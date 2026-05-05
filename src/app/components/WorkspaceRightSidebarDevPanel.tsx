@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { forgetting_curve } from 'ts-fsrs';
 
 import {
@@ -9,6 +8,7 @@ import {
 import type { Node, NodeReadingProfile, NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { InspectorSection } from '../../shared/ui';
 
 interface WorkspaceRightSidebarDevPanelProps {
   activeNodeId: string | null;
@@ -109,23 +109,6 @@ function DevInfoRow({ label, value, mono = false }: { label: string; value: stri
   );
 }
 
-function DevInfoSection({
-  title,
-  children
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-white/90 p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      </div>
-      <dl className="grid grid-cols-[minmax(88px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]">{children}</dl>
-    </section>
-  );
-}
-
 function ReadingProfileSection({ reading }: { reading: NodeReadingProfile | null | undefined }) {
   if (!reading) {
     return null;
@@ -133,23 +116,22 @@ function ReadingProfileSection({ reading }: { reading: NodeReadingProfile | null
   const intervalDays = Math.round(reading.intervalDurationMs / (24 * 60 * 60 * 1000));
 
   return (
-    <DevInfoSection title="Reading">
-      <DevInfoRow label="Next at" value={formatDateTime(reading.nextAt)} />
-      <DevInfoRow label="Last handled" value={formatDateTime(reading.lastHandledAt)} />
-      <DevInfoRow label="Interval" value={`${intervalDays} d`} />
-      <DevInfoRow label="Growth" value={formatNumber(reading.intervalGrowthFactor)} />
-      <DevInfoRow label="Position" value={String(reading.readingPosition)} />
-      <DevInfoRow label="Repeats" value={String(reading.repetitionCount)} />
-    </DevInfoSection>
+    <InspectorSection contentClassName="grid grid-cols-[minmax(88px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]" title="Reading">
+      <dl className="contents">
+        <DevInfoRow label="Next at" value={formatDateTime(reading.nextAt)} />
+        <DevInfoRow label="Last handled" value={formatDateTime(reading.lastHandledAt)} />
+        <DevInfoRow label="Interval" value={`${intervalDays} d`} />
+        <DevInfoRow label="Growth" value={formatNumber(reading.intervalGrowthFactor)} />
+        <DevInfoRow label="Position" value={String(reading.readingPosition)} />
+        <DevInfoRow label="Repeats" value={String(reading.repetitionCount)} />
+      </dl>
+    </InspectorSection>
   );
 }
 
 function EmptyDevPanelState() {
   return (
-    <section className="rounded-lg border border-border bg-white/90 p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
-      <h3 className="text-sm font-semibold text-foreground">Dev panel</h3>
-      <p className="mt-2 text-sm text-foreground/70">Select a node to inspect its development data.</p>
-    </section>
+    <InspectorSection description="Select a node to inspect its development data." title="Dev panel" />
   );
 }
 
@@ -185,41 +167,47 @@ function DevPanelContent({ data }: { data: DevPanelResolvedData }) {
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
-      <DevInfoSection title="Scheduling">
-        <DevInfoRow label="Priority" value={`P${priority.value} · ${getSettingSourceLabel(priority)}`} />
-        <DevInfoRow
-          label="Retention"
-          value={`${formatPercent(desiredRetention.value)} · ${getSettingSourceLabel(desiredRetention)}`}
-        />
-        <DevInfoRow label="Due status" value={getDueStatusLabel(node.review?.due, now)} />
-        <DevInfoRow
-          label="Retrievability"
-          value={retrievability == null ? 'Not available' : formatPercent(retrievability)}
-        />
-        <DevInfoRow label="Last review" value={formatDateTime(node.review?.lastReviewAt)} />
-        <DevInfoRow label="Next due" value={formatDateTime(node.review?.due)} />
-      </DevInfoSection>
+      <InspectorSection contentClassName="grid grid-cols-[minmax(88px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]" title="Scheduling">
+        <dl className="contents">
+          <DevInfoRow label="Priority" value={`P${priority.value} · ${getSettingSourceLabel(priority)}`} />
+          <DevInfoRow
+            label="Retention"
+            value={`${formatPercent(desiredRetention.value)} · ${getSettingSourceLabel(desiredRetention)}`}
+          />
+          <DevInfoRow label="Due status" value={getDueStatusLabel(node.review?.due, now)} />
+          <DevInfoRow
+            label="Retrievability"
+            value={retrievability == null ? 'Not available' : formatPercent(retrievability)}
+          />
+          <DevInfoRow label="Last review" value={formatDateTime(node.review?.lastReviewAt)} />
+          <DevInfoRow label="Next due" value={formatDateTime(node.review?.due)} />
+        </dl>
+      </InspectorSection>
 
-      <DevInfoSection title="Review">
-        <DevInfoRow label="State" value={node.review ? getReviewStateLabel(node.review.state) : 'Not initialized'} />
-        <DevInfoRow label="Stability" value={node.review ? formatDurationDays(node.review.stability) : '0 d'} />
-        <DevInfoRow label="Difficulty" value={node.review ? formatNumber(node.review.difficulty) : '0'} />
-        <DevInfoRow label="Elapsed" value={node.review ? formatDurationDays(node.review.elapsedDays) : '0 d'} />
-        <DevInfoRow label="Scheduled" value={node.review ? formatDurationDays(node.review.scheduledDays) : '0 d'} />
-        <DevInfoRow label="Reps" value={String(node.review?.reps ?? 0)} />
-        <DevInfoRow label="Lapses" value={String(node.review?.lapses ?? 0)} />
-      </DevInfoSection>
+      <InspectorSection contentClassName="grid grid-cols-[minmax(88px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]" title="Review">
+        <dl className="contents">
+          <DevInfoRow label="State" value={node.review ? getReviewStateLabel(node.review.state) : 'Not initialized'} />
+          <DevInfoRow label="Stability" value={node.review ? formatDurationDays(node.review.stability) : '0 d'} />
+          <DevInfoRow label="Difficulty" value={node.review ? formatNumber(node.review.difficulty) : '0'} />
+          <DevInfoRow label="Elapsed" value={node.review ? formatDurationDays(node.review.elapsedDays) : '0 d'} />
+          <DevInfoRow label="Scheduled" value={node.review ? formatDurationDays(node.review.scheduledDays) : '0 d'} />
+          <DevInfoRow label="Reps" value={String(node.review?.reps ?? 0)} />
+          <DevInfoRow label="Lapses" value={String(node.review?.lapses ?? 0)} />
+        </dl>
+      </InspectorSection>
 
       <ReadingProfileSection reading={node.reading} />
 
-      <DevInfoSection title="Node">
-        <DevInfoRow label="Parent" value={node.parentNodeId ?? 'Root'} mono={node.parentNodeId !== null} />
-        <DevInfoRow label="Created" value={formatDateTime(node.createdAt)} />
-        <DevInfoRow label="Updated" value={formatDateTime(node.updatedAt)} />
-        <DevInfoRow label="Kind" value={isFsrsReviewItemNode(node) ? 'Review' : 'Reading'} />
-        <DevInfoRow label="Anchor kind" value={node.anchorLink?.kind ?? 'None'} />
-        <DevInfoRow label="Content size" value={`${node.content.length} chars`} />
-      </DevInfoSection>
+      <InspectorSection contentClassName="grid grid-cols-[minmax(88px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]" title="Node">
+        <dl className="contents">
+          <DevInfoRow label="Parent" value={node.parentNodeId ?? 'Root'} mono={node.parentNodeId !== null} />
+          <DevInfoRow label="Created" value={formatDateTime(node.createdAt)} />
+          <DevInfoRow label="Updated" value={formatDateTime(node.updatedAt)} />
+          <DevInfoRow label="Kind" value={isFsrsReviewItemNode(node) ? 'Review' : 'Reading'} />
+          <DevInfoRow label="Anchor kind" value={node.anchorLink?.kind ?? 'None'} />
+          <DevInfoRow label="Content size" value={`${node.content.length} chars`} />
+        </dl>
+      </InspectorSection>
     </div>
   );
 }

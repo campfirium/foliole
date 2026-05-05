@@ -1,5 +1,6 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
+import { InspectorSection } from '../../shared/ui';
 
 interface WorkspaceRightSidebarReviewQueuePanelProps {
   currentNodeId: string | null;
@@ -60,8 +61,7 @@ function getQueueItemScheduleLabel(node: Node | undefined) {
 
 function QueueSummary({ fsrsCount, readingCount, totalCount }: { fsrsCount: number; readingCount: number; totalCount: number }) {
   return (
-    <section className="rounded-lg border border-border bg-white/90 p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
-      <h3 className="text-sm font-semibold text-foreground">Whole queue</h3>
+    <InspectorSection title="Whole queue">
       <dl className="mt-3 grid grid-cols-3 gap-3 text-center">
         <div className="rounded-md bg-[#f5f1e8] px-2 py-2">
           <dt className="text-[11px] uppercase tracking-[0.12em] text-foreground/45">Total</dt>
@@ -76,16 +76,13 @@ function QueueSummary({ fsrsCount, readingCount, totalCount }: { fsrsCount: numb
           <dd className="mt-1 text-base font-semibold text-foreground">{readingCount}</dd>
         </div>
       </dl>
-    </section>
+    </InspectorSection>
   );
 }
 
 function EmptyQueueState() {
   return (
-    <section className="rounded-lg border border-border bg-white/90 p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
-      <h3 className="text-sm font-semibold text-foreground">Review queue</h3>
-      <p className="mt-2 text-sm text-foreground/70">No scheduled review items are available right now.</p>
-    </section>
+    <InspectorSection description="No scheduled review items are available right now." title="Review queue" />
   );
 }
 
@@ -100,8 +97,7 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
   return (
     <div className="flex min-h-0 flex-col gap-3">
       <QueueSummary fsrsCount={fsrsCount} readingCount={readingCount} totalCount={props.queueNodeIds.length} />
-      <section className="rounded-lg border border-border bg-white/90 p-2 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
-        <h3 className="px-2 pb-2 pt-1 text-sm font-semibold text-foreground">Review queue</h3>
+      <InspectorSection className="p-2" title="Review queue">
         <ol aria-label="Review queue items" className="flex flex-col gap-1">
           {props.queueNodeIds.map((nodeId, index) => {
             const node = props.nodesById[nodeId];
@@ -127,7 +123,7 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
             );
           })}
         </ol>
-      </section>
+      </InspectorSection>
     </div>
   );
 }

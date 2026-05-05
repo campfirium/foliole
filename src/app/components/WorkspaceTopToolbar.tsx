@@ -1,6 +1,6 @@
 import { Bug, FileText, ListOrdered, PanelLeft, Trash2 } from 'lucide-react';
 
-import { AppIconButton, AppToolbar } from '../../shared/ui';
+import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
 export type WorkspaceRightPanelId = 'review-queue' | 'dev';
 
@@ -25,7 +25,7 @@ export function WorkspaceTopToolbar({
 }: WorkspaceTopToolbarProps) {
   return (
     <AppToolbar aria-label="Workspace top toolbar" className="min-h-[40px] border-b border-border bg-[#f6f6f6] px-3">
-      <div className="flex items-center gap-1.5">
+      <ToolbarActionGroup ariaLabel="Workspace primary navigation actions">
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           icon={<PanelLeft aria-hidden="true" size={16} strokeWidth={1.75} />}
@@ -46,9 +46,9 @@ export function WorkspaceTopToolbar({
           label="Open trash view"
           onClick={onOpenTrashView}
         />
-      </div>
+      </ToolbarActionGroup>
       <div className="flex-1" />
-      <div className="flex items-center gap-1.5">
+      <ToolbarActionGroup ariaLabel="Workspace inspector actions">
         <AppIconButton
           aria-pressed={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
@@ -65,7 +65,7 @@ export function WorkspaceTopToolbar({
           label="Dev panel"
           onClick={() => onSelectRightPanel('dev')}
         />
-      </div>
+      </ToolbarActionGroup>
     </AppToolbar>
   );
 }

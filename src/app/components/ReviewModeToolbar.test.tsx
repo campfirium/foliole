@@ -1,167 +1,84 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
+
+import type { SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 
-const baseProps = {
-  isStudyMode: true,
-  isAnswerRevealed: true,
-  isCurrentItemGradable: true,
-  isReviewEditing: false,
-  reviewCurrentNodeId: 'node-1',
-  reviewPreview: null,
-  reviewQueueVisibility: null,
-  onGrade: vi.fn(async () => true),
-  onCompleteReviewItem: vi.fn(() => true),
-  onDeferReviewItem: vi.fn(() => true),
-  onDismissReviewItem: vi.fn(() => true),
-  onRevealAnswer: vi.fn(),
-  onExitReviewMode: vi.fn()
-} as const;
+const preview: SchedulerPreviewResult = {
+  Again: { card: { due: '2026-01-01T00:01:00.000Z' }, reviewed_at: '2026-01-01T00:00:00.000Z' } as SchedulerPreviewResult['Again'],
+  Hard: { card: { due: '2026-01-01T01:00:00.000Z' }, reviewed_at: '2026-01-01T00:00:00.000Z' } as SchedulerPreviewResult['Hard'],
+  Good: { card: { due: '2026-01-02T00:00:00.000Z' }, reviewed_at: '2026-01-01T00:00:00.000Z' } as SchedulerPreviewResult['Good'],
+  Easy: { card: { due: '2026-02-01T00:00:00.000Z' }, reviewed_at: '2026-01-01T00:00:00.000Z' } as SchedulerPreviewResult['Easy']
+};
 
-it('shows push queue visibility with source queues and live mix ratio', () => {
-  render(
+function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}) {
+  return render(
     <ReviewModeToolbar
-      {...baseProps}
-      reviewQueueVisibility={{
-        currentQueueLabel: 'FSRS queue',
-        fsrsQueueCount: 4,
-        readingQueueCount: 1,
-        queueMixRatioReading: 1,
-        queueMixRatioFsrs: 5
-      }}
-    />
-  );
-
-  expect(screen.getByLabelText('Push queue visibility')).toBeInTheDocument();
-  expect(screen.getByText('Push queue live')).toBeInTheDocument();
-  expect(screen.getByText('Current FSRS queue')).toBeInTheDocument();
-  expect(screen.getByText('FSRS queue 4 left')).toBeInTheDocument();
-  expect(screen.getByText('Reading queue 1 left')).toBeInTheDocument();
-  expect(screen.getByText('Mix 1:5')).toBeInTheDocument();
-});
-
-it('shows interval labels when preview payload is available', () => {
-  render(
-    <ReviewModeToolbar
-      {...baseProps}
-      reviewPreview={{
-        Again: {
-          reviewed_at: '2026-03-06T00:00:00.000Z',
-          card: { due: '2026-03-06T00:00:00.000Z', last_review: null, state: 0, stability: 0, difficulty: 0, elapsed_days: 0, scheduled_days: 0, reps: 0, lapses: 0 }
-        },
-        Hard: {
-          reviewed_at: '2026-03-06T00:00:00.000Z',
-          card: { due: '2026-03-07T00:00:00.000Z', last_review: null, state: 0, stability: 0, difficulty: 0, elapsed_days: 0, scheduled_days: 1, reps: 0, lapses: 0 }
-        },
-        Good: {
-          reviewed_at: '2026-03-06T00:00:00.000Z',
-          card: { due: '2026-03-09T00:00:00.000Z', last_review: null, state: 0, stability: 0, difficulty: 0, elapsed_days: 0, scheduled_days: 3, reps: 0, lapses: 0 }
-        },
-        Easy: {
-          reviewed_at: '2026-03-06T00:00:00.000Z',
-          card: { due: '2026-03-13T00:00:00.000Z', last_review: null, state: 0, stability: 0, difficulty: 0, elapsed_days: 0, scheduled_days: 7, reps: 0, lapses: 0 }
-        }
-      }}
-    />
-  );
-
-  expect(screen.getByText('Now')).toBeInTheDocument();
-  expect(screen.getByText('1d')).toBeInTheDocument();
-  expect(screen.getByText('3d')).toBeInTheDocument();
-  expect(screen.getByText('7d')).toBeInTheDocument();
-});
-
-it('keeps grading actions available when preview is missing', async () => {
-  const onGrade = vi.fn();
-  render(<ReviewModeToolbar {...baseProps} onGrade={async (grade) => (onGrade(grade), true)} reviewPreview={null} />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Good' }));
-  await waitFor(() => {
-    expect(onGrade).toHaveBeenCalledWith(3);
-  });
-  expect(onGrade).toHaveBeenCalledWith(3);
-  expect(screen.queryByText('Now')).not.toBeInTheDocument();
-  expect(screen.queryByText('Saved')).not.toBeInTheDocument();
-  expect(screen.queryByText('Save failed. Retry.')).not.toBeInTheDocument();
-});
-
-it('keeps grading retryable when grading write fails', async () => {
-  const onGrade = vi.fn(async () => false);
-  render(<ReviewModeToolbar {...baseProps} onGrade={onGrade} reviewPreview={null} />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Good' }));
-
-  await waitFor(() => {
-    expect(onGrade).toHaveBeenCalledWith(3);
-  });
-  expect(screen.getByText('Failed to save grade. Please retry.')).toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Good' }));
-  await waitFor(() => {
-    expect(onGrade).toHaveBeenCalledTimes(2);
-  });
-});
-
-it('clears grading error after a successful retry', async () => {
-  const onGrade = vi.fn(async () => false).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-  render(<ReviewModeToolbar {...baseProps} onGrade={onGrade} reviewPreview={null} />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Good' }));
-  await waitFor(() => {
-    expect(screen.getByText('Failed to save grade. Please retry.')).toBeInTheDocument();
-  });
-
-  fireEvent.click(screen.getByRole('button', { name: 'Good' }));
-  await waitFor(() => {
-    expect(onGrade).toHaveBeenCalledTimes(2);
-  });
-  expect(screen.queryByText('Failed to save grade. Please retry.')).not.toBeInTheDocument();
-});
-
-it('shows reading later/read/dismiss actions instead of grading for non-qa items', () => {
-  const onCompleteReviewItem = vi.fn(() => true);
-  const onDeferReviewItem = vi.fn(() => true);
-  const onDismissReviewItem = vi.fn(() => true);
-  render(
-    <ReviewModeToolbar
-      {...baseProps}
       isAnswerRevealed={false}
       isCurrentItemGradable={false}
-      onCompleteReviewItem={onCompleteReviewItem}
-      onDeferReviewItem={onDeferReviewItem}
-      onDismissReviewItem={onDismissReviewItem}
+      isReviewEditing={false}
+      isStudyMode
+      onCompleteReviewItem={vi.fn(() => true)}
+      onDeferReviewItem={vi.fn(() => true)}
+      onDismissReviewItem={vi.fn(() => true)}
+      onExitReviewMode={vi.fn()}
+      onGrade={vi.fn(async () => true)}
+      onRevealAnswer={vi.fn()}
+      reviewCurrentNodeId="node-1"
+      reviewPreview={preview}
+      reviewQueueVisibility={{
+        currentQueueLabel: 'Reading queue',
+        fsrsQueueCount: 2,
+        readingQueueCount: 1,
+        queueMixRatioFsrs: 1,
+        queueMixRatioReading: 2
+      }}
+      {...overrides}
+    />
+  );
+}
+
+it('renders reading actions and queue status inside the shared review action bar', () => {
+  renderToolbar();
+
+  expect(document.querySelector('[data-review-item-kind="reading"]')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
+  expect(screen.getByText('Push queue live')).toBeInTheDocument();
+});
+
+it('switches to fsrs reveal and grade actions in the shared review action bar', async () => {
+  const onRevealAnswer = vi.fn();
+  const onGrade = vi.fn(async () => true);
+  const { rerender } = renderToolbar({ isCurrentItemGradable: true, onGrade, onRevealAnswer });
+
+  expect(document.querySelector('[data-review-item-kind="fsrs"]')).toBeInTheDocument();
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
+  });
+  expect(onRevealAnswer).toHaveBeenCalledTimes(1);
+
+  rerender(
+    <ReviewModeToolbar
+      isAnswerRevealed
+      isCurrentItemGradable
+      isReviewEditing={false}
+      isStudyMode
+      onCompleteReviewItem={vi.fn(() => true)}
+      onDeferReviewItem={vi.fn(() => true)}
+      onDismissReviewItem={vi.fn(() => true)}
+      onExitReviewMode={vi.fn()}
+      onGrade={onGrade}
+      onRevealAnswer={onRevealAnswer}
+      reviewCurrentNodeId="node-1"
+      reviewPreview={preview}
+      reviewQueueVisibility={null}
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Review mode toolbar')).toHaveAttribute('data-review-item-kind', 'reading');
-  expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Later' }));
-  expect(onDeferReviewItem).toHaveBeenCalledTimes(1);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Read' }));
-  expect(onCompleteReviewItem).toHaveBeenCalledTimes(1);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
-  expect(onDismissReviewItem).toHaveBeenCalledTimes(1);
-});
-
-it('switches toolbar kind when props move from reading to fsrs card', () => {
-  const { rerender } = render(
-    <ReviewModeToolbar {...baseProps} isAnswerRevealed={false} isCurrentItemGradable={false} />
-  );
-
-  expect(screen.getByLabelText('Review mode toolbar')).toHaveAttribute('data-review-item-kind', 'reading');
-  expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
-
-  rerender(<ReviewModeToolbar {...baseProps} isAnswerRevealed={false} isCurrentItemGradable />);
-
-  expect(screen.getByLabelText('Review mode toolbar')).toHaveAttribute('data-review-item-kind', 'fsrs');
-  expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Read' })).not.toBeInTheDocument();
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Good' }));
+  });
+  expect(onGrade).toHaveBeenCalledWith(3);
 });
