@@ -1,7 +1,6 @@
+import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
 import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { resolveRuntimeAttachmentResource } from '../../../shared/platform/attachmentResources';
-
-const INLINE_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\n]+)\)/g;
 
 export interface MarkdownImageMatch {
   attachmentId: string | null;
@@ -10,23 +9,6 @@ export interface MarkdownImageMatch {
   alt: string;
   display: 'block' | 'inline';
   source: string;
-}
-
-function parseMarkdownImageTarget(target: string) {
-  const trimmedTarget = target.trim();
-  if (!trimmedTarget) {
-    return null;
-  }
-
-  if (trimmedTarget.startsWith('<')) {
-    const closingIndex = trimmedTarget.indexOf('>');
-    if (closingIndex > 0) {
-      return trimmedTarget.slice(1, closingIndex);
-    }
-  }
-
-  const match = /^(\S+)(?:\s+.+)?$/.exec(trimmedTarget);
-  return match?.[1] ?? null;
 }
 
 function isRemoteImageSource(value: string) {
@@ -102,22 +84,20 @@ export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch) {
 
 export function collectImageMatches(from: number, text: string): MarkdownImageMatch[] {
   const matches: MarkdownImageMatch[] = [];
-  let match = INLINE_IMAGE_PATTERN.exec(text);
-  while (match) {
-    const source = parseMarkdownImageTarget(match[2] ?? '');
+  for (const match of collectMarkdownImageReferences(text)) {
+    const target = parseMarkdownImageTarget(match.rawTarget);
+    const source = target?.destination ?? null;
     if (source && (isRemoteImageSource(source) || isInternalImageSource(source))) {
-      const start = from + match.index;
+      const start = from + match.start;
       matches.push({
         attachmentId: isInternalImageSource(source) ? parseAssetMarkdownUrl(source) : null,
-        display: resolveImageDisplay(text, match.index, match[0] ?? ''),
+        display: resolveImageDisplay(text, match.start, match.fullMatch),
         from: start,
-        to: start + match[0].length,
-        alt: match[1] ?? '',
+        to: start + match.fullMatch.length,
+        alt: match.altText,
         source
       });
     }
-    match = INLINE_IMAGE_PATTERN.exec(text);
   }
-  INLINE_IMAGE_PATTERN.lastIndex = 0;
   return matches;
 }

@@ -32,6 +32,14 @@ function createAdapterHost(initialContent: string) {
   return { adapter, host };
 }
 
+function expectRemoteImageRendered(host: HTMLElement, source: string) {
+  const image = host.querySelector('.cm-md-image-element');
+
+  expect(image).not.toBeNull();
+  expect(image?.getAttribute('src')).toBe(source);
+  expect(resolveRuntimeAttachmentResource).not.toHaveBeenCalled();
+}
+
 describe('live markdown image rendering', () => {
   beforeEach(() => {
     resolveRuntimeAttachmentResource.mockReset();
@@ -77,11 +85,15 @@ describe('live markdown image rendering', () => {
   it('keeps remote markdown image rendering unchanged', () => {
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/cover.png)');
 
-    const image = host.querySelector('.cm-md-image-element');
+    expectRemoteImageRendered(host, 'https://example.com/cover.png');
 
-    expect(image).not.toBeNull();
-    expect(image?.getAttribute('src')).toBe('https://example.com/cover.png');
-    expect(resolveRuntimeAttachmentResource).not.toHaveBeenCalled();
+    adapter.destroy();
+  });
+
+  it('keeps remote image urls with parentheses intact', () => {
+    const { adapter, host } = createAdapterHost('![Remote](https://example.com/gallery/(cover).png)');
+
+    expectRemoteImageRendered(host, 'https://example.com/gallery/(cover).png');
 
     adapter.destroy();
   });

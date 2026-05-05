@@ -44,6 +44,7 @@ async function createMarkdownImportFixture(rootDir: string) {
   const subdirectoryPath = path.join(rootDir, 'images');
   const nestedImagePath = path.join(subdirectoryPath, 'chart.webp');
   const absoluteImagePath = path.join(rootDir, 'absolute.jpg');
+  const parenthesizedImagePath = path.join(rootDir, 'Mood Board (Final).png');
   const spacedEmbedPath = path.join(rootDir, 'Pasted image 2026-03-30 100000.png');
   const sourceMarkdownPath = path.join(rootDir, 'note.md');
 
@@ -51,6 +52,7 @@ async function createMarkdownImportFixture(rootDir: string) {
   await fs.writeFile(relativeImagePath, Buffer.from('cover-image'));
   await fs.writeFile(nestedImagePath, Buffer.from('chart-image'));
   await fs.writeFile(absoluteImagePath, Buffer.from('absolute-image'));
+  await fs.writeFile(parenthesizedImagePath, Buffer.from('parenthesized-image'));
   await fs.writeFile(spacedEmbedPath, Buffer.from('obsidian-embed-image'));
   await fs.writeFile(
     sourceMarkdownPath,
@@ -60,6 +62,7 @@ async function createMarkdownImportFixture(rootDir: string) {
       'Relative image: ![Cover](cover.png)',
       'Nested image: ![Chart](images/chart.webp)',
       `Absolute image: ![Absolute](${absoluteImagePath})`,
+      'Parenthesized image: ![Mood Board](Mood Board (Final).png)',
       'Obsidian image embed: ![[Pasted image 2026-03-30 100000.png]]',
       'Obsidian nested embed: ![[images/chart.webp|Chart alias]]',
       'Obsidian note embed: ![[Linked note]]',
@@ -104,6 +107,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   expect(nodeRow.content).toContain('![Cover](asset://');
   expect(nodeRow.content).toContain('![Chart](asset://');
   expect(nodeRow.content).toContain('![Absolute](asset://');
+  expect(nodeRow.content).toContain('![Mood Board](asset://');
   expect(nodeRow.content).toContain('![Pasted image 2026-03-30 100000](asset://');
   expect(nodeRow.content).toContain('![Chart alias](asset://');
   expect(nodeRow.content).toContain('![[Linked note]]');
@@ -114,9 +118,9 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   expect(nodeRow.content).toContain('.webp)');
   expect(nodeRow.content).toContain('.jpg)');
   expect(nodeRow.content).not.toContain('![[Pasted image 2026-03-30 100000.png]]');
-  expect(attachments).toHaveLength(4);
+  expect(attachments).toHaveLength(5);
   expect(new Set(attachments.map((entry) => entry.attachment.originalName))).toEqual(
-    new Set(['absolute.jpg', 'chart.webp', 'cover.png', 'Pasted image 2026-03-30 100000.png'])
+    new Set(['absolute.jpg', 'chart.webp', 'cover.png', 'Mood Board (Final).png', 'Pasted image 2026-03-30 100000.png'])
   );
 
   await fs.rm(sourceRoot, { recursive: true, force: true });
