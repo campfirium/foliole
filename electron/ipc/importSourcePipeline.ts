@@ -2,6 +2,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ImportHighlightPolicy, ImportSourceKind, PreparedImportRecord } from '../../lib/core/import/contract.js';
+import {
+  buildRetainedDegradedImportContent,
+  type ImportContextPolicy,
+  type ImportSidecarHighlight,
+  type ImportSourceProfile
+} from '../../lib/core/import/controlledContext.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import {
   convertHtmlToMarkdownCompatible,
@@ -26,6 +32,7 @@ export interface DirectoryImportSourceDescriptor extends ImportSourceDescriptor 
 
 const HTML_EXTENSIONS = new Set(['.htm', '.html']);
 const MARKDOWN_EXTENSIONS = new Set(['.md', '.markdown']);
+const EPUB_EXTENSIONS = new Set(['.epub']);
 const TEXT_EXTENSIONS = new Set(['.txt']);
 const SKIPPED_DIRECTORY_NAMES = new Set(['.git', '.obsidian', 'node_modules']);
 
@@ -45,6 +52,9 @@ function resolveDirectoryAdapter(rootIsObsidianVault: boolean, extension: string
 
 export function resolveImportKind(filePath: string): ImportSourceKind {
   const extension = path.extname(filePath).toLowerCase();
+  if (EPUB_EXTENSIONS.has(extension)) {
+    return 'epub';
+  }
   if (HTML_EXTENSIONS.has(extension)) {
     return 'html';
   }
@@ -61,8 +71,15 @@ export function resolveImportHighlightPolicy(args?: Pick<NativeTextImportArgs, '
   return args?.highlight_policy === 'adopt' ? 'adopt' : 'reference_only';
 }
 
-export function toImportPayload(content: string, kind: ImportSourceKind) {
+export function toImportPayload(content: string, kind: ImportSourceKind, sourceName = 'Imported source') {
   const normalizedContent = stripUtf8Bom(content);
+  if (kind === 'epub') {
+    const reason = 'EPUB import degraded: text extraction is not implemented yet';
+    return {
+      content: buildRetainedDegradedImportContent({ reason, sourceKind: kind, sourceName }),
+      degradedReason: reason
+    };
+  }
   if (kind !== 'html') {
     return { content: normalizedContent, degradedReason: null };
   }
@@ -77,31 +94,47 @@ export function buildPreparedImportRecord(
   source: Pick<ImportSourceDescriptor, 'filePath' | 'kind' | 'sourceName'>,
   input: {
     content: string;
+    contextPolicy?: ImportContextPolicy;
     degradedReason?: string | null;
+    highlightSidecar?: ImportSidecarHighlight[];
     highlightPolicy?: ImportHighlightPolicy;
     importedAt: string;
+    sourceProfile?: ImportSourceProfile;
   }
 ): PreparedImportRecord {
   return createPreparedDesktopTextImport({
     content: input.content,
+    contextPolicy: input.contextPolicy,
     degradedReason: input.degradedReason,
     fileName: source.sourceName,
     filePath: source.filePath,
+    highlightSidecar: input.highlightSidecar,
     highlightPolicy: input.highlightPolicy,
     importedAt: input.importedAt,
-    kind: source.kind
+    kind: source.kind,
+    sourceProfile: input.sourceProfile
   });
 }
 
 export async function loadPreparedImportRecord(
   source: Pick<ImportSourceDescriptor, 'filePath' | 'kind' | 'sourceName'>,
   options: {
+    contextPolicy?: ImportContextPolicy;
+    highlightSidecar?: ImportSidecarHighlight[];
     highlightPolicy?: ImportHighlightPolicy;
     importedAt: string;
+    sourceProfile?: ImportSourceProfile;
   }
 ) {
-  const payload = toImportPayload(await fs.readFile(source.filePath, 'utf8'), source.kind);
-  return buildPreparedImportRecord(source, { ...payload, ...options });
+  const payload =
+    source.kind === 'epub'
+      ? toImportPayload('', source.kind, source.sourceName)
+      : toImportPayload(await fs.readFile(source.filePath, 'utf8'), source.kind, source.sourceName);
+  return buildPreparedImportRecord(source, {
+    ...payload,
+    ...options,
+    sourceProfile: options.sourceProfile ?? (source.kind === 'epub' ? 'epub' : undefined)
+  });
 }
 
 export function resolveSingleFileImportSource(filePath: string): ImportSourceDescriptor {

@@ -7,7 +7,7 @@ export interface RuntimeImportedTextFile {
   fileName: string;
   filePath: string;
   content: string;
-  kind: 'html' | 'markdown' | 'text';
+  kind: 'epub' | 'html' | 'markdown' | 'text';
 }
 export type ImportHighlightPolicy = 'adopt' | 'reference_only';
 export interface RuntimeTextImportResult {
@@ -21,7 +21,7 @@ export interface RuntimeTextImportResult {
   provider: 'desktop_text_file';
   resultStatus: 'imported' | 'degraded' | 'failed';
   sourceFingerprint: string;
-  sourceKind: 'html' | 'markdown' | 'text';
+  sourceKind: 'epub' | 'html' | 'markdown' | 'text';
   sourceLocator: string;
   sourceName: string;
 }
@@ -35,7 +35,7 @@ export interface RuntimeImportOverview {
   recentRuns: RuntimeTextImportResult[];
 }
 function isImportKind(value: unknown): value is RuntimeImportedTextFile['kind'] {
-  return value === 'html' || value === 'markdown' || value === 'text';
+  return value === 'epub' || value === 'html' || value === 'markdown' || value === 'text';
 }
 function toRuntimeImportedTextFile(value: unknown): RuntimeImportedTextFile | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {

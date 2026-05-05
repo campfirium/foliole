@@ -38,11 +38,11 @@ function toNativeTextImportResult(record: PersistedImportRecord): NativeTextImpo
 async function selectImportFilePath(window?: BrowserWindow | null) {
   const selection = window
     ? await dialog.showOpenDialog(window, {
-        filters: [{ name: 'Markdown / HTML / Text', extensions: ['md', 'markdown', 'html', 'htm', 'txt'] }],
+        filters: [{ name: 'Markdown / HTML / Text / EPUB', extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub'] }],
         properties: ['openFile']
       })
     : await dialog.showOpenDialog({
-        filters: [{ name: 'Markdown / HTML / Text', extensions: ['md', 'markdown', 'html', 'htm', 'txt'] }],
+        filters: [{ name: 'Markdown / HTML / Text / EPUB', extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub'] }],
         properties: ['openFile']
       });
 

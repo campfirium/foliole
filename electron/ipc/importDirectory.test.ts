@@ -32,7 +32,7 @@ function createPersistedRecord(
     importedAt: string;
     provider: 'desktop_text_file';
     sourceFingerprint: string;
-    sourceKind: 'html' | 'markdown' | 'text';
+    sourceKind: 'epub' | 'html' | 'markdown' | 'text';
     sourceLocator: string;
     sourceName: string;
   },

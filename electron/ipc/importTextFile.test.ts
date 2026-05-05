@@ -129,3 +129,64 @@ it('supports adopting markdown highlight markers during import', async () => {
     })
   );
 });
+
+it('retains EPUB imports as explicit degraded results instead of dropping them', async () => {
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/book.epub'] });
+  runPreparedImport.mockReturnValue({
+    contentFingerprint: 'content-fingerprint',
+    degradedReason: 'EPUB import degraded: text extraction is not implemented yet',
+    duplicateSemantic: 'new',
+    failureReason: null,
+    importId: 'import-epub',
+    importedAt: '2026-03-22T12:10:00.000Z',
+    nodeId: 'node-import-epub',
+    provider: 'desktop_text_file',
+    resultStatus: 'degraded',
+    sourceFingerprint: 'source-fingerprint',
+    sourceKind: 'epub',
+    sourceLocator: '/tmp/book.epub',
+    sourceName: 'book.epub'
+  });
+
+  await expect(selectImportTextFile()).resolves.toEqual({
+    content:
+      '# book.epub\n[Degraded import retained]\n- source kind: epub\n- reason: EPUB import degraded: text extraction is not implemented yet',
+    file_name: 'book.epub',
+    file_path: '/tmp/book.epub',
+    kind: 'epub'
+  });
+
+  await expect(runTextFileImport()).resolves.toEqual({
+    content_fingerprint: 'content-fingerprint',
+    degraded_reason: 'EPUB import degraded: text extraction is not implemented yet',
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-epub',
+    imported_at: '2026-03-22T12:10:00.000Z',
+    node_id: 'node-import-epub',
+    provider: 'desktop_text_file',
+    result_status: 'degraded',
+    source_fingerprint: 'source-fingerprint',
+    source_kind: 'epub',
+    source_locator: '/tmp/book.epub',
+    source_name: 'book.epub'
+  });
+
+  expect(showOpenDialog).toHaveBeenCalledWith(
+    expect.objectContaining({
+      filters: [{ extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub'], name: 'Markdown / HTML / Text / EPUB' }],
+      properties: ['openFile']
+    })
+  );
+  expect(runPreparedImport).toHaveBeenCalledWith(
+    expect.objectContaining({
+      content:
+        '# book.epub\n[Degraded import retained]\n- source kind: epub\n- reason: EPUB import degraded: text extraction is not implemented yet',
+      degradedReason: 'EPUB import degraded: text extraction is not implemented yet',
+      sourceKind: 'epub',
+      sourceLocator: '/tmp/book.epub',
+      sourceName: 'book.epub'
+    })
+  );
+  expect(readFile).not.toHaveBeenCalled();
+});
