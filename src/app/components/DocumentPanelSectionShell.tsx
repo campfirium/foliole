@@ -1,0 +1,52 @@
+import { DocumentPanelHeader } from './DocumentPanelHeader';
+import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+import { DocumentPanelContent } from './DocumentPanelSectionParts';
+
+interface DocumentPanelShellProps {
+  bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
+  isFolderListView: boolean;
+  isSourceUpdatePanelOpen: boolean;
+  onToggleSourceUpdatePanel: () => void;
+  props: DocumentPanelSectionProps;
+  showSourceUpdateAction: boolean;
+}
+
+export function DocumentPanelSectionShell({
+  bodyProps,
+  isFolderListView,
+  isSourceUpdatePanelOpen,
+  onToggleSourceUpdatePanel,
+  props,
+  showSourceUpdateAction
+}: DocumentPanelShellProps) {
+  return (
+    <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
+      <DocumentPanelHeader
+        activeNodeId={props.activeNodeId}
+        canGoBack={props.canGoBack}
+        canGoForward={props.canGoForward}
+        canGoParent={props.canGoParent}
+        isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
+        nodesById={props.nodesById}
+        onGoBack={props.onGoBack}
+        onGoForward={props.onGoForward}
+        onGoParent={props.onGoParent}
+        onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
+        onToggleSourceUpdatePanel={onToggleSourceUpdatePanel}
+        showSourceUpdateAction={showSourceUpdateAction}
+      />
+      <DocumentPanelContent
+        activeNodeId={props.activeNodeId}
+        bodyProps={bodyProps}
+        isFolderListView={isFolderListView}
+        nodeOrder={props.nodeOrder}
+        trashedNodeIds={props.trashedNodeIds}
+        nodesById={props.nodesById}
+        onCreatePdfHighlight={props.onCreatePdfHighlight}
+        onNodeContentChange={props.onNodeContentChange}
+        onPersistPdfViewState={props.onPersistPdfViewState}
+        onSelectNode={props.onSelectNode}
+      />
+    </section>
+  );
+}

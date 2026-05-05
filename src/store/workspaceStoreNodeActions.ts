@@ -7,6 +7,7 @@ import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
+import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import {
   syncCreateNodeToRuntime,
   syncDeleteNodesPermanentlyToRuntime,
@@ -22,6 +23,7 @@ import {
   createQAFromSelectionAction,
   createRootNodeAction
 } from './workspaceStoreCreateActions';
+import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';
 import { createRelearnNodeAction } from './workspaceStoreNodeRelearnAction';
 import {
   createUpdateNodeDesiredRetentionAction,
@@ -43,6 +45,7 @@ type WorkspaceNodeActions = Pick<
   WorkspaceState,
   | 'createChildNode'
   | 'createHighlightNodeFromSelection'
+  | 'createImageClozeNodes'
   | 'createQANodeFromSelection'
   | 'createRootNode'
   | 'createVirtualNode'
@@ -236,6 +239,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     createChildNode: createChildNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
     createVirtualNode: createVirtualNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
+    createImageClozeNodes: createImageClozeNodesAction(set, runtimeHandlers, reconcileReviewSession),
     createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers),
     moveNode: createMoveNodeAction(set, syncMovedNodes, syncNodeOrderToRuntime),
     moveNodes: createMoveNodesAction(set, syncMovedNodes, syncNodeOrderToRuntime)

@@ -57,6 +57,7 @@ function createWorkspaceFixture(): WorkspaceState {
     createVirtualNode: () => 'unused',
     createHighlightNodeFromSelection: () => null,
     createQANodeFromSelection: () => null,
+    createImageClozeNodes: () => [],
     moveNode: () => false,
     moveNodes: () => false
   };

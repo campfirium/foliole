@@ -1,5 +1,5 @@
 import { buildNodeTreeRows } from '../../features/nodes/model/nodeTree';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 export interface PdfHighlightLocator {
@@ -58,7 +58,7 @@ export function collectPdfHighlightLocators(
     }
     const node = nodesById[nodeId];
     const anchor = node?.anchorLink;
-    if (!node || anchor?.kind !== 'highlight' || !anchor.id || !anchor.locator) {
+    if (!node || anchor?.kind !== 'highlight' || !anchor.id || !isPdfAnchorLocator(anchor.locator)) {
       continue;
     }
     if (seenLocatorIds.has(anchor.id)) {

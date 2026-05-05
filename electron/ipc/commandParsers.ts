@@ -63,13 +63,16 @@ interface AnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze';
   locator?: {
-    page: number;
+    attachmentId?: string;
+    height?: number;
+    page?: number;
     rects?: Array<{
       x: number;
       y: number;
       width: number;
       height: number;
     }>;
+    width?: number;
     x: number;
     y: number;
   };
@@ -86,6 +89,44 @@ interface ReadingProfilePayload {
   state: 'active' | 'done' | 'dismissed';
 }
 
+interface RawAnchorLocator {
+  attachmentId?: unknown;
+  height?: unknown;
+  page?: unknown;
+  rects?: unknown;
+  width?: unknown;
+  x: number;
+  y: number;
+}
+
+function parseImageAnchorLocator(locator: RawAnchorLocator, field: string) {
+  if (typeof locator.width !== 'number' || !Number.isFinite(locator.width) || locator.width <= 0) {
+    throw new Error(`invalid argument: ${field}.locator.width`);
+  }
+  if (typeof locator.height !== 'number' || !Number.isFinite(locator.height) || locator.height <= 0) {
+    throw new Error(`invalid argument: ${field}.locator.height`);
+  }
+  return {
+    attachmentId: locator.attachmentId as string,
+    height: Math.max(0, Math.min(1, locator.height)),
+    width: Math.max(0, Math.min(1, locator.width)),
+    x: Math.max(0, Math.min(1, locator.x)),
+    y: Math.max(0, Math.min(1, locator.y))
+  };
+}
+
+function parsePdfAnchorLocator(locator: RawAnchorLocator, field: string) {
+  if (typeof locator.page !== 'number' || !Number.isInteger(locator.page) || locator.page < 1) {
+    throw new Error(`invalid argument: ${field}.locator.page`);
+  }
+  return {
+    page: locator.page,
+    rects: parseAnchorLinkLocatorRects(locator.rects, `${field}.locator.rects`),
+    x: Math.max(0, Math.min(1, locator.x)),
+    y: Math.max(0, Math.min(1, locator.y))
+  };
+}
+
 function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
   if (value === null || value === undefined) {
     return null;
@@ -96,7 +137,7 @@ function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
   const payload = value as {
     id?: unknown;
     kind?: unknown;
-    locator?: { page?: unknown; rects?: unknown; x?: unknown; y?: unknown };
+    locator?: RawAnchorLocator;
   };
   if (typeof payload.id !== 'string') {
     throw new Error(`invalid argument: ${field}.id`);
@@ -110,21 +151,16 @@ function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
     if (!locator || typeof locator !== 'object' || Array.isArray(locator)) {
       throw new Error(`invalid argument: ${field}.locator`);
     }
-    if (typeof locator.page !== 'number' || !Number.isInteger(locator.page) || locator.page < 1) {
-      throw new Error(`invalid argument: ${field}.locator.page`);
-    }
     if (typeof locator.x !== 'number' || !Number.isFinite(locator.x)) {
       throw new Error(`invalid argument: ${field}.locator.x`);
     }
     if (typeof locator.y !== 'number' || !Number.isFinite(locator.y)) {
       throw new Error(`invalid argument: ${field}.locator.y`);
     }
-    anchorLink.locator = {
-      page: locator.page,
-      rects: parseAnchorLinkLocatorRects(locator.rects, `${field}.locator.rects`),
-      x: Math.max(0, Math.min(1, locator.x)),
-      y: Math.max(0, Math.min(1, locator.y))
-    };
+    anchorLink.locator =
+      typeof locator.attachmentId === 'string' && locator.attachmentId.trim().length > 0
+        ? parseImageAnchorLocator(locator, field)
+        : parsePdfAnchorLocator(locator, field);
   }
   return anchorLink;
 }

@@ -4,7 +4,7 @@ import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
 import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -32,7 +32,7 @@ interface PdfDocumentSurfaceProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   isVisible?: boolean;
   nodeId: string | null;
-  onCreateHighlightFromSelection?: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onCreateHighlightFromSelection?: (selectionText: string, locator: PdfAnchorLocator) => boolean;
   onPersistViewState: (viewState: NodeViewState) => void;
   pdfIndexStatus: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   sourceHint: string;
@@ -41,14 +41,14 @@ interface PdfDocumentSurfaceProps {
 
 type PdfSurfaceLayoutProps = ComponentProps<typeof PdfDocumentSurfaceLayout>;
 
-function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean) {
+function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionText: string, locator: PdfAnchorLocator) => boolean) {
   const [selectionMenuState, setSelectionMenuState] = useState<{
     left: number;
     top: number;
     selectionText: string;
-    locator: NodeAnchorLink['locator'];
+    locator: PdfAnchorLocator;
   } | null>(null);
-  const [selectionOverlayLocator, setSelectionOverlayLocator] = useState<NodeAnchorLink['locator']>(undefined);
+  const [selectionOverlayLocator, setSelectionOverlayLocator] = useState<PdfAnchorLocator | undefined>(undefined);
   const surfaceRef = useRef<HTMLElement | null>(null);
   const preservedSelectionRef = useRef<PdfSelectionSnapshot | null>(null);
   useTrackPdfSelection(surfaceRef, preservedSelectionRef);

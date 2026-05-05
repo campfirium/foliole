@@ -115,15 +115,18 @@ export function buildAppControllerLayoutProps(args: BuildControllerLayoutPropsAr
 
 function createLayoutEditorCtx(args: BuildControllerLayoutPropsArgs) {
   return {
+    onCloseImageClozeComposer: args.editorCtx.handleCloseImageClozeComposer,
     onCloseContextMenu: args.editorCtx.closeContextMenu,
     onCopyImage: args.editorCtx.handleCopyImage,
     onCreateCloze: args.editorCtx.handleCreateCloze,
     onCreateHighlight: args.editorCtx.handleCreateHighlight,
+    onCreateImageCloze: args.editorCtx.handleCreateImageCloze,
     onCreatePdfHighlight: createPdfHighlightHandler(args),
     onCutImage: args.editorCtx.handleCutImage,
     onDeleteImage: args.editorCtx.handleDeleteImage,
     onEditorContextMenu: args.editorCtx.handleEditorContextMenu,
-    onExportImage: args.editorCtx.handleExportImage
+    onExportImage: args.editorCtx.handleExportImage,
+    onSaveImageCloze: args.editorCtx.handleSaveImageCloze
   };
 }
 
@@ -140,6 +143,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     contextMenu: args.editorCtx.contextMenu,
     documentMaxWidth: args.ws.documentMaxWidth,
     documentNode: args.runtime.isViewingTrashNode ? args.selectedTrashNode : args.activeNode,
+    imageClozeComposerAttachmentId: args.editorCtx.imageClozeComposer?.attachmentId ?? null,
     documentResize: args.documentResize,
     ...resolveEditorBindingArgs(args),
     isResizingList: args.listResize.isResizingList,

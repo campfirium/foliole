@@ -2,13 +2,16 @@ export interface StoredAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze';
   locator?: {
-    page: number;
+    attachmentId?: string;
+    height?: number;
+    page?: number;
     rects?: Array<{
       x: number;
       y: number;
       width: number;
       height: number;
     }>;
+    width?: number;
     x: number;
     y: number;
   };
@@ -56,7 +59,15 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
     const parsed = JSON.parse(value) as {
       id?: unknown;
       kind?: unknown;
-      locator?: { page?: unknown; rects?: unknown; x?: unknown; y?: unknown };
+      locator?: {
+        attachmentId?: unknown;
+        height?: unknown;
+        page?: unknown;
+        rects?: unknown;
+        width?: unknown;
+        x?: unknown;
+        y?: unknown;
+      };
     };
     if (typeof parsed.id !== 'string') {
       return null;
@@ -66,22 +77,32 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
     }
     const base: StoredAnchorLink = { id: parsed.id, kind: parsed.kind };
     const locator = parsed.locator;
-    if (
-      locator &&
-      typeof locator.page === 'number' &&
-      Number.isInteger(locator.page) &&
-      locator.page > 0 &&
-      typeof locator.x === 'number' &&
-      Number.isFinite(locator.x) &&
-      typeof locator.y === 'number' &&
-      Number.isFinite(locator.y)
-    ) {
-      base.locator = {
-        page: locator.page,
-        rects: asRectArray(locator.rects),
-        x: clampRatio(locator.x),
-        y: clampRatio(locator.y)
-      };
+    if (locator && typeof locator.x === 'number' && Number.isFinite(locator.x) && typeof locator.y === 'number' && Number.isFinite(locator.y)) {
+      if (
+        typeof locator.attachmentId === 'string' &&
+        locator.attachmentId.trim().length > 0 &&
+        typeof locator.width === 'number' &&
+        Number.isFinite(locator.width) &&
+        locator.width > 0 &&
+        typeof locator.height === 'number' &&
+        Number.isFinite(locator.height) &&
+        locator.height > 0
+      ) {
+        base.locator = {
+          attachmentId: locator.attachmentId,
+          height: clampRatio(locator.height),
+          width: clampRatio(locator.width),
+          x: clampRatio(locator.x),
+          y: clampRatio(locator.y)
+        };
+      } else if (typeof locator.page === 'number' && Number.isInteger(locator.page) && locator.page > 0) {
+        base.locator = {
+          page: locator.page,
+          rects: asRectArray(locator.rects),
+          x: clampRatio(locator.x),
+          y: clampRatio(locator.y)
+        };
+      }
     }
     return base;
   } catch {

@@ -3,19 +3,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { ImageClozeDraftRegion } from '../../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
-import { DocumentPanelHeader } from './DocumentPanelHeader';
-import { DocumentPanelContent, DocumentPanelContextMenu } from './DocumentPanelSectionParts';
-import { DocumentPanelSourceUpdatePanel } from './DocumentPanelSourceUpdatePanel';
+import { DocumentPanelSectionOverlays } from './DocumentPanelSectionOverlays';
+import { DocumentPanelSectionShell } from './DocumentPanelSectionShell';
 import { useNodeSourceUpdatePreview } from './useNodeSourceUpdatePreview';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
-interface DocumentPanelSectionProps {
+export interface DocumentPanelSectionProps {
   activeNodeId: string | null;
   editableNodeId: string | null;
   canGoBack: boolean;
@@ -25,6 +25,7 @@ interface DocumentPanelSectionProps {
   documentMaxWidth: number;
   editorContent: string;
   editorAppearanceKey: string;
+  imageClozeComposerAttachmentId?: string | null;
   isEditorReadOnly: boolean;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -38,11 +39,13 @@ interface DocumentPanelSectionProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
+  onCreateImageCloze?: () => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;
+  onCloseImageClozeComposer?: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
@@ -52,6 +55,7 @@ interface DocumentPanelSectionProps {
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
+  onSaveImageCloze?: (regions: ImageClozeDraftRegion[]) => string[];
   onSelectNode: (nodeId: string) => void;
   onStartDocumentResize: (
     side: ResizeSide,
@@ -207,58 +211,31 @@ function useSourceUpdatePanelState(props: DocumentPanelSectionProps) {
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
   const { bodyProps, documentLayoutStyle, isFolderListView } = getDocumentPanelView(props, editorDisplayMode);
-  const { currentSourceUpdateContent, handleSourceUpdateDraftChange, handleSourceUpdatePanelOpenChange, isSourceUpdatePanelOpen, sourceUpdatePreview } = useSourceUpdatePanelState(props);
+  const {
+    currentSourceUpdateContent,
+    handleSourceUpdateDraftChange,
+    handleSourceUpdatePanelOpenChange,
+    isSourceUpdatePanelOpen,
+    sourceUpdatePreview
+  } = useSourceUpdatePanelState(props);
+
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
-      <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
-        <DocumentPanelHeader
-          activeNodeId={props.activeNodeId}
-          canGoBack={props.canGoBack}
-          canGoForward={props.canGoForward}
-          canGoParent={props.canGoParent}
-          isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
-          nodesById={props.nodesById}
-          onGoBack={props.onGoBack}
-          onGoForward={props.onGoForward}
-          onGoParent={props.onGoParent}
-          onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
-          onToggleSourceUpdatePanel={() => handleSourceUpdatePanelOpenChange(!isSourceUpdatePanelOpen)}
-          showSourceUpdateAction={Boolean(sourceUpdatePreview.value)}
-        />
-        <DocumentPanelContent
-          activeNodeId={props.activeNodeId}
-          bodyProps={bodyProps}
-          isFolderListView={isFolderListView}
-          nodeOrder={props.nodeOrder}
-          trashedNodeIds={props.trashedNodeIds}
-          nodesById={props.nodesById}
-          onCreatePdfHighlight={props.onCreatePdfHighlight}
-          onNodeContentChange={props.onNodeContentChange}
-          onPersistPdfViewState={props.onPersistPdfViewState}
-          onSelectNode={props.onSelectNode}
-        />
-      </section>
-      {sourceUpdatePreview.value ? (
-        <DocumentPanelSourceUpdatePanel
-          currentContent={currentSourceUpdateContent}
-          documentMaxWidth={props.documentMaxWidth}
-          editorAppearanceKey={props.editorAppearanceKey}
-          editorNodeId={props.editorNodeId}
-          onCurrentContentChange={handleSourceUpdateDraftChange}
-          onOpenChange={handleSourceUpdatePanelOpenChange}
-          open={isSourceUpdatePanelOpen}
-          updatedContent={sourceUpdatePreview.value.updatedContent}
-        />
-      ) : null}
-      <DocumentPanelContextMenu
-        contextMenu={props.contextMenu}
-        onCloseContextMenu={props.onCloseContextMenu}
-        onCopyImage={props.onCopyImage}
-        onCreateCloze={props.onCreateCloze}
-        onCreateHighlight={props.onCreateHighlight}
-        onCutImage={props.onCutImage}
-        onDeleteImage={props.onDeleteImage}
-        onExportImage={props.onExportImage}
+      <DocumentPanelSectionShell
+        bodyProps={bodyProps}
+        isFolderListView={isFolderListView}
+        isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
+        onToggleSourceUpdatePanel={() => handleSourceUpdatePanelOpenChange(!isSourceUpdatePanelOpen)}
+        props={props}
+        showSourceUpdateAction={Boolean(sourceUpdatePreview.value)}
+      />
+      <DocumentPanelSectionOverlays
+        currentSourceUpdateContent={currentSourceUpdateContent}
+        handleSourceUpdateDraftChange={handleSourceUpdateDraftChange}
+        handleSourceUpdatePanelOpenChange={handleSourceUpdatePanelOpenChange}
+        isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
+        props={props}
+        sourceUpdatePreview={sourceUpdatePreview.value}
       />
     </section>
   );

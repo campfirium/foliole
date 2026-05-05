@@ -24,20 +24,30 @@ export interface NodeReadingProfile {
   state: 'active' | 'done' | 'dismissed';
 }
 
+export interface PdfAnchorLocator {
+  page: number;
+  rects?: Array<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }>;
+  x: number;
+  y: number;
+}
+
+export interface ImageAnchorLocator {
+  attachmentId: string;
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
 export interface NodeAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze';
-  locator?: {
-    page: number;
-    x: number;
-    y: number;
-    rects?: Array<{
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    }>;
-  };
+  locator?: PdfAnchorLocator | ImageAnchorLocator;
 }
 
 export type NodeSpecialKind = 'inbox' | 'virtual-root' | 'virtual';
@@ -62,6 +72,10 @@ export interface Node {
   review: NodeReviewProfile | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export function isPdfAnchorLocator(locator: NodeAnchorLink['locator'] | null | undefined): locator is PdfAnchorLocator {
+  return Boolean(locator && 'page' in locator && typeof locator.page === 'number' && Number.isInteger(locator.page) && locator.page > 0);
 }
 
 export function hasNodeContent(node: Pick<Node, 'content' | 'hasContent'> | null | undefined) {

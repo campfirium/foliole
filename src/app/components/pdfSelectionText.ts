@@ -1,4 +1,4 @@
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 
 function isSelectionNodeInside(container: HTMLElement, node: Node | null) {
   if (!node) {
@@ -175,7 +175,7 @@ function resolveRangeBoundingRect(range: Range): DOMRect | null {
   return new DOMRect(firstRect.x, firstRect.y, firstRect.width, firstRect.height);
 }
 
-export function resolvePdfSelectionLocator(container: HTMLElement | null, selection: Selection | null): NodeAnchorLink['locator'] {
+export function resolvePdfSelectionLocator(container: HTMLElement | null, selection: Selection | null): PdfAnchorLocator | undefined {
   if (!container || !selection || selection.isCollapsed || selection.rangeCount === 0) {
     return undefined;
   }

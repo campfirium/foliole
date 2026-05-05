@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 
 import { resolvePdfSelectionLocator, resolvePdfSelectionText } from './pdfSelectionText';
 
@@ -13,7 +13,7 @@ const ROW_CLAMP_INSET_PX = 1;
 
 export interface PdfSelectionSnapshot {
   capturedAt: number;
-  locator: NodeAnchorLink['locator'];
+  locator: PdfAnchorLocator;
   selectionText: string;
 }
 
@@ -152,9 +152,13 @@ function resolvePdfSelectionSnapshot(surface: HTMLElement | null): PdfSelectionS
   if (!selectionText) {
     return null;
   }
+  const locator = resolvePdfSelectionLocator(surface, selection);
+  if (!locator) {
+    return null;
+  }
   return {
     capturedAt: Date.now(),
-    locator: resolvePdfSelectionLocator(surface, selection),
+    locator,
     selectionText
   };
 }

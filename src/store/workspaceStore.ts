@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
+import type { ImageClozeDraftRegion } from '../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
@@ -77,6 +78,11 @@ export interface WorkspaceState {
     answerContent: string,
     anchorId?: string
   ) => string | null;
+  createImageClozeNodes: (
+    parentNodeId: string,
+    attachmentId: string,
+    regions: ImageClozeDraftRegion[]
+  ) => string[];
   moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
   moveNodes: (
     nodeIds: string[],

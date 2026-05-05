@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
 import type { NodeViewState } from '../../../store/workspaceStore';
-import type { NodeAnchorLink } from '../../nodes/model/nodeTypes';
+import { isPdfAnchorLocator, type NodeAnchorLink } from '../../nodes/model/nodeTypes';
 
 import type { PdfJumpRequest, PdfSystemController } from './pdfSystemApi';
 import { createInitialPageJumpRequest, resolveInitialPdfViewState, usePdfSourceReset, usePdfVisibilityRestore, usePersistedPdfViewStateSync } from './pdfSystemControllerState';
@@ -72,6 +72,9 @@ function createPdfSystemActions(args: {
   return {
     ...createPdfCoreActions(args),
     requestAnchorJump: (locator: NonNullable<NodeAnchorLink['locator']>) => {
+      if (!isPdfAnchorLocator(locator)) {
+        return;
+      }
       const nextPage = clampInteger(locator.page, PDF_PAGE_MIN, args.maxPage);
       args.setPage(nextPage);
       args.setPositionY(Math.max(0, Math.min(1, locator.y ?? 0)));

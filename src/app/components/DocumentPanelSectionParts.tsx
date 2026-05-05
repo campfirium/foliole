@@ -1,17 +1,17 @@
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
 
-import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
+import { isImageClozeNode } from '../../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
-import { resolvePdfDocumentSurface, renderPdfDocumentSurface } from './documentPanelPdfView';
+import { resolvePdfDocumentSurface } from './documentPanelPdfView';
+import { resolveDocumentPanelContentBody } from './documentPanelSpecialContent';
 import { EditorContextMenu } from './EditorContextMenu';
-import { FolderListView } from './FolderListView';
 import { PdfDocumentSurfaceCache } from './PdfDocumentSurfaceCache';
-import { collectPdfHighlightLocators, type PdfHighlightLocator } from './pdfHighlightLocators';
+import { collectPdfHighlightLocators } from './pdfHighlightLocators';
 import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 import { useNodeSourceDetails } from './useNodeSourceDetails';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
@@ -34,6 +34,7 @@ interface DocumentPanelContextMenuProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
+  onCreateImageCloze: () => void;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
@@ -57,95 +58,61 @@ function isLikelyPdfSourceReference(content: string) {
   return /(?:file:\/\/|[A-Za-z]:[\\/]|\/)/.test(normalized);
 }
 
-function renderPdfLoadingSurface() {
-  return (
-    <section aria-label="PDF reader panel" className="flex min-h-0 flex-1 flex-col bg-bg-canvas" data-testid="pdf-document-loading-shell">
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-bg-canvas">
-          <div aria-hidden="true" className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-foreground/65" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function renderDocumentBody(activeNodeId: string | null, bodyProps: ComponentProps<typeof DocumentPanelBody>) {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col" data-testid="document-panel-content-body">
-      <ReadwiseBookActionsPanel activeNodeId={activeNodeId} />
-      <DocumentPanelBody {...bodyProps} />
-    </div>
-  );
-}
-
-function renderVirtualContent(
-  activeNode: Node,
-  nodesById: Record<string, Node>,
-  onNodeContentChange: (nodeId: string, content: string) => void,
-  onSelectNode: (nodeId: string) => void,
-  pdfCache: JSX.Element
-) {
-  return (
-    <>
-      {pdfCache}
-      <VirtualNodeDetailView node={activeNode} nodesById={nodesById} onSelectNode={onSelectNode} onUpdateFilter={onNodeContentChange} />
-    </>
-  );
-}
-
-function renderFolderContent(
-  activeNodeId: string,
-  nodeOrder: string[],
-  nodesById: Record<string, Node>,
-  onSelectNode: (nodeId: string) => void,
-  pdfCache: JSX.Element
-) {
-  return (
-    <>
-      {pdfCache}
-      <FolderListView folderNodeId={activeNodeId} nodeOrder={nodeOrder} nodesById={nodesById} onSelectNode={onSelectNode} />
-    </>
-  );
-}
-
-function renderPdfOrBodyContent(args: {
+function createPdfCache(args: {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
-  isActivePdfCachedVisible: boolean;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
-  pdfCache: JSX.Element;
   pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
-  pdfHighlightLocators: PdfHighlightLocator[];
-  shouldHideEditorBodyDuringSourceLoad: boolean;
+  pdfHighlightLocators: ReturnType<typeof collectPdfHighlightLocators>;
+  setIsActivePdfCachedVisible: (visible: boolean) => void;
 }) {
-  if (!args.pdfDocumentSurface) {
-    return (
-      <>
-        {args.pdfCache}
-        {args.shouldHideEditorBodyDuringSourceLoad ? renderPdfLoadingSurface() : renderDocumentBody(args.activeNodeId, args.bodyProps)}
-      </>
-    );
-  }
-
-  if (args.pdfDocumentSurface.state === 'ready') {
-    return <>{args.pdfCache}</>;
-  }
-
   return (
     <>
-      {args.pdfCache}
-      {!args.isActivePdfCachedVisible
-        ? renderPdfDocumentSurface(
-            args.pdfDocumentSurface,
-            { editorNodeId: args.bodyProps.editorNodeId, editorNodeViewState: args.bodyProps.editorNodeViewState },
-            args.pdfHighlightLocators,
-            args.onCreatePdfHighlight,
-            args.onPersistPdfViewState
-          )
-        : null}
+      <PdfDocumentSurfaceCache
+        activeNodeId={args.activeNodeId}
+        activePdfState={args.pdfDocumentSurface?.state ?? null}
+        activeSourceHint={args.pdfDocumentSurface?.sourceHint ?? null}
+        editorNodeId={args.bodyProps.editorNodeId}
+        editorNodeViewState={args.bodyProps.editorNodeViewState}
+        highlightLocators={args.pdfHighlightLocators}
+        onActiveCacheVisibilityChange={args.setIsActivePdfCachedVisible}
+        onCreatePdfHighlight={args.onCreatePdfHighlight}
+        onPersistPdfViewState={args.onPersistPdfViewState}
+      />
+      <ReadwiseBookActionsPanel activeNodeId={args.activeNodeId} />
     </>
   );
+}
+
+function getDocumentPanelFlags(args: {
+  activeNode: Node | undefined;
+  activeNodeId: string | null;
+  bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  isFolderListView: boolean;
+  pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
+  sourceDetails: ReturnType<typeof useNodeSourceDetails>;
+}) {
+  return {
+    shouldHideEditorBodyDuringSourceLoad:
+      Boolean(
+        args.activeNodeId &&
+          args.activeNode &&
+          !isVirtualNode(args.activeNode) &&
+          !args.isFolderListView &&
+          !isImageClozeNode(args.activeNode)
+      ) &&
+      !args.pdfDocumentSurface &&
+      args.sourceDetails.isLoading &&
+      args.sourceDetails.value === null &&
+      isLikelyPdfSourceReference(args.bodyProps.editorContent),
+    shouldRenderEditorBody:
+      !args.activeNode ||
+      (!isVirtualNode(args.activeNode) &&
+        !args.isFolderListView &&
+        !args.pdfDocumentSurface &&
+        !isImageClozeNode(args.activeNode))
+  };
 }
 
 export function DocumentPanelContent({
@@ -162,13 +129,20 @@ export function DocumentPanelContent({
 }: DocumentPanelContentProps) {
   const [isActivePdfCachedVisible, setIsActivePdfCachedVisible] = useState(false);
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
-  const shouldLoadSourceDetails = Boolean(activeNodeId && activeNode && !isVirtualNode(activeNode) && !isFolderListView);
+  const shouldLoadSourceDetails = Boolean(
+    activeNodeId && activeNode && !isVirtualNode(activeNode) && !isFolderListView && !isImageClozeNode(activeNode)
+  );
   const sourceDetails = useNodeSourceDetails(shouldLoadSourceDetails ? activeNodeId : null);
   const pdfDocumentSurface = resolvePdfDocumentSurface(activeNodeId, sourceDetails.isLoading, sourceDetails.value);
   const pdfHighlightLocators = activeNodeId ? collectPdfHighlightLocators(activeNodeId, nodeOrder, nodesById, trashedNodeIds) : [];
-  const shouldHideEditorBodyDuringSourceLoad =
-    shouldLoadSourceDetails && !pdfDocumentSurface && sourceDetails.isLoading && sourceDetails.value === null && isLikelyPdfSourceReference(bodyProps.editorContent);
-  const shouldRenderEditorBody = !activeNode || (!isVirtualNode(activeNode) && !isFolderListView && !pdfDocumentSurface);
+  const { shouldHideEditorBodyDuringSourceLoad, shouldRenderEditorBody } = getDocumentPanelFlags({
+    activeNode,
+    activeNodeId,
+    bodyProps,
+    isFolderListView,
+    pdfDocumentSurface,
+    sourceDetails
+  });
 
   useEffect(() => {
     if (!shouldRenderEditorBody) {
@@ -176,33 +150,28 @@ export function DocumentPanelContent({
     }
   }, [bodyProps, shouldRenderEditorBody]);
 
-  const pdfCache = (
-    <PdfDocumentSurfaceCache
-      activeNodeId={activeNodeId}
-      activePdfState={pdfDocumentSurface?.state ?? null}
-      activeSourceHint={pdfDocumentSurface?.sourceHint ?? null}
-      editorNodeId={bodyProps.editorNodeId}
-      editorNodeViewState={bodyProps.editorNodeViewState}
-      highlightLocators={pdfHighlightLocators}
-      onActiveCacheVisibilityChange={setIsActivePdfCachedVisible}
-      onCreatePdfHighlight={onCreatePdfHighlight}
-      onPersistPdfViewState={onPersistPdfViewState}
-    />
-  );
+  const pdfCache = createPdfCache({
+    activeNodeId,
+    bodyProps,
+    onCreatePdfHighlight,
+    onPersistPdfViewState,
+    pdfDocumentSurface,
+    pdfHighlightLocators,
+    setIsActivePdfCachedVisible
+  });
 
-  if (activeNode && isVirtualNode(activeNode)) {
-    return renderVirtualContent(activeNode, nodesById, onNodeContentChange, onSelectNode, pdfCache);
-  }
-  if (isFolderListView && activeNodeId) {
-    return renderFolderContent(activeNodeId, nodeOrder, nodesById, onSelectNode, pdfCache);
-  }
-
-  return renderPdfOrBodyContent({
+  return resolveDocumentPanelContentBody({
+    activeNode,
     activeNodeId,
     bodyProps,
     isActivePdfCachedVisible,
+    isFolderListView,
+    nodeOrder,
+    nodesById,
     onCreatePdfHighlight,
+    onNodeContentChange,
     onPersistPdfViewState,
+    onSelectNode,
     pdfCache,
     pdfDocumentSurface,
     pdfHighlightLocators,
@@ -215,6 +184,7 @@ export function DocumentPanelContextMenu({
   onCloseContextMenu,
   onCopyImage,
   onCreateHighlight,
+  onCreateImageCloze,
   onCreateCloze,
   onCutImage,
   onDeleteImage,
@@ -233,6 +203,7 @@ export function DocumentPanelContextMenu({
       onCopyImage={onCopyImage}
       onCreateCloze={onCreateCloze}
       onCreateHighlight={onCreateHighlight}
+      onCreateImageCloze={onCreateImageCloze}
       onCutImage={onCutImage}
       onDeleteImage={onDeleteImage}
       onExportImage={onExportImage}

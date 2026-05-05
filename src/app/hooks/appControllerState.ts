@@ -21,6 +21,7 @@ export function useWorkspaceSelectors() {
     createChildNode: useWorkspaceStore((state) => state.createChildNode),
     createVirtualNode: useWorkspaceStore((state) => state.createVirtualNode),
     createHighlightNodeFromSelection: useWorkspaceStore((state) => state.createHighlightNodeFromSelection),
+    createImageClozeNodes: useWorkspaceStore((state) => state.createImageClozeNodes),
     createQANodeFromSelection: useWorkspaceStore((state) => state.createQANodeFromSelection),
     createRootNode: useWorkspaceStore((state) => state.createRootNode),
     dismissReviewItem: useWorkspaceStore((state) => state.dismissReviewItem),
@@ -95,7 +96,16 @@ export function useWorkspaceControllerState(
     ws.setNodeViewState(ws.activeNodeId, { scrollTop: runtime.editorRef.current.getScrollTop(), selection: runtime.editorRef.current.getSelection() });
   }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
   const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, closeContextMenu: () => undefined, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, openNode: ws.openNode, saveActiveNodeView });
-  const editorCtx = useEditorContextCommands({ activeNode, activeNodeId: ws.activeNodeId, createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection, createQANodeFromSelection: ws.createQANodeFromSelection, editorRef: runtime.editorRef, isTrashViewOpen: runtime.isViewingTrashNode, updateNodeContent: ws.updateNodeContent });
+  const editorCtx = useEditorContextCommands({
+    activeNode,
+    activeNodeId: ws.activeNodeId,
+    createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection,
+    createImageClozeNodes: ws.createImageClozeNodes,
+    createQANodeFromSelection: ws.createQANodeFromSelection,
+    editorRef: runtime.editorRef,
+    isTrashViewOpen: runtime.isViewingTrashNode,
+    updateNodeContent: ws.updateNodeContent
+  });
   useReadingProgressSync({ activeNodeId: ws.activeNodeId, editorRef: runtime.editorRef, isViewingTrashNode: runtime.isViewingTrashNode, isWorkspaceHydrated, nodeViewById: ws.nodeViewById, setNodeViewState: ws.setNodeViewState });
   return {
     activeNode,

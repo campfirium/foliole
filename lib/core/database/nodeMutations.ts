@@ -14,7 +14,10 @@ interface NodeAnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze';
   locator?: {
-    page: number;
+    attachmentId?: string;
+    height?: number;
+    page?: number;
+    width?: number;
     x: number;
     y: number;
   };
