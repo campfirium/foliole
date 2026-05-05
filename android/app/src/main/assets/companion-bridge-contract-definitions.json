@@ -1,6 +1,15 @@
 {
   "hostApi": {
     "bootstrap": {
+      "deviceNameDefaults": {
+        "defaultDeviceName": "Android device",
+        "emulatorDeviceName": "Android Emulator",
+        "emulatorModelTokens": [
+          "sdk",
+          "gphone",
+          "emulator"
+        ]
+      },
       "outputKeys": {
         "bootedAt": "booted_at",
         "databasePath": "database_path",

@@ -1,6 +1,11 @@
 export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   hostApi: {
     bootstrap: {
+      deviceNameDefaults: {
+        defaultDeviceName: 'Android device',
+        emulatorDeviceName: 'Android Emulator',
+        emulatorModelTokens: ['sdk', 'gphone', 'emulator']
+      },
       outputKeys: {
         bootedAt: 'booted_at',
         databasePath: 'database_path',

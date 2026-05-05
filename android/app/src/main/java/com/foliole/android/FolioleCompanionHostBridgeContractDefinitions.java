@@ -2,6 +2,8 @@ package com.foliole.android;
 
 import android.content.Context;
 
+import org.json.JSONArray;
+
 final class FolioleCompanionHostBridgeContractDefinitions {
     private FolioleCompanionHostBridgeContractDefinitions() {}
 
@@ -31,6 +33,20 @@ final class FolioleCompanionHostBridgeContractDefinitions {
 
     static String bootstrapRuntimeKind(Context context) throws Exception {
         return FolioleCompanionBridgeContractDefinitions.hostApiGroup(context, "bootstrap").getString("runtimeKind");
+    }
+
+    static String bootstrapDefaultDeviceName(Context context) throws Exception {
+        return bootstrapDeviceNameDefault(context, "defaultDeviceName");
+    }
+
+    static String bootstrapEmulatorDeviceName(Context context) throws Exception {
+        return bootstrapDeviceNameDefault(context, "emulatorDeviceName");
+    }
+
+    static JSONArray bootstrapEmulatorModelTokens(Context context) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.hostApiGroup(context, "bootstrap")
+            .getJSONObject("deviceNameDefaults")
+            .getJSONArray("emulatorModelTokens");
     }
 
     static String contentBlobBatchBlobHashResponseHeaderKey(Context context) throws Exception {
@@ -129,6 +145,10 @@ final class FolioleCompanionHostBridgeContractDefinitions {
 
     private static String bootstrapOutputKey(Context context, String key) throws Exception {
         return hostApiString(context, "bootstrap", "outputKeys", key);
+    }
+
+    private static String bootstrapDeviceNameDefault(Context context, String key) throws Exception {
+        return hostApiString(context, "bootstrap", "deviceNameDefaults", key);
     }
 
     private static String contentBlobBatchResponseHeaderKey(Context context, String key) throws Exception {

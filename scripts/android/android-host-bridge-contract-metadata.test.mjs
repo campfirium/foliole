@@ -51,6 +51,11 @@ describe('Android host bridge contract metadata', () => {
       serviceType: '_foliole-sync._tcp.',
       timeoutMs: 1500
     });
+    expect(definitions.hostApi.bootstrap.deviceNameDefaults).toEqual({
+      defaultDeviceName: 'Android device',
+      emulatorDeviceName: 'Android Emulator',
+      emulatorModelTokens: ['sdk', 'gphone', 'emulator']
+    });
     expect(definitions.hostApi.contentBlobBatch.responseHeaderKeys).toMatchObject({
       blobHash: 'x-blob-hash'
     });
@@ -70,6 +75,7 @@ describe('Android host bridge contract metadata', () => {
     expect(bridgeSource).toContain('hostApiString(Context context, String groupName, String objectName, String key)');
     expect(hostBridgeSource).toContain('workspaceSyncRequestKey(context, "endpointUrl")');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.bootstrapBootedAtOutputKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.bootstrapEmulatorModelTokens(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.contentBlobBatchBlobHashResponseHeaderKey(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkUrlRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress)');
@@ -90,5 +96,8 @@ describe('Android host bridge contract metadata', () => {
     expect(combinedSource).not.toContain('"_foliole-sync._tcp."');
     expect(combinedSource).not.toContain('"x-blob-hash"');
     expect(combinedSource).not.toContain('DISCOVERY_TIMEOUT_MS');
+    expect(combinedSource).not.toContain('contains("sdk")');
+    expect(combinedSource).not.toContain('contains("gphone")');
+    expect(combinedSource).not.toContain('contains("emulator")');
   });
 });

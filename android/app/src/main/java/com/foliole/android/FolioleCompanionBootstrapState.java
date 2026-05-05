@@ -5,6 +5,8 @@ import android.os.Build;
 
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
+
 final class FolioleCompanionBootstrapState {
 
     private final String bootedAt;
@@ -14,7 +16,7 @@ final class FolioleCompanionBootstrapState {
     private final String deviceName;
     private final Context context;
 
-    FolioleCompanionBootstrapState(Context context, String bootedAt, String databasePath, boolean databaseReady, String deviceId) {
+    FolioleCompanionBootstrapState(Context context, String bootedAt, String databasePath, boolean databaseReady, String deviceId) throws Exception {
         this.context = context;
         this.bootedAt = bootedAt;
         this.databasePath = databasePath;
@@ -23,15 +25,18 @@ final class FolioleCompanionBootstrapState {
         this.deviceName = resolveDeviceName();
     }
 
-    private String resolveDeviceName() {
+    private String resolveDeviceName() throws Exception {
         String model = Build.MODEL == null ? "" : Build.MODEL.trim();
         String manufacturer = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.trim();
         if (model.isEmpty()) {
-            return "Android device";
+            return FolioleCompanionHostBridgeContractDefinitions.bootstrapDefaultDeviceName(context);
         }
         String normalizedModel = model.toLowerCase();
-        if (normalizedModel.contains("sdk") || normalizedModel.contains("gphone") || normalizedModel.contains("emulator")) {
-            return "Android Emulator";
+        JSONArray emulatorTokens = FolioleCompanionHostBridgeContractDefinitions.bootstrapEmulatorModelTokens(context);
+        for (int index = 0; index < emulatorTokens.length(); index += 1) {
+            if (normalizedModel.contains(emulatorTokens.getString(index))) {
+                return FolioleCompanionHostBridgeContractDefinitions.bootstrapEmulatorDeviceName(context);
+            }
         }
         if (!manufacturer.isEmpty() && !normalizedModel.startsWith(manufacturer.toLowerCase())) {
             return manufacturer + " " + model;
