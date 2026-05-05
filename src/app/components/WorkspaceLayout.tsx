@@ -31,6 +31,9 @@ export interface WorkspaceEditorContextMenu {
   };
   kind: 'image' | 'selection';
   left: number;
+  mode?: 'annotation-toolbar' | 'context-menu' | 'existing-highlight-toolbar';
+  notePanelLeft?: number;
+  notePanelTop?: number;
   top: number;
 }
 
@@ -144,10 +147,12 @@ export interface WorkspaceLayoutProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
+  onCreateNote: (note: string) => void;
+  onDeleteExistingHighlight: () => void;
   onCreateSelectionHighlight: (payload: SelectionCommandPayload) => string | null;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onToggleSelectionHighlight: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
-  onCreateSelectionNote: (payload: SelectionCommandPayload) => string | null;
+  onCreateSelectionNote: (payload: SelectionCommandPayload, note?: string) => string | null;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;

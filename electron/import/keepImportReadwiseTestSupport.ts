@@ -31,7 +31,9 @@ export async function seedReadwiseArticleFixture(root: string) {
       '## Highlights',
       'This is the highlighted sentence. [...] (https://example.com)',
       '',
-      'Another matching excerpt. Tags: [[tag-a]] [[tag-b]]'
+      'Another matching excerpt.',
+      'Note: Keep import note',
+      'Tags: [[tag-a]] [[tag-b]]'
     ].join('\n'),
     'utf8'
   );

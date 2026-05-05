@@ -15,8 +15,12 @@ describe('markdownBlockProjection', () => {
     ]);
   });
 
-  it('does not treat setext heading underline as a thematic break', () => {
-    expect(collectMarkdownThematicBreakRanges('Title\n---\nBody')).toEqual([]);
+  it('treats legacy setext underline markers as thematic breaks instead of headings', () => {
+    const text = 'Title\n---\nBody';
+
+    expect(collectMarkdownThematicBreakRanges(text)).toEqual([
+      { from: text.indexOf('---'), kind: 'thematicBreak', to: text.indexOf('---') + 3 }
+    ]);
   });
 
   it('collects parser-backed line classes for common markdown blocks', () => {
@@ -24,7 +28,6 @@ describe('markdownBlockProjection', () => {
 
     expect(collectMarkdownLineClassRanges(text).map(({ className, from }) => ({ className, from }))).toEqual([
       { className: 'cm-line-h1', from: 0 },
-      { className: 'cm-line-h2', from: 8 },
       { className: 'cm-line-quote', from: 19 },
       { className: 'cm-line-list-unordered', from: 27 },
       { className: 'cm-line-list-unordered cm-line-task-list', from: 34 },
@@ -44,7 +47,6 @@ describe('markdownBlockProjection', () => {
       to
     }))).toEqual([
       { checked: undefined, from: 0, kind: 'heading', lineFrom: 0, markerText: '', to: 2 },
-      { checked: undefined, from: 15, kind: 'heading', lineFrom: 15, markerText: '', to: 18 },
       { checked: undefined, from: 19, kind: 'quote', lineFrom: 19, markerText: '', to: 21 },
       { checked: undefined, from: 27, kind: 'unordered-list', lineFrom: 27, markerText: '• ', to: 29 },
       { checked: true, from: 34, kind: 'task-list', lineFrom: 34, markerText: '', to: 40 },

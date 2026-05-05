@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 
+import { formatHighlightCardContent } from '../annotations/textAnnotationContent.js';
+
 import {
   IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
   type ImportHighlightPolicy,
@@ -71,7 +73,8 @@ function serializeHighlightSidecar(highlightSidecar: ImportSidecarHighlight[] | 
     .map((highlight) => {
       const text = normalizeImportedContent(highlight.text).trim();
       const label = normalizeImportedContent(highlight.label ?? '').trim();
-      return `${label}\u001e${text}`;
+      const note = normalizeImportedContent(highlight.note ?? '').trim();
+      return `${label}\u001e${text}\u001e${note}`;
     })
     .join('\u001d');
 }
@@ -135,7 +138,10 @@ function collectPreparedMatchedHighlights(input: {
   return [
     ...input.highlightPolicyResult.highlights,
     ...input.contextResult.matchedHighlights.map(({ excerpt, highlight }) => ({
-      content: normalizeImportedContent(highlight.text).trim(),
+      content: formatHighlightCardContent({
+        note: highlight.note,
+        text: normalizeImportedContent(highlight.text).trim()
+      }),
       label: highlight.label?.trim() || null,
       locatorText: excerpt
     }))
@@ -147,7 +153,10 @@ function collectPreparedUnmatchedHighlights(input: {
 }) {
   return input.contextResult.unmatchedHighlights
     .map((highlight) => ({
-      content: normalizeImportedContent(highlight.text).trim(),
+      content: formatHighlightCardContent({
+        note: highlight.note,
+        text: normalizeImportedContent(highlight.text).trim()
+      }),
       label: highlight.label?.trim() || null,
       locatorText: null
     }))

@@ -51,6 +51,8 @@ export interface DocumentPanelSectionProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
+  onCreateNote?: (note: string) => void;
+  onDeleteExistingHighlight?: () => void;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;

@@ -108,10 +108,19 @@ export const liveMarkdownTheme = EditorView.theme({
     backgroundColor: 'var(--editor-source-highlight-surface-color)',
     borderRadius: 'var(--editor-radius-sm)'
   },
-  '.cm-md-highlight': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
+  '.cm-md-highlight': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)', cursor: 'pointer' },
+  '.cm-md-highlight:hover, .cm-md-highlight-active': {
+    backgroundColor: 'color-mix(in srgb, var(--app-highlight-surface-color) 78%, rgb(var(--color-foreground)) 22%)'
+  },
   '.cm-md-cloze': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
-  '.cm-md-anchor-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
-  '.cm-md-highlight-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
+  '.cm-md-anchor-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)', cursor: 'pointer' },
+  '.cm-md-anchor-overlap:hover, .cm-md-anchor-overlap.cm-md-highlight-active': {
+    backgroundColor: 'color-mix(in srgb, var(--app-highlight-surface-color) 78%, rgb(var(--color-foreground)) 22%)'
+  },
+  '.cm-md-highlight-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)', cursor: 'pointer' },
+  '.cm-md-highlight-overlap:hover, .cm-md-highlight-overlap.cm-md-highlight-active': {
+    backgroundColor: 'color-mix(in srgb, var(--app-highlight-surface-color) 78%, rgb(var(--color-foreground)) 22%)'
+  },
   '.cm-md-cloze-placeholder': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
   '.cm-md-anchor-tag-token': { color: 'var(--app-accent-color)', opacity: '0.9' },
   '.cm-md-anchor-tag-delimiter': { color: 'var(--app-accent-color)', opacity: '0.7' },

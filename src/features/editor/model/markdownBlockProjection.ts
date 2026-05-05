@@ -5,7 +5,11 @@ import {
   resolveMarkdownHeadingLineClass,
   type MarkdownHeadingPrefixRange
 } from './markdownBlockHeadingProjection';
-import { collectMarkdownThematicBreakNodes, type MarkdownThematicBreakRange } from './markdownThematicBreakProjection';
+import {
+  collectMarkdownHyphenThematicBreakLines,
+  collectMarkdownThematicBreakNodes,
+  type MarkdownThematicBreakRange
+} from './markdownThematicBreakProjection';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -187,7 +191,14 @@ function visitLineClassNodes(args: {
 
 export function collectMarkdownThematicBreakRanges(text: string, offset = 0): MarkdownBlockRange[] {
   const tree = folioleMarkdownParser.parse(text);
-  return collectMarkdownThematicBreakNodes(tree.topNode, offset);
+  const rangesByFrom = new Map<number, MarkdownBlockRange>();
+  for (const range of collectMarkdownThematicBreakNodes(tree.topNode, offset)) {
+    rangesByFrom.set(range.from, range);
+  }
+  for (const range of collectMarkdownHyphenThematicBreakLines(text, offset)) {
+    rangesByFrom.set(range.from, range);
+  }
+  return Array.from(rangesByFrom.values()).sort((left, right) => left.from - right.from);
 }
 
 export function collectMarkdownLineClassRanges(text: string, offset = 0): MarkdownLineClassRange[] {

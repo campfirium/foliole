@@ -6,6 +6,7 @@ import type { BrowserWindow } from 'electron';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { insertImportedHighlightNodes } from '../../lib/core/database/importDerivedHighlights.js';
 import { resolveReadwiseHighlightUpdate } from '../../lib/core/database/importReadwiseHighlightUpdates.js';
+import type { ImportSidecarHighlight } from '../../lib/core/import/controlledContext.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from '../../lib/platform/nativeContract.js';
@@ -89,7 +90,7 @@ function createPreparedManualHighlightMerge(
   sourceNodeId: string,
   sourceNode: SourceNodeRow,
   highlightFilePath: string,
-  highlightSidecar: Array<{ text: string }>
+  highlightSidecar: ImportSidecarHighlight[]
 ) {
   return createPreparedDesktopTextImport({
     content: sourceNode.content,

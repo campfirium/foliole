@@ -1,7 +1,7 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import { isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { getTextAnchorLocators, isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 import type { SelectionCommandPayload } from '../contextCommands';
 
 export type NormalizedSelection = {
@@ -10,6 +10,7 @@ export type NormalizedSelection = {
 };
 
 export type LocatorHighlightMatch = {
+  originalText: string;
   nodeId: string;
 };
 
@@ -54,5 +55,30 @@ export function findExactLocatorHighlight(
       nodeLocator.originalText === locator.originalText
     );
   });
-  return matchingNode ? { nodeId: matchingNode.id } : null;
+  if (!matchingNode || !matchingNode.anchorLink || !isTextAnchorLocator(matchingNode.anchorLink.locator)) {
+    return null;
+  }
+  return { nodeId: matchingNode.id, originalText: matchingNode.anchorLink.locator.originalText };
+}
+
+export function findHighlightAtPosition(
+  activeNodeId: string,
+  nodesById: Record<string, Node>,
+  position: number,
+  trashedNodeIds: string[]
+): LocatorHighlightMatch | null {
+  const trashedNodeIdSet = new Set(trashedNodeIds);
+  const matches = Object.values(nodesById).flatMap((node) => {
+    if (
+      node.parentNodeId !== activeNodeId ||
+      trashedNodeIdSet.has(node.id) ||
+      node.anchorLink?.kind !== 'highlight'
+    ) {
+      return [];
+    }
+    return getTextAnchorLocators(node.anchorLink.locator)
+      .filter((locator) => locator.from <= position && position < locator.to)
+      .map((locator) => ({ nodeId: node.id, originalText: locator.originalText }));
+  });
+  return matches.length === 1 ? matches[0] ?? null : null;
 }

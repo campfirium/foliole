@@ -77,25 +77,15 @@ export function createMarkdownHeadingPrefixRange(
       to: offset + extendTrailingSpaces(source, headerMark.to)
     };
   }
-  if (node.name.startsWith('SetextHeading')) {
-    const from = findLineStart(source, headerMark.from);
-    return {
-      from: offset + from,
-      kind: 'heading',
-      lineFrom: offset + from,
-      markerText: '',
-      to: offset + extendTrailingSpaces(source, headerMark.to)
-    };
-  }
   return null;
 }
 
 export function resolveMarkdownHeadingLineClass(node: MarkdownSyntaxNode, source: string) {
   const level = node.name === 'LenientStrongATXHeading'
     ? resolveLenientStrongATXLevel(node, source)
-    : node.name === 'ATXHeading1' || node.name === 'SetextHeading1'
+    : node.name === 'ATXHeading1'
       ? 1
-      : node.name === 'ATXHeading2' || node.name === 'SetextHeading2'
+      : node.name === 'ATXHeading2'
         ? 2
         : node.name === 'ATXHeading3'
           ? 3

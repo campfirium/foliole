@@ -72,6 +72,8 @@ export function buildDocumentSectionProps(
     onCopyImage: props.onCopyImage,
     onCreateCloze: props.onCreateCloze,
     onCreateHighlight: props.onCreateHighlight,
+    onCreateNote: props.onCreateNote,
+    onDeleteExistingHighlight: props.onDeleteExistingHighlight,
     onPastedTextAnchors: props.onPastedTextAnchors,
     onCreatePdfHighlight: props.onCreatePdfHighlight,
     onCutImage: props.onCutImage,

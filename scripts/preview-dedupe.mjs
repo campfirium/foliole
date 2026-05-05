@@ -18,17 +18,41 @@ function parseArgs(argv) {
   return { command, target };
 }
 
-function workspaceHash() {
-  const result = spawnSync('git', ['diff', '--binary', 'HEAD'], {
+function runGitBuffer(args) {
+  const result = spawnSync('git', args, {
     cwd: REPO_ROOT,
     encoding: 'buffer',
     stdio: ['ignore', 'pipe', 'pipe']
   });
   if (result.status !== 0) {
     const detail = result.stderr?.toString().trim();
-    throw new Error(detail || 'git diff failed');
+    throw new Error(detail || `git ${args.join(' ')} failed`);
   }
-  return createHash('sha256').update(result.stdout).digest('hex');
+  return result.stdout;
+}
+
+function listUntrackedFiles() {
+  const runtimeRoot = runtimeDir();
+  const output = runGitBuffer(['ls-files', '--others', '--exclude-standard', '-z']);
+  return output
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean)
+    .filter((filePath) => !path.resolve(REPO_ROOT, filePath).startsWith(`${runtimeRoot}${path.sep}`))
+    .sort();
+}
+
+async function workspaceHash() {
+  const hash = createHash('sha256');
+  hash.update('tracked-diff\0');
+  hash.update(runGitBuffer(['diff', '--binary', 'HEAD']));
+  for (const filePath of listUntrackedFiles()) {
+    hash.update('\0untracked\0');
+    hash.update(filePath);
+    hash.update('\0');
+    hash.update(await readFile(path.join(REPO_ROOT, filePath)));
+  }
+  return hash.digest('hex');
 }
 
 function runtimeDir() {
@@ -76,7 +100,7 @@ async function main() {
     return 2;
   }
 
-  const currentHash = workspaceHash();
+  const currentHash = await workspaceHash();
   const storedHash = await readStoredHash(target);
   if (storedHash === currentHash) {
     console.log(`[${target}-preview] dedupe: covered hash=${currentHash}`);

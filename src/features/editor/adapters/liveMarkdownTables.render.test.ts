@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { setEditorDisplayMode } from '../model/editorDisplayMode';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
@@ -17,10 +18,12 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.innerHTML = '';
+  setEditorDisplayMode('preview');
 });
 
 describe('live markdown thematic break rendering', () => {
   it('renders thematic breaks as horizontal rule widgets', () => {
+    setEditorDisplayMode('preview');
     const { adapter, host } = createAdapterHost('Before\n\n---\n\nAfter');
 
     expect(host.querySelector('.cm-md-thematic-break')).not.toBeNull();
@@ -29,10 +32,21 @@ describe('live markdown thematic break rendering', () => {
     adapter.destroy();
   });
 
+  it('keeps thematic break markers as text in source mode', () => {
+    setEditorDisplayMode('source');
+    const { adapter, host } = createAdapterHost('Before\n\n---\n\nAfter');
+
+    expect(host.querySelector('.cm-md-thematic-break')).toBeNull();
+    expect(host.querySelector('.cm-content')?.textContent).toContain('---');
+
+    adapter.destroy();
+  });
+
   it('does not render setext heading markers as horizontal rule widgets', () => {
     const { adapter, host } = createAdapterHost('Before\n---\nAfter');
 
-    expect(host.querySelector('.cm-md-thematic-break')).toBeNull();
+    expect(host.querySelector('.cm-line-h2')).toBeNull();
+    expect(host.querySelector('.cm-md-thematic-break')).not.toBeNull();
 
     adapter.destroy();
   });

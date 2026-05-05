@@ -123,7 +123,7 @@ it('keeps merged child text from the highlight file while storing the matched pa
       content: ['# Imported', '', 'Before the quote. This is the highlighted sentence. After the quote.'].join('\n'),
       fileName: 'note.md',
       filePath: '/tmp/note.md',
-      highlightSidecar: [{ text: 'This is the highlighted sentence.' }],
+      highlightSidecar: [{ note: 'Reader note', text: 'This is the highlighted sentence.' }],
       importedAt: '2026-03-22T10:30:00.000Z',
       kind: 'markdown',
       sourceProfile: 'body_with_highlight_sidecar'
@@ -145,7 +145,7 @@ it('keeps merged child text from the highlight file while storing the matched pa
         kind: 'highlight',
         locator: expect.objectContaining({ originalText: 'Before the quote. This is the highlighted sentence. After the quote.' })
       }),
-      content: 'This is the highlighted sentence.',
+      content: 'This is the highlighted sentence.\n---\nReader note',
       parent_id: updated.nodeId,
       title: 'This is the highlighted sentence.'
     }

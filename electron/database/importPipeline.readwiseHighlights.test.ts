@@ -121,14 +121,14 @@ function expectReadwiseDerivedChildren(input: {
           originalText: 'Another paragraph with Another matching excerpt. End.'
         })
       }),
-      content: 'Another matching excerpt',
+      content: 'Another matching excerpt\n---\nKeep this one',
       kind: 'topic',
       parent_id: input.nodeId,
       title: 'Another matching excerpt'
     },
     {
       anchorLink: null,
-      content: 'quote that is not present in the body',
+      content: 'quote that is not present in the body\n---\nUnmatched note',
       kind: 'topic',
       parent_id: input.nodeId,
       title: 'quote that is not present in the body'
@@ -167,8 +167,8 @@ function createReadwisePreparedImport() {
     filePath: '/tmp/readwise.md',
     highlightSidecar: [
       { label: 'Recovered 1', text: 'This is the highlighted sentence' },
-      { label: 'Recovered 2', text: 'Another matching excerpt' },
-      { label: 'Missing', text: 'quote that is not present in the body' }
+      { label: 'Recovered 2', note: 'Keep this one', text: 'Another matching excerpt' },
+      { label: 'Missing', note: 'Unmatched note', text: 'quote that is not present in the body' }
     ],
     importedAt: '2026-03-26T01:00:00.000Z',
     kind: 'markdown',
@@ -209,7 +209,7 @@ function expectImportedChildrenInSnapshot(nodeId: string, sourceFingerprint: str
     expect.objectContaining({
       kind: 'topic',
       anchorLink: null,
-      content: 'quote that is not present in the body'
+      content: 'quote that is not present in the body\n---\nUnmatched note'
     })
   ]);
 }

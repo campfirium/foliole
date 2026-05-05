@@ -41,6 +41,8 @@ export function DocumentPanelSectionOverlays({
         onCopyImage={props.onCopyImage}
         onCreateCloze={props.onCreateCloze}
         onCreateHighlight={props.onCreateHighlight}
+        onCreateNote={props.onCreateNote ?? (() => undefined)}
+        onDeleteExistingHighlight={props.onDeleteExistingHighlight ?? (() => undefined)}
         onCutImage={props.onCutImage}
         onDeleteImage={props.onDeleteImage}
         onExportImage={props.onExportImage}

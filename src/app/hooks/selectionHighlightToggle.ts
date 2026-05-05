@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react';
 
+import { appendHighlightCardNote } from '../../../lib/core/annotations/textAnnotationContent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { SelectionCommandPayload } from '../contextCommands';
@@ -78,7 +79,7 @@ function resolveEditorSelectionContext(
   };
 }
 
-function resolveExistingHighlightMatch(
+export function resolveExistingHighlightMatch(
   activeNodeId: string | null,
   payload: SelectionCommandPayload,
   editorRef: MutableRefObject<EditorAdapter | null>,
@@ -101,6 +102,40 @@ function resolveExistingHighlightMatch(
     trashedNodeIds
   );
   return locatorMatch;
+}
+
+export function createAddNoteToSelectionHighlightFromPayloadHandler(args: {
+  activeNodeId: string | null;
+  createHighlightFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
+  editorRef: MutableRefObject<EditorAdapter | null>;
+  nodesById: Record<string, Node>;
+  onSelectNode: (nodeId: string) => void;
+  trashedNodeIds: string[];
+  updateNodeContent: (nodeId: string, content: string) => void;
+}) {
+  return (payload: SelectionCommandPayload, note = '') => {
+    const existingHighlightMatch = resolveExistingHighlightMatch(
+      args.activeNodeId,
+      payload,
+      args.editorRef,
+      args.nodesById,
+      args.trashedNodeIds
+    );
+    if (!existingHighlightMatch) {
+      return args.createHighlightFromPayload(payload, note);
+    }
+    const node = args.nodesById[existingHighlightMatch.nodeId];
+    if (!node) {
+      return null;
+    }
+    args.updateNodeContent(existingHighlightMatch.nodeId, appendHighlightCardNote({
+      content: node.content,
+      note,
+      originalText: existingHighlightMatch.originalText
+    }));
+    args.onSelectNode(existingHighlightMatch.nodeId);
+    return existingHighlightMatch.nodeId;
+  };
 }
 
 export function createToggleSelectionHighlightFromPayloadHandler(args: {

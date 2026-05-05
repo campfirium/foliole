@@ -125,11 +125,10 @@ it('keeps the last valid markdown selection payload when right-click clears the 
   });
 });
 
-it('creates a linked note from an explicit reading selection payload', () => {
+it('creates an annotated highlight from an explicit reading selection payload', () => {
   let content = 'Alpha\n\nBeta';
   const updateNodeContent = vi.fn();
   const createHighlightNodeFromSelection = vi.fn(() => 'highlight-1');
-  const createChildNode = vi.fn(() => 'note-1');
   const onSelectNode = vi.fn();
   const onExitImmersiveMode = vi.fn();
   const adapter = createEditorAdapter({
@@ -143,7 +142,7 @@ it('creates a linked note from an explicit reading selection payload', () => {
     useEditorContextCommands(
       buildHookArgs({
         activeNode: { id: 'node-1', content, title: 'Welcome to Foliole' } as never,
-        createChildNode,
+        createChildNode: vi.fn(() => 'note-1'),
         createHighlightNodeFromSelection,
         editorRef: { current: adapter },
         nodesById: { 'node-1': { id: 'node-1', content, title: 'Welcome to Foliole' } } as never,
@@ -167,17 +166,16 @@ it('creates a linked note from an explicit reading selection payload', () => {
       }],
       parentNodeId: 'node-1',
       selectionText: 'Alpha'
-    });
+    }, 'Reader thought');
   });
 
-  expect(createHighlightNodeFromSelection).toHaveBeenCalledWith('node-1', 'Alpha', '1', {
+  expect(createHighlightNodeFromSelection).toHaveBeenCalledWith('node-1', 'Alpha\n---\nReader thought', '1', {
     id: '1',
     kind: 'highlight',
     locator: { from: 0, originalText: 'Alpha', to: 5 }
   }, undefined);
-  expect(createChildNode).toHaveBeenCalledWith('highlight-1', '');
-  expect(onExitImmersiveMode).toHaveBeenCalledTimes(1);
-  expect(onSelectNode).toHaveBeenCalledWith('note-1');
+  expect(onExitImmersiveMode).not.toHaveBeenCalled();
+  expect(onSelectNode).not.toHaveBeenCalled();
   expect(updateNodeContent).not.toHaveBeenCalled();
 });
 

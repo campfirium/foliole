@@ -83,7 +83,7 @@ it('merges selected highlight files into an existing topic and appends newly add
   const imported = createImportedTopic();
   const firstHighlightPath = await writeHighlightFile(
     'highlights-1.md',
-    ['# Article', '', '## Highlights', '', '- Alpha sentence.'].join('\n')
+    ['# Article', '', '## Highlights', '', '- Alpha sentence.', '    - Note: First note'].join('\n')
   );
   const secondHighlightPath = await writeHighlightFile(
     'highlights-2.md',
@@ -106,6 +106,7 @@ it('merges selected highlight files into an existing topic and appends newly add
     kind: 'highlight',
     locator: expect.objectContaining({ originalText: 'Alpha sentence.' })
   }));
+  expect(firstState.children[0]?.content).toBe('Alpha sentence.\n---\nFirst note');
 
   const secondResult = await mergeReadwiseTopicHighlightsFromFile(imported.nodeId as string, secondHighlightPath);
   const secondState = readMergedState(imported.nodeId as string);

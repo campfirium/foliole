@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react';
 
+import { formatHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { NodeAnchorLink, NodeImageRegionGroup, TextAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import type { SelectionCommandPayload } from '../contextCommands';
@@ -38,21 +39,30 @@ function createHighlightFactory(
     ) ?? null;
 }
 
+function createAnnotatedHighlightFactory(
+  createHighlightNodeFromSelection: (
+    parentNodeId: string,
+    selectionText: string,
+    anchorId: string,
+    anchorLink?: NodeAnchorLink,
+    imageRegions?: NodeImageRegionGroup[] | null
+  ) => string | null
+) {
+  return (payload: SelectionCommandPayload, note: string) =>
+    createHighlightNodeFromSelection(
+      payload.parentNodeId,
+      formatHighlightCardContent({ note, text: payload.selectionText }),
+      payload.anchorId,
+      createTextAnchorLink(payload, 'highlight'),
+      payload.imageRegions
+    ) ?? null;
+}
+
 function createNoteFromPayloadHandler(args: {
-  createChildNode: (parentNodeId: string, content?: string) => string;
-  createHighlight: (payload: SelectionCommandPayload) => string | null;
-  onExitImmersiveMode: () => void;
-  onSelectNode: (nodeId: string) => void;
+  createAnnotatedHighlight: (payload: SelectionCommandPayload, note: string) => string | null;
 }) {
-  return (payload: SelectionCommandPayload) => {
-    const highlightNodeId = args.createHighlight(payload);
-    if (!highlightNodeId) {
-      return null;
-    }
-    const noteNodeId = args.createChildNode(highlightNodeId, '');
-    args.onExitImmersiveMode();
-    args.onSelectNode(noteNodeId);
-    return noteNodeId;
+  return (payload: SelectionCommandPayload, note = '') => {
+    return args.createAnnotatedHighlight(payload, note);
   };
 }
 
@@ -111,29 +121,37 @@ function createHighlightHandlers(args: {
   ) => string | null;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
+  runSelectionCommand: (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => void;
   runSelectionCommandFromPayloadHandler: (args: {
     onApplied: (payload: SelectionCommandPayload) => string | null;
     payload: SelectionCommandPayload;
   }) => string | null;
 }) {
   const createHighlight = createHighlightFactory(args.createHighlightNodeFromSelection);
+  const createAnnotatedHighlight = createAnnotatedHighlightFactory(args.createHighlightNodeFromSelection);
   const createNoteFromPayload = createNoteFromPayloadHandler({
-    createChildNode: args.createChildNode,
-    createHighlight,
-    onExitImmersiveMode: args.onExitImmersiveMode,
-    onSelectNode: args.onSelectNode
+    createAnnotatedHighlight
   });
 
   return {
+    handleCreateNote(note: string) {
+      args.runSelectionCommand((payload) => {
+        const normalizedNote = note.trim();
+        if (!normalizedNote) {
+          return;
+        }
+        createNoteFromPayload(payload, normalizedNote);
+      }, 'highlight');
+    },
     handleCreateHighlightFromPayload(payload: SelectionCommandPayload) {
       return args.runSelectionCommandFromPayloadHandler({
         onApplied: createHighlight,
         payload
       });
     },
-    handleCreateNoteFromPayload(payload: SelectionCommandPayload) {
+    handleCreateNoteFromPayload(payload: SelectionCommandPayload, note?: string) {
       return args.runSelectionCommandFromPayloadHandler({
-        onApplied: createNoteFromPayload,
+        onApplied: (appliedPayload) => createNoteFromPayload(appliedPayload, note),
         payload
       });
     }
@@ -175,6 +193,7 @@ export function createSelectionHandlers(args: {
       }, 'highlight');
     },
     handleCreateHighlightFromPayload: highlightHandlers.handleCreateHighlightFromPayload,
+    handleCreateNote: highlightHandlers.handleCreateNote,
     handleCreateNoteFromPayload: highlightHandlers.handleCreateNoteFromPayload
   };
 }

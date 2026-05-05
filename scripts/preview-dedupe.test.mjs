@@ -29,8 +29,9 @@ async function createRepo() {
   git(root, ['init']);
   git(root, ['config', 'user.email', 'test@example.com']);
   git(root, ['config', 'user.name', 'Preview Test']);
+  await writeFile(path.join(root, '.gitignore'), 'before-run.hash\nruns.log\n', 'utf8');
   await writeFile(path.join(root, 'tracked.txt'), 'base\n', 'utf8');
-  git(root, ['add', 'tracked.txt']);
+  git(root, ['add', '.gitignore', 'tracked.txt']);
   git(root, ['commit', '-m', 'init']);
   return root;
 }
@@ -93,19 +94,40 @@ describe('preview-dedupe', () => {
     }
   });
 
-  it('ignores untracked files when matching the preview hash', async () => {
+  it('includes untracked files when matching the preview hash', async () => {
     const repoRoot = await createRepo();
     try {
       await mkdir(path.join(repoRoot, '.lab', 'internal', 'runtime'), { recursive: true });
       const first = await runDedupe(repoRoot, 'android', ['bash', '-c', 'echo run > runs.log']);
       const storedHash = await readHash(repoRoot, 'android');
-      await writeFile(path.join(repoRoot, 'untracked.txt'), 'ignored\n', 'utf8');
+      await writeFile(path.join(repoRoot, 'untracked.txt'), 'included\n', 'utf8');
 
       const second = await runDedupe(repoRoot, 'android', ['bash', '-c', 'echo second >> runs.log']);
       expect(first.code).toBe(0);
       expect(second.code).toBe(0);
-      expect(second.stdout).toContain('[android-preview] dedupe: covered hash=');
-      expect(await readHash(repoRoot, 'android')).toBe(storedHash);
+      expect(second.stdout).toContain('[android-preview] dedupe: claimed hash=');
+      expect(await readHash(repoRoot, 'android')).not.toBe(storedHash);
+      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('run\nsecond\n');
+    } finally {
+      await rm(repoRoot, { force: true, recursive: true });
+    }
+  });
+
+  it('ignores gitignored untracked files when matching the preview hash', async () => {
+    const repoRoot = await createRepo();
+    try {
+      await writeFile(path.join(repoRoot, '.gitignore'), 'before-run.hash\nruns.log\nignored.txt\n', 'utf8');
+      git(repoRoot, ['add', '.gitignore']);
+      git(repoRoot, ['commit', '-m', 'ignore file']);
+      const first = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo run > runs.log']);
+      const storedHash = await readHash(repoRoot, 'windows');
+      await writeFile(path.join(repoRoot, 'ignored.txt'), 'ignored\n', 'utf8');
+
+      const second = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo second >> runs.log']);
+      expect(first.code).toBe(0);
+      expect(second.code).toBe(0);
+      expect(second.stdout).toContain('[windows-preview] dedupe: covered hash=');
+      expect(await readHash(repoRoot, 'windows')).toBe(storedHash);
       expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('run\n');
     } finally {
       await rm(repoRoot, { force: true, recursive: true });

@@ -205,14 +205,12 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
   const linkReferences = collectMarkdownLinkReferences(view.state.doc.toString());
   const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
-  const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
   const viewportPlans = collectSourceViewportPlans({
     codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
     codeLineFroms: codeFenceProjection.codeLineFroms,
     lines: collectViewportLines(view, startLineNumber, endLineNumber),
     linkReferences,
-    startInCodeBlock: false,
-    thematicBreakLineFroms
+    startInCodeBlock: false
   });
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
@@ -220,7 +218,6 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
       calloutPrefixRange: calloutPrefixRangeByLineFrom.get(lineFrom),
       prefixRanges: prefixRangesByLineFrom.get(lineFrom)
     });
-    addThematicBreakDecoration(ranges, lineFrom, lineText, true, plan.isThematicBreak);
     addCodeFenceDecoration(ranges, lineFrom, lineText, true, plan.isCodeFenceLine);
     addFootnoteDecorations(ranges, plan.footnoteMatches);
     for (const inlinePlan of plan.inlinePresentationPlans) applyInlinePresentationPlan(ranges, inlinePlan);

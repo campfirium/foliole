@@ -12,7 +12,10 @@ import {
 } from '../contextCommands';
 import { resolveImageContextMenuState, type ImageContextMenuState } from '../editorImageContextMenu';
 
+import type { LocatorHighlightMatch } from './selectionHighlightToggleSupport';
+
 export interface SelectionContextMenuState extends WorkspaceEditorContextMenu {
+  existingHighlight?: LocatorHighlightMatch;
   kind: 'selection';
   payload: SelectionCommandPayload | null;
 }
@@ -27,8 +30,11 @@ export interface EditorContextCommandsResult {
   handleCreateClozeFromPayload: (payload: SelectionCommandPayload) => string | null;
   handleCreateHighlight: () => void;
   handleCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
+  handleCreateNote: (note: string) => void;
   handleToggleSelectionHighlightFromPayload: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
-  handleCreateNoteFromPayload: (payload: SelectionCommandPayload) => string | null;
+  handleAddNoteToSelectionHighlightFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
+  handleCreateNoteFromPayload: (payload: SelectionCommandPayload, note?: string) => string | null;
+  handleDeleteExistingHighlight: () => void;
   handleCutImage: () => Promise<void>;
   handleDeleteImage: () => void;
   handleEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -120,6 +126,7 @@ export function createHandleEditorContextMenu(args: {
       canRunCommands: !!commandPayload,
       kind: 'selection',
       left: position.left,
+      mode: 'context-menu',
       payload: commandPayload,
       top: position.top
     });

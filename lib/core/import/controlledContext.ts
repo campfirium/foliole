@@ -6,6 +6,7 @@ export type ImportContextPolicy = 'full_text' | 'full_text_with_context' | 'cont
 export type ImportSourceProfile = 'default' | 'epub' | 'body_with_highlight_sidecar';
 
 export interface ImportSidecarHighlight {
+  note?: string | null;
   text: string;
   label?: string;
 }

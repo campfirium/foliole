@@ -47,6 +47,8 @@ export interface WorkspaceDocumentSurfaceSource {
   onCopyImage: () => void;
   onCreateCloze: () => void;
   onCreateHighlight: () => void;
+  onCreateNote: (note: string) => void;
+  onDeleteExistingHighlight: () => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCutImage: () => void;
   onDeleteImage: () => void;
@@ -161,6 +163,8 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onCopyImage: props.onCopyImage,
     onCreateCloze: props.onCreateCloze,
     onCreateHighlight: props.onCreateHighlight,
+    onCreateNote: props.onCreateNote,
+    onDeleteExistingHighlight: props.onDeleteExistingHighlight,
     onCreatePdfHighlight: props.onCreatePdfHighlight,
     onCutImage: props.onCutImage,
     onDeleteImage: props.onDeleteImage,

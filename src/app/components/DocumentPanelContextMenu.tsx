@@ -6,6 +6,8 @@ interface DocumentPanelContextMenuProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
+  onCreateNote: (note: string) => void;
+  onDeleteExistingHighlight: () => void;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
@@ -17,6 +19,8 @@ export function DocumentPanelContextMenu({
   onCloseContextMenu,
   onCopyImage,
   onCreateHighlight,
+  onCreateNote,
+  onDeleteExistingHighlight,
   onCreateCloze,
   onCutImage,
   onDeleteImage,
@@ -28,13 +32,17 @@ export function DocumentPanelContextMenu({
 
   return (
     <EditorContextMenu
-      canRunCommands={contextMenu.canRunCommands}
       kind={contextMenu.kind}
       left={contextMenu.left}
+      mode={contextMenu.mode}
+      notePanelLeft={contextMenu.notePanelLeft}
+      notePanelTop={contextMenu.notePanelTop}
       onClose={onCloseContextMenu}
       onCopyImage={onCopyImage}
       onCreateCloze={onCreateCloze}
       onCreateHighlight={onCreateHighlight}
+      onCreateNote={onCreateNote}
+      onDeleteExistingHighlight={onDeleteExistingHighlight}
       onCutImage={onCutImage}
       onDeleteImage={onDeleteImage}
       onExportImage={onExportImage}

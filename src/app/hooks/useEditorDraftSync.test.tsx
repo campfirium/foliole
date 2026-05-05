@@ -96,6 +96,50 @@ function registerNodeSwitchDisplayTest() {
   });
 }
 
+function registerNodeSwitchCommitIsolationTest() {
+  it('does not commit the next node draft through the previous node debounce timer', () => {
+    const alphaCommit = vi.fn();
+    const betaCommit = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ committedContent, nodeId, onCommit }) =>
+        useEditorDraftSync({
+          committedContent,
+          nodeId,
+          onCommit
+        }),
+      {
+        initialProps: {
+          committedContent: 'Alpha body',
+          nodeId: 'node-1',
+          onCommit: alphaCommit
+        }
+      }
+    );
+
+    act(() => {
+      result.current.handleEditorChange('Alpha draft');
+    });
+
+    rerender({
+      committedContent: 'Beta body',
+      nodeId: 'node-2',
+      onCommit: betaCommit
+    });
+
+    act(() => {
+      result.current.handleEditorChange('Beta draft');
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(alphaCommit).toHaveBeenCalledWith('Alpha draft');
+    expect(alphaCommit).not.toHaveBeenCalledWith('Beta draft');
+    expect(betaCommit).toHaveBeenCalledWith('Beta draft');
+  });
+}
+
 describe('useEditorDraftSync', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -107,4 +151,5 @@ describe('useEditorDraftSync', () => {
   registerDebouncePersistenceTest();
   registerCloseFlushTest();
   registerNodeSwitchDisplayTest();
+  registerNodeSwitchCommitIsolationTest();
 });

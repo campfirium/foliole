@@ -132,6 +132,18 @@ describe('liveMarkdown block rendering', () => {
     adapter.destroy();
   });
 
+  it('does not render legacy setext headings as headings', () => {
+    const host = createHost();
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: 'abc\n-' });
+
+    expect(host.querySelector('.cm-line-h2')).toBeNull();
+    expect(host.querySelector('.cm-md-heading-syntax-hidden')).toBeNull();
+    expect(host.querySelector('.cm-content')?.textContent).toContain('abc');
+    expect(host.querySelector('.cm-content')?.textContent).toContain('-');
+
+    adapter.destroy();
+  });
+
   it('renders wiki aliases, callout labels, and plain Obsidian tags', () => {
     const host = createHost();
     const adapter = new CodeMirrorEditorAdapter(host, {

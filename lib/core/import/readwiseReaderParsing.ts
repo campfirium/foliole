@@ -83,22 +83,36 @@ function renderReadwiseFrontmatter(metadata: Array<{ key: string; value: string 
   return ['---', ...metadata.map(({ key, value }) => `${key}: ${value}`), '---'].join('\n');
 }
 
-function trimHighlightMetadata(block: string, tagKeyword: string, noteKeyword: string) {
-  const metadataKeywords = [tagKeyword, noteKeyword].filter((value) => value.trim().length > 0);
-  return metadataKeywords
-    .reduce(
-      (current, keyword) =>
-        current
-          .replace(new RegExp(`\\s+-?\\s*${escapeRegex(keyword)}\\s*[\\s\\S]*$`, 'i'), '')
-          .replace(new RegExp(`(^|\\n)\\s*-?\\s*${escapeRegex(keyword)}\\s*[\\s\\S]*$`, 'i'), '$1')
-          .trim(),
-      block
-        .replace(/\s+\[\.\.\.]\s*\([^)]+\)/g, '')
-        .replace(/\s+\(\[[^\]]+]\([^)]+\)\)\s*$/g, '')
-        .replace(/\s+\([^()\n]+\)\s*$/g, '')
-        .trim()
-    )
+function stripReadwiseLinkTail(block: string) {
+  return block
+    .replace(/\s+\[\.\.\.]\s*\([^)]+\)/g, '')
+    .replace(/\s+\(\[[^\]]+]\([^)]+\)\)\s*$/g, '')
+    .replace(/\s+\([^()\n]+\)\s*$/g, '')
     .trim();
+}
+
+function splitKeywordTail(block: string, keyword: string) {
+  if (!keyword.trim()) {
+    return { before: block.trim(), value: '' };
+  }
+  const match = new RegExp(`(^|\\n|\\s)\\s*-?\\s*${escapeRegex(keyword)}\\s*([\\s\\S]*)$`, 'i').exec(block);
+  if (match?.index === undefined) {
+    return { before: block.trim(), value: '' };
+  }
+  return {
+    before: block.slice(0, match.index).trim(),
+    value: (match[2] ?? '').trim()
+  };
+}
+
+function parseHighlightMetadata(block: string, tagKeyword: string, noteKeyword: string) {
+  const withoutLinkTail = stripReadwiseLinkTail(block);
+  const withoutTags = splitKeywordTail(withoutLinkTail, tagKeyword).before;
+  const noteSplit = splitKeywordTail(withoutTags, noteKeyword);
+  return {
+    note: noteSplit.value,
+    text: noteSplit.before.replace(/^[-*+]\s+/, '').replace(/^>\s+/, '').trim()
+  };
 }
 
 function splitHighlightBlocks(content: string, separator: string) {
@@ -232,7 +246,10 @@ export function extractReadwiseSidecarHighlights(
     extractReadwiseHighlightsSection(articleMarkdown, [config.highlightsHeading, config.newHighlightsHeading]),
     config.highlightSeparator
   )
-    .map((block) => trimHighlightMetadata(block, config.tagKeyword, config.noteKeyword))
-    .filter((text) => normalizeReadwiseText(text).length > 0)
-    .map((text) => ({ text }));
+    .map((block) => parseHighlightMetadata(block, config.tagKeyword, config.noteKeyword))
+    .filter((highlight) => normalizeReadwiseText(highlight.text).length > 0)
+    .map((highlight) => ({
+      note: highlight.note || null,
+      text: highlight.text
+    }));
 }
