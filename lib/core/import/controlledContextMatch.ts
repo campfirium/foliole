@@ -74,21 +74,34 @@ function collectDelimiterFragments(rawQuote: string) {
   return fragments;
 }
 
-function collectTokenWindowFragments(normalizedQuote: string) {
-  const tokens = normalizedQuote.split(' ').filter(Boolean);
+function collectSlidingWindowFragments(units: string[], joiner: string) {
   const fragments: string[] = [];
   const seen = new Set<string>();
-  for (let windowSize = Math.min(8, tokens.length); windowSize >= 2; windowSize -= 1) {
-    for (let start = 0; start + windowSize <= tokens.length; start += 1) {
-      pushFragment(fragments, seen, tokens.slice(start, start + windowSize).join(' '));
+  for (let windowSize = units.length; windowSize >= 1; windowSize -= 1) {
+    for (let start = 0; start + windowSize <= units.length; start += 1) {
+      pushFragment(fragments, seen, units.slice(start, start + windowSize).join(joiner));
     }
   }
   return fragments;
 }
 
+function collectWordWindowFragments(normalizedQuote: string) {
+  const words = normalizedQuote.split(' ').filter(Boolean);
+  return words.length > 1 ? collectSlidingWindowFragments(words, ' ') : [];
+}
+
+function collectCharacterWindowFragments(normalizedQuote: string) {
+  const characters = Array.from(normalizedQuote.replace(/\s+/g, ''));
+  return characters.length > 1 ? collectSlidingWindowFragments(characters, '') : [];
+}
+
 function collectSearchFragments(rawQuote: string) {
   const normalizedQuote = normalizeText(rawQuote);
-  const fragments = [...collectDelimiterFragments(rawQuote), ...collectTokenWindowFragments(normalizedQuote)];
+  const fragments = [
+    ...collectDelimiterFragments(rawQuote),
+    ...collectWordWindowFragments(normalizedQuote),
+    ...collectCharacterWindowFragments(normalizedQuote)
+  ];
   return Array.from(new Set(fragments)).sort((left, right) => right.length - left.length);
 }
 

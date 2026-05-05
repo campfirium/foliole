@@ -48,6 +48,35 @@ it('matches flattened table highlights by token windows when larger fragments fa
   );
 });
 
+it('starts fallback fragments from the longest available word window instead of capping at eight words', () => {
+  const content = [
+    '# Notes',
+    '',
+    'common1 common2 common3 common4 common5 common6 common7 common8 common9 target',
+    '',
+    'common1 common2 common3 common4 common5 common6 common7 common8 common9 other'
+  ].join('\n');
+
+  expect(
+    findContextExcerpt(
+      content,
+      'intro common1 common2 common3 common4 common5 common6 common7 common8 common9 target'
+    )
+  ).toBe('common1 common2 common3 common4 common5 common6 common7 common8 common9 target');
+});
+
+it('falls back from the longest available character fragment for quotes without spaces', () => {
+  const content = [
+    '# Notes',
+    '',
+    '前缀甲乙丙丁戊己庚辛壬目标后缀',
+    '',
+    '前缀甲乙丙丁戊己庚辛壬别的后缀'
+  ].join('\n');
+
+  expect(findContextExcerpt(content, '说明甲乙丙丁戊己庚辛壬目标')).toBe('前缀甲乙丙丁戊己庚辛壬目标后缀');
+});
+
 it('locks onto a nearby paragraph range when repeated fragments need a second clue', () => {
   const content = [
     '# Notes',
