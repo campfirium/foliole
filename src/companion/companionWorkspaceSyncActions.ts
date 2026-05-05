@@ -17,7 +17,7 @@ import {
 
 import { describeCompanionSyncPassResult } from './companionSyncPassResult';
 import {
-  buildRemainingStructureProgress,
+  buildRemainingSyncProgress,
   shouldClearCompanionSyncProgress
 } from './companionSyncProgressVisibility';
 import type { CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow';
@@ -72,9 +72,9 @@ async function syncDesktopStreams(args: {
   args.setState(nextState);
   args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-  const remainingStructureProgress = buildRemainingStructureProgress(result);
-  if (remainingStructureProgress) {
-    args.setSyncProgress(remainingStructureProgress);
+  const remainingProgress = buildRemainingSyncProgress(result);
+  if (remainingProgress) {
+    args.setSyncProgress(remainingProgress);
   } else if (shouldClearCompanionSyncProgress(result)) {
     args.setSyncProgress(null);
   }

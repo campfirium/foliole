@@ -118,11 +118,8 @@ function formatProgressCount(args: {
   progress: CompanionDesktopSyncProgress;
   total: number;
 }) {
-  if (args.progress.phase === 'structure' && args.progress.total === null) {
+  if (args.progress.total === null) {
     return 'Checking';
-  }
-  if (args.progress.total === null && !args.isFsrsPriority) {
-    return `${args.progress.completed} cached`;
   }
   return `${args.completed}/${args.total}`;
 }

@@ -12,7 +12,7 @@ import {
 
 import { describeCompanionSyncPassResult } from './companionSyncPassResult';
 import {
-  buildRemainingStructureProgress,
+  buildRemainingSyncProgress,
   shouldClearCompanionSyncProgress
 } from './companionSyncProgressVisibility';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
@@ -55,9 +55,9 @@ export async function runCompanionStreamSync(args: {
   args.setState(completedState);
   args.setReadableArticle(await syncReadableArticle(completedState.workspace_snapshot));
   args.setStatus('idle');
-  const remainingStructureProgress = buildRemainingStructureProgress(result);
-  if (remainingStructureProgress) {
-    args.setSyncProgress(remainingStructureProgress);
+  const remainingProgress = buildRemainingSyncProgress(result);
+  if (remainingProgress) {
+    args.setSyncProgress(remainingProgress);
   } else if (shouldClearCompanionSyncProgress(result)) {
     args.setSyncProgress(null);
   }

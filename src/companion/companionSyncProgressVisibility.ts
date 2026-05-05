@@ -10,9 +10,24 @@ export function shouldClearCompanionSyncProgress(result: CompanionSyncPassInput)
   return result.remainingAttachmentResourceCount === 0 && result.remainingContentBlobCount === 0 && structureDone;
 }
 
-export function buildRemainingStructureProgress(result: CompanionSyncPassInput): CompanionDesktopSyncProgress | null {
-  if (result.remainingContentBlobCount !== 0 || result.remainingAttachmentResourceCount !== 0) {
-    return null;
+export function buildRemainingSyncProgress(result: CompanionSyncPassInput): CompanionDesktopSyncProgress | null {
+  if (result.remainingContentBlobCount !== 0) {
+    return {
+      completed: 0,
+      completedBytes: 0,
+      phase: 'content',
+      total: result.remainingContentBlobCount,
+      totalBytes: result.remainingContentBlobBytes ?? null
+    };
+  }
+  if (result.remainingAttachmentResourceCount !== 0) {
+    return {
+      completed: 0,
+      completedBytes: 0,
+      phase: 'attachment',
+      total: result.remainingAttachmentResourceCount,
+      totalBytes: result.remainingAttachmentResourceBytes ?? null
+    };
   }
   const remaining = result.remainingStructureChangeCount;
   if (remaining === undefined || remaining === 0) {
