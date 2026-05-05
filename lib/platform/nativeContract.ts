@@ -140,6 +140,10 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
   [NATIVE_COMMANDS.syncAppMenuState]: {
     args: {
       enabledCommandIds: string[];
+      shortcutAccelerators?: {
+        accelerator: string;
+        commandId: string;
+      }[];
     };
     result: null;
   };

@@ -262,13 +262,17 @@ it('filters empty native menu events before reaching the handler', async () => {
   expect(handler).toHaveBeenCalledWith('workspace.open-command-palette');
 });
 
-it('syncs unique enabled native menu commands through typed invoke', async () => {
+it('syncs unique enabled native menu commands and accelerators through typed invoke', async () => {
   const invoke = vi.fn().mockResolvedValue(null);
   window.electronAPI = createMockElectronApi(invoke);
 
-  await syncNativeMenuState(['import.singleFileToInbox', 'import.singleFileToInbox', 'workspace.openNotes']);
+  await syncNativeMenuState({
+    enabledCommandIds: ['import.singleFileToInbox', 'import.singleFileToInbox', 'workspace.openNotes'],
+    shortcutAccelerators: [{ accelerator: 'Control+I', commandId: 'import.singleFileToInbox' }]
+  });
 
   expect(invoke).toHaveBeenCalledWith('sync_app_menu_state', {
-    enabledCommandIds: ['import.singleFileToInbox', 'workspace.openNotes']
+    enabledCommandIds: ['import.singleFileToInbox', 'workspace.openNotes'],
+    shortcutAccelerators: [{ accelerator: 'Control+I', commandId: 'import.singleFileToInbox' }]
   });
 });

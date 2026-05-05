@@ -12,6 +12,21 @@ import { listSystemFonts } from './fonts.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
 
+function asShortcutAccelerators(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item) => {
+      const raw = item as Record<string, unknown>;
+      return {
+        accelerator: typeof raw.accelerator === 'string' ? raw.accelerator : '',
+        commandId: typeof raw.commandId === 'string' ? raw.commandId : ''
+      };
+    })
+    .filter((item) => item.accelerator.trim() && item.commandId.trim());
+}
+
 function resolveTargetWindow(context?: InvokeContext) {
   if (context?.sender) {
     const window = BrowserWindow.fromWebContents(context.sender);
@@ -101,7 +116,7 @@ function handleUtilityCommand(request: InvokeRequest) {
     return clearLinkPanelBrowsingData();
   }
   if (request.command === NATIVE_COMMANDS.syncAppMenuState) {
-    syncAppMenuState(asStringArray(args.enabledCommandIds, 'enabledCommandIds'));
+    syncAppMenuState(asStringArray(args.enabledCommandIds, 'enabledCommandIds'), asShortcutAccelerators(args.shortcutAccelerators));
     return null;
   }
   if (request.command === NATIVE_COMMANDS.appGetVersion) {

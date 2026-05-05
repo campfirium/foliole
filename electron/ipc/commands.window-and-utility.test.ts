@@ -135,7 +135,10 @@ it('handles typed native utility commands', async () => {
   } satisfies NativeInvokeRequest<'open_local_path'>;
   const syncAppMenuStateRequest = {
     command: 'sync_app_menu_state',
-    args: { enabledCommandIds: ['node.create', 'node.delete'] }
+    args: {
+      enabledCommandIds: ['node.create', 'node.delete'],
+      shortcutAccelerators: [{ accelerator: 'Control+N', commandId: 'node.create' }]
+    }
   } satisfies NativeInvokeRequest<'sync_app_menu_state'>;
 
   await expect(handleInvokeRequest(openExternalUrlRequest)).resolves.toBeNull();
@@ -147,7 +150,10 @@ it('handles typed native utility commands', async () => {
 
   expect(openExternal).toHaveBeenCalledWith('https://example.com');
   expect(openPath).toHaveBeenCalledWith('/tmp/source.md');
-  expect(syncAppMenuState).toHaveBeenCalledWith(['node.create', 'node.delete']);
+  expect(syncAppMenuState).toHaveBeenCalledWith(
+    ['node.create', 'node.delete'],
+    [{ accelerator: 'Control+N', commandId: 'node.create' }]
+  );
 });
 
 it('throws on unsupported command', async () => {

@@ -30,10 +30,19 @@ const MENU_COMMAND_IDS = [
   'navigation.goBack',
   'navigation.goForward',
   'navigation.goToNode',
-  'navigation.goParent'
+  'navigation.goParent',
+  'document.findInTopic',
+  'nodes.enterPriorityMode',
+  'editor.toggleImmersiveMode',
+  'workspace.toggleDevTools'
 ] as const;
 
 const menuItemsById = new Map<string, ElectronMenuItem>();
+
+export interface NativeMenuShortcutAccelerator {
+  accelerator: string;
+  commandId: string;
+}
 
 function commandItem(label: string, commandId: string): MenuItemConstructorOptions {
   return {
@@ -102,8 +111,18 @@ export function installAppMenu() {
       ]
     },
     {
-      label: 'View',
-      submenu: [commandItem('Toggle Source / Live Preview', 'editor.toggleDisplayMode')]
+      label: 'Editor',
+      submenu: [
+        commandItem('Find in Topic', 'document.findInTopic'),
+        commandItem('Set Priority…', 'nodes.enterPriorityMode'),
+        { type: 'separator' },
+        commandItem('Toggle Source / Live Preview', 'editor.toggleDisplayMode'),
+        commandItem('Toggle Immersive Reading', 'editor.toggleImmersiveMode')
+      ]
+    },
+    {
+      label: 'Developer',
+      submenu: [commandItem('Toggle DevTools', 'workspace.toggleDevTools')]
     }
   ];
 
@@ -113,14 +132,16 @@ export function installAppMenu() {
   walkMenuItems(menu.items);
 }
 
-export function syncAppMenuState(enabledCommandIds: string[]) {
+export function syncAppMenuState(enabledCommandIds: string[], shortcutAccelerators: NativeMenuShortcutAccelerator[] = []) {
   const enabledSet = new Set(enabledCommandIds);
+  const acceleratorsById = new Map(shortcutAccelerators.map((item) => [item.commandId, item.accelerator]));
   for (const commandId of MENU_COMMAND_IDS) {
     const item = menuItemsById.get(commandId);
     if (!item) {
       continue;
     }
     item.enabled = enabledSet.has(commandId);
+    item.accelerator = acceleratorsById.get(commandId) ?? null;
   }
 }
 

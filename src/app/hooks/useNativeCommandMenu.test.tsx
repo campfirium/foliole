@@ -36,7 +36,13 @@ describe('useNativeCommandMenu', () => {
     render(
       <TestHarness
         items={[
-          { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', enabled: true },
+          {
+            id: APP_COMMAND_IDS.importSingleFile,
+            title: 'Import Files',
+            section: 'Import',
+            enabled: true,
+            shortcuts: { primary: { key: 'i', ctrlKey: true } }
+          },
           { id: APP_COMMAND_IDS.openTrash, title: 'Trash', section: 'Workspace', enabled: false }
         ]}
         onRunCommand={onRunCommand}
@@ -44,7 +50,10 @@ describe('useNativeCommandMenu', () => {
     );
 
     await waitFor(() => {
-      expect(syncNativeMenuState).toHaveBeenCalledWith([APP_COMMAND_IDS.importSingleFile]);
+      expect(syncNativeMenuState).toHaveBeenCalledWith({
+        enabledCommandIds: [APP_COMMAND_IDS.importSingleFile],
+        shortcutAccelerators: [{ accelerator: 'Control+I', commandId: APP_COMMAND_IDS.importSingleFile }]
+      });
       expect(onRunCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.importSingleFile);
     });
   });

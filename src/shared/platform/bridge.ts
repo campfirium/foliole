@@ -13,6 +13,11 @@ export type NativeMenuUnlisten = (() => void) | null;
 export type ManagedInboxUpdateUnlisten = (() => void) | null;
 export type WorkspaceSyncAppliedUnlisten = (() => void) | null;
 
+export interface NativeMenuStateSyncPayload {
+  enabledCommandIds: string[];
+  shortcutAccelerators?: { accelerator: string; commandId: string }[];
+}
+
 export type { RuntimeAppPaths, RuntimeSystemFontCatalog } from './bridgePayloads';
 export { getRuntimeInvoke } from './runtimeInvoke';
 export type { RuntimeInvoke } from './runtimeInvoke';
@@ -254,14 +259,17 @@ export async function onWorkspaceSyncApplied(
   });
 }
 
-export async function syncNativeMenuState(enabledCommandIds: string[]) {
+export async function syncNativeMenuState(payload: NativeMenuStateSyncPayload) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return;
   }
-  const uniqueEnabledCommandIds = [...new Set(enabledCommandIds)];
+  const uniqueEnabledCommandIds = [...new Set(payload.enabledCommandIds)];
   try {
-    await runtimeInvoke(NATIVE_COMMANDS.syncAppMenuState, { enabledCommandIds: uniqueEnabledCommandIds });
+    await runtimeInvoke(NATIVE_COMMANDS.syncAppMenuState, {
+      enabledCommandIds: uniqueEnabledCommandIds,
+      shortcutAccelerators: payload.shortcutAccelerators ?? []
+    });
   } catch (error) {
     logRuntimeWarning('native menu sync failed', {
       area: 'bridge',
