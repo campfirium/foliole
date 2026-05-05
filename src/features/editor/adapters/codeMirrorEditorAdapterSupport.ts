@@ -7,7 +7,7 @@ import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
-import type { EditorMissingAttachmentResourceHandler, EditorTextAnchorDecoration } from './EditorAdapter';
+import type { EditorContentChangeMeta, EditorMissingAttachmentResourceHandler, EditorTextAnchorDecoration } from './EditorAdapter';
 import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
 import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
 
@@ -15,7 +15,7 @@ export interface CodeMirrorEditorAdapterOptions {
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   hideTitleHeading?: boolean;
   initialContent: string;
-  onChange?: (content: string) => void;
+  onChange?: (content: string, meta?: EditorContentChangeMeta) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onOpenNodeLink?: (title: string) => void;
@@ -26,6 +26,7 @@ export interface CodeMirrorEditorAdapterOptions {
 
 export interface EditorDocumentChangeMeta {
   isComposing: boolean;
+  nodeId: string | null;
 }
 
 export function createLiveMarkdownReconfigureEffect(args: {

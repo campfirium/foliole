@@ -12,15 +12,15 @@ describe('EditorExternalChangeBuffer', () => {
       onFlush
     });
 
-    buffer.handleDocumentChange('abcd', { isComposing: false });
-    buffer.handleDocumentChange('abcde', { isComposing: false });
+    buffer.handleDocumentChange('abcd', { isComposing: false, nodeId: 'node-1' });
+    buffer.handleDocumentChange('abcde', { isComposing: false, nodeId: 'node-1' });
 
     expect(onFlush).not.toHaveBeenCalled();
 
     vi.runAllTimers();
 
     expect(onFlush).toHaveBeenCalledTimes(1);
-    expect(onFlush).toHaveBeenCalledWith('abcde');
+    expect(onFlush).toHaveBeenCalledWith('abcde', 'node-1');
   });
 
   it('waits until composition ends before flushing composed text', () => {
@@ -32,7 +32,7 @@ describe('EditorExternalChangeBuffer', () => {
       onFlush
     });
 
-    buffer.handleDocumentChange('ab中', { isComposing: true });
+    buffer.handleDocumentChange('ab中', { isComposing: true, nodeId: 'node-1' });
     vi.runAllTimers();
 
     expect(onFlush).not.toHaveBeenCalled();
@@ -41,6 +41,6 @@ describe('EditorExternalChangeBuffer', () => {
     vi.runAllTimers();
 
     expect(onFlush).toHaveBeenCalledTimes(1);
-    expect(onFlush).toHaveBeenCalledWith('ab中文');
+    expect(onFlush).toHaveBeenCalledWith('ab中文', 'node-1');
   });
 });

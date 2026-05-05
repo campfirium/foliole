@@ -71,7 +71,7 @@ export function createCodeMirrorEditorExtensions(args: {
       if (!update.docChanged) {
         return;
       }
-      args.onDocChanged(update.state.doc.toString(), { isComposing: update.view.composing });
+      args.onDocChanged(update.state.doc.toString(), { isComposing: update.view.composing, nodeId: args.nodeId });
     })
   ];
 }

@@ -41,12 +41,12 @@ import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirror
 import { resolvePrimaryVisiblePosition } from './codeMirrorVisiblePosition';
 import {
   EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS,
-  type EditorTextAnchorDecoration,
   type EditorAdapter,
   type EditorRevealOptions,
   type EditorScrollMetrics,
   type EditorSearchDecorations,
-  type EditorSelection
+  type EditorSelection,
+  type EditorTextAnchorDecoration
 } from './EditorAdapter';
 import { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
 
@@ -57,7 +57,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private liveMarkdownCompartment = new Compartment();
   private liveMarkdownStateCompartment = new Compartment();
   private nodeId: string | null = null;
-  private onChange?: (content: string) => void;
+  private onChange?: (content: string, meta?: { nodeId: string | null }) => void;
   private onMissingAttachmentResource: NonNullable<CodeMirrorEditorAdapterOptions['onMissingAttachmentResource']> | null = null;
   private onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | null = null;
   private onOpenNodeLink: ((title: string) => void) | null = null;
@@ -239,7 +239,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       view: this.view
     });
   }
-  onContentChange(listener: (content: string) => void) {
+  onContentChange(listener: (content: string, meta?: { nodeId: string | null }) => void) {
     this.onChange = listener;
     return () => {
       this.onChange = undefined;

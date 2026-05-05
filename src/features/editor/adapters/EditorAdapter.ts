@@ -9,6 +9,10 @@ export interface EditorRevealOptions {
   preserveFocus?: boolean;
 }
 
+export interface EditorContentChangeMeta {
+  nodeId: string | null;
+}
+
 export interface EditorSearchDecorations {
   activeIndex: number;
   matches: EditorSelection[];
@@ -67,6 +71,6 @@ export interface EditorAdapter {
   setReadOnly?(readOnly: boolean): void;
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;
   setSearchDecorations(searchDecorations: EditorSearchDecorations | null): void;
-  onContentChange(listener: (content: string) => void): () => void;
+  onContentChange(listener: (content: string, meta?: EditorContentChangeMeta) => void): () => void;
   onScroll(listener: (event: EditorScrollEvent) => void): () => void;
 }

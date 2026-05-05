@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type {
   EditorAdapter,
+  EditorContentChangeMeta,
   EditorDiffDecorations,
   EditorMissingAttachmentResourceHandler,
   EditorTextAnchorDecoration,
@@ -39,7 +40,7 @@ export interface MarkdownEditorProps {
   readingTargetViewportRatio?: number | null;
   nodeViewState?: EditorViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
-  onChange: (value: string) => void;
+  onChange: (value: string, meta?: EditorContentChangeMeta) => void;
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;

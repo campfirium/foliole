@@ -8,15 +8,14 @@ import type {
 } from './codeMirrorEditorAdapterSupport';
 import { createCodeMirrorEditorControllers } from './codeMirrorEditorControllers';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
-import type { EditorTextAnchorDecoration } from './EditorAdapter';
+import type { EditorContentChangeMeta, EditorTextAnchorDecoration } from './EditorAdapter';
 import type { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
-
 
 interface CodeMirrorEditorAdapterRuntimeArgs {
   diffDecorationsCompartment: Compartment;
   getContent: () => string;
   getNodeId: () => string | null;
-  getOnChange: () => ((content: string) => void) | undefined;
+  getOnChange: () => ((content: string, meta?: EditorContentChangeMeta) => void) | undefined;
   host: HTMLElement;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
@@ -39,17 +38,17 @@ function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
   const controllers = createCodeMirrorEditorControllers({
     applyLocalizedContent: (localized) => {
       args.onSetContent(localized);
-      args.getOnChange()?.(localized);
+      args.getOnChange()?.(localized, { nodeId: args.getNodeId() });
     },
     getContent: args.getContent,
     getNodeId: args.getNodeId,
     isApplyingExternalContent: args.isApplyingExternalContent,
-    onFlush: (content) => {
+    onFlush: (content, nodeId) => {
       const onChange = args.getOnChange();
       if (!onChange) {
         return;
       }
-      onChange(content);
+      onChange(content, { nodeId });
       controllers.remoteImageLocalization.schedule();
     }
   });
@@ -76,7 +75,7 @@ function createEditorViewRuntime(
       if (!args.getOnChange() || args.isApplyingExternalContent()) {
         return;
       }
-      externalChangeBuffer.handleDocumentChange(content, meta);
+      externalChangeBuffer.handleDocumentChange(content, { ...meta, nodeId: args.getNodeId() });
     },
     options: args.options,
     paragraphMarkerCompartment: args.paragraphMarkerCompartment,

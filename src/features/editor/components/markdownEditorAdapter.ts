@@ -92,7 +92,7 @@ function createEditorAdapter(args: {
   hideTitleHeading: boolean;
   host: HTMLDivElement;
   initialContent: string;
-  onChange: (value: string) => void;
+  onChange: MarkdownEditorProps['onChange'];
   onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'];
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
   onOpenNodeLink: ((title: string) => void) | undefined;
@@ -122,7 +122,7 @@ function createEditorAdapter(args: {
 function useEditorAdapterInputs(args: {
   hideTitleHeading: boolean;
   initialValue: string;
-  onChange: (value: string) => void;
+  onChange: MarkdownEditorProps['onChange'];
   onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'];
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
   onOpenNodeLink: ((title: string) => void) | undefined;
@@ -191,7 +191,7 @@ function useEditorAdapterLifecycle(args: {
       hideTitleHeading: inputs.hideTitleHeadingRef.current,
       host,
       initialContent: inputs.initialValueRef.current,
-      onChange: (nextValue) => inputs.onChangeRef.current(nextValue),
+      onChange: (nextValue, meta) => inputs.onChangeRef.current(nextValue, meta),
       onMissingAttachmentResource: (attachmentId) => inputs.onMissingAttachmentResourceRef.current?.(attachmentId),
       onOpenExternalLink: (href) => inputs.onOpenExternalLinkRef.current?.(href),
       onOpenNodeLink: (title) => inputs.onOpenNodeLinkRef.current?.(title),
@@ -217,7 +217,7 @@ function useEditorAdapterLifecycle(args: {
 export function useEditorAdapter(
   hostRef: MutableRefObject<HTMLDivElement | null>,
   debugId: string | undefined,
-  onChange: (value: string) => void,
+  onChange: MarkdownEditorProps['onChange'],
   onReady: ((adapter: EditorAdapter | null) => void) | undefined,
   initialValue: string,
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'],

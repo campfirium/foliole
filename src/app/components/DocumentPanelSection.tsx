@@ -134,13 +134,13 @@ function useDocumentPanelPerformanceMarkers(
 }
 
 function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
-  const commitEditorContent = useCallback((content: string) => {
-    if (props.editorNodeId) {
-      props.onNodeContentChange(props.editorNodeId, content);
+  const commitEditorContent = useCallback((nodeId: string | null, content: string) => {
+    if (nodeId) {
+      props.onNodeContentChange(nodeId, content);
       return;
     }
     props.onEditorChange(content);
-  }, [props]);
+  }, [props.onEditorChange, props.onNodeContentChange]);
   const editorDraft = useEditorDraftSync({
     committedContent: props.editorContent,
     nodeId: props.editorNodeId,

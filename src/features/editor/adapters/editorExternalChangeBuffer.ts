@@ -4,11 +4,11 @@ export interface EditorExternalChangeBufferArgs {
   flushDelayMs?: number;
   getCurrentContent: () => string;
   isApplyingExternalContent: () => boolean;
-  onFlush: (content: string) => void;
+  onFlush: (content: string, nodeId: string | null) => void;
 }
 
 export class EditorExternalChangeBuffer {
-  private pendingContent: string | null = null;
+  private pendingChange: { content: string; nodeId: string | null } | null = null;
   private pendingTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly args: EditorExternalChangeBufferArgs) {}
@@ -18,7 +18,7 @@ export class EditorExternalChangeBuffer {
   }
 
   handleDocumentChange(content: string, meta: EditorDocumentChangeMeta) {
-    this.pendingContent = content;
+    this.pendingChange = { content, nodeId: meta.nodeId };
     if (meta.isComposing) {
       this.clearTimer();
       return;
@@ -28,10 +28,10 @@ export class EditorExternalChangeBuffer {
   }
 
   handleCompositionEnd() {
-    if (this.pendingContent === null || this.args.isApplyingExternalContent()) {
+    if (this.pendingChange === null || this.args.isApplyingExternalContent()) {
       return;
     }
-    this.pendingContent = this.args.getCurrentContent();
+    this.pendingChange = { ...this.pendingChange, content: this.args.getCurrentContent() };
     this.scheduleFlush();
   }
 
@@ -52,12 +52,12 @@ export class EditorExternalChangeBuffer {
   }
 
   private flush() {
-    if (this.pendingContent === null || this.args.isApplyingExternalContent()) {
+    if (this.pendingChange === null || this.args.isApplyingExternalContent()) {
       return;
     }
 
-    const nextContent = this.pendingContent;
-    this.pendingContent = null;
-    this.args.onFlush(nextContent);
+    const nextChange = this.pendingChange;
+    this.pendingChange = null;
+    this.args.onFlush(nextChange.content, nextChange.nodeId);
   }
 }

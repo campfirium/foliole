@@ -31,7 +31,7 @@ function registerDebouncePersistenceTest() {
       vi.advanceTimersByTime(1);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('Alpha body updated');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
   });
 }
 
@@ -59,7 +59,26 @@ function registerCloseFlushTest() {
       await expect(closeFlush?.()).resolves.toBe(true);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('Alpha body updated');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
+  });
+
+  it('flushes the pending draft on unmount', () => {
+    const onCommit = vi.fn();
+    const { result, unmount } = renderHook(() =>
+      useEditorDraftSync({
+        committedContent: 'Alpha body',
+        nodeId: 'node-1',
+        onCommit
+      })
+    );
+
+    act(() => {
+      result.current.handleEditorChange('Alpha unmount draft');
+    });
+
+    unmount();
+
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha unmount draft');
   });
 }
 
@@ -134,9 +153,58 @@ function registerNodeSwitchCommitIsolationTest() {
       vi.advanceTimersByTime(400);
     });
 
-    expect(alphaCommit).toHaveBeenCalledWith('Alpha draft');
-    expect(alphaCommit).not.toHaveBeenCalledWith('Beta draft');
-    expect(betaCommit).toHaveBeenCalledWith('Beta draft');
+    expect(alphaCommit).toHaveBeenCalledWith('node-1', 'Alpha draft');
+    expect(alphaCommit).not.toHaveBeenCalledWith('node-1', 'Beta draft');
+    expect(betaCommit).toHaveBeenCalledWith('node-2', 'Beta draft');
+  });
+}
+
+function registerStaleNodeChangeTest() {
+  it('keeps a delayed old-node editor change bound to the source node after switching', () => {
+    const onCommit = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ committedContent, nodeId }) => useEditorDraftSync({ committedContent, nodeId, onCommit }),
+      { initialProps: { committedContent: 'Alpha body', nodeId: 'node-1' } }
+    );
+
+    rerender({ committedContent: 'Beta body', nodeId: 'node-2' });
+
+    act(() => {
+      result.current.handleEditorChange('Alpha late draft', { nodeId: 'node-1' });
+    });
+
+    expect(result.current.editorContent).toBe('Beta body');
+
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha late draft');
+    expect(onCommit).not.toHaveBeenCalledWith('node-2', 'Alpha late draft');
+  });
+}
+
+function registerCommittedContentRefreshTest() {
+  it('preserves an uncommitted same-node draft when committed content refreshes', () => {
+    const onCommit = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ committedContent }) => useEditorDraftSync({ committedContent, nodeId: 'node-1', onCommit }),
+      { initialProps: { committedContent: 'Alpha body' } }
+    );
+
+    act(() => {
+      result.current.handleEditorChange('Alpha local draft');
+    });
+
+    rerender({ committedContent: 'Alpha remote refresh' });
+
+    expect(result.current.editorContent).toBe('Alpha local draft');
+
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha local draft');
   });
 }
 
@@ -152,4 +220,6 @@ describe('useEditorDraftSync', () => {
   registerCloseFlushTest();
   registerNodeSwitchDisplayTest();
   registerNodeSwitchCommitIsolationTest();
+  registerStaleNodeChangeTest();
+  registerCommittedContentRefreshTest();
 });

@@ -8,7 +8,7 @@ export function createCodeMirrorEditorControllers(args: {
   getContent: () => string;
   getNodeId: () => string | null;
   isApplyingExternalContent: () => boolean;
-  onFlush: (content: string) => void;
+  onFlush: (content: string, nodeId: string | null) => void;
 }) {
   return {
     externalChangeBuffer: new EditorExternalChangeBuffer({
@@ -35,7 +35,7 @@ export function createRemoteImageLocalizationController(args: {
 export function createExternalChangeBuffer(args: {
   getCurrentContent: () => string;
   isApplyingExternalContent: () => boolean;
-  onFlush: (content: string) => void;
+  onFlush: (content: string, nodeId: string | null) => void;
 }) {
   return new EditorExternalChangeBuffer(args);
 }
