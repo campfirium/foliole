@@ -169,7 +169,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject saveSyncPushAcks(JSONArray acks) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncPushAckStore.saveAcks(database, acks);
+        return FolioleCompanionSyncPushAckStore.saveAcks(context, database, acks);
     }
 
     JSObject saveSyncSettingRecord(JSONObject record) throws Exception {

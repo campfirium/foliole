@@ -1,6 +1,6 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSArray;
@@ -15,7 +15,7 @@ final class FolioleCompanionSyncPushAckStore {
 
     private FolioleCompanionSyncPushAckStore() {}
 
-    static JSObject saveAcks(SQLiteDatabase database, JSONArray acks) throws Exception {
+    static JSObject saveAcks(Context context, SQLiteDatabase database, JSONArray acks) throws Exception {
         JSArray savedClientOpIds = new JSArray();
         if (acks == null) {
             JSObject result = new JSObject();
@@ -34,22 +34,29 @@ final class FolioleCompanionSyncPushAckStore {
                 if (!hasRequiredAckFields(ack, identity)) {
                     continue;
                 }
-                ContentValues values = new ContentValues();
-                values.put("client_op_id", ack.optString("client_op_id", ack.optString("clientOpId")));
-                values.put("object_type", identity.optString("objectType"));
-                values.put("object_id", identity.optString("objectId"));
-                if (ack.has("state_seq") && !ack.isNull("state_seq")) {
-                    values.put("state_seq", ack.optLong("state_seq"));
-                }
-                values.put("status", ack.optString("status"));
-                values.put("acked_at", now);
-                database.delete(
-                    "sync_push_ack",
-                    "object_type = ? AND object_id = ? AND status IN ('conflict', 'rejected')",
-                    new String[] { values.getAsString("object_type"), values.getAsString("object_id") }
+                String clientOpId = ack.optString("client_op_id", ack.optString("clientOpId"));
+                String objectType = identity.optString("objectType");
+                String objectId = identity.optString("objectId");
+                FolioleCompanionNamedMutationStore.execute(
+                    context,
+                    database,
+                    "syncPushAckDeleteIssuesByObject",
+                    new Object[] { objectType, objectId }
                 );
-                database.insertWithOnConflict("sync_push_ack", null, values, SQLiteDatabase.CONFLICT_REPLACE);
-                savedClientOpIds.put(values.getAsString("client_op_id"));
+                FolioleCompanionNamedMutationStore.execute(
+                    context,
+                    database,
+                    "syncPushAckUpsert",
+                    new Object[] {
+                        clientOpId,
+                        objectType,
+                        objectId,
+                        ack.has("state_seq") && !ack.isNull("state_seq") ? ack.optLong("state_seq") : null,
+                        ack.optString("status"),
+                        now
+                    }
+                );
+                savedClientOpIds.put(clientOpId);
             }
             database.setTransactionSuccessful();
         } finally {

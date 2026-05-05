@@ -11,6 +11,10 @@ final class FolioleCompanionNamedMutationStore {
 
     private FolioleCompanionNamedMutationStore() {}
 
+    static void execute(Context context, SQLiteDatabase database, String statementName, Object[] args) throws Exception {
+        database.execSQL(statement(context, statementName), args);
+    }
+
     static void upsertSyncStateRow(
         Context context,
         SQLiteDatabase database,

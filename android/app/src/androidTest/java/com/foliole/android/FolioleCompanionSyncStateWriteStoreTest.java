@@ -160,7 +160,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
                     .put("objectId", "op-1"))
                 .put("status", "accepted"));
 
-        JSObject result = FolioleCompanionSyncPushAckStore.saveAcks(database, acks);
+        JSObject result = FolioleCompanionSyncPushAckStore.saveAcks(context, database, acks);
 
         assertEquals(2, result.getJSONArray("saved_client_op_ids").length());
         assertEquals("node_review:node-1:5", result.getJSONArray("saved_client_op_ids").getString(0));
@@ -172,7 +172,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
 
     @Test
     public void pushAckStoreClearsOldIssueWhenStateAckIsAccepted() throws Exception {
-        FolioleCompanionSyncPushAckStore.saveAcks(database, new JSONArray()
+        FolioleCompanionSyncPushAckStore.saveAcks(context, database, new JSONArray()
             .put(new JSONObject()
                 .put("client_op_id", "node_review:node-1:4")
                 .put("identity", new JSONObject()
@@ -180,7 +180,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
                     .put("objectId", "node-1"))
                 .put("status", "conflict")));
 
-        JSObject result = FolioleCompanionSyncPushAckStore.saveAcks(database, new JSONArray()
+        JSObject result = FolioleCompanionSyncPushAckStore.saveAcks(context, database, new JSONArray()
             .put(new JSONObject()
                 .put("client_op_id", "node_review:node-1:5")
                 .put("identity", new JSONObject()
@@ -205,7 +205,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
         if (stateSeq != null) {
             ack.put("state_seq", stateSeq);
         }
-        FolioleCompanionSyncPushAckStore.saveAcks(database, new JSONArray().put(ack));
+        FolioleCompanionSyncPushAckStore.saveAcks(context, database, new JSONArray().put(ack));
     }
 
     private void createTables() {
