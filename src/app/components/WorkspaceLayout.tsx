@@ -26,6 +26,7 @@ export interface WorkspaceEditorContextMenu {
 
 export interface WorkspaceLayoutProps {
   activeNodeId: string | null;
+  isWorkspaceHydrated?: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;

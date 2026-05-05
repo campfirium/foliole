@@ -90,6 +90,7 @@ export interface BuildControllerLayoutPropsArgs {
     updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
     updateNodePriority: (nodeId: string, priority: number | null) => void;
     updateNodeReveal: (nodeId: string, reveal: string) => void;
+    isHydrated: boolean;
   };
   runImportDirectory: () => Promise<boolean>;
   runImportFile: () => Promise<boolean>;
@@ -132,6 +133,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
   const nav = createLayoutNav(args);
   return {
     activeNodeId: args.ws.activeNodeId,
+    isWorkspaceHydrated: args.ws.isHydrated,
     reviewSettings: args.reviewSettings,
     canGoBack: args.nav.canGoBack,
     canGoForward: args.nav.canGoForward,

@@ -3,9 +3,46 @@ import type { CSSProperties } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { updateNodeImageState } from '../../shared/platform/performanceDiagnosticsProbe';
+import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 import { hasCachedMarkdownImageReference } from './documentPanelImageReferenceCache';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+
+function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNode: Node | undefined) {
+  if (props.isWorkspaceHydrated === false) {
+    return {
+      loadingLabel: 'Loading document',
+      emptyState: {
+        title: 'Loading workspace',
+        description: 'Your notes are still being prepared.'
+      }
+    };
+  }
+
+  if (!props.activeNodeId) {
+    return {
+      emptyState: {
+        title: 'No note selected',
+        description: 'Choose a note from the list, or create your first note to start writing.'
+      }
+    };
+  }
+
+  if (activeNode && activeNode.kind !== 'folder' && !isNodeDocumentLoaded(activeNode)) {
+    return {
+      loadingLabel: 'Loading document',
+      emptyState: {
+        title: 'Loading note',
+        description: 'The selected note is still loading.'
+      }
+    };
+  }
+
+  return {
+    loadingLabel: undefined,
+    emptyState: undefined
+  };
+}
 
 function resolveInboxEmptyState(activeNode: Node | undefined) {
   return isInboxNode(activeNode)
@@ -18,11 +55,13 @@ function resolveInboxEmptyState(activeNode: Node | undefined) {
 }
 
 function getDocumentPanelState(
+  props: DocumentPanelSectionProps,
   activeNode: Node | undefined,
   editorDisplayMode: 'preview' | 'source',
   showAnswerSection: boolean
 ) {
-  const emptyState = resolveInboxEmptyState(activeNode);
+  const startupState = resolveDocumentStartupState(props, activeNode);
+  const emptyState = startupState.emptyState ?? resolveInboxEmptyState(activeNode);
   const reveal = activeNode?.reveal ?? '';
   const shouldPadDocumentTail = editorDisplayMode === 'preview' && activeNode?.kind !== 'item';
   const shouldCheckItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection);
@@ -37,6 +76,7 @@ function getDocumentPanelState(
   return {
     answerSectionMode: shouldFitItemImages ? 'balanced' : 'fixed',
     editorContentPaddingBottom: shouldPadDocumentTail ? 'min(68dvh, 36rem)' : undefined,
+    loadingLabel: startupState.loadingLabel,
     emptyState,
     fitBlockImagesToViewport: shouldFitItemImages,
     hasAnswerSection: Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && showAnswerSection),
@@ -86,12 +126,13 @@ export function getDocumentPanelView(
   editorDisplayMode: 'preview' | 'source'
 ) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const panelState = getDocumentPanelState(activeNode, editorDisplayMode, props.showAnswerSection);
+  const panelState = getDocumentPanelState(props, activeNode, editorDisplayMode, props.showAnswerSection);
 
   return {
     activeNode,
     bodyProps: getDocumentPanelBodyProps(props, panelState),
     documentLayoutStyle: { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties,
+    loadingLabel: panelState.loadingLabel,
     isFolderListView: Boolean(
       activeNode &&
         activeNode.kind === 'folder' &&

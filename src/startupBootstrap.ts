@@ -30,7 +30,6 @@ async function runBackgroundTask(
 export function bootstrapApp(args: StartupBootstrapArgs) {
   void (async () => {
     args.reportBootStage('boot_start');
-    await runBackgroundTask(args.syncAppSettings, args.reportBootStage, 'settings_sync_failed');
 
     try {
       await args.mountApp();
@@ -43,6 +42,7 @@ export function bootstrapApp(args: StartupBootstrapArgs) {
       return;
     }
 
+    void runBackgroundTask(args.syncAppSettings, args.reportBootStage, 'settings_sync_failed');
     void runBackgroundTask(args.reportBridgeReady, args.reportBootStage, 'bridge_ready_report_failed');
   })();
 }

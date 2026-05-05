@@ -1,15 +1,15 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const useWorkspaceHydration = vi.fn();
 const useAppController = vi.fn();
-
-vi.mock('./hooks/useWorkspaceHydration', () => ({
-  useWorkspaceHydration
-}));
+const ensureWorkspaceHydrated = vi.fn(() => Promise.resolve());
 
 vi.mock('./hooks/useAppController', () => ({
   useAppController
+}));
+
+vi.mock('../store/workspaceStore', () => ({
+  ensureWorkspaceHydrated
 }));
 
 vi.mock('../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -53,24 +53,11 @@ vi.mock('../shared/testing/workspaceDebugBridge', () => ({
 }));
 
 beforeEach(() => {
-  useWorkspaceHydration.mockReset();
   useAppController.mockReset();
+  ensureWorkspaceHydrated.mockClear();
 });
 
-it('keeps the booting shell visible until workspace hydration finishes', async () => {
-  useWorkspaceHydration.mockReturnValue(false);
-
-  const { App } = await import('./App');
-
-  render(<App />);
-
-  expect(screen.getByRole('status', { name: 'Loading workspace' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Loading indicator')).toBeInTheDocument();
-  expect(useAppController).not.toHaveBeenCalled();
-});
-
-it('renders the workspace after hydration completes', async () => {
-  useWorkspaceHydration.mockReturnValue(true);
+it('renders the workspace chrome immediately without a boot-only shell', async () => {
   useAppController.mockReturnValue({
     hotkeySettings: {},
     goToNodeState: {},
@@ -85,5 +72,9 @@ it('renders the workspace after hydration completes', async () => {
   render(<App />);
 
   expect(screen.getByText('workspace-layout')).toBeInTheDocument();
+  expect(screen.queryByRole('status', { name: 'Loading workspace' })).not.toBeInTheDocument();
   expect(useAppController).toHaveBeenCalledTimes(1);
+  await waitFor(() => {
+    expect(ensureWorkspaceHydrated).toHaveBeenCalledTimes(1);
+  });
 });

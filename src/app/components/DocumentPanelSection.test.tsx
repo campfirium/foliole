@@ -159,3 +159,43 @@ it('saves the virtual node keyword through the detail form', () => {
 
   expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'reader');
 });
+
+it('shows a loading state before workspace hydration finishes', () => {
+  renderSectionWithProps({
+    activeNodeId: null,
+    editorNodeId: null,
+    isWorkspaceHydrated: false,
+    nodesById: {}
+  });
+
+  expect(
+    documentPanelBodyMock.mock.calls.some(([props]) =>
+      props &&
+      typeof props === 'object' &&
+      'emptyState' in props &&
+      'emptyContent' in props &&
+      (props as { emptyState?: { title?: string } }).emptyState?.title === 'Loading workspace' &&
+      Boolean((props as { emptyContent?: unknown }).emptyContent)
+    )
+  ).toBe(true);
+});
+
+it('shows an empty state after hydration when no note is selected', () => {
+  renderSectionWithProps({
+    activeNodeId: null,
+    editorNodeId: null,
+    isWorkspaceHydrated: true,
+    nodesById: {}
+  });
+
+  expect(
+    documentPanelBodyMock.mock.calls.some(([props]) =>
+      props &&
+      typeof props === 'object' &&
+      'emptyState' in props &&
+      'emptyContent' in props &&
+      (props as { emptyState?: { title?: string } }).emptyState?.title === 'No note selected' &&
+      !(props as { emptyContent?: unknown }).emptyContent
+    )
+  ).toBe(true);
+});

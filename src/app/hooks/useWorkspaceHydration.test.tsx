@@ -3,32 +3,22 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { useWorkspaceHydration } from './useWorkspaceHydration';
 
-const { hasHydrated, onFinishHydration, onHydrate } = vi.hoisted(() => ({
-  hasHydrated: vi.fn(),
-  onFinishHydration: vi.fn(),
-  onHydrate: vi.fn()
+const { useWorkspaceStore } = vi.hoisted(() => ({
+  useWorkspaceStore: vi.fn()
 }));
 
 vi.mock('../../store/workspaceStore', () => ({
-  useWorkspaceStore: {
-    persist: {
-      hasHydrated,
-      onFinishHydration,
-      onHydrate
-    }
-  }
+  useWorkspaceStore
 }));
 
 beforeEach(() => {
-  hasHydrated.mockReset();
-  onFinishHydration.mockReset();
-  onHydrate.mockReset();
-  onHydrate.mockReturnValue(() => undefined);
-  onFinishHydration.mockReturnValue(() => undefined);
+  useWorkspaceStore.mockReset();
 });
 
-it('picks up an already-finished hydration even if it completed before listeners attached', async () => {
-  hasHydrated.mockReturnValueOnce(false).mockReturnValue(true);
+it('returns the workspace hydration flag from the store', async () => {
+  useWorkspaceStore.mockImplementation((selector: (state: { isHydrated: boolean }) => boolean) =>
+    selector({ isHydrated: true })
+  );
 
   const { result } = renderHook(() => useWorkspaceHydration());
 
@@ -37,23 +27,19 @@ it('picks up an already-finished hydration even if it completed before listeners
   });
 });
 
-it('updates to true when hydration finishes after mount', async () => {
-  hasHydrated.mockReturnValue(false);
-  let finishHydration: (() => void) | null = null;
-  onFinishHydration.mockImplementation((callback: () => void) => {
-    finishHydration = callback;
-    return () => undefined;
-  });
+it('reacts when the store hydration flag changes', async () => {
+  let hydrated = false;
+  useWorkspaceStore.mockImplementation((selector: (state: { isHydrated: boolean }) => boolean) =>
+    selector({ isHydrated: hydrated })
+  );
 
-  const { result } = renderHook(() => useWorkspaceHydration());
+  const { result, rerender } = renderHook(() => useWorkspaceHydration());
 
   expect(result.current).toBe(false);
-  if (!finishHydration) {
-    throw new Error('expected finish hydration listener');
-  }
 
   act(() => {
-    finishHydration?.();
+    hydrated = true;
+    rerender();
   });
 
   await waitFor(() => {

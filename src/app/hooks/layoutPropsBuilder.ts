@@ -13,6 +13,7 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 interface BuildLayoutPropsArgs {
   activeNodeId: string | null;
+  isWorkspaceHydrated: boolean;
   reviewSettings: {
     reviewSchedulerSettings: ReviewSchedulerSettings;
   };
@@ -165,7 +166,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   }).queueNodeIds;
 
   return {
-    activeNodeId: args.activeNodeId, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
+    activeNodeId: args.activeNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
     documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', isEditorReadOnly: args.activeNodeId ? !activeNode || !isNodeDocumentLoaded(activeNode) || isNodeContentLocked(args.activeNodeId, args.nodeOrder, args.nodesById, new Set(args.trashedNodeIds)) : false, editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, requestedSettingsCategory: args.requestedSettingsCategory, requestedSettingsDialog: args.requestedSettingsDialog, isReviewEditing: args.isReviewEditing,

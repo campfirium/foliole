@@ -14,7 +14,7 @@ import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBounda
 import { collectRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryKeepNodeIds';
 import { registerPendingNodeSyncRendererBoundary } from './workspaceRendererBoundaryPendingSync';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
-import { createInitialWorkspaceSnapshot } from './workspaceSeed';
+import { createEmptyWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
@@ -23,6 +23,7 @@ import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 
 export interface WorkspaceState {
   activeNodeId: string | null;
+  isHydrated: boolean;
   layout: WorkspaceLayoutState;
   navigation: WorkspaceNavigationState;
   nodeViewById: Record<string, NodeViewState | undefined>;
@@ -144,6 +145,7 @@ const defaultLayoutState: WorkspaceLayoutState = {
 export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
   | 'activeNodeId'
+  | 'isHydrated'
   | 'layout'
   | 'navigation'
   | 'nodeOrder'
@@ -155,7 +157,8 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'untitledSequenceByParent'
 > {
   return {
-    ...createInitialWorkspaceSnapshot(now, loadWorkspaceLayoutPreferenceSnapshot(defaultLayoutState)),
+    ...createEmptyWorkspaceSnapshot(now, loadWorkspaceLayoutPreferenceSnapshot(defaultLayoutState)),
+    isHydrated: false,
     navigation: { ...INITIAL_WORKSPACE_NAVIGATION_STATE },
     rendererBoundaryKeepNodeIds: [],
     reviewSession: {
@@ -169,10 +172,15 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
 }
 
 const initialState = createInitialWorkspaceState();
+let updateWorkspaceHydrationState = (_hydrated: boolean) => undefined;
+let workspaceHydrationPromise: Promise<void> | null = null;
 
 const workspaceStore = create<WorkspaceState>()(
   persist(
     (set, get) => {
+      updateWorkspaceHydrationState = (hydrated) => {
+        set({ isHydrated: hydrated });
+      };
       const boundaryAwareSet: typeof set = (partial) => {
         set((currentState) => {
           const nextState = typeof partial === 'function' ? partial(currentState) : partial;
@@ -204,6 +212,7 @@ const workspaceStore = create<WorkspaceState>()(
     },
     {
       name: WORKSPACE_STORAGE_KEY,
+      skipHydration: true,
       storage: createJSONStorage(() => workspacePersistStorage),
       partialize: (state): WorkspacePersistedState => ({
         activeNodeId: state.activeNodeId,
@@ -223,6 +232,7 @@ const workspaceStore = create<WorkspaceState>()(
         const nextState = {
           ...currentState,
           ...persisted,
+          isHydrated: currentState.isHydrated,
           layout: {
             ...currentState.layout,
             ...persisted.layout
@@ -240,6 +250,11 @@ const workspaceStore = create<WorkspaceState>()(
             trashedNodeIds: nextState.trashedNodeIds
           })
         }, currentState) as WorkspaceState;
+      },
+      onRehydrateStorage: () => {
+        return () => {
+          updateWorkspaceHydrationState(true);
+        };
       }
     }
   )
@@ -272,3 +287,17 @@ workspaceStore.setState = ((partial, replace) =>
 registerPendingNodeSyncRendererBoundary(workspaceStore);
 
 export const useWorkspaceStore = workspaceStore;
+
+export function ensureWorkspaceHydrated() {
+  if (workspaceStore.getState().isHydrated) {
+    return Promise.resolve();
+  }
+  if (workspaceHydrationPromise) {
+    return workspaceHydrationPromise;
+  }
+
+  workspaceHydrationPromise = Promise.resolve(workspaceStore.persist.rehydrate()).finally(() => {
+    workspaceHydrationPromise = null;
+  });
+  return workspaceHydrationPromise;
+}

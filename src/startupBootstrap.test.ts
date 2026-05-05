@@ -48,10 +48,10 @@ function createPendingTaskHarness() {
   return { pending, recorder };
 }
 
-it('waits for settings sync before mounting and keeps bridge reporting non-blocking after mount', async () => {
+it('mounts immediately and keeps settings sync and bridge reporting non-blocking after mount', async () => {
   const harness = createPendingTaskHarness();
 
-  expect(harness.recorder.events).toEqual(['boot_start']);
+  expect(harness.recorder.events).toEqual(['boot_start', 'mount']);
 
   const releaseSettingsFn = harness.pending.releaseSettings;
   const releaseBridgeFn = harness.pending.releaseBridge;
@@ -85,7 +85,7 @@ it('still mounts when settings sync fails', async () => {
 
   await flushBootstrapWork();
 
-  expect(recorder.events).toEqual(['boot_start', 'settings_sync_failed', 'mount']);
+  expect(recorder.events).toEqual(['boot_start', 'mount', 'settings_sync_failed']);
 });
 
 it('renders the startup error when mounting throws', async () => {

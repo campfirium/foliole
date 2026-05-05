@@ -24,6 +24,7 @@ import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 export interface DocumentPanelSectionProps {
   activeNodeId: string | null;
+  isWorkspaceHydrated?: boolean;
   editableNodeId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -73,7 +74,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
   const { editorDisplayMode } = useAppearanceSettings();
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const { bodyProps, documentLayoutStyle, isFolderListView } = getDocumentPanelView(props, editorDisplayMode);
+  const { bodyProps, documentLayoutStyle, isFolderListView, loadingLabel } = getDocumentPanelView(props, editorDisplayMode);
   const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
   const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
   const {
@@ -115,7 +116,17 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
       <DocumentPanelSectionShell
-        bodyProps={bodyProps}
+        bodyProps={{
+          ...bodyProps,
+          emptyContent: loadingLabel ? (
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <div
+                aria-label={loadingLabel}
+                className="h-7 w-7 animate-spin rounded-full border-2 border-border border-t-foreground/55"
+              />
+            </div>
+          ) : undefined
+        }}
         isFolderListView={isFolderListView}
         isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
         onToggleSourceUpdatePanel={() => handleSourceUpdatePanelOpenChange(!isSourceUpdatePanelOpen)}

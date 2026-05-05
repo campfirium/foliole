@@ -20,6 +20,7 @@ export function useWorkspaceSelectors() {
   return useWorkspaceStore(
     useShallow((state) => ({
       activeNodeId: state.activeNodeId,
+      isHydrated: state.isHydrated,
       createChildNode: state.createChildNode,
       createVirtualNode: state.createVirtualNode,
       createHighlightNodeFromSelection: state.createHighlightNodeFromSelection,

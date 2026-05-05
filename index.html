@@ -19,7 +19,7 @@
 
       body {
         margin: 0;
-        background: #f5f5f3;
+        background: #ffffff;
       }
 
       .startup-shell {
@@ -34,7 +34,8 @@
         align-items: center;
         min-height: 38px;
         background: #fcfcfc;
-        border-bottom: 1px solid rgba(32, 33, 36, 0.18);
+        border-bottom: 1px solid #d9d9d6;
+        position: relative;
       }
 
       .startup-shell__left {
@@ -50,6 +51,23 @@
       .startup-shell__controls {
         width: 138px;
         min-height: 38px;
+        margin-left: auto;
+        position: relative;
+        z-index: 1;
+      }
+
+      .startup-shell__right-anchor {
+        position: absolute;
+        inset: 0 0 0 auto;
+        width: 320px;
+        pointer-events: none;
+      }
+
+      .startup-shell__right-zone {
+        position: absolute;
+        inset: 0 0 0 auto;
+        width: 320px;
+        border-left: 1px solid #d9d9d6;
       }
 
       .startup-shell__body {
@@ -98,21 +116,12 @@
       }
 
       .startup-shell__main-copy {
-        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
         height: calc(100% - 53px);
         padding: 40px;
         overflow: hidden;
-      }
-
-      .startup-shell__loading {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
       }
 
       .startup-shell__loading-pill {
@@ -137,6 +146,7 @@
         .startup-shell__grid {
           grid-template-columns: minmax(0, 300px) 1px minmax(0, 1fr);
         }
+
         .startup-shell__panel--right,
         .startup-shell__divider--right {
           display: none;
@@ -147,14 +157,17 @@
         .startup-shell__body {
           grid-template-columns: 1fr;
         }
+
         .startup-shell__rail,
         .startup-shell__left {
           display: none;
         }
+
         .startup-shell__grid {
           grid-template-columns: 1fr;
           grid-template-rows: minmax(0, 34vh) minmax(0, 1fr);
         }
+
         .startup-shell__panel--list,
         .startup-shell__divider--list {
           display: none;
@@ -168,6 +181,9 @@
         <div class="startup-shell__titlebar">
           <div class="startup-shell__left"></div>
           <div class="startup-shell__drag"></div>
+          <div class="startup-shell__right-anchor">
+            <div class="startup-shell__right-zone"></div>
+          </div>
           <div class="startup-shell__controls"></div>
         </div>
         <div class="startup-shell__body">
@@ -179,9 +195,7 @@
               <main class="startup-shell__panel startup-shell__panel--main">
                 <div class="startup-shell__main-head"></div>
                 <div class="startup-shell__main-copy">
-                  <div class="startup-shell__loading">
-                    <div aria-label="Loading indicator" class="startup-shell__loading-pill"></div>
-                  </div>
+                  <div aria-label="Loading indicator" class="startup-shell__loading-pill"></div>
                 </div>
               </main>
               <div class="startup-shell__divider startup-shell__divider--right"></div>

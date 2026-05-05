@@ -74,6 +74,7 @@ export function renderSectionWithProps(overrides: Partial<ComponentProps<typeof 
   return render(
     <DocumentPanelSection
       activeNodeId="node-1"
+      isWorkspaceHydrated={true}
       canGoBack
       canGoForward
       canGoParent={false}

@@ -1,5 +1,4 @@
-import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
-import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
+import type { NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 
 import type { WorkspaceLayoutState } from './workspaceStore';
@@ -18,30 +17,14 @@ export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile
   };
 }
 
-export function createSeedNode(timestamp: string): Node {
-  const seedContent = '# Welcome to Foliole\n\nStart writing markdown here.';
-  return {
-    id: 'node-1',
-    parentNodeId: null,
-    kind: 'topic',
-    title: deriveNodeTitleFromContent(seedContent),
-    content: seedContent,
-    reveal: null,
-    review: null,
-    createdAt: timestamp,
-    updatedAt: timestamp
-  };
-}
-
-export function createInitialWorkspaceSnapshot(now: Date, defaultLayoutState: WorkspaceLayoutState) {
+export function createEmptyWorkspaceSnapshot(now: Date, defaultLayoutState: WorkspaceLayoutState) {
   const timestamp = now.toISOString();
-  const seedNode = createSeedNode(timestamp);
   return ensureInboxNodeInSnapshot({
-    activeNodeId: seedNode.id,
+    activeNodeId: null,
     layout: { ...defaultLayoutState },
     nodeViewById: {},
-    nodeOrder: [seedNode.id],
-    nodesById: { [seedNode.id]: seedNode },
+    nodeOrder: [],
+    nodesById: {},
     trashedNodeIds: []
   });
 }
