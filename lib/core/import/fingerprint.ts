@@ -59,6 +59,10 @@ export function createPreparedDesktopTextImport(
     ),
     degradedReason: contextResult.degradedReason,
     importedAt: input.importedAt,
+    matchedHighlights: contextResult.matchedHighlights.map(({ excerpt, highlight }) => ({
+      content: excerpt,
+      label: highlight.label?.trim() || null
+    })),
     provider: IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
     sourceFingerprint: hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, input.filePath),
     sourceKind: input.kind,

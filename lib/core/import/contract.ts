@@ -10,6 +10,11 @@ export type ImportDuplicateSemantic = 'new' | 'updated' | 'duplicate';
 
 export type ImportResultStatus = 'imported' | 'degraded' | 'failed';
 
+export interface PreparedImportHighlightRecord {
+  content: string;
+  label: string | null;
+}
+
 export interface PreparedImportRecord {
   provider: ImportProvider;
   sourceName: string;
@@ -18,6 +23,7 @@ export interface PreparedImportRecord {
   sourceFingerprint: string;
   contentFingerprint: string;
   content: string;
+  matchedHighlights?: PreparedImportHighlightRecord[];
   degradedReason: string | null;
   importedAt: string;
 }

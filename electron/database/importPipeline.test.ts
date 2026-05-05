@@ -67,8 +67,11 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
   const nodeRow = nodeId
     ? connection.sqlite.prepare('SELECT parent_id, title, content FROM nodes WHERE id = ?').get(nodeId)
     : undefined;
+  const childRows = nodeId
+    ? connection.sqlite.prepare('SELECT parent_id, title, content FROM nodes WHERE parent_id = ? ORDER BY created_at ASC').all(nodeId)
+    : [];
 
-  return { nodeRow, runRows, sourceRow };
+  return { childRows, nodeRow, runRows, sourceRow };
 }
 
 it('persists new, duplicate, updated and degraded import semantics with traceability', () => {
@@ -183,4 +186,66 @@ it('adopts markdown highlight markers into Foliole highlight anchors when config
     parent_id: 'special-inbox',
     title: 'note.md'
   });
+});
+
+it('creates imported child nodes for matched sidecar highlights during the first import', () => {
+  const imported = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: [
+        '# Article',
+        '',
+        'This is the highlighted sentence inside the article body.',
+        '',
+        'Another paragraph with Another matching excerpt. End.'
+      ].join('\n'),
+      fileName: 'readwise.md',
+      filePath: '/tmp/readwise.md',
+      highlightSidecar: [
+        { label: 'Recovered 1', text: 'This is the highlighted sentence' },
+        { label: 'Recovered 2', text: 'Another matching excerpt' },
+        { label: 'Missing', text: 'quote that is not present in the body' }
+      ],
+      importedAt: '2026-03-26T01:00:00.000Z',
+      kind: 'markdown',
+      sourceProfile: 'body_with_highlight_sidecar'
+    })
+  );
+
+  const { childRows, nodeRow, runRows } = readPersistedImportState(imported.sourceFingerprint, imported.nodeId);
+
+  expect(nodeRow).toEqual({
+    content: [
+      '# Article',
+      '',
+      'This is the highlighted sentence inside the article body.',
+      '',
+      'Another paragraph with Another matching excerpt. End.',
+      '',
+      '## Unmatched Sidecar Highlights',
+      '',
+      '- Missing: quote that is not present in the body'
+    ].join('\n'),
+    parent_id: 'special-inbox',
+    title: 'readwise.md'
+  });
+  expect(childRows).toEqual([
+    {
+      content: 'This is the highlighted sentence inside the article body.',
+      parent_id: imported.nodeId,
+      title: 'This is the highlighted sentence inside the article body.'
+    },
+    {
+      content: 'Another paragraph with Another matching excerpt. End.',
+      parent_id: imported.nodeId,
+      title: 'Another paragraph with Another matching excerpt. End.'
+    }
+  ]);
+  expect(runRows).toEqual([
+    {
+      degraded_reason: 'Controlled context degraded: 1 unmatched sidecar highlight(s)',
+      duplicate_semantic: 'new',
+      node_id: imported.nodeId,
+      result_status: 'degraded'
+    }
+  ]);
 });

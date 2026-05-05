@@ -22,7 +22,9 @@ export interface ControlledImportContextInput {
 interface ControlledImportContextOutput {
   content: string;
   degradedReason: string | null;
+  matchedHighlights: Array<{ excerpt: string; highlight: ImportSidecarHighlight }>;
   policy: ImportContextPolicy;
+  unmatchedHighlights: ImportSidecarHighlight[];
 }
 
 function appendDegradedReason(...reasons: Array<string | null | undefined>) {
@@ -32,19 +34,8 @@ function appendDegradedReason(...reasons: Array<string | null | undefined>) {
   return collected.length > 0 ? Array.from(new Set(collected)).join('; ') : null;
 }
 
-function renderContextAppendix(
-  matchedHighlights: Array<{ excerpt: string; highlight: ImportSidecarHighlight }>,
-  unmatchedHighlights: ImportSidecarHighlight[]
-) {
+function renderUnmatchedHighlightsAppendix(unmatchedHighlights: ImportSidecarHighlight[]) {
   const sections: string[] = [];
-  if (matchedHighlights.length > 0) {
-    sections.push('## Imported Context');
-    matchedHighlights.forEach(({ excerpt, highlight }, index) => {
-      const heading = highlight.label?.trim() || `Highlight ${index + 1}`;
-      sections.push(`### ${heading}`);
-      sections.push(excerpt);
-    });
-  }
   if (unmatchedHighlights.length > 0) {
     sections.push('## Unmatched Sidecar Highlights');
     unmatchedHighlights.forEach((highlight, index) => {
@@ -75,16 +66,7 @@ export function resolveImportContextPolicy(input: Pick<ControlledImportContextIn
   return 'full_text';
 }
 
-export function applyControlledImportContext(input: ControlledImportContextInput): ControlledImportContextOutput {
-  const policy = resolveImportContextPolicy(input);
-  if ((input.highlightSidecar?.length ?? 0) === 0) {
-    return {
-      content: input.content,
-      degradedReason: input.degradedReason ?? null,
-      policy
-    };
-  }
-
+function splitMatchedHighlights(input: ControlledImportContextInput) {
   const matchedHighlights: Array<{ excerpt: string; highlight: ImportSidecarHighlight }> = [];
   const unmatchedHighlights: ImportSidecarHighlight[] = [];
   input.highlightSidecar?.forEach((highlight) => {
@@ -95,37 +77,89 @@ export function applyControlledImportContext(input: ControlledImportContextInput
     }
     unmatchedHighlights.push(highlight);
   });
+  return { matchedHighlights, unmatchedHighlights };
+}
 
-  const appendix = renderContextAppendix(matchedHighlights, unmatchedHighlights);
+function resolveControlledContent(input: {
+  content: string;
+  degradedReason: string | null;
+  matchedHighlights: Array<{ excerpt: string; highlight: ImportSidecarHighlight }>;
+  policy: ImportContextPolicy;
+  sourceKind: ImportSourceKind;
+  sourceName: string;
+  unmatchedHighlights: ImportSidecarHighlight[];
+}) {
+  const unmatchedAppendix = renderUnmatchedHighlightsAppendix(input.unmatchedHighlights);
+
+  if (input.policy === 'full_text') {
+    return {
+      content: input.content,
+      degradedReason: input.degradedReason,
+      matchedHighlights: input.matchedHighlights,
+      policy: input.policy,
+      unmatchedHighlights: input.unmatchedHighlights
+    };
+  }
+
+  if (unmatchedAppendix) {
+    return {
+      content: input.policy === 'context_only' ? unmatchedAppendix : `${input.content}\n\n${unmatchedAppendix}`,
+      degradedReason: input.degradedReason,
+      matchedHighlights: input.matchedHighlights,
+      policy: input.policy,
+      unmatchedHighlights: input.unmatchedHighlights
+    };
+  }
+
+  if (input.matchedHighlights.length > 0) {
+    return {
+      content: input.content,
+      degradedReason: input.degradedReason,
+      matchedHighlights: input.matchedHighlights,
+      policy: input.policy,
+      unmatchedHighlights: input.unmatchedHighlights
+    };
+  }
+
+  return {
+    content: buildRetainedDegradedImportContent({
+      reason: input.degradedReason ?? 'Controlled context unavailable',
+      sourceKind: input.sourceKind,
+      sourceName: input.sourceName
+    }),
+    degradedReason: input.degradedReason,
+    matchedHighlights: input.matchedHighlights,
+    policy: input.policy,
+    unmatchedHighlights: input.unmatchedHighlights
+  };
+}
+
+export function applyControlledImportContext(input: ControlledImportContextInput): ControlledImportContextOutput {
+  const policy = resolveImportContextPolicy(input);
+  if ((input.highlightSidecar?.length ?? 0) === 0) {
+    return {
+      content: input.content,
+      degradedReason: input.degradedReason ?? null,
+      matchedHighlights: [],
+      policy,
+      unmatchedHighlights: []
+    };
+  }
+
+  const { matchedHighlights, unmatchedHighlights } = splitMatchedHighlights(input);
   const degradedReason = appendDegradedReason(
     input.degradedReason,
     unmatchedHighlights.length > 0 ? `Controlled context degraded: ${unmatchedHighlights.length} unmatched sidecar highlight(s)` : null,
     matchedHighlights.length === 0 ? 'Controlled context degraded: no sidecar highlights matched source body' : null
   );
 
-  if (policy === 'full_text') {
-    return {
-      content: input.content,
-      degradedReason,
-      policy
-    };
-  }
-
-  if (appendix) {
-    return {
-      content: policy === 'context_only' ? appendix : `${input.content}\n\n${appendix}`,
-      degradedReason,
-      policy
-    };
-  }
-
-  return {
-    content: buildRetainedDegradedImportContent({
-      reason: degradedReason ?? 'Controlled context unavailable',
-      sourceKind: input.sourceKind,
-      sourceName: input.sourceName
-    }),
+  return resolveControlledContent({
+    content: input.content,
     degradedReason,
-    policy
-  };
+    matchedHighlights,
+    policy,
+    sourceKind: input.sourceKind,
+    sourceName: input.sourceName,
+    unmatchedHighlights
+  });
 }

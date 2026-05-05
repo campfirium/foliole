@@ -8,7 +8,7 @@ it('recognizes epub files as importable long-form sources', () => {
   expect(resolveImportKind('/tmp/book.epub')).toBe('epub');
 });
 
-it('builds controlled context for body plus highlight sidecar imports and keeps degraded mismatches visible', () => {
+it('keeps the source body intact, returns matched highlights, and appends only unmatched sidecar highlights', () => {
   const prepared = buildPreparedImportRecord(
     {
       filePath: '/tmp/chapter.md',
@@ -28,11 +28,10 @@ it('builds controlled context for body plus highlight sidecar imports and keeps 
   );
 
   expect(prepared.content).toContain('# Chapter');
-  expect(prepared.content).toContain('## Imported Context');
-  expect(prepared.content).toContain('### Recovered');
-  expect(prepared.content).toContain('controlled imports and highlight recovery');
+  expect(prepared.content).not.toContain('## Imported Context');
   expect(prepared.content).toContain('## Unmatched Sidecar Highlights');
   expect(prepared.content).toContain('- Missing: quote that is not present in the body');
+  expect(prepared.matchedHighlights).toEqual([{ content: 'This is a long paragraph about controlled imports and highlight recovery for complex sources.', label: 'Recovered' }]);
   expect(prepared.degradedReason).toContain('1 unmatched sidecar highlight(s)');
 });
 
@@ -70,10 +69,21 @@ it('recovers list-heavy and flattened highlights from the source body before mar
     }
   );
 
-  expect(prepared.content).toContain('### Review questions');
-  expect(prepared.content).toContain('是否有项目已无任务？');
-  expect(prepared.content).toContain('### Table row');
-  expect(prepared.content).toContain('Todoist 中的对应操作');
+  expect(prepared.content).toContain('| 每周回顾 | 保持系统清空 & 当前 | 每周打开 Someday/Waiting/Projects 重新评估 |');
   expect(prepared.content).not.toContain('## Unmatched Sidecar Highlights');
+  expect(prepared.matchedHighlights).toEqual([
+    {
+      content: ['Checklist:', '- 是否有项目已无任务？', '- 是否有任务长期未触发？'].join('\n'),
+      label: 'Review questions'
+    },
+    {
+      content: [
+        '| 要素 | GTD 原理 | Todoist 中的对应操作 |',
+        '| --- | --- | --- |',
+        '| 每周回顾 | 保持系统清空 & 当前 | 每周打开 Someday/Waiting/Projects 重新评估 |'
+      ].join('\n'),
+      label: 'Table row'
+    }
+  ]);
   expect(prepared.degradedReason).toBeNull();
 });
