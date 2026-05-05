@@ -1,5 +1,3 @@
-import { Badge } from '@radix-ui/themes';
-
 import { cn } from '@/shared/lib/utils';
 
 type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
@@ -27,8 +25,8 @@ function toneClass(tone: StatusTone) {
 
 export function AppStatusBadge({ label, tone = 'neutral' }: StatusBadgeProps) {
   return (
-    <Badge className={cn('min-h-6 border px-2 text-xs font-semibold', toneClass(tone))} radius="none">
+    <span className={cn('inline-flex min-h-6 items-center border px-2 text-xs font-semibold leading-none', toneClass(tone))}>
       {label}
-    </Badge>
+    </span>
   );
 }

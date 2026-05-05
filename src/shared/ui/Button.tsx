@@ -1,4 +1,3 @@
-import { Button as RadixButton } from '@radix-ui/themes';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '@/shared/lib/utils';
@@ -13,18 +12,21 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'col
   active?: boolean;
 }
 
-function resolveVariant(variant: ButtonVariant) {
+function resolveVariantClass(variant: ButtonVariant) {
   if (variant === 'primary') {
-    return 'ghost';
+    return 'border border-border bg-transparent text-foreground hover:bg-foreground/[0.04]';
   }
-  if (variant === 'ghost') {
-    return 'outline';
+  if (variant === 'subtle') {
+    return 'text-foreground/70 hover:text-foreground';
   }
-  return 'ghost';
+  if (variant === 'list') {
+    return 'w-full justify-start px-3 py-2 text-left text-[13px] text-foreground/80 hover:bg-foreground/[0.03] hover:text-foreground';
+  }
+  return 'border border-transparent bg-transparent text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 }
 
-function resolveSize(size: ButtonSize) {
-  return size === 'sm' ? '1' : '2';
+function resolveSizeClass(size: ButtonSize) {
+  return size === 'sm' ? 'min-h-8 px-3 text-sm' : 'min-h-9 px-3.5 text-sm';
 }
 
 export function AppButton({
@@ -39,21 +41,19 @@ export function AppButton({
   const isList = variant === 'list';
 
   return (
-    <RadixButton
+    <button
       className={cn(
-        isList && 'box-border w-full justify-start px-3 py-2 text-left text-[13px]',
-        variant === 'primary' && 'border border-border bg-transparent text-foreground hover:bg-foreground/[0.04]',
-        variant === 'subtle' && 'text-foreground/70 hover:text-foreground',
+        'inline-flex shrink-0 items-center justify-center gap-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+        !isList && resolveSizeClass(size),
+        resolveVariantClass(variant),
         active && isList && 'border border-border-strong bg-foreground/[0.05] text-foreground',
         className
       )}
       data-active={active}
-      size={isList ? undefined : resolveSize(size)}
       type={type}
-      variant={resolveVariant(variant)}
       {...rest}
     >
       {children}
-    </RadixButton>
+    </button>
   );
 }

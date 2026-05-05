@@ -1,4 +1,3 @@
-import { IconButton as RadixIconButton } from '@radix-ui/themes';
 import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
@@ -14,16 +13,17 @@ export const AppIconButton = forwardRef<HTMLButtonElement, IconButtonProps>(func
   ref
 ) {
   return (
-    <RadixIconButton
+    <button
       aria-label={label}
-      className={cn('size-8', className)}
+      className={cn(
+        'inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+        className
+      )}
       ref={ref}
-      size="1"
       type={type}
-      variant="ghost"
       {...rest}
     >
       {icon}
-    </RadixIconButton>
+    </button>
   );
 });

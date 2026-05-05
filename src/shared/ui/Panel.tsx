@@ -1,4 +1,3 @@
-import { Box, Heading } from '@radix-ui/themes';
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from 'react';
 
 import { cn } from '@/shared/lib/utils';
@@ -44,7 +43,7 @@ export function AppPanel<T extends PanelElement = 'section'>({
       className={cn('min-h-0', className)}
       {...rest}
     >
-      <Box className={cn('flex h-full min-h-0 flex-col overflow-hidden bg-transparent p-0 text-foreground', surfaceClassName)}>
+      <div className={cn('flex h-full min-h-0 flex-col overflow-hidden bg-transparent p-0 text-foreground', surfaceClassName)}>
         <header
           className={cn(
             'flex min-h-[48px] items-center justify-start gap-3 px-4 py-2',
@@ -54,9 +53,9 @@ export function AppPanel<T extends PanelElement = 'section'>({
         >
           <div className="min-w-0 shrink-0">
             {useHeading ? (
-              <Heading as="h3" className="m-0 text-sm font-semibold uppercase tracking-[0.04em]" size="2">
+              <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.04em]">
                 {title}
-              </Heading>
+              </h3>
             ) : (
               <div className="min-w-0">{title}</div>
             )}
@@ -64,9 +63,9 @@ export function AppPanel<T extends PanelElement = 'section'>({
           <div className="min-w-0 flex-1 overflow-hidden">{center}</div>
           <div className="ml-auto shrink-0">{actions}</div>
         </header>
-        <Box className={cn('min-h-0 flex-1', scrollBody && 'overflow-auto', bodyClassName)}>{children}</Box>
+        <div className={cn('min-h-0 flex-1', scrollBody && 'overflow-auto', bodyClassName)}>{children}</div>
         {footer ? <footer className="p-3">{footer}</footer> : null}
-      </Box>
+      </div>
     </Component>
   );
 }

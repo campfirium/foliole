@@ -1,5 +1,3 @@
-import { Theme } from '@radix-ui/themes';
-import '@radix-ui/themes/styles.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -93,9 +91,7 @@ function mountApp() {
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <Theme accentColor="gray" appearance="light" grayColor="sand" panelBackground="solid" radius="large" scaling="105%">
-        <App />
-      </Theme>
+      <App />
     </React.StrictMode>
   );
   reportRuntimeBootStage('react_render_committed');

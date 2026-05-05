@@ -67,13 +67,6 @@ body {
   stroke-linecap: butt;
 }
 
-.radix-themes {
-  --default-font-family: var(--app-interface-font-family, var(--font-family-interface));
-  --heading-font-family: var(--default-font-family);
-  --strong-font-family: var(--default-font-family);
-  --code-font-family: var(--content-panel-mono-font-family, var(--font-family-mono));
-}
-
 .window-titlebar {
   align-items: center;
   background: #fcfcfc;
