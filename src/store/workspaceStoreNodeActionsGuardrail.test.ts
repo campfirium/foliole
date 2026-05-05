@@ -48,6 +48,7 @@ function createWorkspaceFixture(): WorkspaceState {
     dismissReviewItem: () => false,
     exitReviewSession: () => undefined,
     deleteNode: () => undefined,
+    deleteImageClozeRegion: () => undefined,
     deleteNodes: () => undefined,
     restoreNode: () => undefined,
     deleteNodePermanently: () => undefined,

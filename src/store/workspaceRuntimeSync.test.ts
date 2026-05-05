@@ -34,6 +34,7 @@ function createNodeFixture(): Node {
     hideTitleHeading: true,
     content: '# Seed',
     anchorLink: { id: 'hl-1', kind: 'highlight' },
+    imageRegions: null,
     reveal: 'Reveal',
     reading: {
       intervalDurationMs: 0,
@@ -58,6 +59,7 @@ function createRuntimeSnapshotNodeFixture(): NativeWorkspaceNodeSnapshot {
     isTitleManual: false,
     hideTitleHeading: true,
     anchorLink: node.anchorLink ?? null,
+    imageRegions: node.imageRegions ?? null,
     reading: null
   };
 }
@@ -109,6 +111,7 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
     virtualFilter: null,
     reveal: 'Reveal',
     anchorLink: { id: 'hl-1', kind: 'highlight' },
+    imageRegions: null,
     reading: {
       intervalDurationMs: 0,
       intervalGrowthFactor: 1,

@@ -61,6 +61,7 @@ export interface WorkspaceState {
   dismissReviewItem: (now?: string) => boolean;
   exitReviewSession: () => void;
   deleteNode: (nodeId: string) => void;
+  deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   deleteNodes: (nodeIds: string[]) => void;
   restoreNode: (nodeId: string) => void;
   deleteNodePermanently: (nodeId: string) => void;

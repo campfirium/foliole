@@ -50,8 +50,10 @@ it('reapplies the current selection when opening the editor context menu', () =>
       activeNodeId: 'node-1',
       createHighlightNodeFromSelection: vi.fn(),
       createQANodeFromSelection: vi.fn(),
+      deleteImageClozeRegion: vi.fn(),
       editorRef,
       isTrashViewOpen: false,
+      nodesById: { 'node-1': { id: 'node-1', content: 'Welcome to Foliole', title: 'Welcome to Foliole' } } as never,
       updateNodeContent: vi.fn()
     })
   );
@@ -108,8 +110,10 @@ it('opens image commands when the context menu targets an attachment image', () 
       activeNodeId: 'node-1',
       createHighlightNodeFromSelection: vi.fn(),
       createQANodeFromSelection: vi.fn(),
+      deleteImageClozeRegion: vi.fn(),
       editorRef,
       isTrashViewOpen: false,
+      nodesById: { 'node-1': { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } } as never,
       updateNodeContent: vi.fn()
     })
   );
@@ -171,8 +175,10 @@ it('cuts an attachment image only after clipboard copy succeeds', async () => {
       activeNodeId: 'node-1',
       createHighlightNodeFromSelection: vi.fn(),
       createQANodeFromSelection: vi.fn(),
+      deleteImageClozeRegion: vi.fn(),
       editorRef: { current: adapter },
       isTrashViewOpen: false,
+      nodesById: { 'node-1': { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } } as never,
       updateNodeContent
     })
   );
@@ -211,8 +217,10 @@ it('exports an attachment image through the native bridge', async () => {
       activeNodeId: 'node-1',
       createHighlightNodeFromSelection: vi.fn(),
       createQANodeFromSelection: vi.fn(),
+      deleteImageClozeRegion: vi.fn(),
       editorRef: { current: null },
       isTrashViewOpen: false,
+      nodesById: { 'node-1': { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } } as never,
       updateNodeContent: vi.fn()
     })
   );

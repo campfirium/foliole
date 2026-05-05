@@ -95,7 +95,7 @@ export function mergeWorkspaceNodeDocument(node: Node, document: WorkspaceNodeDo
     content: document.content,
     hasContent: document.content.trim().length > 0,
     hideTitleHeading: document.hideTitleHeading,
-    ...(document.imageRegions ? { imageRegions: document.imageRegions } : {}),
+    imageRegions: document.imageRegions ?? null,
     kind: document.kind,
     reveal: document.reveal,
     virtualFilter: document.virtualFilter ?? null,

@@ -45,7 +45,7 @@ function toNodeSnapshotPayload(node: Node, position?: number): NativeNodeSnapsho
     virtualFilter: node.virtualFilter ?? null,
     reveal: node.reveal,
     anchorLink: node.anchorLink ?? null,
-    ...(node.imageRegions ? { imageRegions: node.imageRegions } : {}),
+    imageRegions: node.imageRegions ?? null,
     reading: node.reading ?? null,
     position: typeof position === 'number' ? position : null,
     createdAt: node.createdAt,

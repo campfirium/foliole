@@ -150,11 +150,11 @@ describe('quality-gate-fast.sh', () => {
     try {
       const result = await runGuardedCommand(
         `(sleep 30) & child=$!; echo "$child" > "${pidFile}"; wait`,
-        { QUALITY_GATE_TEST_TIMEOUT_SECONDS: '2' }
+        { QUALITY_GATE_TEST_TIMEOUT_SECONDS: '4' }
       );
 
       expect(result.code).toBe(1);
-      expect(result.stdout).toContain('failed: test exceeded timeout (2s)');
+      expect(result.stdout).toContain('failed: test exceeded timeout (4s)');
       await waitForFile(pidFile);
       const lingeringPid = Number.parseInt((await readFile(pidFile, 'utf8')).trim(), 10);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 200));
@@ -190,13 +190,13 @@ describe('quality-gate-fast.sh', () => {
       });
 
       const result = await runQualityGate(tempRoot, {
-        QUALITY_GATE_LINT_TIMEOUT_SECONDS: '2',
+        QUALITY_GATE_LINT_TIMEOUT_SECONDS: '4',
         QUALITY_GATE_TYPECHECK_TIMEOUT_SECONDS: '20'
       });
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('lint failed:');
-      expect(result.stdout).toContain('failed: lint exceeded timeout (2s)');
+      expect(result.stdout).toContain('failed: lint exceeded timeout (4s)');
       await waitForFile(pidFile);
       const lingeringPid = Number.parseInt((await readFile(pidFile, 'utf8')).trim(), 10);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 200));

@@ -1,9 +1,14 @@
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import type { NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
+import { getRuntimeInvoke } from '../platform/bridge';
 
 interface DebugNodeSeed {
+  anchorLink?: NodeAnchorLink | null;
   content: string;
   id: string;
+  imageRegions?: NodeImageRegionGroup[] | null;
   kind?: 'folder' | 'item' | 'topic';
   parentNodeId?: string | null;
   reveal?: string | null;
@@ -12,10 +17,16 @@ interface DebugNodeSeed {
 
 interface WorkspaceDebugApi {
   getActiveNodeId: () => string | null;
+  importClipboardImageAttachment: (args: {
+    bytesBase64: string;
+    mimeType: string;
+    nodeId: string;
+    originalName?: string;
+  }) => Promise<string | null>;
   getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } } | null;
   listNodes: () => Array<{ id: string; title: string }>;
   openNode: (nodeId: string) => Promise<boolean>;
-  seedNodes: (nodes: DebugNodeSeed[]) => void;
+  seedNodes: (nodes: DebugNodeSeed[]) => Promise<void>;
 }
 
 type WorkspaceDebugWindow = Window & {
@@ -33,6 +44,68 @@ function isWorkspaceDebugEnabled() {
   return Boolean((window as WorkspaceDebugWindow).electronAPI?.debug);
 }
 
+function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode: ReturnType<typeof createInitialWorkspaceState>['nodesById'][string]) {
+  return Object.fromEntries(
+    nodes.map((node, index) => [
+      node.id,
+      {
+        ...initialNode,
+        anchorLink: node.anchorLink ?? null,
+        content: node.content,
+        createdAt,
+        hasContent: node.content.trim().length > 0,
+        hasReveal: node.reveal != null,
+        id: node.id,
+        imageRegions: node.imageRegions ?? null,
+        kind: node.kind ?? initialNode.kind,
+        parentNodeId: node.parentNodeId ?? null,
+        reveal: node.reveal ?? null,
+        title: node.title,
+        updatedAt: `2026-04-08T00:00:${String(index).padStart(2, '0')}.000Z`
+      }
+    ])
+  );
+}
+
+async function persistSeedNodes(nodes: DebugNodeSeed[]) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index];
+    const basePayload = {
+      anchorLink: node.anchorLink ?? null,
+      content: node.content,
+      createdAt: '2026-04-08T00:00:00.000Z',
+      desiredRetention: null,
+      hideTitleHeading: false,
+      imageRegions: node.imageRegions ?? null,
+      isTitleManual: true,
+      kind: node.kind ?? 'topic',
+      nodeId: node.id,
+      parentNodeId: node.parentNodeId ?? null,
+      position: index,
+      priority: null,
+      reading: null,
+      reveal: node.reveal ?? null,
+      title: node.title,
+      updatedAt: `2026-04-08T00:00:${String(index).padStart(2, '0')}.000Z`,
+      virtualFilter: null
+    };
+    const command =
+      basePayload.kind === 'folder'
+        ? NATIVE_COMMANDS.createFolder
+        : basePayload.kind === 'item'
+          ? NATIVE_COMMANDS.createItem
+          : NATIVE_COMMANDS.createTopic;
+    await runtimeInvoke(command, basePayload);
+  }
+
+  await runtimeInvoke(NATIVE_COMMANDS.replaceNodeOrder, { nodeIds: nodes.map((node) => node.id) });
+}
+
 export function installWorkspaceDebugBridge() {
   if (!isWorkspaceDebugEnabled() || typeof window === 'undefined') {
     return;
@@ -45,6 +118,21 @@ export function installWorkspaceDebugBridge() {
 
   targetWindow.__folioleWorkspaceDebug = {
     getActiveNodeId: () => useWorkspaceStore.getState().activeNodeId,
+    importClipboardImageAttachment: async ({ bytesBase64, mimeType, nodeId, originalName }) => {
+      const runtimeInvoke = getRuntimeInvoke();
+      if (!runtimeInvoke) {
+        return null;
+      }
+      const result = await runtimeInvoke(NATIVE_COMMANDS.importClipboardImageAttachment, {
+        bytesBase64,
+        mimeType,
+        nodeId,
+        originalName: originalName ?? 'debug-image.png'
+      });
+      return result && typeof result === 'object' && 'attachment_id' in result && typeof result.attachment_id === 'string'
+        ? result.attachment_id
+        : null;
+    },
     getNodeViewState: (nodeId) => useWorkspaceStore.getState().nodeViewById[nodeId] ?? null,
     listNodes: () =>
       useWorkspaceStore
@@ -62,27 +150,9 @@ export function installWorkspaceDebugBridge() {
         return false;
       }
     },
-    seedNodes: (nodes) => {
+    seedNodes: async (nodes) => {
       const initial = createInitialWorkspaceState(new Date('2026-04-08T00:00:00.000Z'));
-      const seededNodesById = Object.fromEntries(
-        nodes.map((node, index) => [
-          node.id,
-          {
-            ...initial.nodesById['node-1'],
-            anchorLink: null,
-            content: node.content,
-            createdAt: '2026-04-08T00:00:00.000Z',
-            hasContent: node.content.trim().length > 0,
-            hasReveal: node.reveal != null,
-            id: node.id,
-            kind: node.kind ?? initial.nodesById['node-1'].kind,
-            parentNodeId: node.parentNodeId ?? null,
-            reveal: node.reveal ?? null,
-            title: node.title,
-            updatedAt: `2026-04-08T00:00:${String(index).padStart(2, '0')}.000Z`
-          }
-        ])
-      );
+      const seededNodesById = buildSeededNodes(nodes, '2026-04-08T00:00:00.000Z', initial.nodesById['node-1']);
       const firstNodeId = nodes[0]?.id ?? null;
       useWorkspaceStore.setState({
         ...initial,
@@ -91,6 +161,7 @@ export function installWorkspaceDebugBridge() {
         nodesById: seededNodesById,
         trashedNodeIds: []
       });
+      await persistSeedNodes(nodes);
     }
   };
 }

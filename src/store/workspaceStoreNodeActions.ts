@@ -50,6 +50,7 @@ type WorkspaceNodeActions = Pick<
   | 'createQANodeFromSelection'
   | 'createRootNode'
   | 'createVirtualNode'
+  | 'deleteImageClozeRegion'
   | 'deleteNode'
   | 'deleteNodes'
   | 'deleteNodePermanently'
@@ -245,6 +246,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
     createImageClozeNodes: createImageClozeNodesAction(set, runtimeHandlers, reconcileReviewSession),
     createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers),
+    deleteImageClozeRegion: trashActions.deleteImageClozeRegion,
     moveNode: createMoveNodeAction(set, syncMovedNodes, syncNodeOrderToRuntime),
     moveNodes: createMoveNodesAction(set, syncMovedNodes, syncNodeOrderToRuntime)
   };

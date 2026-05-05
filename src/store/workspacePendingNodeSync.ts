@@ -71,7 +71,7 @@ function toPendingWorkspaceNode(
     content: pendingNode.content,
     reveal: pendingNode.reveal,
     anchorLink: pendingNode.anchorLink,
-    ...(pendingNode.imageRegions ? { imageRegions: pendingNode.imageRegions } : {}),
+    imageRegions: pendingNode.imageRegions ?? null,
     reading: pendingNode.reading ?? null,
     review: currentNode?.review ?? null,
     createdAt: pendingNode.createdAt,

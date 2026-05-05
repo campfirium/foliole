@@ -26,6 +26,8 @@ export function useWorkspaceSelectors() {
       createImageClozeNodes: state.createImageClozeNodes,
       createQANodeFromSelection: state.createQANodeFromSelection,
       createRootNode: state.createRootNode,
+      deleteNode: state.deleteNode,
+      deleteImageClozeRegion: state.deleteImageClozeRegion,
       dismissReviewItem: state.dismissReviewItem,
       documentMaxWidth: state.layout.documentMaxWidth,
       completeReviewItem: state.completeReviewItem,
@@ -105,8 +107,10 @@ export function useWorkspaceControllerState(
     createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection,
     createImageClozeNodes: ws.createImageClozeNodes,
     createQANodeFromSelection: ws.createQANodeFromSelection,
+    deleteImageClozeRegion: ws.deleteImageClozeRegion,
     editorRef: runtime.editorRef,
     isTrashViewOpen: runtime.isViewingTrashNode,
+    nodesById: ws.nodesById,
     updateNodeContent: ws.updateNodeContent
   });
   useReadingProgressSync({ activeNodeId: ws.activeNodeId, editorRef: runtime.editorRef, isViewingTrashNode: runtime.isViewingTrashNode, isWorkspaceHydrated, nodeViewById: ws.nodeViewById, setNodeViewState: ws.setNodeViewState });

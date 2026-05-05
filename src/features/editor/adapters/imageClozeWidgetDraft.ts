@@ -71,12 +71,18 @@ function finalizeDraftRect(args: {
 
 function startDraftDrag(args: {
   actions: HTMLElement;
+  canStartDrag?: (event: PointerEvent) => boolean;
   draftRectElement: HTMLElement;
   overlay: HTMLElement;
   setDragStart: (point: { x: number; y: number }) => void;
 }) {
   return (event: PointerEvent) => {
-    if (event.button !== 0 || event.target !== args.overlay) {
+    if (
+      event.button !== 0 ||
+      event.target !== args.overlay ||
+      args.overlay.dataset.mdImageRegionHover === 'true' ||
+      args.canStartDrag?.(event) === false
+    ) {
       return;
     }
     const point = mapPointerToRatio(event, args.overlay);
@@ -134,6 +140,7 @@ function endDraftDrag(args: {
 
 export function attachOverlayDragHandlers(args: {
   actions: HTMLElement;
+  canStartDrag?: (event: PointerEvent) => boolean;
   draftRectElement: HTMLElement;
   onFinalize: (anchorPoint: { x: number; y: number }) => void;
   overlay: HTMLElement;
@@ -158,6 +165,7 @@ export function attachOverlayDragHandlers(args: {
     'pointerdown',
     startDraftDrag({
       actions: args.actions,
+      canStartDrag: args.canStartDrag,
       draftRectElement: args.draftRectElement,
       overlay: args.overlay,
       setDragStart: (point) => {

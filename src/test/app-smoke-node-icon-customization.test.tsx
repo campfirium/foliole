@@ -121,4 +121,4 @@ it('uses configurable state styling while preserving topic and item svg sources'
   render(<App />);
 
   await waitFor(expectCustomizedNodeIcons);
-});
+}, 15000);

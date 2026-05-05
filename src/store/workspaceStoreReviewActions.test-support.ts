@@ -128,6 +128,7 @@ export function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     dismissReviewItem: () => false,
     exitReviewSession: () => undefined,
     deleteNode: () => undefined,
+    deleteImageClozeRegion: () => undefined,
     deleteNodes: () => undefined,
     restoreNode: () => undefined,
     deleteNodePermanently: () => undefined,

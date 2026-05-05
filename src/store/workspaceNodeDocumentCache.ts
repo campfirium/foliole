@@ -48,7 +48,7 @@ export function toWorkspaceNodeDocument(node: Node): WorkspaceNodeDocument {
   return {
     content: node.content,
     hideTitleHeading: node.hideTitleHeading ?? false,
-    ...(node.imageRegions ? { imageRegions: node.imageRegions } : {}),
+    imageRegions: node.imageRegions ?? null,
     kind: node.kind,
     reveal: node.reveal,
     virtualFilter: node.virtualFilter ?? null

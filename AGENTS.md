@@ -13,7 +13,7 @@
 ## 文档读取顺序
 - 启动时只读 `AGENTS.md`。
 - 仅当用户在新会话首条有效指令明确说“继续”时，先读取 `.lab/atlas/todo.md`；必要时按需补读 `.lab/atlas/verify.md`、`.lab/atlas/optional.md`、`.lab/atlas/notes.md`、`.lab/atlas/done.md` 与 `git log --oneline -n 5`。
-- 任务涉及 renderer UI 改动（`src/app/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
+- 任务涉及 renderer UI 改动（`src/app/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须先读取 `DESIGN.md`，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增/重写 spec、整理文档结构、拆分长文档时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
 - 任务涉及台账、继续/停车协议等执行细则时，读取 `.lab/atlas/task-protocol.md`。
@@ -35,11 +35,12 @@
 
 ## 质量闸与测试
 - 不允许通过降低检查标准过关；禁止跳过关键检查、删除校验或用注释掩盖失败。
-- 默认质量闸顺序固定为 `lint` -> `typecheck` -> `test`，入口脚本为 `scripts/quality-gate-fast.sh`。
+- 默认先执行与本次改动直接相关的最小验证，顺序仍遵循 `lint` -> `typecheck` -> `test`；只有当任务影响范围较大、改动触及跨层共享边界、用户明确要求，或相关验证不足以证明结果可靠时，才升级为整仓质量闸 `scripts/quality-gate-fast.sh`。
+- 若只做相关最小验证，必须优先选择与改动文件、改动链路、复现场景直接对应的检查命令；汇报时要明确说明“已执行的相关检查”与“未执行的整仓检查”。
 - 新增或升级 npm 依赖时，除常规质量闸外，必须额外执行 `npm run deps:hardening:check`；不得只凭口头说明或文档勾选完成。
 - npm 依赖相关复核默认由 AI 直接执行并汇报结果；禁止把“人工检查依赖风险”“人工定期复核”这类空泛表述挂成默认待办。
 - npm 依赖收紧的背景、例外与专项结论统一收口在 `.lab/atlas/npm-supply-chain-hardening-plan.md`；主规则只保留可执行入口，不在这里重复展开长篇原则。
-- 当 `.lab/internal/runtime/windows-preview.flag` 为 `ON` 时，代码改动在通过本地质量闸后，默认必须继续执行 `npm run windows:preview`；除非用户当次明确豁免。
+- 当 `.lab/internal/runtime/windows-preview.flag` 为 `ON` 时，只有本次任务实际影响 Windows / Electron 运行链路、桌面壳行为、bridge/runtime 同步链路，或用户明确要求桌面验收时，才在相关验证通过后继续执行 `npm run windows:preview`；普通 renderer 局部改动默认不追加 Windows 预览，除非本轮现象本身只会在桌面运行时暴露。
 - 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
 - Windows 公开验证入口只保留 `npm run windows:preview`；其余 Windows npm 命令不再作为默认或推荐入口。
 - `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。
@@ -70,6 +71,7 @@
 - 单文件目标 <= 220 行，硬上限 > 260 行必须拆分。
 - 单函数目标 <= 40 行，硬上限 > 60 行必须拆分或提取子函数。
 - 遇到 `max-lines`、`max-lines-per-function` 等规模约束时，禁止通过压缩格式、合并多条语句到单行、删除必要留白等方式规避；必须通过拆函数、拆组件或拆文件解决。
+- UI 代码禁止新增硬编码颜色、圆角、阴影或间距值；所有视觉值只从 `tailwind.config.js` token 消费。
 - 每个文件只承载一个核心职责；禁止把 UI、数据访问、业务规则长期混写。
 - 复杂逻辑优先模块化拆分；禁止用极端紧凑写法规避规模限制。
 - 全局设置不得进入 `WorkspaceLayoutProps` 或 workspace 中间层 props 链；新增全局设置默认走统一 settings provider，由设置页和实际消费位置直接读取。
@@ -101,5 +103,5 @@
 - 开发方法论（BDD、UI 先行、任务拆分顺序）：`.lab/specs/_product/methodology.md`
 - agent 台账与执行协议：`.lab/atlas/task-protocol.md`
 - 文档治理与准入规则：`.lab/specs/_governance/doc-update-expectation.md`、`.lab/specs/_governance/spec-organization.md`、`.lab/specs/_governance/doc-organization-expectation.md`
-- UI 规范：`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`、`.lab/specs/desktop/workspace/shell-layout.md`
+- UI 规范：`DESIGN.md`、`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`、`.lab/specs/desktop/workspace/shell-layout.md`
 - Windows Native 开发与启动排障：`.lab/specs/desktop/electron/windows-dev-loop.md`

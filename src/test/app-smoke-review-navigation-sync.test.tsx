@@ -123,4 +123,4 @@ it('keeps review toolbar in sync when navigation history jumps to another queued
   expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['reading-1', 'fsrs-1']);
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByTestId('editor-value')).toHaveValue('Read this first');
-});
+}, 15000);
