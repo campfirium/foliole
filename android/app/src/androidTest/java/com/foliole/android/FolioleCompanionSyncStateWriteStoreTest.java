@@ -101,6 +101,31 @@ public class FolioleCompanionSyncStateWriteStoreTest {
         assertEquals("conflict", selectString("SELECT status FROM sync_push_ack WHERE client_op_id = 'node_review:node-2:6'"));
     }
 
+    @Test
+    public void pushAckStoreClearsOldIssueWhenStateAckIsAccepted() throws Exception {
+        FolioleCompanionSyncPushAckStore.saveAcks(database, new JSONArray()
+            .put(new JSONObject()
+                .put("client_op_id", "node_review:node-1:4")
+                .put("identity", new JSONObject()
+                    .put("objectType", "node_review")
+                    .put("objectId", "node-1"))
+                .put("status", "conflict")));
+
+        JSObject result = FolioleCompanionSyncPushAckStore.saveAcks(database, new JSONArray()
+            .put(new JSONObject()
+                .put("client_op_id", "node_review:node-1:5")
+                .put("identity", new JSONObject()
+                    .put("objectType", "node_review")
+                    .put("objectId", "node-1"))
+                .put("state_seq", 8)
+                .put("status", "accepted")));
+
+        assertEquals(1, result.getJSONArray("saved_client_op_ids").length());
+        assertEquals(1, selectInt("SELECT COUNT(*) FROM sync_push_ack"));
+        assertEquals("accepted", selectString("SELECT status FROM sync_push_ack WHERE object_type = 'node_review' AND object_id = 'node-1'"));
+        assertEquals(8, selectInt("SELECT state_seq FROM sync_push_ack WHERE object_type = 'node_review' AND object_id = 'node-1'"));
+    }
+
     private void createTables() {
         database.execSQL("CREATE TABLE node_review (" +
             "node_id TEXT PRIMARY KEY, due TEXT NOT NULL, last_review_at TEXT, state INTEGER NOT NULL DEFAULT 0, " +
