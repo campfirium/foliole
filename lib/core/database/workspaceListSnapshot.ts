@@ -9,8 +9,8 @@ interface WorkspaceNodeRow extends DatabaseRow {
   title: string;
   is_title_manual: number;
   hide_title_heading: number;
-  content: string;
-  reveal: string | null;
+  has_content: number;
+  has_reveal: number;
   anchor_link: string | null;
   created_at: string;
   updated_at: string;
@@ -102,8 +102,8 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        n.title,
        n.is_title_manual,
        n.hide_title_heading,
-       n.content,
-       n.reveal,
+       CASE WHEN LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
+       CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
        n.anchor_link,
        n.created_at,
        n.updated_at,
@@ -152,8 +152,8 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
       title: row.title,
       isTitleManual: row.is_title_manual === 1,
       hideTitleHeading: row.hide_title_heading === 1,
-      hasContent: row.content.trim().length > 0,
-      hasReveal: row.reveal !== null,
+      hasContent: row.has_content === 1,
+      hasReveal: row.has_reveal === 1,
       content: '',
       reveal: null,
       anchorLink: parseAnchorLink(row.anchor_link),

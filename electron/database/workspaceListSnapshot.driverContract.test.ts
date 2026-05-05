@@ -34,8 +34,8 @@ const workspaceListRow = {
   title: 'Node 1',
   is_title_manual: 1,
   hide_title_heading: 1,
-  content: 'full body',
-  reveal: 'full answer',
+  has_content: 1,
+  has_reveal: 1,
   anchor_link: null,
   created_at: '2026-03-14T00:00:00.000Z',
   updated_at: '2026-03-14T00:00:00.000Z',
@@ -102,4 +102,17 @@ it('loads workspace list snapshot without long-lived node documents', () => {
 
   expect(queryAllSpy).toHaveBeenCalledTimes(2);
   expect(queryOneSpy).toHaveBeenCalledTimes(1);
+});
+
+it('queries lightweight content flags instead of full node documents', () => {
+  queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([{ node_id: 'node-1' }]);
+  queryOneSpy.mockReturnValueOnce(undefined);
+
+  loadWorkspaceListSnapshot(driver);
+
+  const workspaceListSql = queryAllSpy.mock.calls[0]?.[0];
+  expect(workspaceListSql).toContain('AS has_content');
+  expect(workspaceListSql).toContain('AS has_reveal');
+  expect(workspaceListSql).not.toContain('n.content,');
+  expect(workspaceListSql).not.toContain('n.reveal,');
 });
