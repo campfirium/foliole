@@ -24,7 +24,6 @@ export interface CompanionDiscoveryCandidatesPayload {
 
 export interface CompanionWorkspaceSyncPlugin {
   applySyncObjects(args: { objects: NativeSyncObjectRecord[] }): Promise<{ applied_object_ids: string[] }>;
-  applyDesktopSyncPack(args: { headers: Record<string, string>; url: string }): Promise<NativeSyncPackApplyResult>;
   applySyncPack(args: { pack_path: string }): Promise<NativeSyncPackApplyResult>;
   applySyncNodeVersions(args: { nodes: NativeSyncNodeRecord[] }): Promise<{ applied_node_ids: string[] }>;
   applySyncReviewLog(args: { reviews: NativeSyncReviewLogRecord[] }): Promise<{ applied_op_ids: string[] }>;
