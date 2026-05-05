@@ -38,7 +38,12 @@ const syncBridgeMock = vi.hoisted(() => ({
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
 }));
 
+const diagnosticsMock = vi.hoisted(() => ({
+  loadLocalSyncDiagnostics: vi.fn(async () => null)
+}));
+
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
+vi.mock('./companionSyncDiagnostics', () => diagnosticsMock);
 vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourceRequestsFromDesktop: vi.fn(async () => [] as string[]),
   syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
@@ -128,6 +133,7 @@ function parsePushItems(init: RequestInit | undefined) {
 describe('companion desktop sync push acknowledgements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => ({
       json: async () => {
@@ -145,6 +151,27 @@ describe('companion desktop sync push acknowledgements', () => {
       },
       ok: true
     })));
+  });
+
+  it('returns persisted push issue count from the final local diagnostics', async () => {
+    diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue({
+      content: {
+        missing_attachment_resource_bytes: 0,
+        missing_attachment_resource_count: 0,
+        missing_content_blob_bytes: 0,
+        missing_content_blob_count: 0
+      },
+      sync_state: {
+        local_dirty_count: 0,
+        pending_ack_count: 0,
+        push_issue_count: 1
+      }
+    } as Awaited<ReturnType<typeof diagnosticsMock.loadLocalSyncDiagnostics>>);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushIssueCount).toBe(1);
   });
 
   it('does not push unsupported state dirty through the new push endpoint', async () => {
