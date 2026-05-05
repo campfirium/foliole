@@ -31,18 +31,35 @@ function isStandaloneMarkdownBlock(text: string, inCodeBlock: boolean) {
   );
 }
 
+function isMarkdownTableLine(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
+    return false;
+  }
+  return trimmed.length > 1;
+}
+
+function pushSelection(selections: EditorSelection[], from: number | null, to: number) {
+  if (from !== null && from < to) {
+    selections.push({ from, to });
+  }
+}
+
 export function getParagraphSelections(content: string): EditorSelection[] {
   const lines = buildLineRanges(content);
   const selections: EditorSelection[] = [];
   let paragraphStart: number | null = null;
   let paragraphEnd = 0;
   let inCodeBlock = false;
+  let tableStart: number | null = null;
+  let tableEnd = 0;
 
   lines.forEach((line) => {
     if (line.blank) {
-      if (paragraphStart !== null && paragraphStart < paragraphEnd) {
-        selections.push({ from: paragraphStart, to: paragraphEnd });
-      }
+      pushSelection(selections, tableStart, tableEnd);
+      pushSelection(selections, paragraphStart, paragraphEnd);
+      tableStart = null;
+      tableEnd = 0;
       paragraphStart = null;
       paragraphEnd = 0;
       return;
@@ -51,10 +68,21 @@ export function getParagraphSelections(content: string): EditorSelection[] {
     if (/^\s*`{3,}/.test(line.text)) {
       inCodeBlock = !inCodeBlock;
     }
-    if (standaloneBlock) {
-      if (paragraphStart !== null && paragraphStart < paragraphEnd) {
-        selections.push({ from: paragraphStart, to: paragraphEnd });
+    if (isMarkdownTableLine(line.text)) {
+      pushSelection(selections, paragraphStart, paragraphEnd);
+      paragraphStart = null;
+      paragraphEnd = 0;
+      if (tableStart === null) {
+        tableStart = line.start;
       }
+      tableEnd = line.end;
+      return;
+    }
+    pushSelection(selections, tableStart, tableEnd);
+    tableStart = null;
+    tableEnd = 0;
+    if (standaloneBlock) {
+      pushSelection(selections, paragraphStart, paragraphEnd);
       selections.push({ from: line.start, to: line.end });
       paragraphStart = null;
       paragraphEnd = 0;
@@ -66,9 +94,8 @@ export function getParagraphSelections(content: string): EditorSelection[] {
     paragraphEnd = line.end;
   });
 
-  if (paragraphStart !== null && paragraphStart < paragraphEnd) {
-    selections.push({ from: paragraphStart, to: paragraphEnd });
-  }
+  pushSelection(selections, tableStart, tableEnd);
+  pushSelection(selections, paragraphStart, paragraphEnd);
   return selections;
 }
 

@@ -9,6 +9,12 @@ export interface NativePerformanceMemorySnapshot {
   main_process_rss_bytes: number;
 }
 
+export interface NativeReadingPositionTraceLogAppendArgs {
+  event: string;
+  payload?: unknown;
+  timestamp: number;
+}
+
 export type NativeLibraryPathLocation = 'library_home' | 'assets_dir' | 'inbox' | 'mirror';
 
 export interface NativeLibraryPaths {

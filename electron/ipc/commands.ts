@@ -5,6 +5,7 @@ import { type NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 import { previewKeepImportRule } from '../import/keepImportService.js';
 import { resetReadwiseBookImport } from '../import/readwiseBookImportReset.js';
 import { loadReadwiseBookEpub, openReadwiseBookDownload } from '../import/readwiseBookManualActions.js';
+import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 
 import { bootReport } from './boot.js';
 import { asString, asStringArray } from './commandParsers.js';
@@ -144,6 +145,13 @@ async function handleImportCommand(request: InvokeRequest, context?: InvokeConte
 }
 
 function handleUtilityCommand(request: InvokeRequest) {
+  if (isTypedRequest(request, NATIVE_COMMANDS.appendReadingPositionTraceLog)) {
+    return appendReadingPositionTraceRecord({
+      event: asString(request.args.event, 'event'),
+      payload: request.args.payload,
+      timestamp: Number(request.args.timestamp ?? Date.now())
+    });
+  }
   if (isTypedRequest(request, NATIVE_COMMANDS.resolveAppPaths)) {
     return resolveAppPaths();
   }

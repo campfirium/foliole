@@ -21,7 +21,11 @@ export interface EditorAdapter {
   focus(): void;
   getContent(): string;
   getDocumentPositionAtViewportY(clientY: number): number | null;
+  getPrimaryVisiblePosition?(): number | null;
+  isPositionNearViewportRatio?(position: number, ratio: number, toleranceRatio?: number): boolean;
+  getViewportRect?(): DOMRect | null;
   revealPosition(position: number): void;
+  revealSelectionAtViewportRatio?(selection: EditorSelection, ratio: number): void;
   setParagraphMarker?(selection: EditorSelection | null): void;
   restoreSelection(selection: EditorSelection): void;
   setContent(content: string): void;

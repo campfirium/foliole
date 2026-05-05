@@ -1,24 +1,42 @@
 import { type EditorView } from '@codemirror/view';
 
+import { pushDebugTrace } from '../../../shared/testing/debugBridge';
+
 import { alignSelectionInViewport } from './codeMirrorEditorAdapterView';
 import type { EditorSelection } from './EditorAdapter';
 
-export function revealEditorSelection(view: EditorView, selection: EditorSelection, clampPosition: (position: number) => number) {
+export function revealEditorSelection(
+  view: EditorView,
+  selection: EditorSelection,
+  clampPosition: (position: number) => number,
+  targetRatio?: number
+) {
   const anchor = clampPosition(selection.from);
   const head = clampPosition(selection.to);
+  pushDebugTrace(targetRatio == null ? 'editor.viewport.reveal-selection' : 'editor.viewport.reveal-selection-ratio', {
+    ratio: targetRatio ?? null,
+    scrollTop: view.scrollDOM.scrollTop,
+    selection: { from: anchor, to: head }
+  });
   view.dispatch({
     selection: { anchor, head },
     scrollIntoView: true
   });
   view.focus();
-  alignSelectionInViewport(view, anchor);
+  alignSelectionInViewport(view, anchor, targetRatio);
 }
 
 export function restoreEditorSelection(view: EditorView, selection: EditorSelection, clampPosition: (position: number) => number) {
+  const anchor = clampPosition(selection.from);
+  const head = clampPosition(selection.to);
+  pushDebugTrace('editor.viewport.restore-selection', {
+    scrollTop: view.scrollDOM.scrollTop,
+    selection: { from: anchor, to: head }
+  });
   view.dispatch({
     selection: {
-      anchor: clampPosition(selection.from),
-      head: clampPosition(selection.to)
+      anchor,
+      head
     },
     scrollIntoView: true
   });

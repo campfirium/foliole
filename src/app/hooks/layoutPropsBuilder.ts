@@ -89,6 +89,11 @@ interface BuildLayoutPropsArgs {
   onRevealDocumentPosition: WorkspaceLayoutProps['onRevealDocumentPosition'];
   onRevealDocumentSelection: WorkspaceLayoutProps['onRevealDocumentSelection'];
   onResolveDocumentPositionAtViewportY: WorkspaceLayoutProps['onResolveDocumentPositionAtViewportY'];
+  beginApplyingReadingPosition: WorkspaceLayoutProps['beginApplyingReadingPosition'];
+  completeApplyingReadingPosition: WorkspaceLayoutProps['completeApplyingReadingPosition'];
+  getReadingPositionSelection: WorkspaceLayoutProps['getReadingPositionSelection'];
+  getReadingPositionSyncState: WorkspaceLayoutProps['getReadingPositionSyncState'];
+  setReadingPositionSelection: WorkspaceLayoutProps['setReadingPositionSelection'];
   onRightSidebarSplitterKeyDown: WorkspaceLayoutProps['onRightSidebarSplitterKeyDown'];
   onRightSidebarSplitterPointerDown: WorkspaceLayoutProps['onRightSidebarSplitterPointerDown'];
   onSplitterKeyDown: WorkspaceLayoutProps['onSplitterKeyDown'];
@@ -190,6 +195,11 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onRevealDocumentPosition: args.onRevealDocumentPosition,
     onRevealDocumentSelection: args.onRevealDocumentSelection,
     onResolveDocumentPositionAtViewportY: args.onResolveDocumentPositionAtViewportY,
+    beginApplyingReadingPosition: args.beginApplyingReadingPosition,
+    completeApplyingReadingPosition: args.completeApplyingReadingPosition,
+    getReadingPositionSelection: args.getReadingPositionSelection,
+    getReadingPositionSyncState: args.getReadingPositionSyncState,
+    setReadingPositionSelection: args.setReadingPositionSelection,
     onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenMoveToNode: args.onOpenMoveToNode, onOpenTrashView: args.onOpenTrashView, onOpenVirtualView: args.onOpenVirtualView, onEnterImmersiveEdit: args.onEnterImmersiveEdit, onEnterImmersiveMode: args.onEnterImmersiveMode, onExitImmersiveMode: args.onExitImmersiveMode, onToggleListVisibility: args.onToggleListVisibility,
     onToggleImmersiveMode: args.onToggleImmersiveMode,
     onToggleRightSidebarVisibility: args.onToggleRightSidebarVisibility,

@@ -5,6 +5,16 @@ import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 
+function updateReadingPosition(
+  args: BuildControllerLayoutPropsArgs,
+  selection: EditorSelection
+) {
+  args.runtime.readingPositionRef.current = {
+    nodeId: args.ws.activeNodeId,
+    selection
+  };
+}
+
 export function createToggleListVisibility(args: BuildControllerLayoutPropsArgs) {
   return () => {
     if (args.ws.isListCollapsed) {
@@ -52,7 +62,16 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
     if (!selection) {
       return;
     }
+    args.runtime.readingPositionSyncRef.current = {
+      nodeId: args.ws.activeNodeId,
+      state: {
+        reason: 'reveal-anchor',
+        startedAt: Date.now(),
+        targetSelection: selection
+      }
+    };
     adapter.revealSelection(selection);
+    updateReadingPosition(args, selection);
     args.ws.setNodeViewState(args.ws.activeNodeId, {
       scrollTop: adapter.getScrollTop(),
       selection
@@ -67,8 +86,17 @@ export function createRevealDocumentSelection(args: BuildControllerLayoutPropsAr
     }
     const adapter = args.runtime.editorRef.current;
     if (adapter) {
+      args.runtime.readingPositionSyncRef.current = {
+        nodeId: args.ws.activeNodeId,
+        state: {
+          reason: 'reveal-selection',
+          startedAt: Date.now(),
+          targetSelection: selection
+        }
+      };
       adapter.revealSelection(selection);
     }
+    updateReadingPosition(args, selection);
 
     const existingViewState = args.ws.nodeViewById[args.ws.activeNodeId];
     args.ws.setNodeViewState(args.ws.activeNodeId, {
@@ -85,8 +113,20 @@ export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArg
     }
     const adapter = args.runtime.editorRef.current;
     if (adapter) {
+      args.runtime.readingPositionSyncRef.current = {
+        nodeId: args.ws.activeNodeId,
+        state: {
+          reason: 'reveal-position',
+          startedAt: Date.now(),
+          targetSelection: { from: position, to: position }
+        }
+      };
       adapter.revealPosition(position);
     }
+    updateReadingPosition(args, {
+      from: position,
+      to: position
+    });
 
     const existingViewState = args.ws.nodeViewById[args.ws.activeNodeId];
     args.ws.setNodeViewState(args.ws.activeNodeId, {

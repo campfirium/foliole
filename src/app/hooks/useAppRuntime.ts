@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
@@ -13,6 +14,12 @@ interface CommandPaletteToggleShortcutEvent {
   key: string;
   metaKey: boolean;
   shiftKey: boolean;
+}
+
+export interface ReadingPositionSyncState {
+  reason: string;
+  startedAt: number;
+  targetSelection: EditorSelection;
 }
 
 export function isDevToolsToggleShortcut(event: CommandPaletteToggleShortcutEvent) {
@@ -112,10 +119,75 @@ function useRecentHistory() {
   };
 }
 
+function createRuntimeRefs(initialListWidth: number, initialRightSidebarWidth: number) {
+  return {
+    editorRef: useRef<EditorAdapter | null>(null),
+    readingPositionRef: useRef<{ nodeId: string | null; selection: EditorSelection | null }>({
+      nodeId: null,
+      selection: null
+    }),
+    readingPositionSyncRef: useRef<{
+      nodeId: string | null;
+      state: ReadingPositionSyncState | null;
+    }>({
+      nodeId: null,
+      state: null
+    }),
+    lastExpandedListWidthRef: useRef(initialListWidth),
+    lastExpandedRightSidebarWidthRef: useRef(initialRightSidebarWidth)
+  };
+}
+
+function buildRuntimeState(args: {
+  recentHistory: ReturnType<typeof useRecentHistory>;
+  refs: ReturnType<typeof createRuntimeRefs>;
+  requestedSettingsCategory: SettingsCategoryId | null;
+  requestedSettingsDialog: 'readwise-reader' | null;
+  setIsCommandPaletteOpen: Dispatch<SetStateAction<boolean>>;
+  setIsGoToNodePaletteOpen: Dispatch<SetStateAction<boolean>>;
+  setIsImportManagementOpen: Dispatch<SetStateAction<boolean>>;
+  setIsImmersiveMode: Dispatch<SetStateAction<boolean>>;
+  setIsMoveToNodePaletteOpen: Dispatch<SetStateAction<boolean>>;
+  setIsSearchPaletteOpen: Dispatch<SetStateAction<boolean>>;
+  setIsSettingsOpen: Dispatch<SetStateAction<boolean>>;
+  setIsViewingTrashNode: Dispatch<SetStateAction<boolean>>;
+  setRequestedSettingsCategory: (value: SettingsCategoryId | null) => void;
+  setRequestedSettingsDialog: (value: 'readwise-reader' | null) => void;
+  state: {
+    isCommandPaletteOpen: boolean;
+    isGoToNodePaletteOpen: boolean;
+    isImmersiveMode: boolean;
+    isImportManagementOpen: boolean;
+    isMoveToNodePaletteOpen: boolean;
+    isSearchPaletteOpen: boolean;
+    isSettingsOpen: boolean;
+    isViewingTrashNode: boolean;
+  };
+}) {
+  return {
+    ...args.refs,
+    ...args.state,
+    recentCommandIds: args.recentHistory.recentCommandIds,
+    recentNodeIds: args.recentHistory.recentNodeIds,
+    requestedSettingsCategory: args.requestedSettingsCategory,
+    requestedSettingsDialog: args.requestedSettingsDialog,
+    recordRecentCommand: args.recentHistory.recordRecentCommand,
+    recordRecentNode: args.recentHistory.recordRecentNode,
+    setIsCommandPaletteOpen: args.setIsCommandPaletteOpen,
+    setIsGoToNodePaletteOpen: args.setIsGoToNodePaletteOpen,
+    setIsImmersiveMode: args.setIsImmersiveMode,
+    setIsImportManagementOpen: args.setIsImportManagementOpen,
+    setIsMoveToNodePaletteOpen: args.setIsMoveToNodePaletteOpen,
+    setIsSearchPaletteOpen: args.setIsSearchPaletteOpen,
+    setIsSettingsOpen: args.setIsSettingsOpen,
+    setRequestedSettingsCategory: args.setRequestedSettingsCategory,
+    setRequestedSettingsDialog: args.setRequestedSettingsDialog,
+    setIsViewingTrashNode: args.setIsViewingTrashNode
+  };
+}
+
 export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
-  const editorRef = useRef<EditorAdapter | null>(null);
-  const lastExpandedListWidthRef = useRef(initialListWidth);
-  const lastExpandedRightSidebarWidthRef = useRef(initialRightSidebarWidth);
+  const refs = createRuntimeRefs(initialListWidth, initialRightSidebarWidth);
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -134,33 +206,30 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     setIsSearchPaletteOpen
   });
 
-  return {
-    editorRef,
-    isCommandPaletteOpen,
-    isGoToNodePaletteOpen,
-    isImmersiveMode,
-    isImportManagementOpen,
-    isMoveToNodePaletteOpen,
-    isSearchPaletteOpen,
-    isSettingsOpen,
-    isViewingTrashNode,
-    lastExpandedListWidthRef,
-    lastExpandedRightSidebarWidthRef,
-    recentCommandIds: recentHistory.recentCommandIds,
-    recentNodeIds: recentHistory.recentNodeIds,
+  return buildRuntimeState({
+    recentHistory,
+    refs,
     requestedSettingsCategory: settingsRequest.requestedSettingsCategory,
     requestedSettingsDialog: settingsRequest.requestedSettingsDialog,
-    recordRecentCommand: recentHistory.recordRecentCommand,
-    recordRecentNode: recentHistory.recordRecentNode,
     setIsCommandPaletteOpen,
     setIsGoToNodePaletteOpen,
-    setIsImmersiveMode,
     setIsImportManagementOpen,
+    setIsImmersiveMode,
     setIsMoveToNodePaletteOpen,
     setIsSearchPaletteOpen,
     setIsSettingsOpen,
+    setIsViewingTrashNode,
     setRequestedSettingsCategory: settingsRequest.setRequestedSettingsCategory,
     setRequestedSettingsDialog: settingsRequest.setRequestedSettingsDialog,
-    setIsViewingTrashNode
-  };
+    state: {
+      isCommandPaletteOpen,
+      isGoToNodePaletteOpen,
+      isImmersiveMode,
+      isImportManagementOpen,
+      isMoveToNodePaletteOpen,
+      isSearchPaletteOpen,
+      isSettingsOpen,
+      isViewingTrashNode
+    }
+  });
 }

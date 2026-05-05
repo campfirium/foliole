@@ -41,6 +41,7 @@ it('renders the dev panel with resolved scheduling and raw node fields', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Dev panel' }));
 
   expect(screen.getByRole('button', { name: 'Dev panel' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByText('Reading position log')).toBeInTheDocument();
   expect(screen.getByText('Scheduling')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Review' })).toBeInTheDocument();
   expect(screen.getByText('Node')).toBeInTheDocument();

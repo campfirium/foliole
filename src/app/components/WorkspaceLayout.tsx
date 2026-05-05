@@ -9,6 +9,7 @@ import type { ReviewSchedulerSettings } from '../../features/settings/model/revi
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
+import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import type { ReviewQueueVisibility } from './reviewQueueVisibility';
@@ -90,6 +91,11 @@ export interface WorkspaceLayoutProps {
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
+  beginApplyingReadingPosition: (selection: EditorSelection, reason: string) => void;
+  completeApplyingReadingPosition: (reason: string) => void;
+  getReadingPositionSelection: () => EditorSelection | null;
+  getReadingPositionSyncState: () => ReadingPositionSyncState | null;
+  setReadingPositionSelection: (selection: EditorSelection) => void;
   onSelectTrashNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;

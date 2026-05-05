@@ -15,33 +15,55 @@ import {
   createRevealDocumentSelection
 } from './appControllerRuntimeActions';
 
+function createRuntimeState() {
+  return {
+    readingPositionRef: {
+      current: { nodeId: null, selection: null }
+    },
+    readingPositionSyncRef: {
+      current: { nodeId: null, state: null }
+    }
+  };
+}
+
+function createRevealDocumentPositionArgs(args: {
+  getScrollTop?: () => number;
+  revealPosition?: (position: number) => void;
+  setNodeViewState: ReturnType<typeof vi.fn>;
+}) {
+  return {
+    runtime: {
+      editorRef: {
+        current: {
+          getScrollTop: args.getScrollTop ?? (() => 0),
+          revealPosition: args.revealPosition ?? (() => undefined)
+        }
+      },
+      ...createRuntimeState(),
+      isViewingTrashNode: false
+    },
+    ws: {
+      activeNodeId: 'node-1',
+      nodeViewById: {
+        'node-1': {
+          scrollTop: 12,
+          selection: { from: 1, to: 1 }
+        }
+      },
+      setNodeViewState: args.setNodeViewState
+    }
+  };
+}
+
 describe('createRevealDocumentPosition', () => {
   it('stores the revealed document position as the new reading anchor', () => {
     const revealPosition = vi.fn();
     const getScrollTop = vi.fn(() => 320);
     const setNodeViewState = vi.fn();
 
-    const revealDocumentPosition = createRevealDocumentPosition({
-      runtime: {
-        editorRef: {
-          current: {
-            getScrollTop,
-            revealPosition
-          }
-        },
-        isViewingTrashNode: false
-      },
-      ws: {
-        activeNodeId: 'node-1',
-        nodeViewById: {
-          'node-1': {
-            scrollTop: 12,
-            selection: { from: 1, to: 1 }
-          }
-        },
-        setNodeViewState
-      }
-    } as never);
+    const revealDocumentPosition = createRevealDocumentPosition(
+      createRevealDocumentPositionArgs({ getScrollTop, revealPosition, setNodeViewState }) as never
+    );
 
     revealDocumentPosition(48000);
 
@@ -54,12 +76,14 @@ describe('createRevealDocumentPosition', () => {
 
   it('still stores selection when editor adapter is unavailable', () => {
     const setNodeViewState = vi.fn();
+    const runtimeState = createRuntimeState();
 
     const revealDocumentSelection = createRevealDocumentSelection({
       runtime: {
         editorRef: {
           current: null
         },
+        ...runtimeState,
         isViewingTrashNode: false
       },
       ws: {
@@ -85,11 +109,13 @@ describe('createRevealDocumentPosition', () => {
 
 describe('createRevealAnchorInDocument', () => {
   it('routes to pdf locator jump when editor adapter is unavailable', () => {
+    const runtimeState = createRuntimeState();
     const revealAnchorInDocument = createRevealAnchorInDocument({
       runtime: {
         editorRef: {
           current: null
         },
+        ...runtimeState,
         isViewingTrashNode: false
       },
       ws: {
@@ -122,8 +148,10 @@ describe('createRevealAnchorInDocument', () => {
 describe('createPersistPdfViewState', () => {
   it('writes pdf view state for the provided node', () => {
     const setNodeViewState = vi.fn();
+    const runtimeState = createRuntimeState();
     const persistPdfViewState = createPersistPdfViewState({
       runtime: {
+        ...runtimeState,
         isViewingTrashNode: false
       },
       ws: {
@@ -144,8 +172,10 @@ describe('createPersistPdfViewState', () => {
 
   it('skips persistence when viewing trash node', () => {
     const setNodeViewState = vi.fn();
+    const runtimeState = createRuntimeState();
     const persistPdfViewState = createPersistPdfViewState({
       runtime: {
+        ...runtimeState,
         isViewingTrashNode: true
       },
       ws: {

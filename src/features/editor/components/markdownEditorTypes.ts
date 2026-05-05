@@ -1,6 +1,7 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import type { EditorAdapter, EditorDiffDecorations } from '../adapters/EditorAdapter';
+import type { EditorSelection } from '../adapters/EditorAdapter';
 
 export interface EditorViewState {
   scrollTop: number;
@@ -23,14 +24,19 @@ export interface MarkdownEditorProps {
   immersiveEditing?: boolean;
   lineDiffDecorations?: EditorDiffDecorations | null;
   nodeId: string | null;
+  readingSelection?: EditorSelection | null;
   nodeViewState?: EditorViewState;
+  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
   onChange: (value: string) => void;
+  onCompleteApplyingReadingPosition?: (reason: string) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onOpenNodeLink?: (title: string) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
+  onShouldSuppressSelectionRestore?: () => boolean;
   readOnly?: boolean;
+  onSetReadingPositionSelection?: (selection: EditorSelection) => void;
   value: string;
 }

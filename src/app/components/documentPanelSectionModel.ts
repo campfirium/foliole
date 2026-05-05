@@ -86,7 +86,10 @@ function getDocumentPanelBodyProps(
     editorHideTitleHeading: props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false,
     immersiveEditing: props.isImmersiveMode && props.isImmersiveEditing,
     editorNodeId: props.editorNodeId,
+    editorReadingSelection: props.editorReadingSelection,
     editorNodeViewState: props.editorNodeViewState,
+    onBeginApplyingReadingPosition: props.onBeginApplyingReadingPosition,
+    onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
     emptyState: panelState.emptyState,
     fitBlockImagesToViewport: panelState.fitBlockImagesToViewport,
     hasAnswerSection: panelState.hasAnswerSection,
@@ -96,6 +99,8 @@ function getDocumentPanelBodyProps(
     onEditorContextMenu: props.onEditorContextMenu,
     onEditorDoubleClick: props.isImmersiveMode && !props.isImmersiveEditing ? props.onEnterImmersiveEdit : undefined,
     onEditorReady: props.onEditorReady,
+    onShouldSuppressSelectionRestore: props.onShouldSuppressSelectionRestore,
+    onSetReadingPositionSelection: props.onSetReadingPositionSelection,
     onPromptImageLoadStateChange: (state: { loadedCount: number; totalCount: number }) => {
       if (!props.editorNodeId) {
         return;

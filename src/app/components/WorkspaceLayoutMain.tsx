@@ -154,6 +154,7 @@ function renderWorkspaceGrid(args: {
       onEnterImmersiveEdit={args.onEnterImmersiveEdit}
       onOpenImportManagement={args.onOpenImportManagement}
       onSelectNode={args.onSelectNode}
+      onShouldSuppressSelectionRestore={args.immersive.shouldSuppressSelectionRestore}
       onStartClipboardImport={args.onStartClipboardImport}
       onStartImport={args.onStartImport}
       props={args.props}

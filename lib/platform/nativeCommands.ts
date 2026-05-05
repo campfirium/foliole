@@ -1,5 +1,6 @@
 export const NATIVE_COMMANDS = {
   appGetVersion: 'app_get_version',
+  appendReadingPositionTraceLog: 'append_reading_position_trace_log',
   bootReport: 'boot_report',
   listSystemFonts: 'list_system_fonts',
   loadPerformanceMemorySnapshot: 'load_performance_memory_snapshot',

@@ -1,10 +1,21 @@
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
+function buildReadingPositionProps(props: WorkspaceLayoutProps) {
+  return {
+    editorReadingSelection: props.getReadingPositionSelection(),
+    editorNodeViewState: props.editorNodeViewState,
+    onBeginApplyingReadingPosition: props.beginApplyingReadingPosition,
+    onCompleteApplyingReadingPosition: props.completeApplyingReadingPosition,
+    onSetReadingPositionSelection: props.setReadingPositionSelection
+  };
+}
+
 export function buildDocumentSectionProps(
   documentNodeId: string | null,
   editorAppearanceKey: string,
   isImmersiveEditing: boolean,
+  onShouldSuppressSelectionRestore: () => boolean,
   props: WorkspaceLayoutProps
 ): DocumentPanelSectionProps {
   return {
@@ -19,7 +30,7 @@ export function buildDocumentSectionProps(
     editorAppearanceKey,
     editorContent: props.editorContent,
     editorNodeId: props.editorNodeId,
-    editorNodeViewState: props.editorNodeViewState,
+    ...buildReadingPositionProps(props),
     isDocumentResizing: props.isDocumentResizing,
     isEditorReadOnly: props.isEditorReadOnly,
     isImmersiveEditing,
@@ -38,6 +49,7 @@ export function buildDocumentSectionProps(
     onEditorChange: props.onEditorChange,
     onEditorContextMenu: props.onEditorContextMenu,
     onEditorReady: props.onEditorReady,
+    onShouldSuppressSelectionRestore,
     onExportImage: props.onExportImage,
     onGoBack: props.onGoBack,
     onGoForward: props.onGoForward,

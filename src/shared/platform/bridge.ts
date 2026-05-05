@@ -167,6 +167,16 @@ export function reportRuntimeBootStage(stage: string, payload?: BootPayload) {
   });
 }
 
+export function appendReadingPositionTraceLog(entry: { event: string; payload: unknown; timestamp: number }) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  void runtimeInvoke(NATIVE_COMMANDS.appendReadingPositionTraceLog, entry).catch((error) => {
+    console.error('[reading-position] append trace log failed', { entry, error });
+  });
+}
+
 export function reportRuntimeAppReady(payload?: BootPayload) {
   if (typeof window === 'undefined' || window.__FOLIOLE_APP_READY_REPORTED__) {
     return;

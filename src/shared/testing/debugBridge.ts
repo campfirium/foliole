@@ -1,11 +1,22 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { appendReadingPositionTraceLog } from '../platform/bridge';
+import { getElectronAPI } from '../platform/electronApi';
 
 interface FolioleDebugApi {
   clearEditor: (id: string) => void;
+  clearTraces: () => void;
   getEditorContent: (id: string) => string | null;
   getEditorSelection: (id: string) => { from: number; to: number } | null;
+  getTraces: () => DebugTraceEntry[];
+  pushTrace: (event: string, payload: unknown) => void;
   registerEditor: (id: string, adapter: EditorAdapter) => void;
   setEditorSelection: (id: string, from: number, to: number) => boolean;
+}
+
+export interface DebugTraceEntry {
+  event: string;
+  payload: unknown;
+  timestamp: number;
 }
 
 type FolioleWindow = Window & {
@@ -13,9 +24,35 @@ type FolioleWindow = Window & {
 };
 
 const editorMap = new Map<string, EditorAdapter>();
+const debugTraceLog: DebugTraceEntry[] = [];
+const MAX_DEBUG_TRACE_COUNT = 400;
+const FILE_TRACE_KEYWORDS = [
+  'reading',
+  'scroll-sync',
+  'restore-selection',
+  'immersive.toggle',
+  'immersive.entry-selection',
+  'immersive.viewport-reading.sampled',
+  'editor.viewport'
+] as const;
+let lastPersistedTraceSignature: string | null = null;
+
+function shouldPersistTraceToFile(event: string) {
+  return FILE_TRACE_KEYWORDS.some((keyword) => event.includes(keyword));
+}
+
+function buildTraceSignature(entry: DebugTraceEntry) {
+  return JSON.stringify({
+    event: entry.event,
+    payload: entry.payload
+  });
+}
 
 function ensureDebugApi() {
-  if (!import.meta.env.DEV || typeof window === 'undefined') {
+  if (
+    typeof window === 'undefined' ||
+    (!import.meta.env.DEV && import.meta.env.MODE !== 'test' && !getElectronAPI()?.debug)
+  ) {
     return null;
   }
 
@@ -28,6 +65,9 @@ function ensureDebugApi() {
     clearEditor: (id) => {
       editorMap.delete(id);
     },
+    clearTraces: () => {
+      debugTraceLog.length = 0;
+    },
     getEditorContent: (id) => {
       const adapter = editorMap.get(id);
       return adapter ? adapter.getContent() : null;
@@ -35,6 +75,17 @@ function ensureDebugApi() {
     getEditorSelection: (id) => {
       const adapter = editorMap.get(id);
       return adapter ? adapter.getSelection() : null;
+    },
+    getTraces: () => [...debugTraceLog],
+    pushTrace: (event, payload) => {
+      debugTraceLog.push({
+        event,
+        payload,
+        timestamp: Date.now()
+      });
+      if (debugTraceLog.length > MAX_DEBUG_TRACE_COUNT) {
+        debugTraceLog.splice(0, debugTraceLog.length - MAX_DEBUG_TRACE_COUNT);
+      }
     },
     registerEditor: (id, adapter) => {
       editorMap.set(id, adapter);
@@ -62,4 +113,31 @@ export function registerDebugEditorAdapter(id: string, adapter: EditorAdapter) {
 export function clearDebugEditorAdapter(id: string) {
   const api = ensureDebugApi();
   api?.clearEditor(id);
+}
+
+export function pushDebugTrace(event: string, payload: unknown) {
+  const api = ensureDebugApi();
+  const entry = {
+    event,
+    payload,
+    timestamp: Date.now()
+  };
+  api?.pushTrace(event, payload);
+  if (!shouldPersistTraceToFile(event)) {
+    return;
+  }
+  const signature = buildTraceSignature(entry);
+  if (signature === lastPersistedTraceSignature) {
+    return;
+  }
+  lastPersistedTraceSignature = signature;
+  appendReadingPositionTraceLog(entry);
+}
+
+export function readDebugTraces() {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+  const targetWindow = window as FolioleWindow;
+  return targetWindow.__folioleDebug?.getTraces?.() ?? [];
 }

@@ -1,15 +1,14 @@
-import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react';
+import { useEffect, useLayoutEffect, type MutableRefObject } from 'react';
 
 import {
   markEditorContentSyncCompleted,
-  markEditorContentSyncStarted,
-  markNodePositionReady,
-  markNodePositionRequested
+  markEditorContentSyncStarted
 } from '../../../shared/platform/performanceDiagnosticsProbe';
 import { IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../image-cloze/model/imageClozePresentation';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorDiffDecorations } from '../adapters/EditorAdapter';
 
+import { useEditorSelectionRestore } from './markdownEditorSelectionRestore';
 import type { EditorViewState } from './markdownEditorTypes';
 
 function useEditorScrollSync(
@@ -60,54 +59,34 @@ function useEditorContentSync(
   }, [adapterRef, lineDiffDecorations, syncScrollMetrics]);
 }
 
-function useEditorSelectionRestore(
-  adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
-  nodeId: string | null,
-  nodeViewState: EditorViewState | undefined,
-  syncScrollMetrics: () => void,
-  value: string
-) {
-  const lastRestoredSelectionKeyRef = useRef<string | null>(null);
-
-  useLayoutEffect(() => {
-    if (!nodeId || !nodeViewState) {
-      lastRestoredSelectionKeyRef.current = null;
-      return;
-    }
-    const adapter = adapterRef.current;
-    if (!adapter) {
-      return;
-    }
-    const selectionEnd = Math.max(nodeViewState.selection.from, nodeViewState.selection.to);
-    if (value.length === 0 && selectionEnd > 0) {
-      return;
-    }
-    const selectionKey = `${nodeId}:${nodeViewState.selection.from}:${nodeViewState.selection.to}`;
-    if (lastRestoredSelectionKeyRef.current === selectionKey) {
-      return;
-    }
-    markNodePositionRequested(nodeId);
-    adapter.restoreSelection(nodeViewState.selection);
-    lastRestoredSelectionKeyRef.current = selectionKey;
-    requestAnimationFrame(() => {
-      markNodePositionReady(nodeId);
-    });
-    requestAnimationFrame(syncScrollMetrics);
-  }, [adapterRef, nodeId, nodeViewState, syncScrollMetrics, value]);
-}
-
 export function useEditorLayoutEffects(
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
   hostRef: MutableRefObject<HTMLDivElement | null>,
   nodeId: string | null,
+  readingSelection: EditorViewState['selection'] | null | undefined,
   nodeViewState: EditorViewState | undefined,
+  beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined,
+  completeApplyingReadingPosition: ((reason: string) => void) | undefined,
+  setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined,
+  shouldSuppressSelectionRestore: (() => boolean) | undefined,
   syncScrollMetrics: () => void,
   value: string,
   lineDiffDecorations: EditorDiffDecorations | null | undefined
 ) {
   useEditorScrollSync(adapterRef, hostRef, syncScrollMetrics);
   useEditorContentSync(adapterRef, nodeId, syncScrollMetrics, value, lineDiffDecorations);
-  useEditorSelectionRestore(adapterRef, nodeId, nodeViewState, syncScrollMetrics, value);
+  useEditorSelectionRestore(
+    adapterRef,
+    nodeId,
+    readingSelection,
+    nodeViewState,
+    beginApplyingReadingPosition,
+    completeApplyingReadingPosition,
+    setReadingPositionSelection,
+    shouldSuppressSelectionRestore,
+    syncScrollMetrics,
+    value
+  );
 }
 
 export function useEditorAppearanceEffects(

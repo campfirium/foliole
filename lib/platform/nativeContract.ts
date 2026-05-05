@@ -37,6 +37,14 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
     args: undefined;
     result: string;
   };
+  [NATIVE_COMMANDS.appendReadingPositionTraceLog]: {
+    args: {
+      event: string;
+      payload?: unknown;
+      timestamp: number;
+    };
+    result: string;
+  };
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;

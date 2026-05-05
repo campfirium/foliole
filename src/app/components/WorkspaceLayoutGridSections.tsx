@@ -126,11 +126,13 @@ export function WorkspaceDocumentArea({
   documentNodeId,
   isImmersiveEditing,
   onEnterImmersiveEdit,
+  onShouldSuppressSelectionRestore,
   props
 }: {
   documentNodeId: string | null;
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
+  onShouldSuppressSelectionRestore: () => boolean;
   props: WorkspaceLayoutProps;
 }) {
   return (
@@ -139,6 +141,7 @@ export function WorkspaceDocumentArea({
         documentNodeId={documentNodeId}
         isImmersiveEditing={isImmersiveEditing}
         onEnterImmersiveEdit={onEnterImmersiveEdit}
+        onShouldSuppressSelectionRestore={onShouldSuppressSelectionRestore}
         props={props}
       />
       {props.isImmersiveMode ? null : (
@@ -166,17 +169,19 @@ function WorkspaceDocumentSurface({
   documentNodeId,
   isImmersiveEditing,
   onEnterImmersiveEdit,
+  onShouldSuppressSelectionRestore,
   props
 }: {
   documentNodeId: string | null;
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
+  onShouldSuppressSelectionRestore: () => boolean;
   props: WorkspaceLayoutProps;
 }) {
   const { editorAppearanceKey } = useAppearanceSettings();
   return (
     <DocumentPanelSection
-      {...buildDocumentSectionProps(documentNodeId, editorAppearanceKey, isImmersiveEditing, props)}
+      {...buildDocumentSectionProps(documentNodeId, editorAppearanceKey, isImmersiveEditing, onShouldSuppressSelectionRestore, props)}
       onEnterImmersiveEdit={onEnterImmersiveEdit}
     />
   );

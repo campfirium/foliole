@@ -186,7 +186,12 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     adapterRef,
     hostRef,
     props.nodeId,
+    props.readingSelection,
     props.nodeViewState,
+    props.onBeginApplyingReadingPosition,
+    props.onCompleteApplyingReadingPosition,
+    props.onSetReadingPositionSelection,
+    props.onShouldSuppressSelectionRestore,
     syncScrollMetrics,
     props.value,
     props.lineDiffDecorations

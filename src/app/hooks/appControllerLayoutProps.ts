@@ -10,6 +10,7 @@ import type { NodeViewState, ReviewSessionState } from '../../store/workspaceSto
 import type { useCurrentReviewPreview } from './appControllerHelpers';
 import { createLayoutEditorCtx, isVirtualEditorNode, resolveEditorBindingArgs } from './appControllerLayoutContext';
 import { createLayoutNav, createSelectTrashNodeHandler } from './appControllerNavHandlers';
+import { createReadingPositionHandlers } from './appControllerReadingPosition';
 import {
   createPersistPdfViewState,
   createRevealAnchorInDocument,
@@ -191,6 +192,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onRevealDocumentPosition: revealDocumentPosition,
     onRevealDocumentSelection: revealDocumentSelection,
     onResolveDocumentPositionAtViewportY: resolveDocumentPositionAtViewportY,
+    ...createReadingPositionHandlers(args),
     onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => args.ws.updateNodeDesiredRetention(nodeId, desiredRetention),
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),
     onOpenNotesView: openNotesView,
@@ -237,7 +239,6 @@ function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) {
     args.ws.createChildNode(INBOX_NODE_ID, content);
   };
 }
-
 function createNodeContentChangeHandler(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string, content: string) => {
     if (args.runtime.isViewingTrashNode) {

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { getParagraphSelections, resolveParagraphSelection } from './immersiveReadingModel';
+import { getParagraphSelections, resolveCurrentParagraphSelection, resolveParagraphSelection } from './immersiveReadingModel';
 
 it('collects paragraph ranges separated by blank lines', () => {
   expect(getParagraphSelections('Alpha line\nstill alpha\n\nBeta\n\n  \nGamma')).toEqual([
@@ -17,6 +17,17 @@ it('treats markdown headings and list items as standalone reading blocks', () =>
     { from: 18, to: 23 },
     { from: 25, to: 35 }
   ]);
+});
+
+it('treats contiguous markdown table rows as a standalone reading block', () => {
+  const content = 'Intro\n\n| Name | Value |\n| --- | --- |\n| A | B |\n\nOutro';
+
+  expect(getParagraphSelections(content)).toEqual([
+    { from: 0, to: 5 },
+    { from: 7, to: 47 },
+    { from: 49, to: 54 }
+  ]);
+  expect(resolveCurrentParagraphSelection(content, { from: 20, to: 20 })).toEqual({ from: 7, to: 47 });
 });
 
 it('selects the current paragraph first, then advances to the next paragraph', () => {

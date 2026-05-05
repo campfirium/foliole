@@ -190,3 +190,103 @@ it('does not reapply a saved selection while typing in the same node', async () 
   expect(mockMarkNodePositionRequested).toHaveBeenCalledTimes(1);
   expect(mockMarkNodePositionReady).toHaveBeenCalledTimes(1);
 });
+
+it('prefers the current reading selection over the stale saved selection', async () => {
+  const longDocument = createLongDocument();
+  const nodeViewState = {
+    scrollTop: 5_400,
+    selection: { from: 48_000, to: 48_024 }
+  };
+  const readingSelection = { from: 51_200, to: 51_228 };
+
+  renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={nodeViewState}
+      onChange={vi.fn()}
+      readingSelection={readingSelection}
+      value={longDocument}
+    />
+  );
+
+  expect(mockRestoreSelection).toHaveBeenLastCalledWith(readingSelection);
+  expect(mockRestoreSelection).not.toHaveBeenCalledWith(nodeViewState.selection);
+});
+
+it('locks reading-position sync while restoring a saved selection', async () => {
+  const onBeginApplyingReadingPosition = vi.fn();
+  const onCompleteApplyingReadingPosition = vi.fn();
+  const onSetReadingPositionSelection = vi.fn();
+
+  renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+      onBeginApplyingReadingPosition={onBeginApplyingReadingPosition}
+      onChange={vi.fn()}
+      onCompleteApplyingReadingPosition={onCompleteApplyingReadingPosition}
+      onSetReadingPositionSelection={onSetReadingPositionSelection}
+      value={createLongDocument()}
+    />
+  );
+
+  expect(onBeginApplyingReadingPosition).toHaveBeenCalledWith(
+    { from: 48_000, to: 48_024 },
+    'editor-restore-selection'
+  );
+  expect(onSetReadingPositionSelection).toHaveBeenCalledWith({ from: 48_000, to: 48_024 });
+  await waitFor(() => {
+    expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
+  });
+});
+
+it('skips selection restore when immersive toggle suppression is active', () => {
+  renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+      onChange={vi.fn()}
+      onShouldSuppressSelectionRestore={() => true}
+      value={createLongDocument()}
+    />
+  );
+
+  expect(mockRestoreSelection).not.toHaveBeenCalled();
+  expect(mockRevealSelection).not.toHaveBeenCalled();
+});
+
+it('releases the previous restore lock before starting a new restore cycle', () => {
+  const onBeginApplyingReadingPosition = vi.fn();
+  const onCompleteApplyingReadingPosition = vi.fn();
+  const longDocument = createLongDocument();
+  const firstSelection = { from: 48_000, to: 48_024 };
+  const secondSelection = { from: 51_200, to: 51_228 };
+
+  const view = renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: firstSelection }}
+      onBeginApplyingReadingPosition={onBeginApplyingReadingPosition}
+      onChange={vi.fn()}
+      onCompleteApplyingReadingPosition={onCompleteApplyingReadingPosition}
+      value={longDocument}
+    />
+  );
+
+  view.rerender(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_900, selection: secondSelection }}
+      onBeginApplyingReadingPosition={onBeginApplyingReadingPosition}
+      onChange={vi.fn()}
+      onCompleteApplyingReadingPosition={onCompleteApplyingReadingPosition}
+      value={`${longDocument}\n\nupdated`}
+    />
+  );
+
+  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-cancelled');
+  expect(onBeginApplyingReadingPosition).toHaveBeenLastCalledWith(
+    secondSelection,
+    'editor-restore-selection'
+  );
+});

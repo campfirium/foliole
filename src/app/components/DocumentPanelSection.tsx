@@ -48,7 +48,10 @@ export interface DocumentPanelSectionProps {
   onEnterImmersiveEdit?: () => void;
   isPriorityQuickSetActive?: boolean;
   editorNodeId: string | null;
+  editorReadingSelection?: EditorSelection | null;
   editorNodeViewState?: NodeViewState;
+  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
+  onCompleteApplyingReadingPosition?: (reason: string) => void;
   isDocumentResizing: boolean;
   showAnswerSection: boolean;
   onAnswerChange: (answer: string) => void;
@@ -57,6 +60,8 @@ export interface DocumentPanelSectionProps {
   onNodePriorityChange?: (nodeId: string, priority: number | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
+  onShouldSuppressSelectionRestore?: () => boolean;
+  onSetReadingPositionSelection?: (selection: EditorSelection) => void;
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;

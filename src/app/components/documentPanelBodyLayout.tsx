@@ -31,7 +31,10 @@ export interface DocumentPanelBodyLayoutProps {
   editorHideTitleHeading?: boolean;
   immersiveEditing?: boolean;
   editorNodeId: string | null;
+  editorReadingSelection?: EditorSelection | null;
   editorNodeViewState?: NodeViewState;
+  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
+  onCompleteApplyingReadingPosition?: (reason: string) => void;
   emptyContent?: ReactNode;
   emptyState?: {
     description: string;
@@ -48,9 +51,11 @@ export interface DocumentPanelBodyLayoutProps {
   onEditorDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onOpenNodeLink?: (title: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
+  onShouldSuppressSelectionRestore?: () => boolean;
   onPromptImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onPromptImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
   onAnswerImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
+  onSetReadingPositionSelection?: (selection: EditorSelection) => void;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
@@ -128,15 +133,20 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         key={`prompt-${props.editorAppearanceKey}`}
         lineDiffDecorations={props.editorDiffDecorations}
         nodeId={props.editorNodeId}
+        readingSelection={props.editorReadingSelection}
         nodeViewState={props.editorNodeViewState}
+        onBeginApplyingReadingPosition={props.onBeginApplyingReadingPosition}
         onChange={props.onEditorChange}
+        onCompleteApplyingReadingPosition={props.onCompleteApplyingReadingPosition}
         onContextMenu={props.onEditorContextMenu}
         onDoubleClick={props.onEditorDoubleClick}
         onFitBlockImageMetricsChange={props.onPromptImageMetricsChange}
         onImageLoadStateChange={props.onPromptImageLoadStateChange}
         onOpenNodeLink={props.onOpenNodeLink}
         onReady={props.onEditorReady}
+        onShouldSuppressSelectionRestore={props.onShouldSuppressSelectionRestore}
         readOnly={props.readOnly}
+        onSetReadingPositionSelection={props.onSetReadingPositionSelection}
         value={props.editorContent}
       />
     </div>

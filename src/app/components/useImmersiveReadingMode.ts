@@ -1,214 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 
-import type { Node } from '../../features/nodes/model/nodeTypes';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
-import { getSelectionCommandPayload } from '../contextCommands';
 
-import { isImmersiveEditableElement } from './immersiveReadingKeyboard';
+import { getReadableNodeIds, handleImmersiveKeydown } from './immersiveReadingKeydown';
 import {
-  blurImmersiveActiveElement,
   clearParagraphMarker,
-  focusImmersiveEditor,
-  getReadingPositionSelection,
-  syncParagraphMarkerToReadingPosition
+  focusImmersiveEditor
 } from './immersiveReadingMarker';
-import { resolveParagraphSelection } from './immersiveReadingModel';
+import {
+  useImmersiveEntrySelectionSync,
+  useImmersiveParagraphMarkerSync,
+  useImmersiveScrollSync,
+  useReadingSelectionState
+} from './immersiveReadingScrollSync';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
-function getReadableNodeIds(nodeOrder: string[], nodesById: Record<string, Node>, trashedNodeIds: string[]) {
-  return nodeOrder.filter((nodeId) => {
-    if (trashedNodeIds.includes(nodeId)) {
-      return false;
-    }
-    const node = nodesById[nodeId];
-    return Boolean(node && node.kind !== 'folder');
-  });
-}
-function openNextReadableNode(props: WorkspaceLayoutProps, readableNodeIds: string[]) {
-  const currentIndex = props.activeNodeId ? readableNodeIds.indexOf(props.activeNodeId) : -1;
-  const nextNodeId = currentIndex >= 0 ? readableNodeIds[currentIndex + 1] : undefined;
-  if (nextNodeId) {
-    props.onSelectNode(nextNodeId);
-  }
-}
-
-function handleImmersiveExit(props: WorkspaceLayoutProps, isImmersiveEditing: boolean, setIsImmersiveEditing: (value: boolean) => void) {
-  if (isImmersiveEditing) {
-    clearParagraphMarker(props.editorAdapterRef);
-    blurImmersiveActiveElement();
-    setIsImmersiveEditing(false);
-    return;
-  }
-  clearParagraphMarker(props.editorAdapterRef);
-  props.onExitImmersiveMode();
-}
-function selectParagraph(args: {
-  direction: 'backward' | 'forward';
-  props: WorkspaceLayoutProps;
-  readableNodeIds: string[];
-}) {
-  const editor = args.props.editorAdapterRef.current;
-  if (!editor) {
-    return false;
-  }
-  const currentSelection = getReadingPositionSelection(args.props, editor.getSelection());
-  const nextSelection = resolveParagraphSelection({
-    content: editor.getContent(),
-    currentSelection,
-    direction: args.direction
-  });
-  if (nextSelection) {
-    editor.setParagraphMarker?.(nextSelection);
-    editor.revealSelection(nextSelection);
-    return true;
-  }
-  editor.setParagraphMarker?.(null);
-  if (args.direction === 'forward') {
-    openNextReadableNode(args.props, args.readableNodeIds);
-    return true;
-  }
-  return false;
-}
-function runImmersiveSelectionAction(args: {
-  props: WorkspaceLayoutProps;
-  type: 'highlight' | 'note';
-}) {
-  if (!args.props.activeNodeId) {
-    return false;
-  }
-  const payload = getSelectionCommandPayload(args.props.activeNodeId, args.props.editorAdapterRef.current);
-  if (!payload) {
-    return false;
-  }
-  if (args.type === 'highlight') {
-    args.props.onCreateSelectionHighlight(payload);
-    return true;
-  }
-  args.props.onCreateSelectionNote(payload);
-  return true;
-}
-function handleImmersivePrimaryKey(args: {
-  event: KeyboardEvent;
-  isImmersiveEditing: boolean;
-  props: WorkspaceLayoutProps;
-  readableNodeIds: string[];
-  setIsImmersiveEditing: (value: boolean) => void;
-  setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
-}) {
-  if (args.event.key === 'Escape') {
-    args.event.preventDefault();
-    args.setIsShortcutsOverlayOpen(false);
-    handleImmersiveExit(args.props, args.isImmersiveEditing, args.setIsImmersiveEditing);
-    return true;
-  }
-  if (args.event.key === 'Enter') {
-    if (!args.props.editorAdapterRef.current) {
-      return true;
-    }
-    args.event.preventDefault();
-    clearParagraphMarker(args.props.editorAdapterRef);
-    args.setIsImmersiveEditing(true);
-    args.setIsShortcutsOverlayOpen(false);
-    return true;
-  }
-  if (args.event.key === '?' || (args.event.key === '/' && args.event.shiftKey)) {
-    args.event.preventDefault();
-    args.setIsShortcutsOverlayOpen((current) => !current);
-    return true;
-  }
-  return false;
-}
-function handleImmersiveReadingKey(args: {
-  event: KeyboardEvent;
-  props: WorkspaceLayoutProps;
-  readableNodeIds: string[];
-}) {
-  if (args.event.key === 'ArrowUp' || args.event.key === 'ArrowDown') {
-    args.event.preventDefault();
-    selectParagraph({
-      direction: args.event.key === 'ArrowUp' ? 'backward' : 'forward',
-      props: args.props,
-      readableNodeIds: args.readableNodeIds
-    });
-    return;
-  }
-  if (args.event.key === ' ' && args.event.shiftKey) {
-    args.event.preventDefault();
-    selectParagraph({ direction: 'backward', props: args.props, readableNodeIds: args.readableNodeIds });
-    return;
-  }
-  if (args.event.key === ' ') {
-    args.event.preventDefault();
-    selectParagraph({ direction: 'forward', props: args.props, readableNodeIds: args.readableNodeIds });
-    return;
-  }
-  if (args.event.key.toLowerCase() === 'h') {
-    if (runImmersiveSelectionAction({ props: args.props, type: 'highlight' })) {
-      args.event.preventDefault();
-    }
-    return;
-  }
-  if (args.event.key.toLowerCase() === 'n') {
-    if (runImmersiveSelectionAction({ props: args.props, type: 'note' })) {
-      args.event.preventDefault();
-    }
-  }
-}
-function handleImmersiveKeydown(args: {
-  canToggleImmersiveMode: boolean;
-  event: KeyboardEvent;
-  isImmersiveEditing: boolean;
-  props: WorkspaceLayoutProps;
-  readableNodeIds: string[];
-  setIsImmersiveEditing: (value: boolean) => void;
-  setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
-}) {
-  if (args.event.defaultPrevented || args.event.repeat || args.event.isComposing) {
-    return;
-  }
-  if (args.event.key === 'F11' && !args.event.altKey && !args.event.ctrlKey && !args.event.metaKey && !args.event.shiftKey) {
-    if (!args.canToggleImmersiveMode && !args.props.isImmersiveMode) {
-      return;
-    }
-    args.event.preventDefault();
-    args.props.onToggleImmersiveMode();
-    return;
-  }
-  if (!args.props.isImmersiveMode || args.event.altKey || args.event.ctrlKey || args.event.metaKey) {
-    return;
-  }
-  if (isImmersiveEditableElement(args.event.target)) {
-    return;
-  }
-  if (handleImmersivePrimaryKey(args)) {
-    return;
-  }
-  if (args.isImmersiveEditing) {
-    return;
-  }
-  handleImmersiveReadingKey({ event: args.event, props: args.props, readableNodeIds: args.readableNodeIds });
-}
-
-function useImmersiveParagraphMarkerSync(props: WorkspaceLayoutProps, isImmersiveEditing: boolean) {
-  useEffect(() => {
-    if (!props.isImmersiveMode || isImmersiveEditing) {
-      clearParagraphMarker(props.editorAdapterRef);
-      return;
-    }
-    syncParagraphMarkerToReadingPosition(props);
-  }, [isImmersiveEditing, props]);
-}
-
-export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
-  const [isImmersiveEditing, setIsImmersiveEditing] = useState(false);
-  const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
-  const exitImmersiveModeRef = useRef(props.onExitImmersiveMode);
-  const readableNodeIds = useMemo(
-    () => getReadableNodeIds(props.nodeOrder, props.nodesById, props.trashedNodeIds),
-    [props.nodeOrder, props.nodesById, props.trashedNodeIds]
-  );
-  const canToggleImmersiveMode = Boolean(props.activeNodeId && readableNodeIds.includes(props.activeNodeId)) && !props.isStudyMode;
-
+function useImmersiveLifecycleReset(
+  props: WorkspaceLayoutProps,
+  setIsImmersiveEditing: (value: boolean) => void,
+  setIsShortcutsOverlayOpen: (value: boolean) => void,
+  shouldSkipNextScrollSyncRef: MutableRefObject<boolean>,
+  exitImmersiveModeRef: MutableRefObject<WorkspaceLayoutProps['onExitImmersiveMode']>
+) {
   useEffect(() => {
     exitImmersiveModeRef.current = props.onExitImmersiveMode;
   }, [props.onExitImmersiveMode]);
@@ -226,39 +39,193 @@ export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
       return;
     }
     clearParagraphMarker(props.editorAdapterRef);
+    shouldSkipNextScrollSyncRef.current = false;
     setIsImmersiveEditing(false);
     setIsShortcutsOverlayOpen(false);
-  }, [props.activeNodeId, props.isImmersiveMode, props.isStudyMode]);
-  useImmersiveParagraphMarkerSync(props, isImmersiveEditing);
+  }, [
+    props.activeNodeId,
+    props.editorAdapterRef,
+    props.isImmersiveMode,
+    props.isStudyMode,
+    setIsImmersiveEditing,
+    setIsShortcutsOverlayOpen,
+    shouldSkipNextScrollSyncRef
+  ]);
+}
 
-  useEffect(() => {
-    if (!props.isImmersiveMode || !isImmersiveEditing) {
-      return;
-    }
-    clearParagraphMarker(props.editorAdapterRef);
-    focusImmersiveEditor(props.editorAdapterRef);
-  }, [isImmersiveEditing, props.editorAdapterRef, props.isImmersiveMode]);
-
+function useImmersiveKeyboardHandler(args: {
+  canToggleImmersiveMode: boolean;
+  captureReadingSelectionFromViewport: () => void;
+  getReadingSelection: () => { from: number; to: number };
+  isImmersiveEditing: boolean;
+  markNextProgrammaticScroll: () => void;
+  props: WorkspaceLayoutProps;
+  queueReadingSelectionRestore: () => void;
+  readableNodeIds: string[];
+  setIsImmersiveEditing: (value: boolean) => void;
+  setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
+  setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
+  suppressNextSelectionRestore: () => void;
+}) {
   useEffect(
     () =>
       onWindowKeydown((event) =>
         handleImmersiveKeydown({
-          canToggleImmersiveMode,
+          canToggleImmersiveMode: args.canToggleImmersiveMode,
+          captureReadingSelectionFromViewport: args.captureReadingSelectionFromViewport,
           event,
-          isImmersiveEditing,
-          props,
-          readableNodeIds,
-          setIsImmersiveEditing,
-          setIsShortcutsOverlayOpen
+          getReadingSelection: args.getReadingSelection,
+          isImmersiveEditing: args.isImmersiveEditing,
+          markNextProgrammaticScroll: args.markNextProgrammaticScroll,
+          props: args.props,
+          queueReadingSelectionRestore: args.queueReadingSelectionRestore,
+          readableNodeIds: args.readableNodeIds,
+          setIsImmersiveEditing: args.setIsImmersiveEditing,
+          setIsShortcutsOverlayOpen: args.setIsShortcutsOverlayOpen,
+          setReadingSelection: args.setReadingSelection,
+          suppressNextSelectionRestore: args.suppressNextSelectionRestore
         })
       ),
-    [canToggleImmersiveMode, isImmersiveEditing, props, readableNodeIds]
+    [
+      args.canToggleImmersiveMode,
+      args.captureReadingSelectionFromViewport,
+      args.getReadingSelection,
+      args.isImmersiveEditing,
+      args.markNextProgrammaticScroll,
+      args.props,
+      args.queueReadingSelectionRestore,
+      args.readableNodeIds,
+      args.setIsImmersiveEditing,
+      args.setIsShortcutsOverlayOpen,
+      args.setReadingSelection,
+      args.suppressNextSelectionRestore
+    ]
   );
+}
+
+function useImmersiveReadingSelectionSyncState(props: WorkspaceLayoutProps) {
+  return useReadingSelectionState(props);
+}
+
+function useImmersiveModeDependencies(props: WorkspaceLayoutProps, readableNodeIds: string[]) {
+  const selectionState = useImmersiveReadingSelectionSyncState(props);
+  return {
+    ...selectionState,
+    canToggleImmersiveMode: Boolean(props.activeNodeId && readableNodeIds.includes(props.activeNodeId)) && !props.isStudyMode
+  };
+}
+
+function useImmersiveReadingPositionSync(args: {
+  clearPendingSelection: () => void;
+  getPendingSelection: () => { from: number; to: number } | null;
+  getReadingSelection: () => { from: number; to: number };
+  isImmersiveEditing: boolean;
+  props: WorkspaceLayoutProps;
+  setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
+  shouldSkipNextScrollSyncRef: MutableRefObject<boolean>;
+  wasImmersiveModeRef: MutableRefObject<boolean>;
+}) {
+  useImmersiveEntrySelectionSync(
+    args.getReadingSelection,
+    args.getPendingSelection,
+    args.clearPendingSelection,
+    args.props,
+    args.isImmersiveEditing,
+    args.shouldSkipNextScrollSyncRef,
+    args.setReadingSelection,
+    args.wasImmersiveModeRef
+  );
+  useImmersiveParagraphMarkerSync(args.props, args.isImmersiveEditing);
+  useImmersiveScrollSync(
+    args.getReadingSelection,
+    args.props,
+    args.isImmersiveEditing,
+    args.setReadingSelection,
+    args.shouldSkipNextScrollSyncRef
+  );
+}
+
+function useSelectionRestoreSuppression(props: WorkspaceLayoutProps) {
+  const shouldSuppressSelectionRestoreRef = useRef(false);
+  useEffect(() => {
+    shouldSuppressSelectionRestoreRef.current = false;
+  }, [props.isImmersiveMode]);
+  return {
+    shouldSuppressSelectionRestore: () => shouldSuppressSelectionRestoreRef.current,
+    suppressNextSelectionRestore: () => {
+      shouldSuppressSelectionRestoreRef.current = true;
+    }
+  };
+}
+
+function useImmersiveEditingFocusEffect(
+  editorAdapterRef: WorkspaceLayoutProps['editorAdapterRef'],
+  isImmersiveEditing: boolean,
+  isImmersiveMode: boolean
+) {
+  useEffect(() => {
+    if (!isImmersiveMode || !isImmersiveEditing) {
+      return;
+    }
+    clearParagraphMarker(editorAdapterRef);
+    focusImmersiveEditor(editorAdapterRef);
+  }, [editorAdapterRef, isImmersiveEditing, isImmersiveMode]);
+}
+
+export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
+  const [isImmersiveEditing, setIsImmersiveEditing] = useState(false);
+  const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
+  const exitImmersiveModeRef = useRef(props.onExitImmersiveMode);
+  const shouldSkipNextScrollSyncRef = useRef(false);
+  const wasImmersiveModeRef = useRef(props.isImmersiveMode);
+  const selectionRestoreSuppression = useSelectionRestoreSuppression(props);
+  const readableNodeIds = useMemo(
+    () => getReadableNodeIds(props.nodeOrder, props.nodesById, props.trashedNodeIds),
+    [props.nodeOrder, props.nodesById, props.trashedNodeIds]
+  );
+  const {
+    canToggleImmersiveMode,
+    captureReadingSelectionFromViewport,
+    clearPendingSelection,
+    getPendingSelection,
+    getReadingSelection,
+    queueReadingSelectionRestore,
+    setReadingSelection
+  } = useImmersiveModeDependencies(props, readableNodeIds);
+  useImmersiveLifecycleReset(props, setIsImmersiveEditing, setIsShortcutsOverlayOpen, shouldSkipNextScrollSyncRef, exitImmersiveModeRef);
+  useImmersiveReadingPositionSync({
+    clearPendingSelection,
+    getPendingSelection,
+    getReadingSelection,
+    isImmersiveEditing,
+    props,
+    setReadingSelection,
+    shouldSkipNextScrollSyncRef,
+    wasImmersiveModeRef
+  });
+  useImmersiveEditingFocusEffect(props.editorAdapterRef, isImmersiveEditing, props.isImmersiveMode);
+  useImmersiveKeyboardHandler({
+    canToggleImmersiveMode,
+    captureReadingSelectionFromViewport,
+    getReadingSelection,
+    isImmersiveEditing,
+    markNextProgrammaticScroll: () => {
+      shouldSkipNextScrollSyncRef.current = true;
+    },
+    props,
+    queueReadingSelectionRestore,
+    readableNodeIds,
+    setIsImmersiveEditing,
+    setIsShortcutsOverlayOpen,
+    setReadingSelection,
+    suppressNextSelectionRestore: selectionRestoreSuppression.suppressNextSelectionRestore
+  });
 
   return {
     enterImmersiveEdit: () => setIsImmersiveEditing(true),
     isImmersiveEditing,
     isShortcutsOverlayOpen,
-    setIsImmersiveEditing
+    setIsImmersiveEditing,
+    shouldSuppressSelectionRestore: selectionRestoreSuppression.shouldSuppressSelectionRestore
   };
 }

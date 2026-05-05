@@ -27,7 +27,10 @@ interface DocumentPanelBodyProps {
   editorHideTitleHeading?: boolean;
   emptyContent?: ReactNode;
   editorNodeId: string | null;
+  editorReadingSelection?: EditorSelection | null;
   editorNodeViewState?: NodeViewState;
+  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
+  onCompleteApplyingReadingPosition?: (reason: string) => void;
   emptyState?: {
     description: string;
     title: string;
@@ -41,8 +44,10 @@ interface DocumentPanelBodyProps {
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onOpenNodeLink?: (title: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
+  onShouldSuppressSelectionRestore?: () => boolean;
   onPromptImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
   onPromptImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
+  onSetReadingPositionSelection?: (selection: EditorSelection) => void;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;

@@ -8,6 +8,7 @@ import type {
   NativeMirrorAttachmentLinkRebuildResult,
   NativeMirrorOutputRebuildResult,
   NativePerformanceMemorySnapshot,
+  NativeReadingPositionTraceLogAppendArgs,
   NativeSqliteBackupEntry,
   NativeSqliteBackupResult,
   NativeSqliteRestoreResult,
@@ -15,6 +16,10 @@ import type {
 } from './nativeUtilityContract.js';
 
 export type NativeUtilityCommandMap = {
+  [NATIVE_COMMANDS.appendReadingPositionTraceLog]: {
+    args: NativeReadingPositionTraceLogAppendArgs;
+    result: string;
+  };
   [NATIVE_COMMANDS.copyAttachmentImageToClipboard]: {
     args: {
       attachment_id: string;
