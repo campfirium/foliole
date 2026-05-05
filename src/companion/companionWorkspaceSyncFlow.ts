@@ -20,7 +20,7 @@ import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncE
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'skipped';
 
-function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
+export function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
   const remainingStructure = result.remainingStructureChangeCount ?? 0;
   const waitingLocalChanges =
     !result.pushError &&

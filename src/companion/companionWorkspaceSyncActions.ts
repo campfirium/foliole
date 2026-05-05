@@ -20,7 +20,7 @@ import {
   buildRemainingSyncProgress,
   shouldClearCompanionSyncProgress
 } from './companionSyncProgressVisibility';
-import type { CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow';
+import { hasSyncBacklog, type CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow';
 
 interface WorkspaceSnapshotActionArgs {
   setError: (message: string | null) => void;
@@ -32,6 +32,8 @@ interface WorkspaceSnapshotActionArgs {
   state: NativeCompanionWorkspaceSyncState;
 }
 
+const MANUAL_SYNC_MAX_BACKLOG_PASSES = 20;
+
 async function refreshConflictAwareState(args: {
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setSyncConflictCount: (count: number) => void;
@@ -42,6 +44,27 @@ async function refreshConflictAwareState(args: {
   args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   return nextState;
+}
+
+function madeResourceProgress(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
+  return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
+}
+
+function shouldContinueManualSync(
+  result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>,
+  passResult: ReturnType<typeof describeCompanionSyncPassResult>
+) {
+  if (passResult.outcome !== 'skipped' || !hasSyncBacklog(result)) {
+    return false;
+  }
+  if (result.contentBlobError || result.attachmentResourceError || result.pushError) {
+    return false;
+  }
+  if (result.pushConflictCount > 0 || result.pushRejectedCount > 0 || (result.pushIssueCount ?? 0) > 0) {
+    return false;
+  }
+  return madeResourceProgress(result) || (result.remainingStructureChangeCount ?? 0) > 0 ||
+    (result.localDirtyCount ?? 0) > 0 || (result.pendingAckCount ?? 0) > 0;
 }
 
 async function syncDesktopStreams(args: {
@@ -57,26 +80,32 @@ async function syncDesktopStreams(args: {
     status: 'started'
   });
   args.setState(startedState);
-  const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
-    onProgress: args.setSyncProgress,
-    onStructureSynced: async () => {
-      await refreshConflictAwareState(args);
+  let nextState = startedState;
+  for (let pass = 0; pass < MANUAL_SYNC_MAX_BACKLOG_PASSES; pass += 1) {
+    const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
+      onProgress: args.setSyncProgress,
+      onStructureSynced: async () => {
+        await refreshConflictAwareState(args);
+      }
+    });
+    const passResult = describeCompanionSyncPassResult(result);
+    nextState = await recordCompanionWorkspaceSyncEvent({
+      endpointUrl: args.endpointUrl,
+      message: passResult.message,
+      status: passResult.status
+    });
+    args.setState(nextState);
+    args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
+    args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
+    const remainingProgress = buildRemainingSyncProgress(result);
+    if (remainingProgress) {
+      args.setSyncProgress(remainingProgress);
+    } else if (shouldClearCompanionSyncProgress(result)) {
+      args.setSyncProgress(null);
     }
-  });
-  const passResult = describeCompanionSyncPassResult(result);
-  const nextState = await recordCompanionWorkspaceSyncEvent({
-    endpointUrl: args.endpointUrl,
-    message: passResult.message,
-    status: passResult.status
-  });
-  args.setState(nextState);
-  args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
-  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-  const remainingProgress = buildRemainingSyncProgress(result);
-  if (remainingProgress) {
-    args.setSyncProgress(remainingProgress);
-  } else if (shouldClearCompanionSyncProgress(result)) {
-    args.setSyncProgress(null);
+    if (!shouldContinueManualSync(result, passResult)) {
+      break;
+    }
   }
   return nextState;
 }

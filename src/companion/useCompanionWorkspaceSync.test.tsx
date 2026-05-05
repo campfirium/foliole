@@ -100,6 +100,25 @@ function createSyncState(snapshot: WorkspaceSnapshot | null) {
   };
 }
 
+function createSyncObjectsResult(overrides: Record<string, unknown> = {}) {
+  return {
+    attachmentResourceError: null,
+    contentBlobError: null,
+    localDirtyCount: 0,
+    pendingAckCount: 0,
+    pushConflictCount: 0,
+    pushError: null,
+    pushIssueCount: 0,
+    pushRejectedCount: 0,
+    remainingAttachmentResourceCount: 0,
+    remainingContentBlobCount: 0,
+    remainingStructureChangeCount: 0,
+    syncedAttachmentIds: [],
+    syncedContentBlobHashes: [],
+    ...overrides
+  };
+}
+
 function createConflictSnapshot(title: string): NativeSyncNodeConflictRecord['snapshot'] {
   return {
     anchor_link: null,
@@ -203,10 +222,33 @@ async function testManualSyncRefreshesConflictCount() {
   expect(result.current.syncConflictCount).toBe(2);
 }
 
+async function testManualSyncContinuesResourceBacklog() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop
+    .mockResolvedValueOnce(createSyncObjectsResult({
+      remainingContentBlobCount: 1,
+      syncedContentBlobHashes: ['hash-1']
+    }))
+    .mockResolvedValueOnce(createSyncObjectsResult());
+  workspaceSyncMock.recordCompanionWorkspaceSyncEvent
+    .mockResolvedValue(createSyncState(createSnapshot()));
+  const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
+  const { result } = renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync);
+
+  await waitFor(() => expect(result.current.status).toBe('idle'));
+  await act(async () => {
+    await result.current.pullFromDesktop('http://10.0.2.2:38641');
+  });
+
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
+  expect(result.current.status).toBe('idle');
+}
+
 describe('useCompanionWorkspaceSync', () => {
   beforeEach(resetCompanionWorkspaceSyncMocks);
 
   it('refreshes local state and readable article after manual stream sync', testManualSyncRefreshesReadableArticle);
 
   it('refreshes the visible sync conflict count after manual sync', testManualSyncRefreshesConflictCount);
+
+  it('continues manual sync while resource backlog is making progress', testManualSyncContinuesResourceBacklog);
 });
