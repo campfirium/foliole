@@ -21,7 +21,12 @@ final class FolioleCompanionSyncObjectApply {
         } else if (type.equals("external_folder")) {
             applyExternalFolder(database, objectId, record);
         } else if (type.equals("external_document")) {
-            FolioleCompanionDocumentSyncPayload.apply(database, objectId, record);
+            FolioleCompanionDocumentSyncPayload.apply(
+                InstrumentationRegistry.getInstrumentation().getTargetContext(),
+                database,
+                objectId,
+                record
+            );
         } else if (type.equals("node_reading")) {
             FolioleCompanionLearningSyncPayload.applyReading(InstrumentationRegistry.getInstrumentation().getTargetContext(), database, objectId, record);
         } else if (type.equals("node_review")) {
