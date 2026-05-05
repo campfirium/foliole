@@ -32,11 +32,21 @@ function syncReviewSessionSelection(state: WorkspaceState, nodeId: string) {
   };
 }
 
+function isReviewSessionSelectionSynced(state: WorkspaceState, nodeId: string) {
+  if (state.reviewSession.currentNodeId !== nodeId) {
+    return false;
+  }
+  return state.reviewSession.queueNodeIds[0] === nodeId;
+}
+
 function createOpenNodeAction(set: WorkspaceSet) {
   return (nodeId: string) => {
     let nextResult: NodeNavigationResult | null = null;
     set((state) => {
-      if (!isAvailableNode(state, nodeId) || state.activeNodeId === nodeId) {
+      if (!isAvailableNode(state, nodeId)) {
+        return state;
+      }
+      if (state.activeNodeId === nodeId && isReviewSessionSelectionSynced(state, nodeId)) {
         return state;
       }
       nextResult = { focusAnchor: null, nodeId };
