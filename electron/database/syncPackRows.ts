@@ -41,6 +41,12 @@ export interface NodePackRow extends DatabaseRow {
   updated_at: string;
 }
 
+export interface NodeAttachmentPackRow extends DatabaseRow {
+  attachment_id: string;
+  node_id: string;
+  role: string;
+}
+
 export interface ExternalDocumentPackRow extends DatabaseRow {
   body_blob_hash: string | null;
   content: string;
@@ -105,6 +111,15 @@ function collectBodyBlobHashes(nodes: NodePackRow[], documents: ExternalDocument
   ].filter((hash): hash is string => Boolean(hash)))];
 }
 
+function loadNodeAttachmentRows(nodeIds: string[]) {
+  return queryRowsByIds<NodeAttachmentPackRow>(
+    `SELECT node_id, attachment_id, role
+     FROM node_attachments WHERE node_id IN (__IDS__)
+     ORDER BY node_id ASC, role ASC, attachment_id ASC`,
+    nodeIds
+  );
+}
+
 function idsForObjectTable(rows: SyncStatePackRow[], table: 'external_documents' | 'nodes') {
   return rows
     .filter((row): row is SyncStatePackRow & { object_type: SyncPackObjectType } => isSyncPackObjectType(row.object_type))
@@ -141,6 +156,7 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
      FROM nodes WHERE id IN (__IDS__)`,
     nodeIds
   );
+  const nodeAttachments = loadNodeAttachmentRows(nodeIds);
   const externalDocuments = queryRowsByIds<ExternalDocumentPackRow>(
     `SELECT document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
        source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash,
@@ -156,6 +172,7 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
       collectBodyBlobHashes(nodes, externalDocuments)
     ),
     externalDocuments,
+    nodeAttachments,
     nodes,
     stateRows,
     syncObjects: loadPayloadObjects(stateRows)

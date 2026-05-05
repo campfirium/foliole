@@ -41,6 +41,7 @@ final class FolioleCompanionSyncPackApply {
                     }
                     appliedBlobs = upsertContentBlobs(database);
                     upsertNodes(database);
+                    replaceNodeAttachments(database);
                     upsertExternalDocuments(database);
                     upsertSyncObjects(database);
                     appliedObjects = upsertStateRows(database, deviceId);
@@ -131,6 +132,18 @@ final class FolioleCompanionSyncPackApply {
                 "source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, " +
                 "content, indexed_at, is_present, missing_at, created_at, updated_at FROM inc.external_documents " +
                 "WHERE document_id IN (SELECT object_id FROM " + applyableStateRowsSql("external_document") + ")"
+        );
+    }
+
+    private static void replaceNodeAttachments(SQLiteDatabase database) {
+        database.execSQL(
+            "DELETE FROM main.node_attachments WHERE node_id IN (" +
+                "SELECT object_id FROM " + applyableStateRowsSql("node") + ")"
+        );
+        database.execSQL(
+            "INSERT OR REPLACE INTO main.node_attachments (node_id, attachment_id, role) " +
+                "SELECT node_id, attachment_id, role FROM inc.node_attachments " +
+                "WHERE node_id IN (SELECT object_id FROM " + applyableStateRowsSql("node") + ")"
         );
     }
 

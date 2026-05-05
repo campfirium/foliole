@@ -95,6 +95,19 @@ function insertAttachmentSyncState() {
   );
 }
 
+function insertNodeAttachmentRows() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    ['att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:02:00.000Z']
+  );
+  driver.execute(
+    'INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)',
+    ['node-1', 'att-1', 'image']
+  );
+}
+
 function insertExternalFolderSyncState() {
   const driver = openDatabaseConnection().driver;
   driver.execute(
@@ -145,6 +158,7 @@ function readPackRows(packPath: string) {
       blobs: db.prepare('SELECT hash, kind FROM content_blobs').all(),
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash, opening_text FROM external_documents').all(),
       manifest,
+      nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
       nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text FROM nodes').all(),
       stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all(),
       syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all()
@@ -173,6 +187,7 @@ function readStoredZipEntries(filePath: string) {
 
 it('builds a sqlite pack with structure and blob manifests but no body bytes', async () => {
   insertNodeSyncState();
+  insertNodeAttachmentRows();
   const packPath = path.join(tempRoot, 'incoming.db');
 
   const result = await buildDesktopSyncPack({
@@ -209,10 +224,12 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
         { name: 'sync_object_state', row_count: 2 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
+        { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 0 },
         { name: 'content_blobs', row_count: 1 }
       ]
     }),
+    nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
     nodes: [expect.objectContaining({
       body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       content: '',
@@ -252,6 +269,7 @@ it('packs attachment metadata as a generic sync object', async () => {
         { name: 'sync_object_state', row_count: 1 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 0 },
+        { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 0 },
         { name: 'content_blobs', row_count: 0 }
       ]
@@ -286,6 +304,7 @@ it('packs external folder metadata as a generic sync object', async () => {
         { name: 'sync_object_state', row_count: 1 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 0 },
+        { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 0 },
         { name: 'content_blobs', row_count: 0 }
       ]
@@ -320,6 +339,7 @@ it('packs import source metadata as a generic sync object', async () => {
         { name: 'sync_object_state', row_count: 1 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 0 },
+        { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 0 },
         { name: 'content_blobs', row_count: 0 }
       ]
@@ -386,6 +406,7 @@ it('packs external document structure with body blob manifests but no body bytes
         { name: 'sync_object_state', row_count: 1 },
         { name: 'sync_objects', row_count: 0 },
         { name: 'nodes', row_count: 0 },
+        { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 1 },
         { name: 'content_blobs', row_count: 1 }
       ]

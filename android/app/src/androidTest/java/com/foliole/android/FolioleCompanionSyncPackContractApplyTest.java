@@ -59,6 +59,7 @@ public class FolioleCompanionSyncPackContractApplyTest {
         assertEquals(2, countRows("content_blobs"));
         assertEquals(0, countRows("content_blob_data"));
         assertEquals(3, countRows("sync_object_state"));
+        assertEquals(1, countRows("node_attachments"));
         assertEquals("{\"theme\":\"dark\"}", selectString(
             "SELECT value_json FROM setting_records WHERE key = 'app_settings'"
         ));
@@ -143,6 +144,9 @@ public class FolioleCompanionSyncPackContractApplyTest {
             "form_factor TEXT NOT NULL DEFAULT '*', device_id TEXT NOT NULL DEFAULT '*', " +
             "value_json TEXT NOT NULL, content_hash TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, " +
             "PRIMARY KEY (key, scope, platform, form_factor, device_id))");
+        mainDatabase.execSQL("CREATE TABLE node_attachments (" +
+            "node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL, " +
+            "PRIMARY KEY (node_id, attachment_id, role))");
     }
 
     private String selectString(String sql) {

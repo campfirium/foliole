@@ -54,6 +54,7 @@ public class FolioleCompanionSyncPackApplyTest {
         assertEquals("", selectString("SELECT content FROM nodes WHERE id = 'node-1'"));
         assertEquals("Node opening preview", selectString("SELECT opening_text FROM nodes WHERE id = 'node-1'"));
         assertEquals("blob-1", selectString("SELECT body_blob_hash FROM nodes WHERE id = 'node-1'"));
+        assertEquals("att-1", selectString("SELECT attachment_id FROM node_attachments WHERE node_id = 'node-1'"));
         assertEquals("missing", selectString("SELECT availability FROM content_blobs WHERE hash = 'blob-1'"));
         assertEquals("android-test", selectString(
             "SELECT last_modified_by_device_id FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'"
@@ -221,6 +222,9 @@ public class FolioleCompanionSyncPackApplyTest {
         mainDatabase.execSQL("CREATE TABLE attachments (" +
             "id TEXT PRIMARY KEY, original_name TEXT, mime_type TEXT, size_bytes INTEGER NOT NULL DEFAULT 0, " +
             "created_at TEXT NOT NULL)");
+        mainDatabase.execSQL("CREATE TABLE node_attachments (" +
+            "node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL, " +
+            "PRIMARY KEY (node_id, attachment_id, role))");
         mainDatabase.execSQL("CREATE TABLE attachment_blobs (" +
             "attachment_id TEXT PRIMARY KEY, content_hash TEXT, storage_key TEXT, size_bytes INTEGER NOT NULL DEFAULT 0, " +
             "mime_type TEXT, availability TEXT NOT NULL DEFAULT 'remote_known', source_device_id TEXT, " +
@@ -248,6 +252,9 @@ public class FolioleCompanionSyncPackApplyTest {
                 "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
                 "body_blob_hash TEXT, opening_text TEXT, content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, " +
                 "updated_at TEXT NOT NULL, deleted_at TEXT)");
+            packDatabase.execSQL("CREATE TABLE node_attachments (" +
+                "node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT, " +
+                "PRIMARY KEY (node_id, attachment_id, role))");
             packDatabase.execSQL("CREATE TABLE external_documents (" +
                 "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +
                 "file_name TEXT NOT NULL, extension TEXT NOT NULL, source_size_bytes INTEGER NOT NULL, " +
@@ -282,6 +289,8 @@ public class FolioleCompanionSyncPackApplyTest {
         packDatabase.execSQL("INSERT INTO nodes (" +
             "id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, content, created_at, updated_at) " +
             "VALUES ('node-1', 'topic', 'Node 1', 1, 0, 'blob-1', 'Node opening preview', '', '" + now + "', '" + now + "')");
+        packDatabase.execSQL("INSERT INTO node_attachments (" +
+            "node_id, attachment_id, role, created_at) VALUES ('node-1', 'att-1', 'image', '" + now + "')");
         packDatabase.execSQL("INSERT INTO content_blobs (" +
             "hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
             "original_sha256, stored_sha256, availability, source_device_id, created_at) VALUES (" +
@@ -407,6 +416,9 @@ public class FolioleCompanionSyncPackApplyTest {
                 "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
                 "body_blob_hash TEXT, opening_text TEXT, content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, " +
                 "updated_at TEXT NOT NULL, deleted_at TEXT)");
+            packDatabase.execSQL("CREATE TABLE node_attachments (" +
+                "node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT, " +
+                "PRIMARY KEY (node_id, attachment_id, role))");
             packDatabase.execSQL("CREATE TABLE external_documents (" +
                 "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +
                 "file_name TEXT NOT NULL, extension TEXT NOT NULL, source_size_bytes INTEGER NOT NULL, " +

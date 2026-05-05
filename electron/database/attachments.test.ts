@@ -142,6 +142,41 @@ it('creates an attachment record and returns it through node-based lookup', () =
   ]);
 });
 
+it('advances node sync state when attachment links change', () => {
+  seedNode('node-1');
+  createAttachmentRecord({
+    id: 'hash-1',
+    originalName: 'diagram.png',
+    mimeType: 'image/png',
+    sizeBytes: 2048,
+    createdAt: '2026-03-20T00:00:00.000Z'
+  });
+
+  createNodeAttachmentLink({
+    nodeId: 'node-1',
+    attachmentId: 'hash-1',
+    role: 'image'
+  });
+
+  const linkedState = openDatabaseConnection().sqlite
+    .prepare("SELECT content_hash, state_seq FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'")
+    .get() as { content_hash: string; state_seq: number };
+  expect(linkedState.content_hash).toMatch(/^[a-f0-9]{64}$/);
+
+  deleteNodeAttachmentLink({
+    nodeId: 'node-1',
+    attachmentId: 'hash-1',
+    role: 'image'
+  });
+
+  const unlinkedState = openDatabaseConnection().sqlite
+    .prepare("SELECT content_hash, state_seq FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'")
+    .get() as { content_hash: string; state_seq: number };
+  expect(unlinkedState.state_seq).toBeGreaterThan(linkedState.state_seq);
+  expect(unlinkedState.content_hash).not.toBe(linkedState.content_hash);
+});
+
+
 it('stores attachment blob manifests separately from attachment records', () => {
   createAttachmentRecord({
     id: 'hash-blob',

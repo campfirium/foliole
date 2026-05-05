@@ -99,8 +99,22 @@ function insertExternalDocumentSyncState() {
   }], '2026-04-27T00:02:00.000Z');
 }
 
+function insertNodeAttachmentRows() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    ['att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:02:30.000Z']
+  );
+  driver.execute(
+    'INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)',
+    ['node-1', 'att-1', 'image']
+  );
+}
+
 async function buildContractFixturePack(outputPath: string) {
   insertNodeSyncState();
+  insertNodeAttachmentRows();
   insertExternalDocumentSyncState();
   return buildDesktopSyncPack({
     createdAt: '2026-04-27T02:00:00.000Z',
@@ -122,6 +136,7 @@ function readPackRows(packPath: string) {
     return {
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash FROM external_documents').all(),
       manifest,
+      nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
       nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text FROM nodes').all()
     };
   } finally {
@@ -166,10 +181,12 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
         { name: 'sync_object_state', row_count: 3 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
+        { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 1 },
         { name: 'content_blobs', row_count: 2 }
       ]
     }),
+    nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
     nodes: [expect.objectContaining({ content: '', id: 'node-1', opening_text: 'Node opening preview' })]
   });
 });

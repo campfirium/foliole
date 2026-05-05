@@ -2,6 +2,8 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 export interface AttachmentRecordInput {
   id: string;
@@ -57,6 +59,21 @@ function toAttachmentRecord(row: AttachmentRecordRow): AttachmentRecord {
   };
 }
 
+function markNodeAttachmentLinksDirty(nodeId: string, now = new Date().toISOString()) {
+  const deviceId = loadOrCreateDesktopDeviceId(now);
+  openDatabaseConnection().driver.execute(
+    `UPDATE nodes
+     SET updated_at = ?, last_modified_by_device_id = ?, sync_dirty = 1
+     WHERE id = ?`,
+    [now, deviceId, nodeId]
+  );
+  flushNodeSyncVersion(nodeId, now);
+}
+
+function changedRows() {
+  return openDatabaseConnection().driver.queryOne<{ count: number }>('SELECT changes() AS count')?.count ?? 0;
+}
+
 export function createAttachmentRecord(input: AttachmentRecordInput): void {
   const connection = openDatabaseConnection();
   connection.driver.execute(
@@ -79,6 +96,9 @@ export function createNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
      ON CONFLICT(node_id, attachment_id, role) DO NOTHING`,
     [input.nodeId, input.attachmentId, input.role]
   );
+  if (changedRows() > 0) {
+    markNodeAttachmentLinksDirty(input.nodeId);
+  }
   syncPdfSearchIndexForNodeIds(connection.driver, [input.nodeId]);
 }
 
@@ -150,5 +170,8 @@ export function deleteNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
      WHERE node_id = ? AND attachment_id = ? AND role = ?`,
     [input.nodeId, input.attachmentId, input.role]
   );
+  if (changedRows() > 0) {
+    markNodeAttachmentLinksDirty(input.nodeId);
+  }
   syncPdfSearchIndexForNodeIds(connection.driver, [input.nodeId]);
 }

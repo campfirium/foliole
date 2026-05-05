@@ -35,6 +35,12 @@ export const PACK_SCHEMA = [
     updated_at TEXT NOT NULL,
     deleted_at TEXT
   )`,
+  `CREATE TABLE node_attachments (
+    node_id TEXT NOT NULL,
+    attachment_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    PRIMARY KEY (node_id, attachment_id, role)
+  )`,
   `CREATE TABLE external_documents (
     document_id TEXT PRIMARY KEY,
     folder_id TEXT NOT NULL,

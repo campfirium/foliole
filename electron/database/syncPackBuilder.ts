@@ -64,6 +64,7 @@ function writePackManifest(
       tableRows: {
         content_blobs: rows.contentBlobs,
         external_documents: rows.externalDocuments,
+        node_attachments: rows.nodeAttachments,
         nodes: rows.nodes,
         sync_object_state: rows.stateRows,
         sync_objects: rows.syncObjects
@@ -94,6 +95,12 @@ function writePackRows(db: import('better-sqlite3').Database, rows: LoadedSyncPa
     rows: rows.nodes,
     values: (row) => [row.id, row.parent_id, row.kind, row.title, row.is_title_manual,
       row.hide_title_heading, row.body_blob_hash, row.opening_text, '', row.created_at, row.updated_at, row.deleted_at]
+  });
+  copyRows({
+    db,
+    table: 'node_attachments',
+    columns: ['node_id', 'attachment_id', 'role'],
+    rows: rows.nodeAttachments
   });
   copyRows({
     db,
@@ -137,6 +144,7 @@ function buildContainerManifest(args: {
     tableRows: {
       content_blobs: args.rows.contentBlobs,
       external_documents: args.rows.externalDocuments,
+      node_attachments: args.rows.nodeAttachments,
       nodes: args.rows.nodes,
       sync_object_state: args.rows.stateRows,
       sync_objects: args.rows.syncObjects

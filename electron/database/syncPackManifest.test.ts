@@ -15,6 +15,7 @@ it('builds the pack manifest from the explicit table map', () => {
     'sync_object_state',
     'sync_objects',
     'nodes',
+    'node_attachments',
     'external_documents',
     'content_blobs'
   ]);
@@ -32,6 +33,7 @@ it('builds the pack manifest from the explicit table map', () => {
     tableRows: {
       content_blobs: [{}],
       external_documents: [],
+      node_attachments: [{}],
       nodes: [{}, {}],
       sync_object_state: [{}, {}, {}],
       sync_objects: [{}]
@@ -44,6 +46,7 @@ it('builds the pack manifest from the explicit table map', () => {
       { name: 'sync_object_state', row_count: 3 },
       { name: 'sync_objects', row_count: 1 },
       { name: 'nodes', row_count: 2 },
+      { name: 'node_attachments', row_count: 1 },
       { name: 'external_documents', row_count: 0 },
       { name: 'content_blobs', row_count: 1 }
     ],
