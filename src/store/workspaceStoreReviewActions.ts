@@ -1,6 +1,7 @@
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
+import { buildReviewQueuePlan } from './reviewQueuePlanner';
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -28,17 +29,12 @@ function createEmptyReviewSession(): WorkspaceState['reviewSession'] {
 }
 
 function buildReviewQueue(state: WorkspaceState, now: string): string[] {
-  return state.nodeOrder.filter((nodeId) => {
-    if (state.trashedNodeIds.includes(nodeId)) {
-      return false;
-    }
-    const node = state.nodesById[nodeId];
-    if (!node || node.reveal === null) {
-      return false;
-    }
-    const due = node.review?.due ?? now;
-    return due <= now;
-  });
+  return buildReviewQueuePlan({
+    nodeOrder: state.nodeOrder,
+    nodesById: state.nodesById,
+    now,
+    trashedNodeIds: state.trashedNodeIds
+  }).queueNodeIds;
 }
 
 function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceReviewActions['startReviewSession'] {

@@ -20,6 +20,7 @@ import {
   type ReviewSchedulerSettings,
   saveReviewSchedulerSettings
 } from '../../features/settings/model/reviewSchedulerSettings';
+import { buildReviewQueuePlan } from '../../store/reviewQueuePlanner';
 import type { WorkspaceState } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
@@ -114,17 +115,12 @@ export function countDueReviewNodes(
   trashedNodeIds: string[],
   now: string
 ) {
-  return nodeOrder.filter((nodeId) => {
-    if (trashedNodeIds.includes(nodeId)) {
-      return false;
-    }
-    const node = nodesById[nodeId];
-    if (!node || node.reveal === null) {
-      return false;
-    }
-    const due = node.review?.due ?? now;
-    return due <= now;
-  }).length;
+  return buildReviewQueuePlan({
+    nodeOrder,
+    nodesById,
+    now,
+    trashedNodeIds
+  }).queueNodeIds.length;
 }
 
 function createSessionActions(args: BuildLayoutPropsArgs) {
