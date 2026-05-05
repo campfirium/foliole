@@ -116,12 +116,14 @@ function createExtraNote(
 }
 
 function renderArticleBody(article: ArticleNode, derivedByAnchorKey: Map<string, ArticleNode[]>) {
-  return article.content
+  const articleTitle = article.title.trim() || 'Untitled';
+  const rendered = article.content
     .replace(INLINE_ANCHOR_PATTERN, (match, rawKind, anchorId, sourceText, offset) => {
       const kind = rawKind as 'highlight' | 'cloze';
       return renderMarkedSource(kind, sourceText) + createExtraNote(article, kind, sourceText, anchorId, offset, offset + match.length, derivedByAnchorKey);
     })
     .replace(/<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g, '');
+  return stripLeadingMatchingHeading(rendered, articleTitle);
 }
 
 function renderManualTopicAppendix(manualTopics: ArticleNode[]) {
