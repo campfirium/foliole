@@ -16,11 +16,13 @@ interface DocumentPanelHeaderProps {
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
+  isSplitPanelOpen: boolean;
   nodesById: Record<string, Node>;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
   onSelectNode: (nodeId: string) => void;
+  onToggleSplitPanel: () => void;
 }
 
 interface NavigationButtonsProps {
@@ -49,11 +51,13 @@ export function DocumentPanelHeader({
   canGoBack,
   canGoForward,
   canGoParent,
+  isSplitPanelOpen,
   nodesById,
   onGoBack,
   onGoForward,
   onGoParent,
-  onSelectNode
+  onSelectNode,
+  onToggleSplitPanel
 }: DocumentPanelHeaderProps) {
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
 
@@ -76,6 +80,14 @@ export function DocumentPanelHeader({
         </div>
       </div>
       <ToolbarActionGroup ariaLabel="Document editor actions">
+        <AppIconButton
+          aria-pressed={isSplitPanelOpen}
+          className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+          data-active={isSplitPanelOpen}
+          icon={<SplitPanelIcon />}
+          label="Toggle split panel"
+          onClick={onToggleSplitPanel}
+        />
         <AppDropdownMenu>
           <AppDropdownMenuTrigger asChild>
             <AppIconButton
@@ -101,6 +113,25 @@ function MoreOptionsIcon() {
       <circle cx="4" cy="8" r="1.1" fill="currentColor" />
       <circle cx="8" cy="8" r="1.1" fill="currentColor" />
       <circle cx="12" cy="8" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function SplitPanelIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <rect
+        x="2.1"
+        y="2.35"
+        width="11.8"
+        height="11.3"
+        rx="1.55"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.05"
+      />
+      <path d="M8 2.9v10.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
+      <path d="M2.7 5.2h10.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" opacity="0.75" />
     </svg>
   );
 }

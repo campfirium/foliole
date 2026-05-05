@@ -1,10 +1,13 @@
+import { X } from 'lucide-react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -72,10 +75,154 @@ function getDocumentPanelState(props: DocumentPanelSectionProps, editorDisplayMo
   };
 }
 
+function getDocumentPanelBodyProps(
+  props: DocumentPanelSectionProps,
+  editorContentPaddingBottom: string | undefined,
+  emptyState: ReturnType<typeof resolveInboxEmptyState>,
+  hasAnswerSection: boolean,
+  reveal: string
+) {
+  return {
+    documentMaxWidth: props.documentMaxWidth,
+    editorAppearanceKey: props.editorAppearanceKey,
+    editorContent: props.editorContent,
+    editorContentPaddingBottom,
+    editorNodeId: props.editorNodeId,
+    editorNodeViewState: props.editorNodeViewState,
+    emptyState,
+    hasAnswerSection,
+    isDocumentResizing: props.isDocumentResizing,
+    onAnswerChange: props.onAnswerChange,
+    onEditorChange: props.onEditorChange,
+    onEditorContextMenu: props.onEditorContextMenu,
+    onEditorReady: props.onEditorReady,
+    onRevealDocumentPosition: props.onRevealDocumentPosition,
+    onRevealDocumentSelection: props.onRevealDocumentSelection,
+    onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
+    onResetLayout: props.onResetLayout,
+    onStartDocumentResize: props.onStartDocumentResize,
+    reveal
+  };
+}
+
+function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
+  return {
+    scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
+    selection: {
+      from: Math.max(0, Math.trunc(viewState.selection.from)),
+      to: Math.max(0, Math.trunc(viewState.selection.to))
+    }
+  };
+}
+
+function isSameNodeViewState(left: NodeViewState | undefined, right: NodeViewState) {
+  return left?.scrollTop === right.scrollTop && left?.selection.from === right.selection.from && left?.selection.to === right.selection.to;
+}
+
+function useSplitPanelNodeViewState(activeNodeId: string | null, isSplitPanelOpen: boolean) {
+  const [panelNodeViewById, setPanelNodeViewById] = useState<Record<string, NodeViewState | undefined>>({});
+  const panelEditorRef = useRef<EditorAdapter | null>(null);
+  const panelNodeViewState = activeNodeId ? panelNodeViewById[activeNodeId] : undefined;
+
+  useEffect(() => {
+    if (!isSplitPanelOpen || !activeNodeId) {
+      return;
+    }
+    const capturePanelViewState = () => {
+      const adapter = panelEditorRef.current;
+      if (!adapter) {
+        return;
+      }
+      const nextViewState = normalizeNodeViewState({
+        scrollTop: adapter.getScrollTop(),
+        selection: adapter.getSelection()
+      });
+      setPanelNodeViewById((current) => {
+        if (isSameNodeViewState(current[activeNodeId], nextViewState)) {
+          return current;
+        }
+        return {
+          ...current,
+          [activeNodeId]: nextViewState
+        };
+      });
+    };
+    capturePanelViewState();
+    const timer = window.setInterval(capturePanelViewState, 240);
+    return () => {
+      window.clearInterval(timer);
+      capturePanelViewState();
+    };
+  }, [activeNodeId, isSplitPanelOpen]);
+
+  return {
+    panelEditorRef,
+    panelNodeViewState
+  };
+}
+
+function DocumentSplitPanelSurface({
+  bodyProps,
+  panelNodeViewState,
+  panelEditorRef,
+  onOpenChange,
+  open
+}: {
+  bodyProps: ReturnType<typeof getDocumentPanelBodyProps>;
+  panelNodeViewState?: NodeViewState;
+  panelEditorRef: React.MutableRefObject<EditorAdapter | null>;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) {
+  return (
+    <AppDialog onOpenChange={onOpenChange} open={open}>
+      <AppDialogPortal>
+        <AppDialogOverlay />
+        <AppDialogContent
+          aria-describedby={undefined}
+          className="left-1/2 top-1/2 h-[min(820px,calc(100vh-88px))] w-[min(1520px,calc(100vw-72px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-border/35 bg-bg-panel p-0"
+        >
+          <section className="flex h-full min-h-0 flex-col overflow-hidden">
+            <AppDialogTitle className="sr-only">Document split panel</AppDialogTitle>
+            <header className="flex h-12 flex-none items-center justify-end border-b border-border px-4">
+              <AppButton aria-label="Close split panel" className="size-8 px-0" onClick={() => onOpenChange(false)} variant="ghost">
+                <X aria-hidden="true" size={15} strokeWidth={1.9} />
+              </AppButton>
+            </header>
+            <div className="grid min-h-0 flex-1 grid-cols-2 overflow-hidden">
+              <div className="flex min-h-0 min-w-0 overflow-hidden bg-bg-elevated">
+                <DocumentPanelBody
+                  {...bodyProps}
+                  answerEditorDebugId={undefined}
+                  editorNodeViewState={panelNodeViewState}
+                  onEditorContextMenu={undefined}
+                  onEditorReady={(adapter) => {
+                    panelEditorRef.current = adapter;
+                  }}
+                  onRevealDocumentPosition={() => undefined}
+                  onRevealDocumentSelection={() => undefined}
+                  onResolveDocumentPositionAtViewportY={() => null}
+                  promptEditorDebugId={undefined}
+                  showDocumentOutline={false}
+                  showDocumentResizeHandles={false}
+                />
+              </div>
+              <section aria-label="Split panel placeholder" className="app-scrollbar min-h-0 min-w-0 overflow-auto border-l border-border bg-bg-panel/40" />
+            </div>
+          </section>
+        </AppDialogContent>
+      </AppDialogPortal>
+    </AppDialog>
+  );
+}
+
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
+  const [isSplitPanelOpen, setIsSplitPanelOpen] = useState(false);
   const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props, editorDisplayMode);
   const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
+  const bodyProps = getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal);
+  const { panelEditorRef, panelNodeViewState } = useSplitPanelNodeViewState(props.activeNodeId, isSplitPanelOpen);
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
@@ -85,34 +232,23 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           canGoBack={props.canGoBack}
           canGoForward={props.canGoForward}
           canGoParent={props.canGoParent}
+          isSplitPanelOpen={isSplitPanelOpen}
           nodesById={props.nodesById}
           onGoBack={props.onGoBack}
           onGoForward={props.onGoForward}
           onGoParent={props.onGoParent}
           onSelectNode={props.onSelectNode}
+          onToggleSplitPanel={() => setIsSplitPanelOpen((current) => !current)}
         />
-        <DocumentPanelBody
-          documentMaxWidth={props.documentMaxWidth}
-          editorAppearanceKey={props.editorAppearanceKey}
-          editorContent={props.editorContent}
-          editorContentPaddingBottom={editorContentPaddingBottom}
-          editorNodeId={props.editorNodeId}
-          editorNodeViewState={props.editorNodeViewState}
-          emptyState={emptyState}
-          hasAnswerSection={hasAnswerSection}
-          isDocumentResizing={props.isDocumentResizing}
-          onAnswerChange={props.onAnswerChange}
-          onEditorChange={props.onEditorChange}
-          onEditorContextMenu={props.onEditorContextMenu}
-          onEditorReady={props.onEditorReady}
-          onRevealDocumentPosition={props.onRevealDocumentPosition}
-          onRevealDocumentSelection={props.onRevealDocumentSelection}
-          onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
-          onResetLayout={props.onResetLayout}
-          onStartDocumentResize={props.onStartDocumentResize}
-          reveal={reveal}
-        />
+        <DocumentPanelBody {...bodyProps} />
       </section>
+      <DocumentSplitPanelSurface
+        bodyProps={bodyProps}
+        onOpenChange={setIsSplitPanelOpen}
+        open={isSplitPanelOpen}
+        panelEditorRef={panelEditorRef}
+        panelNodeViewState={panelNodeViewState}
+      />
       {props.contextMenu ? (
         <EditorContextMenu
           canRunCommands={props.contextMenu.canRunCommands}

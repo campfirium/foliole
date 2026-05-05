@@ -11,6 +11,7 @@ import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 import { DocumentOutlineLayer } from './DocumentOutlineLayer';
 
 interface DocumentPanelBodyProps {
+  answerEditorDebugId?: string;
   documentMaxWidth: number;
   editorAppearanceKey: string;
   editorContent: string;
@@ -26,8 +27,8 @@ interface DocumentPanelBodyProps {
   isDocumentResizing: boolean;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
-  onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
-  onEditorReady: (adapter: EditorAdapter | null) => void;
+  onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onEditorReady?: (adapter: EditorAdapter | null) => void;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
@@ -36,7 +37,10 @@ interface DocumentPanelBodyProps {
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
+  promptEditorDebugId?: string;
   reveal: string;
+  showDocumentOutline?: boolean;
+  showDocumentResizeHandles?: boolean;
 }
 
 interface DocumentWidthHandleProps {
@@ -79,11 +83,12 @@ function DocumentWidthHandle({ ariaLabel, onPointerDown, onResetLayout, side }: 
 }
 
 function AnswerSection({
+  answerEditorDebugId,
   editorAppearanceKey,
   editorNodeId,
   onAnswerChange,
   reveal
-}: AnswerSectionProps) {
+}: AnswerSectionProps & { answerEditorDebugId?: string }) {
   return (
     <section aria-label="Cloze answer section" className="relative flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden pt-3">
       <div
@@ -93,7 +98,7 @@ function AnswerSection({
       <MarkdownEditor
         ariaLabel="Answer editor"
         className="answer-editor-host min-h-0"
-        debugId="answer-editor"
+        debugId={answerEditorDebugId}
         key={`answer-${editorAppearanceKey}`}
         nodeId={editorNodeId}
         onChange={onAnswerChange}
@@ -122,7 +127,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
         ariaLabel="Prompt editor"
         className="prompt-editor-host"
         contentPaddingBottom={props.editorContentPaddingBottom}
-        debugId="prompt-editor"
+        debugId={props.promptEditorDebugId}
         key={`prompt-${props.editorAppearanceKey}`}
         nodeId={props.editorNodeId}
         nodeViewState={props.editorNodeViewState}
@@ -142,6 +147,7 @@ function renderAnswerSection(props: DocumentPanelBodyProps) {
 
   return (
     <AnswerSection
+      answerEditorDebugId={props.answerEditorDebugId}
       editorAppearanceKey={props.editorAppearanceKey}
       editorNodeId={props.editorNodeId}
       onAnswerChange={props.onAnswerChange}
@@ -151,7 +157,7 @@ function renderAnswerSection(props: DocumentPanelBodyProps) {
 }
 
 function renderDocumentOutline(props: DocumentPanelBodyProps) {
-  if (props.emptyState) {
+  if (props.emptyState || props.showDocumentOutline === false) {
     return null;
   }
 
@@ -173,18 +179,22 @@ function renderDocumentBodyLayout(props: DocumentPanelBodyProps) {
         {renderDocumentBodyContent(props)}
         {renderAnswerSection(props)}
       </div>
-      <DocumentWidthHandle
-        ariaLabel="Resize document width from left"
-        onPointerDown={(event) => props.onStartDocumentResize('left', event)}
-        onResetLayout={props.onResetLayout}
-        side="left"
-      />
-      <DocumentWidthHandle
-        ariaLabel="Resize document width from right"
-        onPointerDown={(event) => props.onStartDocumentResize('right', event)}
-        onResetLayout={props.onResetLayout}
-        side="right"
-      />
+      {props.showDocumentResizeHandles === false ? null : (
+        <>
+          <DocumentWidthHandle
+            ariaLabel="Resize document width from left"
+            onPointerDown={(event) => props.onStartDocumentResize('left', event)}
+            onResetLayout={props.onResetLayout}
+            side="left"
+          />
+          <DocumentWidthHandle
+            ariaLabel="Resize document width from right"
+            onPointerDown={(event) => props.onStartDocumentResize('right', event)}
+            onResetLayout={props.onResetLayout}
+            side="right"
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -195,6 +205,8 @@ export function DocumentPanelBody({
   editorContent,
   editorContentPaddingBottom,
   emptyContent,
+  promptEditorDebugId = 'prompt-editor',
+  answerEditorDebugId = 'answer-editor',
   editorNodeId,
   editorNodeViewState,
   emptyState,
@@ -209,14 +221,18 @@ export function DocumentPanelBody({
   onResolveDocumentPositionAtViewportY,
   onResetLayout,
   onStartDocumentResize,
-  reveal
+  reveal,
+  showDocumentOutline = true,
+  showDocumentResizeHandles = true
 }: DocumentPanelBodyProps) {
   const bodyProps: DocumentPanelBodyProps = {
+    answerEditorDebugId,
     documentMaxWidth,
     editorAppearanceKey,
     editorContent,
     editorContentPaddingBottom,
     emptyContent,
+    promptEditorDebugId,
     editorNodeId,
     editorNodeViewState,
     emptyState,
@@ -231,7 +247,9 @@ export function DocumentPanelBody({
     onResolveDocumentPositionAtViewportY,
     onResetLayout,
     onStartDocumentResize,
-    reveal
+    reveal,
+    showDocumentOutline,
+    showDocumentResizeHandles
   };
 
   return (
