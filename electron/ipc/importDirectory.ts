@@ -1,5 +1,6 @@
 import { dialog, type BrowserWindow } from 'electron';
 
+import { MANAGED_INBOX_APP_SETTING_KEY } from '../../lib/platform/managedInbox.js';
 import type { NativeDirectoryImportArgs, NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
 import { runDirectoryImportBatch } from '../import/directoryImportBatch.js';
 
@@ -14,6 +15,16 @@ import {
   resolveManagedInboxPaths
 } from './managedInboxFolder.js';
 import { resolveAppPaths } from './paths.js';
+import { loadAppSettingsState } from './storage.js';
+
+async function resolveManagedInboxRootPath() {
+  const managedPaths = resolveManagedInboxPaths(
+    resolveAppPaths().app_data_dir,
+    (await loadAppSettingsState())[MANAGED_INBOX_APP_SETTING_KEY]
+  );
+  await ensureManagedInboxRoot(managedPaths.rootPath);
+  return managedPaths.rootPath;
+}
 
 async function selectImportDirectoryPath(window?: BrowserWindow | null, args?: NativeDirectoryImportArgs) {
   const sourceAdapter = resolveDirectoryImportSourceAdapter(args?.source_adapter);
@@ -21,9 +32,7 @@ async function selectImportDirectoryPath(window?: BrowserWindow | null, args?: N
     if (typeof args?.directory_path === 'string' && args.directory_path.trim().length > 0) {
       throw new Error('managed inbox folder path is runtime-owned');
     }
-    const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir);
-    await ensureManagedInboxRoot(managedPaths.rootPath);
-    return managedPaths.rootPath;
+    return resolveManagedInboxRootPath();
   }
 
   if (typeof args?.directory_path === 'string' && args.directory_path.trim().length > 0) {
@@ -52,12 +61,25 @@ export async function runDirectoryImport(
   }
 
   const highlightPolicy = resolveImportHighlightPolicy(args);
-  const sources = await discoverDirectoryImportSources(rootPath);
+  const sources = await discoverDirectoryImportSources(
+    rootPath,
+    sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: ['markdown', 'text'] } : undefined
+  );
   return runDirectoryImportBatch({
     consumePolicy,
     highlightPolicy,
     rootPath,
     sourceAdapter,
     sources
+  });
+}
+
+export async function runManagedInboxImport(rootPath: string) {
+  return runDirectoryImportBatch({
+    consumePolicy: 'clear',
+    highlightPolicy: 'reference_only',
+    rootPath,
+    sourceAdapter: 'foliole_managed_inbox_folder',
+    sources: await discoverDirectoryImportSources(rootPath, { supportedKinds: ['markdown', 'text'] })
   });
 }

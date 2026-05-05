@@ -88,7 +88,6 @@ function expectPushQueueSemanticCopy() {
 vi.mock('../model/systemFonts', () => ({
   listAvailableSystemFonts: vi.fn()
 }));
-
 const mockedListAvailableSystemFonts = vi.mocked(listAvailableSystemFonts);
 
 beforeEach(() => {

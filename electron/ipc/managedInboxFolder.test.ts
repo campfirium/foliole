@@ -3,7 +3,17 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
+
+const { trashItem } = vi.hoisted(() => ({
+  trashItem: vi.fn(async (filePath: string) => {
+    await fs.rm(filePath, { force: true });
+  })
+}));
+
+vi.mock('electron', () => ({
+  shell: { trashItem }
+}));
 
 import {
   applyManagedInboxConsumePolicy,
@@ -33,12 +43,16 @@ it('resolves the managed inbox root under the runtime app data directory', () =>
   expect(resolveDirectoryImportConsumePolicy('foliole_managed_inbox_folder', 'archive')).toBe('archive');
 
   expect(resolveManagedInboxPaths('/tmp/foliole')).toEqual({
-    archiveRootPath: '/tmp/foliole/import/managed-inbox-archive',
-    rootPath: '/tmp/foliole/import/managed-inbox'
+    archiveRootPath: '/tmp/foliole/inbox-archive',
+    rootPath: '/tmp/foliole/inbox'
+  });
+  expect(resolveManagedInboxPaths('/tmp/foliole', '/custom/inbox')).toEqual({
+    archiveRootPath: '/tmp/foliole/inbox-archive',
+    rootPath: '/custom/inbox'
   });
 });
 
-it('clears imported managed inbox files while leaving failed sources behind', async () => {
+it('moves imported managed inbox files to trash while leaving failed sources behind', async () => {
   const appDataDir = await createTempRoot('managed-inbox-clear');
   const { archiveRootPath, rootPath } = resolveManagedInboxPaths(appDataDir);
   const importedPath = path.join(rootPath, 'nested', 'note.md');
@@ -63,6 +77,7 @@ it('clears imported managed inbox files while leaving failed sources behind', as
   await expect(fs.stat(importedPath)).rejects.toThrow();
   await expect(fs.stat(path.join(rootPath, 'nested'))).rejects.toThrow();
   await expect(fs.readFile(failedPath, 'utf8')).resolves.toBe('# Failed');
+  expect(trashItem).toHaveBeenCalledWith(importedPath);
   expect(result).toEqual({ archiveRootPath: null, consumedCount: 1 });
 });
 

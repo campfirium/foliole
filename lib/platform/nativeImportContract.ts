@@ -40,7 +40,7 @@ export interface NativeTextImportResult {
 }
 
 export interface NativeDirectoryImportEntry extends NativeTextImportResult {
-  adapter: 'html_directory' | 'markdown_directory' | 'obsidian_vault';
+  adapter: 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
 }
 
 export interface NativeDirectoryImportResult {

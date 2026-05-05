@@ -1,4 +1,5 @@
 import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
+import { MANAGED_INBOX_APP_SETTING_KEY } from '../../lib/platform/managedInbox.js';
 import type {
   NativeDirectoryImportResult,
   NativeDirectoryImportSourceAdapter,
@@ -12,6 +13,7 @@ import {
   resolveManagedInboxPaths
 } from '../ipc/managedInboxFolder.js';
 import { resolveAppPaths } from '../ipc/paths.js';
+import { loadAppSettingsState } from '../ipc/storage.js';
 
 import { runDirectoryImportBatch } from './directoryImportBatch.js';
 import {
@@ -55,7 +57,10 @@ function isSourceChanged(source: DirectoryImportSourceDescriptor, previousEntry?
 
 async function resolveWatchImportRootPath(config: WatchImportAdapterConfig, sourceAdapter: NativeDirectoryImportSourceAdapter) {
   if (sourceAdapter === 'foliole_managed_inbox_folder') {
-    const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir);
+    const managedPaths = resolveManagedInboxPaths(
+      resolveAppPaths().app_data_dir,
+      (await loadAppSettingsState())[MANAGED_INBOX_APP_SETTING_KEY]
+    );
     await ensureManagedInboxRoot(managedPaths.rootPath);
     return managedPaths.rootPath;
   }
@@ -96,7 +101,10 @@ async function runSingleWatchImport(config: WatchImportAdapterConfig): Promise<W
   const rootPath = await resolveWatchImportRootPath(config, sourceAdapter);
   const loadedCursor = loadWatchImportAdapterCursor(config.adapterConfigId);
   const previousCursor = loadedCursor?.rootPath === rootPath ? loadedCursor : null;
-  const discoveredSources = await discoverDirectoryImportSources(rootPath);
+  const discoveredSources = await discoverDirectoryImportSources(
+    rootPath,
+    sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: ['markdown', 'text'] } : undefined
+  );
   const pendingSources = discoveredSources.filter((source) => isSourceChanged(source, previousCursor?.entries[source.sourceName]));
   const batchResult =
     pendingSources.length > 0

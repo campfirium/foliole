@@ -15,7 +15,7 @@ const { failingSources, runDirectoryImportBatch } = vi.hoisted(() => ({
     rootPath: string;
     sourceAdapter: 'external_directory' | 'foliole_managed_inbox_folder';
     sources: Array<{
-      adapterId: 'html_directory' | 'markdown_directory' | 'obsidian_vault';
+      adapterId: 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
       filePath: string;
       sourceName: string;
     }>;
@@ -63,6 +63,9 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 vi.mock('./directoryImportBatch.js', () => ({ runDirectoryImportBatch }));
+vi.mock('../ipc/storage.js', () => ({
+  loadAppSettingsState: vi.fn().mockResolvedValue({})
+}));
 
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -90,7 +93,7 @@ afterEach(async () => {
 
 it('persists watch cursors per configured adapter and skips unchanged sources after restart', async () => {
   const externalRoot = path.join(tempRoot, 'external-library');
-  const managedRoot = path.join(mockedAppDataDir, 'import', 'managed-inbox');
+  const managedRoot = path.join(mockedAppDataDir, 'inbox');
   await fs.mkdir(managedRoot, { recursive: true });
   await fs.mkdir(externalRoot, { recursive: true });
   await fs.writeFile(path.join(externalRoot, 'note.md'), '# External', 'utf8');

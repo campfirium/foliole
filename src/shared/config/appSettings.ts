@@ -1,3 +1,5 @@
+import { MANAGED_INBOX_APP_SETTING_KEY } from '../../../lib/platform/managedInbox';
+
 export const APP_SETTINGS_STORAGE_KEYS = {
   markdownSyntaxVisibility: 'foliole-markdown-syntax-visibility',
   editorDisplayMode: 'foliole-editor-display-mode',
@@ -35,6 +37,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   nodeListRowSpacing: 'foliole-node-list-row-spacing',
   listCollapsed: 'foliole-workspace-list-collapsed',
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',
+  managedInboxPath: MANAGED_INBOX_APP_SETTING_KEY,
   commandRecents: 'foliole-command-recents',
   commandShortcutOverrides: 'foliole-command-shortcut-overrides'
 } as const;

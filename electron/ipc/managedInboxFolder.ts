@@ -1,6 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { shell } from 'electron';
+
+import {
+  MANAGED_INBOX_DEFAULT_DIRNAME,
+  normalizeManagedInboxPath
+} from '../../lib/platform/managedInbox.js';
 import type {
   NativeDirectoryImportConsumePolicy,
   NativeDirectoryImportEntry,
@@ -8,9 +14,7 @@ import type {
   NativeManagedInboxConsumePolicy
 } from '../../lib/platform/nativeContract.js';
 
-const IMPORT_ROOT_DIRNAME = 'import';
-const MANAGED_ARCHIVE_DIRNAME = 'managed-inbox-archive';
-const MANAGED_INBOX_DIRNAME = 'managed-inbox';
+const MANAGED_ARCHIVE_DIRNAME = 'inbox-archive';
 
 type ManagedInboxImportEntry = Pick<NativeDirectoryImportEntry, 'result_status' | 'source_locator'>;
 
@@ -35,11 +39,11 @@ export function resolveDirectoryImportConsumePolicy(
   return requestedPolicy === 'archive' ? 'archive' : 'clear';
 }
 
-export function resolveManagedInboxPaths(appDataDir: string): ManagedInboxPaths {
-  const importRootPath = path.join(appDataDir, IMPORT_ROOT_DIRNAME);
+export function resolveManagedInboxPaths(appDataDir: string, configuredRootPath?: string | null): ManagedInboxPaths {
+  const normalizedConfiguredRootPath = normalizeManagedInboxPath(configuredRootPath);
   return {
-    archiveRootPath: path.join(importRootPath, MANAGED_ARCHIVE_DIRNAME),
-    rootPath: path.join(importRootPath, MANAGED_INBOX_DIRNAME)
+    archiveRootPath: path.join(appDataDir, MANAGED_ARCHIVE_DIRNAME),
+    rootPath: normalizedConfiguredRootPath ?? path.join(appDataDir, MANAGED_INBOX_DEFAULT_DIRNAME)
   };
 }
 
@@ -85,7 +89,7 @@ async function archiveManagedEntry(
 
 async function clearManagedEntry(entry: ManagedInboxImportEntry, rootPath: string) {
   resolveManagedRelativePath(rootPath, entry.source_locator);
-  await fs.rm(entry.source_locator, { force: true });
+  await shell.trashItem(entry.source_locator);
   await pruneEmptyDirectories(rootPath, path.dirname(entry.source_locator));
 }
 

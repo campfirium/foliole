@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
@@ -17,13 +17,14 @@ import {
   SETTINGS_CATEGORY_STORAGE_KEY,
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
-import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import {
   SettingsCategoryContent,
   SettingsSidebar,
   type SettingsCategoryContentProps
 } from './SettingsPanelSections';
+import { useManagedInboxSettings } from './useManagedInboxSettings';
+import { useSettingsFontOptions } from './useSettingsFontOptions';
 
 interface SettingsPanelProps {
   baseColorMode: BaseColorMode;
@@ -94,62 +95,20 @@ function useSettingsPanelViewState(props: SettingsPanelProps) {
   const accentColorInputRef = useRef<HTMLInputElement>(null);
   const safeAccentColor = ensureAccentHex(props.accentColorPreset);
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => getInitialSettingsCategory());
-  const [availableSystemFonts, setAvailableSystemFonts] = useState<string[]>([]);
-  const [availableMonospaceFonts, setAvailableMonospaceFonts] = useState<string[]>([]);
-  const [areFontOptionsReady, setAreFontOptionsReady] = useState(false);
+  const fontOptions = useSettingsFontOptions(props);
+  const managedInboxSettings = useManagedInboxSettings();
 
-  useEffect(() => {
-    let alive = true;
-    listAvailableSystemFonts()
-      .then((fonts) => {
-        if (!alive) {
-          return;
-        }
-        setAvailableSystemFonts(fonts.fonts);
-        setAvailableMonospaceFonts(fonts.monospaceFonts);
-      })
-      .finally(() => {
-        if (alive) {
-          setAreFontOptionsReady(true);
-        }
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
   useEffect(() => setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory), [activeCategory]);
-
-  const allFontOptions = useMemo(
-    () =>
-      [...new Set([...availableSystemFonts, ...availableMonospaceFonts, props.customUiFont, props.customInterfaceFont, props.customMonospaceFont].filter(Boolean))].sort((l, r) =>
-        l.localeCompare(r)
-      ),
-    [availableMonospaceFonts, availableSystemFonts, props.customInterfaceFont, props.customMonospaceFont, props.customUiFont]
-  );
-  const uiFontOptions = useMemo(() => allFontOptions, [allFontOptions]);
-  const interfaceFontOptions = useMemo(() => allFontOptions, [allFontOptions]);
-  const monospaceFontOptions = useMemo(() => {
-    const mono = new Set(availableMonospaceFonts);
-    return [...allFontOptions.filter((font) => mono.has(font)), ...allFontOptions.filter((font) => !mono.has(font))];
-  }, [allFontOptions, availableMonospaceFonts]);
-
-  const selectedUiFontValue = props.uiFontPreset === 'custom' ? (props.customUiFont ? `ui-font:${props.customUiFont}` : 'ui-preset:default') : `ui-preset:${props.uiFontPreset}`;
-  const selectedInterfaceFontValue = props.interfaceFontPreset === 'custom' ? (props.customInterfaceFont ? `font:${props.customInterfaceFont}` : 'preset:default') : `preset:${props.interfaceFontPreset}`;
-  const selectedMonospaceFontValue = props.monospaceFontPreset === 'custom' ? (props.customMonospaceFont ? `mono-font:${props.customMonospaceFont}` : 'mono-preset:default') : `mono-preset:${props.monospaceFontPreset}`;
   const title = SETTINGS_CATEGORIES.find((category) => category.id === activeCategory)?.label ?? 'Settings';
+
   return {
     accentColorInputRef,
     activeCategory,
-    areFontOptionsReady,
-    interfaceFontOptions,
-    monospaceFontOptions,
     safeAccentColor,
-    selectedInterfaceFontValue,
-    selectedMonospaceFontValue,
-    selectedUiFontValue,
     setActiveCategory,
     title,
-    uiFontOptions
+    ...fontOptions,
+    ...managedInboxSettings
   };
 }
 

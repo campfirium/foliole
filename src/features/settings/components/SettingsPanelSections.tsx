@@ -14,6 +14,7 @@ import { HotkeySettingsSection } from './HotkeySettingsSection';
 import { SettingsAboutSection } from './sections/SettingsAboutSection';
 import { SettingsAppearanceSection } from './sections/SettingsAppearanceSection';
 import { SettingsEditorSection } from './sections/SettingsEditorSection';
+import { SettingsImportSection } from './sections/SettingsImportSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
 
 import { cn } from '@/shared/lib/utils';
@@ -30,6 +31,10 @@ export interface SettingsCategoryContentProps {
   hotkeyItems: HotkeySettingItem[];
   interfaceFontOptions: string[];
   interfaceFontSize: number;
+  inboxPath: string;
+  inboxPathError: string | null;
+  isInboxDesktopRuntime: boolean;
+  isInboxPathPending: boolean;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   maximumIntervalDays: number;
   monospaceFontOptions: string[];
@@ -43,6 +48,8 @@ export interface SettingsCategoryContentProps {
   onDesiredRetentionChange: (value: number) => void;
   onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
+  onInboxPathChangeRequest: () => void;
+  onInboxPathRestoreDefault: () => void;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
@@ -116,6 +123,18 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
   }
   if (props.activeCategory === 'appearance') {
     return <AppearanceSettingsContent {...props} />;
+  }
+  if (props.activeCategory === 'import') {
+    return (
+      <SettingsImportSection
+        errorMessage={props.inboxPathError}
+        inboxPath={props.inboxPath}
+        isDesktopRuntime={props.isInboxDesktopRuntime}
+        isPending={props.isInboxPathPending}
+        onChangeLocation={props.onInboxPathChangeRequest}
+        onRestoreDefault={props.onInboxPathRestoreDefault}
+      />
+    );
   }
   if (props.activeCategory === 'review') {
     return <ReviewSettingsContent {...props} />;

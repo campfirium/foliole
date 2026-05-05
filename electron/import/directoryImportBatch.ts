@@ -69,12 +69,12 @@ export async function runDirectoryImportBatch(options: DirectoryImportBatchOptio
   let archiveRootPath: string | null = null;
   let consumedCount = 0;
   if (options.sourceAdapter === 'foliole_managed_inbox_folder' && options.consumePolicy !== 'keep') {
-    const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir);
+    const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir, options.rootPath);
     const consumed = await applyManagedInboxConsumePolicy(entries, {
       archiveRootPath: managedPaths.archiveRootPath,
       importedAt: new Date().toISOString(),
       policy: options.consumePolicy,
-      rootPath: managedPaths.rootPath
+      rootPath: options.rootPath
     });
     archiveRootPath = consumed.archiveRootPath;
     consumedCount = consumed.consumedCount;

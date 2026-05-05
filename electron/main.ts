@@ -13,6 +13,7 @@ import {
 import { initializeDatabase } from './database/migrate.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
+import { startManagedInboxMonitor, stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { handleInvokeRequest } from './ipc/commands.js';
 import {
   IPC_INVOKE_CHANNEL,
@@ -239,6 +240,7 @@ app.on('second-instance', () => {
 app.on('before-quit', () => {
   devRestartIntentWatcher?.close();
   devRendererReloadIntentWatcher?.close();
+  stopManagedInboxMonitor();
 });
 
 app.whenReady().then(async () => {
@@ -247,6 +249,7 @@ app.whenReady().then(async () => {
   installInvokeHandler();
   installAppMenu();
   await migrateLegacyWebviewStorage();
+  await startManagedInboxMonitor();
   await createMainWindow();
 
   app.on('activate', async () => {

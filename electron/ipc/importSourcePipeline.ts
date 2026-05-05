@@ -15,7 +15,7 @@ import {
 } from '../../lib/core/import/htmlToMarkdownCompatible.js';
 import type { NativeTextImportArgs } from '../../lib/platform/nativeContract.js';
 
-export type DirectoryImportAdapterId = 'html_directory' | 'markdown_directory' | 'obsidian_vault';
+export type DirectoryImportAdapterId = 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
 
 export interface ImportSourceDescriptor {
   adapterId: DirectoryImportAdapterId | 'text_file';
@@ -40,12 +40,19 @@ function stripUtf8Bom(content: string) {
   return content.startsWith('\uFEFF') ? content.slice(1) : content;
 }
 
-function resolveDirectoryAdapter(rootIsObsidianVault: boolean, extension: string): DirectoryImportAdapterId | null {
-  if (HTML_EXTENSIONS.has(extension)) {
+function resolveDirectoryAdapter(
+  rootIsObsidianVault: boolean,
+  extension: string,
+  supportedKinds: ReadonlySet<ImportSourceKind>
+): DirectoryImportAdapterId | null {
+  if (HTML_EXTENSIONS.has(extension) && supportedKinds.has('html')) {
     return 'html_directory';
   }
-  if (MARKDOWN_EXTENSIONS.has(extension)) {
+  if (MARKDOWN_EXTENSIONS.has(extension) && supportedKinds.has('markdown')) {
     return rootIsObsidianVault ? 'obsidian_vault' : 'markdown_directory';
+  }
+  if (TEXT_EXTENSIONS.has(extension) && supportedKinds.has('text')) {
+    return 'text_directory';
   }
   return null;
 }
@@ -158,7 +165,8 @@ async function collectDirectorySources(
   rootDir: string,
   currentDir: string,
   rootIsObsidianVault: boolean,
-  collected: DirectoryImportSourceDescriptor[]
+  collected: DirectoryImportSourceDescriptor[],
+  supportedKinds: ReadonlySet<ImportSourceKind>
 ) {
   const entries = await fs.readdir(currentDir, { withFileTypes: true });
   const sortedEntries = [...entries].sort((left, right) => left.name.localeCompare(right.name));
@@ -168,7 +176,7 @@ async function collectDirectorySources(
       if (SKIPPED_DIRECTORY_NAMES.has(entry.name)) {
         continue;
       }
-      await collectDirectorySources(rootDir, path.join(currentDir, entry.name), rootIsObsidianVault, collected);
+      await collectDirectorySources(rootDir, path.join(currentDir, entry.name), rootIsObsidianVault, collected, supportedKinds);
       continue;
     }
     if (!entry.isFile()) {
@@ -176,7 +184,7 @@ async function collectDirectorySources(
     }
 
     const filePath = path.join(currentDir, entry.name);
-    const adapterId = resolveDirectoryAdapter(rootIsObsidianVault, path.extname(entry.name).toLowerCase());
+    const adapterId = resolveDirectoryAdapter(rootIsObsidianVault, path.extname(entry.name).toLowerCase(), supportedKinds);
     if (!adapterId) {
       continue;
     }
@@ -192,8 +200,12 @@ async function collectDirectorySources(
   }
 }
 
-export async function discoverDirectoryImportSources(rootDir: string) {
+export async function discoverDirectoryImportSources(
+  rootDir: string,
+  options?: { supportedKinds?: ImportSourceKind[] }
+) {
   const collected: DirectoryImportSourceDescriptor[] = [];
-  await collectDirectorySources(rootDir, rootDir, await detectObsidianVaultRoot(rootDir), collected);
+  const supportedKinds = new Set<ImportSourceKind>(options?.supportedKinds ?? ['html', 'markdown']);
+  await collectDirectorySources(rootDir, rootDir, await detectObsidianVaultRoot(rootDir), collected, supportedKinds);
   return collected;
 }
