@@ -1,4 +1,3 @@
-import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import type { NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -10,7 +9,6 @@ import type {
 } from './companionSyncPushTypes.js';
 import { openDatabaseConnection } from './connection.js';
 
-interface ReviewLogRow extends DatabaseRow, NativeSyncReviewLogRecord {}
 interface ReviewLogDbRow extends DbRow, NativeSyncReviewLogRecord {}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -38,18 +36,7 @@ function parseReviewLog(item: CompanionSyncPushPayload): NativeSyncReviewLogReco
   }
 }
 
-function selectReviewLog(driver: DatabaseDriver, opId: string) {
-  return driver.queryOne<ReviewLogRow>(
-    `SELECT
-       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
-       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-     FROM review_log
-     WHERE op_id = ?`,
-    [opId]
-  );
-}
-
-function reviewLogMatches(existing: ReviewLogRow, next: NativeSyncReviewLogRecord) {
+function reviewLogMatches(existing: ReviewLogDbRow, next: NativeSyncReviewLogRecord) {
   return existing.id === next.id
     && existing.op_id === next.op_id
     && existing.device_id === next.device_id
@@ -63,30 +50,6 @@ function reviewLogMatches(existing: ReviewLogRow, next: NativeSyncReviewLogRecor
     && existing.due_after === next.due_after
     && existing.stability_after === next.stability_after
     && existing.difficulty_after === next.difficulty_after;
-}
-
-function insertReviewLog(driver: DatabaseDriver, record: NativeSyncReviewLogRecord) {
-  driver.execute(
-    `INSERT INTO review_log (
-       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
-       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      record.id,
-      record.op_id,
-      record.device_id,
-      record.node_id,
-      record.grade,
-      record.scheduler_version,
-      record.reviewed_at,
-      record.due_before,
-      record.stability_before,
-      record.difficulty_before,
-      record.due_after,
-      record.stability_after,
-      record.difficulty_after
-    ]
-  );
 }
 
 async function selectReviewLogWithDbPort(port: DbPort, opId: string) {
@@ -122,35 +85,6 @@ function insertReviewLogWithDbPort(port: DbPort, record: NativeSyncReviewLogReco
       record.difficulty_after
     ]
   );
-}
-
-export function applyReviewLogPush(driver: DatabaseDriver, item: CompanionSyncPushPayload): CompanionSyncPushResult {
-  return driver.transaction((transactionDriver) => {
-    const record = parseReviewLog(item);
-    if (!record) return { acks: [rejectAck(item, 'invalid_review_log_push')], appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };
-    const existing = selectReviewLog(transactionDriver, record.op_id);
-    if (existing) {
-      const matches = reviewLogMatches(existing, record);
-      return {
-        acks: [{
-          clientOpId: item.clientOpId,
-          identity: item.identity,
-          status: matches ? 'already_applied' : 'rejected',
-          ...(matches ? {} : { conflictReason: 'op_id_payload_mismatch' })
-        }],
-        appliedNodeIds: [],
-        appliedObjectIds: [],
-        appliedReviewOpIds: []
-      };
-    }
-    insertReviewLog(transactionDriver, record);
-    return {
-      acks: [{ clientOpId: item.clientOpId, identity: item.identity, status: 'accepted' }],
-      appliedNodeIds: [],
-      appliedObjectIds: [],
-      appliedReviewOpIds: [record.op_id]
-    };
-  });
 }
 
 export async function applyReviewLogPushAsync(item: CompanionSyncPushPayload): Promise<CompanionSyncPushResult> {

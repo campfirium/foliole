@@ -3,7 +3,7 @@ import type {
 } from '../../lib/platform/nativeSyncContract.js';
 
 import type { CompanionSyncPushPayload, CompanionSyncPushResult } from './companionSyncPushTypes.js';
-import { applySyncNodes, applySyncNodesAsync } from './syncApply.js';
+import { applySyncNodesAsync } from './syncApply.js';
 
 function rejectNodeVersionPush(item: CompanionSyncPushPayload, reason: string): CompanionSyncPushResult {
   return {
@@ -42,26 +42,6 @@ function parseNodeRecord(item: CompanionSyncPushPayload): NativeSyncNodeRecord |
     ancestor_version_ids: item.base.ancestorVersionIds,
     content_hash: item.contentHash ?? record.content_hash,
     updated_at: item.updatedAt ?? record.updated_at
-  };
-}
-
-export function applyNodeVersionPush(item: CompanionSyncPushPayload): CompanionSyncPushResult {
-  const record = parseNodeRecord(item);
-  if (!record) {
-    return rejectNodeVersionPush(item, 'invalid_node_push');
-  }
-  const appliedNodeIds = applySyncNodes([record], { includeAlreadyApplied: true });
-  return {
-    acks: [{
-      clientOpId: item.clientOpId,
-      conflictReason: appliedNodeIds.includes(record.object_id) ? undefined : 'node_version_conflict',
-      identity: item.identity,
-      status: appliedNodeIds.includes(record.object_id) ? 'accepted' : 'conflict',
-      versionId: record.version_id
-    }],
-    appliedNodeIds,
-    appliedObjectIds: [],
-    appliedReviewOpIds: []
   };
 }
 

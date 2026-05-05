@@ -19,7 +19,6 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
-import { applyCompanionSyncPush } from './companionSyncPushApply.js';
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 
@@ -86,8 +85,8 @@ function createNodeVersionPush(): SyncPushPayload {
 }
 
 describe('companion sync node version push apply', () => {
-  it('accepts Android-created node versions into desktop nodes and version history', () => {
-    const result = applyCompanionSyncPush([createNodeVersionPush()]);
+  it('accepts Android-created node versions into desktop nodes and version history', async () => {
+    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()]);
 
     expect(result.appliedNodeIds).toEqual(['node-highlight']);
     expect(result.acks).toMatchObject([{
