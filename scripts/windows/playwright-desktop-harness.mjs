@@ -4,6 +4,7 @@ import process from 'node:process';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const WINDOWS_MIRROR_ROOT = '/mnt/c/dev/foliole';
+export const APP_READY_FLAG = '__FOLIOLE_APP_READY_REPORTED__';
 
 function resolveTimeoutMs(rawValue) {
   const parsed = Number.parseInt(rawValue ?? '', 10);
@@ -52,6 +53,38 @@ export function createDesktopLaunchOptions(target, timeoutMs, env = process.env)
   };
 }
 
+function getRemainingTimeout(deadline) {
+  return Math.max(1, deadline - Date.now());
+}
+
+export async function acquireStableDesktopWindow(electronApp, timeoutMs) {
+  const windowPage = await electronApp.firstWindow({ timeout: timeoutMs });
+
+  await windowPage.waitForLoadState('domcontentloaded', { timeout: timeoutMs });
+  await windowPage.waitForFunction(
+    () =>
+      globalThis.location.href !== 'about:blank' &&
+      globalThis.document.readyState !== 'loading' &&
+      Boolean(globalThis.document.getElementById('root')),
+    undefined,
+    { timeout: timeoutMs }
+  );
+
+  return windowPage;
+}
+
+export async function waitForDesktopAppReady(windowPage, timeoutMs) {
+  await windowPage.waitForFunction((appReadyFlag) => globalThis[appReadyFlag] === true, APP_READY_FLAG, {
+    timeout: timeoutMs
+  });
+
+  return windowPage.evaluate((appReadyFlag) => ({
+    href: globalThis.location.href,
+    readyState: globalThis.document.readyState,
+    reported: globalThis[appReadyFlag] === true
+  }), APP_READY_FLAG);
+}
+
 async function readMainProcessSnapshot(electronApp) {
   return electronApp.evaluate(({ app }) => ({
     appName: app.getName(),
@@ -81,8 +114,10 @@ export async function launchDesktopSession({
 
   const launcher = electronLauncher ?? (await loadElectronLauncher());
   const launchOptions = createDesktopLaunchOptions(target, timeoutMs, env);
+  const deadline = Date.now() + timeoutMs;
   const electronApp = await launcher.launch(launchOptions);
-  const firstWindow = await electronApp.firstWindow({ timeout: timeoutMs });
+  const firstWindow = await acquireStableDesktopWindow(electronApp, getRemainingTimeout(deadline));
+  const appReady = await waitForDesktopAppReady(firstWindow, getRemainingTimeout(deadline));
   const snapshot = await readMainProcessSnapshot(electronApp);
 
   let closed = false;
@@ -95,6 +130,7 @@ export async function launchDesktopSession({
       closed = true;
       await electronApp.close();
     },
+    appReady,
     electronApp,
     firstWindow,
     launchOptions,

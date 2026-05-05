@@ -17,6 +17,7 @@ export type DesktopLaunchTarget = {
 };
 
 export type DesktopSession = {
+  appReady: { href: string; readyState: string; reported: boolean };
   close: () => Promise<void>;
   electronApp: ElectronApplication;
   firstWindow: Page;

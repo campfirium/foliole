@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { APP_READY_FLAG } from './playwright-desktop-harness.mjs';
 import {
   resolveDefaultAppRoot,
   resolveElectronSpikeTarget,
@@ -29,6 +30,37 @@ describe('playwright electron spike', () => {
   it('launches electron via args and captures first window metadata', async () => {
     const calls = [];
     let closed = false;
+    const windowPage = {
+      async evaluate(pageFunction, appReadyFlag) {
+        expect(appReadyFlag).toBe(APP_READY_FLAG);
+        return {
+          href: 'file:///workspace/foliole/dist/index.html',
+          readyState: 'complete',
+          reported: true
+        };
+      },
+      async title() {
+        return 'Foliole';
+      },
+      url() {
+        return 'file:///workspace/foliole/dist/index.html';
+      },
+      async waitForFunction(pageFunction, argOrOptions, options) {
+        expect(pageFunction).toEqual(expect.any(Function));
+        if (typeof argOrOptions === 'string') {
+          expect(argOrOptions).toBe(APP_READY_FLAG);
+          expect(options.timeout).toBeGreaterThan(0);
+          return;
+        }
+        expect(argOrOptions).toBeUndefined();
+        expect(options.timeout).toBeGreaterThan(0);
+      },
+      async waitForLoadState(state, options) {
+        expect(state).toBe('domcontentloaded');
+        expect(options.timeout).toBeGreaterThan(0);
+      }
+    };
+
     const electronLauncher = {
       async launch(options) {
         calls.push(options);
@@ -47,14 +79,7 @@ describe('playwright electron spike', () => {
           },
           async firstWindow({ timeout }) {
             expect(timeout).toBe(12_345);
-            return {
-              async title() {
-                return 'Foliole';
-              },
-              url() {
-                return 'file:///workspace/foliole/dist/index.html';
-              }
-            };
+            return windowPage;
           },
           process() {
             return { pid: 4242 };
