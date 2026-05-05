@@ -7,7 +7,7 @@ export interface RuntimeImportedTextFile {
   fileName: string;
   filePath: string;
   content: string;
-  kind: 'markdown' | 'text';
+  kind: 'html' | 'markdown' | 'text';
 }
 export interface RuntimeTextImportResult {
   contentFingerprint: string;
@@ -20,7 +20,7 @@ export interface RuntimeTextImportResult {
   provider: 'desktop_text_file';
   resultStatus: 'imported' | 'degraded' | 'failed';
   sourceFingerprint: string;
-  sourceKind: 'markdown' | 'text';
+  sourceKind: 'html' | 'markdown' | 'text';
   sourceLocator: string;
   sourceName: string;
 }
@@ -30,7 +30,7 @@ export interface RuntimeImportOverview {
   recentRuns: RuntimeTextImportResult[];
 }
 function isImportKind(value: unknown): value is RuntimeImportedTextFile['kind'] {
-  return value === 'markdown' || value === 'text';
+  return value === 'html' || value === 'markdown' || value === 'text';
 }
 function toRuntimeImportedTextFile(value: unknown): RuntimeImportedTextFile | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {

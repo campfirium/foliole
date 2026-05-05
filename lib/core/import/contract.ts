@@ -2,7 +2,7 @@ export const IMPORT_PROVIDER_DESKTOP_TEXT_FILE = 'desktop_text_file';
 
 export type ImportProvider = typeof IMPORT_PROVIDER_DESKTOP_TEXT_FILE;
 
-export type ImportSourceKind = 'markdown' | 'text';
+export type ImportSourceKind = 'html' | 'markdown' | 'text';
 
 export type ImportDuplicateSemantic = 'new' | 'updated' | 'duplicate';
 

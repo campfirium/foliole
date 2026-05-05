@@ -5,13 +5,17 @@ import { dialog, type BrowserWindow } from 'electron';
 
 import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
+import { convertHtmlToMarkdownCompatible } from '../../lib/core/import/htmlToMarkdownCompatible.js';
 import type { NativeImportedTextFile, NativeTextImportResult } from '../../lib/platform/nativeContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 
-const IMPORTABLE_TEXT_EXTENSIONS = new Set(['.md', '.markdown', '.txt']);
+const IMPORTABLE_TEXT_EXTENSIONS = new Set(['.htm', '.html', '.md', '.markdown', '.txt']);
 
 function resolveImportKind(filePath: string): NativeImportedTextFile['kind'] {
   const extension = path.extname(filePath).toLowerCase();
+  if (extension === '.htm' || extension === '.html') {
+    return 'html';
+  }
   if (extension === '.txt') {
     return 'text';
   }
@@ -23,6 +27,14 @@ function resolveImportKind(filePath: string): NativeImportedTextFile['kind'] {
 
 function stripUtf8Bom(content: string) {
   return content.startsWith('\uFEFF') ? content.slice(1) : content;
+}
+
+function toImportContent(content: string, kind: NativeImportedTextFile['kind']) {
+  const normalizedContent = stripUtf8Bom(content);
+  if (kind !== 'html') {
+    return normalizedContent;
+  }
+  return convertHtmlToMarkdownCompatible(normalizedContent).content;
 }
 
 function toNativeTextImportResult(record: PersistedImportRecord): NativeTextImportResult {
@@ -46,11 +58,11 @@ function toNativeTextImportResult(record: PersistedImportRecord): NativeTextImpo
 async function selectImportFilePath(window?: BrowserWindow | null) {
   const selection = window
     ? await dialog.showOpenDialog(window, {
-        filters: [{ name: 'Markdown / Text', extensions: ['md', 'markdown', 'txt'] }],
+        filters: [{ name: 'Markdown / HTML / Text', extensions: ['md', 'markdown', 'html', 'htm', 'txt'] }],
         properties: ['openFile']
       })
     : await dialog.showOpenDialog({
-        filters: [{ name: 'Markdown / Text', extensions: ['md', 'markdown', 'txt'] }],
+        filters: [{ name: 'Markdown / HTML / Text', extensions: ['md', 'markdown', 'html', 'htm', 'txt'] }],
         properties: ['openFile']
       });
 
@@ -65,13 +77,14 @@ export async function selectImportTextFile(window?: BrowserWindow | null): Promi
   if (!filePath) {
     return null;
   }
-  const content = stripUtf8Bom(await fs.readFile(filePath, 'utf8'));
+  const kind = resolveImportKind(filePath);
+  const content = toImportContent(await fs.readFile(filePath, 'utf8'), kind);
 
   return {
     content,
     file_name: path.basename(filePath),
     file_path: filePath,
-    kind: resolveImportKind(filePath)
+    kind
   };
 }
 
@@ -86,7 +99,7 @@ export async function runTextFileImport(window?: BrowserWindow | null): Promise<
   const kind = resolveImportKind(filePath);
 
   try {
-    const content = stripUtf8Bom(await fs.readFile(filePath, 'utf8'));
+    const content = toImportContent(await fs.readFile(filePath, 'utf8'), kind);
     return toNativeTextImportResult(
       runPreparedImport(
         createPreparedDesktopTextImport({ content, fileName, filePath, importedAt, kind })

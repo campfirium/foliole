@@ -53,8 +53,8 @@ export function WorkspaceRightSidebarImportPanel() {
             title="Quick capture"
           />
           <EntryActionCard
-            actionLabel={formalImport.isImporting ? 'Importing…' : 'Import Markdown / TXT file'}
-            description="Select a Markdown or TXT file through Electron and land it as a child node under Inbox. The import now runs through the shared desktop import pipeline with fingerprinting and result retention."
+            actionLabel={formalImport.isImporting ? 'Importing…' : 'Import Markdown / HTML / TXT file'}
+            description="Select a Markdown, HTML, or TXT file through Electron and land it as a child node under Inbox. HTML content is converted into Markdown-compatible text before it enters the shared desktop import pipeline."
             disabled={!formalImport.isAvailable || formalImport.isImporting}
             onAction={() => {
               void formalImport.startImport();

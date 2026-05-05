@@ -170,6 +170,41 @@ it('normalizes the unified import result payload', async () => {
   expect(invoke).toHaveBeenCalledWith('run_text_file_import');
 });
 
+it('accepts html import payloads from the runtime bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    content_fingerprint: 'content-fingerprint-html',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-html-1',
+    imported_at: '2026-03-22T10:30:00.000Z',
+    node_id: 'node-html-1',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint-html',
+    source_kind: 'html',
+    source_locator: '/tmp/note.html',
+    source_name: 'note.html'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(runRuntimeTextFileImport()).resolves.toEqual({
+    contentFingerprint: 'content-fingerprint-html',
+    degradedReason: null,
+    duplicateSemantic: 'new',
+    failureReason: null,
+    importId: 'import-html-1',
+    importedAt: '2026-03-22T10:30:00.000Z',
+    nodeId: 'node-html-1',
+    provider: 'desktop_text_file',
+    resultStatus: 'imported',
+    sourceFingerprint: 'source-fingerprint-html',
+    sourceKind: 'html',
+    sourceLocator: '/tmp/note.html',
+    sourceName: 'note.html'
+  });
+});
+
 it('returns null when the native import payload is malformed', async () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   const invoke = vi.fn().mockResolvedValue({ file_name: 'note.md' });

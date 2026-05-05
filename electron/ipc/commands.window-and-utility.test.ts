@@ -210,6 +210,58 @@ it('classifies TXT imports as text through the native import command', async () 
   expect(readFile).toHaveBeenCalledWith('/tmp/inbox.txt', 'utf8');
 });
 
+it('converts HTML files into markdown-compatible content through the native import command', async () => {
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.html'] });
+  readFile.mockResolvedValue('<h2>Imported</h2><p><strong>Bold</strong> text</p>');
+  runPreparedImport.mockReturnValue({
+    contentFingerprint: 'content-fingerprint',
+    degradedReason: null,
+    duplicateSemantic: 'new',
+    failureReason: null,
+    importId: 'import-3',
+    importedAt: '2026-03-22T10:20:00.000Z',
+    nodeId: 'node-import-3',
+    provider: 'desktop_text_file',
+    resultStatus: 'imported',
+    sourceFingerprint: 'source-fingerprint-html',
+    sourceKind: 'html',
+    sourceLocator: '/tmp/inbox.html',
+    sourceName: 'inbox.html'
+  });
+
+  await expect(handleInvokeRequest({ command: 'select_import_text_file' })).resolves.toEqual({
+    content: '## Imported\n\n**Bold** text',
+    file_name: 'inbox.html',
+    file_path: '/tmp/inbox.html',
+    kind: 'html'
+  });
+
+  await expect(handleInvokeRequest({ command: 'run_text_file_import' })).resolves.toEqual({
+    content_fingerprint: 'content-fingerprint',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-3',
+    imported_at: '2026-03-22T10:20:00.000Z',
+    node_id: 'node-import-3',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint-html',
+    source_kind: 'html',
+    source_locator: '/tmp/inbox.html',
+    source_name: 'inbox.html'
+  });
+
+  expect(runPreparedImport).toHaveBeenCalledWith(
+    expect.objectContaining({
+      content: '## Imported\n\n**Bold** text',
+      sourceKind: 'html',
+      sourceLocator: '/tmp/inbox.html',
+      sourceName: 'inbox.html'
+    })
+  );
+});
+
 it('handles window commands through invoke channel', async () => {
   await expect(handleInvokeRequest({ command: 'window_minimize' })).resolves.toBeNull();
   await expect(handleInvokeRequest({ command: 'window_toggle_dev_tools' })).resolves.toBeNull();

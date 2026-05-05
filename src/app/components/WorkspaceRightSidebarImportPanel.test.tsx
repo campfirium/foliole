@@ -117,7 +117,7 @@ it('keeps quick capture and formal import visibly separated', async () => {
   expect(screen.getByRole('heading', { name: 'Quick capture' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Formal import' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Quick capture stays in editor' })).toBeEnabled();
-  expect(screen.getByRole('button', { name: 'Import Markdown / TXT file' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Import Markdown / HTML / TXT file' })).toBeEnabled();
 });
 
 it('shows dedicated import status rows', async () => {
@@ -144,7 +144,7 @@ it('imports the selected Markdown file into Inbox', async () => {
   const initialInboxChildren = getInboxChildren();
 
   render(<WorkspaceRightSidebarImportPanel />);
-  fireEvent.click(screen.getByRole('button', { name: 'Import Markdown / TXT file' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Import Markdown / HTML / TXT file' }));
 
   await waitFor(() => {
     const inboxChildren = getInboxChildren();

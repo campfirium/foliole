@@ -5,6 +5,7 @@ import { openExternalUrl } from '../../../shared/platform/bridge';
 import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
+import { handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
 import {
   addAnchorTagDecorations,
   collectSelectionTextWithExpandedLinks,
@@ -182,6 +183,13 @@ const markdownInteractionHandlers = EditorView.domEventHandlers({
 
     event.preventDefault();
     clipboard.setData('text/plain', expandedText);
+    return true;
+  },
+  paste(event, view) {
+    if (!handleMarkdownCompatibleHtmlPaste(event.clipboardData, view)) {
+      return false;
+    }
+    event.preventDefault();
     return true;
   }
 });
