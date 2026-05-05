@@ -10,6 +10,7 @@ export function App() {
   const nodeOrder = useWorkspaceStore((state) => state.nodeOrder);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const updateNodeContent = useWorkspaceStore((state) => state.updateNodeContent);
+  const setActiveNode = useWorkspaceStore((state) => state.setActiveNode);
   const createQANodeFromSelection = useWorkspaceStore((state) => state.createQANodeFromSelection);
   const editorAdapterRef = useRef<EditorAdapter | null>(null);
   const [reviewMessage, setReviewMessage] = useState('Review area placeholder');
@@ -70,6 +71,7 @@ export function App() {
               key={nodeId}
               isActive={activeNodeId === nodeId}
               node={nodesById[nodeId]}
+              onSelect={setActiveNode}
             />
           ))}
         </div>
@@ -110,12 +112,22 @@ export function App() {
 interface NodeRowProps {
   isActive: boolean;
   node: Node | undefined;
+  onSelect: (nodeId: string) => void;
 }
 
-function NodeRow({ isActive, node }: NodeRowProps) {
+function NodeRow({ isActive, node, onSelect }: NodeRowProps) {
   if (!node) {
     return null;
   }
 
-  return <p className={isActive ? 'node-row node-row-active' : 'node-row'}>{node.title}</p>;
+  return (
+    <button
+      aria-pressed={isActive}
+      className={isActive ? 'node-row node-row-active' : 'node-row'}
+      onClick={() => onSelect(node.id)}
+      type="button"
+    >
+      {node.title}
+    </button>
+  );
 }

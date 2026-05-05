@@ -74,8 +74,27 @@ body {
   margin-top: 0.5rem;
 }
 
+.node-row {
+  border: 1px solid #d7dfeb;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  display: block;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  width: 100%;
+}
+
+.node-row:hover {
+  background: #f3f7fd;
+}
+
 .node-row-active {
   color: #0f172a;
+  border-color: #8ea8d8;
+  background: #eaf1fd;
   font-weight: 600;
 }
 
