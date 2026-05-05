@@ -11,6 +11,7 @@ import {
   createUpsertNodeReadingStatement,
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
+import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 interface NodeAnchorLinkPayload {
@@ -179,6 +180,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       title: input.title,
       updatedAt: input.updatedAt
     });
+    syncWorkspaceSearchIndexForNodeIds(driver, [input.nodeId]);
   });
 }
 
@@ -216,6 +218,7 @@ export function softDeleteNodes(driver: DatabaseDriver, input: SoftDeleteNodesIn
     for (const nodeId of input.nodeIds) {
       setDeletedAtStatement.run([input.deletedAt, input.deletedAt, nodeId]);
     }
+    syncWorkspaceSearchIndexForNodeIds(driver, input.nodeIds);
   });
 }
 
@@ -227,6 +230,7 @@ export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): 
     for (const nodeId of input.nodeIds) {
       clearDeletedAtStatement.run([restoredAt, nodeId]);
     }
+    syncWorkspaceSearchIndexForNodeIds(driver, input.nodeIds);
   });
 }
 
@@ -253,6 +257,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     for (let index = 0; index < input.nodeOrder.length; index += 1) {
       insertOrderStatement.run([input.nodeOrder[index], index]);
     }
+    syncWorkspaceSearchIndexForNodeIds(driver, input.nodeIds);
   });
 
   return [];

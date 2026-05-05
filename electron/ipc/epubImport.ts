@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import type { PersistedImportRecord, PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
@@ -126,6 +127,7 @@ async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(
     importedAt,
     nodeId
   ]);
+  syncWorkspaceSearchIndexForNodeIds(openDatabaseConnection().driver, [nodeId]);
 
   return {
     ...node,

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import type { DatabaseDriver } from './driver.js';
+import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
 
 const INBOX_NODE_ID = 'special-inbox';
 
@@ -89,6 +90,7 @@ export function writeNewNode(input: {
     ]
   );
   input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [nodeId, input.nextInboxTopPosition]);
+  syncWorkspaceSearchIndexForNodeIds(input.driver, [nodeId]);
   return nodeId;
 }
 
@@ -121,10 +123,12 @@ export function updateExistingNode(input: {
     } else {
       input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [input.existingNode.id, input.nextInboxTopPosition]);
     }
+    syncWorkspaceSearchIndexForNodeIds(input.driver, [input.existingNode.id]);
     return input.existingNode.id;
   }
   if (typeof input.existingNode.position !== 'number') {
     input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [input.existingNode.id, input.nextNodePosition]);
   }
+  syncWorkspaceSearchIndexForNodeIds(input.driver, [input.existingNode.id]);
   return input.existingNode.id;
 }

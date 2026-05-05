@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
 import { replaceImportedHighlightNodes } from '../../lib/core/database/importPipelineHighlightNodes.js';
+import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import type { PreparedImportHighlightRecord } from '../../lib/core/import/contract.js';
 import { createContextExcerptLocator } from '../../lib/core/import/controlledContextMatch.js';
 import {
@@ -158,6 +159,7 @@ function persistSectionHighlights(input: {
   sections: ImportedBookSection[];
 }) {
   const connection = openDatabaseConnection();
+  const touchedNodeIds = new Set<string>();
   connection.driver.transaction((driver) => {
     let nextPosition = readNextNodePosition(driver);
     input.sections.forEach((section) => {
@@ -171,6 +173,7 @@ function persistSectionHighlights(input: {
           input.importedAt,
           section.id
         ]);
+        touchedNodeIds.add(section.id);
       }
       const insertedCount = replaceImportedHighlightNodes({
         driver,
@@ -182,6 +185,7 @@ function persistSectionHighlights(input: {
       });
       nextPosition += insertedCount;
     });
+    syncWorkspaceSearchIndexForNodeIds(driver, [...touchedNodeIds]);
   });
 }
 

@@ -5,6 +5,7 @@ import { AppIconButton, AppInput } from '../../shared/ui';
 
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfZoomControls as PdfZoomControlsInner } from './PdfDocumentZoomControls';
+import { usePdfSearchInputState } from './pdfSearchInputState';
 
 interface SearchControlsProps {
   onClearSearch: () => void;
@@ -51,6 +52,10 @@ function handleSearchInputKeyDown(
   onFindNext: () => void,
   onFindPrevious: () => void
 ) {
+  const nativeEvent = event.nativeEvent;
+  if ('isComposing' in nativeEvent && nativeEvent.isComposing) {
+    return;
+  }
   if (event.key !== 'Enter' || !canNavigateMatches) {
     return;
   }
@@ -207,23 +212,24 @@ function usePdfPageInputState(args: {
 }
 
 function PdfSearchInput(props: SearchControlsProps & { canNavigateMatches: boolean }) {
+  const { draftQuery, handleSearchCompositionEnd, handleSearchCompositionStart, handleSearchInputChange } = usePdfSearchInputState(props);
+
   return (
     <AppInput
       aria-label="PDF search"
       className="h-8 w-36 border-transparent bg-transparent px-2 text-xs focus-visible:ring-0"
       onKeyDown={(event) => handleSearchInputKeyDown(event, props.canNavigateMatches, props.onFindNext, props.onFindPrevious)}
-      onChange={(event) => {
-        props.onToolbarInteraction();
-        props.onSearchQueryChange(event.target.value);
-      }}
+      onChange={handleSearchInputChange}
       onBlur={() => props.onSearchFocusChange(false)}
+      onCompositionEnd={handleSearchCompositionEnd}
+      onCompositionStart={handleSearchCompositionStart}
       onFocus={() => {
         props.onToolbarInteraction();
         props.onSearchFocusChange(true);
       }}
       placeholder="Search PDF…"
       type="text"
-      value={props.searchQuery}
+      value={draftQuery}
     />
   );
 }

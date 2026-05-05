@@ -1,6 +1,7 @@
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
+import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
 
 interface ExistingChildHighlightRow {
   [column: string]: unknown;
@@ -45,6 +46,10 @@ export function replaceImportedHighlightNodes(input: {
     input.driver.execute('DELETE FROM node_order WHERE node_id = ?', [row.id]);
     input.driver.execute('DELETE FROM nodes WHERE id = ?', [row.id]);
   });
+  syncWorkspaceSearchIndexForNodeIds(
+    input.driver,
+    existingChildren.map((row) => row.id)
+  );
   if (input.highlights.length === 0) {
     return 0;
   }

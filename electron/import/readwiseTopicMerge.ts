@@ -7,6 +7,7 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { insertImportedHighlightNodes } from '../../lib/core/database/importDerivedHighlights.js';
 import { collectAnchoredImportedHighlights } from '../../lib/core/database/importHighlightAnchors.js';
 import { resolveReadwiseHighlightUpdate } from '../../lib/core/database/importReadwiseHighlightUpdates.js';
+import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -133,6 +134,34 @@ async function selectHighlightFilePath(window?: BrowserWindow | null) {
   return selectedPath?.trim() ? path.normalize(selectedPath.trim()) : null;
 }
 
+function persistMergedHighlights(input: {
+  importedAt: string;
+  nodeId: string;
+  sourceTitle: string;
+  update: ReturnType<typeof resolveReadwiseHighlightUpdate>;
+}) {
+  const connection = openDatabaseConnection();
+  connection.driver.transaction(() => {
+    connection.driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
+      input.update.content,
+      resolveNodeOpeningText(input.update.content, input.sourceTitle),
+      input.importedAt,
+      input.nodeId
+    ]);
+    if (input.update.highlights.length > 0) {
+      insertImportedHighlightNodes({
+        driver: connection.driver,
+        highlights: input.update.highlights,
+        importedAt: input.importedAt,
+        parentNodeId: input.nodeId,
+        parentContent: input.update.content,
+        startPosition: readNextNodePosition()
+      });
+    }
+    syncWorkspaceSearchIndexForNodeIds(connection.driver, [input.nodeId]);
+  });
+}
+
 export async function mergeReadwiseTopicHighlightsFromFile(
   nodeId: string,
   highlightFilePath: string
@@ -162,7 +191,6 @@ export async function mergeReadwiseTopicHighlightsFromFile(
 
   const importedAt = new Date().toISOString();
   const prepared = createPreparedManualHighlightMerge(nodeId, sourceNode, normalizedHighlightFilePath, highlightSidecar);
-  const connection = openDatabaseConnection();
   const readwiseUpdate = resolveReadwiseHighlightUpdate({
     existingChildContents: readExistingHighlightContents(nodeId, sourceNode.content),
     existingContent: sourceNode.content,
@@ -172,23 +200,11 @@ export async function mergeReadwiseTopicHighlightsFromFile(
     return { merged_highlight_count: 0, node_id: nodeId, status: 'noop' };
   }
 
-  connection.driver.transaction(() => {
-    connection.driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
-      readwiseUpdate.content,
-      resolveNodeOpeningText(readwiseUpdate.content, sourceNode.title),
-      importedAt,
-      nodeId
-    ]);
-    if (readwiseUpdate.highlights.length > 0) {
-      insertImportedHighlightNodes({
-        driver: connection.driver,
-        highlights: readwiseUpdate.highlights,
-        importedAt,
-        parentNodeId: nodeId,
-        parentContent: readwiseUpdate.content,
-        startPosition: readNextNodePosition()
-      });
-    }
+  persistMergedHighlights({
+    importedAt,
+    nodeId,
+    sourceTitle: sourceNode.title,
+    update: readwiseUpdate
   });
 
   scheduleMirrorSync([nodeId]);

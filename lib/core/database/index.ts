@@ -9,3 +9,4 @@ export * from './workspaceSnapshot.js';
 export * from './workspaceListSnapshot.js';
 export * from './workspaceNodeDocument.js';
 export * from './workspaceSearch.js';
+export * from './workspaceSearchIndex.js';

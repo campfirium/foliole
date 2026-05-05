@@ -148,3 +148,20 @@ it('supports Enter and Shift+Enter for in-view pdf search navigation', async () 
   fireEvent.keyDown(searchInput, { key: 'Enter', shiftKey: true });
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
 });
+
+it('waits for composition to finish before running pdf search', async () => {
+  render(<DocumentPanelSection {...defaultProps} />);
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF search' })).toBeInTheDocument());
+  const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
+
+  fireEvent.compositionStart(searchInput);
+  fireEvent.change(searchInput, { target: { value: 'key' }, nativeEvent: { isComposing: true } });
+
+  await waitFor(() => expect(searchInput).toHaveValue('key'));
+  expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('');
+
+  fireEvent.compositionEnd(searchInput, { data: 'keyword' });
+  fireEvent.change(searchInput, { target: { value: 'keyword' } });
+
+  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
+});

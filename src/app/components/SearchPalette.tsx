@@ -122,6 +122,7 @@ function useSearchResults(props: Pick<SearchPaletteProps, 'isOpen' | 'nodeOrder'
     }
 
     let cancelled = false;
+    setRuntimeResults([]);
     void runtimeInvoke(NATIVE_COMMANDS.searchWorkspace, { query }).then((results) => {
       if (!cancelled) {
         setRuntimeResults(results);

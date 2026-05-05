@@ -6,6 +6,7 @@ import {
   recordPreparedImportFailure as recordPreparedImportFailureViaDriver,
   runPreparedImport as runPreparedImportViaDriver
 } from '../../lib/core/database/index.js';
+import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
@@ -223,6 +224,7 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
     record.importedAt,
     nodeId
   ]);
+  syncWorkspaceSearchIndexForNodeIds(connection.driver, [nodeId]);
 
   if (degradedMessages.length === 0) {
     return record;

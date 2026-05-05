@@ -1,4 +1,5 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 
 import { openDatabaseConnection } from './connection.js';
 
@@ -78,6 +79,7 @@ export function createNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
      ON CONFLICT(node_id, attachment_id, role) DO NOTHING`,
     [input.nodeId, input.attachmentId, input.role]
   );
+  syncPdfSearchIndexForNodeIds(connection.driver, [input.nodeId]);
 }
 
 export function findAttachmentRecordById(id: string): AttachmentRecord | null {
@@ -148,4 +150,5 @@ export function deleteNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
      WHERE node_id = ? AND attachment_id = ? AND role = ?`,
     [input.nodeId, input.attachmentId, input.role]
   );
+  syncPdfSearchIndexForNodeIds(connection.driver, [input.nodeId]);
 }

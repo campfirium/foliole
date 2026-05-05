@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { dialog, shell, type BrowserWindow } from 'electron';
 
+import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import type {
   NativeReadwiseBookEpubProgressEvent,
   NativeReadwiseBookDownloadResult,
@@ -97,6 +98,7 @@ function refreshPlaceholderNode(book: ReadwiseBookInventoryItem) {
       new Date().toISOString(),
       placeholderNodeId
     );
+  syncWorkspaceSearchIndexForNodeIds(openDatabaseConnection().driver, [placeholderNodeId]);
 }
 
 export async function openReadwiseBookDownload(nodeId: string): Promise<NativeReadwiseBookDownloadResult> {

@@ -1,21 +1,9 @@
 import { migrateAttachmentIdsToHashes } from './attachmentIdMigration.js';
+import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
 import { migrateNodeKinds } from './nodeKindMigration.js';
+import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export interface DatabaseMigrationTarget {
-  exec(sql: string): void;
-  pragma(command: string, options?: { simple?: boolean }): unknown;
-  prepare(sql: string): {
-    all(...params: unknown[]): unknown[];
-    run(...params: unknown[]): unknown;
-  };
-  transaction<T>(fn: () => T): () => T;
-}
-
-export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget = DatabaseMigrationTarget> {
-  sqlite: TSqlite;
-}
-
-export const DATABASE_SCHEMA_VERSION = 18;
+export const DATABASE_SCHEMA_VERSION = 19;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -233,7 +221,8 @@ const MIGRATION_STEPS = [
   { statements: CREATE_TABLE_STATEMENTS_V15, version: 15 },
   { statements: CREATE_TABLE_STATEMENTS_V16, version: 16 },
   { statements: CREATE_TABLE_STATEMENTS_V17, version: 17 },
-  { statements: CREATE_TABLE_STATEMENTS_V18, version: 18 }
+  { statements: CREATE_TABLE_STATEMENTS_V18, version: 18 },
+  { migrate: migrateWorkspaceSearchIndexes, version: 19 }
 ];
 function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
   if (currentVersion >= step.version) {

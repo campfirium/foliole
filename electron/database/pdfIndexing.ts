@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { syncPdfSearchIndexForAttachmentIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
@@ -171,6 +172,7 @@ function savePdfPageTextRows(attachmentId: string, pages: Array<{ page: number; 
     }
   });
   runInTransaction();
+  syncPdfSearchIndexForAttachmentIds(connection.driver, [attachmentId]);
 }
 
 function updatePdfNodeOpeningTexts(attachmentId: string, pages: Array<{ page: number; text: string }>) {

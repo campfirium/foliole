@@ -17,8 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
+import { restoreNodes, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { searchWorkspace } from './workspaceSearch.js';
 
 let tempRoot = '';
@@ -35,12 +38,25 @@ afterEach(async () => {
 });
 
 function insertNode(input: { content: string; deletedAt?: string | null; id: string; title: string; updatedAt: string }) {
-  openDatabaseConnection().sqlite
-    .prepare(
-      `INSERT INTO nodes (id, title, content, created_at, updated_at, deleted_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .run(input.id, input.title, input.content, '2026-03-01T00:00:00.000Z', input.updatedAt, input.deletedAt ?? null);
+  upsertNodeSnapshot({
+    nodeId: input.id,
+    parentNodeId: null,
+    kind: 'topic',
+    title: input.title,
+    isTitleManual: true,
+    content: input.content,
+    reveal: null,
+    anchorLink: null,
+    position: null,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    updatedAt: input.updatedAt
+  });
+  if (input.deletedAt) {
+    softDeleteNodes({
+      nodeIds: [input.id],
+      deletedAt: input.deletedAt
+    });
+  }
 }
 
 function insertPdfAttachment(input: { id: string; originalName: string; status: 'failed' | 'indexing' | 'pending' | 'ready' }) {
@@ -115,6 +131,7 @@ it('includes indexed pdf page hits in workspace search results', () => {
   openDatabaseConnection().sqlite
     .prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)`)
     .run('pdf-attachment-1', 3, 'This page contains Atlas launch details and milestones.');
+  syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, ['node-pdf']);
 
   const results = searchWorkspace('Atlas');
 
@@ -135,6 +152,27 @@ it('includes indexed pdf page hits in workspace search results', () => {
   });
 });
 
+it('does not return page-level pdf results when only the pdf title matches', () => {
+  insertNode({
+    id: 'node-pdf-title-only',
+    title: 'Imported PDF Node',
+    content: '',
+    updatedAt: '2026-03-05T00:00:00.000Z'
+  });
+  insertPdfAttachment({ id: 'pdf-attachment-title-only', originalName: 'Atlas Research.pdf', status: 'ready' });
+  openDatabaseConnection().sqlite
+    .prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`)
+    .run('node-pdf-title-only', 'pdf-attachment-title-only', 'reference');
+  openDatabaseConnection().sqlite
+    .prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)`)
+    .run('pdf-attachment-title-only', 3, 'This page contains unrelated content only.');
+  syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, ['node-pdf-title-only']);
+
+  const results = searchWorkspace('Atlas');
+
+  expect(results.some((result) => result.kind === 'pdf' && result.id === 'node-pdf-title-only')).toBe(false);
+});
+
 it('includes cross-page pdf hits without changing the per-page storage model', () => {
   insertNode({
     id: 'node-pdf-cross',
@@ -149,6 +187,7 @@ it('includes cross-page pdf hits without changing the per-page storage model', (
   openDatabaseConnection().sqlite
     .prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?), (?, ?, ?)`)
     .run('pdf-attachment-cross', 3, 'alpha bri', 'pdf-attachment-cross', 4, 'dge omega');
+  syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, ['node-pdf-cross']);
 
   const results = searchWorkspace('bridge');
 
@@ -166,5 +205,66 @@ it('includes cross-page pdf hits without changing the per-page storage model', (
     page: 3,
     pageTextLength: 9,
     query: 'bridge'
+  });
+});
+
+it('keeps the search index in sync across node edits and trash changes', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-editable',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'Daily Note',
+    isTitleManual: true,
+    content: 'Original content only.',
+    reveal: null,
+    anchorLink: null,
+    position: null,
+    createdAt: '2026-03-07T00:00:00.000Z',
+    updatedAt: '2026-03-07T00:00:00.000Z'
+  });
+
+  expect(searchWorkspace('Atlas')).toEqual([]);
+
+  upsertNodeSnapshot({
+    nodeId: 'node-editable',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'Daily Atlas Note',
+    isTitleManual: true,
+    content: 'Atlas launch checklist and follow-up notes.',
+    reveal: null,
+    anchorLink: null,
+    position: null,
+    createdAt: '2026-03-07T00:00:00.000Z',
+    updatedAt: '2026-03-08T00:00:00.000Z'
+  });
+
+  expect(searchWorkspace('Atlas')).toHaveLength(1);
+
+  softDeleteNodes({
+    nodeIds: ['node-editable'],
+    deletedAt: '2026-03-09T00:00:00.000Z'
+  });
+  expect(searchWorkspace('Atlas')).toEqual([]);
+
+  restoreNodes({ nodeIds: ['node-editable'] });
+  expect(searchWorkspace('Atlas')).toHaveLength(1);
+});
+
+it('keeps 1 to 2 character queries on the fallback path', () => {
+  insertNode({
+    id: 'node-short',
+    title: 'AB',
+    content: 'Alpha beta body.',
+    updatedAt: '2026-03-10T00:00:00.000Z'
+  });
+
+  const results = searchWorkspace('AB');
+
+  expect(results).toHaveLength(1);
+  expect(results[0]).toMatchObject({
+    id: 'node-short',
+    title: 'AB',
+    kind: 'node'
   });
 });

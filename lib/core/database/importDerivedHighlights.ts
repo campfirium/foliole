@@ -5,6 +5,7 @@ import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import type { DatabaseDriver } from './driver.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
+import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
 
 function deriveImportedHighlightTitle(content: string) {
   const firstLine = content
@@ -70,8 +71,11 @@ export function insertImportedHighlightNodes(input: {
   );
   const insertOrder = input.driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
 
+  const insertedNodeIds: string[] = [];
+
   input.highlights.forEach((highlight, index) => {
     const nodeId = `node-${randomUUID()}`;
+    insertedNodeIds.push(nodeId);
     if ('kind' in highlight && highlight.kind === 'cloze') {
       const promptContent = createImportedClozePrompt(input.parentContent, highlight);
       const title = deriveImportedHighlightTitle(promptContent);
@@ -101,6 +105,8 @@ export function insertImportedHighlightNodes(input: {
     }
     insertOrder.run([nodeId, input.startPosition + index]);
   });
+
+  syncWorkspaceSearchIndexForNodeIds(input.driver, insertedNodeIds);
 
   return input.highlights.length;
 }
