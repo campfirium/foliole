@@ -11,7 +11,7 @@ fi
 
 target="${1:-}"
 if [[ -z "${target}" ]]; then
-  echo "Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full>"
+  echo "Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release>"
   exit 1
 fi
 
@@ -81,12 +81,18 @@ case "${target}" in
   full)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint typecheck test build electron:compile android:sync android:host:lint android:host:test
+    run_gate_steps lint typecheck:desktop typecheck:android test build electron:compile android:web:build
+    run_workspace_boundary_check_if_present
+    ;;
+  release)
+    run_copy_guard_if_present
+    run_repository_root_boundary_check_if_present
+    run_gate_steps lint typecheck:desktop typecheck:android test build electron:compile android:web:build android:sync android:host:lint android:host:test
     run_workspace_boundary_check_if_present
     ;;
   *)
     echo "[quality-gate-target] unknown target: ${target}"
-    echo "Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full>"
+    echo "Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release>"
     exit 1
     ;;
 esac

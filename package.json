@@ -62,6 +62,7 @@
     "quality:android:device": "bash scripts/quality-gate-target.sh android-device",
     "quality:shared": "bash scripts/quality-gate-target.sh shared",
     "quality:full": "bash scripts/quality-gate-target.sh full",
+    "quality:release": "bash scripts/quality-gate-target.sh release",
     "lint": "eslint .",
     "typecheck": "npm run typecheck:desktop",
     "test": "vitest run --pool=threads --maxWorkers=2",

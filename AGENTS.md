@@ -71,10 +71,10 @@
 - 当前仓库没有强制 git hooks / CI 兜底；质量闸由执行者按任务范围主动选择并运行，不得假设提交或推送时会自动补跑。
 - 默认先执行与本次改动直接相关的最小验证；只有当改动范围或技术风险超过“相关验证”覆盖面时，才升级到宿主 / 共享质量闸。
 - 相关最小验证默认由与改动直接对应的 `eslint`、`vitest`、局部 `tsc`、宿主链路 smoke test 与必要预览组成，而不是默认整仓或整宿主全跑。
-- 质量闸属于升级入口，不是每个最小任务的默认动作；满足条件时按范围选择：`npm run quality:desktop`、`npm run quality:android`、`npm run quality:android:device`、`npm run quality:shared`、`npm run quality:full` 或 `npm run quality:fast`。
+- 质量闸属于升级入口，不是每个最小任务的默认动作；满足条件时按范围选择：`npm run quality:desktop`、`npm run quality:android`、`npm run quality:android:device`、`npm run quality:shared`、`npm run quality:full`、`npm run quality:release` 或 `npm run quality:fast`。
 - `quality:desktop` 适用于桌面多子系统联动、构建链 / preload / IPC 根链路 / sqlite 迁移，或相关验证不足以覆盖风险的场景。
 - `quality:android` 适用于移动宿主联调、Capacitor 宿主 / bridge 根链路调整，或相关验证不足以覆盖风险的场景；权限、生命周期、插件、intent、安装 / 启动链路或设备侧问题升级到 `quality:android:device`。
-- `quality:shared` 适用于共享 contract / 构建根链路 / 跨宿主脚本调整，或相关验证不足以覆盖风险的场景；`quality:full` 只用于用户明确要求、依赖 / 构建根链路、广泛跨宿主联动或无法证明单宿主影响的场景。
+- `quality:shared` 适用于共享 contract / 构建根链路 / 跨宿主脚本调整，或相关验证不足以覆盖风险的场景；`quality:full` 适用于仓库级 JS/TS、桌面构建与 companion Web 构建验证，但不包含 Android 原生宿主检查；`quality:release` 才是桌面 + companion Web + Android 原生宿主的完整发布级验证。
 - `quality:fast` 仅作为通用自动选择入口；多平台任务汇报默认说清实际宿主 / 共享质量入口，不只写 `quality:fast`。
 - 若只做相关最小验证，必须优先选择与改动文件、改动链路、复现场景直接对应的检查命令；最终汇报默认不列测试命令，除非失败、用户追问、或该命令本身就是用户验收所需信息。
 - 只有当你主动执行了某个质量闸，且该质量闸暴露的问题与本次改动链路、当前宿主或被选中的验证范围直接相关时，当前任务才需要顺手清掉这些红灯；禁止因为误触发过重质量闸，就把全仓无关红灯一并卷入当前最小任务。
@@ -107,7 +107,7 @@
 - 不默认写“下一步”；只有存在本轮承诺内未完成项、当前阻塞、实施说明要求停车的明确后续步骤或需要用户当下决策时，才说明后续动作；此类内容必须直接写成阻塞或“需要你决定”，禁止把可选建议伪装成任务主线或塞进 `R`。
 - UI 文案术语检查入口为 `npm run copy:guard`；该检查默认只报告 warning，不阻塞质量闸。只有用户明确要求或任务目标是收敛文案术语债时，才使用 `npm run copy:guard:strict`。
 - 若 `copy:guard` 报出 warning，修复前必须先读取 `.lab/specs/_product/terminology-and-copy.md`，按术语规则判断后再修改；禁止只根据脚本命中词机械替换。
-- `build` 仅在用户明确要求执行构建、或当前任务已触及依赖 / 构建根链路且必须验证构建结果时执行；对应入口为 `npm run quality:full` 或交付脚本。
+- `build` 仅在用户明确要求执行构建、或当前任务已触及依赖 / 构建根链路且必须验证构建结果时执行；仓库级对应入口为 `npm run quality:full`，发布级对应入口为 `npm run quality:release` 或交付脚本。
 
 ## Decision Escalation And Official Sources
 

@@ -365,10 +365,12 @@ describe('quality-gate-fast.sh', () => {
     try {
       await writePackageJson(tempRoot, {
         lint: 'node -e "console.log(\'full lint ok\')"',
-        typecheck: 'node -e "console.log(\'full typecheck ok\')"',
+        'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
+        'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
         test: 'node -e "console.log(\'full test ok\')"',
         build: 'node -e "console.log(\'full build ok\')"',
         'electron:compile': 'node -e "console.log(\'full electron compile ok\')"',
+        'android:web:build': 'node -e "console.log(\'full android web build ok\')"',
         'android:sync': 'node -e "console.log(\'full android sync ok\')"',
         'android:host:lint': 'node -e "console.log(\'full android host lint ok\')"',
         'android:host:test': 'node -e "console.log(\'full android host test ok\')"'
@@ -380,13 +382,51 @@ describe('quality-gate-fast.sh', () => {
       expect(result.stdout).toContain('[quality-gate-fast] forcing full quality gate');
       expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
       expect(result.stdout).toContain('full lint ok');
-      expect(result.stdout).toContain('full typecheck ok');
+      expect(result.stdout).toContain('full desktop typecheck ok');
+      expect(result.stdout).toContain('full android typecheck ok');
       expect(result.stdout).toContain('full test ok');
       expect(result.stdout).toContain('full build ok');
       expect(result.stdout).toContain('full electron compile ok');
-      expect(result.stdout).toContain('full android sync ok');
-      expect(result.stdout).toContain('full android host lint ok');
-      expect(result.stdout).toContain('full android host test ok');
+      expect(result.stdout).toContain('full android web build ok');
+      expect(result.stdout).not.toContain('full android sync ok');
+      expect(result.stdout).not.toContain('full android host lint ok');
+      expect(result.stdout).not.toContain('full android host test ok');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('delegates to the release gate when forced', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'release lint ok\')"',
+        'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
+        'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
+        test: 'node -e "console.log(\'release test ok\')"',
+        build: 'node -e "console.log(\'release build ok\')"',
+        'electron:compile': 'node -e "console.log(\'release electron compile ok\')"',
+        'android:web:build': 'node -e "console.log(\'release android web build ok\')"',
+        'android:sync': 'node -e "console.log(\'release android sync ok\')"',
+        'android:host:lint': 'node -e "console.log(\'release android host lint ok\')"',
+        'android:host:test': 'node -e "console.log(\'release android host test ok\')"'
+      });
+
+      const result = await runQualityGate(tempRoot, {}, ['--release']);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-fast] forcing release quality gate');
+      expect(result.stdout).toContain('[quality-gate:release] all checks passed.');
+      expect(result.stdout).toContain('release lint ok');
+      expect(result.stdout).toContain('release desktop typecheck ok');
+      expect(result.stdout).toContain('release android typecheck ok');
+      expect(result.stdout).toContain('release test ok');
+      expect(result.stdout).toContain('release build ok');
+      expect(result.stdout).toContain('release electron compile ok');
+      expect(result.stdout).toContain('release android web build ok');
+      expect(result.stdout).toContain('release android sync ok');
+      expect(result.stdout).toContain('release android host lint ok');
+      expect(result.stdout).toContain('release android host test ok');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

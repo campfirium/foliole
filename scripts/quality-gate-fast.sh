@@ -242,6 +242,13 @@ if [[ "${1:-}" == "--full" ]]; then
   exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
 fi
 
+if [[ "${1:-}" == "--release" ]]; then
+  if quality_gate_should_print_step; then
+    echo "[quality-gate-fast] forcing release quality gate"
+  fi
+  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" release
+fi
+
 all_changed="$(collect_changed_files)"
 level="$(resolve_quality_gate_level "${all_changed}")"
 

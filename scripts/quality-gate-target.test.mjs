@@ -195,15 +195,17 @@ describe('quality-gate-target.sh', () => {
     }
   }, 15000);
 
-  it('runs the full gate including android host checks', async () => {
+  it('runs the full gate without android host checks', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
         lint: 'node -e "console.log(\'full lint ok\')"',
-        typecheck: 'node -e "console.log(\'full typecheck ok\')"',
+        'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
+        'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
         test: 'node -e "console.log(\'full test ok\')"',
         build: 'node -e "console.log(\'full build ok\')"',
         'electron:compile': 'node -e "console.log(\'full electron compile ok\')"',
+        'android:web:build': 'node -e "console.log(\'full android web build ok\')"',
         'android:sync': 'node -e "console.log(\'full android sync ok\')"',
         'android:host:lint': 'node -e "console.log(\'full android host lint ok\')"',
         'android:host:test': 'node -e "console.log(\'full android host test ok\')"'
@@ -215,16 +217,57 @@ describe('quality-gate-target.sh', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('full lint ok');
-      expect(result.stdout).toContain('full typecheck ok');
+      expect(result.stdout).toContain('full desktop typecheck ok');
+      expect(result.stdout).toContain('full android typecheck ok');
       expect(result.stdout).toContain('full test ok');
       expect(result.stdout).toContain('full build ok');
       expect(result.stdout).toContain('full electron compile ok');
-      expect(result.stdout).toContain('full android sync ok');
-      expect(result.stdout).toContain('full android host lint ok');
-      expect(result.stdout).toContain('full android host test ok');
+      expect(result.stdout).toContain('full android web build ok');
+      expect(result.stdout).not.toContain('full android sync ok');
+      expect(result.stdout).not.toContain('full android host lint ok');
+      expect(result.stdout).not.toContain('full android host test ok');
       expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('workspace boundary ok');
       expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('runs the release gate including android host checks', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'release lint ok\')"',
+        'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
+        'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
+        test: 'node -e "console.log(\'release test ok\')"',
+        build: 'node -e "console.log(\'release build ok\')"',
+        'electron:compile': 'node -e "console.log(\'release electron compile ok\')"',
+        'android:web:build': 'node -e "console.log(\'release android web build ok\')"',
+        'android:sync': 'node -e "console.log(\'release android sync ok\')"',
+        'android:host:lint': 'node -e "console.log(\'release android host lint ok\')"',
+        'android:host:test': 'node -e "console.log(\'release android host test ok\')"'
+      });
+      await writeRepositoryRootBoundaryScript(tempRoot);
+      await writeWorkspaceBoundaryScript(tempRoot);
+
+      const result = await runTargetGate(tempRoot, 'release');
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('release lint ok');
+      expect(result.stdout).toContain('release desktop typecheck ok');
+      expect(result.stdout).toContain('release android typecheck ok');
+      expect(result.stdout).toContain('release test ok');
+      expect(result.stdout).toContain('release build ok');
+      expect(result.stdout).toContain('release electron compile ok');
+      expect(result.stdout).toContain('release android web build ok');
+      expect(result.stdout).toContain('release android sync ok');
+      expect(result.stdout).toContain('release android host lint ok');
+      expect(result.stdout).toContain('release android host test ok');
+      expect(result.stdout).toContain('repository root boundary ok');
+      expect(result.stdout).toContain('workspace boundary ok');
+      expect(result.stdout).toContain('[quality-gate:release] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -239,7 +282,7 @@ describe('quality-gate-target.sh', () => {
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('[quality-gate-target] unknown target: unknown-target');
-      expect(result.stdout).toContain('Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full>');
+      expect(result.stdout).toContain('Usage: bash scripts/quality-gate-target.sh <desktop|android|android-device|shared|full|release>');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

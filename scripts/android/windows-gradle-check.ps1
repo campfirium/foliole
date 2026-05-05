@@ -49,7 +49,7 @@ function Invoke-GradleWrapper {
     [string]$TaskName
   )
 
-  $gradleCommand = "call .\gradlew.bat $TaskName"
+  $gradleCommand = "call .\gradlew.bat --no-daemon $TaskName"
   & cmd.exe /d /c $gradleCommand
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
