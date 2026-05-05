@@ -1,8 +1,10 @@
 import {
+  collectAutolinkMatches,
   collectFootnoteMatches,
   collectInlineCodeMatches,
   collectInlineLinkMatches,
   collectWikiLinkMatches,
+  type AutolinkMatch,
   toRangeBounds,
   type FootnoteMatch,
   type InlineCodeMatch,
@@ -16,6 +18,7 @@ export interface MarkdownLineMatchState {
   clozePlaceholderRanges: RangeBounds[];
   footnoteRanges: RangeBounds[];
   imageMatches: RangeBounds[];
+  autolinkMatches: AutolinkMatch[];
   inlineCodeMatches: InlineCodeMatch[];
   inlineLinkMatches: InlineLinkMatch[];
   wikiLinkMatches: WikiLinkMatch[];
@@ -38,8 +41,13 @@ export function collectPreviewLineMatchState(
   const linkPreservedRanges = preservedRanges.concat(footnoteRanges);
   const inlineLinkMatches = inCodeBlock ? [] : collectInlineLinkMatches(lineFrom, lineText, linkPreservedRanges);
   const wikiLinkMatches = inCodeBlock ? [] : collectWikiLinkMatches(lineFrom, lineText, linkPreservedRanges);
+  const linkRanges = [...inlineLinkMatches, ...wikiLinkMatches].map((match) => ({ from: match.from, to: match.to }));
+  const autolinkMatches = inCodeBlock
+    ? []
+    : collectAutolinkMatches(lineFrom, lineText, linkPreservedRanges.concat(linkRanges));
 
   return {
+    autolinkMatches,
     clozePlaceholderRanges,
     footnoteRanges,
     imageMatches,
@@ -62,14 +70,21 @@ export function collectSourceLineMatchState(
   const footnoteMatches = inCodeBlock ? [] : collectFootnoteMatches(lineFrom, lineText, preservedRanges);
   const footnoteRanges = footnoteMatches.map((match) => ({ from: match.from, to: match.to }));
   const linkPreservedRanges = preservedRanges.concat(footnoteRanges);
+  const inlineLinkMatches = inCodeBlock ? [] : collectInlineLinkMatches(lineFrom, lineText, linkPreservedRanges);
+  const wikiLinkMatches = inCodeBlock ? [] : collectWikiLinkMatches(lineFrom, lineText, linkPreservedRanges);
+  const linkRanges = [...inlineLinkMatches, ...wikiLinkMatches].map((match) => ({ from: match.from, to: match.to }));
+  const autolinkMatches = inCodeBlock
+    ? []
+    : collectAutolinkMatches(lineFrom, lineText, linkPreservedRanges.concat(linkRanges));
 
   return {
+    autolinkMatches,
     clozePlaceholderRanges,
     footnoteRanges,
     imageMatches: [],
     inlineCodeMatches,
-    inlineLinkMatches: inCodeBlock ? [] : collectInlineLinkMatches(lineFrom, lineText, linkPreservedRanges),
-    wikiLinkMatches: inCodeBlock ? [] : collectWikiLinkMatches(lineFrom, lineText, linkPreservedRanges),
+    inlineLinkMatches,
+    wikiLinkMatches,
     preservedRanges,
     footnoteMatches
   };

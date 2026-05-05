@@ -1,4 +1,4 @@
-import type { InlineCodeMatch, InlineLinkMatch, WikiLinkMatch } from './inlineMarkdownMatches';
+import type { AutolinkMatch, InlineCodeMatch, InlineLinkMatch, WikiLinkMatch } from './inlineMarkdownMatches';
 import type { SemanticRange } from './inlineSemanticMarks';
 
 export interface InlinePresentationMarkRange extends SemanticRange {
@@ -61,6 +61,18 @@ export function collectInlineLinkPresentationPlan(
   }
 
   return { markRanges, replaceRanges };
+}
+
+export function collectAutolinkPresentationPlan(linkMatches: ReadonlyArray<AutolinkMatch>): InlinePresentationPlan {
+  return {
+    markRanges: linkMatches.map((linkMatch) => ({
+      className: 'cm-md-link-text',
+      from: linkMatch.from,
+      to: linkMatch.to,
+      attributes: { 'data-md-link-url': linkMatch.href }
+    })),
+    replaceRanges: []
+  };
 }
 
 export function collectWikiLinkPresentationPlan(

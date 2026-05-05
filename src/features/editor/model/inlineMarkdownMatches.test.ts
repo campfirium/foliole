@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  collectAutolinkMatches,
   collectFootnoteMatches,
   collectInlineCodeMatches,
   collectInlineLinkMatches,
@@ -29,6 +30,20 @@ describe('inlineMarkdownMatches', () => {
         ],
         href: 'x'
       }
+    ]);
+  });
+
+  it('collects GFM autolinks outside preserved ranges', () => {
+    expect(collectAutolinkMatches(0, 'See https://example.com, www.example.org and a@b.com', [])).toEqual([
+      { from: 4, href: 'https://example.com', to: 23 },
+      { from: 25, href: 'https://www.example.org', to: 40 },
+      { from: 45, href: 'mailto:a@b.com', to: 52 }
+    ]);
+  });
+
+  it('skips autolinks that overlap existing markdown links', () => {
+    expect(collectAutolinkMatches(0, '[docs](https://example.com) https://ok.test', [{ from: 0, to: 27 }])).toEqual([
+      { from: 28, href: 'https://ok.test', to: 43 }
     ]);
   });
 

@@ -103,6 +103,31 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-anchor-tag-id': { color: 'var(--app-accent-color)', fontWeight: '700', opacity: '1' },
   '.cm-md-prefix-widget': { color: 'var(--color-text-secondary)', display: 'inline-block', whiteSpace: 'pre' },
   '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list': { color: 'var(--color-text-secondary)', fontWeight: '500', opacity: '0.95' },
+  '.cm-md-prefix-task-list': { display: 'inline-flex', alignItems: 'center', height: '1em', marginRight: '0.1rem', verticalAlign: '-0.08em' },
+  '.cm-md-task-checkbox': {
+    border: '1px solid color-mix(in srgb, var(--color-border-strong) 72%, transparent)',
+    borderRadius: '0.2rem',
+    boxSizing: 'border-box',
+    display: 'inline-block',
+    height: '0.82em',
+    position: 'relative',
+    width: '0.82em'
+  },
+  '.cm-md-task-checkbox[data-md-task-checked="true"]': {
+    backgroundColor: 'var(--app-accent-color)',
+    borderColor: 'var(--app-accent-color)'
+  },
+  '.cm-md-task-checkbox[data-md-task-checked="true"]::after': {
+    borderBottom: '1.5px solid var(--color-bg-elevated)',
+    borderRight: '1.5px solid var(--color-bg-elevated)',
+    content: '""',
+    height: '0.42em',
+    left: '0.25em',
+    position: 'absolute',
+    top: '0.1em',
+    transform: 'rotate(42deg)',
+    width: '0.22em'
+  },
   '.cm-md-table-widget': {
     boxSizing: 'border-box',
     marginBottom: '0.45rem',

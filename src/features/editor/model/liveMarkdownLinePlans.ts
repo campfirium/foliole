@@ -1,5 +1,6 @@
 import { collectPreviewLineMatchState, collectSourceLineMatchState } from './inlineLineMatchPlans';
 import {
+  collectAutolinkPresentationPlan,
   collectInlineCodePresentationPlan,
   collectInlineLinkPresentationPlan,
   collectWikiLinkPresentationPlan,
@@ -56,8 +57,15 @@ export function collectPreviewLineDecorationPlan(args: {
         ? 'cm-line-code-fence-hidden'
         : baseLineClass;
   const imageMatches = collectImageMatches(args.lineFrom, args.lineText);
-  const { footnoteMatches, footnoteRanges, inlineCodeMatches, inlineLinkMatches, preservedRanges, wikiLinkMatches } =
-    collectPreviewLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock, imageMatches);
+  const {
+    autolinkMatches,
+    footnoteMatches,
+    footnoteRanges,
+    inlineCodeMatches,
+    inlineLinkMatches,
+    preservedRanges,
+    wikiLinkMatches
+  } = collectPreviewLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock, imageMatches);
 
   return {
     footnoteMatches,
@@ -66,7 +74,8 @@ export function collectPreviewLineDecorationPlan(args: {
     inlinePresentationPlans: [
       collectInlineCodePresentationPlan(inlineCodeMatches, showSyntaxOnLine),
       collectInlineLinkPresentationPlan(inlineLinkMatches, showSyntaxOnLine),
-      collectWikiLinkPresentationPlan(wikiLinkMatches, showSyntaxOnLine)
+      collectWikiLinkPresentationPlan(wikiLinkMatches, showSyntaxOnLine),
+      collectAutolinkPresentationPlan(autolinkMatches)
     ],
     isCodeFenceLine,
     lineClass,
@@ -94,15 +103,23 @@ export function collectSourceLineDecorationPlan(args: {
   lineFrom: number;
   lineText: string;
 }): SourceLineDecorationPlan {
-  const { footnoteMatches, footnoteRanges, inlineCodeMatches, inlineLinkMatches, preservedRanges, wikiLinkMatches } =
-    collectSourceLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock);
+  const {
+    autolinkMatches,
+    footnoteMatches,
+    footnoteRanges,
+    inlineCodeMatches,
+    inlineLinkMatches,
+    preservedRanges,
+    wikiLinkMatches
+  } = collectSourceLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock);
   const isCodeFenceLine = CODE_FENCE_PATTERN.test(args.lineText);
 
   return {
     footnoteMatches,
     inlinePresentationPlans: [
       collectInlineLinkPresentationPlan(inlineLinkMatches, true),
-      collectWikiLinkPresentationPlan(wikiLinkMatches, true)
+      collectWikiLinkPresentationPlan(wikiLinkMatches, true),
+      collectAutolinkPresentationPlan(autolinkMatches)
     ],
     nextInCodeBlock: isCodeFenceLine ? !args.inCodeBlock : args.inCodeBlock,
     textDecorationPlans: [

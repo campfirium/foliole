@@ -57,6 +57,40 @@ describe('liveMarkdown inline rendering', () => {
 
     adapter.destroy();
   });
+
+  it('routes GFM autolinks through the in-app link handler', () => {
+    const host = createHost();
+    const onOpenExternalLink = vi.fn();
+    const adapter = new CodeMirrorEditorAdapter(host, {
+      initialContent: 'Read https://example.com now.',
+      onOpenExternalLink
+    });
+
+    const link = host.querySelector('[data-md-link-url="https://example.com"]');
+    expect(link?.textContent).toBe('https://example.com');
+
+    link?.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 320, clientY: 240 }));
+
+    expect(onOpenExternalLink).toHaveBeenCalledWith({
+      anchorPoint: { x: 320, y: 240 },
+      href: 'https://example.com'
+    });
+    expect(bridgeSpies.openExternalUrl).not.toHaveBeenCalled();
+
+    adapter.destroy();
+  });
+
+  it('renders GFM task list markers as checkbox presentation', () => {
+    const host = createHost();
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: '- [x] Done\n- [ ] Todo' });
+
+    expect(host.querySelectorAll('.cm-md-task-checkbox')).toHaveLength(2);
+    expect(host.querySelectorAll('.cm-md-task-checkbox[data-md-task-checked="true"]')).toHaveLength(1);
+    expect(host.querySelector('.cm-content')?.textContent).toContain('Done');
+    expect(host.querySelector('.cm-content')?.textContent).not.toContain('[x]');
+
+    adapter.destroy();
+  });
 });
 
 describe('liveMarkdown runtime behavior', () => {

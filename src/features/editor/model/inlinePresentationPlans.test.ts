@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  collectAutolinkPresentationPlan,
   collectInlineCodePresentationPlan,
   collectInlineLinkPresentationPlan,
   collectWikiLinkPresentationPlan
@@ -81,6 +82,20 @@ describe('inlinePresentationPlans', () => {
         { from: 2, to: 4 },
         { from: 8, to: 10 }
       ]
+    });
+  });
+
+  it('builds autolink marks with external url attributes', () => {
+    expect(collectAutolinkPresentationPlan([{ from: 4, href: 'https://example.com', to: 23 }])).toEqual({
+      markRanges: [
+        {
+          attributes: { 'data-md-link-url': 'https://example.com' },
+          className: 'cm-md-link-text',
+          from: 4,
+          to: 23
+        }
+      ],
+      replaceRanges: []
     });
   });
 });

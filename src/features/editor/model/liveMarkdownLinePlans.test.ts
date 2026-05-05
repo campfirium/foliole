@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { collectPreviewLineDecorationPlan, collectSourceLineDecorationPlan } from './liveMarkdownLinePlans';
 
-describe('liveMarkdownLinePlans', () => {
+describe('liveMarkdown preview line plans', () => {
   it('builds preview plans for title and fenced lines', () => {
     expect(
       collectPreviewLineDecorationPlan({
@@ -40,6 +40,29 @@ describe('liveMarkdownLinePlans', () => {
     });
   });
 
+  it('adds autolink presentation to preview plans', () => {
+    const plan = collectPreviewLineDecorationPlan({
+      hideTitleHeading: false,
+      inCodeBlock: false,
+      isCursorLine: false,
+      lineFrom: 0,
+      lineNumber: 1,
+      lineText: 'See https://example.com',
+      markdownSyntaxVisible: false
+    });
+
+    expect(plan.inlinePresentationPlans.at(-1)?.markRanges).toEqual([
+      {
+        attributes: { 'data-md-link-url': 'https://example.com' },
+        className: 'cm-md-link-text',
+        from: 4,
+        to: 23
+      }
+    ]);
+  });
+});
+
+describe('liveMarkdown source line plans', () => {
   it('builds source plans with syntax-visible inline preservation', () => {
     const plan = collectSourceLineDecorationPlan({
       inCodeBlock: false,
@@ -48,7 +71,7 @@ describe('liveMarkdownLinePlans', () => {
     });
 
     expect(plan.footnoteMatches).toEqual([]);
-    expect(plan.inlinePresentationPlans).toHaveLength(2);
+    expect(plan.inlinePresentationPlans).toHaveLength(3);
     expect(plan.textDecorationPlans).toHaveLength(3);
     expect(plan.nextInCodeBlock).toBe(false);
   });

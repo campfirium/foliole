@@ -5,12 +5,14 @@ import { CODE_FENCE_PATTERN } from '../model/markdownLineSyntax';
 
 const HEADING_PREFIX_PATTERN = /^\s*#{1,6}(?:\s+|$)/;
 const QUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
+const TASK_LIST_PREFIX_PATTERN = /^(\s*[-*+]\s+\[)([ xX])(\]\s+)/;
 const UNORDERED_LIST_PREFIX_PATTERN = /^(\s*[-*+]\s+)/;
 const ORDERED_LIST_PREFIX_PATTERN = /^(\s*)(\d+)([.)])(\s+)/;
 
-type PrefixWidgetKind = 'quote' | 'unordered-list' | 'ordered-list';
+type PrefixWidgetKind = 'quote' | 'unordered-list' | 'ordered-list' | 'task-list';
 
 interface PrefixWidgetMatch {
+  checked?: boolean;
   from: number;
   to: number;
   kind: PrefixWidgetKind;
@@ -91,6 +93,13 @@ export function addCodeFenceDecoration(
 }
 
 function collectPrefixWidgetMatch(from: number, text: string): PrefixWidgetMatch | null {
+  const taskListMatch = text.match(TASK_LIST_PREFIX_PATTERN);
+  if (taskListMatch) {
+    const prefix = taskListMatch[0] ?? '';
+    const marker = taskListMatch[2] ?? ' ';
+    return { checked: marker.toLowerCase() === 'x', from, to: from + prefix.length, kind: 'task-list', markerText: '' };
+  }
+
   const unorderedListMatch = text.match(UNORDERED_LIST_PREFIX_PATTERN);
   if (unorderedListMatch) {
     const prefix = unorderedListMatch[0] ?? '';
@@ -109,22 +118,30 @@ function collectPrefixWidgetMatch(from: number, text: string): PrefixWidgetMatch
 }
 
 class PrefixWidget extends WidgetType {
+  readonly checked: boolean;
   readonly kind: PrefixWidgetKind;
   readonly markerText: string;
 
-  constructor(kind: PrefixWidgetKind, markerText: string) {
+  constructor(kind: PrefixWidgetKind, markerText: string, checked = false) {
     super();
+    this.checked = checked;
     this.kind = kind;
     this.markerText = markerText;
   }
 
   eq(other: PrefixWidget) {
-    return this.kind === other.kind && this.markerText === other.markerText;
+    return this.checked === other.checked && this.kind === other.kind && this.markerText === other.markerText;
   }
 
   toDOM() {
     const marker = document.createElement('span');
     marker.className = `cm-md-prefix-widget cm-md-prefix-${this.kind}`;
+    if (this.kind === 'task-list') {
+      marker.dataset.mdTaskChecked = this.checked ? 'true' : 'false';
+      marker.setAttribute('aria-hidden', 'true');
+      marker.append(createTaskCheckboxElement(this.checked), document.createTextNode(' '));
+      return marker;
+    }
     marker.textContent = this.markerText;
     return marker;
   }
@@ -132,9 +149,16 @@ class PrefixWidget extends WidgetType {
 
 function addPrefixWidget(ranges: Range<Decoration>[], match: PrefixWidgetMatch) {
   ranges.push(
-    Decoration.replace({ widget: new PrefixWidget(match.kind, match.markerText), inclusive: false }).range(
+    Decoration.replace({ widget: new PrefixWidget(match.kind, match.markerText, match.checked), inclusive: false }).range(
       match.from,
       match.to
     )
   );
+}
+
+function createTaskCheckboxElement(checked: boolean) {
+  const checkbox = document.createElement('span');
+  checkbox.className = 'cm-md-task-checkbox';
+  checkbox.dataset.mdTaskChecked = checked ? 'true' : 'false';
+  return checkbox;
 }

@@ -3,6 +3,8 @@ import type { SemanticRange } from './inlineSemanticMarks';
 const INLINE_LINK_PATTERN = /(?<!!)\[([^\]\n]*)\]\(([^)\n]*)\)/g;
 const WIKI_LINK_PATTERN = /(?<!!)\[\[([^\]\n]+)\]\]/g;
 const FOOTNOTE_PATTERN = /\^\[(?<label>[^\]\n]+)\](?:\{(?<note>(?:\\.|[^}\n])*)\})?/g;
+const AUTOLINK_PATTERN = /\b(?:https?:\/\/[^\s<>()\]]+|www\.[^\s<>()\]]+|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+const AUTOLINK_TRAILING_PUNCTUATION_PATTERN = /[.,;:!?]+$/;
 
 export interface RangeBounds {
   from: number;
@@ -18,6 +20,10 @@ export interface InlineLinkMatch extends RangeBounds {
   labelFrom: number;
   labelTo: number;
   hiddenRanges: RangeBounds[];
+  href: string;
+}
+
+export interface AutolinkMatch extends RangeBounds {
   href: string;
 }
 
@@ -118,6 +124,33 @@ export function collectInlineLinkMatches(
   }
   INLINE_LINK_PATTERN.lastIndex = 0;
   return matches;
+}
+
+export function collectAutolinkMatches(
+  from: number,
+  text: string,
+  preservedRanges: ReadonlyArray<RangeBounds>
+): AutolinkMatch[] {
+  const matches: AutolinkMatch[] = [];
+  let match = AUTOLINK_PATTERN.exec(text);
+  while (match) {
+    const rawText = match[0] ?? '';
+    const linkText = rawText.replace(AUTOLINK_TRAILING_PUNCTUATION_PATTERN, '');
+    const start = from + match.index;
+    const end = start + linkText.length;
+    if (linkText && !isWithinRanges(start, end, preservedRanges)) {
+      matches.push({ from: start, href: normalizeAutolinkHref(linkText), to: end });
+    }
+    match = AUTOLINK_PATTERN.exec(text);
+  }
+  AUTOLINK_PATTERN.lastIndex = 0;
+  return matches;
+}
+
+function normalizeAutolinkHref(text: string) {
+  if (text.startsWith('www.')) return `https://${text}`;
+  if (text.includes('@') && !text.includes('://')) return `mailto:${text}`;
+  return text;
 }
 
 export function collectWikiLinkMatches(

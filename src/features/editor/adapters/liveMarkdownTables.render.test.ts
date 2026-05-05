@@ -69,4 +69,13 @@ describe('live markdown table rendering', () => {
 
     adapter.destroy();
   });
+
+  it('renders GFM autolinks inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| https://example.com |');
+
+    const link = host.querySelector('td.cm-md-table-cell [data-md-link-url="https://example.com"]');
+    expect(link?.textContent).toBe('https://example.com');
+
+    adapter.destroy();
+  });
 });
