@@ -3,6 +3,7 @@ import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 export type CommandMarkupType = 'cloze' | 'highlight';
 
 export interface SelectionCommandPayload {
+  anchorId: string;
   parentNodeId: string;
   clozeContent: string;
   selectionText: string;
@@ -47,8 +48,10 @@ export function getSelectionCommandPayload(
   const suffix = content.slice(to).trimStart();
   const clozeRawContent = `${prefix} ${CLOZE_PLACEHOLDER} ${suffix}`.trim();
   const clozeContent = stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
+  const anchorId = String(getNextAnchorNumericId(content));
 
   return {
+    anchorId,
     parentNodeId,
     clozeContent,
     selectionText
@@ -59,7 +62,11 @@ function stripAnchorTags(value: string) {
   return value.replace(ANCHOR_TAG_PATTERN, '');
 }
 
-export function applySelectionMarkup(adapter: EditorAdapter | null, markupType: CommandMarkupType) {
+export function applySelectionMarkup(
+  adapter: EditorAdapter | null,
+  markupType: CommandMarkupType,
+  anchorId: string
+) {
   if (!adapter) {
     return false;
   }
@@ -77,9 +84,8 @@ export function applySelectionMarkup(adapter: EditorAdapter | null, markupType: 
     return false;
   }
 
-  const nextAnchorId = String(getNextAnchorNumericId(content));
   const tagName = markupType === 'highlight' ? 'highlight' : 'cloze';
-  adapter.replaceSelection(`<${tagName} id="${nextAnchorId}">${selectedText}</${tagName}>`);
+  adapter.replaceSelection(`<${tagName} id="${anchorId}">${selectedText}</${tagName}>`);
   return true;
 }
 

@@ -113,6 +113,22 @@ function createTestStore(now: Date) {
 
         const nextNodeOrder = state.nodeOrder.filter((id) => id !== nodeId);
         const nextNodesById = Object.fromEntries(Object.entries(state.nodesById).filter(([id]) => id !== nodeId));
+        const deletedNode = state.nodesById[nodeId];
+        const anchorLink = deletedNode?.anchorLink;
+        const parentNodeId = deletedNode?.parentNodeId;
+        if (anchorLink && parentNodeId && nextNodesById[parentNodeId]) {
+          const parentNode = nextNodesById[parentNodeId];
+          const pattern = new RegExp(
+            `<${anchorLink.kind}\\s+id="${anchorLink.id}">([\\s\\S]*?)<\\/${anchorLink.kind}>`
+          );
+          const nextContent = parentNode.content.replace(pattern, '$1');
+          nextNodesById[parentNodeId] = {
+            ...parentNode,
+            content: nextContent,
+            title: deriveNodeTitleFromContent(nextContent),
+            updatedAt: new Date().toISOString()
+          };
+        }
         return {
           activeNodeId: nextNodeOrder[0] ?? null,
           nodeOrder: nextNodeOrder,
@@ -129,22 +145,23 @@ function createTestStore(now: Date) {
         nodeOrder: [...state.nodeOrder, nodeId],
         nodesById: {
           ...state.nodesById,
-          [nodeId]: {
-            id: nodeId,
-            parentNodeId: null,
-            title: deriveNodeTitleFromContent(content),
-            content,
-            reveal: null,
-            review: null,
-            createdAt: timestamp,
-            updatedAt: timestamp
-          }
+            [nodeId]: {
+              id: nodeId,
+              parentNodeId: null,
+              title: deriveNodeTitleFromContent(content),
+              content,
+              anchorLink: null,
+              reveal: null,
+              review: null,
+              createdAt: timestamp,
+              updatedAt: timestamp
+            }
         }
       }));
 
       return nodeId;
     },
-    createHighlightNodeFromSelection: (parentNodeId, content) => {
+    createHighlightNodeFromSelection: (parentNodeId, content, anchorId) => {
       const normalizedContent = content.trim();
       if (!normalizedContent) {
         return null;
@@ -168,6 +185,7 @@ function createTestStore(now: Date) {
               parentNodeId,
               title: deriveNodeTitleFromContent(normalizedContent),
               content: normalizedContent,
+              anchorLink: anchorId ? { id: anchorId, kind: 'highlight' } : null,
               reveal: null,
               review: null,
               createdAt: timestamp,
@@ -179,7 +197,7 @@ function createTestStore(now: Date) {
 
       return childNodeId;
     },
-    createQANodeFromSelection: (parentNodeId, promptContent, answerContent) => {
+    createQANodeFromSelection: (parentNodeId, promptContent, answerContent, anchorId) => {
       const normalizedPrompt = promptContent.trim();
       const normalizedAnswer = answerContent.trim();
       if (!normalizedPrompt || !normalizedAnswer) {
@@ -204,6 +222,7 @@ function createTestStore(now: Date) {
               parentNodeId,
               title: deriveNodeTitleForCloze(normalizedPrompt, normalizedAnswer),
               content: normalizedPrompt,
+              anchorLink: anchorId ? { id: anchorId, kind: 'cloze' } : null,
               reveal: normalizedAnswer,
               review: {
                 due: timestamp,
@@ -371,6 +390,31 @@ describe('workspaceStore', () => {
 
     expect(store.getState().nodesById['node-highlight-id']).toBeUndefined();
     expect(store.getState().activeNodeId).toBe('node-1');
+  });
+
+  it('removes matching anchor tags from parent content when deleting linked child node', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    const parentContent = 'before <cloze id="1">answer</cloze> and <highlight id="2">keep</highlight> after';
+    store.getState().updateNodeContent('node-1', parentContent);
+    store.getState().createQANodeFromSelection('node-1', 'Prompt [...]', 'answer', '1');
+
+    store.getState().deleteNode('node-test-id');
+
+    expect(store.getState().nodesById['node-1']?.content).toBe(
+      'before answer and <highlight id="2">keep</highlight> after'
+    );
+    expect(store.getState().nodesById['node-1']?.content).toContain('<highlight id="2">keep</highlight>');
+  });
+
+  it('keeps parent content unchanged when deleting child node without anchor link', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    const parentContent = 'before <highlight id="1">text</highlight> after';
+    store.getState().updateNodeContent('node-1', parentContent);
+    store.getState().createHighlightNodeFromSelection('node-1', 'text');
+
+    store.getState().deleteNode('node-highlight-id');
+
+    expect(store.getState().nodesById['node-1']?.content).toBe(parentContent);
   });
 
   it('updates layout widths without artificial range clamp and resets to defaults', () => {

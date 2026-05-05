@@ -1,7 +1,13 @@
-export type MarkdownSyntaxVisibility = 'hidden' | 'visible';
+import {
+  APP_SETTINGS_STORAGE_KEYS,
+  DEFAULT_PERSISTED_APP_SETTINGS,
+  type MarkdownSyntaxVisibility
+} from '../../../shared/config/appSettings';
 
-export const MARKDOWN_SYNTAX_VISIBILITY_KEY = 'foliole-markdown-syntax-visibility';
-export const MARKDOWN_SYNTAX_VISIBILITY_DEFAULT: MarkdownSyntaxVisibility = 'hidden';
+export type { MarkdownSyntaxVisibility } from '../../../shared/config/appSettings';
+
+export const MARKDOWN_SYNTAX_VISIBILITY_KEY = APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility;
+export const MARKDOWN_SYNTAX_VISIBILITY_DEFAULT: MarkdownSyntaxVisibility = DEFAULT_PERSISTED_APP_SETTINGS.markdownSyntaxVisibility;
 
 function isMarkdownSyntaxVisibility(value: string): value is MarkdownSyntaxVisibility {
   return value === 'hidden' || value === 'visible';

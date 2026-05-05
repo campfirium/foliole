@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { parseAnchorBlocks } from '../features/editor/model/anchorBlocks';
 import { deriveNodeTitleForCloze, deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
@@ -22,8 +23,13 @@ export interface WorkspaceState {
   updateNodeReveal: (nodeId: string, reveal: string) => void;
   deleteNode: (nodeId: string) => void;
   createRootNode: (content?: string) => string;
-  createHighlightNodeFromSelection: (parentNodeId: string, content: string) => string | null;
-  createQANodeFromSelection: (parentNodeId: string, promptContent: string, answerContent: string) => string | null;
+  createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string) => string | null;
+  createQANodeFromSelection: (
+    parentNodeId: string,
+    promptContent: string,
+    answerContent: string,
+    anchorId?: string
+  ) => string | null;
 }
 
 interface WorkspacePersistedState {
@@ -45,6 +51,18 @@ export interface NodeViewState {
     from: number;
     to: number;
   };
+}
+
+function removeAnchorTagsForLink(content: string, anchor: { id: string; kind: 'highlight' | 'cloze' }) {
+  const matchedBlock = parseAnchorBlocks(content).blocks.find((block) => block.id === anchor.id && block.kind === anchor.kind);
+  if (!matchedBlock) {
+    return content;
+  }
+
+  const before = content.slice(0, matchedBlock.openTagFrom);
+  const inner = content.slice(matchedBlock.openTagTo, matchedBlock.closeTagFrom);
+  const after = content.slice(matchedBlock.closeTagTo);
+  return `${before}${inner}${after}`;
 }
 
 export const WORKSPACE_STORAGE_KEY = 'foliole-workspace-v1';
@@ -177,6 +195,33 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const remainingNodesById = Object.fromEntries(
             Object.entries(state.nodesById).filter(([id]) => !idsToDeleteSet.has(id))
           );
+
+          for (const deletedId of idsToDelete) {
+            const deletedNode = state.nodesById[deletedId];
+            const anchorLink = deletedNode?.anchorLink;
+            const parentNodeId = deletedNode?.parentNodeId;
+            if (!anchorLink || !parentNodeId || idsToDeleteSet.has(parentNodeId)) {
+              continue;
+            }
+
+            const parentNode = remainingNodesById[parentNodeId];
+            if (!parentNode) {
+              continue;
+            }
+
+            const cleanedContent = removeAnchorTagsForLink(parentNode.content, anchorLink);
+            if (cleanedContent === parentNode.content) {
+              continue;
+            }
+
+            remainingNodesById[parentNodeId] = {
+              ...parentNode,
+              content: cleanedContent,
+              title: deriveNodeTitleFromContent(cleanedContent),
+              updatedAt: new Date().toISOString()
+            };
+          }
+
           const nextActiveNodeId =
             state.activeNodeId && !idsToDeleteSet.has(state.activeNodeId)
               ? state.activeNodeId
@@ -203,6 +248,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               parentNodeId: null,
               title: deriveNodeTitleFromContent(content),
               content,
+              anchorLink: null,
               reveal: null,
               review: null,
               createdAt: timestamp,
@@ -213,7 +259,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         return nodeId;
       },
-      createHighlightNodeFromSelection: (parentNodeId, content) => {
+      createHighlightNodeFromSelection: (parentNodeId, content, anchorId) => {
         const normalizedContent = content.trim();
         if (!normalizedContent) {
           return null;
@@ -237,6 +283,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 parentNodeId,
                 title: deriveNodeTitleFromContent(normalizedContent),
                 content: normalizedContent,
+                anchorLink: anchorId ? { id: anchorId, kind: 'highlight' } : null,
                 reveal: null,
                 review: null,
                 createdAt: timestamp,
@@ -248,7 +295,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         return childNodeId;
       },
-      createQANodeFromSelection: (parentNodeId, promptContent, answerContent) => {
+      createQANodeFromSelection: (parentNodeId, promptContent, answerContent, anchorId) => {
         const normalizedPrompt = promptContent.trim();
         const normalizedAnswer = answerContent.trim();
         if (!normalizedPrompt || !normalizedAnswer) {
@@ -273,6 +320,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 parentNodeId,
                 title: deriveNodeTitleForCloze(normalizedPrompt, normalizedAnswer),
                 content: normalizedPrompt,
+                anchorLink: anchorId ? { id: anchorId, kind: 'cloze' } : null,
                 reveal: normalizedAnswer,
                 review: createDefaultReviewProfile(timestamp),
                 createdAt: timestamp,

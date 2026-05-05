@@ -106,3 +106,10 @@
 2. 交接文档存放路径：`.lab/agent/handoffs/YYYYMMDD-HHMM-<slug>.md`。
 3. 每次新增交接后，更新 `.lab/agent/handoffs/LATEST.md` 指向最新文件。
 4. 交接内容最少包含：`Goal`、`Current State`、`Key Decisions`、`Next Actions`、`Open Risks`。
+
+## “继续”对齐协议（强制）
+1. 当用户输入“继续”时，先读取 `.lab/agent/handoffs/LATEST.md` 与其指向交接文档。
+2. 紧接着必须核对最近提交记录（至少 `git log --oneline -n 20`），确认交接中的 `Next Actions` 是否已被后续提交覆盖。
+3. 在任何代码改动前，必须先向用户发送“准备实施清单”（本轮拟做 1 个最小任务 + 验收标准 + 不做项），等待用户确认对齐。
+4. 若用户未确认或提出修正，先更新清单再实施；禁止按旧理解直接开工。
+5. 仅在用户确认后进入实施与验证；实施后按 SOP 更新 `.lab/agent/iteration-log.md`。

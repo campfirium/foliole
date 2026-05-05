@@ -10,11 +10,17 @@ export interface NodeReviewProfile {
   lapses: number;
 }
 
+export interface NodeAnchorLink {
+  id: string;
+  kind: 'highlight' | 'cloze';
+}
+
 export interface Node {
   id: string;
   parentNodeId: string | null;
   title: string;
   content: string;
+  anchorLink?: NodeAnchorLink | null;
   reveal: string | null;
   review: NodeReviewProfile | null;
   createdAt: string;

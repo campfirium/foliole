@@ -108,10 +108,13 @@ export function App() {
     if (!payload) {
       return;
     }
-    createHighlightNodeFromSelection(payload.parentNodeId, payload.selectionText);
-    if (applySelectionMarkup(editorRef.current, 'highlight')) {
-      syncActiveNodeContentFromEditor();
+    const applied = applySelectionMarkup(editorRef.current, 'highlight', payload.anchorId);
+    if (!applied) {
+      closeContextMenu();
+      return;
     }
+    syncActiveNodeContentFromEditor();
+    createHighlightNodeFromSelection(payload.parentNodeId, payload.selectionText, payload.anchorId);
     closeContextMenu();
   };
 
@@ -120,10 +123,13 @@ export function App() {
     if (!payload) {
       return;
     }
-    const childNodeId = createQANodeFromSelection(payload.parentNodeId, payload.clozeContent, payload.selectionText);
-    if (childNodeId && applySelectionMarkup(editorRef.current, 'cloze')) {
-      syncActiveNodeContentFromEditor();
+    const applied = applySelectionMarkup(editorRef.current, 'cloze', payload.anchorId);
+    if (!applied) {
+      closeContextMenu();
+      return;
     }
+    syncActiveNodeContentFromEditor();
+    createQANodeFromSelection(payload.parentNodeId, payload.clozeContent, payload.selectionText, payload.anchorId);
     closeContextMenu();
   };
 
