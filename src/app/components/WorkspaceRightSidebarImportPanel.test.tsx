@@ -1,16 +1,59 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
-import { runRuntimeTextFileImport } from '../../shared/platform/importBridge';
+import { loadRuntimeImportOverview, runRuntimeTextFileImport } from '../../shared/platform/importBridge';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 import { resetFormalImportState } from '../hooks/useFormalImport';
 
 import { WorkspaceRightSidebarImportPanel } from './WorkspaceRightSidebarImportPanel';
 
 vi.mock('../../shared/platform/importBridge', () => ({
+  loadRuntimeImportOverview: vi.fn(),
   runRuntimeTextFileImport: vi.fn()
 }));
+
+const EMPTY_IMPORT_OVERVIEW = {
+  latestFailure: null,
+  latestResult: null,
+  recentRuns: []
+};
+
+const IMPORTED_RESULT = {
+  contentFingerprint: 'content-fingerprint',
+  degradedReason: null,
+  duplicateSemantic: 'new' as const,
+  failureReason: null,
+  importId: 'import-1',
+  importedAt: '2026-03-22T10:00:00.000Z',
+  nodeId: 'node-import-1',
+  provider: 'desktop_text_file' as const,
+  resultStatus: 'imported' as const,
+  sourceFingerprint: 'source-fingerprint',
+  sourceKind: 'markdown' as const,
+  sourceLocator: '/tmp/imported-note.md',
+  sourceName: 'imported-note.md'
+};
+
+const IMPORTED_OVERVIEW = {
+  latestFailure: {
+    contentFingerprint: 'failure-content-fingerprint',
+    degradedReason: null,
+    duplicateSemantic: 'new' as const,
+    failureReason: 'disk failed',
+    importId: 'import-2',
+    importedAt: '2026-03-22T11:00:00.000Z',
+    nodeId: null,
+    provider: 'desktop_text_file' as const,
+    resultStatus: 'failed' as const,
+    sourceFingerprint: 'failure-source-fingerprint',
+    sourceKind: 'markdown' as const,
+    sourceLocator: '/tmp/failed-note.md',
+    sourceName: 'failed-note.md'
+  },
+  latestResult: IMPORTED_RESULT,
+  recentRuns: [IMPORTED_RESULT]
+};
 
 function mockDesktopBridge() {
   const invoke = vi.fn(async (...args: unknown[]) => {
@@ -51,67 +94,67 @@ function mockDesktopBridge() {
   };
 }
 
-describe('WorkspaceRightSidebarImportPanel', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    resetFormalImportState();
-    mockDesktopBridge();
-    useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-03-22T08:00:00.000Z')));
+function getInboxChildren() {
+  return Object.values(useWorkspaceStore.getState().nodesById).filter((node) => node.parentNodeId === INBOX_NODE_ID);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetFormalImportState();
+  mockDesktopBridge();
+  vi.mocked(loadRuntimeImportOverview).mockResolvedValue(EMPTY_IMPORT_OVERVIEW);
+  useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-03-22T08:00:00.000Z')));
+});
+
+it('keeps quick capture and formal import visibly separated', async () => {
+  render(<WorkspaceRightSidebarImportPanel />);
+
+  await waitFor(() => {
+    expect(loadRuntimeImportOverview).toHaveBeenCalled();
   });
 
-  it('keeps quick capture and formal import visibly separated', () => {
-    render(<WorkspaceRightSidebarImportPanel />);
+  expect(screen.getByRole('heading', { name: 'Import entry points' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Quick capture' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Formal import' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Quick capture stays in editor' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Import Markdown / TXT file' })).toBeEnabled();
+});
 
-    expect(screen.getByRole('heading', { name: 'Import entry points' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Quick capture' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Formal import' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Quick capture stays in editor' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Import Markdown / TXT file' })).toBeEnabled();
+it('shows dedicated import status rows', async () => {
+  render(<WorkspaceRightSidebarImportPanel />);
+
+  await waitFor(() => {
+    expect(loadRuntimeImportOverview).toHaveBeenCalled();
   });
 
-  it('shows dedicated import status rows', () => {
-    render(<WorkspaceRightSidebarImportPanel />);
+  expect(screen.getByRole('heading', { name: 'Import status' })).toBeInTheDocument();
+  expect(screen.getByText('No imports yet')).toBeInTheDocument();
+  expect(screen.getByText('Imported files land as child nodes under Inbox')).toBeInTheDocument();
+  expect(screen.getByText('Nothing recorded')).toBeInTheDocument();
+  expect(screen.getByText('No import result recorded yet.')).toBeInTheDocument();
+  expect(screen.getByText('No failed import recorded.')).toBeInTheDocument();
+});
 
-    expect(screen.getByRole('heading', { name: 'Import status' })).toBeInTheDocument();
-    expect(screen.getByText('No imports yet')).toBeInTheDocument();
-    expect(screen.getByText('Imported files land as child nodes under Inbox')).toBeInTheDocument();
-    expect(screen.getByText('Nothing recorded')).toBeInTheDocument();
+it('imports the selected Markdown file into Inbox', async () => {
+  vi.mocked(runRuntimeTextFileImport).mockResolvedValue(IMPORTED_RESULT);
+  vi.mocked(loadRuntimeImportOverview)
+    .mockResolvedValueOnce(EMPTY_IMPORT_OVERVIEW)
+    .mockResolvedValueOnce(IMPORTED_OVERVIEW);
+
+  const initialInboxChildren = getInboxChildren();
+
+  render(<WorkspaceRightSidebarImportPanel />);
+  fireEvent.click(screen.getByRole('button', { name: 'Import Markdown / TXT file' }));
+
+  await waitFor(() => {
+    const inboxChildren = getInboxChildren();
+    expect(inboxChildren).toHaveLength(initialInboxChildren.length + 1);
+    expect(inboxChildren.some((node) => node.content === '# Imported note\nBody')).toBe(true);
   });
 
-  it('imports the selected Markdown file into Inbox', async () => {
-    vi.mocked(runRuntimeTextFileImport).mockResolvedValue({
-      contentFingerprint: 'content-fingerprint',
-      degradedReason: null,
-      duplicateSemantic: 'new',
-      failureReason: null,
-      importId: 'import-1',
-      importedAt: '2026-03-22T10:00:00.000Z',
-      nodeId: 'node-import-1',
-      provider: 'desktop_text_file',
-      resultStatus: 'imported',
-      sourceFingerprint: 'source-fingerprint',
-      sourceKind: 'markdown',
-      sourceLocator: '/tmp/imported-note.md',
-      sourceName: 'imported-note.md'
-    });
-
-    const initialInboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
-      (node) => node.parentNodeId === INBOX_NODE_ID
-    );
-
-    render(<WorkspaceRightSidebarImportPanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Import Markdown / TXT file' }));
-
-    await waitFor(() => {
-      const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
-        (node) => node.parentNodeId === INBOX_NODE_ID
-      );
-      expect(inboxChildren).toHaveLength(initialInboxChildren.length + 1);
-      expect(inboxChildren.some((node) => node.content === '# Imported note\nBody')).toBe(true);
-    });
-
-    expect(screen.getByText(/Imported imported-note\.md/)).toBeInTheDocument();
-    expect(screen.getByText('Inbox child created from imported-note.md')).toBeInTheDocument();
-    expect(screen.getByText('Nothing recorded')).toBeInTheDocument();
-  });
+  expect(screen.getAllByText(/Imported imported-note\.md/).length).toBeGreaterThan(0);
+  expect(screen.getByText('Inbox child created from imported-note.md')).toBeInTheDocument();
+  expect(screen.getByText('markdown · /tmp/imported-note.md')).toBeInTheDocument();
+  expect(screen.getByText('Failed failed-note.md')).toBeInTheDocument();
+  expect(screen.getByText('disk failed')).toBeInTheDocument();
 });

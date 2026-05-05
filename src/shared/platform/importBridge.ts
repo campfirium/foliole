@@ -9,7 +9,6 @@ export interface RuntimeImportedTextFile {
   content: string;
   kind: 'markdown' | 'text';
 }
-
 export interface RuntimeTextImportResult {
   contentFingerprint: string;
   degradedReason: string | null;
@@ -25,11 +24,14 @@ export interface RuntimeTextImportResult {
   sourceLocator: string;
   sourceName: string;
 }
-
+export interface RuntimeImportOverview {
+  latestFailure: RuntimeTextImportResult | null;
+  latestResult: RuntimeTextImportResult | null;
+  recentRuns: RuntimeTextImportResult[];
+}
 function isImportKind(value: unknown): value is RuntimeImportedTextFile['kind'] {
   return value === 'markdown' || value === 'text';
 }
-
 function toRuntimeImportedTextFile(value: unknown): RuntimeImportedTextFile | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
@@ -50,11 +52,9 @@ function toRuntimeImportedTextFile(value: unknown): RuntimeImportedTextFile | nu
     kind: payload.kind
   };
 }
-
 function isImportSemantic(value: unknown): value is RuntimeTextImportResult['duplicateSemantic'] {
   return value === 'new' || value === 'updated' || value === 'duplicate';
 }
-
 function isImportResultStatus(value: unknown): value is RuntimeTextImportResult['resultStatus'] {
   return value === 'imported' || value === 'degraded' || value === 'failed';
 }
@@ -95,6 +95,32 @@ function toRuntimeTextImportResult(value: unknown): RuntimeTextImportResult | nu
     sourceKind: payload.source_kind,
     sourceLocator: payload.source_locator,
     sourceName: payload.source_name
+  };
+}
+
+function toRuntimeImportOverview(value: unknown): RuntimeImportOverview | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const payload = value as Record<string, unknown>;
+  if (!Array.isArray(payload.recent_runs)) {
+    return null;
+  }
+  const recentRuns = payload.recent_runs.map(toRuntimeTextImportResult);
+  if (recentRuns.some((entry) => !entry)) {
+    return null;
+  }
+
+  const latestResult = payload.latest_result === null ? null : toRuntimeTextImportResult(payload.latest_result);
+  const latestFailure = payload.latest_failure === null ? null : toRuntimeTextImportResult(payload.latest_failure);
+  if ((payload.latest_result !== null && !latestResult) || (payload.latest_failure !== null && !latestFailure)) {
+    return null;
+  }
+
+  return {
+    latestFailure,
+    latestResult,
+    recentRuns: recentRuns.filter((entry): entry is RuntimeTextImportResult => Boolean(entry))
   };
 }
 
@@ -161,5 +187,34 @@ export async function runRuntimeTextFileImport(): Promise<RuntimeTextImportResul
       error
     });
     throw error;
+  }
+}
+
+export async function loadRuntimeImportOverview(): Promise<RuntimeImportOverview | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+
+  try {
+    const overview = toRuntimeImportOverview(await runtimeInvoke(NATIVE_COMMANDS.loadImportOverview));
+    if (!overview) {
+      logRuntimeWarning('native import overview payload invalid', {
+        action: 'load_runtime_import_overview',
+        area: 'bridge',
+        command: NATIVE_COMMANDS.loadImportOverview,
+        fallback: 'return_null'
+      });
+    }
+    return overview;
+  } catch (error) {
+    logRuntimeWarning('native import overview loading failed', {
+      action: 'load_runtime_import_overview',
+      area: 'bridge',
+      command: NATIVE_COMMANDS.loadImportOverview,
+      fallback: 'return_null',
+      error
+    });
+    return null;
   }
 }

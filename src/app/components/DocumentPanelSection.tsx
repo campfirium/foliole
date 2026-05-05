@@ -10,6 +10,7 @@ import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import { EditorContextMenu } from './EditorContextMenu';
+import { InboxImportLanding } from './InboxImportLanding';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 interface DocumentPanelSectionProps {
@@ -60,6 +61,9 @@ function resolveInboxEmptyState(activeNode: Node | undefined) {
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const inboxEmptyState = resolveInboxEmptyState(activeNode);
+  const inboxEmptyContent = inboxEmptyState ? (
+    <InboxImportLanding nodesById={props.nodesById} onSelectNode={props.onSelectNode} />
+  ) : undefined;
   const reveal = activeNode?.reveal ?? '';
   const hasAnswerSection = Boolean(
     !inboxEmptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && props.showAnswerSection
@@ -85,6 +89,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         <DocumentPanelBody
           editorAppearanceKey={props.editorAppearanceKey}
           editorContent={props.editorContent}
+          emptyContent={inboxEmptyContent}
           editorNodeId={props.editorNodeId}
           editorNodeViewState={props.editorNodeViewState}
           emptyState={inboxEmptyState}

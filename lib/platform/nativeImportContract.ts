@@ -20,3 +20,9 @@ export interface NativeTextImportResult {
   degraded_reason: string | null;
   failure_reason: string | null;
 }
+
+export interface NativeImportOverview {
+  latest_failure: NativeTextImportResult | null;
+  latest_result: NativeTextImportResult | null;
+  recent_runs: NativeTextImportResult[];
+}

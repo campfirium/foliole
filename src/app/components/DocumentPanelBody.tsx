@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
@@ -10,6 +10,7 @@ import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 interface DocumentPanelBodyProps {
   editorAppearanceKey: string;
   editorContent: string;
+  emptyContent?: ReactNode;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
   emptyState?: {
@@ -92,8 +93,12 @@ function AnswerSection({ editorAppearanceKey, editorNodeId, onAnswerChange, reve
 function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
   if (props.emptyState) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-8">
-        <AppEmptyState description={props.emptyState.description} title={props.emptyState.title} />
+      <div className="flex min-h-0 flex-1 px-6 py-8">
+        {props.emptyContent ?? (
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            <AppEmptyState description={props.emptyState.description} title={props.emptyState.title} />
+          </div>
+        )}
       </div>
     );
   }
@@ -133,6 +138,7 @@ function renderAnswerSection(props: DocumentPanelBodyProps) {
 export function DocumentPanelBody({
   editorAppearanceKey,
   editorContent,
+  emptyContent,
   editorNodeId,
   editorNodeViewState,
   emptyState,
@@ -149,6 +155,7 @@ export function DocumentPanelBody({
   const bodyProps = {
     editorAppearanceKey,
     editorContent,
+    emptyContent,
     editorNodeId,
     editorNodeViewState,
     emptyState,

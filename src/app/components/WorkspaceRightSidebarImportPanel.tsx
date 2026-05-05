@@ -1,6 +1,8 @@
 import { AppButton, AppStatusBadge, InspectorSection } from '../../shared/ui';
 import { useFormalImport } from '../hooks/useFormalImport';
 
+import { ImportRunSection } from './ImportOverviewSections';
+
 function EntryActionCard({
   title,
   description,
@@ -74,6 +76,16 @@ export function WorkspaceRightSidebarImportPanel() {
           ))}
         </dl>
       </InspectorSection>
+      <ImportRunSection
+        emptyLabel="No import result recorded yet."
+        entry={formalImport.overview.latestResult}
+        title="Latest result"
+      />
+      <ImportRunSection
+        emptyLabel="No failed import recorded."
+        entry={formalImport.overview.latestFailure}
+        title="Failure entry"
+      />
     </div>
   );
 }

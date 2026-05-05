@@ -1,7 +1,107 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { runRuntimeTextFileImport, selectRuntimeImportTextFile } from './importBridge';
+import { loadRuntimeImportOverview, runRuntimeTextFileImport, selectRuntimeImportTextFile } from './importBridge';
+
+const IMPORT_OVERVIEW_PAYLOAD = {
+  latest_failure: {
+    content_fingerprint: 'content-failure',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: 'disk failed',
+    import_id: 'import-2',
+    imported_at: '2026-03-22T11:00:00.000Z',
+    node_id: null,
+    provider: 'desktop_text_file',
+    result_status: 'failed',
+    source_fingerprint: 'source-fingerprint-2',
+    source_kind: 'markdown',
+    source_locator: '/tmp/failure.md',
+    source_name: 'failure.md'
+  },
+  latest_result: {
+    content_fingerprint: 'content-success',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-1',
+    imported_at: '2026-03-22T10:00:00.000Z',
+    node_id: 'node-1',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint-1',
+    source_kind: 'markdown',
+    source_locator: '/tmp/note.md',
+    source_name: 'note.md'
+  },
+  recent_runs: [
+    {
+      content_fingerprint: 'content-success',
+      degraded_reason: null,
+      duplicate_semantic: 'new',
+      failure_reason: null,
+      import_id: 'import-1',
+      imported_at: '2026-03-22T10:00:00.000Z',
+      node_id: 'node-1',
+      provider: 'desktop_text_file',
+      result_status: 'imported',
+      source_fingerprint: 'source-fingerprint-1',
+      source_kind: 'markdown',
+      source_locator: '/tmp/note.md',
+      source_name: 'note.md'
+    }
+  ]
+};
+
+const IMPORT_OVERVIEW_RESULT = {
+  latestFailure: {
+    contentFingerprint: 'content-failure',
+    degradedReason: null,
+    duplicateSemantic: 'new' as const,
+    failureReason: 'disk failed',
+    importId: 'import-2',
+    importedAt: '2026-03-22T11:00:00.000Z',
+    nodeId: null,
+    provider: 'desktop_text_file' as const,
+    resultStatus: 'failed' as const,
+    sourceFingerprint: 'source-fingerprint-2',
+    sourceKind: 'markdown' as const,
+    sourceLocator: '/tmp/failure.md',
+    sourceName: 'failure.md'
+  },
+  latestResult: {
+    contentFingerprint: 'content-success',
+    degradedReason: null,
+    duplicateSemantic: 'new' as const,
+    failureReason: null,
+    importId: 'import-1',
+    importedAt: '2026-03-22T10:00:00.000Z',
+    nodeId: 'node-1',
+    provider: 'desktop_text_file' as const,
+    resultStatus: 'imported' as const,
+    sourceFingerprint: 'source-fingerprint-1',
+    sourceKind: 'markdown' as const,
+    sourceLocator: '/tmp/note.md',
+    sourceName: 'note.md'
+  },
+  recentRuns: [
+    {
+      contentFingerprint: 'content-success',
+      degradedReason: null,
+      duplicateSemantic: 'new' as const,
+      failureReason: null,
+      importId: 'import-1',
+      importedAt: '2026-03-22T10:00:00.000Z',
+      nodeId: 'node-1',
+      provider: 'desktop_text_file' as const,
+      resultStatus: 'imported' as const,
+      sourceFingerprint: 'source-fingerprint-1',
+      sourceKind: 'markdown' as const,
+      sourceLocator: '/tmp/note.md',
+      sourceName: 'note.md'
+    }
+  ]
+};
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
@@ -85,4 +185,12 @@ it('returns null when the native import payload is malformed', async () => {
       fallback: 'return_null'
     })
   );
+});
+
+it('normalizes the persisted import overview payload', async () => {
+  const invoke = vi.fn().mockResolvedValue(IMPORT_OVERVIEW_PAYLOAD);
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(loadRuntimeImportOverview()).resolves.toEqual(IMPORT_OVERVIEW_RESULT);
+  expect(invoke).toHaveBeenCalledWith('load_import_overview');
 });
