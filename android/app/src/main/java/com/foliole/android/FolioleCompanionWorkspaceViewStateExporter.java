@@ -42,15 +42,14 @@ final class FolioleCompanionWorkspaceViewStateExporter {
     }
 
     private static Object fieldValue(Context context, JSONObject row, JSONObject field) throws Exception {
-        String rowKey = fieldRowKey(context, field);
         String type = fieldTypeKey(context, field);
-        if (fieldType(context, "string").equals(type)) return row.getString(rowKey);
-        if (fieldType(context, "nonNegativeLong").equals(type)) return Math.max(0, row.getLong(rowKey));
-        if (fieldType(context, "nullableNonNegativeLong").equals(type)) return row.isNull(rowKey) ? JSONObject.NULL : Math.max(0, row.getLong(rowKey));
+        if (fieldType(context, "string").equals(type)) return fieldRowString(context, row, field);
+        if (fieldType(context, "nonNegativeLong").equals(type)) return Math.max(0, fieldRowLong(context, row, field));
+        if (fieldType(context, "nullableNonNegativeLong").equals(type)) return fieldRowNullableNonNegativeLong(context, row, field);
         if (fieldType(context, "defaultedString").equals(type)) {
-            return row.isNull(rowKey)
+            return fieldRowNullableString(context, row, field) == null
                 ? FolioleCompanionWorkspaceReadQueryRules.viewStateString(context, fieldDefaultRuleKey(context, field))
-                : row.getString(rowKey);
+                : fieldRowString(context, row, field);
         }
         throw new IllegalStateException("Unsupported workspace view-state field type: " + type);
     }
@@ -63,8 +62,20 @@ final class FolioleCompanionWorkspaceViewStateExporter {
         return FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field);
     }
 
-    private static String fieldRowKey(Context context, JSONObject field) throws Exception {
-        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field);
+    private static long fieldRowLong(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowLong(context, row, field);
+    }
+
+    private static Object fieldRowNullableNonNegativeLong(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowNullableNonNegativeLong(context, row, field);
+    }
+
+    private static String fieldRowNullableString(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowNullableString(context, row, field);
+    }
+
+    private static String fieldRowString(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowString(context, row, field);
     }
 
     private static String fieldTypeKey(Context context, JSONObject field) throws Exception {

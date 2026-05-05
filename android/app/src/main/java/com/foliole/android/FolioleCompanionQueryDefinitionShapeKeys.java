@@ -43,8 +43,41 @@ final class FolioleCompanionQueryDefinitionShapeKeys {
         return field.getString(fieldKey(context, "rowKey"));
     }
 
+    static boolean fieldRowBooleanLong(Context context, JSONObject row, JSONObject field) throws Exception {
+        return fieldRowLong(context, row, field) == 1;
+    }
+
+    static double fieldRowDoubleOrDefault(Context context, JSONObject row, JSONObject field, double fallback) throws Exception {
+        return row.isNull(fieldRowKey(context, field)) ? fieldDefaultDouble(context, field, fallback) : fieldRowDouble(context, row, field);
+    }
+
+    static long fieldRowLong(Context context, JSONObject row, JSONObject field) throws Exception {
+        return row.getLong(fieldRowKey(context, field));
+    }
+
+    static long fieldRowLongOrDefault(Context context, JSONObject row, JSONObject field, long fallback) throws Exception {
+        return row.isNull(fieldRowKey(context, field)) ? fieldDefaultLong(context, field, fallback) : fieldRowLong(context, row, field);
+    }
+
+    static Object fieldRowNullableNonNegativeLong(Context context, JSONObject row, JSONObject field) throws Exception {
+        return row.isNull(fieldRowKey(context, field)) ? JSONObject.NULL : Math.max(0, fieldRowLong(context, row, field));
+    }
+
+    static String fieldRowNullableString(Context context, JSONObject row, JSONObject field) throws Exception {
+        String key = fieldRowKey(context, field);
+        return row.isNull(key) ? null : row.optString(key, null);
+    }
+
+    static String fieldRowString(Context context, JSONObject row, JSONObject field) throws Exception {
+        return row.getString(fieldRowKey(context, field));
+    }
+
     static String fieldTypeKey(Context context, JSONObject field) throws Exception {
         return field.getString(fieldKey(context, "type"));
+    }
+
+    private static double fieldRowDouble(Context context, JSONObject row, JSONObject field) throws Exception {
+        return row.getDouble(fieldRowKey(context, field));
     }
 
     static String fieldCollectionKey(Context context, String key) throws Exception {

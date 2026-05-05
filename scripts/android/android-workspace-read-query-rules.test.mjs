@@ -86,12 +86,16 @@ describe('Android workspace read query rules', () => {
     expect(rulesSource).toContain('snapshotShape(context, "nodePayload")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowString(context, row, field)');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowLong(context, row, field)');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "workspaceRead", groupName)');
     expect(combinedSource).not.toContain('field.getString("outputKey")');
     expect(combinedSource).not.toContain('field.getString("rowKey")');
     expect(combinedSource).not.toContain('field.getString("type")');
+    expect(combinedSource).not.toContain('row.getString(rowKey)');
+    expect(combinedSource).not.toContain('row.getLong(rowKey)');
     expect(combinedSource).not.toContain('rules.getString("bodyStatusOutputKey")');
     expect(combinedSource).not.toContain('snapshotObject(context, groupName).getString(key)');
     expect(combinedSource).not.toContain('outputKeys.getString("activeNodeId")');
