@@ -76,7 +76,7 @@ final class FolioleCompanionSyncObjectApply {
 
     private static JSONObject payload(JSONObject record) throws Exception {
         String payloadJson = record.optString("payload_json", "{}");
-        return payloadJson.trim().isEmpty() ? new JSONObject() : new JSONObject(payloadJson);
+        return payloadJson.trim().isEmpty() || payloadJson.trim().equals("null") ? new JSONObject() : new JSONObject(payloadJson);
     }
 
     private static void applyImportSource(SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
@@ -120,6 +120,21 @@ final class FolioleCompanionSyncObjectApply {
     }
 
     private static void applySetting(SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
+        if (!record.isNull("deleted_at")) {
+            String[] deletedParts = objectId.split(":", 5);
+            database.delete(
+                "setting_records",
+                "scope = ? AND platform = ? AND form_factor = ? AND device_id = ? AND key = ?",
+                new String[] {
+                    deletedParts.length > 0 ? deletedParts[0] : "device",
+                    deletedParts.length > 1 ? deletedParts[1] : "*",
+                    deletedParts.length > 2 ? deletedParts[2] : "*",
+                    deletedParts.length > 3 ? deletedParts[3] : "*",
+                    deletedParts.length > 4 ? deletedParts[4] : objectId
+                }
+            );
+            return;
+        }
         JSONObject payload = payload(record);
         String[] parts = objectId.split(":", 5);
         ContentValues values = new ContentValues();
