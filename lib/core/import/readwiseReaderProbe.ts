@@ -6,6 +6,13 @@ import {
   normalizeReadwiseText
 } from './readwiseReaderParsing.js';
 
+function selectPreviewHighlights(highlightBlocks: string[]) {
+  if (highlightBlocks.length <= 3) {
+    return highlightBlocks;
+  }
+  return [highlightBlocks[0], highlightBlocks[1], highlightBlocks.at(-1)].filter((value): value is string => Boolean(value));
+}
+
 function createSample(sourceName: string, highlightText: string, fullDocument: string): NativeReadwiseDetectionSample {
   const normalizedHighlight = normalizeReadwiseText(highlightText);
   const normalizedDocument = normalizeReadwiseText(fullDocument);
@@ -33,14 +40,14 @@ export function probeReadwiseArticleContent(input: {
 }): NativeReadwiseDetectionResult {
   const highlightBlocks = extractReadwiseSidecarHighlights(input.articleMarkdown, input).map((highlight) => highlight.text);
   const fullDocument = extractReadwiseFullDocument(input.fullDocumentMarkdown);
-  const samples = highlightBlocks
+  const samples = selectPreviewHighlights(highlightBlocks)
     .map((block) => createSample(input.sourceName, block, fullDocument))
-    .slice(0, 3);
   const matchedHighlightCount = samples.filter((sample) => sample.matched).length;
 
   if (samples.length === 0) {
     return {
       checkedSourceCount: 1,
+      detectedHighlightCount: 0,
       matchedHighlightCount: 0,
       message: 'No highlights were detected in the sampled article.',
       sampleCount: 0,
@@ -51,6 +58,7 @@ export function probeReadwiseArticleContent(input: {
 
   return {
     checkedSourceCount: 1,
+    detectedHighlightCount: highlightBlocks.length,
     matchedHighlightCount,
     message:
       matchedHighlightCount === samples.length

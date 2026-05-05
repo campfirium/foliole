@@ -25,6 +25,10 @@ async function createReadwiseSampleRoot() {
 This is the highlighted sentence.
 
 Another matching excerpt.
+
+Third highlight in the middle.
+
+Closing thought from the final highlight.
 `,
     'utf8'
   );
@@ -35,6 +39,8 @@ Another matching excerpt.
 
 ## Full Document
 This is the highlighted sentence. Another matching excerpt.
+
+Third highlight in the middle. Closing thought from the final highlight.
 `,
     'utf8'
   );
@@ -61,8 +67,10 @@ it('reads sampled article files and returns matched detection samples', async ()
 
   expect(result.success).toBe(true);
   expect(result.checkedSourceCount).toBe(1);
-  expect(result.samples[0]).toMatchObject({
-    matched: true,
-    sourceName: 'Sample Article'
-  });
+  expect(result.detectedHighlightCount).toBe(4);
+  expect(result.samples).toMatchObject([
+    { highlightText: 'This is the highlighted sentence.', matched: true, sourceName: 'Sample Article' },
+    { highlightText: 'Another matching excerpt.', matched: true, sourceName: 'Sample Article' },
+    { highlightText: 'Closing thought from the final highlight.', matched: true, sourceName: 'Sample Article' }
+  ]);
 });

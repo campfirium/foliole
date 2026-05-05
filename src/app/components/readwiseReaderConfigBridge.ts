@@ -12,6 +12,7 @@ export async function inspectReadwiseReaderSetup(input: {
   if (!runtimeInvoke) {
     return {
       checkedSourceCount: 0,
+      detectedHighlightCount: 0,
       matchedHighlightCount: 0,
       message: 'Readwise detection is only available in the desktop app.',
       sampleCount: 0,

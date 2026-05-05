@@ -37,9 +37,10 @@ function createMockElectronApi() {
       if (command === 'inspect_readwise_reader_setup') {
         return {
           checkedSourceCount: 1,
+          detectedHighlightCount: 4,
           matchedHighlightCount: 2,
           message: 'Checked 1 article sample successfully.',
-          sampleCount: 2,
+          sampleCount: 3,
           samples: [
             {
               excerpt: 'This is the highlighted sentence inside the article body.',
@@ -51,6 +52,12 @@ function createMockElectronApi() {
               excerpt: 'Another matching excerpt from the article body.',
               highlightText: 'matching excerpt',
               matched: true,
+              sourceName: 'Sample Article'
+            },
+            {
+              excerpt: 'Closing thought from the article body.',
+              highlightText: 'missing excerpt',
+              matched: false,
               sourceName: 'Sample Article'
             }
           ],
@@ -132,6 +139,9 @@ it('saves the readwise reader setup only after preview and enable', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
   expect(await screen.findByRole('heading', { name: 'Readwise preview' })).toBeInTheDocument();
   expect(await screen.findByText('Checked 1 article sample successfully.')).toBeInTheDocument();
+  expect(screen.getAllByText('Sample Article')).toHaveLength(1);
+  expect(screen.getByText('highlighted sentence', { selector: 'mark' })).toBeInTheDocument();
+  expect(screen.getByText('...')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
 
   await waitFor(() => {

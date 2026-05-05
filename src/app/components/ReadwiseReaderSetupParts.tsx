@@ -5,6 +5,7 @@ import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPort
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { formatReadwiseSourceLabel } from './importSourceWorkspaceModel';
 import { FolderButton, resolveFolderPathHint, resolveFolderPathLabel } from './ImportSourceWorkspaceTableParts';
+import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
 
 const readwiseFormRowClassName =
   'grid gap-3 rounded-lg border border-border bg-bg-panel px-3 py-3 md:grid-cols-[minmax(0,1fr)_340px] md:justify-between md:items-start';
@@ -157,6 +158,8 @@ export function ReadwisePreviewDialog(props: {
   result: NativeReadwiseDetectionResult | null;
 }) {
   const canEnable = Boolean(props.result?.success);
+  const previewSourceName = props.result?.samples[0]?.sourceName ?? 'Sample article';
+  const hasPreviewGap = Boolean(props.result && props.result.detectedHighlightCount > props.result.samples.length && props.result.samples.length >= 3);
 
   return (
     <AppDialog onOpenChange={(open) => !open && props.onCancel()} open={props.open}>
@@ -180,16 +183,9 @@ export function ReadwisePreviewDialog(props: {
                   <p className="mt-2 text-sm text-foreground/65">{props.result.message}</p>
                 </div>
               ) : null}
-              {props.result?.samples.map((sample, index) => (
-                <article className="rounded-lg border border-border bg-bg-elevated px-3 py-3" key={`${sample.sourceName}-${index}`}>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-foreground">{sample.sourceName}</p>
-                    <AppStatusBadge label={sample.matched ? 'Matched' : 'Missing'} tone={sample.matched ? 'success' : 'warning'} />
-                  </div>
-                  <p className="mt-2 text-sm text-foreground/80">{sample.highlightText}</p>
-                  <p className="mt-2 text-xs text-foreground/58">{sample.excerpt || 'No matching excerpt was found in the full document sample.'}</p>
-                </article>
-              ))}
+              {props.result?.samples.length ? (
+                <ReadwisePreviewSampleList hasGap={hasPreviewGap} samples={props.result.samples} sourceName={previewSourceName} />
+              ) : null}
             </div>
             <footer className="flex items-center justify-between gap-3 border-t border-border/70 px-5 py-4">
               <AppButton onClick={props.onCancel} variant="ghost">

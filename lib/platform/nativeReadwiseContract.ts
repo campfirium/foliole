@@ -7,6 +7,7 @@ export interface NativeReadwiseDetectionSample {
 
 export interface NativeReadwiseDetectionResult {
   checkedSourceCount: number;
+  detectedHighlightCount: number;
   matchedHighlightCount: number;
   message: string;
   sampleCount: number;

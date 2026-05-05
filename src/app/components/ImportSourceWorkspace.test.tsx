@@ -38,6 +38,7 @@ function createMockElectronApi() {
       if (command === 'inspect_readwise_reader_setup') {
         return {
           checkedSourceCount: 1,
+          detectedHighlightCount: 2,
           matchedHighlightCount: 2,
           message: 'Checked 1 article sample successfully.',
           sampleCount: 2,
