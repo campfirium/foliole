@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
+import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
+
 import {
   PdfDocumentErrorState,
   PdfDocumentViewportContent,
@@ -22,10 +24,10 @@ interface PdfDocumentViewportProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
-  pageJumpRequest: number | null;
+  pageJumpRequest: PdfJumpRequest | null;
   pdfSource: string;
   rotation: number;
-  setPageJumpRequest: (page: number | null) => void;
+  clearPageJumpRequest: (requestId: number) => void;
   setVisiblePage: (page: number) => void;
   totalPages: number | null;
   zoom: number;
@@ -47,7 +49,7 @@ export function PdfDocumentViewport({
   pageJumpRequest,
   pdfSource,
   rotation,
-  setPageJumpRequest,
+  clearPageJumpRequest,
   setVisiblePage,
   totalPages,
   zoom
@@ -55,7 +57,7 @@ export function PdfDocumentViewport({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
 
-  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, setPageJumpRequest);
+  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, clearPageJumpRequest);
   useViewportTransformAnchor(rotation, scrollContainerRef, zoom);
   const handleScroll = useVisiblePageSync(page, pageElementsRef, scrollContainerRef, setVisiblePage, totalPages);
 

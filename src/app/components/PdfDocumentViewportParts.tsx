@@ -3,6 +3,8 @@ import type { MutableRefObject } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { Document, Page } from 'react-pdf';
 
+import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
+
 import { PdfDocumentToolbar } from './PdfDocumentToolbar';
 
 const PDF_PAGE_MIN = 1;
@@ -10,17 +12,17 @@ const PDF_PAGE_MIN = 1;
 export type PdfPageElementsRef = MutableRefObject<Record<number, HTMLDivElement | null>>;
 
 export function usePageJumpEffect(
-  pageJumpRequest: number | null,
+  pageJumpRequest: PdfJumpRequest | null,
   pageElementsRef: PdfPageElementsRef,
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
-  setPageJumpRequest: (page: number | null) => void
+  onPageJumpHandled: (requestId: number) => void
 ) {
   useEffect(() => {
     if (!pageJumpRequest) {
       return;
     }
     const container = scrollContainerRef.current;
-    const target = pageElementsRef.current[pageJumpRequest];
+    const target = pageElementsRef.current[pageJumpRequest.page];
     if (!container || !target) {
       return;
     }
@@ -30,8 +32,8 @@ export function usePageJumpEffect(
     } else {
       container.scrollTop = top;
     }
-    setPageJumpRequest(null);
-  }, [pageJumpRequest, pageElementsRef, scrollContainerRef, setPageJumpRequest]);
+    onPageJumpHandled(pageJumpRequest.id);
+  }, [onPageJumpHandled, pageJumpRequest, pageElementsRef, scrollContainerRef]);
 }
 
 function resolveVisiblePage(container: HTMLDivElement, pageElementsRef: PdfPageElementsRef, totalPages: number) {
