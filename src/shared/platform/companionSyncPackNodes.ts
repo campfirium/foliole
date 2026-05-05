@@ -11,6 +11,28 @@ import {
 
 const INCOMING_PACK_ALIAS = 'inc';
 
+export interface CompanionSyncPackCursorStore {
+  loadCursor(): Promise<number | null>;
+  saveCursor(cursor: number | null): Promise<number | null>;
+}
+
+export async function applyCompanionSyncPackPathWithSharedCore(
+  args: { deviceId: string; packPath: string },
+  cursorStore: CompanionSyncPackCursorStore,
+  manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
+) {
+  const currentCursor = await cursorStore.loadCursor();
+  const result = await applyCompanionSyncPackNodesWithSharedCore({
+    currentCursor: currentCursor ?? 0,
+    deviceId: args.deviceId,
+    packPath: args.packPath
+  }, manager);
+  if (result.to_state_seq > (currentCursor ?? 0)) {
+    await cursorStore.saveCursor(result.to_state_seq);
+  }
+  return result;
+}
+
 export async function applyCompanionSyncPackNodesWithSharedCore(
   args: { currentCursor: number; deviceId: string; packPath: string },
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)

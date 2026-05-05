@@ -1,6 +1,9 @@
 import { expect, it, vi } from 'vitest';
 
-import { applyCompanionSyncPackNodesWithSharedCore } from './companionSyncPackNodes';
+import {
+  applyCompanionSyncPackNodesWithSharedCore,
+  applyCompanionSyncPackPathWithSharedCore
+} from './companionSyncPackNodes';
 
 it('attaches a sync pack before applying pack nodes through the shared core', async () => {
   const connection = createFakeConnection();
@@ -39,6 +42,32 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   );
   expect(connection.execute).toHaveBeenLastCalledWith('DETACH DATABASE inc', false);
   expect(connection.run).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO main.nodes'), [], false);
+});
+
+it('loads and advances the pack cursor around the shared core apply', async () => {
+  const connection = createFakeConnection();
+  const manager = {
+    createConnection: vi.fn(async () => connection),
+    isConnection: vi.fn(async () => ({ result: false })),
+    retrieveConnection: vi.fn()
+  };
+  const cursorStore = {
+    loadCursor: vi.fn(async () => 2),
+    saveCursor: vi.fn(async (cursor: number | null) => cursor)
+  };
+
+  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({ from_state_seq: 2, to_state_seq: 5 }) }] });
+
+  await expect(applyCompanionSyncPackPathWithSharedCore({
+    deviceId: 'android-device',
+    packPath: '/tmp/pack.db'
+  }, cursorStore, manager as never)).resolves.toMatchObject({
+    applied: true,
+    to_state_seq: 5
+  });
+
+  expect(cursorStore.loadCursor).toHaveBeenCalled();
+  expect(cursorStore.saveCursor).toHaveBeenCalledWith(5);
 });
 
 function createFakeConnection() {
