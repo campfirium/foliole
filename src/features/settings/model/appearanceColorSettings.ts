@@ -106,6 +106,28 @@ function deriveMutedForegroundRgb(fontRgb: string, mode: AppearanceResolvedColor
   return blendRgb(fontRgb, canvasRgb, mode === 'dark' ? 0.68 : 0.72);
 }
 
+function getSelectionSurfaceAlpha(mode: AppearanceResolvedColorMode) {
+  return mode === 'dark' ? 0.42 : 0.2;
+}
+
+function getTextSelectionBackgroundColor(selectionColor: string, mode: AppearanceResolvedColorMode) {
+  return mode === 'dark'
+    ? `color-mix(in srgb, ${selectionColor} 50%, rgb(var(--color-background)) 50%)`
+    : `rgb(var(--app-selection-color-rgb) / ${getSelectionSurfaceAlpha(mode)})`;
+}
+
+function getHighlightSurfaceAlpha(mode: AppearanceResolvedColorMode) {
+  return mode === 'dark' ? 0.28 : 0.34;
+}
+
+function getClozeSurfaceAlpha(mode: AppearanceResolvedColorMode) {
+  return mode === 'dark' ? 0.24 : 0.34;
+}
+
+function getSelectionForegroundColor(mode: AppearanceResolvedColorMode) {
+  return mode === 'dark' ? '#ffffff' : 'rgb(var(--color-foreground))';
+}
+
 export function getFontColorPreset(mode: AppearanceResolvedColorMode = 'light'): FontColorPreset {
   const raw = getWhitelistedLocalStorageItem(
     colorStorageKey(COLOR_STORAGE_KEYS.fontColor, COLOR_STORAGE_KEYS.fontColorDark, mode)
@@ -209,11 +231,14 @@ export function applyAppearanceColorSettings(root: HTMLElement, input: ApplyAppe
   root.style.setProperty('--app-accent-color-rgb', accentRgb);
   root.style.setProperty('--app-selection-color', normalizedSelectionColor);
   root.style.setProperty('--app-selection-color-rgb', selectionRgb);
-  root.style.setProperty('--app-selection-surface-color', `rgb(${selectionRgb} / 0.34)`);
+  root.style.setProperty('--app-text-selection-bg-color', getTextSelectionBackgroundColor(normalizedSelectionColor, input.mode));
+  root.style.setProperty('--app-text-selection-fg-color', getSelectionForegroundColor(input.mode));
+  root.style.setProperty('--app-selection-foreground-color', getSelectionForegroundColor(input.mode));
+  root.style.setProperty('--app-selection-surface-color', `rgb(${selectionRgb} / ${getSelectionSurfaceAlpha(input.mode)})`);
   root.style.setProperty('--app-highlight-color', normalizedHighlightColor);
   root.style.setProperty('--app-highlight-color-rgb', highlightRgb);
-  root.style.setProperty('--app-highlight-surface-color', `rgb(${highlightRgb} / 0.34)`);
+  root.style.setProperty('--app-highlight-surface-color', `rgb(${highlightRgb} / ${getHighlightSurfaceAlpha(input.mode)})`);
   root.style.setProperty('--app-cloze-color', normalizedClozeColor);
   root.style.setProperty('--app-cloze-color-rgb', clozeRgb);
-  root.style.setProperty('--app-cloze-surface-color', `rgb(${clozeRgb} / 0.34)`);
+  root.style.setProperty('--app-cloze-surface-color', `rgb(${clozeRgb} / ${getClozeSurfaceAlpha(input.mode)})`);
 }

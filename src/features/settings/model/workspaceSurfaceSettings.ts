@@ -74,6 +74,7 @@ const STORAGE_KEYS = {
 } as const;
 const WORKSPACE_FOLDER_TOPIC_DIVIDER_ROWS = ['titlebar', 'main', 'footer'] as const;
 const LIGHT_SURFACE_THRESHOLD = 62;
+const LIGHT_DIVIDER_SURFACE_THRESHOLD = 50;
 const LIGHT_SIDEBAR_PANEL_LIGHTNESS_OFFSET = -1;
 const LIGHT_SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET = 1;
 const DARK_SIDEBAR_PANEL_LIGHTNESS_OFFSET = 6;
@@ -179,6 +180,14 @@ function derivePanelSurfaceColor(color: string, lightOffset: number, darkOffset:
   return shiftSurfaceLightness(color, offset);
 }
 
+function deriveDividerMixTarget(color: string) {
+  const parsed = parseWorkspaceSurfaceColor(color);
+  if (!parsed) {
+    return 'black';
+  }
+  return workspaceSurfaceColorToHsl(parsed).l >= LIGHT_DIVIDER_SURFACE_THRESHOLD ? 'black' : 'white';
+}
+
 export function getWorkspaceSurfacePalette(mode: WorkspaceSurfaceColorMode = 'light') {
   return normalizePalette(parseStoredJson(getStorageKeys(mode).palette), mode);
 }
@@ -213,6 +222,10 @@ export function applyWorkspaceSurfaceSettings(
   WORKSPACE_SURFACE_REGION_IDS.forEach((regionId) => {
     const color = palette[assignments[regionId]] ?? palette[0];
     root.style.setProperty(`--workspace-region-${regionId}-bg`, color);
+    root.style.setProperty(
+      `--workspace-region-${regionId}-divider-mix-target`,
+      deriveDividerMixTarget(color)
+    );
     root.style.setProperty(
       `--workspace-region-${regionId}-scrollbar-thumb-color`,
       deriveScrollbarThumbColor(color)

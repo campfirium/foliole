@@ -34,7 +34,7 @@ export function AppBreadcrumb({
           return (
             <button
               aria-label="Expand breadcrumb path"
-              className="inline-block max-w-none border-0 bg-transparent p-0 text-sm font-normal leading-[1.25] text-[#7f8791] hover:text-[#5f6368]"
+              className="inline-block max-w-none border-0 bg-transparent p-0 text-sm font-normal leading-[1.25] text-foreground/45 hover:text-foreground/65"
               key={item.id}
               onClick={() => onExpandEllipsis?.(item.id)}
               type="button"
@@ -48,14 +48,14 @@ export function AppBreadcrumb({
           <span className="inline" key={item.id}>
             <button
               aria-current={isCurrent ? 'page' : undefined}
-              className="inline-block max-w-[18ch] overflow-hidden border-0 bg-transparent p-0 text-left align-baseline text-sm font-normal leading-[1.25] text-[#7f8791] text-ellipsis hover:text-[#5f6368] aria-[current=page]:max-w-[24ch] aria-[current=page]:cursor-default aria-[current=page]:font-normal aria-[current=page]:text-[#7f8791]"
+              className="inline-block max-w-[18ch] overflow-hidden border-0 bg-transparent p-0 text-left align-baseline text-sm font-normal leading-[1.25] text-foreground/45 text-ellipsis hover:text-foreground/65 aria-[current=page]:max-w-[24ch] aria-[current=page]:cursor-default aria-[current=page]:font-normal aria-[current=page]:text-foreground/45"
               onClick={() => onSelect(item.id)}
               type="button"
             >
               {item.label}
             </button>
             {!isLast ? (
-              <span aria-hidden="true" className="inline-flex select-none items-center px-1 text-sm font-normal leading-[1.25] text-[#a4aab1]">
+              <span aria-hidden="true" className="inline-flex select-none items-center px-1 text-sm font-normal leading-[1.25] text-foreground/30">
                 <span className="relative top-[-0.5px]">/</span>
               </span>
             ) : null}

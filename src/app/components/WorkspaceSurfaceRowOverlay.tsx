@@ -43,7 +43,8 @@ export function getWorkspaceSurfaceDividerColor(
   column: (typeof WORKSPACE_SURFACE_COLUMNS)[number]
 ) {
   const surface = getSurfaceColor(row, column);
-  return `color-mix(in oklab, ${surface} var(--workspace-divider-subtle-surface-weight), var(--workspace-divider-mix-target))`;
+  const mixTarget = `var(--workspace-region-${row}-${column}-divider-mix-target, var(--workspace-divider-mix-target))`;
+  return `color-mix(in oklab, ${surface} var(--workspace-divider-subtle-surface-weight), ${mixTarget})`;
 }
 
 export function WorkspaceSurfaceRowOverlay({ row }: { row: WorkspaceSurfaceOverlayRow }) {

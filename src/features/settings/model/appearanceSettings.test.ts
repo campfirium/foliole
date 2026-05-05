@@ -3,10 +3,13 @@ import { beforeEach, expect, it } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 
 import {
+  applyAppearanceColorSettings,
   DEFAULT_DARK_CLOZE_COLOR_PRESET,
   DEFAULT_DARK_FONT_COLOR_PRESET,
   DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET,
-  DEFAULT_DARK_SELECTION_COLOR_PRESET,
+  DEFAULT_DARK_SELECTION_COLOR_PRESET
+} from './appearanceColorSettings';
+import {
   getClozeColorPreset,
   getFontColorPreset,
   getCustomInterfaceFont,
@@ -59,4 +62,24 @@ it('uses dedicated dark defaults for reading colors', () => {
   expect(getSelectionColorPreset('dark')).toBe(DEFAULT_DARK_SELECTION_COLOR_PRESET);
   expect(getHighlightColorPreset('dark')).toBe(DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET);
   expect(getClozeColorPreset('dark')).toBe(DEFAULT_DARK_CLOZE_COLOR_PRESET);
+});
+
+it('applies mode-specific reading mark surface tokens', () => {
+  const root = document.documentElement;
+
+  applyAppearanceColorSettings(root, {
+    accentColor: '#7fb18d',
+    clozeColor: DEFAULT_DARK_CLOZE_COLOR_PRESET,
+    fontColor: DEFAULT_DARK_FONT_COLOR_PRESET,
+    highlightColor: DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET,
+    mode: 'dark',
+    selectionColor: DEFAULT_DARK_SELECTION_COLOR_PRESET
+  });
+
+  expect(root.style.getPropertyValue('--app-text-selection-bg-color')).toBe('color-mix(in srgb, #78a6ff 50%, rgb(var(--color-background)) 50%)');
+  expect(root.style.getPropertyValue('--app-text-selection-fg-color')).toBe('#ffffff');
+  expect(root.style.getPropertyValue('--app-selection-foreground-color')).toBe('#ffffff');
+  expect(root.style.getPropertyValue('--app-selection-surface-color')).toBe('rgb(120 166 255 / 0.42)');
+  expect(root.style.getPropertyValue('--app-highlight-surface-color')).toBe('rgb(92 200 243 / 0.28)');
+  expect(root.style.getPropertyValue('--app-cloze-surface-color')).toBe('rgb(225 193 90 / 0.24)');
 });

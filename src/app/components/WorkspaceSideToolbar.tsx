@@ -193,11 +193,8 @@ export function WorkspaceStudyDockTrigger({
 
   return (
     <div
-      className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center border-t"
-      style={{
-        backgroundColor: 'var(--workspace-region-footer-rail-bg)',
-        borderTopColor: getWorkspaceSurfaceDividerColor('footer', 'rail')
-      }}
+      className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center"
+      style={{ backgroundColor: 'var(--workspace-region-footer-rail-bg)' }}
     >
       <StudyAction
         canStartStudyMode={canStartStudyMode}

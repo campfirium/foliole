@@ -2,27 +2,20 @@ import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceStudyDockTrigger } from './WorkspaceSideToolbar';
-import {
-  WorkspaceFooterRowDividers,
-  WorkspaceSurfaceRowOverlay,
-  getWorkspaceSurfaceDividerColor
-} from './WorkspaceSurfaceRowOverlay';
+import { WorkspaceFooterRowDividers, WorkspaceSurfaceRowOverlay } from './WorkspaceSurfaceRowOverlay';
 
 function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayoutProps }) {
   return (
     <div
       className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
     >
-      <div
-        className="flex min-w-0 items-center border-t bg-transparent px-4 text-sm font-medium text-foreground/70 max-[1080px]:hidden"
-        style={{ borderTopColor: getWorkspaceSurfaceDividerColor('footer', 'folder') }}
-      >
+      <div className="flex min-w-0 items-center bg-transparent px-4 text-sm font-medium text-foreground/70 max-[1080px]:hidden">
         {Math.max(props.reviewQueueCount, 0)} left · {Math.max(props.reviewCompletedCount, 0)} done
       </div>
       <div aria-hidden="true" className="bg-transparent max-[1080px]:hidden" />
       <ReviewModeToolbar
-        className="h-full border-t bg-transparent px-6"
-        style={{ borderTopColor: getWorkspaceSurfaceDividerColor('footer', 'document') }}
+        className="h-full bg-transparent px-6"
+        style={{ borderTopColor: 'transparent' }}
         showSummary={false}
         isAnswerRevealed={props.isAnswerRevealed}
         isCurrentItemGradable={props.isCurrentReviewItemGradable}
@@ -41,11 +34,7 @@ function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayout
       {props.isImmersiveMode ? null : (
         <>
           <div aria-hidden="true" className="hidden bg-transparent xl:block" />
-          <div
-            aria-hidden="true"
-            className="hidden border-t bg-transparent xl:block"
-            style={{ borderTopColor: getWorkspaceSurfaceDividerColor('footer', 'sidebar') }}
-          />
+          <div aria-hidden="true" className="hidden bg-transparent xl:block" />
         </>
       )}
     </div>
@@ -62,7 +51,7 @@ export function WorkspaceBottomReviewToolbar({ props }: { props: WorkspaceLayout
       className={`${props.isImmersiveMode ? 'col-start-1' : 'col-span-2'} row-start-2 min-w-0`}
     >
       <div
-        className={`relative grid min-w-0 ${
+        className={`workspace-bottom-region-grid relative grid min-w-0 ${
           props.isImmersiveMode
             ? 'grid-cols-1'
             : '[grid-template-columns:var(--workspace-rail-width)_minmax(0,1fr)]'

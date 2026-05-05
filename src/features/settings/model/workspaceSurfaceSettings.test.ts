@@ -61,6 +61,63 @@ it('derives sidebar panel and scrollbar colors from the assigned workspace surfa
   expect(root.style.getPropertyValue('--workspace-region-main-sidebar-panel-elevated-bg')).toBe('#696969');
 });
 
+it('derives divider direction per workspace surface instead of per base theme', () => {
+  const root = document.documentElement;
+
+  applyWorkspaceSurfaceSettings(root, {
+    assignments: {
+      'titlebar-rail': 0,
+      'titlebar-folder': 1,
+      'titlebar-topic': 1,
+      'titlebar-document': 1,
+      'titlebar-sidebar': 1,
+      'main-rail': 0,
+      'main-folder': 1,
+      'main-topic': 1,
+      'main-document': 1,
+      'main-sidebar': 1,
+      'footer-rail': 0,
+      'footer-folder': 1,
+      'footer-topic': 1,
+      'footer-document': 1,
+      'footer-sidebar': 1
+    },
+    palette: ['#8b7b44', '#f3ecd8']
+  });
+
+  expect(root.style.getPropertyValue('--workspace-region-main-rail-divider-mix-target')).toBe('white');
+  expect(root.style.getPropertyValue('--workspace-region-main-folder-divider-mix-target')).toBe('black');
+  expect(root.style.getPropertyValue('--workspace-region-footer-rail-divider-mix-target')).toBe('white');
+});
+
+it('keeps medium warm surfaces in the light divider direction', () => {
+  const root = document.documentElement;
+
+  applyWorkspaceSurfaceSettings(root, {
+    assignments: {
+      'titlebar-rail': 0,
+      'titlebar-folder': 1,
+      'titlebar-topic': 1,
+      'titlebar-document': 1,
+      'titlebar-sidebar': 1,
+      'main-rail': 0,
+      'main-folder': 1,
+      'main-topic': 1,
+      'main-document': 1,
+      'main-sidebar': 1,
+      'footer-rail': 0,
+      'footer-folder': 1,
+      'footer-topic': 1,
+      'footer-document': 1,
+      'footer-sidebar': 1
+    },
+    palette: ['#b8aa79', '#f3ecd8']
+  });
+
+  expect(root.style.getPropertyValue('--workspace-region-main-rail-divider-mix-target')).toBe('black');
+  expect(root.style.getPropertyValue('--workspace-region-titlebar-rail-divider-mix-target')).toBe('black');
+});
+
 it('keeps light sidebar panels tinted instead of washing them to white', () => {
   const root = document.documentElement;
 

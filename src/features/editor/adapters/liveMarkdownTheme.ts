@@ -1,6 +1,6 @@
 import { EditorView } from '@codemirror/view';
 
-const SHARED_SELECTION_SURFACE_COLOR = 'var(--app-selection-surface-color)';
+const TEXT_SELECTION_BACKGROUND_COLOR = 'var(--app-text-selection-bg-color)';
 const SHARED_HIGHLIGHT_SURFACE_COLOR = 'var(--app-highlight-surface-color)';
 const SHARED_CLOZE_SURFACE_COLOR = 'var(--app-cloze-surface-color)';
 
@@ -163,11 +163,16 @@ export const liveMarkdownTheme = EditorView.theme({
     width: '3px'
   },
   '.cm-activeLine': { backgroundColor: 'transparent' },
-  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
-    backgroundColor: SHARED_SELECTION_SURFACE_COLOR,
+  '.cm-selectionBackground, & > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+    backgroundColor: TEXT_SELECTION_BACKGROUND_COLOR,
     borderRadius: '0.16rem'
   },
-  '&[data-paragraph-marker-active="true"] .cm-selectionBackground, &[data-paragraph-marker-active="true"].cm-focused .cm-selectionBackground, &[data-paragraph-marker-active="true"] ::selection': {
+  '.cm-content ::selection': {
+    backgroundColor: 'transparent',
+    color: 'inherit',
+    WebkitTextFillColor: 'inherit'
+  },
+  '&[data-paragraph-marker-active="true"] .cm-selectionBackground, &[data-paragraph-marker-active="true"].cm-focused .cm-selectionBackground, &[data-paragraph-marker-active="true"] .cm-content ::selection': {
     backgroundColor: 'transparent'
   }
 });
