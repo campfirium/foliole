@@ -5,6 +5,17 @@ import type { BrowserWindow } from 'electron';
 import { formatRuntimeDiagnosticsSnapshot, resolveRendererTargetUrl, type RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
 import { resolveRendererIndexPath } from './runtimePaths.js';
 
+export type StartupRendererView =
+  | {
+      kind: 'booting';
+    }
+  | {
+      errorSummary: string;
+      kind: 'startup-error';
+      logPath: string | null;
+      moduleLabel: string;
+    };
+
 function resolveRendererUrl() {
   return process.env.ELECTRON_RENDERER_URL ?? null;
 }
@@ -33,13 +44,55 @@ async function loadRendererUrlWithRetry(window: BrowserWindow, url: string, maxA
   throw lastError;
 }
 
-export async function loadRenderer(window: BrowserWindow, runtimeDir: string) {
+function appendStartupViewToUrl(url: string, startupView?: StartupRendererView | null) {
+  if (!startupView) {
+    return url;
+  }
+  const parsedUrl = new URL(url);
+  parsedUrl.searchParams.set('startupView', startupView.kind);
+  if (startupView.kind === 'startup-error') {
+    parsedUrl.searchParams.set('startupModule', startupView.moduleLabel);
+    parsedUrl.searchParams.set('startupError', startupView.errorSummary);
+    if (startupView.logPath) {
+      parsedUrl.searchParams.set('startupLogPath', startupView.logPath);
+    }
+  }
+  return parsedUrl.toString();
+}
+
+function toFileQuery(startupView?: StartupRendererView | null) {
+  if (!startupView) {
+    return undefined;
+  }
+  const query: Record<string, string> = {
+    startupView: startupView.kind
+  };
+  if (startupView.kind === 'startup-error') {
+    query.startupModule = startupView.moduleLabel;
+    query.startupError = startupView.errorSummary;
+    if (startupView.logPath) {
+      query.startupLogPath = startupView.logPath;
+    }
+  }
+  return query;
+}
+
+export async function loadRenderer(
+  window: BrowserWindow,
+  runtimeDir: string,
+  startupView?: StartupRendererView | null
+) {
   const devUrl = resolveRendererUrl();
   if (devUrl) {
-    await loadRendererUrlWithRetry(window, devUrl);
+    await loadRendererUrlWithRetry(window, appendStartupViewToUrl(devUrl, startupView));
     return;
   }
-  await window.loadFile(resolveRendererFilePath(runtimeDir));
+  const query = toFileQuery(startupView);
+  if (!query) {
+    await window.loadFile(resolveRendererFilePath(runtimeDir));
+    return;
+  }
+  await window.loadFile(resolveRendererFilePath(runtimeDir), { query });
 }
 
 function resolveActiveRendererUrl(window: BrowserWindow, runtimeDir: string) {

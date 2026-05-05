@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import '../app/styles.css';
+import { StartupErrorBoundary } from '../shared/ui/StartupErrorBoundary';
+
 import { CompanionApp } from './CompanionApp';
 
 const rootElement = document.getElementById('root');
@@ -12,6 +14,8 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <CompanionApp />
+    <StartupErrorBoundary moduleLabel="Companion renderer">
+      <CompanionApp />
+    </StartupErrorBoundary>
   </React.StrictMode>
 );

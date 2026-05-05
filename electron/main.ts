@@ -31,6 +31,7 @@ import { bindMenuToWindow } from './ipc/menu.js';
 import { loadWindowState } from './ipc/windowState.js';
 import { installMainLifecycle } from './mainLifecycle.js';
 import { bindWindowReadingProgressFlush } from './readingProgressWindowFlush.js';
+import type { StartupRendererView } from './rendererLoader.js';
 import {
   collectRuntimeDiagnosticsSnapshot,
   configureRuntimeAppIdentity,
@@ -98,7 +99,18 @@ function bindWindowIpc(window: ElectronBrowserWindow) {
   window.on('resize', publishResize);
 }
 
-async function createMainWindow() {
+async function loadRendererIntoWindow(window: ElectronBrowserWindow, startupView?: StartupRendererView | null) {
+  await appendBootEvent('renderer_load_start', {
+    startupView: startupView?.kind ?? 'workspace'
+  });
+  await loadMainWindowRenderer({ runtimeDiagnostics, runtimeDir: __dirname, startupView, window });
+  await appendBootEvent('renderer_load_complete', {
+    startupView: startupView?.kind ?? 'workspace',
+    url: window.webContents.getURL()
+  });
+}
+
+async function createMainWindow(startupView?: StartupRendererView | null) {
   await appendBootEvent('main_window_create_start');
   const restoredWindowState = await loadWindowState();
   await appendBootEvent('window_state_loaded', restoredWindowState);
@@ -133,11 +145,8 @@ async function createMainWindow() {
   bindWindowStatePersistence(window);
   bindMenuToWindow(window);
   bindWindowRuntimeDiagnostics(window);
-  await appendBootEvent('renderer_load_start');
-  await loadMainWindowRenderer({ runtimeDiagnostics, runtimeDir: __dirname, window });
-  await appendBootEvent('renderer_load_complete', {
-    url: window.webContents.getURL()
-  });
+  await loadRendererIntoWindow(window, startupView);
+  return window;
 }
 
 function installInvokeHandler() {
@@ -149,4 +158,9 @@ function installInvokeHandler() {
   );
 }
 
-installMainLifecycle({ createMainWindow, installInvokeHandler, runtimeMode });
+installMainLifecycle({
+  createMainWindow,
+  installInvokeHandler,
+  loadMainWindow: loadRendererIntoWindow,
+  runtimeMode
+});

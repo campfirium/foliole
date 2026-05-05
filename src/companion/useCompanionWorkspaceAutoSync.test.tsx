@@ -12,7 +12,10 @@ function createSyncState(endpointUrl: string | null) {
   };
 }
 
-async function renderAutoSyncHook(isNativeRuntime: boolean, endpointUrl = 'http://10.0.2.2:38641') {
+async function renderAutoSyncHook(
+  isNativeRuntime: boolean,
+  endpointUrl: string | null = 'http://10.0.2.2:38641'
+) {
   vi.doMock('../shared/platform/companionWorkspaceSyncBridge', () => ({
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
   }));

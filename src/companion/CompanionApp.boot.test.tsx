@@ -12,6 +12,10 @@ vi.mock('./useCompanionWorkspaceSync', () => ({
   useCompanionWorkspaceSync
 }));
 
+vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
+  SimplePdfDocument: () => <div>PDF original viewer</div>
+}));
+
 function mockCompanionWorkspaceSync() {
   useCompanionWorkspaceSync.mockReturnValue({
     bootstrapState: {
@@ -102,6 +106,8 @@ describe('CompanionApp bootstrap states', () => {
     render(<CompanionApp />);
 
     expect(screen.getByText('Companion bootstrap failed')).toBeInTheDocument();
+    expect(screen.getByText('Failed module: Companion bootstrap')).toBeInTheDocument();
     expect(screen.getByText('Native companion bootstrap returned an invalid payload.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 });

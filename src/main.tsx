@@ -13,8 +13,9 @@ import {
 import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
 import { installRendererErrorDiagnostics } from './shared/platform/rendererErrorDiagnostics';
 import { logRuntimeError } from './shared/platform/runtimeLogging';
+import { renderStartupBootView, renderStartupErrorView } from './shared/ui/StartupSurface';
 import { bootstrapApp } from './startupBootstrap';
-import { renderStartupErrorView } from './startupErrorView';
+import { createStartupErrorActions, resolveStartupView } from './startupViewMode';
 
 const ROOT_ID = 'root';
 
@@ -30,6 +31,48 @@ function renderStartupError(message: string) {
   }
 
   renderStartupErrorView(rootElement, message);
+}
+
+function renderStartupViewIfRequested() {
+  const startupView = resolveStartupView(window.location.search);
+  if (!startupView) {
+    return false;
+  }
+  const rootElement = document.getElementById(ROOT_ID);
+  if (!rootElement) {
+    renderStartupError('Missing #root element in index.html.');
+    return true;
+  }
+  registerBootDiagnostics();
+  reportRuntimeBootStage('startup_surface_render', { kind: startupView.kind });
+  if (startupView.kind === 'booting') {
+    renderStartupBootView(rootElement);
+    return true;
+  }
+  renderStartupErrorView(
+    rootElement,
+    {
+      logPath: startupView.logPath,
+      message: startupView.errorSummary,
+      moduleLabel: startupView.moduleLabel
+    },
+    createStartupErrorActions({
+      getRuntimeInvoke,
+      logPath: startupView.logPath,
+      reportActionFailure: (command, error) => {
+        reportRuntimeBootStage('startup_error_action_failed', {
+          command,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    })
+  );
+  reportRuntimeAppReady({
+    href: window.location.href,
+    readyState: document.readyState,
+    source: 'startup_error_surface'
+  });
+  return true;
 }
 
 function registerBootDiagnostics() {
@@ -103,10 +146,21 @@ async function mountApp() {
   reportRuntimeBootStage('boot_context', bootContext);
 
   const { App } = await import('./app/App');
+  const { StartupErrorBoundary } = await import('./shared/ui/StartupErrorBoundary');
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <App />
+      <StartupErrorBoundary
+        moduleLabel="Desktop renderer"
+        onError={(error, info) => {
+          reportRuntimeBootStage('renderer_error_boundary', {
+            componentStack: info.componentStack,
+            message: error.message
+          });
+        }}
+      >
+        <App />
+      </StartupErrorBoundary>
     </React.StrictMode>
   );
   reportRuntimeBootStage('react_render_committed');
@@ -150,10 +204,12 @@ async function reportDesktopBridgeReady() {
 
 installDesktopDebugProbe();
 installRendererErrorDiagnostics();
-bootstrapApp({
-  mountApp,
-  renderStartupError,
-  reportBootStage: reportRuntimeBootStage,
-  reportBridgeReady: reportDesktopBridgeReady,
-  syncAppSettings: syncAppSettingsWithRuntime
-});
+if (!renderStartupViewIfRequested()) {
+  bootstrapApp({
+    mountApp,
+    renderStartupError,
+    reportBootStage: reportRuntimeBootStage,
+    reportBridgeReady: reportDesktopBridgeReady,
+    syncAppSettings: syncAppSettingsWithRuntime
+  });
+}

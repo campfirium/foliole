@@ -15,8 +15,10 @@ import { loadReadwiseBooksInventory } from './import/readwiseBooksInventory.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { installAppMenu } from './ipc/menu.js';
+import { resolveAppPaths } from './ipc/paths.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
+import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, focusWindow, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
 import { runStartupTask } from './startupTasks.js';
@@ -26,8 +28,9 @@ import { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler, st
 const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
 
 interface MainLifecycleArgs {
-  createMainWindow: () => Promise<void>;
+  createMainWindow: (startupView?: StartupRendererView | null) => Promise<BrowserWindow>;
   installInvokeHandler: () => void;
+  loadMainWindow: (window: BrowserWindow, startupView?: StartupRendererView | null) => Promise<void>;
   runtimeMode: RuntimeMode;
 }
 
@@ -64,7 +67,7 @@ function installBeforeQuitLifecycle() {
   });
 }
 
-async function initializeRuntimeServices(args: MainLifecycleArgs) {
+async function initializeRuntimeServices() {
   await appendBootEvent('database_init_start');
   await appendBootEvent('database_initialize_call_start');
   initializeDatabase((stage, payload = null) => {
@@ -79,8 +82,48 @@ async function initializeRuntimeServices(args: MainLifecycleArgs) {
   await appendBootEvent('node_sync_flush_complete');
   await appendBootEvent('database_init_complete');
   registerAttachmentProtocol();
-  args.installInvokeHandler();
   installAppMenu();
+}
+
+function toStartupErrorSummary(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!message.trim()) {
+    return 'Unknown startup exception';
+  }
+  return message.trim().slice(0, 900);
+}
+
+function resolveStartupLogPath() {
+  try {
+    return resolveAppPaths().app_log_dir;
+  } catch {
+    return null;
+  }
+}
+
+function createStartupErrorView(error: unknown, moduleLabel: string): StartupRendererView {
+  return {
+    errorSummary: toStartupErrorSummary(error),
+    kind: 'startup-error',
+    logPath: resolveStartupLogPath(),
+    moduleLabel
+  };
+}
+
+async function loadStartupErrorSurface(args: {
+  error: unknown;
+  moduleLabel: string;
+  window: BrowserWindow;
+  loadMainWindow: MainLifecycleArgs['loadMainWindow'];
+}) {
+  appendMainProcessDiagnosticLog('startup_runtime_services_failed', { error: args.error });
+  await appendBootEvent('startup_runtime_services_failed', {
+    message: toStartupErrorSummary(args.error),
+    moduleLabel: args.moduleLabel
+  });
+  if (!args.window.isDestroyed()) {
+    await args.loadMainWindow(args.window, createStartupErrorView(args.error, args.moduleLabel));
+  }
 }
 
 async function startCompanionSyncIfEnabled() {
@@ -128,13 +171,34 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
   });
   app.whenReady().then(async () => {
     installAppProcessDiagnostics();
+    args.installInvokeHandler();
     await appendBootEvent('app_when_ready');
-    await initializeRuntimeServices(args);
-    installPairingFocusHandler();
-    await startCompanionSyncIfEnabled();
-    await args.createMainWindow();
-    await appendBootEvent('main_window_ready');
-    startFollowupTasks();
+    const mainWindow = await args.createMainWindow({ kind: 'booting' });
+    try {
+      await initializeRuntimeServices();
+    } catch (error) {
+      await loadStartupErrorSurface({
+        error,
+        loadMainWindow: args.loadMainWindow,
+        moduleLabel: 'Database migration',
+        window: mainWindow
+      });
+      return;
+    }
+    try {
+      installPairingFocusHandler();
+      await startCompanionSyncIfEnabled();
+      await args.loadMainWindow(mainWindow);
+      await appendBootEvent('main_window_ready');
+      startFollowupTasks();
+    } catch (error) {
+      await loadStartupErrorSurface({
+        error,
+        loadMainWindow: args.loadMainWindow,
+        moduleLabel: 'Startup services',
+        window: mainWindow
+      });
+    }
     app.on('activate', async () => {
       notifyExternalSearchUserActivity();
       if (BrowserWindow.getAllWindows().length === 0) await args.createMainWindow();

@@ -43,6 +43,18 @@ export {
   ReviewGradeActions
 } from './ReviewActionControls';
 export { AppStatusBadge } from './StatusBadge';
+export { StartupErrorBoundary } from './StartupErrorBoundary';
+export {
+  createStartupBootSurfaceModel,
+  createStartupErrorSurfaceModel,
+  renderStartupBootView,
+  renderStartupErrorView,
+  StartupSurface,
+  type StartupErrorActions,
+  type StartupErrorViewModel,
+  type StartupSurfaceAction,
+  type StartupSurfaceModel
+} from './StartupSurface';
 export { AppToolbar } from './Toolbar';
 export { ToolbarActionGroup } from './ToolbarActionGroup';
 export {
