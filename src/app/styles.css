@@ -129,9 +129,17 @@ body {
 
 .window-titlebar-leading-secondary {
   align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-width: 0;
+  padding-left: 10px;
+  width: 100%;
+}
+
+.window-titlebar-leading-actions {
+  align-items: center;
   display: inline-flex;
   gap: 6px;
-  padding-left: 10px;
 }
 
 .window-titlebar-leading-button {
@@ -191,6 +199,17 @@ body {
   min-width: 0;
   pointer-events: auto;
   -webkit-app-region: no-drag;
+}
+
+.window-titlebar-left-timestamp {
+  color: #9aa0a6;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  pointer-events: none;
+  padding-right: 14px;
+  user-select: none;
+  white-space: nowrap;
 }
 
 .window-titlebar-right-anchor-shell {

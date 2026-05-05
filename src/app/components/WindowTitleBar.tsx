@@ -1,5 +1,6 @@
 import { Copy, FileText, Minus, PanelLeft, PanelRight, Square, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { workspaceChangeTimestamp } from 'virtual:workspace-change-timestamp';
 
 import { useRuntimeAvailability } from '../../shared/platform/runtimeAvailability';
 import {
@@ -139,24 +140,29 @@ function WindowLeadingActions({
           <SidebarToggleButton active={!isListCollapsed} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
         </div>
         <div className="window-titlebar-leading-secondary">
-          <button
-            aria-label="Notes"
-            className="window-titlebar-leading-button"
-            data-active={!isTrashViewOpen}
-            onClick={onOpenNotesView}
-            type="button"
-          >
-            <FileText aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-          </button>
-          <button
-            aria-label="Trash"
-            className="window-titlebar-leading-button"
-            data-active={isTrashViewOpen}
-            onClick={onOpenTrashView}
-            type="button"
-          >
-            <Trash2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-          </button>
+          <div className="window-titlebar-leading-actions">
+            <button
+              aria-label="Notes"
+              className="window-titlebar-leading-button"
+              data-active={!isTrashViewOpen}
+              onClick={onOpenNotesView}
+              type="button"
+            >
+              <FileText aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+            </button>
+            <button
+              aria-label="Trash"
+              className="window-titlebar-leading-button"
+              data-active={isTrashViewOpen}
+              onClick={onOpenTrashView}
+              type="button"
+            >
+              <Trash2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+            </button>
+          </div>
+          <span aria-label="Current change timestamp" className="window-titlebar-left-timestamp">
+            {workspaceChangeTimestamp}
+          </span>
         </div>
       </div>
     </div>

@@ -49,7 +49,41 @@ beforeEach(() => {
   onMainWindowResized.mockClear();
 });
 
+function expectExpandedRightAnchorLayout(container: HTMLElement) {
+  const shell = container.querySelector('.window-titlebar-right-anchor-shell');
+  const toggleAction = container.querySelector('.window-titlebar-right-expanded-action');
+  const anchor = container.querySelector('.window-titlebar-right-zone');
+  const panelActions = container.querySelector('.window-titlebar-right-panel-actions');
+  expect(shell).not.toBeNull();
+  expect(toggleAction).not.toBeNull();
+  expect(anchor).not.toBeNull();
+  expect(panelActions).not.toBeNull();
+  if (!shell || !toggleAction || !anchor || !panelActions) {
+    throw new Error('right sidebar titlebar anchor should exist');
+  }
+  expect(shell.contains(toggleAction)).toBe(true);
+  expect(shell.contains(anchor)).toBe(true);
+  expect(anchor.contains(panelActions)).toBe(true);
+}
+
 describe('WindowTitleBar', () => {
+  it('renders the change timestamp to the left of the right-side divider', () => {
+    const { container } = renderTitleBar();
+
+    const leftZone = container.querySelector('.window-titlebar-left-zone[data-collapsed="false"]');
+    const actions = container.querySelector('.window-titlebar-leading-actions');
+    const timestamp = screen.getByLabelText('Current change timestamp');
+
+    expect(leftZone).not.toBeNull();
+    expect(actions).not.toBeNull();
+    if (!leftZone || !actions) {
+      throw new Error('expanded left titlebar zone should exist');
+    }
+    expect(leftZone).toContainElement(timestamp);
+    expect(timestamp.textContent).toMatch(/^\d{6}$/);
+    expect(actions.compareDocumentPosition(timestamp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('triggers desktop window controls from titlebar buttons', () => {
     const { container } = renderTitleBar();
 
@@ -98,24 +132,12 @@ describe('WindowTitleBar', () => {
     expect(screen.queryByRole('button', { name: 'Notes' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trash' })).not.toBeInTheDocument();
   });
+});
 
+describe('WindowTitleBar right sidebar anchor', () => {
   it('renders the expanded right sidebar toggle before the divider and the panel button inside the right zone', () => {
     const { container } = renderTitleBar({ isRightSidebarCollapsed: false });
-
-    const shell = container.querySelector('.window-titlebar-right-anchor-shell');
-    const toggleAction = container.querySelector('.window-titlebar-right-expanded-action');
-    const anchor = container.querySelector('.window-titlebar-right-zone');
-    const panelActions = container.querySelector('.window-titlebar-right-panel-actions');
-    expect(shell).not.toBeNull();
-    expect(toggleAction).not.toBeNull();
-    expect(anchor).not.toBeNull();
-    expect(panelActions).not.toBeNull();
-    if (!shell || !toggleAction || !anchor || !panelActions) {
-      throw new Error('right sidebar titlebar anchor should exist');
-    }
-    expect(shell.contains(toggleAction)).toBe(true);
-    expect(shell.contains(anchor)).toBe(true);
-    expect(anchor.contains(panelActions)).toBe(true);
+    expectExpandedRightAnchorLayout(container);
     expect(screen.getByRole('button', { name: 'Review queue panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
   });
