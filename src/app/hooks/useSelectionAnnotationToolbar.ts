@@ -5,11 +5,11 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { getSelectionCommandPayload } from '../contextCommands';
 
-import { findHighlightAtPosition } from './selectionHighlightToggleSupport';
+import { findTextAnchorAtPosition } from './selectionHighlightToggleSupport';
 import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
 
 const ACTIVE_HIGHLIGHT_CLASS = 'cm-md-highlight-active';
-const HIGHLIGHT_TARGET_SELECTOR = '.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-anchor-overlap';
+const HIGHLIGHT_TARGET_SELECTOR = '.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-cloze, .cm-md-anchor-overlap';
 const EDITOR_TARGET_SELECTOR = '.cm-editor';
 
 function getHighlightElement(target: EventTarget | null) {
@@ -75,7 +75,7 @@ function createAnnotationToolbarMouseDownHandler(args: SelectionAnnotationToolba
 function openExistingHighlightToolbar(args: SelectionAnnotationToolbarArgs, event: MouseEvent) {
   const cursor = args.editorRef.current?.getSelection();
   const highlightMatch = cursor && isHighlightTarget(event.target)
-    ? findHighlightAtPosition(args.activeNodeId ?? '', args.nodesById, cursor.from, args.trashedNodeIds)
+    ? findTextAnchorAtPosition(args.activeNodeId ?? '', args.nodesById, cursor.from, args.trashedNodeIds)
     : null;
   if (!highlightMatch) {
     return;

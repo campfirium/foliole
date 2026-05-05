@@ -10,6 +10,7 @@ export type NormalizedSelection = {
 };
 
 export type LocatorHighlightMatch = {
+  kind: 'cloze' | 'highlight';
   originalText: string;
   nodeId: string;
 };
@@ -58,10 +59,10 @@ export function findExactLocatorHighlight(
   if (!matchingNode || !matchingNode.anchorLink || !isTextAnchorLocator(matchingNode.anchorLink.locator)) {
     return null;
   }
-  return { nodeId: matchingNode.id, originalText: matchingNode.anchorLink.locator.originalText };
+  return { kind: 'highlight', nodeId: matchingNode.id, originalText: matchingNode.anchorLink.locator.originalText };
 }
 
-export function findHighlightAtPosition(
+export function findTextAnchorAtPosition(
   activeNodeId: string,
   nodesById: Record<string, Node>,
   position: number,
@@ -72,13 +73,13 @@ export function findHighlightAtPosition(
     if (
       node.parentNodeId !== activeNodeId ||
       trashedNodeIdSet.has(node.id) ||
-      node.anchorLink?.kind !== 'highlight'
+      (node.anchorLink?.kind !== 'highlight' && node.anchorLink?.kind !== 'cloze')
     ) {
       return [];
     }
     return getTextAnchorLocators(node.anchorLink.locator)
       .filter((locator) => locator.from <= position && position < locator.to)
-      .map((locator) => ({ nodeId: node.id, originalText: locator.originalText }));
+      .map((locator) => ({ kind: node.anchorLink?.kind ?? 'highlight', nodeId: node.id, originalText: locator.originalText }));
   });
   return matches.length === 1 ? matches[0] ?? null : null;
 }
