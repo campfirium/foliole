@@ -243,7 +243,7 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     private static JSONObject pairingSignatureObject(Context context, String objectName) throws Exception {
-        JSONObject object = section(context, "pairingPlugin").getJSONObject("signature").optJSONObject(objectName);
+        JSONObject object = object(context, "pairingPlugin", "signature").optJSONObject(objectName);
         if (object == null) {
             throw new IllegalStateException("Companion bridge contract asset is missing object: pairingPlugin.signature." + objectName);
         }
@@ -259,8 +259,8 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     private static String string(Context context, String sectionName, String objectName, String key) throws Exception {
-        JSONObject object = section(context, sectionName).optJSONObject(objectName);
-        if (object == null || !object.has(key)) {
+        JSONObject object = object(context, sectionName, objectName);
+        if (!object.has(key)) {
             throw new IllegalStateException(
                 "Companion bridge contract asset is missing key: " + sectionName + "." + objectName + "." + key
             );
@@ -268,8 +268,16 @@ final class FolioleCompanionBridgeContractDefinitions {
         return object.getString(key);
     }
 
+    private static JSONObject object(Context context, String sectionName, String objectName) throws Exception {
+        JSONObject object = section(context, sectionName).optJSONObject(objectName);
+        if (object == null) {
+            throw new IllegalStateException("Companion bridge contract asset is missing object: " + sectionName + "." + objectName);
+        }
+        return object;
+    }
+
     private static int intValue(Context context, String sectionName, String objectName, String key) throws Exception {
-        return section(context, sectionName).getJSONObject(objectName).getInt(key);
+        return object(context, sectionName, objectName).getInt(key);
     }
 
     private static JSONObject definitions(Context context) throws Exception {
