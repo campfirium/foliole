@@ -1,9 +1,34 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimeTextImportResult } from '../../shared/platform/importBridge';
+import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
 import { AppButton, AppStatusBadge, InspectorSection } from '../../shared/ui';
 
 function formatImportTime(timestamp: string) {
   return timestamp.replace('T', ' ').slice(0, 16);
+}
+
+function formatReadwiseAnnotationStatus(annotationStatus: RuntimeReadwiseBooksInventory['books'][number]['annotationStatus']) {
+  return annotationStatus === 'has_highlights' ? 'Has highlights' : 'No highlights';
+}
+
+function formatReadwiseEpubStatus(epubStatus: RuntimeReadwiseBooksInventory['books'][number]['epubStatus']) {
+  return epubStatus === 'received' ? 'EPUB received' : 'EPUB missing';
+}
+
+function formatReadwiseNodeStatus(nodeStatus: RuntimeReadwiseBooksInventory['books'][number]['nodeStatus']) {
+  return nodeStatus === 'generated' ? 'Node ready' : 'Node missing';
+}
+
+function resolveReadwiseAnnotationTone(annotationStatus: RuntimeReadwiseBooksInventory['books'][number]['annotationStatus']) {
+  return annotationStatus === 'has_highlights' ? ('success' as const) : ('neutral' as const);
+}
+
+function resolveReadwiseEpubTone(epubStatus: RuntimeReadwiseBooksInventory['books'][number]['epubStatus']) {
+  return epubStatus === 'received' ? ('success' as const) : ('warning' as const);
+}
+
+function resolveReadwiseNodeTone(nodeStatus: RuntimeReadwiseBooksInventory['books'][number]['nodeStatus']) {
+  return nodeStatus === 'generated' ? ('info' as const) : ('warning' as const);
 }
 
 function formatImportOutcome(entry: RuntimeTextImportResult) {
@@ -133,6 +158,42 @@ export function InboxImportedNodesSection({
         </div>
       ) : (
         <p className="text-sm text-foreground/65">No imported Inbox children yet.</p>
+      )}
+    </InspectorSection>
+  );
+}
+
+export function ReadwiseBooksInventorySection({ inventory }: { inventory: RuntimeReadwiseBooksInventory | null }) {
+  const books = inventory?.books ?? [];
+  const description = inventory
+    ? `${books.length} books · scanned ${formatImportTime(inventory.scannedAt)}`
+    : 'Shared books list is not available yet.';
+
+  return (
+    <InspectorSection description={description} title="Books inventory">
+      {books.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {books.map((book) => (
+            <div className="rounded-lg border border-border bg-bg-panel px-3 py-3" key={book.bookKey}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{book.title}</p>
+                  <p className="mt-1 break-all text-xs text-foreground/50">{book.bookKey}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <AppStatusBadge
+                  label={formatReadwiseAnnotationStatus(book.annotationStatus)}
+                  tone={resolveReadwiseAnnotationTone(book.annotationStatus)}
+                />
+                <AppStatusBadge label={formatReadwiseNodeStatus(book.nodeStatus)} tone={resolveReadwiseNodeTone(book.nodeStatus)} />
+                <AppStatusBadge label={formatReadwiseEpubStatus(book.epubStatus)} tone={resolveReadwiseEpubTone(book.epubStatus)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-foreground/65">No books discovered yet.</p>
       )}
     </InspectorSection>
   );
