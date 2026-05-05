@@ -109,13 +109,19 @@ vi.mock('./markdownInputAssist', () => ({
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 import { shouldRefreshLineDecorations } from './liveMarkdownViewport';
 
+function resetEditorMocks() {
+  mockDrawSelection.mockClear();
+  mockCompartmentReconfigure.mockClear();
+  mockScrollIntoView.mockClear();
+  mockEditorStateCreate.mockClear();
+  mockEditorView.mockClear();
+  mockReadOnlyOf.mockClear();
+  mockEditableOf.mockClear();
+}
+
 describe('CodeMirrorEditorAdapter', () => {
   beforeEach(() => {
-    mockDrawSelection.mockClear();
-    mockCompartmentReconfigure.mockClear();
-    mockScrollIntoView.mockClear();
-    mockEditorStateCreate.mockClear();
-    mockEditorView.mockClear();
+    resetEditorMocks();
   });
 
   it('enables drawn selection so selection highlight stays visible outside native focus', () => {
@@ -126,6 +132,16 @@ describe('CodeMirrorEditorAdapter', () => {
     expect(mockDrawSelection).toHaveBeenCalledTimes(1);
     const extensions = mockEditorStateCreate.mock.calls[0]?.[0]?.extensions;
     expect(extensions).toContain('draw-selection-extension');
+  });
+
+  it('keeps read-only editors selectable so comparison panes can copy text', () => {
+    new CodeMirrorEditorAdapter(document.createElement('div'), {
+      initialContent: 'abc',
+      readOnly: true
+    });
+
+    expect(mockReadOnlyOf).toHaveBeenCalledWith(true);
+    expect(mockEditableOf).toHaveBeenCalledWith(true);
   });
 
   it('can reveal a document position without changing selection', () => {

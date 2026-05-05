@@ -37,7 +37,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorState.readOnly.of(options.readOnly === true),
-          EditorView.editable.of(options.readOnly !== true),
+          // Keep the DOM selectable even in read-only panes so users can copy text from comparison views.
+          EditorView.editable.of(true),
           drawSelection(),
           EditorView.lineWrapping,
           highlightActiveLine(),
