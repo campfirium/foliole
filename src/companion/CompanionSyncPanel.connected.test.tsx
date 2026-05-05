@@ -49,158 +49,132 @@ function createConnectedProps() {
   };
 }
 
+function completedEvent() {
+  return {
+    endpoint_url: 'http://10.0.2.2:38641',
+    id: 'completed-event',
+    message: 'Auto sync completed.',
+    occurred_at: '2026-04-29T02:24:44.000Z',
+    status: 'completed' as const
+  };
+}
+
+function failedEvent() {
+  return {
+    endpoint_url: 'http://10.0.2.2:38641',
+    id: 'failed-event',
+    message: 'Desktop sync timed out while fetching content blobs.',
+    occurred_at: '2026-04-29T02:18:33.000Z',
+    status: 'failed' as const
+  };
+}
+
+function backlogEvent() {
+  return {
+    endpoint_url: 'http://10.0.2.2:38641',
+    id: 'backlog-event',
+    message: 'Some topic bodies are still being cached.',
+    occurred_at: '2026-04-29T02:24:44.000Z',
+    status: 'skipped' as const
+  };
+}
+
+function testShowsPairedState() {
+  render(<CompanionSyncPanel {...createConnectedProps()} />);
+
+  expect(screen.getByText('Last sync')).toBeInTheDocument();
+  expect(screen.getByText('Handoff reminders')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
+}
+
+function testShowsPendingSyncConflicts() {
+  render(<CompanionSyncPanel {...createConnectedProps()} syncConflictCount={2} />);
+
+  expect(screen.getByText('Issues to resolve')).toBeInTheDocument();
+  expect(screen.getByText('2')).toBeInTheDocument();
+}
+
+function testSeparatesConnectionFromActivity() {
+  const props = createConnectedProps();
+  render(
+    <CompanionSyncPanel
+      {...props}
+      lastSyncedAt="2026-04-29T02:24:44.000Z"
+      pairingState={{ ...props.pairingState, device_name: 'Android Emulator' }}
+      syncEvents={[completedEvent(), failedEvent()]}
+    />
+  );
+
+  expect(screen.getByText('Last sync')).toBeInTheDocument();
+  expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+  screen.getByRole('button', { name: /Activity/ }).click();
+  expect(props.onOpenSettingsPage).toHaveBeenCalledWith('syncActivity');
+}
+
+function testManualPassIsNotAutomatic() {
+  render(
+    <CompanionSyncPanel
+      {...createConnectedProps()}
+      lastSyncedAt="2026-04-29T02:24:44.000Z"
+      syncEvents={[{
+        endpoint_url: 'http://10.0.2.2:38641',
+        id: 'manual-completed-event',
+        message: 'Sync completed.',
+        occurred_at: '2026-04-29T02:24:44.000Z',
+        status: 'completed'
+      }]}
+    />
+  );
+
+  expect(screen.getByText('Finished pass')).toBeInTheDocument();
+  expect(screen.queryByText('Finished automatic pass')).not.toBeInTheDocument();
+}
+
+function testOlderFailuresAreNeutralAfterCompletedPass() {
+  render(
+    <CompanionSyncPanel
+      {...createConnectedProps()}
+      page="syncActivity"
+      syncEvents={[completedEvent(), failedEvent()]}
+    />
+  );
+
+  expect(screen.getByText('Finished automatic pass')).toBeInTheDocument();
+  const oldFailure = screen.getByText('Earlier sync attempt did not complete');
+  expect(oldFailure).toBeInTheDocument();
+  expect(oldFailure.className).not.toContain('text-error');
+}
+
+function testHealthyBacklogPassAvoidsStrictCompletion() {
+  render(<CompanionSyncPanel {...createConnectedProps()} syncEvents={[backlogEvent()]} />);
+
+  expect(screen.getByText('Last sync')).toBeInTheDocument();
+  expect(screen.getByText('Some topic bodies are still being cached.')).toBeInTheDocument();
+  expect(screen.queryByText('No finished sync pass yet')).not.toBeInTheDocument();
+  expect(screen.queryByText('Finished automatic pass')).not.toBeInTheDocument();
+}
+
+function testOlderFailuresAreNeutralAfterBacklogPass() {
+  render(
+    <CompanionSyncPanel
+      {...createConnectedProps()}
+      page="syncActivity"
+      syncEvents={[backlogEvent(), failedEvent()]}
+    />
+  );
+
+  expect(screen.getByText('Some topic bodies are still being cached.')).toBeInTheDocument();
+  const oldFailure = screen.getByText('Earlier sync attempt did not complete');
+  expect(oldFailure).toBeInTheDocument();
+  expect(oldFailure.className).not.toContain('text-error');
+}
+
 describe('CompanionSyncPanel connected state', () => {
-  it('shows a paired state without setup controls', () => {
-    render(<CompanionSyncPanel {...createConnectedProps()} />);
-
-    expect(screen.getByText('Last sync')).toBeInTheDocument();
-    expect(screen.getByText('Handoff reminders')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
-  });
-
-  it('shows pending sync conflicts when the local database has them', () => {
-    render(<CompanionSyncPanel {...createConnectedProps()} syncConflictCount={2} />);
-
-    expect(screen.getByText('Issues to resolve')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-  });
-
-  it('separates the current connection state from older sync activity', () => {
-    const props = createConnectedProps();
-    render(
-      <CompanionSyncPanel
-        {...props}
-        lastSyncedAt="2026-04-29T02:24:44.000Z"
-        pairingState={{
-          ...props.pairingState,
-          device_name: 'Android Emulator'
-        }}
-        syncEvents={[
-          {
-            endpoint_url: 'http://10.0.2.2:38641',
-            id: 'completed-event',
-            message: 'Auto sync completed.',
-            occurred_at: '2026-04-29T02:24:44.000Z',
-            status: 'completed'
-          },
-          {
-            endpoint_url: 'http://10.0.2.2:38641',
-            id: 'failed-event',
-            message: 'Desktop sync timed out while fetching content blobs.',
-            occurred_at: '2026-04-29T02:18:33.000Z',
-            status: 'failed'
-          }
-        ]}
-      />
-    );
-
-    expect(screen.getByText('Last sync')).toBeInTheDocument();
-    expect(screen.queryByText('Synced')).not.toBeInTheDocument();
-    screen.getByRole('button', { name: /Activity/ }).click();
-    expect(props.onOpenSettingsPage).toHaveBeenCalledWith('syncActivity');
-  });
-
-  it('does not call manual sync completion automatic', () => {
-    render(
-      <CompanionSyncPanel
-        {...createConnectedProps()}
-        lastSyncedAt="2026-04-29T02:24:44.000Z"
-        syncEvents={[
-          {
-            endpoint_url: 'http://10.0.2.2:38641',
-            id: 'manual-completed-event',
-            message: 'Sync completed.',
-            occurred_at: '2026-04-29T02:24:44.000Z',
-            status: 'completed'
-          }
-        ]}
-      />
-    );
-
-    expect(screen.getByText('Completed')).toBeInTheDocument();
-    expect(screen.queryByText('Completed automatically')).not.toBeInTheDocument();
-  });
-
-  it('shows older failures as neutral history after a later completed sync', () => {
-    const props = createConnectedProps();
-    render(
-      <CompanionSyncPanel
-        {...props}
-        page="syncActivity"
-        syncEvents={[
-          {
-            endpoint_url: 'http://10.0.2.2:38641',
-            id: 'completed-event',
-            message: 'Auto sync completed.',
-            occurred_at: '2026-04-29T02:24:44.000Z',
-            status: 'completed'
-          },
-          {
-            endpoint_url: 'http://10.0.2.2:38641',
-            id: 'failed-event',
-            message: 'Desktop sync timed out while fetching content blobs.',
-            occurred_at: '2026-04-29T02:18:33.000Z',
-            status: 'failed'
-          }
-        ]}
-      />
-    );
-
-    expect(screen.getByText('Completed auto sync')).toBeInTheDocument();
-    const oldFailure = screen.getByText('Earlier sync attempt did not complete');
-    expect(oldFailure).toBeInTheDocument();
-    expect(oldFailure.className).not.toContain('text-error');
-  });
-
-  it('shows a healthy backlog sync pass without claiming strict completion', () => {
-    render(
-      <CompanionSyncPanel
-        {...createConnectedProps()}
-        syncEvents={[
-          {
-            endpoint_url: 'http://10.0.2.2:38641',
-            id: 'backlog-event',
-            message: 'Some topic bodies are still being cached.',
-            occurred_at: '2026-04-29T02:24:44.000Z',
-            status: 'skipped'
-          }
-        ]}
-      />
-    );
-
-    expect(screen.getByText('Last sync')).toBeInTheDocument();
-    expect(screen.getByText('Some topic bodies are still being cached.')).toBeInTheDocument();
-    expect(screen.queryByText('No completed sync yet')).not.toBeInTheDocument();
-    expect(screen.queryByText('Completed automatically')).not.toBeInTheDocument();
-  });
-
-  it('shows older failures as neutral history after a later backlog sync pass', () => {
-    render(
-      <CompanionSyncPanel
-        {...createConnectedProps()}
-        page="syncActivity"
-        syncEvents={[
-          {
-            endpoint_url: 'http://10.0.2.2:38641',
-            id: 'backlog-event',
-            message: 'Some topic bodies are still being cached.',
-            occurred_at: '2026-04-29T02:24:44.000Z',
-            status: 'skipped'
-          },
-          {
-            endpoint_url: 'http://10.0.2.2:38641',
-            id: 'failed-event',
-            message: 'Desktop sync timed out while fetching content blobs.',
-            occurred_at: '2026-04-29T02:18:33.000Z',
-            status: 'failed'
-          }
-        ]}
-      />
-    );
-
-    expect(screen.getByText('Some topic bodies are still being cached.')).toBeInTheDocument();
-    const oldFailure = screen.getByText('Earlier sync attempt did not complete');
-    expect(oldFailure).toBeInTheDocument();
-    expect(oldFailure.className).not.toContain('text-error');
-  });
+  it('shows a paired state without setup controls', testShowsPairedState);
+  it('shows pending sync conflicts when the local database has them', testShowsPendingSyncConflicts);
+  it('separates the current connection state from older sync activity', testSeparatesConnectionFromActivity);
+  it('does not call manual sync completion automatic', testManualPassIsNotAutomatic);
+  it('shows older failures as neutral history after a later completed sync', testOlderFailuresAreNeutralAfterCompletedPass);
+  it('shows a healthy backlog sync pass without claiming strict completion', testHealthyBacklogPassAvoidsStrictCompletion);
+  it('shows older failures as neutral history after a later backlog sync pass', testOlderFailuresAreNeutralAfterBacklogPass);
 });

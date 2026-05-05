@@ -105,19 +105,19 @@ function resolveLastSyncRow(props: {
     };
   }
   return {
-    detail: props.lastSyncedAt ? formatLastCompletedDetail(latestCompletedEvent) : 'No completed sync yet',
+    detail: props.lastSyncedAt ? formatLastCompletedDetail(latestCompletedEvent) : 'No finished sync pass yet',
     value: formatClock(props.lastSyncedAt),
     valueTone: props.lastSyncedAt ? 'success' as const : 'default' as const
   };
 }
 
 function formatLastCompletedDetail(event: NativeCompanionSyncEvent | null) {
-  return event?.message === 'Auto sync completed.' ? 'Completed automatically' : 'Completed';
+  return event?.message === 'Auto sync completed.' ? 'Finished automatic pass' : 'Finished pass';
 }
 
 function formatEventStatus(status: NativeCompanionSyncEvent['status']) {
   if (status === 'completed') {
-    return 'Completed';
+    return 'Finished pass';
   }
   if (status === 'failed') {
     return 'Failed';
@@ -130,10 +130,10 @@ function formatEventStatus(status: NativeCompanionSyncEvent['status']) {
 
 function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
   if (event.status === 'completed' && event.message === 'Auto sync completed.') {
-    return 'Completed auto sync';
+    return 'Finished automatic pass';
   }
   if (event.status === 'completed') {
-    return 'Completed sync';
+    return 'Finished sync pass';
   }
   if (event.status === 'started' && event.message === 'Auto sync started.') {
     return 'Started auto sync';
