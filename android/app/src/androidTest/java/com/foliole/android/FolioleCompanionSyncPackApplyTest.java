@@ -127,6 +127,25 @@ public class FolioleCompanionSyncPackApplyTest {
     }
 
     @Test
+    public void clearsDirtyNodeReadingAfterPackConfirmsAcceptedPushAck() throws Exception {
+        createIncomingStateOnlyPack("node_reading", "node-1", 8, "reading-hash");
+        mainDatabase.execSQL("INSERT INTO sync_object_state (" +
+            "object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, base_content_hash) " +
+            "VALUES ('node_reading', 'node-1', 5, 'reading-hash', 'android-local', '2026-04-27T00:04:00.000Z', 1, 'base-hash')");
+        mainDatabase.execSQL("INSERT INTO sync_push_ack (" +
+            "client_op_id, object_type, object_id, state_seq, status, acked_at) VALUES (" +
+            "'node_reading:node-1:5', 'node_reading', 'node-1', 8, 'accepted', '2026-04-27T00:05:00.000Z')");
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test", 5);
+
+        assertEquals(1, result.getInt("applied_object_count"));
+        assertEquals(0, selectInt(
+            "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = 'node-1'"
+        ));
+        assertEquals(0, countRows("sync_push_ack"));
+    }
+
+    @Test
     public void doesNotOverwriteDirtyNodeReviewWithoutConfirmedPushAck() throws Exception {
         createIncomingStateOnlyPack("node_review", "node-1", 7, "desktop-review-hash");
         mainDatabase.execSQL("INSERT INTO sync_object_state (" +
