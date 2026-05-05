@@ -9,8 +9,11 @@ type FloatingBarVisibilityApi = ReturnType<typeof useFloatingBarVisibility>;
 type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
 export function useCompanionActionState(args: {
+  browseReturnNodeId: string | null;
+  browsedFolderNodeId: string | null;
   floatingBar: FloatingBarVisibilityApi;
   setActiveAction: (action: CompanionTabAction) => void;
+  setBrowseReturnNodeId: (nodeId: string | null) => void;
   setReadingError: (value: string | null) => void;
   setReviewError: (value: string | null) => void;
   setSelectedBrowseNodeId: (nodeId: string | null) => void;
@@ -30,12 +33,14 @@ export function useCompanionActionState(args: {
     args.setReviewError(null);
     args.setReadingError(null);
     if (action === 'recent') {
+      args.setBrowseReturnNodeId(null);
       args.setSelectedBrowseNodeId(null);
       args.floatingBar.revealBar();
     }
   }
 
   function handleSelectRecentArticle(nodeId: string) {
+    args.setBrowseReturnNodeId(null);
     args.setSelectedBrowseNodeId(nodeId);
     markOpened(nodeId);
     args.setActiveAction('recent');
@@ -43,11 +48,20 @@ export function useCompanionActionState(args: {
   }
 
   function handleSelectBrowseNode(nodeId: string) {
+    args.setBrowseReturnNodeId(args.browsedFolderNodeId);
     args.setSelectedBrowseNodeId(nodeId);
     markOpened(nodeId);
     args.setActiveAction('recent');
     args.floatingBar.revealBar();
   }
 
-  return { handleSelectBrowseNode, handleSelectRecentArticle, handleTabAction };
+  function handleExitBrowseArticle() {
+    if (args.browseReturnNodeId) {
+      handleSelectBrowseNode(args.browseReturnNodeId);
+      return;
+    }
+    handleTabAction('recent');
+  }
+
+  return { handleExitBrowseArticle, handleSelectBrowseNode, handleSelectRecentArticle, handleTabAction };
 }

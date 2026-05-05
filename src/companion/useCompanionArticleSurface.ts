@@ -14,7 +14,38 @@ import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
 type FloatingBarVisibilityApi = ReturnType<typeof useFloatingBarVisibility>;
 type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
+function useCompanionBrowseReturnState() {
+  const [browseReturnNodeId, setBrowseReturnNodeId] = useState<string | null>(null);
+  return { browseReturnNodeId, setBrowseReturnNodeId };
+}
+
+function useCompanionBrowseActions(args: {
+  browsedFolderNodeId: string | null;
+  floatingBar: FloatingBarVisibilityApi;
+  setActiveAction: (action: CompanionTabAction) => void;
+  setReadingError: (value: string | null) => void;
+  setReviewError: (value: string | null) => void;
+  setSelectedBrowseNodeId: (nodeId: string | null) => void;
+  snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'];
+  workspaceSync: CompanionWorkspaceSyncApi;
+}) {
+  const browseReturn = useCompanionBrowseReturnState();
+  return useCompanionActionState({
+    browseReturnNodeId: browseReturn.browseReturnNodeId,
+    browsedFolderNodeId: args.browsedFolderNodeId,
+    floatingBar: args.floatingBar,
+    setActiveAction: args.setActiveAction,
+    setBrowseReturnNodeId: browseReturn.setBrowseReturnNodeId,
+    setReadingError: args.setReadingError,
+    setReviewError: args.setReviewError,
+    setSelectedBrowseNodeId: args.setSelectedBrowseNodeId,
+    snapshot: args.snapshot,
+    workspaceSync: args.workspaceSync
+  });
+}
+
 function useCompanionInteractionState(
+  browsedFolderNodeId: string | null,
   floatingBar: FloatingBarVisibilityApi,
   reviewSession: ReturnType<typeof resolveCompanionReviewSession>,
   setActiveAction: (action: CompanionTabAction) => void,
@@ -40,7 +71,8 @@ function useCompanionInteractionState(
     workspaceSync
   });
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
-  const { handleSelectBrowseNode, handleSelectRecentArticle, handleTabAction } = useCompanionActionState({
+  const { handleExitBrowseArticle, handleSelectBrowseNode, handleSelectRecentArticle, handleTabAction } = useCompanionBrowseActions({
+    browsedFolderNodeId,
     floatingBar,
     setActiveAction,
     setReadingError,
@@ -64,6 +96,7 @@ function useCompanionInteractionState(
     handleDismissReviewItem,
     handleGradeReview,
     handleRevealAnswer,
+    handleExitBrowseArticle,
     handleSelectBrowseNode,
     handleSelectRecentArticle,
     handleTabAction,
@@ -107,6 +140,7 @@ export function useCompanionArticleSurface(
     selectedBrowseNodeId: browseState.selectedBrowseNodeId
   });
   const interactionState = useCompanionInteractionState(
+    browseState.browsedFolder?.nodeId ?? null,
     floatingBar,
     browseState.reviewSession,
     setActiveAction,

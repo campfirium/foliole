@@ -28,7 +28,6 @@ import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-import { resolveCompanionBrowseExitNodeId } from '@/shared/platform/companionReadableArticle';
 import { NodeBrowseList } from '@/shared/ui';
 
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
@@ -41,16 +40,8 @@ function resolveShellSyncEndpoint(workspaceSync: WorkspaceSync) {
     : null;
 }
 
-function handleExitReadableArticle(surface: Surface, workspaceSync: WorkspaceSync) {
-  const exitNodeId = resolveCompanionBrowseExitNodeId(
-    workspaceSync.state.workspace_snapshot,
-    surface.selectedBrowseNodeId
-  );
-  if (exitNodeId) {
-    surface.handleSelectBrowseNode(exitNodeId);
-    return;
-  }
-  surface.handleTabAction('recent');
+function handleExitReadableArticle(surface: Surface) {
+  surface.handleExitBrowseArticle();
 }
 
 function continueAttachmentResourceSync(workspaceSync: WorkspaceSync) {
@@ -96,7 +87,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
   }
   if (props.surface.readableArticle && props.surface.selectedBrowseNodeId) {
     return renderReadableArticle({
-      onExit: () => handleExitReadableArticle(props.surface, props.workspaceSync),
+      onExit: () => handleExitReadableArticle(props.surface),
       surface: props.surface,
       workspaceSync: props.workspaceSync
     });
