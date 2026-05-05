@@ -30,6 +30,7 @@ function createSyncObjectsResult(overrides: Partial<CompanionDesktopSyncResult> 
     pushedNodeIds: [],
     pushedObjectIds: [],
     pushedReviewOpIds: [],
+    pushError: null,
     remainingAttachmentResourceBytes: null,
     remainingAttachmentResourceCount: 0,
     remainingContentBlobBytes: null,
@@ -184,6 +185,32 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
   }));
 }
 
+async function testRecordsPushFailureWithoutFailingPull() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    localDirtyCount: 1,
+    pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
+    remainingAttachmentResourceCount: 0,
+    remainingContentBlobCount: 0
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('skipped');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync pass finished; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push.',
+    status: 'skipped'
+  }));
+}
+
 describe('tryForegroundAutoSync', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -200,4 +227,6 @@ describe('tryForegroundAutoSync', () => {
   it('records remaining cache bytes when a pass leaves body or attachment backlog', testRecordsBacklogBytes);
 
   it('does not record completed while local work is waiting', testDoesNotCompleteWhileLocalWorkIsWaiting);
+
+  it('records push failure without marking the pull pass failed', testRecordsPushFailureWithoutFailingPull);
 });

@@ -35,6 +35,7 @@ function describeManualSyncPassResult(result: {
   remainingContentBlobCount: number | null;
   localDirtyCount?: number | null;
   pendingAckCount?: number | null;
+  pushError?: string | null;
 }) {
   if (result.attachmentResourceError) {
     return {
@@ -52,6 +53,22 @@ function describeManualSyncPassResult(result: {
   const remainingAttachments = result.remainingAttachmentResourceCount;
   const bodyLabel = formatBacklogLabel('topic bodies', remainingBodies, result.remainingContentBlobBytes);
   const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
+  if (result.pushError) {
+    const prefix = `Sync pass finished; device changes could not be sent: ${result.pushError}`;
+    if (remainingBodies === 0 && remainingAttachments === 0) {
+      return { message: prefix, status: 'skipped' as const };
+    }
+    if (remainingBodies === 0) {
+      return { message: `${prefix}; ${attachmentLabel} still caching.`, status: 'skipped' as const };
+    }
+    if (remainingAttachments === 0) {
+      return { message: `${prefix}; ${bodyLabel} still caching.`, status: 'skipped' as const };
+    }
+    return {
+      message: `${prefix}; ${bodyLabel} and ${attachmentLabel} still caching.`,
+      status: 'skipped' as const
+    };
+  }
   if (
     remainingBodies === 0 &&
     remainingAttachments === 0 &&

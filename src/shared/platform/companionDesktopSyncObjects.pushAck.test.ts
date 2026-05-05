@@ -198,6 +198,23 @@ describe('companion desktop sync push acknowledgements', () => {
     });
   });
 
+  it('surfaces push failures while still applying the structure pack', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
+    vi.mocked(fetch).mockResolvedValueOnce({
+      json: async () => ({}),
+      ok: false,
+      status: 500,
+      text: async () => 'push rejected'
+    } as Response);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushError).toBe('Desktop sync target returned 500 for /companion/sync-push.');
+    expect(result.pushedObjectIds).toEqual([]);
+    expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalled();
+  });
+
   it('skips legacy node_reading dirty rows that do not have a base reference', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReadingChange({
       base_content_hash: null

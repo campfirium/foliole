@@ -46,6 +46,7 @@ export interface CompanionDesktopSyncResult {
   pushedNodeIds: string[];
   pushedObjectIds: string[];
   pushedReviewOpIds: string[];
+  pushError: string | null;
   requestedObjectIds: string[];
   syncedAttachmentIds: string[];
   attachmentResourceError: string | null;
@@ -248,12 +249,16 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Desktop content blob sync failed.';
 }
 
+function pushErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Desktop sync push failed.';
+}
+
 async function runCompanionObjectsSync(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions = {}
 ): Promise<CompanionDesktopSyncResult> {
   const pushed = await withSyncStepTimeout('pushing local review changes', pushLocalDirtyObjects(endpointUrl))
-    .catch(() => ({ pushedObjectIds: [], pushedReviewOpIds: [] }));
+    .catch((error) => ({ pushedObjectIds: [], pushedReviewOpIds: [], pushError: pushErrorMessage(error) }));
   const pack = await withSyncStepTimeout('applying the structure pack', pullRemoteStructurePack(endpointUrl));
   options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
   await options.onStructureSynced?.();
@@ -292,6 +297,7 @@ async function runCompanionObjectsSync(
     pushedNodeIds: [],
     pushedObjectIds: pushed.pushedObjectIds,
     pushedReviewOpIds: pushed.pushedReviewOpIds,
+    pushError: pushed.pushError,
     requestedObjectIds: [],
     syncedAttachmentIds,
     attachmentResourceError,

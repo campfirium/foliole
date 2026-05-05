@@ -18,6 +18,12 @@ import {
 
 const SYNC_PUSH_PATH = '/companion/sync-push';
 
+export interface CompanionDesktopSyncPushResult {
+  pushedObjectIds: string[];
+  pushedReviewOpIds: string[];
+  pushError: string | null;
+}
+
 interface DesktopSyncPushResponse {
   acks: Array<{
     client_op_id: string;
@@ -68,11 +74,15 @@ function acceptedAcks(acks: SyncPushAck[]) {
   return acks.filter((ack) => ack.status === 'accepted' || ack.status === 'already_applied');
 }
 
-export async function pushLocalDirtyObjects(endpointUrl: string) {
+function formatPushError(error: unknown) {
+  return error instanceof Error ? error.message : 'Desktop sync push failed.';
+}
+
+export async function pushLocalDirtyObjects(endpointUrl: string): Promise<CompanionDesktopSyncPushResult> {
   try {
     const { items, reviewLog } = await collectLocalPushItems();
     if (items.length === 0) {
-      return { pushedObjectIds: [] as string[], pushedReviewOpIds: [] as string[] };
+      return { pushedObjectIds: [], pushedReviewOpIds: [], pushError: null };
     }
     const response = await postDesktopJson<DesktopSyncPushResponse>(endpointUrl, SYNC_PUSH_PATH, { items });
     const acks = response.acks.map(toPushAck);
@@ -85,10 +95,11 @@ export async function pushLocalDirtyObjects(endpointUrl: string) {
         .map((ack) => `${ack.identity.objectType}:${ack.identity.objectId}`),
       pushedReviewOpIds: accepted
         .filter((ack) => ack.identity.objectType === 'review_log')
-        .map((ack) => ack.identity.objectId)
+        .map((ack) => ack.identity.objectId),
+      pushError: null
     };
-  } catch {
-    return { pushedObjectIds: [] as string[], pushedReviewOpIds: [] as string[] };
+  } catch (error) {
+    return { pushedObjectIds: [], pushedReviewOpIds: [], pushError: formatPushError(error) };
   }
 }
 
