@@ -20,6 +20,7 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
     ) throws Exception {
         JSONObject connectionKeys = diagnosticObject(context, "connectionKeys");
         JSONObject stateKeys = diagnosticObject(context, "stateKeys");
+        JSONObject metricKeys = metricKeys(context);
         JSArray verdicts = new JSArray();
         if (connection.optString(connectionKeys.getString("endpointUrl"), null) == null) {
             add(context, verdicts, "endpointMissing", connection);
@@ -27,13 +28,13 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
         if (!syncState.has(stateKeys.getString("packCursor")) || syncState.isNull(stateKeys.getString("packCursor"))) {
             add(context, verdicts, "packCursorMissing", syncState);
         }
-        if (storage.optLong("active_node_count", 0) == 0 && hasCompletedEvent(context, events)) {
+        if (storage.optLong(metricKeys.getString("activeNodeCount"), 0) == 0 && hasCompletedEvent(context, events)) {
             add(context, verdicts, "noNodesAfterCompletedSync", storage);
         }
-        if (content.optLong("missing_content_blob_count", 0) > 0) {
+        if (content.optLong(metricKeys.getString("missingContentBlobCount"), 0) > 0) {
             add(context, verdicts, "missingContentBlobs", content);
         }
-        if (content.optLong("missing_attachment_resource_count", 0) > 0) {
+        if (content.optLong(metricKeys.getString("missingAttachmentResourceCount"), 0) > 0) {
             add(context, verdicts, "missingAttachmentResources", content);
         }
         JSONObject failed = recentFailedEvent(context, events);
@@ -44,13 +45,13 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
             evidence.put(evidenceKeys.getString("occurredAt"), failed.optString(evidenceKeys.getString("occurredAt")));
             add(context, verdicts, "recentSyncFailed", evidence);
         }
-        if (syncState.optLong("local_dirty_count", 0) > 0) {
+        if (syncState.optLong(metricKeys.getString("localDirtyCount"), 0) > 0) {
             add(context, verdicts, "hasLocalDirtyState", syncState);
         }
-        if (syncState.optLong("pending_ack_count", 0) > 0) {
+        if (syncState.optLong(metricKeys.getString("pendingAckCount"), 0) > 0) {
             add(context, verdicts, "hasPendingPushAck", syncState);
         }
-        if (syncState.optLong("push_issue_count", 0) > 0) {
+        if (syncState.optLong(metricKeys.getString("pushIssueCount"), 0) > 0) {
             add(context, verdicts, "hasPushIssues", syncState);
         }
         if (verdicts.length() == 0) {
@@ -121,5 +122,9 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
 
     private static String syncEventRecordKey(Context context, String key) throws Exception {
         return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEventRecordKeys", key);
+    }
+
+    private static JSONObject metricKeys(Context context) throws Exception {
+        return FolioleCompanionSyncDiagnosticQueryRules.object(context, "verdictMetricKeys");
     }
 }

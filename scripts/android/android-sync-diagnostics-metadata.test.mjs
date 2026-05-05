@@ -91,6 +91,7 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fullSyncCompletedMessage")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdict(context, key)');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys")');
+    expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "verdictMetricKeys")');
     expect(combined).toContain('FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys")');
     expect(combined).toContain('optJSONObject("diagnosticRead")');
     expect(combined).not.toContain('"workspace_sync_endpoint_url"');
@@ -103,6 +104,8 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).not.toContain('connection.put("endpoint_url"');
     expect(combined).not.toContain('state.put("pack_cursor"');
     expect(combined).not.toContain('verdict.put("evidence"');
+    expect(combined).not.toContain('optLong("active_node_count"');
+    expect(combined).not.toContain('optLong("push_issue_count"');
     expect(combined).not.toContain('"sync_pack_cursor"');
     expect(combined).not.toContain('"android_endpoint_missing"');
     expect(combined).not.toContain('"Android sync state is readable."');
@@ -124,7 +127,11 @@ describe('Android sync diagnostics metadata', () => {
       dirtyObjects: { queryName: 'diagnosticDirtyObjects', resultKey: 'objects' },
       metaValue: { queryName: 'companionMetaValue' },
       stateMetrics: { queryName: 'diagnosticSyncStateMetrics' },
-      storageMetrics: { queryName: 'diagnosticStorageMetrics' }
+      storageMetrics: { queryName: 'diagnosticStorageMetrics' },
+      verdictMetricKeys: {
+        activeNodeCount: 'active_node_count',
+        pushIssueCount: 'push_issue_count'
+      }
     });
   });
 });

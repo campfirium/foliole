@@ -1890,6 +1890,14 @@
     },
     "storageMetrics": {
       "queryName": "diagnosticStorageMetrics"
+    },
+    "verdictMetricKeys": {
+      "activeNodeCount": "active_node_count",
+      "localDirtyCount": "local_dirty_count",
+      "missingAttachmentResourceCount": "missing_attachment_resource_count",
+      "missingContentBlobCount": "missing_content_blob_count",
+      "pendingAckCount": "pending_ack_count",
+      "pushIssueCount": "push_issue_count"
     }
   },
   "missingResourceRead": {

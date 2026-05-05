@@ -22,6 +22,10 @@ final class FolioleCompanionSyncDiagnosticQueryRules {
         return group(context, groupKey).getJSONObject(key);
     }
 
+    static JSONObject object(Context context, String key) throws Exception {
+        return group(context, key);
+    }
+
     static JSONArray array(Context context, String groupKey, String key) throws Exception {
         return group(context, groupKey).getJSONArray(key);
     }

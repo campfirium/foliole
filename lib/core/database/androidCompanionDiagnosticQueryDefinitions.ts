@@ -211,5 +211,13 @@ export const ANDROID_COMPANION_DIAGNOSTIC_READ_RULES = {
   recentTopics: { queryName: 'diagnosticRecentTopics', resultKey: 'topics' },
   stateCounts: { queryName: 'diagnosticSyncStateCounts', resultKey: 'counts' },
   stateMetrics: { queryName: 'diagnosticSyncStateMetrics' },
-  storageMetrics: { queryName: 'diagnosticStorageMetrics' }
+  storageMetrics: { queryName: 'diagnosticStorageMetrics' },
+  verdictMetricKeys: {
+    activeNodeCount: 'active_node_count',
+    localDirtyCount: 'local_dirty_count',
+    missingAttachmentResourceCount: 'missing_attachment_resource_count',
+    missingContentBlobCount: 'missing_content_blob_count',
+    pendingAckCount: 'pending_ack_count',
+    pushIssueCount: 'push_issue_count'
+  }
 } as const;
