@@ -75,7 +75,7 @@ export function useVisiblePageSync(
 ) {
   return () => {
     const container = scrollContainerRef.current;
-    if (!container || !totalPages) {
+    if (!container || !totalPages || container.offsetParent === null || container.clientHeight === 0) {
       return;
     }
     const visiblePage = resolveVisiblePage(container, pageElementsRef, totalPages);

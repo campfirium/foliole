@@ -86,15 +86,20 @@ export function renderPdfDocumentSurface(
   },
   highlightLocators: PdfHighlightLocator[],
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean,
-  onPersistPdfViewState: (viewState: NodeViewState) => void
+  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void
 ) {
   if (pdfDocumentSurface.state === 'ready') {
     return (
       <PdfDocumentSurface
         highlightLocators={highlightLocators}
+        isVisible
         nodeViewState={pdfViewContext.editorNodeViewState}
         onCreateHighlightFromSelection={onCreatePdfHighlight}
-        onPersistViewState={onPersistPdfViewState}
+        onPersistViewState={(viewState) => {
+          if (pdfViewContext.editorNodeId) {
+            onPersistPdfViewState(pdfViewContext.editorNodeId, viewState);
+          }
+        }}
         nodeId={pdfViewContext.editorNodeId}
         pdfIndexStatus={pdfDocumentSurface.pdfIndexStatus}
         sourceHint={pdfDocumentSurface.sourceHint ?? ''}

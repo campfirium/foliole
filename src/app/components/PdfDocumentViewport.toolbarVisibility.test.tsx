@@ -25,15 +25,18 @@ vi.mock('react-pdf', async () => {
     },
     Page: ({
       onGetTextSuccess,
+      onRenderSuccess,
       onRenderTextLayerSuccess
     }: {
       onGetTextSuccess?: (payload: { items: Array<{ str: string }> }) => void;
+      onRenderSuccess?: () => void;
       onRenderTextLayerSuccess?: () => void;
     }) => {
       React.useEffect(() => {
+        onRenderSuccess?.();
         onGetTextSuccess?.({ items: [{ str: 'keyword bridge content' }] });
         onRenderTextLayerSuccess?.();
-      }, [onGetTextSuccess, onRenderTextLayerSuccess]);
+      }, [onGetTextSuccess, onRenderSuccess, onRenderTextLayerSuccess]);
       return (
         <div data-testid="pdf-document-page">
           <div className="textLayer">
@@ -159,8 +162,9 @@ function setScrollTopAndScroll(container: HTMLElement, scrollTop: number) {
   fireEvent.scroll(container);
 }
 
-function renderToolbarVisibilityHarness() {
+async function renderToolbarVisibilityHarness() {
   render(<ToolbarVisibilityHarness />);
+  await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
   return {
     scrollContainer: screen.getByTestId('pdf-scroll-container'),
     toolbar: screen.getByTestId('pdf-document-toolbar')
@@ -173,9 +177,9 @@ async function expectToolbarInteractionToKeepVisible(toolbar: HTMLElement, actio
 }
 
 describe('PdfDocumentViewport toolbar visibility', () => {
-  it('hides on downward scroll and returns on upward scroll', () => {
+  it('hides on downward scroll and returns on upward scroll', async () => {
     collectTextSegmentsSpy.mockReturnValue([]);
-    const { scrollContainer, toolbar } = renderToolbarVisibilityHarness();
+    const { scrollContainer, toolbar } = await renderToolbarVisibilityHarness();
 
     expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
 
@@ -189,7 +193,7 @@ describe('PdfDocumentViewport toolbar visibility', () => {
     expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
   });
 
-  it('stays visible while the search field is active', () => {
+  it('stays visible while the search field is active', async () => {
     collectTextSegmentsSpy.mockImplementation((shell: HTMLDivElement) => {
       const span = shell.querySelector<HTMLElement>('.textLayer span[role="presentation"]');
       const node = span?.firstChild instanceof Text ? span.firstChild : new Text(span?.textContent ?? '');
@@ -197,7 +201,7 @@ describe('PdfDocumentViewport toolbar visibility', () => {
         ? [{ element: span, end: node.textContent?.length ?? 0, node, start: 0, text: node.textContent ?? '' }]
         : [];
     });
-    const { scrollContainer, toolbar } = renderToolbarVisibilityHarness();
+    const { scrollContainer, toolbar } = await renderToolbarVisibilityHarness();
     const searchInput = screen.getByLabelText('PDF search');
 
     setScrollTopAndScroll(scrollContainer, 80);
@@ -214,9 +218,9 @@ describe('PdfDocumentViewport toolbar visibility', () => {
     expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
   });
 
-  it('stays visible on the first restored scroll position before any user scroll gesture', () => {
+  it('stays visible on the first restored scroll position before any user scroll gesture', async () => {
     collectTextSegmentsSpy.mockReturnValue([]);
-    const { scrollContainer, toolbar } = renderToolbarVisibilityHarness();
+    const { scrollContainer, toolbar } = await renderToolbarVisibilityHarness();
 
     setScrollTopAndScroll(scrollContainer, 220);
     expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
@@ -227,7 +231,7 @@ describe('PdfDocumentViewport toolbar visibility', () => {
 
   it('keeps the toolbar visible after page and zoom actions until the next reading scroll', async () => {
     collectTextSegmentsSpy.mockReturnValue([]);
-    const { scrollContainer, toolbar } = renderToolbarVisibilityHarness();
+    const { scrollContainer, toolbar } = await renderToolbarVisibilityHarness();
 
     setScrollTopAndScroll(scrollContainer, 80);
     setScrollTopAndScroll(scrollContainer, 120);

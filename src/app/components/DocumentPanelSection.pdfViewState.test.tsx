@@ -125,7 +125,7 @@ it('writes pdf page and zoom through onPersistPdfViewState callback', async () =
   fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
 
   await waitFor(() =>
-    expect(onPersistPdfViewState).toHaveBeenCalledWith({
+    expect(onPersistPdfViewState).toHaveBeenCalledWith('node-1', {
       scrollTop: 0,
       selection: { from: 1, to: 110 }
     })
@@ -142,7 +142,7 @@ it('keeps fit width as the default persisted zoom mode for a new pdf', async () 
   });
 
   await waitFor(() =>
-    expect(onPersistPdfViewState).toHaveBeenCalledWith({
+    expect(onPersistPdfViewState).toHaveBeenCalledWith('node-1', {
       scrollTop: 0,
       selection: { from: 2, to: 0 }
     })

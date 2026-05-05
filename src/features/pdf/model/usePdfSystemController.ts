@@ -5,7 +5,7 @@ import type { NodeViewState } from '../../../store/workspaceStore';
 import type { NodeAnchorLink } from '../../nodes/model/nodeTypes';
 
 import type { PdfJumpRequest, PdfSystemController } from './pdfSystemApi';
-import { createInitialPageJumpRequest, resolveInitialPdfViewState, usePdfSourceReset, usePersistedPdfViewStateSync } from './pdfSystemControllerState';
+import { createInitialPageJumpRequest, resolveInitialPdfViewState, usePdfSourceReset, usePdfVisibilityRestore, usePersistedPdfViewStateSync } from './pdfSystemControllerState';
 import {
   clampInteger,
   createJumpRequest,
@@ -17,7 +17,6 @@ import {
   PDF_ZOOM_STEP,
   resolvePdfSource
 } from './pdfSystemStateUtils';
-
 function usePdfSystemActions(
   page: number,
   maxPage: number,
@@ -226,7 +225,8 @@ function usePdfCoreState(
 export function usePdfSystemController(
   nodeViewState: NodeViewState | undefined,
   onPersistViewState: (viewState: NodeViewState) => void,
-  sourceHint: string
+  sourceHint: string,
+  isVisible = true
 ): PdfSystemController {
   const coreState = usePdfCoreState(nodeViewState, onPersistViewState, sourceHint);
   const actions = usePdfSystemActions(
@@ -242,6 +242,13 @@ export function usePdfSystemController(
     coreState.setZoom,
     coreState.setZoomMode
   );
+  usePdfVisibilityRestore({
+    isVisible,
+    page: coreState.page,
+    positionY: coreState.positionY,
+    setPageJumpRequest: coreState.setPageJumpRequest,
+    totalPages: coreState.totalPages
+  });
 
   return {
     actions,

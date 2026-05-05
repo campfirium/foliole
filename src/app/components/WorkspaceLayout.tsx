@@ -78,7 +78,7 @@ export interface WorkspaceLayoutProps {
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
-  onPersistPdfViewState: (viewState: NodeViewState) => void;
+  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;

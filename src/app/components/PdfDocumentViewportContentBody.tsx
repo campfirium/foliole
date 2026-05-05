@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
 
 import type { PdfSearchStatus, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
@@ -42,6 +42,17 @@ interface PdfDocumentViewportContentBodyProps {
   totalPages: number | null;
   zoomMode: 'custom' | 'fit-width';
   zoom: number;
+}
+
+function PdfDocumentLoadingOverlay() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-bg-canvas"
+      data-testid="pdf-document-loading-overlay"
+    >
+      <div aria-hidden="true" className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-foreground/65" />
+    </div>
+  );
 }
 
 function useFitWidthTargetWidth(scrollContainerRef: MutableRefObject<HTMLDivElement | null>) {
@@ -90,56 +101,89 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
     zoom: props.zoom,
     zoomMode: props.zoomMode
   });
+  const [isInitialRenderReady, setIsInitialRenderReady] = useState(false);
+  const previousPdfSourceRef = useRef(props.pdfSource);
+
+  useEffect(() => {
+    if (previousPdfSourceRef.current === props.pdfSource) {
+      return;
+    }
+    previousPdfSourceRef.current = props.pdfSource;
+    setIsInitialRenderReady(false);
+  }, [props.pdfSource]);
 
   return (
-    <div
-      className="app-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-auto px-2 pb-5"
-      onContextMenu={props.handleContextMenu}
-      onScroll={props.handleScroll}
-      data-testid="pdf-scroll-container"
-      ref={props.scrollContainerRef}
-    >
-      <PdfViewportToolbar
-        isVisible={props.isToolbarVisible}
-        maxPage={props.maxPage}
-        onClearSearch={props.onClearSearch}
-        onNextPage={props.onNextPage}
-        onPageChange={props.onPageChange}
-        onPreviousPage={props.onPreviousPage}
-        onRotateClockwise={props.onRotateClockwise}
-        onSearchFocusChange={props.onSearchFocusChange}
-        searchIndexingHint={props.searchIndexingHint}
-        onSearchQueryChange={props.onSearchQueryChange}
-        onSearchRequest={props.onSearchRequest}
-        onSetFitWidth={props.onSetFitWidth}
-        onSetZoom={props.onSetZoom}
-        onToolbarActiveChange={props.onToolbarActiveChange}
-        onToolbarInteraction={props.onToolbarInteraction}
-        onZoomIn={props.onZoomIn}
-        onZoomOut={props.onZoomOut}
-        page={props.page}
-        searchQuery={props.searchQuery}
-        searchStatus={props.searchStatus}
-        zoomMode={props.zoomMode}
-        zoom={displayedZoom}
-      />
-      <PdfViewportDocument
-        fitWidthTargetWidth={fitWidthTargetWidth}
-        highlightLocators={props.highlightLocators}
-        onLoadError={props.onLoadError}
-        onLoadSuccess={props.onLoadSuccess}
-        onPageLoadSuccess={handlePageLoadSuccess}
-        onTextContentLoad={props.onTextContentLoad}
-        onTextLayerRender={props.onTextLayerRender}
-        pageElementsRef={props.pageElementsRef}
-        pdfSelectionLocator={props.pdfSelectionLocator}
-        pdfSource={props.pdfSource}
-        rotation={props.rotation}
-        searchHighlights={props.searchHighlights}
-        totalPages={props.totalPages}
-        zoomMode={props.zoomMode}
-        zoom={props.zoom}
-      />
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      {!isInitialRenderReady ? <PdfDocumentLoadingOverlay /> : null}
+      <div
+        className="app-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-auto px-2 pb-5"
+        onContextMenu={props.handleContextMenu}
+        onScroll={props.handleScroll}
+        data-testid="pdf-scroll-container"
+        ref={props.scrollContainerRef}
+      >
+        {isInitialRenderReady ? renderViewportToolbar(props, displayedZoom) : null}
+        {renderViewportDocument(props, fitWidthTargetWidth, handlePageLoadSuccess, setIsInitialRenderReady)}
+      </div>
     </div>
+  );
+}
+
+function renderViewportToolbar(props: PdfDocumentViewportContentBodyProps, displayedZoom: number) {
+  return (
+    <PdfViewportToolbar
+      isVisible={props.isToolbarVisible}
+      maxPage={props.maxPage}
+      onClearSearch={props.onClearSearch}
+      onNextPage={props.onNextPage}
+      onPageChange={props.onPageChange}
+      onPreviousPage={props.onPreviousPage}
+      onRotateClockwise={props.onRotateClockwise}
+      onSearchFocusChange={props.onSearchFocusChange}
+      searchIndexingHint={props.searchIndexingHint}
+      onSearchQueryChange={props.onSearchQueryChange}
+      onSearchRequest={props.onSearchRequest}
+      onSetFitWidth={props.onSetFitWidth}
+      onSetZoom={props.onSetZoom}
+      onToolbarActiveChange={props.onToolbarActiveChange}
+      onToolbarInteraction={props.onToolbarInteraction}
+      onZoomIn={props.onZoomIn}
+      onZoomOut={props.onZoomOut}
+      page={props.page}
+      searchQuery={props.searchQuery}
+      searchStatus={props.searchStatus}
+      zoomMode={props.zoomMode}
+      zoom={displayedZoom}
+    />
+  );
+}
+
+function renderViewportDocument(
+  props: PdfDocumentViewportContentBodyProps,
+  fitWidthTargetWidth: number | null,
+  handlePageLoadSuccess: (pageNumber: number, baseWidth: number) => void,
+  onInitialRenderReadyChange: (ready: boolean) => void
+) {
+  return (
+    <PdfViewportDocument
+      fitWidthTargetWidth={fitWidthTargetWidth}
+      highlightLocators={props.highlightLocators}
+      onInitialRenderReadyChange={onInitialRenderReadyChange}
+      onLoadError={props.onLoadError}
+      onLoadSuccess={props.onLoadSuccess}
+      onPageLoadSuccess={handlePageLoadSuccess}
+      onTextContentLoad={props.onTextContentLoad}
+      onTextLayerRender={props.onTextLayerRender}
+      page={props.page}
+      pageElementsRef={props.pageElementsRef}
+      pdfSelectionLocator={props.pdfSelectionLocator}
+      pdfSource={props.pdfSource}
+      rotation={props.rotation}
+      searchQuery={props.searchQuery}
+      searchHighlights={props.searchHighlights}
+      totalPages={props.totalPages}
+      zoomMode={props.zoomMode}
+      zoom={props.zoom}
+    />
   );
 }

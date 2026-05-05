@@ -100,11 +100,11 @@ export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArg
 }
 
 export function createPersistPdfViewState(args: BuildControllerLayoutPropsArgs) {
-  return (viewState: { scrollTop: number; selection: { from: number; to: number } }) => {
-    if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
+  return (nodeId: string, viewState: { scrollTop: number; selection: { from: number; to: number } }) => {
+    if (args.runtime.isViewingTrashNode || !nodeId) {
       return;
     }
-    args.ws.setNodeViewState(args.ws.activeNodeId, viewState);
+    args.ws.setNodeViewState(nodeId, viewState);
   };
 }
 

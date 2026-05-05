@@ -25,15 +25,18 @@ vi.mock('react-pdf', async () => {
     },
     Page: ({
       onGetTextSuccess,
+      onRenderSuccess,
       onRenderTextLayerSuccess
     }: {
       onGetTextSuccess?: (payload: { items: Array<{ str: string }> }) => void;
+      onRenderSuccess?: () => void;
       onRenderTextLayerSuccess?: () => void;
     }) => {
       React.useEffect(() => {
+        onRenderSuccess?.();
         onGetTextSuccess?.({ items: [{ str: 'keyword bridge content' }] });
         onRenderTextLayerSuccess?.();
-      }, [onGetTextSuccess, onRenderTextLayerSuccess]);
+      }, [onGetTextSuccess, onRenderSuccess, onRenderTextLayerSuccess]);
       return (
         <div data-testid="pdf-document-page">
           <div className="textLayer">

@@ -166,8 +166,37 @@ it('renders the pdf reading container for linked pdf nodes', () => {
   expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
   expect(screen.getByTestId('pdf-document-view')).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
   expect(screen.getByTestId('pdf-document-toolbar')).toBeInTheDocument();
+  expect(screen.getAllByTestId('pdf-document-page')).toHaveLength(2);
   expect(screen.queryByText(/highlight/i)).not.toBeInTheDocument();
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
+});
+
+it('hides the interim pdf loading states behind a single loading overlay', async () => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
+
+  renderSection();
+
+  expect(screen.queryByText('Loading PDF...')).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
+});
+
+it('hides the raw pdf source path while source details are still loading', () => {
+  useNodeSourceDetails.mockReturnValue({ isLoading: true, value: null } as never);
+
+  renderSection({ editorContent: '/tmp/sample.pdf' });
+
+  expect(screen.getByTestId('pdf-document-loading-shell')).toBeInTheDocument();
+  expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
+  expect(screen.queryByText('/tmp/sample.pdf')).not.toBeInTheDocument();
+});
+
+it('clears the editor binding when switching into pdf view', () => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
+  const onEditorReady = vi.fn();
+
+  renderSection({ onEditorReady });
+
+  expect(onEditorReady).toHaveBeenCalledWith(null);
 });
 
 it('supports pdf controls with zoom, page navigation, and rotation', () => {

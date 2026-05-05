@@ -6,11 +6,13 @@ vi.mock('react-pdf', async () => {
   return {
     Page: ({
       onLoadSuccess,
+      onRenderSuccess,
       onGetTextSuccess,
       onRenderTextLayerSuccess,
       pageNumber
     }: {
       onLoadSuccess?: (page: { getViewport: (input: { scale: number }) => { width: number } }) => void;
+      onRenderSuccess?: () => void;
       onGetTextSuccess?: (payload: { items: Array<{ str: string }> }) => void;
       onRenderTextLayerSuccess?: () => void;
       pageNumber: number;
@@ -19,9 +21,10 @@ vi.mock('react-pdf', async () => {
         onLoadSuccess?.({
           getViewport: ({ scale }: { scale: number }) => ({ width: 800 * scale })
         });
+        onRenderSuccess?.();
         onGetTextSuccess?.({ items: [{ str: `mock text ${pageNumber}` }] });
         onRenderTextLayerSuccess?.();
-      }, [onGetTextSuccess, onLoadSuccess, onRenderTextLayerSuccess, pageNumber]);
+      }, [onGetTextSuccess, onLoadSuccess, onRenderSuccess, onRenderTextLayerSuccess, pageNumber]);
 
       return (
         <div data-testid="pdf-document-page">

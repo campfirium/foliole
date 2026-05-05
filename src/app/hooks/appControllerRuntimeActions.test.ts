@@ -120,24 +120,23 @@ describe('createRevealAnchorInDocument', () => {
 });
 
 describe('createPersistPdfViewState', () => {
-  it('writes pdf view state for active node', () => {
+  it('writes pdf view state for the provided node', () => {
     const setNodeViewState = vi.fn();
     const persistPdfViewState = createPersistPdfViewState({
       runtime: {
         isViewingTrashNode: false
       },
       ws: {
-        activeNodeId: 'node-1',
         setNodeViewState
       }
     } as never);
 
-    persistPdfViewState({
+    persistPdfViewState('node-7', {
       scrollTop: 7,
       selection: { from: 7, to: 120 }
     });
 
-    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
+    expect(setNodeViewState).toHaveBeenCalledWith('node-7', {
       scrollTop: 7,
       selection: { from: 7, to: 120 }
     });
@@ -150,12 +149,11 @@ describe('createPersistPdfViewState', () => {
         isViewingTrashNode: true
       },
       ws: {
-        activeNodeId: 'node-1',
         setNodeViewState
       }
     } as never);
 
-    persistPdfViewState({
+    persistPdfViewState('node-1', {
       scrollTop: 2,
       selection: { from: 2, to: 100 }
     });

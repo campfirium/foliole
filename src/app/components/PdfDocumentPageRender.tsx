@@ -18,6 +18,7 @@ interface RenderPdfPageArgs {
   fitWidthTargetWidth: number | null;
   highlightLocators: PdfPageRenderLocator[];
   onPageLoadSuccess: (pageNumber: number, baseWidth: number) => void;
+  onPageRenderReady?: (pageNumber: number) => void;
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
@@ -52,6 +53,7 @@ export function renderPdfPage(args: RenderPdfPageArgs) {
       <div className="relative inline-block">
         <PdfPageCanvas
           onPageLoadSuccess={args.onPageLoadSuccess}
+          onPageRenderReady={args.onPageRenderReady}
           onTextContentLoad={args.onTextContentLoad}
           onTextLayerRender={args.onTextLayerRender}
           pageNumber={args.pageNumber}
@@ -75,6 +77,7 @@ const PdfPageCanvas = memo(
   function PdfPageCanvas(props: {
     fitWidthTargetWidth: number | null;
     onPageLoadSuccess: (pageNumber: number, baseWidth: number) => void;
+    onPageRenderReady?: (pageNumber: number) => void;
     onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
     onTextLayerRender: (pageNumber: number) => void;
     pageNumber: number;
@@ -94,6 +97,10 @@ const PdfPageCanvas = memo(
         data-testid="pdf-document-page"
         onGetTextSuccess={(textContent: unknown) => {
           props.onTextContentLoad(props.pageNumber, resolvePageText(textContent));
+        }}
+        loading={null}
+        onRenderSuccess={() => {
+          props.onPageRenderReady?.(props.pageNumber);
         }}
         onRenderTextLayerSuccess={() => {
           props.onTextLayerRender(props.pageNumber);

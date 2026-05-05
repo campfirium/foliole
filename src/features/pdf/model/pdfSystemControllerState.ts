@@ -111,3 +111,27 @@ export function usePersistedPdfViewStateSync(args: {
     );
   }, [args]);
 }
+
+export function usePdfVisibilityRestore(args: {
+  isVisible: boolean;
+  page: number;
+  positionY: number;
+  setPageJumpRequest: Dispatch<SetStateAction<PdfJumpRequest | null>>;
+  totalPages: number | null;
+}) {
+  const restoreJumpIdRef = useRef(-1);
+  const previousVisibleRef = useRef(args.isVisible);
+  const previousTotalPagesRef = useRef(args.totalPages);
+
+  useEffect(() => {
+    const becameVisible = args.isVisible && !previousVisibleRef.current;
+    const becameReadyWhileVisible = args.isVisible && !previousTotalPagesRef.current && Boolean(args.totalPages);
+    previousVisibleRef.current = args.isVisible;
+    previousTotalPagesRef.current = args.totalPages;
+    if (!becameVisible && !becameReadyWhileVisible) {
+      return;
+    }
+    args.setPageJumpRequest({ id: restoreJumpIdRef.current, page: args.page, positionY: args.positionY });
+    restoreJumpIdRef.current -= 1;
+  }, [args.isVisible, args.page, args.positionY, args.setPageJumpRequest, args.totalPages]);
+}

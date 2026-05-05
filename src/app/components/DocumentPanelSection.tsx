@@ -47,7 +47,7 @@ interface DocumentPanelSectionProps {
   onGoForward: () => void;
   onGoParent: () => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
-  onPersistPdfViewState: (viewState: NodeViewState) => void;
+  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;

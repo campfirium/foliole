@@ -30,6 +30,7 @@ configurePdfWorker();
 
 interface PdfDocumentSurfaceProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
+  isVisible?: boolean;
   nodeId: string | null;
   onCreateHighlightFromSelection?: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onPersistViewState: (viewState: NodeViewState) => void;
@@ -116,6 +117,7 @@ function PdfSelectionContextMenu({
 
 export function PdfDocumentSurface({
   highlightLocators,
+  isVisible = true,
   nodeId,
   nodeViewState,
   onCreateHighlightFromSelection,
@@ -123,7 +125,7 @@ export function PdfDocumentSurface({
   pdfIndexStatus,
   sourceHint
 }: PdfDocumentSurfaceProps) {
-  const pdfSystem = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint);
+  const pdfSystem = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint, isVisible);
   const selectionState = usePdfSelectionContextMenu(onCreateHighlightFromSelection);
   const searchState = usePdfSearchControls();
   useRegisterPdfSurface(nodeId, pdfSystem.actions.requestAnchorJump, searchState.applyExternalSearch);
