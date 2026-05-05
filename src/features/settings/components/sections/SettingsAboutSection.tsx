@@ -33,6 +33,11 @@ function formatBackupMeta(entry: DatabaseBackupEntry) {
   return `${updatedAt} · ${sizeInKilobytes}`;
 }
 
+function getBackupFileName(filePath: string) {
+  const parts = filePath.split(/[/\\]/);
+  return parts.at(-1) || filePath;
+}
+
 function loadInitialBackups(
   setBackups: (entries: DatabaseBackupEntry[]) => void,
   setIsLoadingBackups: (value: boolean) => void
@@ -73,7 +78,7 @@ async function runCreateBackup(
     return;
   }
   await refreshBackups();
-  setStatusMessage('Backup created.');
+  setStatusMessage(`Backup created: ${getBackupFileName(result.value.destinationPath)}.`);
   setIsCreatingBackup(false);
 }
 

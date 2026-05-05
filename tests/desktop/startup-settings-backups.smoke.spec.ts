@@ -8,9 +8,15 @@ test.describe('desktop smoke', () => {
     await expectWorkspaceShell(desktopWindow);
   });
 
-  test('settings exposes the backups section', async ({ desktopWindow }) => {
+  test('settings exposes the backups section and creates a visible backup entry', async ({ desktopWindow }) => {
     await expectWorkspaceShell(desktopWindow);
     await openBackupsSection(desktopWindow);
-    await expect(desktopWindow.getByRole('button', { name: 'Create backup' })).toBeEnabled();
+    const createBackupButton = desktopWindow.getByRole('button', { name: 'Create backup' });
+
+    await expect(createBackupButton).toBeEnabled();
+    await createBackupButton.click();
+
+    await expect(desktopWindow.getByText(/^Backup created:/)).toBeVisible();
+    await expect(desktopWindow.getByRole('button', { name: 'Restore' }).first()).toBeVisible();
   });
 });
