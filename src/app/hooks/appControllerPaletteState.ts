@@ -1,3 +1,4 @@
+import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
@@ -87,6 +88,20 @@ function createRestartAppCommand(args: {
   };
 }
 
+function createPaletteNavigationActions(args: {
+  nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return {
+    goBack: args.nav.handleGoBack,
+    goForward: args.nav.handleGoForward,
+    goParent: args.nav.handleGoParent,
+    goToNode: () => undefined,
+    moveToNode: () => undefined,
+    renameNode: () => requestNodeRename(args.ws.activeNodeId)
+  };
+}
+
 function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
@@ -115,15 +130,11 @@ function createPaletteRunnerArgs(args: {
     exportCurrentArticle: createExportCurrentArticleCommand(args),
     findInTopic: requestDocumentTopicSearchOpen,
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
-    goBack: args.nav.handleGoBack,
-    goForward: args.nav.handleGoForward,
-    goParent: args.nav.handleGoParent,
-    goToNode: () => undefined,
+    ...createPaletteNavigationActions(args),
     gradeReviewCard: args.ws.gradeReviewCard,
     importDirectory: args.formalImport.startImportDirectory,
     importSingleFile: args.formalImport.startImportFile,
     isReviewMode: args.isStudyMode,
-    moveToNode: () => undefined,
     onRestartApp: createRestartAppCommand(args),
     onToggleBaseColorMode: args.appearance.toggleBaseColorMode,
     onToggleDevTools: toggleMainWindowDevTools,

@@ -17,6 +17,7 @@ interface WorkspaceTopicTreeRowsProps {
   collapsedNodeIds: ReadonlySet<string>;
   nodesById: WorkspaceListNodesById;
   onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
+  onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
   rows: NodeTreeRow[];
@@ -30,6 +31,7 @@ function renderWorkspaceTopicTreeRow(
     collapsedNodeIds: ReadonlySet<string>;
     nodesById: WorkspaceListNodesById;
     onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
+    onRenameNode: (nodeId: string, title: string) => void;
     onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
     onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
     onToggleCollapse: (nodeId: string) => void;
@@ -72,6 +74,7 @@ function renderWorkspaceTopicTreeRow(
       onContextMenu={args.onContextMenu}
       rowSpacing={args.rowSpacing}
       onKeyDown={args.onRowKeyDown}
+      onRename={args.onRenameNode}
       onSelect={args.onSelectNode}
       onToggleCollapse={args.onToggleCollapse}
     />
@@ -83,6 +86,7 @@ export function WorkspaceTopicTreeRows({
   collapsedNodeIds,
   nodesById,
   onContextMenu,
+  onRenameNode,
   onSelectNode,
   onToggleCollapse,
   rows,
@@ -116,6 +120,7 @@ export function WorkspaceTopicTreeRows({
           collapsedNodeIds,
           nodesById,
           onContextMenu,
+          onRenameNode,
           onRowKeyDown,
           onSelectNode,
           onToggleCollapse,

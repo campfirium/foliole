@@ -11,6 +11,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.closeContextMenu]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.goBack]: { primary: { key: 'ArrowLeft', altKey: true } },
   [APP_COMMAND_IDS.goForward]: { primary: { key: 'ArrowRight', altKey: true } },
+  [APP_COMMAND_IDS.renameNode]: { primary: { key: 'F2' } },
   [APP_COMMAND_IDS.createFolder]: { primary: { key: 'f', ctrlKey: true, altKey: true }, secondary: { key: 'f', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.createTopic]: { primary: { key: 't', ctrlKey: true, altKey: true }, secondary: { key: 't', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.createItem]: { primary: { key: 'i', ctrlKey: true, altKey: true }, secondary: { key: 'e', metaKey: true, altKey: true } },

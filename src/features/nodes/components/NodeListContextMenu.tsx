@@ -15,6 +15,7 @@ interface NodeListContextMenuProps {
   onMergeHighlightsIntoTopic?: () => void;
   onMoveToNode?: () => void;
   onPasteIntoNode?: () => void;
+  onRenameNode?: () => void;
   onReturnNode?: () => void;
   onRestoreNode: () => void;
   showDeleteAction?: boolean;
@@ -22,6 +23,7 @@ interface NodeListContextMenuProps {
   showMergeHighlightsIntoTopicAction?: boolean;
   showMoveToNodeAction?: boolean;
   showPasteIntoNodeAction?: boolean;
+  showRenameAction?: boolean;
   showRootCreateOnly?: boolean;
   showReturnAction?: boolean;
   top: number;
@@ -40,12 +42,14 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       onMergeHighlightsIntoTopic={props.onMergeHighlightsIntoTopic}
       onMoveToNode={props.onMoveToNode}
       onPasteIntoNode={props.onPasteIntoNode}
+      onRenameNode={props.onRenameNode}
       onReturnNode={props.onReturnNode}
       showDeleteAction={props.showDeleteAction}
       showDismissAction={props.showDismissAction}
       showMergeHighlightsIntoTopicAction={props.showMergeHighlightsIntoTopicAction}
       showMoveToNodeAction={props.showMoveToNodeAction}
       showPasteIntoNodeAction={props.showPasteIntoNodeAction}
+      showRenameAction={props.showRenameAction}
       showRootCreateOnly={props.showRootCreateOnly}
       showReturnAction={props.showReturnAction}
     />
@@ -99,12 +103,14 @@ function NoteMenuItems({
   onMergeHighlightsIntoTopic,
   onMoveToNode,
   onPasteIntoNode,
+  onRenameNode,
   onReturnNode,
   showDeleteAction,
   showDismissAction,
   showMergeHighlightsIntoTopicAction,
   showMoveToNodeAction,
   showPasteIntoNodeAction,
+  showRenameAction,
   showRootCreateOnly,
   showReturnAction
 }: Omit<NodeListContextMenuProps, 'isTrashMenu' | 'left' | 'onClose' | 'onDeleteNodePermanently' | 'onRestoreNode' | 'top'>) {
@@ -115,6 +121,7 @@ function NoteMenuItems({
           {command.listLabel}
         </AppDropdownMenuItem>
       ))}
+      {showRootCreateOnly ? null : showRenameAction && onRenameNode ? <AppDropdownMenuItem onSelect={onRenameNode}>Rename</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showReturnAction && onReturnNode ? <AppDropdownMenuItem onSelect={onReturnNode}>Relearn</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDismissAction && onDismissNode ? <AppDropdownMenuItem onSelect={onDismissNode}>Dismiss</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showMergeHighlightsIntoTopicAction ? <AppDropdownMenuItem onSelect={onMergeHighlightsIntoTopic}>Merge Highlights</AppDropdownMenuItem> : null}

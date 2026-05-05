@@ -19,6 +19,7 @@ interface PaletteCommandRunnerArgs {
   goForward: () => void;
   goToNode: () => void;
   moveToNode: () => void;
+  renameNode: () => void;
   goParent: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
   importDirectory: () => Promise<boolean>;
@@ -84,6 +85,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     goForward: args.goForward,
     goToNode: () => args.setGoToNodePaletteOpen(true),
     moveToNode: () => args.setIsMoveToNodePaletteOpen(true),
+    renameNode: args.renameNode,
     goParent: args.goParent,
     importDirectory: () => {
       void args.importDirectory();

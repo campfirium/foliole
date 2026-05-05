@@ -15,6 +15,7 @@ import { hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview
 import { createDismissNodeAction, createReturnNodeAction } from './nodeListMenuActions';
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
+import { requestNodeRename } from './NodeTreeRowRename';
 
 interface NodeListTreeMenuProps {
   contextMenu: NodeListContextMenuController;
@@ -61,6 +62,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     showMergeHighlightsIntoTopicAction: showNodeImportActions,
     showMoveToNodeAction: isSingleNodeTarget && canNodeBeMoved(primaryTarget),
     showNodeImportActions,
+    showRenameAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget),
     showVirtualCreateOnly: props.isVirtualViewOpen || (isSingleNodeTarget && isVirtualRootNode(primaryTarget))
   };
 }
@@ -176,6 +178,10 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
       })}
       onMoveToNode={createMoveToNodeHandler(props, menuState.primaryTargetId)}
       onPasteIntoNode={props.contextMenu.closeContextMenu}
+      onRenameNode={() => (
+        requestNodeRename(menuState.primaryTargetId),
+        props.contextMenu.closeContextMenu()
+      )}
       onRestoreNode={() => (
         menuState.contextTargets.forEach((id) => props.restoreNode(id)),
         props.contextMenu.closeContextMenu()
@@ -186,6 +192,7 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
       showMergeHighlightsIntoTopicAction={menuState.showMergeHighlightsIntoTopicAction}
       showMoveToNodeAction={menuState.showMoveToNodeAction}
       showPasteIntoNodeAction={menuState.showNodeImportActions}
+      showRenameAction={menuState.showRenameAction}
       showRootCreateOnly={menuState.isRootMenu || menuState.showVirtualCreateOnly}
       showReturnAction={menuState.isNotesMenu && hasReturnTargets(menuState.contextTargets, props.nodesById)}
       top={props.contextMenu.menuPosition.top}

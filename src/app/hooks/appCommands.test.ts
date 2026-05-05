@@ -19,6 +19,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     goForward: () => undefined,
     goToNode: () => undefined,
     moveToNode: () => undefined,
+    renameNode: () => undefined,
     goParent: () => undefined,
     toggleImmersiveMode: () => undefined,
     importDirectory: () => undefined,
@@ -58,6 +59,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canImportFolder: true,
     canExportCurrentArticle: true,
     canMergeHighlightsIntoTopic: true,
+    canRenameNode: true,
     canResetImportData: true,
     canGoBack: true,
     canGoForward: true,
@@ -93,6 +95,7 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.goToNode)).toBe(true);
   expect(items.find((item) => item.id === APP_COMMAND_IDS.goToNode)?.title).toBe('Go to…');
   expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.renameNode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.findInTopic)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.enterPriorityMode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
@@ -157,6 +160,14 @@ describe('runAppCommand basics', () => {
     expectCommandRuns(APP_COMMAND_IDS.moveToNode, { moveToNode });
 
     expect(moveToNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs rename through the shared command handler', () => {
+    const renameNode = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.renameNode, { renameNode });
+
+    expect(renameNode).toHaveBeenCalledTimes(1);
   });
 
   it('runs formal import through the shared command handler', () => {

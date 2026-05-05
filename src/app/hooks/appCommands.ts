@@ -20,6 +20,7 @@ interface RunAppCommandActions {
   goForward: () => void;
   goToNode: () => void;
   moveToNode: () => void;
+  renameNode: () => void;
   goParent: () => void;
   toggleImmersiveMode: () => void;
   importSingleFile: () => void | Promise<void>;
@@ -95,6 +96,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.goForward]: actions.goForward,
     [APP_COMMAND_IDS.goToNode]: actions.goToNode,
     [APP_COMMAND_IDS.moveToNode]: actions.moveToNode,
+    [APP_COMMAND_IDS.renameNode]: actions.renameNode,
     [APP_COMMAND_IDS.goParent]: actions.goParent,
     [APP_COMMAND_IDS.toggleImmersiveMode]: actions.toggleImmersiveMode,
     [APP_COMMAND_IDS.toggleEditorDisplayMode]: actions.toggleEditorDisplayMode,

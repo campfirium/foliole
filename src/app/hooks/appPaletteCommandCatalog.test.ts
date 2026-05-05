@@ -19,6 +19,7 @@ const enabledOptions: BuildAppPaletteItemsOptions = {
   canImportFolder: true,
   canMergeHighlightsIntoTopic: true,
   canMoveToNode: true,
+  canRenameNode: true,
   canResetImportData: true,
   canRevealAnswer: true,
   canSetNodePriority: true,
@@ -45,5 +46,6 @@ describe('getAppPaletteCommands', () => {
     expect(sectionFor(APP_COMMAND_IDS.enterPriorityMode)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.exportCurrentArticle)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe('Editor');
+    expect(sectionFor(APP_COMMAND_IDS.renameNode)).toBe('Workspace');
   });
 });

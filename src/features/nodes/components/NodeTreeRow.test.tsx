@@ -151,3 +151,47 @@ it('does not toggle collapse on modified row click', () => {
   });
   expect(onToggleCollapse).not.toHaveBeenCalled();
 });
+
+it('starts inline rename on double click', () => {
+  render(
+    <NodeTreeRow
+      depth={0}
+      hasChildren={false}
+      isActive={false}
+      isCollapsed={false}
+      isSelected={false}
+      label="Draft topic"
+      nodeId="node-1"
+      onRename={vi.fn()}
+      onSelect={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rowSpacing={0}
+    />
+  );
+
+  fireEvent.doubleClick(screen.getByRole('treeitem', { name: 'Draft topic' }));
+
+  expect(screen.getByRole('textbox', { name: 'Rename Draft topic' })).toHaveValue('Draft topic');
+});
+
+it('starts inline rename on F2', () => {
+  render(
+    <NodeTreeRow
+      depth={0}
+      hasChildren={false}
+      isActive={false}
+      isCollapsed={false}
+      isSelected={false}
+      label="Draft topic"
+      nodeId="node-1"
+      onRename={vi.fn()}
+      onSelect={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rowSpacing={0}
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Draft topic' }), { key: 'F2' });
+
+  expect(screen.getByRole('textbox', { name: 'Rename Draft topic' })).toHaveValue('Draft topic');
+});

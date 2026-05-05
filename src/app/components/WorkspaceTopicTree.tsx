@@ -51,7 +51,8 @@ function useWorkspaceTopicTreeActions() {
     deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
     dismissNode: useWorkspaceStore((state) => state.dismissNode),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
-    returnNode: useWorkspaceStore((state) => state.relearnNode)
+    returnNode: useWorkspaceStore((state) => state.relearnNode),
+    updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)
   };
 }
 
@@ -156,6 +157,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
         emptyStateDescription: props.emptyStateDescription ?? 'Add a topic to get started.',
         emptyStateTitle: props.emptyStateTitle ?? 'No topics in this folder',
         nodesById: props.nodesById,
+        onRenameNode: interaction.updateNodeTitle,
         onSelectNode: interaction.handleSelectNode,
         onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, setCollapsedNodeIds),
         selectedNodeIds: interaction.topicTreeState.selectedNodeIds,

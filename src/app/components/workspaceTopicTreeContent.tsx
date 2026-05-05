@@ -15,6 +15,7 @@ export function renderWorkspaceTopicTreeBody(args: {
   emptyStateDescription: string;
   emptyStateTitle: string;
   nodesById: WorkspaceListNodesById;
+  onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
   onToggleCollapse: (nodeId: string) => void;
   selectedNodeIds: string[];
@@ -44,6 +45,7 @@ export function renderWorkspaceTopicTreeBody(args: {
           collapsedNodeIds={args.collapsedNodeIds}
           nodesById={args.nodesById}
           onContextMenu={args.contextMenu.openContextMenu}
+          onRenameNode={args.onRenameNode}
           onSelectNode={args.onSelectNode}
           onToggleCollapse={args.onToggleCollapse}
           rows={args.visibleRows}

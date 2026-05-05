@@ -55,4 +55,8 @@ describe('default command shortcuts', () => {
     expect(matchesShortcutSet(keyEvent({ key: '\\', ctrlKey: true }), shortcuts)).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: '\\', metaKey: true }), shortcuts)).toBe(true);
   });
+
+  it('registers rename on F2', () => {
+    expect(matchesShortcutSet(keyEvent({ key: 'F2' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.renameNode])).toBe(true);
+  });
 });

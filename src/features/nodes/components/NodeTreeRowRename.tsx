@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
 
+const NODE_RENAME_REQUEST_EVENT = 'foliole:node-rename-request';
+
+interface NodeRenameRequestDetail {
+  nodeId: string;
+}
+
 interface RenameState {
   draftTitle: string;
   isRenaming: boolean;
@@ -16,6 +22,17 @@ export function useRenameState(
 ): RenameState {
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(label);
+
+  useEffect(() => {
+    const handleRenameRequest = (event: Event) => {
+      const detail = (event as CustomEvent<NodeRenameRequestDetail>).detail;
+      if (detail?.nodeId === nodeId && onRename) {
+        setIsRenaming(true);
+      }
+    };
+    window.addEventListener(NODE_RENAME_REQUEST_EVENT, handleRenameRequest);
+    return () => window.removeEventListener(NODE_RENAME_REQUEST_EVENT, handleRenameRequest);
+  }, [nodeId, onRename]);
 
   useEffect(() => {
     setDraftTitle(label);
@@ -37,6 +54,14 @@ export function useRenameState(
   };
 }
 
+export function requestNodeRename(nodeId: string | null | undefined) {
+  if (!nodeId) {
+    return false;
+  }
+  window.dispatchEvent(new CustomEvent<NodeRenameRequestDetail>(NODE_RENAME_REQUEST_EVENT, { detail: { nodeId } }));
+  return true;
+}
+
 interface NodeRenameInputProps {
   draftTitle: string;
   label: string;
@@ -56,7 +81,7 @@ export function NodeRenameInput({
     <input
       aria-label={`Rename ${label}`}
       autoFocus
-      className="min-w-0 flex-1 rounded border border-border-strong bg-bg-panel px-2 py-1 text-sm outline-none"
+      className="box-border h-5 min-w-0 max-w-full flex-1 rounded-sm border border-border/35 bg-[var(--app-surface-control-bg)] px-1.5 py-0 text-[13px] leading-5 text-foreground outline-none focus:border-border-strong focus:bg-[var(--app-surface-control-hover-bg)]"
       onBlur={onSubmit}
       onChange={(event) => onChange(event.target.value)}
       onClick={(event) => event.stopPropagation()}

@@ -68,6 +68,39 @@ function canToggleImmersiveMode(args: {
   return Boolean(activeNode && activeNode.kind !== 'folder');
 }
 
+function buildPaletteOptions(
+  args: Parameters<typeof useAppPaletteItems>[0],
+  canMoveToNode: boolean,
+  hasNavigableNodes: boolean
+) {
+  const canUseCurrentTopic = canMergeHighlightsIntoTopic(args);
+  return {
+    canExportCurrentArticle: canExportCurrentArticle(args),
+    canImportFile: args.formalImportAvailable,
+    canImportFolder: args.formalImportAvailable,
+    canMergeHighlightsIntoTopic: canUseCurrentTopic,
+    canRenameNode: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
+    canResetImportData: args.formalImportAvailable,
+    canGoBack: args.nav.canGoBack,
+    canGoForward: args.nav.canGoForward,
+    canGoToNode: hasNavigableNodes,
+    canMoveToNode,
+    canGoParent: args.nav.canGoParent,
+    canFindInCurrentTopic: canUseCurrentTopic,
+    canToggleImmersiveMode: canToggleImmersiveMode(args),
+    resolvedBaseColorMode: args.resolvedBaseColorMode,
+    canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
+    canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
+    canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
+    canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,
+    canDeferReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+    canCompleteReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+    canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+    isImmersiveMode: args.isImmersiveMode,
+    isReviewMode: args.isStudyMode
+  };
+}
+
 export function useAppPaletteItems(args: {
   activeNodeId: string | null;
   formalImportAvailable: boolean;
@@ -90,39 +123,18 @@ export function useAppPaletteItems(args: {
   const canMoveToNode = useMemo(
     () => {
       const activeNodeId = args.activeNodeId;
-      return activeNodeId && canNodeBeMoved(args.ws.nodesById[activeNodeId])
-        ? args.ws.nodeOrder.some((nodeId) => canNodeBeMoveTarget({ activeNodeId, nodeId, ws: args.ws }))
-        : false;
+      return Boolean(
+        activeNodeId &&
+        canNodeBeMoved(args.ws.nodesById[activeNodeId]) &&
+        args.ws.nodeOrder.some((nodeId) => canNodeBeMoveTarget({ activeNodeId, nodeId, ws: args.ws }))
+      );
     },
     [args.activeNodeId, args.ws.nodeOrder, args.ws.nodesById, args.ws.trashedNodeIds]
   );
 
   return useMemo(
     () =>
-      buildAppPaletteItems({
-        canExportCurrentArticle: canExportCurrentArticle(args),
-        canImportFile: args.formalImportAvailable,
-        canImportFolder: args.formalImportAvailable,
-        canMergeHighlightsIntoTopic: canMergeHighlightsIntoTopic(args),
-        canResetImportData: args.formalImportAvailable,
-        canGoBack: args.nav.canGoBack,
-        canGoForward: args.nav.canGoForward,
-        canGoToNode: hasNavigableNodes,
-        canMoveToNode,
-        canGoParent: args.nav.canGoParent,
-        canFindInCurrentTopic: canMergeHighlightsIntoTopic(args),
-        canToggleImmersiveMode: canToggleImmersiveMode(args),
-        resolvedBaseColorMode: args.resolvedBaseColorMode,
-        canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
-        canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
-        canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
-        canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,
-        canDeferReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
-        canCompleteReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
-        canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
-        isImmersiveMode: args.isImmersiveMode,
-        isReviewMode: args.isStudyMode
-      }).map((item) => ({
+      buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes)).map((item) => ({
         ...item,
         shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts
       })),

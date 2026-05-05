@@ -7,6 +7,7 @@ export interface BuildAppPaletteItemsOptions {
   canImportFile: boolean;
   canImportFolder: boolean;
   canMergeHighlightsIntoTopic: boolean;
+  canRenameNode: boolean;
   canResetImportData: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -58,6 +59,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   },
   { id: APP_COMMAND_IDS.resetImportData, title: 'DEV Reset Import Data', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reset', 'clear', 'records'] },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
+  { id: APP_COMMAND_IDS.renameNode, title: 'Rename', section: 'Workspace', keywords: ['rename', 'topic', 'folder'] },
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Editor', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
   {
     id: APP_COMMAND_IDS.mergeHighlightsIntoTopic,
@@ -128,24 +130,51 @@ function isReviewGradeCommand(id: string) {
   );
 }
 
-export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+  if (id === APP_COMMAND_IDS.openTrash || id === APP_COMMAND_IDS.restartApp || id === APP_COMMAND_IDS.toggleList) {
+    return true;
+  }
+  if (id === APP_COMMAND_IDS.renameNode) {
+    return options.canRenameNode;
+  }
+  return null;
+}
+
+function isImportCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
   if (id === APP_COMMAND_IDS.importSingleFile) {
     return options.canImportFile;
   }
   if (id === APP_COMMAND_IDS.importFolder) {
     return options.canImportFolder;
   }
-  if (id === APP_COMMAND_IDS.goBack) {
-    return options.canGoBack;
-  }
   if (id === APP_COMMAND_IDS.resetImportData) {
     return options.canResetImportData;
   }
+  return null;
+}
+
+function isEditorCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
   if (id === APP_COMMAND_IDS.exportCurrentArticle) {
     return options.canExportCurrentArticle;
   }
   if (id === APP_COMMAND_IDS.mergeHighlightsIntoTopic) {
     return options.canMergeHighlightsIntoTopic;
+  }
+  if (id === APP_COMMAND_IDS.findInTopic) {
+    return options.canFindInCurrentTopic;
+  }
+  if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
+    return options.canToggleImmersiveMode;
+  }
+  if (id === APP_COMMAND_IDS.enterPriorityMode) {
+    return options.canSetNodePriority;
+  }
+  return null;
+}
+
+function isNavigationCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+  if (id === APP_COMMAND_IDS.goBack) {
+    return options.canGoBack;
   }
   if (id === APP_COMMAND_IDS.goForward) {
     return options.canGoForward;
@@ -159,15 +188,10 @@ export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItem
   if (id === APP_COMMAND_IDS.goParent) {
     return options.canGoParent;
   }
-  if (id === APP_COMMAND_IDS.findInTopic) {
-    return options.canFindInCurrentTopic;
-  }
-  if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
-    return options.canToggleImmersiveMode;
-  }
-  if (id === APP_COMMAND_IDS.enterPriorityMode) {
-    return options.canSetNodePriority;
-  }
+  return null;
+}
+
+function isReviewCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
   if (id === APP_COMMAND_IDS.startStudyMode) {
     return options.canToggleReviewMode;
   }
@@ -185,6 +209,20 @@ export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItem
   }
   if (isReviewGradeCommand(id)) {
     return options.canGradeReview;
+  }
+  return null;
+}
+
+export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+  const enabled = [
+    isWorkspaceCommandEnabled,
+    isImportCommandEnabled,
+    isEditorCommandEnabled,
+    isNavigationCommandEnabled,
+    isReviewCommandEnabled
+  ].reduce<boolean | null>((current, resolver) => current ?? resolver(id, options), null);
+  if (enabled !== null) {
+    return enabled;
   }
   return true;
 }
