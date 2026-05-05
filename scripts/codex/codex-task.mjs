@@ -145,7 +145,7 @@ export function buildPrompt(task) {
   const request = parseTaskRequest(task);
   const promptLines = [
     `Work in repository: ${REPO_ROOT}`,
-    'Read AGENTS.md first and follow the repo workflow in .lab/agent/workflow.md.',
+    'Read AGENTS.md first and follow the repo workflow in .lab/atlas/workflow.md.',
     `Implement exactly one minimal acceptable task: ${request.task}`,
     'Constraints:',
     '- Stay within the task boundary and avoid unrelated refactors.',

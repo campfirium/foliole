@@ -12,15 +12,15 @@
 
 ## 文档读取顺序
 - 启动时只读 `AGENTS.md`。
-- 仅当用户在新会话首条有效指令明确说“继续”时，先读取 `.lab/agent/todo.md`；必要时按需补读 `.lab/agent/verify.md`、`.lab/agent/optional.md`、`.lab/agent/notes.md`、`.lab/agent/done.md` 与 `git log --oneline -n 5`。
+- 仅当用户在新会话首条有效指令明确说“继续”时，先读取 `.lab/atlas/todo.md`；必要时按需补读 `.lab/atlas/verify.md`、`.lab/atlas/optional.md`、`.lab/atlas/notes.md`、`.lab/atlas/done.md` 与 `git log --oneline -n 5`。
 - 任务涉及 renderer UI 改动（`src/app/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增/重写 spec、整理文档结构、拆分长文档时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
-- 任务涉及台账、继续/停车协议等执行细则时，读取 `.lab/agent/task-protocol.md`。
+- 任务涉及台账、继续/停车协议等执行细则时，读取 `.lab/atlas/task-protocol.md`。
 - 仅在判断验证或停车策略时读取 `.lab/internal/runtime/windows-preview.flag` 与 `.lab/internal/runtime/park.flag`。
 
 ## 任务执行主规则
-1. 任务来源优先级：用户当次明确指令 > 当前代码现状 > `.lab/agent/todo.md` 首项。
+1. 任务来源优先级：用户当次明确指令 > 当前代码现状 > `.lab/atlas/todo.md` 首项。
 2. 若用户未给清晰任务范围，先补齐任务说明，再实施；禁止凭短标题脑补。
 3. 任务说明至少应覆盖：当前问题或背景、预期目标、影响范围、明确边界、已知约束或依赖。
 4. 需求、边界、验收标准或预期行为存在歧义时，必须先向用户澄清；禁止靠猜测开工。
@@ -31,14 +31,14 @@
 9. 若 `todo`、`verify`、`optional`、`done` 与最近提交不一致，先更新台账或向用户明确差异，再实施代码任务；禁止跳过对账直接认领下一条。
 10. `verify` 仅表示“已实现但仍待复核/待人工确认”的备注区，不是默认任务来源；除非用户明确要求补做其中缺口，否则不得把它当作新的实施任务直接开工。
 11. 只改当前任务相关文件；发现结构性阻塞时，先写回 TODO，再决定是否提升优先级。
-12. `.lab/agent/todo.md`、`.lab/agent/verify.md`、`.lab/agent/optional.md` 共同构成未完成工作的真实来源，其中默认接手入口只有 `todo`；`.lab/agent/notes.md` 只承载长期备注，`.lab/agent/done.md` 只记录已完成项；但当“继续”恢复发现台账滞后于代码与提交时，必须先修正台账真相。
+12. `.lab/atlas/todo.md`、`.lab/atlas/verify.md`、`.lab/atlas/optional.md` 共同构成未完成工作的真实来源，其中默认接手入口只有 `todo`；`.lab/atlas/notes.md` 只承载长期备注，`.lab/atlas/done.md` 只记录已完成项；但当“继续”恢复发现台账滞后于代码与提交时，必须先修正台账真相。
 
 ## 质量闸与测试
 - 不允许通过降低检查标准过关；禁止跳过关键检查、删除校验或用注释掩盖失败。
 - 默认质量闸顺序固定为 `lint` -> `typecheck` -> `test`，入口脚本为 `scripts/quality-gate-fast.sh`。
 - 新增或升级 npm 依赖时，除常规质量闸外，必须额外执行 `npm run deps:hardening:check`；不得只凭口头说明或文档勾选完成。
 - npm 依赖相关复核默认由 AI 直接执行并汇报结果；禁止把“人工检查依赖风险”“人工定期复核”这类空泛表述挂成默认待办。
-- npm 依赖收紧的背景、例外与专项结论统一收口在 `.lab/agent/npm-supply-chain-hardening-plan.md`；主规则只保留可执行入口，不在这里重复展开长篇原则。
+- npm 依赖收紧的背景、例外与专项结论统一收口在 `.lab/atlas/npm-supply-chain-hardening-plan.md`；主规则只保留可执行入口，不在这里重复展开长篇原则。
 - 当 `.lab/internal/runtime/windows-preview.flag` 为 `ON` 时，代码改动在通过本地质量闸后，默认必须继续执行 `npm run windows:preview`；除非用户当次明确豁免。
 - 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
 - Windows 公开验证入口只保留 `npm run windows:preview`；其余 Windows npm 命令不再作为默认或推荐入口。
@@ -98,7 +98,7 @@
 
 ## 细则入口
 - 开发方法论（BDD、UI 先行、任务拆分顺序）：`.lab/specs/_product/methodology.md`
-- agent 台账与执行协议：`.lab/agent/task-protocol.md`
+- agent 台账与执行协议：`.lab/atlas/task-protocol.md`
 - 文档治理与准入规则：`.lab/specs/_governance/doc-update-expectation.md`、`.lab/specs/_governance/spec-organization.md`、`.lab/specs/_governance/doc-organization-expectation.md`
 - UI 规范：`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`、`.lab/specs/desktop/workspace/shell-layout.md`
 - Windows Native 开发与启动排障：`.lab/specs/desktop/electron/windows-dev-loop.md`
