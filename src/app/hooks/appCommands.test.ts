@@ -10,6 +10,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     goBack: () => undefined,
     goForward: () => undefined,
     goToNode: () => undefined,
+    moveToNode: () => undefined,
     goParent: () => undefined,
     importDirectory: () => undefined,
     importSingleFile: () => undefined,
@@ -36,6 +37,10 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
   };
 }
 
+function expectCommandRuns(commandId: string, overrides: Partial<Parameters<typeof runAppCommand>[1]>) {
+  expect(runAppCommand(commandId, createCommandActions(overrides))).toBe(true);
+}
+
 describe('buildAppPaletteItems', () => {
   it('includes migrated command entries instead of a minimal fallback list', () => {
     const items = buildAppPaletteItems({
@@ -45,6 +50,7 @@ describe('buildAppPaletteItems', () => {
       canGoBack: true,
       canGoForward: true,
       canGoToNode: true,
+      canMoveToNode: true,
       canGoParent: true,
       canRevealAnswer: true,
       canToggleReviewMode: true,
@@ -60,6 +66,7 @@ describe('buildAppPaletteItems', () => {
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.goToNode)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
@@ -76,6 +83,7 @@ describe('buildAppPaletteItems', () => {
       canGoBack: true,
       canGoForward: true,
       canGoToNode: true,
+      canMoveToNode: true,
       canGoParent: true,
       canRevealAnswer: true,
       canToggleReviewMode: true,
@@ -96,13 +104,7 @@ describe('runAppCommand', () => {
     const importSingleFile = vi.fn();
     const importDirectory = vi.fn();
 
-    expect(
-      runAppCommand(APP_COMMAND_IDS.toggleDevTools, createCommandActions({
-        importDirectory,
-        importSingleFile,
-        toggleDevTools
-      }))
-    ).toBe(true);
+    expectCommandRuns(APP_COMMAND_IDS.toggleDevTools, { importDirectory, importSingleFile, toggleDevTools });
 
     expect(toggleDevTools).toHaveBeenCalledTimes(1);
     expect(importSingleFile).not.toHaveBeenCalled();
@@ -112,25 +114,24 @@ describe('runAppCommand', () => {
   it('runs go to node through the shared command handler', () => {
     const goToNode = vi.fn();
 
-    expect(
-      runAppCommand(APP_COMMAND_IDS.goToNode, createCommandActions({
-        goToNode
-      }))
-    ).toBe(true);
+    expectCommandRuns(APP_COMMAND_IDS.goToNode, { goToNode });
 
     expect(goToNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs move to through the shared command handler', () => {
+    const moveToNode = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.moveToNode, { moveToNode });
+
+    expect(moveToNode).toHaveBeenCalledTimes(1);
   });
 
   it('runs formal import through the shared command handler', () => {
     const importSingleFile = vi.fn();
     const importDirectory = vi.fn();
 
-    expect(
-      runAppCommand(APP_COMMAND_IDS.importSingleFile, createCommandActions({
-        importDirectory,
-        importSingleFile,
-      }))
-    ).toBe(true);
+    expectCommandRuns(APP_COMMAND_IDS.importSingleFile, { importDirectory, importSingleFile });
 
     expect(importSingleFile).toHaveBeenCalledTimes(1);
     expect(importDirectory).not.toHaveBeenCalled();
@@ -139,11 +140,7 @@ describe('runAppCommand', () => {
   it('runs restart app through the shared command handler', () => {
     const restartApp = vi.fn();
 
-    expect(
-      runAppCommand(APP_COMMAND_IDS.restartApp, createCommandActions({
-        restartApp
-      }))
-    ).toBe(true);
+    expectCommandRuns(APP_COMMAND_IDS.restartApp, { restartApp });
 
     expect(restartApp).toHaveBeenCalledTimes(1);
   });

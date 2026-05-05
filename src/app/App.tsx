@@ -18,6 +18,15 @@ function AppContent() {
         <CommandPalette {...controller.paletteState} />
         <SearchPalette {...controller.searchState} />
         <GoToNodePalette {...controller.goToNodeState} />
+        <GoToNodePalette
+          {...controller.moveToNodeState}
+          dialogLabel="Move to"
+          emptyLabel="Search target nodes"
+          inputLabel="Move to"
+          noResultsLabel="No matching target nodes"
+          onSelectNode={controller.moveToNodeState.onOpenNode}
+          placeholder="Type a node title..."
+        />
       </>
     </HotkeySettingsProvider>
   );

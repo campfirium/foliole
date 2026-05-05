@@ -4,6 +4,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
+import { getRecentNodeIds, pushRecentNodeId, setRecentNodeIds } from '../components/nodePaletteRecents';
 
 interface CommandPaletteToggleShortcutEvent {
   altKey: boolean;
@@ -44,6 +45,7 @@ export function isSearchPaletteToggleShortcut(event: CommandPaletteToggleShortcu
 function useWindowHotkeys(args: {
   setIsCommandPaletteOpen: (update: (open: boolean) => boolean) => void;
   setIsGoToNodePaletteOpen: (open: boolean) => void;
+  setIsMoveToNodePaletteOpen: (open: boolean) => void;
   setIsSearchPaletteOpen: (update: (open: boolean) => boolean) => void;
 }) {
   useEffect(
@@ -58,6 +60,7 @@ function useWindowHotkeys(args: {
           event.preventDefault();
           args.setIsSearchPaletteOpen(() => false);
           args.setIsGoToNodePaletteOpen(false);
+          args.setIsMoveToNodePaletteOpen(false);
           args.setIsCommandPaletteOpen((open) => !open);
           return;
         }
@@ -65,6 +68,7 @@ function useWindowHotkeys(args: {
           event.preventDefault();
           args.setIsCommandPaletteOpen(() => false);
           args.setIsGoToNodePaletteOpen(false);
+          args.setIsMoveToNodePaletteOpen(false);
           args.setIsSearchPaletteOpen((open) => !open);
         }
       }),
@@ -81,15 +85,29 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isSearchPaletteOpen, setIsSearchPaletteOpen] = useState(false);
   const [isGoToNodePaletteOpen, setIsGoToNodePaletteOpen] = useState(false);
+  const [isMoveToNodePaletteOpen, setIsMoveToNodePaletteOpen] = useState(false);
   const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
   const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
+  const [recentNodeIds, setRecentNodeIdsState] = useState<string[]>(() => getRecentNodeIds());
 
-  useWindowHotkeys({ setIsCommandPaletteOpen, setIsGoToNodePaletteOpen, setIsSearchPaletteOpen });
+  useWindowHotkeys({
+    setIsCommandPaletteOpen,
+    setIsGoToNodePaletteOpen,
+    setIsMoveToNodePaletteOpen,
+    setIsSearchPaletteOpen
+  });
 
   const recordRecentCommand = (id: string) => {
     setRecentCommandIdsState((current) => {
       const next = pushRecentCommandId(current, id);
       setRecentCommandIds(next);
+      return next;
+    });
+  };
+  const recordRecentNode = (id: string) => {
+    setRecentNodeIdsState((current) => {
+      const next = pushRecentNodeId(current, id);
+      setRecentNodeIds(next);
       return next;
     });
   };
@@ -99,16 +117,20 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     isCommandPaletteOpen,
     isGoToNodePaletteOpen,
     isImportManagementOpen,
+    isMoveToNodePaletteOpen,
     isSearchPaletteOpen,
     isSettingsOpen,
     isViewingTrashNode,
     lastExpandedListWidthRef,
     lastExpandedRightSidebarWidthRef,
     recentCommandIds,
+    recentNodeIds,
     recordRecentCommand,
+    recordRecentNode,
     setIsCommandPaletteOpen,
     setIsGoToNodePaletteOpen,
     setIsImportManagementOpen,
+    setIsMoveToNodePaletteOpen,
     setIsSearchPaletteOpen,
     setIsSettingsOpen,
     setIsViewingTrashNode

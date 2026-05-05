@@ -57,3 +57,43 @@ it('runs go to node from the command palette without replacing workspace search'
   });
   expect(screen.queryByRole('dialog', { name: 'Go to node' })).not.toBeInTheDocument();
 });
+
+it('shows nodes immediately and puts the last used target first when reopened', async () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2', 'node-3'],
+    nodesById: {
+      ...state.nodesById,
+      'node-2': createNode({
+        id: 'node-2',
+        title: 'Project Atlas',
+        content: 'This note tracks rollout details.'
+      }),
+      'node-3': createNode({
+        id: 'node-3',
+        title: 'Inbox Target',
+        content: 'This note is only here to test recents.'
+      })
+    }
+  }));
+
+  render(<App />);
+
+  fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
+  let commandInput = within(screen.getByRole('dialog', { name: 'Command palette' })).getByLabelText('Search commands');
+  fireEvent.change(commandInput, { target: { value: 'go to node' } });
+  fireEvent.keyDown(commandInput, { key: 'Enter' });
+
+  const firstDialog = await screen.findByRole('dialog', { name: 'Go to node' });
+  expect(within(firstDialog).getByRole('button', { name: /Welcome to Foliole/i })).toBeInTheDocument();
+  fireEvent.click(within(firstDialog).getByRole('button', { name: /Project Atlas/i }));
+
+  fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
+  commandInput = within(screen.getByRole('dialog', { name: 'Command palette' })).getByLabelText('Search commands');
+  fireEvent.change(commandInput, { target: { value: 'go to node' } });
+  fireEvent.keyDown(commandInput, { key: 'Enter' });
+
+  const secondDialog = await screen.findByRole('dialog', { name: 'Go to node' });
+  const resultButtons = within(secondDialog).getAllByRole('button');
+  expect(resultButtons[0]).toHaveTextContent('Project Atlas');
+});

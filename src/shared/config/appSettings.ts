@@ -48,6 +48,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',
   managedInboxPath: MANAGED_INBOX_APP_SETTING_KEY,
   commandRecents: 'foliole-command-recents',
+  nodePaletteRecents: 'foliole-node-palette-recents',
   commandShortcutOverrides: 'foliole-command-shortcut-overrides'
 } as const;
 

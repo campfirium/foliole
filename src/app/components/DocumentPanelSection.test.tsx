@@ -49,6 +49,7 @@ function renderSection() {
       editableNodeId="node-1"
       editorAppearanceKey="appearance-1"
       editorContent="# Node 1"
+      isEditorReadOnly={false}
       editorNodeId="node-1"
       editorNodeViewState={undefined}
       isDocumentResizing={false}

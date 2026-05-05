@@ -50,6 +50,7 @@ const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.rightSidebarCollapsed,
   APP_SETTINGS_STORAGE_KEYS.managedInboxPath,
   APP_SETTINGS_STORAGE_KEYS.commandRecents,
+  APP_SETTINGS_STORAGE_KEYS.nodePaletteRecents,
   APP_SETTINGS_STORAGE_KEYS.commandShortcutOverrides
 ]);
 

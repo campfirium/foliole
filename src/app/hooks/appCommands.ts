@@ -9,6 +9,7 @@ interface BuildAppPaletteItemsOptions {
   canGoBack: boolean;
   canGoForward: boolean;
   canGoToNode: boolean;
+  canMoveToNode: boolean;
   canGoParent: boolean;
   canRevealAnswer: boolean;
   canToggleReviewMode: boolean;
@@ -26,6 +27,7 @@ interface RunAppCommandActions {
   goBack: () => void;
   goForward: () => void;
   goToNode: () => void;
+  moveToNode: () => void;
   goParent: () => void;
   importSingleFile: () => void | Promise<void>;
   resetImportData: () => boolean | void;
@@ -103,6 +105,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.goBack, title: 'Go Back', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goForward, title: 'Go Forward', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goToNode, title: 'Go to Node', section: 'Navigation', keywords: ['search', 'open', 'node', 'jump'] },
+  { id: APP_COMMAND_IDS.moveToNode, title: 'Move to', section: 'Navigation', keywords: ['move', 'reparent', 'node'] },
   { id: APP_COMMAND_IDS.goParent, title: 'Go Parent', section: 'Navigation' },
   { id: APP_COMMAND_IDS.toggleEditorDisplayMode, title: 'Toggle Editor Display Mode', section: 'Editor' },
   { id: APP_COMMAND_IDS.startStudyMode, title: 'Enter Review Mode', section: 'Review' },
@@ -141,6 +144,9 @@ function isCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
   }
   if (id === APP_COMMAND_IDS.goToNode) {
     return options.canGoToNode;
+  }
+  if (id === APP_COMMAND_IDS.moveToNode) {
+    return options.canMoveToNode;
   }
   if (id === APP_COMMAND_IDS.goParent) {
     return options.canGoParent;
@@ -207,6 +213,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.goBack]: actions.goBack,
     [APP_COMMAND_IDS.goForward]: actions.goForward,
     [APP_COMMAND_IDS.goToNode]: actions.goToNode,
+    [APP_COMMAND_IDS.moveToNode]: actions.moveToNode,
     [APP_COMMAND_IDS.goParent]: actions.goParent,
     [APP_COMMAND_IDS.toggleEditorDisplayMode]: actions.toggleEditorDisplayMode,
     [APP_COMMAND_IDS.startStudyMode]: actions.toggleReviewMode,

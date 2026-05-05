@@ -118,6 +118,7 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       editableNodeId={props.editorNodeId}
       editorAppearanceKey={editorAppearanceKey}
       editorContent={props.editorContent}
+      isEditorReadOnly={props.isEditorReadOnly}
       editorNodeId={props.editorNodeId}
       editorNodeViewState={props.editorNodeViewState}
       isDocumentResizing={props.isDocumentResizing}

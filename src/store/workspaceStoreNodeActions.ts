@@ -1,4 +1,5 @@
 import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
+import { hasChildNodes } from '../features/nodes/model/nodeContainers';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../features/nodes/model/specialNodes';
 import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
@@ -86,7 +87,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || isInboxNode(node)) {
+      if (!node || isInboxNode(node) || hasChildNodes(nodeId, state.nodeOrder, state.nodesById)) {
         return state;
       }
       const derivedTitle = deriveNodeTitleFromContent(content);

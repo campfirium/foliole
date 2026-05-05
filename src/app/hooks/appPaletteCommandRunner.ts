@@ -9,6 +9,7 @@ interface PaletteCommandRunnerArgs {
   goBack: () => void;
   goForward: () => void;
   goToNode: () => void;
+  moveToNode: () => void;
   goParent: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
   importDirectory: () => Promise<boolean>;
@@ -29,6 +30,7 @@ interface PaletteCommandRunnerArgs {
   revealReviewAnswer: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setGoToNodePaletteOpen: (open: boolean) => void;
+  setIsMoveToNodePaletteOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   startClipboardImport: () => void;
   startReviewSession: () => boolean;
@@ -56,6 +58,7 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       goBack: args.goBack,
       goForward: args.goForward,
       goToNode: () => args.setGoToNodePaletteOpen(true),
+      moveToNode: () => args.setIsMoveToNodePaletteOpen(true),
       goParent: args.goParent,
       importDirectory: () => {
         void args.importDirectory();

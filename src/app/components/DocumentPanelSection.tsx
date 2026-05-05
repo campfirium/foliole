@@ -26,6 +26,7 @@ interface DocumentPanelSectionProps {
   documentMaxWidth: number;
   editorContent: string;
   editorAppearanceKey: string;
+  isEditorReadOnly: boolean;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
   isDocumentResizing: boolean;
@@ -101,6 +102,7 @@ function getDocumentPanelBodyProps(
     onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
     onResetLayout: props.onResetLayout,
     onStartDocumentResize: props.onStartDocumentResize,
+    readOnly: props.isEditorReadOnly,
     reveal
   };
 }

@@ -31,11 +31,12 @@ export function buildGoToNodeState(
   isOpen: boolean,
   nodeOrder: string[],
   nodesById: AppGoToNodeState['nodesById'],
+  recentNodeIds: string[],
   trashedNodeIds: string[],
   onClose: () => void,
   onOpenNode: (nodeId: string) => void
 ): AppGoToNodeState {
-  return { isOpen, nodeOrder, nodesById, onClose, onOpenNode, trashedNodeIds };
+  return { isOpen, nodeOrder, nodesById, onClose, onOpenNode, recentNodeIds, trashedNodeIds };
 }
 
 type WorkspaceSelectors = {

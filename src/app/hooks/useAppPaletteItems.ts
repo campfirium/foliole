@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
 
+import { canNodeAcceptMovedChildren } from '../../features/nodes/model/nodeContainers';
+import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
+
 import { buildAppPaletteItems } from './appCommands';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import {
@@ -8,6 +11,7 @@ import {
 } from './reviewHotkeysState';
 
 export function useAppPaletteItems(args: {
+  activeNodeId: string | null;
   formalImportAvailable: boolean;
   hasReviewCard: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
@@ -22,6 +26,23 @@ export function useAppPaletteItems(args: {
     () => args.ws.nodeOrder.some((nodeId) => !args.ws.trashedNodeIds.includes(nodeId) && Boolean(args.ws.nodesById[nodeId])),
     [args.ws.nodeOrder, args.ws.nodesById, args.ws.trashedNodeIds]
   );
+  const canMoveToNode = useMemo(
+    () => {
+      const activeNodeId = args.activeNodeId;
+      return activeNodeId
+        ? args.ws.nodeOrder.some((nodeId) => {
+            if (nodeId === activeNodeId || args.ws.trashedNodeIds.includes(nodeId)) {
+              return false;
+            }
+            if (isNodeInSubtree(nodeId, activeNodeId, args.ws.nodesById as Record<string, import('../../features/nodes/model/nodeTypes').Node>)) {
+              return false;
+            }
+            return canNodeAcceptMovedChildren(nodeId, args.ws.nodeOrder, args.ws.nodesById);
+          })
+        : false;
+    },
+    [args.activeNodeId, args.ws.nodeOrder, args.ws.nodesById, args.ws.trashedNodeIds]
+  );
 
   return useMemo(
     () =>
@@ -32,6 +53,7 @@ export function useAppPaletteItems(args: {
         canGoBack: args.nav.canGoBack,
         canGoForward: args.nav.canGoForward,
         canGoToNode: hasNavigableNodes,
+        canMoveToNode,
         canGoParent: args.nav.canGoParent,
         canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
         canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
@@ -44,6 +66,6 @@ export function useAppPaletteItems(args: {
         ...item,
         shortcuts: isReviewShortcutCommand(item.id) ? args.hotkeys.shortcutMap[item.id] : item.shortcuts
       })),
-    [args, hasNavigableNodes]
+    [args, canMoveToNode, hasNavigableNodes]
   );
 }

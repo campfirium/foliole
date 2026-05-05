@@ -7,6 +7,7 @@ export interface AppGoToNodeState {
   nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById'];
   onClose: () => void;
   onOpenNode: (nodeId: string) => void;
+  recentNodeIds: string[];
   trashedNodeIds: string[];
 }
 
@@ -19,9 +20,11 @@ export function buildControllerGoToNodeState(args: {
     args.runtime.isGoToNodePaletteOpen,
     args.ws.nodeOrder,
     args.ws.nodesById,
+    args.runtime.recentNodeIds,
     args.ws.trashedNodeIds,
     () => args.runtime.setIsGoToNodePaletteOpen(false),
     (nodeId) => {
+      args.runtime.recordRecentNode(nodeId);
       args.trash.closeTrashView();
       args.ws.openNode(nodeId);
       args.runtime.setIsGoToNodePaletteOpen(false);

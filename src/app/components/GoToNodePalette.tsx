@@ -6,20 +6,29 @@ import { appFloatingSurfaceClassName } from '../../shared/ui';
 import { buildNodeSearchResults } from './workspaceNodeSearch';
 
 interface GoToNodePaletteProps {
+  dialogLabel?: string;
+  emptyLabel?: string;
   isOpen: boolean;
+  inputLabel?: string;
   nodeOrder: string[];
   nodesById: Record<string, Node | undefined>;
   onClose: () => void;
-  onOpenNode: (nodeId: string) => void;
+  onOpenNode?: (nodeId: string) => void;
+  onSelectNode?: (nodeId: string) => void;
+  noResultsLabel?: string;
+  placeholder?: string;
+  recentNodeIds: string[];
   trashedNodeIds: string[];
 }
 
 interface GoToNodeInputProps {
   inputRef: RefObject<HTMLInputElement>;
+  inputLabel: string;
   onClose: () => void;
   onOpenActive: () => void;
   onSetActiveIndex: (update: (current: number) => number) => void;
   onSetQuery: (value: string) => void;
+  placeholder: string;
   query: string;
   totalItems: number;
 }
@@ -53,17 +62,26 @@ function handleInputKeyDown(
 }
 
 export function GoToNodePalette({
+  dialogLabel = 'Go to node',
+  emptyLabel = 'Search node titles',
   isOpen,
+  inputLabel = 'Go to node',
   nodeOrder,
   nodesById,
   onClose,
   onOpenNode,
+  onSelectNode,
+  noResultsLabel = 'No matching nodes',
+  placeholder = 'Type a node title...',
+  recentNodeIds,
   trashedNodeIds
 }: GoToNodePaletteProps) {
+  const handleSelectNode = onSelectNode ?? onOpenNode;
   const { activeIndex, inputRef, query, results, setActiveIndex, setQuery } = useGoToNodePaletteState({
     isOpen,
     nodeOrder,
     nodesById,
+    recentNodeIds,
     trashedNodeIds
   });
 
@@ -73,16 +91,50 @@ export function GoToNodePalette({
 
   const openActiveNode = () => {
     const result = results[activeIndex];
-    if (result) {
-      onOpenNode(result.id);
+    if (result && handleSelectNode) {
+      handleSelectNode(result.id);
     }
   };
 
+  return renderGoToNodeDialog({
+    activeIndex,
+    dialogLabel,
+    emptyLabel,
+    handleSelectNode,
+    inputLabel,
+    inputRef,
+    noResultsLabel,
+    onClose,
+    openActiveNode,
+    placeholder,
+    query,
+    results,
+    setActiveIndex,
+    setQuery
+  });
+}
+
+function renderGoToNodeDialog(args: {
+  activeIndex: number;
+  dialogLabel: string;
+  emptyLabel: string;
+  handleSelectNode?: (nodeId: string) => void;
+  inputLabel: string;
+  inputRef: RefObject<HTMLInputElement>;
+  noResultsLabel: string;
+  onClose: () => void;
+  openActiveNode: () => void;
+  placeholder: string;
+  query: string;
+  results: ReturnType<typeof buildNodeSearchResults>;
+  setActiveIndex: (update: (current: number) => number) => void;
+  setQuery: (value: string) => void;
+}) {
   return (
     <div
-      aria-label="Go to node"
+      aria-label={args.dialogLabel}
       className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/20 px-4 pt-[12vh]"
-      onClick={onClose}
+      onClick={args.onClose}
       role="dialog"
     >
       <div
@@ -90,27 +142,36 @@ export function GoToNodePalette({
         onClick={(event) => event.stopPropagation()}
       >
         <GoToNodeInput
-          inputRef={inputRef}
-          onClose={onClose}
-          onOpenActive={openActiveNode}
-          onSetActiveIndex={setActiveIndex}
-          onSetQuery={setQuery}
-          query={query}
-          totalItems={results.length}
+          inputRef={args.inputRef}
+          inputLabel={args.inputLabel}
+          onClose={args.onClose}
+          onOpenActive={args.openActiveNode}
+          onSetActiveIndex={args.setActiveIndex}
+          onSetQuery={args.setQuery}
+          placeholder={args.placeholder}
+          query={args.query}
+          totalItems={args.results.length}
         />
-        <GoToNodeResults activeIndex={activeIndex} onOpenNode={onOpenNode} query={query} results={results} />
+        <GoToNodeResults
+          activeIndex={args.activeIndex}
+          emptyLabel={args.emptyLabel}
+          noResultsLabel={args.noResultsLabel}
+          onSelectNode={args.handleSelectNode ?? (() => undefined)}
+          query={args.query}
+          results={args.results}
+        />
       </div>
     </div>
   );
 }
 
-function useGoToNodePaletteState(args: Pick<GoToNodePaletteProps, 'isOpen' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>) {
+function useGoToNodePaletteState(args: Pick<GoToNodePaletteProps, 'isOpen' | 'nodeOrder' | 'nodesById' | 'recentNodeIds' | 'trashedNodeIds'>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const results = useMemo(
-    () => buildNodeSearchResults(args.nodeOrder, args.nodesById, args.trashedNodeIds, query),
-    [args.nodeOrder, args.nodesById, args.trashedNodeIds, query]
+    () => buildNodeSearchResults(args.nodeOrder, args.nodesById, args.recentNodeIds, args.trashedNodeIds, query),
+    [args.nodeOrder, args.nodesById, args.recentNodeIds, args.trashedNodeIds, query]
   );
 
   useEffect(() => {
@@ -137,20 +198,22 @@ function useGoToNodePaletteState(args: Pick<GoToNodePaletteProps, 'isOpen' | 'no
 
 function GoToNodeInput({
   inputRef,
+  inputLabel,
   onClose,
   onOpenActive,
   onSetActiveIndex,
   onSetQuery,
+  placeholder,
   query,
   totalItems
 }: GoToNodeInputProps) {
   return (
     <input
-      aria-label="Go to node"
+      aria-label={inputLabel}
       className="w-full border-b border-border bg-bg-elevated px-4 py-3 text-sm outline-none"
       onChange={(event) => onSetQuery(event.target.value)}
       onKeyDown={(event) => handleInputKeyDown(event, totalItems, onClose, onOpenActive, onSetActiveIndex)}
-      placeholder="Type a node title..."
+      placeholder={placeholder}
       ref={inputRef}
       type="text"
       value={query}
@@ -160,12 +223,16 @@ function GoToNodeInput({
 
 function GoToNodeResults({
   activeIndex,
-  onOpenNode,
+  emptyLabel,
+  noResultsLabel,
+  onSelectNode,
   query,
   results
 }: {
   activeIndex: number;
-  onOpenNode: (nodeId: string) => void;
+  emptyLabel: string;
+  noResultsLabel: string;
+  onSelectNode: (nodeId: string) => void;
   query: string;
   results: ReturnType<typeof buildNodeSearchResults>;
 }) {
@@ -173,7 +240,7 @@ function GoToNodeResults({
     return (
       <ul className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
         <li className="px-3 py-8 text-center text-sm text-foreground/55">
-          {query.trim() ? 'No matching nodes' : 'Search node titles'}
+          {query.trim() ? noResultsLabel : emptyLabel}
         </li>
       </ul>
     );
@@ -186,7 +253,7 @@ function GoToNodeResults({
           <button
             className="flex w-full flex-col gap-1 rounded-md px-3 py-2 text-left hover:bg-bg-subtle data-[active=true]:bg-bg-subtle"
             data-active={index === activeIndex}
-            onClick={() => onOpenNode(item.id)}
+            onClick={() => onSelectNode(item.id)}
             type="button"
           >
             <span className="truncate text-sm font-medium text-foreground">{item.title}</span>

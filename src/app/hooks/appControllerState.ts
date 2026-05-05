@@ -31,6 +31,7 @@ export function useWorkspaceSelectors() {
     isListCollapsed: useWorkspaceStore((state) => state.layout.isListCollapsed),
     isRightSidebarCollapsed: useWorkspaceStore((state) => state.layout.isRightSidebarCollapsed),
     listWidth: useWorkspaceStore((state) => state.layout.listWidth),
+    moveNode: useWorkspaceStore((state) => state.moveNode),
     navigation: useWorkspaceStore((state) => state.navigation),
     nodesById: useWorkspaceStore((state) => state.nodesById),
     nodeOrder: useWorkspaceStore((state) => state.nodeOrder),

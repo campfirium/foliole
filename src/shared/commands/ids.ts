@@ -7,6 +7,7 @@ export const APP_COMMAND_IDS = {
   goBack: 'navigation.goBack',
   goForward: 'navigation.goForward',
   goToNode: 'navigation.goToNode',
+  moveToNode: 'navigation.moveToNode',
   goParent: 'navigation.goParent',
   toggleEditorDisplayMode: 'editor.toggleDisplayMode',
   startStudyMode: 'review.startStudyMode',

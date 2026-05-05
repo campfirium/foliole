@@ -13,6 +13,7 @@ import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from '.
 import { buildControllerGoToNodeState } from './appGoToNodeState';
 import type { AppGoToNodeState } from './appGoToNodeState';
 import { buildHotkeySettings, type AppHotkeySettings } from './appHotkeySettings';
+import { buildControllerMoveToNodeState } from './appMoveToNodeState';
 import { createPaletteCommandRunner } from './appPaletteCommandRunner';
 import type { AppSearchState } from './appSearchState';
 import { buildControllerSearchState } from './appSearchState';
@@ -38,6 +39,7 @@ export interface AppPaletteState {
 export interface AppControllerResult {
   hotkeySettings: AppHotkeySettings;
   goToNodeState: AppGoToNodeState;
+  moveToNodeState: AppGoToNodeState;
   layoutProps: WorkspaceLayoutProps;
   paletteState: AppPaletteState;
   searchState: AppSearchState;
@@ -59,6 +61,7 @@ function useDerivedControllerState(args: {
 }) {
   const reviewDueCount = countDueReviewNodes(args.ws.nodeOrder, args.ws.nodesById, args.ws.trashedNodeIds, args.nowIso, args.reviewSettings.reviewSchedulerSettings.pushQueue);
   const paletteItems = useAppPaletteItems({
+    activeNodeId: args.ws.activeNodeId,
     formalImportAvailable: args.formalImport.isAvailable && !args.formalImport.isImporting,
     hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
     hotkeys: args.hotkeys,
@@ -107,6 +110,7 @@ function buildControllerPaletteState(args: {
     goBack: args.nav.handleGoBack,
     goForward: args.nav.handleGoForward,
     goToNode: () => undefined,
+    moveToNode: () => undefined,
     goParent: args.nav.handleGoParent,
     gradeReviewCard: args.ws.gradeReviewCard,
     importDirectory: args.formalImport.startImportDirectory,
@@ -124,6 +128,7 @@ function buildControllerPaletteState(args: {
     revealReviewAnswer: args.ws.revealReviewAnswer,
     setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,
     setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
+    setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
     setSettingsOpen: args.runtime.setIsSettingsOpen,
     startClipboardImport: args.layoutProps.onStartClipboardImport,
     startReviewSession: args.ws.startReviewSession,
@@ -250,6 +255,7 @@ export function useAppController(): AppControllerResult {
     ws
   });
   const goToNodeState = buildControllerGoToNodeState({ runtime: controller.runtime, trash: controller.trash, ws });
+  const moveToNodeState = buildControllerMoveToNodeState({ runtime: controller.runtime, ws });
   const searchState = buildControllerSearchState({ runtime: controller.runtime, trash: controller.trash, ws });
 
   useNativeCommandMenu(paletteState.items, paletteState.onRunCommand);
@@ -257,6 +263,7 @@ export function useAppController(): AppControllerResult {
   return {
     hotkeySettings: buildHotkeySettings(paletteItems, hotkeys),
     goToNodeState,
+    moveToNodeState,
     layoutProps,
     paletteState,
     searchState

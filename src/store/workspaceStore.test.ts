@@ -109,6 +109,15 @@ it('keeps manual title when content changes after rename', () => {
   expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Title');
 });
 
+it('blocks content edits after a node becomes a container for child nodes', () => {
+  const parentId = useWorkspaceStore.getState().createRootNode('');
+  useWorkspaceStore.getState().createChildNode(parentId, 'Child body');
+
+  useWorkspaceStore.getState().updateNodeContent(parentId, 'Container text should stay blocked');
+
+  expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('');
+});
+
 it('creates QA node from selected content', () => {
   const createdId = useWorkspaceStore
     .getState()

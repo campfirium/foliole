@@ -25,6 +25,7 @@ export interface WorkspaceLayoutProps {
   contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
   editorContent: string;
+  isEditorReadOnly: boolean;
   onNodePriorityChange: (nodeId: string, priority: number | null) => void;
   onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => void;
   editorNodeId: string | null;
