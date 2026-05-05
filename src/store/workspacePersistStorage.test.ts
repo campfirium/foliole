@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 
 import { workspacePersistStorage } from './workspacePersistStorage';
+import {
+  readWorkspaceNodesFromPayload,
+  stageLegacyWorkspacePayload,
+  stagePendingNode1Sync
+} from './workspacePersistStorage.test-support';
 
 vi.mock('../shared/platform/bridge', () => ({
   getRuntimeInvoke: vi.fn()
@@ -215,5 +220,39 @@ describe('workspacePersistStorage web fallback', () => {
 
     await workspacePersistStorage.setItem('foliole-workspace-v1', '{"state":{"activeNodeId":"node-4"}}');
     expect(window.localStorage.getItem('foliole-workspace-v1')).toBeNull();
+  });
+});
+
+describe('workspacePersistStorage web fallback renderer boundary', () => {
+  it('rewrites persisted workspace payload to keep only active and pending node documents', async () => {
+    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+    stagePendingNode1Sync();
+    stageLegacyWorkspacePayload();
+
+    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+    const nodesById = readWorkspaceNodesFromPayload(value);
+
+    expect(nodesById?.['node-1']).toEqual({
+      id: 'node-1',
+      content: 'Pending node 1 body',
+      hasContent: true,
+      hasReveal: false,
+      reveal: null
+    });
+    expect(nodesById?.['node-2']).toEqual({
+      id: 'node-2',
+      content: 'Active node 2 body',
+      hasContent: true,
+      hasReveal: true,
+      reveal: 'Active node 2 answer'
+    });
+    expect(nodesById?.['node-3']).toEqual({
+      id: 'node-3',
+      content: '',
+      hasContent: true,
+      hasReveal: true,
+      reveal: null
+    });
+    expect(window.localStorage.getItem('foliole-workspace-v1')).toBe(value);
   });
 });

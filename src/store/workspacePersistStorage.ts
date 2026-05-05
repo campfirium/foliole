@@ -31,6 +31,38 @@ function toPersistedStatePayload(value: unknown): string | null {
   return JSON.stringify({ state: value, version: 0 });
 }
 
+function trimPersistedWorkspaceStatePayload(value: string) {
+  try {
+    const parsed = JSON.parse(value) as {
+      state?: {
+        activeNodeId?: string | null;
+        nodesById?: Record<string, Node>;
+      };
+      version?: number;
+    };
+    if (!parsed || typeof parsed !== 'object' || !parsed.state || typeof parsed.state !== 'object') {
+      return value;
+    }
+    if (!parsed.state.nodesById || typeof parsed.state.nodesById !== 'object') {
+      return value;
+    }
+
+    return JSON.stringify({
+      ...parsed,
+      state: {
+        ...parsed.state,
+        nodesById: trimWorkspaceNodesForRendererBoundary(
+          typeof parsed.state.activeNodeId === 'string' ? parsed.state.activeNodeId : null,
+          parsed.state.nodesById,
+          new Set(listPendingNodeSyncNodeIds())
+        )
+      }
+    });
+  } catch {
+    return value;
+  }
+}
+
 async function loadReadingProgressForHydrate(name: string) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.loadReadingProgress).catch((error) => {
     logRuntimeWarning('reading progress load failed during workspace hydrate', {
@@ -154,7 +186,17 @@ export const workspacePersistStorage: StateStorage = {
         return null;
       }
     }
-    return getLocalFallbackStorage()?.getItem(name) ?? null;
+    const fallbackStorage = getLocalFallbackStorage();
+    const persistedValue = fallbackStorage?.getItem(name) ?? null;
+    if (!persistedValue) {
+      return null;
+    }
+
+    const trimmedValue = trimPersistedWorkspaceStatePayload(persistedValue);
+    if (trimmedValue !== persistedValue) {
+      fallbackStorage?.setItem(name, trimmedValue);
+    }
+    return trimmedValue;
   },
   setItem(name, value) {
     if (getRuntimeInvoke()) {
