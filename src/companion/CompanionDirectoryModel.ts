@@ -1,14 +1,14 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import {
+  type CompanionFolderListEntry,
+  resolveCompanionFolderViewByNodeId,
+  resolveCompanionRootDirectoryView
+} from '../shared/platform/companionBrowseLists';
 import type {
   CompanionExternalDirectory,
   loadCompanionExternalDocument
 } from '../shared/platform/companionExternalDocuments';
-import {
-  type CompanionFolderListEntry,
-  type CompanionReadableArticle,
-  resolveCompanionFolderViewByNodeId,
-  resolveCompanionRootDirectoryView
-} from '../shared/platform/companionReadableArticle';
+import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import {
   buildExternalLibraryFolderBrowseState,
   compareNaturalName,

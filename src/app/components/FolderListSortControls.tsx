@@ -1,5 +1,9 @@
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import {
+  FOLDER_LIST_SORT_OPTIONS,
+  getFolderListSortOrderOptions
+} from '../../features/nodes/model/folderListSortOptions';
+import {
   AppDropdownMenu,
   AppDropdownMenuContent,
   AppDropdownMenuItem,
@@ -8,34 +12,14 @@ import {
   AppDropdownMenuTrigger
 } from '../../shared/ui';
 
-export const FOLDER_LIST_SORT_OPTIONS: { key: FolderListSortKey; label: string }[] = [
-  { key: 'dateLastOpened', label: 'Date last opened' },
-  { key: 'dateImported', label: 'Import time' },
-  { key: 'title', label: 'Title' }
-];
-
-function getOrderOptions(sortKey: FolderListSortKey): { label: string; value: FolderListSortDirection }[] {
-  if (sortKey === 'title') {
-    return [
-      { label: 'A -> Z', value: 'asc' },
-      { label: 'Z -> A', value: 'desc' }
-    ];
-  }
-
-  return [
-    { label: 'Recent -> Old', value: 'desc' },
-    { label: 'Old -> Recent', value: 'asc' }
-  ];
-}
-
 export function FolderListSortControls(props: {
   onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
-  const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Import time';
-  const orderOptions = getOrderOptions(props.sortKey);
+  const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Date imported';
+  const orderOptions = getFolderListSortOrderOptions();
 
   return (
     <AppDropdownMenu>

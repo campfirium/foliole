@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 
+import { resolveCompanionRecentArticles } from './companionBrowseLists';
 import {
-  resolveCompanionRecentArticles,
   resolveReadableCompanionArticleByNodeId
 } from './companionReadableArticle';
 

@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -230,6 +230,28 @@ describe('useCompanionArticleSurface browsing', () => {
     expect(result.current.readableArticle?.nodeId).toBe('article-2');
     expect(result.current.selectedBrowseNodeId).toBe('article-2');
     expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('article-2');
+  });
+
+  it('marks opened browse topics as last opened in the local snapshot', async () => {
+    const workspaceSync = createWorkspaceSync();
+    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+
+    act(() => {
+      result.current.handleSelectRecentArticle('article-2');
+    });
+
+    await waitFor(() => expect(syncObjectMock.saveCompanionSyncNodeViewState).toHaveBeenCalledWith({
+      nodeId: 'article-2',
+      scrollTop: 0
+    }));
+    expect(workspaceSync.replaceSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        persistedNodeViewById: expect.objectContaining({
+          'article-2': expect.objectContaining({ nodeId: 'article-2' })
+        })
+      }),
+      'article-2'
+    );
   });
 
   it('marks the selected missing body as loading while direct body sync runs', async () => {

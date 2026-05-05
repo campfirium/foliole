@@ -1,6 +1,10 @@
-import { FolderTree, ListFilter, X } from 'lucide-react';
+import {
+  DEFAULT_FOLDER_LIST_SORT_DIRECTION,
+  DEFAULT_FOLDER_LIST_SORT_KEY,
+  type FolderListSortDirection,
+  type FolderListSortKey
+} from '../features/nodes/model/folderListOrdering';
 
-import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
 import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
@@ -16,6 +20,7 @@ import {
 } from './companionSelectionAnnotationController';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import type { CompanionTabConfig } from './CompanionTabsConfig';
+import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -67,6 +72,7 @@ function renderReadableArticle(props: {
       onCreateSelectionAnnotation={createCompanionSelectionAnnotationHandler(props.workspaceSync)}
       onDeleteExistingHighlight={createCompanionExistingHighlightDeleteHandler(props.workspaceSync)}
       onExit={props.onExit}
+      onSaveArticleContent={createCompanionTopicContentSaveHandler(props.workspaceSync)}
       readableArticle={props.surface.readableArticle}
       snapshot={props.workspaceSync.state.workspace_snapshot}
       syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
@@ -148,77 +154,25 @@ function renderRecentContent(props: Parameters<typeof renderCompanionShellConten
         onSelectNode={props.surface.handleSelectBrowseNode}
         selection={props.directorySelection}
         snapshot={props.workspaceSync.state.workspace_snapshot}
+        sortDirection={props.browseSortDirection ?? DEFAULT_FOLDER_LIST_SORT_DIRECTION}
+        sortKey={props.browseSortKey ?? DEFAULT_FOLDER_LIST_SORT_KEY}
       />
     );
   }
   return <RecentBrowseContent surface={props.surface} workspaceSync={props.workspaceSync} />;
 }
 
-export function resolveCompanionTopBarProps(
-  surface: Surface,
-  settingsPage: CompanionSettingsPage,
-  isBrowseDirectoryOpen: boolean,
-  isOnlyReviewOpen: boolean,
-  directorySelection: CompanionDirectorySelection,
-  onOpenBrowseDirectory: () => void,
-  onCloseBrowseDirectory: () => void,
-  onResetDirectorySelection: () => void,
-  onBackDirectorySelection: () => void,
-  onOpenAddSheet: () => void,
-  onOpenOnlyReview: () => void,
-  onCloseOnlyReview: () => void,
-  onExitReview: () => void,
-  onBackToSettingsList: () => void,
-  onBackToSyncSettings: () => void
-) {
-  if (surface.activeAction === 'more') {
-    if (settingsPage === 'sync') {
-      return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Device sync' };
-    }
-    if (settingsPage === 'tabs') {
-      return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Tabs' };
-    }
-    if (settingsPage === 'syncActivity') {
-      return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Activity' };
-    }
-    if (settingsPage === 'syncConnection') {
-      return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Connection' };
-    }
-    if (settingsPage === 'syncHandoff') {
-      return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Handoff reminders' };
-    }
-    return {};
-  }
-  if (surface.activeAction === 'recent') {
-    if (isBrowseDirectoryOpen) {
-      return directorySelection.kind === 'root'
-        ? {}
-        : { backLabel: 'Back', onBack: onBackDirectorySelection };
-    }
-    return {
-      leftAction: { icon: FolderTree, label: 'Directory', onClick: onOpenBrowseDirectory },
-      rightSlot: <CompanionBrowseTopActions onOpenCapture={onOpenAddSheet} />,
-    };
-  }
-  if (surface.activeAction === 'search') {
-    return {};
-  }
-  if (isOnlyReviewOpen) {
-    return { backLabel: 'Learn', onBack: onCloseOnlyReview, title: 'Only Review' };
-  }
-  return {
-    leftAction: { icon: X, label: 'Exit', onClick: onExitReview },
-    rightAction: { icon: ListFilter, label: 'Only Review', onClick: onOpenOnlyReview },
-  };
-}
-
 export function renderCompanionShellContent(props: {
   directorySelection: CompanionDirectorySelection;
+  browseSortDirection?: FolderListSortDirection;
+  browseSortKey?: FolderListSortKey;
   hasSnapshot: boolean;
   isBrowseDirectoryOpen: boolean;
   isOnlyReviewOpen: boolean;
   onBackToSettingsList: () => void;
   onBackDirectorySelection: () => void;
+  onChangeBrowseSortDirection?: (sortDirection: FolderListSortDirection) => void;
+  onChangeBrowseSortKey?: (sortKey: FolderListSortKey) => void;
   onChangeDirectorySelection: (selection: CompanionDirectorySelection) => void;
   companionTabConfig: CompanionTabConfig;
   onCompanionTabConfigChange: (config: CompanionTabConfig) => void;

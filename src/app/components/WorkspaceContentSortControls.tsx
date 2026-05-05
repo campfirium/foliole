@@ -40,7 +40,7 @@ export function WorkspaceContentSortControls(props: {
   sortKey: WorkspaceContentSortKey;
 }) {
   const activeOption = props.options.find((option) => option.key === props.sortKey) ?? props.options[0];
-  const activeLabel = activeOption?.label ?? 'Import time';
+  const activeLabel = activeOption?.label ?? 'Date imported';
   const activeKey = activeOption?.key ?? 'importedAt';
   const orderOptions = getOrderOptions(activeKey);
   const activeOrderLabel = orderOptions.find((option) => option.value === props.sortDirection)?.label ?? orderOptions[0]?.label;

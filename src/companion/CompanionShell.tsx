@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
-import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionShellView } from './CompanionShellView';
-import type { CompanionSecondaryDestinationId } from './CompanionTabsConfig';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
-import { useCompanionSyncSettingsPage, type CompanionSettingsPage } from './useCompanionSyncSettingsPage';
+import { useCompanionShellActions } from './useCompanionShellActions';
+import { useCompanionSyncSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionTabsConfig } from './useCompanionTabsConfig';
-import { useCompanionTopBarProps } from './useCompanionTopBarProps';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
@@ -54,46 +53,6 @@ function useResetCompanionSubsurfaces(args: {
   }, [activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen]);
 }
 
-function resolveActiveSecondaryDestination(args: {
-  activeAction: CompanionTabAction;
-  isBrowseDirectoryOpen: boolean;
-  isOnlyReviewOpen: boolean;
-  settingsPage: CompanionSettingsPage;
-}): CompanionSecondaryDestinationId | null {
-  if (args.activeAction === 'recent' && args.isBrowseDirectoryOpen) return 'directory';
-  if (args.activeAction === 'review' && args.isOnlyReviewOpen) return 'onlyReview';
-  if (args.activeAction === 'more' && args.settingsPage !== 'list') return args.settingsPage as CompanionSecondaryDestinationId;
-  return null;
-}
-
-function useCompanionSecondaryDestinations(args: {
-  activeAction: CompanionTabAction;
-  isBrowseDirectoryOpen: boolean;
-  isOnlyReviewOpen: boolean;
-  settingsPage: CompanionSettingsPage;
-  setIsBrowseDirectoryOpen(open: boolean): void;
-  setIsOnlyReviewOpen(open: boolean): void;
-  setSettingsPage(page: CompanionSettingsPage): void;
-  surface: ReturnType<typeof useCompanionArticleSurface>;
-}) {
-  const handleSecondaryDestination = (destinationId: CompanionSecondaryDestinationId) => {
-    if (destinationId === 'directory') {
-      args.surface.handleTabAction('recent');
-      args.setIsBrowseDirectoryOpen(true);
-      return;
-    }
-    if (destinationId === 'onlyReview') {
-      args.surface.handleTabAction('review');
-      args.setIsOnlyReviewOpen(true);
-      return;
-    }
-    args.surface.handleTabAction('more');
-    args.setSettingsPage(destinationId);
-  };
-  const activeSecondaryDestinationId = resolveActiveSecondaryDestination(args);
-  return { activeSecondaryDestinationId, handleSecondaryDestination };
-}
-
 function useCompanionReviewChrome(args: {
   floatingBar: ReturnType<typeof useFloatingBarVisibility>;
   surface: ReturnType<typeof useCompanionArticleSurface>;
@@ -109,54 +68,64 @@ function useCompanionReviewChrome(args: {
   return { isBottomBarDisabled, isReviewTaskActive, reviewBreadcrumbItems, ...navigation };
 }
 
-function useCompanionShellActions(args: {
+function buildCompanionShellModel(args: {
+  actions: ReturnType<typeof useCompanionShellActions>;
+  browseSort: ReturnType<typeof useCompanionBrowseSortState>;
+  companionTabs: ReturnType<typeof useCompanionTabsConfig>;
   directoryState: ReturnType<typeof useCompanionDirectorySelectionState>;
-  externalDirectory: CompanionExternalDirectory;
+  floatingBar: ReturnType<typeof useFloatingBarVisibility>;
+  handleContainerScroll: ReturnType<typeof useCompanionShellScrollHandler>;
   isBrowseDirectoryOpen: boolean;
+  isCaptureSheetOpen: boolean;
   isOnlyReviewOpen: boolean;
-  setIsBrowseDirectoryOpen(open: boolean): void;
+  reviewChrome: ReturnType<typeof useCompanionReviewChrome>;
   setIsCaptureSheetOpen(open: boolean): void;
-  setIsOnlyReviewOpen(open: boolean): void;
-  setSettingsPage(page: CompanionSettingsPage): void;
-  settingsPage: CompanionSettingsPage;
+  setSettingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['setSettingsPage'];
+  settingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['settingsPage'];
   surface: ReturnType<typeof useCompanionArticleSurface>;
   workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
 }) {
-  const topBarProps = useCompanionTopBarProps({
-    resetDirectorySelection: args.directoryState.resetDirectorySelection,
+  return {
+    activeSecondaryDestinationId: args.actions.secondaryDestinations.activeSecondaryDestinationId,
+    browseSortDirection: args.browseSort.browseSortDirection,
+    browseSortKey: args.browseSort.browseSortKey,
+    companionTabs: args.companionTabs,
     directorySelection: args.directoryState.directorySelection,
-    externalDirectory: args.externalDirectory,
+    floatingBar: args.floatingBar,
+    handleContainerScroll: args.handleContainerScroll,
+    handleContentTap: args.reviewChrome.handleContentTap,
+    handleNavigationAction: args.actions.handleNavigationAction,
+    handleSecondaryDestination: args.actions.secondaryDestinations.handleSecondaryDestination,
+    isBottomBarDisabled: args.reviewChrome.isBottomBarDisabled,
     isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
+    isCaptureSheetOpen: args.isCaptureSheetOpen,
     isOnlyReviewOpen: args.isOnlyReviewOpen,
-    setIsBrowseDirectoryOpen: args.setIsBrowseDirectoryOpen,
+    isNavigationVisible: args.reviewChrome.isNavigationVisible,
+    isReviewTaskActive: args.reviewChrome.isReviewTaskActive,
+    reviewBreadcrumbItems: args.reviewChrome.reviewBreadcrumbItems,
     setIsCaptureSheetOpen: args.setIsCaptureSheetOpen,
-    setIsOnlyReviewOpen: args.setIsOnlyReviewOpen,
+    setBrowseSortDirection: args.browseSort.setBrowseSortDirection,
+    setBrowseSortKey: args.browseSort.setBrowseSortKey,
+    setDirectorySelection: args.directoryState.setDirectorySelection,
     setSettingsPage: args.setSettingsPage,
     settingsPage: args.settingsPage,
     surface: args.surface,
+    topBarProps: args.actions.topBarProps,
     workspaceSync: args.workspaceSync
-  });
-  const handleNavigationAction = (action: CompanionTabAction) => args.surface.handleTabAction(action);
-  const secondaryDestinations = useCompanionSecondaryDestinations({
-    activeAction: args.surface.activeAction,
-    isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
-    isOnlyReviewOpen: args.isOnlyReviewOpen,
-    settingsPage: args.settingsPage,
-    setIsBrowseDirectoryOpen: args.setIsBrowseDirectoryOpen,
-    setIsOnlyReviewOpen: args.setIsOnlyReviewOpen,
-    setSettingsPage: args.setSettingsPage,
-    surface: args.surface
-  });
-  return { handleNavigationAction, secondaryDestinations, topBarProps };
+  };
 }
 
 function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const floatingBar = useFloatingBarVisibility('companion-bottom-tabs');
+  const browseSort = useCompanionBrowseSortState();
   const [isBrowseDirectoryOpen, setIsBrowseDirectoryOpen] = useState(false);
   const [isCaptureSheetOpen, setIsCaptureSheetOpen] = useState(false);
   const [isOnlyReviewOpen, setIsOnlyReviewOpen] = useState(false);
   const workspaceSync = useCompanionWorkspaceSync(bootstrapState);
-  const surface = useCompanionArticleSurface(workspaceSync, floatingBar);
+  const surface = useCompanionArticleSurface(workspaceSync, floatingBar, {
+    sortDirection: browseSort.browseSortDirection,
+    sortKey: browseSort.browseSortKey
+  });
   const companionTabs = useCompanionTabsConfig();
   const { setSettingsPage, settingsPage } = useCompanionSyncSettingsPage({
     activeAction: surface.activeAction,
@@ -167,10 +136,14 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const externalDirectory = useCompanionExternalDirectory();
   const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);
   const actions = useCompanionShellActions({
+    browseSortDirection: browseSort.browseSortDirection,
+    browseSortKey: browseSort.browseSortKey,
     directoryState,
     externalDirectory,
     isBrowseDirectoryOpen,
     isOnlyReviewOpen,
+    setBrowseSortDirection: browseSort.setBrowseSortDirection,
+    setBrowseSortKey: browseSort.setBrowseSortKey,
     setIsBrowseDirectoryOpen,
     setIsCaptureSheetOpen,
     setIsOnlyReviewOpen,
@@ -181,30 +154,23 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   });
   useResetCompanionSubsurfaces({ activeAction: surface.activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen });
 
-  return {
-    activeSecondaryDestinationId: actions.secondaryDestinations.activeSecondaryDestinationId,
+  return buildCompanionShellModel({
+    actions,
+    browseSort,
     companionTabs,
-    directorySelection: directoryState.directorySelection,
+    directoryState,
     floatingBar,
     handleContainerScroll,
-    handleContentTap: reviewChrome.handleContentTap,
-    handleNavigationAction: actions.handleNavigationAction,
-    handleSecondaryDestination: actions.secondaryDestinations.handleSecondaryDestination,
-    isBottomBarDisabled: reviewChrome.isBottomBarDisabled,
     isBrowseDirectoryOpen,
     isCaptureSheetOpen,
     isOnlyReviewOpen,
-    isNavigationVisible: reviewChrome.isNavigationVisible,
-    isReviewTaskActive: reviewChrome.isReviewTaskActive,
-    reviewBreadcrumbItems: reviewChrome.reviewBreadcrumbItems,
+    reviewChrome,
     setIsCaptureSheetOpen,
-    setDirectorySelection: directoryState.setDirectorySelection,
     setSettingsPage,
     settingsPage,
     surface,
-    topBarProps: actions.topBarProps,
     workspaceSync
-  };
+  });
 }
 
 export type CompanionShellModel = ReturnType<typeof useCompanionShellModel>;

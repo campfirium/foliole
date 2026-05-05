@@ -82,7 +82,7 @@ export function useFolderListViewState(
       onChangeSearchQuery?.(nextSearchQuery);
     },
     updateSortKey: (nextSortKey: FolderListSortKey) => {
-      const nextSortDirection = resolveDefaultFolderListSortDirection(nextSortKey);
+      const nextSortDirection = resolveDefaultFolderListSortDirection();
       if (controlledSortKey === undefined) {
         setUncontrolledSortKey(nextSortKey);
       }

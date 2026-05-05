@@ -71,8 +71,6 @@ function renderDocumentSurface(
       onGoForward={vi.fn()}
       onOpenImportedNode={vi.fn()}
       onOpenSelection={vi.fn()}
-      onResetLayout={vi.fn()}
-      onStartDocumentResize={vi.fn()}
       selection={selection}
     />
   );
@@ -92,18 +90,16 @@ it('renders the external folder contents in the center document area using the f
       onGoForward={vi.fn()}
       onOpenImportedNode={vi.fn()}
       onOpenSelection={onOpenSelection}
-      onResetLayout={vi.fn()}
-      onStartDocumentResize={vi.fn()}
       selection={{ folderId: 'folder-1', kind: 'folder' }}
     />
   );
 
   expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Sort list by Import time' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort list by Last opened' })).toBeInTheDocument();
   expect(screen.getByTestId('folder-list-count')).toHaveTextContent('2');
   expect(screen.getByTestId('folder-list-title-/library/test 6/one.md')).toHaveTextContent('First title');
   expect(screen.getByTestId('folder-list-excerpt-/library/test 6/one.md')).toHaveTextContent('First opening preview from cache.');
-  expect(screen.getByTestId('folder-list-date-/library/test 6/one.md')).toHaveTextContent('2026-04-19');
+  expect(screen.getByTestId('folder-list-date-/library/test 6/one.md')).toHaveTextContent('Never opened');
 
   fireEvent.click(screen.getByRole('button', { name: 'Open First title' }));
 

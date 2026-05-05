@@ -121,6 +121,8 @@ it('keeps breadcrumb and priority controls on the document content rail', () => 
 
   const rail = screen.getByTestId('document-header-content-rail');
   expect(rail.closest('header')).toHaveClass('min-h-8');
+  expect(rail.closest('header')).toHaveClass('pr-4');
+  expect(rail.closest('header')).toHaveClass('max-[1080px]:px-2');
   expect(rail).toHaveClass('max-w-[var(--document-max-width)]');
   expect(rail).toHaveClass('px-[var(--document-content-inline-padding)]');
   expect(rail).toContainElement(screen.getByRole('button', { name: 'Inbox' }));
@@ -169,7 +171,7 @@ it('keeps the folder-mode header free of right-side actions', () => {
   expect(screen.queryByRole('button', { name: 'Inbox' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Document navigation actions')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('More editor options')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Sort list by Import time' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Sort list by Imported' })).not.toBeInTheDocument();
 });
 
 it('shows a backlinks trigger with count and opens the inline backlinks menu', () => {

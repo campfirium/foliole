@@ -2,10 +2,14 @@ import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type {
+  FolderListSortDirection,
+  FolderListSortKey
+} from '../features/nodes/model/folderListOrdering';
 import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionRootDirectoryView
-} from '../shared/platform/companionReadableArticle';
+} from '../shared/platform/companionBrowseLists';
 
 import {
   type CompanionDirectorySelection,
@@ -72,12 +76,14 @@ function useCompanionDirectorySections(args: {
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   selection: CompanionDirectorySelection;
   snapshot: WorkspaceSnapshot | null;
+  sortDirection: FolderListSortDirection;
+  sortKey: FolderListSortKey;
 }) {
   const currentNodeId = args.selection.kind === 'internal' ? args.selection.nodeId : null;
   const virtualNodeId = args.selection.kind === 'virtual' ? args.selection.nodeId : null;
-  const folderView = resolveCompanionFolderViewByNodeId(args.snapshot, currentNodeId);
-  const virtualView = resolveCompanionFolderViewByNodeId(args.snapshot, virtualNodeId);
-  const rootView = resolveCompanionRootDirectoryView(args.snapshot);
+  const folderView = resolveCompanionFolderViewByNodeId(args.snapshot, currentNodeId, args.sortKey, args.sortDirection);
+  const virtualView = resolveCompanionFolderViewByNodeId(args.snapshot, virtualNodeId, args.sortKey, args.sortDirection);
+  const rootView = resolveCompanionRootDirectoryView(args.snapshot, args.sortKey, args.sortDirection);
   const sections = useMemo(
     () => resolveDirectorySections({
       directory: args.directory,
@@ -108,13 +114,17 @@ export function CompanionDirectoryContent(props: {
   onChangeSelection(selection: CompanionDirectorySelection): void;
   onSelectNode(nodeId: string): void;
   snapshot: WorkspaceSnapshot | null;
+  sortDirection: FolderListSortDirection;
+  sortKey: FolderListSortKey;
 }) {
   const directory = useCompanionExternalDirectory();
   const externalDocument = useCompanionExternalDocument(props.selection);
   const { folderView, sections, virtualView } = useCompanionDirectorySections({
     directory,
     selection: props.selection,
-    snapshot: props.snapshot
+    snapshot: props.snapshot,
+    sortDirection: props.sortDirection,
+    sortKey: props.sortKey
   });
   const parentSelection = useMemo(
     () => resolveDirectoryParentSelection({ directory, selection: props.selection, snapshot: props.snapshot }),

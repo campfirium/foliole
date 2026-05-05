@@ -58,10 +58,10 @@ it('updates a controlled sort key through the toolbar menu', () => {
 
   render(<ControlledFolderList />);
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Import time' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Title' }));
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date imported' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Date modified' }));
 
-  expect(screen.getByRole('button', { name: 'Sort list by Title' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
   expect(getRenderedEntryTitles()).toEqual(['Alpha', 'Beta']);
 });
 
@@ -93,8 +93,8 @@ it('updates a controlled sort direction through the toolbar menu', () => {
 
   render(<ControlledFolderList />);
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Import time' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Old -> Recent' }));
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date imported' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Older -> Recent' }));
 
   expect(getRenderedEntryTitles()).toEqual(['First imported', 'Last imported']);
 });

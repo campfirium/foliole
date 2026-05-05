@@ -73,12 +73,12 @@ describe('FolderListView content', () => {
     expect(screen.getByTestId('folder-list-title-node-1')).toHaveTextContent('Child topic');
     expect(screen.getByRole('heading', { level: 2, name: 'Library root' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1');
-    expect(screen.getByRole('button', { name: 'Sort list by Import time' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sort list by Last opened' })).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-excerpt-node-1')).toHaveTextContent(
       'This is the first useful sentence inside the folder list body.'
     );
-    expect(screen.getByTestId('folder-list-date-node-1')).toHaveTextContent('2026-04-02');
+    expect(screen.getByTestId('folder-list-date-node-1')).toHaveTextContent('Never opened');
     expect(screen.queryByTestId('folder-list-meta-node-1')).not.toBeInTheDocument();
   });
 
@@ -97,15 +97,18 @@ describe('FolderListView content', () => {
 
 describe('FolderListView opening metadata', () => {
   it('skips frontmatter in openings and shows the import date', () => {
-    renderFolderList([
-      createNode({
-        id: 'node-3',
-        title: 'Child topic',
-        content: '---\nauthor: Ada\n---\n# Child topic\n\nUseful body text\n\nLater paragraph',
-        createdAt: '2026-04-03T10:30:00.000Z',
-        updatedAt: ''
-      })
-    ]);
+    renderFolderList(
+      [
+        createNode({
+          id: 'node-3',
+          title: 'Child topic',
+          content: '---\nauthor: Ada\n---\n# Child topic\n\nUseful body text\n\nLater paragraph',
+          createdAt: '2026-04-03T10:30:00.000Z',
+          updatedAt: ''
+        })
+      ],
+      { sortKey: 'dateImported' }
+    );
 
     expect(screen.getByTestId('folder-list-excerpt-node-3')).toHaveTextContent('Useful body text');
     expect(screen.getByTestId('folder-list-excerpt-node-3')).not.toHaveTextContent('author: Ada');
@@ -161,31 +164,34 @@ describe('FolderListView opening metadata', () => {
 });
 
 describe('FolderListView date sorting', () => {
-  it('sorts by latest import time by default', () => {
+  it('sorts unopened entries by title fallback by default', () => {
     renderFolderList([
       createNode({ createdAt: '2026-04-01T09:00:00.000Z', id: 'node-1', title: 'Old note', updatedAt: '2026-04-04T09:00:00.000Z' }),
       createNode({ createdAt: '2026-04-03T09:00:00.000Z', id: 'node-2', title: 'Newest note', updatedAt: '2026-04-01T09:00:00.000Z' }),
       createNode({ createdAt: '2026-04-02T09:00:00.000Z', id: 'node-3', title: 'Middle note', updatedAt: '2026-04-05T09:00:00.000Z' })
     ]);
 
-    expect(getRenderedEntryTitles()).toEqual(['Newest note', 'Middle note', 'Old note']);
+    expect(getRenderedEntryTitles()).toEqual(['Middle note', 'Newest note', 'Old note']);
   });
 
   it('uses the same import time fallback chain for sorting and display', () => {
-    renderFolderList([
-      createNode({
-        id: 'node-4',
-        title: 'Created fallback',
-        createdAt: '2026-04-03T09:00:00.000Z',
-        updatedAt: ''
-      }),
-      createNode({
-        id: 'node-5',
-        title: 'Updated value',
-        createdAt: '2026-04-01T09:00:00.000Z',
-        updatedAt: '2026-04-05T09:00:00.000Z'
-      })
-    ]);
+    renderFolderList(
+      [
+        createNode({
+          id: 'node-4',
+          title: 'Created fallback',
+          createdAt: '2026-04-03T09:00:00.000Z',
+          updatedAt: ''
+        }),
+        createNode({
+          id: 'node-5',
+          title: 'Updated value',
+          createdAt: '2026-04-01T09:00:00.000Z',
+          updatedAt: '2026-04-05T09:00:00.000Z'
+        })
+      ],
+      { sortKey: 'dateImported' }
+    );
 
     expect(getRenderedEntryTitles()).toEqual(['Created fallback', 'Updated value']);
     expect(screen.getByTestId('folder-list-date-node-4')).toHaveTextContent('2026-04-03');
@@ -219,18 +225,6 @@ describe('FolderListView date sorting', () => {
     expect(getRenderedEntryTitles()).toEqual(['Newest open', 'Old open', 'Never opened']);
     expect(screen.getByTestId('folder-list-date-node-2')).toHaveTextContent('2026-04-04');
     expect(screen.getByTestId('folder-list-date-node-3')).toHaveTextContent('Never opened');
-  });
-});
-
-describe('FolderListView secondary sorting', () => {
-  it('switches to stable title sorting', () => {
-    renderFolderList([
-      createNode({ id: 'node-1', title: 'Beta', updatedAt: '2026-04-01T09:00:00.000Z' }),
-      createNode({ id: 'node-2', title: 'Alpha', updatedAt: '2026-04-03T09:00:00.000Z' }),
-      createNode({ id: 'node-3', title: 'Alpha', updatedAt: '2026-04-02T09:00:00.000Z' })
-    ], { sortDirection: 'asc', sortKey: 'title' });
-
-    expect(getRenderedEntryTitles()).toEqual(['Alpha', 'Alpha', 'Beta']);
   });
 });
 

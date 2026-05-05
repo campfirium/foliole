@@ -1,11 +1,16 @@
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
-import { resolveNodeOpeningText } from '../../../lib/core/nodes/nodeOpeningPreview';
 import type { PersistedNodeViewState } from '../../../lib/platform/persistedNodeViewState';
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
 
-import { isCompanionArticleNode, resolveCompanionArticleContentPaddingTop } from './companionReadableArticleTitleSlot';
+import { resolveCompanionArticleContentPaddingTop } from './companionReadableArticleTitleSlot';
+export type {
+  CompanionFolderListEntry,
+  CompanionFolderView,
+  CompanionRecentArticle,
+  CompanionRootDirectoryView
+} from './companionBrowseLists';
 
 export interface CompanionReadableArticle {
   bodyBlobHash?: string | null;
@@ -18,34 +23,6 @@ export interface CompanionReadableArticle {
   pdfAttachmentId: string | null;
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   title: string;
-}
-
-export interface CompanionRecentArticle {
-  bodyBlobHash?: string | null;
-  bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
-  nodeId: string;
-  preview: string | null;
-  title: string;
-  updatedAt: string;
-}
-
-export interface CompanionFolderListEntry {
-  bodyBlobHash?: string | null;
-  bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
-  kind: CompanionReadableNode['kind'];
-  nodeId: string;
-  preview: string | null;
-  title: string;
-}
-
-export interface CompanionFolderView {
-  items: CompanionFolderListEntry[];
-  nodeId: string;
-  title: string;
-}
-
-export interface CompanionRootDirectoryView {
-  items: CompanionFolderListEntry[];
 }
 
 type CompanionReadableNode = WorkspaceSnapshot['nodesById'][string];
@@ -92,27 +69,8 @@ function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: Com
   };
 }
 
-function buildCompanionFolderListEntry(node: CompanionReadableNode): CompanionFolderListEntry {
-  return {
-    bodyStatus: normalizeBodyStatus(node.bodyStatus),
-    bodyBlobHash: node.bodyBlobHash ?? null,
-    kind: node.kind,
-    nodeId: node.id,
-    preview: node.kind === 'folder' ? null : resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
-    title: node.kind === 'topic' ? resolveCompanionArticleTitle(node) : node.title.trim() || 'Untitled'
-  };
-}
-
 function normalizeBodyStatus(status: CompanionReadableNode['bodyStatus']) {
   return status === 'missing' || status === 'empty' || status === 'fetching' || status === 'failed' ? status : undefined;
-}
-
-function isActiveFolderNode(node: CompanionReadableNode | undefined) {
-  return Boolean(node && node.kind === 'folder');
-}
-
-function isRootFolderNode(node: CompanionReadableNode | undefined) {
-  return Boolean(node && node.kind === 'folder' && !node.parentNodeId);
 }
 
 export function resolveCompanionArticleTitle(node: CompanionReadableNode) {
@@ -158,44 +116,6 @@ export function resolveReadableCompanionArticle(snapshot: WorkspaceSnapshot | nu
   return null;
 }
 
-export function resolveCompanionFolderViewByNodeId(
-  snapshot: WorkspaceSnapshot | null,
-  nodeId: string | null
-): CompanionFolderView | null {
-  if (!snapshot || !nodeId || snapshot.trashedNodeIds.includes(nodeId)) {
-    return null;
-  }
-
-  const folderNode = snapshot.nodesById[nodeId];
-  if (!isActiveFolderNode(folderNode)) {
-    return null;
-  }
-
-  return {
-    items: snapshot.nodeOrder
-      .filter((childNodeId) => !snapshot.trashedNodeIds.includes(childNodeId))
-      .map((childNodeId) => snapshot.nodesById[childNodeId])
-      .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === nodeId))
-      .map(buildCompanionFolderListEntry),
-    nodeId: folderNode.id,
-    title: folderNode.title.trim() || 'Untitled'
-  };
-}
-
-export function resolveCompanionRootDirectoryView(snapshot: WorkspaceSnapshot | null): CompanionRootDirectoryView {
-  if (!snapshot) {
-    return { items: [] };
-  }
-
-  return {
-    items: snapshot.nodeOrder
-      .filter((nodeId) => !snapshot.trashedNodeIds.includes(nodeId))
-      .map((nodeId) => snapshot.nodesById[nodeId])
-      .filter((node): node is CompanionReadableNode => isRootFolderNode(node))
-      .map(buildCompanionFolderListEntry)
-  };
-}
-
 export function resolveCompanionBrowseExitNodeId(snapshot: WorkspaceSnapshot | null, nodeId: string | null) {
   if (!snapshot || !nodeId || snapshot.trashedNodeIds.includes(nodeId)) {
     return null;
@@ -206,37 +126,4 @@ export function resolveCompanionBrowseExitNodeId(snapshot: WorkspaceSnapshot | n
     return null;
   }
   return snapshot.nodesById[parentNodeId]?.kind === 'folder' ? parentNodeId : null;
-}
-
-export function resolveCompanionRecentArticles(snapshot: WorkspaceSnapshot | null): CompanionRecentArticle[] {
-  if (!snapshot) {
-    return [];
-  }
-
-  const orderIndexByNodeId = new Map(snapshot.nodeOrder.map((nodeId, index) => [nodeId, index]));
-
-  return snapshot.nodeOrder
-    .filter((nodeId) => !snapshot.trashedNodeIds.includes(nodeId))
-    .map((nodeId) => snapshot.nodesById[nodeId])
-    .filter((node) => isCompanionArticleNode(snapshot, node))
-    .filter(hasReadableContent)
-    .sort((left, right) => {
-      const updatedAtCompare = right.updatedAt.localeCompare(left.updatedAt);
-      if (updatedAtCompare !== 0) {
-        return updatedAtCompare;
-      }
-      const createdAtCompare = right.createdAt.localeCompare(left.createdAt);
-      if (createdAtCompare !== 0) {
-        return createdAtCompare;
-      }
-      return (orderIndexByNodeId.get(left.id) ?? 0) - (orderIndexByNodeId.get(right.id) ?? 0);
-    })
-    .map((node) => ({
-      nodeId: node.id,
-      bodyBlobHash: node.bodyBlobHash ?? null,
-      preview: resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
-      bodyStatus: normalizeBodyStatus(node.bodyStatus),
-      title: resolveCompanionArticleTitle(node),
-      updatedAt: node.updatedAt
-    }));
 }

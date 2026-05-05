@@ -61,7 +61,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
             onChangeSortDirection={contentSort.setSortDirection}
             onChangeSortKey={contentSort.setSortKey}
             options={[
-              { key: 'importedAt', label: 'Import time' },
+              { key: 'importedAt', label: 'Date imported' },
               { key: 'lastOpenedAt', label: 'Last opened' },
               { key: 'name', label: 'Name' }
             ]}

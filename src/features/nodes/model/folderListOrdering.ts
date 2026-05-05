@@ -2,14 +2,14 @@ import type { Node } from './nodeTypes';
 import { compareWorkspaceListNodeDateDesc } from './workspaceListNode';
 import { compareWorkspaceListNodeAuthor } from './workspaceListNodeMetadata';
 
-export type FolderListSortKey = 'dateImported' | 'dateLastOpened' | 'dateSaved' | 'title';
+export type FolderListSortKey = 'dateImported' | 'dateLastOpened' | 'dateSaved';
 export type FolderListSortDirection = 'desc' | 'asc';
 
-export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'dateImported';
+export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'dateLastOpened';
 export const DEFAULT_FOLDER_LIST_SORT_DIRECTION: FolderListSortDirection = 'desc';
 
-export function resolveDefaultFolderListSortDirection(sortKey: FolderListSortKey): FolderListSortDirection {
-  return sortKey === 'title' ? 'asc' : 'desc';
+export function resolveDefaultFolderListSortDirection(): FolderListSortDirection {
+  return 'desc';
 }
 
 function normalizeSortText(value: string) {
@@ -47,24 +47,37 @@ function compareLastOpenedDesc(
   return rightTimestamp.localeCompare(leftTimestamp);
 }
 
-function compareTitle(
-  left: { node: Node; title: string },
-  right: { node: Node; title: string },
-  sortDirection: FolderListSortDirection
-) {
-  const titleResult = compareText(left.title, right.title) * (sortDirection === 'asc' ? 1 : -1);
-  if (titleResult !== 0) {
-    return titleResult;
-  }
-  return compareWorkspaceListNodeDateDesc(left.node, right.node);
-}
-
 function compareImportedDate(
   left: { node: Node; title: string },
   right: { node: Node; title: string },
   directionMultiplier: number
 ) {
   const dateResult = compareWorkspaceListNodeDateDesc(left.node, right.node) * directionMultiplier;
+  if (dateResult !== 0) {
+    return dateResult;
+  }
+  return compareText(left.title, right.title);
+}
+
+function resolveSavedTimestamp(node: Node) {
+  return node.updatedAt?.trim() || null;
+}
+
+function compareSavedDateDesc(left: Node, right: Node) {
+  const leftTimestamp = resolveSavedTimestamp(left);
+  const rightTimestamp = resolveSavedTimestamp(right);
+  if (!leftTimestamp && !rightTimestamp) return 0;
+  if (!leftTimestamp) return 1;
+  if (!rightTimestamp) return -1;
+  return rightTimestamp.localeCompare(leftTimestamp);
+}
+
+function compareSavedDate(
+  left: { node: Node; title: string },
+  right: { node: Node; title: string },
+  directionMultiplier: number
+) {
+  const dateResult = compareSavedDateDesc(left.node, right.node) * directionMultiplier;
   if (dateResult !== 0) {
     return dateResult;
   }
@@ -107,15 +120,15 @@ export function sortFolderListNodes(
       title: normalizeSortText(node.title)
     }))
     .sort((left, right) => {
-      if (sortKey === 'title') {
-        const titleResult = compareTitle(left, right, sortDirection);
-        if (titleResult !== 0) {
-          return titleResult;
+      if (sortKey === 'dateImported') {
+        const dateResult = compareImportedDate(left, right, directionMultiplier);
+        if (dateResult !== 0) {
+          return dateResult;
         }
       }
 
-      if (sortKey === 'dateImported' || sortKey === 'dateSaved') {
-        const dateResult = compareImportedDate(left, right, directionMultiplier);
+      if (sortKey === 'dateSaved') {
+        const dateResult = compareSavedDate(left, right, directionMultiplier);
         if (dateResult !== 0) {
           return dateResult;
         }

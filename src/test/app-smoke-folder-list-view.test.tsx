@@ -14,8 +14,8 @@ function getFolderListTitles() {
     .map((button) => button.getAttribute('aria-label')?.replace(/^Open\s+/, '') ?? '');
 }
 
-function chooseFolderSort(label: 'Date last opened' | 'Title') {
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date saved' }), { key: 'ArrowDown' });
+function chooseFolderSort(label: 'Last opened' | 'Date modified') {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Last opened' }), { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('menuitem', { name: label }));
 }
 
@@ -82,7 +82,7 @@ it('opens the selected child content when a folder list item is clicked', async 
   });
 });
 
-it('sorts folder items by updated date descending by default', () => {
+it('sorts folder items by last opened time by default', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1', 'note-1', 'note-2', 'note-3'],
@@ -115,10 +115,10 @@ it('sorts folder items by updated date descending by default', () => {
 
   render(<App />);
 
-  expect(getFolderListTitles()).toEqual(['Newest note', 'Middle note', 'Old note']);
+  expect(getFolderListTitles()).toEqual(['Middle note', 'Newest note', 'Old note']);
 });
 
-it('switches to title sorting and keeps folder open until an item is opened', async () => {
+it('switches to saved sorting and keeps folder open until a topic is opened', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1', 'note-1', 'note-2', 'note-3'],
@@ -151,7 +151,7 @@ it('switches to title sorting and keeps folder open until an item is opened', as
 
   render(<App />);
 
-  chooseFolderSort('Title');
+  chooseFolderSort('Date modified');
 
   expect(getFolderListTitles()).toEqual(['Alpha', 'Alpha', 'Beta']);
   expect(useWorkspaceStore.getState().activeNodeId).toBe('folder-1');
@@ -202,7 +202,7 @@ it('supports date last opened sorting from recent to old', () => {
 
   render(<App />);
 
-  chooseFolderSort('Date last opened');
+  chooseFolderSort('Last opened');
 
   expect(getFolderListTitles()).toEqual(['Opened latest', 'Opened earlier', 'Never opened']);
   expect(screen.getByTestId('folder-list-date-note-2')).toHaveTextContent('2026-04-03');

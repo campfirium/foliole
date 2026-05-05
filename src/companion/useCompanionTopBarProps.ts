@@ -1,18 +1,26 @@
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
+import type {
+  FolderListSortDirection,
+  FolderListSortKey
+} from '../features/nodes/model/folderListOrdering';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryModel';
-import { resolveCompanionTopBarProps } from './CompanionShellContent';
+import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 export function useCompanionTopBarProps(args: {
   directorySelection: CompanionDirectorySelection;
+  browseSortDirection: FolderListSortDirection;
+  browseSortKey: FolderListSortKey;
   externalDirectory: CompanionExternalDirectory;
   isBrowseDirectoryOpen: boolean;
   isOnlyReviewOpen: boolean;
   resetDirectorySelection(selection?: CompanionDirectorySelection): void;
+  setBrowseSortDirection(sortDirection: FolderListSortDirection): void;
+  setBrowseSortKey(sortKey: FolderListSortKey): void;
   setIsBrowseDirectoryOpen(open: boolean): void;
   setIsCaptureSheetOpen(open: boolean): void;
   setIsOnlyReviewOpen(open: boolean): void;
@@ -35,21 +43,20 @@ export function useCompanionTopBarProps(args: {
     args.isBrowseDirectoryOpen,
     args.isOnlyReviewOpen,
     args.directorySelection,
+    args.browseSortKey,
+    args.browseSortDirection,
+    args.setBrowseSortKey,
+    args.setBrowseSortDirection,
     () => {
       args.resetDirectorySelection();
       args.setIsBrowseDirectoryOpen(true);
     },
-    () => {
-      args.resetDirectorySelection();
-      args.setIsBrowseDirectoryOpen(false);
-    },
-    args.resetDirectorySelection,
-    backDirectorySelection,
     () => args.setIsCaptureSheetOpen(true),
     () => args.setIsOnlyReviewOpen(true),
     () => args.setIsOnlyReviewOpen(false),
     () => args.surface.handleTabAction('recent'),
     () => args.setSettingsPage('list'),
-    () => args.setSettingsPage('sync')
+    () => args.setSettingsPage('sync'),
+    backDirectorySelection
   );
 }

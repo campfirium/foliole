@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 
 import {
-  resolveCompanionBrowseExitNodeId,
   resolveCompanionFolderViewByNodeId,
   resolveCompanionRecentArticles,
   resolveCompanionRootDirectoryView
-} from './companionReadableArticle';
+} from './companionBrowseLists';
+import { resolveCompanionBrowseExitNodeId } from './companionReadableArticle';
 
 type SnapshotNode = WorkspaceSnapshot['nodesById'][string];
 
@@ -30,7 +30,7 @@ function createNodeRecord(overrides: Partial<SnapshotNode> = {}): SnapshotNode {
   };
 }
 
-function createSnapshot() {
+function createSnapshot(): WorkspaceSnapshot {
   return {
     activeNodeId: 'node-2',
     nodeOrder: ['folder-1', 'folder-2', 'folder-3', 'node-1', 'node-2', 'node-3', 'node-4', 'node-5', 'node-6', 'node-7'],
@@ -51,7 +51,18 @@ function createSnapshot() {
   } satisfies WorkspaceSnapshot;
 }
 
-describe('companionReadableArticle browse helpers', () => {
+function createViewState(nodeId: string, updatedAt: string) {
+  return {
+    nodeId,
+    scrollTop: 0,
+    selectionFrom: null,
+    selectionTo: null,
+    source: 'user-scroll' as const,
+    updatedAt
+  };
+}
+
+describe('companionReadableArticle recent browse helpers', () => {
   it('builds recent articles in descending updated time order', () => {
     const result = resolveCompanionRecentArticles(createSnapshot());
 
@@ -61,6 +72,16 @@ describe('companionReadableArticle browse helpers', () => {
       title: 'Newer',
       updatedAt: '2026-04-21T10:00:00.000Z'
     });
+  });
+
+  it('builds recent articles in descending last opened time order when view state is available', () => {
+    const snapshot = createSnapshot();
+    snapshot.persistedNodeViewById = {
+      'node-1': createViewState('node-1', '2026-04-25T10:00:00.000Z'),
+      'node-2': createViewState('node-2', '2026-04-24T10:00:00.000Z')
+    };
+
+    expect(resolveCompanionRecentArticles(snapshot).map((article) => article.nodeId)).toEqual(['node-1', 'node-2', 'node-7']);
   });
 
   it('excludes child topics and cloze items from recent articles', () => {
@@ -76,25 +97,41 @@ describe('companionReadableArticle browse helpers', () => {
     expect(result.some((article) => article.nodeId === 'node-1')).toBe(true);
     expect(result.some((article) => article.nodeId === 'node-2')).toBe(true);
   });
+});
 
+describe('companionReadableArticle directory browse helpers', () => {
   it('builds a direct-child folder view for companion browsing', () => {
     const result = resolveCompanionFolderViewByNodeId(createSnapshot(), 'folder-1');
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       items: [
-        { kind: 'folder', nodeId: 'folder-2', preview: null, title: 'Nested folder' },
+        { kind: 'topic', nodeId: 'node-3', preview: null, title: 'Empty note' },
         { kind: 'topic', nodeId: 'node-1', preview: 'Older body', title: 'Older' },
-        { kind: 'topic', nodeId: 'node-3', preview: null, title: 'Empty note' }
+        { kind: 'folder', nodeId: 'folder-2', preview: null, title: 'Nested folder' }
       ],
       nodeId: 'folder-1',
       title: 'Reading folder'
     });
   });
 
+  it('builds folder views in descending last opened time order when view state is available', () => {
+    const snapshot = createSnapshot();
+    snapshot.persistedNodeViewById = {
+      'folder-2': createViewState('folder-2', '2026-04-25T10:00:00.000Z'),
+      'node-1': createViewState('node-1', '2026-04-24T10:00:00.000Z')
+    };
+
+    expect(resolveCompanionFolderViewByNodeId(snapshot, 'folder-1')?.items.map((item) => item.nodeId)).toEqual([
+      'folder-2',
+      'node-1',
+      'node-3'
+    ]);
+  });
+
   it('builds the root directory from top-level folders only', () => {
     const result = resolveCompanionRootDirectoryView(createSnapshot());
 
-    expect(result.items).toEqual([
+    expect(result.items).toMatchObject([
       { kind: 'folder', nodeId: 'folder-1', preview: null, title: 'Reading folder' }
     ]);
   });

@@ -30,11 +30,15 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
             />
             {renderCompanionShellContent({
               hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
+              browseSortDirection: model.browseSortDirection,
+              browseSortKey: model.browseSortKey,
               companionTabConfig: model.companionTabs.config,
               directorySelection: model.directorySelection,
               onBackDirectorySelection: model.topBarProps.onBack ?? (() => undefined),
               onBackToSettingsList: () => model.setSettingsPage('list'),
               onChangeDirectorySelection: model.setDirectorySelection,
+              onChangeBrowseSortDirection: model.setBrowseSortDirection,
+              onChangeBrowseSortKey: model.setBrowseSortKey,
               onCompanionTabConfigChange: model.companionTabs.setConfig,
               isBrowseDirectoryOpen: model.isBrowseDirectoryOpen,
               isOnlyReviewOpen: model.isOnlyReviewOpen,

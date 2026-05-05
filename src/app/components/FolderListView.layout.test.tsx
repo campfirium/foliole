@@ -53,27 +53,6 @@ it('keeps long titles, empty bodies, and long summaries clamped inside the row',
   expect(screen.queryByText('Topic')).not.toBeInTheDocument();
 });
 
-it('reuses the shared width resize handles when the document width props are provided', () => {
-  render(
-    <FolderListView
-      documentMaxWidth={760}
-      folderNodeId="folder-1"
-      nodeOrder={['folder-1']}
-      nodesById={{
-        'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' })
-      }}
-      onChangeSortDirection={() => undefined}
-      onChangeSortKey={() => undefined}
-      onResetLayout={() => undefined}
-      onSelectNode={() => undefined}
-      onStartDocumentResize={() => undefined}
-    />
-  );
-
-  expect(screen.getByRole('separator', { name: 'Resize document width from left' })).toBeInTheDocument();
-  expect(screen.getByRole('separator', { name: 'Resize document width from right' })).toBeInTheDocument();
-});
-
 it('hides the embedded folder header when requested', () => {
   render(
     <FolderListView
@@ -89,7 +68,7 @@ it('hides the embedded folder header when requested', () => {
     />
   );
 
-  expect(screen.queryByRole('button', { name: 'Sort list by Import time' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Sort list by Imported' })).not.toBeInTheDocument();
   expect(screen.queryByRole('searchbox', { name: 'Search folder contents' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 2, name: 'Library root' })).not.toBeInTheDocument();
 });

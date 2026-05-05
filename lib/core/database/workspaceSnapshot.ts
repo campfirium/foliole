@@ -9,6 +9,7 @@ import {
   type WorkspaceNodeAttachmentSnapshot,
   type WorkspaceNodeSnapshot
 } from './workspaceSnapshotHelpers.js';
+import { loadPersistedNodeViewById } from './workspaceSnapshotNodeViewState.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 export interface WorkspaceSnapshot {
@@ -180,11 +181,13 @@ function buildSnapshotRows(
   }
   attachNodeAttachments(nodesById, queryNodeAttachmentRows(driver));
   const nodeOrder = buildOrderedNodeIds(rows, orderedRows, nodesById);
+  const persistedNodeViewById = loadPersistedNodeViewById(driver);
 
   return {
     activeNodeId: resolveSnapshotActiveNodeId(driver, nodeOrder, nodesById, trashedNodeIds, ACTIVE_NODE_META_KEY),
     nodeOrder,
     nodesById,
+    ...(Object.keys(persistedNodeViewById).length > 0 ? { persistedNodeViewById } : {}),
     trashedNodeIds,
     untitledSequenceByParent: {}
   };
