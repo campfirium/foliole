@@ -59,6 +59,7 @@ describe('verify-preview.sh', () => {
       );
 
       const result = await runScript({
+        VERIFY_PREVIEW_HEARTBEAT_SECONDS: '1',
         VERIFY_PREVIEW_VALIDATE_COMMAND: `bash ${validateScript}`,
         VERIFY_PREVIEW_FINISH_COMMAND: `bash ${finishScript}`
       });
@@ -67,6 +68,34 @@ describe('verify-preview.sh', () => {
       expect(result.stdout).toContain('step 1/2 verify');
       expect(result.stdout).toContain('step 2/2 preview');
       expect(result.stdout).toContain('[verify-preview] done');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('prints progress while verification is still running', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'verify-preview-'));
+    try {
+      const validateScript = await createMockCommand(
+        tempRoot,
+        'validate.sh',
+        'sleep 2'
+      );
+      const finishScript = await createMockCommand(
+        tempRoot,
+        'finish.sh',
+        'echo "preview ok"'
+      );
+
+      const result = await runScript({
+        VERIFY_PREVIEW_HEARTBEAT_SECONDS: '1',
+        VERIFY_PREVIEW_VALIDATE_COMMAND: `bash ${validateScript}`,
+        VERIFY_PREVIEW_FINISH_COMMAND: `bash ${finishScript}`
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('waiting: step 1/2 verify still running (1s elapsed)');
+      expect(result.stdout).toContain('step 2/2 preview');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -94,6 +123,37 @@ describe('verify-preview.sh', () => {
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('step 1/2 verify');
+      expect(result.stdout).toContain('failed: step 1/2 verify exited with code 1');
+      expect(result.stdout).toContain('blocked: verification did not pass, so preview was skipped');
+      expect(result.stdout).not.toContain('step 2/2 preview');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('explains when verification is blocked by the memory limit', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'verify-preview-'));
+    try {
+      const markerPath = path.join(tempRoot, 'preview.log');
+      const validateScript = await createMockCommand(
+        tempRoot,
+        'validate.sh',
+        'echo "[quality-gate-fast] failed: test exceeded memory limit (65536 KiB > 32768 KiB)"; exit 1'
+      );
+      const finishScript = await createMockCommand(
+        tempRoot,
+        'finish.sh',
+        `printf 'preview\n' >> "${markerPath}"`
+      );
+
+      const result = await runScript({
+        VERIFY_PREVIEW_VALIDATE_COMMAND: `bash ${validateScript}`,
+        VERIFY_PREVIEW_FINISH_COMMAND: `bash ${finishScript}`
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('failed: test exceeded memory limit');
+      expect(result.stdout).toContain('blocked: verification hit the memory limit, so preview was skipped');
       expect(result.stdout).not.toContain('step 2/2 preview');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
