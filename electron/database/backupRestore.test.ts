@@ -18,10 +18,11 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { upsertNodeSnapshot } from './nodeMutations.js';
+import { deleteNodesPermanently, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { saveReadingProgress } from './readingProgress.js';
+import { applyReviewGrade } from './reviewMutations.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 let tempRoot = '';
@@ -74,17 +75,183 @@ it('restores the application sqlite state from an online backup snapshot', async
   });
 });
 
-function seedNode(nodeId: string, content: string) {
+it('restores review history, node lifecycle state, and backup truth after later CRUD drift', async () => {
+  seedBackupBaseline();
+
+  const backup = await createApplicationDatabaseBackup();
+
+  mutateWorkspaceAfterBackup();
+
+  await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
+
+  expect(loadWorkspaceSnapshot()).toEqual(createRestoredWorkspaceSnapshot());
+  expect(selectReviewLogCount('node-qa')).toBe(1);
+  expect(selectNodeCount('node-later')).toBe(0);
+
+  applyFollowupReviewGrade();
+
+  expect(selectReviewLogCount('node-qa')).toBe(2);
+});
+
+function seedBackupBaseline() {
+  seedNode('node-root', '# root', 0);
+  seedNode('node-qa', 'Prompt [...]', 1, 'Answer');
+  seedNode('node-trash', '# trash', 2);
+
+  softDeleteNodes({ nodeIds: ['node-trash'], deletedAt: '2026-03-14T10:01:00.000Z' });
+  applyReviewGrade({
+    nodeId: 'node-qa',
+    grade: 3,
+    reviewedAt: '2026-03-14T10:02:00.000Z',
+    cardBefore: createSchedulerCard('2026-03-14T10:00:00.000Z'),
+    cardAfter: {
+      ...createSchedulerCard('2026-03-17T10:02:00.000Z'),
+      last_review: '2026-03-14T10:02:00.000Z',
+      state: 1,
+      stability: 2.7,
+      difficulty: 3.4,
+      elapsed_days: 1,
+      scheduled_days: 3,
+      reps: 1
+    }
+  });
+}
+
+function mutateWorkspaceAfterBackup() {
+  seedNode('node-root', '# mutated after backup', 0);
+  seedNode('node-later', '# later node', 3);
+  deleteNodesPermanently({
+    nodeIds: ['node-qa', 'node-trash'],
+    nodeOrder: ['node-root', 'node-later']
+  });
+}
+
+function createRestoredWorkspaceSnapshot() {
+  return {
+    activeNodeId: 'node-root',
+    nodeOrder: ['node-root', 'node-qa', 'node-trash'],
+    nodesById: {
+      'node-root': {
+        id: 'node-root',
+        parentNodeId: null,
+        title: 'node-root',
+        isTitleManual: true,
+        content: '# root',
+        reveal: null,
+        anchorLink: null,
+        review: null,
+        createdAt: '2026-03-14T10:00:00.000Z',
+        updatedAt: '2026-03-14T10:00:00.000Z'
+      },
+      'node-qa': {
+        id: 'node-qa',
+        parentNodeId: null,
+        title: 'node-qa',
+        isTitleManual: true,
+        content: 'Prompt [...]',
+        reveal: 'Answer',
+        anchorLink: null,
+        review: {
+          due: '2026-03-17T10:02:00.000Z',
+          lastReviewAt: '2026-03-14T10:02:00.000Z',
+          state: 1,
+          stability: 2.7,
+          difficulty: 3.4,
+          elapsedDays: 1,
+          scheduledDays: 3,
+          reps: 1,
+          lapses: 0
+        },
+        createdAt: '2026-03-14T10:00:00.000Z',
+        updatedAt: '2026-03-14T10:00:00.000Z'
+      },
+      'node-trash': {
+        id: 'node-trash',
+        parentNodeId: null,
+        title: 'node-trash',
+        isTitleManual: true,
+        content: '# trash',
+        reveal: null,
+        anchorLink: null,
+        review: null,
+        createdAt: '2026-03-14T10:00:00.000Z',
+        updatedAt: '2026-03-14T10:01:00.000Z'
+      }
+    },
+    trashedNodeIds: ['node-trash']
+  };
+}
+
+function applyFollowupReviewGrade() {
+  applyReviewGrade({
+    nodeId: 'node-qa',
+    grade: 1,
+    reviewedAt: '2026-03-17T10:02:00.000Z',
+    cardBefore: {
+      ...createSchedulerCard('2026-03-17T10:02:00.000Z'),
+      last_review: '2026-03-14T10:02:00.000Z',
+      state: 1,
+      stability: 2.7,
+      difficulty: 3.4,
+      elapsed_days: 1,
+      scheduled_days: 3,
+      reps: 1
+    },
+    cardAfter: {
+      ...createSchedulerCard('2026-03-17T10:12:00.000Z'),
+      last_review: '2026-03-17T10:02:00.000Z',
+      state: 3,
+      stability: 1.1,
+      difficulty: 4.2,
+      elapsed_days: 3,
+      scheduled_days: 0,
+      reps: 2,
+      lapses: 1
+    }
+  });
+}
+
+function seedNode(nodeId: string, content: string, position = 0, reveal: string | null = null) {
   upsertNodeSnapshot({
     nodeId,
     parentNodeId: null,
     title: nodeId,
     isTitleManual: true,
     content,
-    reveal: null,
+    reveal,
     anchorLink: null,
-    position: 0,
+    position,
     createdAt: '2026-03-14T10:00:00.000Z',
     updatedAt: '2026-03-14T10:00:00.000Z'
   });
+}
+
+function createSchedulerCard(due: string) {
+  return {
+    due,
+    last_review: null,
+    state: 0 as const,
+    stability: 0,
+    difficulty: 0,
+    elapsed_days: 0,
+    scheduled_days: 0,
+    reps: 0,
+    lapses: 0
+  };
+}
+
+function selectReviewLogCount(nodeId: string) {
+  const connection = openDatabaseConnection();
+  const row = connection.sqlite
+    .prepare('SELECT COUNT(*) as count FROM review_log WHERE node_id = ?')
+    .get(nodeId) as { count: number };
+  return row.count;
+}
+
+function selectNodeCount(nodeId: string) {
+  const connection = openDatabaseConnection();
+  const row = connection.sqlite
+    .prepare('SELECT COUNT(*) as count FROM nodes WHERE id = ?')
+    .get(nodeId) as { count: number };
+  return row.count;
 }
