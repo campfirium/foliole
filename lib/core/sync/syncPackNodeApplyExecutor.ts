@@ -14,6 +14,7 @@ import {
 import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocumentsExecutor.js';
 import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
 import { clearConfirmedSyncPushAcksWithDbPort } from './syncPackPushAcksExecutor.js';
+import { applySyncPackReviewLogWithDbPort } from './syncPackReviewLogExecutor.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 import {
   applySyncPackMetadataObjectsWithDbPort,
@@ -42,6 +43,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   const shouldApply = assertContiguousSyncPackCursor(cursor, options.currentCursor);
   let appliedObjectCount = 0;
   let appliedBlobCount = 0;
+  let appliedReviewOpIds: string[] = [];
   if (shouldApply) {
     appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
     await applySyncPackNodesWithDbPort(port, options);
@@ -50,6 +52,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     await applySyncPackMetadataObjectsWithDbPort(port, options);
     await applySyncPackLearningObjectsWithDbPort(port, options);
     await applySyncPackAttachmentObjectsWithDbPort(port, options);
+    appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
     appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
       ...options,
       objectTypes: [
@@ -73,6 +76,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     applied: shouldApply,
     appliedBlobCount,
     appliedObjectCount,
+    appliedReviewOpIds,
     fromStateSeq: cursor.fromStateSeq,
     toStateSeq: cursor.toStateSeq
   };
