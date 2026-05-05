@@ -5,7 +5,6 @@ import { folioleMarkdownExtensions } from '../model/markdownOblikeExtension';
 
 const {
   mockCompartmentReconfigure,
-  mockDrawSelection,
   mockScrollIntoView,
   mockLineWrapping,
   mockUpdateListenerExtension,
@@ -24,7 +23,6 @@ const {
   mockStateFieldDefine
 } = vi.hoisted(() => ({
   mockCompartmentReconfigure: vi.fn((value: unknown) => value),
-  mockDrawSelection: vi.fn(() => 'draw-selection-extension'),
   mockScrollIntoView: vi.fn(() => 'scroll-into-view-effect'),
   mockLineWrapping: Symbol('lineWrapping'),
   mockUpdateListenerExtension: Symbol('updateListener'),
@@ -59,7 +57,11 @@ vi.mock('@codemirror/commands', () => ({
 
 vi.mock('@codemirror/lang-markdown', () => ({
   markdown: vi.fn(() => 'markdown-extension'),
-  markdownLanguage: 'markdown-language'
+  markdownLanguage: {
+    parser: {
+      configure: vi.fn(() => 'foliole-markdown-parser')
+    }
+  }
 }));
 
 vi.mock('@codemirror/state', () => ({
@@ -96,9 +98,10 @@ vi.mock('@codemirror/view', () => ({
   Decoration: {
     line: vi.fn((value) => value),
     mark: vi.fn((value) => value),
-    none: 'decoration-none'
+    none: 'decoration-none',
+    set: vi.fn((value) => value),
+    widget: vi.fn((value) => ({ range: vi.fn((position) => ({ position, value })) }))
   },
-  drawSelection: mockDrawSelection,
   EditorView: Object.assign(
     function EditorView(this: Record<string, unknown>, config: unknown) {
       mockEditorView(config);
@@ -127,7 +130,8 @@ vi.mock('@codemirror/view', () => ({
   highlightActiveLine: mockHighlightActiveLine,
   keymap: {
     of: mockKeymapOf
-  }
+  },
+  WidgetType: class {}
 }));
 
 vi.mock('./liveMarkdown', () => ({
@@ -145,7 +149,6 @@ vi.mock('./markdownInputAssist', () => ({
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
 function resetEditorMocks() {
-  mockDrawSelection.mockClear();
   mockCompartmentReconfigure.mockClear();
   mockScrollIntoView.mockClear();
   mockEditorStateCreate.mockClear();
@@ -190,15 +193,14 @@ describe('CodeMirrorEditorAdapter construction', () => {
     vi.useRealTimers();
   });
 
-  it('enables drawn selection so selection highlight stays visible outside native focus', () => {
+  it('uses native browser selection so wrapped text selections stay glyph-bound', () => {
     new CodeMirrorEditorAdapter(document.createElement('div'), {
       initialContent: 'abc'
     });
 
-    expect(mockDrawSelection).toHaveBeenCalledTimes(1);
     expect(mockAllowMultipleSelectionsOf).toHaveBeenCalledWith(true);
     const extensions = mockEditorStateCreate.mock.calls[0]?.[0]?.extensions;
-    expect(extensions).toContain('draw-selection-extension');
+    expect(extensions).not.toContain('draw-selection-extension');
     expect(extensions).toContain('allow-multiple-selections-extension');
   });
 
@@ -207,7 +209,14 @@ describe('CodeMirrorEditorAdapter construction', () => {
       initialContent: 'abc'
     });
 
-    expect(markdown).toHaveBeenCalledWith({ base: 'markdown-language', extensions: folioleMarkdownExtensions });
+    expect(markdown).toHaveBeenCalledWith({
+      base: {
+        parser: {
+          configure: expect.any(Function)
+        }
+      },
+      extensions: folioleMarkdownExtensions
+    });
   });
 
   it('keeps read-only editors selectable so comparison panes can copy text', () => {

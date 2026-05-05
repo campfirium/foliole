@@ -30,14 +30,13 @@ it('uses dedicated selection, highlight, and cloze color tokens', () => {
 
   expect(cssText).toContain('cm-md-highlight');
   expect(cssText).toContain('cm-md-cloze');
-  expect(cssText).toContain('cm-selectionBackground');
-  expect(cssText).toContain('.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground');
   expect(cssText).toContain('cm-paragraph-marker-line');
   expect(cssText).toContain('data-paragraph-marker-active');
   expect(cssText).toContain('var(--app-selection-surface-color)');
+  expect(cssText).toContain('.cm-content ::selection');
   expect(cssText).toContain('var(--app-text-selection-bg-color)');
-  expect(cssText).toContain('background-color: transparent;');
-  expect(cssText).toContain('-webkit-text-fill-color: inherit;');
+  expect(cssText).toContain('background-color: var(--app-text-selection-bg-color);');
+  expect(cssText).toContain('-webkit-text-fill-color: var(--app-text-selection-fg-color);');
   expect(cssText).toContain('var(--app-highlight-surface-color)');
   expect(cssText).toContain('cursor: pointer;');
   expect(cssText).toContain('.cm-md-highlight-active');
@@ -54,7 +53,7 @@ it('uses dedicated selection, highlight, and cloze color tokens', () => {
   expect(cssText).toContain('var(--content-panel-text-color, var(--color-text-primary))');
   expect(cssText).toContain('border-left-color: var(--color-text-primary);');
   expect(cssText).toContain('caret-color: var(--color-text-primary);');
-  expect(cssText).toContain('scrollbar-gutter: stable both-edges;');
+  expect(cssText).not.toContain('scrollbar-gutter: stable both-edges;');
   expect(cssText).toContain(
     'padding: var(--editor-content-padding-top, 0.25rem) var(--document-content-inline-padding, 1.5rem) var(--editor-content-padding-bottom, 0.6rem);'
   );
