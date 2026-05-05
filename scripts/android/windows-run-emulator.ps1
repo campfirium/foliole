@@ -83,6 +83,24 @@ function Get-RunningEmulatorSerial {
   return $null
 }
 
+function Get-OfflineEmulatorSerials {
+  param([string]$AdbPath)
+
+  $serials = @()
+  $deviceLines = (& $AdbPath devices 2>$null) | Select-Object -Skip 1
+  foreach ($line in $deviceLines) {
+    $trimmed = $line.Trim()
+    if ([string]::IsNullOrWhiteSpace($trimmed)) {
+      continue
+    }
+    $parts = $trimmed -split "\s+"
+    if ($parts.Count -ge 2 -and $parts[0] -like "emulator-*" -and $parts[1] -eq "offline") {
+      $serials += $parts[0]
+    }
+  }
+  return $serials
+}
+
 function Get-RunningEmulatorSerialForAvd {
   param(
     [string]$AdbPath,
@@ -107,6 +125,29 @@ function Get-RunningEmulatorSerialForAvd {
   }
 
   return $null
+}
+
+function Repair-OfflineEmulators {
+  param([string]$AdbPath)
+
+  $offlineSerials = Get-OfflineEmulatorSerials -AdbPath $AdbPath
+  if ($offlineSerials.Count -eq 0) {
+    return
+  }
+
+  Write-Info "offline adb transport detected: $($offlineSerials -join ', ')"
+  Write-Info "reconnecting offline adb transports"
+  & $AdbPath reconnect offline | Out-Null
+  Start-Sleep -Seconds 5
+
+  $offlineSerials = Get-OfflineEmulatorSerials -AdbPath $AdbPath
+  foreach ($serial in $offlineSerials) {
+    Write-Info "killing offline emulator transport: $serial"
+    & $AdbPath -s $serial emu kill | Out-Null
+  }
+  if ($offlineSerials.Count -gt 0) {
+    Start-Sleep -Seconds 5
+  }
 }
 
 function Wait-ForEmulatorReady {
@@ -160,10 +201,11 @@ Write-Info "avd: $AvdName"
 Write-Info "sdk: $sdkRoot"
 
 & $adbPath start-server | Out-Null
+Repair-OfflineEmulators -AdbPath $adbPath
 $existingSerial = Get-RunningEmulatorSerialForAvd -AdbPath $adbPath -AvdName $AvdName
 
 if ($null -eq $existingSerial) {
-  Start-Process -FilePath $emulatorPath -ArgumentList "-avd", $AvdName
+  Start-Process -FilePath $emulatorPath -ArgumentList "-avd", $AvdName, "-no-snapshot-load"
   Write-Info "launch: requested"
 } else {
   Write-Info "launch: already running ($existingSerial)"
