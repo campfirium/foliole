@@ -65,6 +65,24 @@ const READWISE_LINK_FULL_DOCUMENT_MARKDOWN = `## Full Document
 但这终究有局限性。
 `;
 
+const NON_BULLET_READWISE_LINK_ARTICLE_MARKDOWN = `# 小而美
+
+## Highlights
+盈利能力第一  [...](https://read.readwise.io/read/01a)
+
+极简主义创业者以社区为基础创业  [...](https://read.readwise.io/read/01b)
+
+他们量入为出，不过分地花钱  [...](https://read.readwise.io/read/01c)
+`;
+
+const NON_BULLET_READWISE_LINK_FULL_DOCUMENT_MARKDOWN = `## Full Document
+盈利能力第一。
+
+极简主义创业者以社区为基础创业。
+
+他们量入为出，不过分地花钱。
+`;
+
 it('matches sampled highlights back to the full document content', () => {
   const result = probeReadwiseArticleContent({
     articleMarkdown: ARTICLE_MARKDOWN,
@@ -181,6 +199,28 @@ it('supports readwise list-style highlights with the default blank-line separato
       highlightText: '但这终究有局限性',
       matched: true
     }
+  ]);
+});
+
+it('falls back to blank-line split when separator is list-style but highlights are plain paragraphs', () => {
+  const result = probeReadwiseArticleContent({
+    articleMarkdown: NON_BULLET_READWISE_LINK_ARTICLE_MARKDOWN,
+    fullDocumentMarkdown: NON_BULLET_READWISE_LINK_FULL_DOCUMENT_MARKDOWN,
+    highlightsHeading: '## Highlights',
+    highlightSeparator: '- ',
+    newHighlightsHeading: '## New highlights added',
+    noteKeyword: 'Note:',
+    sourceName: '小而美',
+    tagKeyword: 'Tags:'
+  });
+
+  expect(result.success).toBe(true);
+  expect(result.detectedHighlightCount).toBe(3);
+  expect(result.sampleCount).toBe(3);
+  expect(result.samples).toMatchObject([
+    { highlightText: '盈利能力第一', matched: true },
+    { highlightText: '极简主义创业者以社区为基础创业', matched: true },
+    { highlightText: '他们量入为出，不过分地花钱', matched: true }
   ]);
 });
 

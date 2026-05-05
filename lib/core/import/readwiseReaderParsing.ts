@@ -123,6 +123,10 @@ function splitHighlightBlocks(content: string, separator: string) {
     .map((part) => part.trim())
     .filter(Boolean);
   if (literalBlocks.length === 1) {
+    const readwiseLinkFallbackBlocks = tryReadwiseLinkFallbackBlocks(normalizedContent);
+    if (readwiseLinkFallbackBlocks) {
+      return readwiseLinkFallbackBlocks;
+    }
     const listBlocks = splitTopLevelListHighlights(normalizedContent);
     if (listBlocks.length > 1) {
       return listBlocks;
@@ -143,6 +147,29 @@ function splitTopLevelListHighlights(content: string) {
       return content.slice(start, end).trim();
     })
     .filter(Boolean);
+}
+
+function splitBlankLineHighlights(content: string) {
+  return normalizeLineEndings(content)
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function isReadwiseLinkTerminatedHighlight(block: string) {
+  return /\[\.\.\.]\(\s*https?:\/\/read(?:\.readwise)?\.io\/read\/[^)]+\s*\)\s*$/i.test(block.trim());
+}
+
+function tryReadwiseLinkFallbackBlocks(content: string) {
+  const blocks = splitBlankLineHighlights(content);
+  if (blocks.length <= 1) {
+    return null;
+  }
+  const linkTerminatedCount = blocks.filter((block) => isReadwiseLinkTerminatedHighlight(block)).length;
+  if (linkTerminatedCount >= Math.ceil(blocks.length * 0.6)) {
+    return blocks;
+  }
+  return null;
 }
 
 export function extractReadwiseHighlightsSection(markdown: string, headings: string[]) {
