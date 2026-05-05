@@ -1,10 +1,8 @@
 import type { SemanticRange } from './inlineSemanticMarks';
+import { collectMarkdownInlineLinkRanges, collectMarkdownInlineRanges } from './markdownInlineProjection';
+import { collectMarkdownWikiLinkRanges } from './markdownOblikeInlineProjection';
 
-const INLINE_LINK_PATTERN = /(?<!!)\[([^\]\n]*)\]\(([^)\n]*)\)/g;
-const WIKI_LINK_PATTERN = /(?<!!)\[\[([^\]\n]+)\]\]/g;
 const FOOTNOTE_PATTERN = /\^\[(?<label>[^\]\n]+)\](?:\{(?<note>(?:\\.|[^}\n])*)\})?/g;
-const AUTOLINK_PATTERN = /\b(?:https?:\/\/[^\s<>()\]]+|www\.[^\s<>()\]]+|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
-const AUTOLINK_TRAILING_PUNCTUATION_PATTERN = /[.,;:!?]+$/;
 
 export interface RangeBounds {
   from: number;
@@ -49,41 +47,14 @@ function isWithinRanges(from: number, to: number, ranges: ReadonlyArray<RangeBou
 }
 
 export function collectInlineCodeMatches(from: number, text: string): InlineCodeMatch[] {
-  const matches: InlineCodeMatch[] = [];
-  let index = 0;
-  while (index < text.length) {
-    if (text[index] !== '`') {
-      index += 1;
-      continue;
-    }
-    const openerStart = index;
-    while (index < text.length && text[index] === '`') index += 1;
-    const delimiterLength = index - openerStart;
-    const openerEnd = index;
-
-    let cursor = openerEnd;
-    let foundClosing = false;
-    while (cursor < text.length) {
-      if (text[cursor] !== '`') {
-        cursor += 1;
-        continue;
-      }
-      const closerStart = cursor;
-      while (cursor < text.length && text[cursor] === '`') cursor += 1;
-      const closerLength = cursor - closerStart;
-      if (closerLength !== delimiterLength) continue;
-      matches.push({
-        from: from + openerStart,
-        to: from + cursor,
-        contentFrom: from + openerEnd,
-        contentTo: from + closerStart
-      });
-      foundClosing = true;
-      break;
-    }
-    if (!foundClosing) index = openerEnd;
-  }
-  return matches;
+  return collectMarkdownInlineRanges(text, from)
+    .filter((match) => match.kind === 'inlineCode')
+    .map((match) => ({
+      from: match.from,
+      to: match.to,
+      contentFrom: match.contentFrom,
+      contentTo: match.contentTo
+    }));
 }
 
 export function collectInlineLinkMatches(
@@ -91,39 +62,16 @@ export function collectInlineLinkMatches(
   text: string,
   preservedRanges: ReadonlyArray<RangeBounds>
 ): InlineLinkMatch[] {
-  const matches: InlineLinkMatch[] = [];
-  let match = INLINE_LINK_PATTERN.exec(text);
-  while (match) {
-    const start = from + match.index;
-    const fullText = match[0] ?? '';
-    const label = match[1] ?? '';
-    const labelFrom = start + 1;
-    const labelTo = labelFrom + label.length;
-    const pairFrom = labelTo;
-    const pairTo = pairFrom + 2;
-    const linkTo = start + fullText.length;
-
-    if (!isWithinRanges(start, linkTo, preservedRanges)) {
-      const urlFrom = pairTo;
-      const urlTo = linkTo - 1;
-      matches.push({
-        from: start,
-        to: linkTo,
-        labelFrom,
-        labelTo,
-        hiddenRanges: [
-          { from: start, to: start + 1 },
-          { from: pairFrom, to: pairTo },
-          { from: urlFrom, to: urlTo },
-          { from: linkTo - 1, to: linkTo }
-        ],
-        href: match[2] ?? ''
-      });
-    }
-    match = INLINE_LINK_PATTERN.exec(text);
-  }
-  INLINE_LINK_PATTERN.lastIndex = 0;
-  return matches;
+  return collectMarkdownInlineLinkRanges(text, from)
+    .filter((match) => !isWithinRanges(match.from, match.to, preservedRanges))
+    .map((match) => ({
+      from: match.from,
+      to: match.to,
+      labelFrom: match.labelFrom,
+      labelTo: match.labelTo,
+      hiddenRanges: match.hiddenRanges,
+      href: match.href
+    }));
 }
 
 export function collectAutolinkMatches(
@@ -131,26 +79,13 @@ export function collectAutolinkMatches(
   text: string,
   preservedRanges: ReadonlyArray<RangeBounds>
 ): AutolinkMatch[] {
-  const matches: AutolinkMatch[] = [];
-  let match = AUTOLINK_PATTERN.exec(text);
-  while (match) {
-    const rawText = match[0] ?? '';
-    const linkText = rawText.replace(AUTOLINK_TRAILING_PUNCTUATION_PATTERN, '');
-    const start = from + match.index;
-    const end = start + linkText.length;
-    if (linkText && !isWithinRanges(start, end, preservedRanges)) {
-      matches.push({ from: start, href: normalizeAutolinkHref(linkText), to: end });
-    }
-    match = AUTOLINK_PATTERN.exec(text);
-  }
-  AUTOLINK_PATTERN.lastIndex = 0;
-  return matches;
-}
-
-function normalizeAutolinkHref(text: string) {
-  if (text.startsWith('www.')) return `https://${text}`;
-  if (text.includes('@') && !text.includes('://')) return `mailto:${text}`;
-  return text;
+  return collectMarkdownInlineRanges(text, from)
+    .filter((match) => match.kind === 'autolink' && !isWithinRanges(match.from, match.to, preservedRanges))
+    .map((match) => ({
+      from: match.from,
+      href: match.href ?? match.text,
+      to: match.to
+    }));
 }
 
 export function collectWikiLinkMatches(
@@ -158,48 +93,16 @@ export function collectWikiLinkMatches(
   text: string,
   preservedRanges: ReadonlyArray<RangeBounds>
 ): WikiLinkMatch[] {
-  const matches: WikiLinkMatch[] = [];
-  let match = WIKI_LINK_PATTERN.exec(text);
-  while (match) {
-    const start = from + match.index;
-    const rawTitle = match[1] ?? '';
-    const aliasDelimiterIndex = rawTitle.indexOf('|');
-    const title = (aliasDelimiterIndex >= 0 ? rawTitle.slice(0, aliasDelimiterIndex) : rawTitle).trim();
-    const linkTo = start + (match[0]?.length ?? 0);
-    const labelBounds = resolveWikiLinkLabelBounds(start + 2, rawTitle, aliasDelimiterIndex, linkTo - 2);
-
-    if (title && !isWithinRanges(start, linkTo, preservedRanges)) {
-      matches.push({
-        from: start,
-        to: linkTo,
-        hiddenRanges: [
-          { from: start, to: labelBounds.from },
-          { from: linkTo - 2, to: linkTo }
-        ],
-        labelFrom: labelBounds.from,
-        labelTo: labelBounds.to,
-        title
-      });
-    }
-    match = WIKI_LINK_PATTERN.exec(text);
-  }
-  WIKI_LINK_PATTERN.lastIndex = 0;
-  return matches;
-}
-
-function resolveWikiLinkLabelBounds(innerFrom: number, rawTitle: string, aliasDelimiterIndex: number, fallbackTo: number) {
-  if (aliasDelimiterIndex < 0) {
-    return { from: innerFrom, to: fallbackTo };
-  }
-
-  const rawAlias = rawTitle.slice(aliasDelimiterIndex + 1);
-  const leadingWhitespace = rawAlias.length - rawAlias.trimStart().length;
-  const trailingWhitespace = rawAlias.length - rawAlias.trimEnd().length;
-  const labelFrom = innerFrom + aliasDelimiterIndex + 1 + leadingWhitespace;
-  return {
-    from: labelFrom,
-    to: Math.max(labelFrom, fallbackTo - trailingWhitespace)
-  };
+  return collectMarkdownWikiLinkRanges(text, from)
+    .filter((match) => !isWithinRanges(match.from, match.to, preservedRanges))
+    .map((match) => ({
+      from: match.from,
+      to: match.to,
+      hiddenRanges: match.hiddenRanges,
+      labelFrom: match.labelFrom,
+      labelTo: match.labelTo,
+      title: match.title
+    }));
 }
 
 export function collectFootnoteMatches(

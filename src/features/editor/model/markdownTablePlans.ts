@@ -1,11 +1,14 @@
-import { markdownLanguage } from '@codemirror/lang-markdown';
+import { folioleMarkdownParser } from './folioleMarkdownParser';
 
 import type { EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
 
-type MarkdownSyntaxTree = ReturnType<typeof markdownLanguage.parser.parse>;
+type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
+export type MarkdownTableCellAlignment = 'center' | 'left' | 'right' | null;
+
 export interface MarkdownTableCellPlan {
+  align: MarkdownTableCellAlignment;
   from: number;
   text: string;
   to: number;
@@ -27,27 +30,40 @@ export interface MarkdownTablePlan {
   to: number;
 }
 
-function collectChildCells(node: MarkdownSyntaxNode, source: string, offset: number): MarkdownTableCellPlan[] {
+function collectChildCells(
+  node: MarkdownSyntaxNode,
+  source: string,
+  offset: number,
+  alignments: readonly MarkdownTableCellAlignment[]
+): MarkdownTableCellPlan[] {
   const cells: MarkdownTableCellPlan[] = [];
+  let cellIndex = 0;
   for (let child = node.firstChild; child; child = child.nextSibling) {
     if (child.name !== 'TableCell') continue;
     cells.push({
+      align: alignments[cellIndex] ?? null,
       from: offset + child.from,
       text: source.slice(child.from, child.to),
       to: offset + child.to
     });
+    cellIndex += 1;
   }
   return cells;
 }
 
-function collectTableRows(tableNode: MarkdownSyntaxNode, source: string, offset: number): MarkdownTableRowPlan[] {
+function collectTableRows(
+  tableNode: MarkdownSyntaxNode,
+  source: string,
+  offset: number,
+  alignments: readonly MarkdownTableCellAlignment[]
+): MarkdownTableRowPlan[] {
   const rows: MarkdownTableRowPlan[] = [];
   let columnCount = 0;
 
   for (let child = tableNode.firstChild; child; child = child.nextSibling) {
     if (child.name !== 'TableHeader' && child.name !== 'TableRow') continue;
 
-    const cells = collectChildCells(child, source, offset);
+    const cells = collectChildCells(child, source, offset, alignments);
     if (child.name === 'TableHeader') {
       columnCount = cells.length;
     }
@@ -64,6 +80,31 @@ function collectTableRows(tableNode: MarkdownSyntaxNode, source: string, offset:
   }
 
   return rows.filter((row) => row.kind === 'header' || row.cells.length === columnCount);
+}
+
+function resolveTableAlignments(tableNode: MarkdownSyntaxNode, source: string): MarkdownTableCellAlignment[] {
+  for (let child = tableNode.firstChild; child; child = child.nextSibling) {
+    if (child.name === 'TableDelimiter') {
+      return splitDelimiterCells(source.slice(child.from, child.to)).map(resolveDelimiterAlignment);
+    }
+  }
+  return [];
+}
+
+function splitDelimiterCells(delimiterLine: string) {
+  const trimmed = delimiterLine.trim();
+  const withoutLeadingPipe = trimmed.startsWith('|') ? trimmed.slice(1) : trimmed;
+  const withoutBoundaryPipes = withoutLeadingPipe.endsWith('|') ? withoutLeadingPipe.slice(0, -1) : withoutLeadingPipe;
+  return withoutBoundaryPipes.split('|').map((cell) => cell.trim());
+}
+
+function resolveDelimiterAlignment(cell: string): MarkdownTableCellAlignment {
+  const startsWithColon = cell.startsWith(':');
+  const endsWithColon = cell.endsWith(':');
+  if (startsWithColon && endsWithColon) return 'center';
+  if (endsWithColon) return 'right';
+  if (startsWithColon) return 'left';
+  return null;
 }
 
 function resolveTableDelimiterTo(tableNode: MarkdownSyntaxNode, offset: number, headerTo: number) {
@@ -83,7 +124,8 @@ function collectTablePlanFromNode(args: {
   offset: number;
   source: string;
 }): MarkdownTablePlan | null {
-  const rows = collectTableRows(args.node, args.source, args.offset);
+  const alignments = resolveTableAlignments(args.node, args.source);
+  const rows = collectTableRows(args.node, args.source, args.offset, alignments);
   const header = rows.find((row) => row.kind === 'header');
   if (!header || header.cells.length === 0) return null;
 
@@ -123,7 +165,7 @@ export function collectMarkdownTablePlans(args: {
   from: number;
   text: string;
 }): MarkdownTablePlan[] {
-  const tree = markdownLanguage.parser.parse(args.text);
+  const tree = folioleMarkdownParser.parse(args.text);
   const tables: MarkdownTablePlan[] = [];
 
   visitTableNodes(tree.topNode, (node) => {

@@ -3,9 +3,7 @@ import {
   collectStrikethroughTextRanges,
   type SemanticRange
 } from './inlineSemanticMarks';
-
-const INLINE_TOKEN_PATTERN = /(\*\*|__|~~)/g;
-const SOURCE_HIGHLIGHT_PATTERN = /==(.+?)==/g;
+import { collectMarkdownInlineRanges } from './markdownInlineProjection';
 
 export interface InlineCodeDelimiterRange extends SemanticRange {
   contentFrom: number;
@@ -42,17 +40,20 @@ export function collectInlineTokenDecorationPlan(
   const markRanges: InlineTextMarkRange[] = [];
   const replaceRanges: SemanticRange[] = [];
 
-  let tokenMatch = INLINE_TOKEN_PATTERN.exec(text);
-  while (tokenMatch) {
-    const tokenFrom = from + tokenMatch.index;
-    const tokenTo = tokenFrom + tokenMatch[0].length;
-    if (!isWithinRanges(tokenFrom, tokenTo, preservedRanges)) {
-      if (showSyntax) markRanges.push({ className: 'cm-md-syntax-visible', from: tokenFrom, to: tokenTo });
-      else replaceRanges.push({ from: tokenFrom, to: tokenTo });
+  for (const inlineRange of collectMarkdownInlineRanges(text, from)) {
+    if (inlineRange.kind !== 'strong' && inlineRange.kind !== 'strikethrough') {
+      continue;
     }
-    tokenMatch = INLINE_TOKEN_PATTERN.exec(text);
+    for (const syntaxRange of inlineRange.syntaxRanges) {
+      if (!isWithinRanges(syntaxRange.from, syntaxRange.to, preservedRanges)) {
+        if (showSyntax) {
+          markRanges.push({ className: 'cm-md-syntax-visible', from: syntaxRange.from, to: syntaxRange.to });
+        } else {
+          replaceRanges.push({ from: syntaxRange.from, to: syntaxRange.to });
+        }
+      }
+    }
   }
-  INLINE_TOKEN_PATTERN.lastIndex = 0;
 
   return { markRanges, replaceRanges };
 }
@@ -105,26 +106,20 @@ export function collectSourceHighlightDecorationPlan(
 
   const markRanges: InlineTextMarkRange[] = [];
   const replaceRanges: SemanticRange[] = [];
-  let match = SOURCE_HIGHLIGHT_PATTERN.exec(text);
 
-  while (match) {
-    const start = from + match.index;
-    const end = start + match[0].length;
-    if (!isWithinRanges(start, end, preservedRanges)) {
-      const contentFrom = start + 2;
-      const contentTo = end - 2;
-      markRanges.push({ className: 'cm-md-source-highlight', from: contentFrom, to: contentTo });
+  for (const inlineRange of collectMarkdownInlineRanges(text, from)) {
+    if (inlineRange.kind !== 'sourceHighlight' || isWithinRanges(inlineRange.from, inlineRange.to, preservedRanges)) {
+      continue;
+    }
+    markRanges.push({ className: 'cm-md-source-highlight', from: inlineRange.contentFrom, to: inlineRange.contentTo });
+    for (const syntaxRange of inlineRange.syntaxRanges) {
       if (showSyntax) {
-        markRanges.push({ className: 'cm-md-syntax-visible', from: start, to: contentFrom });
-        markRanges.push({ className: 'cm-md-syntax-visible', from: contentTo, to: end });
+        markRanges.push({ className: 'cm-md-syntax-visible', from: syntaxRange.from, to: syntaxRange.to });
       } else {
-        replaceRanges.push({ from: start, to: contentFrom });
-        replaceRanges.push({ from: contentTo, to: end });
+        replaceRanges.push({ from: syntaxRange.from, to: syntaxRange.to });
       }
     }
-    match = SOURCE_HIGHLIGHT_PATTERN.exec(text);
   }
 
-  SOURCE_HIGHLIGHT_PATTERN.lastIndex = 0;
   return { markRanges, replaceRanges };
 }

@@ -2,7 +2,7 @@ import type { Range, Text } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
 import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
-import type { MarkdownTableCellPlan, MarkdownTablePlan } from '../model/markdownTablePlans';
+import type { MarkdownTableCellAlignment, MarkdownTableCellPlan, MarkdownTablePlan } from '../model/markdownTablePlans';
 import { dispatchMarkdownTablePreviewRequest } from '../model/markdownTablePreview';
 
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
@@ -20,6 +20,8 @@ function appendInlineText(container: HTMLElement, text: string) {
     if (token.kind === 'text') container.append(document.createTextNode(token.text));
     if (token.kind === 'strong') appendStrongElement(container, token.text);
     if (token.kind === 'strikethrough') appendStrikethroughElement(container, token.text);
+    if (token.kind === 'sourceHighlight') appendSourceHighlightElement(container, token.text);
+    if (token.kind === 'inlineCode') appendInlineCodeElement(container, token.text);
     if (token.kind === 'autolink') appendAutolinkElement(container, token.text, token.href);
   }
 }
@@ -36,6 +38,20 @@ function appendStrikethroughElement(container: HTMLElement, text: string) {
   strike.className = 'cm-md-strikethrough';
   strike.textContent = text;
   container.append(strike);
+}
+
+function appendSourceHighlightElement(container: HTMLElement, text: string) {
+  const highlight = document.createElement('span');
+  highlight.className = 'cm-md-source-highlight';
+  highlight.textContent = text;
+  container.append(highlight);
+}
+
+function appendInlineCodeElement(container: HTMLElement, text: string) {
+  const code = document.createElement('code');
+  code.className = 'cm-md-inline-code';
+  code.textContent = text;
+  container.append(code);
 }
 
 function appendAutolinkElement(container: HTMLElement, linkText: string, href: string) {
@@ -56,8 +72,15 @@ function createCellElement(
   const { hasCloze, hasHighlight } = getCellAnchorClasses(cell, decorations);
   if (hasHighlight) element.classList.add('cm-md-highlight');
   if (hasCloze) element.classList.add('cm-md-cloze');
+  applyCellAlignment(element, cell.align);
   appendInlineText(element, cell.text.trim());
   return element;
+}
+
+function applyCellAlignment(element: HTMLElement, align: MarkdownTableCellAlignment) {
+  if (align) {
+    element.style.textAlign = align;
+  }
 }
 
 function createTableElement(tablePlan: MarkdownTablePlan) {
@@ -76,7 +99,7 @@ function createTableElement(tablePlan: MarkdownTablePlan) {
     const rowElement = document.createElement('tr');
     rowElement.className = row.kind === 'header' ? 'cm-md-table-row cm-md-table-row-header' : 'cm-md-table-row';
     for (let index = 0; index < tablePlan.columnCount; index += 1) {
-      const cell = row.cells[index] ?? { from: row.to, text: '', to: row.to };
+      const cell = row.cells[index] ?? { align: null, from: row.to, text: '', to: row.to };
       rowElement.append(createCellElement(cell, row.kind === 'header' ? 'th' : 'td', tablePlan.anchorDecorations));
     }
     body.append(rowElement);

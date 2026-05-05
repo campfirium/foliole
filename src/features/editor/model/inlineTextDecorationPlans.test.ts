@@ -30,6 +30,16 @@ describe('inlineTextDecorationPlans', () => {
     });
   });
 
+  it('does not hide markdown tokens inside inline code', () => {
+    expect(collectInlineTokenDecorationPlan(0, '`**code**` **Bold**', false, false, [])).toEqual({
+      markRanges: [],
+      replaceRanges: [
+        { from: 11, to: 13 },
+        { from: 17, to: 19 }
+      ]
+    });
+  });
+
   it('marks inline code delimiters as visible syntax', () => {
     expect(
       collectInlineCodeSyntaxDecorationPlan([{ from: 3, to: 11, contentFrom: 4, contentTo: 10 }])

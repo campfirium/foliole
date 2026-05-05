@@ -33,14 +33,4 @@ describe('importedNodeTitle', () => {
       })
     ).toBe('note');
   });
-
-  it('does not treat old imported anchor markup as a heading wrapper', () => {
-    expect(
-      resolveImportedNodeTitle({
-        content: '<highlight id="anchor-1"># Imported title</highlight id="anchor-1">\n\nBody',
-        sourceName: 'note.md',
-        titleStrategy: 'heading'
-      })
-    ).toBe('note');
-  });
 });

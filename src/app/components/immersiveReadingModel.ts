@@ -1,6 +1,7 @@
 import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import { createLineClass } from '../../features/editor/model/markdownLineSyntax';
+import { collectMarkdownLineClassRanges } from '../../features/editor/model/markdownBlockProjection';
+import { collectMarkdownCodeFenceProjection } from '../../features/editor/model/markdownCodeFenceProjection';
 
 function buildLineRanges(content: string) {
   const lines: Array<{ blank: boolean; end: number; start: number; text: string }> = [];
@@ -21,8 +22,7 @@ function buildLineRanges(content: string) {
   return lines;
 }
 
-function isStandaloneMarkdownBlock(text: string, inCodeBlock: boolean) {
-  const lineClass = createLineClass(text, inCodeBlock);
+function isStandaloneMarkdownBlock(lineClass: string | null) {
   return (
     lineClass === 'cm-line-h1' ||
     lineClass === 'cm-line-h2' ||
@@ -49,71 +49,105 @@ function isStandaloneMarkdownImageLine(text: string) {
   return matches.length === 1 && matches[0]?.fullMatch === trimmed;
 }
 
+function resolveMarkdownLineClass(args: {
+  lineStart: number;
+  codeLineFroms: ReadonlySet<number>;
+  fenceLineFroms: ReadonlySet<number>;
+  markdownLineClasses: ReadonlyMap<number, string>;
+}) {
+  if (args.fenceLineFroms.has(args.lineStart)) return 'cm-line-code-fence';
+  if (args.codeLineFroms.has(args.lineStart)) return 'cm-line-code';
+  return args.markdownLineClasses.get(args.lineStart) ?? null;
+}
+
 function pushSelection(selections: EditorSelection[], from: number | null, to: number) {
   if (from !== null && from < to) {
     selections.push({ from, to });
   }
 }
 
-export function getParagraphSelections(content: string): EditorSelection[] {
-  const lines = buildLineRanges(content);
-  const selections: EditorSelection[] = [];
-  let paragraphStart: number | null = null;
-  let paragraphEnd = 0;
-  let inCodeBlock = false;
-  let tableStart: number | null = null;
-  let tableEnd = 0;
+interface ParagraphSelectionState {
+  paragraphEnd: number;
+  paragraphStart: number | null;
+  selections: EditorSelection[];
+  tableEnd: number;
+  tableStart: number | null;
+}
 
-  lines.forEach((line) => {
-    if (line.blank) {
-      pushSelection(selections, tableStart, tableEnd);
-      pushSelection(selections, paragraphStart, paragraphEnd);
-      tableStart = null;
-      tableEnd = 0;
-      paragraphStart = null;
-      paragraphEnd = 0;
-      return;
+function flushTable(state: ParagraphSelectionState) {
+  pushSelection(state.selections, state.tableStart, state.tableEnd);
+  state.tableStart = null;
+  state.tableEnd = 0;
+}
+
+function flushParagraph(state: ParagraphSelectionState) {
+  pushSelection(state.selections, state.paragraphStart, state.paragraphEnd);
+  state.paragraphStart = null;
+  state.paragraphEnd = 0;
+}
+
+function visitParagraphLine(
+  state: ParagraphSelectionState,
+  line: ReturnType<typeof buildLineRanges>[number],
+  codeLineFroms: ReadonlySet<number>,
+  fenceLineFroms: ReadonlySet<number>,
+  markdownLineClasses: ReadonlyMap<number, string>
+) {
+  if (line.blank) {
+    flushTable(state);
+    flushParagraph(state);
+    return;
+  }
+  const lineClass = resolveMarkdownLineClass({
+    codeLineFroms,
+    fenceLineFroms,
+    lineStart: line.start,
+    markdownLineClasses
+  });
+  const standaloneBlock = isStandaloneMarkdownBlock(lineClass);
+  if (isMarkdownTableLine(line.text)) {
+    flushParagraph(state);
+    if (state.tableStart === null) {
+      state.tableStart = line.start;
     }
-    const standaloneBlock = isStandaloneMarkdownBlock(line.text, inCodeBlock);
-    if (/^\s*`{3,}/.test(line.text)) {
-      inCodeBlock = !inCodeBlock;
-    }
-    if (isMarkdownTableLine(line.text)) {
-      pushSelection(selections, paragraphStart, paragraphEnd);
-      paragraphStart = null;
-      paragraphEnd = 0;
-      if (tableStart === null) {
-        tableStart = line.start;
-      }
-      tableEnd = line.end;
-      return;
-    }
-    pushSelection(selections, tableStart, tableEnd);
-    tableStart = null;
-    tableEnd = 0;
-    if (isStandaloneMarkdownImageLine(line.text)) {
-      pushSelection(selections, paragraphStart, paragraphEnd);
-      selections.push({ from: line.start, to: line.end });
-      paragraphStart = null;
-      paragraphEnd = 0;
-      return;
-    }
-    if (standaloneBlock) {
-      pushSelection(selections, paragraphStart, paragraphEnd);
-      selections.push({ from: line.start, to: line.end });
-      paragraphStart = null;
-      paragraphEnd = 0;
-      return;
-    }
-    if (paragraphStart === null) {
-      paragraphStart = line.start;
-    }
-    paragraphEnd = line.end;
+    state.tableEnd = line.end;
+    return;
+  }
+  flushTable(state);
+  if (isStandaloneMarkdownImageLine(line.text)) {
+    flushParagraph(state);
+    state.selections.push({ from: line.start, to: line.end });
+    return;
+  }
+  if (standaloneBlock) {
+    flushParagraph(state);
+    state.selections.push({ from: line.start, to: line.end });
+    return;
+  }
+  if (state.paragraphStart === null) {
+    state.paragraphStart = line.start;
+  }
+  state.paragraphEnd = line.end;
+}
+
+export function getParagraphSelections(content: string): EditorSelection[] {
+  const codeFenceProjection = collectMarkdownCodeFenceProjection(content);
+  const markdownLineClasses = new Map(collectMarkdownLineClassRanges(content).map((range) => [range.from, range.className]));
+  const state: ParagraphSelectionState = {
+    paragraphEnd: 0,
+    paragraphStart: null,
+    selections: [],
+    tableEnd: 0,
+    tableStart: null
+  };
+
+  buildLineRanges(content).forEach((line) => {
+    visitParagraphLine(state, line, codeFenceProjection.codeLineFroms, codeFenceProjection.fenceLineFroms, markdownLineClasses);
   });
 
-  pushSelection(selections, tableStart, tableEnd);
-  pushSelection(selections, paragraphStart, paragraphEnd);
-  return selections;
+  flushTable(state);
+  flushParagraph(state);
+  return state.selections;
 }
 
 function isSameSelection(left: EditorSelection, right: EditorSelection) {

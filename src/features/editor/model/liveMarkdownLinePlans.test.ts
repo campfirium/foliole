@@ -10,6 +10,7 @@ describe('liveMarkdown preview line plans', () => {
         inCodeBlock: false,
         isCursorLine: false,
         lineFrom: 0,
+        lineClassByFrom: new Map([[0, 'cm-line-h1']]),
         lineNumber: 1,
         lineText: '# Title',
         markdownSyntaxVisible: false
@@ -24,10 +25,12 @@ describe('liveMarkdown preview line plans', () => {
 
     expect(
       collectPreviewLineDecorationPlan({
+        codeFenceLineFroms: new Set([0]),
         hideTitleHeading: false,
         inCodeBlock: false,
         isCursorLine: false,
         lineFrom: 0,
+        lineClassByFrom: new Map([[0, 'cm-line-h1']]),
         lineNumber: 2,
         lineText: '```ts',
         markdownSyntaxVisible: false

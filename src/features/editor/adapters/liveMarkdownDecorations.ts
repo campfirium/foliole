@@ -8,16 +8,22 @@ import {
   collectSourceViewportPlans,
   type ViewportLineInput
 } from '../model/liveMarkdownViewportPlans';
+import {
+  collectMarkdownLineClassRanges,
+  collectMarkdownPrefixRanges,
+  collectMarkdownThematicBreakRanges,
+  type MarkdownPrefixRange
+} from '../model/markdownBlockProjection';
+import { collectMarkdownCodeFenceProjection } from '../model/markdownCodeFenceProjection';
 import { collectMarkdownTablePlans, isPositionInsideInactiveTable } from '../model/markdownTablePlans';
 
-import { resolveCodeBlockStateBeforeLine } from './liveMarkdownCodeBlocks';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addImageDecorations } from './liveMarkdownInlineDecorations';
+import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
 import {
   addCodeFenceDecoration,
   addLine,
   addMark,
-  addPrefixDecoration,
   addReplace,
   addThematicBreakDecoration
 } from './liveMarkdownPrimitives';
@@ -55,11 +61,37 @@ function collectViewportLines(view: EditorView, startLineNumber: number, endLine
   return lines;
 }
 
+function collectCodeFenceProjection(view: EditorView) {
+  return collectMarkdownCodeFenceProjection(view.state.doc.toString());
+}
+
+function collectThematicBreakLineFroms(view: EditorView) {
+  return new Set(collectMarkdownThematicBreakRanges(view.state.doc.toString()).map((range) => range.from));
+}
+
+function collectLineClassByFrom(view: EditorView) {
+  return new Map(collectMarkdownLineClassRanges(view.state.doc.toString()).map((range) => [range.from, range.className]));
+}
+
+function collectPrefixRangesByLineFrom(view: EditorView) {
+  const rangesByLineFrom = new Map<number, MarkdownPrefixRange[]>();
+  for (const range of collectMarkdownPrefixRanges(view.state.doc.toString())) {
+    const ranges = rangesByLineFrom.get(range.lineFrom) ?? [];
+    ranges.push(range);
+    rangesByLineFrom.set(range.lineFrom, ranges);
+  }
+  return rangesByLineFrom;
+}
+
 export function buildPreviewDecorationSet(view: EditorView, context: DecorationBuildContext): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const startLine = view.state.doc.line(startLineNumber);
   const endLine = view.state.doc.line(endLineNumber);
+  const codeFenceProjection = collectCodeFenceProjection(view);
+  const lineClassByFrom = collectLineClassByFrom(view);
+  const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
+  const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
   const tablePlans = collectMarkdownTablePlans({
     activePosition: null,
     anchorDecorations: getTextAnchorDecorations(view),
@@ -67,11 +99,15 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     text: view.state.sliceDoc(startLine.from, endLine.to)
   });
   const viewportPlans = collectPreviewViewportPlans({
+    codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
+    codeLineFroms: codeFenceProjection.codeLineFroms,
     cursorLineNumber: context.cursorLineNumber,
     hideTitleHeading: context.hideTitleHeading,
+    lineClassByFrom,
     lines: collectViewportLines(view, startLineNumber, endLineNumber),
     markdownSyntaxVisible: context.markdownSyntaxVisible,
-    startInCodeBlock: resolveCodeBlockStateBeforeLine(view.state, startLineNumber)
+    startInCodeBlock: false,
+    thematicBreakLineFroms
   });
 
   addTableDecorations(ranges, tablePlans, view.state.doc);
@@ -86,10 +122,13 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     }
 
     if (plan.prefixVisible) {
-      addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, { forceHideHeadingSyntax: true });
+      addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, {
+        forceHideHeadingSyntax: true,
+        prefixRanges: prefixRangesByLineFrom.get(lineFrom)
+      });
     }
-    addThematicBreakDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine);
-    addCodeFenceDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine);
+    addThematicBreakDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, plan.isThematicBreak);
+    addCodeFenceDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, plan.isCodeFenceLine);
     addFootnoteDecorations(ranges, plan.footnoteMatches);
     for (const inlinePlan of plan.inlinePresentationPlans) applyInlinePresentationPlan(ranges, inlinePlan);
     for (const textPlan of plan.textDecorationPlans) applyInlineTextDecorationPlan(ranges, textPlan);
@@ -101,15 +140,21 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
 export function buildSourceDecorationSet(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
+  const codeFenceProjection = collectCodeFenceProjection(view);
+  const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
+  const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
   const viewportPlans = collectSourceViewportPlans({
+    codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
+    codeLineFroms: codeFenceProjection.codeLineFroms,
     lines: collectViewportLines(view, startLineNumber, endLineNumber),
-    startInCodeBlock: resolveCodeBlockStateBeforeLine(view.state, startLineNumber)
+    startInCodeBlock: false,
+    thematicBreakLineFroms
   });
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
-    addPrefixDecoration(ranges, lineFrom, lineText, true);
-    addThematicBreakDecoration(ranges, lineFrom, lineText, true);
-    addCodeFenceDecoration(ranges, lineFrom, lineText, true);
+    addPrefixDecoration(ranges, lineFrom, lineText, true, { prefixRanges: prefixRangesByLineFrom.get(lineFrom) });
+    addThematicBreakDecoration(ranges, lineFrom, lineText, true, plan.isThematicBreak);
+    addCodeFenceDecoration(ranges, lineFrom, lineText, true, plan.isCodeFenceLine);
     addFootnoteDecorations(ranges, plan.footnoteMatches);
     for (const inlinePlan of plan.inlinePresentationPlans) applyInlinePresentationPlan(ranges, inlinePlan);
     for (const textPlan of plan.textDecorationPlans) applyInlineTextDecorationPlan(ranges, textPlan);

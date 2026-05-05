@@ -24,47 +24,61 @@ export interface ViewportSourceLinePlan {
 }
 
 export function collectPreviewViewportPlans(args: {
+  codeFenceLineFroms?: ReadonlySet<number>;
+  codeLineFroms?: ReadonlySet<number>;
   cursorLineNumber: number | null;
   hideTitleHeading: boolean;
+  lineClassByFrom?: ReadonlyMap<number, string>;
   lines: ReadonlyArray<ViewportLineInput>;
   markdownSyntaxVisible: boolean;
   startInCodeBlock: boolean;
+  thematicBreakLineFroms?: ReadonlySet<number>;
 }): ViewportPreviewLinePlan[] {
   const plans: ViewportPreviewLinePlan[] = [];
   let inCodeBlock = args.startInCodeBlock;
 
   for (const line of args.lines) {
+    const lineInCodeBlock = args.codeLineFroms?.has(line.from) ?? inCodeBlock;
     const plan = collectPreviewLineDecorationPlan({
       hideTitleHeading: args.hideTitleHeading,
-      inCodeBlock,
+      codeFenceLineFroms: args.codeFenceLineFroms,
+      inCodeBlock: lineInCodeBlock,
       isCursorLine: args.cursorLineNumber !== null && line.lineNumber === args.cursorLineNumber,
       lineFrom: line.from,
+      lineClassByFrom: args.lineClassByFrom,
       lineNumber: line.lineNumber,
       lineText: line.text,
-      markdownSyntaxVisible: args.markdownSyntaxVisible
+      markdownSyntaxVisible: args.markdownSyntaxVisible,
+      thematicBreakLineFroms: args.thematicBreakLineFroms
     });
     plans.push({ lineFrom: line.from, lineText: line.text, plan });
-    inCodeBlock = plan.nextInCodeBlock;
+    inCodeBlock = args.codeLineFroms ? inCodeBlock : plan.nextInCodeBlock;
   }
 
   return plans;
 }
 
 export function collectSourceViewportPlans(args: {
+  codeFenceLineFroms?: ReadonlySet<number>;
+  codeLineFroms?: ReadonlySet<number>;
   lines: ReadonlyArray<ViewportLineInput>;
   startInCodeBlock: boolean;
+  thematicBreakLineFroms?: ReadonlySet<number>;
 }): ViewportSourceLinePlan[] {
   const plans: ViewportSourceLinePlan[] = [];
   let inCodeBlock = args.startInCodeBlock;
 
   for (const line of args.lines) {
+    const lineInCodeBlock = args.codeLineFroms?.has(line.from) ?? inCodeBlock;
     const plan = collectSourceLineDecorationPlan({
-      inCodeBlock,
+      codeFenceLineFroms: args.codeFenceLineFroms,
+      inCodeBlock: lineInCodeBlock,
       lineFrom: line.from,
-      lineText: line.text
+      lineText: line.text,
+      thematicBreakLineFroms: args.thematicBreakLineFroms
     });
     plans.push({ lineFrom: line.from, lineText: line.text, plan });
-    inCodeBlock = plan.nextInCodeBlock;
+    inCodeBlock = args.codeLineFroms ? inCodeBlock : plan.nextInCodeBlock;
   }
 
   return plans;

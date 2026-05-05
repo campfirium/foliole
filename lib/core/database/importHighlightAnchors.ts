@@ -92,72 +92,13 @@ function findAvailableOccurrence(
   return null;
 }
 
-function parseImportedAnchorTags(content: string) {
-  const tagPattern = /<(\/?)(highlight|cloze) id="([^"]+)">/g;
-  const parsedHighlights: AnchoredImportedHighlightRecord[] = [];
-  const activeAnchors: Array<{
-    anchorId: string;
-    content: string;
-    from: number;
-    kind: 'highlight' | 'cloze';
-  }> = [];
-  let pureContent = '';
-  let lastIndex = 0;
-
-  for (const match of content.matchAll(tagPattern)) {
-    const tagStart = match.index ?? 0;
-    const text = content.slice(lastIndex, tagStart);
-    pureContent += text;
-    for (const anchor of activeAnchors) {
-      anchor.content += text;
-    }
-
-    const isClosing = match[1] === '/';
-    const kind = match[2] as 'highlight' | 'cloze';
-    const anchorId = match[3] ?? '';
-    if (isClosing) {
-      const activeIndex = activeAnchors.findIndex((anchor) => anchor.anchorId === anchorId);
-      const [anchor] = activeIndex >= 0 ? activeAnchors.splice(activeIndex, 1) : [];
-      if (anchor) {
-        parsedHighlights.push({
-          anchorId: anchor.anchorId,
-          content: anchor.content,
-          from: anchor.from,
-          kind: anchor.kind,
-          label: null,
-          locatorText: anchor.content,
-          to: pureContent.length
-        });
-      }
-    } else {
-      activeAnchors.push({
-        anchorId,
-        content: '',
-        from: pureContent.length,
-        kind
-      });
-    }
-    lastIndex = tagStart + match[0].length;
-  }
-
-  if (lastIndex === 0) {
-    return null;
-  }
-  const tail = content.slice(lastIndex);
-  pureContent += tail;
-  for (const anchor of activeAnchors) {
-    anchor.content += tail;
-  }
-  return { content: pureContent, highlights: parsedHighlights };
-}
-
 export function applyImportedHighlightAnchors(input: {
   content: string;
   highlights: PreparedImportHighlightRecord[] | undefined;
 }) {
   const content = input.content;
   if (!input.highlights?.length) {
-    return parseImportedAnchorTags(content) ?? { content, highlights: [] as AnchoredImportedHighlightRecord[] };
+    return { content, highlights: [] as AnchoredImportedHighlightRecord[] };
   }
 
   let searchFrom = 0;

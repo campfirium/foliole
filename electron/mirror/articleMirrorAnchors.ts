@@ -19,8 +19,11 @@ function isLocatorMirrorSpan(span: LocatorMirrorSpan | null): span is LocatorMir
   return span !== null && span.sourceText.length > 0;
 }
 
-function renderMirrorAnchorTag(anchorId: string, kind: 'highlight' | 'cloze', slash: boolean) {
-  return `<${slash ? '/' : ''}${kind} id="${anchorId}">`;
+function renderMirrorBoundary(kind: 'highlight' | 'cloze', slash: boolean) {
+  if (kind === 'highlight') {
+    return '==';
+  }
+  return slash ? '</u>' : '<u>';
 }
 
 function resolveTextMirrorLocator(
@@ -118,7 +121,7 @@ function renderArticleBodyFromOverlappingLocators(input: {
           return right.from - left.from;
         })
         .forEach((span) => {
-          parts.push(renderMirrorAnchorTag(span.anchorId, span.kind, true));
+          parts.push(renderMirrorBoundary(span.kind, true));
           parts.push(input.createExtraNote(span));
         });
     }
@@ -132,7 +135,7 @@ function renderArticleBodyFromOverlappingLocators(input: {
           }
           return right.to - left.to;
         })
-        .forEach((span) => parts.push(renderMirrorAnchorTag(span.anchorId, span.kind, false)));
+        .forEach((span) => parts.push(renderMirrorBoundary(span.kind, false)));
     }
 
     if (position < input.articleContent.length) {

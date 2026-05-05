@@ -4,6 +4,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
+import { folioleMarkdownExtensions } from '../model/markdownOblikeExtension';
 
 import {
   type CodeMirrorEditorAdapterOptions,
@@ -33,7 +34,7 @@ export function createCodeMirrorEditorExtensions(args: {
   textAnchorDecorationsCompartment: import('@codemirror/state').Compartment;
 }): Extension[] {
   return [
-    markdown({ base: markdownLanguage }),
+    markdown({ base: markdownLanguage, extensions: folioleMarkdownExtensions }),
     history(),
     EditorState.allowMultipleSelections.of(true),
     keymap.of([...defaultKeymap, ...historyKeymap]),

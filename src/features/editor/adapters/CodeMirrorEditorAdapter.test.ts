@@ -1,6 +1,8 @@
 import { markdown } from '@codemirror/lang-markdown';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { folioleMarkdownExtensions } from '../model/markdownOblikeExtension';
+
 const {
   mockCompartmentReconfigure,
   mockDrawSelection,
@@ -205,7 +207,7 @@ describe('CodeMirrorEditorAdapter construction', () => {
       initialContent: 'abc'
     });
 
-    expect(markdown).toHaveBeenCalledWith({ base: 'markdown-language' });
+    expect(markdown).toHaveBeenCalledWith({ base: 'markdown-language', extensions: folioleMarkdownExtensions });
   });
 
   it('keeps read-only editors selectable so comparison panes can copy text', () => {

@@ -14,4 +14,21 @@ describe('markdownTableInline', () => {
       { kind: 'text', text: '.' }
     ]);
   });
+
+  it('uses the Markdown parser for inline code boundaries', () => {
+    expect(tokenizeMarkdownTableInlineText('A `**code**` and **bold**')).toEqual([
+      { kind: 'text', text: 'A ' },
+      { kind: 'inlineCode', text: '**code**' },
+      { kind: 'text', text: ' and ' },
+      { kind: 'strong', text: 'bold' }
+    ]);
+  });
+
+  it('tokenizes OB-like source highlights from the shared parser projection', () => {
+    expect(tokenizeMarkdownTableInlineText('A ==marked== cell')).toEqual([
+      { kind: 'text', text: 'A ' },
+      { kind: 'sourceHighlight', text: 'marked' },
+      { kind: 'text', text: ' cell' }
+    ]);
+  });
 });

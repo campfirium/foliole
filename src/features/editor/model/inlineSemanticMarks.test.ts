@@ -14,4 +14,10 @@ describe('inlineSemanticMarks', () => {
       { className: 'cm-md-strikethrough', from: 8, to: 12 }
     ]);
   });
+
+  it('does not collect strong text inside inline code', () => {
+    expect(collectStrongTextRanges(0, '`**code**` **Bold**', false)).toEqual([
+      { className: 'cm-md-strong', from: 13, to: 17 }
+    ]);
+  });
 });

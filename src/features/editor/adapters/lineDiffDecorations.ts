@@ -1,7 +1,8 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 
-import { createLineClass } from '../model/markdownLineSyntax';
+import { collectMarkdownLineClassRanges } from '../model/markdownBlockProjection';
+import { collectMarkdownCodeFenceProjection } from '../model/markdownCodeFenceProjection';
 
 export type EditorDiffLineKind = 'added' | 'removed';
 
@@ -120,14 +121,19 @@ export function buildEditorDiffDecorations(view: EditorView, config: EditorDiffD
 }
 
 export function buildLineClassProfiles(lines: string[]) {
-  let inCodeBlock = false;
+  const text = lines.join('\n');
+  const codeFenceProjection = collectMarkdownCodeFenceProjection(text);
+  const markdownLineClasses = new Map(collectMarkdownLineClassRanges(text).map((range) => [range.from, range.className]));
+  let position = 0;
 
   return lines.map((text) => {
-    const className = createLineClass(text, inCodeBlock);
+    const className = codeFenceProjection.fenceLineFroms.has(position)
+      ? 'cm-line-code-fence'
+      : codeFenceProjection.codeLineFroms.has(position)
+        ? 'cm-line-code'
+        : markdownLineClasses.get(position) ?? null;
     const profile = { className, text };
-    if (/^\s*`{3,}/.test(text)) {
-      inCodeBlock = !inCodeBlock;
-    }
+    position += text.length + 1;
     return profile;
   });
 }

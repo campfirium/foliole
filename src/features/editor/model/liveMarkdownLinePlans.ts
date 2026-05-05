@@ -15,14 +15,13 @@ import {
   type InlineTextDecorationPlan
 } from './inlineTextDecorationPlans';
 import { collectImageMatches, type MarkdownImageMatch } from './markdownImageMatches';
-import { CODE_FENCE_PATTERN, createLineClass } from './markdownLineSyntax';
-
 export interface PreviewLineDecorationPlan {
   footnoteMatches: ReturnType<typeof collectPreviewLineMatchState>['footnoteMatches'];
   imageMatches: MarkdownImageMatch[];
   imageVisible: boolean;
   inlinePresentationPlans: InlinePresentationPlan[];
   isCodeFenceLine: boolean;
+  isThematicBreak: boolean;
   lineClass: string | null;
   nextInCodeBlock: boolean;
   prefixVisible: boolean;
@@ -33,6 +32,8 @@ export interface PreviewLineDecorationPlan {
 export interface SourceLineDecorationPlan {
   footnoteMatches: ReturnType<typeof collectSourceLineMatchState>['footnoteMatches'];
   inlinePresentationPlans: InlinePresentationPlan[];
+  isCodeFenceLine: boolean;
+  isThematicBreak: boolean;
   nextInCodeBlock: boolean;
   textDecorationPlans: InlineTextDecorationPlan[];
 }
@@ -60,24 +61,50 @@ function collectPreviewTextDecorationPlans(args: {
   ];
 }
 
+function resolvePreviewLineClass(args: {
+  hideTitleHeading: boolean;
+  inCodeBlock: boolean;
+  isCodeFenceLine: boolean;
+  lineClassByFrom?: ReadonlyMap<number, string>;
+  lineFrom: number;
+  lineNumber: number;
+  showSyntaxOnLine: boolean;
+}) {
+  const baseLineClass = args.isCodeFenceLine
+    ? 'cm-line-code-fence'
+    : args.inCodeBlock
+      ? 'cm-line-code'
+      : args.lineClassByFrom?.get(args.lineFrom) ?? null;
+  return args.hideTitleHeading && args.lineNumber === 1 && baseLineClass === 'cm-line-h1'
+    ? 'cm-line-title-heading-hidden'
+    : args.isCodeFenceLine && !args.showSyntaxOnLine
+      ? 'cm-line-code-fence-hidden'
+      : baseLineClass;
+}
+
 export function collectPreviewLineDecorationPlan(args: {
   hideTitleHeading: boolean;
   inCodeBlock: boolean;
+  codeFenceLineFroms?: ReadonlySet<number>;
   isCursorLine: boolean;
   lineFrom: number;
   lineNumber: number;
+  lineClassByFrom?: ReadonlyMap<number, string>;
   lineText: string;
   markdownSyntaxVisible: boolean;
+  thematicBreakLineFroms?: ReadonlySet<number>;
 }): PreviewLineDecorationPlan {
-  const isCodeFenceLine = CODE_FENCE_PATTERN.test(args.lineText);
+  const isCodeFenceLine = args.codeFenceLineFroms?.has(args.lineFrom) ?? false;
   const showSyntaxOnLine = args.markdownSyntaxVisible && args.isCursorLine;
-  const baseLineClass = createLineClass(args.lineText, args.inCodeBlock);
-  const lineClass =
-    args.hideTitleHeading && args.lineNumber === 1 && baseLineClass === 'cm-line-h1'
-      ? 'cm-line-title-heading-hidden'
-      : isCodeFenceLine && !showSyntaxOnLine
-        ? 'cm-line-code-fence-hidden'
-        : baseLineClass;
+  const lineClass = resolvePreviewLineClass({
+    hideTitleHeading: args.hideTitleHeading,
+    inCodeBlock: args.inCodeBlock,
+    isCodeFenceLine,
+    lineClassByFrom: args.lineClassByFrom,
+    lineFrom: args.lineFrom,
+    lineNumber: args.lineNumber,
+    showSyntaxOnLine
+  });
   const imageMatches = collectImageMatches(args.lineFrom, args.lineText);
   const {
     autolinkMatches,
@@ -100,6 +127,7 @@ export function collectPreviewLineDecorationPlan(args: {
       collectAutolinkPresentationPlan(autolinkMatches)
     ],
     isCodeFenceLine,
+    isThematicBreak: args.thematicBreakLineFroms?.has(args.lineFrom) ?? false,
     lineClass,
     nextInCodeBlock: isCodeFenceLine ? !args.inCodeBlock : args.inCodeBlock,
     prefixVisible: !args.inCodeBlock || isCodeFenceLine,
@@ -117,8 +145,10 @@ export function collectPreviewLineDecorationPlan(args: {
 
 export function collectSourceLineDecorationPlan(args: {
   inCodeBlock: boolean;
+  codeFenceLineFroms?: ReadonlySet<number>;
   lineFrom: number;
   lineText: string;
+  thematicBreakLineFroms?: ReadonlySet<number>;
 }): SourceLineDecorationPlan {
   const {
     autolinkMatches,
@@ -129,7 +159,7 @@ export function collectSourceLineDecorationPlan(args: {
     preservedRanges,
     wikiLinkMatches
   } = collectSourceLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock);
-  const isCodeFenceLine = CODE_FENCE_PATTERN.test(args.lineText);
+  const isCodeFenceLine = args.codeFenceLineFroms?.has(args.lineFrom) ?? false;
 
   return {
     footnoteMatches,
@@ -138,6 +168,8 @@ export function collectSourceLineDecorationPlan(args: {
       collectWikiLinkPresentationPlan(wikiLinkMatches, true),
       collectAutolinkPresentationPlan(autolinkMatches)
     ],
+    isCodeFenceLine,
+    isThematicBreak: args.thematicBreakLineFroms?.has(args.lineFrom) ?? false,
     nextInCodeBlock: isCodeFenceLine ? !args.inCodeBlock : args.inCodeBlock,
     textDecorationPlans: [
       collectInlineCodeSyntaxDecorationPlan(inlineCodeMatches),

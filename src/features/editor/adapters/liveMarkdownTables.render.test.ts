@@ -21,10 +21,18 @@ afterEach(() => {
 
 describe('live markdown thematic break rendering', () => {
   it('renders thematic breaks as horizontal rule widgets', () => {
-    const { adapter, host } = createAdapterHost('Before\n---\nAfter');
+    const { adapter, host } = createAdapterHost('Before\n\n---\n\nAfter');
 
     expect(host.querySelector('.cm-md-thematic-break')).not.toBeNull();
     expect(host.querySelector('.cm-content')?.textContent).not.toContain('---');
+
+    adapter.destroy();
+  });
+
+  it('does not render setext heading markers as horizontal rule widgets', () => {
+    const { adapter, host } = createAdapterHost('Before\n---\nAfter');
+
+    expect(host.querySelector('.cm-md-thematic-break')).toBeNull();
 
     adapter.destroy();
   });
@@ -102,12 +110,34 @@ describe('live markdown table rendering', () => {
 
     adapter.destroy();
   });
+});
+
+describe('live markdown table inline rendering', () => {
+  it('renders OB-like source highlights inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| ==Marked== |');
+
+    expect(host.querySelector('td.cm-md-table-cell .cm-md-source-highlight')?.textContent).toBe('Marked');
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Marked');
+
+    adapter.destroy();
+  });
 
   it('renders GFM autolinks inside inactive table cells', () => {
     const { adapter, host } = createAdapterHost('| A |\n| --- |\n| https://example.com |');
 
     const link = host.querySelector('td.cm-md-table-cell [data-md-link-url="https://example.com"]');
     expect(link?.textContent).toBe('https://example.com');
+
+    adapter.destroy();
+  });
+});
+
+describe('live markdown table alignment rendering', () => {
+  it('applies GFM table alignment in inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A | B | C |\n| :--- | ---: | :---: |\n| 1 | 2 | 3 |');
+
+    const cells = Array.from(host.querySelectorAll('td.cm-md-table-cell')) as HTMLElement[];
+    expect(cells.map((cell) => cell.style.textAlign)).toEqual(['left', 'right', 'center']);
 
     adapter.destroy();
   });

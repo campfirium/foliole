@@ -1,4 +1,5 @@
-import { createLineClass } from '../../features/editor/model/markdownLineSyntax';
+import { collectMarkdownLineClassRanges } from '../../features/editor/model/markdownBlockProjection';
+import { collectMarkdownCodeFenceProjection } from '../../features/editor/model/markdownCodeFenceProjection';
 
 export interface SourceUpdateAlignedRow {
   currentLine: string | null;
@@ -43,10 +44,17 @@ function normalizeRenderedText(text: string) {
 }
 
 function buildLineProfiles(lines: string[]) {
-  let inCodeBlock = false;
+  const text = lines.join('\n');
+  const codeFenceProjection = collectMarkdownCodeFenceProjection(text);
+  const markdownLineClasses = new Map(collectMarkdownLineClassRanges(text).map((range) => [range.from, range.className]));
+  let position = 0;
 
   return lines.map((text) => {
-    const className = createLineClass(text, inCodeBlock);
+    const className = codeFenceProjection.fenceLineFroms.has(position)
+      ? 'cm-line-code-fence'
+      : codeFenceProjection.codeLineFroms.has(position)
+        ? 'cm-line-code'
+        : markdownLineClasses.get(position) ?? null;
     const normalizedRenderedText = normalizeRenderedText(renderLineText(text, className));
     const profile: LineProfile = {
       className,
@@ -56,9 +64,7 @@ function buildLineProfiles(lines: string[]) {
       text
     };
 
-    if (/^\s*`{3,}/.test(text)) {
-      inCodeBlock = !inCodeBlock;
-    }
+    position += text.length + 1;
 
     return profile;
   });

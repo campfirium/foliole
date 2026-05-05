@@ -19,6 +19,16 @@ it('treats markdown headings and list items as standalone reading blocks', () =>
   ]);
 });
 
+it('keeps markdown-looking lines inside code fences in one reading block', () => {
+  const content = 'Intro\n\n```ts\n# not heading\n- not list\n```\n\nOutro';
+
+  expect(getParagraphSelections(content)).toEqual([
+    { from: 0, to: 5 },
+    { from: 7, to: 41 },
+    { from: 43, to: 48 }
+  ]);
+});
+
 it('treats contiguous markdown table rows as a standalone reading block', () => {
   const content = 'Intro\n\n| Name | Value |\n| --- | --- |\n| A | B |\n\nOutro';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildEditorDiffDecorations } from './lineDiffDecorations';
+import { buildEditorDiffDecorations, buildLineClassProfiles } from './lineDiffDecorations';
 
 describe('buildEditorDiffDecorations', () => {
   it('accepts mixed line and spacer entries without requiring pre-sorted input order', () => {
@@ -20,5 +20,22 @@ describe('buildEditorDiffDecorations', () => {
         spacerDecorations: [{ beforeLineNumber: 2, kind: 'added', lines: [{ className: null, lineNumber: 2, text: 'gap' }] }]
       })
     ).not.toThrow();
+  });
+
+  it('uses parser-backed markdown line classes for spacer profiles', () => {
+    expect(buildLineClassProfiles(['# Title', '#tag/sample', '- [x] Done']).map((profile) => profile.className)).toEqual([
+      'cm-line-h1',
+      null,
+      'cm-line-list-unordered cm-line-task-list'
+    ]);
+  });
+
+  it('uses parser-backed code fence profiles for spacer lines', () => {
+    expect(buildLineClassProfiles(['```ts', '# not heading', '- not list', '```']).map((profile) => profile.className)).toEqual([
+      'cm-line-code-fence',
+      'cm-line-code',
+      'cm-line-code',
+      'cm-line-code-fence'
+    ]);
   });
 });

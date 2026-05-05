@@ -74,9 +74,9 @@ it('preserves overlapping locator-backed highlights when exporting article markd
     throw new Error('expected article row');
   }
 
-  expect(renderArticleMirrorMarkdown(articleRow)).toContain(
-    '<highlight id="hl-1">AB<highlight id="hl-2">C</highlight id="hl-1">DE</highlight id="hl-2">'
-  );
+  const output = renderArticleMirrorMarkdown(articleRow);
+  expect(output).toContain('==AB==C==DE==');
+  expect(output).not.toContain('<highlight');
 });
 
 it('keeps adjacent locator-backed highlights as separate spans when exporting article markdown', () => {
@@ -88,9 +88,9 @@ it('keeps adjacent locator-backed highlights as separate spans when exporting ar
     throw new Error('expected article row');
   }
 
-  expect(renderArticleMirrorMarkdown(articleRow)).toContain(
-    '<highlight id="hl-1">AB</highlight id="hl-1"><highlight id="hl-2">CD</highlight id="hl-2">E'
-  );
+  const output = renderArticleMirrorMarkdown(articleRow);
+  expect(output).toContain('==AB====CD==E');
+  expect(output).not.toContain('<highlight');
 });
 
 it('resolves article ownership from derived nodes with text locator payloads', () => {

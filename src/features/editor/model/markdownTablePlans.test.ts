@@ -36,4 +36,12 @@ describe('markdownTablePlans', () => {
 
     expect(table?.anchorDecorations).toEqual([{ from: 36, kind: 'highlight', to: 37 }]);
   });
+
+  it('collects GFM table column alignment from the delimiter row', () => {
+    const text = '| A | B | C |\n| :--- | ---: | :---: |\n| 1 | 2 | 3 |';
+    const table = collectMarkdownTablePlans({ activePosition: null, from: 0, text })[0];
+
+    expect(table?.rows[0]?.cells.map((cell) => cell.align)).toEqual(['left', 'right', 'center']);
+    expect(table?.rows[1]?.cells.map((cell) => cell.align)).toEqual(['left', 'right', 'center']);
+  });
 });

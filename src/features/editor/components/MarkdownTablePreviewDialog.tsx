@@ -128,10 +128,10 @@ function renderTableRow(previewRow: MarkdownTablePreviewRequest['table']['rows']
   return (
     <tr className="last:[&_td]:border-b-0" key={rowIndex}>
       {Array.from({ length: columnCount }, (_, columnIndex) => {
-        const cell = previewRow.cells[columnIndex] ?? { from: previewRow.to, text: '', to: previewRow.to };
+        const cell = previewRow.cells[columnIndex] ?? { align: null, from: previewRow.to, text: '', to: previewRow.to };
         const Tag = previewRow.kind === 'header' ? 'th' : 'td';
         return (
-          <Tag className={previewRow.kind === 'header' ? headerCellClassName : cellClassName} key={columnIndex}>
+          <Tag className={previewRow.kind === 'header' ? headerCellClassName : cellClassName} key={columnIndex} style={cell.align ? { textAlign: cell.align } : undefined}>
             {renderCellInlineContent(cell.text.trim())}
           </Tag>
         );
@@ -144,6 +144,8 @@ function renderCellInlineContent(text: string) {
   return tokenizeMarkdownTableInlineText(text).map((token, index) => {
     if (token.kind === 'strong') return <strong className="font-semibold" key={index}>{token.text}</strong>;
     if (token.kind === 'strikethrough') return <s key={index}>{token.text}</s>;
+    if (token.kind === 'sourceHighlight') return <mark className="cm-md-source-highlight" key={index}>{token.text}</mark>;
+    if (token.kind === 'inlineCode') return <code className="rounded-sm bg-foreground/5 px-1 font-mono text-[0.9em]" key={index}>{token.text}</code>;
     if (token.kind === 'autolink') {
       return <span className="cursor-pointer text-accent underline" data-md-link-url={token.href} key={index}>{token.text}</span>;
     }
