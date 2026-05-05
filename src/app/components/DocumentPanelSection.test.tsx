@@ -70,6 +70,7 @@ function renderSectionWithProps(overrides: Partial<ComponentProps<typeof Documen
       editorNodeId="node-1"
       editorNodeViewState={undefined}
       isDocumentResizing={false}
+      nodeOrder={['node-1']}
       nodesById={{ 'node-1': baseNode }}
       onAnswerChange={() => undefined}
       onCloseContextMenu={() => undefined}
@@ -119,11 +120,15 @@ function mockSourceUpdatePreview() {
 }
 
 function openSourceUpdatePanel() {
-  fireEvent.click(screen.getByRole('button', { name: 'Toggle source update panel' }));
+  const trigger = screen.getAllByRole('button', { name: 'Toggle source update panel' }).at(-1);
+  if (!trigger) {
+    throw new Error('Expected source update panel trigger');
+  }
+  fireEvent.click(trigger);
   return documentSourceUpdatePanelMock.mock.calls.at(-1)?.[0];
 }
 
-function registerDocumentPanelSectionTests() {
+describe('DocumentPanelSection', () => {
   it('hides the source update action when no source update is available', () => {
     renderSection();
 
@@ -131,6 +136,30 @@ function registerDocumentPanelSectionTests() {
     expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
   });
 
+  it('renders the document body without passing a visible kind label', () => {
+    renderSection();
+
+    expect(screen.getByText('Document body')).toBeInTheDocument();
+  });
+
+  it('shows the folder list shell for ordinary folder nodes', () => {
+    renderSectionWithProps({
+      activeNodeId: 'node-1',
+      editorNodeId: 'node-1',
+      nodeOrder: ['node-1', 'node-2'],
+      nodesById: {
+        'node-1': { ...baseNode, kind: 'folder', content: 'Folder prose should stay hidden' },
+        'node-2': { ...baseNode, id: 'node-2', parentNodeId: 'node-1', title: 'Child topic', content: '# Child topic' }
+      }
+    });
+
+    expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
+    expect(screen.getByText('1 item')).toBeInTheDocument();
+    expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
+  });
+});
+
+describe('DocumentPanelSection source updates', () => {
   it('opens the source update panel from the header action', () => {
     mockSourceUpdatePreview();
 
@@ -150,16 +179,14 @@ function registerDocumentPanelSectionTests() {
 
     renderSection();
 
-    const splitButton = screen.getByRole('button', { name: 'Toggle source update panel' });
-    const moreButton = screen.getByRole('button', { name: 'More editor options' });
+    const splitButton = screen.getAllByRole('button', { name: 'Toggle source update panel' }).at(-1);
+    const moreButton = screen.getAllByRole('button', { name: 'More editor options' }).at(-1);
+
+    if (!splitButton || !moreButton) {
+      throw new Error('Expected header action buttons');
+    }
 
     expect(splitButton.compareDocumentPosition(moreButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it('renders the document body without passing a visible kind label', () => {
-    renderSection();
-
-    expect(screen.getByText('Document body')).toBeInTheDocument();
   });
 
   it('writes source update panel edits back when the panel closes', () => {
@@ -192,8 +219,4 @@ function registerDocumentPanelSectionTests() {
 
     expect(onNodeContentChange).not.toHaveBeenCalled();
   });
-}
-
-describe('DocumentPanelSection', () => {
-  registerDocumentPanelSectionTests();
 });

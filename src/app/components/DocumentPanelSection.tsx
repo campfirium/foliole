@@ -9,10 +9,9 @@ import { useAppearanceSettings } from '../../features/settings/context/Appearanc
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
-import { DocumentPanelBody } from './DocumentPanelBody';
 import { DocumentPanelHeader } from './DocumentPanelHeader';
-import { DocumentSourceUpdatePanel } from './DocumentSourceUpdatePanel';
-import { EditorContextMenu } from './EditorContextMenu';
+import { DocumentPanelContent, DocumentPanelContextMenu } from './DocumentPanelSectionParts';
+import { DocumentPanelSourceUpdatePanel } from './DocumentPanelSourceUpdatePanel';
 import { useNodeSourceUpdatePreview } from './useNodeSourceUpdatePreview';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
@@ -55,9 +54,9 @@ interface DocumentPanelSectionProps {
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
+  nodeOrder: string[];
   nodesById: Record<string, Node>;
 }
-
 function resolveInboxEmptyState(activeNode: Node | undefined) {
   return isInboxNode(activeNode)
     ? {
@@ -68,15 +67,18 @@ function resolveInboxEmptyState(activeNode: Node | undefined) {
     : undefined;
 }
 
-function getDocumentPanelState(props: DocumentPanelSectionProps, editorDisplayMode: 'preview' | 'source') {
-  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
+function getDocumentPanelState(
+  activeNode: Node | undefined,
+  editorDisplayMode: 'preview' | 'source',
+  showAnswerSection: boolean
+) {
   const emptyState = resolveInboxEmptyState(activeNode);
   const reveal = activeNode?.reveal ?? '';
 
   return {
     editorContentPaddingBottom: editorDisplayMode === 'preview' ? 'min(68dvh, 36rem)' : undefined,
     emptyState,
-    hasAnswerSection: Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && props.showAnswerSection),
+    hasAnswerSection: Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && showAnswerSection),
     reveal
   };
 }
@@ -110,6 +112,23 @@ function getDocumentPanelBodyProps(
     onStartDocumentResize: props.onStartDocumentResize,
     readOnly: props.isEditorReadOnly,
     reveal
+  };
+}
+
+function getDocumentPanelView(props: DocumentPanelSectionProps, editorDisplayMode: 'preview' | 'source') {
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
+  const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(
+    activeNode,
+    editorDisplayMode,
+    props.showAnswerSection
+  );
+
+  return {
+    bodyProps: getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal),
+    documentLayoutStyle: { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties,
+    isFolderListView: Boolean(
+      activeNode && activeNode.kind === 'folder' && !isInboxNode(activeNode) && props.editorNodeId === props.activeNodeId
+    )
   };
 }
 
@@ -150,20 +169,20 @@ function useSourceUpdatePanelState(props: DocumentPanelSectionProps) {
   );
 
   useEffect(() => {
-    if (!sourceUpdatePreview.value && !sourceUpdatePreview.isLoading) {
+    if (isSourceUpdatePanelOpen && !sourceUpdatePreview.value && !sourceUpdatePreview.isLoading) {
       handleSourceUpdatePanelOpenChange(false);
     }
-  }, [handleSourceUpdatePanelOpenChange, sourceUpdatePreview.isLoading, sourceUpdatePreview.value]);
+  }, [handleSourceUpdatePanelOpenChange, isSourceUpdatePanelOpen, sourceUpdatePreview.isLoading, sourceUpdatePreview.value]);
 
   useEffect(() => {
     if (!isSourceUpdatePanelOpen) {
       sourceUpdateDraftRef.current = null;
-      setSourceUpdateDraftContent(null);
+      setSourceUpdateDraftContent((current) => (current === null ? current : null));
       return;
     }
     sourceUpdateDraftRef.current = props.editorContent;
-    setSourceUpdateDraftContent(props.editorContent);
-  }, [isSourceUpdatePanelOpen, props.editorNodeId]);
+    setSourceUpdateDraftContent((current) => (current === props.editorContent ? current : props.editorContent));
+  }, [isSourceUpdatePanelOpen, props.editorContent, props.editorNodeId]);
 
   return {
     currentSourceUpdateContent: sourceUpdateDraftContent ?? props.editorContent,
@@ -179,17 +198,8 @@ function useSourceUpdatePanelState(props: DocumentPanelSectionProps) {
 
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
-  const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props, editorDisplayMode);
-  const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
-  const bodyProps = getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal);
-  const {
-    currentSourceUpdateContent,
-    handleSourceUpdateDraftChange,
-    handleSourceUpdatePanelOpenChange,
-    isSourceUpdatePanelOpen,
-    sourceUpdatePreview
-  } = useSourceUpdatePanelState(props);
-
+  const { bodyProps, documentLayoutStyle, isFolderListView } = getDocumentPanelView(props, editorDisplayMode);
+  const { currentSourceUpdateContent, handleSourceUpdateDraftChange, handleSourceUpdatePanelOpenChange, isSourceUpdatePanelOpen, sourceUpdatePreview } = useSourceUpdatePanelState(props);
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
       <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
@@ -207,57 +217,37 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onToggleSourceUpdatePanel={() => handleSourceUpdatePanelOpenChange(!isSourceUpdatePanelOpen)}
           showSourceUpdateAction={Boolean(sourceUpdatePreview.value)}
         />
-        <DocumentPanelBody {...bodyProps} />
+        <DocumentPanelContent
+          activeNodeId={props.activeNodeId}
+          bodyProps={bodyProps}
+          isFolderListView={isFolderListView}
+          nodeOrder={props.nodeOrder}
+          nodesById={props.nodesById}
+          onSelectNode={props.onSelectNode}
+        />
       </section>
-      {renderSourceUpdatePanel(
-        props,
-        currentSourceUpdateContent,
-        isSourceUpdatePanelOpen,
-        handleSourceUpdatePanelOpenChange,
-        handleSourceUpdateDraftChange,
-        sourceUpdatePreview.value
-      )}
-      {props.contextMenu ? (
-        <EditorContextMenu
-          canRunCommands={props.contextMenu.canRunCommands}
-          kind={props.contextMenu.kind}
-          left={props.contextMenu.left}
-          onClose={props.onCloseContextMenu}
-          onCopyImage={props.onCopyImage}
-          onCreateCloze={props.onCreateCloze}
-          onCreateHighlight={props.onCreateHighlight}
-          onCutImage={props.onCutImage}
-          onDeleteImage={props.onDeleteImage}
-          onExportImage={props.onExportImage}
-          top={props.contextMenu.top}
+      {sourceUpdatePreview.value ? (
+        <DocumentPanelSourceUpdatePanel
+          currentContent={currentSourceUpdateContent}
+          documentMaxWidth={props.documentMaxWidth}
+          editorAppearanceKey={props.editorAppearanceKey}
+          editorNodeId={props.editorNodeId}
+          onCurrentContentChange={handleSourceUpdateDraftChange}
+          onOpenChange={handleSourceUpdatePanelOpenChange}
+          open={isSourceUpdatePanelOpen}
+          updatedContent={sourceUpdatePreview.value.updatedContent}
         />
       ) : null}
+      <DocumentPanelContextMenu
+        contextMenu={props.contextMenu}
+        onCloseContextMenu={props.onCloseContextMenu}
+        onCopyImage={props.onCopyImage}
+        onCreateCloze={props.onCreateCloze}
+        onCreateHighlight={props.onCreateHighlight}
+        onCutImage={props.onCutImage}
+        onDeleteImage={props.onDeleteImage}
+        onExportImage={props.onExportImage}
+      />
     </section>
-  );
-}
-
-function renderSourceUpdatePanel(
-  props: DocumentPanelSectionProps,
-  currentSourceUpdateContent: string,
-  isSourceUpdatePanelOpen: boolean,
-  onSourceUpdatePanelOpenChange: (open: boolean) => void,
-  onSourceUpdateDraftChange: (content: string) => void,
-  sourceUpdatePreview: ReturnType<typeof useNodeSourceUpdatePreview>['value']
-) {
-  if (!sourceUpdatePreview) {
-    return null;
-  }
-
-  return (
-    <DocumentSourceUpdatePanel
-      currentContent={currentSourceUpdateContent}
-      currentNodeId={props.editorNodeId}
-      documentMaxWidth={props.documentMaxWidth}
-      editorAppearanceKey={props.editorAppearanceKey}
-      onCurrentContentChange={onSourceUpdateDraftChange}
-      onOpenChange={onSourceUpdatePanelOpenChange}
-      open={isSourceUpdatePanelOpen}
-      updatedContent={sourceUpdatePreview.updatedContent}
-    />
   );
 }

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
@@ -8,6 +9,7 @@ const WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = 'virtual:workspace-change-timestamp
 const RESOLVED_WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = `\0${WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID}`;
 const WORKSPACE_TIMESTAMP_ROOTS = ['src', 'electron'];
 const WORKSPACE_TIMESTAMP_INCLUDE_EXTENSIONS = new Set(['.css', '.js', '.jsx', '.mjs', '.mts', '.scss', '.ts', '.tsx']);
+const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 function resolveDevPort() {
   const raw = process.env.FOLIOLE_VITE_PORT;
@@ -63,9 +65,9 @@ function collectWorkspaceTimestampFiles(rootDir: string) {
 
 function readWorkspaceChangeTimestamp() {
   const candidateFiles = WORKSPACE_TIMESTAMP_ROOTS
-    .map((root) => path.resolve(__dirname, root))
+    .map((root) => path.resolve(PROJECT_ROOT, root))
     .flatMap((root) => (fs.existsSync(root) ? collectWorkspaceTimestampFiles(root) : []));
-  candidateFiles.push(path.resolve(__dirname, 'vite.config.ts'));
+  candidateFiles.push(path.resolve(PROJECT_ROOT, 'vite.config.ts'));
 
   let latestModifiedAt = 0;
   for (const filePath of candidateFiles) {
@@ -111,7 +113,7 @@ export default defineConfig({
   plugins: [react(), workspaceChangeTimestampPlugin()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(PROJECT_ROOT, './src')
     }
   },
   server: {
