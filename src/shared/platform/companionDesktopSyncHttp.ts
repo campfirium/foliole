@@ -3,7 +3,7 @@ import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime,
   normalizeEndpointUrl
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 
 export class DesktopSyncHttpError extends Error {
   body: string;

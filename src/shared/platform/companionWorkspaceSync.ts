@@ -19,7 +19,7 @@ import {
   isNativeAndroidCompanionRuntime,
   normalizeEndpointUrl,
   WORKSPACE_VERSION_PATH
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 import { normalizeReadableArticlePayload } from './companionWorkspaceSyncPayloads';
 import {
   appendRememberedTarget,

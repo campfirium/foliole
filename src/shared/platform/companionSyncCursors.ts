@@ -15,7 +15,7 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 
 const WEB_SYNC_STATE_CURSOR_KEY = 'foliole-companion-sync-state-cursor';
 const WEB_SYNC_PACK_CURSOR_KEY = 'foliole-companion-sync-pack-cursor';

@@ -7,7 +7,7 @@ import { fetchDesktopJson } from './companionDesktopSyncHttp';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 
 export const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
 

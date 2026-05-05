@@ -1,7 +1,7 @@
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 
 export async function loadCompanionMissingAttachmentResources(limit = 50) {
   if (!isNativeAndroidCompanionRuntime()) {

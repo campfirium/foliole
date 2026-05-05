@@ -3,7 +3,7 @@ import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSync
 import { loadCompanionBootstrapState } from './companionBootstrap';
 import { applyCompanionSyncPackPathWithSharedCore } from './companionSyncPackNodes';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
-import { FolioleCompanionSync } from './companionWorkspaceSyncBridge';
+import { FolioleCompanionSync } from './companionWorkspaceRuntimeRepository';
 
 const PROBE_QUERY_KEY = 'foliole-sync-probe';
 

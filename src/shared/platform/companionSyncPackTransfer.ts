@@ -1,6 +1,6 @@
 import { registerPlugin } from '@capacitor/core';
 
-import { isNativeAndroidCompanionRuntime } from './companionWorkspaceSyncBridge';
+import { isNativeAndroidCompanionRuntime } from './companionWorkspaceRuntimeRepository';
 
 interface CompanionSyncPackTransferPlugin {
   deleteDownloadedSyncPack(args: { pack_path: string }): Promise<{ deleted: boolean }>;

@@ -8,7 +8,7 @@ import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime,
   normalizeEndpointUrl
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 
 const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
 export const ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT = 64;

@@ -1,7 +1,7 @@
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder

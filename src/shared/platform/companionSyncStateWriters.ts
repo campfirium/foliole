@@ -8,7 +8,7 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 
 export async function saveCompanionSyncSettingRecord(args: {
   key: string;

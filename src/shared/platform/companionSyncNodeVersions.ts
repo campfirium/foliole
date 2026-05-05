@@ -7,7 +7,7 @@ import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   isNativeAndroidCompanionRuntime
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 
 const COMPANION_DATABASE_NAME = 'foliole-companion';
 const COMPANION_DATABASE_VERSION = 14;

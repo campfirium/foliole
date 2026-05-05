@@ -9,7 +9,7 @@ import {
   openCompanionDatabaseConnection
 } from './companionSyncNodeVersions';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
-import { isNativeAndroidCompanionRuntime } from './companionWorkspaceSyncBridge';
+import { isNativeAndroidCompanionRuntime } from './companionWorkspaceRuntimeRepository';
 
 export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[]) {
   if (!isNativeAndroidCompanionRuntime() || objects.length === 0) {

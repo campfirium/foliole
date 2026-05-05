@@ -23,7 +23,7 @@ import {
   type PairCompanionWithDesktopResponse,
   type RequestCompanionPairingArgs,
   type RequestCompanionPairingResponse
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 
 const pairingKeyIdsByRequestId = new Map<string, string>();
 const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-pack?after_state_seq=0';

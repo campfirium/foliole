@@ -2,7 +2,7 @@ import { registerPlugin } from '@capacitor/core';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
 
-import { isNativeAndroidCompanionRuntime } from './companionWorkspaceSyncBridge';
+import { isNativeAndroidCompanionRuntime } from './companionWorkspaceRuntimeRepository';
 
 export interface CompanionAppDataPlugin {
   clearAppData(): Promise<NativeCompanionWorkspaceSyncState>;

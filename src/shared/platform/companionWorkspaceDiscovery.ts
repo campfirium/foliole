@@ -4,7 +4,7 @@ import {
   isNativeAndroidCompanionRuntime,
   type LoadCompanionDiscoveryResponse,
   normalizeEndpointUrl
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 
 export type CompanionDiscoveryResult = {
   discovery: LoadCompanionDiscoveryResponse;

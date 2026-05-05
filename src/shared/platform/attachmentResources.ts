@@ -8,7 +8,7 @@ import { getRuntimeInvoke } from './bridge';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
-} from './companionWorkspaceSyncBridge';
+} from './companionWorkspaceRuntimeRepository';
 import { updateImageCacheStats } from './performanceDiagnosticsProbe';
 import { logRuntimeWarning } from './runtimeLogging';
 
