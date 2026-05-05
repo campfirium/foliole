@@ -5,6 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WINDOWS_SYNC_SCRIPT="${WINDOWS_SYNC_SCRIPT:-scripts/windows/windows-sync.sh}"
 WINDOWS_CLIENT_SCRIPT="${WINDOWS_CLIENT_SCRIPT:-scripts/windows/windows-restart-client.sh}"
+WINDOWS_RESTART_INTENT_SCRIPT="${WINDOWS_RESTART_INTENT_SCRIPT:-scripts/windows/write-restart-intent.mjs}"
+WINDOWS_RESTART_INTENT_ROOT="${WINDOWS_RESTART_INTENT_ROOT:-}"
+WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-C:\\dev\\foliole}"
 WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
 WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS:-${WINDOWS_PREVIEW_TIMEOUT_SECONDS}}"
 WINDOWS_PREVIEW_TIMEOUT_START_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_START_SECONDS:-180}"
@@ -189,16 +192,37 @@ run_sync_only() {
   echo "[windows-preview] status: SYNCED"
 }
 
+resolve_restart_intent_root() {
+  if [ -n "${WINDOWS_RESTART_INTENT_ROOT}" ]; then
+    printf '%s' "${WINDOWS_RESTART_INTENT_ROOT}"
+    return 0
+  fi
+  if command -v wslpath >/dev/null 2>&1; then
+    wslpath -u "${WINDOWS_WORKDIR}"
+    return 0
+  fi
+  printf '%s' "${REPO_ROOT}"
+}
+
 run_restart_intent() {
   local restart_output=""
   local restart_exit=0
+  local restart_intent_root=""
   echo "[windows-preview] selected action: restart-intent"
+  restart_intent_root="$(resolve_restart_intent_root)"
   set +e
-  restart_output="$(run_windows_client_action restart)"
+  restart_output="$(
+    FOLIOLE_RESTART_INTENT_HEAD="${CURRENT_HEAD}" \
+      FOLIOLE_RESTART_INTENT_REASON="${SELECTED_REASON}" \
+      FOLIOLE_RESTART_INTENT_REQUESTED_BY="wsl-windows-preview" \
+      FOLIOLE_RESTART_INTENT_ROOT="${restart_intent_root}" \
+      node "${WINDOWS_RESTART_INTENT_SCRIPT}"
+  )"
   restart_exit=$?
   set -e
-  if [ "${restart_exit}" -eq 0 ] && echo "${restart_output}" | grep -qE 'status:\s*RESTARTED'; then
-    echo "[windows-preview] status: RESTARTED"
+  if [ "${restart_exit}" -eq 0 ] && echo "${restart_output}" | grep -qE 'status:\s*REQUESTED'; then
+    echo "${restart_output}"
+    echo "[windows-preview] status: RESTART_REQUESTED"
     return 0
   fi
   echo "[windows-preview] restart intent failed"

@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-preview.sh');
+const RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 
 function runScript(env) {
   return new Promise((resolve) => {
@@ -64,6 +65,10 @@ async function readActions(actionLog) {
     .filter((entry) => entry.length > 0);
 }
 
+async function readRestartIntent(rootDir) {
+  return JSON.parse(await readFile(path.join(rootDir, RESTART_INTENT_FILE), 'utf8'));
+}
+
 describe('windows-preview script', () => {
   it('chooses sync-only for Class A on a trusted running client', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
@@ -100,10 +105,6 @@ describe('windows-preview script', () => {
           '  echo "[windows-restart-client] status: RUNNING"',
           '  exit 0',
           'fi',
-          'if [ "${WINDOWS_CLIENT_ACTION}" = "restart" ]; then',
-          '  echo "[windows-restart-client] status: RESTARTED"',
-          '  exit 0',
-          'fi',
           'exit 1'
         ].join('\n')
       );
@@ -112,14 +113,24 @@ describe('windows-preview script', () => {
         ACTION_LOG: actionLog,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts'
       });
+
+      const restartIntent = await readRestartIntent(tempRoot);
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('reason: Class B: working tree electron changes detected');
       expect(result.stdout).toContain('selected action: restart-intent');
-      expect(result.stdout).toContain('status: RESTARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'restart']);
+      expect(result.stdout).toContain('status: REQUESTED nonce=1');
+      expect(result.stdout).toContain('status: RESTART_REQUESTED');
+      expect(restartIntent).toMatchObject({
+        nonce: 1,
+        requestedBy: 'wsl-windows-preview',
+        target: 'electron-dev',
+        reason: 'Class B: working tree electron changes detected'
+      });
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -135,10 +146,6 @@ describe('windows-preview script', () => {
           '  echo "[windows-restart-client] status: RUNNING head=old-head"',
           '  exit 0',
           'fi',
-          'if [ "${WINDOWS_CLIENT_ACTION}" = "restart" ]; then',
-          '  echo "[windows-restart-client] status: RESTARTED"',
-          '  exit 0',
-          'fi',
           'exit 1'
         ].join('\n')
       );
@@ -147,16 +154,25 @@ describe('windows-preview script', () => {
         ACTION_LOG: actionLog,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx',
         WINDOWS_PREVIEW_CURRENT_HEAD: 'new-head',
         WINDOWS_PREVIEW_COMMITTED_ELECTRON_CHANGES: 'electron/main.ts'
       });
 
+      const restartIntent = await readRestartIntent(tempRoot);
+
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('reason: Class B: runtime behind committed electron changes');
       expect(result.stdout).toContain('selected action: restart-intent');
-      expect(result.stdout).toContain('status: RESTARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'restart']);
+      expect(result.stdout).toContain('status: REQUESTED nonce=1');
+      expect(result.stdout).toContain('status: RESTART_REQUESTED');
+      expect(restartIntent).toMatchObject({
+        nonce: 1,
+        head: 'new-head',
+        reason: 'Class B: runtime behind committed electron changes'
+      });
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -219,13 +235,14 @@ describe('windows-preview script', () => {
         ACTION_LOG: actionLog,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_RESTART_INTENT_SCRIPT: path.join(tempRoot, 'missing-intent-script.mjs'),
         WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts'
       });
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('restart intent failed');
-      expect(await readActions(actionLog)).toEqual(['status', 'restart']);
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
