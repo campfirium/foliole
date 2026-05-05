@@ -1,9 +1,36 @@
 import {
   createContextExcerptQuoteLocator,
   normalizeLineEndings,
+  normalizeQuoteText,
   type ContextExcerptQuoteLocator
 } from './contextExcerptQuoteLocator.js';
 import { trimMatchedExcerpt } from './controlledContextTrim.js';
+
+const MAX_FRAGMENT_ATTEMPTS_PER_HIGHLIGHT = 220;
+const MAX_FRAGMENT_MATCH_TIME_MS = 40;
+
+interface MatchBudget {
+  attempts: number;
+  startedAtMs: number;
+  stopped: boolean;
+}
+
+function createMatchBudget(): MatchBudget {
+  return { attempts: 0, startedAtMs: Date.now(), stopped: false };
+}
+
+function consumeAttempt(budget: MatchBudget) {
+  if (budget.stopped) {
+    return false;
+  }
+  const timedOut = Date.now() - budget.startedAtMs >= MAX_FRAGMENT_MATCH_TIME_MS;
+  if (timedOut || budget.attempts >= MAX_FRAGMENT_ATTEMPTS_PER_HIGHLIGHT) {
+    budget.stopped = true;
+    return false;
+  }
+  budget.attempts += 1;
+  return true;
+}
 
 function splitParagraphs(content: string) {
   return normalizeLineEndings(content)
@@ -12,7 +39,11 @@ function splitParagraphs(content: string) {
     .filter(Boolean);
 }
 
-function findParagraphIndexesContaining(paragraphs: string[], matcher: RegExp) {
+function normalizeParagraphs(paragraphs: string[]) {
+  return paragraphs.map((paragraph) => normalizeQuoteText(paragraph));
+}
+
+function findParagraphIndexesContainingRegex(paragraphs: string[], matcher: RegExp) {
   const indexes: number[] = [];
   paragraphs.forEach((paragraph, index) => {
     if (matcher.test(paragraph)) {
@@ -22,11 +53,18 @@ function findParagraphIndexesContaining(paragraphs: string[], matcher: RegExp) {
   return indexes;
 }
 
+function findParagraphIndexesContainingFragment(paragraphs: string[], fragment: string) {
+  const indexes: number[] = [];
+  paragraphs.forEach((paragraph, index) => {
+    if (paragraph.includes(fragment)) {
+      indexes.push(index);
+    }
+  });
+  return indexes;
+}
+
 function joinParagraphRange(paragraphs: string[], startIndex: number, endIndex: number) {
-  return paragraphs
-    .slice(startIndex, endIndex + 1)
-    .join('\n\n')
-    .trim();
+  return paragraphs.slice(startIndex, endIndex + 1).join('\n\n').trim();
 }
 
 function shrinkRangeToMinimumMatch(paragraphs: string[], range: { start: number; end: number }, exactMatcher: RegExp | null) {
@@ -63,45 +101,69 @@ function shrinkMatchedLines(raw: string, exactMatcher: RegExp | null) {
   return lines.slice(start, end + 1).join('\n').trim();
 }
 
+function toTrimmedMatch(raw: string, quote: string, anchorFragment: string, exactMatcher: RegExp | null) {
+  return shrinkMatchedLines(trimMatchedExcerpt(raw, quote, anchorFragment), exactMatcher);
+}
+
 function tryExactMatch(locator: ContextExcerptLocator, quote: string, quoteLocator: ContextExcerptQuoteLocator) {
+  const strictIndexes = findParagraphIndexesContainingFragment(locator.normalizedParagraphs, quoteLocator.normalizedQuote);
+  if (strictIndexes.length === 1) {
+    return toTrimmedMatch(
+      locator.paragraphs[strictIndexes[0]],
+      quote,
+      quoteLocator.normalizedQuote,
+      quoteLocator.exactMatcher
+    );
+  }
+
   if (!quoteLocator.exactMatcher) {
     return null;
   }
-  const indexes = findParagraphIndexesContaining(locator.paragraphs, quoteLocator.exactMatcher);
-  if (indexes.length !== 1) {
+  const looseIndexes = findParagraphIndexesContainingRegex(locator.paragraphs, quoteLocator.exactMatcher);
+  if (looseIndexes.length !== 1) {
     return null;
   }
-  return shrinkMatchedLines(
-    trimMatchedExcerpt(locator.paragraphs[indexes[0]], quote, quoteLocator.normalizedQuote),
-    quoteLocator.exactMatcher
-  );
+  return toTrimmedMatch(locator.paragraphs[looseIndexes[0]], quote, quoteLocator.normalizedQuote, quoteLocator.exactMatcher);
 }
 
-function tryUniqueFragmentMatch(locator: ContextExcerptLocator, quote: string, quoteLocator: ContextExcerptQuoteLocator) {
-  for (const fragment of quoteLocator.fragmentMatchers) {
-    const indexes = findParagraphIndexesContaining(locator.paragraphs, fragment.matcher);
+interface RepeatedFragmentCandidate {
+  fragment: string;
+  indexes: number[];
+}
+
+function tryOrderedFragmentMatch(
+  locator: ContextExcerptLocator,
+  quote: string,
+  quoteLocator: ContextExcerptQuoteLocator,
+  budget: MatchBudget
+) {
+  const repeatedCandidates: RepeatedFragmentCandidate[] = [];
+  for (const fragment of quoteLocator.orderedFragments) {
+    if (!consumeAttempt(budget)) {
+      break;
+    }
+    const indexes = findParagraphIndexesContainingFragment(locator.normalizedParagraphs, fragment);
     if (indexes.length === 1) {
-      return shrinkMatchedLines(
-        trimMatchedExcerpt(locator.paragraphs[indexes[0]], quote, fragment.fragment),
-        quoteLocator.exactMatcher
-      );
+      return {
+        match: toTrimmedMatch(locator.paragraphs[indexes[0]], quote, fragment, quoteLocator.exactMatcher),
+        repeatedCandidates
+      };
+    }
+    if (indexes.length > 1 && indexes.length <= 12) {
+      repeatedCandidates.push({ fragment, indexes });
     }
   }
-  return null;
+  return { match: null, repeatedCandidates };
 }
 
-function resolveBestNearbyRange(locator: ContextExcerptLocator, quoteLocator: ContextExcerptQuoteLocator) {
-  const candidates = quoteLocator.fragmentMatchers
-    .map((fragment) => ({
-      fragment,
-      indexes: findParagraphIndexesContaining(locator.paragraphs, fragment.matcher)
-    }))
-    .filter((candidate) => candidate.indexes.length > 1 && candidate.indexes.length <= 12);
-
+function resolveBestNearbyRange(candidates: RepeatedFragmentCandidate[], budget: MatchBudget) {
   let bestRange: { anchorFragment: string; end: number; start: number } | null = null;
   for (let leftIndex = 0; leftIndex < candidates.length; leftIndex += 1) {
+    const left = candidates[leftIndex];
     for (let rightIndex = leftIndex + 1; rightIndex < candidates.length; rightIndex += 1) {
-      const left = candidates[leftIndex];
+      if (!consumeAttempt(budget)) {
+        return bestRange;
+      }
       const right = candidates[rightIndex];
       const matches: Array<{ start: number; end: number }> = [];
       for (const start of left.indexes) {
@@ -122,7 +184,7 @@ function resolveBestNearbyRange(locator: ContextExcerptLocator, quoteLocator: Co
         continue;
       }
       const candidate = {
-        anchorFragment: left.fragment.fragment,
+        anchorFragment: left.fragment,
         end: matches[0].end,
         start: matches[0].start
       };
@@ -137,26 +199,36 @@ function resolveBestNearbyRange(locator: ContextExcerptLocator, quoteLocator: Co
       }
     }
   }
-
   return bestRange;
 }
 
-function tryNearbyRangeMatch(locator: ContextExcerptLocator, quote: string, quoteLocator: ContextExcerptQuoteLocator) {
-  const bestRange = resolveBestNearbyRange(locator, quoteLocator);
+function tryNearbyRangeMatch(
+  locator: ContextExcerptLocator,
+  quote: string,
+  quoteLocator: ContextExcerptQuoteLocator,
+  repeatedCandidates: RepeatedFragmentCandidate[],
+  budget: MatchBudget
+) {
+  if (repeatedCandidates.length < 2 || budget.stopped) {
+    return null;
+  }
+  const bestRange = resolveBestNearbyRange(repeatedCandidates, budget);
   if (!bestRange) {
     return null;
   }
   const narrowed = shrinkRangeToMinimumMatch(locator.paragraphs, bestRange, quoteLocator.exactMatcher);
   const raw = joinParagraphRange(locator.paragraphs, narrowed.start, narrowed.end);
-  return shrinkMatchedLines(trimMatchedExcerpt(raw, quote, bestRange.anchorFragment), quoteLocator.exactMatcher);
+  return toTrimmedMatch(raw, quote, bestRange.anchorFragment, quoteLocator.exactMatcher);
 }
 
 export interface ContextExcerptLocator {
   paragraphs: string[];
+  normalizedParagraphs: string[];
 }
 
 export function createContextExcerptLocator(content: string): ContextExcerptLocator {
-  return { paragraphs: splitParagraphs(content) };
+  const paragraphs = splitParagraphs(content);
+  return { normalizedParagraphs: normalizeParagraphs(paragraphs), paragraphs };
 }
 
 export { createContextExcerptQuoteLocator, type ContextExcerptQuoteLocator };
@@ -166,11 +238,16 @@ export function findContextExcerptInLocatorByQuoteLocator(
   quote: string,
   quoteLocator: ContextExcerptQuoteLocator
 ) {
-  return (
-    tryExactMatch(locator, quote, quoteLocator) ??
-    tryUniqueFragmentMatch(locator, quote, quoteLocator) ??
-    tryNearbyRangeMatch(locator, quote, quoteLocator)
-  );
+  const exactMatch = tryExactMatch(locator, quote, quoteLocator);
+  if (exactMatch) {
+    return exactMatch;
+  }
+  const budget = createMatchBudget();
+  const orderedMatch = tryOrderedFragmentMatch(locator, quote, quoteLocator, budget);
+  if (orderedMatch.match) {
+    return orderedMatch.match;
+  }
+  return tryNearbyRangeMatch(locator, quote, quoteLocator, orderedMatch.repeatedCandidates, budget);
 }
 
 export function findContextExcerptInLocator(locator: ContextExcerptLocator, quote: string) {

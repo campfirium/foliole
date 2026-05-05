@@ -25,7 +25,7 @@ it('matches list-heavy highlights by splitting on punctuation and bullets', () =
   ).toBe(['Setup checklist:', '- alpha step', '- beta step'].join('\n'));
 });
 
-it('matches flattened table highlights by token windows when larger fragments fail', () => {
+it('matches flattened table highlights through punctuation-first fragment splitting', () => {
   const content = [
     '# Notes',
     '',
@@ -49,33 +49,30 @@ it('matches flattened table highlights by token windows when larger fragments fa
   );
 });
 
-it('starts fallback fragments from the longest available word window instead of capping at eight words', () => {
+it('splits chinese highlights by punctuation and spaces when direct matching fails', () => {
   const content = [
     '# Notes',
     '',
-    'common1 common2 common3 common4 common5 common6 common7 common8 common9 target',
+    '我们 在这里 完成定位',
     '',
-    'common1 common2 common3 common4 common5 common6 common7 common8 common9 other'
+    '我们 在另外一处 结束'
   ].join('\n');
 
-  expect(
-    findContextExcerpt(
-      content,
-      'intro common1 common2 common3 common4 common5 common6 common7 common8 common9 target'
-    )
-  ).toBe('common1 common2 common3 common4 common5 common6 common7 common8 common9 target');
+  expect(findContextExcerpt(content, '说明：我们 在这里 完成定位，附注')).toBe('我们 在这里 完成定位');
 });
 
-it('falls back from the longest available character fragment for quotes without spaces', () => {
+it('keeps english spaces as part of a fragment and splits on punctuation only', () => {
   const content = [
     '# Notes',
     '',
-    '前缀甲乙丙丁戊己庚辛壬目标后缀',
+    'final target phrase keeps context',
     '',
-    '前缀甲乙丙丁戊己庚辛壬别的后缀'
+    'another unrelated paragraph'
   ].join('\n');
 
-  expect(findContextExcerpt(content, '说明甲乙丙丁戊己庚辛壬目标')).toBe('前缀甲乙丙丁戊己庚辛壬目标后缀');
+  expect(findContextExcerpt(content, 'intro clause; final target phrase keeps context; trailing note')).toBe(
+    'final target phrase keeps context'
+  );
 });
 
 it('locks onto a nearby paragraph range when repeated fragments need a second clue', () => {
@@ -141,17 +138,21 @@ it('trims a matched sentence down to the exact quote instead of keeping the full
   expect(findContextExcerpt(content, 'This is the highlighted sentence.')).toBe('This is the highlighted sentence.');
 });
 
-it('matches very long highlights without expanding fallback fragments quadratically', () => {
-  const repeated = '甲乙丙丁戊己庚辛壬癸'.repeat(120);
-  const target = `${repeated}最终定位片段`;
-  const content = ['# Long Quote', '', `前缀${target}后缀`, '', '其他段落'].join('\n');
+it('does not fall back to character-window reduction for space-less chinese quotes', () => {
+  const content = [
+    '# Notes',
+    '',
+    '前缀甲乙丙丁戊己庚辛壬目标后缀',
+    '',
+    '前缀甲乙丙丁戊己庚辛壬别的后缀'
+  ].join('\n');
 
-  expect(findContextExcerpt(content, target)).toBe(target);
+  expect(findContextExcerpt(content, '说明甲乙丙丁戊己庚辛壬目标')).toBeNull();
 });
 
-it('caps fallback matcher count for very long quotes', () => {
-  const longQuote = `开头${'甲乙丙丁戊己庚辛壬癸'.repeat(400)}结尾`;
+it('caps ordered fragment generation for very long quotes', () => {
+  const longQuote = Array.from({ length: 600 }, (_, index) => `token-${index}`).join('。');
   const quoteLocator = createContextExcerptQuoteLocator(longQuote);
   expect(quoteLocator).not.toBeNull();
-  expect(quoteLocator?.fragmentMatchers.length ?? 0).toBeLessThanOrEqual(160);
+  expect(quoteLocator?.orderedFragments.length ?? 0).toBeLessThanOrEqual(128);
 });
