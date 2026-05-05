@@ -50,12 +50,18 @@ interface FolderListViewProps {
   itemLayout?: 'default' | 'virtual-result';
   sortDirection?: FolderListSortDirection;
   sortKey?: FolderListSortKey;
+  trashedNodeIds?: string[];
 }
 
-function getDirectChildNodes(folderNodeId: string, nodeOrder: string[], nodesById: Record<string, Node>) {
+function getDirectChildNodes(
+  folderNodeId: string,
+  nodeOrder: string[],
+  nodesById: Record<string, Node>,
+  trashedNodeIds: readonly string[]
+) {
   return nodeOrder
     .map((nodeId) => nodesById[nodeId])
-    .filter((node): node is Node => Boolean(node && node.parentNodeId === folderNodeId));
+    .filter((node): node is Node => Boolean(node && node.parentNodeId === folderNodeId && !trashedNodeIds.includes(node.id)));
 }
 
 const DEFAULT_EMPTY_STATE = {
@@ -152,7 +158,7 @@ function resolveListedNodes(props: FolderListViewProps) {
   if (!props.folderNodeId || !props.nodeOrder) {
     return [];
   }
-  return getDirectChildNodes(props.folderNodeId, props.nodeOrder, props.nodesById);
+  return getDirectChildNodes(props.folderNodeId, props.nodeOrder, props.nodesById, props.trashedNodeIds ?? []);
 }
 
 function buildFolderListEmptyState(
@@ -174,7 +180,16 @@ function useResolvedFolderListState(props: FolderListViewProps) {
   const nodeViewById = props.nodeViewById ?? storeNodeViewById;
   const listedNodes = useMemo(
     () => resolveListedNodes(props),
-    [props.emptyState, props.folderNodeId, props.nodeOrder, props.nodes, props.nodesById, props.onSelectNode, props.regionLabel]
+    [
+      props.emptyState,
+      props.folderNodeId,
+      props.nodeOrder,
+      props.nodes,
+      props.nodesById,
+      props.onSelectNode,
+      props.regionLabel,
+      props.trashedNodeIds
+    ]
   );
   const state = useFolderListViewState(
     listedNodes,

@@ -49,7 +49,8 @@ function renderFolderContent(
   onResetLayout: () => void,
   onSelectNode: (nodeId: string) => void,
   onStartDocumentResize: ComponentProps<typeof DocumentPanelBody>['onStartDocumentResize'],
-  pdfCache: JSX.Element
+  pdfCache: JSX.Element,
+  trashedNodeIds: string[]
 ) {
   return (
     <>
@@ -67,6 +68,7 @@ function renderFolderContent(
         onStartDocumentResize={onStartDocumentResize}
         sortDirection={folderListSortDirection}
         sortKey={folderListSortKey}
+        trashedNodeIds={trashedNodeIds}
       />
     </>
   );
@@ -237,7 +239,8 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
       args.bodyProps.onResetLayout,
       args.onSelectNode,
       args.bodyProps.onStartDocumentResize,
-      args.pdfCache
+      args.pdfCache,
+      args.trashedNodeIds
     );
   }
   if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {
