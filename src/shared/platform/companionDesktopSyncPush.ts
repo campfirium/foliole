@@ -78,8 +78,16 @@ async function collectLocalPushItems() {
     .map((row) => statePushAdapters[row.object_type as keyof typeof statePushAdapters]?.buildPushPayload(row))
     .filter((item) => item !== undefined)
     .filter((item) => item.base.kind !== 'blocked');
+  const pushableReviewNodeIds = new Set(stateItems
+    .filter((item) => item.identity.objectType === 'node_review')
+    .map((item) => item.identity.objectId));
   return {
-    items: [...stateItems, ...reviewLog.map((row) => reviewLogSyncAdapter.buildPushPayload(row))]
+    items: [
+      ...stateItems,
+      ...reviewLog
+        .filter((row) => pushableReviewNodeIds.has(row.node_id))
+        .map((row) => reviewLogSyncAdapter.buildPushPayload(row))
+    ]
   };
 }
 

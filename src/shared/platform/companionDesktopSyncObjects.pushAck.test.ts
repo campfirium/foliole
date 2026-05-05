@@ -326,4 +326,19 @@ describe('companion desktop sync push acknowledgements', () => {
     expect(result.pushedObjectIds).toEqual([]);
     expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
   });
+
+  it('does not push review_log when the matching node_review state is not pushable', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([{
+      ...createLocalNodeReviewChange(),
+      base_content_hash: null
+    }]);
+    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushedReviewOpIds).toEqual([]);
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
+    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
+  });
 });
