@@ -31,7 +31,7 @@ async function testUsesStreamSyncDirectly() {
   const setState = vi.fn();
   const setStatus = vi.fn();
 
-  await tryForegroundAutoSync({
+  const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
     setReadableArticle: vi.fn(),
@@ -40,7 +40,11 @@ async function testUsesStreamSyncDirectly() {
     state: createSyncState()
   });
 
-  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
+    'http://10.0.2.2:38641',
+    expect.objectContaining({ onStructureSynced: expect.any(Function) })
+  );
+  expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Auto sync completed.',
     status: 'completed'
@@ -52,7 +56,7 @@ async function testUsesStreamSyncDirectly() {
 async function testUsesRememberedSyncTarget() {
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
 
-  await tryForegroundAutoSync({
+  const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
     setReadableArticle: vi.fn(),
@@ -64,7 +68,11 @@ async function testUsesRememberedSyncTarget() {
     })
   });
 
-  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith('http://192.168.1.44:38641');
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
+    'http://192.168.1.44:38641',
+    expect.objectContaining({ onStructureSynced: expect.any(Function) })
+  );
+  expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     endpointUrl: 'http://192.168.1.44:38641',
     status: 'started'
@@ -77,7 +85,7 @@ async function testKeepsUnreachableDesktopQuiet() {
   const setError = vi.fn();
   const setStatus = vi.fn();
 
-  await tryForegroundAutoSync({
+  const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError,
     setReadableArticle: vi.fn(),
@@ -87,6 +95,7 @@ async function testKeepsUnreachableDesktopQuiet() {
   });
 
   expect(setError).not.toHaveBeenCalled();
+  expect(outcome).toBe('failed');
   expect(setStatus).toHaveBeenLastCalledWith('idle');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Desktop unreachable.',

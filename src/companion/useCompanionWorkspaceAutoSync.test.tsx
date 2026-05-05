@@ -14,7 +14,8 @@ function createSyncState(endpointUrl: string | null) {
 
 async function renderAutoSyncHook(
   isNativeRuntime: boolean,
-  endpointUrl: string | null = 'http://10.0.2.2:38641'
+  endpointUrl: string | null = 'http://10.0.2.2:38641',
+  tryForegroundAutoSync = vi.fn(async () => 'completed' as const)
 ) {
   vi.doMock('../shared/platform/companionWorkspaceSyncBridge', () => ({
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
@@ -28,7 +29,6 @@ async function renderAutoSyncHook(
     subscribeNativeAppForeground
   }));
   const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
-  const tryForegroundAutoSync = vi.fn(async () => undefined);
   const hook = renderHook(({ syncState }) =>
     useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), syncState, tryForegroundAutoSync),
     { initialProps: { syncState: createSyncState(endpointUrl) } }
@@ -60,6 +60,9 @@ describe('useForegroundAutoSync', () => {
   it('runs again when the native app returns to foreground after the interval', async () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
     const { foregroundHandlers, tryForegroundAutoSync } = await renderAutoSyncHook(true);
+    await act(async () => {
+      await Promise.resolve();
+    });
     now.mockReturnValue(31_000);
 
     await act(async () => {
@@ -72,6 +75,9 @@ describe('useForegroundAutoSync', () => {
   it('runs when the native app returns to foreground even inside the bootstrap interval', async () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
     const { foregroundHandlers, tryForegroundAutoSync } = await renderAutoSyncHook(true);
+    await act(async () => {
+      await Promise.resolve();
+    });
     now.mockReturnValue(1_500);
 
     await act(async () => {
@@ -84,6 +90,9 @@ describe('useForegroundAutoSync', () => {
   it('deduplicates paired native foreground events fired together', async () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
     const { foregroundHandlers, tryForegroundAutoSync } = await renderAutoSyncHook(true);
+    await act(async () => {
+      await Promise.resolve();
+    });
     now.mockReturnValue(1_500);
 
     await act(async () => {
@@ -103,5 +112,25 @@ describe('useForegroundAutoSync', () => {
     hook.rerender({ syncState: createSyncState('http://10.0.2.2:38641') });
 
     expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a failed bootstrap sync with bounded delay', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const tryForegroundAutoSync = vi.fn()
+      .mockResolvedValueOnce('failed')
+      .mockResolvedValueOnce('completed');
+    await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
   });
 });

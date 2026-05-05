@@ -65,6 +65,14 @@ export function findLaggingDesktopObjectTypes(args: {
     .sort((left, right) => right.max_state_seq - left.max_state_seq);
 }
 
+function findLatestFailedTerminalEvent(android: SyncDiagnosticSnapshot) {
+  return android.events.find((event) => (
+    event.status === 'failed' || event.status === 'completed' || event.status === 'skipped'
+  ))?.status === 'failed'
+    ? android.events.find((event) => event.status === 'failed') ?? null
+    : null;
+}
+
 export function mergeSyncDiagnosticVerdicts(args: {
   android: SyncDiagnosticSnapshot | null;
   desktop: SyncDiagnosticSnapshot | null;
@@ -76,7 +84,7 @@ export function mergeSyncDiagnosticVerdicts(args: {
   const androidCursor = args.android.sync_state.pack_cursor ?? 0;
   const desktopMaxSeq = args.desktop.sync_state.max_state_seq ?? 0;
   const cursorLag = Math.max(0, desktopMaxSeq - androidCursor);
-  const latestFailed = args.android.events.find((event) => event.status === 'failed');
+  const latestFailed = findLatestFailedTerminalEvent(args.android);
   if (latestFailed) {
     verdicts.push(warningVerdict('sync_recent_android_failure', 'Recent Android sync failed.', {
       message: latestFailed.message,

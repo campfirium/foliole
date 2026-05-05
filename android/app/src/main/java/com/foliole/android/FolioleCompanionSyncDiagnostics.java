@@ -225,8 +225,15 @@ final class FolioleCompanionSyncDiagnostics {
     private static JSONObject recentFailedEvent(JSArray events) {
         for (int index = 0; index < events.length(); index += 1) {
             JSONObject event = events.optJSONObject(index);
-            if (event != null && "failed".equals(event.optString("status"))) {
+            if (event == null) {
+                continue;
+            }
+            String status = event.optString("status");
+            if ("failed".equals(status)) {
                 return event;
+            }
+            if ("completed".equals(status) || "skipped".equals(status)) {
+                return null;
             }
         }
         return null;

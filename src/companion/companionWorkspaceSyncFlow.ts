@@ -10,6 +10,7 @@ import {
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
+export type ForegroundAutoSyncOutcome = 'completed' | 'failed' | 'skipped';
 
 export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
   return loadCompanionReadableArticle(snapshot);
@@ -52,18 +53,20 @@ export async function tryForegroundAutoSync(args: {
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   state: NativeCompanionWorkspaceSyncState;
-}) {
+}): Promise<ForegroundAutoSyncOutcome> {
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
-  if (!endpointUrl) return;
+  if (!endpointUrl) return 'skipped';
   args.setStatus('syncing');
   try {
     await recordCompanionWorkspaceSyncEvent({ endpointUrl, message: 'Auto sync started.', status: 'started' });
     await runCompanionStreamSync({ ...args, endpointUrl });
+    return 'completed';
   } catch (syncError) {
-    if (args.cancelled()) return;
+    if (args.cancelled()) return 'skipped';
     const message = syncError instanceof Error ? syncError.message : 'Desktop sync failed.';
     args.setStatus('idle');
     const failedState = await recordCompanionWorkspaceSyncEvent({ endpointUrl, message, status: 'failed' }).catch(() => null);
     if (failedState) args.setState(failedState);
+    return 'failed';
   }
 }

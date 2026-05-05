@@ -64,6 +64,31 @@ function expectCursorLagWithRecentFailure() {
   }));
 }
 
+function expectOldFailureHiddenAfterCompletedAutoSync() {
+  const verdicts = mergeSyncDiagnosticVerdicts({
+    android: snapshot('android', {
+      events: [
+        {
+          endpoint_url: null,
+          message: 'Auto sync completed.',
+          occurred_at: '2026-04-29T01:30:00.000Z',
+          status: 'completed'
+        },
+        {
+          endpoint_url: null,
+          message: 'Failed to apply companion desktop sync pack.',
+          occurred_at: '2026-04-29T01:26:00.000Z',
+          status: 'failed'
+        }
+      ],
+      sync_state: { local_dirty_count: 0, max_state_seq: 7, pack_cursor: 7, state_counts: [] }
+    }),
+    desktop: snapshot('desktop', { sync_state: { local_dirty_count: 0, max_state_seq: 7, pack_cursor: null, state_counts: [] } })
+  });
+
+  expect(verdicts).not.toContainEqual(expect.objectContaining({ code: 'sync_recent_android_failure' }));
+}
+
 function expectLaggingDesktopObjectTypes() {
   const lagging = findLaggingDesktopObjectTypes({
     packCursor: 101693,
@@ -111,6 +136,7 @@ function expectContentBacklogSeparateFromStructure() {
 describe('mergeSyncDiagnosticVerdicts', () => {
   it('reports when Android has not caught up to the desktop state sequence', expectAndroidCursorLagVerdict);
   it('keeps cursor lag visible even when the latest Android sync failed', expectCursorLagWithRecentFailure);
+  it('ignores older failed events after a completed auto sync', expectOldFailureHiddenAfterCompletedAutoSync);
   it('identifies desktop object types that are still beyond the Android cursor', expectLaggingDesktopObjectTypes);
   it('reports aligned structure without using progress percentages', expectAlignedStructureWithoutPercentages);
   it('keeps content cache backlog separate from structure alignment', expectContentBacklogSeparateFromStructure);
