@@ -44,6 +44,7 @@ import {
   parseSoftDeleteNodesArgs
 } from './nodeCommandArgs.js';
 import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
+import { toNativeReadwiseBooksInventory } from './readwiseBooksInventoryPayload.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { handleStorageAttachmentCommand } from './storageAttachmentCommands.js';
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
@@ -204,6 +205,9 @@ export async function handleStorageCommand(
   }
   if (command === NATIVE_COMMANDS.loadImportOverview) {
     return toNativeImportOverview();
+  }
+  if (command === NATIVE_COMMANDS.loadReadwiseBooksInventory) {
+    return toNativeReadwiseBooksInventory();
   }
   if (command === NATIVE_COMMANDS.loadNodeSourceDetails) {
     return toNativeNodeSourceDetails(asString(args.node_id, 'node_id'));

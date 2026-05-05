@@ -5,6 +5,7 @@ export const NATIVE_COMMANDS = {
   openExternalUrl: 'open_external_url',
   openLocalPath: 'open_local_path',
   inspectReadwiseReaderSetup: 'inspect_readwise_reader_setup',
+  loadReadwiseBooksInventory: 'load_readwise_books_inventory',
   loadNodeSourceDetails: 'load_node_source_details',
   loadNodeSourceUpdatePreview: 'load_node_source_update_preview',
   previewKeepImportRule: 'preview_keep_import_rule',

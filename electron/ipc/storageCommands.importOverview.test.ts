@@ -5,6 +5,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const { loadImportOverview } = vi.hoisted(() => ({
   loadImportOverview: vi.fn()
 }));
+const { loadReadwiseBooksInventory } = vi.hoisted(() => ({
+  loadReadwiseBooksInventory: vi.fn()
+}));
 const { resetImportData } = vi.hoisted(() => ({
   resetImportData: vi.fn()
 }));
@@ -77,7 +80,48 @@ const IMPORT_OVERVIEW_PAYLOAD = {
   recent_runs: []
 };
 
+const READWISE_BOOKS_INVENTORY_RECORD = {
+  books: [
+    {
+      annotationStatus: 'has_highlights',
+      bookKey: 'book-a',
+      epubPath: '/tmp/Book A.epub',
+      epubStatus: 'received',
+      fullDocumentMarkdownPath: '/tmp/Book A.md',
+      generatedNodeId: 'node-book-a',
+      highlightMarkdownPath: '/tmp/Book A Highlights.md',
+      importStatus: 'completed',
+      nodeStatus: 'generated',
+      title: 'Book A'
+    }
+  ],
+  fullDocumentDirectoryPath: '/tmp/books',
+  highlightDirectoryPath: '/tmp/highlights',
+  scannedAt: '2026-04-03T10:00:00.000Z'
+};
+
+const READWISE_BOOKS_INVENTORY_PAYLOAD = {
+  books: [
+    {
+      annotation_status: 'has_highlights',
+      book_key: 'book-a',
+      epub_path: '/tmp/Book A.epub',
+      epub_status: 'received',
+      full_document_markdown_path: '/tmp/Book A.md',
+      generated_node_id: 'node-book-a',
+      highlight_markdown_path: '/tmp/Book A Highlights.md',
+      import_status: 'completed',
+      node_status: 'generated',
+      title: 'Book A'
+    }
+  ],
+  full_document_directory_path: '/tmp/books',
+  highlight_directory_path: '/tmp/highlights',
+  scanned_at: '2026-04-03T10:00:00.000Z'
+};
+
 vi.mock('../database/importOverview.js', () => ({ loadImportOverview }));
+vi.mock('../import/readwiseBooksInventory.js', () => ({ loadReadwiseBooksInventory }));
 vi.mock('../database/importMaintenance.js', () => ({ resetImportData }));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
@@ -119,6 +163,12 @@ it('serializes persisted import overview to native payload', async () => {
   loadImportOverview.mockReturnValue(IMPORT_OVERVIEW_RECORD);
 
   await expect(handleStorageCommand('load_import_overview', {})).resolves.toEqual(IMPORT_OVERVIEW_PAYLOAD);
+});
+
+it('serializes readwise books inventory to native payload', async () => {
+  loadReadwiseBooksInventory.mockResolvedValue(READWISE_BOOKS_INVENTORY_RECORD);
+
+  await expect(handleStorageCommand('load_readwise_books_inventory', {})).resolves.toEqual(READWISE_BOOKS_INVENTORY_PAYLOAD);
 });
 
 it('dispatches import reset through storage commands', async () => {
