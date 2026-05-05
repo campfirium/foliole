@@ -130,7 +130,7 @@ export function resetAppSmokeState() {
   localStorage.clear();
   resetPerformanceDiagnosticsProbe();
   resetWorkspaceNodeDocumentPrefetchForTest();
-  useWorkspaceStore.setState(createInitialWorkspaceState(new Date(FIXED_TIMESTAMP)));
+  useWorkspaceStore.setState({ ...createInitialWorkspaceState(new Date(FIXED_TIMESTAMP)), isHydrated: true });
   mockEditorState.content = '# Welcome to Foliole\n\nStart writing markdown here.';
   mockEditorState.selectionFrom = 0;
   mockEditorState.selectionTo = 0;

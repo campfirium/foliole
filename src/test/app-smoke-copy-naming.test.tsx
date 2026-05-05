@@ -9,9 +9,19 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 import { createNode } from './app-smoke.shared';
 
 it('shows create menu labels as Folder, Topic, and Item', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-article',
+    nodeOrder: ['node-article'],
+    nodesById: {
+      ...state.nodesById,
+      'node-article': createNode({ id: 'node-article', kind: 'topic', title: 'Article node', content: '# Article body' })
+    }
+  }));
   render(<App />);
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Create' }), { key: 'ArrowDown' });
+  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const tree = within(nodePanel).getByRole('tree');
+  fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
 
   expect(screen.getByRole('menuitem', { name: 'Create Folder' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Create Topic' })).toBeInTheDocument();

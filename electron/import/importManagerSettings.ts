@@ -1,4 +1,5 @@
 import {
+  applyReadwiseRootPath,
   createDefaultImportManagerSettings,
   normalizeImportManagerSettings,
   type ImportManagerSettings
@@ -7,8 +8,8 @@ import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 
 const IMPORT_MANAGER_SETTINGS_KEY = 'import_manager_settings';
 
-function toRecord(value: unknown) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 export function loadImportManagerSettings(): ImportManagerSettings {
@@ -20,9 +21,16 @@ export function loadImportManagerSettings(): ImportManagerSettings {
 }
 
 export function saveImportManagerSettings(settings: unknown): ImportManagerSettings {
+  const payload = toRecord(settings);
+  const current = loadImportManagerSettings();
+  const readwiseRootPath = typeof payload.readwiseRootPath === 'string' ? payload.readwiseRootPath : current.readwiseRootPath;
   const normalized = normalizeImportManagerSettings({
-    ...createDefaultImportManagerSettings(),
-    ...toRecord(settings),
+    ...current,
+    ...payload,
+    readwiseRootPath,
+    readwiseSources: Array.isArray(payload.readwiseSources)
+      ? payload.readwiseSources
+      : applyReadwiseRootPath(current.readwiseSources, readwiseRootPath),
     updatedAt: new Date().toISOString()
   });
   saveJsonSetting(IMPORT_MANAGER_SETTINGS_KEY, normalized, normalized.updatedAt);
