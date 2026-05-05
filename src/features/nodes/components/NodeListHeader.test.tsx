@@ -56,3 +56,43 @@ it('can hide title search when used as a grouping column header', () => {
 
   expect(screen.queryByRole('button', { name: 'Open title search' })).toBeNull();
 });
+
+it('keeps the shared header height in the virtual section when actions are present', () => {
+  render(
+    <NodeListHeader
+      isTrashViewOpen={false}
+      isVirtualViewOpen
+      onCollapseAll={vi.fn()}
+      onCreateCommand={vi.fn()}
+      onEmptyTrash={vi.fn()}
+      onExpandAll={vi.fn()}
+      onOpenNotesView={vi.fn()}
+      onSearchQueryChange={vi.fn()}
+      searchQuery=""
+      trashCount={0}
+    />
+  );
+
+  expect(screen.getByRole('banner')).toHaveClass('min-h-[var(--workspace-top-toolbar-height)]');
+});
+
+it('does not render an empty header shell for the virtual section', () => {
+  render(
+    <NodeListHeader
+      isTrashViewOpen={false}
+      isVirtualViewOpen
+      onCollapseAll={vi.fn()}
+      onCreateCommand={vi.fn()}
+      onEmptyTrash={vi.fn()}
+      onExpandAll={vi.fn()}
+      onOpenNotesView={vi.fn()}
+      onSearchQueryChange={vi.fn()}
+      searchQuery=""
+      showTitleSearch={false}
+      showVirtualCreateAction={false}
+      trashCount={0}
+    />
+  );
+
+  expect(screen.queryByRole('banner')).toBeNull();
+});

@@ -10,6 +10,7 @@ import { scrollActiveTreeItemIntoView } from './nodeListAutoScroll';
 import { renderDeleteStatusOverlay } from './NodeListFeedbackSurface';
 import { NodeListHeader } from './NodeListHeader';
 import { resolveNodeListRowGap } from './nodeListRowSpacingSettings';
+import { getNodeListScrollContainerClassName } from './nodeListTreeContentLayout';
 import { useNodeListDragController } from './NodeListTreeDrag';
 import type {
   NodeListCollapseController,
@@ -181,7 +182,7 @@ function NodeListPanel(props: NodeListPanelProps) {
       />
       <div className="relative min-h-0 flex-1">
         {renderDeleteStatusOverlay(props.deleteStatusLabel)}
-        <div className="app-scrollbar flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden px-4 py-2" ref={scrollContainerRef}>
+        <div className={getNodeListScrollContainerClassName(props.isVirtualViewOpen)} ref={scrollContainerRef}>
           {renderNodeTreeSection(props, drag)}
         </div>
       </div>

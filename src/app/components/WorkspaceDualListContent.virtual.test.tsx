@@ -143,6 +143,7 @@ it('routes an active virtual node into the right content column', () => {
   expect(screen.getByRole('treeitem', { name: 'Saved Search' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByRole('treeitem', { name: 'Alpha Topic Inbox' })).toBeInTheDocument();
   expect(screen.getAllByText('Inbox').length).toBeGreaterThan(0);
+  expect(screen.getAllByRole('complementary', { name: 'Node list panel' })[1].querySelector('.app-scrollbar')).toHaveClass('pt-5', 'pb-2');
 
   fireEvent.click(screen.getByRole('treeitem', { name: 'Alpha Topic Inbox' }));
   expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('topic-a');

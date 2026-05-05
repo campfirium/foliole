@@ -13,6 +13,7 @@ import {
   ToolbarActionGroup
 } from '../../../shared/ui';
 
+import { CollapseAllIcon, ExpandAllIcon, NewNoteIcon } from './NodeListHeaderIcons';
 import { NodeListSearchOverlay, renderSearchLauncher } from './NodeListSearchOverlay';
 
 interface NodeListHeaderProps {
@@ -112,6 +113,61 @@ function renderTrashActions(onEmptyTrash: () => void, trashCount: number) {
   );
 }
 
+function shouldHideNodeListHeader(args: {
+  isVirtualViewOpen: boolean;
+  showTitleSearch: boolean;
+  showVirtualCreateAction: boolean;
+}) {
+  return args.isVirtualViewOpen && !args.showTitleSearch && !args.showVirtualCreateAction;
+}
+
+function renderNodeListHeaderShell(args: {
+  closeSearch: () => void;
+  isSearchOpen: boolean;
+  isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
+  onCollapseAll: () => void;
+  onCreateCommand: (commandId: string) => void;
+  onEmptyTrash: () => void;
+  onExpandAll: () => void;
+  onOpenSearch: () => void;
+  onOpenNotesView: () => void;
+  onSearchQueryChange: (searchQuery: string) => void;
+  searchQuery: string;
+  showTitleSearch: boolean;
+  showVirtualCreateAction: boolean;
+  trashCount: number;
+}) {
+  return (
+    <AppToolbar
+      as="header"
+      className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 overflow-hidden px-4"
+    >
+      <h2 className="sr-only">Nodes</h2>
+      <button className="sr-only" onClick={args.onOpenNotesView} type="button">
+        Nodes
+      </button>
+      {args.showTitleSearch && !args.isVirtualViewOpen ? renderSearchLauncher(args.onOpenSearch) : <span aria-hidden="true" className="size-8" />}
+      <ToolbarActionGroup ariaLabel={args.isTrashViewOpen ? 'Trash actions' : args.isVirtualViewOpen ? 'Virtual folder actions' : 'Node list actions'}>
+        {args.isTrashViewOpen
+          ? renderTrashActions(args.onEmptyTrash, args.trashCount)
+          : args.isVirtualViewOpen
+            ? args.showVirtualCreateAction
+              ? renderVirtualListActions(args.onCreateCommand)
+              : null
+            : renderNodeListActions(args.onCollapseAll, args.onCreateCommand, args.onExpandAll)}
+      </ToolbarActionGroup>
+      {args.showTitleSearch && !args.isVirtualViewOpen && args.isSearchOpen ? (
+        <NodeListSearchOverlay
+          onChangeSearchQuery={args.onSearchQueryChange}
+          onClose={args.closeSearch}
+          searchQuery={args.searchQuery}
+        />
+      ) : null}
+    </AppToolbar>
+  );
+}
+
 export function NodeListHeader({
   isTrashViewOpen,
   isVirtualViewOpen,
@@ -139,105 +195,25 @@ export function NodeListHeader({
     setIsSearchOpen(false);
   };
 
-  return (
-    <AppToolbar as="header" className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 overflow-hidden px-4">
-      <h2 className="sr-only">Nodes</h2>
-      <button className="sr-only" onClick={onOpenNotesView} type="button">
-        Nodes
-      </button>
-      {showTitleSearch && !isVirtualViewOpen ? (
-        renderSearchLauncher(() => setIsSearchOpen(true))
-      ) : (
-        <span aria-hidden="true" className="size-8" />
-      )}
-      <ToolbarActionGroup ariaLabel={isTrashViewOpen ? 'Trash actions' : isVirtualViewOpen ? 'Virtual folder actions' : 'Node list actions'}>
-        {isTrashViewOpen
-          ? renderTrashActions(onEmptyTrash, trashCount)
-          : isVirtualViewOpen
-            ? showVirtualCreateAction
-              ? renderVirtualListActions(onCreateCommand)
-              : null
-            : renderNodeListActions(onCollapseAll, onCreateCommand, onExpandAll)}
-      </ToolbarActionGroup>
-      {showTitleSearch && !isVirtualViewOpen && isSearchOpen ? (
-        <NodeListSearchOverlay
-          onChangeSearchQuery={onSearchQueryChange}
-          onClose={closeSearch}
-          searchQuery={searchQuery}
-        />
-      ) : null}
-    </AppToolbar>
-  );
-}
+  if (shouldHideNodeListHeader({ isVirtualViewOpen, showTitleSearch, showVirtualCreateAction })) {
+    return null;
+  }
 
-function NewNoteIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <path
-        d="M3 2.5h6.8L13 5.7v7.8H3z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-      <path
-        d="M9.8 2.5v3.2H13"
-        fill="none"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-      <path
-        d="m6.2 10.8 2.9-2.9 1.2 1.2-2.9 2.9-1.8.6z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-    </svg>
-  );
-}
-
-function ExpandAllIcon() {
-  return (
-    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 16 16">
-      <path
-        d="M3.5 4.5h5M3.5 8h9M3.5 11.5h5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.05"
-      />
-      <path
-        d="M10.5 2.8 13 5.4l-2.5 2.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-    </svg>
-  );
-}
-
-function CollapseAllIcon() {
-  return (
-    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 16 16">
-      <path
-        d="M3.5 4.5h5M3.5 8h9M3.5 11.5h5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.05"
-      />
-      <path
-        d="M12.9 2.8 10.4 5.4l2.5 2.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-    </svg>
-  );
+  return renderNodeListHeaderShell({
+    closeSearch,
+    isSearchOpen,
+    isTrashViewOpen,
+    isVirtualViewOpen,
+    onCollapseAll,
+    onCreateCommand,
+    onEmptyTrash,
+    onExpandAll,
+    onOpenSearch: () => setIsSearchOpen(true),
+    onOpenNotesView,
+    onSearchQueryChange,
+    searchQuery,
+    showTitleSearch,
+    showVirtualCreateAction,
+    trashCount
+  });
 }

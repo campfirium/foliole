@@ -20,7 +20,7 @@ export function WorkspaceVirtualSectionSplitter({
       aria-label="Resize virtual section"
       aria-orientation="horizontal"
       aria-valuenow={Math.round(height)}
-      className="group relative bg-transparent"
+      className="group relative h-1 shrink-0 bg-transparent"
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       role="separator"
@@ -29,8 +29,8 @@ export function WorkspaceVirtualSectionSplitter({
       <span
         aria-hidden="true"
         className={cn(
-          'absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 cursor-row-resize',
-          'before:absolute before:left-0 before:right-0 before:top-1/2 before:h-px before:-translate-y-1/2 before:bg-border',
+          'absolute inset-x-0 bottom-0 h-1 cursor-row-resize',
+          'before:absolute before:bottom-0 before:left-4 before:right-4 before:h-px before:bg-border/10',
           isResizing && 'before:bg-border-strong'
         )}
       />

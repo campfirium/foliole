@@ -72,7 +72,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
 
 function renderVirtualSection(props: WorkspaceFolderColumnProps, height: number) {
   return (
-    <div className="flex min-h-0 min-w-0 overflow-hidden border-t border-border/60" style={{ flex: `0 0 ${height}px` }}>
+    <div className="flex min-h-0 min-w-0 overflow-hidden" style={{ flex: `0 0 ${height}px` }}>
       <NodeListTree
         activeNodeId={getActiveVirtualSelectionId(props)}
         isSelectionScopeActive={props.isVirtualViewOpen}
