@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
@@ -16,6 +17,26 @@ import java.time.Instant;
 
 final class FolioleCompanionAttachmentResourceStore {
     private FolioleCompanionAttachmentResourceStore() {}
+
+    static JSObject loadMissingResources(SQLiteDatabase database, int limit) {
+        JSArray resources = new JSArray();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT attachment_id, content_hash FROM attachment_blobs " +
+                "WHERE content_hash IS NOT NULL AND TRIM(content_hash) != '' " +
+                "AND availability != 'cached' ORDER BY created_at ASC LIMIT ?",
+            new String[] { String.valueOf(Math.max(1, limit)) }
+        )) {
+            while (cursor.moveToNext()) {
+                JSObject resource = new JSObject();
+                resource.put("attachment_id", cursor.getString(0));
+                resource.put("content_hash", cursor.getString(1));
+                resources.put(resource);
+            }
+        }
+        JSObject result = new JSObject();
+        result.put("resources", resources);
+        return result;
+    }
 
     static JSObject syncResource(
         Context context,

@@ -2,11 +2,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const syncBridgeMock = vi.hoisted(() => ({
   applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 2, applied_object_count: 3, to_state_seq: 8 })),
+  loadCompanionMissingAttachmentResources: vi.fn(async () => [] as Array<{ attachment_id: string; content_hash: string }>),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
+}));
+
+const attachmentResourceMock = vi.hoisted(() => ({
+  syncCompanionAttachmentResourceRequestsFromDesktop: vi.fn(async (
+    _endpointUrl: string,
+    requests: Array<{ attachmentId: string }>
+  ) => requests.map((request) => request.attachmentId))
 }));
 
 const pairingMock = vi.hoisted(() => ({
@@ -25,6 +33,7 @@ const capacitorMock = vi.hoisted(() => ({
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
+vi.mock('./companionDesktopAttachmentResources', () => attachmentResourceMock);
 vi.mock('./companionWorkspacePairing', () => pairingMock);
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -76,6 +85,22 @@ async function testPullsStructurePackAndContentBlobs() {
     },
     method: 'POST'
   });
+}
+
+async function testPullsMissingAttachmentResourcesAfterStructurePack() {
+  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+    { attachment_id: 'att-1', content_hash: 'hash-att-1' }
+  ]);
+
+  const { ATTACHMENT_RESOURCE_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).toHaveBeenCalledWith(ATTACHMENT_RESOURCE_BATCH_LIMIT);
+  expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).toHaveBeenCalledWith(
+    'http://10.0.2.2:38641/',
+    [{ attachmentId: 'att-1', contentHash: 'hash-att-1' }]
+  );
+  expect(result.syncedAttachmentIds).toEqual(['att-1']);
 }
 
 async function testRefreshesStructureBeforeContentBatchCompletes() {
@@ -210,12 +235,17 @@ describe('companion desktop sync objects', () => {
       to_state_seq: 8
     });
     syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValue([]);
+    syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValue([]);
     syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);
     syncBridgeMock.saveCompanionSyncPackCursor.mockImplementation(async (cursor: number | null) => cursor);
     syncBridgeMock.syncCompanionContentBlob.mockImplementation(async ({ hash }: { hash: string }) => ({
       availability: 'cached',
       hash
     }));
+    attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockImplementation(async (
+      _endpointUrl: string,
+      requests: Array<{ attachmentId: string }>
+    ) => requests.map((request) => request.attachmentId));
     pairingMock.createSignedRequestHeaders.mockImplementation(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
       'X-Device-Id': 'android-test-device',
       'X-Signature': `signed:${pathWithQuery}`
@@ -223,6 +253,8 @@ describe('companion desktop sync objects', () => {
   });
 
   it('pulls the structure pack and missing content blobs from desktop', testPullsStructurePackAndContentBlobs);
+
+  it('pulls missing attachment resources from desktop after structure sync', testPullsMissingAttachmentResourcesAfterStructurePack);
 
   it('refreshes structure before running bounded content blob batches', testRefreshesStructureBeforeContentBatchCompletes);
 

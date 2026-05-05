@@ -16,6 +16,9 @@ const capacitorMock = vi.hoisted(() => ({
     loadSyncObjects: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting' }] })),
     loadSyncStateChanges: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting', state_seq: 1 }] })),
     loadMissingContentBlobHashes: vi.fn(async () => ({ hashes: ['a'.repeat(64)] })),
+    loadMissingAttachmentResources: vi.fn(async () => ({
+      resources: [{ attachment_id: 'att-1', content_hash: 'hash-att-1' }]
+    })),
     loadSyncStateCursor: vi.fn(async () => ({ cursor: 2 })),
     loadSyncPackCursor: vi.fn(async () => ({ cursor: 4 })),
     loadSyncStatePushCursor: vi.fn(async () => ({ cursor: null })),
@@ -137,6 +140,10 @@ async function testNativePluginBridge() {
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([{ object_id: 'one', object_type: 'setting', state_seq: 1 }]);
   await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
   expect(capacitorMock.plugin.loadMissingContentBlobHashes).toHaveBeenCalledWith({ limit: 3 });
+  await expect(api.loadCompanionMissingAttachmentResources(4)).resolves.toEqual([
+    { attachment_id: 'att-1', content_hash: 'hash-att-1' }
+  ]);
+  expect(capacitorMock.plugin.loadMissingAttachmentResources).toHaveBeenCalledWith({ limit: 4 });
   await expect(api.syncCompanionContentBlob({
     hash: 'a'.repeat(64),
     headers: { 'X-Device-Id': 'android' },

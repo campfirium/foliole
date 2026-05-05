@@ -58,14 +58,24 @@ export async function syncCompanionAttachmentResourcesFromDesktop(
   endpointUrl: string,
   records: NativeSyncObjectRecord[]
 ) {
+  return syncCompanionAttachmentResourceRequestsFromDesktop(
+    endpointUrl,
+    records
+      .map(toAttachmentResourceRequest)
+      .filter((request): request is AttachmentResourceRequest => Boolean(request))
+  );
+}
+
+export async function syncCompanionAttachmentResourceRequestsFromDesktop(
+  endpointUrl: string,
+  requests: AttachmentResourceRequest[]
+) {
   if (!isNativeAndroidCompanionRuntime()) {
     return [];
   }
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedAttachmentIds: string[] = [];
-  for (const record of records) {
-    const request = toAttachmentResourceRequest(record);
-    if (!request) continue;
+  for (const request of requests) {
     const pathWithQuery = buildAttachmentResourcePath(request);
     await FolioleCompanionSync.syncAttachmentResource({
       attachment_id: request.attachmentId,

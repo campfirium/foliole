@@ -98,6 +98,13 @@ export async function loadCompanionMissingContentBlobHashes(limit = 50) {
   return (await FolioleCompanionSync.loadMissingContentBlobHashes({ limit })).hashes;
 }
 
+export async function loadCompanionMissingAttachmentResources(limit = 50) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return [] as Array<{ attachment_id: string; content_hash: string }>;
+  }
+  return (await FolioleCompanionSync.loadMissingAttachmentResources({ limit })).resources;
+}
+
 export async function syncCompanionContentBlob(args: {
   hash: string;
   headers: Record<string, string>;

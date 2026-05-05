@@ -23,6 +23,7 @@ vi.mock('@capacitor/core', () => ({
 vi.mock('./companionWorkspacePairing', () => pairingMock);
 
 import {
+  syncCompanionAttachmentResourceRequestsFromDesktop,
   syncCompanionAttachmentResourcesFromDesktop,
   toAttachmentResourceRequest
 } from './companionDesktopAttachmentResources';
@@ -65,6 +66,19 @@ describe('companion desktop attachment resources', () => {
       content_hash: 'blob-hash',
       headers: { 'X-Signature': 'signed' },
       url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-1&content_hash=blob-hash'
+    });
+  });
+
+  it('downloads already enumerated missing attachment resources', async () => {
+    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
+      { attachmentId: 'att-2', contentHash: 'blob-hash-2' }
+    ])).resolves.toEqual(['att-2']);
+
+    expect(capacitorMock.plugin.syncAttachmentResource).toHaveBeenCalledWith({
+      attachment_id: 'att-2',
+      content_hash: 'blob-hash-2',
+      headers: { 'X-Signature': 'signed' },
+      url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-2&content_hash=blob-hash-2'
     });
   });
 

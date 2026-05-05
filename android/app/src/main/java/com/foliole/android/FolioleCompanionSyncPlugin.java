@@ -71,6 +71,16 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
 
     @PluginMethod
+    public void loadMissingAttachmentResources(PluginCall call) {
+        resolveWithDatabase(
+            call,
+            "Failed to load missing companion attachment resources.",
+            databaseHelper -> databaseHelper.loadMissingAttachmentResources(call.getInt("limit", 50))
+        );
+    }
+
+
+    @PluginMethod
     public void loadMissingContentBlobHashes(PluginCall call) {
         resolveWithDatabase(
             call,

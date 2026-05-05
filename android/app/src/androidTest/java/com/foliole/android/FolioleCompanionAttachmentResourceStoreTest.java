@@ -72,6 +72,18 @@ public class FolioleCompanionAttachmentResourceStoreTest {
         assertEquals("GET", server.method());
     }
 
+    @Test
+    public void listsMissingManifestResourcesForMainSync() throws Exception {
+        FolioleCompanionSyncObjectApply.applyPayload(database, attachmentRecord());
+
+        JSObject result = FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10);
+        JSONObject resource = result.getJSONArray("resources").getJSONObject(0);
+
+        assertEquals(1, result.getJSONArray("resources").length());
+        assertEquals("att-android-1", resource.getString("attachment_id"));
+        assertEquals("hash-android-1", resource.getString("content_hash"));
+    }
+
     private JSONObject attachmentRecord() throws Exception {
         JSONObject blob = new JSONObject()
             .put("content_hash", "hash-android-1")
