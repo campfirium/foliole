@@ -3,6 +3,7 @@ import type { NativeCommandArgs, NativeCommandName } from '../../../lib/platform
 
 import { getRuntimeInvoke } from './bridge';
 import { logRuntimeError } from './runtimeLogging';
+export { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 export {
   createWorkspaceRuntimeNodeSnapshot,
   replayPendingWorkspaceNodeSync,
@@ -16,7 +17,6 @@ import type {
   WorkspaceReadingProgressSnapshot,
   WorkspaceRelearnNodePayload,
   WorkspaceReviewGradeSyncPayload,
-  WorkspaceRuntimeNodeDocument,
   WorkspaceRuntimeSnapshot
 } from './workspaceRuntimeTypes';
 
@@ -52,14 +52,6 @@ function runFireAndForgetRuntimeSync<T extends FireAndForgetRuntimeCommand>(
 
 export function hasWorkspaceRuntimeRepository() {
   return Boolean(getRuntimeInvoke());
-}
-
-export async function loadWorkspaceNodeDocumentFromRuntime(nodeId: string): Promise<WorkspaceRuntimeNodeDocument | null> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return null;
-  }
-  return runtimeInvoke(NATIVE_COMMANDS.loadNodeDocument, { nodeId });
 }
 
 export async function loadWorkspaceListSnapshotFromRuntime(args?: {

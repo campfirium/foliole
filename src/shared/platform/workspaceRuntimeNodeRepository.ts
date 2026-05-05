@@ -3,6 +3,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { getRuntimeInvoke } from './bridge';
 import { logRuntimeError } from './runtimeLogging';
+import { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 import {
   listPendingNodeSyncSnapshots,
   resolvePendingNodeSync,
@@ -61,14 +62,6 @@ function toNodeAnchorLocatorUpdatePayload(node: WorkspaceRuntimeNode) {
     anchorLink: node.anchorLink,
     updatedAt: node.updatedAt
   };
-}
-
-async function loadWorkspaceNodeDocument(nodeId: string): Promise<WorkspaceRuntimeNodeDocument | null> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return null;
-  }
-  return runtimeInvoke(NATIVE_COMMANDS.loadNodeDocument, { nodeId });
 }
 
 function handleNodeSnapshotSyncResult(
@@ -137,7 +130,7 @@ function runNodeSnapshotSync(args: {
     );
     return;
   }
-  void loadWorkspaceNodeDocument(args.node.id)
+  void loadWorkspaceNodeDocumentFromRuntime(args.node.id)
     .then((document) =>
       document ? createWorkspaceRuntimeNodeSnapshot(args.mergeDocument(args.node, document), args.position) : null
     )
