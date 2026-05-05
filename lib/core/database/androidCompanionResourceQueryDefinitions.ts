@@ -28,3 +28,32 @@ export const ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES = {
     summaryQueryName: 'contentBlobMissingSummaryRows'
   }
 } as const;
+
+export const ANDROID_COMPANION_CONTENT_READ_RULES = {
+  externalDocuments: {
+    byIdQueryName: 'externalDocumentById',
+    defaultSearchLimit: 20,
+    directoryEntriesQueryName: 'externalDocumentDirectoryEntries',
+    directoryEntriesResultKey: 'entries',
+    documentResultKey: 'document',
+    documentsResultKey: 'documents',
+    excerptRadius: 80,
+    foldersQueryName: 'externalSearchFolders',
+    foldersResultKey: 'folders',
+    maxSearchLimit: 100,
+    searchQueryName: 'externalDocumentSearch',
+    searchResultsKey: 'results'
+  },
+  readableArticle: {
+    activeNodeIdQueryName: 'readableArticleActiveNodeId',
+    articleResultKey: 'readable_article',
+    articlesResultKey: 'articles',
+    byNodeIdQueryName: 'readableArticleByNodeId',
+    firstNodeQueryName: 'readableArticleFirstNode',
+    pdfPagesQueryName: 'pdfPageTextPages',
+    pdfPagesResultKey: 'pages',
+    pdfPlaceholderText: 'Linked PDF source ready for the reader surface.',
+    referencePdfAttachmentQueryName: 'readableArticleReferencePdfAttachment',
+    untitledTitle: 'Untitled'
+  }
+} as const;

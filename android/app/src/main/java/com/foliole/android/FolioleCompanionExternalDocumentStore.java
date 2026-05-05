@@ -9,10 +9,6 @@ import com.getcapacitor.JSObject;
 import org.json.JSONObject;
 
 final class FolioleCompanionExternalDocumentStore {
-
-    private static final int DEFAULT_SEARCH_LIMIT = 20;
-    private static final int EXCERPT_RADIUS = 80;
-
     private FolioleCompanionExternalDocumentStore() {}
 
     static JSObject loadDocument(Context context, SQLiteDatabase database, String documentId) throws Exception {
@@ -22,7 +18,13 @@ final class FolioleCompanionExternalDocumentStore {
             return result;
         }
         JSArray documents = FolioleCompanionNamedQueryStore
-            .loadRows(context, database, "externalDocumentById", "documents", new String[] { documentId.trim() });
+            .loadRows(
+                context,
+                database,
+                stringRule(context, "byIdQueryName"),
+                stringRule(context, "documentsResultKey"),
+                new String[] { documentId.trim() }
+            );
         if (documents.length() > 0) {
             result.put("document", toDocument(context, documents.getJSONObject(0)));
         }
@@ -31,7 +33,15 @@ final class FolioleCompanionExternalDocumentStore {
 
     static JSObject loadDirectory(Context context, SQLiteDatabase database) throws Exception {
         JSObject result = new JSObject();
-        result.put("folders", FolioleCompanionNamedQueryStore.loadRows(context, database, "externalSearchFolders", "folders"));
+        result.put(
+            stringRule(context, "foldersResultKey"),
+            FolioleCompanionNamedQueryStore.loadRows(
+                context,
+                database,
+                stringRule(context, "foldersQueryName"),
+                stringRule(context, "foldersResultKey")
+            )
+        );
         result.put("entries", loadEntries(context, database));
         return result;
     }
@@ -49,8 +59,8 @@ final class FolioleCompanionExternalDocumentStore {
             .loadRows(
                 context,
                 database,
-                "externalDocumentSearch",
-                "documents",
+                stringRule(context, "searchQueryName"),
+                stringRule(context, "documentsResultKey"),
                 new String[] {
                 normalizedQuery,
                 normalizedQuery,
@@ -58,7 +68,7 @@ final class FolioleCompanionExternalDocumentStore {
                 normalizedQuery,
                 normalizedQuery,
                 normalizedQuery,
-                Integer.toString(resolveLimit(limit))
+                Integer.toString(resolveLimit(context, limit))
                 }
             );
         for (int index = 0; index < documents.length(); index += 1) {
@@ -69,7 +79,12 @@ final class FolioleCompanionExternalDocumentStore {
 
     private static JSArray loadEntries(Context context, SQLiteDatabase database) throws Exception {
         JSArray entries = new JSArray();
-        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "externalDocumentDirectoryEntries", "entries");
+        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(
+            context,
+            database,
+            stringRule(context, "directoryEntriesQueryName"),
+            stringRule(context, "directoryEntriesResultKey")
+        );
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
             JSObject entry = new JSObject();
@@ -99,7 +114,7 @@ final class FolioleCompanionExternalDocumentStore {
         int matchStart = Math.max(0, row.getInt("match_index") - 1);
         putDocumentFields(context, result, row);
         result.put("match_start", matchStart);
-        result.put("excerpt", buildExcerpt(resolveContent(row), matchStart));
+        result.put("excerpt", buildExcerpt(context, resolveContent(row), matchStart));
         return result;
     }
 
@@ -138,19 +153,29 @@ final class FolioleCompanionExternalDocumentStore {
         return row.isNull(key) ? null : row.optString(key, null);
     }
 
-    private static String buildExcerpt(String text, int matchStart) {
-        if (text == null || text.length() <= EXCERPT_RADIUS * 2) {
+    private static String buildExcerpt(Context context, String text, int matchStart) throws Exception {
+        int excerptRadius = intRule(context, "excerptRadius");
+        if (text == null || text.length() <= excerptRadius * 2) {
             return text == null ? "" : text;
         }
-        int start = Math.max(0, matchStart - EXCERPT_RADIUS);
-        int end = Math.min(text.length(), matchStart + EXCERPT_RADIUS);
+        int start = Math.max(0, matchStart - excerptRadius);
+        int end = Math.min(text.length(), matchStart + excerptRadius);
         return text.substring(start, end).trim();
     }
 
-    private static int resolveLimit(int limit) {
+    private static int resolveLimit(Context context, int limit) throws Exception {
         if (limit <= 0) {
-            return DEFAULT_SEARCH_LIMIT;
+            return intRule(context, "defaultSearchLimit");
         }
-        return Math.min(limit, 100);
+        return Math.min(limit, intRule(context, "maxSearchLimit"));
     }
+
+    private static String stringRule(Context context, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.externalDocumentString(context, key);
+    }
+
+    private static int intRule(Context context, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.externalDocumentInt(context, key);
+    }
+
 }

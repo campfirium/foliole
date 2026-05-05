@@ -9,9 +9,6 @@ import com.getcapacitor.JSObject;
 import org.json.JSONObject;
 
 final class FolioleCompanionReadableArticleQuery {
-
-    private static final String PDF_READER_PLACEHOLDER_TEXT = "Linked PDF source ready for the reader surface.";
-
     private FolioleCompanionReadableArticleQuery() {}
 
     static JSObject loadReadableArticle(Context context, SQLiteDatabase database) throws Exception {
@@ -20,19 +17,25 @@ final class FolioleCompanionReadableArticleQuery {
         if (activeNodeId != null) {
             JSObject activeArticle = loadArticleByNodeId(context, database, activeNodeId);
             if (activeArticle != null) {
-                return wrap(activeArticle);
+                return wrap(context, activeArticle);
             }
         }
 
-        JSONObject article = FolioleCompanionNamedQueryStore.loadFirstRow(context, database, "readableArticleFirstNode", "articles", null);
+        JSONObject article = FolioleCompanionNamedQueryStore.loadFirstRow(
+            context,
+            database,
+            stringRule(context, "firstNodeQueryName"),
+            stringRule(context, "articlesResultKey"),
+            null
+        );
         if (article == null) {
-            return wrap(null);
+            return wrap(context, null);
         }
-        return wrap(buildArticle(context, database, article));
+        return wrap(context, buildArticle(context, database, article));
     }
 
     private static String loadActiveNodeId(Context context, SQLiteDatabase database) throws Exception {
-        String value = FolioleCompanionNamedQueryStore.loadString(context, database, "readableArticleActiveNodeId", null);
+        String value = FolioleCompanionNamedQueryStore.loadString(context, database, stringRule(context, "activeNodeIdQueryName"), null);
         return value == null || value.trim().isEmpty() ? null : value;
     }
 
@@ -40,8 +43,8 @@ final class FolioleCompanionReadableArticleQuery {
         JSONObject article = FolioleCompanionNamedQueryStore.loadFirstRow(
             context,
             database,
-            "readableArticleByNodeId",
-            "articles",
+            stringRule(context, "byNodeIdQueryName"),
+            stringRule(context, "articlesResultKey"),
             new String[] { nodeId }
         );
         if (article == null) {
@@ -54,7 +57,7 @@ final class FolioleCompanionReadableArticleQuery {
         return FolioleCompanionNamedQueryStore.loadString(
             context,
             database,
-            "readableArticleReferencePdfAttachment",
+            stringRule(context, "referencePdfAttachmentQueryName"),
             new String[] { nodeId }
         );
     }
@@ -67,8 +70,8 @@ final class FolioleCompanionReadableArticleQuery {
         JSArray pages = FolioleCompanionNamedQueryStore.loadRows(
             context,
             database,
-            "pdfPageTextPages",
-            "pages",
+            stringRule(context, "pdfPagesQueryName"),
+            stringRule(context, "pdfPagesResultKey"),
             new String[] { attachmentId.trim() }
         );
         for (int index = 0; index < pages.length(); index += 1) {
@@ -84,16 +87,16 @@ final class FolioleCompanionReadableArticleQuery {
         return builder.length() == 0 ? null : builder.toString();
     }
 
-    private static boolean isPdfPlaceholderContent(String content) {
-        return content != null && content.contains(PDF_READER_PLACEHOLDER_TEXT);
+    private static boolean isPdfPlaceholderContent(Context context, String content) throws Exception {
+        return content != null && content.contains(stringRule(context, "pdfPlaceholderText"));
     }
 
     private static String resolveArticleContent(Context context, SQLiteDatabase database, String title, String content, String pdfAttachmentId) throws Exception {
-        String pdfText = isPdfPlaceholderContent(content) ? loadPdfPageText(context, database, pdfAttachmentId) : null;
+        String pdfText = isPdfPlaceholderContent(context, content) ? loadPdfPageText(context, database, pdfAttachmentId) : null;
         if (pdfText == null) {
             return content;
         }
-        return "# " + normalizeTitle(title) + "\n\n" + pdfText;
+        return "# " + normalizeTitle(context, title) + "\n\n" + pdfText;
     }
 
     private static String resolveContentStatus(
@@ -121,7 +124,7 @@ final class FolioleCompanionReadableArticleQuery {
 
     private static JSObject buildArticle(Context context, SQLiteDatabase database, JSONObject row) throws Exception {
         String nodeId = row.getString("id");
-        String title = normalizeTitle(nullableString(row, "title"));
+        String title = normalizeTitle(context, nullableString(row, "title"));
         String inlineContent = nullableString(row, "content");
         String bodyBlobHash = nullableString(row, "body_blob_hash");
         String bodyBlobData = nullableString(row, "body_blob_data");
@@ -142,13 +145,17 @@ final class FolioleCompanionReadableArticleQuery {
         return row.isNull(key) ? null : row.optString(key, null);
     }
 
-    private static String normalizeTitle(String title) {
-        return title == null || title.trim().isEmpty() ? "Untitled" : title.trim();
+    private static String normalizeTitle(Context context, String title) throws Exception {
+        return title == null || title.trim().isEmpty() ? stringRule(context, "untitledTitle") : title.trim();
     }
 
-    private static JSObject wrap(JSObject article) {
+    private static JSObject wrap(Context context, JSObject article) throws Exception {
         JSObject payload = new JSObject();
-        payload.put("readable_article", article == null ? null : article);
+        payload.put(stringRule(context, "articleResultKey"), article == null ? null : article);
         return payload;
+    }
+
+    private static String stringRule(Context context, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.readableArticleString(context, key);
     }
 }
