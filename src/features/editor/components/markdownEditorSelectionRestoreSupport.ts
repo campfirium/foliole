@@ -11,12 +11,14 @@ import { applyRestoreScrollTop } from './markdownEditorSelectionRestoreScroll';
 import type { EditorViewState } from './markdownEditorTypes';
 
 export function handleSelectionRestore(args: {
+  activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string | null;
   nodeViewState: EditorViewState | undefined;
+  pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   readingSelection: EditorViewState['selection'] | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
@@ -29,11 +31,13 @@ export function handleSelectionRestore(args: {
   if (!args.restoreTarget) {
     if (!args.nodeId || !(args.readingSelection ?? args.nodeViewState?.selection)) {
       args.lastRestoredSelectionKeyRef.current = null;
+      args.pendingRestoreSelectionKeyRef.current = null;
     }
     return;
   }
   if (args.shouldSuppressSelectionRestore?.()) {
     args.lastRestoredSelectionKeyRef.current = args.restoreTarget.selectionKey;
+    args.pendingRestoreSelectionKeyRef.current = null;
     pushDebugTrace('editor.restore-selection.suppressed', {
       nodeId: args.restoreTarget.nodeId,
       selection: args.restoreTarget.selection
@@ -42,11 +46,13 @@ export function handleSelectionRestore(args: {
   }
   restoreEditorSelection({
     adapter: args.restoreTarget.adapter,
+    activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
     beginApplyingReadingPosition: args.beginApplyingReadingPosition,
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
     isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
     lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
     nodeId: args.restoreTarget.nodeId,
+    pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
     restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
     restoreCompletionFrameRef: args.restoreCompletionFrameRef,
     restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
@@ -60,14 +66,16 @@ export function handleSelectionRestore(args: {
 
 export function resolveRestoreTarget(args: {
   adapter: CodeMirrorEditorAdapter | null;
+  activeRestoreSelectionKey: string | null;
   lastRestoredSelectionKey: string | null;
   nodeId: string | null;
   nodeViewState: EditorViewState | undefined;
+  pendingRestoreSelectionKey: string | null;
   readingSelection: EditorViewState['selection'] | null | undefined;
   value: string;
 }) {
   const selection = args.readingSelection ?? args.nodeViewState?.selection;
-  if (!args.nodeId || !selection || !args.adapter) {
+  if (!args.nodeId || !selection || !args.adapter || !args.pendingRestoreSelectionKey) {
     return null;
   }
   const restoreScrollTop = args.nodeViewState?.scrollTop ?? 0;
@@ -78,6 +86,12 @@ export function resolveRestoreTarget(args: {
     return null;
   }
   const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop}`;
+  if (args.pendingRestoreSelectionKey !== selectionKey) {
+    return null;
+  }
+  if (args.activeRestoreSelectionKey === selectionKey) {
+    return null;
+  }
   if (args.lastRestoredSelectionKey === selectionKey) {
     return null;
   }
@@ -90,6 +104,7 @@ export function resolveRestoreTarget(args: {
 }
 
 export function clearRestoreCompletionTimers(args: {
+  activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   completeApplyingReadingPosition: ((reason: string) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
@@ -114,11 +129,13 @@ export function clearRestoreCompletionTimers(args: {
   }
   if (hadPendingCompletion && args.isRestoreApplyingActiveRef.current) {
     args.isRestoreApplyingActiveRef.current = false;
+    args.activeRestoreSelectionKeyRef.current = null;
     args.completeApplyingReadingPosition?.('editor-restore-selection-cancelled');
   }
 }
 
 function finishRestoreApplying(args: {
+  activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   completeApplyingReadingPosition: ((reason: string) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   reason: string;
@@ -127,6 +144,7 @@ function finishRestoreApplying(args: {
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
 }) {
   args.isRestoreApplyingActiveRef.current = false;
+  args.activeRestoreSelectionKeyRef.current = null;
   args.completeApplyingReadingPosition?.(args.reason);
   args.restoreCompletionFrameRef.current = null;
   args.restoreCompletionFrame2Ref.current = null;
@@ -138,11 +156,13 @@ function finishRestoreApplying(args: {
 
 function restoreEditorSelection(args: {
   adapter: CodeMirrorEditorAdapter;
+  activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string;
+  pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
@@ -157,6 +177,7 @@ function restoreEditorSelection(args: {
     selection: args.selection
   });
   clearRestoreCompletionTimers({
+    activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
     isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
     restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
@@ -165,6 +186,7 @@ function restoreEditorSelection(args: {
   });
   args.beginApplyingReadingPosition?.(args.selection, 'editor-restore-selection');
   args.isRestoreApplyingActiveRef.current = true;
+  args.activeRestoreSelectionKeyRef.current = args.selectionKey;
   args.setReadingPositionSelection?.(args.selection);
   args.adapter.restoreSelection(args.selection);
   applyRestoreScrollTop(args.adapter, args.restoreScrollTop);
@@ -174,6 +196,7 @@ function restoreEditorSelection(args: {
     args.restoreCompletionFrame2Ref.current = requestAnimationFrame(() => {
       markRestoreSelectionSettled(args);
       finishRestoreApplying({
+        activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
         completeApplyingReadingPosition: args.completeApplyingReadingPosition,
         isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
         reason: 'editor-restore-selection-settled',
@@ -186,6 +209,7 @@ function restoreEditorSelection(args: {
   args.restoreCompletionTimeoutRef.current = window.setTimeout(() => {
     markRestoreSelectionSettled(args);
     finishRestoreApplying({
+      activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
       completeApplyingReadingPosition: args.completeApplyingReadingPosition,
       isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
       reason: 'editor-restore-selection-timeout',
@@ -200,12 +224,14 @@ function markRestoreSelectionSettled(args: {
   adapter: CodeMirrorEditorAdapter;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string;
+  pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   restoreScrollTop: number | undefined;
   selection: EditorViewState['selection'];
   selectionKey: string;
 }) {
   if (isRestoreScrollSettled(args.adapter, args.restoreScrollTop)) {
     args.lastRestoredSelectionKeyRef.current = args.selectionKey;
+    args.pendingRestoreSelectionKeyRef.current = null;
     return;
   }
   args.lastRestoredSelectionKeyRef.current = null;

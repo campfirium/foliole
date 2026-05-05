@@ -74,7 +74,7 @@ it('skips selection restore when immersive toggle suppression is active', () => 
   expect(mockRevealSelection).not.toHaveBeenCalled();
 });
 
-it('releases the previous restore lock before starting a new restore cycle', async () => {
+it('releases the previous restore lock when switching to another document before restore settles', async () => {
   const longDocument = createLongDocument();
   const onBeginApplyingReadingPosition = vi.fn();
   const onCompleteApplyingReadingPosition = vi.fn();
@@ -92,7 +92,7 @@ it('releases the previous restore lock before starting a new restore cycle', asy
 
   view.rerender(
     <MarkdownEditor
-      nodeId="node-1"
+      nodeId="node-2"
       nodeViewState={{ scrollTop: 5_900, selection: { from: 51_200, to: 51_228 } }}
       onBeginApplyingReadingPosition={onBeginApplyingReadingPosition}
       onChange={vi.fn()}
@@ -127,4 +127,29 @@ it('applies the saved scroll position before an unmount can cancel the restore c
 
   expect(mockSetScrollTop).toHaveBeenCalledWith(5_400);
   expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-cancelled');
+});
+
+it('does not restart the same restore request when typing before the first restore settles', () => {
+  const longDocument = createLongDocument();
+  const view = renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+      onChange={vi.fn()}
+      value={longDocument}
+    />
+  );
+
+  expect(mockRestoreSelection).toHaveBeenCalledTimes(1);
+
+  view.rerender(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+      onChange={vi.fn()}
+      value={`${longDocument}1`}
+    />
+  );
+
+  expect(mockRestoreSelection).toHaveBeenCalledTimes(1);
 });
