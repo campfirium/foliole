@@ -21,6 +21,7 @@ export const CONTENT_BLOB_CONCURRENT_FETCH_LIMIT = 6;
 export const ATTACHMENT_RESOURCE_BATCH_LIMIT = 64;
 export const ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC = 20;
 export const COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS = 60_000;
+export const COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS = 5 * 60_000;
 
 export interface CompanionDesktopSyncOptions {
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
@@ -209,12 +210,16 @@ export async function syncCompanionContentBlobFromDesktop(endpointUrl: string, h
   return result;
 }
 
-async function withSyncStepTimeout<T>(stage: string, work: Promise<T>): Promise<T> {
+async function withSyncStepTimeout<T>(
+  stage: string,
+  work: Promise<T>,
+  timeoutMs = COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS
+): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   const timeout = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
       reject(new Error(`Desktop sync timed out while ${stage}.`));
-    }, COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS);
+    }, timeoutMs);
   });
   try {
     return await Promise.race([work, timeout]);
@@ -243,13 +248,21 @@ async function runCompanionObjectsSync(
   let syncedAttachmentIds: string[] = [];
   let syncedContentBlobHashes: string[] = [];
   try {
-    const attachments = await withSyncStepTimeout('fetching attachment resources', pullMissingAttachmentResources(endpointUrl, options.onProgress));
+    const attachments = await withSyncStepTimeout(
+      'fetching attachment resources',
+      pullMissingAttachmentResources(endpointUrl, options.onProgress),
+      COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
+    );
     syncedAttachmentIds = attachments.syncedAttachmentIds;
   } catch (error) {
     attachmentResourceError = errorMessage(error);
   }
   try {
-    const blobs = await withSyncStepTimeout('fetching topic bodies', pullMissingContentBlobs(endpointUrl, options.onProgress));
+    const blobs = await withSyncStepTimeout(
+      'fetching topic bodies',
+      pullMissingContentBlobs(endpointUrl, options.onProgress),
+      COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
+    );
     syncedContentBlobHashes = blobs.syncedContentBlobHashes;
   } catch (error) {
     contentBlobError = errorMessage(error);

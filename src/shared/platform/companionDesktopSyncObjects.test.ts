@@ -262,6 +262,29 @@ async function testFailsWhenStageNeverReturns() {
   vi.useRealTimers();
 }
 
+async function testAllowsLongerContentCachingPass() {
+  vi.useFakeTimers();
+  const bodyHash = 'd'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
+    .mockResolvedValueOnce([]);
+  syncBridgeMock.syncCompanionContentBlob.mockImplementation(async ({ hash }: { hash: string }) => {
+    await new Promise((resolve) => setTimeout(resolve, 61_000));
+    return { availability: 'cached', hash };
+  });
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 })));
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const sync = syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  await vi.advanceTimersByTimeAsync(61_000);
+
+  await expect(sync).resolves.toMatchObject({
+    contentBlobError: null,
+    syncedContentBlobHashes: [bodyHash]
+  });
+  vi.useRealTimers();
+}
+
 describe('companion desktop sync objects', () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -313,4 +336,6 @@ describe('companion desktop sync objects', () => {
   it('does not run legacy JSON state, topic, or review streams on the normal pull path', testNoLegacyJsonStreams);
 
   it('fails instead of staying in sync when a desktop sync stage never returns', testFailsWhenStageNeverReturns);
+
+  it('allows a resource caching pass to run longer than the structure timeout', testAllowsLongerContentCachingPass);
 });
