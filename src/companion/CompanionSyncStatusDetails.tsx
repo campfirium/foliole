@@ -1,5 +1,6 @@
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 
+import { CompanionSyncDiagnosticsPanel } from './CompanionSyncDiagnosticsPanel';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
 function formatClock(timestamp: string | null) {
@@ -214,6 +215,9 @@ export function CompanionSyncStatusDetails(props: {
   if (props.page === 'syncConnection') {
     return <ConnectionPage endpointUrl={props.endpointUrl} pairingState={props.pairingState} />;
   }
+  if (props.page === 'syncDiagnostics') {
+    return <CompanionSyncDiagnosticsPanel endpointUrl={props.endpointUrl} />;
+  }
 
   const lastSync = resolveLastSyncRow(props);
   const topicValue = props.syncedTopicCount > 0
@@ -236,6 +240,12 @@ export function CompanionSyncStatusDetails(props: {
         onOpen={() => props.onOpenPage('syncConnection')}
       />
       <SyncActivitySummary events={props.syncEvents} onOpen={() => props.onOpenPage('syncActivity')} />
+      <SettingsLinkRow
+        detail="Read-only sync health snapshot"
+        label="Diagnostic"
+        onClick={() => props.onOpenPage('syncDiagnostics')}
+        value="Run"
+      />
     </div>
   );
 }

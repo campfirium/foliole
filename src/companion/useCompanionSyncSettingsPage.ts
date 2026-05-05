@@ -3,7 +3,13 @@ import { useEffect, useState } from 'react';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-export type CompanionSettingsPage = 'list' | 'sync' | 'syncActivity' | 'syncConnection' | 'syncHandoff';
+export type CompanionSettingsPage =
+  | 'list'
+  | 'sync'
+  | 'syncActivity'
+  | 'syncConnection'
+  | 'syncDiagnostics'
+  | 'syncHandoff';
 
 export function useCompanionSyncSettingsPage(args: {
   activeAction: CompanionTabAction;

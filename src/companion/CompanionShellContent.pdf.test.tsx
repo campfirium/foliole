@@ -85,6 +85,7 @@ describe('CompanionShellContent PDF articles', () => {
     render(renderCompanionShellContent({
       hasSnapshot: true,
       onBackToSettingsList: vi.fn(),
+      onOpenSyncSettingsPage: vi.fn(),
       onOpenSyncSettings: vi.fn(),
       onSelectReviewBreadcrumbItem: vi.fn(),
       reviewBreadcrumbItems: [],
@@ -109,6 +110,7 @@ describe('CompanionShellContent PDF articles', () => {
     render(renderCompanionShellContent({
       hasSnapshot: true,
       onBackToSettingsList: vi.fn(),
+      onOpenSyncSettingsPage: vi.fn(),
       onOpenSyncSettings: vi.fn(),
       onSelectReviewBreadcrumbItem: vi.fn(),
       reviewBreadcrumbItems: [],
@@ -126,6 +128,7 @@ describe('CompanionShellContent PDF articles', () => {
     render(renderCompanionShellContent({
       hasSnapshot: true,
       onBackToSettingsList: vi.fn(),
+      onOpenSyncSettingsPage: vi.fn(),
       onOpenSyncSettings: vi.fn(),
       onSelectReviewBreadcrumbItem: vi.fn(),
       reviewBreadcrumbItems: [],
@@ -143,6 +146,7 @@ describe('CompanionShellContent PDF articles', () => {
     render(renderCompanionShellContent({
       hasSnapshot: true,
       onBackToSettingsList: vi.fn(),
+      onOpenSyncSettingsPage: vi.fn(),
       onOpenSyncSettings: vi.fn(),
       onSelectReviewBreadcrumbItem: vi.fn(),
       reviewBreadcrumbItems: [],

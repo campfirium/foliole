@@ -7,6 +7,7 @@ import {
   DISCOVERY_ENDPOINT_PATH,
   PAIR_ENDPOINT_PATH,
   PAIR_REQUESTS_ENDPOINT_PATH,
+  SYNC_DIAGNOSTICS_PATH,
   SYNC_PACK_PATH,
   WORKSPACE_SNAPSHOT_PATH,
   WORKSPACE_VERSION_PATH
@@ -82,6 +83,7 @@ function createWorkspaceSyncHttpServer(args: { appVersion: string; peerId: strin
   return http.createServer(
     createLanWorkspaceSyncRequestHandler({
       appVersion: args.appVersion,
+      getSyncStatus: () => activeStatus,
       onPairRequestCreated: activePairRequestHandler,
       peerId: args.peerId,
       updatePairingStatus: (pairing) => {
@@ -115,6 +117,7 @@ function logRunningStatus() {
       PAIR_REQUESTS_ENDPOINT_PATH,
       PAIR_ENDPOINT_PATH,
       SYNC_PACK_PATH,
+      SYNC_DIAGNOSTICS_PATH,
       ATTACHMENT_RESOURCE_PATH,
       WORKSPACE_VERSION_PATH,
       WORKSPACE_SNAPSHOT_PATH

@@ -282,6 +282,22 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void diagnoseSync(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(FolioleCompanionSyncDiagnostics.diagnose(
+                getContext(),
+                databaseHelper.getReadableDatabase(),
+                getContext().getDatabasePath(FolioleCompanionDatabaseHelper.DATABASE_NAME).getAbsolutePath()
+            ));
+        } catch (Exception exception) {
+            call.reject("Failed to diagnose companion sync.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+    @PluginMethod
     public void saveWorkspaceSyncEndpoint(PluginCall call) {
         FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
         try {

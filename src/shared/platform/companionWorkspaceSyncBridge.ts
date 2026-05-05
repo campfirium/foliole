@@ -19,6 +19,7 @@ import type {
   NativeSyncReviewLogRecord,
   NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
+import type { SyncDiagnosticSnapshot } from '../../../lib/platform/syncDiagnosticsContract';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
 export const PAIR_ENDPOINT_PATH = '/companion/pair';
@@ -44,6 +45,7 @@ export interface CompanionWorkspaceSyncPlugin {
     method: string;
     url: string;
   }): Promise<{ body: string; status: number }>;
+  diagnoseSync(): Promise<SyncDiagnosticSnapshot>;
   loadSyncIndex(): Promise<{ entries: NativeSyncIndexEntry[] }>;
   loadSyncNodeConflicts(): Promise<{ conflicts: NativeSyncNodeConflictRecord[] }>;
   loadSyncObjects(args: {

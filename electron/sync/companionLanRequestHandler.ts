@@ -2,6 +2,7 @@ import type http from 'node:http';
 
 import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
+import { buildCompanionSyncDiagnostics } from './buildCompanionSyncDiagnostics.js';
 import {
   ATTACHMENT_RESOURCE_PATH,
   loadCompanionAttachmentResource
@@ -18,6 +19,7 @@ import {
   buildWorkspaceSnapshotPayload,
   buildWorkspaceVersionPayload
 } from './companionLanPayloads.js';
+import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import {
   isRetiredSyncJsonEndpoint,
   SYNC_INDEX_PATH,
@@ -26,11 +28,8 @@ import {
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH
 } from './companionLanSyncObjects.js';
-import {
-  buildCompanionSyncPackResource,
-  SYNC_PACK_PATH
-} from './companionLanSyncPack.js';
-import { readCompanionRequestBody } from './companionLanRequestBody.js';
+import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
+import { handleSyncPackGet } from './companionLanSyncPackGet.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 
 const ALLOWED_CORS_PROTOCOLS = new Set(['capacitor:', 'http:', 'https:']);
@@ -40,6 +39,7 @@ export const PAIR_ENDPOINT_PATH = '/companion/pair';
 export const PAIR_REQUESTS_ENDPOINT_PATH = '/companion/pair-requests';
 export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
+export const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
 export {
   ATTACHMENT_RESOURCE_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
@@ -107,6 +107,31 @@ function writeBinary(response: http.ServerResponse, statusCode: number, body: Bu
   response.end(body);
 }
 
+function handleWorkspaceMetadataGet(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  parsedRequestUrl: URL,
+  args: {
+    appVersion: string;
+    getSyncStatus: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
+    peerId: string;
+  }
+) {
+  if (parsedRequestUrl.pathname === WORKSPACE_VERSION_PATH) {
+    const version = loadWorkspaceVersionMetadata();
+    writeJson(request, response, 200, buildWorkspaceVersionPayload(args.appVersion, args.peerId, version));
+    return true;
+  }
+  if (parsedRequestUrl.pathname === SYNC_DIAGNOSTICS_PATH) {
+    writeJson(request, response, 200, buildCompanionSyncDiagnostics({
+      appVersion: args.appVersion,
+      serverStatus: args.getSyncStatus()
+    }), 'GET, OPTIONS');
+    return true;
+  }
+  return false;
+}
+
 async function handlePostRequest(
   request: http.IncomingMessage,
   response: http.ServerResponse,
@@ -133,7 +158,11 @@ async function handleAuthenticatedGet(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   parsedRequestUrl: URL,
-  args: { appVersion: string; peerId: string }
+  args: {
+    appVersion: string;
+    getSyncStatus: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
+    peerId: string;
+  }
 ) {
   if (request.method === 'GET' && isRetiredSyncJsonEndpoint(parsedRequestUrl)) {
     writeJson(request, response, 410, { error: 'sync_json_endpoint_retired' }, 'GET, OPTIONS');
@@ -160,25 +189,8 @@ async function handleAuthenticatedGet(
     }
     return;
   }
-  if (parsedRequestUrl.pathname === SYNC_PACK_PATH) {
-    const resource = await buildCompanionSyncPackResource(parsedRequestUrl);
-    if (resource.status === 'ready') {
-      response.writeHead(200, {
-        'Content-Disposition': `attachment; filename="${resource.fileName ?? 'sync-pack.syncpack'}"`,
-        'Content-Length': resource.body?.byteLength ?? 0,
-        'Content-Type': 'application/zip'
-      });
-      response.end(resource.body);
-    } else {
-      writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
-    }
-    return;
-  }
-  if (parsedRequestUrl.pathname === WORKSPACE_VERSION_PATH) {
-    const version = loadWorkspaceVersionMetadata();
-    writeJson(request, response, 200, buildWorkspaceVersionPayload(args.appVersion, args.peerId, version));
-    return;
-  }
+  if (await handleSyncPackGet(request, response, parsedRequestUrl, writeJson)) return;
+  if (handleWorkspaceMetadataGet(request, response, parsedRequestUrl, args)) return;
   if (parsedRequestUrl.pathname !== WORKSPACE_SNAPSHOT_PATH) {
     writeJson(request, response, 404, { error: 'not_found' });
     return;
@@ -217,6 +229,7 @@ async function handleAuthenticatedPost(
 
 export function createLanWorkspaceSyncRequestHandler(args: {
   appVersion: string;
+  getSyncStatus?: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
   onPairRequestCreated: (() => void) | null;
   peerId: string;
   updatePairingStatus: (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void;
@@ -248,6 +261,9 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       writeJson(request, response, auth.status_code, { error: auth.error });
       return;
     }
-    await handleAuthenticatedGet(request, response, parsedRequestUrl, args);
+    await handleAuthenticatedGet(request, response, parsedRequestUrl, {
+      ...args,
+      getSyncStatus: args.getSyncStatus ?? (() => null)
+    });
   };
 }

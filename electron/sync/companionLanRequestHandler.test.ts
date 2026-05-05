@@ -36,6 +36,18 @@ const syncPackMock = vi.hoisted(() => ({
     statusCode: 200
   }))
 }));
+const diagnosticsMock = vi.hoisted(() => ({
+  buildCompanionSyncDiagnostics: vi.fn((): unknown => ({
+    collected_at: '2026-04-29T00:00:00.000Z',
+    content: { missing_content_blob_count: 0 },
+    events: [],
+    host: 'desktop',
+    identity: { app_version: '0.1.0-test', database_path: null, device_id: 'desktop-local' },
+    storage: { active_node_count: 1 },
+    sync_state: { max_state_seq: 4 },
+    verdicts: []
+  }))
+}));
 
 vi.mock('../database/workspaceSnapshot.js', () => ({
   loadWorkspaceSnapshot: workspaceSnapshotMock.loadWorkspaceSnapshot,
@@ -59,6 +71,9 @@ vi.mock('./companionLanSyncPack.js', () => ({
   SYNC_PACK_PATH: '/companion/sync-pack',
   buildCompanionSyncPackResource: syncPackMock.buildCompanionSyncPackResource
 }));
+vi.mock('./buildCompanionSyncDiagnostics.js', () => ({
+  buildCompanionSyncDiagnostics: diagnosticsMock.buildCompanionSyncDiagnostics
+}));
 
 import {
   ATTACHMENT_RESOURCE_PATH,
@@ -66,6 +81,7 @@ import {
   CONTENT_BLOB_RESOURCE_PATH,
   createLanWorkspaceSyncRequestHandler,
   SYNC_INDEX_PATH,
+  SYNC_DIAGNOSTICS_PATH,
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
   SYNC_PACK_PATH,
@@ -97,6 +113,16 @@ beforeEach(() => {
     status: 'ready',
     statusCode: 200
   });
+  diagnosticsMock.buildCompanionSyncDiagnostics.mockReturnValue({
+    collected_at: '2026-04-29T00:00:00.000Z',
+    content: { missing_content_blob_count: 0 },
+    events: [],
+    host: 'desktop',
+    identity: { app_version: '0.1.0-test', database_path: null, device_id: 'desktop-local' },
+    storage: { active_node_count: 1 },
+    sync_state: { max_state_seq: 4 },
+    verdicts: []
+  });
 });
 
 function createResponse() {
@@ -112,7 +138,15 @@ function createHandler() {
     appVersion: '0.1.0-test',
     onPairRequestCreated: null,
     peerId: 'desktop-local',
-    updatePairingStatus: vi.fn()
+    updatePairingStatus: vi.fn(),
+    getSyncStatus: () => ({
+      advertised_urls: ['http://127.0.0.1:38641'],
+      last_error: null,
+      paired_device_count: 1,
+      pending_pair_request_count: 0,
+      port: 38641,
+      state: 'running'
+    })
   });
 }
 
@@ -231,6 +265,26 @@ it('serves signed sync pack containers without loading the workspace snapshot', 
   expect(response.end).toHaveBeenCalledWith(Buffer.from('sqlite-pack'));
   expect(syncPackMock.buildCompanionSyncPackResource).toHaveBeenCalledWith(expect.objectContaining({
     pathname: SYNC_PACK_PATH
+  }));
+  expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
+});
+
+it('serves signed sync diagnostics without loading content bodies or the workspace snapshot', async () => {
+  const response = createResponse();
+  await createHandler()({
+    headers: {},
+    method: 'GET',
+    url: SYNC_DIAGNOSTICS_PATH
+  } as http.IncomingMessage, response);
+
+  expect(response.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
+    'Content-Type': 'application/json; charset=utf-8'
+  }));
+  expect(response.end).toHaveBeenCalledWith(expect.stringContaining('"host":"desktop"'));
+  expect(response.end).not.toHaveBeenCalledWith(expect.stringContaining('"content":"'));
+  expect(diagnosticsMock.buildCompanionSyncDiagnostics).toHaveBeenCalledWith(expect.objectContaining({
+    appVersion: '0.1.0-test',
+    serverStatus: expect.objectContaining({ state: 'running' })
   }));
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });
