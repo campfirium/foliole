@@ -367,9 +367,7 @@ describe('quality-gate-fast.sh', () => {
         lint: 'node -e "console.log(\'full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
-        'test:shared': 'node -e "console.log(\'full shared test ok\')"',
-        'test:desktop': 'node -e "console.log(\'full desktop test ok\')"',
-        'test:android': 'node -e "console.log(\'full android test ok\')"',
+        'test:full': 'node -e "console.log(\'full deduped test ok\')"',
         build: 'node -e "console.log(\'full build ok\')"',
         'electron:compile': 'node -e "console.log(\'full electron compile ok\')"',
         'android:web:build': 'node -e "console.log(\'full android web build ok\')"',
@@ -386,9 +384,7 @@ describe('quality-gate-fast.sh', () => {
       expect(result.stdout).toContain('full lint ok');
       expect(result.stdout).toContain('full desktop typecheck ok');
       expect(result.stdout).toContain('full android typecheck ok');
-      expect(result.stdout).toContain('full shared test ok');
-      expect(result.stdout).toContain('full desktop test ok');
-      expect(result.stdout).toContain('full android test ok');
+      expect(result.stdout).toContain('full deduped test ok');
       expect(result.stdout).toContain('full build ok');
       expect(result.stdout).toContain('full electron compile ok');
       expect(result.stdout).toContain('full android web build ok');
@@ -407,9 +403,7 @@ describe('quality-gate-fast.sh', () => {
         lint: 'node -e "console.log(\'release lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
-        'test:shared': 'node -e "console.log(\'release shared test ok\')"',
-        'test:desktop': 'node -e "console.log(\'release desktop test ok\')"',
-        'test:android': 'node -e "console.log(\'release android test ok\')"',
+        'test:full': 'node -e "console.log(\'release deduped test ok\')"',
         build: 'node -e "console.log(\'release build ok\')"',
         'electron:compile': 'node -e "console.log(\'release electron compile ok\')"',
         'android:web:build': 'node -e "console.log(\'release android web build ok\')"',
@@ -426,9 +420,7 @@ describe('quality-gate-fast.sh', () => {
       expect(result.stdout).toContain('release lint ok');
       expect(result.stdout).toContain('release desktop typecheck ok');
       expect(result.stdout).toContain('release android typecheck ok');
-      expect(result.stdout).toContain('release shared test ok');
-      expect(result.stdout).toContain('release desktop test ok');
-      expect(result.stdout).toContain('release android test ok');
+      expect(result.stdout).toContain('release deduped test ok');
       expect(result.stdout).toContain('release build ok');
       expect(result.stdout).toContain('release electron compile ok');
       expect(result.stdout).toContain('release android web build ok');

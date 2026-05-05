@@ -46,33 +46,74 @@ run_gate_steps() {
 }
 
 run_gate_steps_parallel() {
-  local mode step log_file pid exit_code failed
+  local mode step log_file status_file pid exit_code failed index pending now next_heartbeat heartbeat_seconds
   local -a steps=("$@")
   local -a pids=()
   local -a logs=()
+  local -a status_files=()
+  local -a completed=()
 
   if [[ "${#steps[@]}" -eq 0 ]]; then
     return 0
   fi
 
   mode="$(resolve_quality_gate_log_mode)"
+  heartbeat_seconds="${QUALITY_GATE_PARALLEL_HEARTBEAT_SECONDS:-30}"
+  if [[ ! "${heartbeat_seconds}" =~ ^[0-9]+$ || "${heartbeat_seconds}" -le 0 ]]; then
+    heartbeat_seconds=30
+  fi
+  next_heartbeat=$((SECONDS + heartbeat_seconds))
+
   if quality_gate_should_print_step; then
     echo "[${prefix}] running in parallel: ${steps[*]}"
   fi
 
   for step in "${steps[@]}"; do
     log_file="$(create_quality_gate_log_file "${step}.parallel")"
+    status_file="${log_file}.status"
     : >"${log_file}"
+    rm -f "${status_file}"
     (
       trap 'if [[ -n "${QUALITY_GATE_ACTIVE_PGID:-}" ]]; then terminate_process_group "${QUALITY_GATE_ACTIVE_PGID}"; fi' EXIT INT TERM
-      run_quality_gate_script "${prefix}" "${pm}" "${step}" >"${log_file}" 2>&1
+      set +e
+      ( run_quality_gate_script "${prefix}" "${pm}" "${step}" ) >"${log_file}" 2>&1
+      exit_code=$?
+      set -e
+      printf '%s\n' "${exit_code}" >"${status_file}"
+      exit "${exit_code}"
     ) &
     pid=$!
     pids+=("${pid}")
     logs+=("${log_file}")
+    status_files+=("${status_file}")
+    completed+=("0")
   done
 
-  failed=0
+  while true; do
+    pending=()
+    for index in "${!steps[@]}"; do
+      if [[ "${completed[${index}]}" == "1" ]]; then
+        continue
+      fi
+      if [[ -f "${status_files[${index}]}" ]]; then
+        completed[${index}]="1"
+        continue
+      fi
+      pending+=("${steps[${index}]}")
+    done
+
+    if [[ "${#pending[@]}" -eq 0 ]]; then
+      break
+    fi
+
+    now="${SECONDS}"
+    if (( now >= next_heartbeat )); then
+      echo "[${prefix}] still running in parallel: ${pending[*]}"
+      next_heartbeat=$((now + heartbeat_seconds))
+    fi
+    sleep 1
+  done
+
   for index in "${!steps[@]}"; do
     exit_code=0
     if wait "${pids[${index}]}"; then
@@ -80,19 +121,25 @@ run_gate_steps_parallel() {
     else
       exit_code=$?
     fi
+  done
 
+  failed=0
+  for index in "${!steps[@]}"; do
+    exit_code="$(cat "${status_files[${index}]}" 2>/dev/null || printf '1')"
     if [[ "${exit_code}" -ne 0 ]]; then
       failed=1
       echo "[${prefix}] ${steps[${index}]} failed:"
       echo "[${prefix}] full log: ${logs[${index}]}"
       cat "${logs[${index}]}"
-    elif [[ "${mode}" != "fail-only" ]]; then
+    elif [[ "${mode}" == "verbose" ]]; then
       cat "${logs[${index}]}"
+    elif [[ "${mode}" == "summary" ]]; then
+      print_quality_gate_success_excerpt "${prefix}" "${steps[${index}]}" "${logs[${index}]}"
     fi
   done
 
   if [[ "${failed}" -ne 0 ]]; then
-    exit 1
+    return 1
   fi
 }
 
@@ -132,15 +179,15 @@ case "${target}" in
   full)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint typecheck:desktop typecheck:android test:shared test:desktop test:android build
-    run_gate_steps_parallel electron:compile android:web:build
+    run_gate_steps lint typecheck:desktop typecheck:android test:full
+    run_gate_steps_parallel build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
   release)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint typecheck:desktop typecheck:android test:shared test:desktop test:android build
-    run_gate_steps_parallel electron:compile android:web:build
+    run_gate_steps lint typecheck:desktop typecheck:android test:full
+    run_gate_steps_parallel build electron:compile android:web:build
     run_gate_steps android:sync android:host:lint android:host:test
     run_workspace_boundary_check_if_present
     ;;
