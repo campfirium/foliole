@@ -7,6 +7,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
+import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { WorkspaceToolbar } from './WorkspaceToolbar';
 
 export interface WorkspaceEditorContextMenu {
@@ -25,6 +26,8 @@ export interface WorkspaceLayoutProps {
   editorContent: string;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
+  canStartStudyMode: boolean;
+  isStudyMode: boolean;
   isDocumentResizing: boolean;
   isResizingList: boolean;
   isTrashViewOpen: boolean;
@@ -54,6 +57,7 @@ export interface WorkspaceLayoutProps {
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
+  onStartStudyMode: () => void;
   selectedTrashNodeId: string | null;
 }
 
@@ -67,6 +71,8 @@ export function WorkspaceLayout({
   editorContent,
   editorNodeId,
   editorNodeViewState,
+  canStartStudyMode,
+  isStudyMode,
   isDocumentResizing,
   isResizingList,
   isTrashViewOpen,
@@ -93,6 +99,7 @@ export function WorkspaceLayout({
   onCreateHighlight,
   onCreateCloze,
   onStartDocumentResize,
+  onStartStudyMode,
   selectedTrashNodeId
 }: WorkspaceLayoutProps) {
   const workspaceGridStyle = {
@@ -128,26 +135,33 @@ export function WorkspaceLayout({
           onSplitterKeyDown={onSplitterKeyDown}
           onSplitterPointerDown={onSplitterPointerDown}
         />
-        <DocumentPanelSection
-          activeNodeId={documentNodeId}
-          contextMenu={contextMenu}
-          documentMaxWidth={documentMaxWidth}
-          editorContent={editorContent}
-          editorNodeId={editorNodeId}
-          editorNodeViewState={editorNodeViewState}
-          isDocumentResizing={isDocumentResizing}
-          nodesById={nodesById}
-          onAnswerChange={onAnswerChange}
-          onCloseContextMenu={onCloseContextMenu}
-          onCreateCloze={onCreateCloze}
-          onCreateHighlight={onCreateHighlight}
-          onEditorChange={onEditorChange}
-          onEditorContextMenu={onEditorContextMenu}
-          onEditorReady={onEditorReady}
-          onResetLayout={onResetLayout}
-          onSelectNode={onSelectBreadcrumbNode}
-          onStartDocumentResize={onStartDocumentResize}
-        />
+        <section aria-label="Document and review area" className="workspace-right-column">
+          <DocumentPanelSection
+            activeNodeId={documentNodeId}
+            contextMenu={contextMenu}
+            documentMaxWidth={documentMaxWidth}
+            editorContent={editorContent}
+            editorNodeId={editorNodeId}
+            editorNodeViewState={editorNodeViewState}
+            isDocumentResizing={isDocumentResizing}
+            nodesById={nodesById}
+            onAnswerChange={onAnswerChange}
+            onCloseContextMenu={onCloseContextMenu}
+            onCreateCloze={onCreateCloze}
+            onCreateHighlight={onCreateHighlight}
+            onEditorChange={onEditorChange}
+            onEditorContextMenu={onEditorContextMenu}
+            onEditorReady={onEditorReady}
+            onResetLayout={onResetLayout}
+            onSelectNode={onSelectBreadcrumbNode}
+            onStartDocumentResize={onStartDocumentResize}
+          />
+          <ReviewModeToolbar
+            canStartStudyMode={canStartStudyMode}
+            isStudyMode={isStudyMode}
+            onStartStudyMode={onStartStudyMode}
+          />
+        </section>
       </div>
     </main>
   );

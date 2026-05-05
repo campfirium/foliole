@@ -7,6 +7,7 @@ import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { useDocumentWidthResizer } from './hooks/useDocumentWidthResizer';
 import { useEditorContextCommands } from './hooks/useEditorContextCommands';
 import { useListResizer } from './hooks/useListResizer';
+import { useStudyMode } from './hooks/useStudyMode';
 import { useTrashView } from './hooks/useTrashView';
 import { useWorkspaceNavigation } from './hooks/useWorkspaceNavigation';
 
@@ -49,6 +50,10 @@ export function App() {
     trashedNodeIds
   });
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
+  const { canStartStudyMode, isStudyMode, resetStudyMode, startStudyMode } = useStudyMode({
+    activeNodeId,
+    isViewingTrashNode
+  });
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const selectedTrashNode = selectedTrashNodeId ? nodesById[selectedTrashNodeId] : undefined;
   const documentNode = isViewingTrashNode ? selectedTrashNode : activeNode;
@@ -125,6 +130,7 @@ export function App() {
   };
 
   const handleOpenTrashView = () => {
+    resetStudyMode();
     setIsViewingTrashNode(false);
     if (isTrashViewOpen) {
       closeTrashView();
@@ -145,17 +151,20 @@ export function App() {
   };
 
   const handleSelectNode = (nodeId: string) => {
+    resetStudyMode();
     setIsViewingTrashNode(false);
     handleSelectNoteNode(nodeId);
   };
 
   const handleSelectTrashNode = (nodeId: string) => {
+    resetStudyMode();
     setIsViewingTrashNode(true);
     openTrashView();
     setSelectedTrashNodeId(nodeId);
   };
 
   const handleSelectBreadcrumbNode = (nodeId: string) => {
+    resetStudyMode();
     setIsViewingTrashNode(false);
     handleSelectBreadcrumbNodeRaw(nodeId);
   };
@@ -211,10 +220,12 @@ export function App() {
       canGoForward={canGoForward}
       canGoParent={canGoParent}
       contextMenu={contextMenu}
+      canStartStudyMode={canStartStudyMode}
       documentMaxWidth={documentMaxWidth}
       editorContent={editorContent}
       editorNodeId={editorNodeId}
       editorNodeViewState={activeNodeViewState}
+      isStudyMode={isStudyMode}
       isDocumentResizing={documentResize.isResizingDocument}
       isResizingList={listResize.isResizingList}
       isTrashViewOpen={isTrashViewOpen}
@@ -239,6 +250,7 @@ export function App() {
       onSplitterKeyDown={listResize.handleSplitterKeyDown}
       onSplitterPointerDown={listResize.handleSplitterPointerDown}
       onStartDocumentResize={documentResize.startResize}
+      onStartStudyMode={startStudyMode}
       onOpenNotesView={handleOpenNotesView}
       onOpenTrashView={handleOpenTrashView}
       selectedTrashNodeId={selectedTrashNodeId}

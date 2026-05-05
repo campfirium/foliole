@@ -87,12 +87,27 @@ describe('App', () => {
 
   it('renders note list and single document panel', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Note' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Nodes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Content' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Workspace toolbar' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Node breadcrumbs' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Review' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create QA Node' })).not.toBeInTheDocument();
+  });
+
+  it('enters study mode only after clicking Study in the review toolbar', () => {
+    render(<App />);
+
+    expect(screen.getByRole('button', { name: 'Study' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Grade 1' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+
+    expect(screen.getByRole('button', { name: 'Grade 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Grade 2' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Grade 3' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Grade 4' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Study' })).not.toBeInTheDocument();
   });
 
   it('loads selected node content into editor', () => {
@@ -617,7 +632,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
     expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
 
-    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Notes' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Nodes' }));
     fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
     fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));

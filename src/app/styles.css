@@ -36,6 +36,13 @@ body {
   overflow: hidden;
 }
 
+.workspace-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-height: 0;
+}
+
 .workspace-toolbar {
   align-items: center;
   background: linear-gradient(170deg, var(--color-bg-panel), var(--color-bg-subtle));
@@ -186,6 +193,7 @@ body {
 
 .trash-inline-header {
   align-items: center;
+  border-top: 1px dashed var(--color-border-default);
   border-bottom: 1px dashed var(--color-border-default);
   display: flex;
   justify-content: space-between;
@@ -196,15 +204,13 @@ body {
 }
 
 .trash-inline-section[data-open='false'] .trash-inline-header {
-  border-top: 0;
   border-bottom: 0;
-  border-bottom-color: transparent;
-  min-height: calc(52px * 0.9);
-  padding-block: calc(var(--space-12) * 0.75) calc(var(--space-12) * 0.9);
+  min-height: 52px;
+  padding-block: var(--space-12);
 }
 
 .trash-inline-section[data-open='true'] .trash-inline-header {
-  border-top: 0;
+  border-bottom: 1px dashed var(--color-border-default);
 }
 
 .trash-inline-header:hover {
@@ -304,6 +310,8 @@ body {
 }
 
 .panel-list .ui-panel-header {
+  height: 52px;
+  min-height: 52px;
   padding-inline: var(--space-16);
 }
 
@@ -321,12 +329,15 @@ body {
 .panel-editor .ui-panel-header {
   align-items: center;
   gap: var(--space-12);
+  height: 52px;
   justify-content: space-between;
+  min-height: 52px;
   padding-inline: calc((100% - min(100%, var(--document-max-width))) / 2 + var(--space-16));
 }
 
 .document-header-breadcrumbs {
   flex: 1;
+  overflow: hidden;
   min-width: 0;
   padding-left: var(--space-8);
 }
@@ -335,6 +346,9 @@ body {
   display: block;
   min-width: 0;
   text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .node-breadcrumbs-item {
@@ -485,6 +499,29 @@ body {
   opacity: 1;
 }
 
+.workspace-review-toolbar {
+  flex: 0 0 auto;
+  justify-content: flex-start;
+  min-height: 52px;
+  padding: var(--space-12) var(--space-16);
+}
+
+.review-mode-toolbar-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-8);
+  justify-content: flex-start;
+}
+
+.workspace-review-toolbar[data-mode='study'] .review-mode-toolbar-actions {
+  justify-content: center;
+  width: 100%;
+}
+
+.review-grade-button {
+  min-width: 96px;
+}
+
 .markdown-editor-host {
   height: 100%;
   min-height: var(--layout-editor-min-height);
@@ -565,6 +602,10 @@ body.workspace-resizing {
     gap: var(--space-8);
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 38dvh) minmax(0, 1fr);
+  }
+
+  .workspace-right-column {
+    min-height: 0;
   }
 
   .workspace-splitter {

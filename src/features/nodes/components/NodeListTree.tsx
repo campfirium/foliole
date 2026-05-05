@@ -214,20 +214,20 @@ export function NodeListTree({
         title={
           <h2 className="node-list-title-heading">
             <button
-              aria-label="Notes"
+              aria-label="Nodes"
               aria-pressed={!isTrashViewOpen}
               className="notes-title-button"
               onClick={handleNotesHeaderClick}
               type="button"
             >
-              Notes
+              Nodes
             </button>
           </h2>
         }
       >
         <section aria-hidden={isTrashViewOpen} className="node-list-notes" data-collapsed={isTrashViewOpen}>
           {noteRows.length === 0 ? (
-            <EmptyState description="Create or import a node to start editing." title="No notes" />
+            <EmptyState description="Create or import a node to start editing." title="No nodes" />
           ) : (
             noteRows.map((row) => (
               <NodeTreeRow

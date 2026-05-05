@@ -75,7 +75,7 @@ export function DocumentPanelSection({
         bodyClassName="editor-body"
         className="panel-editor"
         style={documentLayoutStyle}
-        title="Note"
+        title="Content"
       >
         <div className="document-width-shell" data-resizing={isDocumentResizing}>
           <DocumentWidthHandle
