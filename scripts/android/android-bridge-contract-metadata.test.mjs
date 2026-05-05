@@ -74,6 +74,10 @@ describe('Android bridge contract metadata', () => {
       deviceSecret: 'device_secret',
       pairedAt: 'paired_at'
     });
+    expect(definitions.pairingPlugin.storageKeys).toMatchObject({
+      keyAlias: 'foliole_companion_pairing_secret',
+      preferencesName: 'foliole_companion_pairing'
+    });
     expect(definitions.pairingPlugin.signature).toMatchObject({
       headerKeys: {
         deviceId: 'X-Device-Id',
@@ -139,12 +143,15 @@ describe('Android bridge contract metadata', () => {
     expect(bridgeSource).toContain('pairingCredentialRequestKey(context, "deviceId")');
     expect(bridgeSource).toContain('pairingSignatureRequestKey(context, "method")');
     expect(bridgeSource).toContain('pairingPreferenceKey(context, "deviceId")');
+    expect(bridgeSource).toContain('pairingStorageKey(context, "keyAlias")');
     expect(bridgeSource).toContain('pairingStateKey(context, "deviceId")');
     expect(bridgeSource).toContain('pairingSignatureHeaderKey(context, "deviceId")');
     expect(bridgeSource).toContain('pairingSignatureResponseKey(context, "headers")');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdCredentialRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingMethodSignatureRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingPreferencesNameStorageKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingKeyAliasStorageKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdStateKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdSignatureHeaderKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingHeadersSignatureResponseKey(context)');
@@ -169,6 +176,8 @@ describe('Android bridge contract metadata', () => {
     expect(combinedSource).not.toContain('put("X-Timestamp"');
     expect(combinedSource).not.toContain('put("X-Nonce"');
     expect(combinedSource).not.toContain('put("X-Signature"');
+    expect(combinedSource).not.toContain('"foliole_companion_pairing_secret"');
+    expect(combinedSource).not.toContain('"foliole_companion_pairing"');
   });
 
 });

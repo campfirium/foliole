@@ -18,8 +18,6 @@ import javax.crypto.spec.SecretKeySpec;
 
 final class FolioleCompanionPairingStore {
     private static final String ANDROID_KEYSTORE = "AndroidKeyStore";
-    private static final String KEY_ALIAS = "foliole_companion_pairing_secret";
-    private static final String PREFS_NAME = "foliole_companion_pairing";
 
     private FolioleCompanionPairingStore() {}
 
@@ -53,7 +51,7 @@ final class FolioleCompanionPairingStore {
         String pairedAt
     ) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.ENCRYPT_MODE, loadOrCreateSecretKey());
+        cipher.init(Cipher.ENCRYPT_MODE, loadOrCreateSecretKey(context));
         byte[] iv = cipher.getIV();
         if (iv == null || iv.length == 0) {
             throw new IllegalStateException("Android Keystore did not provide an encryption IV.");
@@ -94,8 +92,8 @@ final class FolioleCompanionPairingStore {
         return result;
     }
 
-    private static SharedPreferences prefs(Context context) {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    private static SharedPreferences prefs(Context context) throws Exception {
+        return context.getSharedPreferences(FolioleCompanionBridgeContractDefinitions.pairingPreferencesNameStorageKey(context), Context.MODE_PRIVATE);
     }
 
     private static boolean canReadPairingSecret(Context context, String deviceId) {
@@ -127,15 +125,16 @@ final class FolioleCompanionPairingStore {
         }
     }
 
-    private static SecretKey loadOrCreateSecretKey() throws Exception {
+    private static SecretKey loadOrCreateSecretKey(Context context) throws Exception {
+        String keyAlias = FolioleCompanionBridgeContractDefinitions.pairingKeyAliasStorageKey(context);
         KeyStore keyStore = KeyStore.getInstance(ANDROID_KEYSTORE);
         keyStore.load(null);
-        if (keyStore.containsAlias(KEY_ALIAS)) {
-            return (SecretKey) keyStore.getKey(KEY_ALIAS, null);
+        if (keyStore.containsAlias(keyAlias)) {
+            return (SecretKey) keyStore.getKey(keyAlias, null);
         }
         KeyGenerator generator = KeyGenerator.getInstance("AES", ANDROID_KEYSTORE);
         generator.init(new android.security.keystore.KeyGenParameterSpec.Builder(
-            KEY_ALIAS,
+            keyAlias,
             android.security.keystore.KeyProperties.PURPOSE_DECRYPT | android.security.keystore.KeyProperties.PURPOSE_ENCRYPT
         )
             .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
@@ -151,7 +150,7 @@ final class FolioleCompanionPairingStore {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(
             Cipher.DECRYPT_MODE,
-            loadOrCreateSecretKey(),
+            loadOrCreateSecretKey(context),
             new GCMParameterSpec(128, Base64.decode(iv, Base64.NO_WRAP))
         );
         return new String(
@@ -160,7 +159,7 @@ final class FolioleCompanionPairingStore {
         );
     }
 
-    private static String requireMeta(Context context, String key) {
+    private static String requireMeta(Context context, String key) throws Exception {
         String value = trimToNull(prefs(context).getString(key, null));
         if (value == null) {
             throw new IllegalStateException("Companion is not paired.");

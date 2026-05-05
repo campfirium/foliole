@@ -77,6 +77,18 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingPreferenceKey(context, "pairedAt");
     }
 
+    static String pairingStorageKey(Context context, String key) throws Exception {
+        return string(context, "pairingPlugin", "storageKeys", key);
+    }
+
+    static String pairingKeyAliasStorageKey(Context context) throws Exception {
+        return pairingStorageKey(context, "keyAlias");
+    }
+
+    static String pairingPreferencesNameStorageKey(Context context) throws Exception {
+        return pairingStorageKey(context, "preferencesName");
+    }
+
     static String pairingSignatureHeaderKey(Context context, String key) throws Exception {
         return pairingSignatureString(context, "headerKeys", key);
     }

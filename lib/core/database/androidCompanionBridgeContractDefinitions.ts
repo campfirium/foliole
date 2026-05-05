@@ -81,6 +81,10 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       deviceSecretIv: 'device_secret_iv',
       pairedAt: 'paired_at'
     },
+    storageKeys: {
+      keyAlias: 'foliole_companion_pairing_secret',
+      preferencesName: 'foliole_companion_pairing'
+    },
     signature: {
       headerKeys: {
         deviceId: 'X-Device-Id',
