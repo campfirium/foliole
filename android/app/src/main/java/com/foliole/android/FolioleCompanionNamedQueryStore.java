@@ -83,6 +83,16 @@ final class FolioleCompanionNamedQueryStore {
         return new String[] { objectId };
     }
 
+    static String loadSyncPayload(Context context, SQLiteDatabase database, String objectType, String objectId) throws Exception {
+        String objectIdKey = objectIdKey(objectId);
+        String queryName = syncPayloadQueryName(context, objectType, objectIdKey);
+        if (queryName == null) {
+            return "{}";
+        }
+        String payload = loadString(context, database, queryName, syncPayloadQueryArgs(context, queryName, objectId, objectIdKey, objectIdDeviceId(objectId)));
+        return payload == null ? "{}" : payload;
+    }
+
     private static String replaceTokens(String sql, Map<String, String> replacements) {
         if (replacements == null) {
             return sql;
@@ -123,6 +133,16 @@ final class FolioleCompanionNamedQueryStore {
         }
         String prefix = payload.optString("objectIdPrefix", "");
         return prefix.isEmpty() || objectIdKey.startsWith(prefix);
+    }
+
+    private static String objectIdDeviceId(String objectId) {
+        String[] parts = objectId.split(":", 5);
+        return parts.length >= 4 ? parts[3] : "";
+    }
+
+    private static String objectIdKey(String objectId) {
+        String[] parts = objectId.split(":", 5);
+        return parts.length >= 5 ? parts[4] : objectId;
     }
 
     private static JSObject toRecord(Cursor cursor, JSONArray columns) throws Exception {

@@ -81,8 +81,8 @@ describe('FolioleCompanionSyncObjectStore', () => {
 
   it('loads sync object indexes and payloads through generated queries', async () => {
     const source = await readFile(SYNC_OBJECT_STORE, 'utf8');
-    const payloadReader = await readFile(
-      path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', 'FolioleCompanionSyncObjectPayloadReader.java'),
+    const namedQueryStore = await readFile(
+      path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', 'FolioleCompanionNamedQueryStore.java'),
       'utf8'
     );
     const queryDefinitions = JSON.parse(await readFile(COMPANION_QUERY_DEFINITIONS, 'utf8'));
@@ -96,7 +96,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(loadBody).toContain('syncObjectQueryReplacements');
     expect(source).not.toContain('objectTypeFilter');
     expect(queryDefinitions.queries.syncObjects.sql).toContain('? = 0 OR object_type IN (:objectTypes)');
-    expect(source).toContain('FolioleCompanionSyncObjectPayloadReader.readPayloadJson');
+    expect(source).toContain('FolioleCompanionNamedQueryStore.loadSyncPayload');
     expect(queryDefinitions.queries.syncPayloadAttachment.syncPayload).toEqual({
       argMode: 'object_id',
       objectType: 'attachment'
@@ -111,10 +111,13 @@ describe('FolioleCompanionSyncObjectStore', () => {
       objectIdPrefix: 'node:',
       objectType: 'view_state'
     });
-    expect(payloadReader).toContain('FolioleCompanionNamedQueryStore.syncPayloadQueryName');
-    expect(payloadReader).toContain('FolioleCompanionNamedQueryStore.syncPayloadQueryArgs');
-    expect(payloadReader).not.toContain('syncPayloadAttachment');
-    expect(payloadReader).not.toContain('objectType.equals("view_state")');
+    expect(namedQueryStore).toContain('static String loadSyncPayload');
+    expect(namedQueryStore).toContain('syncPayloadQueryName');
+    expect(namedQueryStore).toContain('syncPayloadQueryArgs');
+    await expect(readFile(
+      path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', 'FolioleCompanionSyncObjectPayloadReader.java'),
+      'utf8'
+    )).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('keeps removed Android state apply forks out of the sync store', async () => {

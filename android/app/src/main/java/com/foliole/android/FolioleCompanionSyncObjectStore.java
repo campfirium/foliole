@@ -53,7 +53,7 @@ final class FolioleCompanionSyncObjectStore {
         for (int index = 0; index < objects.length(); index += 1) {
             JSONObject object = objects.getJSONObject(index);
             object.put("payload_json", object.isNull("deleted_at") ?
-                FolioleCompanionSyncObjectPayloadReader.readPayloadJson(
+                FolioleCompanionNamedQueryStore.loadSyncPayload(
                     context,
                     database,
                     object.getString("object_type"),
