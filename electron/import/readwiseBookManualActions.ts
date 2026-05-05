@@ -9,6 +9,8 @@ import type {
 } from '../../lib/platform/nativeReadwiseContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import { runEpubImport } from '../ipc/epubImport.js';
+import { resolveSingleFileImportSource } from '../ipc/importSourcePipeline.js';
 
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { loadReadwiseBooksInventory, type ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
@@ -202,10 +204,15 @@ export async function loadReadwiseBookEpub(
 
   const epubPath = selection.filePaths[0].trim();
   saveRecentReadwiseBookEpubDirectory(epubPath);
+  const imported = await runEpubImport(resolveSingleFileImportSource(epubPath), new Date().toISOString());
+  const generatedNodeId = imported.nodeId ?? book.generatedNodeId;
   const updatedBook = {
     ...book,
     epubPath,
-    epubStatus: 'received'
+    epubStatus: 'received',
+    generatedNodeId,
+    importStatus: generatedNodeId ? 'completed' : book.importStatus,
+    nodeStatus: generatedNodeId ? 'generated' : book.nodeStatus
   } satisfies ReadwiseBookInventoryItem;
   const updatedInventory = {
     ...inventory,

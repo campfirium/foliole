@@ -28,10 +28,11 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { loadJsonSetting } from '../database/settingsStore.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { loadReadwiseBookEpub, openReadwiseBookDownload } from './readwiseBookManualActions.js';
@@ -85,6 +86,34 @@ async function createBooksFixture() {
   return { fullDocumentDir, highlightDir };
 }
 
+async function createBookEpub(fileName: string) {
+  const filePath = path.join(tempRoot, fileName);
+  await fs.writeFile(
+    filePath,
+    createTestZip([
+      { compression: 'store', content: 'application/epub+zip', name: 'mimetype' },
+      {
+        compression: 'store',
+        content:
+          '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+        name: 'META-INF/container.xml'
+      },
+      {
+        compression: 'store',
+        content:
+          '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Manual Book</dc:title></metadata><manifest><item id="chapter" href="text/chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="chapter"/></spine></package>',
+        name: 'OPS/book.opf'
+      },
+      {
+        compression: 'store',
+        content: '<html><body><h1>Chapter 1</h1><p>First chapter body.</p></body></html>',
+        name: 'OPS/text/chapter.xhtml'
+      }
+    ])
+  );
+  return filePath;
+}
+
 it('extracts the current book download link and opens it through the host shell', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
 
@@ -108,8 +137,10 @@ it('extracts the current book download link and opens it through the host shell'
   expect(openExternal).toHaveBeenCalledWith('https://readwise.example.com/books/manual-book.epub');
 });
 
-it('binds the selected EPUB to the current book and keeps the received status on reload', async () => {
+it('imports the selected EPUB into a real book structure and keeps that node on reload', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
+  const selectedEpubPath = await createBookEpub('selected-book.epub');
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [selectedEpubPath] });
 
   const inventory = await scanReadwiseBooksInventory({
     fullDocumentDirectoryPath: fullDocumentDir,
@@ -124,7 +155,7 @@ it('binds the selected EPUB to the current book and keeps the received status on
 
   expect(result).toEqual({
     book_key: 'manual book',
-    epub_path: '/tmp/selected-book.epub',
+    epub_path: selectedEpubPath,
     status: 'selected',
     title: 'Manual Book'
   });
@@ -138,13 +169,26 @@ it('binds the selected EPUB to the current book and keeps the received status on
     highlightDirectoryPath: highlightDir,
     readwiseConfig: createDefaultReadwiseReaderConfig()
   });
-  expect(reloadedInventory.books.find((book) => book.bookKey === 'manual book')).toMatchObject({
-    epubPath: '/tmp/selected-book.epub',
-    epubStatus: 'received'
+  const reloadedBook = reloadedInventory.books.find((book) => book.bookKey === 'manual book');
+  expect(reloadedBook).toMatchObject({
+    epubPath: selectedEpubPath,
+    epubStatus: 'received',
+    importStatus: 'completed'
   });
+  expect(reloadedBook?.generatedNodeId).toBeTruthy();
+  expect(reloadedBook?.generatedNodeId).not.toBe(buildReadwiseBookPlaceholderNodeId('manual book'));
 
   const snapshot = loadWorkspaceSnapshot();
-  expect(snapshot?.nodesById[buildReadwiseBookPlaceholderNodeId('manual book')]?.content).toContain('EPUB received');
+  const importedNode = reloadedBook?.generatedNodeId ? snapshot?.nodesById[reloadedBook.generatedNodeId] : null;
+  expect(importedNode?.title).toBe('Manual Book');
+  expect(importedNode?.content).toContain('# Manual Book');
+
+  const chapters = reloadedBook?.generatedNodeId
+    ? (openDatabaseConnection().sqlite
+        .prepare('SELECT title FROM nodes WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC')
+        .all(reloadedBook.generatedNodeId) as Array<{ title: string }>).map((chapter) => chapter.title)
+    : [];
+  expect(chapters).toContain('Chapter 1');
 });
 
 it('reopens the picker from the last selected EPUB folder after restart', async () => {
@@ -162,7 +206,7 @@ it('reopens the picker from the last selected EPUB folder after restart', async 
 
   const downloadDir = path.join(tempRoot, 'downloads');
   await fs.mkdir(downloadDir, { recursive: true });
-  const selectedEpubPath = path.join(downloadDir, 'selected-book.epub');
+  const selectedEpubPath = await createBookEpub(path.join('downloads', 'selected-book.epub'));
   showOpenDialog
     .mockResolvedValueOnce({ canceled: false, filePaths: [selectedEpubPath] })
     .mockResolvedValueOnce({ canceled: true, filePaths: [] });

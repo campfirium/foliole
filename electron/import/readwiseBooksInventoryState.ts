@@ -1,5 +1,6 @@
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 
+import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import type { ReadwiseBookInventoryItem, ReadwiseBooksInventory } from './readwiseBooksInventory.js';
 
 const READWISE_BOOKS_INVENTORY_STATE_KEY = 'readwise_books_inventory_state';
@@ -78,6 +79,15 @@ function normalizeState(value: unknown): PersistedReadwiseBooksInventoryState {
   };
 }
 
+function resolveGeneratedNodeId(book: ReadwiseBookInventoryItem, persistedBook?: ReadwiseBookInventoryItem) {
+  if (!persistedBook?.generatedNodeId) {
+    return book.generatedNodeId;
+  }
+  return !book.generatedNodeId || book.generatedNodeId === buildReadwiseBookPlaceholderNodeId(book.bookKey)
+    ? persistedBook.generatedNodeId
+    : book.generatedNodeId;
+}
+
 export function loadPersistedReadwiseBooksInventory(paths: InventoryPaths) {
   const state = normalizeState(loadJsonSetting(READWISE_BOOKS_INVENTORY_STATE_KEY));
   return state.inventories[createInventoryKey(paths)] ?? null;
@@ -106,14 +116,17 @@ export function mergePersistedReadwiseBooksInventory(input: {
   const mergedBooks = new Map(
     input.currentInventory.books.map((book) => {
       const persistedBook = persistedInventory.books.find((candidate) => candidate.bookKey === book.bookKey);
+      const generatedNodeId = resolveGeneratedNodeId(book, persistedBook);
       return [
         book.bookKey,
         {
           ...book,
           epubPath: book.epubPath ?? persistedBook?.epubPath ?? null,
           epubStatus: book.epubPath || persistedBook?.epubPath ? 'received' : 'missing',
+          generatedNodeId,
           importStatus:
-            book.importStatus === 'completed' || persistedBook?.importStatus === 'completed' ? 'completed' : 'pending'
+            book.importStatus === 'completed' || persistedBook?.importStatus === 'completed' ? 'completed' : 'pending',
+          nodeStatus: generatedNodeId ? 'generated' : 'missing'
         } satisfies ReadwiseBookInventoryItem
       ] as const;
     })
