@@ -23,11 +23,6 @@ vi.mock('./paths.js', () => ({
     app_log_dir: '/log'
   })
 }));
-vi.mock('../database/workspaceState.js', () => ({
-  clearWorkspaceStateFromSqlite: vi.fn(),
-  loadWorkspaceStateFromSqlite: vi.fn(),
-  saveWorkspaceStateToSqlite: vi.fn()
-}));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
   replaceNodeOrder: vi.fn(),

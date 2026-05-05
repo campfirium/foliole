@@ -111,6 +111,7 @@ describe('workspaceRuntimeSync node mutations', () => {
       createdAt: '2026-03-06T00:00:00.000Z',
       updatedAt: '2026-03-06T00:00:01.000Z'
     });
+    expectNoWorkspacePersist(invoke);
   });
 
   it('syncs full node order through replace_node_order command', () => {
@@ -120,6 +121,7 @@ describe('workspaceRuntimeSync node mutations', () => {
     syncNodeOrderToRuntime(['node-1', 'node-2']);
 
     expect(invoke).toHaveBeenCalledWith('replace_node_order', { nodeIds: ['node-1', 'node-2'] });
+    expectNoWorkspacePersist(invoke);
   });
 });
 

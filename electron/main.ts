@@ -23,7 +23,6 @@ import {
 } from './ipc/contracts.js';
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { bindMenuToWindow, installAppMenu } from './ipc/menu.js';
-import { migrateLegacyWorkspaceState } from './ipc/storage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -199,7 +198,6 @@ app.whenReady().then(async () => {
   initializeDatabase();
   installInvokeHandler();
   installAppMenu();
-  await migrateLegacyWorkspaceState('foliole-workspace-v1');
   await migrateLegacyWebviewStorage();
   await createMainWindow();
 

@@ -38,11 +38,6 @@ vi.mock('./paths.js', () => ({
     app_log_dir: '/log'
   })
 }));
-vi.mock('../database/workspaceState.js', () => ({
-  clearWorkspaceStateFromSqlite: vi.fn(),
-  loadWorkspaceStateFromSqlite: vi.fn().mockReturnValue('{"state":1}'),
-  saveWorkspaceStateToSqlite: vi.fn()
-}));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
   replaceNodeOrder: vi.fn(),
@@ -62,29 +57,6 @@ vi.mock('./review.js', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockWindow.isMaximized.mockReturnValue(false);
-});
-
-it('handles workspace state storage commands', async () => {
-  await expect(
-    handleInvokeRequest({
-      command: 'save_workspace_state',
-      args: { storageKey: 'foliole-workspace-v1', payload: '{}' }
-    })
-  ).resolves.toBeNull();
-
-  await expect(
-    handleInvokeRequest({
-      command: 'load_workspace_state',
-      args: { storageKey: 'foliole-workspace-v1' }
-    })
-  ).resolves.toBe('{"state":1}');
-
-  await expect(
-    handleInvokeRequest({
-      command: 'clear_workspace_state',
-      args: { storageKey: 'foliole-workspace-v1' }
-    })
-  ).resolves.toBeNull();
 });
 
 it('handles node mutation commands', async () => {
