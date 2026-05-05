@@ -37,7 +37,7 @@ export function resolveStoredReadingSelection(props: StoredReadingSelectionSourc
   }
   const editor = props.editorAdapterRef.current;
   if (!editor) {
-    return getReadingPositionSelection(props, { from: 0, to: 0 });
+    return props.editorNodeViewState?.selection ?? null;
   }
   return getReadingPositionSelection(props, editor.getSelection());
 }

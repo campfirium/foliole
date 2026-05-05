@@ -219,8 +219,8 @@ export function useReadingSelectionState(
   }, [
     props.activeNodeId,
     props.editorAdapterRef,
-    props.editorNodeViewState?.selection.from,
-    props.editorNodeViewState?.selection.to,
+    props.editorNodeViewState?.selection?.from,
+    props.editorNodeViewState?.selection?.to,
     props.getReadingPositionSelection,
     props.getReadingPositionSyncState,
     props.setReadingPositionSelection
