@@ -10,12 +10,20 @@ import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import {
   INTERFACE_FONT_SIZE_DEFAULT,
   applyAppearanceSettings,
+  getCustomUiFont,
+  getCustomInterfaceFont,
+  getCustomMonospaceFont,
   getInterfaceFontPreset,
   getInterfaceFontSize,
   getMonospaceFontPreset,
+  getUiFontPreset,
+  setCustomUiFont,
+  setCustomInterfaceFont,
+  setCustomMonospaceFont,
   setInterfaceFontPreset,
   setInterfaceFontSize,
   setMonospaceFontPreset,
+  setUiFontPreset,
   type InterfaceFontPreset,
   type MonospaceFontPreset
 } from '../features/settings/model/appearanceSettings';
@@ -78,8 +86,12 @@ export function App() {
   const [markdownSyntaxVisibility, setMarkdownSyntaxVisibilityState] = useState<MarkdownSyntaxVisibility>(() =>
     getMarkdownSyntaxVisibility()
   );
+  const [uiFontPreset, setUiFontPresetState] = useState<InterfaceFontPreset>(() => getUiFontPreset());
+  const [customUiFont, setCustomUiFontState] = useState(() => getCustomUiFont());
   const [interfaceFontPreset, setInterfaceFontPresetState] = useState<InterfaceFontPreset>(() => getInterfaceFontPreset());
+  const [customInterfaceFont, setCustomInterfaceFontState] = useState(() => getCustomInterfaceFont());
   const [monospaceFontPreset, setMonospaceFontPresetState] = useState<MonospaceFontPreset>(() => getMonospaceFontPreset());
+  const [customMonospaceFont, setCustomMonospaceFontState] = useState(() => getCustomMonospaceFont());
   const [interfaceFontSize, setInterfaceFontSizeState] = useState(() => getInterfaceFontSize());
   const { canStartStudyMode, isStudyMode, resetStudyMode, startStudyMode } = useStudyMode({
     activeNodeId,
@@ -266,9 +278,29 @@ export function App() {
     setInterfaceFontPresetState(value);
   };
 
+  const handleUiFontPresetChange = (value: InterfaceFontPreset) => {
+    setUiFontPreset(value);
+    setUiFontPresetState(value);
+  };
+
+  const handleCustomUiFontChange = (value: string) => {
+    setCustomUiFont(value);
+    setCustomUiFontState(value);
+  };
+
+  const handleCustomInterfaceFontChange = (value: string) => {
+    setCustomInterfaceFont(value);
+    setCustomInterfaceFontState(value);
+  };
+
   const handleMonospaceFontPresetChange = (value: MonospaceFontPreset) => {
     setMonospaceFontPreset(value);
     setMonospaceFontPresetState(value);
+  };
+
+  const handleCustomMonospaceFontChange = (value: string) => {
+    setCustomMonospaceFont(value);
+    setCustomMonospaceFontState(value);
   };
 
   const handleInterfaceFontSizeChange = (value: number) => {
@@ -338,11 +370,15 @@ export function App() {
 
   useEffect(() => {
     applyAppearanceSettings({
+      uiFont: uiFontPreset,
+      customUiFont,
       interfaceFont: interfaceFontPreset,
       interfaceFontSize,
-      monospaceFont: monospaceFontPreset
+      monospaceFont: monospaceFontPreset,
+      customInterfaceFont,
+      customMonospaceFont
     });
-  }, [interfaceFontPreset, interfaceFontSize, monospaceFontPreset]);
+  }, [customInterfaceFont, customMonospaceFont, customUiFont, interfaceFontPreset, interfaceFontSize, monospaceFontPreset, uiFontPreset]);
 
   return (
     <WorkspaceLayout
@@ -389,13 +425,21 @@ export function App() {
       onOpenSettings={handleOpenSettings}
       onCloseSettings={handleCloseSettings}
       onInterfaceFontPresetChange={handleInterfaceFontPresetChange}
+      onUiFontPresetChange={handleUiFontPresetChange}
+      onCustomUiFontChange={handleCustomUiFontChange}
+      onCustomInterfaceFontChange={handleCustomInterfaceFontChange}
       onMonospaceFontPresetChange={handleMonospaceFontPresetChange}
+      onCustomMonospaceFontChange={handleCustomMonospaceFontChange}
       onInterfaceFontSizeChange={handleInterfaceFontSizeChange}
       onInterfaceFontSizeReset={handleInterfaceFontSizeReset}
       onMarkdownSyntaxVisibilityChange={handleMarkdownSyntaxVisibilityChange}
       onOpenNotesView={handleOpenNotesView}
       onOpenTrashView={handleOpenTrashView}
       onToggleListVisibility={handleToggleListVisibility}
+      customUiFont={customUiFont}
+      customInterfaceFont={customInterfaceFont}
+      customMonospaceFont={customMonospaceFont}
+      uiFontPreset={uiFontPreset}
       interfaceFontPreset={interfaceFontPreset}
       interfaceFontSize={interfaceFontSize}
       markdownSyntaxVisibility={markdownSyntaxVisibility}

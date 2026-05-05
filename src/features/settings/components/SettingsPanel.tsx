@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import {
@@ -7,15 +7,24 @@ import {
   type InterfaceFontPreset,
   type MonospaceFontPreset
 } from '../model/appearanceSettings';
+import { listAvailableSystemFonts } from '../model/systemFonts';
 
 type SettingsCategoryId = 'about' | 'editor' | 'appearance' | 'hotkeys';
 
 interface SettingsPanelProps {
+  customUiFont: string;
+  customInterfaceFont: string;
+  customMonospaceFont: string;
+  uiFontPreset: InterfaceFontPreset;
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
   onClose: () => void;
+  onCustomUiFontChange: (value: string) => void;
+  onCustomInterfaceFontChange: (value: string) => void;
+  onCustomMonospaceFontChange: (value: string) => void;
+  onUiFontPresetChange: (value: InterfaceFontPreset) => void;
   onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
@@ -30,23 +39,189 @@ const SETTINGS_CATEGORIES: Array<{ id: SettingsCategoryId; label: string }> = [
   { id: 'hotkeys', label: 'Hotkeys' }
 ];
 
+const SETTINGS_CATEGORY_STORAGE_KEY = 'foliole-settings-active-category';
+const INTERFACE_PRESET_OPTION_VALUES: InterfaceFontPreset[] = ['default', 'inter', 'system', 'source-sans', 'serif', 'rounded'];
+const MONOSPACE_PRESET_OPTION_VALUES: MonospaceFontPreset[] = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa'];
+
+function isSettingsCategoryId(value: string): value is SettingsCategoryId {
+  return SETTINGS_CATEGORIES.some((category) => category.id === value);
+}
+
+function getInitialSettingsCategory(): SettingsCategoryId {
+  if (typeof window === 'undefined') {
+    return 'editor';
+  }
+  const raw = window.localStorage.getItem(SETTINGS_CATEGORY_STORAGE_KEY);
+  return raw && isSettingsCategoryId(raw) ? raw : 'editor';
+}
+
+function presetLabel(preset: InterfaceFontPreset) {
+  switch (preset) {
+    case 'default':
+      return 'Default';
+    case 'inter':
+      return 'Inter';
+    case 'system':
+      return 'System UI';
+    case 'source-sans':
+      return 'Source Sans';
+    case 'serif':
+      return 'Serif';
+    case 'rounded':
+      return 'Rounded';
+    default:
+      return 'Custom';
+  }
+}
+
+function monospacePresetLabel(preset: MonospaceFontPreset) {
+  switch (preset) {
+    case 'default':
+      return 'Default';
+    case 'jetbrains':
+      return 'JetBrains Mono';
+    case 'cascadia':
+      return 'Cascadia Code';
+    case 'consolas':
+      return 'Consolas';
+    case 'fira':
+      return 'Fira Code';
+    case 'sarasa':
+      return 'Sarasa Mono';
+    default:
+      return 'Custom';
+  }
+}
+
 export function SettingsPanel({
+  customUiFont,
+  customInterfaceFont,
+  customMonospaceFont,
+  uiFontPreset,
   interfaceFontPreset,
   interfaceFontSize,
   markdownSyntaxVisibility,
   monospaceFontPreset,
   onClose,
+  onCustomUiFontChange,
+  onCustomInterfaceFontChange,
+  onCustomMonospaceFontChange,
+  onUiFontPresetChange,
   onInterfaceFontPresetChange,
   onInterfaceFontSizeChange,
   onInterfaceFontSizeReset,
   onMarkdownSyntaxVisibilityChange,
   onMonospaceFontPresetChange
 }: SettingsPanelProps) {
-  const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>('editor');
+  const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => getInitialSettingsCategory());
+  const [availableSystemFonts, setAvailableSystemFonts] = useState<string[]>([]);
+  const [availableMonospaceFonts, setAvailableMonospaceFonts] = useState<string[]>([]);
+  const uiFontOptions = useMemo(() => {
+    const all = new Set(availableSystemFonts);
+    if (customUiFont) {
+      all.add(customUiFont);
+    }
+    return [...all].sort((left, right) => left.localeCompare(right));
+  }, [availableSystemFonts, customUiFont]);
+  const interfaceFontOptions = useMemo(() => {
+    const all = new Set(availableSystemFonts);
+    if (customInterfaceFont) {
+      all.add(customInterfaceFont);
+    }
+    return [...all].sort((left, right) => left.localeCompare(right));
+  }, [availableSystemFonts, customInterfaceFont]);
+  const monospaceFontOptions = useMemo(() => {
+    const all = new Set(availableSystemFonts);
+    if (customMonospaceFont) {
+      all.add(customMonospaceFont);
+    }
+    const sorted = [...all].sort((left, right) => left.localeCompare(right));
+    const monoSet = new Set(availableMonospaceFonts);
+    const monospaceFirst = sorted.filter((font) => monoSet.has(font));
+    const remaining = sorted.filter((font) => !monoSet.has(font));
+    return [...monospaceFirst, ...remaining];
+  }, [availableMonospaceFonts, availableSystemFonts, customMonospaceFont]);
+  const selectedUiFontValue =
+    uiFontPreset === 'custom' ? (customUiFont ? `ui-font:${customUiFont}` : 'ui-preset:default') : `ui-preset:${uiFontPreset}`;
+  const selectedInterfaceFontValue =
+    interfaceFontPreset === 'custom'
+      ? customInterfaceFont
+        ? `font:${customInterfaceFont}`
+        : 'preset:default'
+      : `preset:${interfaceFontPreset}`;
+  const selectedMonospaceFontValue =
+    monospaceFontPreset === 'custom'
+      ? customMonospaceFont
+        ? `mono-font:${customMonospaceFont}`
+        : 'mono-preset:default'
+      : `mono-preset:${monospaceFontPreset}`;
   const title = useMemo(
     () => SETTINGS_CATEGORIES.find((category) => category.id === activeCategory)?.label ?? 'Settings',
     [activeCategory]
   );
+
+  useEffect(() => {
+    let alive = true;
+    listAvailableSystemFonts().then((fonts) => {
+      if (alive) {
+        setAvailableSystemFonts(fonts.fonts);
+        setAvailableMonospaceFonts(fonts.monospaceFonts);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory);
+  }, [activeCategory]);
+
+  const handleCategoryChange = (category: SettingsCategoryId) => {
+    setActiveCategory(category);
+  };
+
+  const handleInterfaceFontSelectionChange = (value: string) => {
+    if (value.startsWith('preset:')) {
+      const preset = value.slice('preset:'.length) as InterfaceFontPreset;
+      onInterfaceFontPresetChange(preset);
+      return;
+    }
+    if (value.startsWith('font:')) {
+      const font = value.slice('font:'.length);
+      onCustomInterfaceFontChange(font);
+      onInterfaceFontPresetChange('custom');
+    }
+  };
+
+  const handleUiFontSelectionChange = (value: string) => {
+    if (value.startsWith('ui-preset:')) {
+      const preset = value.slice('ui-preset:'.length) as InterfaceFontPreset;
+      onUiFontPresetChange(preset);
+      return;
+    }
+    if (value.startsWith('ui-font:')) {
+      const font = value.slice('ui-font:'.length);
+      onCustomUiFontChange(font);
+      onUiFontPresetChange('custom');
+    }
+  };
+
+  const handleMonospaceFontSelectionChange = (value: string) => {
+    if (value.startsWith('mono-preset:')) {
+      const preset = value.slice('mono-preset:'.length) as MonospaceFontPreset;
+      onMonospaceFontPresetChange(preset);
+      return;
+    }
+    if (value.startsWith('mono-font:')) {
+      const font = value.slice('mono-font:'.length);
+      onCustomMonospaceFontChange(font);
+      onMonospaceFontPresetChange('custom');
+    }
+  };
 
   return (
     <section aria-label="Settings" className="settings-root" onMouseDown={onClose} role="presentation">
@@ -58,7 +233,7 @@ export function SettingsPanel({
               <button
                 className={`settings-nav-item${category.id === activeCategory ? ' settings-nav-item-active' : ''}`}
                 key={category.id}
-                onClick={() => setActiveCategory(category.id)}
+                onClick={() => handleCategoryChange(category.id)}
                 type="button"
               >
                 {category.label}
@@ -102,42 +277,75 @@ export function SettingsPanel({
                 <div className="settings-row">
                   <div className="settings-row-copy">
                     <h4>Interface font</h4>
-                    <p>Font used in the main content panel text.</p>
+                    <p>Font used for app chrome and UI controls.</p>
                   </div>
                   <label className="settings-select-wrap">
-                    <span className="sr-only">Interface font preset</span>
+                    <span className="sr-only">Interface font</span>
                     <select
                       className="settings-select"
-                      onChange={(event) => onInterfaceFontPresetChange(event.target.value as InterfaceFontPreset)}
-                      value={interfaceFontPreset}
+                      onChange={(event) => handleUiFontSelectionChange(event.target.value)}
+                      value={selectedUiFontValue}
                     >
-                      <option value="default">Default</option>
-                      <option value="inter">Inter</option>
-                      <option value="system">System UI</option>
-                      <option value="source-sans">Source Sans</option>
-                      <option value="serif">Serif</option>
-                      <option value="rounded">Rounded</option>
+                      {INTERFACE_PRESET_OPTION_VALUES.map((preset) => (
+                        <option key={preset} value={`ui-preset:${preset}`}>
+                          {presetLabel(preset)}
+                        </option>
+                      ))}
+                      {uiFontOptions.map((font) => (
+                        <option key={font} value={`ui-font:${font}`}>
+                          {font}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-row-copy">
+                    <h4>Text font</h4>
+                    <p>Font used in main content text.</p>
+                  </div>
+                  <label className="settings-select-wrap">
+                    <span className="sr-only">Text font</span>
+                    <select
+                      className="settings-select"
+                      onChange={(event) => handleInterfaceFontSelectionChange(event.target.value)}
+                      value={selectedInterfaceFontValue}
+                    >
+                      {INTERFACE_PRESET_OPTION_VALUES.map((preset) => (
+                        <option key={preset} value={`preset:${preset}`}>
+                          {presetLabel(preset)}
+                        </option>
+                      ))}
+                      {interfaceFontOptions.map((font) => (
+                        <option key={font} value={`font:${font}`}>
+                          {font}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-copy">
                     <h4>Monospace font</h4>
-                    <p>Monospace font used in code and fenced blocks in main panel.</p>
+                    <p>Code font in fenced blocks and inline code. Monospaced fonts are listed first.</p>
                   </div>
                   <label className="settings-select-wrap">
                     <span className="sr-only">Monospace font preset</span>
                     <select
                       className="settings-select"
-                      onChange={(event) => onMonospaceFontPresetChange(event.target.value as MonospaceFontPreset)}
-                      value={monospaceFontPreset}
+                      onChange={(event) => handleMonospaceFontSelectionChange(event.target.value)}
+                      value={selectedMonospaceFontValue}
                     >
-                      <option value="default">Default</option>
-                      <option value="jetbrains">JetBrains Mono</option>
-                      <option value="cascadia">Cascadia Code</option>
-                      <option value="consolas">Consolas</option>
-                      <option value="fira">Fira Code</option>
-                      <option value="sarasa">Sarasa Mono</option>
+                      {MONOSPACE_PRESET_OPTION_VALUES.map((preset) => (
+                        <option key={preset} value={`mono-preset:${preset}`}>
+                          {monospacePresetLabel(preset)}
+                        </option>
+                      ))}
+                      {monospaceFontOptions.map((font) => (
+                        <option key={font} value={`mono-font:${font}`}>
+                          {font}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>

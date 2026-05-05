@@ -8,11 +8,13 @@
 
 :root {
   --font-family-interface:
-    'Inter Variable', Inter, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI',
-    'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif;
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC',
+    sans-serif;
   --font-family-text:
-    'Inter Variable', Inter, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei',
-    'Noto Sans CJK SC', 'Noto Sans SC', sans-serif;
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC',
+    sans-serif;
   --font-family-sans: var(--font-family-text);
   --font-family-mono:
     'JetBrains Mono', 'Cascadia Code', 'Sarasa Mono SC', 'SFMono-Regular', Menlo, Consolas,
@@ -29,13 +31,20 @@ body {
   margin: 0;
   background: #ffffff;
   color: #202124;
-  font-family: var(--font-family-interface);
+  font-family: var(--app-interface-font-family, var(--font-family-interface));
   font-size: var(--app-font-size, 15px);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   overflow: hidden;
+}
+
+.radix-themes {
+  --default-font-family: var(--app-interface-font-family, var(--font-family-interface));
+  --heading-font-family: var(--default-font-family);
+  --strong-font-family: var(--default-font-family);
+  --code-font-family: var(--content-panel-mono-font-family, var(--font-family-mono));
 }
 
 .window-titlebar {
@@ -174,7 +183,7 @@ body {
 }
 
 .markdown-editor-host .cm-scroller {
-  font-size: 1.0625rem;
+  font-size: var(--content-panel-font-size, 1.0625rem);
   line-height: 1.76;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -332,6 +341,11 @@ body.workspace-resizing {
   margin: 0;
 }
 
+.settings-row-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .settings-row-copy p {
   color: #5f666f;
   margin: 2px 0 0;
@@ -339,6 +353,8 @@ body.workspace-resizing {
 
 .settings-select-wrap {
   display: inline-flex;
+  flex: 0 0 360px;
+  max-width: 100%;
 }
 
 .settings-select {
@@ -346,7 +362,8 @@ body.workspace-resizing {
   border-radius: 8px;
   color: #1f2328;
   font: inherit;
-  min-width: 190px;
+  min-width: 0;
+  width: 100%;
   padding: 6px 8px;
 }
 
@@ -414,5 +431,10 @@ body.workspace-resizing {
   .settings-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .settings-select-wrap {
+    width: 100%;
+    flex-basis: auto;
   }
 }

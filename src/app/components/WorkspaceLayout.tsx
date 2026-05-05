@@ -66,12 +66,20 @@ export interface WorkspaceLayoutProps {
   onOpenSettings: () => void;
   onCloseSettings: () => void;
   onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
+  onUiFontPresetChange: (value: InterfaceFontPreset) => void;
+  onCustomUiFontChange: (value: string) => void;
+  onCustomInterfaceFontChange: (value: string) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
+  onCustomMonospaceFontChange: (value: string) => void;
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => void;
+  customUiFont: string;
+  customInterfaceFont: string;
+  customMonospaceFont: string;
+  uiFontPreset: InterfaceFontPreset;
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
@@ -124,12 +132,20 @@ export function WorkspaceLayout({
   onOpenSettings,
   onCloseSettings,
   onInterfaceFontPresetChange,
+  onUiFontPresetChange,
+  onCustomUiFontChange,
+  onCustomInterfaceFontChange,
   onMonospaceFontPresetChange,
+  onCustomMonospaceFontChange,
   onInterfaceFontSizeChange,
   onInterfaceFontSizeReset,
   onMarkdownSyntaxVisibilityChange,
   onRevealAnswer,
   onGradeReview,
+  customUiFont,
+  customInterfaceFont,
+  customMonospaceFont,
+  uiFontPreset,
   interfaceFontPreset,
   interfaceFontSize,
   markdownSyntaxVisibility,
@@ -235,12 +251,20 @@ export function WorkspaceLayout({
       </div>
       {isSettingsOpen ? (
         <SettingsPanel
+          customUiFont={customUiFont}
+          customInterfaceFont={customInterfaceFont}
+          customMonospaceFont={customMonospaceFont}
+          uiFontPreset={uiFontPreset}
           interfaceFontPreset={interfaceFontPreset}
           interfaceFontSize={interfaceFontSize}
           markdownSyntaxVisibility={markdownSyntaxVisibility}
           monospaceFontPreset={monospaceFontPreset}
           onClose={onCloseSettings}
+          onUiFontPresetChange={onUiFontPresetChange}
+          onCustomUiFontChange={onCustomUiFontChange}
+          onCustomInterfaceFontChange={onCustomInterfaceFontChange}
           onInterfaceFontPresetChange={onInterfaceFontPresetChange}
+          onCustomMonospaceFontChange={onCustomMonospaceFontChange}
           onInterfaceFontSizeChange={onInterfaceFontSizeChange}
           onInterfaceFontSizeReset={onInterfaceFontSizeReset}
           onMarkdownSyntaxVisibilityChange={onMarkdownSyntaxVisibilityChange}

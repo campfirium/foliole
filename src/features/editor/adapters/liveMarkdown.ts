@@ -393,20 +393,20 @@ const liveMarkdownTheme = EditorView.theme({
     padding: 0
   },
   '.cm-line.cm-line-h1': {
-    fontSize: '1.5rem',
+    fontSize: 'var(--content-panel-h1-font-size, 1.5rem)',
     fontWeight: '700',
     letterSpacing: '-0.01em',
     paddingBottom: '0.25rem',
     paddingTop: '0.75rem'
   },
   '.cm-line.cm-line-h2': {
-    fontSize: '1.25rem',
+    fontSize: 'var(--content-panel-h2-font-size, 1.25rem)',
     fontWeight: '700',
     paddingBottom: '0.2rem',
     paddingTop: '0.65rem'
   },
   '.cm-line.cm-line-h3': {
-    fontSize: '1.08rem',
+    fontSize: 'var(--content-panel-h3-font-size, 1.08rem)',
     fontWeight: '650',
     paddingTop: '0.5rem'
   },
@@ -434,7 +434,7 @@ const liveMarkdownTheme = EditorView.theme({
     backgroundColor: 'rgba(15, 23, 42, 0.06)',
     borderRadius: '0.35rem',
     fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))',
-    fontSize: '0.86rem',
+    fontSize: 'var(--content-panel-code-font-size, 0.86rem)',
     padding: '0.04rem 0.5rem'
   },
   '.cm-md-syntax-visible': {
