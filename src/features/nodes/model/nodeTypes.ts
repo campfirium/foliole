@@ -77,7 +77,7 @@ export interface Node {
   hideTitleHeading?: boolean;
   hasContent?: boolean;
   hasReveal?: boolean;
-  opening?: string | null;
+  openingText?: string | null;
   content: string;
   virtualFilter?: VirtualNodeFilter | null;
   anchorLink?: NodeAnchorLink | null;

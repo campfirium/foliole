@@ -23,19 +23,31 @@ beforeEach(() => {
   vi.clearAllMocks();
   getRuntimeInvoke.mockReturnValue(null);
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-04-09T00:00:00.000Z')));
+  useWorkspaceStore.getState().createRootNode('');
   delete (window as Window & { __folioleWorkspaceDebug?: unknown }).__folioleWorkspaceDebug;
 });
 
+function getSeedNodeId() {
+  const seedNode = useWorkspaceStore
+    .getState()
+    .nodeOrder.find((nodeId) => useWorkspaceStore.getState().nodesById[nodeId]?.specialKind == null);
+  if (!seedNode) {
+    throw new Error('missing seed node');
+  }
+  return seedNode;
+}
+
 it('opens debug nodes through the prepared open path', async () => {
   installWorkspaceDebugBridge();
+  const seedNodeId = getSeedNodeId();
   const debugApi = (window as Window & {
     __folioleWorkspaceDebug?: { openNode: (nodeId: string) => Promise<boolean> };
   }).__folioleWorkspaceDebug;
 
-  const opened = await debugApi?.openNode('node-1');
+  const opened = await debugApi?.openNode(seedNodeId);
 
   expect(opened).toBe(true);
-  expect(openWorkspaceNodeWithPreparedDocument).toHaveBeenCalledWith('node-1');
+  expect(openWorkspaceNodeWithPreparedDocument).toHaveBeenCalledWith(seedNodeId);
 });
 
 it('reads active node id and saved node view state through the debug bridge', () => {

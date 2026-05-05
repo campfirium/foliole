@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { dialog, shell, type BrowserWindow } from 'electron';
 
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type {
   NativeReadwiseBookEpubProgressEvent,
   NativeReadwiseBookDownloadResult,
@@ -90,8 +91,13 @@ function refreshPlaceholderNode(book: ReadwiseBookInventoryItem) {
     return;
   }
   openDatabaseConnection().sqlite
-    .prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
-    .run(buildReadwiseBookPlaceholderContent(book), new Date().toISOString(), placeholderNodeId);
+    .prepare('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
+    .run(
+      buildReadwiseBookPlaceholderContent(book),
+      null,
+      new Date().toISOString(),
+      placeholderNodeId
+    );
 }
 
 export async function openReadwiseBookDownload(nodeId: string): Promise<NativeReadwiseBookDownloadResult> {

@@ -109,6 +109,10 @@ it('creates minimal readwise book nodes with status and action placeholders', as
   expect(placeholderNode?.content).toContain('## Next actions');
   expect(placeholderNode?.content).toContain('Download EPUB*');
   expect(placeholderNode?.content).toContain('Load EPUB*');
+  const placeholderRow = openDatabaseConnection().sqlite
+    .prepare('SELECT opening_text FROM nodes WHERE id = ?')
+    .get(annotatedBook?.generatedNodeId) as { opening_text: string | null } | undefined;
+  expect(placeholderRow?.opening_text).toBeNull();
 });
 
 it('uses the same executable auto-node rule for annotated and unannotated books', async () => {

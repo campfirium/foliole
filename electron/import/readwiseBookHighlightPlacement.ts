@@ -12,12 +12,14 @@ import {
 } from '../../lib/core/import/highlightExcerptMatch.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 interface ImportedBookSection {
   [column: string]: unknown;
   content: string;
   id: string;
+  title: string;
 }
 
 interface LocatedReadwiseBookHighlight extends PreparedImportHighlightRecord {
@@ -43,13 +45,14 @@ function readNextNodePosition(driver: DatabaseDriver) {
 function readImportedBookSections(rootNodeId: string) {
   const connection = openDatabaseConnection();
   return connection.driver.queryAll<ImportedBookSection>(
-    `WITH RECURSIVE book_sections(id, parent_id, content, anchor_link, sort_path) AS (
-       SELECT n.id, n.parent_id, n.content, n.anchor_link, '' AS sort_path
+    `WITH RECURSIVE book_sections(id, parent_id, title, content, anchor_link, sort_path) AS (
+       SELECT n.id, n.parent_id, n.title, n.content, n.anchor_link, '' AS sort_path
        FROM nodes n
        WHERE n.id = ? AND n.deleted_at IS NULL
        UNION ALL
        SELECT child.id,
               child.parent_id,
+              child.title,
               child.content,
               child.anchor_link,
               book_sections.sort_path || '.' || printf('%020d', COALESCE(o.position, 0))
@@ -58,7 +61,7 @@ function readImportedBookSections(rootNodeId: string) {
        JOIN book_sections ON child.parent_id = book_sections.id
        WHERE child.deleted_at IS NULL
      )
-     SELECT id, content
+     SELECT id, title, content
      FROM book_sections
      WHERE id <> ? AND anchor_link IS NULL
      ORDER BY sort_path, id`,
@@ -161,7 +164,12 @@ function persistSectionHighlights(input: {
       const baseContent = stripImportedHighlightAnchors(section.content);
       const anchored = applyImportedHighlightAnchors({ content: baseContent, highlights: sectionHighlights });
       if (anchored.content !== section.content) {
-        driver.execute('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?', [anchored.content, input.importedAt, section.id]);
+        driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
+          anchored.content,
+          resolveNodeOpeningText(anchored.content, section.title),
+          input.importedAt,
+          section.id
+        ]);
       }
       const insertedCount = replaceImportedHighlightNodes({
         driver,

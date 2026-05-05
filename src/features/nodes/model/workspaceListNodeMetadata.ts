@@ -195,18 +195,18 @@ export function getWorkspaceListNodeSummary(node: Pick<Node, 'content' | 'title'
   return truncateSummary(summary);
 }
 
-export function getWorkspaceListNodeOpening(node: Pick<Node, 'content' | 'kind' | 'title' | 'opening'>) {
+export function getWorkspaceListNodeOpening(node: Pick<Node, 'content' | 'kind' | 'title' | 'openingText'>) {
   if (node.kind === 'folder') {
     return WORKSPACE_LIST_OPENING_FALLBACK;
   }
 
-  const contentOpening = node.content.trim() ? extractNodeOpeningPreview(node.content, node.title) : WORKSPACE_LIST_OPENING_FALLBACK;
-  if (contentOpening !== WORKSPACE_LIST_OPENING_FALLBACK) {
-    return contentOpening;
+  if (typeof node.openingText === 'string' && node.openingText.trim()) {
+    return node.openingText;
   }
-  if (typeof node.opening === 'string' && node.opening.trim()) {
-    return node.opening;
-  }
+
+  const contentOpening = node.content.trim()
+    ? extractNodeOpeningPreview(node.content, node.title)
+    : WORKSPACE_LIST_OPENING_FALLBACK;
   return contentOpening;
 }
 

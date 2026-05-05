@@ -88,9 +88,14 @@ function createActionsHarness() {
   const invoke = vi.fn().mockResolvedValue(null);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
   const harness = createSetStateHarness(createWorkspaceFixture());
+  const actions = createWorkspaceNodeActions(harness.setState);
+  const seedNodeId = actions.createRootNode('');
+  vi.clearAllMocks();
   return {
-    actions: createWorkspaceNodeActions(harness.setState),
-    invoke
+    actions,
+    harness,
+    invoke,
+    seedNodeId
   };
 }
 
@@ -100,60 +105,57 @@ describe('workspace node actions runtime guardrail', () => {
   });
 
   it('updateNodeContent uses update_node_content only and never save_workspace_state', () => {
-    const { actions, invoke } = createActionsHarness();
+    const { actions, invoke, seedNodeId } = createActionsHarness();
 
-    actions.updateNodeContent('node-1', '# Updated title\n\nBody');
+    actions.updateNodeContent(seedNodeId, '# Updated title\n\nBody');
 
     expect(getInvokedCommands(invoke)).toEqual(['update_node_content']);
     expectNoWorkspacePersist(invoke);
   });
 
   it('createChildNode uses sqlite commands and never save_workspace_state', () => {
-    const { actions, invoke } = createActionsHarness();
+    const { actions, invoke, seedNodeId } = createActionsHarness();
 
-    actions.createChildNode('node-1', 'Child body');
+    actions.createChildNode(seedNodeId, 'Child body');
 
     expect(getInvokedCommands(invoke)).toEqual(['create_topic', 'replace_node_order']);
     expectNoWorkspacePersist(invoke);
   });
 
   it('createChildNode does not sync invalid folder creation under a topic', () => {
-    const { actions, invoke } = createActionsHarness();
+    const { actions, invoke, seedNodeId } = createActionsHarness();
 
-    actions.createChildNode('node-1', '', 'folder');
+    actions.createChildNode(seedNodeId, '', 'folder');
 
     expect(getInvokedCommands(invoke)).toEqual([]);
     expectNoWorkspacePersist(invoke);
   });
 
   it('moveNode uses sqlite commands and never save_workspace_state', () => {
-    const { actions, invoke } = createActionsHarness();
+    const { actions, invoke, seedNodeId } = createActionsHarness();
     const rootNodeId = actions.createRootNode('Root B');
 
     vi.clearAllMocks();
-    actions.moveNode(rootNodeId, 'node-1');
+    actions.moveNode(rootNodeId, seedNodeId);
 
     expect(getInvokedCommands(invoke)).toEqual(['update_node_content', 'replace_node_order']);
     expectNoWorkspacePersist(invoke);
   });
 
   it('updateNodeReveal uses update_node_reveal only and never save_workspace_state', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
-    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-    const harness = createSetStateHarness(createWorkspaceFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
-    const node = harness.getState().nodesById['node-1'];
+    const { actions, harness, invoke, seedNodeId } = createActionsHarness();
+    const node = harness.getState().nodesById[seedNodeId];
     if (!node) {
       throw new Error('missing seed node');
     }
     harness.setState({
       nodesById: {
         ...harness.getState().nodesById,
-        'node-1': { ...node, reveal: 'Old reveal' }
+        [seedNodeId]: { ...node, reveal: 'Old reveal' }
       }
     });
 
-    actions.updateNodeReveal('node-1', 'New reveal');
+    actions.updateNodeReveal(seedNodeId, 'New reveal');
 
     expect(getInvokedCommands(invoke)).toEqual(['update_node_reveal']);
     expectNoWorkspacePersist(invoke);

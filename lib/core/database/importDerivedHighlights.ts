@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
+import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import type { DatabaseDriver } from './driver.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
@@ -31,8 +32,8 @@ export function insertImportedHighlightNodes(input: {
   const insertNode = input.driver.prepare(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual,
-       content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 0, ?, NULL, ?, ?, ?, NULL)`
+       content, opening_text, reveal, anchor_link, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 0, ?, ?, NULL, ?, ?, ?, NULL)`
   );
   const insertOrder = input.driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
 
@@ -43,6 +44,7 @@ export function insertImportedHighlightNodes(input: {
       input.parentNodeId,
       deriveImportedHighlightTitle(highlight.content),
       highlight.content,
+      resolveNodeOpeningText(highlight.content, deriveImportedHighlightTitle(highlight.content)),
       'anchorId' in highlight ? JSON.stringify({ id: highlight.anchorId, kind: 'highlight' }) : null,
       input.importedAt,
       input.importedAt

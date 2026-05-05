@@ -1,5 +1,4 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
-import { extractNodeOpeningPreview } from '../nodes/nodeOpeningPreview.js';
 import { parseVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import { parseStoredAnchorLink } from './anchorLinkCodec.js';
@@ -18,7 +17,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   is_title_manual: number;
   hide_title_heading: number;
   virtual_filter: string | null;
-  content: string;
+  opening_text: string | null;
   has_content: number;
   has_reveal: number;
   anchor_link: string | null;
@@ -112,7 +111,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        n.is_title_manual,
        n.hide_title_heading,
        n.virtual_filter,
-       n.content,
+       n.opening_text,
        CASE WHEN LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
        CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
        n.anchor_link,
@@ -177,7 +176,7 @@ function buildNodesById(rows: WorkspaceNodeRow[]) {
   const directOpeningById = new Map<string, string | null>();
   for (const row of rows) {
     const imageRegions = parseStoredImageRegions(row.image_regions);
-    const directOpening = row.has_content === 1 ? extractNodeOpeningPreview(row.content, row.title) : null;
+    const directOpening = typeof row.opening_text === 'string' && row.opening_text.trim() ? row.opening_text : null;
     directOpeningById.set(row.id, directOpening);
     nodesById[row.id] = {
       id: row.id,
@@ -190,7 +189,7 @@ function buildNodesById(rows: WorkspaceNodeRow[]) {
       hideTitleHeading: row.hide_title_heading === 1,
       hasContent: row.has_content === 1,
       hasReveal: row.has_reveal === 1,
-      opening: null,
+      openingText: null,
       content: '',
       virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
       reveal: null,

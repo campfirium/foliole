@@ -14,6 +14,17 @@ import {
 
 function resetWorkspaceStore() {
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
+  useWorkspaceStore.getState().createRootNode('');
+}
+
+function getSeedNodeId() {
+  const seedNodeId = useWorkspaceStore
+    .getState()
+    .nodeOrder.find((nodeId) => nodeId !== INBOX_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID);
+  if (!seedNodeId) {
+    throw new Error('missing seed node');
+  }
+  return seedNodeId;
 }
 
 beforeEach(() => {
@@ -21,17 +32,16 @@ beforeEach(() => {
   resetWorkspaceStore();
 });
 
-it('creates seed node as initial state', () => {
+it('creates an empty initial state with only special roots', () => {
   const initial = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
 
-  expect(initial.activeNodeId).toBe('node-1');
-  expect(initial.nodeOrder).toEqual([INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'node-1']);
+  expect(initial.activeNodeId).toBeNull();
+  expect(initial.nodeOrder).toEqual([INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID]);
   expect(isInboxNode(initial.nodesById[INBOX_NODE_ID])).toBe(true);
   expect(isVirtualRootNode(initial.nodesById[VIRTUAL_ROOT_NODE_ID])).toBe(true);
   expect(initial.nodesById[INBOX_NODE_ID]?.parentNodeId).toBeNull();
   expect(initial.nodesById[VIRTUAL_ROOT_NODE_ID]?.parentNodeId).toBeNull();
-  expect(initial.nodesById['node-1']?.parentNodeId).toBeNull();
-  expect(initial.nodesById['node-1']?.review).toBeNull();
+  expect(initial.nodesById['node-1']).toBeUndefined();
   expect(initial.layout.listWidth).toBe(LIST_WIDTH_DEFAULT);
   expect(initial.layout.documentMaxWidth).toBe(DOCUMENT_WIDTH_DEFAULT);
   expect(initial.layout.rightSidebarWidth).toBe(RIGHT_SIDEBAR_WIDTH_DEFAULT);
@@ -40,18 +50,20 @@ it('creates seed node as initial state', () => {
 });
 
 it('updates node content and title', () => {
-  useWorkspaceStore.getState().updateNodeContent('node-1', 'updated markdown');
+  const seedNodeId = getSeedNodeId();
+  useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'updated markdown');
 
-  const node = useWorkspaceStore.getState().nodesById['node-1'];
+  const node = useWorkspaceStore.getState().nodesById[seedNodeId];
   expect(node?.content).toBe('updated markdown');
   expect(node?.title).toBe('updated markdown');
 });
 
 it('updates reveal only for qa nodes', () => {
-  useWorkspaceStore.getState().createQANodeFromSelection('node-1', 'Prompt [...]', 'answer');
+  const seedNodeId = getSeedNodeId();
+  useWorkspaceStore.getState().createQANodeFromSelection(seedNodeId, 'Prompt [...]', 'answer');
   const qaNodeId = useWorkspaceStore
     .getState()
-    .nodeOrder.find((nodeId) => nodeId !== 'node-1' && nodeId !== INBOX_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID);
+    .nodeOrder.find((nodeId) => nodeId !== seedNodeId && nodeId !== INBOX_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID);
 
   expect(qaNodeId).toBeTruthy();
   if (!qaNodeId) {
@@ -59,56 +71,62 @@ it('updates reveal only for qa nodes', () => {
   }
 
   useWorkspaceStore.getState().updateNodeReveal(qaNodeId, 'updated answer');
-  useWorkspaceStore.getState().updateNodeReveal('node-1', 'ignored');
+  useWorkspaceStore.getState().updateNodeReveal(seedNodeId, 'ignored');
 
   expect(useWorkspaceStore.getState().nodesById[qaNodeId]?.reveal).toBe('updated answer');
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.reveal).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.reveal).toBeNull();
 });
 
 it('derives title from normalized markdown content', () => {
-  useWorkspaceStore.getState().updateNodeContent('node-1', '# New Title\n\nBody paragraph.');
+  const seedNodeId = getSeedNodeId();
+  useWorkspaceStore.getState().updateNodeContent(seedNodeId, '# New Title\n\nBody paragraph.');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('New Title');
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('New Title');
 });
 
 it('keeps full normalized sentence in derived title', () => {
+  const seedNodeId = getSeedNodeId();
   useWorkspaceStore
     .getState()
-    .updateNodeContent('node-1', 'First clause, second clause. Third sentence.');
+    .updateNodeContent(seedNodeId, 'First clause, second clause. Third sentence.');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe(
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe(
     'First clause, second clause. Third sentence.'
   );
 });
 
 it('does not include anchor tags in derived title', () => {
+  const seedNodeId = getSeedNodeId();
   useWorkspaceStore
     .getState()
-    .updateNodeContent('node-1', '# Intro <cloze id="1">answer</cloze id="1">');
+    .updateNodeContent(seedNodeId, '# Intro <cloze id="1">answer</cloze id="1">');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Intro answer');
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Intro answer');
 });
 
 it('applies fixed title max length from config', () => {
+  const seedNodeId = getSeedNodeId();
   const longContent = `# ${'x'.repeat(NODE_TITLE_MAX_CHARS + 20)}`;
-  useWorkspaceStore.getState().updateNodeContent('node-1', longContent);
+  useWorkspaceStore.getState().updateNodeContent(seedNodeId, longContent);
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe(
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe(
     'x'.repeat(NODE_TITLE_MAX_CHARS)
   );
 });
 
 it('uses Untitled when content has no usable text', () => {
-  useWorkspaceStore.getState().updateNodeContent('node-1', ' \n\t  ');
+  const seedNodeId = getSeedNodeId();
+  useWorkspaceStore.getState().updateNodeContent(seedNodeId, ' \n\t  ');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Untitled');
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Untitled');
 });
 
 it('keeps manual title when content changes after rename', () => {
-  useWorkspaceStore.getState().updateNodeTitle('node-1', 'Manual Title');
-  useWorkspaceStore.getState().updateNodeContent('node-1', '# Auto Title\nBody');
+  const seedNodeId = getSeedNodeId();
+  useWorkspaceStore.getState().updateNodeTitle(seedNodeId, 'Manual Title');
+  useWorkspaceStore.getState().updateNodeContent(seedNodeId, '# Auto Title\nBody');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Title');
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Manual Title');
 });
 
 it('blocks content edits for empty container nodes after they gain child nodes', () => {
@@ -140,9 +158,10 @@ it('restores content editing after an empty container loses all child nodes', ()
 });
 
 it('creates QA node from selected content', () => {
+  const seedNodeId = getSeedNodeId();
   const createdId = useWorkspaceStore
     .getState()
-    .createQANodeFromSelection('node-1', 'What is [...]?', 'quoted text');
+    .createQANodeFromSelection(seedNodeId, 'What is [...]?', 'quoted text');
 
   expect(createdId).toBeTruthy();
   if (!createdId) {
@@ -150,7 +169,7 @@ it('creates QA node from selected content', () => {
   }
 
   const createdNode = useWorkspaceStore.getState().nodesById[createdId];
-  expect(createdNode?.parentNodeId).toBe('node-1');
+  expect(createdNode?.parentNodeId).toBe(seedNodeId);
   expect(createdNode?.kind).toBe('item');
   expect(createdNode?.title).toBe('What is [...]?');
   expect(createdNode?.content).toBe('What is [...]?');
@@ -159,9 +178,10 @@ it('creates QA node from selected content', () => {
 });
 
 it('creates highlight node from selected content', () => {
+  const seedNodeId = getSeedNodeId();
   const createdId = useWorkspaceStore
     .getState()
-    .createHighlightNodeFromSelection('node-1', 'selected text');
+    .createHighlightNodeFromSelection(seedNodeId, 'selected text');
 
   expect(createdId).toBeTruthy();
   if (!createdId) {
@@ -169,7 +189,7 @@ it('creates highlight node from selected content', () => {
   }
 
   const createdNode = useWorkspaceStore.getState().nodesById[createdId];
-  expect(createdNode?.parentNodeId).toBe('node-1');
+  expect(createdNode?.parentNodeId).toBe(seedNodeId);
   expect(createdNode?.kind).toBe('topic');
   expect(createdNode?.title).toBe('selected text');
   expect(createdNode?.content).toBe('selected text');
@@ -232,9 +252,10 @@ it('blocks creating folder children under topics', () => {
 });
 
 it('deletes node and switches active node', () => {
+  const seedNodeId = getSeedNodeId();
   const createdId = useWorkspaceStore
     .getState()
-    .createHighlightNodeFromSelection('node-1', 'selected text');
+    .createHighlightNodeFromSelection(seedNodeId, 'selected text');
 
   expect(createdId).toBeTruthy();
   if (!createdId) {
@@ -246,17 +267,18 @@ it('deletes node and switches active node', () => {
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toBeDefined();
   expect(useWorkspaceStore.getState().trashedNodeIds).toContain(createdId);
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+  expect(useWorkspaceStore.getState().activeNodeId).toBe(seedNodeId);
 });
 
-it('removes matching anchor tags from parent when deleting linked child node', () => {
+it('keeps linked anchor tags in parent content during soft delete', () => {
+  const seedNodeId = getSeedNodeId();
   const parentContent =
     'before <cloze id="1">answer</cloze id="1"> and <highlight id="2">keep</highlight id="2"> after';
-  useWorkspaceStore.getState().updateNodeContent('node-1', parentContent);
+  useWorkspaceStore.getState().updateNodeContent(seedNodeId, parentContent);
 
   const createdId = useWorkspaceStore
     .getState()
-    .createQANodeFromSelection('node-1', 'Prompt [...]', 'answer', '1');
+    .createQANodeFromSelection(seedNodeId, 'Prompt [...]', 'answer', '1');
   expect(createdId).toBeTruthy();
   if (!createdId) {
     throw new Error('expected QA node');
@@ -264,18 +286,17 @@ it('removes matching anchor tags from parent when deleting linked child node', (
 
   useWorkspaceStore.getState().deleteNode(createdId);
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(
-    'before answer and <highlight id="2">keep</highlight id="2"> after'
-  );
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.content).toBe(parentContent);
 });
 
 it('keeps parent content unchanged when deleting unlinked child node', () => {
+  const seedNodeId = getSeedNodeId();
   const parentContent = 'before <highlight id="1">text</highlight id="1"> after';
-  useWorkspaceStore.getState().updateNodeContent('node-1', parentContent);
+  useWorkspaceStore.getState().updateNodeContent(seedNodeId, parentContent);
 
   const createdId = useWorkspaceStore
     .getState()
-    .createHighlightNodeFromSelection('node-1', 'text');
+    .createHighlightNodeFromSelection(seedNodeId, 'text');
   expect(createdId).toBeTruthy();
   if (!createdId) {
     throw new Error('expected highlight node');
@@ -283,7 +304,7 @@ it('keeps parent content unchanged when deleting unlinked child node', () => {
 
   useWorkspaceStore.getState().deleteNode(createdId);
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(parentContent);
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.content).toBe(parentContent);
 });
 
 it('updates layout widths and resets to defaults', () => {

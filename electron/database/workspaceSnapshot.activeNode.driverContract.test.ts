@@ -27,6 +27,7 @@ const driver: DatabaseDriver = {
 const nodeRow = {
   parent_id: null,
   is_title_manual: 1,
+  opening_text: null,
   content: 'content',
   reveal: null,
   anchor_link: null,

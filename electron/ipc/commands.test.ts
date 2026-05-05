@@ -92,6 +92,7 @@ vi.mock('../mirror/mirrorSyncScheduler.js', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockWindow.isMaximized.mockReturnValue(false);
+  vi.mocked(deleteNodesPermanently).mockReturnValue([]);
 });
 
 it('handles node mutation commands', async () => {

@@ -92,7 +92,8 @@ describe('workspace trash runtime guardrail', () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
-    const childNodeId = actions.createChildNode('node-1', 'child');
+    const seedNodeId = actions.createRootNode('');
+    const childNodeId = actions.createChildNode(seedNodeId, 'child');
 
     vi.clearAllMocks();
     actions.deleteNode(childNodeId);
@@ -105,7 +106,8 @@ describe('workspace trash runtime guardrail', () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
-    const childNodeId = actions.createChildNode('node-1', 'child');
+    const seedNodeId = actions.createRootNode('');
+    const childNodeId = actions.createChildNode(seedNodeId, 'child');
 
     actions.deleteNode(childNodeId);
     vi.clearAllMocks();

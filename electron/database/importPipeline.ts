@@ -7,6 +7,7 @@ import {
   runPreparedImport as runPreparedImportViaDriver
 } from '../../lib/core/database/index.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import {
@@ -216,7 +217,12 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
   }
 
   const connection = openDatabaseConnection();
-  connection.driver.execute('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?', [rewrittenContent, record.importedAt, nodeId]);
+  connection.driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
+    rewrittenContent,
+    resolveNodeOpeningText(rewrittenContent, prepared.nodeTitle),
+    record.importedAt,
+    nodeId
+  ]);
 
   if (degradedMessages.length === 0) {
     return record;

@@ -125,6 +125,7 @@ function createReadwiseBookNode(book: ReadwiseBookInventoryItem, position: numbe
     isTitleManual: true,
     kind: 'topic',
     nodeId,
+    openingText: null,
     parentNodeId: INBOX_NODE_ID,
     position,
     reveal: null,

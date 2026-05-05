@@ -90,18 +90,22 @@ describe('createWorkspaceNodeActions relearn sync', () => {
   it('resets item review cards to an uninitialized state and syncs runtime reset', () => {
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
+    const seedNodeId = actions.createRootNode('');
     const state = harness.getState();
-    const node = state.nodesById['node-1'];
+    const node = state.nodesById[seedNodeId];
     if (!node) {
       throw new Error('missing seed node');
     }
     harness.setState({
       nodesById: {
         ...state.nodesById,
-        'node-1': {
+        [seedNodeId]: {
           ...node,
+          content: 'Prompt',
+          hasContent: true,
           kind: 'item',
-          reveal: null,
+          reveal: 'Answer',
+          hasReveal: true,
           review: {
             due: '2026-03-10T00:00:00.000Z',
             lastReviewAt: '2026-03-06T00:00:00.000Z',
@@ -117,10 +121,10 @@ describe('createWorkspaceNodeActions relearn sync', () => {
       }
     });
 
-    const relearned = actions.relearnNode('node-1', '2026-03-18T00:00:00.000Z');
+    const relearned = actions.relearnNode(seedNodeId, '2026-03-18T00:00:00.000Z');
 
     expect(relearned).toBe(true);
-    expect(harness.getState().nodesById['node-1']?.review).toBeNull();
-    expect(syncRelearnNodeToRuntime).toHaveBeenCalledWith({ nodeId: 'node-1' });
+    expect(harness.getState().nodesById[seedNodeId]?.review).toBeNull();
+    expect(syncRelearnNodeToRuntime).toHaveBeenCalledWith({ nodeId: seedNodeId });
   });
 });

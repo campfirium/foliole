@@ -5,7 +5,7 @@ const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 export const NODE_OPENING_PREVIEW_FALLBACK = 'No opening yet.';
 export const PDF_READER_PLACEHOLDER_TEXT = 'Linked PDF source ready for the reader surface.';
 
-const NODE_OPENING_PREVIEW_MAX_LENGTH = 100;
+const NODE_OPENING_PREVIEW_MAX_LENGTH = 200;
 const OPENING_PREVIEW_IGNORED_VALUES = new Set([
   'cover',
   'cover image',
@@ -16,6 +16,16 @@ const OPENING_PREVIEW_IGNORED_VALUES = new Set([
 
 function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, ' ');
+}
+
+function stripChapterPrefix(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+  const strippedChinese = trimmed.replace(/^\s*第\s*[零〇一二两三四五六七八九十百千万\d]+\s*[章节回部卷篇]\s*[:：、.\-)]?\s*/u, '');
+  const strippedEnglish = strippedChinese.replace(/^\s*chapter\s+(?:\d+|[ivxlcdm]+)\s*[:：.\-)]?\s*/iu, '');
+  return strippedEnglish.trim();
 }
 
 function stripLeadingFrontmatter(content: string) {
@@ -87,19 +97,25 @@ function truncatePreview(value: string) {
     return value;
   }
 
-  const slicedValue = value.slice(0, NODE_OPENING_PREVIEW_MAX_LENGTH).trimEnd();
-  const lastSpaceIndex = slicedValue.lastIndexOf(' ');
-  const safeValue = lastSpaceIndex >= 60 ? slicedValue.slice(0, lastSpaceIndex) : slicedValue;
-
-  return `${safeValue.trimEnd()}…`;
+  return `${value.slice(0, NODE_OPENING_PREVIEW_MAX_LENGTH).trimEnd()}…`;
 }
 
 function stripLeadingTitleEcho(paragraph: string, normalizedTitle: string) {
   let nextParagraph = paragraph;
   const lowerTitle = normalizedTitle.toLocaleLowerCase();
+  const strippedTitle = stripChapterPrefix(normalizedTitle);
+  const lowerStrippedTitle = strippedTitle.toLocaleLowerCase();
 
   while (normalizedTitle && nextParagraph.toLocaleLowerCase().startsWith(lowerTitle)) {
     nextParagraph = nextParagraph.slice(normalizedTitle.length).replace(/^[\s:：,-]+/, '').trim();
+  }
+
+  while (lowerStrippedTitle) {
+    const strippedParagraph = stripChapterPrefix(nextParagraph);
+    if (!strippedParagraph.toLocaleLowerCase().startsWith(lowerStrippedTitle)) {
+      break;
+    }
+    nextParagraph = strippedParagraph.slice(strippedTitle.length).replace(/^[\s:：,-]+/, '').trim();
   }
 
   return nextParagraph;
@@ -117,11 +133,17 @@ export function extractNodeOpeningPreview(content: string, title: string) {
   }
 
   const normalizedTitle = normalizeText(title);
-  const strippedOpening =
-    paragraphs
-      .map((paragraph) => stripLeadingTitleEcho(paragraph, normalizedTitle))
-      .find((paragraph) => !isIgnoredOpeningValue(paragraph)) ?? '';
-  const opening = strippedOpening || NODE_OPENING_PREVIEW_FALLBACK;
+  const strippedParagraphs = paragraphs.map((paragraph) => stripLeadingTitleEcho(paragraph, normalizedTitle));
+  const openingStartIndex = strippedParagraphs.findIndex((paragraph) => !isIgnoredOpeningValue(paragraph));
+  const opening =
+    openingStartIndex >= 0
+      ? strippedParagraphs.slice(openingStartIndex).join(' ').trim()
+      : NODE_OPENING_PREVIEW_FALLBACK;
 
   return truncatePreview(opening);
+}
+
+export function resolveNodeOpeningText(content: string, title: string) {
+  const opening = extractNodeOpeningPreview(content, title);
+  return opening === NODE_OPENING_PREVIEW_FALLBACK ? null : opening;
 }

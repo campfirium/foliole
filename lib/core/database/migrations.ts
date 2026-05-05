@@ -15,7 +15,7 @@ export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget 
   sqlite: TSqlite;
 }
 
-export const DATABASE_SCHEMA_VERSION = 17;
+export const DATABASE_SCHEMA_VERSION = 18;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -208,6 +208,7 @@ const CREATE_TABLE_STATEMENTS_V16 = [
   'ALTER TABLE pdf_page_text ADD COLUMN page_height REAL'
 ];
 const CREATE_TABLE_STATEMENTS_V17 = ['ALTER TABLE nodes ADD COLUMN image_regions TEXT'];
+const CREATE_TABLE_STATEMENTS_V18 = ['ALTER TABLE nodes ADD COLUMN opening_text TEXT'];
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -231,7 +232,8 @@ const MIGRATION_STEPS = [
   { statements: CREATE_TABLE_STATEMENTS_V14, version: 14 },
   { statements: CREATE_TABLE_STATEMENTS_V15, version: 15 },
   { statements: CREATE_TABLE_STATEMENTS_V16, version: 16 },
-  { statements: CREATE_TABLE_STATEMENTS_V17, version: 17 }
+  { statements: CREATE_TABLE_STATEMENTS_V17, version: 17 },
+  { statements: CREATE_TABLE_STATEMENTS_V18, version: 18 }
 ];
 function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
   if (currentVersion >= step.version) {

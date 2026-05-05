@@ -4,12 +4,15 @@ import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import type { PersistedImportRecord, PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { importImageAttachmentBytes } from '../attachments/importImageAttachmentBytes.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 
 import { readRawEpubBook } from './epubImportBook.js';
+import { persistImportedOpeningTexts } from './epubImportOpeningText.js';
+import { ensureTrackedImportTarget } from './epubImportTracking.js';
 import { type RawBookNode } from './epubImportTree.js';
 import { type ImportSourceDescriptor } from './importSourcePipeline.js';
 
@@ -27,6 +30,7 @@ interface PreparedImportNodeContent {
   content: string;
   degradedReason: string | null;
   embeddedImages: PreparedImportEmbeddedImage[];
+  title: string;
 }
 
 interface EpubImportOptions {
@@ -73,39 +77,6 @@ function buildRootContent(title: string, body: string) {
   return trimmedBody ? `# ${title}\n\n${trimmedBody}` : `# ${title}`;
 }
 
-function ensureTrackedImportTarget(record: ReturnType<typeof createPreparedDesktopTextImport>, targetNodeId: string) {
-  const connection = openDatabaseConnection();
-  const existingSource = connection.driver.queryOne<{ source_fingerprint: string }>(
-    'SELECT source_fingerprint FROM import_sources WHERE source_fingerprint = ?',
-    [record.sourceFingerprint]
-  );
-  if (existingSource) {
-    connection.driver.execute('UPDATE import_sources SET latest_node_id = ? WHERE source_fingerprint = ?', [
-      targetNodeId,
-      record.sourceFingerprint
-    ]);
-    return;
-  }
-
-  connection.driver.execute(
-    `INSERT INTO import_sources (
-       source_fingerprint, provider, source_kind, source_name, source_locator,
-       first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      record.sourceFingerprint,
-      record.provider,
-      record.sourceKind,
-      record.sourceName,
-      record.sourceLocator,
-      record.importedAt,
-      record.importedAt,
-      '',
-      targetNodeId
-    ]
-  );
-}
-
 async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(nodeId: string, importedAt: string, node: T) {
   if (node.embeddedImages.length === 0) {
     return node;
@@ -149,8 +120,9 @@ async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(
     return node;
   }
 
-  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?', [
+  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
     rewrittenContent,
+    resolveNodeOpeningText(rewrittenContent, node.title),
     importedAt,
     nodeId
   ]);
@@ -200,7 +172,7 @@ async function syncBookNodes(parentNodeId: string, sourceFingerprint: string, im
     }
     finalizedNodes.push(await importEmbeddedImagesForNode(nodeId, importedAt, node));
   }
-  return finalizedNodes;
+  return { finalizedNodes, nodeIdsByKey };
 }
 
 function applyAggregateDegrade(record: PersistedImportRecord, degradedReason: string | null) {
@@ -248,9 +220,17 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
   const finalizedRoot = await importEmbeddedImagesForNode(imported.nodeId, importedAt, {
     content: rootNode.content,
     degradedReason: rootNode.degradedReason,
-    embeddedImages: book.rootEmbeddedImages
+    embeddedImages: book.rootEmbeddedImages,
+    title: rootNode.nodeTitle
   });
-  const finalizedNodes = await syncBookNodes(imported.nodeId, imported.sourceFingerprint, importedAt, nodes);
+  const { finalizedNodes, nodeIdsByKey } = await syncBookNodes(imported.nodeId, imported.sourceFingerprint, importedAt, nodes);
+  persistImportedOpeningTexts({
+    finalizedNodes,
+    finalizedRoot,
+    nodeIdsByKey,
+    rootNodeId: imported.nodeId,
+    rootTitle: rootNode.nodeTitle
+  });
   const aggregateReason = finalizedNodes.reduce<string | null>(
     (reason, node) => appendReason(reason, node.degradedReason),
     appendReason(imported.degradedReason, finalizedRoot.degradedReason)

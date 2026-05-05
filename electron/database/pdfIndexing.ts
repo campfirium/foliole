@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -172,6 +173,27 @@ function savePdfPageTextRows(attachmentId: string, pages: Array<{ page: number; 
   runInTransaction();
 }
 
+function updatePdfNodeOpeningTexts(attachmentId: string, pages: Array<{ page: number; text: string }>) {
+  const firstUsablePage = pages.find((page) => page.text.trim().length > 0);
+  const connection = openDatabaseConnection();
+  const linkedNodes = connection.driver.queryAll<{ node_id: string; title: string }>(
+    `SELECT n.id AS node_id, n.title
+     FROM node_attachments na
+     INNER JOIN nodes n
+       ON n.id = na.node_id
+     WHERE na.attachment_id = ?
+       AND na.role = 'reference'`,
+    [attachmentId]
+  );
+  for (const node of linkedNodes) {
+    const openingText = firstUsablePage ? resolveNodeOpeningText(firstUsablePage.text, node.title) : null;
+    connection.driver.execute('UPDATE nodes SET opening_text = ? WHERE id = ?', [
+      openingText,
+      node.node_id
+    ]);
+  }
+}
+
 function enqueueInternal(attachmentId: string) {
   queuedAttachmentIds.add(attachmentId);
   void runQueueWorker();
@@ -187,6 +209,7 @@ async function processOneAttachment(attachmentId: string) {
   try {
     const pages = await extractPdfPageText(attachmentId);
     savePdfPageTextRows(attachmentId, pages);
+    updatePdfNodeOpeningTexts(attachmentId, pages);
     updatePdfIndexStatus({ attachmentId, error: null, indexedAt: new Date().toISOString(), status: PDF_STATUS_READY });
   } catch (error) {
     const attempt = readPdfIndexAttempt(attachmentId);

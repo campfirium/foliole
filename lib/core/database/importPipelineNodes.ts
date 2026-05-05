@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
+
 import type { DatabaseDriver } from './driver.js';
 
 const INBOX_NODE_ID = 'special-inbox';
@@ -27,8 +29,8 @@ function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
   driver.execute(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, NULL, 'folder', NULL, NULL, 'Inbox', 1, 0, '', NULL, NULL, ?, ?, NULL)`,
+       content, opening_text, reveal, anchor_link, created_at, updated_at, deleted_at
+     ) VALUES (?, NULL, 'folder', NULL, NULL, 'Inbox', 1, 0, '', NULL, NULL, NULL, ?, ?, NULL)`,
     [INBOX_NODE_ID, importedAt, importedAt]
   );
 }
@@ -43,12 +45,13 @@ export function writeNewNode(input: {
 }) {
   ensureInboxNode(input.driver, input.importedAt);
   const nodeId = `node-${randomUUID()}`;
+  const openingText = resolveNodeOpeningText(input.content, input.title);
   input.driver.execute(
     `INSERT INTO nodes (
      id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-     content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, ?, ?, NULL, NULL, ?, ?, NULL)`,
-    [nodeId, INBOX_NODE_ID, input.title, input.hideTitleHeading ? 1 : 0, input.content, input.importedAt, input.importedAt]
+     content, opening_text, reveal, anchor_link, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, ?, ?, ?, NULL, NULL, ?, ?, NULL)`,
+    [nodeId, INBOX_NODE_ID, input.title, input.hideTitleHeading ? 1 : 0, input.content, openingText, input.importedAt, input.importedAt]
   );
   input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [nodeId, input.nextInboxTopPosition]);
   return nodeId;
@@ -66,9 +69,16 @@ export function updateExistingNode(input: {
 }) {
   input.driver.execute(
     `UPDATE nodes
-     SET kind = 'topic', title = ?, is_title_manual = 1, hide_title_heading = ?, content = ?, updated_at = ?, deleted_at = NULL
+     SET kind = 'topic', title = ?, is_title_manual = 1, hide_title_heading = ?, content = ?, opening_text = ?, updated_at = ?, deleted_at = NULL
      WHERE id = ?`,
-    [input.title, input.hideTitleHeading ? 1 : 0, input.content, input.importedAt, input.existingNode.id]
+    [
+      input.title,
+      input.hideTitleHeading ? 1 : 0,
+      input.content,
+      resolveNodeOpeningText(input.content, input.title),
+      input.importedAt,
+      input.existingNode.id
+    ]
   );
   if (input.existingNode.parent_id === INBOX_NODE_ID) {
     if (typeof input.existingNode.position === 'number') {

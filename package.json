@@ -18,6 +18,7 @@
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
     "workspace:migrate": "node scripts/migrate-workspace-data.mjs",
+    "workspace:backfill-opening-text": "node --experimental-strip-types scripts/backfill-node-opening-text.ts",
     "sqlite:backup": "node --experimental-strip-types scripts/sqlite-maintenance.ts backup",
     "sqlite:restore": "node --experimental-strip-types scripts/sqlite-maintenance.ts restore",
     "sqlite:node-kind-report": "node --experimental-strip-types scripts/node-kind-report.ts",

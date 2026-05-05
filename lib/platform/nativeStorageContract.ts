@@ -70,7 +70,7 @@ export interface NativeWorkspaceNodeSnapshot {
   hideTitleHeading?: boolean;
   hasContent?: boolean;
   hasReveal?: boolean;
-  opening?: string | null;
+  openingText?: string | null;
   content: string;
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;

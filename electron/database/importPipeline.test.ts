@@ -78,7 +78,7 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
     )
     .all(sourceFingerprint);
   const nodeRow = nodeId
-    ? connection.sqlite.prepare('SELECT parent_id, title, hide_title_heading, content FROM nodes WHERE id = ?').get(nodeId)
+    ? connection.sqlite.prepare('SELECT parent_id, title, hide_title_heading, content, opening_text FROM nodes WHERE id = ?').get(nodeId)
     : undefined;
   const childRows = nodeId
     ? connection.sqlite
@@ -152,6 +152,7 @@ it('persists new, duplicate, updated and degraded import semantics with traceabi
   expect(nodeRow).toEqual({
     content: '# Imported\nUpdated body',
     hide_title_heading: 1,
+    opening_text: 'Updated body',
     parent_id: 'special-inbox',
     title: 'note'
   });
@@ -191,6 +192,7 @@ it('persists explicit degraded reasons while still writing converted content', (
   expect(nodeRow).toEqual({
     content: '# Imported\n\n[Table degraded]\nName | Value',
     hide_title_heading: 1,
+    opening_text: '[Table degraded] Name | Value',
     parent_id: 'special-inbox',
     title: 'note'
   });
@@ -213,6 +215,7 @@ it('adopts markdown highlight markers into Foliole highlight anchors when config
   expect(nodeRow).toEqual({
     content: '# Imported\nUse <highlight id="1">important</highlight id="1"> text',
     hide_title_heading: 1,
+    opening_text: 'Use important text',
     parent_id: 'special-inbox',
     title: 'note'
   });

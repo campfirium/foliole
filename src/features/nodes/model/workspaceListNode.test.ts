@@ -65,13 +65,13 @@ it('uses the opening from the list snapshot when body content is not loaded', ()
     getWorkspaceListNodeOpening({
       content: '',
       kind: 'topic',
-      opening: 'Tiny changes compound into remarkable results.',
+      openingText: 'Tiny changes compound into remarkable results.',
       title: 'Atomic Habits'
     })
   ).toBe('Tiny changes compound into remarkable results.');
 });
 
-it('truncates the opening preview to about 100 characters', () => {
+it('truncates the opening preview to about 200 characters', () => {
   const opening = getWorkspaceListNodeOpening({
     content: '# Atomic Habits\n\n' + 'Tiny changes compound into remarkable results '.repeat(6),
     kind: 'topic',
@@ -79,7 +79,7 @@ it('truncates the opening preview to about 100 characters', () => {
   });
 
   expect(opening.endsWith('…')).toBe(true);
-  expect(opening.length).toBeLessThanOrEqual(101);
+  expect(opening.length).toBeLessThanOrEqual(201);
 });
 
 it('skips a leading h1 line when building the opening preview', () => {
@@ -92,12 +92,32 @@ it('skips a leading h1 line when building the opening preview', () => {
   ).toBe('Tiny changes compound into remarkable results.');
 });
 
+it('skips repeated chapter title echoes before the real body opening', () => {
+  const opening = getWorkspaceListNodeOpening({
+    content: [
+      '# 第一章 持续盈利创业',
+      '',
+      '## 第一章',
+      '持续盈利创业',
+      '',
+      '万事万物，皆生于细微。^[1]',
+      '',
+      '彼得是一名生活在美国亚特兰大的网页开发人员。'
+    ].join('\n'),
+    kind: 'topic',
+    title: '持续盈利创业'
+  });
+
+  expect(opening.startsWith('万事万物，皆生于细微。^[1]')).toBe(true);
+  expect(opening).toContain('彼得是一名生活在美国亚特兰大的网页开发人员。');
+});
+
 it('falls back to the stored opening when loaded body content is only a PDF placeholder', () => {
   expect(
     getWorkspaceListNodeOpening({
       content: '# Paper\n\nLinked PDF source ready for the reader surface.',
       kind: 'topic',
-      opening: 'The real PDF body starts here.',
+      openingText: 'The real PDF body starts here.',
       title: 'Paper'
     })
   ).toBe('The real PDF body starts here.');
@@ -108,10 +128,21 @@ it('skips cover-only content when deciding the opening preview', () => {
     getWorkspaceListNodeOpening({
       content: '# Book Title\n\n![Cover](asset://cover.png)',
       kind: 'topic',
-      opening: 'Chapter one body starts here.',
+      openingText: 'Chapter one body starts here.',
       title: 'Book Title'
     })
   ).toBe('Chapter one body starts here.');
+});
+
+it('prefers the stored opening over cover-like loaded body content', () => {
+  expect(
+    getWorkspaceListNodeOpening({
+      content: '![Cover](asset://cover.png)',
+      kind: 'topic',
+      openingText: '第二章 从社区看书 他对于健身和营养的内容了解得越多，分享得就越多。',
+      title: '小而美'
+    })
+  ).toBe('第二章 从社区看书 他对于健身和营养的内容了解得越多，分享得就越多。');
 });
 
 it('suppresses opening previews for folder rows', () => {
@@ -119,7 +150,7 @@ it('suppresses opening previews for folder rows', () => {
     getWorkspaceListNodeOpening({
       content: '# Folder\n\nChild intro text.',
       kind: 'folder',
-      opening: 'Child intro text.',
+      openingText: 'Child intro text.',
       title: 'Folder'
     })
   ).toBe('No opening yet.');

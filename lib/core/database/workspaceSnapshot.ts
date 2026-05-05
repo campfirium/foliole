@@ -1,53 +1,11 @@
-import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
-import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
-
-import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import { parseStoredImageRegions, type StoredImageRegionGroup } from './imageRegionCodec.js';
+import {
+  buildOrderedNodeIds,
+  buildWorkspaceSnapshotNode,
+  resolveSnapshotActiveNodeId,
+  type WorkspaceNodeSnapshot
+} from './workspaceSnapshotHelpers.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
-
-interface WorkspaceReviewProfile {
-  due: string;
-  lastReviewAt: string | null;
-  state: 0 | 1 | 2 | 3;
-  stability: number;
-  difficulty: number;
-  elapsedDays: number;
-  scheduledDays: number;
-  reps: number;
-  lapses: number;
-}
-
-interface WorkspaceReadingProfile {
-  intervalDurationMs: number;
-  intervalGrowthFactor: number;
-  lastHandledAt: string;
-  nextAt: string;
-  priority: number;
-  readingPosition: number;
-  repetitionCount: number;
-  state: 'active' | 'done' | 'dismissed';
-}
-
-interface WorkspaceNodeSnapshot {
-  id: string;
-  parentNodeId: string | null;
-  kind: NodeKind;
-  priority?: number | null;
-  desiredRetention?: number | null;
-  title: string;
-  isTitleManual: boolean;
-  hideTitleHeading: boolean;
-  content: string;
-  virtualFilter?: VirtualNodeFilter | null;
-  reveal: string | null;
-  anchorLink: StoredAnchorLink | null;
-  imageRegions?: StoredImageRegionGroup[] | null;
-  reading: WorkspaceReadingProfile | null;
-  review: WorkspaceReviewProfile | null;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface WorkspaceSnapshot {
   activeNodeId: string | null;
@@ -66,6 +24,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   title: string;
   is_title_manual: number;
   hide_title_heading: number;
+  opening_text: string | null;
   virtual_filter: string | null;
   content: string;
   reveal: string | null;
@@ -97,51 +56,7 @@ interface NodeOrderRow extends DatabaseRow {
   node_id: string;
 }
 
-interface WorkspaceMetaRow extends DatabaseRow {
-  value: string;
-}
-
 const ACTIVE_NODE_META_KEY = 'active_node_id';
-
-function parseNodeKind(value: string | null): NodeKind {
-  return isNodeKind(value) ? value : 'topic';
-}
-
-function toReadingProfile(row: WorkspaceNodeRow): WorkspaceReadingProfile | null {
-  if (typeof row.reading_last_handled_at !== 'string' || typeof row.reading_next_at !== 'string') {
-    return null;
-  }
-  if (row.reading_state !== 'active' && row.reading_state !== 'done' && row.reading_state !== 'dismissed') {
-    return null;
-  }
-  return {
-    intervalDurationMs: row.reading_interval_duration_ms ?? 0,
-    intervalGrowthFactor: row.reading_interval_growth_factor ?? 1,
-    lastHandledAt: row.reading_last_handled_at,
-    nextAt: row.reading_next_at,
-    priority: row.reading_priority ?? 0,
-    readingPosition: row.reading_position ?? 0,
-    repetitionCount: row.reading_repetition_count ?? 0,
-    state: row.reading_state
-  };
-}
-
-function toReviewProfile(row: WorkspaceNodeRow): WorkspaceReviewProfile | null {
-  if (typeof row.review_due !== 'string') {
-    return null;
-  }
-  return {
-    due: row.review_due,
-    lastReviewAt: row.review_last_review_at,
-    state: (row.review_state ?? 0) as 0 | 1 | 2 | 3,
-    stability: row.review_stability ?? 0,
-    difficulty: row.review_difficulty ?? 0,
-    elapsedDays: row.review_elapsed_days ?? 0,
-    scheduledDays: row.review_scheduled_days ?? 0,
-    reps: row.review_reps ?? 0,
-    lapses: row.review_lapses ?? 0
-  };
-}
 
 function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
   return driver.queryAll<WorkspaceNodeRow>(
@@ -154,6 +69,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        n.title,
        n.is_title_manual,
        n.hide_title_heading,
+       n.opening_text,
        n.virtual_filter,
        n.content,
        n.reveal,
@@ -189,14 +105,6 @@ function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
   return driver.queryAll<NodeOrderRow>('SELECT node_id FROM node_order ORDER BY position ASC');
 }
 
-function loadPersistedActiveNodeId(driver: DatabaseDriver) {
-  const row = driver.queryOne<WorkspaceMetaRow>(
-    'SELECT value FROM workspace_meta WHERE key = ?',
-    [ACTIVE_NODE_META_KEY]
-  );
-  return row && row.value !== '' ? row.value : null;
-}
-
 function buildSnapshotRows(
   driver: DatabaseDriver,
   rows: WorkspaceNodeRow[],
@@ -206,55 +114,15 @@ function buildSnapshotRows(
   const trashedNodeIds: string[] = [];
 
   for (const row of rows) {
-    const imageRegions = parseStoredImageRegions(row.image_regions);
-    const node: WorkspaceNodeSnapshot = {
-      id: row.id,
-      parentNodeId: row.parent_id,
-      kind: parseNodeKind(row.kind),
-      title: row.title,
-      isTitleManual: row.is_title_manual === 1,
-      hideTitleHeading: row.hide_title_heading === 1,
-      content: row.content,
-      virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
-      reveal: row.reveal,
-      anchorLink: parseStoredAnchorLink(row.anchor_link),
-      reading: toReadingProfile(row),
-      review: toReviewProfile(row),
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
-    if (imageRegions) {
-      node.imageRegions = imageRegions;
-    }
-    if (typeof row.priority === 'number') {
-      node.priority = row.priority;
-    }
-    if (typeof row.desired_retention === 'number') {
-      node.desiredRetention = row.desired_retention;
-    }
-    nodesById[row.id] = node;
+    nodesById[row.id] = buildWorkspaceSnapshotNode(row);
     if (row.deleted_at) {
       trashedNodeIds.push(row.id);
     }
   }
-
-  const nodeOrder = orderedRows.map((row) => row.node_id).filter((nodeId) => Boolean(nodesById[nodeId]));
-  const orderedNodeIds = new Set(nodeOrder);
-  for (const row of rows) {
-    if (!orderedNodeIds.has(row.id)) {
-      nodeOrder.push(row.id);
-    }
-  }
-
-  const trashedNodeSet = new Set(trashedNodeIds);
-  const persistedActiveNodeId = loadPersistedActiveNodeId(driver);
-  const activeNodeId =
-    (persistedActiveNodeId && nodesById[persistedActiveNodeId] && !trashedNodeSet.has(persistedActiveNodeId)
-      ? persistedActiveNodeId
-      : null) ?? nodeOrder.find((nodeId) => !trashedNodeSet.has(nodeId)) ?? null;
+  const nodeOrder = buildOrderedNodeIds(rows, orderedRows, nodesById);
 
   return {
-    activeNodeId,
+    activeNodeId: resolveSnapshotActiveNodeId(driver, nodeOrder, nodesById, trashedNodeIds, ACTIVE_NODE_META_KEY),
     nodeOrder,
     nodesById,
     trashedNodeIds,

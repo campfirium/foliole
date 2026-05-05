@@ -1,8 +1,10 @@
 import type { NodeKind } from '../nodes/nodeKind.js';
+import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
-import type { DatabaseBindParams, DatabaseDriver, DatabaseRow } from './driver.js';
+import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
+import { cleanupDeletedTextAnchors } from './nodeDeletedAnchorCleanup.js';
 import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
   createUpsertNodeOrderStatement,
@@ -22,15 +24,6 @@ interface NodeAnchorLinkPayload {
     x: number;
     y: number;
   };
-}
-
-interface DeletedNodeAnchorCleanupRow extends DatabaseRow {
-  anchor_link: string | null;
-  parent_id: string | null;
-}
-
-interface ParentContentRow extends DatabaseRow {
-  content: string;
 }
 
 interface NodeReadingPayload {
@@ -67,6 +60,7 @@ export interface UpsertNodeSnapshotInput {
   isTitleManual: boolean;
   hideTitleHeading?: boolean;
   content: string;
+  openingText?: string | null;
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: NodeAnchorLinkPayload | null;
@@ -91,66 +85,22 @@ export interface DeleteNodesPermanentlyInput {
   nodeOrder: string[];
 }
 
-function removeAnchorTagsForLink(content: string, anchor: { id: string; kind: 'highlight' | 'cloze' }) {
-  const openTag = `<${anchor.kind} id="${anchor.id}">`;
-  const closeTag = `</${anchor.kind} id="${anchor.id}">`;
-  return content.replaceAll(openTag, '').replaceAll(closeTag, '');
-}
-
-function parseAnchorLinkPayload(value: string | null) {
-  if (!value) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(value) as NodeAnchorLinkPayload;
-    if (!parsed || (parsed.kind !== 'highlight' && parsed.kind !== 'cloze') || typeof parsed.id !== 'string') {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function cleanupDeletedTextAnchors(driver: DatabaseDriver, nodeIds: string[], deletedAt: string) {
-  const deletedNodeIds = new Set(nodeIds);
-  const selectDeletedNodeStatement = driver.prepare(
-    'SELECT parent_id, anchor_link FROM nodes WHERE id = ?'
-  );
-  const selectParentContentStatement = driver.prepare('SELECT content FROM nodes WHERE id = ?');
-  const updateParentContentStatement = driver.prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?');
-  const affectedParentNodeIds = new Set<string>();
-
-  for (const nodeId of nodeIds) {
-    const deletedNode = selectDeletedNodeStatement.get([nodeId]) as DeletedNodeAnchorCleanupRow | undefined;
-    if (!deletedNode?.parent_id || deletedNodeIds.has(deletedNode.parent_id)) {
-      continue;
-    }
-    const anchorLink = parseAnchorLinkPayload(deletedNode.anchor_link);
-    if (!anchorLink || anchorLink.locator) {
-      continue;
-    }
-    const parentRow = selectParentContentStatement.get([deletedNode.parent_id]) as ParentContentRow | undefined;
-    if (!parentRow) {
-      continue;
-    }
-    const cleanedContent = removeAnchorTagsForLink(parentRow.content, anchorLink);
-    if (cleanedContent === parentRow.content) {
-      continue;
-    }
-    updateParentContentStatement.run([cleanedContent, deletedAt, deletedNode.parent_id]);
-    affectedParentNodeIds.add(deletedNode.parent_id);
-  }
-
-  return [...affectedParentNodeIds];
-}
-
 function toAnchorLinkValue(anchorLink: NodeAnchorLinkPayload | null): string | null {
   return anchorLink ? JSON.stringify(anchorLink) : null;
 }
 
 function toImageRegionsValue(imageRegions: NodeImageRegionGroupPayload[] | null | undefined): string | null {
   return imageRegions && imageRegions.length > 0 ? JSON.stringify(imageRegions) : null;
+}
+
+function resolveStoredOpeningText(input: Pick<UpsertNodeSnapshotInput, 'content' | 'kind' | 'openingText' | 'title'>) {
+  if ('openingText' in input) {
+    return input.openingText ?? null;
+  }
+  if (input.kind === 'folder') {
+    return null;
+  }
+  return resolveNodeOpeningText(input.content, input.title);
 }
 
 function writeNodeReadingSnapshot(
@@ -193,6 +143,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       input.isTitleManual ? 1 : 0,
       input.hideTitleHeading === true ? 1 : 0,
       input.content,
+      resolveStoredOpeningText(input),
       stringifyVirtualNodeFilter(input.virtualFilter ?? null),
       input.reveal,
       toAnchorLinkValue(input.anchorLink),

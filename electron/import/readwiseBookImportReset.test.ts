@@ -130,9 +130,10 @@ it('resets an imported readwise book back to its pre-load placeholder state', as
   });
 
   const rootNode = openDatabaseConnection().sqlite
-    .prepare('SELECT content, reveal FROM nodes WHERE id = ? AND deleted_at IS NULL')
-    .get(nodeId) as { content: string; reveal: string | null } | undefined;
+    .prepare('SELECT content, opening_text, reveal FROM nodes WHERE id = ? AND deleted_at IS NULL')
+    .get(nodeId) as { content: string; opening_text: string | null; reveal: string | null } | undefined;
   expect(rootNode?.content).toContain('Load EPUB');
+  expect(rootNode?.opening_text).toBeNull();
   expect(rootNode?.reveal).toBeNull();
 
   const childNodes = openDatabaseConnection().sqlite

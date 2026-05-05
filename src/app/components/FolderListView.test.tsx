@@ -12,7 +12,7 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
     kind: overrides.kind ?? 'topic',
     title: overrides.title,
     content: overrides.content ?? '',
-    opening: overrides.opening ?? null,
+    openingText: overrides.openingText ?? null,
     reveal: overrides.reveal ?? null,
     review: overrides.review ?? null,
     createdAt: overrides.createdAt ?? '2026-04-01T09:00:00.000Z',
@@ -104,7 +104,7 @@ describe('FolderListView opening metadata', () => {
         id: 'node-6',
         title: 'Atomic Habits',
         content: '',
-        opening: 'Tiny changes compound into remarkable results.',
+        openingText: 'Tiny changes compound into remarkable results.',
         updatedAt: '2026-04-03T10:30:00.000Z'
       })
     ]);
@@ -115,13 +115,28 @@ describe('FolderListView opening metadata', () => {
     expect(screen.getByText('Has opening')).toBeInTheDocument();
   });
 
+  it('prefers the stored opening when the loaded body is only a cover marker', () => {
+    renderFolderList([
+      createNode({
+        id: 'node-8',
+        title: 'Small and Beautiful',
+        content: '![Cover](asset://cover.png)',
+        openingText: 'The real chapter opening should show here.'
+      })
+    ]);
+
+    expect(screen.getByTestId('folder-list-excerpt-node-8')).toHaveTextContent(
+      'The real chapter opening should show here.'
+    );
+  });
+
   it('keeps the opening area blank when no opening is available', () => {
     renderFolderList([
       createNode({
         id: 'node-7',
         title: 'No body yet',
         content: '',
-        opening: null
+        openingText: null
       })
     ]);
 

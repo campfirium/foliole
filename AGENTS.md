@@ -64,6 +64,8 @@
 
 ## Desktop / Platform 规则
 - 本项目默认按桌面应用优先，不按纯 Web 方案优先。
+- 默认客户端视角就是 Windows 客户端；未特别说明时，运行态、预览验收、数据库核对与人工补数据都以 Windows 客户端为准，不以 WSL 内临时路径或其他本机副本为准。
+- 默认主数据库固定视为 `D:\X\U\Foliole\Data\foliole.db`；在 WSL 内对应路径为 `/mnt/d/X/U/Foliole/Data/foliole.db`。未获用户明确批准前，不得自行改查其他数据库路径。
 - 系统能力优先经 Electron main process 暴露，再由前端通过 bridge 调用；业务层不得散落 `ipcRenderer` 调用。
 - 文件路径、数据库路径、日志路径等统一由 Electron main process 解析；前端禁止拼平台绝对路径。
 - 持久化主路径统一走 Electron main process；`localStorage` 仅允许用于可丢失 UI 偏好且必须可审计。

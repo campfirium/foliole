@@ -10,7 +10,7 @@ interface PdfOpeningRowLike {
 
 type SnapshotNodeRecord = Record<string, unknown> & {
   kind?: unknown;
-  opening?: unknown;
+  openingText?: unknown;
   parentNodeId?: unknown;
   title?: unknown;
 };
@@ -37,6 +37,19 @@ function buildChildrenByParentId(
     childrenByParentId.set(parentNodeId, children);
   }
   return childrenByParentId;
+}
+
+function resolveFirstNestedChildNodeId(
+  nodeId: string,
+  childrenByParentId: Map<string, string[]>
+) {
+  const branchChildNodeId = (childrenByParentId.get(nodeId) ?? []).find(
+    (childNodeId) => (childrenByParentId.get(childNodeId)?.length ?? 0) > 0
+  );
+  if (!branchChildNodeId) {
+    return null;
+  }
+  return childrenByParentId.get(branchChildNodeId)?.[0] ?? null;
 }
 
 export function buildPdfOpeningById(
@@ -99,8 +112,9 @@ export function applyResolvedOpenings(input: {
       return pdfOpening;
     }
 
-    for (const childNodeId of childrenByParentId.get(nodeId) ?? []) {
-      const childOpening = resolveNodeOpening(childNodeId, visiting);
+    const firstNestedChildNodeId = resolveFirstNestedChildNodeId(nodeId, childrenByParentId);
+    if (firstNestedChildNodeId) {
+      const childOpening = resolveNodeOpening(firstNestedChildNodeId, visiting);
       if (childOpening) {
         resolvedOpeningById.set(nodeId, childOpening);
         visiting.delete(nodeId);
@@ -114,6 +128,6 @@ export function applyResolvedOpenings(input: {
   };
 
   for (const nodeId of input.nodeOrder) {
-    input.nodesById[nodeId].opening = resolveNodeOpening(nodeId);
+    input.nodesById[nodeId].openingText = resolveNodeOpening(nodeId);
   }
 }

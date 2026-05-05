@@ -19,8 +19,8 @@ function ensureSpecialRootNode(driver: DatabaseDriver, nodeId: SpecialRootNodeId
   driver.execute(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
-     ) VALUES (?, NULL, 'folder', NULL, NULL, ?, 1, 0, '', NULL, NULL, NULL, NULL, ?, ?, NULL)`,
+       content, opening_text, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
+     ) VALUES (?, NULL, 'folder', NULL, NULL, ?, 1, 0, '', NULL, NULL, NULL, NULL, NULL, ?, ?, NULL)`,
     [nodeId, SPECIAL_ROOT_NODE_RECORDS[nodeId].title, updatedAt, updatedAt]
   );
 }
