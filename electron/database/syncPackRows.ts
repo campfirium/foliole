@@ -2,6 +2,7 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadSyncObjects } from './syncObjects.js';
 import {
   isSyncPackObjectType,
   isSyncPackPayloadObjectType,
@@ -9,7 +10,6 @@ import {
   SYNC_PACK_OBJECT_TYPE_TABLES,
   type SyncPackObjectType
 } from './syncPackManifest.js';
-import { loadSyncObjects } from './syncObjects.js';
 
 interface RawSyncStatePackRow extends DatabaseRow {
   content_hash: string;
@@ -132,10 +132,14 @@ function idsForObjectTable(rows: SyncStatePackRow[], table: 'external_documents'
 function loadPayloadObjects(rows: SyncStatePackRow[]): SyncObjectPackRow[] {
   const payloadRows = rows.filter((row) => isSyncPackPayloadObjectType(row.object_type));
   if (payloadRows.length === 0) return [];
-  return loadSyncObjects(
-    payloadRows.map((row) => row.object_id),
-    [...new Set(payloadRows.map((row) => row.object_type))]
-  );
+  const rowsByType = new Map<string, string[]>();
+  for (const row of payloadRows) {
+    rowsByType.set(row.object_type, [...(rowsByType.get(row.object_type) ?? []), row.object_id]);
+  }
+  return [...rowsByType.entries()].flatMap(([objectType, objectIds]) => loadSyncObjects(
+    objectIds,
+    [objectType]
+  ));
 }
 
 function loadReviewLogRows(rows: SyncStatePackRow[]): ReviewLogPackRow[] {

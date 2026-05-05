@@ -87,3 +87,34 @@ it('loads reading and review state as state-only sync pack metadata', () => {
     ]
   });
 });
+
+it('loads only payload objects that match changed state row pairs', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
+     VALUES ('att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:01:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO import_sources (
+       source_fingerprint, provider, source_kind, source_name, source_locator,
+       first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
+     ) VALUES
+       ('source-1', 'manual', 'markdown', 'notes.md', '/notes.md',
+        '2026-04-27T00:02:00.000Z', '2026-04-27T00:02:00.000Z', 'hash-1', NULL),
+       ('att-1', 'manual', 'markdown', 'stale.md', '/stale.md',
+        '2026-04-27T00:03:00.000Z', '2026-04-27T00:03:00.000Z', 'hash-stale', NULL)`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES
+       ('attachment', 'att-1', 1, 'attachment-hash', 'desktop', '2026-04-27T00:01:00.000Z', 0),
+       ('import_source', 'source-1', 2, 'source-hash', 'desktop', '2026-04-27T00:02:00.000Z', 0),
+       ('import_source', 'att-1', 99, 'stale-source-hash', 'desktop', '2026-04-27T00:03:00.000Z', 0)`
+  );
+
+  expect(loadPackRows(0, 2).syncObjects.map((row) => `${row.object_type}:${row.object_id}`)).toEqual([
+    'attachment:att-1',
+    'import_source:source-1'
+  ]);
+});
