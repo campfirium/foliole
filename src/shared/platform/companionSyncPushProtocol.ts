@@ -5,6 +5,8 @@ import type {
   NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+import { isValidStateObjectIdentity, stateObjectIdentity } from './companionSyncStateObjectIdentity';
+
 export type SyncPushStatus = 'accepted' | 'already_applied' | 'conflict' | 'rejected';
 
 export type SyncLocalStatus = 'conflict' | 'dirty' | 'pending_ack' | 'ready_to_push' | 'rejected';
@@ -71,24 +73,6 @@ function canonicalIdentityKey(identity: SyncObjectIdentity) {
 
 function sameIdentity(left: SyncObjectIdentity, right: SyncObjectIdentity) {
   return canonicalIdentityKey(left) === canonicalIdentityKey(right);
-}
-
-function stateObjectIdentity(row: Pick<NativeSyncStateObjectRecord, 'object_id' | 'object_type'>): SyncObjectIdentity {
-  return {
-    objectId: row.object_id,
-    objectType: row.object_type,
-    scope: row.object_type === 'setting' || row.object_type === 'view_state'
-      ? row.object_id.split(':', 1)[0] || row.object_type
-      : 'workspace'
-  };
-}
-
-function isValidStateObjectIdentity(row: Pick<NativeSyncStateObjectRecord, 'object_id' | 'object_type'>) {
-  if (row.object_type !== 'setting' && row.object_type !== 'view_state') {
-    return true;
-  }
-  const parts = row.object_id.split(':', 5);
-  return parts.length === 5 && parts.every((part) => part.trim().length > 0);
 }
 
 function stateClientOpId(row: NativeSyncStateObjectRecord) {

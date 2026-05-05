@@ -226,6 +226,16 @@
       "scope": "scope"
     }
   },
+  "syncStateObjectIdentity": {
+    "defaultScope": "workspace",
+    "scopedObjectIdDelimiter": ":",
+    "scopedObjectIdPartLimit": 5,
+    "scopedObjectTypes": [
+      "setting",
+      "view_state"
+    ],
+    "scopePartIndex": 0
+  },
   "syncObjectTypes": {
     "nodeReading": "node_reading",
     "nodeReview": "node_review",

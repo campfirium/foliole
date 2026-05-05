@@ -1,3 +1,5 @@
+import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from './androidCompanionSyncPayloadRoutingDefinitions.js';
+
 export const ANDROID_COMPANION_RESOURCE_STATUSES = {
   cached: 'cached',
   empty: 'empty',
@@ -194,6 +196,13 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
       platform: 'platform',
       scope: 'scope'
     }
+  },
+  syncStateObjectIdentity: {
+    defaultScope: 'workspace',
+    scopedObjectIdDelimiter: ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING.objectIdDelimiter,
+    scopedObjectIdPartLimit: ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING.objectIdPartLimit,
+    scopedObjectTypes: ['setting', 'view_state'],
+    scopePartIndex: 0
   },
   syncObjectTypes: {
     nodeReading: 'node_reading',
