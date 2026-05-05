@@ -11,6 +11,7 @@ import {
 } from 'electron';
 
 import { initializeDatabase } from './database/migrate.js';
+import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { handleInvokeRequest } from './ipc/commands.js';
 import {
   IPC_INVOKE_CHANNEL,
@@ -222,8 +223,14 @@ if (!hasSingleInstanceLock) {
   process.exit(0);
 }
 
+const devRestartIntentWatcher = installDevRestartIntentWatcher({ app });
+
 app.on('second-instance', () => {
   focusFirstWindow();
+});
+
+app.on('before-quit', () => {
+  devRestartIntentWatcher?.close();
 });
 
 app.whenReady().then(async () => {
