@@ -57,6 +57,7 @@ body {
   flex: 0 0 auto;
   min-height: 38px;
   padding-inline: 0;
+  position: relative;
   user-select: none;
   -webkit-app-region: drag;
 }
@@ -64,8 +65,16 @@ body {
 .window-titlebar-left-zone {
   align-items: center;
   display: flex;
-  flex: 0 0 calc(40px + var(--workspace-list-width, 300px));
   min-width: 0;
+}
+
+.window-titlebar-left-zone[data-collapsed='false'] {
+  flex: 0 0 calc(40px + var(--workspace-list-width, 300px));
+}
+
+.window-titlebar-left-zone[data-collapsed='true'] {
+  flex: 0 0 40px;
+  justify-content: center;
 }
 
 .window-titlebar-leading {
@@ -79,6 +88,15 @@ body {
 .window-titlebar-leading-primary {
   display: flex;
   justify-content: center;
+}
+
+.window-titlebar-collapsed-left-action {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 38px;
+  width: 40px;
+  -webkit-app-region: no-drag;
 }
 
 .window-titlebar-leading-secondary {
@@ -131,23 +149,42 @@ body {
 .window-titlebar-controls {
   display: inline-flex;
   margin-left: auto;
+  position: relative;
+  z-index: 1;
   -webkit-app-region: no-drag;
 }
 
 .window-titlebar-right-zone {
+  align-self: stretch;
+  border-left: 1px solid #d9d9d6;
   display: flex;
-  flex: 0 0 var(--workspace-right-sidebar-width, 320px);
-  justify-content: flex-start;
+  flex: 1 1 auto;
   min-width: 0;
   -webkit-app-region: no-drag;
 }
 
-.window-titlebar-right-anchor {
+.window-titlebar-right-anchor-shell {
+  align-self: stretch;
+  display: flex;
+  min-width: 0;
+  position: relative;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--workspace-right-sidebar-width, 320px);
+}
+
+.window-titlebar-right-expanded-action {
   align-items: center;
-  border-left: 1px solid #d9d9d6;
   display: inline-flex;
-  min-height: 38px;
-  padding-left: 8px;
+  left: 0;
+  pointer-events: auto;
+  position: absolute;
+  top: 50%;
+  transform: translate(calc(-100% - 8px), -50%);
+  -webkit-app-region: no-drag;
 }
 
 .window-titlebar-collapsed-sidebar-action {

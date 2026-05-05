@@ -138,6 +138,21 @@ function WorkspaceDocumentArea({
   );
 }
 
+function WorkspaceLeftRail({ props }: { props: WorkspaceLayoutProps }) {
+  return (
+    <div className="h-full bg-[#f6f6f6] max-[1080px]:hidden">
+      <WorkspaceSideToolbar
+        canStartStudyMode={props.canStartStudyMode}
+        isStudyMode={props.isStudyMode}
+        isSettingsOpen={props.isSettingsOpen}
+        reviewDueCount={props.reviewDueCount}
+        onOpenSettings={props.onOpenSettings}
+        onToggleReviewSession={props.onToggleReviewSession}
+      />
+    </div>
+  );
+}
+
 export function WorkspaceLayoutGrid({
   documentNodeId,
   props
@@ -147,16 +162,7 @@ export function WorkspaceLayoutGrid({
 }) {
   return (
     <div className="grid min-h-0 flex-1 overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]" style={{ gridTemplateColumns: '40px minmax(0, 1fr)' }}>
-      <div className="h-full bg-[#f6f6f6] max-[1080px]:hidden">
-        <WorkspaceSideToolbar
-          canStartStudyMode={props.canStartStudyMode}
-          isStudyMode={props.isStudyMode}
-          isSettingsOpen={props.isSettingsOpen}
-          reviewDueCount={props.reviewDueCount}
-          onOpenSettings={props.onOpenSettings}
-          onToggleReviewSession={props.onToggleReviewSession}
-        />
-      </div>
+      <WorkspaceLeftRail props={props} />
       <div className="col-start-2 min-h-0 min-w-0 overflow-hidden max-[1080px]:col-start-1">
         <div
           className={`grid h-full min-h-0 gap-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]`}

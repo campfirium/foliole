@@ -117,8 +117,18 @@ function WindowLeadingActions({
   onOpenTrashView,
   onToggleListVisibility
 }: WindowTitleBarProps) {
+  if (isListCollapsed) {
+    return (
+      <div className="window-titlebar-left-zone" data-collapsed="true">
+        <div className="window-titlebar-collapsed-left-action">
+          <SidebarToggleButton active={false} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="window-titlebar-left-zone">
+    <div className="window-titlebar-left-zone" data-collapsed="false">
       <div className="window-titlebar-leading">
         <div className="window-titlebar-leading-primary">
           <SidebarToggleButton active={!isListCollapsed} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
@@ -158,11 +168,14 @@ function WindowRightSidebarAnchor({
   }
 
   return (
-    <div className="window-titlebar-right-zone" style={{ '--workspace-right-sidebar-width': `${rightSidebarWidth}px` } as CSSProperties}>
-      <div className="window-titlebar-right-anchor">
-        <SidebarToggleButton active label="Toggle right sidebar" onClick={onToggleRightSidebarVisibility} side="right" />
+    <>
+      <div className="window-titlebar-right-anchor-shell" style={{ '--workspace-right-sidebar-width': `${rightSidebarWidth}px` } as CSSProperties}>
+        <div className="window-titlebar-right-expanded-action">
+          <SidebarToggleButton active label="Toggle right sidebar" onClick={onToggleRightSidebarVisibility} side="right" />
+        </div>
+        <div className="window-titlebar-right-zone" />
       </div>
-    </div>
+    </>
   );
 }
 

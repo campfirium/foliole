@@ -30,6 +30,8 @@
 ## 质量闸与测试
 - 不允许通过降低检查标准过关；禁止跳过关键检查、删除校验或用注释掩盖失败。
 - 默认质量闸顺序固定为 `lint` -> `typecheck` -> `test`，入口脚本为 `scripts/quality-gate-fast.sh`。
+- 当 `.lab/agent/windows-preview.flag` 为 `ON` 时，代码改动在通过本地质量闸后，默认必须继续执行 `npm run windows:preview`；除非用户当次明确豁免。
+- 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
 - `build` 仅在用户明确要求完整交付时执行；对应入口为 `scripts/quality-gate.sh` 或交付脚本。
 - 包管理器必须按锁文件检测，禁止硬编码。
 - 任意可复现 Bug 修复必须新增至少 1 条自动化回归测试；没有回归测试不算完成。
