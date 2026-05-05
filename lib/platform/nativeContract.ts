@@ -1,9 +1,6 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
-import type {
-  NativeDirectoryImportArgs, NativeDirectoryImportResult, NativeNodeSourceDetails, NativeKeepImportPreviewArgs,
-  NativeKeepImportPreviewResult, NativeImportedTextFile, NativeTextImportArgs, NativeTextImportResult
-} from './nativeImportContract.js';
+import type { NativeImportCommandMap } from './nativeImportCommandMap.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
 import type {
   NativeNodeSnapshotBatchMutationSpec,
@@ -15,7 +12,6 @@ import type {
   NativeImportRemoteImageAttachmentArgs, NativeImportLocalImageAttachmentResult,
   NativeRelearnNodeArgs, NativeReadingProgressSnapshot,
   NativeResetImportDataResult,
-  NativeMergeReadwiseTopicHighlightsResult,
   NativeReviewSchedulerSettings,
   NativeWorkspaceBacklink,
   NativeSaveReadingProgressArgs,
@@ -33,7 +29,7 @@ import type {
 export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
 
-export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSyncCommandMap & {
+export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSyncCommandMap & NativeImportCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;
@@ -68,44 +64,6 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
       path: string;
     };
     result: null;
-  };
-  [NATIVE_COMMANDS.runTextFileImport]: {
-    args: NativeTextImportArgs;
-    result: NativeTextImportResult | null;
-  };
-  [NATIVE_COMMANDS.runClipboardImport]: { args: NativeTextImportArgs; result: NativeTextImportResult | null };
-  [NATIVE_COMMANDS.runDirectoryImport]: {
-    args: NativeDirectoryImportArgs;
-    result: NativeDirectoryImportResult | null;
-  };
-  [NATIVE_COMMANDS.previewKeepImportRule]: {
-    args: NativeKeepImportPreviewArgs;
-    result: NativeKeepImportPreviewResult;
-  };
-  [NATIVE_COMMANDS.loadNodeSourceDetails]: {
-    args: { node_id: string };
-    result: NativeNodeSourceDetails | null;
-  };
-  [NATIVE_COMMANDS.loadNodeSourceUpdatePreview]: {
-    args: { node_id: string };
-    result: {
-      checked_at: string;
-      current_content: string;
-      source_node_id: string;
-      updated_content: string;
-    } | null;
-  };
-  [NATIVE_COMMANDS.mergeReadwiseTopicHighlights]: {
-    args: { node_id: string };
-    result: NativeMergeReadwiseTopicHighlightsResult;
-  };
-  [NATIVE_COMMANDS.selectImportTextFile]: {
-    args: NativeTextImportArgs;
-    result: NativeImportedTextFile | null;
-  };
-  [NATIVE_COMMANDS.selectImportDirectory]: {
-    args: undefined;
-    result: string | null;
   };
   [NATIVE_COMMANDS.importClipboardImageAttachment]: {
     args: NativeImportClipboardImageAttachmentArgs;

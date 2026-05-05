@@ -239,7 +239,7 @@ if [[ "${1:-}" == "--full" ]]; then
   if quality_gate_should_print_step; then
     echo "[quality-gate-fast] forcing full quality gate"
   fi
-  exec bash "${SCRIPT_DIR}/quality-gate.sh"
+  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
 fi
 
 all_changed="$(collect_changed_files)"
@@ -253,8 +253,16 @@ if [[ -f "scripts/check-ui-copy-guard.mjs" ]]; then
   run_quality_gate_script "quality-gate-fast" "${pm}" "copy:guard"
 fi
 
+if [[ -f "scripts/check-repository-root-boundary.mjs" ]]; then
+  run_quality_gate_command \
+    "quality-gate-fast" \
+    "repository-root-boundary" \
+    "repository root boundary" \
+    node scripts/check-repository-root-boundary.mjs
+fi
+
 if [[ "${level}" == "full" ]]; then
-  exec bash "${SCRIPT_DIR}/quality-gate.sh"
+  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
 fi
 
 lint_targets="$(collect_lint_targets "${all_changed}")"

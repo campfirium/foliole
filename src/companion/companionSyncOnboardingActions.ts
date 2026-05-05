@@ -1,10 +1,10 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 
-import type { TopBarAction } from './CompanionFloatingBars';
+import type { CompanionTabAction } from './CompanionFloatingBars';
 
 export function useCompanionSyncOnboardingActions(args: {
   saveSyncOnboardingStatus(status: NativeCompanionWorkspaceSyncState['sync_onboarding_status']): Promise<unknown>;
-  setActiveAction: (action: TopBarAction) => void;
+  setActiveAction: (action: CompanionTabAction) => void;
 }) {
   async function handleDismissSyncOnboarding() {
     await args.saveSyncOnboardingStatus('dismissed');

@@ -1,10 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-import { WorkspaceBottomReviewToolbar } from './WorkspaceBottomReviewToolbar';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+import {
+  WorkspaceBottomReviewToolbar,
+  type WorkspaceBottomReviewToolbarProps
+} from './WorkspaceBottomReviewToolbar';
 
-function createProps(overrides: Partial<WorkspaceLayoutProps> = {}): WorkspaceLayoutProps {
+function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {}): WorkspaceBottomReviewToolbarProps {
   return {
     canStartStudyMode: true,
     isAnswerRevealed: false,
@@ -25,11 +27,11 @@ function createProps(overrides: Partial<WorkspaceLayoutProps> = {}): WorkspaceLa
     onRevealAnswer: vi.fn(),
     onToggleReviewSession: vi.fn(),
     ...overrides
-  } as WorkspaceLayoutProps;
+  };
 }
 
 it('collapses the review footer list summary with the left sidebar', () => {
-  render(<WorkspaceBottomReviewToolbar props={createProps({ isListCollapsed: true })} />);
+  render(<WorkspaceBottomReviewToolbar {...createProps({ isListCollapsed: true })} />);
 
   expect(screen.queryByText('2 left · 0 done')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
@@ -37,7 +39,7 @@ it('collapses the review footer list summary with the left sidebar', () => {
 });
 
 it('keeps the review footer list summary when the left sidebar is expanded', () => {
-  render(<WorkspaceBottomReviewToolbar props={createProps()} />);
+  render(<WorkspaceBottomReviewToolbar {...createProps()} />);
 
   expect(screen.getByText('2 left · 0 done')).toBeInTheDocument();
   expect(screen.getByLabelText('Review mode toolbar')).toHaveClass('col-start-3');

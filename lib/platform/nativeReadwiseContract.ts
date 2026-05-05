@@ -46,3 +46,23 @@ export interface NativeReadwiseBookImportResetResult {
   title: string | null;
   updated_at: string | null;
 }
+
+export interface NativeReadwiseBookInventoryItem {
+  annotation_status: 'has_highlights' | 'no_highlights';
+  book_key: string;
+  epub_path: string | null;
+  epub_status: 'received' | 'missing';
+  full_document_markdown_path: string | null;
+  generated_node_id: string | null;
+  highlight_markdown_path: string | null;
+  import_status: 'completed' | 'pending';
+  node_status: 'generated' | 'missing';
+  title: string;
+}
+
+export interface NativeReadwiseBooksInventory {
+  books: NativeReadwiseBookInventoryItem[];
+  full_document_directory_path: string;
+  highlight_directory_path: string;
+  scanned_at: string;
+}

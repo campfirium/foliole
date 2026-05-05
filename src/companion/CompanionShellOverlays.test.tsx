@@ -14,6 +14,7 @@ function createSurface() {
     handleGradeReview: vi.fn(),
     handleRevealAnswer: vi.fn(),
     handleStartSyncOnboarding: vi.fn(),
+    handleTabAction: vi.fn(),
     isAnswerRevealed: false,
     reviewSession: {
       currentCard: null
@@ -26,7 +27,11 @@ describe('CompanionShellOverlays sync onboarding', () => {
     render(
       <CompanionShellOverlays
         isBottomBarDisabled={false}
+        isCaptureSheetOpen={false}
+        isNavigationVisible={false}
         isSyncPaired={false}
+        onCaptureSheetOpenChange={vi.fn()}
+        onNavigationAction={vi.fn()}
         surface={createSurface()}
         syncOnboardingStatus="pending"
       />
@@ -40,7 +45,11 @@ describe('CompanionShellOverlays sync onboarding', () => {
     render(
       <CompanionShellOverlays
         isBottomBarDisabled={false}
+        isCaptureSheetOpen={false}
+        isNavigationVisible={false}
         isSyncPaired={false}
+        onCaptureSheetOpenChange={vi.fn()}
+        onNavigationAction={vi.fn()}
         surface={createSurface()}
         syncOnboardingStatus="dismissed"
       />
@@ -53,7 +62,11 @@ describe('CompanionShellOverlays sync onboarding', () => {
     render(
       <CompanionShellOverlays
         isBottomBarDisabled={false}
+        isCaptureSheetOpen={false}
+        isNavigationVisible={false}
         isSyncPaired={false}
+        onCaptureSheetOpenChange={vi.fn()}
+        onNavigationAction={vi.fn()}
         surface={createSurface()}
         syncOnboardingStatus="accepted"
       />

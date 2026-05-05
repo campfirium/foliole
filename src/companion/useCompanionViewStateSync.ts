@@ -5,12 +5,12 @@ import {
   saveCompanionSyncNodeViewState
 } from '../shared/platform/companionSyncObjects';
 
-import type { TopBarAction } from './CompanionFloatingBars';
+import type { CompanionTabAction } from './CompanionFloatingBars';
 
 type ScrollSaveTimer = ReturnType<typeof setTimeout>;
 
 export function useCompanionViewStateSync(args: {
-  activeAction: TopBarAction;
+  activeAction: CompanionTabAction;
   readableArticleNodeId: string | null;
   reviewNodeId: string | null;
   selectedBrowseNodeId: string | null;

@@ -50,6 +50,16 @@ async function writeWorkspaceBoundaryScript(rootDir, message = 'workspace bounda
   );
 }
 
+async function writeRepositoryRootBoundaryScript(rootDir, message = 'repository root boundary ok') {
+  const scriptsDir = path.join(rootDir, 'scripts');
+  await mkdir(scriptsDir, { recursive: true });
+  await writeFile(
+    path.join(scriptsDir, 'check-repository-root-boundary.mjs'),
+    `console.log('${message}')\n`,
+    'utf8'
+  );
+}
+
 async function writeCopyGuardScript(rootDir, message = 'copy guard ok') {
   const scriptsDir = path.join(rootDir, 'scripts');
   await mkdir(scriptsDir, { recursive: true });
@@ -69,6 +79,7 @@ describe('quality-gate-target.sh', () => {
         'electron:compile': 'node -e "console.log(\'electron compile ok\')"'
       });
       await writeCopyGuardScript(tempRoot);
+      await writeRepositoryRootBoundaryScript(tempRoot);
       await writeWorkspaceBoundaryScript(tempRoot);
 
       const result = await runTargetGate(tempRoot, 'desktop');
@@ -80,6 +91,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('desktop test ok');
       expect(result.stdout).toContain('desktop build ok');
       expect(result.stdout).toContain('electron compile ok');
+      expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('workspace boundary ok');
       expect(result.stdout).toContain('[quality-gate:desktop] all checks passed.');
     } finally {
@@ -98,6 +110,7 @@ describe('quality-gate-target.sh', () => {
         'android:host:lint': 'node -e "console.log(\'android host lint ok\')"',
         'android:host:test': 'node -e "console.log(\'android host test ok\')"'
       });
+      await writeRepositoryRootBoundaryScript(tempRoot);
 
       const result = await runTargetGate(tempRoot, 'android');
 
@@ -108,6 +121,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('android sync ok');
       expect(result.stdout).toContain('android host lint ok');
       expect(result.stdout).toContain('android host test ok');
+      expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('[quality-gate:android] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -127,6 +141,7 @@ describe('quality-gate-target.sh', () => {
         'android:emulator': 'node -e "console.log(\'android emulator ok\')"',
         'android:host:device-test': 'node -e "console.log(\'android connected test ok\')"'
       });
+      await writeRepositoryRootBoundaryScript(tempRoot);
 
       const result = await runTargetGate(tempRoot, 'android-device');
 
@@ -139,6 +154,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('android host test ok');
       expect(result.stdout).toContain('android emulator ok');
       expect(result.stdout).toContain('android connected test ok');
+      expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('[quality-gate:android-device] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -156,6 +172,7 @@ describe('quality-gate-target.sh', () => {
         'electron:compile': 'node -e "console.log(\'shared electron compile ok\')"',
         'android:web:build': 'node -e "console.log(\'shared android build ok\')"'
       });
+      await writeRepositoryRootBoundaryScript(tempRoot);
       await writeWorkspaceBoundaryScript(tempRoot);
 
       const result = await runTargetGate(tempRoot, 'shared');
@@ -167,6 +184,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('shared build ok');
       expect(result.stdout).toContain('shared electron compile ok');
       expect(result.stdout).toContain('shared android build ok');
+      expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('workspace boundary ok');
       expect(result.stdout).toContain('[quality-gate:shared] all checks passed.');
       expect(result.stdout).not.toContain('android sync ok');
@@ -190,6 +208,7 @@ describe('quality-gate-target.sh', () => {
         'android:host:lint': 'node -e "console.log(\'full android host lint ok\')"',
         'android:host:test': 'node -e "console.log(\'full android host test ok\')"'
       });
+      await writeRepositoryRootBoundaryScript(tempRoot);
       await writeWorkspaceBoundaryScript(tempRoot);
 
       const result = await runTargetGate(tempRoot, 'full');
@@ -203,6 +222,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('full android sync ok');
       expect(result.stdout).toContain('full android host lint ok');
       expect(result.stdout).toContain('full android host test ok');
+      expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('workspace boundary ok');
       expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
     } finally {

@@ -3,7 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const ACTIVE_ROOTS = new Set(['electron', 'lib', 'scripts', 'src', 'tests']);
+const ACTIVE_ROOTS = new Set(['android', 'electron', 'ios', 'lib', 'scripts', 'src', 'tests']);
 const BASELINE_ALLOWED_ROOTS = new Set(['.claude', '.git', '.lab']);
 const EXEMPT_ROOTS = new Set([
   'dist',

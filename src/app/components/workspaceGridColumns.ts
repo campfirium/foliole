@@ -1,6 +1,8 @@
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+export interface WorkspaceGridColumnState {
+  isImmersiveMode: boolean;
+}
 
-export function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
+export function getWorkspaceGridColumns(props: WorkspaceGridColumnState) {
   if (props.isImmersiveMode) {
     return 'grid-cols-1 xl:grid-cols-1';
   }

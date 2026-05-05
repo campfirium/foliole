@@ -281,6 +281,7 @@ describe('quality-gate-fast.sh', () => {
         build: 'node -e "console.log(\'repo build should stay unused\')"'
       });
       await writeFixtureFile(tempRoot, 'scripts/check-ui-copy-guard.mjs', 'console.log("copy guard ok");\n');
+      await writeFixtureFile(tempRoot, 'scripts/check-repository-root-boundary.mjs', 'console.log("repository root boundary ok");\n');
       await writeExecutable(
         tempRoot,
         'node_modules/.bin/eslint',
@@ -299,6 +300,7 @@ describe('quality-gate-fast.sh', () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: light');
       expect(result.stdout).toContain('copy guard ok');
+      expect(result.stdout).toContain('repository root boundary ok');
       expect(await readFile(lintMarker, 'utf8')).toContain('src/features/image-cloze/components/ImageClozeCardView.tsx');
       expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
       expect(result.stdout).not.toContain('repo lint should stay unused');
@@ -321,6 +323,7 @@ describe('quality-gate-fast.sh', () => {
         test: 'node -e "console.log(\'repo test should stay unused\')"',
         build: 'node -e "console.log(\'repo build should stay unused\')"'
       });
+      await writeFixtureFile(tempRoot, 'scripts/check-repository-root-boundary.mjs', 'console.log("repository root boundary ok");\n');
       await writeExecutable(
         tempRoot,
         'node_modules/.bin/eslint',
@@ -345,6 +348,7 @@ describe('quality-gate-fast.sh', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: mid');
+      expect(result.stdout).toContain('repository root boundary ok');
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/FancyCard.tsx');
       expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
       expect(result.stdout).toContain('related test:run --pool=threads --maxWorkers=2 src/app/components/FancyCard.test.tsx');

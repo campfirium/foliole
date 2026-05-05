@@ -3,6 +3,7 @@ import type {
   NativeReadwiseBookDownloadResult,
   NativeReadwiseBookImportResetResult,
   NativeReadwiseBookEpubLoadResult,
+  NativeReadwiseBooksInventory,
   NativeReadwiseDetectionResult
 } from './nativeReadwiseContract.js';
 
@@ -18,6 +19,10 @@ export type NativeReadwiseCommandMap = {
       tagKeyword: string;
     };
     result: NativeReadwiseDetectionResult;
+  };
+  [NATIVE_COMMANDS.loadReadwiseBooksInventory]: {
+    args: undefined;
+    result: NativeReadwiseBooksInventory;
   };
   [NATIVE_COMMANDS.openReadwiseBookDownload]: {
     args: {

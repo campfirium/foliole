@@ -6,7 +6,10 @@ import {
 } from '../../features/nodes/model/workspaceListNode';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
-import { WorkspaceBottomReviewToolbar } from './WorkspaceBottomReviewToolbar';
+import {
+  WorkspaceBottomReviewToolbar,
+  type WorkspaceBottomReviewToolbarProps
+} from './WorkspaceBottomReviewToolbar';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { renderWorkspaceGridColumns } from './workspaceLayoutGridContentColumns';
@@ -123,9 +126,34 @@ export function WorkspaceLayoutGrid({
         onSelectNode={onSelectNode}
         props={props}
       />
-      <WorkspaceBottomReviewToolbar props={props} />
+      <WorkspaceBottomReviewToolbar {...selectWorkspaceBottomReviewToolbarProps(props)} />
     </WorkspaceLayoutGridShell>
   );
+}
+
+function selectWorkspaceBottomReviewToolbarProps(
+  props: WorkspaceLayoutProps
+): WorkspaceBottomReviewToolbarProps {
+  return {
+    canStartStudyMode: props.canStartStudyMode,
+    isAnswerRevealed: props.isAnswerRevealed,
+    isCurrentReviewItemGradable: props.isCurrentReviewItemGradable,
+    isImmersiveMode: props.isImmersiveMode,
+    isListCollapsed: props.isListCollapsed,
+    isReviewEditing: props.isReviewEditing,
+    isStudyMode: props.isStudyMode,
+    onCompleteReviewItem: props.onCompleteReviewItem,
+    onDeferReviewItem: props.onDeferReviewItem,
+    onDismissReviewItem: props.onDismissReviewItem,
+    onExitReviewMode: props.onExitReviewMode,
+    onGradeReview: props.onGradeReview,
+    onRevealAnswer: props.onRevealAnswer,
+    onToggleReviewSession: props.onToggleReviewSession,
+    reviewCompletedCount: props.reviewCompletedCount,
+    reviewCurrentNodeId: props.reviewCurrentNodeId,
+    reviewDueCount: props.reviewDueCount,
+    reviewQueueCount: props.reviewQueueCount
+  };
 }
 
 function WorkspaceLayoutGridShell({

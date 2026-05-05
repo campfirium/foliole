@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import type { BottomBarGrade, TopBarAction } from './CompanionFloatingBars';
+import type { BottomBarGrade, CompanionTabAction } from './CompanionFloatingBars';
 import {
   completeCompanionReadingReview,
   deferCompanionReadingReview,
@@ -143,12 +143,12 @@ function useCompanionSurfaceActions(args: {
 
 function useCompanionActionState(args: {
   floatingBar: FloatingBarVisibilityApi;
-  setActiveAction: (action: TopBarAction) => void;
+  setActiveAction: (action: CompanionTabAction) => void;
   setReadingError: (value: string | null) => void;
   setReviewError: (value: string | null) => void;
   setSelectedBrowseNodeId: (nodeId: string | null) => void;
 }) {
-  function handleTopBarAction(action: TopBarAction) {
+  function handleTabAction(action: CompanionTabAction) {
     args.setActiveAction(action);
     args.setReviewError(null);
     args.setReadingError(null);
@@ -170,13 +170,13 @@ function useCompanionActionState(args: {
     args.floatingBar.revealBar();
   }
 
-  return { handleSelectBrowseNode, handleSelectRecentArticle, handleTopBarAction };
+  return { handleSelectBrowseNode, handleSelectRecentArticle, handleTabAction };
 }
 
 function useCompanionInteractionState(
   floatingBar: FloatingBarVisibilityApi,
   reviewSession: ReturnType<typeof resolveCompanionReviewSession>,
-  setActiveAction: (action: TopBarAction) => void,
+  setActiveAction: (action: CompanionTabAction) => void,
   setSelectedBrowseNodeId: (nodeId: string | null) => void,
   snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'],
   workspaceSync: CompanionWorkspaceSyncApi
@@ -199,7 +199,7 @@ function useCompanionInteractionState(
     workspaceSync
   });
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
-  const { handleSelectBrowseNode, handleSelectRecentArticle, handleTopBarAction } = useCompanionActionState({
+  const { handleSelectBrowseNode, handleSelectRecentArticle, handleTabAction } = useCompanionActionState({
     floatingBar,
     setActiveAction,
     setReadingError,
@@ -228,7 +228,7 @@ function useCompanionInteractionState(
     handleSelectBrowseNode,
     handleSelectRecentArticle,
     ...syncOnboardingActions,
-    handleTopBarAction,
+    handleTabAction,
     isAnswerRevealed,
     isSubmittingGrade,
     isSubmittingReadingAction,
@@ -238,7 +238,7 @@ function useCompanionInteractionState(
 }
 
 export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSyncApi, floatingBar: FloatingBarVisibilityApi) {
-  const [activeAction, setActiveAction] = useState<TopBarAction>(() => {
+  const [activeAction, setActiveAction] = useState<CompanionTabAction>(() => {
     return workspaceSync.state.workspace_snapshot ? 'review' : 'more';
   });
   const browseState = useCompanionBrowseState(workspaceSync);

@@ -1,81 +1,69 @@
-type IconProps = {
-  className?: string;
-};
+import { Clock3, MoreHorizontal, Plus, Search, SquareStack } from 'lucide-react';
+import type { ComponentType } from 'react';
 
-export type TopBarAction = 'review' | 'recent' | 'search' | 'capture' | 'more';
+export type CompanionTabAction = 'review' | 'recent' | 'search' | 'capture' | 'more';
 export type BottomBarGrade = 1 | 2 | 3 | 4;
 
-function IconButton(props: {
+const COMPANION_TABS: Array<{
+  action: CompanionTabAction;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+}> = [
+  { action: 'review', icon: SquareStack, label: 'Review' },
+  { action: 'recent', icon: Clock3, label: 'Recent' },
+  { action: 'search', icon: Search, label: 'Search' },
+  { action: 'capture', icon: Plus, label: 'Capture' },
+  { action: 'more', icon: MoreHorizontal, label: 'More' }
+];
+
+function TabButton(props: {
   active?: boolean;
-  ariaLabel: string;
-  children: React.ReactNode;
-  disabled?: boolean;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
   onClick?: () => void;
 }) {
+  const Icon = props.icon;
   return (
     <button
-      aria-label={props.ariaLabel}
-      className={`flex h-9 w-9 items-center justify-center rounded-full border text-foreground transition-colors ${
-        props.active ? 'border-foreground/25 bg-bg-subtle' : 'border-border bg-canvas'
-      } ${props.disabled ? 'cursor-not-allowed opacity-45' : ''}`}
-      disabled={props.disabled}
+      aria-current={props.active ? 'page' : undefined}
+      aria-label={props.label}
+      className={`flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-md text-xs font-medium transition-colors ${
+        props.active ? 'bg-companion-accent-soft text-companion-accent' : 'text-companion-text-secondary'
+      }`}
       onClick={props.onClick}
       type="button"
     >
-      {props.children}
+      <Icon className="h-5 w-5" />
+      <span className="max-w-full truncate">{props.label}</span>
     </button>
   );
 }
 
-function SearchIcon({ className = 'h-5 w-5' }: IconProps) {
-  return <svg className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" /><path d="m20 20-4.2-4.2" /></svg>;
-}
-
-function ClockIcon({ className = 'h-5 w-5' }: IconProps) {
-  return <svg className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3 2" /></svg>;
-}
-
-function ReviewIcon({ className = 'h-5 w-5' }: IconProps) {
-  return <svg className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M8 5h8" /><path d="M12 5v5" /><path d="M8 14h8" /><path d="m9.5 18 1.7 1.7 3.3-3.4" /></svg>;
-}
-
-function MoreIcon({ className = 'h-5 w-5' }: IconProps) {
-  return <svg className={className} fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>;
-}
-
-function CaptureIcon({ className = 'h-5 w-5' }: IconProps) {
-  return <svg className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M12 5v14" /><path d="M5 12h14" /></svg>;
-}
-
-export function TopFloatingBar(props: {
-  activeAction: TopBarAction;
-  onAction(action: TopBarAction): void;
+export function CompanionBottomTabBar(props: {
+  activeAction: CompanionTabAction;
+  onAction(action: CompanionTabAction): void;
   visible: boolean;
 }) {
+  if (!props.visible) {
+    return null;
+  }
+
   return (
-    <header
-      className={`sticky top-4 z-20 flex justify-center transition-all duration-200 ${
-        props.visible ? 'translate-y-0 opacity-100' : '-translate-y-6 opacity-0'
-      }`}
-      data-testid="companion-top-floating-bar"
+    <footer
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-companion-divider bg-companion-content px-4 pb-5 pt-2 shadow-panel"
+      data-testid="companion-bottom-tab-bar"
     >
-      <div className="inline-flex items-center gap-2 rounded-full border border-border bg-canvas px-3 py-2 text-foreground shadow-panel">
-        <IconButton active={props.activeAction === 'review'} ariaLabel="Review" onClick={() => props.onAction('review')}>
-          <ReviewIcon className="h-5 w-5" />
-        </IconButton>
-        <IconButton active={props.activeAction === 'recent'} ariaLabel="Recent" onClick={() => props.onAction('recent')}>
-          <ClockIcon className="h-5 w-5" />
-        </IconButton>
-        <IconButton active={props.activeAction === 'search'} ariaLabel="Search" onClick={() => props.onAction('search')}>
-          <SearchIcon className="h-5 w-5" />
-        </IconButton>
-        <IconButton active={props.activeAction === 'capture'} ariaLabel="Capture" onClick={() => props.onAction('capture')}>
-          <CaptureIcon className="h-5 w-5" />
-        </IconButton>
-        <IconButton active={props.activeAction === 'more'} ariaLabel="Device sync" onClick={() => props.onAction('more')}>
-          <MoreIcon className="h-5 w-5" />
-        </IconButton>
+      <div className="mx-auto flex w-full max-w-[760px] items-center gap-1">
+        {COMPANION_TABS.map((tab) => (
+          <TabButton
+            active={props.activeAction === tab.action}
+            icon={tab.icon}
+            key={tab.action}
+            label={tab.label}
+            onClick={() => props.onAction(tab.action)}
+          />
+        ))}
       </div>
-    </header>
+    </footer>
   );
 }

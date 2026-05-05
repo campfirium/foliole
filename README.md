@@ -1,6 +1,8 @@
 # Foliole
 
-Electron-first desktop workspace for reading, note processing, and review.
+Foliole is a local-first incremental reading workspace for turning reading into a continuous learning loop: read, excerpt, make items, review, and keep refining the material in your own SQLite file.
+
+It is not positioned as an Anki or SuperMemo replacement. The public category is an incremental reading workspace.
 
 ## Entry Points
 1. Repository rules: `AGENTS.md`

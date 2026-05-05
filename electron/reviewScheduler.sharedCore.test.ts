@@ -72,6 +72,22 @@ it('returns Again/Hard/Good/Easy preview payload through shared core', () => {
   expect(Date.parse(preview.Easy.card.due)).not.toBeNaN();
 });
 
+it('keeps grade result aligned with matching preview rating', () => {
+  const scheduler = createScheduler(0.9);
+  const card = createReviewedCard();
+  const grade = scheduler.grade({
+    card,
+    rating: 'Good',
+    now: NOW
+  });
+  const preview = scheduler.preview({
+    card,
+    now: NOW
+  });
+
+  expect(grade).toEqual(preview.Good);
+});
+
 it('rebuilds shared core scheduler preview when desired retention changes', () => {
   const defaultScheduler = createScheduler(0.9);
   const tunedScheduler = createScheduler(0.8);

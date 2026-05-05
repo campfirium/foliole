@@ -61,6 +61,10 @@ export type NativeSyncCommandMap = {
     args: undefined;
     result: DesktopCompanionPairingOverviewPayload;
   };
+  [NATIVE_COMMANDS.removeCompanionPairedDevice]: {
+    args: { device_id: string };
+    result: DesktopCompanionPairingOverviewPayload;
+  };
   [NATIVE_COMMANDS.approveCompanionPairRequest]: {
     args: { pair_request_id: string };
     result: DesktopCompanionPairingOverviewPayload;

@@ -1,10 +1,32 @@
+import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceStudyDockTrigger } from './WorkspaceSideToolbar';
 import { WorkspaceFooterRowDividers, WorkspaceSurfaceRowOverlay } from './WorkspaceSurfaceRowOverlay';
 
-function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayoutProps }) {
+export interface WorkspaceBottomReviewToolbarProps {
+  canStartStudyMode: boolean;
+  isAnswerRevealed: boolean;
+  isCurrentReviewItemGradable: boolean;
+  isImmersiveMode: boolean;
+  isListCollapsed: boolean;
+  isReviewEditing: boolean;
+  isStudyMode: boolean;
+  reviewCompletedCount: number;
+  reviewCurrentNodeId: string | null;
+  reviewDueCount: number;
+  reviewQueueCount: number;
+  onCompleteReviewItem: () => boolean;
+  onDeferReviewItem: () => boolean;
+  onDismissReviewItem: () => boolean;
+  onExitReviewMode: () => void;
+  onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
+  onRevealAnswer: () => void;
+  onToggleReviewSession: () => void;
+}
+
+function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbarProps) {
   return (
     <div
       className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
@@ -45,7 +67,7 @@ function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayout
   );
 }
 
-export function WorkspaceBottomReviewToolbar({ props }: { props: WorkspaceLayoutProps }) {
+export function WorkspaceBottomReviewToolbar(props: WorkspaceBottomReviewToolbarProps) {
   if (!props.isStudyMode) {
     return null;
   }
@@ -74,7 +96,7 @@ export function WorkspaceBottomReviewToolbar({ props }: { props: WorkspaceLayout
           </div>
         )}
         <div className="relative z-[1] min-w-0">
-          <WorkspaceBottomReviewToolbarContent props={props} />
+          <WorkspaceBottomReviewToolbarContent {...props} />
         </div>
       </div>
     </div>

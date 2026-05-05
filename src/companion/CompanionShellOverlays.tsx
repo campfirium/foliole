@@ -1,11 +1,17 @@
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
+import { CompanionCaptureSheet } from './CompanionCaptureSheet';
+import { CompanionBottomTabBar, type CompanionTabAction } from './CompanionFloatingBars';
 import { CompanionSyncOnboardingPrompt } from './CompanionSyncOnboardingPrompt';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 export function CompanionShellOverlays(props: {
   isBottomBarDisabled: boolean;
+  isCaptureSheetOpen: boolean;
+  isNavigationVisible: boolean;
   isSyncPaired: boolean;
+  onCaptureSheetOpenChange(open: boolean): void;
+  onNavigationAction(action: CompanionTabAction): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
   syncOnboardingStatus: ReturnType<typeof useCompanionWorkspaceSync>['state']['sync_onboarding_status'];
 }) {
@@ -23,6 +29,12 @@ export function CompanionShellOverlays(props: {
 
   return (
     <>
+      <CompanionBottomTabBar
+        activeAction={props.surface.activeAction}
+        onAction={props.onNavigationAction}
+        visible={props.isNavigationVisible}
+      />
+      <CompanionCaptureSheet onOpenChange={props.onCaptureSheetOpenChange} open={props.isCaptureSheetOpen} />
       <CompanionBottomReviewBar
         disabled={props.isBottomBarDisabled}
         isAnswerRevealed={props.surface.isAnswerRevealed}

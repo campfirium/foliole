@@ -119,7 +119,7 @@ function createItemReviewSurface() {
     handleSelectBrowseNode: vi.fn(),
     handleRevealAnswer: vi.fn(),
     handleSelectRecentArticle: vi.fn(),
-    handleTopBarAction: vi.fn(),
+    handleTabAction: vi.fn(),
     isAnswerRevealed: false,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,

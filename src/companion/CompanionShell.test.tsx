@@ -149,7 +149,7 @@ function createReviewEmptySurface() {
     handleSelectBrowseNode: vi.fn(),
     handleRevealAnswer: vi.fn(),
     handleSelectRecentArticle: vi.fn(),
-    handleTopBarAction: vi.fn(),
+    handleTabAction: vi.fn(),
     isAnswerRevealed: false,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,
@@ -185,7 +185,7 @@ function createReadingReviewSurface() {
     handleSelectBrowseNode: vi.fn(),
     handleRevealAnswer: vi.fn(),
     handleSelectRecentArticle: vi.fn(),
-    handleTopBarAction: vi.fn(),
+    handleTabAction: vi.fn(),
     isAnswerRevealed: false,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,
@@ -235,16 +235,6 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
   });
 
-  it('hides the top toolbar by default during immersive review and reveals it on tap', async () => {
-    const { floatingBar } = await renderShellWithSurface(createReadingReviewSurface());
-
-    expect(screen.getByTestId('companion-top-floating-bar').className).toContain('opacity-0');
-
-    fireEvent.click(screen.getByTestId('companion-scroll-container'));
-
-    expect(floatingBar.revealBar).toHaveBeenCalled();
-  });
-
   it('opens settings from the more action before entering sync details', async () => {
     await renderShellWithSurface({
       ...createReviewEmptySurface(),
@@ -264,6 +254,6 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getByText('No sync records yet.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sync now' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'Device sync' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute('aria-current', 'page');
   });
 });

@@ -28,6 +28,16 @@ run_workspace_boundary_check_if_present() {
   fi
 }
 
+run_repository_root_boundary_check_if_present() {
+  if [[ -f "scripts/check-repository-root-boundary.mjs" ]]; then
+    run_quality_gate_command \
+      "${prefix}" \
+      "repository-root-boundary" \
+      "repository root boundary" \
+      node scripts/check-repository-root-boundary.mjs
+  fi
+}
+
 run_gate_steps() {
   local step
   for step in "$@"; do
@@ -48,24 +58,29 @@ fi
 case "${target}" in
   desktop)
     run_copy_guard_if_present
+    run_repository_root_boundary_check_if_present
     run_gate_steps lint:desktop typecheck:desktop test:desktop build electron:compile
     run_workspace_boundary_check_if_present
     ;;
   android)
     run_copy_guard_if_present
+    run_repository_root_boundary_check_if_present
     run_gate_steps lint:android typecheck:android test:android android:sync android:host:lint android:host:test
     ;;
   android-device)
     run_copy_guard_if_present
+    run_repository_root_boundary_check_if_present
     run_gate_steps lint:android typecheck:android test:android android:sync android:host:lint android:host:test android:emulator android:host:device-test
     ;;
   shared)
     run_copy_guard_if_present
+    run_repository_root_boundary_check_if_present
     run_gate_steps lint:shared typecheck:shared test:shared build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
   full)
     run_copy_guard_if_present
+    run_repository_root_boundary_check_if_present
     run_gate_steps lint typecheck test build electron:compile android:sync android:host:lint android:host:test
     run_workspace_boundary_check_if_present
     ;;

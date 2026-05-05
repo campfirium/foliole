@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 
-import type { TopBarAction } from './CompanionFloatingBars';
+import type { CompanionTabAction } from './CompanionFloatingBars';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type CompanionSettingsPage = 'list' | 'sync';
 
 export function useCompanionSyncSettingsPage(args: {
-  activeAction: TopBarAction;
+  activeAction: CompanionTabAction;
   syncOnboardingStatus: ReturnType<typeof useCompanionWorkspaceSync>['state']['sync_onboarding_status'];
 }) {
   const [settingsPage, setSettingsPage] = useState<CompanionSettingsPage>('list');
