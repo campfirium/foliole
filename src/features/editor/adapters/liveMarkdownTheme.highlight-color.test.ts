@@ -31,7 +31,10 @@ it('uses dedicated selection, highlight, and cloze color tokens', () => {
   expect(cssText).toContain('cm-md-highlight');
   expect(cssText).toContain('cm-md-cloze');
   expect(cssText).toContain('cm-selectionBackground');
+  expect(cssText).toContain('cm-paragraph-marker-line');
+  expect(cssText).toContain('data-paragraph-marker-active');
   expect(cssText).toContain('var(--app-selection-surface-color)');
   expect(cssText).toContain('var(--app-highlight-surface-color)');
   expect(cssText).toContain('var(--app-cloze-surface-color)');
+  expect(cssText).toContain('var(--app-accent-color)');
 });

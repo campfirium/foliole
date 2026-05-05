@@ -42,6 +42,7 @@ function createMockCodeMirrorEditorAdapterClass() {
     setNodeId(nodeId: string | null) { mockSetNodeId(nodeId); }
     refreshImageClozePresentation() { mockRefreshImageClozePresentation(); }
     getSelection() { return { from: 0, to: 0 }; }
+    setParagraphMarker() {}
     setSelection(selection: { from: number; to: number }) { mockSetSelection(selection); }
     restoreSelection() {}
     revealSelection() {}

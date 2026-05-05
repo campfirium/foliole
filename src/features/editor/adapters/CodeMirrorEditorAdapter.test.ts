@@ -14,7 +14,8 @@ const {
   mockEditorStateCreate,
   mockReadOnlyOf,
   mockEditableOf,
-  mockAllowMultipleSelectionsOf
+  mockAllowMultipleSelectionsOf,
+  mockRangeSetBuilder
 } = vi.hoisted(() => ({
   mockCompartmentReconfigure: vi.fn((value: unknown) => value),
   mockDrawSelection: vi.fn(() => 'draw-selection-extension'),
@@ -29,7 +30,11 @@ const {
   mockEditorStateCreate: vi.fn((config) => config),
   mockReadOnlyOf: vi.fn(() => 'read-only-extension'),
   mockEditableOf: vi.fn(() => 'editable-extension'),
-  mockAllowMultipleSelectionsOf: vi.fn(() => 'allow-multiple-selections-extension')
+  mockAllowMultipleSelectionsOf: vi.fn(() => 'allow-multiple-selections-extension'),
+  mockRangeSetBuilder: vi.fn().mockImplementation(() => ({
+    add: vi.fn(),
+    finish: vi.fn(() => 'paragraph-marker-decorations')
+  }))
 }));
 
 vi.mock('@codemirror/commands', () => ({
@@ -59,11 +64,13 @@ vi.mock('@codemirror/state', () => ({
     readOnly: {
       of: mockReadOnlyOf
     }
-  }
+  },
+  RangeSetBuilder: mockRangeSetBuilder
 }));
 
 vi.mock('@codemirror/view', () => ({
   Decoration: {
+    line: vi.fn((value) => value),
     none: 'decoration-none'
   },
   drawSelection: mockDrawSelection,
@@ -180,9 +187,11 @@ describe('CodeMirrorEditorAdapter construction', () => {
     });
 
     expect(mockReadOnlyOf).toHaveBeenCalledWith(true);
-    expect(mockEditableOf).toHaveBeenCalledWith(true);
+    expect(mockEditableOf).toHaveBeenCalledWith(false);
   });
+});
 
+describe('CodeMirrorEditorAdapter selection behavior', () => {
   it('can reveal a document position without changing selection', () => {
     const { adapter, dispatch, focus } = createAdapterWithStubbedView();
 
@@ -203,5 +212,32 @@ describe('CodeMirrorEditorAdapter construction', () => {
       selection: { anchor: 8, head: 10 }
     });
     expect(focus).not.toHaveBeenCalled();
+  });
+
+  it('can toggle paragraph marker styling on the editor host', () => {
+    const host = document.createElement('div');
+    const adapter = new CodeMirrorEditorAdapter(host, {
+      initialContent: 'Alpha\nBeta'
+    });
+
+    Object.assign(adapter as object, {
+      view: {
+        dispatch: vi.fn(),
+        dom: host,
+        state: {
+          doc: {
+            length: 10,
+            line: (lineNumber: number) => (lineNumber === 1 ? { from: 0 } : { from: 6 }),
+            lineAt: (position: number) => (position <= 5 ? { from: 0, number: 1 } : { from: 6, number: 2 })
+          }
+        }
+      }
+    });
+
+    adapter.setParagraphMarker({ from: 0, to: 5 });
+    expect(host.dataset.paragraphMarkerActive).toBe('true');
+
+    adapter.setParagraphMarker(null);
+    expect(host.dataset.paragraphMarkerActive).toBe('false');
   });
 });

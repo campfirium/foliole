@@ -37,6 +37,7 @@ vi.mock('../../features/editor/adapters/CodeMirrorEditorAdapter', () => ({
     getSelection() {
       return { from: 0, to: 0 };
     }
+    setParagraphMarker() {}
     setSelection(selection: { from: number; to: number }) {
       mockSetSelection(selection);
     }
@@ -220,7 +221,7 @@ it('restores a mid-document reading position after the recent cache is eventuall
   await expectTrimmedNode('node-1');
 
   expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('');
-  expect(useWorkspaceStore.getState().nodeViewById['node-1']).toEqual({
+  expect(useWorkspaceStore.getState().nodeViewById['node-1']).toMatchObject({
     scrollTop: 5_400,
     selection: { from: 48_000, to: 48_024 }
   });

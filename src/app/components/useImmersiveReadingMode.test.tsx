@@ -43,6 +43,7 @@ function buildProps() {
     revealPosition: vi.fn(),
     restoreSelection: vi.fn(),
     revealSelection,
+    setParagraphMarker: vi.fn(),
     setContent: vi.fn(),
     setDiffDecorations: vi.fn(),
     setReadOnly: vi.fn(),
@@ -63,6 +64,7 @@ function buildProps() {
     props: {
       activeNodeId: 'node-1',
       editorAdapterRef: { current: adapter },
+      editorNodeViewState: undefined,
       isImmersiveMode: true,
       isStudyMode: false,
       nodeOrder: ['node-1', 'node-2'],
@@ -112,6 +114,51 @@ it('runs highlight and note actions from the current paragraph selection', () =>
       selectionText: 'Alpha'
     })
   );
+});
+
+it('shows a paragraph marker when moving with space', () => {
+  const { adapter, props } = buildProps();
+  renderHook(() => useImmersiveReadingMode(props));
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
+  });
+
+  expect(adapter.setParagraphMarker).toHaveBeenCalledWith({ from: 0, to: 5 });
+  expect(adapter.revealSelection).toHaveBeenCalledWith({ from: 0, to: 5 });
+});
+
+it('moves the paragraph marker with arrow keys', () => {
+  const { adapter, props } = buildProps();
+  renderHook(() => useImmersiveReadingMode(props));
+  vi.mocked(adapter.setParagraphMarker).mockClear();
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+  });
+
+  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(1, { from: 0, to: 5 });
+  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(2, { from: 7, to: 11 });
+  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(3, { from: 0, to: 5 });
+});
+
+it('starts the paragraph marker from the persisted reading position', () => {
+  const { adapter, props } = buildProps();
+  (props as { editorNodeViewState?: { scrollTop: number; selection: EditorSelection } }).editorNodeViewState = {
+    scrollTop: 120,
+    selection: { from: 7, to: 7 }
+  };
+  renderHook(() => useImmersiveReadingMode(props));
+  vi.mocked(adapter.setParagraphMarker).mockClear();
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+  });
+
+  expect(adapter.setParagraphMarker).toHaveBeenCalledWith({ from: 7, to: 11 });
+  expect(adapter.revealSelection).toHaveBeenCalledWith({ from: 7, to: 11 });
 });
 
 it('toggles the shortcuts overlay with question mark', () => {

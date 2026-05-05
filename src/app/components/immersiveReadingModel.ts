@@ -1,7 +1,8 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import { createLineClass } from '../../features/editor/adapters/liveMarkdownPrimitives';
 
 function buildLineRanges(content: string) {
-  const lines: Array<{ blank: boolean; end: number; start: number }> = [];
+  const lines: Array<{ blank: boolean; end: number; start: number; text: string }> = [];
   let lineStart = 0;
   for (let index = 0; index <= content.length; index += 1) {
     if (index < content.length && content[index] !== '\n') {
@@ -11,11 +12,23 @@ function buildLineRanges(content: string) {
     lines.push({
       blank: line.trim().length === 0,
       end: index,
-      start: lineStart
+      start: lineStart,
+      text: line
     });
     lineStart = index + 1;
   }
   return lines;
+}
+
+function isStandaloneMarkdownBlock(text: string, inCodeBlock: boolean) {
+  const lineClass = createLineClass(text, inCodeBlock);
+  return (
+    lineClass === 'cm-line-h1' ||
+    lineClass === 'cm-line-h2' ||
+    lineClass === 'cm-line-h3' ||
+    lineClass === 'cm-line-list' ||
+    lineClass === 'cm-line-list-unordered'
+  );
 }
 
 export function getParagraphSelections(content: string): EditorSelection[] {
@@ -23,12 +36,26 @@ export function getParagraphSelections(content: string): EditorSelection[] {
   const selections: EditorSelection[] = [];
   let paragraphStart: number | null = null;
   let paragraphEnd = 0;
+  let inCodeBlock = false;
 
   lines.forEach((line) => {
     if (line.blank) {
       if (paragraphStart !== null && paragraphStart < paragraphEnd) {
         selections.push({ from: paragraphStart, to: paragraphEnd });
       }
+      paragraphStart = null;
+      paragraphEnd = 0;
+      return;
+    }
+    const standaloneBlock = isStandaloneMarkdownBlock(line.text, inCodeBlock);
+    if (/^\s*`{3,}/.test(line.text)) {
+      inCodeBlock = !inCodeBlock;
+    }
+    if (standaloneBlock) {
+      if (paragraphStart !== null && paragraphStart < paragraphEnd) {
+        selections.push({ from: paragraphStart, to: paragraphEnd });
+      }
+      selections.push({ from: line.start, to: line.end });
       paragraphStart = null;
       paragraphEnd = 0;
       return;
@@ -51,6 +78,21 @@ function isSameSelection(left: EditorSelection, right: EditorSelection) {
 
 function findContainingParagraphIndex(paragraphs: EditorSelection[], selection: EditorSelection) {
   return paragraphs.findIndex((paragraph) => selection.from >= paragraph.from && selection.to <= paragraph.to);
+}
+
+export function resolveCurrentParagraphSelection(content: string, currentSelection: EditorSelection): EditorSelection | null {
+  const paragraphs = getParagraphSelections(content);
+  if (paragraphs.length === 0) {
+    return null;
+  }
+
+  const currentIndex = findContainingParagraphIndex(paragraphs, currentSelection);
+  if (currentIndex >= 0) {
+    return paragraphs[currentIndex] ?? null;
+  }
+
+  const anchor = Math.max(currentSelection.from, currentSelection.to);
+  return paragraphs.find((paragraph) => paragraph.from >= anchor) ?? paragraphs[paragraphs.length - 1] ?? null;
 }
 
 export function resolveParagraphSelection(args: {

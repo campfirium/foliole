@@ -23,6 +23,7 @@ export function createCodeMirrorEditorExtensions(args: {
   onDocChanged: (content: string, meta: EditorDocumentChangeMeta) => void;
   onCompositionEnd: () => void;
   options: CodeMirrorEditorAdapterOptions;
+  paragraphMarkerCompartment: import('@codemirror/state').Compartment;
   readOnlyCompartment: import('@codemirror/state').Compartment;
   searchDecorationsCompartment: import('@codemirror/state').Compartment;
 }): Extension[] {
@@ -38,6 +39,7 @@ export function createCodeMirrorEditorExtensions(args: {
     highlightActiveLine(),
     markdownInputAssist,
     args.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
+    args.paragraphMarkerCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.searchDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.liveMarkdownCompartment.of(
       createLiveMarkdown(

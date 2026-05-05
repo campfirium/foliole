@@ -145,8 +145,24 @@ export const liveMarkdownTheme = EditorView.theme({
     borderRadius: '0.25rem',
     boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--app-accent-color) 30%, transparent)'
   },
+  '.cm-paragraph-marker-line': {
+    position: 'relative'
+  },
+  '.cm-paragraph-marker-line::before': {
+    backgroundColor: 'var(--app-accent-color)',
+    bottom: '0',
+    content: '""',
+    left: '-1.2em',
+    pointerEvents: 'none',
+    position: 'absolute',
+    top: '0',
+    width: '3px'
+  },
   '.cm-activeLine': { backgroundColor: 'transparent' },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
     backgroundColor: SHARED_SELECTION_SURFACE_COLOR
+  },
+  '&[data-paragraph-marker-active="true"] .cm-selectionBackground, &[data-paragraph-marker-active="true"].cm-focused .cm-selectionBackground, &[data-paragraph-marker-active="true"] ::selection': {
+    backgroundColor: 'transparent'
   }
 });

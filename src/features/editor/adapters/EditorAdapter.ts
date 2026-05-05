@@ -22,6 +22,7 @@ export interface EditorAdapter {
   getContent(): string;
   getDocumentPositionAtViewportY(clientY: number): number | null;
   revealPosition(position: number): void;
+  setParagraphMarker?(selection: EditorSelection | null): void;
   restoreSelection(selection: EditorSelection): void;
   setContent(content: string): void;
   getSelection(): EditorSelection;

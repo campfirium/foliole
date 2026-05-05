@@ -4,25 +4,16 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 import { getSelectionCommandPayload } from '../contextCommands';
 
+import { isImmersiveEditableElement } from './immersiveReadingKeyboard';
+import {
+  blurImmersiveActiveElement,
+  clearParagraphMarker,
+  focusImmersiveEditor,
+  getReadingPositionSelection,
+  syncParagraphMarkerToReadingPosition
+} from './immersiveReadingMarker';
 import { resolveParagraphSelection } from './immersiveReadingModel';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
-
-const NON_TEXT_INPUT_TYPES = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
-function isEditableElement(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  if (target.isContentEditable || target.closest('[contenteditable="true"]')) {
-    return true;
-  }
-  if (target instanceof HTMLTextAreaElement) {
-    return !target.readOnly && !target.disabled;
-  }
-  if (target instanceof HTMLInputElement) {
-    return !target.readOnly && !target.disabled && !NON_TEXT_INPUT_TYPES.has(target.type.toLowerCase());
-  }
-  return false;
-}
 
 function getReadableNodeIds(nodeOrder: string[], nodesById: Record<string, Node>, trashedNodeIds: string[]) {
   return nodeOrder.filter((nodeId) => {
@@ -33,21 +24,6 @@ function getReadableNodeIds(nodeOrder: string[], nodesById: Record<string, Node>
     return Boolean(node && node.kind !== 'folder');
   });
 }
-
-function focusEditor(editorAdapterRef: WorkspaceLayoutProps['editorAdapterRef']) {
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => {
-      editorAdapterRef.current?.focus();
-    });
-  });
-}
-
-function blurActiveElement() {
-  if (document.activeElement instanceof HTMLElement) {
-    document.activeElement.blur();
-  }
-}
-
 function openNextReadableNode(props: WorkspaceLayoutProps, readableNodeIds: string[]) {
   const currentIndex = props.activeNodeId ? readableNodeIds.indexOf(props.activeNodeId) : -1;
   const nextNodeId = currentIndex >= 0 ? readableNodeIds[currentIndex + 1] : undefined;
@@ -58,13 +34,14 @@ function openNextReadableNode(props: WorkspaceLayoutProps, readableNodeIds: stri
 
 function handleImmersiveExit(props: WorkspaceLayoutProps, isImmersiveEditing: boolean, setIsImmersiveEditing: (value: boolean) => void) {
   if (isImmersiveEditing) {
-    blurActiveElement();
+    clearParagraphMarker(props.editorAdapterRef);
+    blurImmersiveActiveElement();
     setIsImmersiveEditing(false);
     return;
   }
+  clearParagraphMarker(props.editorAdapterRef);
   props.onExitImmersiveMode();
 }
-
 function selectParagraph(args: {
   direction: 'backward' | 'forward';
   props: WorkspaceLayoutProps;
@@ -74,22 +51,24 @@ function selectParagraph(args: {
   if (!editor) {
     return false;
   }
+  const currentSelection = getReadingPositionSelection(args.props, editor.getSelection());
   const nextSelection = resolveParagraphSelection({
     content: editor.getContent(),
-    currentSelection: editor.getSelection(),
+    currentSelection,
     direction: args.direction
   });
   if (nextSelection) {
+    editor.setParagraphMarker?.(nextSelection);
     editor.revealSelection(nextSelection);
     return true;
   }
+  editor.setParagraphMarker?.(null);
   if (args.direction === 'forward') {
     openNextReadableNode(args.props, args.readableNodeIds);
     return true;
   }
   return false;
 }
-
 function runImmersiveSelectionAction(args: {
   props: WorkspaceLayoutProps;
   type: 'highlight' | 'note';
@@ -108,7 +87,6 @@ function runImmersiveSelectionAction(args: {
   args.props.onCreateSelectionNote(payload);
   return true;
 }
-
 function handleImmersivePrimaryKey(args: {
   event: KeyboardEvent;
   isImmersiveEditing: boolean;
@@ -128,6 +106,7 @@ function handleImmersivePrimaryKey(args: {
       return true;
     }
     args.event.preventDefault();
+    clearParagraphMarker(args.props.editorAdapterRef);
     args.setIsImmersiveEditing(true);
     args.setIsShortcutsOverlayOpen(false);
     return true;
@@ -139,12 +118,20 @@ function handleImmersivePrimaryKey(args: {
   }
   return false;
 }
-
 function handleImmersiveReadingKey(args: {
   event: KeyboardEvent;
   props: WorkspaceLayoutProps;
   readableNodeIds: string[];
 }) {
+  if (args.event.key === 'ArrowUp' || args.event.key === 'ArrowDown') {
+    args.event.preventDefault();
+    selectParagraph({
+      direction: args.event.key === 'ArrowUp' ? 'backward' : 'forward',
+      props: args.props,
+      readableNodeIds: args.readableNodeIds
+    });
+    return;
+  }
   if (args.event.key === ' ' && args.event.shiftKey) {
     args.event.preventDefault();
     selectParagraph({ direction: 'backward', props: args.props, readableNodeIds: args.readableNodeIds });
@@ -167,7 +154,6 @@ function handleImmersiveReadingKey(args: {
     }
   }
 }
-
 function handleImmersiveKeydown(args: {
   canToggleImmersiveMode: boolean;
   event: KeyboardEvent;
@@ -191,7 +177,7 @@ function handleImmersiveKeydown(args: {
   if (!args.props.isImmersiveMode || args.event.altKey || args.event.ctrlKey || args.event.metaKey) {
     return;
   }
-  if (isEditableElement(args.event.target)) {
+  if (isImmersiveEditableElement(args.event.target)) {
     return;
   }
   if (handleImmersivePrimaryKey(args)) {
@@ -201,6 +187,16 @@ function handleImmersiveKeydown(args: {
     return;
   }
   handleImmersiveReadingKey({ event: args.event, props: args.props, readableNodeIds: args.readableNodeIds });
+}
+
+function useImmersiveParagraphMarkerSync(props: WorkspaceLayoutProps, isImmersiveEditing: boolean) {
+  useEffect(() => {
+    if (!props.isImmersiveMode || isImmersiveEditing) {
+      clearParagraphMarker(props.editorAdapterRef);
+      return;
+    }
+    syncParagraphMarkerToReadingPosition(props);
+  }, [isImmersiveEditing, props]);
 }
 
 export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
@@ -219,23 +215,28 @@ export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
 
   useEffect(() => {
     if (!props.isImmersiveMode) {
+      clearParagraphMarker(props.editorAdapterRef);
       setIsImmersiveEditing(false);
       setIsShortcutsOverlayOpen(false);
       return;
     }
     if (props.isStudyMode) {
+      clearParagraphMarker(props.editorAdapterRef);
       exitImmersiveModeRef.current();
       return;
     }
+    clearParagraphMarker(props.editorAdapterRef);
     setIsImmersiveEditing(false);
     setIsShortcutsOverlayOpen(false);
   }, [props.activeNodeId, props.isImmersiveMode, props.isStudyMode]);
+  useImmersiveParagraphMarkerSync(props, isImmersiveEditing);
 
   useEffect(() => {
     if (!props.isImmersiveMode || !isImmersiveEditing) {
       return;
     }
-    focusEditor(props.editorAdapterRef);
+    clearParagraphMarker(props.editorAdapterRef);
+    focusImmersiveEditor(props.editorAdapterRef);
   }, [isImmersiveEditing, props.editorAdapterRef, props.isImmersiveMode]);
 
   useEffect(
