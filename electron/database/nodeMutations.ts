@@ -1,157 +1,47 @@
+import {
+  clearNodeOrder as clearNodeOrderViaDriver,
+  deleteNodesPermanently as deleteNodesPermanentlyViaDriver,
+  replaceNodeOrder as replaceNodeOrderViaDriver,
+  restoreNodes as restoreNodesViaDriver,
+  softDeleteNodes as softDeleteNodesViaDriver,
+  upsertNodeSnapshot as upsertNodeSnapshotViaDriver
+} from '../../lib/core/database/nodeMutations.js';
+import type {
+  DeleteNodesPermanentlyInput,
+  RestoreNodesInput,
+  SoftDeleteNodesInput,
+  UpsertNodeSnapshotInput
+} from '../../lib/core/database/nodeMutations.js';
+
 import { openDatabaseConnection } from './connection.js';
-import { withTransaction } from './transaction.js';
 
-interface NodeAnchorLinkPayload {
-  id: string;
-  kind: 'highlight' | 'cloze';
-}
-
-export interface UpsertNodeSnapshotInput {
-  nodeId: string;
-  parentNodeId: string | null;
-  title: string;
-  isTitleManual: boolean;
-  content: string;
-  reveal: string | null;
-  anchorLink: NodeAnchorLinkPayload | null;
-  position: number | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface SoftDeleteNodesInput {
-  nodeIds: string[];
-  deletedAt: string;
-}
-
-export interface RestoreNodesInput {
-  nodeIds: string[];
-}
-
-export interface DeleteNodesPermanentlyInput {
-  nodeIds: string[];
-  nodeOrder: string[];
-}
-
-function toAnchorLinkValue(anchorLink: NodeAnchorLinkPayload | null): string | null {
-  return anchorLink ? JSON.stringify(anchorLink) : null;
-}
+export type {
+  DeleteNodesPermanentlyInput,
+  RestoreNodesInput,
+  SoftDeleteNodesInput,
+  UpsertNodeSnapshotInput
+};
 
 export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
-  const connection = openDatabaseConnection();
-  const upsertNodeStatement = connection.driver.prepare(
-    `INSERT INTO nodes (
-        id,
-        parent_id,
-        title,
-        is_title_manual,
-        content,
-        reveal,
-        anchor_link,
-        created_at,
-        updated_at,
-        deleted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
-      ON CONFLICT(id) DO UPDATE SET
-        parent_id = excluded.parent_id,
-        title = excluded.title,
-        is_title_manual = excluded.is_title_manual,
-        content = excluded.content,
-        reveal = excluded.reveal,
-        anchor_link = excluded.anchor_link,
-        updated_at = excluded.updated_at,
-        deleted_at = NULL`
-  );
-  const upsertNodeOrderStatement = connection.driver.prepare(
-    `INSERT INTO node_order (node_id, position)
-     VALUES (?, ?)
-     ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`
-  );
-  withTransaction(connection.driver, () => {
-    upsertNodeStatement.run([
-      input.nodeId,
-      input.parentNodeId,
-      input.title,
-      input.isTitleManual ? 1 : 0,
-      input.content,
-      input.reveal,
-      toAnchorLinkValue(input.anchorLink),
-      input.createdAt,
-      input.updatedAt
-    ]);
-    if (typeof input.position === 'number') {
-      upsertNodeOrderStatement.run([input.nodeId, input.position]);
-    }
-  });
+  upsertNodeSnapshotViaDriver(openDatabaseConnection().driver, input);
 }
 
 export function replaceNodeOrder(nodeIds: string[]): void {
-  const connection = openDatabaseConnection();
-  const deleteOrderStatement = connection.driver.prepare('DELETE FROM node_order');
-  const insertOrderStatement = connection.driver.prepare(
-    'INSERT INTO node_order (node_id, position) VALUES (?, ?)'
-  );
-  withTransaction(connection.driver, () => {
-    deleteOrderStatement.run();
-    for (let index = 0; index < nodeIds.length; index += 1) {
-      insertOrderStatement.run([nodeIds[index], index]);
-    }
-  });
+  replaceNodeOrderViaDriver(openDatabaseConnection().driver, nodeIds);
 }
 
 export function clearNodeOrder(): void {
-  const connection = openDatabaseConnection();
-  connection.driver.execute('DELETE FROM node_order');
+  clearNodeOrderViaDriver(openDatabaseConnection().driver);
 }
 
 export function softDeleteNodes(input: SoftDeleteNodesInput): void {
-  const connection = openDatabaseConnection();
-  const setDeletedAtStatement = connection.driver.prepare(
-    'UPDATE nodes SET deleted_at = ?, updated_at = ? WHERE id = ?'
-  );
-  withTransaction(connection.driver, () => {
-    for (const nodeId of input.nodeIds) {
-      setDeletedAtStatement.run([input.deletedAt, input.deletedAt, nodeId]);
-    }
-  });
+  softDeleteNodesViaDriver(openDatabaseConnection().driver, input);
 }
 
 export function restoreNodes(input: RestoreNodesInput): void {
-  const connection = openDatabaseConnection();
-  const restoredAt = new Date().toISOString();
-  const clearDeletedAtStatement = connection.driver.prepare(
-    'UPDATE nodes SET deleted_at = NULL, updated_at = ? WHERE id = ?'
-  );
-  withTransaction(connection.driver, () => {
-    for (const nodeId of input.nodeIds) {
-      clearDeletedAtStatement.run([restoredAt, nodeId]);
-    }
-  });
+  restoreNodesViaDriver(openDatabaseConnection().driver, input);
 }
 
 export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): void {
-  const connection = openDatabaseConnection();
-  const deleteReviewLogStatement = connection.driver.prepare('DELETE FROM review_log WHERE node_id = ?');
-  const deleteNodeReviewStatement = connection.driver.prepare('DELETE FROM node_review WHERE node_id = ?');
-  const deleteNodeOrderStatement = connection.driver.prepare('DELETE FROM node_order WHERE node_id = ?');
-  const deleteNodeStatement = connection.driver.prepare('DELETE FROM nodes WHERE id = ?');
-  const clearOrderStatement = connection.driver.prepare('DELETE FROM node_order');
-  const insertOrderStatement = connection.driver.prepare(
-    'INSERT INTO node_order (node_id, position) VALUES (?, ?)'
-  );
-
-  withTransaction(connection.driver, () => {
-    for (const nodeId of input.nodeIds) {
-      deleteReviewLogStatement.run([nodeId]);
-      deleteNodeReviewStatement.run([nodeId]);
-      deleteNodeOrderStatement.run([nodeId]);
-    }
-    for (const nodeId of [...input.nodeIds].reverse()) {
-      deleteNodeStatement.run([nodeId]);
-    }
-    clearOrderStatement.run();
-    for (let index = 0; index < input.nodeOrder.length; index += 1) {
-      insertOrderStatement.run([input.nodeOrder[index], index]);
-    }
-  });
+  deleteNodesPermanentlyViaDriver(openDatabaseConnection().driver, input);
 }
