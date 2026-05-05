@@ -3,7 +3,9 @@ param(
   [string]$Action = "status",
   [string]$WindowsWorkDir = "C:\dev\foliole",
   [string]$PidFile = "$env:TEMP\foliole-electron-dev.pid",
-  [string]$RuntimePidFile = "$env:TEMP\foliole-electron-runtime.pid"
+  [string]$RuntimePidFile = "$env:TEMP\foliole-electron-runtime.pid",
+  [string]$RuntimeHeadFile = "$env:TEMP\foliole-electron-runtime-head.txt",
+  [string]$RuntimeHead = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -85,6 +87,46 @@ function Save-TrackedRuntimePid {
 
 function Remove-TrackedRuntimePid {
   Remove-Item -Path $RuntimePidFile -Force -ErrorAction SilentlyContinue
+}
+
+function Get-RepoHead {
+  param([string]$WorkDir)
+  if (-not [string]::IsNullOrWhiteSpace($RuntimeHead)) {
+    return $RuntimeHead.Trim()
+  }
+  try {
+    $head = (git -C $WorkDir rev-parse HEAD 2>$null | Select-Object -First 1).Trim()
+    if ([string]::IsNullOrWhiteSpace($head)) {
+      return $null
+    }
+    return $head
+  } catch {
+    return $null
+  }
+}
+
+function Get-TrackedRuntimeHead {
+  if (!(Test-Path -Path $RuntimeHeadFile)) {
+    return $null
+  }
+
+  $raw = (Get-Content -Path $RuntimeHeadFile -Raw).Trim()
+  if ([string]::IsNullOrWhiteSpace($raw)) {
+    return $null
+  }
+  return $raw
+}
+
+function Save-TrackedRuntimeHead {
+  param([string]$Head)
+  if ([string]::IsNullOrWhiteSpace($Head)) {
+    return
+  }
+  Set-Content -Path $RuntimeHeadFile -Value $Head -NoNewline
+}
+
+function Remove-TrackedRuntimeHead {
+  Remove-Item -Path $RuntimeHeadFile -Force -ErrorAction SilentlyContinue
 }
 
 function Get-ProcessById {
@@ -459,6 +501,7 @@ function Restart-ElectronRuntimeOnly {
     return @{ ok = $false; reason = "app-ready-timeout"; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
   Save-TrackedRuntimePid -ProcessId $health.runtimePid
+  Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WorkDir)
   return @{
     ok = $true
     oldRuntimePid = $oldRuntimePid
@@ -511,6 +554,7 @@ function Start-ElectronRuntimeOnly {
     return @{ ok = $false; reason = "app-ready-timeout"; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
   Save-TrackedRuntimePid -ProcessId $health.runtimePid
+  Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WorkDir)
   return @{
     ok = $true
     runtimePid = $health.runtimePid
@@ -538,18 +582,24 @@ function Stop-Electron {
 
   Remove-TrackedPid
   Remove-TrackedRuntimePid
+  Remove-TrackedRuntimeHead
   Write-Info "status: STOPPED"
 }
 
 if ($Action -eq "status") {
   $tracked = Get-TrackedProcess
   $runtime = Get-TrackedRuntimeProcess
+  $runtimeHead = Get-TrackedRuntimeHead
   if ($null -eq $runtime) {
     $runtime = Get-ElectronRuntimeProcess
   }
   if ($null -ne $tracked) {
     if ($null -ne $runtime) {
-      Write-Info "status: RUNNING pid=$($tracked.Id) runtime_pid=$($runtime.Id)"
+      $headInfo = ""
+      if ($null -ne $runtimeHead) {
+        $headInfo = " head=$runtimeHead"
+      }
+      Write-Info "status: RUNNING pid=$($tracked.Id) runtime_pid=$($runtime.Id)$headInfo"
     } else {
       Write-Info "status: STOPPED reason=runtime-missing shell_pid=$($tracked.Id)"
     }
@@ -557,7 +607,11 @@ if ($Action -eq "status") {
   }
 
   if ($null -ne $runtime) {
-    Write-Info "status: RUNNING runtime_pid=$($runtime.Id)"
+    $headInfo = ""
+    if ($null -ne $runtimeHead) {
+      $headInfo = " head=$runtimeHead"
+    }
+    Write-Info "status: RUNNING runtime_pid=$($runtime.Id)$headInfo"
     exit 0
   }
 
@@ -601,6 +655,7 @@ if ($Action -eq "start") {
 
   $started = Start-ElectronWithHealthCheck -WorkDir $WindowsWorkDir
   Save-TrackedRuntimePid -ProcessId $started.runtimePid
+  Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WindowsWorkDir)
   Write-Info "status: STARTED shell_pid=$($started.shellPid) runtime_pid=$($started.runtimePid)"
   exit 0
 }

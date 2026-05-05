@@ -222,4 +222,45 @@ describe('windows-preview script', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('restarts when runtime head is behind committed electron changes even without local electron diff', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: RUNNING runtime_pid=10 head=old-head"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "restart" ]; then',
+          '  echo "[windows-restart-client] status: RESTARTED"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx',
+        WINDOWS_PREVIEW_CURRENT_HEAD: 'new-head',
+        WINDOWS_PREVIEW_COMMITTED_ELECTRON_CHANGES: 'electron/main.ts',
+        WINDOWS_PREVIEW_ELECTRON_RESTART_MODE: 'runtime-only'
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('reason: runtime behind committed electron changes');
+      expect(result.stdout).toContain('status: RESTARTED');
+      const actions = (await readFile(actionLog, 'utf8'))
+        .split('\n')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+      expect(actions).toEqual(['status', 'restart']);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

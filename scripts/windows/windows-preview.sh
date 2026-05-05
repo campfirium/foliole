@@ -14,6 +14,49 @@ WINDOWS_PREVIEW_ELECTRON_RESTART_MODE="${WINDOWS_PREVIEW_ELECTRON_RESTART_MODE:-
 
 cd "${REPO_ROOT}"
 
+resolve_current_head() {
+  if [ -n "${WINDOWS_PREVIEW_CURRENT_HEAD:-}" ]; then
+    printf '%s' "${WINDOWS_PREVIEW_CURRENT_HEAD}"
+    return 0
+  fi
+  git rev-parse HEAD 2>/dev/null || true
+}
+
+extract_runtime_head() {
+  printf '%s\n' "$1" | sed -n 's/.* head=\([^[:space:]]*\).*/\1/p' | head -n 1
+}
+
+has_committed_electron_changes_since() {
+  local runtime_head="$1"
+  if [ -n "${WINDOWS_PREVIEW_COMMITTED_ELECTRON_CHANGES:-}" ]; then
+    [ -n "${WINDOWS_PREVIEW_COMMITTED_ELECTRON_CHANGES}" ]
+    return
+  fi
+  if [ -z "${runtime_head}" ] || [ -z "${CURRENT_HEAD}" ]; then
+    return 1
+  fi
+  if [ "${runtime_head}" = "${CURRENT_HEAD}" ]; then
+    return 1
+  fi
+  if ! git rev-parse --verify "${runtime_head}^{commit}" >/dev/null 2>&1; then
+    return 0
+  fi
+  git diff --name-only "${runtime_head}..${CURRENT_HEAD}" -- electron/ | grep -q .
+}
+
+CURRENT_HEAD="$(resolve_current_head)"
+STATUS_PROBE_RAN=0
+STATUS_PROBE_OUTPUT=""
+STATUS_PROBE_EXIT=0
+
+probe_windows_client_status() {
+  set +e
+  STATUS_PROBE_OUTPUT="$(run_windows_client_action status)"
+  STATUS_PROBE_EXIT=$?
+  set -e
+  STATUS_PROBE_RAN=1
+}
+
 run_windows_client_action() {
   local action="$1"
   local timeout_seconds="${WINDOWS_PREVIEW_TIMEOUT_SECONDS}"
@@ -107,10 +150,14 @@ ensure_windows_client_running() {
   local start_output=""
   local start_exit=0
 
-  set +e
-  status_output="$(run_windows_client_action status)"
-  status_exit=$?
-  set -e
+  if [ "${STATUS_PROBE_RAN}" -eq 1 ]; then
+    status_output="${STATUS_PROBE_OUTPUT}"
+    status_exit="${STATUS_PROBE_EXIT}"
+  else
+    probe_windows_client_status
+    status_output="${STATUS_PROBE_OUTPUT}"
+    status_exit="${STATUS_PROBE_EXIT}"
+  fi
 
   if [ "${status_exit}" -eq 0 ] && echo "${status_output}" | grep -qE 'status:\s*RUNNING'; then
     echo "[windows-preview] windows client: RUNNING"
@@ -159,17 +206,38 @@ if [ -z "${changed_files}" ]; then
   )"
 fi
 
+restart_for_electron=0
+restart_reason=""
+restart_status_output=""
+restart_status_exit=0
+
 if echo "${changed_files}" | grep -qE '^electron/'; then
+  restart_for_electron=1
+  restart_reason="working tree electron changes detected"
+else
+  probe_windows_client_status
+  restart_status_output="${STATUS_PROBE_OUTPUT}"
+  restart_status_exit="${STATUS_PROBE_EXIT}"
+  runtime_head="$(extract_runtime_head "${restart_status_output}")"
+  if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*RUNNING' && has_committed_electron_changes_since "${runtime_head}"; then
+    restart_for_electron=1
+    restart_reason="runtime behind committed electron changes"
+  fi
+fi
+
+if [ "${restart_for_electron}" -eq 1 ]; then
   echo "[windows-preview] step 2/2: electron changes detected; evaluating client state"
+  echo "[windows-preview] reason: ${restart_reason}"
   if [ "${WINDOWS_PREVIEW_ELECTRON_RESTART_MODE}" = "runtime-only" ]; then
     echo "[windows-preview] restart mode: runtime-only"
   else
     echo "[windows-preview] restart mode: full"
   fi
-  set +e
-  restart_status_output="$(run_windows_client_action status)"
-  restart_status_exit=$?
-  set -e
+  if [ "${STATUS_PROBE_RAN}" -eq 0 ]; then
+    probe_windows_client_status
+    restart_status_output="${STATUS_PROBE_OUTPUT}"
+    restart_status_exit="${STATUS_PROBE_EXIT}"
+  fi
   if [ "${WINDOWS_PREVIEW_ELECTRON_RESTART_MODE}" != "runtime-only" ]; then
     if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*RUNNING'; then
       echo "[windows-preview] windows client: RUNNING; full restarting (stop -> start)"
