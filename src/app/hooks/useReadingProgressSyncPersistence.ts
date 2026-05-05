@@ -1,6 +1,6 @@
 import type { MutableRefObject } from 'react';
 
-import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import {
   hasWorkspaceRuntimeRepository,
   saveWorkspaceReadingProgressNow

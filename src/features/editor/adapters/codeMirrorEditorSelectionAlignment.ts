@@ -1,6 +1,6 @@
 import { type EditorView } from '@codemirror/view';
 
-import { pushDebugTrace } from '../../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../../shared/diagnostics/debugTrace';
 import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 
 import {

@@ -1,6 +1,6 @@
 import { EditorView, type EditorView as CodeMirrorView } from '@codemirror/view';
 
-import { pushDebugTrace } from '../../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../../shared/diagnostics/debugTrace';
 
 import { alignSelectionInViewport } from './codeMirrorEditorAdapterView';
 import type { EditorRevealOptions, EditorSelection } from './EditorAdapter';

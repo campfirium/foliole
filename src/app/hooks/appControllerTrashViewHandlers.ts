@@ -1,5 +1,5 @@
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 

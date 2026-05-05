@@ -8,7 +8,7 @@ import {
   saveWorkspaceReadingProgressNow
 } from '../../shared/platform/workspaceRuntimeRepository';
 import { restartMainWindowApp } from '../../shared/platform/windowControls';
-import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
 import type { NodeViewState } from '../../store/workspaceStore';
 

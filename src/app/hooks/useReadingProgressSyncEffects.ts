@@ -1,7 +1,7 @@
 import { useEffect, useMemo, type MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
-import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import {

@@ -1,5 +1,5 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 

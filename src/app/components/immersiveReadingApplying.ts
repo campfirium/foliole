@@ -1,7 +1,7 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 

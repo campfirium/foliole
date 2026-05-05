@@ -1,6 +1,6 @@
 import { type EditorView } from '@codemirror/view';
 
-import { pushDebugTrace } from '../../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../../shared/diagnostics/debugTrace';
 
 export function getEditorLineBlockHeight(view: EditorView, lineNumber: number) {
   if (lineNumber < 1 || lineNumber > view.state.doc.lines) {

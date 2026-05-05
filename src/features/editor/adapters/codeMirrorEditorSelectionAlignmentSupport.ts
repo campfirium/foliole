@@ -1,4 +1,4 @@
-import { pushDebugTrace } from '../../../shared/testing/debugBridge';
+import { pushDebugTrace } from '../../../shared/diagnostics/debugTrace';
 
 export type ResolvedViewportTop = {
   source: string;
