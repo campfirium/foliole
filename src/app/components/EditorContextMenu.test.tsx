@@ -103,13 +103,15 @@ it('shows an app panel before creating a long cloze front', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Cloze' }));
 
-  expect(screen.getByText('Create a long cloze?')).toBeInTheDocument();
+  expect(screen.getByText('Confirm action')).toBeInTheDocument();
   expect(screen.queryByText(/foliole/i)).toBeNull();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Create highlight' }));
+  const highlightButtons = screen.getAllByRole('button', { name: 'Highlight' });
+  fireEvent.click(highlightButtons[highlightButtons.length - 1]);
   expect(onCreateHighlightFromPayload).toHaveBeenCalledWith(createLongClozePayload());
 
-  fireEvent.click(screen.getByRole('button', { name: 'Keep cloze' }));
+  const clozeButtons = screen.getAllByRole('button', { name: 'Cloze' });
+  fireEvent.click(clozeButtons[clozeButtons.length - 1]);
   expect(onCreateClozeFromPayload).toHaveBeenCalledWith(createLongClozePayload(), { skipGuard: true });
   expect(onCreateCloze).not.toHaveBeenCalled();
   expect(onCreateHighlight).not.toHaveBeenCalled();
@@ -138,7 +140,7 @@ it('converts a long cloze front from the floating toolbar when conversion mode i
 
   expect(onCreateHighlightFromPayload).toHaveBeenCalledWith(createLongClozePayload());
   expect(onCreateClozeFromPayload).not.toHaveBeenCalled();
-  expect(screen.queryByText('Create a long cloze?')).toBeNull();
+  expect(screen.queryByText('Long cloze')).toBeNull();
 });
 
 it('saves add note text from the floating note panel', () => {

@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import { subscribeOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
@@ -172,6 +173,14 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     setIsMoveToNodePaletteOpen,
     setIsSearchPaletteOpen
   });
+
+  useEffect(() => {
+    return subscribeOpenClozeGuardSettings(() => {
+      settingsRequest.setRequestedSettingsDialog(null);
+      settingsRequest.setRequestedSettingsCategory('editor');
+      setIsSettingsOpen(true);
+    });
+  }, [settingsRequest]);
 
   const editorDraftFlush = useEditorDraftFlushRegistry(refs);
   const bumpReadingPositionRequest = useCallback(() => {
