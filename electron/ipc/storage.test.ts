@@ -88,6 +88,21 @@ it('merges app settings saves without dropping runtime-only keys', async () => {
   });
 });
 
+it('removes renderer settings that are absent from the next full snapshot', async () => {
+  await saveAppSettingsState({
+    'foliole-node-icon-scheduled-item-appearance': '{"effect":"double-line"}',
+    'foliole-settings-active-category': 'appearance'
+  });
+
+  await saveAppSettingsState({
+    'foliole-settings-active-category': 'appearance'
+  });
+
+  await expect(loadAppSettingsState()).resolves.toEqual({
+    'foliole-settings-active-category': 'appearance'
+  });
+});
+
 it('returns empty object when sqlite payload is malformed json', async () => {
   openDatabaseConnection().sqlite
     .prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')

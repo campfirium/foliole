@@ -60,9 +60,11 @@ async function expectStoredNodeIconSettings() {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg)).toContain('<svg');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg)).toContain('<svg');
     expect(readJsonSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance)).toMatchObject({
-      doubleLineDistance: 2.5,
       effect: 'double-line',
+      innerScale: 0.72,
       lineWidth: 1.8,
+      outerScale: 1.2,
+      scale: 1.15,
       svg: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>'
     });
   });
@@ -83,7 +85,9 @@ it('stores compact topic and item icon rows plus per-state topic and item icon s
   editState('Edit Item scheduled');
   fireEvent.change(screen.getByLabelText('Effect'), { target: { value: 'double-line' } });
   fireEvent.change(screen.getByLabelText('Line width'), { target: { value: '1.8' } });
-  fireEvent.change(screen.getByLabelText('Line distance'), { target: { value: '2.5' } });
+  fireEvent.change(screen.getByLabelText('Scale'), { target: { value: '1.15' } });
+  fireEvent.change(screen.getByLabelText('Outer scale'), { target: { value: '1.2' } });
+  fireEvent.change(screen.getByLabelText('Inner scale'), { target: { value: '0.72' } });
   fireEvent.change(screen.getByLabelText('SVG'), {
     target: { value: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>' }
   });
@@ -102,7 +106,8 @@ it('keeps base icon preview independent from state effects', () => {
     APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance,
     JSON.stringify({
       effect: 'double-line',
-      doubleLineDistance: 2.5,
+      innerScale: 0.72,
+      outerScale: 1.2,
       svg: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>'
     })
   );

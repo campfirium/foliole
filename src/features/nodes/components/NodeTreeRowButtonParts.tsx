@@ -37,7 +37,6 @@ export function renderNodeTreeRowContent(props: {
   return (
     <span
       className={resolveNodeRowContentClassName()}
-      style={props.isMuted ? { opacity: props.mutedOpacity } : undefined}
     >
       <span className="flex min-w-0 w-full items-center gap-1.5 overflow-hidden">
         {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
@@ -134,7 +133,10 @@ export function renderNodeTreeRowButtonSurface(props: {
       onDoubleClick={props.handlers.onDoubleClick}
       onKeyDown={props.handlers.onKeyDown}
       role="treeitem"
-      style={props.style}
+      style={{
+        ...props.style,
+        ...(props.isMuted ? { '--node-muted-opacity': props.mutedOpacity } : {})
+      } as CSSProperties}
       variant="list"
     >
       {renderNodeTreeRowButtonBody(props)}

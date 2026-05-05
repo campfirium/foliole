@@ -3,10 +3,14 @@ import { fileURLToPath } from 'node:url';
 
 import { app } from 'electron';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { writePrebuiltRendererHtmlForSettings } from '../runtimeRendererHtml.js';
 
 const APP_SETTINGS_KEY = 'app_settings';
+const RUNTIME_ONLY_APP_SETTINGS_KEYS = new Set<string>([
+  APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncEnabled
+]);
 const currentRuntimeDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 function resolveRendererUrl() {
@@ -36,9 +40,15 @@ export async function loadAppSettingsState(): Promise<Record<string, string>> {
 }
 
 export async function saveAppSettingsState(settings: Record<string, unknown>): Promise<void> {
+  const incomingSettings = normalizeAppSettingsPayload(settings);
+  const preservedRuntimeSettings = Object.fromEntries(
+    Object.entries(normalizeAppSettingsPayload(loadJsonSetting(APP_SETTINGS_KEY))).filter(([key]) =>
+      RUNTIME_ONLY_APP_SETTINGS_KEYS.has(key)
+    )
+  );
   const nextSettings = {
-    ...normalizeAppSettingsPayload(loadJsonSetting(APP_SETTINGS_KEY)),
-    ...normalizeAppSettingsPayload(settings)
+    ...preservedRuntimeSettings,
+    ...incomingSettings
   };
   saveJsonSetting(APP_SETTINGS_KEY, nextSettings);
   try {

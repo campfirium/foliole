@@ -58,6 +58,8 @@ const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg,
   APP_SETTINGS_STORAGE_KEYS.nodeIconPrimaryLucideIcon,
   APP_SETTINGS_STORAGE_KEYS.nodeIconSecondaryLucideIcon,
+  APP_SETTINGS_STORAGE_KEYS.nodeIconPrimaryAppearance,
+  APP_SETTINGS_STORAGE_KEYS.nodeIconSecondaryAppearance,
   APP_SETTINGS_STORAGE_KEYS.nodeIconReviewVariantMode,
   APP_SETTINGS_STORAGE_KEYS.nodeIconPendingStrokeStyle,
   APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledStrokeStyle,

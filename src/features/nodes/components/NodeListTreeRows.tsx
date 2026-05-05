@@ -14,7 +14,7 @@ import type { useNodeListDragController } from './NodeListTreeDrag';
 import { createNodeListRowKeydownHandler } from './NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
-import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState } from './NodeTreeRowIconModel';
+import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState, type NodeTreeRowIconKind } from './NodeTreeRowIconModel';
 import { TrashListRows } from './TrashListRows';
 
 interface NodeListRowsProps {
@@ -52,7 +52,14 @@ function renderNodeListRow(
       ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
       : (node?.reading?.repetitionCount ?? 0) > 0
   });
-  const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow();
+  const nodeIconKind = resolveNodeTreeRowIconKind({
+    hasChildren: props.isTrashViewOpen ? false : row.hasChildren,
+    isCollapsed: props.isTrashViewOpen ? false : props.collapsedNodeIds.has(row.node.id),
+    isReviewCard,
+    kind: node?.kind ?? 'topic'
+  });
+  const leafIconKind = resolveLeafIconKind(nodeIconKind);
+  const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow(leafIconKind);
 
   return (
     <NodeTreeRowItem
@@ -66,18 +73,13 @@ function renderNodeListRow(
       isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox || isTrashRoot || isVirtualRoot}
       isDropTarget={props.drag.dropTargetNodeId === row.node.id}
       isMuted={shouldFadeWholeRow}
-      mutedOpacity={shouldFadeWholeRow ? getDismissedFadeOpacity() : 1}
+      mutedOpacity={shouldFadeWholeRow ? getDismissedFadeOpacity(leafIconKind) : 1}
       dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
       isSelected={props.selectedNodeIds.includes(row.node.id)}
       key={row.node.id}
       label={row.node.title}
       nodeId={row.node.id}
-      nodeIconKind={resolveNodeTreeRowIconKind({
-        hasChildren: props.isTrashViewOpen ? false : row.hasChildren,
-        isCollapsed: props.isTrashViewOpen ? false : props.collapsedNodeIds.has(row.node.id),
-        isReviewCard,
-        kind: node?.kind ?? 'topic'
-      })}
+      nodeIconKind={nodeIconKind}
       nodeIconState={nodeIconState}
       showIcon={false}
       rowSpacing={props.rowSpacing}
@@ -93,6 +95,10 @@ function renderNodeListRow(
       onToggleCollapse={props.onToggleCollapse}
     />
   );
+}
+
+function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
+  return kind === 'reading' || kind === 'review' ? kind : undefined;
 }
 
 export function NodeListRows(props: NodeListRowsProps) {

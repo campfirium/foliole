@@ -25,11 +25,17 @@ export type NodeIconEditTarget =
   | { type: 'state'; state: NodeTreeRowIconState; kind: EditableIconKind; title: string };
 
 function SvgEditDialog(props: {
+  color: string;
   iconId: string;
   iconQuery: string;
+  lineWidth: number;
+  onColorChange: (value: string) => void;
   onIconChange: (value: string) => void;
   onIconQueryChange: (value: string) => void;
+  onLineWidthChange: (value: number) => void;
+  onScaleChange: (value: number) => void;
   onSvgChange: (value: string) => void;
+  scale: number;
   svgValue: string;
 }) {
   const filteredIcons = LUCIDE_ICON_OPTIONS.filter((icon) => matchesIconQuery([icon.id, icon.label], props.iconQuery));
@@ -64,6 +70,11 @@ function SvgEditDialog(props: {
           value={props.svgValue}
         />
       </label>
+      <div className="grid grid-cols-[7.5rem_7.5rem_minmax(9.5rem,auto)] gap-3">
+        <NumberField label="Line width" onChange={props.onLineWidthChange} step={0.05} value={props.lineWidth} />
+        <NumberField label="Scale" onChange={props.onScaleChange} step={0.05} value={props.scale} />
+        <ColorField label="Color" onChange={props.onColorChange} value={props.color} />
+      </div>
     </div>
   );
 }
@@ -72,12 +83,16 @@ function StateEditDialog(props: {
   appearance: NodeIconStateAppearance;
   isDismissed: boolean;
   onColorChange: (value: string) => void;
-  onDoubleLineDistanceChange: (value: number) => void;
   onEffectChange: (value: NodeIconEffect) => void;
   onFadeEnabledChange: (value: boolean) => void;
   onFadeOpacityChange: (value: number) => void;
   onFadeWholeRowChange: (value: boolean) => void;
+  onInnerLineWidthChange: (value: number) => void;
+  onInnerScaleChange: (value: number) => void;
   onLineWidthChange: (value: number) => void;
+  onOuterLineWidthChange: (value: number) => void;
+  onOuterScaleChange: (value: number) => void;
+  onScaleChange: (value: number) => void;
   onSvgChange: (value: string) => void;
 }) {
   return (
@@ -93,14 +108,18 @@ function StateEditDialog(props: {
           value={props.appearance.svg}
         />
       </label>
-      <div className="grid grid-cols-[minmax(0,1fr)_7.5rem_minmax(9.5rem,auto)] gap-3">
-        <EffectSelect label="Effect" onChange={props.onEffectChange} value={props.appearance.effect} />
+      <div className="grid grid-cols-[8.25rem_7.5rem_7.5rem_minmax(9.5rem,auto)] gap-3">
+        <EffectSelect compact label="Effect" onChange={props.onEffectChange} value={props.appearance.effect} />
         <NumberField label="Line width" onChange={props.onLineWidthChange} step={0.05} value={props.appearance.lineWidth} />
+        <NumberField label="Scale" onChange={props.onScaleChange} step={0.05} value={props.appearance.scale} />
         <ColorField label="Color" onChange={props.onColorChange} value={props.appearance.color} />
       </div>
       {props.appearance.effect === 'double-line' ? (
         <div className="flex flex-wrap gap-3">
-          <NumberField label="Line distance" onChange={props.onDoubleLineDistanceChange} step={0.25} value={props.appearance.doubleLineDistance} />
+          <NumberField label="Outer scale" onChange={props.onOuterScaleChange} step={0.05} value={props.appearance.outerScale} />
+          <NumberField label="Outer width" onChange={props.onOuterLineWidthChange} step={0.05} value={props.appearance.outerLineWidth} />
+          <NumberField label="Inner scale" onChange={props.onInnerScaleChange} step={0.05} value={props.appearance.innerScale} />
+          <NumberField label="Inner width" onChange={props.onInnerLineWidthChange} step={0.05} value={props.appearance.innerLineWidth} />
         </div>
       ) : null}
       {props.isDismissed ? (
@@ -137,11 +156,17 @@ export function NodeIconSettingsDialog(props: {
           <AppDialogTitle>{target.title}</AppDialogTitle>
           {target.type === 'svg' ? (
             <SvgEditDialog
+              color={target.kind === 'reading' ? props.state.topicColor : props.state.itemColor}
               iconId={target.kind === 'reading' ? props.state.topicIcon : props.state.itemIcon}
               iconQuery={props.iconQuery}
+              lineWidth={target.kind === 'reading' ? props.state.topicLineWidth : props.state.itemLineWidth}
+              onColorChange={target.kind === 'reading' ? props.state.setTopicColor : props.state.setItemColor}
               onIconChange={target.kind === 'reading' ? props.state.setTopicIcon : props.state.setItemIcon}
               onIconQueryChange={props.onIconQueryChange}
+              onLineWidthChange={target.kind === 'reading' ? props.state.setTopicLineWidth : props.state.setItemLineWidth}
+              onScaleChange={target.kind === 'reading' ? props.state.setTopicScale : props.state.setItemScale}
               onSvgChange={target.kind === 'reading' ? props.state.setTopicSvg : props.state.setItemSvg}
+              scale={target.kind === 'reading' ? props.state.topicScale : props.state.itemScale}
               svgValue={target.kind === 'reading' ? props.state.topicSvg : props.state.itemSvg}
             />
           ) : appearance ? (
@@ -149,12 +174,16 @@ export function NodeIconSettingsDialog(props: {
               appearance={appearance}
               isDismissed={target.state === 'dismissed'}
               onColorChange={(value) => props.state.setStateColor(target.state, target.kind, value)}
-              onDoubleLineDistanceChange={(value) => props.state.setStateDoubleLineDistance(target.state, target.kind, value)}
               onEffectChange={(value) => props.state.setStateEffect(target.state, target.kind, value)}
               onFadeEnabledChange={(value) => props.state.setDismissedFadeEnabled(target.kind, value)}
               onFadeOpacityChange={(value) => props.state.setDismissedFadeOpacity(target.kind, value)}
               onFadeWholeRowChange={(value) => props.state.setDismissedFadeWholeRow(target.kind, value)}
+              onInnerLineWidthChange={(value) => props.state.setStateInnerLineWidth(target.state, target.kind, value)}
+              onInnerScaleChange={(value) => props.state.setStateInnerScale(target.state, target.kind, value)}
               onLineWidthChange={(value) => props.state.setStateLineWidth(target.state, target.kind, value)}
+              onOuterLineWidthChange={(value) => props.state.setStateOuterLineWidth(target.state, target.kind, value)}
+              onOuterScaleChange={(value) => props.state.setStateOuterScale(target.state, target.kind, value)}
+              onScaleChange={(value) => props.state.setStateScale(target.state, target.kind, value)}
               onSvgChange={(value) => props.state.setStateSvg(target.state, target.kind, value)}
             />
           ) : null}

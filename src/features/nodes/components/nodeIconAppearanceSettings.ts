@@ -1,78 +1,38 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
+import {
+  DEFAULT_NODE_ICON_BASE_APPEARANCE,
+  DEFAULT_NODE_ICON_STATE_APPEARANCE,
+  NODE_ICON_EFFECT_OPTIONS,
+  type NodeIconBaseAppearance,
+  type NodeIconEffect,
+  type NodeIconStateAppearance
+} from './nodeIconAppearanceModel';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
 
-export const NODE_ICON_SHAPE_OPTIONS = ['hexagon', 'diamond', 'circle', 'square', 'triangle', 'leaf'] as const;
-export const NODE_ICON_EFFECT_OPTIONS = ['none', 'double-line'] as const;
+export {
+  DEFAULT_NODE_ICON_BASE_APPEARANCE,
+  DEFAULT_NODE_ICON_STATE_APPEARANCE,
+  NODE_ICON_EFFECT_OPTIONS,
+  NODE_ICON_SHAPE_OPTIONS
+} from './nodeIconAppearanceModel';
+export type {
+  NodeIconBaseAppearance,
+  NodeIconEffect,
+  NodeIconShape,
+  NodeIconStateAppearance
+} from './nodeIconAppearanceModel';
 
-export type NodeIconShape = (typeof NODE_ICON_SHAPE_OPTIONS)[number];
-export type NodeIconEffect = (typeof NODE_ICON_EFFECT_OPTIONS)[number];
-
-export interface NodeIconStateAppearance {
-  color: string;
-  doubleLineDistance: number;
-  effect: NodeIconEffect;
-  fadeEnabled: boolean;
-  fadeOpacity: number;
-  fadeWholeRow: boolean;
-  lineWidth: number;
-  svg: string;
-}
-
-export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, NodeIconStateAppearance> = {
-  pending: {
-    color: '#202124',
-    doubleLineDistance: 2,
-    effect: 'none',
-    fadeEnabled: false,
-    fadeOpacity: 1,
-    fadeWholeRow: false,
-    lineWidth: 1.2,
-    svg: ''
-  },
-  scheduled: {
-    color: '#202124',
-    doubleLineDistance: 2,
-    effect: 'double-line',
-    fadeEnabled: false,
-    fadeOpacity: 1,
-    fadeWholeRow: false,
-    lineWidth: 1.2,
-    svg: ''
-  },
-  dismissed: {
-    color: '#202124',
-    doubleLineDistance: 2,
-    effect: 'none',
-    fadeEnabled: true,
-    fadeOpacity: 0.35,
-    fadeWholeRow: true,
-    lineWidth: 1.2,
-    svg: ''
-  }
-};
+type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 
 export function getDefaultNodeIconStateAppearance(state: NodeTreeRowIconState): NodeIconStateAppearance {
   return DEFAULT_NODE_ICON_STATE_APPEARANCE[state];
 }
 
-const STORAGE_KEYS = {
-  pending: {
-    color: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingColor,
-    lineWidth: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingLineWidth
-  },
-  scheduled: {
-    color: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledColor,
-    lineWidth: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledLineWidth
-  },
-  dismissed: {
-    color: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedColor,
-    fadeEnabled: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeEnabled,
-    fadeOpacity: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeOpacity,
-    fadeWholeRow: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeWholeRow,
-    lineWidth: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedLineWidth
-  }
+const BASE_STORAGE_KEYS = {
+  reading: APP_SETTINGS_STORAGE_KEYS.nodeIconPrimaryAppearance,
+  review: APP_SETTINGS_STORAGE_KEYS.nodeIconSecondaryAppearance
 } as const;
 
 const KIND_STORAGE_KEYS = {
@@ -89,10 +49,6 @@ const KIND_STORAGE_KEYS = {
     review: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedItemAppearance
   }
 } as const;
-
-function getDismissedStorageKeys() {
-  return STORAGE_KEYS.dismissed;
-}
 
 function normalizeColor(value: string | null, fallback: string): string {
   const match = /^#([0-9a-fA-F]{6})$/.exec(value?.trim() ?? '');
@@ -116,6 +72,17 @@ function normalizePositiveNumber(value: string | null, fallback: number) {
   return Math.max(0.25, Math.min(12, Math.round(parsed * 100) / 100));
 }
 
+function normalizeNonNegativeNumber(value: string | null, fallback: number) {
+  if (value === null || value.trim() === '') {
+    return fallback;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.max(0, Math.min(12, Math.round(parsed * 100) / 100));
+}
+
 function normalizeOpacity(value: string | null, fallback: number) {
   if (value === null || value.trim() === '') {
     return fallback;
@@ -125,16 +92,6 @@ function normalizeOpacity(value: string | null, fallback: number) {
     return fallback;
   }
   return Math.max(0, Math.min(1, Math.round(parsed * 100) / 100));
-}
-
-function normalizeBoolean(value: string | null, fallback: boolean) {
-  if (value === 'true') {
-    return true;
-  }
-  if (value === 'false') {
-    return false;
-  }
-  return fallback;
 }
 
 function normalizeAppearanceOverride(
@@ -153,7 +110,12 @@ function normalizeAppearanceOverride(
       fadeEnabled: typeof parsed.fadeEnabled === 'boolean' ? parsed.fadeEnabled : fallback.fadeEnabled,
       fadeOpacity: normalizeOpacity(String(parsed.fadeOpacity ?? ''), fallback.fadeOpacity),
       fadeWholeRow: typeof parsed.fadeWholeRow === 'boolean' ? parsed.fadeWholeRow : fallback.fadeWholeRow,
-      lineWidth: normalizePositiveNumber(String(parsed.lineWidth ?? ''), fallback.lineWidth),
+      innerLineWidth: normalizeNonNegativeNumber(String(parsed.innerLineWidth ?? ''), fallback.innerLineWidth),
+      innerScale: normalizePositiveNumber(String(parsed.innerScale ?? ''), fallback.innerScale),
+      lineWidth: normalizeNonNegativeNumber(String(parsed.lineWidth ?? ''), fallback.lineWidth),
+      outerLineWidth: normalizeNonNegativeNumber(String(parsed.outerLineWidth ?? ''), fallback.outerLineWidth),
+      outerScale: normalizePositiveNumber(String(parsed.outerScale ?? ''), fallback.outerScale),
+      scale: normalizePositiveNumber(String(parsed.scale ?? ''), fallback.scale),
       svg: typeof parsed.svg === 'string' ? parsed.svg : fallback.svg
     };
   } catch {
@@ -161,37 +123,53 @@ function normalizeAppearanceOverride(
   }
 }
 
+function normalizeBaseAppearance(value: string | null): NodeIconBaseAppearance {
+  if (!value) return DEFAULT_NODE_ICON_BASE_APPEARANCE;
+  try {
+    const parsed = JSON.parse(value) as Partial<Record<keyof NodeIconBaseAppearance, unknown>>;
+    return {
+      color: normalizeColor(typeof parsed.color === 'string' ? parsed.color : null, DEFAULT_NODE_ICON_BASE_APPEARANCE.color),
+      lineWidth: normalizeNonNegativeNumber(String(parsed.lineWidth ?? ''), DEFAULT_NODE_ICON_BASE_APPEARANCE.lineWidth),
+      scale: normalizePositiveNumber(String(parsed.scale ?? ''), DEFAULT_NODE_ICON_BASE_APPEARANCE.scale)
+    };
+  } catch {
+    return DEFAULT_NODE_ICON_BASE_APPEARANCE;
+  }
+}
+
+export function getNodeIconBaseAppearance(kind: EditableIconKind): NodeIconBaseAppearance {
+  return normalizeBaseAppearance(getWhitelistedLocalStorageItem(BASE_STORAGE_KEYS[kind]));
+}
+
 export function getNodeIconStateAppearance(
   state: NodeTreeRowIconState,
   kind?: Extract<NodeTreeRowIconKind, 'reading' | 'review'>
 ): NodeIconStateAppearance {
-  const defaults = getDefaultNodeIconStateAppearance(state);
-  const keys = STORAGE_KEYS[state];
-  const dismissedKeys = getDismissedStorageKeys();
+  const base = kind ? getNodeIconBaseAppearance(kind) : DEFAULT_NODE_ICON_BASE_APPEARANCE;
+  const defaults = {
+    ...getDefaultNodeIconStateAppearance(state),
+    color: base.color,
+    innerLineWidth: base.lineWidth,
+    lineWidth: base.lineWidth,
+    outerLineWidth: base.lineWidth,
+    scale: base.scale
+  };
   const legacyAppearance = {
-    color: normalizeColor(getWhitelistedLocalStorageItem(keys.color), defaults.color),
+    color: defaults.color,
     doubleLineDistance: defaults.doubleLineDistance,
     effect: defaults.effect,
-    fadeEnabled:
-      state === 'dismissed'
-        ? normalizeBoolean(getWhitelistedLocalStorageItem(dismissedKeys.fadeEnabled), defaults.fadeEnabled)
-        : defaults.fadeEnabled,
-    fadeOpacity:
-      state === 'dismissed'
-        ? normalizeOpacity(getWhitelistedLocalStorageItem(dismissedKeys.fadeOpacity), defaults.fadeOpacity)
-        : defaults.fadeOpacity,
-    fadeWholeRow:
-      state === 'dismissed'
-        ? normalizeBoolean(getWhitelistedLocalStorageItem(dismissedKeys.fadeWholeRow), defaults.fadeWholeRow)
-        : defaults.fadeWholeRow,
-    lineWidth: normalizePositiveNumber(getWhitelistedLocalStorageItem(keys.lineWidth), defaults.lineWidth),
+    fadeEnabled: defaults.fadeEnabled,
+    fadeOpacity: defaults.fadeOpacity,
+    fadeWholeRow: defaults.fadeWholeRow,
+    innerLineWidth: defaults.innerLineWidth,
+    innerScale: defaults.innerScale,
+    lineWidth: defaults.lineWidth,
+    outerLineWidth: defaults.outerLineWidth,
+    outerScale: defaults.outerScale,
+    scale: defaults.scale,
     svg: defaults.svg
   };
   return kind ? normalizeAppearanceOverride(getWhitelistedLocalStorageItem(KIND_STORAGE_KEYS[state][kind]), legacyAppearance) : legacyAppearance;
-}
-
-export function getNodeIconStateAppearanceStorageKeys(state: NodeTreeRowIconState) {
-  return STORAGE_KEYS[state];
 }
 
 export function getNodeIconKindStateAppearanceStorageKey(
@@ -201,11 +179,11 @@ export function getNodeIconKindStateAppearanceStorageKey(
   return KIND_STORAGE_KEYS[state][kind];
 }
 
-export function shouldFadeDismissedWholeRow() {
-  const appearance = getNodeIconStateAppearance('dismissed');
+export function shouldFadeDismissedWholeRow(kind?: EditableIconKind) {
+  const appearance = getNodeIconStateAppearance('dismissed', kind);
   return appearance.fadeEnabled && appearance.fadeWholeRow;
 }
 
-export function getDismissedFadeOpacity() {
-  return getNodeIconStateAppearance('dismissed').fadeOpacity;
+export function getDismissedFadeOpacity(kind?: EditableIconKind) {
+  return getNodeIconStateAppearance('dismissed', kind).fadeOpacity;
 }

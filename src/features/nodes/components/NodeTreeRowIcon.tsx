@@ -1,12 +1,12 @@
 import { Folder, FolderOpen } from 'lucide-react';
 
 import { cn } from '../../../shared/lib/utils';
-import { LucideCatalogIcon } from '../../../shared/ui';
 
-import { DEFAULT_NODE_ICON_STATE_APPEARANCE, getNodeIconStateAppearance } from './nodeIconAppearanceSettings';
+import { DEFAULT_NODE_ICON_STATE_APPEARANCE, getNodeIconBaseAppearance, getNodeIconStateAppearance } from './nodeIconAppearanceSettings';
 import { resolveNodeTreeRowIconSource } from './nodeIconSvgSettings';
+import { NodeTreeRowIconGraphic } from './NodeTreeRowIconGraphic';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
-import { NodeTreeRowPresetIcon, resolveNodeIconPresetTransformMode } from './NodeTreeRowPresetIcon';
+import { resolveNodeIconPresetTransformMode } from './NodeTreeRowPresetIcon';
 
 interface NodeTreeRowIconProps {
   baseOnly?: boolean;
@@ -15,77 +15,41 @@ interface NodeTreeRowIconProps {
   state: NodeTreeRowIconState;
 }
 
-function iconTransformClass(transformMode: 'none' | 'flip-x' | 'flip-y') {
-  if (transformMode === 'flip-x') {
-    return '[transform:scaleX(-1)]';
-  }
-  if (transformMode === 'flip-y') {
-    return '[transform:scaleY(-1)]';
-  }
-  return '';
+function resolveStateAppearance(args: {
+  baseOnly: boolean;
+  kind: NodeTreeRowIconKind;
+  state: NodeTreeRowIconState;
+}) {
+  const baseAppearance = args.kind === 'reading' || args.kind === 'review' ? getNodeIconBaseAppearance(args.kind) : null;
+  const appearanceKind = args.kind === 'reading' || args.kind === 'review' ? args.kind : undefined;
+  return args.baseOnly && baseAppearance
+    ? { ...DEFAULT_NODE_ICON_STATE_APPEARANCE[args.state], color: baseAppearance.color, lineWidth: baseAppearance.lineWidth, scale: baseAppearance.scale }
+    : getNodeIconStateAppearance(args.state, appearanceKind);
 }
 
-function resolveCustomIconClassName(transformMode: 'none' | 'flip-x' | 'flip-y', preview = false) {
-  return cn(
-    preview ? 'inline-flex size-6 items-center justify-center' : 'inline-flex size-3.5 items-center justify-center',
-    iconTransformClass(transformMode)
-  );
-}
-
-function resolveDefaultIconClassName(transformMode: 'none' | 'flip-x' | 'flip-y', preview = false) {
-  return cn(
-    preview ? 'size-6' : 'size-3.5',
-    iconTransformClass(transformMode)
-  );
-}
-
-function NodeTreeRowIconGraphic(props: {
-  customMarkup: string;
-  doubleLineDistance: number;
+function createGraphicProps(args: {
+  customIcon: ReturnType<typeof resolveNodeTreeRowIconSource>;
   effect: 'none' | 'double-line';
   fallbackShape: 'diamond' | 'hexagon';
-  iconId: string;
-  preview?: boolean;
+  preview: boolean;
+  stateAppearance: ReturnType<typeof getNodeIconStateAppearance>;
   transformMode: 'none' | 'flip-x' | 'flip-y';
 }) {
-  const innerScale = Math.max(0.5, Math.min(0.96, 1 - props.doubleLineDistance / 16));
-  if (props.customMarkup) {
-    return (
-      <span className={cn(resolveCustomIconClassName(props.transformMode, props.preview), props.effect === 'double-line' && 'relative')}>
-        <span dangerouslySetInnerHTML={{ __html: props.customMarkup }} />
-        {props.effect === 'double-line' ? (
-          <span
-            aria-hidden="true"
-            className="absolute inset-0"
-            dangerouslySetInnerHTML={{ __html: props.customMarkup }}
-            style={{ transform: `scale(${innerScale})` }}
-          />
-        ) : null}
-      </span>
-    );
-  }
-  if (props.iconId) {
-    return (
-      <span className={cn(resolveDefaultIconClassName(props.transformMode, props.preview), props.effect === 'double-line' && 'relative inline-flex items-center justify-center')}>
-        <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={1.75} />
-        {props.effect === 'double-line' ? (
-          <span aria-hidden="true" className="absolute inset-0 inline-flex items-center justify-center" style={{ transform: `scale(${innerScale})` }}>
-            <LucideCatalogIcon iconId={props.iconId} size={props.preview ? 24 : 14} strokeWidth={1.75} />
-          </span>
-        ) : null}
-      </span>
-    );
-  }
-  return (
-    <span className={resolveDefaultIconClassName(props.transformMode, props.preview)}>
-      <NodeTreeRowPresetIcon
-        doubleLineDistance={props.doubleLineDistance}
-        effect={props.effect}
-        preview={props.preview}
-        shape={props.fallbackShape}
-      />
-    </span>
-  );
+  return {
+    customMarkup: args.customIcon.markup ?? '',
+    doubleLineDistance: args.stateAppearance.doubleLineDistance,
+    effect: args.effect,
+    fallbackShape: args.fallbackShape,
+    iconId: args.customIcon.iconId ?? '',
+    innerLineWidth: args.stateAppearance.innerLineWidth,
+    innerScale: args.stateAppearance.innerScale,
+    lineWidth: args.stateAppearance.lineWidth,
+    outerLineWidth: args.stateAppearance.outerLineWidth,
+    outerScale: args.stateAppearance.outerScale,
+    preview: args.preview,
+    scale: args.stateAppearance.scale,
+    transformMode: args.transformMode
+  };
 }
 
 export function NodeTreeRowIcon({ baseOnly = false, kind, preview = false, state }: NodeTreeRowIconProps) {
@@ -93,7 +57,7 @@ export function NodeTreeRowIcon({ baseOnly = false, kind, preview = false, state
     return <NodeTreeFolderIcon kind={kind} />;
   }
 
-  const stateAppearance = baseOnly ? DEFAULT_NODE_ICON_STATE_APPEARANCE[state] : getNodeIconStateAppearance(state, kind);
+  const stateAppearance = resolveStateAppearance({ baseOnly, kind, state });
   const customIcon = resolveNodeTreeRowIconSource({
     kind,
     state,
@@ -112,15 +76,7 @@ export function NodeTreeRowIcon({ baseOnly = false, kind, preview = false, state
     preview ? 'm-0 size-6' : 'mr-1 size-3.5'
   );
   const customStyleScope = `${kind}-${state}`;
-  const graphicProps = {
-    customMarkup: customIcon.markup ?? '',
-    doubleLineDistance: stateAppearance.doubleLineDistance,
-    effect: baseOnly ? 'none' : stateAppearance.effect,
-    fallbackShape: fallbackShape as 'diamond' | 'hexagon',
-    iconId: customIcon.iconId ?? '',
-    preview,
-    transformMode
-  };
+  const graphicProps = createGraphicProps({ customIcon, effect: baseOnly ? 'none' : stateAppearance.effect, fallbackShape, preview, stateAppearance, transformMode });
   return (
     <span
       className={iconClassName}

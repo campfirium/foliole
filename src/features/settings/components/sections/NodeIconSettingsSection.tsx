@@ -9,9 +9,6 @@ import {
   settingsResetButtonClassName,
   settingsUtilityIconButtonClassName
 } from '../../../../shared/ui';
-import {
-  getDefaultNodeIconStateAppearance
-} from '../../../nodes/components/nodeIconAppearanceSettings';
 import { NodeTreeRowIcon } from '../../../nodes/components/NodeTreeRowIcon';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from '../../../nodes/components/NodeTreeRowIconModel';
 
@@ -68,9 +65,15 @@ function IconColumn(props: {
           if (isTopic) {
             props.state.setTopicIcon('');
             props.state.setTopicSvg('');
+            props.state.setTopicColor('#202124');
+            props.state.setTopicLineWidth(1.2);
+            props.state.setTopicScale(1);
           } else {
             props.state.setItemIcon('');
             props.state.setItemSvg('');
+            props.state.setItemColor('#202124');
+            props.state.setItemLineWidth(1.2);
+            props.state.setItemScale(1);
           }
         }}
         preview={<PreviewIcon baseOnly kind={props.kind} state="scheduled" />}
@@ -92,17 +95,7 @@ function IconColumn(props: {
 type NodeIconSettingsState = ReturnType<typeof useNodeIconSettingsState>;
 
 function resetAppearance(state: NodeIconSettingsState, iconState: NodeTreeRowIconState, kind: EditableIconKind) {
-  const defaults = getDefaultNodeIconStateAppearance(iconState);
-  state.setStateColor(iconState, kind, defaults.color);
-  state.setStateDoubleLineDistance(iconState, kind, defaults.doubleLineDistance);
-  state.setStateEffect(iconState, kind, defaults.effect);
-  state.setStateLineWidth(iconState, kind, defaults.lineWidth);
-  state.setStateSvg(iconState, kind, defaults.svg);
-  if (iconState === 'dismissed') {
-    state.setDismissedFadeEnabled(kind, defaults.fadeEnabled);
-    state.setDismissedFadeOpacity(kind, defaults.fadeOpacity);
-    state.setDismissedFadeWholeRow(kind, defaults.fadeWholeRow);
-  }
+  state.resetStateAppearance(iconState, kind);
 }
 
 function resetEditTarget(state: NodeIconSettingsState, target: NodeIconEditTarget) {

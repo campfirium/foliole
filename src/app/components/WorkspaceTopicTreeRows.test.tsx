@@ -1,0 +1,72 @@
+import { render, screen } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
+import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+
+import { WorkspaceTopicTreeRows } from './WorkspaceTopicTreeRows';
+
+beforeEach(() => {
+  window.localStorage.clear();
+});
+
+function createRow(node: NonNullable<WorkspaceListNodesById[string]>): NodeTreeRow {
+  return {
+    descendantCount: 0,
+    depth: 0,
+    hasChildren: false,
+    node
+  };
+}
+
+it('applies dismissed appearance to topic tree row text and icon', () => {
+  window.localStorage.setItem(
+    APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedTopicAppearance,
+    JSON.stringify({ fadeEnabled: true, fadeOpacity: 0.42, fadeWholeRow: true })
+  );
+  const node = {
+      anchorLink: null,
+      createdAt: '2026-05-02T00:00:00.000Z',
+      hasContent: true,
+      hasReveal: false,
+      id: 'node-1',
+      kind: 'topic',
+      parentNodeId: null,
+      reading: {
+        intervalDurationMs: 0,
+        intervalGrowthFactor: 1,
+        lastHandledAt: '2026-05-02T00:00:00.000Z',
+        nextAt: '2026-05-02T00:00:00.000Z',
+        priority: 0,
+        readingPosition: 0,
+        repetitionCount: 0,
+        state: 'dismissed'
+      },
+      review: null,
+      title: 'Dismissed topic',
+      updatedAt: '2026-05-02T00:00:00.000Z'
+    };
+  const nodesById: WorkspaceListNodesById = {
+    'node-1': node
+  };
+
+  render(
+    <WorkspaceTopicTreeRows
+      activeNodeId={null}
+      collapsedNodeIds={new Set()}
+      nodesById={nodesById}
+      onContextMenu={vi.fn()}
+      onRenameNode={vi.fn()}
+      onSelectNode={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rows={[createRow(node)]}
+      selectedNodeIds={[]}
+    />
+  );
+
+  const row = screen.getByRole('treeitem', { name: 'Dismissed topic' });
+  expect(row).toHaveAttribute('data-node-visibility', 'muted');
+  expect(row).toHaveStyle({ '--node-muted-opacity': '0.42' });
+  expect(row.querySelector('[data-node-icon-state="dismissed"]')).not.toBeNull();
+});

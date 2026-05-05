@@ -1,13 +1,17 @@
 import { useMemo, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import {
+  getDismissedFadeOpacity,
+  shouldFadeDismissedWholeRow
+} from '../../features/nodes/components/nodeIconAppearanceSettings';
+import {
   getNodeListRowSpacing,
   resolveNodeListRowGap
 } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from '../../features/nodes/components/NodeTreeRow';
-import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState } from '../../features/nodes/components/NodeTreeRowIconModel';
+import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState, type NodeTreeRowIconKind } from '../../features/nodes/components/NodeTreeRowIconModel';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { isFsrsWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
@@ -49,6 +53,14 @@ function renderWorkspaceTopicTreeRow(
       ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
       : (node?.reading?.repetitionCount ?? 0) > 0
   });
+  const nodeIconKind = resolveNodeTreeRowIconKind({
+    hasChildren: row.hasChildren,
+    isCollapsed: args.collapsedNodeIds.has(row.node.id),
+    isReviewCard,
+    kind: node?.kind ?? 'topic'
+  });
+  const leafIconKind = resolveLeafIconKind(nodeIconKind);
+  const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow(leafIconKind);
 
   return (
     <NodeTreeRowItem
@@ -59,16 +71,13 @@ function renderWorkspaceTopicTreeRow(
       isBulkSelectionActive={args.selectedNodeIds.length > 1}
       isCollapsed={args.collapsedNodeIds.has(row.node.id)}
       isDerived={isDerivedNode}
+      isMuted={shouldFadeWholeRow}
+      mutedOpacity={shouldFadeWholeRow ? getDismissedFadeOpacity(leafIconKind) : 1}
       isSelected={isSelected}
       key={row.node.id}
       label={row.node.title}
       nodeId={row.node.id}
-      nodeIconKind={resolveNodeTreeRowIconKind({
-        hasChildren: row.hasChildren,
-        isCollapsed: args.collapsedNodeIds.has(row.node.id),
-        isReviewCard,
-        kind: node?.kind ?? 'topic'
-      })}
+      nodeIconKind={nodeIconKind}
       nodeIconState={nodeIconState}
       showIcon
       onContextMenu={args.onContextMenu}
@@ -79,6 +88,10 @@ function renderWorkspaceTopicTreeRow(
       onToggleCollapse={args.onToggleCollapse}
     />
   );
+}
+
+function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
+  return kind === 'reading' || kind === 'review' ? kind : undefined;
 }
 
 export function WorkspaceTopicTreeRows({

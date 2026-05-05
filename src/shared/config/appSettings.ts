@@ -56,6 +56,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   nodeIconSecondarySvg: 'foliole-node-icon-secondary-svg',
   nodeIconPrimaryLucideIcon: 'foliole-node-icon-primary-lucide-icon',
   nodeIconSecondaryLucideIcon: 'foliole-node-icon-secondary-lucide-icon',
+  nodeIconPrimaryAppearance: 'foliole-node-icon-primary-appearance',
+  nodeIconSecondaryAppearance: 'foliole-node-icon-secondary-appearance',
   nodeIconReviewVariantMode: 'foliole-node-icon-review-variant-mode',
   nodeIconPendingStrokeStyle: 'foliole-node-icon-pending-stroke-style',
   nodeIconScheduledStrokeStyle: 'foliole-node-icon-scheduled-stroke-style',
