@@ -83,6 +83,8 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       objectType: 'node_reading',
       priorityPayloadKey: 'priority',
       readingPositionPayloadKey: 'reading_position',
+      recordDeletedAtKey: 'deleted_at',
+      recordUpdatedAtKey: 'updated_at',
       repetitionCountPayloadKey: 'repetition_count',
       statePayloadKey: 'state'
     },
@@ -110,6 +112,8 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       lastReviewAtPayloadKey: 'last_review_at',
       nodeIdPayloadKey: 'node_id',
       objectType: 'node_review',
+      recordDeletedAtKey: 'deleted_at',
+      recordUpdatedAtKey: 'updated_at',
       repsPayloadKey: 'reps',
       reviewLogInputPayloadKey: 'review_log_json',
       scheduledDaysPayloadKey: 'scheduled_days',

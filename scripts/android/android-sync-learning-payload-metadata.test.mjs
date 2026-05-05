@@ -25,7 +25,9 @@ describe('Android learning sync payload metadata', () => {
       hashIgnoredPayloadKeys: ['device_id', 'reading_position'],
       inputPayloadKey: 'reading_json',
       nodeIdPayloadKey: 'node_id',
-      readingPositionPayloadKey: 'reading_position'
+      readingPositionPayloadKey: 'reading_position',
+      recordDeletedAtKey: 'deleted_at',
+      recordUpdatedAtKey: 'updated_at'
     });
     expect(definitions.queries.syncPayloadNodeReview.syncPayload).toMatchObject({
       defaultDifficulty: 0,
@@ -33,6 +35,8 @@ describe('Android learning sync payload metadata', () => {
       defaultStability: 0,
       inputPayloadKey: 'review_json',
       nodeIdPayloadKey: 'node_id',
+      recordDeletedAtKey: 'deleted_at',
+      recordUpdatedAtKey: 'updated_at',
       reviewLogInputPayloadKey: 'review_log_json'
     });
   });
@@ -48,6 +52,8 @@ describe('Android learning sync payload metadata', () => {
     expect(learningSource).toContain('FolioleCompanionLearningPayloadRules.doubleValue(context, payload, queryName');
     expect(rulesSource).toContain('FolioleCompanionSyncPayloadQueryStore.metadataArrayText(context, queryName, key)');
     expect(stateWriteSource).not.toContain('hashPayload.remove("reading_position")');
+    expect(learningSource).not.toContain('record.isNull("deleted_at")');
+    expect(learningSource).not.toContain('record.optString("updated_at")');
     expect(learningSource).not.toContain('payload.optString("state", "active")');
     expect(learningSource).not.toContain('payload.optLong("reading_position", 0)');
   });

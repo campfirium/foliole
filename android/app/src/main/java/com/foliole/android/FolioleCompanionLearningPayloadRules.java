@@ -41,6 +41,14 @@ final class FolioleCompanionLearningPayloadRules {
         return payload.optString(metadata(context, queryName, keyName), fallback);
     }
 
+    static boolean isDeleted(Context context, JSONObject record, String queryName) throws Exception {
+        return !record.isNull(metadata(context, queryName, "recordDeletedAtKey"));
+    }
+
+    static String updatedAt(Context context, JSONObject record, String queryName) throws Exception {
+        return record.optString(metadata(context, queryName, "recordUpdatedAtKey"));
+    }
+
     static long longValue(Context context, JSONObject payload, String queryName, String keyName, String defaultName) throws Exception {
         return payload.optLong(metadata(context, queryName, keyName), longDefault(context, queryName, defaultName));
     }
