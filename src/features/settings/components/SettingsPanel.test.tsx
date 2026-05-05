@@ -211,7 +211,12 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
     });
   });
 
-  fireEvent.mouseDown(screen.getByLabelText('Settings'));
+  fireEvent.click(screen.getByLabelText('Settings'));
+
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog', { name: 'Settings dialog' })).not.toBeInTheDocument();
+  });
+
   fireEvent.click(screen.getByRole('button', { name: 'Reopen settings' }));
 
   openReviewSettings();
