@@ -60,6 +60,11 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     "UPDATE content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ? WHERE hash = ?",
   contentBlobMarkFetching: "UPDATE content_blobs SET availability = 'fetching' WHERE hash = ?",
   contentBlobMarkFailed: "UPDATE content_blobs SET availability = 'failed' WHERE hash = ?",
+  migrationSyncObjectStateNextInsert:
+    'INSERT INTO sync_object_state_next (' +
+    'object_type, object_id, state_seq, current_version_id, content_hash, last_modified_by_device_id, ' +
+    'updated_at, deleted_at, sync_dirty, base_content_hash' +
+    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   syncStateExisting:
     'SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1',
   syncStateNextSeq: 'SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state',

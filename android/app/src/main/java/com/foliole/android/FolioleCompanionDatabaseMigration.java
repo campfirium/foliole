@@ -1,6 +1,5 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -68,7 +67,7 @@ final class FolioleCompanionDatabaseMigration {
         database.beginTransaction();
         try {
             installMigrationStatement(context, database, "syncObjectStateNextTable", "Failed to create sync object state repair table.");
-            copyLegacySyncObjectStateRows(database);
+            copyLegacySyncObjectStateRows(context, database);
             installMigrationStatement(context, database, "syncObjectStateDropLegacyTable", "Failed to drop legacy sync object state table.");
             installMigrationStatement(context, database, "syncObjectStateRenameNextTable", "Failed to rename sync object state repair table.");
             createSyncObjectStateIndexes(context, database);
@@ -78,7 +77,7 @@ final class FolioleCompanionDatabaseMigration {
         }
     }
 
-    private static void copyLegacySyncObjectStateRows(SQLiteDatabase database) {
+    private static void copyLegacySyncObjectStateRows(Context context, SQLiteDatabase database) {
         try (Cursor cursor = database.query(
             "sync_object_state",
             new String[] {
@@ -99,20 +98,28 @@ final class FolioleCompanionDatabaseMigration {
         )) {
             int stateSeq = 1;
             while (cursor.moveToNext()) {
-                ContentValues values = new ContentValues();
-                values.put("object_type", cursor.getString(0));
-                values.put("object_id", cursor.getString(1));
-                values.put("state_seq", stateSeq);
-                values.put("current_version_id", cursor.isNull(2) ? null : cursor.getString(2));
-                values.put("content_hash", cursor.getString(3));
-                values.put("last_modified_by_device_id", cursor.getString(4));
-                values.put("updated_at", cursor.getString(5));
-                values.put("deleted_at", cursor.isNull(6) ? null : cursor.getString(6));
-                values.put("sync_dirty", cursor.getInt(7));
-                values.put("base_content_hash", (String) null);
-                database.insertOrThrow("sync_object_state_next", null, values);
+                insertLegacySyncObjectStateRow(context, database, cursor, stateSeq);
                 stateSeq += 1;
             }
+        }
+    }
+
+    private static void insertLegacySyncObjectStateRow(Context context, SQLiteDatabase database, Cursor cursor, int stateSeq) {
+        try {
+            FolioleCompanionNamedMutationStore.execute(context, database, "migrationSyncObjectStateNextInsert", new Object[] {
+                cursor.getString(0),
+                cursor.getString(1),
+                stateSeq,
+                cursor.isNull(2) ? null : cursor.getString(2),
+                cursor.getString(3),
+                cursor.getString(4),
+                cursor.getString(5),
+                cursor.isNull(6) ? null : cursor.getString(6),
+                cursor.getInt(7),
+                null
+            });
+        } catch (Exception exception) {
+            throw new IllegalStateException("Failed to copy legacy sync object state row.", exception);
         }
     }
 
