@@ -71,6 +71,7 @@ describe('CompanionDirectoryModel', () => {
 
     expect(sectionTitles(sections)).toEqual([
       { id: 'internal', title: 'Workspace', titles: ['Inbox'] },
+      { id: 'trash', title: 'Trash', titles: ['Trash'] },
       { id: 'virtual', title: 'Virtual', titles: ['Virtual'] },
       { id: 'external', title: 'External', titles: ['2think'] }
     ]);

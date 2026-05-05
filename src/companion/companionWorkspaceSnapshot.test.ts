@@ -16,10 +16,12 @@ describe('resolveReadableCompanionArticle', () => {
     } as never);
 
     expect(result).toEqual({
+      bodyBlobHash: null,
       bodyStatus: 'ready',
       content: 'Readable body',
       hideTitleHeading: false,
       nodeId: 'node-2',
+      persistedNodeViewState: null,
       pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'Readable title'

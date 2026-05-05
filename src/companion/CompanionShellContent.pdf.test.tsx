@@ -115,7 +115,22 @@ function createFailedBodySurface() {
   };
 }
 
-function renderSurfaceElement(surface: unknown, workspaceSync: unknown = {}) {
+function createWorkspaceSync(overrides: Record<string, unknown> = {}) {
+  const state = {
+    endpoint_url: null,
+    remembered_targets: [],
+    workspace_snapshot: null,
+    ...((overrides.state as Record<string, unknown> | undefined) ?? {})
+  };
+  return {
+    pullFromDesktop: vi.fn(async () => undefined),
+    status: 'idle',
+    ...overrides,
+    state
+  };
+}
+
+function renderSurfaceElement(surface: unknown, workspaceSync: unknown = createWorkspaceSync()) {
   return renderCompanionShellContent({
     companionTabConfig: {
       orderedTabIds: ['browse', 'learn', 'search', 'settings', 'shortcut'],
@@ -144,7 +159,7 @@ function renderSurfaceElement(surface: unknown, workspaceSync: unknown = {}) {
   });
 }
 
-function renderSurface(surface: unknown, workspaceSync: unknown = {}) {
+function renderSurface(surface: unknown, workspaceSync: unknown = createWorkspaceSync()) {
   return render(renderSurfaceElement(surface, workspaceSync));
 }
 
