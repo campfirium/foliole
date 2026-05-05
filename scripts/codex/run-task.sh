@@ -6,14 +6,9 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 cd "${REPO_ROOT}"
 
-if ! command -v npm >/dev/null 2>&1; then
-  echo "[codex-task] npm not found in WSL PATH."
-  exit 1
-fi
-
 if ! command -v codex >/dev/null 2>&1; then
-  echo "[codex-task] codex not found; installing @openai/codex via npm."
-  npm install -g @openai/codex --no-audit --no-fund
+  echo "[codex-task] codex not found in PATH. Manually install the @openai/codex CLI so the 'codex' command is available, then rerun."
+  exit 1
 fi
 
 node "${SCRIPT_DIR}/codex-task.mjs" "$@"
