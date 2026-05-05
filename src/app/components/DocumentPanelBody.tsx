@@ -1,11 +1,14 @@
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { cn } from '../../shared/lib/utils';
 import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
+
+import { DocumentOutlineLayer } from './DocumentOutlineLayer';
 
 interface DocumentPanelBodyProps {
   editorAppearanceKey: string;
@@ -24,6 +27,8 @@ interface DocumentPanelBodyProps {
   onEditorChange: (content: string) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
+  onRevealDocumentSelection: (selection: EditorSelection) => void;
+  onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
   onStartDocumentResize: (
     side: ResizeSide,
@@ -137,6 +142,44 @@ function renderAnswerSection(props: DocumentPanelBodyProps) {
   );
 }
 
+function renderDocumentOutline(props: DocumentPanelBodyProps) {
+  if (props.emptyState) {
+    return null;
+  }
+
+  return (
+      <DocumentOutlineLayer
+        content={props.editorContent}
+        onRevealSelection={props.onRevealDocumentSelection}
+        onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
+      />
+    );
+}
+
+function renderDocumentBodyLayout(props: DocumentPanelBodyProps) {
+  return (
+    <div className="relative flex h-full min-h-0 w-full" data-resizing={props.isDocumentResizing}>
+      {renderDocumentOutline(props)}
+      <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+        {renderDocumentBodyContent(props)}
+        {renderAnswerSection(props)}
+      </div>
+      <DocumentWidthHandle
+        ariaLabel="Resize document width from left"
+        onPointerDown={(event) => props.onStartDocumentResize('left', event)}
+        onResetLayout={props.onResetLayout}
+        side="left"
+      />
+      <DocumentWidthHandle
+        ariaLabel="Resize document width from right"
+        onPointerDown={(event) => props.onStartDocumentResize('right', event)}
+        onResetLayout={props.onResetLayout}
+        side="right"
+      />
+    </div>
+  );
+}
+
 export function DocumentPanelBody({
   editorAppearanceKey,
   editorContent,
@@ -151,11 +194,13 @@ export function DocumentPanelBody({
   onEditorChange,
   onEditorContextMenu,
   onEditorReady,
+  onRevealDocumentSelection,
+  onResolveDocumentPositionAtViewportY,
   onResetLayout,
   onStartDocumentResize,
   reveal
 }: DocumentPanelBodyProps) {
-  const bodyProps = {
+  const bodyProps: DocumentPanelBodyProps = {
     editorAppearanceKey,
     editorContent,
     editorContentPaddingBottom,
@@ -169,6 +214,8 @@ export function DocumentPanelBody({
     onEditorChange,
     onEditorContextMenu,
     onEditorReady,
+    onRevealDocumentSelection,
+    onResolveDocumentPositionAtViewportY,
     onResetLayout,
     onStartDocumentResize,
     reveal
@@ -176,24 +223,7 @@ export function DocumentPanelBody({
 
   return (
     <div className="flex min-h-0 flex-1 pl-4 pr-0 pt-4 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0">
-      <div className="relative flex h-full min-h-0 w-full" data-resizing={isDocumentResizing}>
-        <div className="flex h-full min-h-0 w-full flex-1 flex-col">
-          {renderDocumentBodyContent(bodyProps)}
-          {renderAnswerSection(bodyProps)}
-        </div>
-        <DocumentWidthHandle
-          ariaLabel="Resize document width from left"
-          onPointerDown={(event) => onStartDocumentResize('left', event)}
-          onResetLayout={onResetLayout}
-          side="left"
-        />
-        <DocumentWidthHandle
-          ariaLabel="Resize document width from right"
-          onPointerDown={(event) => onStartDocumentResize('right', event)}
-          onResetLayout={onResetLayout}
-          side="right"
-        />
-      </div>
+      {renderDocumentBodyLayout(bodyProps)}
     </div>
   );
 }

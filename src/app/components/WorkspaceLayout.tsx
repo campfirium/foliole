@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { MarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
@@ -73,6 +74,8 @@ export interface WorkspaceLayoutProps {
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
+  onRevealDocumentSelection: (selection: EditorSelection) => void;
+  onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onSelectTrashNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;

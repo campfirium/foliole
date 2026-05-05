@@ -13,6 +13,7 @@ export interface EditorAdapter {
   destroy(): void;
   focus(): void;
   getContent(): string;
+  getDocumentPositionAtViewportY(clientY: number): number | null;
   setContent(content: string): void;
   getSelection(): EditorSelection;
   revealSelection(selection: EditorSelection): void;

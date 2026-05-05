@@ -1,6 +1,7 @@
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
@@ -37,6 +38,8 @@ interface DocumentPanelSectionProps {
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
+  onRevealDocumentSelection: (selection: EditorSelection) => void;
+  onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
   onToggleEditorDisplayMode: () => void;
@@ -96,6 +99,8 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onEditorChange={props.onEditorChange}
           onEditorContextMenu={props.onEditorContextMenu}
           onEditorReady={props.onEditorReady}
+          onRevealDocumentSelection={props.onRevealDocumentSelection}
+          onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
           onResetLayout={props.onResetLayout}
           onStartDocumentResize={props.onStartDocumentResize}
           reveal={reveal}

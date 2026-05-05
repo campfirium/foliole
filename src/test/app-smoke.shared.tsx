@@ -14,6 +14,7 @@ export const mockEditorAdapter: EditorAdapter = {
   destroy: () => undefined,
   focus: () => undefined,
   getContent: () => mockEditorState.content,
+  getDocumentPositionAtViewportY: () => 0,
   setContent: (content: string) => {
     mockEditorState.content = content;
   },

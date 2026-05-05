@@ -59,6 +59,12 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     return this.view.state.doc.toString();
   }
 
+  getDocumentPositionAtViewportY(clientY: number) {
+    const contentRect = this.view.contentDOM.getBoundingClientRect();
+    const x = contentRect.left + Math.min(Math.max(contentRect.width * 0.52, 160), contentRect.width - 24);
+    return this.view.posAtCoords({ x, y: clientY }, false);
+  }
+
   setContent(content: string) {
     const currentContent = this.getContent();
     if (currentContent === content) {

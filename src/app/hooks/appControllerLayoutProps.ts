@@ -17,6 +17,8 @@ import type { NodeViewState, ReviewSessionState } from '../../store/workspaceSto
 import type { useCurrentReviewPreview } from './appControllerHelpers';
 import {
   createRevealAnchorInDocument,
+  createRevealDocumentSelection,
+  createResolveDocumentPositionAtViewportY,
   createToggleListVisibility,
   createToggleRightSidebarVisibility
 } from './appControllerRuntimeActions';
@@ -193,6 +195,8 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
 function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
   const openNotesView = createOpenNotesView(args);
   const revealAnchorInDocument = createRevealAnchorInDocument(args);
+  const revealDocumentSelection = createRevealDocumentSelection(args);
+  const resolveDocumentPositionAtViewportY = createResolveDocumentPositionAtViewportY(args);
 
   return {
     onAnswerChange: (answer: string) => {
@@ -214,6 +218,8 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
       args.runtime.editorRef.current = adapter;
     },
     onRevealAnchorInDocument: revealAnchorInDocument,
+    onRevealDocumentSelection: revealDocumentSelection,
+    onResolveDocumentPositionAtViewportY: resolveDocumentPositionAtViewportY,
     onHotkeyUpdate: args.blockedHotkeyUpdate,
     onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => args.ws.updateNodeDesiredRetention(nodeId, desiredRetention),
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),

@@ -23,6 +23,9 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     getContent() {
       return mockGetContent();
     }
+    getDocumentPositionAtViewportY() {
+      return 0;
+    }
     setContent(content: string) {
       mockSetContent(content);
     }

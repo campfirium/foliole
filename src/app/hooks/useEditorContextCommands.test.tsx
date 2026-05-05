@@ -18,6 +18,7 @@ it('reapplies the current selection when opening the editor context menu', () =>
     destroy: vi.fn(),
     focus: vi.fn(),
     getContent: vi.fn(() => 'Welcome to Foliole'),
+    getDocumentPositionAtViewportY: vi.fn(() => 0),
     getScrollMetrics: vi.fn(),
     getScrollTop: vi.fn(),
     getSelection: vi.fn(() => ({ from: 2, to: 9 })),

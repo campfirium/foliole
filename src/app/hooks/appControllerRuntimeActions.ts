@@ -1,3 +1,4 @@
+import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
@@ -48,5 +49,31 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
       scrollTop: adapter.getScrollTop(),
       selection
     });
+  };
+}
+
+export function createRevealDocumentSelection(args: BuildControllerLayoutPropsArgs) {
+  return (selection: EditorSelection) => {
+    if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
+      return;
+    }
+    const adapter = args.runtime.editorRef.current;
+    if (!adapter) {
+      return;
+    }
+    adapter.revealSelection(selection);
+    args.ws.setNodeViewState(args.ws.activeNodeId, {
+      scrollTop: adapter.getScrollTop(),
+      selection
+    });
+  };
+}
+
+export function createResolveDocumentPositionAtViewportY(args: BuildControllerLayoutPropsArgs) {
+  return (clientY: number) => {
+    if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
+      return null;
+    }
+    return args.runtime.editorRef.current?.getDocumentPositionAtViewportY(clientY) ?? null;
   };
 }
