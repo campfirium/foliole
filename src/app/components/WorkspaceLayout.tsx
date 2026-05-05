@@ -8,6 +8,7 @@ import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import type { NodeViewState } from '../../store/workspaceStore';
+import type { SelectionCommandPayload } from '../contextCommands';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import type { ReviewQueueVisibility } from './reviewQueueVisibility';
@@ -115,6 +116,8 @@ export interface WorkspaceLayoutProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
+  onCreateSelectionHighlight: (payload: SelectionCommandPayload) => string | null;
+  onCreateSelectionNote: (payload: SelectionCommandPayload) => string | null;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;

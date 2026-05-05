@@ -105,6 +105,7 @@ export function useWorkspaceControllerState(
   const editorCtx = useEditorContextCommands({
     activeNode,
     activeNodeId: ws.activeNodeId,
+    createChildNode: ws.createChildNode,
     createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection,
     createImageClozeNodes: ws.createImageClozeNodes,
     createQANodeFromSelection: ws.createQANodeFromSelection,
@@ -112,6 +113,8 @@ export function useWorkspaceControllerState(
     editorRef: runtime.editorRef,
     isTrashViewOpen: runtime.isViewingTrashNode,
     nodesById: ws.nodesById,
+    onExitImmersiveMode: () => runtime.setIsImmersiveMode(false),
+    onSelectNode: (nodeId) => ws.openNode(nodeId),
     updateNodeContent: ws.updateNodeContent
   });
   useReadingProgressSync({ activeNodeId: ws.activeNodeId, editorRef: runtime.editorRef, isViewingTrashNode: runtime.isViewingTrashNode, isWorkspaceHydrated, nodeViewById: ws.nodeViewById, setNodeViewState: ws.setNodeViewState });

@@ -59,6 +59,24 @@ function createEditorAdapter(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function buildHookArgs(overrides: Record<string, unknown> = {}) {
+  return {
+    activeNode: { id: 'node-1', content: 'Welcome to Foliole', title: 'Welcome to Foliole' } as never,
+    activeNodeId: 'node-1',
+    createChildNode: vi.fn(() => 'child-note'),
+    createHighlightNodeFromSelection: vi.fn(() => 'highlight-1'),
+    createQANodeFromSelection: vi.fn(() => 'qa-1'),
+    deleteImageClozeRegion: vi.fn(),
+    editorRef: { current: createEditorAdapter() },
+    isTrashViewOpen: false,
+    nodesById: { 'node-1': { id: 'node-1', content: 'Welcome to Foliole', title: 'Welcome to Foliole' } } as never,
+    onExitImmersiveMode: vi.fn(),
+    onSelectNode: vi.fn(),
+    updateNodeContent: vi.fn(),
+    ...overrides
+  };
+}
+
 it('reapplies the current selection when opening the editor context menu', () => {
   const adapter = createEditorAdapter({
     getSelection: vi.fn(() => ({ from: 2, to: 9 })),
@@ -67,17 +85,7 @@ it('reapplies the current selection when opening the editor context menu', () =>
 
   const editorRef = { current: adapter };
   const { result } = renderHook(() =>
-    useEditorContextCommands({
-      activeNode: { id: 'node-1', content: 'Welcome to Foliole', title: 'Welcome to Foliole' } as never,
-      activeNodeId: 'node-1',
-      createHighlightNodeFromSelection: vi.fn(),
-      createQANodeFromSelection: vi.fn(),
-      deleteImageClozeRegion: vi.fn(),
-      editorRef,
-      isTrashViewOpen: false,
-      nodesById: { 'node-1': { id: 'node-1', content: 'Welcome to Foliole', title: 'Welcome to Foliole' } } as never,
-      updateNodeContent: vi.fn()
-    })
+    useEditorContextCommands(buildHookArgs({ editorRef }))
   );
 
   act(() => {
@@ -102,17 +110,13 @@ it('opens image commands when the context menu targets an attachment image', () 
   const imageTarget = createImageTarget();
 
   const { result } = renderHook(() =>
-    useEditorContextCommands({
-      activeNode: { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } as never,
-      activeNodeId: 'node-1',
-      createHighlightNodeFromSelection: vi.fn(),
-      createQANodeFromSelection: vi.fn(),
-      deleteImageClozeRegion: vi.fn(),
-      editorRef,
-      isTrashViewOpen: false,
-      nodesById: { 'node-1': { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } } as never,
-      updateNodeContent: vi.fn()
-    })
+    useEditorContextCommands(
+      buildHookArgs({
+        activeNode: { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } as never,
+        editorRef,
+        nodesById: { 'node-1': { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } } as never
+      })
+    )
   );
 
   act(() => {
@@ -142,17 +146,14 @@ it('cuts an attachment image only after clipboard copy succeeds', async () => {
   const imageTarget = createImageTarget();
 
   const { result } = renderHook(() =>
-    useEditorContextCommands({
-      activeNode: { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } as never,
-      activeNodeId: 'node-1',
-      createHighlightNodeFromSelection: vi.fn(),
-      createQANodeFromSelection: vi.fn(),
-      deleteImageClozeRegion: vi.fn(),
-      editorRef: { current: adapter },
-      isTrashViewOpen: false,
-      nodesById: { 'node-1': { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } } as never,
-      updateNodeContent
-    })
+    useEditorContextCommands(
+      buildHookArgs({
+        activeNode: { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } as never,
+        editorRef: { current: adapter },
+        nodesById: { 'node-1': { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } } as never,
+        updateNodeContent
+      })
+    )
   );
 
   act(() => {
@@ -184,17 +185,13 @@ it('exports an attachment image through the native bridge', async () => {
   imageWidget.append(imageTarget);
 
   const { result } = renderHook(() =>
-    useEditorContextCommands({
-      activeNode: { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } as never,
-      activeNodeId: 'node-1',
-      createHighlightNodeFromSelection: vi.fn(),
-      createQANodeFromSelection: vi.fn(),
-      deleteImageClozeRegion: vi.fn(),
-      editorRef: { current: null },
-      isTrashViewOpen: false,
-      nodesById: { 'node-1': { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } } as never,
-      updateNodeContent: vi.fn()
-    })
+    useEditorContextCommands(
+      buildHookArgs({
+        activeNode: { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } as never,
+        editorRef: { current: null },
+        nodesById: { 'node-1': { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } } as never
+      })
+    )
   );
 
   act(() => {
@@ -211,4 +208,50 @@ it('exports an attachment image through the native bridge', async () => {
   });
 
   expect(exportAttachmentImage).toHaveBeenCalledWith('hash-1');
+});
+
+it('creates a linked note from an explicit reading selection payload', () => {
+  let content = 'Alpha\n\nBeta';
+  const updateNodeContent = vi.fn();
+  const createHighlightNodeFromSelection = vi.fn(() => 'highlight-1');
+  const createChildNode = vi.fn(() => 'note-1');
+  const onSelectNode = vi.fn();
+  const onExitImmersiveMode = vi.fn();
+  const adapter = createEditorAdapter({
+    getContent: vi.fn(() => content),
+    replaceRange: vi.fn((from: number, to: number, next: string) => {
+      content = `${content.slice(0, from)}${next}${content.slice(to)}`;
+    })
+  });
+
+  const { result } = renderHook(() =>
+    useEditorContextCommands(
+      buildHookArgs({
+        activeNode: { id: 'node-1', content, title: 'Welcome to Foliole' } as never,
+        createChildNode,
+        createHighlightNodeFromSelection,
+        editorRef: { current: adapter },
+        nodesById: { 'node-1': { id: 'node-1', content, title: 'Welcome to Foliole' } } as never,
+        onExitImmersiveMode,
+        onSelectNode,
+        updateNodeContent
+      })
+    )
+  );
+
+  act(() => {
+    result.current.handleCreateNoteFromPayload({
+      anchorId: '1',
+      clozeContent: '[...]\n\nBeta',
+      entries: [{ anchorId: '1', clozeContent: '[...]\n\nBeta', range: { from: 0, to: 5 }, selectionText: 'Alpha' }],
+      parentNodeId: 'node-1',
+      selectionText: 'Alpha'
+    });
+  });
+
+  expect(createHighlightNodeFromSelection).toHaveBeenCalledWith('node-1', 'Alpha', '1');
+  expect(createChildNode).toHaveBeenCalledWith('highlight-1', '');
+  expect(onExitImmersiveMode).toHaveBeenCalledTimes(1);
+  expect(onSelectNode).toHaveBeenCalledWith('note-1');
+  expect(updateNodeContent).toHaveBeenCalledWith('node-1', '<highlight id="1">Alpha</highlight id="1">\n\nBeta');
 });

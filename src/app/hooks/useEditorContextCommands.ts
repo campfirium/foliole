@@ -12,12 +12,12 @@ import {
 } from '../../features/image-cloze/model/imageClozeEvents';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
+import { createSelectionHandlers, runSelectionCommandFromPayload } from './editorSelectionCommandActions';
 import {
   buildEditorContextCommandsResult,
   createHandleEditorContextMenu,
   createImageCommandHandlers,
   createSelectionCommandRunner,
-  createSelectionHandlers,
   createSyncActiveNodeContentFromEditor,
   type EditorContextMenuState
 } from './useEditorContextCommandHelpers';
@@ -25,7 +25,8 @@ import {
 interface UseEditorContextCommandsParams {
   activeNode?: Node;
   activeNodeId: string | null;
-  createHighlightNodeFromSelection: (parentNodeId: string, selectionText: string, anchorId: string) => void;
+  createChildNode: (parentNodeId: string, content?: string) => string;
+  createHighlightNodeFromSelection: (parentNodeId: string, selectionText: string, anchorId: string) => string | null;
   createImageClozeNodes?: (
     parentNodeId: string,
     attachmentId: string,
@@ -37,11 +38,13 @@ interface UseEditorContextCommandsParams {
     clozeContent: string,
     answer: string,
     anchorId: string
-  ) => void;
+  ) => string | null;
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   isTrashViewOpen: boolean;
   nodesById: Record<string, Node>;
+  onExitImmersiveMode: () => void;
+  onSelectNode: (nodeId: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
 }
 
@@ -96,6 +99,7 @@ function useImageClozeEventBridge(args: {
 export function useEditorContextCommands({
   activeNode,
   activeNodeId,
+  createChildNode,
   createHighlightNodeFromSelection,
   createImageClozeNodes = () => [],
   createQANodeFromSelection,
@@ -103,11 +107,14 @@ export function useEditorContextCommands({
   editorRef,
   isTrashViewOpen,
   nodesById,
+  onExitImmersiveMode,
+  onSelectNode,
   updateNodeContent
 }: UseEditorContextCommandsParams) {
   const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
   useImageClozeEventBridge({ activeNode, activeNodeId, createImageClozeNodes, deleteImageClozeRegion, editorRef, nodesById });
   const closeContextMenu = () => setContextMenu(null);
+  const syncActiveNodeContentFromEditor = createSyncActiveNodeContentFromEditor(activeNodeId, editorRef, updateNodeContent);
   const handleEditorContextMenu = createHandleEditorContextMenu({
     activeNode,
     activeNodeId,
@@ -115,38 +122,83 @@ export function useEditorContextCommands({
     isTrashViewOpen,
     setContextMenu
   });
-  const syncActiveNodeContentFromEditor = createSyncActiveNodeContentFromEditor(
-    activeNodeId,
-    editorRef,
-    updateNodeContent
-  );
   const runSelectionCommand = createSelectionCommandRunner(
     contextMenu?.kind === 'selection' ? contextMenu : null,
     editorRef,
     closeContextMenu,
     syncActiveNodeContentFromEditor
   );
-  const { handleCreateCloze, handleCreateHighlight } = createSelectionHandlers(
-    runSelectionCommand,
+  const runSelectionCommandFromPayloadHandler = createPayloadSelectionRunner(closeContextMenu, editorRef, syncActiveNodeContentFromEditor);
+  const selectionHandlers = createSelectionHandlers({
+    createChildNode,
     createHighlightNodeFromSelection,
-    createQANodeFromSelection
-  );
-  const { handleCopyImage, handleCutImage, handleDeleteImage, handleExportImage } = createImageCommandHandlers({
+    createQANodeFromSelection,
+    onExitImmersiveMode,
+    onSelectNode,
+    runSelectionCommand,
+    runSelectionCommandFromPayloadHandler
+  });
+  return buildEditorCommandsResult({
     closeContextMenu,
     contextMenu,
     editorRef,
+    handleEditorContextMenu,
+    selectionHandlers,
     syncActiveNodeContentFromEditor
+  });
+}
+
+function createPayloadSelectionRunner(
+  closeContextMenu: () => void,
+  editorRef: MutableRefObject<EditorAdapter | null>,
+  syncActiveNodeContentFromEditor: () => void
+) {
+  return ({
+    onApplied,
+    payload,
+    type
+  }: {
+    onApplied: (payload: Parameters<typeof runSelectionCommandFromPayload>[0]['payload']) => string | null;
+    payload: Parameters<typeof runSelectionCommandFromPayload>[0]['payload'];
+    type: Parameters<typeof runSelectionCommandFromPayload>[0]['type'];
+  }) =>
+    runSelectionCommandFromPayload({
+      closeContextMenu,
+      editorRef,
+      onApplied,
+      payload,
+      syncActiveNodeContentFromEditor,
+      type
+    });
+}
+
+function buildEditorCommandsResult(args: {
+  closeContextMenu: () => void;
+  contextMenu: EditorContextMenuState | null;
+  editorRef: MutableRefObject<EditorAdapter | null>;
+  handleEditorContextMenu: ReturnType<typeof createHandleEditorContextMenu>;
+  selectionHandlers: ReturnType<typeof createSelectionHandlers>;
+  syncActiveNodeContentFromEditor: () => void;
+}) {
+  const imageHandlers = createImageCommandHandlers({
+    closeContextMenu: args.closeContextMenu,
+    contextMenu: args.contextMenu,
+    editorRef: args.editorRef,
+    syncActiveNodeContentFromEditor: args.syncActiveNodeContentFromEditor
   });
 
   return buildEditorContextCommandsResult({
-    closeContextMenu,
-    contextMenu,
-    handleCopyImage,
-    handleCreateCloze,
-    handleCreateHighlight,
-    handleCutImage,
-    handleDeleteImage,
-    handleEditorContextMenu,
-    handleExportImage
+    closeContextMenu: args.closeContextMenu,
+    contextMenu: args.contextMenu,
+    handleCopyImage: imageHandlers.handleCopyImage,
+    handleCreateCloze: args.selectionHandlers.handleCreateCloze,
+    handleCreateClozeFromPayload: args.selectionHandlers.handleCreateClozeFromPayload,
+    handleCreateHighlight: args.selectionHandlers.handleCreateHighlight,
+    handleCreateHighlightFromPayload: args.selectionHandlers.handleCreateHighlightFromPayload,
+    handleCreateNoteFromPayload: args.selectionHandlers.handleCreateNoteFromPayload,
+    handleCutImage: imageHandlers.handleCutImage,
+    handleDeleteImage: imageHandlers.handleDeleteImage,
+    handleEditorContextMenu: args.handleEditorContextMenu,
+    handleExportImage: imageHandlers.handleExportImage
   });
 }

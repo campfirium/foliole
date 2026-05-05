@@ -24,7 +24,10 @@ export interface EditorContextCommandsResult {
   contextMenu: EditorContextMenuState | null;
   handleCopyImage: () => Promise<void>;
   handleCreateCloze: () => void;
+  handleCreateClozeFromPayload: (payload: SelectionCommandPayload) => string | null;
   handleCreateHighlight: () => void;
+  handleCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
+  handleCreateNoteFromPayload: (payload: SelectionCommandPayload) => string | null;
   handleCutImage: () => Promise<void>;
   handleDeleteImage: () => void;
   handleEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -115,30 +118,6 @@ export function createSyncActiveNodeContentFromEditor(
       return;
     }
     updateNodeContent(activeNodeId, editorRef.current.getContent());
-  };
-}
-
-export function createSelectionHandlers(
-  runSelectionCommand: ReturnType<typeof createSelectionCommandRunner>,
-  createHighlightNodeFromSelection: (parentNodeId: string, selectionText: string, anchorId: string) => void,
-  createQANodeFromSelection: (
-    parentNodeId: string,
-    clozeContent: string,
-    answer: string,
-    anchorId: string
-  ) => void
-) {
-  return {
-    handleCreateCloze() {
-      runSelectionCommand((payload) => {
-        createQANodeFromSelection(payload.parentNodeId, payload.clozeContent, payload.selectionText, payload.anchorId);
-      }, 'cloze');
-    },
-    handleCreateHighlight() {
-      runSelectionCommand((payload) => {
-        createHighlightNodeFromSelection(payload.parentNodeId, payload.selectionText, payload.anchorId);
-      }, 'highlight');
-    }
   };
 }
 

@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 
+import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { WindowTitleBar } from './WindowTitleBar';
@@ -78,6 +79,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         immersive={immersive}
         props={props}
       />
+      <ImmersiveShortcutsOverlay visible={props.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
       <ImportSourceWorkspace
         onOpenChange={(open) => (open ? props.onOpenImportManagement() : props.onCloseImportManagement())}
         onSelectNode={handleSelectNode}

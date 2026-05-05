@@ -28,6 +28,7 @@ function renderImageClozeCommands(createImageClozeNodes: ReturnType<typeof vi.fn
     useEditorContextCommands({
       activeNode: nodesById['node-1'],
       activeNodeId: 'node-1',
+      createChildNode: vi.fn(() => 'note-1'),
       createHighlightNodeFromSelection: vi.fn(),
       createImageClozeNodes,
       createQANodeFromSelection: vi.fn(),
@@ -35,6 +36,8 @@ function renderImageClozeCommands(createImageClozeNodes: ReturnType<typeof vi.fn
       editorRef,
       isTrashViewOpen: false,
       nodesById,
+      onExitImmersiveMode: vi.fn(),
+      onSelectNode: vi.fn(),
       updateNodeContent: vi.fn()
     })
   );

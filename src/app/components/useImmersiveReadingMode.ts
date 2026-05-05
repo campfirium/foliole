@@ -2,13 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
+import { getSelectionCommandPayload } from '../contextCommands';
 
+import { resolveParagraphSelection } from './immersiveReadingModel';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
 const NON_TEXT_INPUT_TYPES = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
-const PAGE_STEP_RATIO = 0.9;
-const SCROLL_EDGE_THRESHOLD_PX = 24;
-
 function isEditableElement(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -49,16 +48,6 @@ function blurActiveElement() {
   }
 }
 
-function scrollEditorPage(editor: NonNullable<WorkspaceLayoutProps['editorAdapterRef']['current']>, direction: 'up' | 'down') {
-  const metrics = editor.getScrollMetrics();
-  const step = Math.max(120, metrics.clientHeight * PAGE_STEP_RATIO);
-  const nextScrollTop =
-    direction === 'down'
-      ? Math.min(Math.max(0, metrics.scrollHeight - metrics.clientHeight), metrics.scrollTop + step)
-      : Math.max(0, metrics.scrollTop - step);
-  editor.setScrollTop(nextScrollTop);
-}
-
 function openNextReadableNode(props: WorkspaceLayoutProps, readableNodeIds: string[]) {
   const currentIndex = props.activeNodeId ? readableNodeIds.indexOf(props.activeNodeId) : -1;
   const nextNodeId = currentIndex >= 0 ? readableNodeIds[currentIndex + 1] : undefined;
@@ -76,31 +65,107 @@ function handleImmersiveExit(props: WorkspaceLayoutProps, isImmersiveEditing: bo
   props.onExitImmersiveMode();
 }
 
-function handleImmersiveNavigation(args: {
-  event: KeyboardEvent;
+function selectParagraph(args: {
+  direction: 'backward' | 'forward';
   props: WorkspaceLayoutProps;
   readableNodeIds: string[];
 }) {
   const editor = args.props.editorAdapterRef.current;
   if (!editor) {
-    return;
+    return false;
   }
-  if (args.event.key === 'PageUp' || (args.event.key === ' ' && args.event.shiftKey)) {
-    args.event.preventDefault();
-    scrollEditorPage(editor, 'up');
-    return;
+  const nextSelection = resolveParagraphSelection({
+    content: editor.getContent(),
+    currentSelection: editor.getSelection(),
+    direction: args.direction
+  });
+  if (nextSelection) {
+    editor.revealSelection(nextSelection);
+    return true;
   }
-  if (args.event.key !== ' ' && args.event.key !== 'PageDown') {
-    return;
-  }
-  args.event.preventDefault();
-  const metrics = editor.getScrollMetrics();
-  const maxScrollTop = Math.max(0, metrics.scrollHeight - metrics.clientHeight);
-  if (maxScrollTop - metrics.scrollTop <= SCROLL_EDGE_THRESHOLD_PX) {
+  if (args.direction === 'forward') {
     openNextReadableNode(args.props, args.readableNodeIds);
+    return true;
+  }
+  return false;
+}
+
+function runImmersiveSelectionAction(args: {
+  props: WorkspaceLayoutProps;
+  type: 'highlight' | 'note';
+}) {
+  if (!args.props.activeNodeId) {
+    return false;
+  }
+  const payload = getSelectionCommandPayload(args.props.activeNodeId, args.props.editorAdapterRef.current);
+  if (!payload) {
+    return false;
+  }
+  if (args.type === 'highlight') {
+    args.props.onCreateSelectionHighlight(payload);
+    return true;
+  }
+  args.props.onCreateSelectionNote(payload);
+  return true;
+}
+
+function handleImmersivePrimaryKey(args: {
+  event: KeyboardEvent;
+  isImmersiveEditing: boolean;
+  props: WorkspaceLayoutProps;
+  readableNodeIds: string[];
+  setIsImmersiveEditing: (value: boolean) => void;
+  setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
+}) {
+  if (args.event.key === 'Escape') {
+    args.event.preventDefault();
+    args.setIsShortcutsOverlayOpen(false);
+    handleImmersiveExit(args.props, args.isImmersiveEditing, args.setIsImmersiveEditing);
+    return true;
+  }
+  if (args.event.key === 'Enter') {
+    if (!args.props.editorAdapterRef.current) {
+      return true;
+    }
+    args.event.preventDefault();
+    args.setIsImmersiveEditing(true);
+    args.setIsShortcutsOverlayOpen(false);
+    return true;
+  }
+  if (args.event.key === '?' || (args.event.key === '/' && args.event.shiftKey)) {
+    args.event.preventDefault();
+    args.setIsShortcutsOverlayOpen((current) => !current);
+    return true;
+  }
+  return false;
+}
+
+function handleImmersiveReadingKey(args: {
+  event: KeyboardEvent;
+  props: WorkspaceLayoutProps;
+  readableNodeIds: string[];
+}) {
+  if (args.event.key === ' ' && args.event.shiftKey) {
+    args.event.preventDefault();
+    selectParagraph({ direction: 'backward', props: args.props, readableNodeIds: args.readableNodeIds });
     return;
   }
-  scrollEditorPage(editor, 'down');
+  if (args.event.key === ' ') {
+    args.event.preventDefault();
+    selectParagraph({ direction: 'forward', props: args.props, readableNodeIds: args.readableNodeIds });
+    return;
+  }
+  if (args.event.key.toLowerCase() === 'h') {
+    if (runImmersiveSelectionAction({ props: args.props, type: 'highlight' })) {
+      args.event.preventDefault();
+    }
+    return;
+  }
+  if (args.event.key.toLowerCase() === 'n') {
+    if (runImmersiveSelectionAction({ props: args.props, type: 'note' })) {
+      args.event.preventDefault();
+    }
+  }
 }
 
 function handleImmersiveKeydown(args: {
@@ -110,6 +175,7 @@ function handleImmersiveKeydown(args: {
   props: WorkspaceLayoutProps;
   readableNodeIds: string[];
   setIsImmersiveEditing: (value: boolean) => void;
+  setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
 }) {
   if (args.event.defaultPrevented || args.event.repeat || args.event.isComposing) {
     return;
@@ -125,34 +191,21 @@ function handleImmersiveKeydown(args: {
   if (!args.props.isImmersiveMode || args.event.altKey || args.event.ctrlKey || args.event.metaKey) {
     return;
   }
-  if (args.event.key === 'Escape') {
-    args.event.preventDefault();
-    handleImmersiveExit(args.props, args.isImmersiveEditing, args.setIsImmersiveEditing);
-    return;
-  }
   if (isEditableElement(args.event.target)) {
     return;
   }
-  if (args.event.key === 'Enter') {
-    if (!args.props.editorAdapterRef.current) {
-      return;
-    }
-    args.event.preventDefault();
-    args.setIsImmersiveEditing(true);
+  if (handleImmersivePrimaryKey(args)) {
     return;
   }
   if (args.isImmersiveEditing) {
     return;
   }
-  handleImmersiveNavigation({
-    event: args.event,
-    props: args.props,
-    readableNodeIds: args.readableNodeIds
-  });
+  handleImmersiveReadingKey({ event: args.event, props: args.props, readableNodeIds: args.readableNodeIds });
 }
 
 export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
   const [isImmersiveEditing, setIsImmersiveEditing] = useState(false);
+  const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
   const exitImmersiveModeRef = useRef(props.onExitImmersiveMode);
   const readableNodeIds = useMemo(
     () => getReadableNodeIds(props.nodeOrder, props.nodesById, props.trashedNodeIds),
@@ -167,6 +220,7 @@ export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
   useEffect(() => {
     if (!props.isImmersiveMode) {
       setIsImmersiveEditing(false);
+      setIsShortcutsOverlayOpen(false);
       return;
     }
     if (props.isStudyMode) {
@@ -174,6 +228,7 @@ export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
       return;
     }
     setIsImmersiveEditing(false);
+    setIsShortcutsOverlayOpen(false);
   }, [props.activeNodeId, props.isImmersiveMode, props.isStudyMode]);
 
   useEffect(() => {
@@ -192,7 +247,8 @@ export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
           isImmersiveEditing,
           props,
           readableNodeIds,
-          setIsImmersiveEditing
+          setIsImmersiveEditing,
+          setIsShortcutsOverlayOpen
         })
       ),
     [canToggleImmersiveMode, isImmersiveEditing, props, readableNodeIds]
@@ -201,6 +257,7 @@ export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
   return {
     enterImmersiveEdit: () => setIsImmersiveEditing(true),
     isImmersiveEditing,
+    isShortcutsOverlayOpen,
     setIsImmersiveEditing
   };
 }
