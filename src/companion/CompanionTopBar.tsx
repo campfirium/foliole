@@ -1,4 +1,4 @@
-import { ChevronLeft, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 type TopBarAction = {
@@ -31,11 +31,10 @@ export function CompanionTopBar(props: {
   title?: string;
   visible: boolean;
 }) {
-  const hasTitleRow = Boolean(
-    props.leftAction || props.rightAction || props.rightSlot || (!props.onBack && props.statusSlot) || props.title
-  );
+  const rightActionSlot = props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null);
+  const rightSlotInBackRow = Boolean(props.onBack && (rightActionSlot || props.statusSlot));
+  const hasTitleRow = Boolean(props.leftAction || (!rightSlotInBackRow && rightActionSlot) || (!props.onBack && props.statusSlot) || props.title);
   const hasChrome = Boolean(props.onBack || hasTitleRow);
-  const statusInBackRow = Boolean(props.onBack && props.statusSlot);
   if (!props.visible || !hasChrome) {
     return null;
   }
@@ -45,14 +44,19 @@ export function CompanionTopBar(props: {
       {props.onBack ? (
         <div className={`flex min-h-10 items-center justify-between gap-3 ${hasTitleRow ? 'mb-3' : ''}`}>
           <button
+            aria-label={props.backLabel ?? 'Back'}
             className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground"
             onClick={props.onBack}
             type="button"
           >
-            <ChevronLeft className="h-4 w-4 shrink-0" />
-            <span className="truncate">{props.backLabel ?? 'Back'}</span>
+            <ArrowLeft className="h-6 w-6 shrink-0" />
           </button>
-          {statusInBackRow ? <div className="shrink-0">{props.statusSlot}</div> : null}
+          {rightSlotInBackRow ? (
+            <div className="flex shrink-0 items-center gap-1">
+              {props.statusSlot}
+              {rightActionSlot}
+            </div>
+          ) : null}
         </div>
       ) : null}
       {hasTitleRow ? (
@@ -66,8 +70,8 @@ export function CompanionTopBar(props: {
             <div className="min-w-0 flex-1" />
           )}
           <div className="flex min-w-10 justify-end gap-1">
-            {statusInBackRow ? null : props.statusSlot}
-            {props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null)}
+            {rightSlotInBackRow ? null : props.statusSlot}
+            {rightSlotInBackRow ? null : rightActionSlot}
           </div>
         </div>
       ) : null}
