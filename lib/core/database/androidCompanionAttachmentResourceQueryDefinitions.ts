@@ -63,5 +63,13 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'storage_key', source: 'storage_key', type: 'nullableString' },
       { key: 'mime_type', source: 'mime_type', type: 'nullableString' }
     ]
+  },
+  attachmentResourceContentHashesByIds: {
+    resultKey: 'resources',
+    sql: 'SELECT attachment_id, content_hash FROM attachment_blobs WHERE attachment_id IN (__ATTACHMENT_ID_FILTER__)',
+    columns: [
+      { key: 'attachment_id', source: 'attachment_id', type: 'string' },
+      { key: 'content_hash', source: 'content_hash', type: 'string' }
+    ]
   }
 };

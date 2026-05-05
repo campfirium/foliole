@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSArray;
@@ -13,6 +12,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -102,7 +102,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             return;
         }
         String now = Instant.now().toString();
-        Map<String, String> contentHashes = loadContentHashes(database, attachmentIds);
+        Map<String, String> contentHashes = loadContentHashes(context, database, attachmentIds);
         database.beginTransaction();
         try {
             for (String attachmentId : attachmentIds) {
@@ -126,7 +126,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         }
     }
 
-    private static Map<String, String> loadContentHashes(SQLiteDatabase database, List<String> attachmentIds) {
+    private static Map<String, String> loadContentHashes(Context context, SQLiteDatabase database, List<String> attachmentIds) throws Exception {
         Map<String, String> hashes = new HashMap<>();
         StringBuilder placeholders = new StringBuilder();
         String[] args = new String[attachmentIds.size()];
@@ -135,13 +135,18 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             placeholders.append("?");
             args[index] = attachmentIds.get(index);
         }
-        try (Cursor cursor = database.rawQuery(
-            "SELECT attachment_id, content_hash FROM attachment_blobs WHERE attachment_id IN (" + placeholders + ")",
-            args
-        )) {
-            while (cursor.moveToNext()) {
-                hashes.put(cursor.getString(0), requireText(cursor.getString(1), "content_hash"));
-            }
+        JSONArray rows = FolioleCompanionNamedQueryStore
+            .loadArray(
+                context,
+                database,
+                "attachmentResourceContentHashesByIds",
+                Collections.singletonMap("__ATTACHMENT_ID_FILTER__", placeholders.toString()),
+                args
+            )
+            .getJSONArray("resources");
+        for (int index = 0; index < rows.length(); index += 1) {
+            JSONObject row = rows.getJSONObject(index);
+            hashes.put(row.getString("attachment_id"), requireText(row.getString("content_hash"), "content_hash"));
         }
         return hashes;
     }
