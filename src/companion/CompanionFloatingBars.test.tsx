@@ -99,7 +99,7 @@ function expectTopicBodyStageAfterReviewQueue() {
 
   expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
   expect(screen.getByText('128/616 - 1.0 MB/2.0 MB')).toBeInTheDocument();
-  expect(screen.getByText('Top-level 64 · Nested 156 · External 23 · Due review 0')).toBeInTheDocument();
+  expect(screen.getByText('Top-level 64 · Nested 156 · External 23 · Review queue 0')).toBeInTheDocument();
 }
 
 function expectTopicBodyStageAfterDueReviewBodiesComplete() {

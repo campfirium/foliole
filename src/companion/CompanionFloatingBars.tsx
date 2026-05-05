@@ -89,7 +89,7 @@ function formatContentBreakdown(progress: CompanionDesktopSyncProgress) {
     ['Top-level', breakdown.topLevelTopicBodies],
     ['Nested', breakdown.nestedTopicBodies],
     ['External', breakdown.externalDocumentBodies],
-    ['Due review', breakdown.dueReviewBodies]
+    ['Review queue', breakdown.dueReviewBodies]
   ]
     .filter((segment): segment is [string, number] => typeof segment[1] === 'number')
     .map(([label, count]) => `${label} ${count}`);
