@@ -1,4 +1,4 @@
-import { Bug, PanelRight } from 'lucide-react';
+import { PanelRight, SlidersHorizontal } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -31,34 +31,36 @@ interface WindowTitleBarRightSidebarAnchorProps {
 export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSidebarAnchorProps) {
   const isDevPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'dev';
 
+  if (props.isRightSidebarCollapsed) {
+    return (
+      <div className="window-titlebar-collapsed-sidebar-action">
+        <RightSidebarToggleButton active={false} onClick={props.onToggleRightSidebarVisibility} />
+      </div>
+    );
+  }
+
   return (
     <div
       className="window-titlebar-right-anchor-shell"
       style={{ '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px` } as CSSProperties}
     >
       <div className="window-titlebar-right-expanded-action">
-        <button
-          aria-label="Dev panel"
-          aria-pressed={isDevPanelActive}
-          className="window-titlebar-leading-button"
-          data-active={isDevPanelActive}
-          onClick={() => props.onSelectRightPanel('dev')}
-          type="button"
-        >
-          <Bug aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-        </button>
+        <RightSidebarToggleButton active onClick={props.onToggleRightSidebarVisibility} />
       </div>
-      {!props.isRightSidebarCollapsed ? (
-        <div className="window-titlebar-right-expanded-action" style={{ left: 38 }}>
-          <RightSidebarToggleButton active onClick={props.onToggleRightSidebarVisibility} />
+      <div className="window-titlebar-right-zone">
+        <div className="window-titlebar-right-panel-actions">
+          <button
+            aria-label="Dev panel"
+            aria-pressed={isDevPanelActive}
+            className="window-titlebar-leading-button"
+            data-active={isDevPanelActive}
+            onClick={() => props.onSelectRightPanel('dev')}
+            type="button"
+          >
+            <SlidersHorizontal aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+          </button>
         </div>
-      ) : null}
-      {!props.isRightSidebarCollapsed ? <div className="window-titlebar-right-zone" /> : null}
-      {props.isRightSidebarCollapsed ? (
-        <div className="window-titlebar-collapsed-sidebar-action">
-          <RightSidebarToggleButton active={false} onClick={props.onToggleRightSidebarVisibility} />
-        </div>
-      ) : null}
+      </div>
     </div>
   );
 }

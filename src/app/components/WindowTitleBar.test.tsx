@@ -87,7 +87,7 @@ describe('WindowTitleBar', () => {
     renderTitleBar({ isRightSidebarCollapsed: true });
 
     expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
   });
 
   it('collapses left titlebar actions down to the toggle button only', () => {
@@ -98,19 +98,22 @@ describe('WindowTitleBar', () => {
     expect(screen.queryByRole('button', { name: 'Trash' })).not.toBeInTheDocument();
   });
 
-  it('renders the expanded right sidebar toggle before the titlebar divider anchor', () => {
+  it('renders the expanded right sidebar toggle before the divider and the panel button inside the right zone', () => {
     const { container } = renderTitleBar({ isRightSidebarCollapsed: false });
 
     const shell = container.querySelector('.window-titlebar-right-anchor-shell');
-    const action = container.querySelector('.window-titlebar-right-expanded-action');
+    const toggleAction = container.querySelector('.window-titlebar-right-expanded-action');
     const anchor = container.querySelector('.window-titlebar-right-zone');
+    const panelActions = container.querySelector('.window-titlebar-right-panel-actions');
     expect(shell).not.toBeNull();
-    expect(action).not.toBeNull();
+    expect(toggleAction).not.toBeNull();
     expect(anchor).not.toBeNull();
-    if (!shell || !action || !anchor) {
+    expect(panelActions).not.toBeNull();
+    if (!shell || !toggleAction || !anchor || !panelActions) {
       throw new Error('right sidebar titlebar anchor should exist');
     }
-    expect(shell.contains(action)).toBe(true);
+    expect(shell.contains(toggleAction)).toBe(true);
     expect(shell.contains(anchor)).toBe(true);
+    expect(anchor.contains(panelActions)).toBe(true);
   });
 });

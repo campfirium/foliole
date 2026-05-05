@@ -159,7 +159,9 @@ body {
   border-left: 1px solid #d9d9d6;
   display: flex;
   flex: 1 1 auto;
+  justify-content: flex-start;
   min-width: 0;
+  pointer-events: auto;
   -webkit-app-region: no-drag;
 }
 
@@ -187,10 +189,20 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.window-titlebar-right-panel-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  padding-left: 10px;
+}
+
 .window-titlebar-collapsed-sidebar-action {
   align-items: center;
   display: inline-flex;
+  margin-left: 8px;
   padding-right: 4px;
+  position: relative;
+  z-index: 1;
   -webkit-app-region: no-drag;
 }
 
