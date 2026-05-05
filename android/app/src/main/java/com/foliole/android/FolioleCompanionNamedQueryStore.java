@@ -116,6 +116,15 @@ final class FolioleCompanionNamedQueryStore {
         return result;
     }
 
+    static JSONObject loadFirstRow(Context context, SQLiteDatabase database, String queryName, String resultKey, String[] args) throws Exception {
+        JSONArray rows = loadRows(context, database, queryName, resultKey, args);
+        return rows.length() <= 0 ? null : rows.getJSONObject(0);
+    }
+
+    static boolean hasRows(Context context, SQLiteDatabase database, String queryName, String resultKey, String[] args) throws Exception {
+        return loadFirstRow(context, database, queryName, resultKey, args) != null;
+    }
+
     private static String replaceTokens(String sql, Map<String, String> replacements) {
         if (replacements == null) {
             return sql;

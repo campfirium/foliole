@@ -6,7 +6,6 @@ import android.net.Uri;
 
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -75,13 +74,16 @@ final class FolioleCompanionAttachmentResourceStore {
 
     static JSObject resolveResource(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
         String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
-        JSONArray rows = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "attachmentResourceResolve", new String[] { normalizedAttachmentId })
-            .getJSONArray("resources");
-        if (rows.length() <= 0) {
+        JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(
+            context,
+            database,
+            "attachmentResourceResolve",
+            "resources",
+            new String[] { normalizedAttachmentId }
+        );
+        if (row == null) {
             return notFound();
         }
-        JSONObject row = rows.getJSONObject(0);
         String storageKey = nullableString(row, "storage_key");
         String mimeType = nullableString(row, "mime_type");
         if (storageKey == null || storageKey.trim().isEmpty()) {
