@@ -30,7 +30,12 @@
     "windows:tauri:simple:start": "bash scripts/windows/windows-tauri-simple.sh start",
     "windows:tauri:simple:stop": "bash scripts/windows/windows-tauri-simple.sh stop",
     "windows:tauri:simple:restart": "bash scripts/windows/windows-tauri-simple.sh restart",
-    "windows:tauri:simple:status": "bash scripts/windows/windows-tauri-simple.sh status"
+    "windows:tauri:simple:status": "bash scripts/windows/windows-tauri-simple.sh status",
+    "windows:dev:direct": "bash scripts/windows/windows-native-direct.sh",
+    "windows:tauri:fresh": "bash scripts/windows/windows-tauri-fresh.sh",
+    "windows:tauri:fresh:diag": "bash scripts/windows/windows-tauri-fresh.sh diag",
+    "windows:tauri:fresh:sw": "bash scripts/windows/windows-tauri-fresh.sh sw",
+    "windows:tauri:fresh:diag:sw": "bash scripts/windows/windows-tauri-fresh.sh diag-sw"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.2",

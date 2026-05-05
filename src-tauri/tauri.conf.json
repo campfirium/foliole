@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev -- --host 127.0.0.1 --port 4600",
     "beforeBuildCommand": "npm run build",
-    "devUrl": "http://127.0.0.1:4600",
+    "devUrl": "http://127.0.0.1:4600/?diag=solid",
     "frontendDist": "../dist"
   },
   "app": {
@@ -16,9 +16,9 @@
         "title": "Foliole",
         "width": 1400,
         "height": 900,
-        "decorations": false,
+        "decorations": true,
         "resizable": true,
-        "maximized": true
+        "maximized": false
       }
     ],
     "security": {

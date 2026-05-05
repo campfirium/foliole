@@ -32,6 +32,23 @@ function mountApp() {
     return;
   }
 
+  const search = new URLSearchParams(window.location.search);
+  if (search.get('diag') === 'solid') {
+    document.body.style.margin = '0';
+    document.body.style.background = '#0f766e';
+    rootElement.innerHTML =
+      '<section style="display:flex;height:100vh;align-items:center;justify-content:center;color:#ffffff;font:700 42px Segoe UI,Arial,sans-serif;">SOLID DIAG PAGE</section>';
+    reportNativeBootStage('diag_solid_rendered', {
+      href: window.location.href
+    });
+    reportNativeAppReady({
+      href: window.location.href,
+      readyState: document.readyState,
+      source: 'diag_solid'
+    });
+    return;
+  }
+
   window.addEventListener('error', (event) => {
     console.error('[startup] uncaught error', event.error);
     reportNativeBootStage('window_error', {

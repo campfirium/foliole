@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 LOG_DIR="${REPO_ROOT}/logs/windows"
-PS_SCRIPT="${SCRIPT_DIR}/run-windows-native-dev.ps1"
+PS_SCRIPT="${SCRIPT_DIR}/run-windows-tauri-simple.ps1"
 WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-C:\\dev\\foliole}"
 ACTION="${1:-apply}"
 RESOLVED_ACTION="${ACTION}"
@@ -20,20 +20,7 @@ case "${ACTION}" in
 esac
 
 if [[ "${ACTION}" == "apply" ]]; then
-  changed_files=""
-  if git -C "${REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    tracked_changes="$(git -C "${REPO_ROOT}" diff --name-only HEAD || true)"
-    untracked_changes="$(git -C "${REPO_ROOT}" ls-files --others --exclude-standard || true)"
-    changed_files="$(printf "%s\n%s\n" "${tracked_changes}" "${untracked_changes}" | sed '/^$/d' | sort -u)"
-  fi
-
-  # Always sync only. The running `tauri dev` process on Windows watches for
-  # file changes itself and handles hot-reload (frontend) or recompile+restart
-  # (Rust) automatically. Forcing a restart from WSL kills WebView2 mid-flight
-  # and causes UDD lock corruption. Let Tauri CLI own the restart decision.
   RESOLVED_ACTION="sync"
-
-  echo "[windows-native-dev] apply decision: ${RESOLVED_ACTION}"
 fi
 
 if ! command -v powershell.exe >/dev/null 2>&1; then
@@ -70,7 +57,6 @@ PS_ARGS=(
   -File "${PS_SCRIPT_WIN}"
   -Distro "${DISTRO}"
   -SourceRepoLinuxPath "${REPO_ROOT}"
-  -SourceRepoWindowsPath "${REPO_ROOT_WIN}"
   -WindowsWorkDir "${WINDOWS_WORKDIR}"
   -LogDir "${LOG_DIR_WIN}"
   -Action "${RESOLVED_ACTION}"
