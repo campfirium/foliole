@@ -93,6 +93,15 @@ describe('schema inventory drift gate', () => {
     await expect(readFile(COMPANION_SYNC_STATE_ROWS, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('keeps generated mutation definitions write-only', async () => {
+    const schema = JSON.parse(await readFile(COMPANION_MUTATION_DEFINITIONS, 'utf8'));
+    const readStatements = Object.entries(schema.statements).filter(([, sql]) =>
+      /\b(?:SELECT|PRAGMA)\b|sqlite_master/i.test(sql)
+    );
+
+    expect(readStatements).toEqual([]);
+  });
+
   it('keeps the desktop and Android core schema drift explicit', () => {
     const report = buildSchemaDriftReport();
     const sharedDrift = Object.fromEntries(
