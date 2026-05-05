@@ -16,6 +16,7 @@ const FORBIDDEN_MAIN_PATTERNS = [
   /\bclass\s+FolioleCompanionSyncConflictCopyProjection\b/,
   /\bclass\s+FolioleCompanionSyncConflictCopies\b/,
   /\bclass\s+FolioleCompanionSyncLocalNodeState\b/,
+  /\bclass\s+FolioleCompanionSyncNodeRecordBatch\b/,
   /\bclass\s+FolioleCompanionSyncNodeVersionApplySupport\b/,
   /\bapplyDesktopSyncPack\s*\(/,
   /\bapplySyncPack\s*\(/,
