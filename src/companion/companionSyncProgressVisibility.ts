@@ -18,6 +18,10 @@ function hasAttachmentProgress(result: CompanionSyncPassInput) {
   return (result.syncedAttachmentIds?.length ?? 0) > 0;
 }
 
+function knownNumber(value: number | null | undefined) {
+  return typeof value === 'number' ? value : undefined;
+}
+
 export function shouldClearCompanionSyncProgress(result: CompanionSyncPassInput) {
   if (result.attachmentResourceError || result.contentBlobError) {
     return !hasRemainingResourceBacklog(result);
@@ -35,6 +39,8 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
       completed: 0,
       completedBytes: 0,
       contentBreakdown: result.remainingContentBreakdown,
+      failedBytes: knownNumber(result.remainingFailedContentBlobBytes),
+      failedCount: knownNumber(result.remainingFailedContentBlobCount),
       phase: 'content',
       total: result.remainingContentBlobCount,
       totalBytes: result.remainingContentBlobBytes ?? null
@@ -48,6 +54,8 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
       attachmentBreakdown: result.remainingAttachmentBreakdown,
       completed: 0,
       completedBytes: 0,
+      failedBytes: knownNumber(result.remainingFailedAttachmentResourceBytes),
+      failedCount: knownNumber(result.remainingFailedAttachmentResourceCount),
       phase: 'attachment',
       total: result.remainingAttachmentResourceCount,
       totalBytes: result.remainingAttachmentResourceBytes ?? null

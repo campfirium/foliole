@@ -138,13 +138,14 @@ function expectAttachmentStage() {
     },
     completed: 4,
     completedBytes: 2097152,
+    failedCount: 1,
     phase: 'attachment',
     total: 12,
     totalBytes: 8388608
   });
 
   expect(screen.getByText('Attachments')).toBeInTheDocument();
-  expect(screen.getByText('4/12 - 2.0 MB/8.0 MB')).toBeInTheDocument();
+  expect(screen.getByText('4/12 - 2.0 MB/8.0 MB · 1 failed')).toBeInTheDocument();
   expect(screen.getByText('Images 5 · PDFs 4 · Other 3')).toBeInTheDocument();
 }
 

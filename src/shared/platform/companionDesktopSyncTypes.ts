@@ -17,6 +17,8 @@ export interface CompanionDesktopSyncProgress {
   completed: number;
   completedBytes?: number;
   elapsedMs?: number;
+  failedCount?: number;
+  failedBytes?: number;
   contentBreakdown?: {
     activeTopicBodies?: number;
     dueReviewBodies?: number;
@@ -55,9 +57,13 @@ export interface CompanionDesktopSyncResult {
   remainingAttachmentBreakdown?: CompanionDesktopSyncProgress['attachmentBreakdown'];
   remainingAttachmentResourceBytes: number | null;
   remainingAttachmentResourceCount: number | null;
+  remainingFailedAttachmentResourceBytes: number | null;
+  remainingFailedAttachmentResourceCount: number | null;
   remainingContentBreakdown?: CompanionDesktopSyncProgress['contentBreakdown'];
   remainingContentBlobBytes: number | null;
   remainingContentBlobCount: number | null;
+  remainingFailedContentBlobBytes: number | null;
+  remainingFailedContentBlobCount: number | null;
   remainingStructureChangeCount: number | null;
   syncedContentBlobHashes: string[];
   syncedContentBlobBytes: number;

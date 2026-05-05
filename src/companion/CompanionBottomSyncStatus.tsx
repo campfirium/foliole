@@ -110,7 +110,10 @@ export function CompanionBottomSyncStatus(props: {
     ? `${formatBytes(props.progress.completedBytes)}/${formatBytes(props.progress.totalBytes)}`
     : null;
   const elapsedLabel = formatElapsedTime(props.progress.elapsedMs);
-  const statusLabel = [byteLabel ? `${count} - ${byteLabel}` : count, elapsedLabel].filter(Boolean).join(' · ');
+  const failedLabel = props.progress.failedCount && props.progress.failedCount > 0
+    ? `${props.progress.failedCount} failed`
+    : null;
+  const statusLabel = [byteLabel ? `${count} - ${byteLabel}` : count, failedLabel, elapsedLabel].filter(Boolean).join(' · ');
   const detail = formatContentBreakdown(props.progress) ?? formatAttachmentBreakdown(props.progress);
   return (
     <section

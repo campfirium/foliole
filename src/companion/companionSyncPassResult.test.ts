@@ -85,6 +85,21 @@ describe('describeCompanionSyncPassResult', () => {
     });
   });
 
+  it('shows failed downloads separately from ordinary backlog', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      remainingContentBlobBytes: 5242880,
+      remainingContentBlobCount: 5,
+      remainingFailedAttachmentResourceBytes: 524288,
+      remainingFailedAttachmentResourceCount: 1,
+      remainingFailedContentBlobBytes: 1048576,
+      remainingFailedContentBlobCount: 1
+    }))).toEqual({
+      message: 'Sync checked; 5 topic bodies (5.0 MB) left to download, 1 topic body download (1.0 MB) failed earlier, and 1 attachment download (512 KB) failed earlier.',
+      outcome: 'skipped',
+      status: 'skipped'
+    });
+  });
+
 });
 
 describe('describeCompanionSyncPassResult errors', () => {

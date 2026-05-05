@@ -24,6 +24,8 @@ export interface CompanionSyncPassInput {
   };
   remainingAttachmentResourceBytes?: number | null;
   remainingAttachmentResourceCount: number | null;
+  remainingFailedAttachmentResourceBytes?: number | null;
+  remainingFailedAttachmentResourceCount?: number | null;
   remainingContentBreakdown?: {
     activeTopicBodies?: number;
     dueReviewBodies?: number;
@@ -34,6 +36,8 @@ export interface CompanionSyncPassInput {
   };
   remainingContentBlobBytes?: number | null;
   remainingContentBlobCount: number | null;
+  remainingFailedContentBlobBytes?: number | null;
+  remainingFailedContentBlobCount?: number | null;
   remainingStructureChangeCount?: number | null;
 }
 
@@ -74,6 +78,11 @@ function joinBacklogSuffix(prefix: string, suffix: string) {
   return `${prefix.replace(/[.;]\s*$/, '')}; ${suffix}`;
 }
 
+function joinPhrases(phrases: string[]) {
+  if (phrases.length <= 2) return phrases.join(' and ');
+  return `${phrases.slice(0, -1).join(', ')}, and ${phrases[phrases.length - 1]}`;
+}
+
 function appendDownloadSuffix(prefix: string, result: CompanionSyncPassInput) {
   const bodyCount = result.syncedContentBlobHashes?.length ?? 0;
   const attachmentCount = result.syncedAttachmentIds?.length ?? 0;
@@ -112,6 +121,8 @@ function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
   const bodyLabel = formatBacklogLabel('topic bodies', remainingBodies, result.remainingContentBlobBytes);
   const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
   const suffixes: string[] = [];
+  const failedBodies = result.remainingFailedContentBlobCount ?? 0;
+  const failedAttachments = result.remainingFailedAttachmentResourceCount ?? 0;
   if (typeof remainingStructure === 'number' && remainingStructure > 0) {
     suffixes.push(`${formatCount(remainingStructure, 'topic list change is', 'topic list changes are')} still applying`);
   } else if (remainingStructure === null) {
@@ -124,7 +135,13 @@ function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
   } else if (isKnownBacklog(remainingAttachments)) {
     suffixes.push(`${attachmentLabel} ${resourceBacklogVerb(result)}`);
   }
-  return suffixes.length === 0 ? prefix : joinBacklogSuffix(prefix, `${suffixes.join(', and ')}.`);
+  if (failedBodies > 0) {
+    suffixes.push(`${formatDownloadLabel(failedBodies, 'topic body download', 'topic body downloads', result.remainingFailedContentBlobBytes)} failed earlier`);
+  }
+  if (failedAttachments > 0) {
+    suffixes.push(`${formatDownloadLabel(failedAttachments, 'attachment download', 'attachment downloads', result.remainingFailedAttachmentResourceBytes)} failed earlier`);
+  }
+  return suffixes.length === 0 ? prefix : joinBacklogSuffix(prefix, `${joinPhrases(suffixes)}.`);
 }
 
 function createPassResult(message: string, status: CompanionSyncPassResult['status']): CompanionSyncPassResult {

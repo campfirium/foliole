@@ -24,6 +24,8 @@ export async function loadCompanionDesktopSyncSummary(endpointUrl: string) {
     } : undefined,
     remainingAttachmentResourceBytes: diagnostics?.content?.missing_attachment_resource_bytes ?? null,
     remainingAttachmentResourceCount: diagnostics?.content?.missing_attachment_resource_count ?? null,
+    remainingFailedAttachmentResourceBytes: diagnostics?.content?.failed_attachment_resource_bytes ?? null,
+    remainingFailedAttachmentResourceCount: diagnostics?.content?.failed_attachment_resource_count ?? null,
     remainingContentBreakdown: diagnostics ? {
       activeTopicBodies: diagnostics.content?.missing_active_topic_body_count,
       dueReviewBodies: diagnostics.content?.missing_due_review_body_count,
@@ -34,6 +36,8 @@ export async function loadCompanionDesktopSyncSummary(endpointUrl: string) {
     } : undefined,
     remainingContentBlobBytes: diagnostics?.content?.missing_content_blob_bytes ?? null,
     remainingContentBlobCount: diagnostics?.content?.missing_content_blob_count ?? null,
+    remainingFailedContentBlobBytes: diagnostics?.content?.failed_content_blob_bytes ?? null,
+    remainingFailedContentBlobCount: diagnostics?.content?.failed_content_blob_count ?? null,
     remainingStructureChangeCount: typeof desktopStateSeq === 'number' && typeof androidCursor === 'number'
       ? Math.max(0, desktopStateSeq - androidCursor)
       : null
