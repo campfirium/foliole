@@ -94,8 +94,16 @@ it('adds only newly anchored readwise highlights during keep import updates', as
   await runReadwiseKeepImport(fixture.fullDocumentDir);
 
   const { childRows, parentRow } = readImportedChildRows();
+  const keepItem = openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT has_source_update
+       FROM keep_import_items
+       WHERE rule_id = 'draft-import-source-1' AND source_path = 'Sample Article.md'`
+    )
+    .get() as { has_source_update: number };
 
   expect(childRows).toHaveLength(2);
+  expect(keepItem.has_source_update).toBe(1);
   expect(parentRow.content).not.toContain('Completely different upstream body.');
   expect(parentRow.content).toContain('<highlight id="1">This is the highlighted sentence.</highlight id="1">');
   expect(parentRow.content).toContain('<highlight id="2">Another matching excerpt.</highlight id="2">');
@@ -125,8 +133,16 @@ it('refreshes the node when only the readwise highlight file changes', async () 
   await runReadwiseKeepImport(fixture.fullDocumentDir);
 
   const { childRows, parentRow } = readImportedChildRows();
+  const keepItem = openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT has_source_update
+       FROM keep_import_items
+       WHERE rule_id = 'draft-import-source-1' AND source_path = 'Sample Article.md'`
+    )
+    .get() as { has_source_update: number };
 
   expect(childRows).toHaveLength(3);
+  expect(keepItem.has_source_update).toBe(0);
   expect(parentRow.content).toContain('<highlight id="3">After the quote.</highlight id="3">');
   expect(childRows[2]).toEqual({
     anchor_link: JSON.stringify({ id: '3', kind: 'highlight' }),

@@ -95,6 +95,7 @@ const NODE_SOURCE_DETAILS = createNodeSourceDetails({
   },
   keepImportItem: {
     firstSeenAt: '2026-03-24T12:00:00.000Z',
+    hasSourceUpdate: true,
     highlightPath: '/Users/me/Readwise/Articles',
     keepState: 'enabled',
     lastImportedAt: '2026-03-25T12:30:00.000Z',
@@ -103,6 +104,7 @@ const NODE_SOURCE_DETAILS = createNodeSourceDetails({
     primaryPath: '/Users/me/Readwise/Full Document Contents/Articles',
     ruleId: 'draft-import-source-1',
     ruleLabel: 'Readwise articles',
+    resolvedSourcePath: '/Users/me/Readwise/Full Document Contents/Articles/imported-note.md',
     sourceMtimeMs: 123,
     sourcePath: '/Users/me/Readwise/Full Document Contents/Articles/imported-note.md',
     sourceSizeBytes: 456,

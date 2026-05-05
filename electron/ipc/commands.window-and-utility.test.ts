@@ -14,6 +14,7 @@ const {
   mockApp,
   mockWindow,
   openExternal,
+  openPath,
   readFile,
   recordPreparedImportFailure,
   runPreparedImport,
@@ -49,6 +50,7 @@ const {
     unmaximize: vi.fn()
   },
   openExternal: vi.fn().mockResolvedValue(undefined),
+  openPath: vi.fn().mockResolvedValue(''),
   readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
   recordPreparedImportFailure: vi.fn(),
   runPreparedImport: vi.fn(),
@@ -63,7 +65,7 @@ vi.mock('electron', () => ({
   },
   app: mockApp,
   dialog: { showOpenDialog },
-  shell: { openExternal }
+  shell: { openExternal, openPath }
 }));
 vi.mock('node:fs/promises', () => ({
   default: { readFile },
@@ -116,18 +118,24 @@ it('handles typed native utility commands', async () => {
     command: 'open_external_url',
     args: { url: 'https://example.com' }
   } satisfies NativeInvokeRequest<'open_external_url'>;
+  const openLocalPathRequest = {
+    command: 'open_local_path',
+    args: { path: '/tmp/source.md' }
+  } satisfies NativeInvokeRequest<'open_local_path'>;
   const syncAppMenuStateRequest = {
     command: 'sync_app_menu_state',
     args: { enabledCommandIds: ['node.create', 'node.delete'] }
   } satisfies NativeInvokeRequest<'sync_app_menu_state'>;
 
   await expect(handleInvokeRequest(openExternalUrlRequest)).resolves.toBeNull();
+  await expect(handleInvokeRequest(openLocalPathRequest)).resolves.toBeNull();
   await expect(handleInvokeRequest(syncAppMenuStateRequest)).resolves.toBeNull();
   await expect(
     handleInvokeRequest({ command: 'app_get_version' } satisfies NativeInvokeRequest<'app_get_version'>)
   ).resolves.toBe('1.0.0');
 
   expect(openExternal).toHaveBeenCalledWith('https://example.com');
+  expect(openPath).toHaveBeenCalledWith('/tmp/source.md');
   expect(syncAppMenuState).toHaveBeenCalledWith(['node.create', 'node.delete']);
 });
 

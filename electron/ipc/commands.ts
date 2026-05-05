@@ -104,6 +104,14 @@ async function handleImportCommand(request: InvokeRequest, context?: InvokeConte
     await shell.openExternal(url);
     return null;
   }
+  if (isTypedRequest(request, NATIVE_COMMANDS.openLocalPath)) {
+    const targetPath = asString(request.args.path, 'path').trim();
+    if (!targetPath) {
+      return null;
+    }
+    await shell.openPath(targetPath);
+    return null;
+  }
   if (isTypedRequest(request, NATIVE_COMMANDS.inspectReadwiseReaderSetup)) {
     return inspectReadwiseReaderSetup(request.args);
   }

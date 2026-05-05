@@ -14,6 +14,7 @@ export interface RuntimeNodeImportSource {
 
 export interface RuntimeKeepImportItemDetails {
   firstSeenAt: string;
+  hasSourceUpdate: boolean;
   highlightPath: string | null;
   keepState: 'draft' | 'enabled' | 'previewed' | null;
   lastImportedAt: string | null;
@@ -22,6 +23,7 @@ export interface RuntimeKeepImportItemDetails {
   primaryPath: string | null;
   ruleId: string;
   ruleLabel: string | null;
+  resolvedSourcePath: string | null;
   sourceMtimeMs: number;
   sourcePath: string;
   sourceSizeBytes: number;
@@ -34,13 +36,6 @@ export interface RuntimeNodeSourceDetails {
   inheritedFromParent: boolean;
   keepImportItem: RuntimeKeepImportItemDetails | null;
   sourceNodeId: string;
-}
-
-export interface RuntimeNodeSourceUpdatePreview {
-  checkedAt: string;
-  currentContent: string;
-  sourceNodeId: string;
-  updatedContent: string;
 }
 
 function isKeepImportItemStatus(value: unknown): value is RuntimeKeepImportItemDetails['lastStatus'] {
@@ -85,6 +80,7 @@ function toRuntimeKeepImportItemDetails(value: unknown): RuntimeKeepImportItemDe
   const payload = value as Record<string, unknown>;
   if (
     typeof payload.first_seen_at !== 'string' ||
+    typeof payload.has_source_update !== 'boolean' ||
     (payload.highlight_path !== null && typeof payload.highlight_path !== 'string') ||
     (payload.keep_state !== null && payload.keep_state !== 'draft' && payload.keep_state !== 'enabled' && payload.keep_state !== 'previewed') ||
     (payload.last_imported_at !== null && typeof payload.last_imported_at !== 'string') ||
@@ -93,6 +89,7 @@ function toRuntimeKeepImportItemDetails(value: unknown): RuntimeKeepImportItemDe
     (payload.primary_path !== null && typeof payload.primary_path !== 'string') ||
     typeof payload.rule_id !== 'string' ||
     (payload.rule_label !== null && typeof payload.rule_label !== 'string') ||
+    (payload.resolved_source_path !== null && typeof payload.resolved_source_path !== 'string') ||
     typeof payload.source_mtime_ms !== 'number' ||
     typeof payload.source_path !== 'string' ||
     typeof payload.source_size_bytes !== 'number' ||
@@ -102,6 +99,7 @@ function toRuntimeKeepImportItemDetails(value: unknown): RuntimeKeepImportItemDe
   }
   return {
     firstSeenAt: payload.first_seen_at,
+    hasSourceUpdate: payload.has_source_update,
     highlightPath: payload.highlight_path,
     keepState: payload.keep_state,
     lastImportedAt: payload.last_imported_at,
@@ -110,6 +108,7 @@ function toRuntimeKeepImportItemDetails(value: unknown): RuntimeKeepImportItemDe
     primaryPath: payload.primary_path,
     ruleId: payload.rule_id,
     ruleLabel: payload.rule_label,
+    resolvedSourcePath: payload.resolved_source_path,
     sourceMtimeMs: payload.source_mtime_ms,
     sourcePath: payload.source_path,
     sourceSizeBytes: payload.source_size_bytes,
@@ -140,26 +139,5 @@ export function toRuntimeNodeSourceDetails(value: unknown): RuntimeNodeSourceDet
     inheritedFromParent: payload.inherited_from_parent,
     keepImportItem,
     sourceNodeId: payload.source_node_id
-  };
-}
-
-export function toRuntimeNodeSourceUpdatePreview(value: unknown): RuntimeNodeSourceUpdatePreview | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  const payload = value as Record<string, unknown>;
-  if (
-    typeof payload.checked_at !== 'string' ||
-    typeof payload.current_content !== 'string' ||
-    typeof payload.source_node_id !== 'string' ||
-    typeof payload.updated_content !== 'string'
-  ) {
-    return null;
-  }
-  return {
-    checkedAt: payload.checked_at,
-    currentContent: payload.current_content,
-    sourceNodeId: payload.source_node_id,
-    updatedContent: payload.updated_content
   };
 }

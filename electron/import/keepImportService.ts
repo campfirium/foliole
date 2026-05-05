@@ -15,6 +15,8 @@ import {
 import { buildKeepImportPreviewResult } from './keepImportPreviewResult.js';
 import { logReadwiseRunCompleted, shouldLogReadwiseScan, type KeepImportRunEntry } from './keepImportReadwiseLogging.js';
 import { createBlockedRecord, persistKeepImportState } from './keepImportServiceState.js';
+import { hasHighlightSourceChanged, hasPrimarySourceChanged } from './keepImportSourceSignature.js';
+import { resolveKeepImportResultDetail, resolveKeepImportResultStatus, resolvePersistedSourceUpdateFlag } from './keepImportSourceUpdateState.js';
 import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
 
 type KeepImportPreviewStatus = NativeKeepImportPreviewResult['entries'][number]['status'];
@@ -25,27 +27,6 @@ interface KeepImportPreviewEntry {
   highlightSamples: NativeKeepImportPreviewResult['entries'][number]['highlight_samples'];
   sourcePath: string;
   status: KeepImportPreviewStatus;
-}
-
-function hasPrimarySourceChanged(
-  existingItem: ReturnType<typeof isBlockedByDeletedNode>['existingItem'],
-  sourceSignature: Awaited<ReturnType<typeof resolveKeepImportSourceSignature>>
-) {
-  return (
-    !existingItem ||
-    existingItem.source_mtime_ms !== sourceSignature.primary.mtimeMs ||
-    existingItem.source_size_bytes !== sourceSignature.primary.sizeBytes
-  );
-}
-
-function hasHighlightSourceChanged(
-  existingItem: ReturnType<typeof isBlockedByDeletedNode>['existingItem'],
-  sourceSignature: Awaited<ReturnType<typeof resolveKeepImportSourceSignature>>
-) {
-  return (
-    (existingItem?.highlight_source_mtime_ms ?? null) !== (sourceSignature.highlight?.mtimeMs ?? null) ||
-    (existingItem?.highlight_source_size_bytes ?? null) !== (sourceSignature.highlight?.sizeBytes ?? null)
-  );
 }
 
 export interface KeepImportRuleConfig {
@@ -133,9 +114,13 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
   const importedAt = new Date().toISOString();
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
   const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
+  const hasSourceUpdate = resolvePersistedSourceUpdateFlag(
+    blockedState.existingItem,
+    hasPrimarySourceChanged(blockedState.existingItem, sourceSignature)
+  );
   if (blockedState.blocked) {
     const blockedRecord = createBlockedRecord(source, importedAt, blockedState.existingItem?.last_node_id ?? null);
-    persistKeepImportState(config, source, sourceSignature, blockedRecord, 'blocked_deleted');
+    persistKeepImportState(config, source, sourceSignature, blockedRecord, 'blocked_deleted', hasSourceUpdate);
     return {
       detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
       failureReason: blockedRecord.failureReason,
@@ -145,22 +130,17 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
   }
   try {
     const record = runPreparedImport(await loadPreparedKeepImportRecord(config, source, importedAt));
+    const importStatus = resolveKeepImportResultStatus(record);
     persistKeepImportState(
       config,
       source,
       sourceSignature,
       record,
-      record.resultStatus === 'degraded' ? 'degraded' : record.duplicateSemantic === 'duplicate' ? 'duplicate' : 'imported'
+      importStatus,
+      hasSourceUpdate
     );
-    const importStatus: 'degraded' | 'duplicate' | 'imported' =
-      record.resultStatus === 'degraded' ? 'degraded' : record.duplicateSemantic === 'duplicate' ? 'duplicate' : 'imported';
     return {
-      detail:
-        importStatus === 'duplicate'
-          ? 'File content was already imported and no new node was created.'
-          : importStatus === 'degraded'
-            ? record.degradedReason ?? 'Imported with degraded content.'
-            : 'Imported successfully.',
+      detail: resolveKeepImportResultDetail(record, importStatus),
       failureReason: record.failureReason,
       importId: record.importId,
       importStatus
@@ -176,7 +156,7 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
       }),
       failureReason
     );
-    persistKeepImportState(config, source, sourceSignature, record, 'failed');
+    persistKeepImportState(config, source, sourceSignature, record, 'failed', hasSourceUpdate);
     return {
       detail: failureReason,
       failureReason,
@@ -254,5 +234,12 @@ async function persistBlockedKeepImportState(
   const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
   const blockedRecord = createBlockedRecord(source, importedAt, blockedState.existingItem?.last_node_id ?? null);
-  persistKeepImportState(config, source, sourceSignature, blockedRecord, 'blocked_deleted');
+  persistKeepImportState(
+    config,
+    source,
+    sourceSignature,
+    blockedRecord,
+    'blocked_deleted',
+    Boolean(blockedState.existingItem?.has_source_update)
+  );
 }

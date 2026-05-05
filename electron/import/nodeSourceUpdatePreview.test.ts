@@ -66,6 +66,12 @@ it('returns source update content after the readwise body changes upstream', asy
     ].join('\n'),
     'utf8'
   );
+  await runKeepImportRule({
+    directoryPath: fixture.fullDocumentDir,
+    highlightPolicy: 'reference_only',
+    ruleId: 'draft-import-source-1',
+    sourceType: 'readwise'
+  });
 
   const importedNode = openDatabaseConnection().sqlite
     .prepare(`SELECT latest_node_id FROM import_sources WHERE source_name = 'Sample Article.md'`)

@@ -27,8 +27,7 @@ export type { RuntimeKeepImportPreviewEntry, RuntimeKeepImportPreviewResult } fr
 export type {
   RuntimeKeepImportItemDetails,
   RuntimeNodeImportSource,
-  RuntimeNodeSourceDetails,
-  RuntimeNodeSourceUpdatePreview
+  RuntimeNodeSourceDetails
 } from './nodeSourceBridgePayloads';
 
 export async function selectRuntimeImportDirectory(): Promise<string | null> {

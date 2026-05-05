@@ -8,7 +8,7 @@ export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget 
   sqlite: TSqlite;
 }
 
-export const DATABASE_SCHEMA_VERSION = 8;
+export const DATABASE_SCHEMA_VERSION = 9;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -154,6 +154,8 @@ const CREATE_TABLE_STATEMENTS_V7 = [
 
 const CREATE_TABLE_STATEMENTS_V8 = ['ALTER TABLE nodes ADD COLUMN hide_title_heading INTEGER NOT NULL DEFAULT 0'];
 
+const CREATE_TABLE_STATEMENTS_V9 = ['ALTER TABLE keep_import_items ADD COLUMN has_source_update INTEGER NOT NULL DEFAULT 0'];
+
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -163,56 +165,33 @@ function setUserVersion(sqlite: DatabaseMigrationTarget, version: number) {
   sqlite.pragma(`user_version = ${version}`);
 }
 
+const MIGRATION_STEPS = [
+  { statements: CREATE_TABLE_STATEMENTS_V1, version: 1 },
+  { statements: CREATE_TABLE_STATEMENTS_V2, version: 2 },
+  { statements: CREATE_TABLE_STATEMENTS_V3, version: 3 },
+  { statements: CREATE_TABLE_STATEMENTS_V4, version: 4 },
+  { statements: CREATE_TABLE_STATEMENTS_V5, version: 5 },
+  { statements: CREATE_TABLE_STATEMENTS_V6, version: 6 },
+  { statements: CREATE_TABLE_STATEMENTS_V7, version: 7 },
+  { statements: CREATE_TABLE_STATEMENTS_V8, version: 8 },
+  { statements: CREATE_TABLE_STATEMENTS_V9, version: 9 }
+];
+
+function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
+  if (currentVersion >= step.version) {
+    return;
+  }
+  for (const statement of step.statements) {
+    sqlite.exec(statement);
+  }
+  setUserVersion(sqlite, step.version);
+}
+
 export function runDatabaseMigrations(sqlite: DatabaseMigrationTarget) {
   const applyInTransaction = sqlite.transaction(() => {
     const currentVersion = readUserVersion(sqlite);
-    if (currentVersion < 1) {
-      for (const statement of CREATE_TABLE_STATEMENTS_V1) {
-        sqlite.exec(statement);
-      }
-      setUserVersion(sqlite, 1);
-    }
-    if (currentVersion < 2) {
-      for (const statement of CREATE_TABLE_STATEMENTS_V2) {
-        sqlite.exec(statement);
-      }
-      setUserVersion(sqlite, 2);
-    }
-    if (currentVersion < 3) {
-      for (const statement of CREATE_TABLE_STATEMENTS_V3) {
-        sqlite.exec(statement);
-      }
-      setUserVersion(sqlite, 3);
-    }
-    if (currentVersion < 4) {
-      for (const statement of CREATE_TABLE_STATEMENTS_V4) {
-        sqlite.exec(statement);
-      }
-      setUserVersion(sqlite, 4);
-    }
-    if (currentVersion < 5) {
-      for (const statement of CREATE_TABLE_STATEMENTS_V5) {
-        sqlite.exec(statement);
-      }
-      setUserVersion(sqlite, 5);
-    }
-    if (currentVersion < 6) {
-      for (const statement of CREATE_TABLE_STATEMENTS_V6) {
-        sqlite.exec(statement);
-      }
-      setUserVersion(sqlite, 6);
-    }
-    if (currentVersion < 7) {
-      for (const statement of CREATE_TABLE_STATEMENTS_V7) {
-        sqlite.exec(statement);
-      }
-      setUserVersion(sqlite, 7);
-    }
-    if (currentVersion < 8) {
-      for (const statement of CREATE_TABLE_STATEMENTS_V8) {
-        sqlite.exec(statement);
-      }
-      setUserVersion(sqlite, 8);
+    for (const step of MIGRATION_STEPS) {
+      applyMigrationStep(sqlite, currentVersion, step);
     }
     if (currentVersion > DATABASE_SCHEMA_VERSION) {
       throw new Error(`database schema version ${currentVersion} is newer than supported`);

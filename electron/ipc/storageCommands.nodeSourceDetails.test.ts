@@ -8,10 +8,6 @@ const { loadNodeSourceDetails } = vi.hoisted(() => ({
 const { loadImportManagerSettings } = vi.hoisted(() => ({
   loadImportManagerSettings: vi.fn()
 }));
-const { loadNodeSourceUpdatePreview } = vi.hoisted(() => ({
-  loadNodeSourceUpdatePreview: vi.fn()
-}));
-
 vi.mock('../database/nodeSourceDetails.js', () => ({ loadNodeSourceDetails }));
 vi.mock('../database/importOverview.js', () => ({ loadImportOverview: vi.fn() }));
 vi.mock('../database/importMaintenance.js', () => ({ resetImportData: vi.fn() }));
@@ -44,7 +40,6 @@ vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings,
   saveImportManagerSettings: vi.fn()
 }));
-vi.mock('../import/nodeSourceUpdatePreview.js', () => ({ loadNodeSourceUpdatePreview }));
 vi.mock('../import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: vi.fn() }));
 vi.mock('../import/managedInboxMonitor.js', () => ({ refreshManagedInboxMonitorFromSettings: vi.fn() }));
 vi.mock('./storage.js', () => ({
@@ -86,6 +81,7 @@ const NODE_SOURCE_DETAILS_RECORD = {
   inheritedFromParent: true,
   keepImportItem: {
     first_seen_at: '2026-03-25T10:00:00.000Z',
+    has_source_update: 1,
     last_imported_at: '2026-03-26T10:00:00.000Z',
     last_seen_at: '2026-03-26T10:05:00.000Z',
     last_status: 'imported',
@@ -148,6 +144,7 @@ const EXPECTED_NODE_SOURCE_PAYLOAD = {
   inherited_from_parent: true,
   keep_import_item: {
     first_seen_at: '2026-03-25T10:00:00.000Z',
+    has_source_update: true,
     highlight_path: '/Users/me/Readwise/Articles',
     keep_state: 'enabled',
     last_imported_at: '2026-03-26T10:00:00.000Z',
@@ -156,6 +153,7 @@ const EXPECTED_NODE_SOURCE_PAYLOAD = {
     primary_path: '/Users/me/Readwise/Full Document Contents/Articles',
     rule_id: 'draft-import-source-1',
     rule_label: 'Readwise articles',
+    resolved_source_path: '/Users/me/Readwise/Full Document Contents/Articles/note.md',
     source_mtime_ms: 123,
     source_path: '/Users/me/Readwise/Full Document Contents/Articles/note.md',
     source_size_bytes: 456,
@@ -178,20 +176,4 @@ it('serializes node source details with keep-import metadata', async () => {
   loadNodeSourceDetails.mockReturnValue(NODE_SOURCE_DETAILS_RECORD);
   loadImportManagerSettings.mockReturnValue(IMPORT_MANAGER_SETTINGS_RECORD);
   await expectNodeSourcePayload();
-});
-
-it('loads node source update preview payloads', async () => {
-  loadNodeSourceUpdatePreview.mockResolvedValue({
-    checked_at: '2026-03-28T10:00:00.000Z',
-    current_content: '# Current',
-    source_node_id: 'node-1',
-    updated_content: '# Updated'
-  });
-
-  await expect(handleStorageCommand('load_node_source_update_preview', { node_id: 'node-1' })).resolves.toEqual({
-    checked_at: '2026-03-28T10:00:00.000Z',
-    current_content: '# Current',
-    source_node_id: 'node-1',
-    updated_content: '# Updated'
-  });
 });

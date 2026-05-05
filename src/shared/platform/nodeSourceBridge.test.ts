@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { loadRuntimeNodeSourceDetails, loadRuntimeNodeSourceUpdatePreview } from './nodeSourceBridge';
+import { loadRuntimeNodeSourceDetails } from './nodeSourceBridge';
 
 const NODE_SOURCE_DETAILS_PAYLOAD = {
   import_runs: [
@@ -35,6 +35,7 @@ const NODE_SOURCE_DETAILS_PAYLOAD = {
   inherited_from_parent: true,
   keep_import_item: {
     first_seen_at: '2026-03-20T10:00:00.000Z',
+    has_source_update: true,
     highlight_path: '/tmp/readwise/Articles',
     keep_state: 'enabled',
     last_imported_at: '2026-03-22T10:00:00.000Z',
@@ -43,6 +44,7 @@ const NODE_SOURCE_DETAILS_PAYLOAD = {
     primary_path: '/tmp/readwise/Full Document Contents/Articles',
     rule_id: 'draft-import-source-1',
     rule_label: 'Readwise articles',
+    resolved_source_path: '/tmp/readwise/Full Document Contents/Articles/note.md',
     source_mtime_ms: 123,
     source_path: '/tmp/readwise/Full Document Contents/Articles/note.md',
     source_size_bytes: 456,
@@ -101,6 +103,7 @@ it('normalizes node source details from the runtime bridge', async () => {
     inheritedFromParent: true,
     keepImportItem: {
       firstSeenAt: '2026-03-20T10:00:00.000Z',
+      hasSourceUpdate: true,
       highlightPath: '/tmp/readwise/Articles',
       keepState: 'enabled',
       lastImportedAt: '2026-03-22T10:00:00.000Z',
@@ -109,6 +112,7 @@ it('normalizes node source details from the runtime bridge', async () => {
       primaryPath: '/tmp/readwise/Full Document Contents/Articles',
       ruleId: 'draft-import-source-1',
       ruleLabel: 'Readwise articles',
+      resolvedSourcePath: '/tmp/readwise/Full Document Contents/Articles/note.md',
       sourceMtimeMs: 123,
       sourcePath: '/tmp/readwise/Full Document Contents/Articles/note.md',
       sourceSizeBytes: 456,
@@ -117,22 +121,4 @@ it('normalizes node source details from the runtime bridge', async () => {
     sourceNodeId: 'node-parent'
   });
   expect(invoke).toHaveBeenCalledWith('load_node_source_details', { node_id: 'node-1' });
-});
-
-it('normalizes node source update preview from the runtime bridge', async () => {
-  const invoke = vi.fn().mockResolvedValue({
-    checked_at: '2026-03-28T10:00:00.000Z',
-    current_content: '# Current',
-    source_node_id: 'node-1',
-    updated_content: '# Updated'
-  });
-  window.electronAPI = createMockElectronApi(invoke);
-
-  await expect(loadRuntimeNodeSourceUpdatePreview('node-1')).resolves.toEqual({
-    checkedAt: '2026-03-28T10:00:00.000Z',
-    currentContent: '# Current',
-    sourceNodeId: 'node-1',
-    updatedContent: '# Updated'
-  });
-  expect(invoke).toHaveBeenCalledWith('load_node_source_update_preview', { node_id: 'node-1' });
 });

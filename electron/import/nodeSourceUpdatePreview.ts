@@ -137,7 +137,7 @@ export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeS
   }
 
   const keepImportItem = readKeepImportItem(sourceDetails.keepImportItem.rule_id, sourceDetails.keepImportItem.source_path);
-  if (!keepImportItem) {
+  if (!keepImportItem || !keepImportItem.has_source_update) {
     return null;
   }
   const sourceNode = readSourceNode(sourceDetails.sourceNodeId);

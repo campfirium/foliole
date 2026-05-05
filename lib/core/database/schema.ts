@@ -120,6 +120,7 @@ export const keepImportItems = sqliteTable('keep_import_items', {
   sourceSizeBytes: integer('source_size_bytes').notNull(),
   highlightSourceMtimeMs: integer('highlight_source_mtime_ms'),
   highlightSourceSizeBytes: integer('highlight_source_size_bytes'),
+  hasSourceUpdate: integer('has_source_update', { mode: 'boolean' }).notNull().default(false),
   lastNodeId: text('last_node_id'),
   lastStatus: text('last_status').notNull(),
   firstSeenAt: text('first_seen_at').notNull(),

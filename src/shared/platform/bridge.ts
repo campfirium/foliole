@@ -11,7 +11,6 @@ const EXTERNAL_URL_WINDOW_FEATURES = 'noopener,noreferrer';
 
 export type NativeMenuUnlisten = (() => void) | null;
 export type ManagedInboxUpdateUnlisten = (() => void) | null;
-export type WindowResizeUnlisten = (() => void) | null;
 
 export type { RuntimeAppPaths, RuntimeSystemFontCatalog } from './bridgePayloads';
 export { getRuntimeInvoke } from './runtimeInvoke';
@@ -75,6 +74,31 @@ export async function openExternalUrl(target: string) {
   }
 
   window.open(resolvedUrl, '_blank', EXTERNAL_URL_WINDOW_FEATURES);
+}
+
+export async function openLocalPath(targetPath: string) {
+  const trimmedPath = targetPath.trim();
+  if (!trimmedPath) {
+    return;
+  }
+
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+
+  try {
+    await runtimeInvoke(NATIVE_COMMANDS.openLocalPath, { path: trimmedPath });
+  } catch (error) {
+    logRuntimeWarning('native local path open failed', {
+      area: 'bridge',
+      action: 'open_local_path',
+      command: NATIVE_COMMANDS.openLocalPath,
+      fallback: 'skip_open',
+      target: trimmedPath,
+      error
+    });
+  }
 }
 
 export async function resolveRuntimeAppPaths(): Promise<RuntimeAppPaths | null> {
@@ -208,70 +232,4 @@ export async function syncNativeMenuState(enabledCommandIds: string[]) {
       error
     });
   }
-}
-
-export function isWindowControlsAvailable() {
-  return Boolean(getRuntimeInvoke());
-}
-
-export async function queryMainWindowMaximized() {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return false;
-  }
-  try {
-    return (await runtimeInvoke(NATIVE_COMMANDS.windowIsMaximized)) === true;
-  } catch (error) {
-    logRuntimeWarning('window maximized query failed', {
-      area: 'bridge',
-      action: 'query_main_window_maximized',
-      command: NATIVE_COMMANDS.windowIsMaximized,
-      fallback: 'assume_not_maximized',
-      error
-    });
-    return false;
-  }
-}
-
-export async function onMainWindowResized(handler: () => void): Promise<WindowResizeUnlisten> {
-  const bridge = getElectronBridge();
-  if (!bridge) {
-    return null;
-  }
-  return bridge.onWindowResized(handler);
-}
-
-type WindowCommand =
-  | typeof NATIVE_COMMANDS.windowMinimize
-  | typeof NATIVE_COMMANDS.windowRestartApp
-  | typeof NATIVE_COMMANDS.windowToggleDevTools
-  | typeof NATIVE_COMMANDS.windowToggleMaximize
-  | typeof NATIVE_COMMANDS.windowClose;
-
-async function invokeWindowCommand(command: WindowCommand) {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return;
-  }
-  await runtimeInvoke(command);
-}
-
-export function minimizeMainWindow() {
-  return invokeWindowCommand(NATIVE_COMMANDS.windowMinimize);
-}
-
-export function toggleMainWindowMaximize() {
-  return invokeWindowCommand(NATIVE_COMMANDS.windowToggleMaximize);
-}
-
-export function toggleMainWindowDevTools() {
-  return invokeWindowCommand(NATIVE_COMMANDS.windowToggleDevTools);
-}
-
-export function restartMainWindowApp() {
-  return invokeWindowCommand(NATIVE_COMMANDS.windowRestartApp);
-}
-
-export function closeMainWindow() {
-  return invokeWindowCommand(NATIVE_COMMANDS.windowClose);
 }

@@ -30,6 +30,7 @@ interface ImportRunRow extends DatabaseRow {
 
 interface KeepImportItemRow extends DatabaseRow {
   first_seen_at: string;
+  has_source_update: number;
   last_imported_at: string | null;
   last_seen_at: string;
   last_status: 'blocked_deleted' | 'degraded' | 'duplicate' | 'failed' | 'imported';
@@ -128,6 +129,7 @@ function readKeepImportItem(driver: DatabaseDriver, nodeId: string) {
          source_path,
          source_mtime_ms,
          source_size_bytes,
+         has_source_update,
          last_status,
          first_seen_at,
          last_seen_at,

@@ -4,9 +4,9 @@ import {
   getRuntimeInvoke,
   listRuntimeSystemFonts,
   onManagedInboxUpdated,
-  onMainWindowResized,
   onNativeMenuCommand,
   openExternalUrl,
+  openLocalPath,
   reportRuntimeAppReady,
   reportRuntimeBridgeReady,
   reportRuntimeBootStage,
@@ -14,6 +14,7 @@ import {
   syncNativeMenuState
 } from './bridge';
 import type { ElectronAPI } from './electronApi';
+import { onMainWindowResized } from './windowControls';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
@@ -91,6 +92,15 @@ it('opens external urls through typed native invoke when available', async () =>
   await openExternalUrl('https://example.com/docs');
 
   expect(invoke).toHaveBeenCalledWith('open_external_url', { url: 'https://example.com/docs' });
+});
+
+it('opens local paths through typed native invoke when available', async () => {
+  const invoke = vi.fn().mockResolvedValue(null);
+  window.electronAPI = createMockElectronApi(invoke as ElectronAPI['invoke']);
+
+  await openLocalPath('/tmp/source.md');
+
+  expect(invoke).toHaveBeenCalledWith('open_local_path', { path: '/tmp/source.md' });
 });
 
 it('logs and falls back when native external URL open fails', async () => {

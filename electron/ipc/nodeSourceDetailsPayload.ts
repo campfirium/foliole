@@ -1,6 +1,18 @@
+import path from 'node:path';
+
 import { formatReadwiseSourceLabel } from '../../lib/core/import/importManagerSettings.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
+
+function resolveSourceFilePath(primaryPath: string | null, sourcePath: string) {
+  if (path.isAbsolute(sourcePath)) {
+    return sourcePath;
+  }
+  if (!primaryPath) {
+    return null;
+  }
+  return path.join(primaryPath, sourcePath);
+}
 
 function toNativeImportRunRow(record: NonNullable<ReturnType<typeof loadNodeSourceDetails>>['importRuns'][number]) {
   return {
@@ -49,6 +61,7 @@ function toNativeKeepImportItem(record: NonNullable<ReturnType<typeof loadNodeSo
 
   return {
     first_seen_at: record.first_seen_at,
+    has_source_update: Boolean(record.has_source_update),
     highlight_path: readwiseRule?.highlightPath ?? rule?.highlightPath ?? null,
     keep_state: rule?.keepState ?? null,
     last_imported_at: record.last_imported_at,
@@ -57,6 +70,7 @@ function toNativeKeepImportItem(record: NonNullable<ReturnType<typeof loadNodeSo
     primary_path: rule?.primaryPath ?? null,
     rule_id: record.rule_id,
     rule_label: readwiseRule?.kind ? `Readwise ${formatReadwiseSourceLabel(readwiseRule.kind).toLowerCase()}` : sourceType === 'generic' ? 'Keep import source' : null,
+    resolved_source_path: resolveSourceFilePath(rule?.primaryPath ?? null, record.source_path),
     source_mtime_ms: record.source_mtime_ms,
     source_path: record.source_path,
     source_size_bytes: record.source_size_bytes,

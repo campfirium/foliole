@@ -12,9 +12,11 @@ export function persistKeepImportState(
     primary: { mtimeMs: number; sizeBytes: number };
   },
   record: PersistedImportRecord,
-  status: 'blocked_deleted' | 'degraded' | 'duplicate' | 'failed' | 'imported'
+  status: 'blocked_deleted' | 'degraded' | 'duplicate' | 'failed' | 'imported',
+  hasSourceUpdate: boolean
 ) {
   upsertKeepImportItem({
+    hasSourceUpdate,
     highlightSourceMtimeMs: sourceSignature.highlight?.mtimeMs ?? null,
     highlightSourceSizeBytes: sourceSignature.highlight?.sizeBytes ?? null,
     lastImportedAt: status === 'blocked_deleted' ? null : record.importedAt,

@@ -16,8 +16,10 @@ vi.mock('./DocumentPanelBody', () => ({
 
 const { useNodeSourceUpdatePreview } = vi.hoisted(() => ({
   useNodeSourceUpdatePreview: vi.fn(() => ({
+    hasSourceUpdate: false,
     isLoading: false,
-    value: null
+    openSourceFile: vi.fn(),
+    sourceFilePath: null
   }))
 }));
 
@@ -77,8 +79,10 @@ function renderSection() {
 
 beforeEach(() => {
   useNodeSourceUpdatePreview.mockReturnValue({
+    hasSourceUpdate: false,
     isLoading: false,
-    value: null
+    openSourceFile: vi.fn(),
+    sourceFilePath: null
   });
 });
 
@@ -86,51 +90,40 @@ describe('DocumentPanelSection', () => {
   it('hides the source update action when no source update is available', () => {
     renderSection();
 
-    expect(screen.queryByRole('button', { name: 'Toggle source update panel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open updated source file' })).not.toBeInTheDocument();
     expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
   });
 
-  it('opens and closes the source update panel from the header action', () => {
+  it('opens the updated source file from the header action', () => {
+    const openSourceFile = vi.fn();
     useNodeSourceUpdatePreview.mockReturnValue({
+      hasSourceUpdate: true,
       isLoading: false,
-      value: {
-        checkedAt: '2026-03-28T10:00:00.000Z',
-        currentContent: '# Current',
-        sourceNodeId: 'node-1',
-        updatedContent: '# Updated'
-      } as never
-    });
+      openSourceFile,
+      sourceFilePath: '/tmp/source.md'
+    } as never);
 
     renderSection();
 
-    expect(screen.queryByRole('dialog', { name: 'Source update panel' })).not.toBeInTheDocument();
     expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle source update panel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open updated source file' }));
 
-    expect(screen.getByRole('dialog', { name: 'Source update panel' })).toBeInTheDocument();
-    expect(screen.getAllByTestId('document-panel-body')).toHaveLength(3);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Close source update panel' }));
-
-    expect(screen.queryByRole('dialog', { name: 'Source update panel' })).not.toBeInTheDocument();
+    expect(openSourceFile).toHaveBeenCalledTimes(1);
     expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
   });
 
   it('places the source update action before the more-options menu in the header', () => {
     useNodeSourceUpdatePreview.mockReturnValue({
+      hasSourceUpdate: true,
       isLoading: false,
-      value: {
-        checkedAt: '2026-03-28T10:00:00.000Z',
-        currentContent: '# Current',
-        sourceNodeId: 'node-1',
-        updatedContent: '# Updated'
-      } as never
-    });
+      openSourceFile: vi.fn(),
+      sourceFilePath: '/tmp/source.md'
+    } as never);
 
     renderSection();
 
-    const splitButton = screen.getByRole('button', { name: 'Toggle source update panel' });
+    const splitButton = screen.getByRole('button', { name: 'Open updated source file' });
     const moreButton = screen.getByRole('button', { name: 'More editor options' });
 
     expect(splitButton.compareDocumentPosition(moreButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

@@ -5,6 +5,7 @@ export type KeepImportItemStatus = 'blocked_deleted' | 'degraded' | 'duplicate' 
 export interface KeepImportItemRow {
   [column: string]: unknown;
   first_seen_at: string;
+  has_source_update: number;
   highlight_source_mtime_ms: number | null;
   highlight_source_size_bytes: number | null;
   last_imported_at: string | null;
@@ -19,6 +20,7 @@ export interface KeepImportItemRow {
 
 export interface UpsertKeepImportItemInput {
   firstSeenAt?: string;
+  hasSourceUpdate: boolean;
   highlightSourceMtimeMs?: number | null;
   highlightSourceSizeBytes?: number | null;
   lastImportedAt: string | null;
@@ -41,7 +43,7 @@ export function readKeepImportItem(driver: DatabaseDriver, ruleId: string, sourc
   return (
     driver.queryOne<KeepImportItemRow>(
       `SELECT rule_id, source_path, source_mtime_ms, source_size_bytes,
-              highlight_source_mtime_ms, highlight_source_size_bytes, last_node_id,
+              highlight_source_mtime_ms, highlight_source_size_bytes, has_source_update, last_node_id,
               last_status, first_seen_at, last_seen_at, last_imported_at
        FROM keep_import_items
        WHERE rule_id = ? AND source_path = ?`,
@@ -65,14 +67,15 @@ export function upsertKeepImportItem(driver: DatabaseDriver, input: UpsertKeepIm
   driver.execute(
     `INSERT INTO keep_import_items (
        rule_id, source_path, source_mtime_ms, source_size_bytes,
-       highlight_source_mtime_ms, highlight_source_size_bytes, last_node_id,
+       highlight_source_mtime_ms, highlight_source_size_bytes, has_source_update, last_node_id,
        last_status, first_seen_at, last_seen_at, last_imported_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(rule_id, source_path) DO UPDATE SET
        source_mtime_ms = excluded.source_mtime_ms,
        source_size_bytes = excluded.source_size_bytes,
        highlight_source_mtime_ms = excluded.highlight_source_mtime_ms,
        highlight_source_size_bytes = excluded.highlight_source_size_bytes,
+       has_source_update = excluded.has_source_update,
        last_node_id = excluded.last_node_id,
        last_status = excluded.last_status,
        first_seen_at = COALESCE(keep_import_items.first_seen_at, excluded.first_seen_at),
@@ -85,6 +88,7 @@ export function upsertKeepImportItem(driver: DatabaseDriver, input: UpsertKeepIm
       input.sourceSizeBytes,
       input.highlightSourceMtimeMs ?? null,
       input.highlightSourceSizeBytes ?? null,
+      input.hasSourceUpdate ? 1 : 0,
       input.lastNodeId,
       input.lastStatus,
       input.firstSeenAt ?? input.lastSeenAt,

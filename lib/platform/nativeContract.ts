@@ -1,60 +1,25 @@
 import { NATIVE_COMMANDS, isTypedNativeCommand } from './nativeCommands.js';
 import type {
-  NativeDirectoryImportArgs,
-  NativeDirectoryImportResult,
-  NativeNodeSourceDetails,
-  NativeNodeSourceUpdatePreview,
-  NativeKeepImportPreviewArgs,
-  NativeKeepImportPreviewResult,
-  NativeImportedTextFile,
-  NativeTextImportArgs,
-  NativeTextImportResult
+  NativeDirectoryImportArgs, NativeDirectoryImportResult, NativeNodeSourceDetails, NativeKeepImportPreviewArgs,
+  NativeKeepImportPreviewResult, NativeImportedTextFile, NativeTextImportArgs, NativeTextImportResult
 } from './nativeImportContract.js';
 import type { NativeReadwiseDetectionResult } from './nativeReadwiseContract.js';
 import type {
-  NativeApplyReviewGradeArgs,
-  NativeRelearnNodeArgs,
-  NativeNodeSnapshotArgs,
-  NativeReadingProgressSnapshot,
-  NativeResetImportDataResult,
-  NativeReviewSchedulerSettings,
-  NativeSaveReadingProgressArgs,
-  NativeWorkspaceSnapshot
+  NativeApplyReviewGradeArgs, NativeRelearnNodeArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
+  NativeResetImportDataResult, NativeReviewSchedulerSettings, NativeSaveReadingProgressArgs, NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
 import type {
-  NativeResolvedAppPaths,
-  NativeReviewGradeArgs,
-  NativeReviewGradeResult,
-  NativeReviewPreviewArgs,
-  NativeReviewPreviewResult,
-  NativeSqliteBackupResult,
-  NativeSqliteRestoreResult,
-  NativeSystemFontCatalog
+  NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult,
+  NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog
 } from './nativeUtilityContract.js';
 export type {
-  NativeApplyReviewGradeArgs,
-  NativeRelearnNodeArgs,
-  NativeNodeSnapshotArgs,
-  NativeReadingProgressSnapshot,
-  NativeResetImportDataResult,
-  NativeReviewSchedulerSettings,
-  NativeSaveReadingProgressArgs,
-  NativeWorkspaceSnapshot
+  NativeApplyReviewGradeArgs, NativeRelearnNodeArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
+  NativeResetImportDataResult, NativeReviewSchedulerSettings, NativeSaveReadingProgressArgs, NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
 export type {
-  NativeDirectoryImportArgs,
-  NativeDirectoryImportConsumePolicy,
-  NativeDirectoryImportEntry,
-  NativeDirectoryImportResult,
-  NativeDirectoryImportSourceAdapter,
-  NativeNodeSourceDetails,
-  NativeNodeSourceUpdatePreview,
-  NativeKeepImportPreviewArgs,
-  NativeKeepImportPreviewEntry,
-  NativeKeepImportPreviewResult,
-  NativeImportedTextFile,
-  NativeManagedInboxConsumePolicy,
-  NativeTextImportArgs,
+  NativeDirectoryImportArgs, NativeDirectoryImportConsumePolicy, NativeDirectoryImportEntry, NativeDirectoryImportResult,
+  NativeDirectoryImportSourceAdapter, NativeNodeSourceDetails, NativeKeepImportPreviewArgs, NativeKeepImportPreviewEntry,
+  NativeKeepImportPreviewResult, NativeImportedTextFile, NativeManagedInboxConsumePolicy, NativeTextImportArgs,
   NativeTextImportResult
 } from './nativeImportContract.js';
 export type { NativeReadwiseDetectionResult, NativeReadwiseDetectionSample } from './nativeReadwiseContract.js';
@@ -78,6 +43,12 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.openExternalUrl]: {
     args: {
       url: string;
+    };
+    result: null;
+  };
+  [NATIVE_COMMANDS.openLocalPath]: {
+    args: {
+      path: string;
     };
     result: null;
   };
@@ -108,10 +79,6 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.loadNodeSourceDetails]: {
     args: { node_id: string };
     result: NativeNodeSourceDetails | null;
-  };
-  [NATIVE_COMMANDS.loadNodeSourceUpdatePreview]: {
-    args: { node_id: string };
-    result: NativeNodeSourceUpdatePreview | null;
   };
   [NATIVE_COMMANDS.selectImportTextFile]: {
     args: NativeTextImportArgs;
