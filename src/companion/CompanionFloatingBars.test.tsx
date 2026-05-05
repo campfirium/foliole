@@ -25,6 +25,14 @@ function expectLibraryIndexStage() {
   expect(screen.getByText('820/820')).toBeInTheDocument();
 }
 
+function expectUnknownStructureConfirmation() {
+  renderBottomBar({ completed: 0, phase: 'structure', total: null });
+
+  expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
+  expect(screen.getByText('Checking')).toBeInTheDocument();
+  expect(screen.queryByText('0 cached')).not.toBeInTheDocument();
+}
+
 function expectFsrsPriorityBodyStage() {
   renderBottomBar({
     completed: 3,
@@ -160,6 +168,8 @@ function expectAttachmentStageAfterDueReviewAttachmentsComplete() {
 
 describe('CompanionBottomTabBar', () => {
   it('shows the library index stage above the bottom tabs', expectLibraryIndexStage);
+
+  it('shows unknown structure confirmation without cache wording', expectUnknownStructureConfirmation);
 
   it('shows FSRS priority progress while due review bodies are first in the body queue', expectFsrsPriorityBodyStage);
 
