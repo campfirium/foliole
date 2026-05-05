@@ -97,7 +97,7 @@ export async function flushReadingProgressToCloseBridge(args: {
   });
   await runtimeInvoke(
     NATIVE_COMMANDS.saveReadingProgress,
-    createReadingProgressPayload(resolved.resolvedActiveNodeId, resolved.mergedNodeViewById)
+    createReadingProgressPayload(resolved.resolvedActiveNodeId, resolved.mergedNodeViewById, 'close-flush')
   );
   args.lastSyncedSignatureRef.current = createReadingProgressSignature(
     resolved.resolvedActiveNodeId,

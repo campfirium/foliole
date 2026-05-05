@@ -3,6 +3,7 @@ package com.foliole.android;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -161,6 +162,16 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         assertEquals(false, payloads.contains("lastReviewAt"));
         assertEquals(false, payloads.contains("activeNodeId"));
         assertEquals(false, payloads.contains("scrollTop"));
+        assertEquals("user-scroll", loadViewStateSource("article-1", "remote-device"));
+    }
+
+    private String loadViewStateSource(String nodeId, String deviceId) {
+        try (Cursor cursor = database.rawQuery(
+            "SELECT source FROM node_view_state WHERE node_id = ? AND device_id = ?",
+            new String[] { nodeId, deviceId }
+        )) {
+            return cursor.moveToFirst() ? cursor.getString(0) : null;
+        }
     }
 
     private void createTables() {
@@ -195,7 +206,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
         database.execSQL("CREATE TABLE node_view_state (node_id TEXT NOT NULL, device_id TEXT NOT NULL, " +
             "scroll_top INTEGER NOT NULL DEFAULT 0, selection_from INTEGER, selection_to INTEGER, " +
-            "updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
+            "source TEXT NOT NULL DEFAULT 'user-scroll', updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
         database.execSQL("CREATE TABLE sync_object_state (" +
             "object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL, " +
             "current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL, " +

@@ -76,7 +76,15 @@ it('saves reading progress through prepared driver statements only', () => {
   expect(transactionSpy).toHaveBeenCalledTimes(3);
   expect(prepare).toHaveBeenCalledTimes(2);
   expect(metaRun).toHaveBeenCalledWith(['active_node_id', 'node-2', '2026-03-14T00:00:00.000Z']);
-  expect(nodeRun).toHaveBeenCalledWith(['node-1', 'desktop-test', 124, 10, 18, '2026-03-14T00:00:00.000Z']);
+  expect(nodeRun).toHaveBeenCalledWith([
+    'node-1',
+    'desktop-test',
+    124,
+    10,
+    18,
+    'user-scroll',
+    '2026-03-14T00:00:00.000Z'
+  ]);
 });
 
 it('loads reading progress through query helpers only', () => {
@@ -87,6 +95,7 @@ it('loads reading progress through query helpers only', () => {
       scroll_top: 124,
       selection_from: 10,
       selection_to: 18,
+      source: 'user-scroll',
       updated_at: '2026-03-14T00:00:00.000Z'
     }
   ]);
@@ -98,6 +107,7 @@ it('loads reading progress through query helpers only', () => {
         scrollTop: 124,
         selectionFrom: 10,
         selectionTo: 18,
+        source: 'user-scroll',
         updatedAt: '2026-03-14T00:00:00.000Z'
       }
     }
@@ -112,6 +122,7 @@ it('loads reading progress through query helpers only', () => {
        scroll_top,
        selection_from,
        selection_to,
+       source,
        updated_at
      FROM node_view_state
      WHERE device_id = ?`,

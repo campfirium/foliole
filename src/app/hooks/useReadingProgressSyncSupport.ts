@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react';
 
+import type { NodeViewStateWriteSource } from '../../../lib/platform/persistedNodeViewState';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -77,11 +78,13 @@ export function captureEditorNodeViewState(
 
 export function createReadingProgressPayload(
   activeNodeId: string | null,
-  nodeViewById: Record<string, NodeViewState | undefined>
+  nodeViewById: Record<string, NodeViewState | undefined>,
+  source: NodeViewStateWriteSource = 'user-scroll'
 ) {
   return {
     activeNodeId,
     nodeViewStates: toRuntimeNodeViewStates(nodeViewById),
+    source,
     updatedAt: new Date().toISOString()
   };
 }

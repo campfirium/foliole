@@ -34,6 +34,7 @@ function runRuntimeReadingPositionPersistenceTest() {
   expect(syncReadingProgressToRuntime).toHaveBeenLastCalledWith({
     activeNodeId: 'node-2',
     nodeViewStates: [{ nodeId: 'node-2', scrollTop: 5400, selectionFrom: 48000, selectionTo: 48000 }],
+    source: 'user-scroll',
     updatedAt: expect.any(String)
   });
 }
@@ -102,6 +103,7 @@ function registerRuntimeDebouncePersistenceTests() {
           selectionTo: 48000
         }
       ],
+      source: 'user-scroll',
       updatedAt: expect.any(String)
     });
   });
@@ -178,6 +180,7 @@ function registerVisiblePositionPreferenceTests() {
     expect(syncReadingProgressToRuntime).toHaveBeenLastCalledWith({
       activeNodeId: 'node-2',
       nodeViewStates: [{ nodeId: 'node-2', scrollTop: 5400, selectionFrom: 3, selectionTo: 3 }],
+      source: 'user-scroll',
       updatedAt: expect.any(String)
     });
   });

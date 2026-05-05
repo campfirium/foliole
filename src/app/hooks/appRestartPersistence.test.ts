@@ -76,6 +76,7 @@ it('flushes the current reading position before restarting', async () => {
         selectionTo: 48000
       }
     ],
+    source: 'close-flush',
     updatedAt: expect.any(String)
   });
   expect(mocks.restartMainWindowApp).toHaveBeenCalledTimes(1);
@@ -123,6 +124,7 @@ it('normalizes scroll and selection before flushing on restart', async () => {
         selectionTo: 542
       }
     ],
+    source: 'close-flush',
     updatedAt: expect.any(String)
   });
 });
@@ -162,6 +164,7 @@ it('preserves previously saved node positions when restarting from another node'
         selectionTo: 48000
       }
     ],
+    source: 'close-flush',
     updatedAt: expect.any(String)
   });
 });

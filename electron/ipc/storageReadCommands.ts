@@ -15,6 +15,7 @@ import {
   asStringArray,
   asString,
   asTimestamp,
+  normalizeNodeViewStateWriteSource,
   parseNodeViewStatePayloadArray
 } from './commandParsers.js';
 import { parseApplyReviewGradeArgs } from './reviewCommandArgs.js';
@@ -60,6 +61,7 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
     saveReadingProgress({
       activeNodeId: asNullableString(args.activeNodeId, 'activeNodeId'),
       nodeViewStates: parseNodeViewStatePayloadArray(args.nodeViewStates, 'nodeViewStates'),
+      source: normalizeNodeViewStateWriteSource(args.source),
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
     });
     return null;

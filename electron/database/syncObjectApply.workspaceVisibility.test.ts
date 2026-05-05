@@ -114,13 +114,14 @@ it('makes Android-applied reading, review, and view state visible to desktop sna
 
   expect(loadReadingProgress()).toEqual({
     activeNodeId: 'node-1',
-    nodeViewStateById: {
-      'node-1': {
-        scrollTop: 128,
-        selectionFrom: 5,
-        selectionTo: 13,
-        updatedAt: '2026-04-22T08:13:00.000Z'
-      }
-    }
+    nodeViewStateById: {}
   });
+  expect(openDatabaseConnection().sqlite
+    .prepare('SELECT scroll_top, selection_from, selection_to, source FROM node_view_state WHERE node_id = ? AND device_id = ?')
+    .get('node-1', 'android-test')).toEqual({
+      scroll_top: 128,
+      selection_from: 5,
+      selection_to: 13,
+      source: 'user-scroll'
+    });
 });

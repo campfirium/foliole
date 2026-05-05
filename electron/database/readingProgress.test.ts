@@ -73,12 +73,14 @@ it('persists and loads active node and per-node view state from sqlite', () => {
         scrollTop: 124,
         selectionFrom: 10,
         selectionTo: 18,
+        source: 'user-scroll',
         updatedAt: '2026-03-06T10:00:00.000Z'
       },
       'node-2': {
         scrollTop: 8,
         selectionFrom: null,
         selectionTo: null,
+        source: 'user-scroll',
         updatedAt: '2026-03-06T10:00:00.000Z'
       }
     }
@@ -86,6 +88,72 @@ it('persists and loads active node and per-node view state from sqlite', () => {
   expect(openDatabaseConnection().sqlite
     .prepare('SELECT device_id FROM node_view_state WHERE node_id = ?')
     .get('node-1')).toEqual({ device_id: 'desktop-test' });
+});
+
+it('persists close flush source and keeps newer user scroll rows', () => {
+  saveReadingProgress({
+    activeNodeId: 'node-1',
+    nodeViewStates: [
+      {
+        nodeId: 'node-1',
+        scrollTop: 200,
+        selectionFrom: null,
+        selectionTo: null
+      }
+    ],
+    source: 'user-scroll',
+    updatedAt: '2026-03-06T10:01:00.000Z'
+  });
+  saveReadingProgress({
+    activeNodeId: 'node-1',
+    nodeViewStates: [
+      {
+        nodeId: 'node-1',
+        scrollTop: 10,
+        selectionFrom: null,
+        selectionTo: null
+      }
+    ],
+    source: 'close-flush',
+    updatedAt: '2026-03-06T10:00:00.000Z'
+  });
+
+  expect(openDatabaseConnection().sqlite
+    .prepare('SELECT scroll_top, source FROM node_view_state WHERE node_id = ?')
+    .get('node-1')).toEqual({ scroll_top: 200, source: 'user-scroll' });
+});
+
+it('does not let restore overwrite saved user reading positions', () => {
+  saveReadingProgress({
+    activeNodeId: 'node-1',
+    nodeViewStates: [
+      {
+        nodeId: 'node-1',
+        scrollTop: 200,
+        selectionFrom: null,
+        selectionTo: null
+      }
+    ],
+    source: 'user-scroll',
+    updatedAt: '2026-03-06T10:00:00.000Z'
+  });
+  saveReadingProgress({
+    activeNodeId: 'node-1',
+    nodeViewStates: [
+      {
+        nodeId: 'node-1',
+        scrollTop: 10,
+        selectionFrom: null,
+        selectionTo: null
+      }
+    ],
+    source: 'restore',
+    updatedAt: '2026-03-06T10:01:00.000Z'
+  });
+
+  expect(openDatabaseConnection().sqlite
+    .prepare('SELECT scroll_top, source FROM node_view_state WHERE node_id = ?')
+    .get('node-1')).toEqual({ scroll_top: 200, source: 'user-scroll' });
 });
 
 

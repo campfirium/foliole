@@ -3,6 +3,7 @@ import type { VirtualNodeFilter } from '../core/nodes/virtualNodeFilter.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
 
 import type { NativeSchedulerCard } from './nativeContract.js';
+import type { NodeViewStateWriteSource } from './persistedNodeViewState.js';
 
 export interface NativeWorkspaceAnchorLink {
   id: string;
@@ -252,6 +253,7 @@ export interface NativeReadingProgressSnapshot {
 export interface NativeSaveReadingProgressArgs {
   activeNodeId: string | null;
   nodeViewStates: NativeReadingProgressNodeViewState[];
+  source?: NodeViewStateWriteSource;
   updatedAt: string;
 }
 

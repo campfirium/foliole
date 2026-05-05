@@ -25,6 +25,7 @@ function expectCurrentNodeCloseFlush(invoke: ReturnType<typeof vi.fn>) {
         selectionTo: 3
       }
     ],
+    source: 'close-flush',
     updatedAt: expect.any(String)
   });
 }
@@ -46,6 +47,7 @@ function expectFullTableCloseFlush(invoke: ReturnType<typeof vi.fn>) {
         selectionTo: 3
       }
     ],
+    source: 'close-flush',
     updatedAt: expect.any(String)
   });
 }

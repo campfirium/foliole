@@ -37,6 +37,7 @@ function registerHydrationLifecycleTests() {
     expect(syncReadingProgressToRuntime).toHaveBeenCalledWith({
       activeNodeId: 'node-2',
       nodeViewStates: [],
+      source: 'user-scroll',
       updatedAt: expect.any(String)
     });
   });
@@ -60,6 +61,7 @@ function registerNodeSwitchTests() {
           selectionTo: 6
         }
       ],
+      source: 'user-scroll',
       updatedAt: expect.any(String)
     });
   });

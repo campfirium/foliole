@@ -60,6 +60,7 @@ it('handles reading progress storage commands', async () => {
         scrollTop: 24,
         selectionFrom: 2,
         selectionTo: 6,
+        source: 'user-scroll',
         updatedAt: '2026-03-06T10:00:00.000Z'
       }
     }
@@ -72,6 +73,7 @@ it('handles reading progress storage commands', async () => {
         scrollTop: 24,
         selectionFrom: 2,
         selectionTo: 6,
+        source: 'user-scroll',
         updatedAt: '2026-03-06T10:00:00.000Z'
       }
     }
@@ -105,6 +107,7 @@ it('handles reading progress storage commands', async () => {
         selectionTo: 6
       }
     ],
+    source: 'user-scroll',
     updatedAt: '2026-03-06T10:00:00.000Z'
   });
 });

@@ -1,3 +1,5 @@
+import { normalizeNodeViewStateWriteSource } from '../../lib/platform/persistedNodeViewState.js';
+
 import { parseNodeSnapshotArgs } from './commandParserNodeSnapshot.js';
 import { asNullableInteger, asString } from './commandParserPrimitives.js';
 
@@ -9,6 +11,7 @@ export {
   asTimestamp
 } from './commandParserPrimitives.js';
 export { parseNodeCreationArgs, parseNodeSnapshotArgs } from './commandParserNodeSnapshot.js';
+export { normalizeNodeViewStateWriteSource };
 
 interface NodeViewStatePayload {
   nodeId: string;

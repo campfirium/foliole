@@ -93,6 +93,7 @@ export async function saveCompanionSyncNodeViewState(args: {
   }
   return FolioleCompanionSync.saveSyncNodeViewState({
     node_id: args.nodeId,
-    scroll_top: Math.max(0, Math.trunc(args.scrollTop))
+    scroll_top: Math.max(0, Math.trunc(args.scrollTop)),
+    source: 'user-scroll'
   });
 }

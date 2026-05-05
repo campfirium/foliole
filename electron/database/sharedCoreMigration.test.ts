@@ -173,11 +173,37 @@ it('migrates node view state to device-scoped rows', () => {
     'scroll_top',
     'selection_from',
     'selection_to',
+    'source',
     'updated_at'
   ]);
   expect(connection.sqlite
     .prepare('SELECT node_id, device_id, scroll_top FROM node_view_state')
     .get()).toEqual({ device_id: 'desktop-test', node_id: 'node-1', scroll_top: 42 });
+});
+
+it('adds source to device-scoped node view state rows', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.exec(`
+    CREATE TABLE node_view_state (
+      node_id TEXT NOT NULL,
+      device_id TEXT NOT NULL,
+      scroll_top INTEGER NOT NULL DEFAULT 0,
+      selection_from INTEGER,
+      selection_to INTEGER,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (node_id, device_id)
+    );
+    INSERT INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, updated_at)
+    VALUES ('node-1', 'desktop-test', 42, NULL, NULL, '2026-04-30T00:00:00.000Z');
+  `);
+  connection.sqlite.pragma('user_version = 32');
+
+  initializeDatabaseConnection(connection);
+
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite
+    .prepare('SELECT source FROM node_view_state WHERE node_id = ? AND device_id = ?')
+    .get('node-1', 'desktop-test')).toEqual({ source: 'user-scroll' });
 });
 
 it('migrates reading position to device-scoped rows', () => {

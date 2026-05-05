@@ -92,6 +92,7 @@ export async function restartAppWithReadingProgress(args: RestartWithReadingProg
       await runtimeInvoke(NATIVE_COMMANDS.saveReadingProgress, {
         activeNodeId: captured.nodeId,
         nodeViewStates: toRuntimeNodeViewStates(mergedNodeViewById),
+        source: 'close-flush',
         updatedAt: new Date().toISOString()
       });
       pushDebugTrace('reading-progress.restart-saved', {

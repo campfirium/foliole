@@ -210,6 +210,11 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
   }));
   await expect(api.saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42.8 }))
     .resolves.toEqual({ content_hash: 'hash-view', object_id: 'view' });
+  expect(capacitorMock.plugin.saveSyncNodeViewState).toHaveBeenCalledWith({
+    node_id: 'node-1',
+    scroll_top: 42,
+    source: 'user-scroll'
+  });
   await expect(api.applyCompanionSyncObjects([{
     content_hash: 'hash',
     deleted_at: null,

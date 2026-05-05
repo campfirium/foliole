@@ -6,7 +6,7 @@ import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
 import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 32;
+export const DATABASE_SCHEMA_VERSION = 33;
 
 const CREATE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -121,6 +121,7 @@ const CREATE_SCHEMA_STATEMENTS = [
     scroll_top INTEGER NOT NULL DEFAULT 0,
     selection_from INTEGER,
     selection_to INTEGER,
+    source TEXT NOT NULL DEFAULT 'user-scroll',
     updated_at TEXT NOT NULL,
     PRIMARY KEY (node_id, device_id)
   )`,

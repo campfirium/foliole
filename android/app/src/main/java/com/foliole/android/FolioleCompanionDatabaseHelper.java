@@ -20,7 +20,7 @@ import java.util.UUID;
 final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "foliole-companion.db";
-    private static final int DATABASE_VERSION = 11;
+    private static final int DATABASE_VERSION = 12;
     private static final String META_TABLE = "companion_meta";
     private static final String DEVICE_ID_KEY = "device_id";
     private static final String WORKSPACE_SYNC_ENDPOINT_URL_KEY = "workspace_sync_endpoint_url";
@@ -118,6 +118,25 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
                 throw new IllegalStateException("Failed to upgrade companion content blob data schema.", exception);
             }
         }
+        if (oldVersion < 12) {
+            try {
+                FolioleCompanionSchemaInstaller.install(context, database);
+                addNodeViewStateSourceIfMissing(database);
+            } catch (Exception exception) {
+                throw new IllegalStateException("Failed to upgrade companion view state source schema.", exception);
+            }
+        }
+    }
+
+    private static void addNodeViewStateSourceIfMissing(SQLiteDatabase database) {
+        try (Cursor cursor = database.rawQuery("PRAGMA table_info(node_view_state)", null)) {
+            while (cursor.moveToNext()) {
+                if ("source".equals(cursor.getString(cursor.getColumnIndexOrThrow("name")))) {
+                    return;
+                }
+            }
+        }
+        database.execSQL("ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'");
     }
 
     FolioleCompanionBootstrapState loadBootstrapState(Context context) {

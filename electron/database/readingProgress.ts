@@ -1,7 +1,13 @@
-import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import type { DatabaseRow, DatabaseStatement } from '../../lib/core/database/driver.js';
+import {
+  normalizeNodeViewStateWriteSource,
+  shouldWritePersistedNodeViewState,
+  type NodeViewStateWriteSource,
+  type PersistedNodeViewState
+} from '../../lib/platform/persistedNodeViewState.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 
-import { openDatabaseConnection } from './connection.js';
+import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
 import { loadDesktopDeviceId, loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { withTransaction } from './transaction.js';
 import { writeActiveNodeViewStateSync, writeNodeViewStateSync } from './viewStateSync.js';
@@ -16,6 +22,7 @@ export interface NodeViewStateInput {
 export interface SaveReadingProgressInput {
   activeNodeId: string | null;
   nodeViewStates: NodeViewStateInput[];
+  source?: NodeViewStateWriteSource;
   updatedAt: string;
 }
 
@@ -23,6 +30,7 @@ export interface NodeViewStateSnapshot {
   scrollTop: number;
   selectionFrom: number | null;
   selectionTo: number | null;
+  source: NodeViewStateWriteSource;
   updatedAt: string;
 }
 
@@ -40,6 +48,7 @@ interface NodeViewStateRow extends DatabaseRow {
   scroll_top: number;
   selection_from: number | null;
   selection_to: number | null;
+  source?: string | null;
   updated_at: string;
 }
 
@@ -47,16 +56,8 @@ const ACTIVE_NODE_META_KEY = 'active_node_id';
 
 export function saveReadingProgress(input: SaveReadingProgressInput): void {
   const deviceId = loadOrCreateDesktopDeviceId(input.updatedAt);
-  appendReadingPositionTraceRecord({
-    event: 'reading-progress.db-save',
-    payload: {
-      activeNodeId: input.activeNodeId,
-      nodeIds: input.nodeViewStates.map((state) => state.nodeId),
-      scrollTops: input.nodeViewStates.map((state) => state.scrollTop),
-      updatedAt: input.updatedAt
-    },
-    timestamp: Date.now()
-  });
+  const source = normalizeNodeViewStateWriteSource(input.source);
+  traceReadingProgressSave(input);
   const connection = openDatabaseConnection();
   const upsertMetaStatement = connection.driver.prepare(
     `INSERT INTO workspace_meta (key, value, updated_at)
@@ -72,12 +73,14 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
        scroll_top,
        selection_from,
        selection_to,
+       source,
        updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(node_id, device_id) DO UPDATE SET
        scroll_top = excluded.scroll_top,
        selection_from = excluded.selection_from,
        selection_to = excluded.selection_to,
+       source = excluded.source,
        updated_at = excluded.updated_at`
   );
 
@@ -87,18 +90,47 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
       activeNodeId: input.activeNodeId,
       updatedAt: input.updatedAt
     });
-    for (const state of input.nodeViewStates) {
-      upsertNodeViewStateStatement.run([
-        state.nodeId,
-        deviceId,
-        state.scrollTop,
-        state.selectionFrom,
-        state.selectionTo,
-        input.updatedAt
-      ]);
-      writeNodeViewStateSync(connection, { ...state, updatedAt: input.updatedAt });
-    }
+    saveNodeViewStates(connection, upsertNodeViewStateStatement, input, deviceId, source);
   });
+}
+
+function traceReadingProgressSave(input: SaveReadingProgressInput) {
+  appendReadingPositionTraceRecord({
+    event: 'reading-progress.db-save',
+    payload: {
+      activeNodeId: input.activeNodeId,
+      nodeIds: input.nodeViewStates.map((state) => state.nodeId),
+      scrollTops: input.nodeViewStates.map((state) => state.scrollTop),
+      updatedAt: input.updatedAt
+    },
+    timestamp: Date.now()
+  });
+}
+
+function saveNodeViewStates(
+  connection: DatabaseConnection,
+  statement: DatabaseStatement,
+  input: SaveReadingProgressInput,
+  deviceId: string,
+  source: NodeViewStateWriteSource
+) {
+  for (const state of input.nodeViewStates) {
+    const incoming: PersistedNodeViewState = { ...state, source, updatedAt: input.updatedAt };
+    const existing = loadExistingNodeViewState(connection, deviceId, state.nodeId);
+    if (!shouldWritePersistedNodeViewState(existing, incoming).shouldWrite) {
+      continue;
+    }
+    statement.run([
+      state.nodeId,
+      deviceId,
+      state.scrollTop,
+      state.selectionFrom,
+      state.selectionTo,
+      source,
+      input.updatedAt
+    ]);
+    writeNodeViewStateSync(connection, { ...state, updatedAt: input.updatedAt });
+  }
 }
 
 export function loadReadingProgress(): ReadingProgressSnapshot {
@@ -114,6 +146,7 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
        scroll_top,
        selection_from,
        selection_to,
+       source,
        updated_at
      FROM node_view_state
      WHERE device_id = ?`,
@@ -126,6 +159,7 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
       scrollTop: row.scroll_top,
       selectionFrom: row.selection_from,
       selectionTo: row.selection_to,
+      source: normalizeNodeViewStateWriteSource(row.source),
       updatedAt: row.updated_at
     };
   }
@@ -143,4 +177,34 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
     timestamp: Date.now()
   });
   return snapshot;
+}
+
+function loadExistingNodeViewState(
+  connection: DatabaseConnection,
+  deviceId: string,
+  nodeId: string
+): PersistedNodeViewState | null {
+  const row = connection.driver.queryOne<NodeViewStateRow>(
+    `SELECT
+       node_id,
+       scroll_top,
+       selection_from,
+       selection_to,
+       source,
+       updated_at
+     FROM node_view_state
+     WHERE device_id = ? AND node_id = ?`,
+    [deviceId, nodeId]
+  );
+  if (!row) {
+    return null;
+  }
+  return {
+    nodeId: row.node_id,
+    scrollTop: row.scroll_top,
+    selectionFrom: row.selection_from,
+    selectionTo: row.selection_to,
+    source: normalizeNodeViewStateWriteSource(row.source),
+    updatedAt: row.updated_at
+  };
 }

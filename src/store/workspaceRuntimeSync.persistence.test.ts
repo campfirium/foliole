@@ -62,12 +62,14 @@ describe('workspaceRuntimeSync persistence mutations', () => {
     syncReadingProgressToRuntime({
       activeNodeId: 'node-2',
       nodeViewStates: [{ nodeId: 'node-2', scrollTop: 120, selectionFrom: 4, selectionTo: 8 }],
+      source: 'user-scroll',
       updatedAt: '2026-03-06T00:00:00.000Z'
     });
 
     expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
       activeNodeId: 'node-2',
       nodeViewStates: [{ nodeId: 'node-2', scrollTop: 120, selectionFrom: 4, selectionTo: 8 }],
+      source: 'user-scroll',
       updatedAt: '2026-03-06T00:00:00.000Z'
     });
     expectNoWorkspacePersist(invoke);

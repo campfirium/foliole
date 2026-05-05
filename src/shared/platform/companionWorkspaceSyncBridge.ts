@@ -178,6 +178,7 @@ export interface CompanionWorkspaceSyncPlugin {
   saveSyncNodeViewState(args: {
     node_id: string;
     scroll_top: number;
+    source?: 'user-scroll';
   }): Promise<{ content_hash: string; object_id: string }>;
   savePairingCredentials(args: {
     device_id: string;

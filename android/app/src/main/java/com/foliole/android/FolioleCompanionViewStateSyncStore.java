@@ -49,7 +49,7 @@ final class FolioleCompanionViewStateSyncStore {
         String contentHash = contentHash(deviceId, "node:" + nodeId, payload);
         database.beginTransaction();
         try {
-            upsertNodeViewState(database, nodeId, deviceId, payload.optInt("scroll_top", 0), now);
+            upsertNodeViewState(database, nodeId, deviceId, payload.optInt("scroll_top", 0), "user-scroll", now);
             writeSyncRows(database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
@@ -72,7 +72,7 @@ final class FolioleCompanionViewStateSyncStore {
         if (key.equals("active_node")) {
             upsertActiveNode(database, nullIfEmpty(payload.optString("active_node_id", "")), record.optString("updated_at"));
         } else if (key.startsWith("node:")) {
-            upsertNodeViewState(database, key.substring(5), deviceId, payload.optInt("scroll_top", 0), record.optString("updated_at"));
+            upsertNodeViewState(database, key.substring(5), deviceId, payload.optInt("scroll_top", 0), "user-scroll", record.optString("updated_at"));
         }
     }
 
@@ -111,13 +111,14 @@ final class FolioleCompanionViewStateSyncStore {
         database.insertWithOnConflict("workspace_meta", null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
-    private static void upsertNodeViewState(SQLiteDatabase database, String nodeId, String deviceId, int scrollTop, String now) {
+    private static void upsertNodeViewState(SQLiteDatabase database, String nodeId, String deviceId, int scrollTop, String source, String now) {
         ContentValues values = new ContentValues();
         values.put("node_id", nodeId);
         values.put("device_id", deviceId);
         values.put("scroll_top", Math.max(0, scrollTop));
         values.putNull("selection_from");
         values.putNull("selection_to");
+        values.put("source", source);
         values.put("updated_at", now);
         database.insertWithOnConflict("node_view_state", null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }

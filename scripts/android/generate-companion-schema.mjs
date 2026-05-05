@@ -112,6 +112,7 @@ const statements = [
     scroll_top INTEGER NOT NULL DEFAULT 0,
     selection_from INTEGER,
     selection_to INTEGER,
+    source TEXT NOT NULL DEFAULT 'user-scroll',
     updated_at TEXT NOT NULL,
     PRIMARY KEY (node_id, device_id)
   )`,
