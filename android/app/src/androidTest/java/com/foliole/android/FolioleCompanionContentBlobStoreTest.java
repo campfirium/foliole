@@ -39,6 +39,7 @@ public class FolioleCompanionContentBlobStoreTest {
         database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
         database.execSQL("CREATE TABLE nodes (id TEXT PRIMARY KEY, body_blob_hash TEXT, updated_at TEXT NOT NULL, deleted_at TEXT)");
+        database.execSQL("CREATE TABLE node_reading (node_id TEXT PRIMARY KEY, last_handled_at TEXT NOT NULL)");
         database.execSQL("CREATE TABLE node_review (node_id TEXT PRIMARY KEY, due TEXT NOT NULL)");
         database.execSQL("CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT, updated_at TEXT NOT NULL, is_present INTEGER NOT NULL DEFAULT 1)");
     }
@@ -145,6 +146,24 @@ public class FolioleCompanionContentBlobStoreTest {
     }
 
     @Test
+    public void ordersOrdinaryTopicBodiesByRecentReadingActivity() throws Exception {
+        String recentlyReadHash = sha256("recently read body");
+        String recentlyUpdatedHash = sha256("recently updated body");
+        insertMissingBlob(recentlyReadHash);
+        insertMissingBlob(recentlyUpdatedHash);
+        insertNodeRef("recently-read-node", recentlyReadHash, "2026-04-20T00:00:00.000Z");
+        insertNodeRef("recently-updated-node", recentlyUpdatedHash, "2026-04-29T00:00:00.000Z");
+        insertReading("recently-read-node", "2026-04-30T00:00:00.000Z");
+
+        assertEquals(recentlyReadHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(0));
+        assertEquals(recentlyUpdatedHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(1));
+    }
+
+    @Test
     public void rejectsBlobBytesThatDoNotMatchTheManifestHash() throws Exception {
         String hash = sha256("expected body");
         insertMissingBlob(hash);
@@ -231,6 +250,10 @@ public class FolioleCompanionContentBlobStoreTest {
 
     private void insertReviewDue(String nodeId, String due) {
         database.execSQL("INSERT INTO node_review (node_id, due) VALUES ('" + nodeId + "', '" + due + "')");
+    }
+
+    private void insertReading(String nodeId, String lastHandledAt) {
+        database.execSQL("INSERT INTO node_reading (node_id, last_handled_at) VALUES ('" + nodeId + "', '" + lastHandledAt + "')");
     }
 
     private void assertSyncBlobFails(String hash, String url, String expectedAvailability) throws Exception {
