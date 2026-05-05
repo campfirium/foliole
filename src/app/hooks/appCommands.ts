@@ -29,6 +29,7 @@ interface RunAppCommandActions {
   openNotes: () => void;
   openSettings: () => void;
   openTrash: () => void;
+  restartApp: () => void;
   revealReviewAnswer: () => void;
   toggleReviewMode: () => void;
   toggleEditorDisplayMode: () => void;
@@ -82,6 +83,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   },
   { id: APP_COMMAND_IDS.openNotes, title: 'Open Notes', section: 'Workspace' },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
+  { id: APP_COMMAND_IDS.restartApp, title: 'Restart App', section: 'Workspace', keywords: ['restart', 'relaunch'] },
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
   { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Workspace', keywords: ['developer', 'inspect'] },
   { id: APP_COMMAND_IDS.openSettings, title: 'Open Settings', section: 'Settings' },
@@ -177,6 +179,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.openImportManagement]: actions.openImportManagement,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
+    [APP_COMMAND_IDS.restartApp]: actions.restartApp,
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,
     [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,
     [APP_COMMAND_IDS.openSettings]: actions.openSettings,

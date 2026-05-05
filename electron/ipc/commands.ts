@@ -44,6 +44,11 @@ async function handleWindowCommand(request: InvokeRequest, context?: InvokeConte
     window?.minimize();
     return null;
   }
+  if (isTypedRequest(request, NATIVE_COMMANDS.windowRestartApp)) {
+    app.relaunch();
+    app.exit(0);
+    return null;
+  }
   if (isTypedRequest(request, NATIVE_COMMANDS.windowToggleDevTools)) {
     window?.webContents.toggleDevTools();
     return null;

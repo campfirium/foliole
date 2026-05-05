@@ -24,6 +24,7 @@ export const APP_COMMAND_IDS = {
   openNotes: 'workspace.openNotes',
   openTrash: 'workspace.openTrash',
   openSettings: 'workspace.openSettings',
+  restartApp: 'workspace.restartApp',
   toggleList: 'workspace.toggleList',
   toggleDevTools: 'workspace.toggleDevTools'
 } as const;

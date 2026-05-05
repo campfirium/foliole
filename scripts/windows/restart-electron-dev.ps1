@@ -686,6 +686,12 @@ function Wait-ElectronHealthy {
     if ($null -eq $runtime) {
       $runtime = Get-ReadyMarkerRuntimeProcess -WorkDir $WorkDir -ExpectedSession $ExpectedSession
     }
+    if ($null -eq $runtime) {
+      $runtimeCandidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)
+      if ($runtimeCandidates.Count -eq 1) {
+        $runtime = $runtimeCandidates[0]
+      }
+    }
     if ($null -ne $runtime) {
       return @{ ok = $true; runtimePid = $runtime.Id }
     }

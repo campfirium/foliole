@@ -1,13 +1,18 @@
 // @vitest-environment node
-
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 
 import { handleInvokeRequest } from './commands.js';
-
+import {
+  failedMarkdownResult,
+  importedHtmlResult,
+  importedMarkdownResult
+} from './commands.window-and-utility.test.fixtures.js';
 const {
   defaultReviewSchedulerSettings,
+  mockApp,
+  mockWindow,
   openExternal,
   readFile,
   recordPreparedImportFailure,
@@ -30,6 +35,19 @@ const {
     },
     updatedAt: '2026-03-06T00:00:00.000Z'
   },
+  mockApp: {
+    exit: vi.fn(),
+    getVersion: () => '1.0.0',
+    relaunch: vi.fn()
+  },
+  mockWindow: {
+    close: vi.fn(),
+    isMaximized: vi.fn(() => false),
+    maximize: vi.fn(),
+    minimize: vi.fn(),
+    webContents: { toggleDevTools: vi.fn() },
+    unmaximize: vi.fn()
+  },
   openExternal: vi.fn().mockResolvedValue(undefined),
   readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
   recordPreparedImportFailure: vi.fn(),
@@ -38,21 +56,12 @@ const {
   syncAppMenuState: vi.fn()
 }));
 
-const mockWindow = {
-  close: vi.fn(),
-  isMaximized: vi.fn(() => false),
-  maximize: vi.fn(),
-  minimize: vi.fn(),
-  webContents: { toggleDevTools: vi.fn() },
-  unmaximize: vi.fn()
-};
-
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => mockWindow),
     getFocusedWindow: vi.fn(() => mockWindow)
   },
-  app: { getVersion: () => '1.0.0' },
+  app: mockApp,
   dialog: { showOpenDialog },
   shell: { openExternal }
 }));
@@ -98,36 +107,8 @@ beforeEach(() => {
   mockWindow.isMaximized.mockReturnValue(false);
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] });
   readFile.mockResolvedValue('# Imported title\nBody');
-  runPreparedImport.mockReturnValue({
-    contentFingerprint: 'content-fingerprint',
-    degradedReason: null,
-    duplicateSemantic: 'new',
-    failureReason: null,
-    importId: 'import-1',
-    importedAt: '2026-03-22T10:00:00.000Z',
-    nodeId: 'node-import-1',
-    provider: 'desktop_text_file',
-    resultStatus: 'imported',
-    sourceFingerprint: 'source-fingerprint',
-    sourceKind: 'markdown',
-    sourceLocator: '/tmp/inbox.md',
-    sourceName: 'inbox.md'
-  });
-  recordPreparedImportFailure.mockReturnValue({
-    contentFingerprint: 'content-fingerprint',
-    degradedReason: null,
-    duplicateSemantic: 'new',
-    failureReason: 'disk failed',
-    importId: 'import-2',
-    importedAt: '2026-03-22T10:00:00.000Z',
-    nodeId: null,
-    provider: 'desktop_text_file',
-    resultStatus: 'failed',
-    sourceFingerprint: 'source-fingerprint',
-    sourceKind: 'markdown',
-    sourceLocator: '/tmp/inbox.md',
-    sourceName: 'inbox.md'
-  });
+  runPreparedImport.mockReturnValue(importedMarkdownResult);
+  recordPreparedImportFailure.mockReturnValue(failedMarkdownResult);
 });
 
 it('handles typed native utility commands', async () => {
@@ -220,21 +201,7 @@ it('classifies TXT imports as text through the native import command', async () 
 it('converts HTML files into markdown-compatible content through the native import command', async () => {
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.html'] });
   readFile.mockResolvedValue('<h2>Imported</h2><p><strong>Bold</strong> text</p>');
-  runPreparedImport.mockReturnValue({
-    contentFingerprint: 'content-fingerprint',
-    degradedReason: null,
-    duplicateSemantic: 'new',
-    failureReason: null,
-    importId: 'import-3',
-    importedAt: '2026-03-22T10:20:00.000Z',
-    nodeId: 'node-import-3',
-    provider: 'desktop_text_file',
-    resultStatus: 'imported',
-    sourceFingerprint: 'source-fingerprint-html',
-    sourceKind: 'html',
-    sourceLocator: '/tmp/inbox.html',
-    sourceName: 'inbox.html'
-  });
+  runPreparedImport.mockReturnValue(importedHtmlResult);
 
   await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
     content: '## Imported\n\n**Bold** text',
@@ -271,12 +238,15 @@ it('converts HTML files into markdown-compatible content through the native impo
 
 it('handles window commands through invoke channel', async () => {
   await expect(handleInvokeRequest({ command: 'window_minimize' })).resolves.toBeNull();
+  await expect(handleInvokeRequest({ command: 'window_restart_app' })).resolves.toBeNull();
   await expect(handleInvokeRequest({ command: 'window_toggle_dev_tools' })).resolves.toBeNull();
   await expect(handleInvokeRequest({ command: 'window_toggle_maximize' })).resolves.toBeNull();
   await expect(handleInvokeRequest({ command: 'window_close' })).resolves.toBeNull();
   await expect(handleInvokeRequest({ command: 'window_is_maximized' })).resolves.toBe(false);
 
   expect(mockWindow.minimize).toHaveBeenCalledTimes(1);
+  expect(mockApp.relaunch).toHaveBeenCalledTimes(1);
+  expect(mockApp.exit).toHaveBeenCalledWith(0);
   expect(mockWindow.webContents.toggleDevTools).toHaveBeenCalledTimes(1);
   expect(mockWindow.maximize).toHaveBeenCalledTimes(1);
   expect(mockWindow.close).toHaveBeenCalledTimes(1);

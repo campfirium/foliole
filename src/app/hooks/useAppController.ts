@@ -4,7 +4,7 @@ import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
-import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
+import { restartMainWindowApp, toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { buildAppPaletteItems } from './appCommands';
@@ -71,6 +71,7 @@ function buildControllerPaletteState(args: {
     openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     onToggleEditorDisplayMode: args.layoutProps.onToggleEditorDisplayMode,
     onToggleListVisibility: args.layoutProps.onToggleListVisibility,
+    onRestartApp: restartMainWindowApp,
     onToggleDevTools: toggleMainWindowDevTools,
     openTrashView: args.trash.openTrashView,
     paletteItems: args.paletteItems,

@@ -16,6 +16,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openNotes: () => undefined,
     openSettings: () => undefined,
     openTrash: () => undefined,
+    restartApp: () => undefined,
     revealReviewAnswer: () => undefined,
     startClipboardImport: () => undefined,
     toggleReviewMode: () => undefined,
@@ -58,6 +59,7 @@ describe('buildAppPaletteItems', () => {
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.openImportManagement)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
   });
 
   it('shows review-mode command as exit when already in review mode', () => {
@@ -112,6 +114,18 @@ describe('runAppCommand', () => {
 
     expect(importSingleFile).toHaveBeenCalledTimes(1);
     expect(importDirectory).not.toHaveBeenCalled();
+  });
+
+  it('runs restart app through the shared command handler', () => {
+    const restartApp = vi.fn();
+
+    expect(
+      runAppCommand(APP_COMMAND_IDS.restartApp, createCommandActions({
+        restartApp
+      }))
+    ).toBe(true);
+
+    expect(restartApp).toHaveBeenCalledTimes(1);
   });
 });
 

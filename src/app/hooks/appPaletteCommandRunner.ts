@@ -19,6 +19,7 @@ interface PaletteCommandRunnerArgs {
   openImportManagement: () => void;
   onToggleEditorDisplayMode: () => void;
   onToggleListVisibility: () => void;
+  onRestartApp: () => void;
   onToggleDevTools: () => void;
   openTrashView: () => void;
   paletteItems: CommandPaletteItem[];
@@ -62,6 +63,7 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       openNotes: args.closeTrashView,
       openSettings: () => args.setSettingsOpen(true),
       openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
+      restartApp: args.onRestartApp,
       revealReviewAnswer: args.revealReviewAnswer,
       startClipboardImport: args.startClipboardImport,
       toggleReviewMode,

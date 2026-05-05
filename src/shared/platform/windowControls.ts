@@ -4,6 +4,7 @@ export {
   minimizeMainWindow,
   onMainWindowResized,
   queryMainWindowMaximized,
+  restartMainWindowApp,
   toggleMainWindowDevTools,
   toggleMainWindowMaximize,
   type WindowResizeUnlisten

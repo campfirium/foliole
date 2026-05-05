@@ -47,4 +47,13 @@ describe('restart-electron-dev script', () => {
     expect(script).toContain('Stop-StaleFolioleDevProcesses -WorkDir $WorkDir');
     expect(script).toContain('Get-ReadyMarkerRuntimeProcess -WorkDir $WorkDir -ExpectedSession $ExpectedSession');
   });
+
+  it('accepts a single matching runtime candidate during startup before ready markers land', async () => {
+    const script = await readFile(SCRIPT_PATH, 'utf8');
+
+    expect(script).toContain('function Wait-ElectronHealthy');
+    expect(script).toContain('$runtimeCandidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)');
+    expect(script).toContain('if ($runtimeCandidates.Count -eq 1) {');
+    expect(script).toContain('$runtime = $runtimeCandidates[0]');
+  });
 });

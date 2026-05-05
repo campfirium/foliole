@@ -6,6 +6,7 @@ import {
   minimizeMainWindow,
   onMainWindowResized,
   queryMainWindowMaximized,
+  restartMainWindowApp,
   toggleMainWindowDevTools,
   toggleMainWindowMaximize
 } from './windowControls';
@@ -45,6 +46,7 @@ it('uses invoke fallback when windowControls is missing', async () => {
   expect(isWindowControlsAvailable()).toBe(true);
   await expect(queryMainWindowMaximized()).resolves.toBe(true);
   await minimizeMainWindow();
+  await restartMainWindowApp();
   await toggleMainWindowDevTools();
   await toggleMainWindowMaximize();
   await closeMainWindow();
@@ -52,9 +54,10 @@ it('uses invoke fallback when windowControls is missing', async () => {
 
   expect(invoke).toHaveBeenNthCalledWith(1, 'window_is_maximized');
   expect(invoke).toHaveBeenNthCalledWith(2, 'window_minimize');
-  expect(invoke).toHaveBeenNthCalledWith(3, 'window_toggle_dev_tools');
-  expect(invoke).toHaveBeenNthCalledWith(4, 'window_toggle_maximize');
-  expect(invoke).toHaveBeenNthCalledWith(5, 'window_close');
+  expect(invoke).toHaveBeenNthCalledWith(3, 'window_restart_app');
+  expect(invoke).toHaveBeenNthCalledWith(4, 'window_toggle_dev_tools');
+  expect(invoke).toHaveBeenNthCalledWith(5, 'window_toggle_maximize');
+  expect(invoke).toHaveBeenNthCalledWith(6, 'window_close');
   expect(onWindowResized).toHaveBeenCalledTimes(1);
 });
 
@@ -70,13 +73,15 @@ it('uses typed invoke for window commands when desktop bridge is available', asy
 
   await expect(queryMainWindowMaximized()).resolves.toBe(false);
   await minimizeMainWindow();
+  await restartMainWindowApp();
   await toggleMainWindowDevTools();
   await toggleMainWindowMaximize();
   await closeMainWindow();
 
   expect(invoke).toHaveBeenNthCalledWith(1, 'window_is_maximized');
   expect(invoke).toHaveBeenNthCalledWith(2, 'window_minimize');
-  expect(invoke).toHaveBeenNthCalledWith(3, 'window_toggle_dev_tools');
-  expect(invoke).toHaveBeenNthCalledWith(4, 'window_toggle_maximize');
-  expect(invoke).toHaveBeenNthCalledWith(5, 'window_close');
+  expect(invoke).toHaveBeenNthCalledWith(3, 'window_restart_app');
+  expect(invoke).toHaveBeenNthCalledWith(4, 'window_toggle_dev_tools');
+  expect(invoke).toHaveBeenNthCalledWith(5, 'window_toggle_maximize');
+  expect(invoke).toHaveBeenNthCalledWith(6, 'window_close');
 });
