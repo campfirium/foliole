@@ -1,8 +1,10 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
+import type { NativeInvoke } from '../../../lib/platform/nativeContract';
+
 import { loadRuntimeReadwiseBooksInventory, onRuntimeReadwiseBookEpubProgress } from './readwiseBooksBridge';
 
-function createMockElectronApi(invoke: ReturnType<typeof vi.fn>) {
+function createMockElectronApi(invoke: NativeInvoke) {
   return {
     invoke,
     onManagedInboxUpdated: vi.fn(() => () => undefined),

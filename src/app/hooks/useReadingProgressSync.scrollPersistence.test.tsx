@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
+import type { NodeViewState } from '../../store/workspaceStore';
 
 import { useReadingProgressSync } from './useReadingProgressSync';
 
@@ -14,7 +15,10 @@ vi.mock('../../store/workspaceRuntimeSync', () => ({
   syncReadingProgressToRuntime: vi.fn()
 }));
 
-function renderImmediateCaptureHarness(setNodeViewState: ReturnType<typeof vi.fn>, scrollListeners: Set<() => void>) {
+function renderImmediateCaptureHarness(
+  setNodeViewState: (nodeId: string, viewState: NodeViewState) => void,
+  scrollListeners: Set<() => void>
+) {
   function ImmediateCaptureHarness() {
     const ref = {
       current: {

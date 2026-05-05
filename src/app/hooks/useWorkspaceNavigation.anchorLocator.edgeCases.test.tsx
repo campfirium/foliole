@@ -1,8 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import { navigationTestNodes, resetWorkspaceNavigationTestState } from './useWorkspaceNavigation.testSupport';
@@ -22,10 +23,10 @@ vi.mock('../../shared/platform/bridge', () => ({
 function renderTextLocatorNavigationHook(args: {
   activeNodeContent: string | null;
   activeNodeId: string;
-  beginAnchorNavigationRestore?: ReturnType<typeof vi.fn>;
-  jumpToAncestorNode?: ReturnType<typeof vi.fn>;
+  beginAnchorNavigationRestore?: (nodeId: string, selection: EditorSelection) => void;
+  jumpToAncestorNode?: (nodeId: string) => NodeNavigationResult | null;
 }) {
-  const beginAnchorNavigationRestore = args.beginAnchorNavigationRestore ?? vi.fn();
+  const beginAnchorNavigationRestore = args.beginAnchorNavigationRestore ?? vi.fn<(nodeId: string, selection: EditorSelection) => void>();
 
   const view = renderHook(
     ({ activeNodeContent, activeNodeId }) =>
@@ -44,7 +45,7 @@ function renderTextLocatorNavigationHook(args: {
         goBack: vi.fn(() => null),
         goForward: vi.fn(() => null),
         goToParent: vi.fn(() => null),
-        jumpToAncestorNode: args.jumpToAncestorNode ?? vi.fn(() => null),
+        jumpToAncestorNode: args.jumpToAncestorNode ?? vi.fn<(nodeId: string) => NodeNavigationResult | null>(() => null),
         nodesById: navigationTestNodes,
         openNode: vi.fn(() => null),
         saveActiveNodeView: vi.fn()

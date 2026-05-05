@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
+import type { NodeViewState } from '../../store/workspaceStore';
 
 import { useReadingProgressSync } from './useReadingProgressSync';
 import { HookHarness } from './useReadingProgressSync.testSupport';
@@ -37,7 +38,10 @@ function runRuntimeReadingPositionPersistenceTest() {
   });
 }
 
-function renderDebouncedHarness(listeners: Set<() => void>, setNodeViewState: ReturnType<typeof vi.fn>) {
+function renderDebouncedHarness(
+  listeners: Set<() => void>,
+  setNodeViewState: (nodeId: string, viewState: NodeViewState) => void
+) {
   function DebouncedHarness() {
     const editorRef = {
       current: {

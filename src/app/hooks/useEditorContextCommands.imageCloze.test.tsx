@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { act } from 'react';
 import { expect, it, vi } from 'vitest';
 
+import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../../features/image-cloze/model/imageCloze';
 import { IMAGE_CLOZE_CREATE_EVENT, IMAGE_CLOZE_DELETE_EVENT } from '../../features/image-cloze/model/imageClozeEvents';
 
 import { useEditorContextCommands } from './useEditorContextCommands';
@@ -9,7 +10,15 @@ import { useEditorContextCommands } from './useEditorContextCommands';
 const content = 'Before\n\n![Cover](asset://hash-1.png)\n\nAfter';
 const imageMarkdown = '![Cover](asset://hash-1.png)';
 
-function renderImageClozeCommands(createImageClozeNodes: ReturnType<typeof vi.fn>, deleteImageClozeRegion = vi.fn()) {
+function renderImageClozeCommands(
+  createImageClozeNodes: (
+    parentNodeId: string,
+    attachmentId: string,
+    sourcePayload: ImageClozeSourcePayload,
+    regions: ImageClozeDraftRegion[]
+  ) => string[],
+  deleteImageClozeRegion = vi.fn<(nodeId: string, regionId: string) => void>()
+) {
   const editorRef = {
     current: {
       getContent: vi.fn(() => content)

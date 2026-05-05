@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
 import { getRuntimeInvoke } from '../../../shared/platform/bridge';
 
 import {
@@ -21,7 +22,7 @@ function createSettings(overrides?: Partial<(typeof DEFAULT_REVIEW_SCHEDULER_SET
   };
 }
 
-function expectSavedPayload(invoke: ReturnType<typeof vi.fn>, settings: Record<string, unknown>) {
+function expectSavedPayload(invoke: NativeInvoke, settings: Record<string, unknown>) {
   expect(invoke).toHaveBeenLastCalledWith('save_review_scheduler_settings', {
     settings
   });
@@ -30,7 +31,7 @@ function expectSavedPayload(invoke: ReturnType<typeof vi.fn>, settings: Record<s
 function createInvokeSequence(...results: Array<Partial<typeof DEFAULT_REVIEW_SCHEDULER_SETTINGS>>) {
   return results.reduce(
     (mock, result) => mock.mockResolvedValueOnce(createSettings(result)),
-    vi.fn()
+    vi.fn<NativeInvoke>()
   );
 }
 

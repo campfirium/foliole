@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+
 import { createLayoutNav } from './appControllerNavHandlers';
 
 function createNavHarness(args: {
   activeNodeId: string;
-  handleSelectBreadcrumbNode?: ReturnType<typeof vi.fn>;
+  handleSelectBreadcrumbNode?: (nodeId: string) => void;
   nodesById: Record<string, unknown>;
-  onSelectNode?: ReturnType<typeof vi.fn>;
+  onSelectNode?: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
 }) {
-  const handleSelectBreadcrumbNode = args.handleSelectBreadcrumbNode ?? vi.fn();
-  const onSelectNode = args.onSelectNode ?? vi.fn();
+  const handleSelectBreadcrumbNode = args.handleSelectBreadcrumbNode ?? vi.fn<(nodeId: string) => void>();
+  const onSelectNode = args.onSelectNode ?? vi.fn<(nodeId: string, focusAnchor?: NodeAnchorLink | null) => void>();
   const nav = createLayoutNav({
     nav: {
       handleGoBack: vi.fn(),

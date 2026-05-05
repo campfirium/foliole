@@ -50,7 +50,7 @@ function createTestFileSystem(args: {
   onWatch: (listener: () => void, path: string) => void;
   onUnwatch: (path: string) => void;
   setIntentContent: (content: string | null) => void;
-  writeDeliveryFile: ReturnType<typeof vi.fn>;
+  writeDeliveryFile: (filePath: string, content: string) => void;
 }) {
   return {
     deleteIntentFile(filePath: string) {

@@ -5,7 +5,7 @@ import { expect, it, vi } from 'vitest';
 import '../../test/reactPdfMock';
 import { usePageJumpEffect, useVisiblePageSync } from './PdfDocumentViewportParts';
 
-function PendingJumpHarness(props: { onVisibleLocation: ReturnType<typeof vi.fn> }) {
+function PendingJumpHarness(props: { onVisibleLocation: (page: number, positionY: number) => void }) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const handleScroll = useVisiblePageSync({ id: 9, page: 2, positionY: 0 }, pageElementsRef, scrollContainerRef, props.onVisibleLocation, 3);

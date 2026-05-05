@@ -1,8 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import { navigationTestNodes, resetWorkspaceNavigationTestState } from './useWorkspaceNavigation.testSupport';
@@ -22,16 +23,16 @@ vi.mock('../../shared/platform/bridge', () => ({
 function renderTextLocatorNavigationHook(args: {
   activeNodeContent: string | null;
   activeNodeId: string;
-  beginAnchorNavigationRestore?: ReturnType<typeof vi.fn>;
-  jumpToAncestorNode?: ReturnType<typeof vi.fn>;
-  openNode?: ReturnType<typeof vi.fn>;
-  saveActiveNodeView?: ReturnType<typeof vi.fn>;
+  beginAnchorNavigationRestore?: (nodeId: string, selection: EditorSelection) => void;
+  jumpToAncestorNode?: (nodeId: string) => NodeNavigationResult | null;
+  openNode?: (nodeId: string) => NodeNavigationResult | null;
+  saveActiveNodeView?: (nodeIdOverride?: string | null) => void;
 }) {
-  const beginAnchorNavigationRestore = args.beginAnchorNavigationRestore ?? vi.fn();
-  const saveActiveNodeView = args.saveActiveNodeView ?? vi.fn();
+  const beginAnchorNavigationRestore = args.beginAnchorNavigationRestore ?? vi.fn<(nodeId: string, selection: EditorSelection) => void>();
+  const saveActiveNodeView = args.saveActiveNodeView ?? vi.fn<(nodeIdOverride?: string | null) => void>();
   const flushPendingEditorDraft = vi.fn();
-  const jumpToAncestorNode = args.jumpToAncestorNode ?? vi.fn(() => null);
-  const openNode = args.openNode ?? vi.fn(() => null);
+  const jumpToAncestorNode = args.jumpToAncestorNode ?? vi.fn<(nodeId: string) => NodeNavigationResult | null>(() => null);
+  const openNode = args.openNode ?? vi.fn<(nodeId: string) => NodeNavigationResult | null>(() => null);
 
   const view = renderHook(
     ({ activeNodeContent, activeNodeId }) =>

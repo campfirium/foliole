@@ -1,8 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeInvoke } from '../../../lib/platform/nativeContract';
+
 import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from './appSettingsState';
 
-function createMockElectronApi(invoke: ReturnType<typeof vi.fn>) {
+function createMockElectronApi(invoke: NativeInvoke) {
   return {
     invoke,
     onManagedInboxUpdated: () => () => undefined,

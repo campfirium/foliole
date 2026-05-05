@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { SelectionCommandPayload } from '../contextCommands';
 
 import { createToggleSelectionHighlightFromPayloadHandler } from './selectionHighlightToggle';
 
@@ -23,10 +24,10 @@ function createEditorRef(content: string, selection: { from: number; to: number 
 
 function createHandlerArgs(args: {
   anchorLink: { id: string; kind: 'highlight'; locator?: { from: number; originalText: string; to: number } };
-  createHighlightFromPayload?: ReturnType<typeof vi.fn>;
-  deleteNodePermanently?: ReturnType<typeof vi.fn>;
+  createHighlightFromPayload?: (payload: SelectionCommandPayload) => string | null;
+  deleteNodePermanently?: (nodeId: string) => void;
   editorRef: ReturnType<typeof createEditorRef>['editorRef'];
-  syncActiveNodeContentFromEditor?: ReturnType<typeof vi.fn>;
+  syncActiveNodeContentFromEditor?: () => void;
 }) {
   const childNode: Node = {
     id: 'child-1',
@@ -42,13 +43,13 @@ function createHandlerArgs(args: {
   };
   return {
     activeNodeId: 'parent-1',
-    createHighlightFromPayload: args.createHighlightFromPayload ?? vi.fn(() => 'node-new'),
-    deleteNodePermanently: args.deleteNodePermanently ?? vi.fn(),
+    createHighlightFromPayload: args.createHighlightFromPayload ?? vi.fn<(payload: SelectionCommandPayload) => string | null>(() => 'node-new'),
+    deleteNodePermanently: args.deleteNodePermanently ?? vi.fn<(nodeId: string) => void>(),
     editorRef: args.editorRef,
     nodesById: {
       'child-1': childNode
     },
-    syncActiveNodeContentFromEditor: args.syncActiveNodeContentFromEditor ?? vi.fn(),
+    syncActiveNodeContentFromEditor: args.syncActiveNodeContentFromEditor ?? vi.fn<() => void>(),
     trashedNodeIds: []
   };
 }

@@ -26,14 +26,14 @@ function renderFolderList(
   children: Node[],
   options?: {
     nodeViewById?: Record<string, NodeViewState | undefined>;
-    onSelectNode?: ReturnType<typeof vi.fn>;
+    onSelectNode?: (nodeId: string) => void;
     sortDirection?: FolderListSortDirection;
     sortKey?: FolderListSortKey;
   }
 ) {
   const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
   const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
-  const onSelectNode = options?.onSelectNode ?? vi.fn();
+  const onSelectNode = options?.onSelectNode ?? vi.fn<(nodeId: string) => void>();
 
   render(
     <FolderListView

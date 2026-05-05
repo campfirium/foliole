@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig, type Plugin, type UserConfig } from 'vite';
+import type { Plugin } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 const WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = 'virtual:workspace-change-timestamp';
 const RESOLVED_WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = `\0${WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID}`;
@@ -111,10 +113,10 @@ function workspaceChangeTimestampPlugin(projectRoot: string): Plugin {
   };
 }
 
-export function createSharedViteConfig(projectRoot: string): UserConfig {
+export function createSharedViteConfig(projectRoot: string) {
   return defineConfig({
     base: './',
-    plugins: [react(), workspaceChangeTimestampPlugin(projectRoot)],
+    plugins: [react(), tailwindcss(), workspaceChangeTimestampPlugin(projectRoot)],
     resolve: {
       alias: {
         '@': path.resolve(projectRoot, './src')

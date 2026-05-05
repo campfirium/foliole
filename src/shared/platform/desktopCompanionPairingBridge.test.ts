@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeInvoke } from '../../../lib/platform/nativeContract';
+
 import {
   approveDesktopCompanionPairRequest,
   clearDesktopCompanionPairedDevices,
@@ -10,7 +12,7 @@ import {
   rejectDesktopCompanionPairRequest
 } from './desktopCompanionPairingBridge';
 
-function createMockElectronApi(invoke: ReturnType<typeof vi.fn>) {
+function createMockElectronApi(invoke: NativeInvoke) {
   return {
     invoke,
     onManagedInboxUpdated: () => () => undefined,
