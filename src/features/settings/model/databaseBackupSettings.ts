@@ -1,9 +1,9 @@
 import {
-  hasSettingsRuntimeRepository,
+  hasDatabaseBackupRuntimeRepository,
   loadDatabaseBackupSettingsFromRuntime,
   saveDatabaseBackupSettingsToRuntime,
   type RuntimeBackupSettings
-} from '../../../shared/platform/settingsRuntimeRepository';
+} from '../../../shared/platform/databaseBackupRuntimeRepository';
 
 export type DatabaseBackupSettings = RuntimeBackupSettings;
 
@@ -43,7 +43,7 @@ export function normalizeDatabaseBackupSettings(value: unknown): DatabaseBackupS
 }
 
 export async function loadDatabaseBackupSettings(): Promise<DatabaseBackupSettings> {
-  if (!hasSettingsRuntimeRepository()) {
+  if (!hasDatabaseBackupRuntimeRepository()) {
     return DEFAULT_BACKUP_SETTINGS;
   }
   try {
@@ -54,7 +54,7 @@ export async function loadDatabaseBackupSettings(): Promise<DatabaseBackupSettin
 }
 
 export async function saveDatabaseBackupSettings(settings: DatabaseBackupSettings): Promise<DatabaseBackupSettings> {
-  if (!hasSettingsRuntimeRepository()) {
+  if (!hasDatabaseBackupRuntimeRepository()) {
     return normalizeDatabaseBackupSettings(settings);
   }
   try {

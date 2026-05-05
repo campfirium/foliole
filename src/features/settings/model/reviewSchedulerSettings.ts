@@ -5,10 +5,10 @@ import {
   type UnifiedPushQueueRulesPatch
 } from '../../../../lib/core/review/unifiedPushQueueRules';
 import {
-  hasSettingsRuntimeRepository,
+  hasReviewSchedulerSettingsRuntimeRepository,
   loadReviewSchedulerSettingsFromRuntime,
   saveReviewSchedulerSettingsToRuntime
-} from '../../../shared/platform/settingsRuntimeRepository';
+} from '../../../shared/platform/reviewSchedulerSettingsRuntimeRepository';
 
 export interface ReviewSchedulerSettings {
   algorithm: string;
@@ -156,7 +156,7 @@ function syncCurrentReviewSchedulerSettings(settings: ReviewSchedulerSettings) {
 }
 
 export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSettings> {
-  if (!hasSettingsRuntimeRepository()) {
+  if (!hasReviewSchedulerSettingsRuntimeRepository()) {
     return syncCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   }
   try {
@@ -171,7 +171,7 @@ export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSett
 export async function saveReviewSchedulerSettings(
   settings: ReviewSchedulerSettingsSavePatch
 ): Promise<ReviewSchedulerSettings> {
-  const hasRuntime = hasSettingsRuntimeRepository();
+  const hasRuntime = hasReviewSchedulerSettingsRuntimeRepository();
   const baseSettings = hasRuntime ? await loadReviewSchedulerSettings() : getCurrentReviewSchedulerSettings();
   const payload = normalizeReviewSchedulerSettings({
     ...baseSettings,

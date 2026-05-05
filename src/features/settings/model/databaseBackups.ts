@@ -1,11 +1,11 @@
 import {
   createDatabaseBackupInRuntime,
-  hasSettingsRuntimeRepository,
+  hasDatabaseBackupRuntimeRepository,
   listDatabaseBackupsFromRuntime,
   restoreDatabaseBackupInRuntime,
   type RuntimeSqliteBackupResult,
   type RuntimeSqliteRestoreResult
-} from '../../../shared/platform/settingsRuntimeRepository';
+} from '../../../shared/platform/databaseBackupRuntimeRepository';
 
 export interface DatabaseBackupEntry {
   fileName: string;
@@ -118,11 +118,11 @@ function readErrorMessage(error: unknown) {
 }
 
 export function areDatabaseBackupActionsAvailable() {
-  return hasSettingsRuntimeRepository();
+  return hasDatabaseBackupRuntimeRepository();
 }
 
 export async function listDatabaseBackups(): Promise<DatabaseBackupEntry[]> {
-  if (!hasSettingsRuntimeRepository()) {
+  if (!hasDatabaseBackupRuntimeRepository()) {
     return [];
   }
   try {
@@ -140,7 +140,7 @@ export async function listDatabaseBackups(): Promise<DatabaseBackupEntry[]> {
 }
 
 export async function createDatabaseBackup(): Promise<DatabaseBackupActionResult | null> {
-  if (!hasSettingsRuntimeRepository()) {
+  if (!hasDatabaseBackupRuntimeRepository()) {
     return null;
   }
   try {
@@ -155,7 +155,7 @@ export async function createDatabaseBackup(): Promise<DatabaseBackupActionResult
 }
 
 export async function restoreDatabaseBackup(sourcePath: string): Promise<DatabaseRestoreActionResult | null> {
-  if (!hasSettingsRuntimeRepository()) {
+  if (!hasDatabaseBackupRuntimeRepository()) {
     return null;
   }
   try {
