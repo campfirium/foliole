@@ -41,6 +41,9 @@ public class FolioleCompanionAttachmentResourceStoreTest {
             "attachment_id TEXT PRIMARY KEY, content_hash TEXT, storage_key TEXT, size_bytes INTEGER NOT NULL DEFAULT 0, " +
             "mime_type TEXT, availability TEXT NOT NULL DEFAULT 'remote_known', source_device_id TEXT, " +
             "created_at TEXT NOT NULL, cached_at TEXT, last_verified_at TEXT)");
+        database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
+        database.execSQL("CREATE TABLE nodes (id TEXT PRIMARY KEY, updated_at TEXT NOT NULL, deleted_at TEXT)");
+        database.execSQL("CREATE TABLE node_attachments (node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL)");
     }
 
     @After
@@ -84,6 +87,39 @@ public class FolioleCompanionAttachmentResourceStoreTest {
         assertEquals("hash-android-1", resource.getString("content_hash"));
     }
 
+    @Test
+    public void ordersMissingManifestResourcesByActiveThenRecentTopicLinks() throws Exception {
+        insertAttachmentManifest("old-att", "hash-old", "2026-04-25T00:00:00.000Z");
+        insertAttachmentManifest("active-att", "hash-active", "2026-04-25T00:00:00.000Z");
+        insertAttachmentManifest("recent-att", "hash-recent", "2026-04-25T00:00:00.000Z");
+        insertAttachmentManifest("unlinked-att", "hash-unlinked", "2026-04-24T00:00:00.000Z");
+        insertNode("old-node", "2026-04-26T00:00:00.000Z");
+        insertNode("active-node", "2026-04-25T00:00:00.000Z");
+        insertNode("recent-node", "2026-04-27T00:00:00.000Z");
+        insertNodeAttachment("old-node", "old-att");
+        insertNodeAttachment("active-node", "active-att");
+        insertNodeAttachment("recent-node", "recent-att");
+        database.execSQL("INSERT INTO workspace_meta (key, value, updated_at) VALUES " +
+            "('active_node_id', 'active-node', '2026-04-28T00:00:00.000Z')");
+
+        assertEquals("active-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(0)
+            .getString("attachment_id"));
+        assertEquals("recent-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(1)
+            .getString("attachment_id"));
+        assertEquals("old-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(2)
+            .getString("attachment_id"));
+        assertEquals("unlinked-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(3)
+            .getString("attachment_id"));
+    }
+
     private JSONObject attachmentRecord() throws Exception {
         JSONObject blob = new JSONObject()
             .put("content_hash", "hash-android-1")
@@ -105,6 +141,22 @@ public class FolioleCompanionAttachmentResourceStoreTest {
             .put("deleted_at", JSONObject.NULL)
             .put("payload_json", payload.toString())
             .put("updated_at", "2026-04-25T00:00:00.000Z");
+    }
+
+    private void insertAttachmentManifest(String attachmentId, String contentHash, String createdAt) {
+        database.execSQL("INSERT INTO attachment_blobs (" +
+            "attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, source_device_id, created_at" +
+            ") VALUES ('" + attachmentId + "', '" + contentHash + "', '" + contentHash + "', 11, " +
+            "'image/png', 'remote_known', 'desktop', '" + createdAt + "')");
+    }
+
+    private void insertNode(String nodeId, String updatedAt) {
+        database.execSQL("INSERT INTO nodes (id, updated_at, deleted_at) VALUES ('" + nodeId + "', '" + updatedAt + "', NULL)");
+    }
+
+    private void insertNodeAttachment(String nodeId, String attachmentId) {
+        database.execSQL("INSERT INTO node_attachments (node_id, attachment_id, role) VALUES " +
+            "('" + nodeId + "', '" + attachmentId + "', 'inline')");
     }
 
     private void deleteAttachmentFile(String storageKey) {
