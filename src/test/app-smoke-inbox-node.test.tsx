@@ -150,8 +150,11 @@ it('opens import management from the left toolbar instead of replacing Inbox', (
   fireEvent.click(screen.getByRole('button', { name: 'Import Management' }));
 
   expect(screen.getByRole('heading', { name: 'Import management' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Readwise Reader for Obsidian settings' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Open Readwise Reader settings' })).toBeInTheDocument();
+  expect(screen.getByRole('navigation', { name: 'Import management navigation' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Readwise Books' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Readwise Articles' })).toBeInTheDocument();
+  expect(screen.queryByText('Readwise Reader settings')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Close import management' }));
 

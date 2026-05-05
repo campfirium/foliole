@@ -1,41 +1,47 @@
 import { X } from 'lucide-react';
+import { useState } from 'react';
 
-import type { ImportNodeTitleStrategy } from '../../../lib/core/import/importedNodeTitle';
-import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppEmptyState } from '../../shared/ui';
 
-import type { DraftImportSource, DraftImportSourceField } from './importSourceWorkspaceModel';
-import { importSourceSelectClassName } from './importSourceWorkspaceModel';
-import { ImportSourceWorkspaceReadwiseSection } from './ImportSourceWorkspaceReadwiseSection';
-import { ImportSourceTable } from './ImportSourceWorkspaceTable';
+type ImportManagementPageId = 'inbox' | 'readwise-books' | 'readwise-articles';
 
 type ImportSourceWorkspaceDetailsProps = {
   open: boolean;
-  readwiseReaderConfig: ReadwiseReaderConfig;
-  readwiseRootPath: string;
-  sources: DraftImportSource[];
-  titleStrategy: ImportNodeTitleStrategy;
   onOpenChange: (open: boolean) => void;
-  onOpenReadwiseConfig: () => void;
-  onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
-  onChangeAction: (sourceId: string, value: string) => void;
-  onChangeTitleStrategy: (value: ImportNodeTitleStrategy) => void;
-  onChoosePrimaryFolder: (sourceId: string) => void;
-  onChooseHighlightFolder: (sourceId: string) => void;
-  onDisableKeepImport: (sourceId: string, scope: 'sources') => void;
-  onCopySource: (sourceId: string) => void;
-  onDeleteSource: (sourceId: string) => void;
-  onPreviewKeepImport: (sourceId: string, scope: 'sources') => void;
 };
+
+const importManagementPages = [
+  {
+    description: 'Review everything that lands in the import inbox from one place.',
+    emptyDescription: 'Imported inbox content will appear here once the content view is wired in.',
+    id: 'inbox',
+    title: 'Inbox'
+  },
+  {
+    description: 'Manage imported Readwise book content here without mixing it into settings.',
+    emptyDescription: 'Readwise book content will appear here once the list view is ready.',
+    id: 'readwise-books',
+    title: 'Readwise Books'
+  },
+  {
+    description: 'Manage imported Readwise article content here without mixing it into settings.',
+    emptyDescription: 'Readwise article content will appear here once the list view is ready.',
+    id: 'readwise-articles',
+    title: 'Readwise Articles'
+  }
+] as const satisfies ReadonlyArray<{
+  description: string;
+  emptyDescription: string;
+  id: ImportManagementPageId;
+  title: string;
+}>;
 
 function ImportSourceWorkspaceHeader({ onClose }: { onClose: () => void }) {
   return (
-    <header className="flex items-center justify-between px-6 pb-3 pt-5">
+    <header className="flex items-center justify-between border-b border-border/60 px-6 pb-4 pt-5">
       <div className="min-w-0 pr-4">
         <AppDialogTitle className="text-[1.02rem] font-semibold">Import management</AppDialogTitle>
-        <p className="mt-1 text-sm text-foreground/68">
-          Set up long-running imports here. Readwise Reader is ready first, and later sources can follow the same panel.
-        </p>
+        <p className="mt-1 text-sm text-foreground/68">Use this space to manage imported content. Source settings now live in Settings.</p>
       </div>
       <AppButton aria-label="Close import management" className="size-8 px-0" onClick={onClose} variant="ghost">
         <X aria-hidden="true" size={15} strokeWidth={1.9} />
@@ -44,81 +50,50 @@ function ImportSourceWorkspaceHeader({ onClose }: { onClose: () => void }) {
   );
 }
 
-function TitleStrategySection(props: {
-  onChange: (value: ImportNodeTitleStrategy) => void;
-  titleStrategy: ImportNodeTitleStrategy;
+function ImportSourceWorkspaceNavigation(props: {
+  activePageId: ImportManagementPageId;
+  onSelect: (pageId: ImportManagementPageId) => void;
 }) {
   return (
-    <SettingsSection
-      ariaLabel="Import title settings"
-      className="mb-6"
-      description="Imported notes keep the original body unchanged. This only decides which value becomes the note title."
-      title="Imported title"
-    >
-      <SettingsRow
-        description="File name is the safer default. Unique level-one heading only applies when the document has exactly one `#` heading."
-        title="Title source"
-      >
-        <SettingsControlSlot>
-          <select
-            aria-label="Imported title source"
-            className={importSourceSelectClassName}
-            onChange={(event) => props.onChange(event.target.value as ImportNodeTitleStrategy)}
-            value={props.titleStrategy}
+    <aside className="flex w-56 shrink-0 flex-col border-r border-border/60 px-3 py-4">
+      <h2 className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.08em] text-foreground/55">Navigation</h2>
+      <nav aria-label="Import management navigation" className="flex flex-col gap-1">
+        {importManagementPages.map((page) => (
+          <AppButton
+            key={page.id}
+            active={props.activePageId === page.id}
+            aria-pressed={props.activePageId === page.id}
+            className="min-h-9"
+            onClick={() => props.onSelect(page.id)}
+            variant="list"
           >
-            <option value="file_name">File name first</option>
-            <option value="heading">Unique level-one heading first</option>
-          </select>
-        </SettingsControlSlot>
-      </SettingsRow>
-    </SettingsSection>
+            {page.title}
+          </AppButton>
+        ))}
+      </nav>
+    </aside>
   );
 }
 
-function ImportSourceWorkspaceBody(props: Omit<ImportSourceWorkspaceDetailsProps, 'open' | 'onOpenChange'>) {
+function ImportSourceWorkspacePage({ pageId }: { pageId: ImportManagementPageId }) {
+  const page = importManagementPages.find((entry) => entry.id === pageId) ?? importManagementPages[0];
+
   return (
-    <div className="min-h-0 flex-1 overflow-auto px-6 pb-6">
-      <TitleStrategySection onChange={props.onChangeTitleStrategy} titleStrategy={props.titleStrategy} />
-      <ImportSourceWorkspaceReadwiseSection
-        onOpenReadwiseConfig={props.onOpenReadwiseConfig}
-        readwiseReaderConfig={props.readwiseReaderConfig}
-        readwiseRootPath={props.readwiseRootPath}
-      />
-      <div className="overflow-auto">
-        <ImportSourceTable
-          onChange={props.onChange}
-          onChangeAction={props.onChangeAction}
-          onChooseHighlightFolder={props.onChooseHighlightFolder}
-          onChoosePrimaryFolder={props.onChoosePrimaryFolder}
-          onDisableKeepImport={(sourceId) => props.onDisableKeepImport(sourceId, 'sources')}
-          onCopySource={props.onCopySource}
-          onDeleteSource={props.onDeleteSource}
-          onPreviewKeepImport={(sourceId) => void props.onPreviewKeepImport(sourceId, 'sources')}
-          sources={props.sources}
-        />
+    <section aria-label={`${page.title} page`} className="flex min-h-0 flex-1 flex-col px-6 py-5">
+      <div className="border-b border-border/60 pb-4">
+        <h2 className="text-lg font-semibold text-foreground">{page.title}</h2>
+        <p className="mt-1 text-sm text-foreground/68">{page.description}</p>
       </div>
-    </div>
+      <div className="flex min-h-0 flex-1 items-center justify-center py-6">
+        <AppEmptyState description={page.emptyDescription} title={`${page.title} page`} />
+      </div>
+    </section>
   );
 }
 
-export function ImportSourceWorkspaceDetails({
-  open,
-  readwiseRootPath,
-  readwiseReaderConfig,
-  sources,
-  onOpenChange,
-  onOpenReadwiseConfig,
-  onChange,
-  onChangeAction,
-  onChangeTitleStrategy,
-  onChoosePrimaryFolder,
-  onChooseHighlightFolder,
-  onDisableKeepImport,
-  onCopySource,
-  onDeleteSource,
-  onPreviewKeepImport,
-  titleStrategy
-}: ImportSourceWorkspaceDetailsProps) {
+export function ImportSourceWorkspaceDetails({ open, onOpenChange }: ImportSourceWorkspaceDetailsProps) {
+  const [activePageId, setActivePageId] = useState<ImportManagementPageId>('inbox');
+
   return (
     <AppDialog onOpenChange={onOpenChange} open={open}>
       <AppDialogPortal>
@@ -129,22 +104,10 @@ export function ImportSourceWorkspaceDetails({
         >
           <section aria-label="Import management" className="flex h-full min-h-0 flex-col">
             <ImportSourceWorkspaceHeader onClose={() => onOpenChange(false)} />
-            <ImportSourceWorkspaceBody
-              onChange={onChange}
-              onChangeAction={onChangeAction}
-              onChangeTitleStrategy={onChangeTitleStrategy}
-              onChooseHighlightFolder={onChooseHighlightFolder}
-              onChoosePrimaryFolder={onChoosePrimaryFolder}
-              onDisableKeepImport={onDisableKeepImport}
-              onCopySource={onCopySource}
-              onDeleteSource={onDeleteSource}
-              onOpenReadwiseConfig={onOpenReadwiseConfig}
-              onPreviewKeepImport={onPreviewKeepImport}
-              readwiseReaderConfig={readwiseReaderConfig}
-              readwiseRootPath={readwiseRootPath}
-              sources={sources}
-              titleStrategy={titleStrategy}
-            />
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              <ImportSourceWorkspaceNavigation activePageId={activePageId} onSelect={setActivePageId} />
+              <ImportSourceWorkspacePage pageId={activePageId} />
+            </div>
           </section>
         </AppDialogContent>
       </AppDialogPortal>
