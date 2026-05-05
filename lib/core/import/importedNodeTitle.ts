@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { stripAnchorBlocks } from '../../../src/features/editor/model/anchorBlocks.js';
+import { stripImportedAnchorMarkup } from './importAnchorMarkup.js';
 
 export type ImportNodeTitleStrategy = 'file_name' | 'heading';
 
@@ -42,7 +42,7 @@ export function extractUniqueLevelOneHeading(content: string) {
       continue;
     }
 
-    const match = stripAnchorBlocks(line).match(LEVEL_ONE_HEADING_PATTERN);
+    const match = stripImportedAnchorMarkup(line).match(LEVEL_ONE_HEADING_PATTERN);
     if (!match) {
       continue;
     }

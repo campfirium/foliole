@@ -2,6 +2,48 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { applyImmersiveEntrySelection } from './immersiveReadingApplying';
 
+function createReadyViewportEditor() {
+  return {
+    getContent: vi.fn(() => `${'A'.repeat(62000)}\n\n${'B'.repeat(40)}`),
+    getScrollMetrics: vi.fn(() => ({ clientHeight: 400, scrollHeight: 4000, scrollTop: 0 })),
+    getSelection: vi.fn(() => ({ from: 61200, to: 61200 })),
+    getViewportRect: vi.fn(() => ({ height: 400 })),
+    isPositionNearViewportRatio: vi.fn(() => true),
+    revealSelectionAtViewportRatio: vi.fn(),
+    setParagraphMarker: vi.fn(),
+    setSelection: vi.fn()
+  };
+}
+
+function runNearAnchorScenario() {
+  const setReadingSelection = vi.fn();
+  const completeApplyingReadingPosition = vi.fn();
+  const editor = createReadyViewportEditor();
+
+  applyImmersiveEntrySelection({
+    clearPendingSelection: vi.fn(),
+    props: {
+      completeApplyingReadingPosition,
+      editorAdapterRef: { current: editor },
+      getReadingPositionSyncState: () => ({
+        reason: 'enter-immersive',
+        startedAt: Date.now(),
+        targetSelection: { from: 61200, to: 61200 }
+      }),
+      getReadingPositionSelection: () => ({ from: 61200, to: 61200 }),
+      isImmersiveMode: true,
+      setReadingPositionSelection: vi.fn()
+    } as never,
+    remainingAttempts: 1,
+    scheduleRetry: vi.fn(),
+    selection: { from: 61200, to: 61200 },
+    setReadingSelection,
+    shouldSkipNextScrollSyncRef: { current: false }
+  });
+
+  return { completeApplyingReadingPosition, editor, setReadingSelection };
+}
+
 describe('applyImmersiveEntrySelection', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -11,35 +53,7 @@ describe('applyImmersiveEntrySelection', () => {
   });
 
   it('completes once the target position is visually near the anchor without falling back to viewport sampling', () => {
-    const setReadingSelection = vi.fn();
-    const completeApplyingReadingPosition = vi.fn();
-    const editor = {
-      getContent: vi.fn(() => `${'A'.repeat(62000)}\n\n${'B'.repeat(40)}`),
-      getScrollMetrics: vi.fn(() => ({ clientHeight: 400, scrollHeight: 4000, scrollTop: 0 })),
-      getSelection: vi.fn(() => ({ from: 61200, to: 61200 })),
-      getViewportRect: vi.fn(() => ({ height: 400 })),
-      isPositionNearViewportRatio: vi.fn(() => true),
-      revealSelectionAtViewportRatio: vi.fn(),
-      setParagraphMarker: vi.fn(),
-      setSelection: vi.fn()
-    };
-
-    applyImmersiveEntrySelection({
-      clearPendingSelection: vi.fn(),
-      props: {
-        completeApplyingReadingPosition,
-        editorAdapterRef: { current: editor },
-        getReadingPositionSyncState: () => ({ reason: 'enter-immersive', startedAt: Date.now(), targetSelection: { from: 61200, to: 61200 } }),
-        getReadingPositionSelection: () => ({ from: 61200, to: 61200 }),
-        isImmersiveMode: true,
-        setReadingPositionSelection: vi.fn()
-      } as never,
-      remainingAttempts: 1,
-      scheduleRetry: vi.fn(),
-      selection: { from: 61200, to: 61200 },
-      setReadingSelection,
-      shouldSkipNextScrollSyncRef: { current: false }
-    });
+    const { completeApplyingReadingPosition, editor, setReadingSelection } = runNearAnchorScenario();
 
     vi.runAllTimers();
 

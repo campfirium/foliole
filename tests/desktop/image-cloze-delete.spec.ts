@@ -73,14 +73,33 @@ async function dragCreateRegion(desktopWindow: Page) {
 }
 
 async function clickRegionBorder(desktopWindow: Page) {
-  const region = desktopWindow.locator('.cm-md-image-cloze-region').first();
-  await expect(region).toBeVisible();
-  const box = await region.boundingBox();
-  if (!box) {
-    throw new Error('missing image cloze region box');
-  }
-  await desktopWindow.mouse.move(box.x + 4, box.y + box.height / 2);
-  await desktopWindow.mouse.click(box.x + 4, box.y + box.height / 2);
+  await desktopWindow.evaluate(() => {
+    const overlay = document.querySelector('.cm-md-image-cloze-overlay') as HTMLElement | null;
+    const region = document.querySelector('.cm-md-image-cloze-region') as HTMLElement | null;
+    const surface = document.querySelector('.cm-md-image-surface-block') as HTMLElement | null;
+    if (!overlay || !region || !surface) {
+      throw new Error('missing image cloze selection surface');
+    }
+    surface.dispatchEvent(new Event('pointerenter', { bubbles: true }));
+    const overlayRect = overlay.getBoundingClientRect();
+    const regionRect = region.getBoundingClientRect();
+    const clientX = regionRect.right - 4;
+    const clientY = regionRect.bottom - 4;
+    overlay.dispatchEvent(new PointerEvent('pointermove', {
+      bubbles: true,
+      button: 0,
+      clientX,
+      clientY,
+      pointerId: 7
+    }));
+    overlay.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: Math.max(overlayRect.left, Math.min(overlayRect.right, clientX)),
+      clientY: Math.max(overlayRect.top, Math.min(overlayRect.bottom, clientY)),
+      pointerId: 7
+    }));
+  });
 }
 
 async function collectSelectionDebugState(desktopWindow: Page) {

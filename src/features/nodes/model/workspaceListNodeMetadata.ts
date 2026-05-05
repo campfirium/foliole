@@ -1,5 +1,4 @@
 import { extractNodeOpeningPreview, NODE_OPENING_PREVIEW_FALLBACK } from '../../../../lib/core/nodes/nodeOpeningPreview';
-import { stripAnchorBlocks } from '../../editor/model/anchorBlocks';
 
 import type { Node } from './nodeTypes';
 
@@ -108,7 +107,6 @@ function normalizePreviewText(content: string) {
     stripLeadingFrontmatter(content)
       .replace(/\r\n/g, '\n')
       .split('\n')
-      .map((line) => stripAnchorBlocks(line))
       .join('\n')
       .split(/\r?\n/)
       .map((line) => stripMarkdownLinePrefix(line))

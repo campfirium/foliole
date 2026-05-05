@@ -23,11 +23,12 @@ function toImportedAnchorLink(highlight: PreparedImportHighlightRecord | Anchore
     return null;
   }
   if (typeof highlight.from !== 'number' || typeof highlight.to !== 'number') {
-    return JSON.stringify({ id: highlight.anchorId, kind: 'highlight' });
+    return JSON.stringify({ id: highlight.anchorId, kind: highlight.kind, origin: 'imported' });
   }
   return JSON.stringify({
     id: highlight.anchorId,
-    kind: 'highlight',
+    kind: highlight.kind,
+    origin: 'imported',
     locator: {
       from: highlight.from,
       to: highlight.to,
@@ -36,11 +37,19 @@ function toImportedAnchorLink(highlight: PreparedImportHighlightRecord | Anchore
   });
 }
 
+function createImportedClozePrompt(parentContent: string, highlight: AnchoredImportedHighlightRecord) {
+  if (typeof highlight.from !== 'number' || typeof highlight.to !== 'number') {
+    return '[...]';
+  }
+  return `${parentContent.slice(0, highlight.from)}[...]${parentContent.slice(highlight.to)}`.trim() || '[...]';
+}
+
 export function insertImportedHighlightNodes(input: {
   driver: DatabaseDriver;
   highlights: Array<PreparedImportHighlightRecord | AnchoredImportedHighlightRecord> | undefined;
   importedAt: string;
   parentNodeId: string;
+  parentContent: string;
   startPosition: number;
 }) {
   if (!input.highlights?.length) {
@@ -53,20 +62,43 @@ export function insertImportedHighlightNodes(input: {
        content, opening_text, reveal, anchor_link, created_at, updated_at, deleted_at
      ) VALUES (?, ?, 'topic', NULL, NULL, ?, 0, ?, ?, NULL, ?, ?, ?, NULL)`
   );
+  const insertClozeNode = input.driver.prepare(
+    `INSERT INTO nodes (
+       id, parent_id, kind, priority, desired_retention, title, is_title_manual,
+       content, opening_text, reveal, anchor_link, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, 'item', NULL, NULL, ?, 0, ?, ?, ?, ?, ?, ?, NULL)`
+  );
   const insertOrder = input.driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
 
   input.highlights.forEach((highlight, index) => {
     const nodeId = `node-${randomUUID()}`;
-    insertNode.run([
-      nodeId,
-      input.parentNodeId,
-      deriveImportedHighlightTitle(highlight.content),
-      highlight.content,
-      resolveNodeOpeningText(highlight.content, deriveImportedHighlightTitle(highlight.content)),
-      toImportedAnchorLink(highlight),
-      input.importedAt,
-      input.importedAt
-    ]);
+    if ('kind' in highlight && highlight.kind === 'cloze') {
+      const promptContent = createImportedClozePrompt(input.parentContent, highlight);
+      const title = deriveImportedHighlightTitle(promptContent);
+      insertClozeNode.run([
+        nodeId,
+        input.parentNodeId,
+        title,
+        promptContent,
+        resolveNodeOpeningText(promptContent, title),
+        highlight.content,
+        toImportedAnchorLink(highlight),
+        input.importedAt,
+        input.importedAt
+      ]);
+    } else {
+      const title = deriveImportedHighlightTitle(highlight.content);
+      insertNode.run([
+        nodeId,
+        input.parentNodeId,
+        title,
+        highlight.content,
+        resolveNodeOpeningText(highlight.content, title),
+        toImportedAnchorLink(highlight),
+        input.importedAt,
+        input.importedAt
+      ]);
+    }
     insertOrder.run([nodeId, input.startPosition + index]);
   });
 

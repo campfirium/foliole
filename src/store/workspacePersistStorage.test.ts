@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { appendReadingPositionTraceLog, getRuntimeInvoke } from '../shared/platform/bridge';
 
 import { workspacePersistStorage } from './workspacePersistStorage';
 import {
@@ -10,11 +10,13 @@ import {
 } from './workspacePersistStorage.test-support';
 
 vi.mock('../shared/platform/bridge', () => ({
+  appendReadingPositionTraceLog: vi.fn(),
   getRuntimeInvoke: vi.fn()
 }));
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.mocked(appendReadingPositionTraceLog).mockReset();
   vi.mocked(getRuntimeInvoke).mockReset();
   window.localStorage.clear();
 });
@@ -79,6 +81,10 @@ function createPendingDismissedNodeSync() {
   };
 }
 
+function readPersistedState(value: string | null) {
+  return value ? (JSON.parse(value) as { state: { nodeViewById?: Record<string, unknown>; nodesById?: Record<string, unknown>; activeNodeId?: string | null } }).state : null;
+}
+
 function createRuntimeSnapshotWithoutReading() {
   return {
     activeNodeId: 'node-2',
@@ -120,10 +126,17 @@ describe('workspacePersistStorage runtime merge', () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
     const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+    const state = readPersistedState(value);
 
     expect(value).toContain('"node-1":{"id":"node-1","content":"","hasContent":true');
     expect(value).toContain('"node-2":{"id":"node-2","content":"Node 2 content"');
-    expect(value).toContain('"nodeViewById":{"node-2":{"scrollTop":18,"selection":{"from":5,"to":7}}}');
+    expect(state?.nodeViewById).toEqual({
+      'node-2': {
+        scrollTop: 18,
+        selection: { from: 5, to: 7 },
+        updatedAt: null
+      }
+    });
     expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot');
     expect(invoke).toHaveBeenCalledWith('load_reading_progress');
     expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });

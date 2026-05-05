@@ -2,20 +2,20 @@ import type { Compartment } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
 import { applyLiveMarkdownState } from './codeMirrorLiveMarkdownState';
-import { applyEditorTextAnchorPresentation } from './codeMirrorTextAnchorPresentation';
-import type { EditorTextAnchorPresentation } from './EditorAdapter';
+import { applyEditorTextAnchorDecorations } from './codeMirrorTextAnchorPresentation';
+import type { EditorTextAnchorDecoration } from './EditorAdapter';
 
-export function syncEditorTextAnchorPresentation(args: {
+export function syncEditorTextAnchorDecorations(args: {
   compartment: Compartment;
-  textAnchorPresentation: EditorTextAnchorPresentation;
+  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   view: EditorView;
 }) {
-  applyEditorTextAnchorPresentation(args);
+  applyEditorTextAnchorDecorations(args);
 }
 
 export function syncEditorLiveMarkdownState(args: {
   liveMarkdownStateCompartment: Compartment;
-  textAnchorPresentation: EditorTextAnchorPresentation;
+  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;

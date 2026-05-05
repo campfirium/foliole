@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react';
+import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceLayoutGrid } from './WorkspaceLayoutGrid';
@@ -9,7 +10,6 @@ const lifecycle = vi.hoisted(() => ({
 }));
 
 vi.mock('./WorkspaceLayoutGridSections', () => {
-  const React = require('react') as typeof import('react');
   return {
     WorkspaceDocumentArea: () => {
       React.useEffect(() => {

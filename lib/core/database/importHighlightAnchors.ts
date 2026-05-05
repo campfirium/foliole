@@ -1,10 +1,14 @@
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
+import { extractImportedAnchorBlocks, stripImportedAnchorMarkup } from '../import/importAnchorMarkup.js';
 
 export interface AnchoredImportedHighlightRecord extends PreparedImportHighlightRecord {
   anchorId: string;
   from?: number;
+  kind: 'highlight' | 'cloze';
   to?: number;
 }
+
+const INLINE_ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)\b[^>]*>/g;
 
 function normalizeLineEndings(value: string) {
   return value.replace(/\r\n?/g, '\n');
@@ -39,21 +43,57 @@ function normalizeLooseWhitespaceWithMap(value: string) {
 }
 
 export function collectAnchoredImportedHighlights(content: string) {
-  const pattern = /<highlight id="([^"]+)">([\s\S]*?)<\/highlight id="\1">/g;
-  return [...content.matchAll(pattern)]
-    .map<AnchoredImportedHighlightRecord | null>((match) => {
-      const anchorId = match[1] ?? '';
-      const highlightContent = (match[2] ?? '').replace(/<\/?(?:highlight|cloze)\s+id="[^"]+"\s*>/g, '').trim();
-      if (!anchorId || !highlightContent) {
+  const projection = projectInlineAnchorContent(content);
+  return extractImportedAnchorBlocks(content)
+    .map<AnchoredImportedHighlightRecord | null>((block) => {
+      const anchorContent = stripImportedAnchorMarkup(content.slice(block.contentFrom, block.contentTo)).trim();
+      if (!block.id || !anchorContent) {
         return null;
       }
       return {
-        anchorId,
-        content: highlightContent,
-        label: null
+        anchorId: block.id,
+        content: anchorContent,
+        from: projection.rawToVisible[block.contentFrom] ?? 0,
+        kind: block.kind,
+        label: null,
+        to: projection.rawToVisible[block.contentTo] ?? 0
       };
     })
     .filter((highlight): highlight is AnchoredImportedHighlightRecord => highlight !== null);
+}
+
+function projectInlineAnchorContent(content: string) {
+  const rawToVisible: number[] = Array.from({ length: content.length + 1 }, () => 0);
+  let rawCursor = 0;
+  let visibleCursor = 0;
+
+  for (const match of content.matchAll(INLINE_ANCHOR_TAG_PATTERN)) {
+    const tagFrom = match.index ?? -1;
+    const tagText = match[0] ?? '';
+    const tagTo = tagFrom < 0 ? -1 : tagFrom + tagText.length;
+    if (tagFrom < 0 || tagTo < 0) {
+      continue;
+    }
+
+    while (rawCursor < tagFrom) {
+      rawToVisible[rawCursor] = visibleCursor;
+      rawCursor += 1;
+      visibleCursor += 1;
+    }
+    while (rawCursor < tagTo) {
+      rawToVisible[rawCursor] = visibleCursor;
+      rawCursor += 1;
+    }
+  }
+
+  while (rawCursor < content.length) {
+    rawToVisible[rawCursor] = visibleCursor;
+    rawCursor += 1;
+    visibleCursor += 1;
+  }
+
+  rawToVisible[content.length] = visibleCursor;
+  return { rawToVisible };
 }
 
 function findAvailableOccurrence(
@@ -113,31 +153,44 @@ export function applyImportedHighlightAnchors(input: {
   content: string;
   highlights: PreparedImportHighlightRecord[] | undefined;
 }) {
+  const content = stripImportedAnchorMarkup(input.content);
+  const inlineAnchors = collectAnchoredImportedHighlights(input.content);
   if (!input.highlights?.length) {
-    return { content: input.content, highlights: [] satisfies AnchoredImportedHighlightRecord[] };
+    return { content, highlights: inlineAnchors };
   }
 
-  let searchFrom = 0;
-  const occupiedRanges: Array<{ from: number; to: number }> = [];
-  const locatedHighlights: AnchoredImportedHighlightRecord[] = [];
+  let searchFrom = inlineAnchors.reduce((max, highlight) => Math.max(max, highlight.to ?? 0), 0);
+  const occupiedRanges: Array<{ from: number; to: number }> = inlineAnchors
+    .filter((highlight) => typeof highlight.from === 'number' && typeof highlight.to === 'number')
+    .map((highlight) => ({ from: highlight.from ?? 0, to: highlight.to ?? 0 }));
+  const locatedHighlights: AnchoredImportedHighlightRecord[] = [...inlineAnchors];
 
   input.highlights.forEach((highlight) => {
     const excerpt = highlight.content.trim();
     if (!excerpt) {
       return;
     }
-    const range = findAvailableOccurrence(input.content, excerpt, searchFrom, occupiedRanges);
+    const range = findAvailableOccurrence(content, excerpt, searchFrom, occupiedRanges);
     if (!range) {
       return;
     }
     const anchorId = `imported-highlight-${crypto.randomUUID()}`;
     searchFrom = range.to;
     occupiedRanges.push(range);
-    locatedHighlights.push({ ...highlight, anchorId, ...range });
+    locatedHighlights.push({ ...highlight, anchorId, ...range, kind: 'highlight' });
   });
 
   return {
-    content: input.content,
-    highlights: locatedHighlights
+    content,
+    highlights: locatedHighlights.sort((left, right) => {
+      const leftFrom = left.from ?? Number.MAX_SAFE_INTEGER;
+      const rightFrom = right.from ?? Number.MAX_SAFE_INTEGER;
+      if (leftFrom !== rightFrom) {
+        return leftFrom - rightFrom;
+      }
+      const leftTo = left.to ?? Number.MAX_SAFE_INTEGER;
+      const rightTo = right.to ?? Number.MAX_SAFE_INTEGER;
+      return leftTo - rightTo;
+    })
   };
 }

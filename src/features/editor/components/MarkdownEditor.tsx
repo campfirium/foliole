@@ -1,17 +1,15 @@
 import {
   type CSSProperties,
-  useLayoutEffect,
   useMemo,
   useRef,
   type MutableRefObject
 } from 'react';
 
 import { collectMarkdownImageReferences } from '../../../../lib/core/import/markdownImageReferences';
-import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
 import { useMouseGestureSettings } from '../../settings/context/MouseGestureSettingsProvider';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
-import type { EditorAdapter } from '../adapters/EditorAdapter';
 
+import { useEditorAdapter } from './markdownEditorAdapter';
 import { GestureTrailOverlay, buildGestureTrailPath } from './markdownEditorGestureTrail';
 import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
 import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
@@ -21,85 +19,6 @@ import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
 import { useMarkdownImagePreview } from './useMarkdownImagePreview';
 
-const EMPTY_TEXT_ANCHOR_PRESENTATION = {
-  inlineAnchorCompatibility: {
-    hiddenKeys: []
-  },
-  textAnchorDecorations: []
-} as const;
-
-function resolveTextAnchorPresentation(textAnchorPresentation: MarkdownEditorProps['textAnchorPresentation']) {
-  return textAnchorPresentation ?? EMPTY_TEXT_ANCHOR_PRESENTATION;
-}
-
-function useEditorAdapter(
-  hostRef: MutableRefObject<HTMLDivElement | null>,
-  debugId: string | undefined,
-  onChange: (value: string) => void,
-  onReady: ((adapter: EditorAdapter | null) => void) | undefined,
-  initialValue: string,
-  textAnchorPresentation: MarkdownEditorProps['textAnchorPresentation'],
-  hideTitleHeading: boolean,
-  onOpenNodeLink: ((title: string) => void) | undefined,
-  onPastedAnchors: MarkdownEditorProps['onPastedAnchors'],
-  readOnly: boolean | undefined
-) {
-  const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
-  const initialValueRef = useRef(initialValue);
-  const onChangeRef = useRef(onChange);
-  const onOpenNodeLinkRef = useRef(onOpenNodeLink);
-  const onPastedAnchorsRef = useRef(onPastedAnchors);
-  const onReadyRef = useRef(onReady);
-  const resolvedTextAnchorPresentation = resolveTextAnchorPresentation(textAnchorPresentation);
-
-  onChangeRef.current = onChange;
-  initialValueRef.current = initialValue;
-  onOpenNodeLinkRef.current = onOpenNodeLink;
-  onPastedAnchorsRef.current = onPastedAnchors;
-  onReadyRef.current = onReady;
-
-  useLayoutEffect(() => {
-    const host = hostRef.current;
-    if (!host || adapterRef.current) {
-      return;
-    }
-
-    const adapter = new CodeMirrorEditorAdapter(host, {
-      hideTitleHeading,
-      initialContent: initialValueRef.current,
-      onChange: (nextValue) => onChangeRef.current(nextValue),
-      onOpenNodeLink: (title) => onOpenNodeLinkRef.current?.(title),
-      onPastedAnchors: (payload) => onPastedAnchorsRef.current?.(payload),
-      readOnly,
-      textAnchorPresentation: resolvedTextAnchorPresentation
-    });
-
-    adapterRef.current = adapter;
-    if (debugId) {
-      registerDebugEditorAdapter(debugId, adapter);
-    }
-    onReadyRef.current?.(adapter);
-
-    return () => {
-      onReadyRef.current?.(null);
-      if (debugId) {
-        clearDebugEditorAdapter(debugId);
-      }
-      adapter.destroy();
-      adapterRef.current = null;
-    };
-  }, [debugId, hostRef]);
-
-  useLayoutEffect(() => {
-    adapterRef.current?.setTextAnchorPresentation?.(resolvedTextAnchorPresentation);
-  }, [resolvedTextAnchorPresentation]);
-
-  useLayoutEffect(() => {
-    adapterRef.current?.setReadOnly?.(readOnly === true);
-  }, [readOnly]);
-
-  return adapterRef;
-}
 function MarkdownEditorSurface(args: {
   ariaLabel: string | undefined;
   className: string | undefined;
@@ -191,7 +110,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.onChange,
     props.onReady,
     props.value,
-    props.textAnchorPresentation,
+    props.textAnchorDecorations,
     props.hideTitleHeading ?? false,
     props.onOpenNodeLink,
     props.onPastedAnchors,

@@ -97,11 +97,11 @@ it('keeps full normalized sentence in derived title', () => {
   );
 });
 
-it('does not include anchor tags in derived title', () => {
+it('derives title from plain markdown content without extra cleanup branches', () => {
   const seedNodeId = getSeedNodeId();
   useWorkspaceStore
     .getState()
-    .updateNodeContent(seedNodeId, '# Intro <cloze id="1">answer</cloze id="1">');
+    .updateNodeContent(seedNodeId, '# Intro answer');
 
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Intro answer');
 });
@@ -272,10 +272,9 @@ it('deletes node and switches active node', () => {
   expect(useWorkspaceStore.getState().activeNodeId).toBe(seedNodeId);
 });
 
-it('keeps linked anchor tags in parent content during soft delete', () => {
+it('keeps parent content unchanged during soft delete', () => {
   const seedNodeId = getSeedNodeId();
-  const parentContent =
-    'before <cloze id="1">answer</cloze id="1"> and <highlight id="2">keep</highlight id="2"> after';
+  const parentContent = 'before answer and keep after';
   useWorkspaceStore.getState().updateNodeContent(seedNodeId, parentContent);
 
   const createdId = useWorkspaceStore
@@ -293,7 +292,7 @@ it('keeps linked anchor tags in parent content during soft delete', () => {
 
 it('keeps parent content unchanged when deleting unlinked child node', () => {
   const seedNodeId = getSeedNodeId();
-  const parentContent = 'before <highlight id="1">text</highlight id="1"> after';
+  const parentContent = 'before text after';
   useWorkspaceStore.getState().updateNodeContent(seedNodeId, parentContent);
 
   const createdId = useWorkspaceStore

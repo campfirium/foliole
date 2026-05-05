@@ -24,6 +24,137 @@ export function stagePendingNode1Sync() {
   );
 }
 
+export function stagePendingNodeDocument() {
+  window.localStorage.setItem(
+    'foliole-pending-node-sync-v1',
+    JSON.stringify({
+      nodesById: {
+        'node-1': {
+          nodeId: 'node-1',
+          parentNodeId: null,
+          priority: null,
+          desiredRetention: null,
+          title: 'Node 1',
+          isTitleManual: false,
+          hideTitleHeading: false,
+          content: 'Pending node 1 draft',
+          reveal: null,
+          anchorLink: null,
+          reading: null,
+          position: 0,
+          createdAt: '2026-03-06T00:00:00.000Z',
+          updatedAt: '2026-03-18T00:00:00.000Z'
+        }
+      }
+    })
+  );
+}
+
+export function stagePendingAnchorChildNode() {
+  window.localStorage.setItem(
+    'foliole-pending-node-sync-v1',
+    JSON.stringify({
+      nodesById: {
+        'node-highlight': {
+          nodeId: 'node-highlight',
+          parentNodeId: 'node-2',
+          kind: 'topic',
+          priority: null,
+          desiredRetention: null,
+          title: 'Better',
+          isTitleManual: false,
+          hideTitleHeading: false,
+          content: 'Better',
+          reveal: null,
+          anchorLink: {
+            id: 'hl-1',
+            kind: 'highlight',
+            locator: {
+              from: 6,
+              originalText: 'Better',
+              to: 12
+            }
+          },
+          reading: null,
+          position: 1,
+          createdAt: '2026-03-06T00:00:00.000Z',
+          updatedAt: '2026-03-18T00:00:00.000Z'
+        }
+      }
+    })
+  );
+}
+
+export function stagePendingUnresolvedAnchorChildNode() {
+  window.localStorage.setItem(
+    'foliole-pending-node-sync-v1',
+    JSON.stringify({
+      nodesById: {
+        'node-highlight': {
+          nodeId: 'node-highlight',
+          parentNodeId: 'node-2',
+          kind: 'topic',
+          priority: null,
+          desiredRetention: null,
+          title: 'Beta',
+          isTitleManual: false,
+          hideTitleHeading: false,
+          content: 'Beta',
+          reveal: null,
+          anchorLink: {
+            id: 'hl-1',
+            kind: 'highlight',
+            locator: {
+              from: 6,
+              originalText: 'Beta',
+              to: 6
+            }
+          },
+          reading: null,
+          position: 1,
+          createdAt: '2026-03-06T00:00:00.000Z',
+          updatedAt: '2026-03-18T00:00:00.000Z'
+        }
+      }
+    })
+  );
+}
+
+export function stagePendingUnresolvedClozeChildNode() {
+  window.localStorage.setItem(
+    'foliole-pending-node-sync-v1',
+    JSON.stringify({
+      nodesById: {
+        'node-cloze': {
+          nodeId: 'node-cloze',
+          parentNodeId: 'node-2',
+          kind: 'item',
+          priority: null,
+          desiredRetention: null,
+          title: 'Alpha [...] Gamma',
+          isTitleManual: false,
+          hideTitleHeading: false,
+          content: 'Alpha [...] Gamma',
+          reveal: 'Beta',
+          anchorLink: {
+            id: 'cloze-1',
+            kind: 'cloze',
+            locator: {
+              from: 6,
+              originalText: 'Beta',
+              to: 6
+            }
+          },
+          reading: null,
+          position: 1,
+          createdAt: '2026-03-06T00:00:00.000Z',
+          updatedAt: '2026-03-18T00:00:00.000Z'
+        }
+      }
+    })
+  );
+}
+
 export function stageLegacyWorkspacePayload() {
   window.localStorage.setItem(
     'foliole-workspace-v1',

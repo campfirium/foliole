@@ -1,7 +1,3 @@
-import { stripAnchorBlocks } from './anchorBlocks.js';
-
-const ANCHOR_BLOCK_PATTERN = /<(highlight|cloze)\s+id="([^"]+)">([\s\S]*?)<\/\1 id="\2">/g;
-
 export interface ExternalAnchorRange {
   from: number;
   kind: 'highlight' | 'cloze';
@@ -14,21 +10,6 @@ function renderExternalAnchorOpen(kind: 'highlight' | 'cloze') {
 
 function renderExternalAnchorClose(kind: 'highlight' | 'cloze') {
   return kind === 'highlight' ? '==' : '</u>';
-}
-
-export function convertAnchoredMarkdownToExternal(value: string): string {
-  let converted = value;
-  let previous = '';
-
-  while (converted !== previous) {
-    previous = converted;
-    converted = converted.replace(ANCHOR_BLOCK_PATTERN, (_match, kind: string, _id: string, inner: string) => {
-      const nestedContent = convertAnchoredMarkdownToExternal(inner);
-      return kind === 'highlight' ? `==${nestedContent}==` : `<u>${nestedContent}</u>`;
-    });
-  }
-
-  return stripAnchorBlocks(converted);
 }
 
 export function renderExternalMarkdownWithAnchorRanges(

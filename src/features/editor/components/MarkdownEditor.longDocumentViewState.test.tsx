@@ -42,7 +42,7 @@ function createMockCodeMirrorEditorAdapterClass() {
     setSearchDecorations(searchDecorations: unknown) {
       mockSetSearchDecorations(searchDecorations);
     }
-    setTextAnchorPresentation() {}
+    setTextAnchorDecorations() {}
     setHideTitleHeading(value: boolean) {
       mockSetHideTitleHeading(value);
     }

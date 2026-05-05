@@ -4,7 +4,7 @@ import type { StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.j
 import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { renderArticleBodyFromLocators } from './articleMirrorAnchors.js';
-import { renderMarkedSource, stripLeadingMatchingHeading } from './articleMirrorMarkup.js';
+import { stripLeadingMatchingHeading } from './articleMirrorMarkup.js';
 import {
   compactNoteText,
   normalizeClozeComparableText,
@@ -18,7 +18,6 @@ import {
   createRootReservedDirectoryNames,
   resolveArticleDirectory
 } from './mirrorTargetDirectories.js';
-const INLINE_ANCHOR_PATTERN = /<(highlight|cloze)\s+id="([^"]+)">([\s\S]*?)<\/\1 id="\2">/g;
 type ArticleNode = WorkspaceSnapshot['nodesById'][string];
 
 export interface ArticleMirrorTarget {
@@ -149,21 +148,12 @@ function createExtraNote(
 
 function renderArticleBody(article: ArticleNode, derivedByAnchorKey: Map<string, ArticleNode[]>) {
   const articleTitle = article.title.trim() || 'Untitled';
-  const hasInlineAnchors = /<(highlight|cloze)\s+id="[^"]+">/.test(article.content);
-  const rendered =
-    hasInlineAnchors
-      ? article.content
-          .replace(INLINE_ANCHOR_PATTERN, (match, rawKind, anchorId, sourceText, offset) => {
-            const kind = rawKind as 'highlight' | 'cloze';
-            return renderMarkedSource(kind, sourceText) + createExtraNote(article, kind, sourceText, anchorId, offset, offset + match.length, derivedByAnchorKey);
-          })
-          .replace(/<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g, '')
-      : renderArticleBodyFromLocators({
-          articleContent: article.content,
-          createExtraNote: (span) =>
-            createExtraNote(article, span.kind, span.sourceText, span.anchorId, span.from, span.to, derivedByAnchorKey),
-          derivedByAnchorKey
-        });
+  const rendered = renderArticleBodyFromLocators({
+    articleContent: article.content,
+    createExtraNote: (span) =>
+      createExtraNote(article, span.kind, span.sourceText, span.anchorId, span.from, span.to, derivedByAnchorKey),
+    derivedByAnchorKey
+  });
   return stripLeadingMatchingHeading(rendered, articleTitle);
 }
 

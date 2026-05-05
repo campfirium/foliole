@@ -3,7 +3,7 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorTextAnchorPresentation } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
@@ -43,7 +43,7 @@ export interface DocumentPanelBodyLayoutProps {
     title: string;
   };
   fitBlockImagesToViewport?: boolean;
-  textAnchorPresentation?: EditorTextAnchorPresentation;
+  textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   hasAnswerSection: boolean;
   isDocumentResizing: boolean;
   onAnswerChange: (answer: string) => void;
@@ -151,7 +151,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         onShouldSuppressSelectionRestore={props.onShouldSuppressSelectionRestore}
         readOnly={props.readOnly}
         onSetReadingPositionSelection={props.onSetReadingPositionSelection}
-        textAnchorPresentation={props.textAnchorPresentation}
+        textAnchorDecorations={props.textAnchorDecorations}
         value={props.editorContent}
       />
     </div>

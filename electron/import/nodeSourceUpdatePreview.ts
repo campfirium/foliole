@@ -50,14 +50,6 @@ function countCurrentHighlights(nodeId: string) {
   return row?.count ?? 0;
 }
 
-function stripImportedAnchorTags(content: string) {
-  return content.replace(/<\/?(?:highlight|cloze)\s+id="[^"]+">/g, '');
-}
-
-function hasImportedAnchorTags(content: string) {
-  return /<\/?(?:highlight|cloze)\s+id="[^"]+">/.test(content);
-}
-
 function stripUnmatchedSidecarAppendix(content: string) {
   const marker = '\n\n## Unmatched Sidecar Highlights\n\n';
   const markerIndex = content.indexOf(marker);
@@ -66,8 +58,11 @@ function stripUnmatchedSidecarAppendix(content: string) {
 
 function normalizeComparableContent(content: string, sourceProfile?: string) {
   const normalized = content.replace(/\r\n?/g, '\n').trim();
-  const comparable = hasImportedAnchorTags(normalized) ? stripImportedAnchorTags(normalized).trim() : normalized;
-  return sourceProfile === 'body_with_highlight_sidecar' ? stripUnmatchedSidecarAppendix(comparable) : comparable;
+  return sourceProfile === 'body_with_highlight_sidecar' ? stripUnmatchedSidecarAppendix(normalized) : normalized;
+}
+
+export function normalizeNodeSourcePreviewContent(content: string) {
+  return content.replace(/\r\n?/g, '\n');
 }
 
 function resolveRuleConfig(ruleId: string) {
@@ -205,9 +200,9 @@ export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeS
   return {
     checked_at: checkedAt,
     current_highlight_count: countCurrentHighlights(sourceNode.id),
-    current_content: sourceNode.content,
+    current_content: normalizeNodeSourcePreviewContent(sourceNode.content),
     source_node_id: sourceNode.id,
     updated_highlight_count: prepared.matchedHighlights?.length ?? 0,
-    updated_content: prepared.content
+    updated_content: normalizeNodeSourcePreviewContent(prepared.content)
   };
 }

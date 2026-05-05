@@ -19,7 +19,7 @@ const BASE_NODE: Node = {
   updatedAt: '2026-03-25T09:00:00.000Z'
 };
 
-it('hides unresolved text locator highlights from the sidebar list', () => {
+it('keeps unresolved text locator highlights visible in the sidebar list', () => {
   const parent: Node = {
     ...BASE_NODE,
     id: 'node-parent',
@@ -52,7 +52,8 @@ it('hides unresolved text locator highlights from the sidebar list', () => {
     />
   );
 
-  expect(screen.getByText('This node and its child nodes have no highlight nodes yet.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Highlight Beta' })).toBeInTheDocument();
+  expect(screen.getByText('Total highlights: 1')).toBeInTheDocument();
 });
 
 it('keeps resolved text locator highlights visible in the sidebar list', () => {
@@ -130,7 +131,7 @@ it('keeps text locator highlights visible when the parent document body is not l
   expect(screen.getByText('Total highlights: 1')).toBeInTheDocument();
 });
 
-it('hides unresolved text locator clozes from the sidebar list', () => {
+it('keeps unresolved text locator clozes visible in the sidebar list', () => {
   const parent: Node = {
     ...BASE_NODE,
     id: 'node-parent',
@@ -164,5 +165,43 @@ it('hides unresolved text locator clozes from the sidebar list', () => {
     />
   );
 
-  expect(screen.getByText('This node and its child nodes have no highlight nodes yet.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Cloze Alpha [...] Gamma' })).toBeInTheDocument();
+  expect(screen.getByText('Total highlights: 1')).toBeInTheDocument();
+});
+
+it('keeps pdf locator highlights visible in the sidebar list', () => {
+  const parent: Node = {
+    ...BASE_NODE,
+    id: 'node-parent',
+    content: 'Parent content'
+  };
+  const pdfHighlight: Node = {
+    ...BASE_NODE,
+    id: 'node-highlight',
+    parentNodeId: 'node-parent',
+    content: 'Picked text',
+    title: 'Picked text',
+    anchorLink: {
+      id: 'pdf-hl-1',
+      kind: 'highlight',
+      locator: {
+        page: 4,
+        x: 0.3,
+        y: 0.6
+      }
+    }
+  };
+
+  render(
+    <WorkspaceRightSidebarHighlightsPanel
+      activeNodeId="node-parent"
+      nodeOrder={['node-parent', 'node-highlight']}
+      trashedNodeIds={[]}
+      nodesById={{ 'node-parent': parent, 'node-highlight': pdfHighlight }}
+      onRevealHighlight={() => undefined}
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Highlight Picked text' })).toBeInTheDocument();
+  expect(screen.getByText('Total highlights: 1')).toBeInTheDocument();
 });

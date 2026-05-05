@@ -34,10 +34,10 @@ function createWorkspaceState(nodesById: Record<string, Node>, trashedNodeIds: s
 }
 
 describe('computeDeleteNodesMutation', () => {
-  it('keeps inline text anchors in parent content during soft delete', () => {
+  it('keeps parent content unchanged during soft delete', () => {
     const parentNode = createNode({
       id: 'parent',
-      content: 'before <cloze id="1">answer</cloze id="1"> after',
+      content: 'before answer after',
       hasContent: true
     });
     const childNode = createNode({
@@ -56,8 +56,37 @@ describe('computeDeleteNodesMutation', () => {
       ['child']
     );
 
-    expect(mutation?.patch.nodesById.parent.content).toBe('before <cloze id="1">answer</cloze id="1"> after');
+    expect(mutation?.patch.nodesById.parent.content).toBe('before answer after');
     expect(mutation?.parentNodesToSync).toEqual([]);
+  });
+
+  it('keeps pure markdown parent content unchanged when soft deleting an unresolved locator highlight', () => {
+    const parentNode = createNode({
+      id: 'parent',
+      content: 'before answer after',
+      hasContent: true
+    });
+    const childNode = createNode({
+      id: 'child',
+      parentNodeId: 'parent',
+      kind: 'topic',
+      content: 'answer',
+      anchorLink: {
+        id: 'anchor-1',
+        kind: 'highlight',
+        locator: { from: 7, originalText: 'answer', to: 7 }
+      },
+      hasContent: true
+    });
+
+    const mutation = computeDeleteNodesMutation(
+      createWorkspaceState({ parent: parentNode, child: childNode }),
+      ['child']
+    );
+
+    expect(mutation?.patch.nodesById.parent.content).toBe('before answer after');
+    expect(mutation?.parentNodesToSync).toEqual([]);
+    expect(mutation?.patch.trashedNodeIds).toEqual(['child']);
   });
 });
 
@@ -94,21 +123,15 @@ function expectPermanentDeleteResult(args: {
 }
 
 describe('computeDeleteNodesPermanentlyMutation', () => {
-  it('removes opaque-id inline text anchors from parent content during permanent delete', () => {
+  it('keeps parent content unchanged during permanent delete', () => {
     const mutation = expectPermanentDeleteResult({
       childAnchorLink: { id: 'anchor-1', kind: 'highlight' },
       expectedContent: 'before answer after',
-      expectedSyncedParentCount: 1,
-      parentContent: 'before <highlight id="anchor-1">answer</highlight id="anchor-1"> after'
+      expectedSyncedParentCount: 0,
+      parentContent: 'before answer after'
     });
 
-    expect(mutation?.patch.nodesById.parent.title).toBe('before answer after');
-    expect(mutation?.parentNodesToSync).toEqual([
-      expect.objectContaining({
-        id: 'parent',
-        content: 'before answer after'
-      })
-    ]);
+    expect(mutation?.patch.nodesById.parent.title).toBe('parent');
   });
 
   it('keeps pure markdown parent content unchanged for locator-era highlights', () => {
@@ -128,6 +151,21 @@ describe('computeDeleteNodesPermanentlyMutation', () => {
         id: 'anchor-1',
         kind: 'highlight',
         locator: { from: 7, originalText: 'answer', to: 13 }
+      },
+      expectedContent: 'before answer after',
+      expectedSyncedParentCount: 0,
+      parentContent: 'before answer after'
+    });
+
+    expect(mutation?.patch.nodesById.parent.title).toBe('parent');
+  });
+
+  it('keeps unresolved zero-width locator highlights from rewriting parent content during permanent delete', () => {
+    const mutation = expectPermanentDeleteResult({
+      childAnchorLink: {
+        id: 'anchor-1',
+        kind: 'highlight',
+        locator: { from: 7, originalText: 'answer', to: 7 }
       },
       expectedContent: 'before answer after',
       expectedSyncedParentCount: 0,

@@ -1,6 +1,10 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
-import type { EditorAdapter, EditorDiffDecorations, EditorTextAnchorPresentation } from '../adapters/EditorAdapter';
+import type {
+  EditorAdapter,
+  EditorDiffDecorations,
+  EditorTextAnchorDecoration
+} from '../adapters/EditorAdapter';
 import type { EditorSelection } from '../adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 
@@ -18,7 +22,7 @@ export interface MarkdownEditorProps {
   className?: string;
   contentPaddingBottom?: string;
   fitBlockImagesToViewport?: boolean;
-  textAnchorPresentation?: EditorTextAnchorPresentation;
+  textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   debugId?: string;
   hideTitleHeading?: boolean;
   hideScrollbar?: boolean;

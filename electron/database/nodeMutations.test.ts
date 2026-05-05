@@ -187,14 +187,15 @@ it('deletes subtree nodes and rewrites node_order while clearing review side tab
   expect(getNodeReadingRow('node-child')).toBeUndefined();
 });
 
-it('cleans inline text anchors from surviving parents when permanently deleting linked child nodes', () => {
+it('keeps surviving parent content unchanged when permanently deleting linked child nodes', () => {
+  const parentContent = 'before answer after';
   upsertNodeSnapshot({
     nodeId: 'node-parent',
     parentNodeId: null,
     kind: 'topic',
     title: 'node-parent',
     isTitleManual: true,
-    content: 'before <cloze id="1">answer</cloze id="1"> after',
+    content: parentContent,
     reveal: null,
     anchorLink: null,
     position: 0,
@@ -209,7 +210,15 @@ it('cleans inline text anchors from surviving parents when permanently deleting 
     isTitleManual: true,
     content: 'before [...] after',
     reveal: 'answer',
-    anchorLink: { id: '1', kind: 'cloze' },
+    anchorLink: {
+      id: '1',
+      kind: 'cloze',
+      locator: {
+        from: parentContent.indexOf('answer'),
+        originalText: 'answer',
+        to: parentContent.indexOf('answer') + 'answer'.length
+      }
+    },
     position: 1,
     createdAt: '2026-03-06T00:00:00.000Z',
     updatedAt: '2026-03-06T00:00:00.000Z'
@@ -224,8 +233,8 @@ it('cleans inline text anchors from surviving parents when permanently deleting 
     nodeOrder: ['node-parent']
   });
 
-  expect(affectedParentNodeIds).toEqual(['node-parent']);
-  expect(getNodeRow('node-parent')?.content).toBe('before answer after');
+  expect(affectedParentNodeIds).toEqual([]);
+  expect(getNodeRow('node-parent')?.content).toBe(parentContent);
   expect(getNodeRow('node-child')).toBeUndefined();
 });
 

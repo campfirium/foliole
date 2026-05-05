@@ -2,11 +2,11 @@ import { type Compartment } from '@codemirror/state';
 import { type EditorView } from '@codemirror/view';
 
 import { dispatchLiveMarkdownReconfigure } from './codeMirrorEditorAdapterSupport';
-import type { EditorTextAnchorPresentation } from './EditorAdapter';
+import type { EditorTextAnchorDecoration } from './EditorAdapter';
 
 export function applyLiveMarkdownState(args: {
   liveMarkdownStateCompartment: Compartment;
-  textAnchorPresentation: EditorTextAnchorPresentation;
+  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
@@ -16,7 +16,7 @@ export function applyLiveMarkdownState(args: {
 }) {
   dispatchLiveMarkdownReconfigure({
     compartment: args.liveMarkdownStateCompartment,
-    textAnchorPresentation: args.textAnchorPresentation,
+    textAnchorDecorations: args.textAnchorDecorations,
     hideTitleHeading: args.hideTitleHeading,
     imageClozePresentationVersion: args.imageClozePresentationVersion,
     nodeId: args.nodeId,

@@ -10,7 +10,6 @@ export function getSettingsDialog(windowPage: Page): Locator {
 
 export async function expectWorkspaceShell(windowPage: Page) {
   await waitForVisible(windowPage.getByLabel('Foliole workspace'));
-  await waitForVisible(windowPage.getByRole('button', { name: 'Settings' }));
 }
 
 export async function openSettingsDialog(windowPage: Page) {

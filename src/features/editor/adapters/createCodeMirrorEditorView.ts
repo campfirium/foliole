@@ -9,7 +9,7 @@ import {
 
 export function createCodeMirrorEditorView(args: {
   diffDecorationsCompartment: Compartment;
-  textAnchorPresentation: import('./EditorAdapter').EditorTextAnchorPresentation;
+  textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   host: HTMLElement;
   imageClozePresentationVersion: number;
@@ -30,7 +30,7 @@ export function createCodeMirrorEditorView(args: {
       doc: args.options.initialContent,
       extensions: createCodeMirrorEditorExtensions({
         diffDecorationsCompartment: args.diffDecorationsCompartment,
-        textAnchorPresentation: args.textAnchorPresentation,
+        textAnchorDecorations: args.textAnchorDecorations,
         hideTitleHeading: args.hideTitleHeading,
         imageClozePresentationVersion: args.imageClozePresentationVersion,
         liveMarkdownCompartment: args.liveMarkdownCompartment,

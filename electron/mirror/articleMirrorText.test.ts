@@ -11,8 +11,8 @@ import {
 } from './articleMirrorText.js';
 
 describe('articleMirrorText', () => {
-  it('strips opaque anchor tags from comparable text', () => {
-    const value = '<highlight id="anchor-1">Alpha</highlight id="anchor-1">\n<cloze id="anchor-2">Beta</cloze id="anchor-2">';
+  it('keeps plain text unchanged while normalizing comparable text', () => {
+    const value = 'Alpha\nBeta';
 
     expect(stripAnchorTags(value)).toBe('Alpha\nBeta');
     expect(normalizeComparableText(value)).toBe('Alpha Beta');
@@ -20,9 +20,7 @@ describe('articleMirrorText', () => {
     expect(preserveNoteLines(value)).toBe('Alpha\nBeta');
   });
 
-  it('normalizes placeholder variants after stripping opaque anchors', () => {
-    const value = 'Before <cloze id="anchor-2">answer</cloze id="anchor-2"> After';
-
-    expect(normalizeClozeComparableText(value.replace('answer', '【...】'))).toBe('Before[...]After');
+  it('normalizes placeholder variants in plain cloze text', () => {
+    expect(normalizeClozeComparableText('Before 【...】 After')).toBe('Before[...]After');
   });
 });

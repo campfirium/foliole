@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Node } from '../../nodes/model/nodeTypes';
 
-import {
-  collectDocumentTextAnchorDecorations,
-  collectDocumentTextAnchorPresentation,
-  collectLegacyInlineAnchorKeys
-} from './documentTextAnchorDecorations';
+import { collectDocumentTextAnchorDecorations } from './documentTextAnchorDecorations';
 
 function createHighlightChildNode(overrides: {
   locator: { from: number; originalText: string; to: number };
@@ -68,46 +64,6 @@ function expectHighlightDecorationForContent(content: string, locator: { from: n
   ]);
 }
 
-function createLegacyHiddenKeyArgs(parentContent: string) {
-  return {
-    activeNodeId: 'node-1',
-    parentContent,
-    nodesById: {
-      'child-1': {
-        id: 'child-1',
-        parentNodeId: 'node-1',
-        kind: 'topic' as const,
-        title: 'Child',
-        content: 'Beta',
-        anchorLink: { id: 'anchor-1', kind: 'highlight' as const },
-        reveal: null,
-        review: null,
-        createdAt: '2026-04-14T00:00:00.000Z',
-        updatedAt: '2026-04-14T00:00:00.000Z'
-      }
-    },
-    trashedNodeIds: ['child-1']
-  };
-}
-
-function createPresentationNodes(content: string) {
-  return {
-    'node-1': createParentNode(content),
-    'node-2': createHighlightChildNode({
-      locator: {
-        from: content.indexOf('Beta'),
-        originalText: 'Beta',
-        to: content.indexOf('Beta') + 'Beta'.length
-      },
-      parentNodeId: 'node-1'
-    }),
-    'child-1': {
-      ...createLegacyHiddenKeyArgs(content).nodesById['child-1'],
-      title: 'Legacy child'
-    }
-  };
-}
-
 function registerDocumentTextAnchorDecorationTests() {
   it('collects direct child text anchors for the active document', () => {
     const content = 'Alpha Beta Gamma';
@@ -146,38 +102,8 @@ function registerDocumentTextAnchorDecorationTests() {
       to: 10
     });
   });
-
-  it('skips legacy hidden keys when the parent content is already pure markdown', () => {
-    expect(collectLegacyInlineAnchorKeys(createLegacyHiddenKeyArgs('Alpha Beta Gamma'))).toEqual([]);
-  });
-}
-
-function registerDocumentTextAnchorPresentationTests() {
-  it('collects both text decorations and legacy hidden keys from one presentation model', () => {
-    const content = 'Alpha <highlight id="anchor-1">Beta</highlight id="anchor-1"> Gamma';
-    expect(
-      collectDocumentTextAnchorPresentation({
-        activeNodeId: 'node-1',
-        nodesById: createPresentationNodes(content),
-        parentContent: content,
-        trashedNodeIds: ['child-1']
-      })
-    ).toEqual({
-      inlineAnchorCompatibility: {
-        hiddenKeys: ['highlight:anchor-1']
-      },
-      textAnchorDecorations: [
-        {
-          from: content.indexOf('Beta'),
-          kind: 'highlight',
-          to: content.indexOf('Beta') + 'Beta'.length
-        }
-      ]
-    });
-  });
 }
 
 describe('documentTextAnchorDecorations', () => {
   registerDocumentTextAnchorDecorationTests();
-  registerDocumentTextAnchorPresentationTests();
 });

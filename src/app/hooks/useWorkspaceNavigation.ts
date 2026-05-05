@@ -33,7 +33,7 @@ interface WorkspaceNavigationHandlers {
   handleGoForward: () => void;
   handleGoParent: () => void;
   handleSelectBreadcrumbNode: (nodeId: string) => void;
-  handleSelectNode: (nodeId: string) => void;
+  handleSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
 }
 
 type PendingAnchor = NodeAnchorLink;
@@ -69,12 +69,14 @@ function usePendingAnchorNavigation(
       return;
     }
     if (!activeNodeContent) {
-      clearPendingAnchor();
+      return;
+    }
+    const adapter = editorRef.current;
+    if (!adapter) {
       return;
     }
     const selection = findAnchorSelection(activeNodeContent, pendingAnchor);
-    const adapter = editorRef.current;
-    if (!selection || !adapter) {
+    if (!selection) {
       clearPendingAnchor();
       return;
     }

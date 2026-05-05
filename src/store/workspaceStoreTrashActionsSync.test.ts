@@ -25,6 +25,43 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
+function createUnresolvedLocatorHighlightHarness() {
+  const fixture = createWorkspaceNodeActionsFixture();
+  fixture.nodesById['node-1'] = {
+    ...fixture.nodesById['node-1'],
+    content: 'before answer after',
+    title: 'Parent'
+  };
+  fixture.nodeOrder = [...fixture.nodeOrder, 'node-highlight'];
+  fixture.nodesById['node-highlight'] = {
+    id: 'node-highlight',
+    parentNodeId: 'node-1',
+    kind: 'topic',
+    title: 'answer',
+    isTitleManual: false,
+    hideTitleHeading: false,
+    hasContent: true,
+    content: 'answer',
+    anchorLink: {
+      id: 'anchor-1',
+      kind: 'highlight',
+      locator: { from: 7, originalText: 'answer', to: 7 }
+    },
+    hasReveal: false,
+    reveal: null,
+    review: null,
+    createdAt: '2026-04-15T00:00:00.000Z',
+    updatedAt: '2026-04-15T00:00:00.000Z'
+  };
+  const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
+  const actions = createWorkspaceNodeActions(harness.setState);
+  return { actions, harness };
+}
+
+function expectParentDocumentUntouched(harness: ReturnType<typeof createUnresolvedLocatorHighlightHarness>['harness']) {
+  expect(harness.getState().nodesById['node-1']?.content).toBe('before answer after');
+}
+
 describe('createWorkspaceNodeActions soft delete sync', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,10 +71,15 @@ describe('createWorkspaceNodeActions soft delete sync', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
-    actions.updateNodeContent('node-1', 'before <cloze id="1">answer</cloze id="1"> after');
+    actions.updateNodeContent('node-1', 'before answer after');
     const nodeId = actions.createQANodeFromSelection('node-1', 'Prompt [...]', 'answer', '1', {
       id: '1',
-      kind: 'cloze'
+      kind: 'cloze',
+      locator: {
+        from: 'before answer after'.indexOf('answer'),
+        originalText: 'answer',
+        to: 'before answer after'.indexOf('answer') + 'answer'.length
+      }
     });
     if (!nodeId) {
       throw new Error('expected QA node id');
@@ -81,6 +123,50 @@ describe('createWorkspaceNodeActions soft delete sync', () => {
 
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1);
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [nodeId] });
+  });
+});
+
+describe('createWorkspaceNodeActions unresolved locator lifecycle sync', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('soft deletes and restores unresolved locator highlights without rewriting the parent document', () => {
+    const { actions, harness } = createUnresolvedLocatorHighlightHarness();
+
+    vi.clearAllMocks();
+    actions.deleteNode('node-highlight');
+
+    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+    expect(syncSoftDeleteNodesToRuntime).toHaveBeenCalledWith({
+      nodeIds: ['node-highlight'],
+      deletedAt: expect.any(String)
+    });
+    expectParentDocumentUntouched(harness);
+
+    vi.clearAllMocks();
+    actions.restoreNode('node-highlight');
+
+    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+    expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: ['node-highlight'] });
+    expect(harness.getState().trashedNodeIds).toEqual([]);
+    expectParentDocumentUntouched(harness);
+  });
+
+  it('permanently deletes unresolved locator highlights without rewriting the parent document', () => {
+    const { actions, harness } = createUnresolvedLocatorHighlightHarness();
+
+    actions.deleteNode('node-highlight');
+    vi.clearAllMocks();
+    actions.deleteNodePermanently('node-highlight');
+
+    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+    expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
+      nodeIds: ['node-highlight'],
+      nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
+    });
+    expectParentDocumentUntouched(harness);
+    expect(harness.getState().nodesById['node-highlight']).toBeUndefined();
   });
 });
 

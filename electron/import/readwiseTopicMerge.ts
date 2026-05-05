@@ -185,6 +185,7 @@ export async function mergeReadwiseTopicHighlightsFromFile(
         highlights: readwiseUpdate.highlights,
         importedAt,
         parentNodeId: nodeId,
+        parentContent: readwiseUpdate.content,
         startPosition: readNextNodePosition()
       });
     }

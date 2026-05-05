@@ -1,5 +1,4 @@
 import type { EditorAdapter, EditorSelection } from '../features/editor/adapters/EditorAdapter';
-import { stripAnchorBlocks } from '../features/editor/model/anchorBlocks';
 import type { TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 
 export interface SelectionCommandEntry {
@@ -74,22 +73,18 @@ function buildSelectionCommandPayload(
   }
   const entries = selections
     .map((range): SelectionCommandEntry | null => {
-      const selectionText = stripAnchorTags(content.slice(range.from, range.to)).trim();
+      const selectionText = content.slice(range.from, range.to).trim();
       if (!selectionText) {
         return null;
       }
       const prefix = content.slice(0, range.from);
       const suffix = content.slice(range.to);
       const clozeRawContent = `${prefix}${CLOZE_PLACEHOLDER}${suffix}`;
-      const clozeContent = stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
+      const clozeContent = clozeRawContent || CLOZE_PLACEHOLDER;
       const entry = {
         anchorId: createAnchorId(),
         clozeContent,
-        locator: {
-          from: range.from,
-          originalText: selectionText,
-          to: range.to
-        },
+        locator: buildTextLocator(range, selectionText),
         range,
         selectionText
       };
@@ -111,7 +106,14 @@ function buildSelectionCommandPayload(
   };
 }
 
-function stripAnchorTags(value: string) { return stripAnchorBlocks(value); }
+function buildTextLocator(range: EditorSelection, selectionText: string): TextAnchorLocator {
+  const from = range.from;
+  return {
+    from,
+    originalText: selectionText,
+    to: from + selectionText.length
+  };
+}
 
 function getNormalizedSelectionRanges(adapter: EditorAdapter, max: number) {
   return normalizeSelectionRanges(adapter.getSelectionRanges(), max);
@@ -125,10 +127,19 @@ function normalizeSelectionRanges(selections: EditorSelection[], max: number) {
     }))
     .filter((selection) => selection.from < selection.to)
     .sort((left, right) => left.from - right.from);
-  return normalizedSelections.filter((selection, index) => {
-    const previous = normalizedSelections[index - 1];
-    return !previous || previous.from !== selection.from || previous.to !== selection.to;
-  });
+  return normalizedSelections.reduce<Array<{ from: number; to: number }>>((merged, selection) => {
+    const previous = merged[merged.length - 1];
+    if (!previous) {
+      merged.push(selection);
+      return merged;
+    }
+    if (selection.from > previous.to) {
+      merged.push(selection);
+      return merged;
+    }
+    previous.to = Math.max(previous.to, selection.to);
+    return merged;
+  }, []);
 }
 
 function buildCombinedClozeContent(content: string, entries: SelectionCommandEntry[]) {
@@ -139,5 +150,5 @@ function buildCombinedClozeContent(content: string, entries: SelectionCommandEnt
         `${currentContent.slice(0, entry.range.from)}${CLOZE_PLACEHOLDER}${currentContent.slice(entry.range.to)}`,
       content
     );
-  return stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
+  return clozeRawContent || CLOZE_PLACEHOLDER;
 }

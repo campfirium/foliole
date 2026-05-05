@@ -1,7 +1,7 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 import { withTransaction } from './transaction.js';
 
 export interface NodeViewStateInput {

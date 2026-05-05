@@ -1,13 +1,7 @@
 import type { NativeReadwiseDetectionSample } from '../../platform/nativeReadwiseContract.js';
 
 import type { PreparedImportHighlightRecord } from './contract.js';
-
-interface ParsedHighlightBlock {
-  anchorId: string;
-  from: number;
-  text: string;
-  to: number;
-}
+import { extractImportedAnchorBlocks, stripImportedAnchorMarkup } from './importAnchorMarkup.js';
 
 function selectPreviewHighlights<T>(items: T[]) {
   if (items.length <= 3) {
@@ -17,58 +11,56 @@ function selectPreviewHighlights<T>(items: T[]) {
 }
 
 function collectAnchoredHighlightBlocks(content: string) {
-  const tokenPattern = /<(\/?)highlight\s+id="([^"]+)"\s*>/g;
-  const plainParts: string[] = [];
-  const active = new Map<string, { start: number }>();
-  const blocks: ParsedHighlightBlock[] = [];
-  let plainIndex = 0;
-  let lastIndex = 0;
+  const anchorBlocks = extractImportedAnchorBlocks(content);
+  const plainText = stripImportedAnchorMarkup(content);
+  const rawToStrippedIndex: number[] = Array.from({ length: content.length + 1 }, () => 0);
+  let rawCursor = 0;
+  let strippedCursor = 0;
 
-  for (const match of content.matchAll(tokenPattern)) {
-    const token = match[0];
-    const tokenIndex = match.index ?? 0;
-    const textChunk = content.slice(lastIndex, tokenIndex);
-    if (textChunk) {
-      plainParts.push(textChunk);
-      plainIndex += textChunk.length;
+  for (const block of anchorBlocks) {
+    while (rawCursor < block.openTagFrom) {
+      rawToStrippedIndex[rawCursor] = strippedCursor;
+      rawCursor += 1;
+      strippedCursor += 1;
     }
-    lastIndex = tokenIndex + token.length;
-
-    const slash = match[1] === '/';
-    const anchorId = match[2] ?? '';
-    if (!slash) {
-      active.set(anchorId, { start: plainIndex });
-      continue;
+    while (rawCursor < block.openTagTo) {
+      rawToStrippedIndex[rawCursor] = strippedCursor;
+      rawCursor += 1;
     }
-    const opened = active.get(anchorId);
-    if (!opened || plainIndex <= opened.start) {
-      active.delete(anchorId);
-      continue;
+    while (rawCursor < block.closeTagFrom) {
+      rawToStrippedIndex[rawCursor] = strippedCursor;
+      rawCursor += 1;
+      strippedCursor += 1;
     }
-    const plainText = plainParts.join('');
-    blocks.push({
-      anchorId,
-      from: opened.start,
-      text: plainText.slice(opened.start, plainIndex),
-      to: plainIndex
-    });
-    active.delete(anchorId);
+    while (rawCursor < block.closeTagTo) {
+      rawToStrippedIndex[rawCursor] = strippedCursor;
+      rawCursor += 1;
+    }
   }
-
-  const trailingText = content.slice(lastIndex);
-  if (trailingText) {
-    plainParts.push(trailingText);
+  while (rawCursor < content.length) {
+    rawToStrippedIndex[rawCursor] = strippedCursor;
+    rawCursor += 1;
+    strippedCursor += 1;
   }
+  rawToStrippedIndex[content.length] = strippedCursor;
+
+  const blocks = anchorBlocks
+    .map((block) => ({
+      from: rawToStrippedIndex[block.contentFrom] ?? 0,
+      text: stripImportedAnchorMarkup(content.slice(block.contentFrom, block.contentTo)),
+      to: rawToStrippedIndex[block.contentTo] ?? 0
+    }))
+    .filter((block) => block.text.trim().length > 0 && block.from < block.to);
 
   return {
     blocks,
-    plainText: plainParts.join('')
+    plainText
   };
 }
 
 export function buildImportedHighlightPreview(input: { content: string; sourceName: string }) {
   const { blocks, plainText } = collectAnchoredHighlightBlocks(input.content);
-  if (blocks.length === 0 && input.content.indexOf('<highlight id=') < 0) {
+  if (blocks.length === 0) {
     return {
       detectedHighlightCount: 0,
       samples: [] as NativeReadwiseDetectionSample[]

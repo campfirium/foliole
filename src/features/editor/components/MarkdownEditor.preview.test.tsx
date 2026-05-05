@@ -29,7 +29,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     setContent() {}
     setDiffDecorations() {}
     setSearchDecorations() {}
-    setTextAnchorPresentation() {}
+    setTextAnchorDecorations() {}
     setHideTitleHeading() {}
     setNodeId(nodeId: string | null) { mockSetNodeId(nodeId); }
     refreshImageClozePresentation() { mockRefreshImageClozePresentation(); }

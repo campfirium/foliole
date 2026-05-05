@@ -4,8 +4,8 @@ import type { EditorView } from '@codemirror/view';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 
 import {
-  EMPTY_EDITOR_TEXT_ANCHOR_PRESENTATION,
-  type EditorTextAnchorPresentation
+  EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS,
+  type EditorTextAnchorDecoration
 } from './EditorAdapter';
 
 export const hideTitleHeadingFacet = Facet.define<boolean, boolean>({
@@ -20,8 +20,11 @@ export const imageClozePresentationVersionFacet = Facet.define<number, number>({
   combine: (values) => values[0] ?? 0
 });
 
-export const textAnchorPresentationFacet = Facet.define<EditorTextAnchorPresentation, EditorTextAnchorPresentation>({
-  combine: (values) => values[0] ?? EMPTY_EDITOR_TEXT_ANCHOR_PRESENTATION
+export const textAnchorDecorationsFacet = Facet.define<
+  readonly EditorTextAnchorDecoration[],
+  readonly EditorTextAnchorDecoration[]
+>({
+  combine: (values) => values[0] ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS
 });
 
 export const openNodeLinkFacet = Facet.define<((title: string) => void) | null, ((title: string) => void) | null>({
@@ -36,7 +39,7 @@ export const pastedAnchorsFacet = Facet.define<
 });
 
 export function createLiveMarkdownStateExtensions(args: {
-  textAnchorPresentation: EditorTextAnchorPresentation;
+  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
@@ -47,19 +50,15 @@ export function createLiveMarkdownStateExtensions(args: {
     hideTitleHeadingFacet.of(args.hideTitleHeading),
     activeNodeIdFacet.of(args.nodeId),
     imageClozePresentationVersionFacet.of(args.imageClozePresentationVersion),
-    textAnchorPresentationFacet.of(args.textAnchorPresentation),
+    textAnchorDecorationsFacet.of(args.textAnchorDecorations),
     openNodeLinkFacet.of(args.onOpenNodeLink),
     pastedAnchorsFacet.of(args.onPastedAnchors ?? null)
   ];
 }
 
-export function getTextAnchorPresentation(value: EditorView | { facet: EditorView['state']['facet'] }) {
+export function getTextAnchorDecorations(value: EditorView | { facet: EditorView['state']['facet'] }) {
   if ('state' in value) {
-    return value.state.facet(textAnchorPresentationFacet) ?? EMPTY_EDITOR_TEXT_ANCHOR_PRESENTATION;
+    return value.state.facet(textAnchorDecorationsFacet) ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
   }
-  return value.facet(textAnchorPresentationFacet) ?? EMPTY_EDITOR_TEXT_ANCHOR_PRESENTATION;
-}
-
-export function getHiddenInlineAnchorKeys(value: EditorView | { facet: EditorView['state']['facet'] }) {
-  return getTextAnchorPresentation(value).inlineAnchorCompatibility.hiddenKeys;
+  return value.facet(textAnchorDecorationsFacet) ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
 }

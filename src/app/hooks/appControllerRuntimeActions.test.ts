@@ -170,7 +170,7 @@ describe('createRevealAnchorInDocument', () => {
             parentNodeId: null,
             kind: 'topic',
             title: 'PDF Parent',
-            content: 'No inline anchor tags',
+            content: 'Plain markdown content',
             anchorLink: null,
             reveal: null,
             review: null,
@@ -192,13 +192,17 @@ describe('createRevealAnchorInDocument', () => {
     const revealSelection = vi.fn();
     const getScrollTop = vi.fn(() => 88);
     const setNodeViewState = vi.fn();
-    const content = 'A<highlight id="anchor-1"></highlight id="anchor-1">D';
-    const anchorPosition = content.indexOf('</highlight id="anchor-1">');
+    const content = 'AD';
+    const anchorPosition = 1;
     const revealAnchorInDocument = createRevealAnchorInDocument(
       createZeroWidthAnchorRevealArgs({ content, getScrollTop, revealSelection, setNodeViewState }) as never
     );
 
-    revealAnchorInDocument({ id: 'anchor-1', kind: 'highlight' });
+    revealAnchorInDocument({
+      id: 'anchor-1',
+      kind: 'highlight',
+      locator: { from: anchorPosition, originalText: '', to: anchorPosition }
+    });
 
     expect(revealSelection).toHaveBeenCalledWith({ from: anchorPosition, to: anchorPosition });
     expect(setNodeViewState).toHaveBeenCalledWith('node-1', {

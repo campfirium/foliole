@@ -10,6 +10,7 @@ import {
   prepareHighlightExcerptCandidate,
   type PreparedHighlightExcerptCandidate
 } from '../../lib/core/import/highlightExcerptMatch.js';
+import { stripImportedAnchorMarkup } from '../../lib/core/import/importAnchorMarkup.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -31,10 +32,6 @@ interface SectionHighlightLocator {
   locator: ReturnType<typeof createContextExcerptLocator>;
   section: ImportedBookSection;
   sectionIndex: number;
-}
-
-function stripImportedHighlightAnchors(content: string) {
-  return content.replace(/<\/?highlight id="[1-9]\d*">/g, '');
 }
 
 function readNextNodePosition(driver: DatabaseDriver) {
@@ -71,7 +68,7 @@ function readImportedBookSections(rootNodeId: string) {
 
 function buildSectionHighlightLocators(sections: ImportedBookSection[]) {
   return sections.map((section, sectionIndex) => ({
-    locator: createContextExcerptLocator(stripImportedHighlightAnchors(section.content)),
+    locator: createContextExcerptLocator(stripImportedAnchorMarkup(section.content)),
     section,
     sectionIndex
   }));
@@ -161,7 +158,7 @@ function persistSectionHighlights(input: {
     let nextPosition = readNextNodePosition(driver);
     input.sections.forEach((section) => {
       const sectionHighlights = input.groupedBySection.get(section.id) ?? [];
-      const baseContent = stripImportedHighlightAnchors(section.content);
+      const baseContent = stripImportedAnchorMarkup(section.content);
       const anchored = applyImportedHighlightAnchors({ content: baseContent, highlights: sectionHighlights });
       if (anchored.content !== section.content) {
         driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
@@ -176,6 +173,7 @@ function persistSectionHighlights(input: {
         highlights: anchored.highlights,
         importedAt: input.importedAt,
         parentNodeId: section.id,
+        parentContent: anchored.content,
         startPosition: nextPosition
       });
       nextPosition += insertedCount;

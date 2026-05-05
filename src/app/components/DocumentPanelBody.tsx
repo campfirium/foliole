@@ -3,7 +3,7 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorTextAnchorPresentation } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import { cn } from '../../shared/lib/utils';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -23,7 +23,7 @@ interface DocumentPanelBodyProps {
   editorContent: string;
   editorContentPaddingBottom?: string;
   fitBlockImagesToViewport?: boolean;
-  textAnchorPresentation?: EditorTextAnchorPresentation;
+  textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   editorDiffDecorations?: EditorDiffDecorations | null;
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;

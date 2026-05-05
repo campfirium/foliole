@@ -53,10 +53,6 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
   useNodeSourceUpdatePreview: sourceUpdatePreviewMocks.useNodeSourceUpdatePreview
 }));
 
-vi.mock('./useNodeBacklinks', () => ({
-  useNodeBacklinks: () => []
-}));
-
 const nodeBacklinksBridgeMocks = vi.hoisted(() => ({
   loadRuntimeNodeBacklinks: vi.fn(async () => null)
 }));

@@ -14,21 +14,7 @@ export interface EditorTextAnchorDecoration {
   to: number;
 }
 
-export interface EditorInlineAnchorCompatibility {
-  hiddenKeys: readonly string[];
-}
-
-export interface EditorTextAnchorPresentation {
-  inlineAnchorCompatibility: EditorInlineAnchorCompatibility;
-  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
-}
-
-export const EMPTY_EDITOR_TEXT_ANCHOR_PRESENTATION: EditorTextAnchorPresentation = {
-  inlineAnchorCompatibility: {
-    hiddenKeys: []
-  },
-  textAnchorDecorations: []
-};
+export const EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS: readonly EditorTextAnchorDecoration[] = [];
 
 export interface EditorScrollMetrics {
   clientHeight: number;
@@ -62,7 +48,7 @@ export interface EditorAdapter {
   getScrollMetrics(): EditorScrollMetrics;
   replaceRange(from: number, to: number, content: string): void;
   replaceSelection(content: string): void;
-  setTextAnchorPresentation?(textAnchorPresentation: EditorTextAnchorPresentation): void;
+  setTextAnchorDecorations?(textAnchorDecorations: readonly EditorTextAnchorDecoration[]): void;
   setReadOnly?(readOnly: boolean): void;
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;
   setSearchDecorations(searchDecorations: EditorSearchDecorations | null): void;

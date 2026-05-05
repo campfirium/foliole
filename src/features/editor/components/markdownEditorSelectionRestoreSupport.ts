@@ -1,17 +1,18 @@
 import type { MutableRefObject } from 'react';
 
-import {
-  markNodePositionReady,
-  markNodePositionRequested
-} from '../../../shared/platform/performanceDiagnosticsProbe';
+import { markNodePositionRequested } from '../../../shared/platform/performanceDiagnosticsProbe';
 import { pushDebugTrace } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 
-import { applyRestoreScrollTop } from './markdownEditorSelectionRestoreScroll';
+import {
+  beginRestoreSelection,
+  scheduleRestoreSelectionCompletion
+} from './markdownEditorSelectionRestoreCompletion';
 import type { EditorViewState } from './markdownEditorTypes';
 
 export function handleSelectionRestore(args: {
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
+  activeRestoreValueLengthRef: MutableRefObject<number>;
   beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
@@ -27,6 +28,7 @@ export function handleSelectionRestore(args: {
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
   shouldSuppressSelectionRestore: (() => boolean) | undefined;
   syncScrollMetrics: () => void;
+  valueLength: number;
 }) {
   if (!args.restoreTarget) {
     if (!args.nodeId || !(args.readingSelection ?? args.nodeViewState?.selection)) {
@@ -47,6 +49,7 @@ export function handleSelectionRestore(args: {
   restoreEditorSelection({
     adapter: args.restoreTarget.adapter,
     activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
+    activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
     beginApplyingReadingPosition: args.beginApplyingReadingPosition,
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
     isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
@@ -59,7 +62,8 @@ export function handleSelectionRestore(args: {
     restoreScrollTop: args.nodeViewState?.scrollTop,
     selectionKey: args.restoreTarget.selectionKey,
     selection: args.restoreTarget.selection,
-    setReadingPositionSelection: args.setReadingPositionSelection
+    setReadingPositionSelection: args.setReadingPositionSelection,
+    valueLength: args.valueLength
   });
   requestAnimationFrame(args.syncScrollMetrics);
 }
@@ -67,6 +71,7 @@ export function handleSelectionRestore(args: {
 export function resolveRestoreTarget(args: {
   adapter: CodeMirrorEditorAdapter | null;
   activeRestoreSelectionKey: string | null;
+  activeRestoreValueLength: number;
   lastRestoredSelectionKey: string | null;
   nodeId: string | null;
   nodeViewState: EditorViewState | undefined;
@@ -89,7 +94,10 @@ export function resolveRestoreTarget(args: {
   if (args.pendingRestoreSelectionKey !== selectionKey) {
     return null;
   }
-  if (args.activeRestoreSelectionKey === selectionKey) {
+  if (
+    args.activeRestoreSelectionKey === selectionKey &&
+    !canRetryScrollOnlyRestore(selection, restoreScrollTop, args.activeRestoreValueLength, args.value.length)
+  ) {
     return null;
   }
   if (args.lastRestoredSelectionKey === selectionKey) {
@@ -134,29 +142,10 @@ export function clearRestoreCompletionTimers(args: {
   }
 }
 
-function finishRestoreApplying(args: {
-  activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  completeApplyingReadingPosition: ((reason: string) => void) | undefined;
-  isRestoreApplyingActiveRef: MutableRefObject<boolean>;
-  reason: string;
-  restoreCompletionFrame2Ref: MutableRefObject<number | null>;
-  restoreCompletionFrameRef: MutableRefObject<number | null>;
-  restoreCompletionTimeoutRef: MutableRefObject<number | null>;
-}) {
-  args.isRestoreApplyingActiveRef.current = false;
-  args.activeRestoreSelectionKeyRef.current = null;
-  args.completeApplyingReadingPosition?.(args.reason);
-  args.restoreCompletionFrameRef.current = null;
-  args.restoreCompletionFrame2Ref.current = null;
-  if (args.restoreCompletionTimeoutRef.current) {
-    window.clearTimeout(args.restoreCompletionTimeoutRef.current);
-    args.restoreCompletionTimeoutRef.current = null;
-  }
-}
-
 function restoreEditorSelection(args: {
   adapter: CodeMirrorEditorAdapter;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
+  activeRestoreValueLengthRef: MutableRefObject<number>;
   beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
@@ -170,82 +159,47 @@ function restoreEditorSelection(args: {
   selectionKey: string;
   selection: EditorViewState['selection'];
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
+  valueLength: number;
 }) {
   markNodePositionRequested(args.nodeId);
   pushDebugTrace('editor.restore-selection', {
     nodeId: args.nodeId,
     selection: args.selection
   });
-  clearRestoreCompletionTimers({
+  beginRestoreSelection({
+    adapter: args.adapter,
     activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
-    completeApplyingReadingPosition: args.completeApplyingReadingPosition,
-    isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
-    restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
-    restoreCompletionFrameRef: args.restoreCompletionFrameRef,
-    restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef
-  });
-  args.beginApplyingReadingPosition?.(args.selection, 'editor-restore-selection');
-  args.isRestoreApplyingActiveRef.current = true;
-  args.activeRestoreSelectionKeyRef.current = args.selectionKey;
-  args.setReadingPositionSelection?.(args.selection);
-  args.adapter.restoreSelection(args.selection);
-  applyRestoreScrollTop(args.adapter, args.restoreScrollTop);
-  args.restoreCompletionFrameRef.current = requestAnimationFrame(() => {
-    applyRestoreScrollTop(args.adapter, args.restoreScrollTop);
-    markNodePositionReady(args.nodeId);
-    args.restoreCompletionFrame2Ref.current = requestAnimationFrame(() => {
-      markRestoreSelectionSettled(args);
-      finishRestoreApplying({
+    activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
+    beginApplyingReadingPosition: args.beginApplyingReadingPosition,
+    clearRestoreCompletionTimers: () =>
+      clearRestoreCompletionTimers({
         activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
         completeApplyingReadingPosition: args.completeApplyingReadingPosition,
         isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
-        reason: 'editor-restore-selection-settled',
         restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
         restoreCompletionFrameRef: args.restoreCompletionFrameRef,
         restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef
-      });
-    });
-  });
-  args.restoreCompletionTimeoutRef.current = window.setTimeout(() => {
-    markRestoreSelectionSettled(args);
-    finishRestoreApplying({
-      activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
-      completeApplyingReadingPosition: args.completeApplyingReadingPosition,
-      isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
-      reason: 'editor-restore-selection-timeout',
-      restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
-      restoreCompletionFrameRef: args.restoreCompletionFrameRef,
-      restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef
-    });
-  }, 500);
-}
-
-function markRestoreSelectionSettled(args: {
-  adapter: CodeMirrorEditorAdapter;
-  lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
-  nodeId: string;
-  pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  restoreScrollTop: number | undefined;
-  selection: EditorViewState['selection'];
-  selectionKey: string;
-}) {
-  if (isRestoreScrollSettled(args.adapter, args.restoreScrollTop)) {
-    args.lastRestoredSelectionKeyRef.current = args.selectionKey;
-    args.pendingRestoreSelectionKeyRef.current = null;
-    return;
-  }
-  args.lastRestoredSelectionKeyRef.current = null;
-  pushDebugTrace('editor.restore-selection.pending-retry', {
-    nodeId: args.nodeId,
-    selection: args.selection,
+      }),
+    isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
     restoreScrollTop: args.restoreScrollTop,
-    currentScrollTop: args.adapter.getScrollTop()
+    selection: args.selection,
+    selectionKey: args.selectionKey,
+    setReadingPositionSelection: args.setReadingPositionSelection,
+    valueLength: args.valueLength
   });
+  scheduleRestoreSelectionCompletion(args);
 }
 
-function isRestoreScrollSettled(adapter: CodeMirrorEditorAdapter, restoreScrollTop: number | undefined) {
-  if (typeof restoreScrollTop !== 'number' || !Number.isFinite(restoreScrollTop) || restoreScrollTop <= 0) {
-    return true;
-  }
-  return Math.abs(adapter.getScrollTop() - restoreScrollTop) <= 2;
+function canRetryScrollOnlyRestore(
+  selection: EditorViewState['selection'],
+  restoreScrollTop: number,
+  activeRestoreValueLength: number,
+  valueLength: number
+) {
+  return (
+    selection.from === 0 &&
+    selection.to === 0 &&
+    restoreScrollTop > 0 &&
+    valueLength > activeRestoreValueLength
+  );
 }

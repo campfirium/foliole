@@ -132,6 +132,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
         nextContent: content,
         nodesById: nextNodesByIdWithParent,
         parentNodeId: nodeId,
+        previousContent: node.content,
         timestamp
       });
       nextNodeForSync = nextNode;

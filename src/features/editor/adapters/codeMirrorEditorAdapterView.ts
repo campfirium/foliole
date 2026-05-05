@@ -33,21 +33,74 @@ function resolvePositionViewportTop(view: EditorView, position: number) {
   }
 }
 
+function scheduleSelectionAlignmentRetry(
+  view: EditorView,
+  position: number,
+  targetRatio: number | undefined,
+  attemptsRemaining: number
+) {
+  requestAnimationFrame(() => {
+    scheduleSelectionAlignment(view, position, targetRatio, attemptsRemaining - 1);
+  });
+}
+
+function shouldWaitForViewportLayout(scroller: HTMLElement, attemptsRemaining: number) {
+  return attemptsRemaining > 0 && (scroller.clientHeight <= 0 || scroller.scrollHeight <= scroller.clientHeight);
+}
+
+function shouldRetrySelectionAlignment(args: {
+  attemptsRemaining: number;
+  maxScrollTop: number;
+  nextScrollTop: number;
+  position: number;
+  scroller: HTMLElement;
+  targetRatio: number | undefined;
+  view: EditorView;
+}) {
+  return (
+    args.nextScrollTop === args.scroller.scrollTop &&
+    args.maxScrollTop > 0 &&
+    args.attemptsRemaining > 0 &&
+    !isPositionNearViewportRatio(args.view, args.position, args.targetRatio ?? 0.4, 0.05)
+  );
+}
+
+function traceSelectionAlignment(view: EditorView, resolvedTop: { source: string; viewportTop: number }, nextScrollTop: number, position: number, targetRatio: number | undefined) {
+  pushDebugTrace('editor.viewport.align-selection', {
+    cursorTop: resolvedTop.viewportTop,
+    nextScrollTop,
+    position,
+    previousScrollTop: view.scrollDOM.scrollTop,
+    scrollHeight: view.scrollDOM.scrollHeight,
+    source: resolvedTop.source,
+    targetRatio: targetRatio ?? null,
+    viewportHeight: view.scrollDOM.clientHeight
+  });
+}
+
+function handleMissingSelectionRect(
+  view: EditorView,
+  position: number,
+  targetRatio: number | undefined,
+  attemptsRemaining: number
+) {
+  if (attemptsRemaining <= 0) {
+    pushDebugTrace('editor.viewport.align-selection-missing-rect', {
+      position,
+      scrollTop: view.scrollDOM.scrollTop,
+      targetRatio: targetRatio ?? null
+    });
+    return true;
+  }
+  scheduleSelectionAlignmentRetry(view, position, targetRatio, attemptsRemaining);
+  return true;
+}
+
 function scheduleSelectionAlignment(view: EditorView, position: number, targetRatio: number | undefined, attemptsRemaining: number) {
   const scroller = view.scrollDOM;
   const resolvedTop = resolvePositionViewportTop(view, position);
   if (!resolvedTop) {
-    if (attemptsRemaining <= 0) {
-      pushDebugTrace('editor.viewport.align-selection-missing-rect', {
-        position,
-        scrollTop: scroller.scrollTop,
-        targetRatio: targetRatio ?? null
-      });
-      return;
-    }
-    requestAnimationFrame(() => {
-      scheduleSelectionAlignment(view, position, targetRatio, attemptsRemaining - 1);
-    });
+    handleMissingSelectionRect(view, position, targetRatio, attemptsRemaining);
     return;
   }
 
@@ -55,7 +108,7 @@ function scheduleSelectionAlignment(view: EditorView, position: number, targetRa
   const scrollHeight = scroller.scrollHeight;
   const viewportHeight = scroller.clientHeight;
   const maxScrollTop = Math.max(0, scrollHeight - viewportHeight);
-  if ((viewportHeight <= 0 || scrollHeight <= viewportHeight) && attemptsRemaining > 0) {
+  if (shouldWaitForViewportLayout(scroller, attemptsRemaining)) {
     pushDebugTrace('editor.viewport.align-selection-wait-layout', {
       attemptsRemaining,
       position,
@@ -64,9 +117,7 @@ function scheduleSelectionAlignment(view: EditorView, position: number, targetRa
       source: resolvedTop.source,
       viewportHeight
     });
-    requestAnimationFrame(() => {
-      scheduleSelectionAlignment(view, position, targetRatio, attemptsRemaining - 1);
-    });
+    scheduleSelectionAlignmentRetry(view, position, targetRatio, attemptsRemaining);
     return;
   }
   const nextScrollTop = alignScrollTopToViewportRatio({
@@ -77,7 +128,15 @@ function scheduleSelectionAlignment(view: EditorView, position: number, targetRa
     viewportHeight,
     viewportTop: viewportRect.top
   });
-  if (nextScrollTop === scroller.scrollTop && maxScrollTop > 0 && attemptsRemaining > 0 && !isPositionNearViewportRatio(view, position, targetRatio ?? 0.4, 0.05)) {
+  if (shouldRetrySelectionAlignment({
+    attemptsRemaining,
+    maxScrollTop,
+    nextScrollTop,
+    position,
+    scroller,
+    targetRatio,
+    view
+  })) {
     pushDebugTrace('editor.viewport.align-selection-retry', {
       attemptsRemaining,
       cursorTop: resolvedTop.viewportTop,
@@ -88,22 +147,10 @@ function scheduleSelectionAlignment(view: EditorView, position: number, targetRa
       targetRatio: targetRatio ?? null,
       viewportHeight
     });
-    requestAnimationFrame(() => {
-      scheduleSelectionAlignment(view, position, targetRatio, attemptsRemaining - 1);
-    });
+    scheduleSelectionAlignmentRetry(view, position, targetRatio, attemptsRemaining);
     return;
   }
-  pushDebugTrace('editor.viewport.align-selection', {
-    cursorTop: resolvedTop.viewportTop,
-    nextScrollTop,
-    position,
-    previousScrollTop: scroller.scrollTop,
-    scrollHeight,
-    source: resolvedTop.source,
-    targetRatio: targetRatio ?? null
-    ,
-    viewportHeight
-  });
+  traceSelectionAlignment(view, resolvedTop, nextScrollTop, position, targetRatio);
   scroller.scrollTop = nextScrollTop;
 }
 

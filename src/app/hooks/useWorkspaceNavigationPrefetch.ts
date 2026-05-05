@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import {
   markNodeDocumentLoadResolved,
@@ -62,16 +62,17 @@ function useSelectNodeAction(
   openPreparedNode: (nodeId: string, focusAnchor?: NodeNavigationResult['focusAnchor']) => Promise<void>
 ) {
   return useCallback(
-    async (nodeId: string) => {
+    async (nodeId: string, focusAnchor: NodeAnchorLink | null = null) => {
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
       if (targetNode && !isNodeDocumentLoaded(targetNode) && getRuntimeInvoke()) {
-        await openPreparedNode(nodeId);
+        await openPreparedNode(nodeId, focusAnchor);
         return;
       }
 
       markRequested(nodeId);
       beforeNavigate();
-      finalize(action(nodeId));
+      const result = action(nodeId);
+      finalize(result ? { ...result, focusAnchor } : result);
       void ensureNodeReady(nodeId);
     },
     [action, beforeNavigate, ensureNodeReady, finalize, markRequested, openPreparedNode]

@@ -34,7 +34,7 @@ describe('importedNodeTitle', () => {
     ).toBe('note');
   });
 
-  it('extracts an opaque-id wrapped heading when heading mode is enabled', () => {
+  it('extracts an imported wrapped heading when heading mode is enabled', () => {
     expect(
       resolveImportedNodeTitle({
         content: '<highlight id="anchor-1"># Imported title</highlight id="anchor-1">\n\nBody',

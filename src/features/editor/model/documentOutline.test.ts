@@ -13,12 +13,12 @@ describe('extractDocumentOutline', () => {
     ]);
   });
 
-  it('ignores headings inside fences and strips anchor tags', () => {
-    const content = ['# Intro', '```md', '## Hidden', '```', '<highlight id="1">## Visible</highlight id="1">'].join('\n');
+  it('ignores headings inside fences and keeps only real markdown headings', () => {
+    const content = ['# Intro', '```md', '## Hidden', '```', '## Visible'].join('\n');
 
     expect(extractDocumentOutline(content)).toEqual([
       { from: 2, level: 1, text: 'Intro', to: 7 },
-      { from: 49, level: 2, text: 'Visible', to: 75 }
+      { from: 31, level: 2, text: 'Visible', to: 38 }
     ]);
   });
 });

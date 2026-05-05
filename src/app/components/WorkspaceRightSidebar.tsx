@@ -100,15 +100,20 @@ function renderHighlightsPanel(
       nodesById={props.nodesById}
       onRevealHighlight={(nodeId) => {
         const highlightNode = props.nodesById[nodeId];
-        if (highlightNode?.anchorLink?.kind === 'highlight' && highlightNode.parentNodeId) {
+        if (
+          (highlightNode?.anchorLink?.kind === 'highlight' || highlightNode?.anchorLink?.kind === 'cloze') &&
+          highlightNode.parentNodeId
+        ) {
           if (props.activeNodeId === highlightNode.parentNodeId) {
             props.onRevealAnchorInDocument(highlightNode.anchorLink as NodeAnchorLink);
             return;
           }
-          props.onSelectNode(highlightNode.parentNodeId);
           if (isPdfAnchorLocator(highlightNode.anchorLink.locator)) {
+            props.onSelectNode(highlightNode.parentNodeId);
             requestPdfAnchorJump(highlightNode.parentNodeId, highlightNode.anchorLink.locator);
+            return;
           }
+          props.onSelectNode(highlightNode.parentNodeId, highlightNode.anchorLink as NodeAnchorLink);
           return;
         }
         props.onSelectNode(nodeId);
@@ -130,6 +135,7 @@ export function WorkspaceRightSidebar(props: Pick<
 > & {
   activePanelId: WorkspaceRightPanelId;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
 }) {
   recordComponentRender('rightSidebar');
   return (

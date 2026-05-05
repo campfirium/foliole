@@ -21,7 +21,146 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('syncs text locator when creating highlight nodes from selections', () => {
+function createParentEditedFixture(content: string) {
+  const fixture = createWorkspaceNodeActionsFixture();
+  fixture.nodesById['node-1'] = {
+    ...fixture.nodesById['node-1'],
+    content
+  };
+  return fixture;
+}
+
+function createHighlightChildNode(nodeId: string) {
+  return {
+    id: nodeId,
+    parentNodeId: 'node-1',
+    kind: 'topic' as const,
+    title: 'Beta',
+    hasContent: true,
+    content: 'Beta',
+    anchorLink: {
+      id: 'hl-1',
+      kind: 'highlight' as const,
+      locator: {
+        from: 6,
+        originalText: 'Beta',
+        to: 10
+      }
+    },
+    hasReveal: false,
+    reveal: null,
+    review: null,
+    createdAt: '2026-04-14T00:00:00.000Z',
+    updatedAt: '2026-04-14T00:00:00.000Z'
+  };
+}
+
+function createClozeChildNode() {
+  return {
+    id: 'node-cloze',
+    parentNodeId: 'node-1',
+    kind: 'item' as const,
+    title: 'Alpha [...] Gamma',
+    hasContent: true,
+    content: 'Alpha [...] Gamma',
+    anchorLink: {
+      id: 'cloze-1',
+      kind: 'cloze' as const,
+      locator: {
+        from: 6,
+        originalText: 'Beta',
+        to: 10
+      }
+    },
+    hasReveal: true,
+    reveal: 'Beta',
+    review: {
+      difficulty: 5,
+      due: '2026-04-14T00:00:00.000Z',
+      elapsedDays: 0,
+      lapses: 0,
+      lastReviewAt: null,
+      reps: 0,
+      scheduledDays: 0,
+      stability: 0,
+      state: 0 as const
+    },
+    createdAt: '2026-04-14T00:00:00.000Z',
+    updatedAt: '2026-04-14T00:00:00.000Z'
+  };
+}
+
+function expectUpdatedBetaLocator() {
+  return {
+    from: 6,
+    originalText: 'Better',
+    to: 12
+  };
+}
+
+function expectShiftedBetaLocator() {
+  return {
+    from: 'Start Alpha Beta Gamma'.indexOf('Beta'),
+    originalText: 'Beta',
+    to: 'Start Alpha Beta Gamma'.indexOf('Beta') + 'Beta'.length
+  };
+}
+
+function createHarnessWithActions(content: string) {
+  const fixture = createParentEditedFixture(content);
+  const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
+  const actions = createWorkspaceNodeActions(harness.setState);
+  return { actions, fixture, harness };
+}
+
+function expectHighlightRuntimeSync(callIndex: number, nodeId: string, locator: ReturnType<typeof expectShiftedBetaLocator>) {
+  expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
+    callIndex,
+    expect.objectContaining({
+      id: nodeId,
+      anchorLink: {
+        id: 'hl-1',
+        kind: 'highlight',
+        locator
+      }
+    })
+  );
+}
+
+function expectRefreshedHighlightRuntimeSync() {
+  expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
+    2,
+    expect.objectContaining({
+      id: 'node-highlight',
+      content: 'Better',
+      title: 'Better',
+      anchorLink: {
+        id: 'hl-1',
+        kind: 'highlight',
+        locator: expectUpdatedBetaLocator()
+      }
+    })
+  );
+}
+
+function expectRefreshedClozeRuntimeSync() {
+  expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
+    3,
+    expect.objectContaining({
+      id: 'node-cloze',
+      content: 'Alpha [...] Gamma',
+      reveal: 'Better',
+      title: 'Alpha [...] Gamma',
+      anchorLink: {
+        id: 'cloze-1',
+        kind: 'cloze',
+        locator: expectUpdatedBetaLocator()
+      }
+    })
+  );
+}
+
+function runCreateHighlightLocatorCase() {
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
 
@@ -54,66 +193,78 @@ it('syncs text locator when creating highlight nodes from selections', () => {
       }
     })
   );
-});
+}
 
-it('remaps direct child text locators when parent content shifts', () => {
-  const fixture = createWorkspaceNodeActionsFixture();
-  fixture.nodesById['node-1'] = {
-    ...fixture.nodesById['node-1'],
-    content: 'Alpha Beta Gamma'
-  };
+function runParentShiftLocatorCase() {
+  const { actions, fixture, harness } = createHarnessWithActions('Alpha Beta Gamma');
   fixture.nodeOrder = [...fixture.nodeOrder, 'node-2'];
-  fixture.nodesById['node-2'] = {
-    id: 'node-2',
-    parentNodeId: 'node-1',
-    kind: 'topic',
-    title: 'Highlight child',
-    hasContent: true,
-    content: 'Beta',
-    anchorLink: {
-      id: 'hl-1',
-      kind: 'highlight',
-      locator: {
-        from: 6,
-        originalText: 'Beta',
-        to: 10
-      }
-    },
-    hasReveal: false,
-    reveal: null,
-    review: null,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  };
-
-  const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
-  const actions = createWorkspaceNodeActions(harness.setState);
+  fixture.nodesById['node-2'] = createHighlightChildNode('node-2');
 
   actions.updateNodeContent('node-1', 'Start Alpha Beta Gamma');
 
-  expect(harness.getState().nodesById['node-2']?.anchorLink).toEqual({
-    id: 'hl-1',
-    kind: 'highlight',
-    locator: {
-      from: 'Start Alpha Beta Gamma'.indexOf('Beta'),
-      originalText: 'Beta',
-      to: 'Start Alpha Beta Gamma'.indexOf('Beta') + 'Beta'.length
-    }
-  });
+  expect(harness.getState().nodesById['node-2']).toEqual(
+    expect.objectContaining({
+      content: 'Beta',
+      title: 'Beta',
+      anchorLink: {
+        id: 'hl-1',
+        kind: 'highlight',
+        locator: expectShiftedBetaLocator()
+      }
+    })
+  );
   expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(2);
+  expectHighlightRuntimeSync(2, 'node-2', expectShiftedBetaLocator());
+}
+
+function runRefreshedChildPayloadsCase() {
+  const { actions, fixture } = createHarnessWithActions('Alpha Beta Gamma');
+  fixture.nodeOrder = [...fixture.nodeOrder, 'node-highlight', 'node-cloze'];
+  fixture.nodesById['node-highlight'] = createHighlightChildNode('node-highlight');
+  fixture.nodesById['node-cloze'] = createClozeChildNode();
+
+  actions.updateNodeContent('node-1', 'Alpha Better Gamma');
+
+  expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(3);
+  expectRefreshedHighlightRuntimeSync();
+  expectRefreshedClozeRuntimeSync();
+}
+
+function runDeletedAnchorTextNoSyncCase() {
+  const { actions, fixture } = createHarnessWithActions('Alpha Beta Gamma');
+  fixture.nodeOrder = [...fixture.nodeOrder, 'node-highlight'];
+  fixture.nodesById['node-highlight'] = createHighlightChildNode('node-highlight');
+
+  actions.updateNodeContent('node-1', 'Alpha  Gamma');
+
+  expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(2);
+  expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
+    1,
+    expect.objectContaining({
+      id: 'node-1',
+      content: 'Alpha  Gamma'
+    })
+  );
   expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
     2,
     expect.objectContaining({
-      id: 'node-2',
+      id: 'node-highlight',
+      content: 'Beta',
+      title: 'Beta',
       anchorLink: {
         id: 'hl-1',
         kind: 'highlight',
         locator: {
-          from: 'Start Alpha Beta Gamma'.indexOf('Beta'),
+          from: 6,
           originalText: 'Beta',
-          to: 'Start Alpha Beta Gamma'.indexOf('Beta') + 'Beta'.length
+          to: 6
         }
       }
     })
   );
-});
+}
+
+it('syncs text locator when creating highlight nodes from selections', runCreateHighlightLocatorCase);
+it('remaps direct child text locators when parent content shifts', runParentShiftLocatorCase);
+it('syncs refreshed child highlight and cloze payloads when parent text changes inside anchored ranges', runRefreshedChildPayloadsCase);
+it('keeps syncing a child highlight as an unresolved zero-width anchor when the anchored text is deleted entirely', runDeletedAnchorTextNoSyncCase);

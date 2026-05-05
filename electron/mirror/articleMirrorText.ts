@@ -1,10 +1,8 @@
-import { stripAnchorBlocks } from '../../src/features/editor/model/anchorBlocks.js';
-
 const CLOZE_PLACEHOLDER_PATTERN = /\s*\[\.\.\.\]\s*/g;
 const CLOZE_PLACEHOLDER_VARIANT_PATTERN = /\s*[[［【]\s*(?:\.{3,}|…+|⋯+)\s*[\]］】]\s*/g;
 
 export function stripAnchorTags(value: string) {
-  return stripAnchorBlocks(value);
+  return value;
 }
 
 export function normalizeComparableText(value: string | null | undefined) {

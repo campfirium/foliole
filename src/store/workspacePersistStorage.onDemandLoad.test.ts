@@ -1,11 +1,12 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { appendReadingPositionTraceLog, getRuntimeInvoke } from '../shared/platform/bridge';
 
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { readWorkspaceNodesFromPayload } from './workspacePersistStorage.test-support';
 
 vi.mock('../shared/platform/bridge', () => ({
+  appendReadingPositionTraceLog: vi.fn(),
   getRuntimeInvoke: vi.fn()
 }));
 
@@ -113,6 +114,7 @@ function createNearTermDirectionRuntimeInvoke(longDocument: string) {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.mocked(appendReadingPositionTraceLog).mockReset();
   vi.mocked(getRuntimeInvoke).mockReset();
   window.localStorage.clear();
 });
@@ -184,7 +186,8 @@ it('keeps the initial workspace hydrate on the fixed route: lightweight list, se
   expect(parsed?.state.activeNodeId).toBe('node-2');
   expect(parsed?.state.nodeViewById['node-2']).toEqual({
     scrollTop: 5_400,
-    selection: { from: 48_000, to: 48_024 }
+    selection: { from: 48_000, to: 48_024 },
+    updatedAt: '2026-03-29T00:00:00.000Z'
   });
   expect(parsed?.state.nodesById['node-1']).toMatchObject({
     content: '',

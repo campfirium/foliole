@@ -2,9 +2,10 @@ import { Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import {
-  syncEditorLiveMarkdownState,
-  syncEditorTextAnchorPresentation
-} from './codeMirrorEditorAdapterState';
+  applyAdapterTextAnchorDecorations,
+  reconfigureAdapterLiveMarkdownState
+} from './codeMirrorEditorAdapterPresentation';
+import { createCodeMirrorEditorAdapterRuntime } from './codeMirrorEditorAdapterRuntime';
 import {
   dispatchReadOnlyReconfigure,
   RemoteImageLocalizationController,
@@ -17,7 +18,6 @@ import {
   resolveDocumentPositionAtViewportY,
   subscribeToEditorScroll
 } from './codeMirrorEditorAdapterView';
-import { createCodeMirrorEditorControllers } from './codeMirrorEditorControllers';
 import {
   applyDiffDecorations,
   applyExternalEditorContent,
@@ -29,18 +29,17 @@ import { getEditorLineBlockHeight, setEditorScrollTop } from './codeMirrorEditor
 import { applyParagraphMarkerState } from './codeMirrorParagraphMarkerState';
 import { restoreEditorSelection, revealEditorSelection } from './codeMirrorSelectionActions';
 import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
-import { shouldReconfigureForTextAnchorPresentation } from './codeMirrorTextAnchorPresentation';
 import { resolvePrimaryVisiblePosition } from './codeMirrorVisiblePosition';
-import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
 import {
-  EMPTY_EDITOR_TEXT_ANCHOR_PRESENTATION,
+  EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS,
+  type EditorTextAnchorDecoration,
   type EditorAdapter,
   type EditorScrollMetrics,
   type EditorSearchDecorations,
-  type EditorSelection,
-  type EditorTextAnchorPresentation
+  type EditorSelection
 } from './EditorAdapter';
 import { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
+
 export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
   private isApplyingExternalContent = false;
@@ -59,55 +58,38 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private externalChangeBuffer: EditorExternalChangeBuffer;
   private view: EditorView;
   private hideTitleHeading = false;
-  private textAnchorPresentation: EditorTextAnchorPresentation;
-  private readonly host: HTMLElement;
-  constructor(host: HTMLElement, options: CodeMirrorEditorAdapterOptions) {
-    this.host = host;
+  private textAnchorDecorations: readonly EditorTextAnchorDecoration[];
+
+  constructor(private readonly host: HTMLElement, options: CodeMirrorEditorAdapterOptions) {
     this.hideTitleHeading = options.hideTitleHeading === true;
-    this.textAnchorPresentation = options.textAnchorPresentation ?? EMPTY_EDITOR_TEXT_ANCHOR_PRESENTATION;
+    this.textAnchorDecorations = options.textAnchorDecorations ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
     this.onChange = options.onChange;
     this.onOpenNodeLink = options.onOpenNodeLink ?? null;
     this.onPastedAnchors = options.onPastedAnchors ?? null;
-    const controllers = createCodeMirrorEditorControllers({
-      applyLocalizedContent: (localized) => {
-        this.setContent(localized);
-        this.onChange?.(localized);
-      },
-      getContent: () => this.getContent(),
-      getNodeId: () => this.nodeId,
-      isApplyingExternalContent: () => this.isApplyingExternalContent,
-      onFlush: (content) => {
-        if (!this.onChange) {
-          return;
-        }
-        this.onChange(content);
-        this.remoteImageLocalization.schedule();
-      }
-    });
-    this.externalChangeBuffer = controllers.externalChangeBuffer;
-    this.remoteImageLocalization = controllers.remoteImageLocalization;
-    this.view = createCodeMirrorEditorView({
+    const runtime = createCodeMirrorEditorAdapterRuntime({
       diffDecorationsCompartment: this.diffDecorationsCompartment,
-      textAnchorPresentation: this.textAnchorPresentation,
+      getContent: () => this.getContent(),
       hideTitleHeading: this.hideTitleHeading,
       host,
       imageClozePresentationVersion: this.imageClozePresentationVersion,
+      isApplyingExternalContent: () => this.isApplyingExternalContent,
       liveMarkdownCompartment: this.liveMarkdownCompartment,
       liveMarkdownStateCompartment: this.liveMarkdownStateCompartment,
       nodeId: this.nodeId,
-      onCompositionEnd: () => this.externalChangeBuffer.handleCompositionEnd(),
-      onDocChanged: (content, meta) => {
-        if (!this.onChange || this.isApplyingExternalContent) {
-          return;
-        }
-        this.externalChangeBuffer.handleDocumentChange(content, meta);
-      },
+      onChange: this.onChange,
+      onOpenNodeLink: this.onOpenNodeLink,
+      onPastedAnchors: this.onPastedAnchors,
+      onSetContent: (content) => this.setContent(content),
       options,
       paragraphMarkerCompartment: this.paragraphMarkerCompartment,
       readOnlyCompartment: this.readOnlyCompartment,
       searchDecorationsCompartment: this.searchDecorationsCompartment,
+      textAnchorDecorations: this.textAnchorDecorations,
       textAnchorDecorationsCompartment: this.textAnchorDecorationsCompartment
     });
+    this.externalChangeBuffer = runtime.externalChangeBuffer;
+    this.remoteImageLocalization = runtime.remoteImageLocalization;
+    this.view = runtime.view;
   }
   destroy() {
     this.externalChangeBuffer.destroy();
@@ -164,16 +146,13 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.imageClozePresentationVersion += 1;
     this.reconfigureLiveMarkdown();
   }
-  setTextAnchorPresentation(textAnchorPresentation: EditorTextAnchorPresentation) {
-    const shouldReconfigure = shouldReconfigureForTextAnchorPresentation(
-      this.textAnchorPresentation,
-      textAnchorPresentation
-    );
-    this.textAnchorPresentation = textAnchorPresentation;
-    if (shouldReconfigure) {
-      this.reconfigureLiveMarkdown();
-    }
-    this.applyTextAnchorPresentation(textAnchorPresentation);
+  setTextAnchorDecorations(textAnchorDecorations: readonly EditorTextAnchorDecoration[]) {
+    this.textAnchorDecorations = textAnchorDecorations;
+    applyAdapterTextAnchorDecorations({
+      compartment: this.textAnchorDecorationsCompartment,
+      textAnchorDecorations,
+      view: this.view
+    });
   }
   getSelection(): EditorSelection {
     const { from, to } = this.view.state.selection.main;
@@ -240,13 +219,10 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     };
   }
   onScroll(listener: () => void) { return subscribeToEditorScroll(this.view, listener); }
-  private applyTextAnchorPresentation(textAnchorPresentation: EditorTextAnchorPresentation) {
-    syncEditorTextAnchorPresentation({ compartment: this.textAnchorDecorationsCompartment, textAnchorPresentation, view: this.view });
-  }
   private reconfigureLiveMarkdown() {
-    syncEditorLiveMarkdownState({
+    reconfigureAdapterLiveMarkdownState({
       liveMarkdownStateCompartment: this.liveMarkdownStateCompartment,
-      textAnchorPresentation: this.textAnchorPresentation,
+      textAnchorDecorations: this.textAnchorDecorations,
       hideTitleHeading: this.hideTitleHeading,
       imageClozePresentationVersion: this.imageClozePresentationVersion,
       nodeId: this.nodeId,

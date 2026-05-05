@@ -1,5 +1,3 @@
-import { stripAnchorBlocks } from '../../../src/features/editor/model/anchorBlocks.js';
-
 const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
 const WIKILINK_WRAPPER_PATTERN = /\[\[([^\]]+)\]\]/g;
 
@@ -80,7 +78,6 @@ function getNormalizedParagraphs(content: string) {
   return stripLeadingTitleHeading(stripLeadingFrontmatter(content))
     .replaceAll('\r\n', '\n')
     .split(/\n{2,}/)
-    .map((paragraph) => stripAnchorBlocks(paragraph))
     .map((paragraph) =>
       stripMarkdownInline(
         paragraph

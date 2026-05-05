@@ -50,33 +50,99 @@ it('opens debug nodes through the prepared open path', async () => {
   expect(openWorkspaceNodeWithPreparedDocument).toHaveBeenCalledWith(seedNodeId);
 });
 
-it('reads active node id and saved node view state through the debug bridge', () => {
+it('reads active node id and saved node view state through the debug bridge', async () => {
+  installWorkspaceDebugBridge();
+  const debugApi = (window as Window & {
+    __folioleWorkspaceDebug?: {
+      createTextClozeChild: (args: {
+        anchorId: string;
+        answer: string;
+        parentNodeId: string;
+        prompt: string;
+      }) => Promise<string | null>;
+      createTextHighlightChild: (args: {
+        anchorId: string;
+        parentNodeId: string;
+        text: string;
+      }) => Promise<string | null>;
+      deleteNode: (nodeId: string) => Promise<boolean>;
+      deleteNodePermanently: (nodeId: string) => Promise<boolean>;
+      getActiveNodeId: () => string | null;
+      getNode: (nodeId: string) => {
+        anchorKind: 'highlight' | 'cloze' | null;
+        content: string;
+        id: string;
+        parentNodeId: string | null;
+        reveal: string | null;
+        title: string;
+        trashed: boolean;
+      } | null;
+      getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } } | null;
+      restoreNode: (nodeId: string) => Promise<boolean>;
+      seedNodes: (nodes: Array<{
+        content: string;
+        id: string;
+        kind?: 'folder' | 'item' | 'topic';
+        title: string;
+      }>) => Promise<void>;
+      updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
+    };
+  }).__folioleWorkspaceDebug;
+
+  await debugApi?.seedNodes([
+    {
+      content: 'Seed body',
+      id: 'debug-node-1',
+      kind: 'topic',
+      title: 'Debug Node 1'
+    }
+  ]);
+
   useWorkspaceStore.setState((state) => ({
     ...state,
-    activeNodeId: 'node-2',
+    activeNodeId: 'debug-node-1',
     nodeViewById: {
       ...state.nodeViewById,
-      'node-2': {
+      'debug-node-1': {
         scrollTop: 5400,
         selection: { from: 48000, to: 48024 }
       }
     }
   }));
 
-  installWorkspaceDebugBridge();
-  const debugApi = (window as Window & {
-    __folioleWorkspaceDebug?: {
-      getActiveNodeId: () => string | null;
-      getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } } | null;
-    };
-  }).__folioleWorkspaceDebug;
-
-  expect(debugApi?.getActiveNodeId()).toBe('node-2');
-  expect(debugApi?.getNodeViewState('node-2')).toEqual({
+  expect(debugApi?.getActiveNodeId()).toBe('debug-node-1');
+  expect(debugApi?.getNodeViewState('debug-node-1')).toEqual({
     scrollTop: 5400,
     selection: { from: 48000, to: 48024 }
   });
   expect(debugApi?.getNodeViewState('missing-node')).toBeNull();
+
+  const createdHighlightId = await debugApi?.createTextHighlightChild({
+    anchorId: 'hl-debug-1',
+    parentNodeId: 'debug-node-1',
+    text: 'Alpha'
+  });
+  const createdClozeId = await debugApi?.createTextClozeChild({
+    anchorId: 'cloze-debug-1',
+    answer: 'Alpha',
+    parentNodeId: 'debug-node-1',
+    prompt: '[...] Beta'
+  });
+  const updated = await debugApi?.updateNodeContent('debug-node-1', 'Alpha Beta');
+
+  expect(createdHighlightId).toBeTruthy();
+  expect(createdClozeId).toBeTruthy();
+  expect(updated).toBe(true);
+  expect(typeof debugApi?.deleteNode).toBe('function');
+  expect(typeof debugApi?.restoreNode).toBe('function');
+  expect(typeof debugApi?.deleteNodePermanently).toBe('function');
+  expect(debugApi?.getNode('debug-node-1')).toMatchObject({
+    content: 'Alpha Beta',
+    id: 'debug-node-1',
+    title: 'Alpha Beta',
+    trashed: false
+  });
+  expect(useWorkspaceStore.getState().nodesById['debug-node-1']?.content).toBe('Alpha Beta');
 });
 
 it('persists seeded debug nodes and imports debug attachments through the native runtime when available', async () => {

@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const spies = vi.hoisted(() => ({
-  buildPreviewAnchorDecorationPlan: vi.fn(),
   buildFrontmatterDecorationState: vi.fn()
 }));
 
@@ -13,20 +12,6 @@ vi.mock('../../../shared/platform/bridge', () => ({
   getRuntimeInvoke: vi.fn(() => null),
   openExternalUrl
 }));
-
-vi.mock('../model/anchorDecorationPlans', async () => {
-  const actual = await vi.importActual<typeof import('../model/anchorDecorationPlans')>('../model/anchorDecorationPlans');
-  return {
-    ...actual,
-    buildPreviewAnchorDecorationPlan: (
-      content: Parameters<typeof actual.buildPreviewAnchorDecorationPlan>[0],
-      hiddenAnchorKeys?: Parameters<typeof actual.buildPreviewAnchorDecorationPlan>[1]
-    ) => {
-      spies.buildPreviewAnchorDecorationPlan(content);
-      return actual.buildPreviewAnchorDecorationPlan(content, hiddenAnchorKeys);
-    }
-  };
-});
 
 vi.mock('./liveMarkdownFrontmatter', async () => {
   const actual = await vi.importActual<typeof import('./liveMarkdownFrontmatter')>('./liveMarkdownFrontmatter');
@@ -56,74 +41,13 @@ function createHost() {
   return host;
 }
 
-function createAdapter(content: string) {
-  return new CodeMirrorEditorAdapter(createHost(), { initialContent: content });
-}
-
 afterEach(() => {
   document.body.innerHTML = '';
   setMarkdownSyntaxVisibility('hidden');
-  spies.buildPreviewAnchorDecorationPlan.mockClear();
   spies.buildFrontmatterDecorationState.mockClear();
 });
 
-describe('liveMarkdown anchor decorations', () => {
-  it('keeps anchor decorations mapped without rescanning on plain text edits', () => {
-    const content = '<highlight id="1">hello</highlight id="1"> world';
-    const host = createHost();
-    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: content });
-
-    spies.buildPreviewAnchorDecorationPlan.mockClear();
-    const from = content.indexOf('world');
-    adapter.replaceRange(from, from + 'world'.length, 'planet');
-
-    expect(spies.buildPreviewAnchorDecorationPlan).not.toHaveBeenCalled();
-    expect(host.textContent).toContain('hello planet');
-    expect(host.textContent).not.toContain('<highlight');
-
-    adapter.destroy();
-  });
-
-  it('rescans anchor decorations when an anchor tag itself changes', () => {
-    const content = '<highlight id="1">hello</highlight id="1"> world';
-    const adapter = createAdapter(content);
-
-    spies.buildPreviewAnchorDecorationPlan.mockClear();
-    const from = content.indexOf('highlight');
-    adapter.replaceRange(from, from + 'highlight'.length, 'cloze');
-
-    expect(spies.buildPreviewAnchorDecorationPlan).toHaveBeenCalledTimes(1);
-
-    adapter.destroy();
-  });
-});
-
-describe('liveMarkdown imported content rendering', () => {
-  it('renders imported multi-line table highlights in preview mode', () => {
-    const content = [
-      '# GTD 项目管理方法',
-      '',
-      '<highlight id="5">你提到的一些 GTD 元素你没用过，但恰恰它们是 GTD 有效运行的关键环节</highlight id="5">：',
-      '',
-      '<highlight id="6">| 要素 | GTD 原理 | Todoist 中的对应操作 |',
-      '| --- | --- | --- |',
-      '| **每周回顾** | 保持系统清空 & 当前 | 每周打开「Someday/Waiting/Projects」重新评估 |',
-      '| **拖动排序** | 明确今日任务顺序（非重要性排序） | 用拖动或优先级字段安排今日计划 |',
-      '| **统一调度到今天** | 临时任务快速执行（反向推导优先级） | Inbox → 今天清空 or 用 Filter 扫描 |</highlight id="6">'
-    ].join('\n');
-    const host = createHost();
-    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: content });
-
-    const highlightTexts = Array.from(host.querySelectorAll('.cm-md-highlight, .cm-md-highlight-overlap')).map((node) =>
-      (node.textContent ?? '').trim()
-    );
-
-    expect(highlightTexts.some((text) => text.includes('你提到的一些 GTD 元素你没用过'))).toBe(true);
-    expect(highlightTexts.some((text) => text.includes('每周回顾'))).toBe(true);
-
-    adapter.destroy();
-  });
-
+describe('liveMarkdown runtime behavior', () => {
   it('opens matching workspace nodes when a wiki link is clicked', () => {
     const host = createHost();
     const onOpenNodeLink = vi.fn();

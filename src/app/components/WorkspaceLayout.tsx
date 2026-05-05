@@ -86,7 +86,7 @@ export interface WorkspaceLayoutProps {
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onResetLayout: () => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
-  onSelectNode: (nodeId: string) => void;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;

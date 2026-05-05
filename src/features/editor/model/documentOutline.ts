@@ -1,6 +1,3 @@
-import { stripAnchorBlocks } from './anchorBlocks';
-import { mapVisibleOffsetToRawPosition } from './anchorTextOffsets';
-
 export interface DocumentOutlineItem {
   from: number;
   level: number;
@@ -33,22 +30,16 @@ export function extractDocumentOutline(content: string): DocumentOutlineItem[] {
       const marker = fenceMatch[1] as '```' | '~~~';
       activeFence = activeFence === marker ? null : marker;
     } else if (!activeFence) {
-      const sanitizedLine = stripAnchorBlocks(line);
-      const sanitizedMatch = sanitizedLine.match(HEADING_PATTERN);
       const directMatch = line.match(HEADING_PATTERN);
-
-      if (directMatch || sanitizedMatch) {
-        const sourceLine = sanitizedMatch ? sanitizedLine : line;
-        const sourceMatch = sanitizedMatch ?? directMatch;
-        const text = stripInlineMarkdown(sourceMatch?.[2] ?? '');
-        const headingPrefixLength = (sourceMatch?.[1]?.length ?? 0) + 1;
-        const headingStartInSanitized = sourceLine.search(/\S|$/) + headingPrefixLength;
-        const headingStart = offset + mapVisibleOffsetToRawPosition(line, headingStartInSanitized);
+      if (directMatch) {
+        const text = stripInlineMarkdown(directMatch[2] ?? '');
+        const headingPrefixLength = (directMatch[1]?.length ?? 0) + 1;
+        const headingStart = offset + line.search(/\S|$/) + headingPrefixLength;
 
         if (text) {
           items.push({
             from: headingStart,
-            level: sourceMatch?.[1]?.length ?? 1,
+            level: directMatch[1]?.length ?? 1,
             text,
             to: offset + line.length
           });

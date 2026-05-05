@@ -4,12 +4,12 @@ import { Decoration, EditorView } from '@codemirror/view';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
-import type { EditorTextAnchorPresentation } from './EditorAdapter';
+import type { EditorTextAnchorDecoration } from './EditorAdapter';
 import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
 import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
 
 export interface CodeMirrorEditorAdapterOptions {
-  textAnchorPresentation?: import('./EditorAdapter').EditorTextAnchorPresentation;
+  textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   hideTitleHeading?: boolean;
   initialContent: string;
   onChange?: (content: string) => void;
@@ -24,7 +24,7 @@ export interface EditorDocumentChangeMeta {
 
 export function createLiveMarkdownReconfigureEffect(args: {
   compartment: Compartment;
-  textAnchorPresentation: EditorTextAnchorPresentation;
+  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
@@ -33,7 +33,7 @@ export function createLiveMarkdownReconfigureEffect(args: {
 }) {
   return args.compartment.reconfigure(
     createLiveMarkdownStateExtensions({
-      textAnchorPresentation: args.textAnchorPresentation,
+      textAnchorDecorations: args.textAnchorDecorations,
       hideTitleHeading: args.hideTitleHeading,
       imageClozePresentationVersion: args.imageClozePresentationVersion,
       nodeId: args.nodeId,
@@ -57,7 +57,7 @@ export function createReadOnlyExtensions(readOnly: boolean) {
 
 export function dispatchLiveMarkdownReconfigure(args: {
   compartment: Compartment;
-  textAnchorPresentation: EditorTextAnchorPresentation;
+  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
@@ -68,7 +68,7 @@ export function dispatchLiveMarkdownReconfigure(args: {
   args.view.dispatch({
     effects: createLiveMarkdownReconfigureEffect({
       compartment: args.compartment,
-      textAnchorPresentation: args.textAnchorPresentation,
+      textAnchorDecorations: args.textAnchorDecorations,
       hideTitleHeading: args.hideTitleHeading,
       imageClozePresentationVersion: args.imageClozePresentationVersion,
       nodeId: args.nodeId,

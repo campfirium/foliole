@@ -2,7 +2,7 @@ import type { PersistedImportRecord, PreparedImportRecord } from '../import/cont
 
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
-import { applyImportedHighlightAnchors, collectAnchoredImportedHighlights } from './importHighlightAnchors.js';
+import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
 import { readExistingChildHighlights, replaceImportedHighlightNodes } from './importPipelineHighlightNodes.js';
 import { updateExistingNode, writeNewNode } from './importPipelineNodes.js';
 import {
@@ -99,6 +99,7 @@ function updateExistingReadwiseNode(
       highlights: readwiseUpdate.highlights,
       importedAt: record.importedAt,
       parentNodeId: nodeId,
+      parentContent: readwiseUpdate.content,
       startPosition: readNextNodePosition(driver)
     });
   }
@@ -106,22 +107,21 @@ function updateExistingReadwiseNode(
 }
 
 function persistImportedHighlightNodes(input: {
+  anchoredContent: string;
   driver: DatabaseDriver;
   duplicateSemantic: PersistedImportRecord['duplicateSemantic'];
   importedAt: string;
   nodeId: string;
   prepared: PreparedImportRecord;
-  anchoredHighlights: ReturnType<typeof collectAnchoredImportedHighlights>;
   matchedAnchoredHighlights: ReturnType<typeof applyImportedHighlightAnchors>['highlights'];
 }) {
   if (input.prepared.sourceProfile !== 'body_with_highlight_sidecar') {
-    const genericHighlights =
-      input.matchedAnchoredHighlights.length > 0 ? input.matchedAnchoredHighlights : input.anchoredHighlights;
     replaceImportedHighlightNodes({
       driver: input.driver,
-      highlights: genericHighlights,
+      highlights: input.matchedAnchoredHighlights,
       importedAt: input.importedAt,
       parentNodeId: input.nodeId,
+      parentContent: input.anchoredContent,
       startPosition: readNextNodePosition(input.driver)
     });
     return;
@@ -134,6 +134,7 @@ function persistImportedHighlightNodes(input: {
     highlights: input.matchedAnchoredHighlights,
     importedAt: input.importedAt,
     parentNodeId: input.nodeId,
+    parentContent: input.anchoredContent,
     startPosition: readNextNodePosition(input.driver)
   });
 }
@@ -217,7 +218,7 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     prepared
   });
   persistImportedHighlightNodes({
-    anchoredHighlights: collectAnchoredImportedHighlights(anchoredImport.content),
+    anchoredContent: anchoredImport.content,
     driver,
     duplicateSemantic,
     importedAt: baseRecord.importedAt,

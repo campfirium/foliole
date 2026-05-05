@@ -25,20 +25,6 @@ describe('anchorClipboardExport', () => {
     });
   });
 
-  it('converts anchors into external-readable content while preserving the internal payload', () => {
-    const payload = createClipboardExportPayload({
-      assetsDir: null,
-      externalTextBase: null,
-      internalText: '<highlight id="1">Keep</highlight id="1"> and <cloze id="2">hide</cloze id="2">',
-      parseAssetUrl
-    });
-
-    expect(payload?.internalText).toBe('<highlight id="1">Keep</highlight id="1"> and <cloze id="2">hide</cloze id="2">');
-    expect(payload?.internalAnchors).toEqual([]);
-    expect(payload?.externalText).toBe('==Keep== and <u>hide</u>');
-    expect(payload?.externalHtml).toBe('<p><mark>Keep</mark> and <u>hide</u></p>');
-  });
-
   it('prefers the expanded markdown selection for external export only', () => {
     const payload = createClipboardExportPayload({
       assetsDir: null,
@@ -63,5 +49,19 @@ describe('anchorClipboardExport', () => {
     expect(payload?.internalAnchors).toEqual([]);
     expect(payload?.externalText).toBe('Before ==important== and <u>hidden</u>');
     expect(payload?.externalHtml).toBe('<p>Before <mark>important</mark> and <u>hidden</u></p>');
+  });
+
+  it('keeps explicit internal anchors when the caller already provides normalized content', () => {
+    const payload = createClipboardExportPayload({
+      assetsDir: null,
+      externalTextBase: 'Before ==important== after',
+      internalAnchors: [{ from: 7, kind: 'highlight', to: 16 }],
+      internalText: 'Before important after',
+      parseAssetUrl
+    });
+
+    expect(payload?.internalText).toBe('Before important after');
+    expect(payload?.internalAnchors).toEqual([{ from: 7, kind: 'highlight', to: 16 }]);
+    expect(payload?.externalText).toBe('Before ==important== after');
   });
 });

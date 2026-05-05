@@ -61,7 +61,11 @@ export function resolveAncestorAnchorLink(
     if (!nearestAnchor && cursor.anchorLink) {
       nearestAnchor = cursor.anchorLink;
     }
-    if (!nearestLocatorAnchor && cursor.anchorLink?.kind === 'highlight' && cursor.anchorLink.locator) {
+    if (
+      !nearestLocatorAnchor &&
+      (cursor.anchorLink?.kind === 'highlight' || cursor.anchorLink?.kind === 'cloze') &&
+      cursor.anchorLink.locator
+    ) {
       nearestLocatorAnchor = cursor.anchorLink;
     }
     if (cursor.parentNodeId === ancestorNodeId) {

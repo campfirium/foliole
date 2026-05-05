@@ -44,6 +44,32 @@ describe('resolveAncestorAnchorLink', () => {
     });
   });
 
+  it('returns nearest cloze locator anchor between active node and ancestor', () => {
+    const nodesById: Record<string, Node> = {
+      root: createNode({ id: 'root', parentNodeId: null }),
+      article: createNode({ id: 'article', parentNodeId: 'root' }),
+      cloze: createNode({
+        anchorLink: {
+          id: 'cloze-1',
+          kind: 'cloze',
+          locator: { from: 6, originalText: 'Beta', to: 10 }
+        },
+        id: 'cloze',
+        parentNodeId: 'article'
+      }),
+      child: createNode({ id: 'child', parentNodeId: 'cloze' })
+    };
+
+    expect(resolveAncestorAnchorLink('child', 'root', nodesById)).toEqual({
+      focusAnchor: {
+        id: 'cloze-1',
+        kind: 'cloze',
+        locator: { from: 6, originalText: 'Beta', to: 10 }
+      },
+      isAncestor: true
+    });
+  });
+
   it('returns not-ancestor when chain does not reach target', () => {
     const nodesById: Record<string, Node> = {
       root: createNode({ id: 'root', parentNodeId: null }),

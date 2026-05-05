@@ -2,42 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { findAnchorSelection } from './anchorNavigation';
 
-function expectBasicHighlightSelection() {
-  const content = 'A<highlight id="1">BC</highlight id="1">D';
-  expect(findAnchorSelection(content, { id: '1', kind: 'highlight' })).toEqual({
-    from: content.indexOf('BC'),
-    to: content.indexOf('BC') + 2
-  });
-}
-
-function expectOverlappingSelections() {
-  const content = 'X<highlight id="1">12<highlight id="2">34</highlight id="1">56</highlight id="2">Y';
-  const first = findAnchorSelection(content, { id: '1', kind: 'highlight' });
-  const second = findAnchorSelection(content, { id: '2', kind: 'highlight' });
-  expect(first).not.toBeNull();
-  expect(second).not.toBeNull();
-  expect(first!.from).toBe(content.indexOf('12'));
-  expect(second!.from).toBe(content.indexOf('34'));
-  expect(first!.to).toBeGreaterThan(first!.from);
-  expect(second!.to).toBeGreaterThan(second!.from);
-}
-
-function expectZeroWidthSelectionForEmptyAnchor() {
-  const content = 'A<highlight id="anchor-1"></highlight id="anchor-1">D';
-  expect(findAnchorSelection(content, { id: 'anchor-1', kind: 'highlight' })).toEqual({
-    from: content.indexOf('</highlight id="anchor-1">'),
-    to: content.indexOf('</highlight id="anchor-1">')
-  });
-}
-
-function expectOpaqueClozeSelection() {
-  const content = 'A<cloze id="anchor-2">BC</cloze id="anchor-2">D';
-  expect(findAnchorSelection(content, { id: 'anchor-2', kind: 'cloze' })).toEqual({
-    from: content.indexOf('BC'),
-    to: content.indexOf('BC') + 2
-  });
-}
-
 function expectDirectTextLocatorSelection() {
   const content = 'Alpha Beta Gamma';
   expect(
@@ -78,18 +42,40 @@ function expectPureMarkdownWithoutLocatorReturnsNull() {
   expect(findAnchorSelection('Alpha Beta Gamma', { id: 'anchor-4', kind: 'highlight' })).toBeNull();
 }
 
+function expectTextLocatorDoesNotFallBackToLegacyInlineMarkup() {
+  const content = 'Start Legacy End';
+  expect(
+    findAnchorSelection(content, {
+      id: 'anchor-5',
+      kind: 'highlight',
+      locator: {
+        from: 0,
+        originalText: 'Beta',
+        to: 4
+      }
+    })
+  ).toBeNull();
+}
+
+function expectUnresolvedZeroWidthTextLocatorFallsBackToStoredPosition() {
+  expect(
+    findAnchorSelection('Alpha  Gamma', {
+      id: 'anchor-6',
+      kind: 'highlight',
+      locator: {
+        from: 6,
+        originalText: 'Beta',
+        to: 6
+      }
+    })
+  ).toEqual({
+    from: 6,
+    to: 6
+  });
+}
+
 describe('anchorNavigation', () => {
-  it('finds selection range for basic anchor pair', expectBasicHighlightSelection);
-  it('finds selection range for overlapping anchors', expectOverlappingSelections);
-  it('returns a zero-width selection for empty anchors so navigation can still land nearby', () => {
-    expectZeroWidthSelectionForEmptyAnchor();
-  });
-
-  it('finds selection range for opaque cloze ids', () => {
-    expectOpaqueClozeSelection();
-  });
-
-  it('uses text locator directly when the document no longer contains anchor tags', () => {
+  it('uses text locator directly against plain markdown content', () => {
     expectDirectTextLocatorSelection();
   });
 
@@ -97,7 +83,15 @@ describe('anchorNavigation', () => {
     expectRecoveredStaleTextLocatorSelection();
   });
 
-  it('does not fall back to legacy anchor parsing when pure markdown has no locator', () => {
+  it('returns null when runtime navigation receives no locator', () => {
     expectPureMarkdownWithoutLocatorReturnsNull();
+  });
+
+  it('returns null when a text locator no longer resolves against the current plain-text content', () => {
+    expectTextLocatorDoesNotFallBackToLegacyInlineMarkup();
+  });
+
+  it('falls back to the stored zero-width position when an unresolved text locator has no matching text anymore', () => {
+    expectUnresolvedZeroWidthTextLocatorFallsBackToStoredPosition();
   });
 });

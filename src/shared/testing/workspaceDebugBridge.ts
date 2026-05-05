@@ -16,7 +16,31 @@ interface DebugNodeSeed {
 }
 
 interface WorkspaceDebugApi {
+  createTextClozeChild: (args: {
+    anchorId: string;
+    anchorLink?: NodeAnchorLink | null;
+    answer: string;
+    parentNodeId: string;
+    prompt: string;
+  }) => Promise<string | null>;
+  createTextHighlightChild: (args: {
+    anchorId: string;
+    anchorLink?: NodeAnchorLink | null;
+    parentNodeId: string;
+    text: string;
+  }) => Promise<string | null>;
+  deleteNode: (nodeId: string) => Promise<boolean>;
+  deleteNodePermanently: (nodeId: string) => Promise<boolean>;
   getActiveNodeId: () => string | null;
+  getNode: (nodeId: string) => {
+    anchorKind: 'highlight' | 'cloze' | null;
+    content: string;
+    id: string;
+    parentNodeId: string | null;
+    reveal: string | null;
+    title: string;
+    trashed: boolean;
+  } | null;
   importClipboardImageAttachment: (args: {
     bytesBase64: string;
     mimeType: string;
@@ -26,7 +50,9 @@ interface WorkspaceDebugApi {
   getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } } | null;
   listNodes: () => Array<{ id: string; title: string }>;
   openNode: (nodeId: string) => Promise<boolean>;
+  restoreNode: (nodeId: string) => Promise<boolean>;
   seedNodes: (nodes: DebugNodeSeed[]) => Promise<void>;
+  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }
 
 type WorkspaceDebugWindow = Window & {
@@ -117,7 +143,54 @@ export function installWorkspaceDebugBridge() {
   }
 
   targetWindow.__folioleWorkspaceDebug = {
+    createTextClozeChild: async ({ anchorId, anchorLink, answer, parentNodeId, prompt }) =>
+      useWorkspaceStore.getState().createQANodeFromSelection(
+        parentNodeId,
+        prompt,
+        answer,
+        anchorId,
+        anchorLink ?? undefined
+      ),
+    createTextHighlightChild: async ({ anchorId, anchorLink, parentNodeId, text }) =>
+      useWorkspaceStore.getState().createHighlightNodeFromSelection(
+        parentNodeId,
+        text,
+        anchorId,
+        anchorLink ?? undefined
+      ),
+    deleteNode: async (nodeId) => {
+      const state = useWorkspaceStore.getState();
+      if (!state.nodesById[nodeId]) {
+        return false;
+      }
+      state.deleteNode(nodeId);
+      return true;
+    },
+    deleteNodePermanently: async (nodeId) => {
+      const state = useWorkspaceStore.getState();
+      if (!state.nodesById[nodeId]) {
+        return false;
+      }
+      state.deleteNodePermanently(nodeId);
+      return true;
+    },
     getActiveNodeId: () => useWorkspaceStore.getState().activeNodeId,
+    getNode: (nodeId) => {
+      const state = useWorkspaceStore.getState();
+      const node = state.nodesById[nodeId];
+      if (!node) {
+        return null;
+      }
+      return {
+        anchorKind: node.anchorLink?.kind ?? null,
+        content: node.content,
+        id: node.id,
+        parentNodeId: node.parentNodeId,
+        reveal: node.reveal,
+        title: node.title,
+        trashed: state.trashedNodeIds.includes(nodeId)
+      };
+    },
     importClipboardImageAttachment: async ({ bytesBase64, mimeType, nodeId, originalName }) => {
       const runtimeInvoke = getRuntimeInvoke();
       if (!runtimeInvoke) {
@@ -150,6 +223,14 @@ export function installWorkspaceDebugBridge() {
         return false;
       }
     },
+    restoreNode: async (nodeId) => {
+      const state = useWorkspaceStore.getState();
+      if (!state.nodesById[nodeId]) {
+        return false;
+      }
+      state.restoreNode(nodeId);
+      return true;
+    },
     seedNodes: async (nodes) => {
       const initial = createInitialWorkspaceState(new Date('2026-04-08T00:00:00.000Z'));
       const seededNodesById = buildSeededNodes(nodes, '2026-04-08T00:00:00.000Z', initial.nodesById['node-1']);
@@ -163,6 +244,14 @@ export function installWorkspaceDebugBridge() {
         trashedNodeIds: []
       });
       await persistSeedNodes(nodes);
+    },
+    updateNodeContent: async (nodeId, content) => {
+      const state = useWorkspaceStore.getState();
+      if (!state.nodesById[nodeId]) {
+        return false;
+      }
+      state.updateNodeContent(nodeId, content);
+      return true;
     }
   };
 }

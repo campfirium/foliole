@@ -52,6 +52,22 @@ function notifyPastedAnchors(view: EditorView, insertedFrom: number, anchors: Re
   });
 }
 
+function insertClipboardTextWithAnchors(
+  view: EditorView,
+  payload: {
+    anchors: ReadonlyArray<ClipboardAnchorRange>;
+    text: string;
+  }
+) {
+  const insertedFrom = dispatchInsertedText(view, payload.text);
+  notifyPastedAnchors(view, insertedFrom, payload.anchors);
+  return true;
+}
+
+function resolveClipboardTextAnchors(content: string) {
+  return extractMarkedTextAnchorRanges(content);
+}
+
 export function handleInternalClipboardPaste(clipboard: ClipboardLike | null, view: EditorView) {
   if (!clipboard) {
     return false;
@@ -63,8 +79,14 @@ export function handleInternalClipboardPaste(clipboard: ClipboardLike | null, vi
   }
 
   const parsed = parseStructuredClipboardPayload(rawPayload);
-  const insertedFrom = dispatchInsertedText(view, parsed?.internalText ?? rawPayload);
-  notifyPastedAnchors(view, insertedFrom, parsed?.anchors ?? []);
+  if (parsed) {
+    return insertClipboardTextWithAnchors(view, {
+      anchors: parsed.anchors,
+      text: parsed.internalText
+    });
+  }
+
+  dispatchInsertedText(view, rawPayload);
   return true;
 }
 
@@ -73,11 +95,10 @@ export function handleMarkdownCompatibleHtmlPaste(clipboard: ClipboardLike | nul
     return false;
   }
 
-  const markedText = extractMarkedTextAnchorRanges(clipboard.getData('text/plain'));
+  const plainText = clipboard.getData('text/plain');
+  const markedText = resolveClipboardTextAnchors(plainText);
   if (markedText) {
-    const insertedFrom = dispatchInsertedText(view, markedText.text);
-    notifyPastedAnchors(view, insertedFrom, markedText.anchors);
-    return true;
+    return insertClipboardTextWithAnchors(view, markedText);
   }
 
   const html = clipboard.getData('text/html');
@@ -90,11 +111,12 @@ export function handleMarkdownCompatibleHtmlPaste(clipboard: ClipboardLike | nul
     return false;
   }
 
-  const insertedFrom = dispatchInsertedText(view, converted);
-  const convertedMarkedText = extractMarkedTextAnchorRanges(converted);
+  const convertedMarkedText = resolveClipboardTextAnchors(converted);
   if (convertedMarkedText) {
-    notifyPastedAnchors(view, insertedFrom, convertedMarkedText.anchors);
+    return insertClipboardTextWithAnchors(view, convertedMarkedText);
   }
+
+  dispatchInsertedText(view, converted);
   return true;
 }
 

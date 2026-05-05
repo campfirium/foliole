@@ -80,31 +80,7 @@ function createDriver() {
 }
 
 describe('nodeDeletedAnchorCleanup', () => {
-  it('removes opaque-id text anchors from parent content when the child is deleted', () => {
-    const { deletedNodes, driver, parents, updates } = createDriver();
-    deletedNodes.set('child-1', {
-      anchor_link: JSON.stringify({ id: 'anchor-1', kind: 'highlight' }),
-      parent_id: 'parent-1'
-    });
-    parents.set('parent-1', {
-      content: 'Before <highlight id="anchor-1">Alpha</highlight id="anchor-1"> after',
-      title: 'Parent'
-    });
-
-    const affectedParentIds = cleanupDeletedTextAnchors(driver, ['child-1'], '2026-04-14T12:00:00.000Z');
-
-    expect(affectedParentIds).toEqual(['parent-1']);
-    expect(updates).toEqual([
-      {
-        content: 'Before Alpha after',
-        deletedAt: '2026-04-14T12:00:00.000Z',
-        nodeId: 'parent-1',
-        openingText: 'Before Alpha after'
-      }
-    ]);
-  });
-
-  it('skips parent rewrites when the parent is already pure markdown', () => {
+  it('does not rewrite parent content when deleting text anchors', () => {
     const { deletedNodes, driver, parents, updates } = createDriver();
     deletedNodes.set('child-1', {
       anchor_link: JSON.stringify({ id: 'anchor-1', kind: 'highlight' }),
@@ -121,7 +97,24 @@ describe('nodeDeletedAnchorCleanup', () => {
     expect(updates).toEqual([]);
   });
 
-  it('skips parent rewrites when the deleted node already uses a locator', () => {
+  it('returns no parent rewrites when the parent is already pure markdown', () => {
+    const { deletedNodes, driver, parents, updates } = createDriver();
+    deletedNodes.set('child-1', {
+      anchor_link: JSON.stringify({ id: 'anchor-1', kind: 'highlight' }),
+      parent_id: 'parent-1'
+    });
+    parents.set('parent-1', {
+      content: 'Before Alpha after',
+      title: 'Parent'
+    });
+
+    const affectedParentIds = cleanupDeletedTextAnchors(driver, ['child-1'], '2026-04-14T12:00:00.000Z');
+
+    expect(affectedParentIds).toEqual([]);
+    expect(updates).toEqual([]);
+  });
+
+  it('returns no parent rewrites when the deleted node already uses a locator', () => {
     const { deletedNodes, driver, parents, updates } = createDriver();
     deletedNodes.set('child-1', {
       anchor_link: JSON.stringify({

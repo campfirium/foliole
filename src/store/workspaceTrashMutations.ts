@@ -1,10 +1,8 @@
-import { removeInlineAnchorMarkup } from '../features/editor/model/anchorInlineCleanup';
 import { isImageClozeLocator, removeImageClozeRegion } from '../features/image-cloze/model/imageCloze';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, sanitizeNavigationState } from './workspaceNavigation';
-import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import {
@@ -73,19 +71,16 @@ function updateDeletedAnchorParent(args: {
   if (!parentNode) {
     return null;
   }
-  const shouldRemoveTextAnchor =
-    args.mode === 'permanent' && !anchorLink.locator && isNodeDocumentLoaded(parentNode);
-  const cleanedContent = shouldRemoveTextAnchor ? removeInlineAnchorMarkup(parentNode.content, anchorLink) : parentNode.content;
   const parentWithRemovedRegion = removeImageRegionFromParent(parentNode, args.deletedNode, args.deletedAt);
-  if (cleanedContent === parentNode.content && parentWithRemovedRegion === parentNode) {
+  if (parentWithRemovedRegion === parentNode) {
     return null;
   }
   return {
     parentNodeId,
     updatedParentNode: {
       ...parentWithRemovedRegion,
-      content: cleanedContent,
-      title: cleanedContent === parentNode.content ? parentWithRemovedRegion.title : deriveNodeTitleFromContent(cleanedContent),
+      content: parentWithRemovedRegion.content,
+      title: parentWithRemovedRegion.title ?? deriveNodeTitleFromContent(parentWithRemovedRegion.content),
       updatedAt: args.deletedAt
     }
   };

@@ -9,6 +9,18 @@ interface ExistingChildHighlightRow {
   id: string;
 }
 
+function isImportedAnchorLink(value: string | null) {
+  if (!value) {
+    return false;
+  }
+  try {
+    const parsed = JSON.parse(value) as { origin?: unknown };
+    return parsed?.origin === 'imported';
+  } catch {
+    return false;
+  }
+}
+
 export function readExistingChildHighlights(driver: DatabaseDriver, parentNodeId: string) {
   return driver.queryAll<ExistingChildHighlightRow>(
     `SELECT id, content, anchor_link
@@ -23,9 +35,12 @@ export function replaceImportedHighlightNodes(input: {
   highlights: AnchoredImportedHighlightRecord[];
   importedAt: string;
   parentNodeId: string;
+  parentContent: string;
   startPosition: number;
 }) {
-  const existingChildren = readExistingChildHighlights(input.driver, input.parentNodeId).filter((row) => row.anchor_link !== null);
+  const existingChildren = readExistingChildHighlights(input.driver, input.parentNodeId).filter((row) =>
+    isImportedAnchorLink(row.anchor_link)
+  );
   existingChildren.forEach((row) => {
     input.driver.execute('DELETE FROM node_order WHERE node_id = ?', [row.id]);
     input.driver.execute('DELETE FROM nodes WHERE id = ?', [row.id]);
@@ -38,6 +53,7 @@ export function replaceImportedHighlightNodes(input: {
     highlights: input.highlights,
     importedAt: input.importedAt,
     parentNodeId: input.parentNodeId,
+    parentContent: input.parentContent,
     startPosition: input.startPosition
   });
 }

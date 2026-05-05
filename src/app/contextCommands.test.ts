@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { getSelectionCommandPayload } from './contextCommands';
+import {
+  getSelectionCommandPayload,
+  getSelectionCommandPayloadForContentRanges
+} from './contextCommands';
 
 function createAdapter(content: string, selections: Array<{ from: number; to: number }>) {
   return {
@@ -16,6 +19,11 @@ function expectSelectionPayloadMatches(
   selection: { from: number; to: number },
   expected: {
     clozeContent: string;
+    locator?: {
+      from: number;
+      originalText: string;
+      to: number;
+    };
     selectionText: string;
   }
 ) {
@@ -26,15 +34,80 @@ function expectSelectionPayloadMatches(
     entries: [
       {
         clozeContent: expected.clozeContent,
-        locator: {
+        locator: expected.locator ?? {
           from: selection.from,
           originalText: expected.selectionText,
-          to: selection.to
+          to: selection.from + expected.selectionText.length
         },
         selectionText: expected.selectionText
       }
     ]
   });
+}
+
+function runMergesOverlappingRangesCase() {
+  const content = 'Alpha Beta Gamma';
+  const alphaFrom = content.indexOf('Alpha');
+  const payload = getSelectionCommandPayloadForContentRanges('node-1', content, [
+    { from: alphaFrom, to: alphaFrom + 'Alpha Beta'.length },
+    { from: content.indexOf('Beta'), to: content.indexOf('Gamma') }
+  ]);
+
+  expect(payload?.entries).toEqual([
+      expect.objectContaining({
+        locator: {
+          from: alphaFrom,
+          originalText: 'Alpha Beta',
+          to: alphaFrom + 'Alpha Beta'.length
+        },
+        selectionText: 'Alpha Beta'
+      })
+  ]);
+  expect(payload?.clozeContent).toBe('[...]Gamma');
+  expect(payload?.selectionText).toBe('Alpha Beta');
+}
+
+function runMergesTouchingRangesCase() {
+  const content = 'Alpha Beta Gamma';
+  const payload = getSelectionCommandPayloadForContentRanges('node-1', content, [
+    { from: 0, to: 5 },
+    { from: 5, to: 10 }
+  ]);
+
+  expect(payload?.entries).toEqual([
+    expect.objectContaining({
+      locator: {
+        from: 0,
+        originalText: 'Alpha Beta',
+        to: 10
+      },
+      selectionText: 'Alpha Beta'
+    })
+  ]);
+  expect(payload?.clozeContent).toBe('[...] Gamma');
+}
+
+function runBuildsOnePayloadEntryPerSelectedRangeCase() {
+  vi.spyOn(crypto, 'randomUUID')
+    .mockReturnValueOnce('11111111-1111-1111-1111-111111111111')
+    .mockReturnValueOnce('22222222-2222-2222-2222-222222222222');
+  const content = 'Alpha Beta Gamma Delta';
+  const alphaFrom = content.indexOf('Alpha');
+  const betaFrom = content.indexOf('Gamma');
+  const payload = getSelectionCommandPayload(
+    'node-1',
+    createAdapter(content, [
+      { from: alphaFrom, to: alphaFrom + 'Alpha'.length },
+      { from: betaFrom, to: betaFrom + 'Gamma'.length }
+    ]) as never
+  );
+
+  expect(payload?.entries).toEqual([
+    expect.objectContaining({ anchorId: 'anchor-11111111-1111-1111-1111-111111111111', selectionText: 'Alpha' }),
+    expect.objectContaining({ anchorId: 'anchor-22222222-2222-2222-2222-222222222222', selectionText: 'Gamma' })
+  ]);
+  expect(payload?.selectionText).toBe('Alpha\nGamma');
+  expect(payload?.clozeContent).toBe('[...] Beta [...] Delta');
 }
 
 describe('getSelectionCommandPayload', () => {
@@ -48,36 +121,9 @@ describe('getSelectionCommandPayload', () => {
     });
   });
 
-  it('builds one payload entry per selected range', () => {
-    vi.spyOn(crypto, 'randomUUID')
-      .mockReturnValueOnce('11111111-1111-1111-1111-111111111111')
-      .mockReturnValueOnce('22222222-2222-2222-2222-222222222222');
-    const content = 'Alpha Beta Gamma Delta';
-    const alphaFrom = content.indexOf('Alpha');
-    const betaFrom = content.indexOf('Gamma');
-    const payload = getSelectionCommandPayload(
-      'node-1',
-      createAdapter(content, [
-        { from: alphaFrom, to: alphaFrom + 'Alpha'.length },
-        { from: betaFrom, to: betaFrom + 'Gamma'.length }
-      ]) as never
-    );
+  it('builds one payload entry per selected range', runBuildsOnePayloadEntryPerSelectedRangeCase);
 
-    expect(payload?.entries).toEqual([
-      expect.objectContaining({ anchorId: 'anchor-11111111-1111-1111-1111-111111111111', selectionText: 'Alpha' }),
-      expect.objectContaining({ anchorId: 'anchor-22222222-2222-2222-2222-222222222222', selectionText: 'Gamma' })
-    ]);
-    expect(payload?.selectionText).toBe('Alpha\nGamma');
-    expect(payload?.clozeContent).toBe('[...] Beta [...] Delta');
-  });
+  it('merges overlapping ranges before building payload entries', runMergesOverlappingRangesCase);
 
-  it('strips opaque anchor tags when building selection payload text', () => {
-    const content = 'Before <highlight id="anchor-1">Alpha</highlight id="anchor-1"> After';
-    const from = content.indexOf('<highlight');
-    const to = content.indexOf(' After');
-    expectSelectionPayloadMatches(content, { from, to }, {
-      clozeContent: 'Before [...] After',
-      selectionText: 'Alpha'
-    });
-  });
+  it('merges touching ranges into one continuous payload entry', runMergesTouchingRangesCase);
 });

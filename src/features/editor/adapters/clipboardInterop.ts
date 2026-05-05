@@ -10,7 +10,7 @@ import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import { renderExternalMarkdownWithAnchorRanges } from '../model/anchorExternalMarkdown';
 import { collectInlineLinkMatches } from '../model/inlineMarkdownMatches';
 
-import { getTextAnchorPresentation } from './liveMarkdownState';
+import { getTextAnchorDecorations } from './liveMarkdownState';
 
 export const FOLIOLE_CLIPBOARD_MIME = 'application/x-foliole';
 
@@ -66,7 +66,7 @@ function joinSelectedText(slices: ReadonlyArray<SelectedSlice>) {
 }
 
 function buildExternalTextFromSlices(view: EditorView, slices: ReadonlyArray<SelectedSlice>) {
-  const decorations = getTextAnchorPresentation(view).textAnchorDecorations;
+  const decorations = getTextAnchorDecorations(view);
   if (slices.length === 0) {
     return null;
   }
@@ -93,7 +93,7 @@ function buildExternalTextFromSlices(view: EditorView, slices: ReadonlyArray<Sel
 }
 
 function buildInternalAnchorRanges(view: EditorView, slices: ReadonlyArray<SelectedSlice>) {
-  const decorations = getTextAnchorPresentation(view).textAnchorDecorations;
+  const decorations = getTextAnchorDecorations(view);
   if (slices.length === 0 || decorations.length === 0) {
     return [] satisfies ClipboardAnchorRange[];
   }

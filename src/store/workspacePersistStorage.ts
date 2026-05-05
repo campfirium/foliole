@@ -11,6 +11,7 @@ import {
   mergePendingNodeSyncIntoSnapshot,
   replayPendingNodeSync
 } from './workspacePendingNodeSync';
+import { syncHydratedTextAnchorChildrenForActiveNode } from './workspacePersistStorageTextAnchorHydrate';
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
 import {
   isNodeDocumentLoaded,
@@ -123,12 +124,21 @@ async function hydrateActiveNodeDocument(name: string, snapshot: Record<string, 
     return snapshot;
   }
 
-  return {
-    ...snapshot,
+  const mergedActiveNode = mergeWorkspaceNodeDocument(activeNode, activeDocument);
+  const timestamp = new Date().toISOString();
+  const syncedNodesById = syncHydratedTextAnchorChildrenForActiveNode({
+    activeNode: mergedActiveNode,
+    nodeOrder: snapshot.nodeOrder,
     nodesById: {
       ...(snapshot.nodesById as Record<string, Node | undefined>),
-      [activeNodeId]: mergeWorkspaceNodeDocument(activeNode, activeDocument)
-    }
+      [activeNodeId]: mergedActiveNode
+    } as Record<string, Node>,
+    timestamp
+  });
+
+  return {
+    ...snapshot,
+    nodesById: syncedNodesById
   };
 }
 

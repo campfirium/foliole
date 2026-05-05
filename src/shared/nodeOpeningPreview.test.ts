@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { extractNodeOpeningPreview, resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview';
 
 describe('nodeOpeningPreview', () => {
-  it('strips opaque anchor tags before computing the opening text', () => {
+  it('computes the opening text from plain markdown content', () => {
     const content = [
       '# Title',
       '',
-      '<highlight id="anchor-1">First</highlight id="anchor-1"> paragraph.',
+      'First paragraph.',
       '',
       'Later paragraph.'
     ].join('\n');
@@ -16,7 +16,7 @@ describe('nodeOpeningPreview', () => {
   });
 
   it('returns null when only the placeholder opening remains after normalization', () => {
-    const content = '<highlight id="anchor-1">Linked PDF source ready for the reader surface.</highlight id="anchor-1">';
+    const content = 'Linked PDF source ready for the reader surface.';
 
     expect(resolveNodeOpeningText(content, 'Title')).toBeNull();
   });

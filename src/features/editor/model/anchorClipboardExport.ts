@@ -1,5 +1,4 @@
 import type { ClipboardAnchorRange } from './anchorClipboardPayload.js';
-import { convertAnchoredMarkdownToExternal } from './anchorExternalMarkdown.js';
 
 const HIGHLIGHT_MARKER_PATTERN = /==([\s\S]+?)==/g;
 const ASSET_URL_PATTERN = /asset:\/\/[^\s<>)\]]+/g;
@@ -97,7 +96,7 @@ export function convertInternalMarkdownForExternal(
   assetsDir: string | null,
   parseAssetUrl: (assetUrl: string) => string | null
 ) {
-  return replaceAssetUrls(convertAnchoredMarkdownToExternal(value), assetsDir, parseAssetUrl);
+  return replaceAssetUrls(value, assetsDir, parseAssetUrl);
 }
 
 export function createClipboardExportPayload(input: {
@@ -112,7 +111,7 @@ export function createClipboardExportPayload(input: {
     return null;
   }
 
-  const externalBase = input.externalTextBase?.trim().length ? input.externalTextBase : normalizedInternalText;
+  const externalBase = input.externalTextBase?.trim().length ? input.externalTextBase : input.internalText;
   const externalText = convertInternalMarkdownForExternal(externalBase, input.assetsDir, input.parseAssetUrl);
   return {
     internalAnchors: input.internalAnchors ?? [],
