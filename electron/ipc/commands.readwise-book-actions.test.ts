@@ -65,6 +65,7 @@ vi.mock('./importTextFile.js', () => ({
   runTextFileImport: vi.fn(),
   selectImportTextFile: vi.fn()
 }));
+vi.mock('./importClipboard.js', () => ({ runClipboardImport: vi.fn() }));
 vi.mock('./importDirectory.js', () => ({ runDirectoryImport: vi.fn() }));
 vi.mock('./fonts.js', () => ({ listSystemFonts: vi.fn() }));
 vi.mock('./readwiseReaderSetup.js', () => ({ inspectReadwiseReaderSetup: vi.fn() }));

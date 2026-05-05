@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { getRuntimeInvoke, onManagedInboxUpdated } from '../../shared/platform/bridge';
 import {
   loadRuntimeImportOverview,
+  runRuntimeClipboardImport,
   runRuntimeDirectoryImport,
   runRuntimeTextFileImport,
   type RuntimeDirectoryImportResult,
@@ -78,6 +79,11 @@ function applyImportFailureStatus(message: string) {
       lastRun: 'Import failed'
     }
   });
+}
+
+export function getFormalImportFailureMessage() {
+  const status = useFormalImportState.getState().status;
+  return status.lastRun === 'Import failed' && status.failures ? status.failures : null;
 }
 
 async function refreshFormalImportOverview(triggerImportId?: string) {
@@ -198,6 +204,7 @@ function useFormalImportBootstrap(isAvailable: boolean, hasLoadedOverview: boole
 }
 
 function useFormalImportActions() {
+  const startClipboardImport = useCallback(() => runImportFlow(runRuntimeClipboardImport, shouldRehydrateWorkspace, true), []);
   const startImportFile = useCallback(() => runImportFlow(runRuntimeTextFileImport, shouldRehydrateWorkspace, true), []);
   const startImportDirectory = useCallback(
     () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport, false),
@@ -223,7 +230,7 @@ function useFormalImportActions() {
       }),
     []
   );
-  return { resetImportData, startImportDirectory, startImportFile };
+  return { resetImportData, startClipboardImport, startImportDirectory, startImportFile };
 }
 
 async function runImportFlow<Result extends RuntimeTextImportResult | RuntimeDirectoryImportResult>(

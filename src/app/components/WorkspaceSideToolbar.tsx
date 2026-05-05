@@ -1,4 +1,4 @@
-import { ClipboardPaste, FileUp, Folders, Route, Settings } from 'lucide-react';
+import { ClipboardPlus, FileUp, Folders, Route, Settings } from 'lucide-react';
 
 import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
@@ -42,8 +42,8 @@ function ImportActions({
       <div className="flex h-[var(--workspace-top-toolbar-height)] items-center justify-center">
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-          icon={<ClipboardPaste aria-hidden="true" size={16} strokeWidth={1.75} />}
-          label="Clipboard Import *"
+          icon={<ClipboardPlus aria-hidden="true" size={16} strokeWidth={1.75} />}
+          label="Import Clipboard"
           onClick={onStartClipboardImport}
         />
       </div>

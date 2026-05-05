@@ -49,7 +49,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   },
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
-  { id: APP_COMMAND_IDS.clipboardImport, title: 'Clipboard Import', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
+  { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
   {
     id: APP_COMMAND_IDS.openImportManagement,
     title: 'Import Management',

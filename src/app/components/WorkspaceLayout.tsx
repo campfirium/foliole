@@ -137,7 +137,7 @@ export interface WorkspaceLayoutProps {
   onToggleRightSidebarVisibility: () => void;
   onRunImportFile: () => Promise<boolean>;
   onRunImportFolder: () => Promise<boolean>;
-  onStartClipboardImport: () => void;
+  onStartClipboardImport: () => boolean | Promise<boolean>;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;

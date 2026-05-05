@@ -197,6 +197,7 @@ function buildControllerLayoutState(args: {
     rightSidebarResize: args.controller.rightSidebarResize,
     runtime: args.controller.runtime,
     runImportDirectory: args.formalImport.startImportDirectory,
+    runClipboardImport: args.formalImport.startClipboardImport,
     runImportFile: args.formalImport.startImportFile,
     selectedTrashNode: args.controller.selectedTrashNode,
     startStudyMode: args.startStudyMode,

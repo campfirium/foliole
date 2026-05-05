@@ -104,6 +104,7 @@ export interface BuildControllerLayoutPropsArgs {
     isHydrated: boolean;
   };
   runImportDirectory: () => Promise<boolean>;
+  runClipboardImport: () => Promise<boolean>;
   runImportFile: () => Promise<boolean>;
 }
 
@@ -226,7 +227,7 @@ function createLayoutHandlerArgs(
     onResetLayout: args.ws.resetLayout,
     onRunImportFile: args.runImportFile,
     onRunImportFolder: args.runImportDirectory,
-    onStartClipboardImport: () => undefined,
+    onStartClipboardImport: args.runClipboardImport,
     onSelectNode,
     onSelectTrashNode: createSelectTrashNodeHandler(args),
     onRightSidebarSplitterKeyDown: args.rightSidebarResize.handleRightSidebarSplitterKeyDown,

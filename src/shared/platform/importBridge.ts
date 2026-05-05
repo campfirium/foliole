@@ -130,6 +130,42 @@ export async function runRuntimeTextFileImport(
   }
 }
 
+export async function runRuntimeClipboardImport(
+  highlightPolicy?: ImportHighlightPolicy,
+  titleStrategy?: ImportNodeTitleStrategy
+): Promise<RuntimeTextImportResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+
+  try {
+    const result = await runtimeInvoke(NATIVE_COMMANDS.runClipboardImport, toImportArgs(highlightPolicy, titleStrategy));
+    if (result === null) {
+      return null;
+    }
+    const imported = toRuntimeTextImportResult(result);
+    if (!imported) {
+      logRuntimeWarning('native clipboard import payload invalid', {
+        action: 'run_runtime_clipboard_import',
+        area: 'bridge',
+        command: NATIVE_COMMANDS.runClipboardImport,
+        fallback: 'return_null'
+      });
+    }
+    return imported;
+  } catch (error) {
+    logRuntimeWarning('native clipboard import failed', {
+      action: 'run_runtime_clipboard_import',
+      area: 'bridge',
+      command: NATIVE_COMMANDS.runClipboardImport,
+      fallback: 'rethrow_to_ui',
+      error
+    });
+    throw error;
+  }
+}
+
 export async function runRuntimeDirectoryImport(titleStrategy?: ImportNodeTitleStrategy): Promise<RuntimeDirectoryImportResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {

@@ -70,7 +70,7 @@ export function installAppMenu() {
         { type: 'separator' },
         commandItem('Import Files…', 'import.singleFileToInbox'),
         commandItem('Import Folder…', 'import.folderToInbox'),
-        commandItem('Clipboard Import *', 'import.clipboard'),
+        commandItem('Import Clipboard', 'import.clipboard'),
         commandItem('Import Management', 'import.openManagement'),
         { type: 'separator' },
         commandItem('Open Notes', 'workspace.openNotes'),

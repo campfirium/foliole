@@ -87,6 +87,7 @@ vi.mock('./storage.js', () => ({ loadAppSettingsState: vi.fn(), saveAppSettingsS
 vi.mock('../import/keepImportService.js', () => ({ previewKeepImportRule: vi.fn() }));
 vi.mock('./importDirectory.js', () => ({ runDirectoryImport: vi.fn() }));
 vi.mock('./importTextFile.js', () => ({ runTextFileImport: vi.fn(), selectImportTextFile: vi.fn() }));
+vi.mock('./importClipboard.js', () => ({ runClipboardImport: vi.fn() }));
 vi.mock('./fonts.js', () => ({ listSystemFonts: vi.fn() }));
 vi.mock('./readwiseReaderSetup.js', () => ({ inspectReadwiseReaderSetup: vi.fn() }));
 vi.mock('../attachments/resourceResolver.js', () => ({ resolveAttachmentResource }));

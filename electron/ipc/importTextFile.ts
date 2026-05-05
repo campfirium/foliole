@@ -20,7 +20,7 @@ import {
   resolveSingleFileImportSource
 } from './importSourcePipeline.js';
 
-function toNativeTextImportResult(record: PersistedImportRecord): NativeTextImportResult {
+export function toNativeTextImportResult(record: PersistedImportRecord): NativeTextImportResult {
   return {
     content_fingerprint: record.contentFingerprint,
     degraded_reason: record.degradedReason,

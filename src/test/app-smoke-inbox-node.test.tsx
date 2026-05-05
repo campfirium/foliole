@@ -181,7 +181,7 @@ it('shows import, clipboard import, and import management actions in the left to
   render(<App />);
 
   expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Clipboard Import *' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Import Clipboard' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Import Management' })).toBeInTheDocument();
 });
 
@@ -279,5 +279,5 @@ it('shows the imported PDF node in Inbox after manual import', async () => {
 it('keeps clipboard import marked as in progress in the left toolbar', () => {
   render(<App />);
 
-  expect(screen.getByRole('button', { name: 'Clipboard Import *' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Import Clipboard' })).toBeInTheDocument();
 });

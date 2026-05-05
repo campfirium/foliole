@@ -1,10 +1,13 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
-const windowTitleBarRender = vi.hoisted(() => vi.fn());
+const { windowTitleBarRender, workspaceLayoutGridRender } = vi.hoisted(() => ({
+  windowTitleBarRender: vi.fn(),
+  workspaceLayoutGridRender: vi.fn()
+}));
 
 vi.mock('./WindowTitleBar', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
@@ -17,7 +20,10 @@ vi.mock('./WindowTitleBar', async () => {
 });
 
 vi.mock('./WorkspaceLayoutGrid', () => ({
-  WorkspaceLayoutGrid: () => <div data-testid="workspace-grid" />
+  WorkspaceLayoutGrid: (props: { onStartClipboardImport: () => void }) => {
+    workspaceLayoutGridRender(props);
+    return <button data-testid="workspace-grid" onClick={props.onStartClipboardImport} type="button" />;
+  }
 }));
 
 vi.mock('./ImportSourceWorkspace', () => ({
@@ -59,6 +65,14 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'kind' | 'paren
   };
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
+}
+
 function createProps(overrides: Partial<ComponentProps<typeof WorkspaceLayoutMain>> = {}) {
   const onCloseImportManagement = vi.fn();
   const onOpenNotesView = vi.fn();
@@ -69,6 +83,10 @@ function createProps(overrides: Partial<ComponentProps<typeof WorkspaceLayoutMai
   return {
     activeNodeId: 'node-1',
     editorContent: 'Version 1',
+    externalEntriesByFolderId: {},
+    externalFolders: [],
+    externalSelection: { kind: 'root' },
+    isExternalViewOpen: false,
     isImmersiveMode: false,
     isImportManagementOpen: false,
     isListCollapsed: false,
@@ -99,6 +117,7 @@ function createProps(overrides: Partial<ComponentProps<typeof WorkspaceLayoutMai
 
 beforeEach(() => {
   windowTitleBarRender.mockClear();
+  workspaceLayoutGridRender.mockClear();
 });
 
 describe('WorkspaceLayoutMain title bar rendering', () => {
@@ -116,6 +135,21 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
     );
 
     expect(windowTitleBarRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows transient feedback while importing clipboard content', async () => {
+    const importResult = createDeferred<boolean>();
+    const onStartClipboardImport = vi.fn(() => importResult.promise);
+    render(<WorkspaceLayoutMain {...createProps({ onStartClipboardImport })} />);
+
+    fireEvent.click(screen.getByTestId('workspace-grid'));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Importing clipboard...');
+    importResult.resolve(true);
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Clipboard imported to Inbox');
+    });
+    expect(onStartClipboardImport).toHaveBeenCalledTimes(1);
   });
 
   it('forwards the top-level article title when a derived node is selected', () => {
@@ -154,5 +188,37 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
     const { container } = render(<WorkspaceLayoutMain {...createProps()} />);
 
     expect(container.querySelector('.pointer-events-none.absolute.inset-y-0.z-10.w-px.bg-divider')).toBeNull();
+  });
+});
+
+describe('WorkspaceLayoutMain external title bar rendering', () => {
+  it('forwards the external document title and marker when an external document is selected', () => {
+    render(
+      <WorkspaceLayoutMain
+        {...createProps({
+          activeNodeId: null,
+          externalEntriesByFolderId: {
+            'folder-1': [{
+              absolutePath: '/library/cap/topic.md',
+              extension: 'md',
+              fileName: 'topic.md',
+              folderId: 'folder-1',
+              folderPath: '/library',
+              modifiedAt: '2026-04-25T00:00:00.000Z',
+              openingText: null,
+              relativePath: 'cap/topic.md',
+              title: 'External topic title'
+            }]
+          },
+          externalSelection: { absolutePath: '/library/cap/topic.md', folderId: 'folder-1', kind: 'document' },
+          isExternalViewOpen: true
+        })}
+      />
+    );
+
+    expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({
+      centerTitle: 'External topic title',
+      centerTitleIcon: 'external'
+    }));
   });
 });

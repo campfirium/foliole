@@ -17,6 +17,7 @@ vi.mock('../../shared/platform/bridge', () => ({
 
 vi.mock('../../shared/platform/importBridge', () => ({
   loadRuntimeImportOverview,
+  runRuntimeClipboardImport: vi.fn(),
   runRuntimeDirectoryImport: vi.fn(),
   runRuntimeTextFileImport: vi.fn()
 }));

@@ -8,6 +8,7 @@ import { loadReadwiseBookEpub, openReadwiseBookDownload } from '../import/readwi
 import { asString } from './commandParsers.js';
 import type { InvokeContext } from './commands.js';
 import type { InvokeRequest } from './contracts.js';
+import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
 import { runImportForFilePath, runTextFileImport, selectImportTextFile } from './importTextFile.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
@@ -58,6 +59,9 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   }
   if (request.command === NATIVE_COMMANDS.runTextFileImport) {
     return runTextFileImport(resolveTargetWindow(context), args);
+  }
+  if (request.command === NATIVE_COMMANDS.runClipboardImport) {
+    return runClipboardImport(args);
   }
   if (request.command === NATIVE_COMMANDS.runDirectoryImport) {
     return runDirectoryImport(resolveTargetWindow(context), args);

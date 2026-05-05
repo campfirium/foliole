@@ -24,6 +24,7 @@ export const NATIVE_COMMANDS = {
   loadImportOverview: 'load_import_overview',
   loadPdfImportsInventory: 'load_pdf_imports_inventory',
   loadImportManagerSettings: 'load_import_manager_settings',
+  runClipboardImport: 'run_clipboard_import',
   runDirectoryImport: 'run_directory_import',
   runTextFileImport: 'run_text_file_import',
   selectImportDirectory: 'select_import_directory',
