@@ -123,3 +123,16 @@ it('applies remote nodes through the shared async DbPort executor', async () => 
     ).all('node-1')
   ).toEqual([{ attachment_id: 'att-1', node_id: 'node-1', role: 'reference' }]);
 });
+
+it('allows host adapters to provide the text body hash implementation', async () => {
+  const connection = openDatabaseConnection();
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-node-apply-hash-test' });
+
+  await applySyncNodesWithDbPort(port, [createRemoteNodeRecord()], {
+    hashTextBody: () => 'f'.repeat(64)
+  });
+
+  expect(connection.sqlite.prepare('SELECT body_blob_hash FROM nodes WHERE id = ?').get('node-1')).toEqual({
+    body_blob_hash: 'f'.repeat(64)
+  });
+});

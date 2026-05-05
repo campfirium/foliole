@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import type {
   NativeSyncNodeConflictRecord,
   NativeSyncNodeRecord
@@ -33,15 +31,23 @@ export interface ApplySyncNodesWithDbPortResult {
 }
 
 export interface ApplySyncNodesWithDbPortOptions {
+  hashTextBody?: (content: string) => Promise<string> | string;
   includeAlreadyApplied?: boolean;
-}
-
-function hashTextBody(content: string) {
-  return createHash('sha256').update(content, 'utf8').digest('hex');
 }
 
 function textBodyBlobBytes(content: string) {
   return new TextEncoder().encode(content);
+}
+
+async function hashTextBody(content: string, options: ApplySyncNodesWithDbPortOptions) {
+  if (options.hashTextBody) {
+    return options.hashTextBody(content);
+  }
+  const digest = await globalThis.crypto?.subtle.digest('SHA-256', textBodyBlobBytes(content));
+  if (!digest) {
+    throw new Error('sync_text_body_hash_unavailable');
+  }
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: readonly (string | number | bigint | Uint8Array | null)[] = []) {
@@ -49,8 +55,13 @@ async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: read
   return rows[0] ?? null;
 }
 
-async function upsertTextBodyBlob(port: DbPort, content: string, now: string) {
-  const hash = hashTextBody(content);
+async function upsertTextBodyBlob(
+  port: DbPort,
+  content: string,
+  now: string,
+  options: ApplySyncNodesWithDbPortOptions
+) {
+  const hash = await hashTextBody(content, options);
   const size = textBodyBlobBytes(content).byteLength;
   await port.run(
     `INSERT INTO content_blobs (
@@ -85,9 +96,14 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
   await port.run(statement.sql, statement.params);
 }
 
-async function upsertRemoteNode(port: DbPort, record: NativeSyncNodeRecord) {
+async function upsertRemoteNode(
+  port: DbPort,
+  record: NativeSyncNodeRecord,
+  options: ApplySyncNodesWithDbPortOptions
+) {
   const content = record.snapshot.content ?? '';
-  const bodyBlobHash = record.snapshot.body_blob_hash ?? await upsertTextBodyBlob(port, content, record.snapshot.updated_at);
+  const bodyBlobHash = record.snapshot.body_blob_hash
+    ?? await upsertTextBodyBlob(port, content, record.snapshot.updated_at, options);
   const statement = buildRemoteNodeUpsert(record, bodyBlobHash);
   await port.run(statement.sql, statement.params);
 }
@@ -109,8 +125,12 @@ async function replaceNodeAttachmentLinks(port: DbPort, record: NativeSyncNodeRe
   }
 }
 
-async function applyRemoteNode(port: DbPort, record: NativeSyncNodeRecord) {
-  await upsertRemoteNode(port, record);
+async function applyRemoteNode(
+  port: DbPort,
+  record: NativeSyncNodeRecord,
+  options: ApplySyncNodesWithDbPortOptions
+) {
+  await upsertRemoteNode(port, record, options);
   await upsertRemoteVersion(port, record);
   await replaceNodeOrder(port, record);
   await replaceNodeAttachmentLinks(port, record);
@@ -151,7 +171,7 @@ export async function applySyncNodesWithDbPort(
       const localNode = await loadLocalNodeSyncState(tx, record.object_id);
       const decision = decideIncomingNodeApply(localNode, record);
       if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
-        await applyRemoteNode(tx, record);
+        await applyRemoteNode(tx, record, options);
         result.appliedIds.push(record.object_id);
         continue;
       }
