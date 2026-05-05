@@ -60,6 +60,36 @@ describe('liveMarkdown preview line plans', () => {
       }
     ]);
   });
+
+});
+
+describe('liveMarkdown Obsidian-like preview line plans', () => {
+  it('keeps embeds raw while rendering non-embed wiki links', () => {
+    const plan = collectPreviewLineDecorationPlan({
+      hideTitleHeading: false,
+      inCodeBlock: false,
+      isCursorLine: false,
+      lineFrom: 0,
+      lineNumber: 1,
+      lineText: '![[image.png]] [[image.png]]',
+      markdownSyntaxVisible: false
+    });
+
+    expect(plan.inlinePresentationPlans[2]).toEqual({
+      markRanges: [
+        {
+          attributes: { 'data-md-link-node-title': 'image.png' },
+          className: 'cm-md-link-text',
+          from: 17,
+          to: 26
+        }
+      ],
+      replaceRanges: [
+        { from: 15, to: 17 },
+        { from: 26, to: 28 }
+      ]
+    });
+  });
 });
 
 describe('liveMarkdown source line plans', () => {

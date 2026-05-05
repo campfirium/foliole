@@ -24,6 +24,7 @@ const sampleContent = `# Markdown Dialect Sample Topic
 ==source highlight==
 [[Alpha note]]
 [[Folder/Beta note|Beta alias]]
+[[image.png]]
 ![[image.png]]
 
 > [!note]
@@ -54,12 +55,14 @@ async function collectPreviewState(desktopWindow: Page) {
     return {
       calloutTitles: Array.from(document.querySelectorAll('.prompt-editor-host .cm-md-callout-title')).map((node) => (node.textContent ?? '').trim()),
       hasTableWidget: Boolean(document.querySelector('.prompt-editor-host .cm-md-table-widget table')),
+      rawText: (document.querySelector('.prompt-editor-host') as HTMLElement | null)?.innerText ?? '',
       sourceHighlights: Array.from(document.querySelectorAll('.prompt-editor-host .cm-md-source-highlight')).map((node) => (node.textContent ?? '').trim()),
       tableBorderTop: table ? getComputedStyle(table).borderTopWidth : null,
       taskCheckboxCount: taskCheckboxes.length,
       taskCheckedCount: taskCheckboxes.filter((node) => (node as HTMLElement).dataset.mdTaskChecked === 'true').length,
       titlePrefixDisplay: firstHeadingPrefix ? getComputedStyle(firstHeadingPrefix).display : null,
-      titleVisibleText: (document.querySelector('.prompt-editor-host .cm-line-h1') as HTMLElement | null)?.innerText ?? ''
+      titleVisibleText: (document.querySelector('.prompt-editor-host .cm-line-h1') as HTMLElement | null)?.innerText ?? '',
+      wikiLinkTexts: Array.from(document.querySelectorAll('.prompt-editor-host .cm-md-link-text[data-md-link-node-title]')).map((node) => (node.textContent ?? '').trim())
     };
   });
 }
@@ -86,4 +89,6 @@ test('renders the markdown dialect sample in desktop preview', async ({ desktopW
   expect(state.taskCheckedCount).toBe(1);
   expect(state.titlePrefixDisplay).toBe('none');
   expect(state.titleVisibleText.trim()).toBe('Markdown Dialect Sample Topic');
+  expect(state.wikiLinkTexts).toEqual(expect.arrayContaining(['Alpha note', 'Beta alias', 'image.png']));
+  expect(state.rawText).toContain('![[image.png]]');
 });

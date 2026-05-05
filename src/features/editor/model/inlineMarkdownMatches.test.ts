@@ -85,6 +85,22 @@ describe('wiki and footnote markdown matches', () => {
     expect(collectWikiLinkMatches(0, '![[image.png]]', [])).toEqual([]);
   });
 
+  it('collects image-like wiki links when they are not embeds', () => {
+    expect(collectWikiLinkMatches(0, '[[image.png]]', [])).toEqual([
+      {
+        from: 0,
+        to: 13,
+        hiddenRanges: [
+          { from: 0, to: 2 },
+          { from: 11, to: 13 }
+        ],
+        labelFrom: 2,
+        labelTo: 11,
+        title: 'image.png'
+      }
+    ]);
+  });
+
   it('collects and unescapes footnotes outside preserved ranges', () => {
     expect(collectFootnoteMatches(0, '^[1]{A \\} note} ^[2]', [{ from: 16, to: 20 }])).toEqual([
       { from: 0, to: 15, label: '1', note: 'A } note' }
