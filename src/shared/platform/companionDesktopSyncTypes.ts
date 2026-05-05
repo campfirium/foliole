@@ -16,6 +16,7 @@ export interface CompanionDesktopSyncProgress {
   };
   completed: number;
   completedBytes?: number;
+  elapsedMs?: number;
   contentBreakdown?: {
     activeTopicBodies?: number;
     dueReviewBodies?: number;

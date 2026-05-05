@@ -74,6 +74,19 @@ function formatBytes(bytes: number) {
   return `${bytes} B`;
 }
 
+function formatElapsedTime(elapsedMs: number | undefined) {
+  if (typeof elapsedMs !== 'number' || elapsedMs < 1000) {
+    return null;
+  }
+  const seconds = Math.round(elapsedMs / 1000);
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${minutes}m ${remainder}s`;
+}
+
 function formatContentBreakdown(progress: CompanionDesktopSyncProgress) {
   if (progress.phase !== 'content' || !progress.contentBreakdown) {
     return null;
@@ -146,6 +159,8 @@ function CompanionBottomSyncStatus(props: {
   const byteLabel = isActiveTopic || isReviewQueue || props.progress.totalBytes == null || props.progress.completedBytes == null
     ? null
     : `${formatBytes(props.progress.completedBytes)}/${formatBytes(props.progress.totalBytes)}`;
+  const elapsedLabel = formatElapsedTime(props.progress.elapsedMs);
+  const statusLabel = [byteLabel ? `${countLabel} - ${byteLabel}` : countLabel, elapsedLabel].filter(Boolean).join(' · ');
   const contentBreakdown = formatContentBreakdown(props.progress);
   const attachmentBreakdown = formatAttachmentBreakdown(props.progress);
   const detailBreakdown = contentBreakdown ?? attachmentBreakdown;
@@ -156,7 +171,7 @@ function CompanionBottomSyncStatus(props: {
     >
       <div className="flex items-center justify-between gap-3">
         <span className="font-medium text-foreground">{formatSyncPhase(props.progress)}</span>
-        <span className="shrink-0 tabular-nums">{byteLabel ? `${countLabel} - ${byteLabel}` : countLabel}</span>
+        <span className="shrink-0 tabular-nums">{statusLabel}</span>
       </div>
       {detailBreakdown ? <div className="mt-0.5 truncate text-companion-text-secondary">{detailBreakdown}</div> : null}
       {props.progress.total === null ? null : (

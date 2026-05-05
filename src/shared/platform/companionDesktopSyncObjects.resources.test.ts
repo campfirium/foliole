@@ -47,7 +47,13 @@ async function testPullsAttachmentResources() {
     [{ attachmentId: 'att-1', contentHash: 'hash-att-1' }]
   );
   expect(result.syncedAttachmentIds).toEqual(['att-1']);
-  expect(onProgress).toHaveBeenCalledWith({ completed: 1, completedBytes: 2048, phase: 'attachment', total: null, totalBytes: null });
+  expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+    completed: 1,
+    completedBytes: 2048,
+    phase: 'attachment',
+    total: null,
+    totalBytes: null
+  }));
 }
 
 async function testReportsAttachmentBreakdown() {
@@ -77,7 +83,7 @@ async function testReportsAttachmentBreakdown() {
   const onProgress = vi.fn();
   await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
 
-  expect(onProgress).toHaveBeenCalledWith({
+  expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
     attachmentBreakdown: {
       activeTopicAttachments: 1,
       dueReviewAttachments: 2,
@@ -93,7 +99,7 @@ async function testReportsAttachmentBreakdown() {
     phase: 'attachment',
     total: 4,
     totalBytes: 8192
-  });
+  }));
 }
 
 async function testPullsBodiesBeforeAttachments() {

@@ -70,11 +70,12 @@ async function loadMissingAttachmentResourceSummary() {
 }
 
 export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: ProgressHandler) {
+  const startedAt = Date.now();
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedContentBlobHashes: string[] = [];
   const { contentBreakdown, total, totalBytes } = await loadMissingContentBlobSummary();
   let syncedBytes = 0;
-  onProgress?.({ completed: 0, completedBytes: 0, contentBreakdown, phase: 'content', total, totalBytes });
+  onProgress?.({ completed: 0, completedBytes: 0, contentBreakdown, elapsedMs: 0, phase: 'content', total, totalBytes });
   for (let batchIndex = 0; batchIndex < CONTENT_BLOB_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
     const blobs = await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
     if (blobs.length === 0) break;
@@ -87,7 +88,7 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
     syncedBytes += blobs
       .filter((blob) => syncedHashSet.has(blob.hash))
       .reduce((sum, blob) => sum + Math.max(0, blob.size_bytes ?? 0), 0);
-    onProgress?.({ completed: syncedContentBlobHashes.length, completedBytes: syncedBytes, contentBreakdown, phase: 'content', total, totalBytes });
+    onProgress?.({ completed: syncedContentBlobHashes.length, completedBytes: syncedBytes, contentBreakdown, elapsedMs: Date.now() - startedAt, phase: 'content', total, totalBytes });
     if (syncedBatchHashes.length === 0 && batch.failedContentBlobCount > 0) {
       throw new Error('Topic body batch could not download any requested body.');
     }
@@ -97,10 +98,11 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
 }
 
 export async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: ProgressHandler) {
+  const startedAt = Date.now();
   const { attachmentBreakdown, total, totalBytes } = await loadMissingAttachmentResourceSummary();
   const syncedAttachmentIds: string[] = [];
   let syncedBytes = 0;
-  onProgress?.({ attachmentBreakdown, completed: 0, completedBytes: 0, phase: 'attachment', total, totalBytes });
+  onProgress?.({ attachmentBreakdown, completed: 0, completedBytes: 0, elapsedMs: 0, phase: 'attachment', total, totalBytes });
   for (let batchIndex = 0; batchIndex < ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
     const resources = await loadCompanionMissingAttachmentResources(ATTACHMENT_RESOURCE_BATCH_LIMIT);
     if (resources.length === 0) break;
@@ -116,7 +118,7 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
     syncedBytes += resources
       .filter((resource) => syncedIdSet.has(resource.attachment_id))
       .reduce((sum, resource) => sum + Math.max(0, resource.size_bytes ?? 0), 0);
-    onProgress?.({ attachmentBreakdown, completed: syncedAttachmentIds.length, completedBytes: syncedBytes, phase: 'attachment', total, totalBytes });
+    onProgress?.({ attachmentBreakdown, completed: syncedAttachmentIds.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt, phase: 'attachment', total, totalBytes });
     if (resources.length < ATTACHMENT_RESOURCE_BATCH_LIMIT || syncedBatchIds.length === 0) break;
   }
   return { syncedAttachmentIds };
