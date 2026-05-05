@@ -5,11 +5,11 @@ import { readKeepImportItem, readKeepImportNodeState, upsertKeepImportItem } fro
 import {
   buildPreparedImportRecord,
   discoverDirectoryImportSources,
-  loadPreparedImportRecord,
   type DirectoryImportSourceDescriptor
 } from '../ipc/importSourcePipeline.js';
 
 import { logReadwiseScanFailed, logReadwiseScanStarted } from './importRunLogger.js';
+import { loadPreparedKeepImportRecord } from './keepImportPreparedRecord.js';
 import { logReadwiseRunCompleted, shouldLogReadwiseScan, type KeepImportRunEntry } from './keepImportReadwiseLogging.js';
 
 type KeepImportPreviewStatus = NativeKeepImportPreviewResult['entries'][number]['status'];
@@ -60,10 +60,7 @@ async function classifySource(
     return { detail: 'No file changes detected since the last keep scan.', sourcePath, status: 'unchanged' };
   }
   try {
-    await loadPreparedImportRecord(source, {
-      highlightPolicy: config.highlightPolicy,
-      importedAt: new Date().toISOString()
-    });
+    await loadPreparedKeepImportRecord(config, source, new Date().toISOString());
     return {
       detail: existingItem ? 'File changed and will be refreshed when enabled.' : 'New file will be imported when enabled.',
       sourcePath,
@@ -160,12 +157,7 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
     };
   }
   try {
-    const record = runPreparedImport(
-      await loadPreparedImportRecord(source, {
-        highlightPolicy: config.highlightPolicy,
-        importedAt
-      })
-    );
+    const record = runPreparedImport(await loadPreparedKeepImportRecord(config, source, importedAt));
     persistKeepImportState(
       config,
       source,

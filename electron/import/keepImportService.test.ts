@@ -21,6 +21,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDatabase } from '../database/migrate.js';
 import { softDeleteNodes } from '../database/nodeMutations.js';
 
+import { saveImportManagerSettings } from './importManagerSettings.js';
 import { previewKeepImportRule, runKeepImportRule } from './keepImportService.js';
 
 let tempRoot = '';
@@ -35,6 +36,78 @@ afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
+
+async function seedReadwiseArticleFixture(root: string) {
+  const fullDocumentDir = path.join(root, 'readwise', 'Full Document Contents', 'Articles');
+  const highlightDir = path.join(root, 'readwise', 'Articles');
+  await fs.mkdir(fullDocumentDir, { recursive: true });
+  await fs.mkdir(highlightDir, { recursive: true });
+  await fs.writeFile(
+    path.join(fullDocumentDir, 'Sample Article.md'),
+    [
+      '## Metadata',
+      '- Author: Someone',
+      '',
+      '## Full Document',
+      'Before the quote. This is the highlighted sentence. After the quote.',
+      '',
+      'Another paragraph with Another matching excerpt. End.'
+    ].join('\n'),
+    'utf8'
+  );
+  await fs.writeFile(
+    path.join(highlightDir, 'Sample Article.md'),
+    [
+      '# Sample Article',
+      '',
+      '## Highlights',
+      'This is the highlighted sentence. [...] (https://example.com)',
+      '',
+      'Another matching excerpt. Tags: [[tag-a]] [[tag-b]]'
+    ].join('\n'),
+    'utf8'
+  );
+  return { fullDocumentDir, highlightDir, readwiseRoot: path.join(root, 'readwise') };
+}
+
+function saveReadwiseKeepImportSettings(paths: {
+  fullDocumentDir: string;
+  highlightDir: string;
+  readwiseRoot: string;
+}) {
+  saveImportManagerSettings({
+    readwiseReaderConfig: {
+      highlightSeparator: '\\n\\n',
+      highlightsHeading: '## Highlights',
+      newHighlightsHeading: '## New highlights added',
+      noteKeyword: 'Note:',
+      tagKeyword: 'Tags:',
+      validatedAt: '2026-03-26T01:00:00.000Z'
+    },
+    readwiseRootPath: paths.readwiseRoot,
+    readwiseSources: [
+      {
+        highlightMode: 'split',
+        highlightPath: paths.highlightDir,
+        id: 'draft-import-source-1',
+        keepPreview: null,
+        keepState: 'enabled',
+        kind: 'articles',
+        primaryPath: paths.fullDocumentDir
+      }
+    ]
+  });
+}
+
+function readImportedChildRows() {
+  const connection = openDatabaseConnection();
+  const importedNode = connection.sqlite
+    .prepare(`SELECT latest_node_id FROM import_sources WHERE source_name = 'Sample Article.md'`)
+    .get() as { latest_node_id: string };
+  return connection.sqlite
+    .prepare('SELECT title, content FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+    .all(importedNode.latest_node_id) as Array<{ content: string; title: string }>;
+}
 
 it('blocks keep auto recreation after the imported node is deleted', async () => {
   const sourceDir = path.join(tempRoot, 'sources');
@@ -122,4 +195,28 @@ it('writes a dedicated readwise scan log with per-file decisions', async () => {
       source_path: 'article.md'
     })
   ]);
+});
+
+it('wires readwise keep import into existing highlight-derived child creation', async () => {
+  const fixture = await seedReadwiseArticleFixture(tempRoot);
+  saveReadwiseKeepImportSettings(fixture);
+
+  await runKeepImportRule({
+    directoryPath: fixture.fullDocumentDir,
+    highlightPolicy: 'reference_only',
+    ruleId: 'draft-import-source-1',
+    sourceType: 'readwise'
+  });
+
+  const childRows = readImportedChildRows();
+
+  expect(childRows).toHaveLength(2);
+  expect(childRows[0]).toEqual({
+    content: 'Before the quote. This is the highlighted sentence. After the quote.',
+    title: 'Before the quote. This is the highlighted sentence. After the quote.'
+  });
+  expect(childRows[1]).toEqual({
+    content: 'Another paragraph with Another matching excerpt. End.',
+    title: 'Another paragraph with Another matching excerpt. End.'
+  });
 });
