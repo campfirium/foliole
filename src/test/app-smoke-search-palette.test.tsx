@@ -88,6 +88,18 @@ it('opens workspace search with Ctrl+K and searches node titles and content', as
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
   });
+  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+    content: '',
+    hasContent: true,
+    reveal: null,
+    hasReveal: false
+  });
+  expect(useWorkspaceStore.getState().nodesById['node-3']).toMatchObject({
+    content: 'Atlas launch checklist and follow-up notes.',
+    hasContent: true,
+    reveal: null,
+    hasReveal: false
+  });
   expect(invoke).toHaveBeenCalledWith('search_workspace', { query: 'Atlas' });
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-3' });
   expect(screen.queryByRole('dialog', { name: 'Workspace search' })).not.toBeInTheDocument();
