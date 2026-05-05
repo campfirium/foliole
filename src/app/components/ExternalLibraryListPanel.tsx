@@ -67,7 +67,8 @@ export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
       </AppToolbar>
       <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 pt-2">
         <ExternalDocumentListBody
-          documents={documents}
+          documents={documents.documents}
+          isLoading={documents.isLoading}
           onOpenExternalSelection={props.onOpenExternalSelection}
           selection={props.selection}
         />
@@ -83,9 +84,10 @@ function useExternalDocumentListState(
 ) {
   const activeFolderId = props.selection.kind === 'root' ? null : props.selection.folderId;
   const selectedFolder = activeFolderId ? props.folders.find((folder) => folder.id === activeFolderId) ?? null : null;
-  const folderEntries = selectedFolder ? props.entriesByFolderId[selectedFolder.id] ?? [] : [];
+  const folderEntries = selectedFolder ? props.entriesByFolderId[selectedFolder.id] : [];
+  const isLoading = selectedFolder ? folderEntries === undefined : false;
   const browseState = useMemo(
-    () => (!selectedFolder || props.selection.kind === 'root' ? null : buildExternalLibraryFolderBrowseState(selectedFolder, folderEntries, props.selection)),
+    () => (!selectedFolder || props.selection.kind === 'root' ? null : buildExternalLibraryFolderBrowseState(selectedFolder, folderEntries ?? [], props.selection)),
     [folderEntries, props.selection, selectedFolder]
   );
 
@@ -97,15 +99,23 @@ function useExternalDocumentListState(
       containsQuery(document.title, searchQuery) ||
       containsQuery(document.openingText ?? '', searchQuery)
   );
-  return sortExternalDocuments(filteredDocuments, sort);
+  return {
+    documents: sortExternalDocuments(filteredDocuments, sort),
+    isLoading
+  };
 }
 
 function ExternalDocumentListBody(props: {
   documents: ReturnType<typeof buildExternalLibraryFolderBrowseState>['documentItems'];
+  isLoading: boolean;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   selection: ExternalLibrarySelection;
 }) {
   const rowSpacing = getNodeListRowSpacing();
+
+  if (props.isLoading) {
+    return <ExternalDocumentListLoadingState />;
+  }
 
   if (props.documents.length === 0) {
     return (
@@ -143,5 +153,19 @@ function ExternalDocumentListBody(props: {
         );
       })}
     </section>
+  );
+}
+
+function ExternalDocumentListLoadingState() {
+  return (
+    <div aria-busy="true" className="flex min-h-full items-center justify-center px-3 py-6">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div
+          aria-label="Loading external folder documents indicator"
+          className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-foreground/55"
+        />
+        <p className="m-0 text-sm text-foreground/65">Loading documents</p>
+      </div>
+    </div>
   );
 }

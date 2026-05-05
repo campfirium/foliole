@@ -1,7 +1,7 @@
 import { Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { AppEmptyState, AppInput } from '../../shared/ui';
+import { AppButton, AppEmptyState, AppErrorState, AppInput, AppLoadingState } from '../../shared/ui';
 
 import { ImportCatalogSortControls, type ImportCatalogSortOption } from './ImportCatalogSortControls';
 
@@ -54,7 +54,10 @@ export function ImportCatalogLayout(props: {
   children: ReactNode;
   countLabel: string;
   emptyState: { description: string; title: string };
+  errorState?: { description: string; onRetry: () => void; title: string };
   hasItems: boolean;
+  isLoading?: boolean;
+  loadingState?: { description: string; title: string };
   onChangeQuery: (value: string) => void;
   onChangeSortDirection: (sortDirection: 'asc' | 'desc') => void;
   onChangeSortKey: (sortKey: string) => void;
@@ -81,7 +84,23 @@ export function ImportCatalogLayout(props: {
         sortOptions={props.sortOptions}
         title={props.title}
       />
-      {props.hasItems ? (
+      {props.isLoading && props.loadingState ? (
+        <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
+          <AppLoadingState description={props.loadingState.description} title={props.loadingState.title} />
+        </div>
+      ) : props.errorState ? (
+        <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
+          <AppErrorState
+            action={
+              <AppButton onClick={props.errorState.onRetry} variant="primary">
+                Retry
+              </AppButton>
+            }
+            description={props.errorState.description}
+            title={props.errorState.title}
+          />
+        </div>
+      ) : props.hasItems ? (
         <div className="flex flex-col divide-y divide-border/10 border-b border-border/10">{props.children}</div>
       ) : (
         <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">

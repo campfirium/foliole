@@ -7,16 +7,25 @@ import {
 } from '../../shared/platform/readwiseBooksBridge';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { ImportCatalogLayout } from './ImportCatalogLayout';
 import { IMPORT_CATALOG_SORT_OPTIONS, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
-import { ReadwiseBookInventoryItem } from './ImportInventoryListItems';
 import { matchesImportSearch } from './importManagementSearch';
 import { applyResetReadwiseBookImportToWorkspace, selectReadwiseBookNode } from './importSourceWorkspaceReadwiseBooks';
+import { ReadwiseBooksCatalogPanel } from './ReadwiseBooksCatalogPanel';
 
 function useReadwiseBooksInventoryState(enabled: boolean) {
   const [booksInventory, setBooksInventory] = useState<RuntimeReadwiseBooksInventory | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const refreshBooksInventory = useCallback(async () => {
-    setBooksInventory(await loadRuntimeReadwiseBooksInventory());
+    setErrorMessage('');
+    setIsLoading(true);
+    try {
+      setBooksInventory(await loadRuntimeReadwiseBooksInventory());
+    } catch {
+      setErrorMessage('Readwise Books could not be loaded.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -39,7 +48,7 @@ function useReadwiseBooksInventoryState(enabled: boolean) {
     };
   }, [enabled, refreshBooksInventory]);
 
-  return { booksInventory, refreshBooksInventory };
+  return { booksInventory, errorMessage, isLoading, refreshBooksInventory };
 }
 
 async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
@@ -59,7 +68,7 @@ async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
   return result.node_id;
 }
 
-const readwiseSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
+export const readwiseSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
 type ReadwiseSortKey = ImportCatalogSortKey;
 
 export function filterBooksInventory(query: string, booksInventory: RuntimeReadwiseBooksInventory | null) {
@@ -131,70 +140,6 @@ function useReadwiseBookCatalogState(
   };
 }
 
-function ReadwiseBooksCatalogBody(props: {
-  books: RuntimeReadwiseBooksInventory['books'];
-  nodesById: ReturnType<typeof useWorkspaceStore.getState>['nodesById'];
-  onOpenBookNode: (nodeId: string) => void;
-  onResetBookImport: (input: { nodeId: string; title: string }) => void;
-  resettingNodeId: string | null;
-  scannedAt: string;
-}) {
-  return props.books.map((book) => (
-    <ReadwiseBookInventoryItem
-      book={book}
-      key={book.bookKey}
-      nodesById={props.nodesById}
-      onOpenBookNode={props.onOpenBookNode}
-      onResetBookImport={props.onResetBookImport}
-      resettingNodeId={props.resettingNodeId}
-      scannedAt={props.scannedAt}
-    />
-  ));
-}
-
-function ReadwiseBooksCatalogPanel(props: {
-  books: RuntimeReadwiseBooksInventory['books'];
-  countLabel: string;
-  nodesById: ReturnType<typeof useWorkspaceStore.getState>['nodesById'];
-  onChangeQuery: (value: string) => void;
-  onChangeSortDirection: (sortDirection: 'asc' | 'desc') => void;
-  onChangeSortKey: (value: string) => void;
-  onOpenBookNode: (nodeId: string) => void;
-  onResetBookImport: (input: { nodeId: string; title: string }) => void;
-  query: string;
-  resettingNodeId: string | null;
-  scannedAt: string;
-  sortDirection: 'asc' | 'desc';
-  sortKey: ReadwiseSortKey;
-}) {
-  return (
-    <ImportCatalogLayout
-      countLabel={props.countLabel}
-      emptyState={{ description: 'No books discovered yet.', title: 'Readwise Books is empty' }}
-      hasItems={props.books.length > 0}
-      onChangeQuery={props.onChangeQuery}
-      onChangeSortDirection={props.onChangeSortDirection}
-      onChangeSortKey={props.onChangeSortKey}
-      query={props.query}
-      searchLabel="Search imported books"
-      searchPlaceholder="Search in this folder"
-      sortDirection={props.sortDirection}
-      sortKey={props.sortKey}
-      sortOptions={[...readwiseSortOptions]}
-      title="Readwise Books"
-    >
-      <ReadwiseBooksCatalogBody
-        books={props.books}
-        nodesById={props.nodesById}
-        onOpenBookNode={props.onOpenBookNode}
-        onResetBookImport={props.onResetBookImport}
-        resettingNodeId={props.resettingNodeId}
-        scannedAt={props.scannedAt}
-      />
-    </ImportCatalogLayout>
-  );
-}
-
 function useReadwiseBookActions(props: {
   onOpenChange: (open: boolean) => void;
   onSelectNode?: (nodeId: string) => void;
@@ -238,7 +183,7 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
   onOpenChange: (open: boolean) => void;
   onSelectNode?: (nodeId: string) => void;
 }) {
-  const { booksInventory, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
+  const { booksInventory, errorMessage, isLoading, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const catalog = useReadwiseBookCatalogState(booksInventory, nodeViewById);
@@ -250,17 +195,21 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
         <ReadwiseBooksCatalogPanel
           books={catalog.filteredBooks}
           countLabel={catalog.countLabel}
+          errorMessage={errorMessage}
+          isLoading={isLoading}
           nodesById={nodesById}
           onChangeQuery={catalog.setQuery}
           onChangeSortDirection={catalog.setSortDirection}
           onChangeSortKey={(value) => catalog.setSortKey(value as ReadwiseSortKey)}
           onOpenBookNode={actions.handleOpenBookNode}
+          onRetry={refreshBooksInventory}
           onResetBookImport={actions.handleReimportBook}
           query={catalog.query}
           resettingNodeId={actions.resettingNodeId}
           scannedAt={(booksInventory?.scannedAt ?? '').replace('T', ' ').slice(0, 16)}
           sortDirection={catalog.sortDirection}
           sortKey={catalog.sortKey}
+          sortOptions={[...readwiseSortOptions]}
         />
         <p aria-live="polite" className="px-1 text-xs text-foreground/65">
           {actions.actionMessage}

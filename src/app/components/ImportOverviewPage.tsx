@@ -1,8 +1,57 @@
-import { AppEmptyState } from '../../shared/ui';
+import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
 
 import { ImportCatalogHeader } from './ImportCatalogLayout';
 import { ImportOverviewContent } from './ImportOverviewContent';
 import { overviewSortOptions, useImportOverviewState } from './importOverviewState';
+
+function ImportOverviewBody(props: {
+  onOpenNode: (nodeId: string) => void;
+  state: ReturnType<typeof useImportOverviewState>;
+}) {
+  if (props.state.isLoading) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
+        <AppLoadingState description="Checking import sources and recent import runs." title="Loading imports" />
+      </div>
+    );
+  }
+  if (props.state.errorMessage) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
+        <AppErrorState
+          action={
+            <AppButton onClick={props.state.refresh} variant="primary">
+              Retry
+            </AppButton>
+          }
+          description="Try again to load recent imports, Readwise Books, and PDF imports."
+          title={props.state.errorMessage}
+        />
+      </div>
+    );
+  }
+  if (props.state.totalVisibleCount === 0) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
+        <AppEmptyState description="No imported Inbox topics or recent runs yet." title="Imports are empty" />
+      </div>
+    );
+  }
+  return (
+    <ImportOverviewContent
+      booksInventory={props.state.booksInventory}
+      handleOpenBookNode={props.state.handleOpenBookNode}
+      handleReimportBook={props.state.handleReimportBook}
+      nodesById={props.state.nodesById}
+      onOpenNode={props.onOpenNode}
+      resettingNodeId={props.state.resettingNodeId}
+      sortedBooks={props.state.sortedBooks}
+      sortedInboxNodes={props.state.sortedInboxNodes}
+      sortedInboxRuns={props.state.sortedInboxRuns}
+      sortedPdfItems={props.state.sortedPdfItems}
+    />
+  );
+}
 
 export function ImportOverviewPage({
   open,
@@ -31,24 +80,7 @@ export function ImportOverviewPage({
           sortOptions={overviewSortOptions}
           title="Imports"
         />
-        {state.totalVisibleCount === 0 ? (
-          <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
-            <AppEmptyState description="No imported Inbox topics or recent runs yet." title="Imports are empty" />
-          </div>
-        ) : (
-          <ImportOverviewContent
-            booksInventory={state.booksInventory}
-            handleOpenBookNode={state.handleOpenBookNode}
-            handleReimportBook={state.handleReimportBook}
-            nodesById={state.nodesById}
-            onOpenNode={onSelectNode ?? (() => undefined)}
-            resettingNodeId={state.resettingNodeId}
-            sortedBooks={state.sortedBooks}
-            sortedInboxNodes={state.sortedInboxNodes}
-            sortedInboxRuns={state.sortedInboxRuns}
-            sortedPdfItems={state.sortedPdfItems}
-          />
-        )}
+        <ImportOverviewBody onOpenNode={onSelectNode ?? (() => undefined)} state={state} />
         <p aria-live="polite" className="px-1 pt-3 text-xs text-foreground/65">
           {state.actionMessage}
         </p>

@@ -9,9 +9,19 @@ import { PdfInventoryItem } from './ImportInventoryListItems';
 import { matchesImportSearch } from './importManagementSearch';
 
 function usePdfImportsInventoryState(enabled: boolean) {
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [pdfInventory, setPdfInventory] = useState<RuntimePdfImportsInventory | null>(null);
   const refreshPdfInventory = useCallback(async () => {
-    setPdfInventory(await loadRuntimePdfImportsInventory());
+    setErrorMessage('');
+    setIsLoading(true);
+    try {
+      setPdfInventory(await loadRuntimePdfImportsInventory());
+    } catch {
+      setErrorMessage('PDF imports could not be loaded.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -34,7 +44,7 @@ function usePdfImportsInventoryState(enabled: boolean) {
     };
   }, [enabled, refreshPdfInventory]);
 
-  return { pdfInventory };
+  return { errorMessage, isLoading, pdfInventory, refreshPdfInventory };
 }
 
 const pdfSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
@@ -81,7 +91,7 @@ function formatCountLabel(filteredCount: number, totalCount: number) {
 }
 
 export function ImportSourceWorkspacePdfPage({ open }: { open: boolean }) {
-  const { pdfInventory } = usePdfImportsInventoryState(open);
+  const { errorMessage, isLoading, pdfInventory, refreshPdfInventory } = usePdfImportsInventoryState(open);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const [query, setQuery] = useState('');
@@ -99,7 +109,10 @@ export function ImportSourceWorkspacePdfPage({ open }: { open: boolean }) {
       <ImportCatalogLayout
         countLabel={formatCountLabel(filteredItems.length, totalItems)}
         emptyState={{ description: 'No PDF imports discovered yet.', title: 'PDF is empty' }}
+        errorState={errorMessage ? { description: 'Try again to load imported PDFs.', onRetry: refreshPdfInventory, title: errorMessage } : undefined}
         hasItems={filteredItems.length > 0}
+        isLoading={isLoading}
+        loadingState={{ description: 'Checking imported PDFs.', title: 'Loading PDFs' }}
         onChangeQuery={setQuery}
         onChangeSortDirection={setSortDirection}
         onChangeSortKey={(value) => setSortKey(value as PdfSortKey)}

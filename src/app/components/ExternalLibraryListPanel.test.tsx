@@ -55,6 +55,35 @@ it('reuses the compact item row style for external library items without dates o
   expect(screen.queryByText('The first useful sentence inside this external document.')).toBeNull();
 });
 
+it('shows a loading state while the selected external folder entries are not loaded yet', () => {
+  render(
+    <ExternalLibraryListPanel
+      entriesByFolderId={{}}
+      folders={folders}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ folderId: 'folder-1', kind: 'folder' }}
+    />
+  );
+
+  expect(screen.getByText('Loading documents')).toBeInTheDocument();
+  expect(screen.getByLabelText('Loading external folder documents indicator')).toBeInTheDocument();
+  expect(screen.queryByText('No documents')).toBeNull();
+});
+
+it('shows the empty state only after the selected external folder entries load empty', () => {
+  render(
+    <ExternalLibraryListPanel
+      entriesByFolderId={{ 'folder-1': [] }}
+      folders={folders}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ folderId: 'folder-1', kind: 'folder' }}
+    />
+  );
+
+  expect(screen.getByText('No documents')).toBeInTheDocument();
+  expect(screen.queryByText('Loading documents')).toBeNull();
+});
+
 it('opens the selected document in the external workspace surface', () => {
   const onOpenExternalSelection = vi.fn();
 
