@@ -108,5 +108,23 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
     resultKey: 'rows',
     sql: 'SELECT value FROM companion_meta WHERE key = ? LIMIT 1',
     columns: [{ key: 'value', source: 'value', type: 'nullableString' }]
+  },
+  diagnosticStorageMetrics: {
+    resultKey: 'metrics',
+    sql:
+      "SELECT 'active_node_count' AS metric, COUNT(*) AS value FROM nodes WHERE deleted_at IS NULL " +
+      "UNION ALL SELECT 'external_document_count' AS metric, COUNT(*) AS value FROM external_documents " +
+      "UNION ALL SELECT 'content_blob_count' AS metric, COUNT(*) AS value FROM content_blobs " +
+      "UNION ALL SELECT 'missing_node_state_count' AS metric, COUNT(*) AS value FROM nodes n LEFT JOIN sync_object_state s " +
+      "ON s.object_type = 'node' AND s.object_id = n.id WHERE n.deleted_at IS NULL AND s.object_id IS NULL " +
+      "UNION ALL SELECT 'missing_node_version_count' AS metric, COUNT(*) AS value FROM nodes WHERE deleted_at IS NULL " +
+      "AND (current_version_id IS NULL OR current_version_id = '') " +
+      "UNION ALL SELECT 'node_blob_references_missing_rows' AS metric, COUNT(*) AS value FROM nodes n " +
+      'LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
+      'WHERE n.deleted_at IS NULL AND n.body_blob_hash IS NOT NULL AND cb.hash IS NULL',
+    columns: [
+      { key: 'metric', source: 'metric', type: 'string' },
+      { key: 'value', source: 'value', type: 'long' }
+    ]
   }
 };

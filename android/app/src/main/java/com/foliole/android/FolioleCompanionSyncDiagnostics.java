@@ -16,7 +16,7 @@ final class FolioleCompanionSyncDiagnostics {
 
     static JSObject diagnose(Context context, SQLiteDatabase database, String databasePath) throws Exception {
         String collectedAt = Instant.now().toString();
-        JSObject storage = FolioleCompanionSyncDiagnosticStorage.load(database);
+        JSObject storage = FolioleCompanionSyncDiagnosticStorage.load(context, database);
         JSObject syncState = FolioleCompanionSyncDiagnosticState.load(context, database);
         JSObject connection = loadConnection(context, database);
         JSObject result = new JSObject();
