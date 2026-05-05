@@ -247,7 +247,7 @@ function buildPdfSurfaceLayoutProps(
     searchRequest: searchState.searchRequest,
     searchStatus: searchState.searchStatus,
     searchTarget: searchState.searchTarget,
-    setSearchQuery: searchState.setSearchQuery,
+    setSearchQuery: searchState.handleSearchQueryChange,
     setSearchStatus: searchState.setSearchStatus,
     setVisiblePage: pdfSystem.actions.setVisiblePage,
     stepPage: pdfSystem.actions.stepPage,

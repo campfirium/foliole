@@ -130,11 +130,15 @@ function resolveCursorByRequest(args: {
   searchRequest: PdfSearchRequest | null;
   searchTarget: PdfSearchTarget | null;
 }) {
-  if (args.lastQueryRef.current !== args.query) {
+  const queryChanged = args.lastQueryRef.current !== args.query;
+
+  if (queryChanged) {
     args.cursorRef.current = 0;
     args.lastHandledTargetIdRef.current = null;
     args.lastRequestIdRef.current = null;
-  } else if (args.searchTarget && args.searchTarget.id !== args.lastHandledTargetIdRef.current) {
+  }
+
+  if (args.searchTarget && (queryChanged || args.searchTarget.id !== args.lastHandledTargetIdRef.current)) {
     args.cursorRef.current = resolveTargetCursor(args.matches, args.searchTarget);
     args.lastHandledTargetIdRef.current = args.searchTarget.id;
     args.lastRequestIdRef.current = null;
