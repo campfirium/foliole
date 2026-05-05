@@ -31,6 +31,10 @@ function warningVerdict(code: string, message: string, evidence: Record<string, 
   return { code, evidence, message, severity: 'warning' };
 }
 
+function infoVerdict(code: string, message: string, evidence: Record<string, unknown>): SyncDiagnosticVerdict {
+  return { code, evidence, message, severity: 'info' };
+}
+
 export async function loadLocalSyncDiagnostics(): Promise<SyncDiagnosticSnapshot | null> {
   if (!isNativeAndroidCompanionRuntime()) {
     return null;
@@ -92,7 +96,7 @@ export function mergeSyncDiagnosticVerdicts(args: {
     }));
   }
   if (cursorLag > 0) {
-    verdicts.push(warningVerdict('sync_android_not_caught_up', 'Android has not caught up with desktop state.', {
+    verdicts.push(infoVerdict('sync_android_not_caught_up', 'New desktop changes are available for this device.', {
       android_pack_cursor: androidCursor,
       cursor_lag: cursorLag,
       desktop_max_state_seq: desktopMaxSeq,
@@ -114,7 +118,7 @@ export function mergeSyncDiagnosticVerdicts(args: {
     }));
   }
   if (args.android.storage.active_node_count > 0 && args.android.content.missing_content_blob_count > 0) {
-    verdicts.push(warningVerdict('sync_android_content_cache_backlog', 'Android still has content blobs to cache.', {
+    verdicts.push(infoVerdict('sync_android_content_cache_backlog', 'Some topic bodies are still being cached.', {
       missing_content_blob_count: args.android.content.missing_content_blob_count
     }));
   }

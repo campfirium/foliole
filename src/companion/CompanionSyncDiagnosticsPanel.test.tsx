@@ -59,8 +59,8 @@ const diagnosticResult = {
   verdicts: [{
     code: 'sync_android_not_caught_up',
     evidence: { android_pack_cursor: 4, cursor_lag: 3, desktop_max_state_seq: 7 },
-    message: 'Android has not caught up with desktop state.',
-    severity: 'warning'
+    message: 'New desktop changes are available for this device.',
+    severity: 'info'
   }]
 };
 
@@ -75,20 +75,21 @@ describe('CompanionSyncDiagnosticsPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Run sync diagnostic' }));
 
-    await waitFor(() => expect(screen.getByText('Android has not caught up with desktop state.')).toBeInTheDocument());
-    expect(screen.getByText('Sync checkpoint')).toBeInTheDocument();
-    expect(screen.getByText('Desktop ledger seq')).toBeInTheDocument();
-    expect(screen.getByText('Android applied cursor')).toBeInTheDocument();
-    expect(screen.getByText('Structure cursor')).toBeInTheDocument();
-    expect(screen.getAllByText('Content cache backlog').length).toBeGreaterThan(0);
-    expect(screen.getByText('Current topic body')).toBeInTheDocument();
-    expect(screen.getByText('missing: Current topic')).toBeInTheDocument();
-    expect(screen.getByText('3 state rows')).toBeInTheDocument();
-    expect(screen.getByText('Lagging object types')).toBeInTheDocument();
-    expect(screen.getByText('view_state +3')).toBeInTheDocument();
-    expect(screen.getByText('1 Android / 2 Desktop')).toBeInTheDocument();
-    expect(screen.getAllByText('failed: Failed to apply companion desktop sync pack.')).toHaveLength(2);
-    expect(screen.getByText('A completed event exists, but the Android cursor is still behind desktop.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('New desktop changes are available')).toBeInTheDocument());
+    expect(screen.getByText('What this means')).toBeInTheDocument();
+    expect(screen.queryByText('sync_android_not_caught_up')).not.toBeInTheDocument();
+    expect(screen.getByText('Foliole will bring them in on the next sync.')).toBeInTheDocument();
+    expect(screen.getByText('Sync status')).toBeInTheDocument();
+    expect(screen.getByText('Topic list')).toBeInTheDocument();
+    expect(screen.getByText('New desktop changes')).toBeInTheDocument();
+    expect(screen.getByText('Topic bodies still caching')).toBeInTheDocument();
+    expect(screen.getByText('Current topic')).toBeInTheDocument();
+    expect(screen.getByText('Caching: Current topic')).toBeInTheDocument();
+    expect(screen.getByText('3 changes')).toBeInTheDocument();
+    expect(screen.queryByText('Lagging object types')).not.toBeInTheDocument();
+    expect(screen.getByText('2 on device / 2 on desktop')).toBeInTheDocument();
+    expect(screen.queryByText('failed: Failed to apply companion desktop sync pack.')).not.toBeInTheDocument();
+    expect(screen.queryByText('A completed event exists, but the Android cursor is still behind desktop.')).not.toBeInTheDocument();
     expect(screen.getByText('Android')).toBeInTheDocument();
     expect(screen.getByText('Desktop')).toBeInTheDocument();
     expect(diagnosticsMock.runCombinedSyncDiagnostics).toHaveBeenCalledWith('http://10.0.2.2:38641');

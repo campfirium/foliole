@@ -194,7 +194,7 @@ final class FolioleCompanionSyncDiagnostics {
             addVerdict(verdicts, "android_no_nodes_after_completed_sync", "error", "Completed sync left no topics on this device.", storage);
         }
         if (content.optLong("missing_content_blob_count", 0) > 0) {
-            addVerdict(verdicts, "android_missing_content_blobs", "warning", "Some content blobs are not cached.", content);
+            addVerdict(verdicts, "android_missing_content_blobs", "info", "Some topic bodies are still being cached.", content);
         }
         JSONObject failed = recentFailedEvent(events);
         if (failed != null) {
@@ -204,7 +204,7 @@ final class FolioleCompanionSyncDiagnostics {
             addVerdict(verdicts, "android_recent_sync_failed", "error", "Recent sync activity failed.", evidence);
         }
         if (syncState.optLong("local_dirty_count", 0) > 0) {
-            addVerdict(verdicts, "android_has_local_dirty_state", "info", "This device has local changes waiting to push.", syncState);
+            addVerdict(verdicts, "android_has_local_dirty_state", "info", "This device has changes waiting to send.", syncState);
         }
         if (verdicts.length() == 0) {
             addVerdict(verdicts, "android_ready", "ok", "Android sync state is readable.", storage);

@@ -60,7 +60,9 @@ function expectCursorLagWithRecentFailure() {
   expect(verdicts).toContainEqual(expect.objectContaining({ code: 'sync_recent_android_failure' }));
   expect(verdicts).toContainEqual(expect.objectContaining({
     code: 'sync_android_not_caught_up',
-    evidence: expect.objectContaining({ cursor_lag: 5 })
+    evidence: expect.objectContaining({ cursor_lag: 5 }),
+    message: 'New desktop changes are available for this device.',
+    severity: 'info'
   }));
 }
 
@@ -129,7 +131,11 @@ function expectContentBacklogSeparateFromStructure() {
   });
 
   expect(verdicts).toContainEqual(expect.objectContaining({ code: 'sync_structure_aligned' }));
-  expect(verdicts).toContainEqual(expect.objectContaining({ code: 'sync_android_content_cache_backlog' }));
+  expect(verdicts).toContainEqual(expect.objectContaining({
+    code: 'sync_android_content_cache_backlog',
+    message: 'Some topic bodies are still being cached.',
+    severity: 'info'
+  }));
   expect(verdicts).not.toContainEqual(expect.objectContaining({ code: 'sync_android_not_caught_up' }));
 }
 

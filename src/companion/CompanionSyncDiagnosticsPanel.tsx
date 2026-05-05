@@ -19,6 +19,40 @@ function severityClass(severity: SyncDiagnosticSeverity) {
   return 'text-companion-text-secondary';
 }
 
+function friendlyVerdict(verdict: SyncDiagnosticVerdict) {
+  if (verdict.code === 'sync_android_not_caught_up') {
+    return {
+      description: 'Foliole will bring them in on the next sync.',
+      title: 'New desktop changes are available'
+    };
+  }
+  if (verdict.code === 'sync_android_content_cache_backlog' || verdict.code === 'android_missing_content_blobs') {
+    return {
+      description: 'Topics can open now; uncached bodies load as needed.',
+      title: 'Topic bodies are still caching'
+    };
+  }
+  if (verdict.code === 'android_has_local_dirty_state') {
+    return {
+      description: 'They will be sent to desktop during sync.',
+      title: 'Device changes are waiting to send'
+    };
+  }
+  if (verdict.code === 'desktop_ready') {
+    return {
+      description: 'Desktop sync is reachable from this device.',
+      title: 'Desktop connection is ready'
+    };
+  }
+  if (verdict.code === 'sync_structure_aligned') {
+    return {
+      description: 'The Topic list matches the desktop state.',
+      title: 'Topic list is up to date'
+    };
+  }
+  return { description: null, title: verdict.message };
+}
+
 function formatNumber(value: number | null | undefined) {
   return typeof value === 'number' ? `${value}` : 'None';
 }
@@ -30,9 +64,9 @@ function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
     <div className="border-t border-companion-divider">
       <MetricRow label="Connection" value={snapshot.connection.state} />
       <MetricRow label="Topics" value={formatNumber(snapshot.storage.active_node_count)} />
-      <MetricRow label={isAndroid ? 'Local ledger seq' : 'Ledger seq'} value={formatNumber(snapshot.sync_state.max_state_seq)} />
-      {isAndroid ? <MetricRow label="Applied desktop cursor" value={formatNumber(snapshot.sync_state.pack_cursor)} /> : null}
-      <MetricRow label="Content cache backlog" value={formatNumber(snapshot.content.missing_content_blob_count)} />
+      <MetricRow label={isAndroid ? 'Device changes' : 'Desktop changes'} value={formatNumber(snapshot.sync_state.max_state_seq)} />
+      {isAndroid ? <MetricRow label="Last desktop sync" value={formatNumber(snapshot.sync_state.pack_cursor)} /> : null}
+      <MetricRow label="Bodies still caching" value={formatNumber(snapshot.content.missing_content_blob_count)} />
     </div>
   );
 }
@@ -56,8 +90,10 @@ function VerdictList(props: { verdicts: SyncDiagnosticVerdict[] }) {
     <div className="border-t border-companion-divider">
       {props.verdicts.map((verdict, index) => (
         <div className="border-b border-companion-divider py-3 last:border-b-0" key={`${verdict.code}-${index}`}>
-          <div className={`text-sm font-medium ${severityClass(verdict.severity)}`}>{verdict.message}</div>
-          <div className="mt-1 text-xs text-companion-text-secondary">{verdict.code}</div>
+          <div className={`text-sm font-medium ${severityClass(verdict.severity)}`}>{friendlyVerdict(verdict).title}</div>
+          {friendlyVerdict(verdict).description ? (
+            <div className="mt-1 text-xs leading-5 text-companion-text-secondary">{friendlyVerdict(verdict).description}</div>
+          ) : null}
         </div>
       ))}
     </div>
@@ -129,7 +165,7 @@ export function CompanionSyncDiagnosticsPanel(props: { endpointUrl: string | nul
         <>
           <CompanionSyncDiagnosticCheckpoint result={result} />
           <section>
-            <h3 className="text-sm font-semibold text-foreground">Verdicts</h3>
+            <h3 className="text-sm font-semibold text-foreground">What this means</h3>
             <VerdictList verdicts={result.verdicts} />
           </section>
           <SnapshotSection empty="Android diagnostics are only available in the native app." snapshot={result.android} title="Android" />
