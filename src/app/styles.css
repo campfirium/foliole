@@ -1,7 +1,7 @@
 :root {
-  color: #0f172a;
-  background-color: #f8fafc;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #111827;
+  background-color: #eef2f7;
+  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
 }
 
 * {
@@ -12,15 +12,57 @@ body {
   margin: 0;
 }
 
-.app-shell {
+.workspace {
   display: grid;
-  place-content: center;
-  min-height: 100vh;
-  gap: 0.5rem;
-  padding: 2rem;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: 100dvh;
+  gap: 0.75rem;
+  padding: 0.75rem;
 }
 
-h1,
-p {
+.panel {
+  border: 1px solid #d0d7e2;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.panel-header {
+  border-bottom: 1px solid #e5e9f1;
+  background: #f9fbff;
+  padding: 0.75rem 1rem;
+}
+
+.panel-header h2 {
   margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.panel-body {
+  padding: 1rem;
+}
+
+.panel-body p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.right-stack {
+  display: grid;
+  grid-template-rows: minmax(220px, 2fr) minmax(180px, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .right-stack {
+    grid-template-rows: minmax(220px, auto) minmax(180px, auto);
+  }
 }
