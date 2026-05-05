@@ -33,9 +33,21 @@ describe('playwright desktop harness', () => {
       launchMode: 'args',
       mainEntry: '/workspace/foliole/electron-dist/electron/main.js',
       missingPaths: [],
-      preloadPath: '/workspace/foliole/electron-dist/preload.cjs',
+      preloadPath: '/workspace/foliole/electron/preload.cjs',
       rendererIndexPath: '/workspace/foliole/dist/index.html'
     });
+  });
+
+  it('requires the current preload entry instead of historical electron-dist fallback paths', () => {
+    const target = resolveDesktopLaunchTarget('/workspace/foliole', (filePath) =>
+      [
+        '/workspace/foliole/electron-dist/electron/main.js',
+        '/workspace/foliole/electron-dist/preload.cjs',
+        '/workspace/foliole/dist/index.html'
+      ].includes(filePath)
+    );
+
+    expect(target.missingPaths).toEqual(['/workspace/foliole/electron/preload.cjs']);
   });
 
   it('creates args-based launch options with optional executable override', () => {

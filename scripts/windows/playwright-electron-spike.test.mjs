@@ -22,7 +22,7 @@ describe('playwright electron spike', () => {
 
     expect(target.launchMode).toBe('args');
     expect(target.mainEntry).toBe('/workspace/foliole/electron-dist/electron/main.js');
-    expect(target.preloadPath).toBe('/workspace/foliole/electron-dist/preload.cjs');
+    expect(target.preloadPath).toBe('/workspace/foliole/electron/preload.cjs');
     expect(target.rendererIndexPath).toBe('/workspace/foliole/dist/index.html');
     expect(target.missingPaths).toEqual([]);
   });

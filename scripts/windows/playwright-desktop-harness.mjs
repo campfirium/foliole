@@ -30,7 +30,7 @@ export function resolveDesktopAppRoot(env = process.env, existsSync = fs.existsS
 export function resolveDesktopLaunchTarget(appRoot, existsSync = fs.existsSync) {
   const resolvedAppRoot = path.resolve(appRoot);
   const mainEntry = path.join(resolvedAppRoot, 'electron-dist', 'electron', 'main.js');
-  const preloadPath = path.join(resolvedAppRoot, 'electron-dist', 'preload.cjs');
+  const preloadPath = path.join(resolvedAppRoot, 'electron', 'preload.cjs');
   const rendererIndexPath = path.join(resolvedAppRoot, 'dist', 'index.html');
   const requiredPaths = [mainEntry, preloadPath, rendererIndexPath];
 

@@ -2,6 +2,10 @@ import path from 'node:path';
 
 type ExistsSync = (filePath: string) => boolean;
 
+function resolveCurrentPreloadScriptPath(runtimeDir: string) {
+  return path.join(runtimeDir, '..', '..', 'electron', 'preload.cjs');
+}
+
 function resolveFirstExistingPath(candidates: string[], existsSync: ExistsSync) {
   for (const candidate of candidates) {
     if (existsSync(candidate)) {
@@ -12,17 +16,12 @@ function resolveFirstExistingPath(candidates: string[], existsSync: ExistsSync) 
 }
 
 export function resolvePreloadScriptPath(runtimeDir: string, existsSync: ExistsSync) {
-  const resolved = resolveFirstExistingPath(
-    [
-      path.join(runtimeDir, '..', '..', 'electron', 'preload.cjs'),
-      path.join(runtimeDir, '..', 'preload.cjs'),
-      path.join(runtimeDir, '..', 'electron', 'preload.cjs'),
-      path.join(runtimeDir, 'preload.cjs')
-    ],
-    existsSync
-  );
+  const currentPreloadPath = resolveCurrentPreloadScriptPath(runtimeDir);
+  if (existsSync(currentPreloadPath)) {
+    return currentPreloadPath;
+  }
 
-  return resolved ?? path.join(runtimeDir, '..', 'preload.cjs');
+  return currentPreloadPath;
 }
 
 export function resolveRendererIndexPath(runtimeDir: string, existsSync: ExistsSync) {
