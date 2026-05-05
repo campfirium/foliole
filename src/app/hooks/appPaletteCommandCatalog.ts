@@ -14,6 +14,7 @@ export interface BuildAppPaletteItemsOptions {
   canMoveToNode: boolean;
   canGoParent: boolean;
   canFindInCurrentTopic: boolean;
+  canToggleImmersiveMode: boolean;
   canSetNodePriority: boolean;
   canRevealAnswer: boolean;
   canToggleReviewMode: boolean;
@@ -21,6 +22,7 @@ export interface BuildAppPaletteItemsOptions {
   canDeferReadingReview: boolean;
   canCompleteReadingReview: boolean;
   canDismissReadingReview: boolean;
+  isImmersiveMode: boolean;
   isReviewMode: boolean;
 }
 
@@ -80,6 +82,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.moveToNode, title: 'Move to', section: 'Navigation', keywords: ['move', 'reparent', 'node'] },
   { id: APP_COMMAND_IDS.goParent, title: 'Go Parent', section: 'Navigation' },
   { id: APP_COMMAND_IDS.findInTopic, title: 'Find in Topic', section: 'Navigation', keywords: ['find', 'search', 'topic', 'document', 'text'] },
+  { id: APP_COMMAND_IDS.toggleImmersiveMode, title: 'Toggle Immersive Reading', section: 'Editor', keywords: ['immersive', 'reading', 'focus', 'fullscreen'] },
   { id: APP_COMMAND_IDS.enterPriorityMode, title: 'Set Priority…', section: 'Navigation', keywords: ['priority', 'queue', 'p0', 'p1', 'quick set'] },
   { id: APP_COMMAND_IDS.toggleEditorDisplayMode, title: 'Toggle Editor Display Mode', section: 'Editor' },
   { id: APP_COMMAND_IDS.startStudyMode, title: 'Enter Review Mode', section: 'Review' },
@@ -98,6 +101,13 @@ function resolveCommandTitle(id: string, isReviewMode: boolean, title: string) {
     return title;
   }
   return isReviewMode ? 'Exit Review Mode' : 'Enter Review Mode';
+}
+
+function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, title: string) {
+  if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
+    return options.isImmersiveMode ? 'Exit Immersive Reading' : 'Enter Immersive Reading';
+  }
+  return resolveCommandTitle(id, options.isReviewMode, title);
 }
 
 function isReviewGradeCommand(id: string) {
@@ -143,6 +153,9 @@ export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItem
   if (id === APP_COMMAND_IDS.findInTopic) {
     return options.canFindInCurrentTopic;
   }
+  if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
+    return options.canToggleImmersiveMode;
+  }
   if (id === APP_COMMAND_IDS.enterPriorityMode) {
     return options.canSetNodePriority;
   }
@@ -171,6 +184,6 @@ export function getAppPaletteCommands(options: BuildAppPaletteItemsOptions) {
   return APP_PALETTE_COMMANDS.map((command) => ({
     ...command,
     enabled: isPaletteCommandEnabled(command.id, options),
-    title: resolveCommandTitle(command.id, options.isReviewMode, command.title)
+    title: resolvePaletteTitle(command.id, options, command.title)
   }));
 }

@@ -7,6 +7,7 @@ import { anchorStructureGuard } from './anchorStructureGuard';
 import {
   type CodeMirrorEditorAdapterOptions,
   type EditorDocumentChangeMeta,
+  createReadOnlyExtensions,
   createLiveMarkdownReconfigureEffect
 } from './codeMirrorEditorAdapterSupport';
 import { createLiveMarkdown } from './liveMarkdown';
@@ -22,6 +23,7 @@ export function createCodeMirrorEditorExtensions(args: {
   onDocChanged: (content: string, meta: EditorDocumentChangeMeta) => void;
   onCompositionEnd: () => void;
   options: CodeMirrorEditorAdapterOptions;
+  readOnlyCompartment: import('@codemirror/state').Compartment;
   searchDecorationsCompartment: import('@codemirror/state').Compartment;
 }): Extension[] {
   return [
@@ -30,8 +32,7 @@ export function createCodeMirrorEditorExtensions(args: {
     history(),
     EditorState.allowMultipleSelections.of(true),
     keymap.of([...defaultKeymap, ...historyKeymap]),
-    EditorState.readOnly.of(args.options.readOnly === true),
-    EditorView.editable.of(true),
+    args.readOnlyCompartment.of(createReadOnlyExtensions(args.options.readOnly === true)),
     drawSelection(),
     EditorView.lineWrapping,
     highlightActiveLine(),

@@ -84,6 +84,7 @@ function getDocumentPanelBodyProps(
     editorContent: props.editorContent,
     editorContentPaddingBottom: panelState.editorContentPaddingBottom,
     editorHideTitleHeading: props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false,
+    immersiveEditing: props.isImmersiveMode && props.isImmersiveEditing,
     editorNodeId: props.editorNodeId,
     editorNodeViewState: props.editorNodeViewState,
     emptyState: panelState.emptyState,
@@ -93,6 +94,7 @@ function getDocumentPanelBodyProps(
     onAnswerChange: props.onAnswerChange,
     onEditorChange: props.onEditorChange,
     onEditorContextMenu: props.onEditorContextMenu,
+    onEditorDoubleClick: props.isImmersiveMode && !props.isImmersiveEditing ? props.onEnterImmersiveEdit : undefined,
     onEditorReady: props.onEditorReady,
     onPromptImageLoadStateChange: (state: { loadedCount: number; totalCount: number }) => {
       if (!props.editorNodeId) {
@@ -105,7 +107,8 @@ function getDocumentPanelBodyProps(
     onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
     onResetLayout: props.onResetLayout,
     onStartDocumentResize: props.onStartDocumentResize,
-    readOnly: props.isEditorReadOnly,
+    readOnly: props.isEditorReadOnly || (props.isImmersiveMode && !props.isImmersiveEditing),
+    showDocumentResizeHandles: !props.isImmersiveMode,
     reveal: panelState.reveal
   };
 }

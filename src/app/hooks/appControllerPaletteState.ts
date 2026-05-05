@@ -106,6 +106,7 @@ function createPaletteRunnerArgs(args: {
     onRestartApp: restartMainWindowApp,
     onToggleDevTools: toggleMainWindowDevTools,
     onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode,
+    onToggleImmersiveMode: args.layoutProps.onToggleImmersiveMode,
     onToggleListVisibility: args.layoutProps.onToggleListVisibility,
     openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     openReadwiseReaderSettings: () => openReadwiseReaderSettings(args.runtime),

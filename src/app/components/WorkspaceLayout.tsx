@@ -1,4 +1,5 @@
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -32,7 +33,9 @@ export interface WorkspaceLayoutProps {
   canGoParent: boolean;
   contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
+  editorAdapterRef: MutableRefObject<EditorAdapter | null>;
   editorContent: string;
+  isImmersiveMode: boolean;
   isEditorReadOnly: boolean;
   isPriorityQuickSetActive: boolean;
   onNodePriorityChange: (nodeId: string, priority: number | null) => void;
@@ -96,7 +99,11 @@ export interface WorkspaceLayoutProps {
   onOpenImportManagement: () => void;
   onOpenTrashView: () => void;
   onOpenVirtualView: () => void;
+  onEnterImmersiveEdit: () => void;
+  onEnterImmersiveMode: () => void;
+  onExitImmersiveMode: () => void;
   onCloseImportManagement: () => void;
+  onToggleImmersiveMode: () => void;
   onToggleListVisibility: () => void;
   onToggleRightSidebarVisibility: () => void;
   onRunImportFile: () => Promise<boolean>;

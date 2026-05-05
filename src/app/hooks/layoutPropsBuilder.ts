@@ -1,3 +1,4 @@
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { isNodeContentLocked } from '../../features/nodes/model/nodeContainers';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
@@ -25,6 +26,7 @@ interface BuildLayoutPropsArgs {
   documentMaxWidth: number;
   documentNode?: { content: string };
   documentResize: { isResizingDocument: boolean; startResize: WorkspaceLayoutProps['onStartDocumentResize'] };
+  editorAdapterRef: { current: EditorAdapter | null };
   editorCtx: Pick<
     WorkspaceLayoutProps,
     | 'onCloseContextMenu'
@@ -42,6 +44,7 @@ interface BuildLayoutPropsArgs {
   isResizingList: boolean;
   isResizingRightSidebar: boolean;
   isImportManagementOpen: boolean;
+  isImmersiveMode: boolean;
   isPriorityQuickSetActive: boolean;
   isSettingsOpen: boolean;
   requestedSettingsCategory: SettingsCategoryId | null;
@@ -72,6 +75,9 @@ interface BuildLayoutPropsArgs {
   onOpenSettings: () => void;
   onCloseSettings: () => void;
   onCloseImportManagement: () => void;
+  onEnterImmersiveEdit: () => void;
+  onEnterImmersiveMode: () => void;
+  onExitImmersiveMode: () => void;
   onOpenTrashView: () => void;
   onOpenVirtualView: () => void;
   onResetLayout: () => void;
@@ -86,6 +92,7 @@ interface BuildLayoutPropsArgs {
   onSplitterKeyDown: WorkspaceLayoutProps['onSplitterKeyDown'];
   onSplitterPointerDown: WorkspaceLayoutProps['onSplitterPointerDown'];
   onToggleListVisibility: () => void;
+  onToggleImmersiveMode: () => void;
   onToggleRightSidebarVisibility: () => void;
   onRunImportFile: WorkspaceLayoutProps['onRunImportFile'];
   onRunImportFolder: WorkspaceLayoutProps['onRunImportFolder'];
@@ -170,7 +177,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
 
   return {
     activeNodeId: args.activeNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
-    documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', isEditorReadOnly: args.activeNodeId ? !activeNode || !isNodeDocumentLoaded(activeNode) || isNodeContentLocked(args.activeNodeId, args.nodeOrder, args.nodesById, new Set(args.trashedNodeIds)) : false, isPriorityQuickSetActive: args.isPriorityQuickSetActive, editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
+    documentMaxWidth: args.documentMaxWidth, editorAdapterRef: args.editorAdapterRef, editorContent: args.documentNode?.content ?? '', isImmersiveMode: args.isImmersiveMode, isEditorReadOnly: args.activeNodeId ? !activeNode || !isNodeDocumentLoaded(activeNode) || isNodeContentLocked(args.activeNodeId, args.nodeOrder, args.nodesById, new Set(args.trashedNodeIds)) : false, isPriorityQuickSetActive: args.isPriorityQuickSetActive, editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange, onEnterPriorityQuickSet: args.onEnterPriorityQuickSet, priorityQuickSetShortcutLabel: args.priorityQuickSetShortcutLabel,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, requestedSettingsCategory: args.requestedSettingsCategory, requestedSettingsDialog: args.requestedSettingsDialog, isReviewEditing: args.isReviewEditing,
     isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewPanelQueueNodeIds, reviewQueueNodeIds: args.reviewSession.queueNodeIds, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isVirtualViewOpen: args.isVirtualViewOpen, isViewingTrashNode: args.isViewingTrashNode,
@@ -181,7 +188,8 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onRevealDocumentPosition: args.onRevealDocumentPosition,
     onRevealDocumentSelection: args.onRevealDocumentSelection,
     onResolveDocumentPositionAtViewportY: args.onResolveDocumentPositionAtViewportY,
-    onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenMoveToNode: args.onOpenMoveToNode, onOpenTrashView: args.onOpenTrashView, onOpenVirtualView: args.onOpenVirtualView, onToggleListVisibility: args.onToggleListVisibility,
+    onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenMoveToNode: args.onOpenMoveToNode, onOpenTrashView: args.onOpenTrashView, onOpenVirtualView: args.onOpenVirtualView, onEnterImmersiveEdit: args.onEnterImmersiveEdit, onEnterImmersiveMode: args.onEnterImmersiveMode, onExitImmersiveMode: args.onExitImmersiveMode, onToggleListVisibility: args.onToggleListVisibility,
+    onToggleImmersiveMode: args.onToggleImmersiveMode,
     onToggleRightSidebarVisibility: args.onToggleRightSidebarVisibility,
     onOpenImportManagement: args.onOpenImportManagement,
     onCloseImportManagement: args.onCloseImportManagement,

@@ -39,6 +39,7 @@ function useEditorAdapter(
   const onReadyRef = useRef(onReady);
 
   onChangeRef.current = onChange;
+  initialValueRef.current = initialValue;
   onOpenNodeLinkRef.current = onOpenNodeLink;
   onReadyRef.current = onReady;
 
@@ -71,11 +72,15 @@ function useEditorAdapter(
       adapter.destroy();
       adapterRef.current = null;
     };
-  }, [debugId, hostRef, readOnly]);
+  }, [debugId, hostRef]);
 
   useLayoutEffect(() => {
     adapterRef.current?.setHiddenTextAnchorKeys?.(hiddenTextAnchorKeys ?? []);
   }, [hiddenTextAnchorKeys]);
+
+  useLayoutEffect(() => {
+    adapterRef.current?.setReadOnly?.(readOnly === true);
+  }, [readOnly]);
 
   return adapterRef;
 }
@@ -87,14 +92,18 @@ function MarkdownEditorSurface(args: {
   gestureTrailPath: string;
   hideScrollbar: boolean;
   hostRef: MutableRefObject<HTMLDivElement | null>;
+  immersiveEditing: boolean;
   mouseGesture: ReturnType<typeof useEditorMouseGesture>;
   onContextMenu: MarkdownEditorProps['onContextMenu'];
+  onDoubleClick: MarkdownEditorProps['onDoubleClick'];
+  readOnly: boolean;
   rootRef: MutableRefObject<HTMLDivElement | null>;
 }) {
   return (
     <div
       className="relative h-full w-full overflow-hidden"
       onContextMenu={(event) => args.mouseGesture.handleContextMenu(event, args.onContextMenu)}
+      onDoubleClick={args.onDoubleClick}
       onMouseDownCapture={args.mouseGesture.handleMouseDownCapture}
       ref={args.rootRef}
     >
@@ -106,6 +115,8 @@ function MarkdownEditorSurface(args: {
             : `markdown-editor-host${args.hideScrollbar ? ' scrollbar-hidden' : ''}`
         }
         data-fit-block-images={args.fitBlockImagesToViewport ? 'true' : 'false'}
+        data-immersive-editing={args.immersiveEditing ? 'true' : 'false'}
+        data-read-only={args.readOnly ? 'true' : 'false'}
         ref={args.hostRef}
         style={args.editorStyle}
       />
@@ -213,8 +224,11 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         gestureTrailPath={surface.gestureTrailPath}
         hideScrollbar={props.hideScrollbar ?? false}
         hostRef={hostRef}
+        immersiveEditing={props.immersiveEditing === true}
         mouseGesture={surface.mouseGesture}
         onContextMenu={props.onContextMenu}
+        onDoubleClick={props.onDoubleClick}
+        readOnly={props.readOnly === true}
         rootRef={rootRef}
       />
       <MarkdownImagePreviewDialog image={previewImage} onOpenChange={(open) => !open && closePreview()} />

@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
+import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { WindowTitleBar } from './WindowTitleBar';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceLayoutGrid } from './WorkspaceLayoutGrid';
@@ -41,6 +42,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
     loadWorkspaceRightPanelPreference()
   );
+  const immersive = useImmersiveReadingMode(props);
   const { handleOpenNotesView, handleOpenVirtualView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(props);
   const workspaceGridStyle = {
     '--workspace-list-width': `${props.listWidth}px`,
@@ -73,6 +75,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         onStartClipboardImport={props.onStartClipboardImport}
         onStartImport={() => void props.onRunImportFile()}
         onSelectNode={handleSelectNode}
+        immersive={immersive}
         props={props}
       />
       <ImportSourceWorkspace
@@ -98,6 +101,64 @@ function WorkspaceListDivider({ isListCollapsed }: { isListCollapsed: boolean })
   );
 }
 
+function renderWorkspaceTitleBar(args: {
+  activeRightPanelId: WorkspaceRightPanelId;
+  onOpenNotesView: () => void;
+  onOpenTrashView: () => void;
+  onOpenVirtualView: () => void;
+  onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
+  props: WorkspaceLayoutProps;
+}) {
+  if (args.props.isImmersiveMode) {
+    return null;
+  }
+  return (
+    <WindowTitleBar
+      activeRightPanelId={args.activeRightPanelId}
+      isListCollapsed={args.props.isListCollapsed}
+      isRightSidebarCollapsed={args.props.isRightSidebarCollapsed}
+      isTrashViewOpen={args.props.isTrashViewOpen}
+      isVirtualViewOpen={args.props.isVirtualViewOpen}
+      listWidth={args.props.listWidth}
+      onOpenNotesView={args.onOpenNotesView}
+      onOpenVirtualView={args.onOpenVirtualView}
+      onOpenTrashView={args.onOpenTrashView}
+      onSelectRightPanel={args.onSelectRightPanel}
+      onToggleListVisibility={args.props.onToggleListVisibility}
+      onToggleRightSidebarVisibility={args.props.onToggleRightSidebarVisibility}
+      rightSidebarWidth={args.props.rightSidebarWidth}
+    />
+  );
+}
+
+function renderWorkspaceGrid(args: {
+  activeRightPanelId: WorkspaceRightPanelId;
+  documentNodeId: string | null;
+  immersive: ReturnType<typeof useImmersiveReadingMode>;
+  isImportManagementOpen: boolean;
+  onEnterImmersiveEdit: () => void;
+  onOpenImportManagement: () => void;
+  onSelectNode: (nodeId: string) => void;
+  onStartClipboardImport: () => void;
+  onStartImport: () => void;
+  props: WorkspaceLayoutProps;
+}) {
+  return (
+    <WorkspaceLayoutGrid
+      activeRightPanelId={args.activeRightPanelId}
+      documentNodeId={args.documentNodeId}
+      isImmersiveEditing={args.immersive.isImmersiveEditing}
+      isImportManagementOpen={args.isImportManagementOpen}
+      onEnterImmersiveEdit={args.onEnterImmersiveEdit}
+      onOpenImportManagement={args.onOpenImportManagement}
+      onSelectNode={args.onSelectNode}
+      onStartClipboardImport={args.onStartClipboardImport}
+      onStartImport={args.onStartImport}
+      props={args.props}
+    />
+  );
+}
+
 function WorkspaceMainChrome({
   activeRightPanelId,
   documentNodeId,
@@ -110,6 +171,7 @@ function WorkspaceMainChrome({
   onSelectRightPanel,
   onStartClipboardImport,
   onStartImport,
+  immersive,
   props
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
@@ -124,35 +186,31 @@ function WorkspaceMainChrome({
   onStartClipboardImport: () => void;
   onStartImport: () => void;
   props: WorkspaceLayoutProps;
+  immersive: ReturnType<typeof useImmersiveReadingMode>;
 }) {
   return (
     <>
-      <WorkspaceListDivider isListCollapsed={props.isListCollapsed} />
-      <WindowTitleBar
-        activeRightPanelId={activeRightPanelId}
-        isListCollapsed={props.isListCollapsed}
-        isRightSidebarCollapsed={props.isRightSidebarCollapsed}
-        isTrashViewOpen={props.isTrashViewOpen}
-        isVirtualViewOpen={props.isVirtualViewOpen}
-        listWidth={props.listWidth}
-        onOpenNotesView={onOpenNotesView}
-        onOpenVirtualView={onOpenVirtualView}
-        onOpenTrashView={onOpenTrashView}
-        onSelectRightPanel={onSelectRightPanel}
-        onToggleListVisibility={props.onToggleListVisibility}
-        onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
-        rightSidebarWidth={props.rightSidebarWidth}
-      />
-      <WorkspaceLayoutGrid
-        activeRightPanelId={activeRightPanelId}
-        documentNodeId={documentNodeId}
-        isImportManagementOpen={isImportManagementOpen}
-        onOpenImportManagement={onOpenImportManagement}
-        onSelectNode={onSelectNode}
-        onStartClipboardImport={onStartClipboardImport}
-        onStartImport={onStartImport}
-        props={props}
-      />
+      {props.isImmersiveMode ? null : <WorkspaceListDivider isListCollapsed={props.isListCollapsed} />}
+      {renderWorkspaceTitleBar({
+        activeRightPanelId,
+        onOpenNotesView,
+        onOpenTrashView,
+        onOpenVirtualView,
+        onSelectRightPanel,
+        props
+      })}
+      {renderWorkspaceGrid({
+        activeRightPanelId,
+        documentNodeId,
+        immersive,
+        isImportManagementOpen,
+        onEnterImmersiveEdit: immersive.enterImmersiveEdit,
+        onOpenImportManagement,
+        onSelectNode,
+        onStartClipboardImport,
+        onStartImport,
+        props
+      })}
     </>
   );
 }

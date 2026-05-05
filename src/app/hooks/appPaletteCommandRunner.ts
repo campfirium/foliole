@@ -30,6 +30,7 @@ interface PaletteCommandRunnerArgs {
   isReviewMode: boolean;
   openImportManagement: () => void;
   onToggleEditorDisplayMode: () => void;
+  onToggleImmersiveMode: () => void;
   onToggleListVisibility: () => void;
   onRestartApp: () => void;
   onToggleDevTools: () => void;
@@ -96,6 +97,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     startClipboardImport: args.startClipboardImport,
     toggleReviewMode,
     toggleEditorDisplayMode: args.onToggleEditorDisplayMode,
+    toggleImmersiveMode: args.onToggleImmersiveMode,
     toggleList: args.onToggleListVisibility,
     toggleDevTools: args.onToggleDevTools,
     gradeReviewAgain: () => args.gradeReviewCard(1),

@@ -56,11 +56,24 @@ function canMergeHighlightsIntoTopic(args: {
   return Boolean(activeNode && activeNode.kind === 'topic' && !activeNode.anchorLink);
 }
 
+function canToggleImmersiveMode(args: {
+  activeNodeId: string | null;
+  isStudyMode: boolean;
+  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
+}) {
+  if (!args.activeNodeId || args.ws.trashedNodeIds.includes(args.activeNodeId) || args.isStudyMode) {
+    return false;
+  }
+  const activeNode = args.ws.nodesById[args.activeNodeId];
+  return Boolean(activeNode && activeNode.kind !== 'folder');
+}
+
 export function useAppPaletteItems(args: {
   activeNodeId: string | null;
   formalImportAvailable: boolean;
   hasReviewCard: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
+  isImmersiveMode: boolean;
   isViewingTrashNode: boolean;
   isCurrentReviewItemGradable: boolean;
   isStudyMode: boolean;
@@ -97,6 +110,7 @@ export function useAppPaletteItems(args: {
         canMoveToNode,
         canGoParent: args.nav.canGoParent,
         canFindInCurrentTopic: canMergeHighlightsIntoTopic(args),
+        canToggleImmersiveMode: canToggleImmersiveMode(args),
         canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
         canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
         canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
@@ -104,6 +118,7 @@ export function useAppPaletteItems(args: {
         canDeferReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
         canCompleteReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
         canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+        isImmersiveMode: args.isImmersiveMode,
         isReviewMode: args.isStudyMode
       }).map((item) => ({
         ...item,

@@ -1,4 +1,4 @@
-import { Compartment } from '@codemirror/state';
+import { Compartment, EditorState, type StateEffect } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 
 import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
@@ -42,6 +42,14 @@ export function createEmptyDecorationsEffect(compartment: Compartment) {
   return compartment.reconfigure(EditorView.decorations.of(Decoration.none));
 }
 
+export function createReadOnlyReconfigureEffect(compartment: Compartment, readOnly: boolean): StateEffect<unknown> {
+  return compartment.reconfigure(createReadOnlyExtensions(readOnly));
+}
+
+export function createReadOnlyExtensions(readOnly: boolean) {
+  return [EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)];
+}
+
 export function dispatchLiveMarkdownReconfigure(args: {
   compartment: Compartment;
   hiddenTextAnchorKeys: readonly string[];
@@ -60,6 +68,16 @@ export function dispatchLiveMarkdownReconfigure(args: {
       nodeId: args.nodeId,
       onOpenNodeLink: args.onOpenNodeLink
     })
+  });
+}
+
+export function dispatchReadOnlyReconfigure(args: {
+  compartment: Compartment;
+  readOnly: boolean;
+  view: EditorView;
+}) {
+  args.view.dispatch({
+    effects: createReadOnlyReconfigureEffect(args.compartment, args.readOnly)
   });
 }
 

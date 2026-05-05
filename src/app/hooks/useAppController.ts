@@ -99,6 +99,7 @@ function useDerivedControllerState(args: {
     formalImportAvailable: args.formalImport.isAvailable && !args.formalImport.isImporting,
     hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
     hotkeys: args.hotkeys,
+    isImmersiveMode: args.controller.runtime.isImmersiveMode,
     isViewingTrashNode: args.controller.runtime.isViewingTrashNode,
     isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,
     isStudyMode: args.isStudyMode,

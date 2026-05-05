@@ -29,6 +29,7 @@ export interface DocumentPanelBodyLayoutProps {
   editorDiffDecorations?: EditorDiffDecorations | null;
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;
+  immersiveEditing?: boolean;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
   emptyContent?: ReactNode;
@@ -44,6 +45,7 @@ export interface DocumentPanelBodyLayoutProps {
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onEditorDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onOpenNodeLink?: (title: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onPromptImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
@@ -88,6 +90,7 @@ function AnswerSection(props: DocumentPanelBodyLayoutProps) {
         onChange={props.onAnswerChange}
         onFitBlockImageMetricsChange={props.onAnswerImageMetricsChange}
         onImageLoadStateChange={props.onAnswerImageLoadStateChange}
+        readOnly={props.readOnly}
         value={props.reveal}
       />
     </section>
@@ -121,12 +124,14 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         hiddenTextAnchorKeys={props.hiddenTextAnchorKeys}
         hideScrollbar={props.editorHideScrollbar}
         hideTitleHeading={props.editorHideTitleHeading}
+        immersiveEditing={props.immersiveEditing}
         key={`prompt-${props.editorAppearanceKey}`}
         lineDiffDecorations={props.editorDiffDecorations}
         nodeId={props.editorNodeId}
         nodeViewState={props.editorNodeViewState}
         onChange={props.onEditorChange}
         onContextMenu={props.onEditorContextMenu}
+        onDoubleClick={props.onEditorDoubleClick}
         onFitBlockImageMetricsChange={props.onPromptImageMetricsChange}
         onImageLoadStateChange={props.onPromptImageLoadStateChange}
         onOpenNodeLink={props.onOpenNodeLink}

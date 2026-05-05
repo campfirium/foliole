@@ -21,6 +21,7 @@ interface RunAppCommandActions {
   goToNode: () => void;
   moveToNode: () => void;
   goParent: () => void;
+  toggleImmersiveMode: () => void;
   importSingleFile: () => void | Promise<void>;
   resetImportData: () => boolean | void;
   startClipboardImport: () => void;
@@ -93,6 +94,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.goToNode]: actions.goToNode,
     [APP_COMMAND_IDS.moveToNode]: actions.moveToNode,
     [APP_COMMAND_IDS.goParent]: actions.goParent,
+    [APP_COMMAND_IDS.toggleImmersiveMode]: actions.toggleImmersiveMode,
     [APP_COMMAND_IDS.toggleEditorDisplayMode]: actions.toggleEditorDisplayMode,
     [APP_COMMAND_IDS.startStudyMode]: actions.toggleReviewMode,
     [APP_COMMAND_IDS.revealReviewAnswer]: actions.revealReviewAnswer,

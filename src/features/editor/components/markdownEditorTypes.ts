@@ -20,11 +20,13 @@ export interface MarkdownEditorProps {
   debugId?: string;
   hideTitleHeading?: boolean;
   hideScrollbar?: boolean;
+  immersiveEditing?: boolean;
   lineDiffDecorations?: EditorDiffDecorations | null;
   nodeId: string | null;
   nodeViewState?: EditorViewState;
   onChange: (value: string) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onOpenNodeLink?: (title: string) => void;

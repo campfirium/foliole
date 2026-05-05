@@ -316,6 +316,15 @@ body {
   outline: none;
 }
 
+.markdown-editor-host[data-read-only='true'] .cm-cursor,
+.markdown-editor-host[data-read-only='true'] .cm-dropCursor {
+  display: none;
+}
+
+.markdown-editor-host[data-immersive-editing='true'] .cm-activeLine {
+  background-color: rgb(32 33 36 / 0.06) !important;
+}
+
 .markdown-editor-host .cm-scroller {
   font-size: var(--content-panel-font-size, 1.0625rem);
   line-height: 1.76;

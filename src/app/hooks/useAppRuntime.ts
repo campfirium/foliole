@@ -123,6 +123,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const [isGoToNodePaletteOpen, setIsGoToNodePaletteOpen] = useState(false);
   const [isMoveToNodePaletteOpen, setIsMoveToNodePaletteOpen] = useState(false);
   const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
+  const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const settingsRequest = useSettingsRequestState();
   const recentHistory = useRecentHistory();
 
@@ -137,6 +138,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     editorRef,
     isCommandPaletteOpen,
     isGoToNodePaletteOpen,
+    isImmersiveMode,
     isImportManagementOpen,
     isMoveToNodePaletteOpen,
     isSearchPaletteOpen,
@@ -152,6 +154,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     recordRecentNode: recentHistory.recordRecentNode,
     setIsCommandPaletteOpen,
     setIsGoToNodePaletteOpen,
+    setIsImmersiveMode,
     setIsImportManagementOpen,
     setIsMoveToNodePaletteOpen,
     setIsSearchPaletteOpen,

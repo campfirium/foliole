@@ -4,6 +4,7 @@ import { EditorView } from '@codemirror/view';
 import { bypassAnchorStructureGuard } from './anchorStructureGuard';
 import { createCodeMirrorEditorExtensions } from './codeMirrorEditorAdapterConfig';
 import {
+  dispatchReadOnlyReconfigure,
   RemoteImageLocalizationController,
   dispatchLiveMarkdownReconfigure,
   type CodeMirrorEditorAdapterOptions
@@ -34,6 +35,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private nodeId: string | null = null;
   private onChange?: (content: string) => void;
   private onOpenNodeLink: ((title: string) => void) | null = null;
+  private readOnlyCompartment = new Compartment();
   private searchDecorationsCompartment = new Compartment();
   private remoteImageLocalization = new RemoteImageLocalizationController({
     applyLocalizedContent: (localized) => {
@@ -81,6 +83,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
             this.externalChangeBuffer.handleDocumentChange(content, meta);
           },
           options,
+          readOnlyCompartment: this.readOnlyCompartment,
           searchDecorationsCompartment: this.searchDecorationsCompartment
         })
       })
@@ -123,6 +126,13 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   setHideTitleHeading(hideTitleHeading: boolean) {
     this.hideTitleHeading = hideTitleHeading;
     this.reconfigureLiveMarkdown();
+  }
+  setReadOnly(readOnly: boolean) {
+    dispatchReadOnlyReconfigure({
+      compartment: this.readOnlyCompartment,
+      readOnly,
+      view: this.view
+    });
   }
   setNodeId(nodeId: string | null) {
     this.nodeId = nodeId;

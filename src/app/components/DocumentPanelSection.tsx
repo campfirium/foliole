@@ -43,6 +43,9 @@ export interface DocumentPanelSectionProps {
   editorContent: string;
   editorAppearanceKey: string;
   isEditorReadOnly: boolean;
+  isImmersiveEditing?: boolean;
+  isImmersiveMode?: boolean;
+  onEnterImmersiveEdit?: () => void;
   isPriorityQuickSetActive?: boolean;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;

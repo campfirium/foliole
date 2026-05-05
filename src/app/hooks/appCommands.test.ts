@@ -20,6 +20,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     goToNode: () => undefined,
     moveToNode: () => undefined,
     goParent: () => undefined,
+    toggleImmersiveMode: () => undefined,
     importDirectory: () => undefined,
     importSingleFile: () => undefined,
     openImportManagement: () => undefined,
@@ -63,6 +64,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canMoveToNode: true,
     canGoParent: true,
     canFindInCurrentTopic: true,
+    canToggleImmersiveMode: true,
     canSetNodePriority: true,
     canRevealAnswer: true,
     canToggleReviewMode: true,
@@ -70,6 +72,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canDeferReadingReview: true,
     canCompleteReadingReview: true,
     canDismissReadingReview: true,
+    isImmersiveMode: false,
     isReviewMode
   };
 }
@@ -182,6 +185,14 @@ describe('runAppCommand basics', () => {
     expectCommandRuns(APP_COMMAND_IDS.enterPriorityMode, { enterPriorityMode });
 
     expect(enterPriorityMode).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs immersive reading toggle through the shared command handler', () => {
+    const toggleImmersiveMode = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.toggleImmersiveMode, { toggleImmersiveMode });
+
+    expect(toggleImmersiveMode).toHaveBeenCalledTimes(1);
   });
 });
 

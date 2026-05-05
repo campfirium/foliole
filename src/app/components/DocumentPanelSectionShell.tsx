@@ -112,20 +112,24 @@ export function DocumentPanelSectionShell({
   );
   return (
     <section aria-label="Document panel" className="relative flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
-      {renderDocumentPanelHeader({
-        backlinks,
-        folderListSortDirection,
-        folderListSortKey,
-        isFolderListView,
-        isSourceUpdatePanelOpen,
-        onChangeSortDirection: setFolderListSortDirection,
-        onChangeSortKey: setFolderListSortKey,
-        onToggleSourceUpdatePanel,
-        props,
-        showSourceUpdateAction
-      })}
-      <DocumentPriorityQuickSetHint isActive={!isFolderListView && Boolean(props.isPriorityQuickSetActive)} />
-      {renderDocumentSearchToolbar(props, onPreviewDocumentSelection, onPreviewTopicSearchDecorations)}
+      {props.isImmersiveMode
+        ? null
+        : renderDocumentPanelHeader({
+            backlinks,
+            folderListSortDirection,
+            folderListSortKey,
+            isFolderListView,
+            isSourceUpdatePanelOpen,
+            onChangeSortDirection: setFolderListSortDirection,
+            onChangeSortKey: setFolderListSortKey,
+            onToggleSourceUpdatePanel,
+            props,
+            showSourceUpdateAction
+          })}
+      {props.isImmersiveMode ? null : (
+        <DocumentPriorityQuickSetHint isActive={!isFolderListView && Boolean(props.isPriorityQuickSetActive)} />
+      )}
+      {props.isImmersiveMode ? null : renderDocumentSearchToolbar(props, onPreviewDocumentSelection, onPreviewTopicSearchDecorations)}
       <DocumentPanelContent
         activeNodeId={props.activeNodeId}
         bodyProps={bodyProps}

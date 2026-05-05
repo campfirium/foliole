@@ -53,6 +53,10 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
   useNodeSourceUpdatePreview: sourceUpdatePreviewMocks.useNodeSourceUpdatePreview
 }));
 
+vi.mock('./useNodeBacklinks', () => ({
+  useNodeBacklinks: () => []
+}));
+
 const nodeBacklinksBridgeMocks = vi.hoisted(() => ({
   loadRuntimeNodeBacklinks: vi.fn(async () => null)
 }));
@@ -92,6 +96,9 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
     editorAppearanceKey: 'appearance-1',
     editorContent: '# Node 1',
     isEditorReadOnly: false,
+    isImmersiveEditing: false,
+    isImmersiveMode: false,
+    onEnterImmersiveEdit: () => undefined,
     editorNodeId: 'node-1',
     editorNodeViewState: undefined,
     isDocumentResizing: false,

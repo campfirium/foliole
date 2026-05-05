@@ -12,6 +12,7 @@ import { AppEmptyState } from '../../shared/ui';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
+import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListStudyStatusBar } from './WorkspaceListStudyStatusBar';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
@@ -123,90 +124,60 @@ function WorkspaceListEmptyState() {
 
 export function WorkspaceDocumentArea({
   documentNodeId,
+  isImmersiveEditing,
+  onEnterImmersiveEdit,
   props
 }: {
   documentNodeId: string | null;
+  isImmersiveEditing: boolean;
+  onEnterImmersiveEdit: () => void;
   props: WorkspaceLayoutProps;
 }) {
   return (
     <section aria-label="Document and review area" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
-      <WorkspaceDocumentSurface documentNodeId={documentNodeId} props={props} />
-      <ReviewModeToolbar
-        isAnswerRevealed={props.isAnswerRevealed}
-        isCurrentItemGradable={props.isCurrentReviewItemGradable}
-        isReviewEditing={props.isReviewEditing}
-        isStudyMode={props.isStudyMode}
-        reviewPreview={props.reviewPreview}
-        reviewCurrentNodeId={props.reviewCurrentNodeId}
-        reviewQueueVisibility={props.reviewQueueVisibility}
-        onCompleteReviewItem={props.onCompleteReviewItem}
-        onDeferReviewItem={props.onDeferReviewItem}
-        onDismissReviewItem={props.onDismissReviewItem}
-        onExitReviewMode={props.onExitReviewMode}
-        onGrade={props.onGradeReview}
-        onRevealAnswer={props.onRevealAnswer}
+      <WorkspaceDocumentSurface
+        documentNodeId={documentNodeId}
+        isImmersiveEditing={isImmersiveEditing}
+        onEnterImmersiveEdit={onEnterImmersiveEdit}
+        props={props}
       />
+      {props.isImmersiveMode ? null : (
+        <ReviewModeToolbar
+          isAnswerRevealed={props.isAnswerRevealed}
+          isCurrentItemGradable={props.isCurrentReviewItemGradable}
+          isReviewEditing={props.isReviewEditing}
+          isStudyMode={props.isStudyMode}
+          reviewPreview={props.reviewPreview}
+          reviewCurrentNodeId={props.reviewCurrentNodeId}
+          reviewQueueVisibility={props.reviewQueueVisibility}
+          onCompleteReviewItem={props.onCompleteReviewItem}
+          onDeferReviewItem={props.onDeferReviewItem}
+          onDismissReviewItem={props.onDismissReviewItem}
+          onExitReviewMode={props.onExitReviewMode}
+          onGrade={props.onGradeReview}
+          onRevealAnswer={props.onRevealAnswer}
+        />
+      )}
     </section>
   );
 }
 
 function WorkspaceDocumentSurface({
   documentNodeId,
+  isImmersiveEditing,
+  onEnterImmersiveEdit,
   props
 }: {
   documentNodeId: string | null;
+  isImmersiveEditing: boolean;
+  onEnterImmersiveEdit: () => void;
   props: WorkspaceLayoutProps;
 }) {
   const { editorAppearanceKey } = useAppearanceSettings();
-
   return (
     <DocumentPanelSection
-      activeNodeId={documentNodeId}
-      isWorkspaceHydrated={props.isWorkspaceHydrated}
-      canGoBack={props.canGoBack}
-      canGoForward={props.canGoForward}
-      canGoParent={props.canGoParent}
-      contextMenu={props.contextMenu}
-      documentMaxWidth={props.documentMaxWidth}
-      editableNodeId={props.editorNodeId}
-      editorAppearanceKey={editorAppearanceKey}
-      editorContent={props.editorContent}
-      editorNodeId={props.editorNodeId}
-      editorNodeViewState={props.editorNodeViewState}
-      isDocumentResizing={props.isDocumentResizing}
-      isEditorReadOnly={props.isEditorReadOnly}
-      isPriorityQuickSetActive={props.isPriorityQuickSetActive}
-      nodeOrder={props.nodeOrder}
-      nodesById={props.nodesById}
-      onAnswerChange={props.onAnswerChange}
-      onCloseContextMenu={props.onCloseContextMenu}
-      onCopyImage={props.onCopyImage}
-      onCreateCloze={props.onCreateCloze}
-      onCreateHighlight={props.onCreateHighlight}
-      onCreatePdfHighlight={props.onCreatePdfHighlight}
-      onCutImage={props.onCutImage}
-      onDeleteImage={props.onDeleteImage}
-      onEditorChange={props.onEditorChange}
-      onEditorContextMenu={props.onEditorContextMenu}
-      onEditorReady={props.onEditorReady}
-      onExportImage={props.onExportImage}
-      onGoBack={props.onGoBack}
-      onGoForward={props.onGoForward}
-      onGoParent={props.onGoParent}
-      onNodeContentChange={props.onNodeContentChange}
-      onNodePriorityChange={props.onNodePriorityChange}
-      onPersistPdfViewState={props.onPersistPdfViewState}
-      onResetLayout={props.onResetLayout}
-      onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
-      onRevealDocumentPosition={props.onRevealDocumentPosition}
-      onRevealDocumentSelection={props.onRevealDocumentSelection}
-      onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
-      onSelectNode={props.onSelectNode}
-      onStartDocumentResize={props.onStartDocumentResize}
-      priorityQuickSetShortcutLabel={props.priorityQuickSetShortcutLabel}
-      reviewSchedulerSettings={props.reviewSchedulerSettings}
-      showAnswerSection={props.showAnswerSection}
-      trashedNodeIds={props.trashedNodeIds}
+      {...buildDocumentSectionProps(documentNodeId, editorAppearanceKey, isImmersiveEditing, props)}
+      onEnterImmersiveEdit={onEnterImmersiveEdit}
     />
   );
 }

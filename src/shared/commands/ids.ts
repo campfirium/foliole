@@ -16,6 +16,7 @@ export const APP_COMMAND_IDS = {
   mergeHighlightsIntoTopic: 'workspace.mergeHighlightsIntoTopic',
   goParent: 'navigation.goParent',
   toggleEditorDisplayMode: 'editor.toggleDisplayMode',
+  toggleImmersiveMode: 'editor.toggleImmersiveMode',
   startStudyMode: 'review.startStudyMode',
   revealReviewAnswer: 'review.revealAnswer',
   gradeReviewAgain: 'review.gradeAgain',

@@ -36,6 +36,7 @@ export interface EditorAdapter {
   replaceRange(from: number, to: number, content: string): void;
   replaceSelection(content: string): void;
   setHiddenTextAnchorKeys?(hiddenTextAnchorKeys: readonly string[]): void;
+  setReadOnly?(readOnly: boolean): void;
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;
   setSearchDecorations(searchDecorations: EditorSearchDecorations | null): void;
   onContentChange(listener: (content: string) => void): () => void;
