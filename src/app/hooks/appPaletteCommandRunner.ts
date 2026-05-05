@@ -7,6 +7,7 @@ interface PaletteCommandRunnerArgs {
   createFolder: () => void;
   createItem: () => void;
   createTopic: () => void;
+  exportCurrentArticle: () => Promise<boolean>;
   exitReviewSession: () => void;
   exitStudyMode: () => void;
   goBack: () => void;
@@ -47,6 +48,9 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     createFolder: args.createFolder,
     createItem: args.createItem,
     createTopic: args.createTopic,
+    exportCurrentArticle: () => {
+      void args.exportCurrentArticle();
+    },
     goBack: args.goBack,
     goForward: args.goForward,
     goToNode: () => args.setGoToNodePaletteOpen(true),

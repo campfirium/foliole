@@ -24,6 +24,7 @@ import { loadImportManagerSettings, saveImportManagerSettings } from '../import/
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
+import { exportCurrentArticleMirror } from '../mirror/exportCurrentArticleMirror.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
 import { rebuildMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
@@ -127,7 +128,11 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
   return undefined;
 }
 
-async function handleSettingsStorageCommand(command: string, args: Record<string, unknown>) {
+async function handleSettingsStorageCommand(
+  command: string,
+  args: Record<string, unknown>,
+  window: Parameters<typeof handleStorageAttachmentCommand>[2] = null
+) {
   if (command === NATIVE_COMMANDS.loadImportManagerSettings) {
     return loadImportManagerSettings();
   }
@@ -147,6 +152,9 @@ async function handleSettingsStorageCommand(command: string, args: Record<string
   }
   if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) {
     return rebuildMirrorAttachmentLinks();
+  }
+  if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) {
+    return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
   }
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
     const result = await updateLibraryPathSetting({
@@ -234,7 +242,7 @@ export async function handleStorageCommand(
   if (command === NATIVE_COMMANDS.resetImportData) {
     return resetImportData();
   }
-  const settingsResult = await handleSettingsStorageCommand(command, args);
+  const settingsResult = await handleSettingsStorageCommand(command, args, window);
   if (settingsResult !== undefined) {
     return settingsResult;
   }

@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
   NativeCopyAttachmentImageResult,
   NativeExportAttachmentImageResult,
+  NativeExportCurrentArticleMirrorResult,
   NativeLibraryPaths,
   NativeMirrorAttachmentLinkRebuildResult,
   NativeMirrorOutputRebuildResult,
@@ -20,6 +21,12 @@ export type NativeUtilityCommandMap = {
       attachment_id: string;
     };
     result: NativeExportAttachmentImageResult;
+  };
+  [NATIVE_COMMANDS.exportCurrentArticleMirror]: {
+    args: {
+      node_id: string;
+    };
+    result: NativeExportCurrentArticleMirrorResult;
   };
   [NATIVE_COMMANDS.loadLibraryPathSettings]: {
     args: undefined;

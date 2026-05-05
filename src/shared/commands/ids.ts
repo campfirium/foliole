@@ -32,6 +32,7 @@ export const APP_COMMAND_IDS = {
   createTopic: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createTopic,
   createItem: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createItem,
   openSettings: 'workspace.openSettings',
+  exportCurrentArticle: 'workspace.exportCurrentArticle',
   restartApp: 'workspace.restartApp',
   toggleList: 'workspace.toggleList',
   toggleDevTools: 'workspace.toggleDevTools'

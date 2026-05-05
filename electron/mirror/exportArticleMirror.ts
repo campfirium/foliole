@@ -31,7 +31,7 @@ interface AncestorRow {
   deleted_at: string | null;
 }
 
-function sanitizePathSegment(title: string) {
+export function sanitizePathSegment(title: string) {
   const cleaned = Array.from(title)
     .map((character) => {
       const code = character.charCodeAt(0);
@@ -80,7 +80,7 @@ function resolveArticlePath(mirrorRoot: string, ancestors: AncestorRow[], articl
   return { targetPath, relativePath };
 }
 
-function loadArticleNode(articleId: string): MirrorNodeRow | null {
+export function loadArticleNode(articleId: string): MirrorNodeRow | null {
   const db = openDatabaseConnection().sqlite;
   return db.prepare(
     'SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, content, reveal, anchor_link, created_at, updated_at, deleted_at FROM nodes WHERE id = ?'
@@ -149,6 +149,16 @@ function toNodeView(row: MirrorNodeRow): ArticleNodeView {
     anchorLink: parseAnchorLink(row.anchor_link),
     updatedAt: row.updated_at
   };
+}
+
+export function renderArticleMirrorMarkdown(articleRow: MirrorNodeRow) {
+  const articleView = toNodeView(articleRow);
+  const children = loadArticleChildren(articleRow.id);
+  const childViews = children.map(toNodeView);
+  const derivedChildren = childViews.filter((child) => child.anchorLink !== null);
+  const manualTopics = childViews.filter((child) => child.kind === 'topic' && child.anchorLink === null);
+
+  return renderSingleArticleMirror(articleView, derivedChildren, manualTopics);
 }
 
 function loadMirrorArticleRecord(articleId: string) {
@@ -220,14 +230,7 @@ export async function exportArticleToMirror(articleId: string): Promise<boolean>
     return true;
   }
 
-  const articleView = toNodeView(articleRow);
-  const children = loadArticleChildren(articleId);
-  const childViews = children.map(toNodeView);
-
-  const derivedChildren = childViews.filter((c) => c.anchorLink !== null);
-  const manualTopics = childViews.filter((c) => c.kind === 'topic' && c.anchorLink === null);
-
-  const markdown = renderSingleArticleMirror(articleView, derivedChildren, manualTopics);
+  const markdown = renderArticleMirrorMarkdown(articleRow);
 
   const paths = loadLibraryPathSettingsSync();
   const ancestors = articleRow.parent_id ? loadAncestorChain(articleRow.parent_id) : [];

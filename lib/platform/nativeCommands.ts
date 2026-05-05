@@ -24,6 +24,7 @@ export const NATIVE_COMMANDS = {
   loadLibraryPathSettings: 'load_library_path_settings',
   rebuildMirrorOutput: 'rebuild_mirror_output',
   rebuildMirrorAttachmentLinks: 'rebuild_mirror_attachment_links',
+  exportCurrentArticleMirror: 'export_current_article_mirror',
   updateLibraryPathSetting: 'update_library_path_setting',
   reviewGrade: 'review_grade',
   reviewPreview: 'review_preview',

@@ -75,6 +75,20 @@ export type NativeExportAttachmentImageResult =
       path: null;
     };
 
+export type NativeExportCurrentArticleMirrorResult =
+  | {
+      status: 'saved';
+      path: string;
+    }
+  | {
+      status: 'cancelled';
+      path: null;
+    }
+  | {
+      status: 'not_found' | 'save_failed';
+      path: null;
+    };
+
 export interface NativeSystemFontCatalog {
   fonts: unknown[];
   monospace_fonts: unknown[];

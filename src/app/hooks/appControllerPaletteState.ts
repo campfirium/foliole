@@ -1,6 +1,7 @@
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
 import { restartMainWindowApp, toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
@@ -16,6 +17,19 @@ function createDirectNodeCommand(kind: 'folder' | 'topic' | 'item', args: {
   return () => {
     args.trash.closeTrashView();
     args.ws.createChildNode(INBOX_NODE_ID, '', kind);
+  };
+}
+
+function createExportCurrentArticleCommand(args: {
+  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return async () => {
+    if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
+      return false;
+    }
+    const result = await exportCurrentArticleMirror(args.ws.activeNodeId);
+    return result?.status === 'saved';
   };
 }
 
@@ -37,6 +51,7 @@ export function buildControllerPaletteState(args: {
     createFolder: createDirectNodeCommand('folder', args),
     createItem: createDirectNodeCommand('item', args),
     createTopic: createDirectNodeCommand('topic', args),
+    exportCurrentArticle: createExportCurrentArticleCommand(args),
     deferReviewItem: args.ws.deferReviewItem,
     dismissReviewItem: args.ws.dismissReviewItem,
     exitReviewSession: args.ws.exitReviewSession,

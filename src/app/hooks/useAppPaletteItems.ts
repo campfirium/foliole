@@ -31,6 +31,23 @@ function canNodeBeMoveTarget(args: {
   );
 }
 
+function canExportCurrentArticle(args: {
+  activeNodeId: string | null;
+  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
+}) {
+  if (!args.activeNodeId || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
+    return false;
+  }
+  const activeNode = args.ws.nodesById[args.activeNodeId];
+  if (!activeNode || activeNode.kind === 'folder') {
+    return false;
+  }
+  if (activeNode.kind === 'topic' && !activeNode.anchorLink) {
+    return true;
+  }
+  return Boolean(activeNode.parentNodeId);
+}
+
 export function useAppPaletteItems(args: {
   activeNodeId: string | null;
   formalImportAvailable: boolean;
@@ -60,6 +77,7 @@ export function useAppPaletteItems(args: {
   return useMemo(
     () =>
       buildAppPaletteItems({
+        canExportCurrentArticle: canExportCurrentArticle(args),
         canImportFile: args.formalImportAvailable,
         canImportFolder: args.formalImportAvailable,
         canResetImportData: args.formalImportAvailable,

@@ -27,6 +27,10 @@ const { copyAttachmentImageToClipboard, exportAttachmentImage } = vi.hoisted(() 
   exportAttachmentImage: vi.fn()
 }));
 
+const { exportCurrentArticleMirror } = vi.hoisted(() => ({
+  exportCurrentArticleMirror: vi.fn()
+}));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
@@ -89,6 +93,7 @@ vi.mock('../attachments/attachmentImageActions.js', () => ({ copyAttachmentImage
 vi.mock('../attachments/importLocalImageAttachment.js', () => ({ importLocalImageAttachment }));
 vi.mock('../attachments/importClipboardImageAttachment.js', () => ({ importClipboardImageAttachment }));
 vi.mock('../attachments/importRemoteImageAttachment.js', () => ({ importRemoteImageAttachment }));
+vi.mock('../mirror/exportCurrentArticleMirror.js', () => ({ exportCurrentArticleMirror }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -229,6 +234,7 @@ it('routes remote image attachment imports through the unified runtime entry', a
 it('routes image clipboard and export actions through the unified runtime entry', async () => {
   copyAttachmentImageToClipboard.mockReturnValue({ status: 'copied' });
   exportAttachmentImage.mockResolvedValue({ path: '/tmp/cover.png', status: 'saved' });
+  exportCurrentArticleMirror.mockResolvedValue({ path: '/tmp/article.md', status: 'saved' });
 
   await expect(
     handleInvokeRequest({
@@ -245,4 +251,17 @@ it('routes image clipboard and export actions through the unified runtime entry'
 
   expect(copyAttachmentImageToClipboard).toHaveBeenCalledWith('hash-1');
   expect(exportAttachmentImage).toHaveBeenCalledWith('hash-1', null);
+});
+
+it('routes current article mirror exports through the unified runtime entry', async () => {
+  exportCurrentArticleMirror.mockResolvedValue({ path: '/tmp/article.md', status: 'saved' });
+
+  await expect(
+    handleInvokeRequest({
+      command: NATIVE_COMMANDS.exportCurrentArticleMirror,
+      args: { node_id: 'node-1' }
+    })
+  ).resolves.toEqual({ path: '/tmp/article.md', status: 'saved' });
+
+  expect(exportCurrentArticleMirror).toHaveBeenCalledWith('node-1', null);
 });

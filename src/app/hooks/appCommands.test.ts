@@ -10,6 +10,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     createFolder: () => undefined,
     createItem: () => undefined,
     createTopic: () => undefined,
+    exportCurrentArticle: () => undefined,
     goBack: () => undefined,
     goForward: () => undefined,
     goToNode: () => undefined,
@@ -44,25 +45,30 @@ function expectCommandRuns(commandId: string, overrides: Partial<Parameters<type
   expect(runAppCommand(commandId, createCommandActions(overrides))).toBe(true);
 }
 
+function createPaletteOptions(isReviewMode: boolean) {
+  return {
+    canImportFile: true,
+    canImportFolder: true,
+    canExportCurrentArticle: true,
+    canResetImportData: true,
+    canGoBack: true,
+    canGoForward: true,
+    canGoToNode: true,
+    canMoveToNode: true,
+    canGoParent: true,
+    canRevealAnswer: true,
+    canToggleReviewMode: true,
+    canGradeReview: true,
+    canDeferReadingReview: true,
+    canCompleteReadingReview: true,
+    canDismissReadingReview: true,
+    isReviewMode
+  };
+}
+
 describe('buildAppPaletteItems', () => {
   it('includes migrated command entries instead of a minimal fallback list', () => {
-    const items = buildAppPaletteItems({
-      canImportFile: true,
-      canImportFolder: true,
-      canResetImportData: true,
-      canGoBack: true,
-      canGoForward: true,
-      canGoToNode: true,
-      canMoveToNode: true,
-      canGoParent: true,
-      canRevealAnswer: true,
-      canToggleReviewMode: true,
-      canGradeReview: true,
-      canDeferReadingReview: true,
-      canCompleteReadingReview: true,
-      canDismissReadingReview: true,
-      isReviewMode: false
-    });
+    const items = buildAppPaletteItems(createPaletteOptions(false));
 
     expect(items.length).toBeGreaterThanOrEqual(12);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.createFolder)).toBe(true);
@@ -79,27 +85,12 @@ describe('buildAppPaletteItems', () => {
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.openImportManagement)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
   });
 
   it('shows review-mode command as exit when already in review mode', () => {
-    const items = buildAppPaletteItems({
-      canImportFile: true,
-      canImportFolder: true,
-      canResetImportData: true,
-      canGoBack: true,
-      canGoForward: true,
-      canGoToNode: true,
-      canMoveToNode: true,
-      canGoParent: true,
-      canRevealAnswer: true,
-      canToggleReviewMode: true,
-      canGradeReview: true,
-      canDeferReadingReview: true,
-      canCompleteReadingReview: true,
-      canDismissReadingReview: true,
-      isReviewMode: true
-    });
+    const items = buildAppPaletteItems(createPaletteOptions(true));
     const reviewModeItem = items.find((item) => item.id === APP_COMMAND_IDS.startStudyMode);
     expect(reviewModeItem?.title).toBe('Exit Review Mode');
   });
@@ -142,6 +133,14 @@ describe('runAppCommand', () => {
 
     expect(importSingleFile).toHaveBeenCalledTimes(1);
     expect(importDirectory).not.toHaveBeenCalled();
+  });
+
+  it('runs export current article through the shared command handler', () => {
+    const exportCurrentArticle = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.exportCurrentArticle, { exportCurrentArticle });
+
+    expect(exportCurrentArticle).toHaveBeenCalledTimes(1);
   });
 
   it('runs create topic through the shared command handler', () => {
