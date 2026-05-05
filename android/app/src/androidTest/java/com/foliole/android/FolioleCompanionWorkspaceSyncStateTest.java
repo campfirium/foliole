@@ -39,7 +39,7 @@ public class FolioleCompanionWorkspaceSyncStateTest {
         JSObject completed = helper.recordWorkspaceSyncEvent(
             "http://10.0.2.2:38641",
             "completed",
-            "Sync completed.",
+            "Sync fully completed.",
             "2026-05-01T02:00:00.000Z"
         );
         JSObject checked = helper.recordWorkspaceSyncEvent(

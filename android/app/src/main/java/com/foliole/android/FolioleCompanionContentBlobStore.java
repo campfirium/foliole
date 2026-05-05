@@ -41,7 +41,8 @@ final class FolioleCompanionContentBlobStore {
                 "JOIN ranked_refs refs ON refs.hash = cb.hash " +
                 "LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash " +
                 "WHERE cb.kind = 'text_body' AND cbd.hash IS NULL " +
-                "ORDER BY refs.priority ASC, refs.updated_at DESC, cb.created_at ASC LIMIT ?",
+                "ORDER BY CASE cb.availability WHEN 'failed' THEN 1 ELSE 0 END ASC, " +
+                    "refs.priority ASC, refs.updated_at DESC, cb.created_at ASC LIMIT ?",
             new String[] { String.valueOf(Math.max(1, limit)) }
         )) {
             while (cursor.moveToNext()) {

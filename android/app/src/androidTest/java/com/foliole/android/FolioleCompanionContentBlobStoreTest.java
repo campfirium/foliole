@@ -250,6 +250,24 @@ public class FolioleCompanionContentBlobStoreTest {
     }
 
     @Test
+    public void ordersFreshReferencedContentBlobsBeforeFailedRetries() throws Exception {
+        String failedHash = sha256("failed body");
+        String freshHash = sha256("fresh body");
+        insertMissingBlob(failedHash);
+        insertMissingBlob(freshHash);
+        database.execSQL("UPDATE content_blobs SET availability = 'failed' WHERE hash = '" + failedHash + "'");
+        insertNodeRef("failed-node", failedHash, "2026-04-30T00:00:00.000Z");
+        insertNodeRef("fresh-node", freshHash, "2026-04-20T00:00:00.000Z");
+
+        assertEquals(freshHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(0));
+        assertEquals(failedHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(1));
+    }
+
+    @Test
     public void returnsCachedBlobWithoutDownloadingItAgain() throws Exception {
         String body = "cached body";
         String hash = sha256(body);

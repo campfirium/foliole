@@ -38,7 +38,8 @@ final class FolioleCompanionAttachmentResourceStore {
             "SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0), b.availability, b.storage_key FROM attachment_blobs b " +
                 "LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id " +
                 "WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
-                "ORDER BY COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC",
+                "ORDER BY CASE b.availability WHEN 'failed' THEN 1 ELSE 0 END ASC, " +
+                    "COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC",
             null
         )) {
             int maxResources = Math.max(1, limit);
@@ -176,29 +177,40 @@ final class FolioleCompanionAttachmentResourceStore {
     ) throws Exception {
         String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
         String normalizedContentHash = requireText(contentHash, "content_hash");
-        byte[] bytes = FolioleCompanionDesktopHttpClient.requestBytes(requireText(url, "url"), headers);
-        File outputFile = attachmentFile(context, normalizedContentHash);
-        File parent = outputFile.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            throw new IllegalStateException("Failed to create attachment directory.");
-        }
-        try (FileOutputStream output = new FileOutputStream(outputFile)) {
-            output.write(bytes);
-        }
-        String now = Instant.now().toString();
-        ContentValues values = new ContentValues();
-        values.put("storage_key", normalizedContentHash);
-        values.put("availability", "cached");
-        values.put("cached_at", now);
-        values.put("last_verified_at", now);
-        int updated = database.update("attachment_blobs", values, "attachment_id = ?", new String[] { normalizedAttachmentId });
-        if (updated <= 0) {
-            throw new IllegalStateException("Attachment manifest is missing.");
+        try {
+            byte[] bytes = FolioleCompanionDesktopHttpClient.requestBytes(requireText(url, "url"), headers);
+            File outputFile = attachmentFile(context, normalizedContentHash);
+            File parent = outputFile.getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                throw new IllegalStateException("Failed to create attachment directory.");
+            }
+            try (FileOutputStream output = new FileOutputStream(outputFile)) {
+                output.write(bytes);
+            }
+            String now = Instant.now().toString();
+            ContentValues values = new ContentValues();
+            values.put("storage_key", normalizedContentHash);
+            values.put("availability", "cached");
+            values.put("cached_at", now);
+            values.put("last_verified_at", now);
+            int updated = database.update("attachment_blobs", values, "attachment_id = ?", new String[] { normalizedAttachmentId });
+            if (updated <= 0) {
+                throw new IllegalStateException("Attachment manifest is missing.");
+            }
+        } catch (Exception error) {
+            markFailed(database, normalizedAttachmentId);
+            throw error;
         }
         JSObject result = new JSObject();
         result.put("attachment_id", normalizedAttachmentId);
         result.put("availability", "cached");
         return result;
+    }
+
+    private static void markFailed(SQLiteDatabase database, String attachmentId) {
+        ContentValues values = new ContentValues();
+        values.put("availability", "failed");
+        database.update("attachment_blobs", values, "attachment_id = ?", new String[] { attachmentId });
     }
 
     static JSObject resolveResource(Context context, SQLiteDatabase database, String attachmentId) {

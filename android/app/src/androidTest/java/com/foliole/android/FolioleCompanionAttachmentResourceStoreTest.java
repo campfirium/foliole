@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -230,6 +231,46 @@ public class FolioleCompanionAttachmentResourceStoreTest {
             .getString("attachment_id"));
     }
 
+    @Test
+    public void ordersFreshAttachmentResourcesBeforeFailedRetries() throws Exception {
+        insertAttachmentManifest("failed-att", "hash-failed", "2026-04-25T00:00:00.000Z");
+        insertAttachmentManifest("fresh-att", "hash-fresh", "2026-04-25T00:00:00.000Z");
+        insertNode("failed-node", "2026-04-30T00:00:00.000Z");
+        insertNode("fresh-node", "2026-04-20T00:00:00.000Z");
+        insertNodeAttachment("failed-node", "failed-att");
+        insertNodeAttachment("fresh-node", "fresh-att");
+        database.execSQL("UPDATE attachment_blobs SET availability = 'failed' WHERE attachment_id = 'failed-att'");
+
+        assertEquals("fresh-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(0)
+            .getString("attachment_id"));
+        assertEquals("failed-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(1)
+            .getString("attachment_id"));
+    }
+
+    @Test
+    public void marksAttachmentResourceFailedWhenDownloadFails() throws Exception {
+        insertAttachmentManifest("failed-att", "hash-failed", "2026-04-25T00:00:00.000Z");
+
+        try {
+            FolioleCompanionAttachmentResourceStore.syncResource(
+                context,
+                database,
+                "failed-att",
+                "hash-failed",
+                "http://127.0.0.1:1/attachment",
+                new JSONObject()
+            );
+        } catch (Exception expected) {
+            assertEquals("failed", selectString("SELECT availability FROM attachment_blobs WHERE attachment_id = 'failed-att'"));
+            return;
+        }
+        throw new AssertionError("Expected attachment resource sync failure.");
+    }
+
     private JSONObject attachmentRecord() throws Exception {
         JSONObject blob = new JSONObject()
             .put("content_hash", "hash-android-1")
@@ -285,6 +326,13 @@ public class FolioleCompanionAttachmentResourceStoreTest {
         assertTrue(directory.exists() || directory.mkdirs());
         try (OutputStream output = new java.io.FileOutputStream(new File(directory, storageKey))) {
             output.write(content.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private String selectString(String sql) {
+        try (Cursor cursor = database.rawQuery(sql, null)) {
+            cursor.moveToFirst();
+            return cursor.getString(0);
         }
     }
 

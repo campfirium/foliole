@@ -89,7 +89,7 @@ public class FolioleCompanionReadableArticleBlobSyncTest {
 
     private void createTables() {
         database.execSQL("CREATE TABLE nodes (" +
-            "id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', " +
+            "id TEXT PRIMARY KEY, parent_id TEXT, title TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', " +
             "body_blob_hash TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");
         database.execSQL("CREATE TABLE content_blobs (" +
             "hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL, mime_type TEXT, " +
