@@ -17,12 +17,14 @@ interface SettingsExternalSearchSectionProps {
   feedback: string | null;
   folders: RuntimeExternalSearchFolder[];
   isDesktopRuntime: boolean;
+  isLoading: boolean;
   isSaving: boolean;
   onAddFolder: () => void;
   onChooseAttachmentRoot: (folderId: string) => void;
   onChooseFolder: (folderId: string) => void;
   onRebuildIndex: (folderId?: string) => void;
   onRemoveFolder: (folderId: string) => void;
+  onRetryLoad: () => void;
   onUpdateFolder: (
     folderId: string,
     patch: Partial<Pick<RuntimeExternalSearchFolder, 'attachmentRootPath' | 'excludedDirs' | 'folderPath'>>
@@ -72,6 +74,18 @@ function LinkPanelBrowsingDataRow(props: { isDesktopRuntime: boolean }) {
 }
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
+  if (props.isLoading) {
+    return (
+      <SettingsSection
+        ariaLabel="External sources section"
+        description="Search, preview, and import content from folders that stay outside Foliole until you choose to bring them in."
+        title="External sources"
+      >
+        <SettingsRow description="Loading external source folders." readonly title="Loading external sources" />
+      </SettingsSection>
+    );
+  }
+
   return (
     <SettingsSection
       ariaLabel="External sources section"
@@ -100,7 +114,14 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
         </ExternalLibraryTable>
       </div>
       <LinkPanelBrowsingDataRow isDesktopRuntime={props.isDesktopRuntime} />
-      {props.error ? <p className="text-sm text-error">{props.error}</p> : null}
+      {props.error ? (
+        <div className="flex items-center gap-3" role="alert">
+          <p className="m-0 text-sm text-error">{props.error}</p>
+          <button className={settingsButtonClassName()} onClick={props.onRetryLoad} type="button">
+            Retry
+          </button>
+        </div>
+      ) : null}
     </SettingsSection>
   );
 }

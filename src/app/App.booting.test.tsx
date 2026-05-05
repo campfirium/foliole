@@ -17,7 +17,7 @@ vi.mock('./hooks/useAppController', () => ({
   useAppController
 }));
 
-vi.mock('../store/workspaceStore', () => ({
+vi.mock('../store/workspaceStoreHydration', () => ({
   ensureWorkspaceHydrated
 }));
 

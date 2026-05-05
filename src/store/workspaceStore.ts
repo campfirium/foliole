@@ -21,6 +21,7 @@ import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 export interface WorkspaceState {
   activeNodeId: string | null;
   isHydrated: boolean;
+  workspaceHydrationError: string | null;
   layout: WorkspaceLayoutState;
   navigation: WorkspaceNavigationState;
   nodeViewById: Record<string, NodeViewState | undefined>;
@@ -148,6 +149,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
   | 'activeNodeId'
   | 'isHydrated'
+  | 'workspaceHydrationError'
   | 'layout'
   | 'navigation'
   | 'nodeOrder'
@@ -162,6 +164,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   return {
     ...createEmptyWorkspaceSnapshot(now, loadWorkspaceLayoutPreferenceSnapshot(defaultLayoutState)),
     isHydrated: false,
+    workspaceHydrationError: null,
     navigation: { ...INITIAL_WORKSPACE_NAVIGATION_STATE },
     rendererBoundaryKeepNodeIds: [],
     reviewSession: {
@@ -177,13 +180,19 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
 
 const initialState = createInitialWorkspaceState();
 let updateWorkspaceHydrationState: () => void = () => undefined;
-let workspaceHydrationPromise: Promise<void> | null = null;
+let updateWorkspaceHydrationError: (error: unknown) => void = () => undefined;
 
 const workspaceStore = create<WorkspaceState>()(
   persist(
     (set, get) => {
       updateWorkspaceHydrationState = () => {
-        set({ isHydrated: true });
+        set({ isHydrated: true, workspaceHydrationError: null });
+      };
+      updateWorkspaceHydrationError = (error: unknown) => {
+        set({
+          isHydrated: false,
+          workspaceHydrationError: error instanceof Error ? error.message : 'Could not load the workspace.'
+        });
       };
       const boundaryAwareSet: typeof set = (partial) => {
         set((currentState) => {
@@ -214,7 +223,11 @@ const workspaceStore = create<WorkspaceState>()(
       ...createWorkspaceReviewActions(boundaryAwareSet, get)
     });
     },
-    createWorkspaceStorePersistConfig(() => {
+    createWorkspaceStorePersistConfig((error) => {
+      if (error) {
+        updateWorkspaceHydrationError(error);
+        return;
+      }
       updateWorkspaceHydrationState();
     })
   )
@@ -247,17 +260,3 @@ workspaceStore.setState = ((partial, replace) =>
 registerPendingNodeSyncRendererBoundary(workspaceStore);
 
 export const useWorkspaceStore = workspaceStore;
-
-export function ensureWorkspaceHydrated() {
-  if (workspaceStore.getState().isHydrated) {
-    return Promise.resolve();
-  }
-  if (workspaceHydrationPromise) {
-    return workspaceHydrationPromise;
-  }
-
-  workspaceHydrationPromise = Promise.resolve(workspaceStore.persist.rehydrate()).finally(() => {
-    workspaceHydrationPromise = null;
-  });
-  return workspaceHydrationPromise;
-}

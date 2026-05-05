@@ -28,12 +28,14 @@ function createDraftFolder(folderPath: string): RuntimeExternalSearchFolder {
 export function useExternalSearchFolders() {
   const [folders, setFolders] = useState<RuntimeExternalSearchFolder[]>([]);
   const [isDesktopRuntime, setIsDesktopRuntime] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadKey, setLoadKey] = useState(0);
   const lastSavedSnapshotRef = useRef('[]');
 
-  useLoadExternalSearchFolders(setError, setFolders, setIsDesktopRuntime, lastSavedSnapshotRef);
+  useLoadExternalSearchFolders(loadKey, setError, setFolders, setIsDesktopRuntime, setIsLoading, lastSavedSnapshotRef);
   usePersistExternalSearchFolders(folders, isDesktopRuntime, lastSavedSnapshotRef, setError, setFeedback, setFolders, setIsSaving);
 
   function updateFolder(folderId: string, update: (current: RuntimeExternalSearchFolder) => RuntimeExternalSearchFolder) {
@@ -45,6 +47,7 @@ export function useExternalSearchFolders() {
     externalSearchFolders: folders,
     externalSearchFeedback: feedback,
     isDesktopRuntime,
+    isLoadingExternalSearchFolders: isLoading,
     isSavingExternalSearchFolders: isSaving,
     onAddExternalSearchFolder: () => void addExternalSearchFolder(setError, setFeedback, setFolders),
     onChooseExternalAttachmentRoot: (folderId: string) => void chooseExternalAttachmentRoot(folderId, updateFolder),
@@ -52,6 +55,7 @@ export function useExternalSearchFolders() {
     onRebuildExternalSearchIndex: (folderId?: string) =>
       void rebuildExternalSearchFolders(folderId, setError, setFeedback, setFolders, setIsSaving),
     onRemoveExternalSearchFolder: (folderId: string) => setFolders((current) => current.filter((folder) => folder.id !== folderId)),
+    onRetryLoadExternalSearchFolders: () => setLoadKey((value) => value + 1),
     onUpdateExternalSearchFolder: (
       folderId: string,
       patch: Partial<Pick<RuntimeExternalSearchFolder, 'attachmentRootPath' | 'excludedDirs' | 'folderPath'>>
@@ -64,13 +68,17 @@ export function useExternalSearchFolders() {
 }
 
 function useLoadExternalSearchFolders(
+  loadKey: number,
   setError: (value: string | null) => void,
   setFolders: (value: RuntimeExternalSearchFolder[]) => void,
   setIsDesktopRuntime: (value: boolean) => void,
+  setIsLoading: (value: boolean) => void,
   lastSavedSnapshotRef: { current: string }
 ) {
   useEffect(() => {
     let alive = true;
+    setError(null);
+    setIsLoading(true);
     loadRuntimeExternalSearchFolders()
       .then((loaded) => {
         if (!alive || loaded === null) return;
@@ -81,11 +89,16 @@ function useLoadExternalSearchFolders(
       .catch((nextError) => {
         if (!alive) return;
         setError(nextError instanceof Error ? nextError.message : 'Could not load the external library.');
+      })
+      .finally(() => {
+        if (alive) {
+          setIsLoading(false);
+        }
       });
     return () => {
       alive = false;
     };
-  }, [lastSavedSnapshotRef, setError, setFolders, setIsDesktopRuntime]);
+  }, [lastSavedSnapshotRef, loadKey, setError, setFolders, setIsDesktopRuntime, setIsLoading]);
 }
 
 function usePersistExternalSearchFolders(

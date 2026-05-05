@@ -51,10 +51,12 @@ function useGradeFeedback(
 ) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [failedGrade, setFailedGrade] = useState<ReviewGrade | null>(null);
   useEffect(() => {
     if (!reviewCurrentNodeId || !isAnswerRevealed) {
       setIsSubmitting(false);
       setErrorMessage(null);
+      setFailedGrade(null);
     }
   }, [isAnswerRevealed, reviewCurrentNodeId]);
 
@@ -67,13 +69,16 @@ function useGradeFeedback(
       try {
         const graded = await onGrade(grade);
         if (!graded) {
+          setFailedGrade(grade);
           setErrorMessage('Failed to save grade. Please retry.');
           setIsSubmitting(false);
           return;
         }
+        setFailedGrade(null);
         setErrorMessage(null);
         setIsSubmitting(false);
       } catch {
+        setFailedGrade(grade);
         setErrorMessage('Failed to save grade. Please retry.');
         setIsSubmitting(false);
       }
@@ -81,7 +86,13 @@ function useGradeFeedback(
     [isSubmitting, onGrade]
   );
 
-  return { errorMessage, isSubmitting, submitGrade };
+  const retryGrade = useCallback(async () => {
+    if (failedGrade) {
+      await submitGrade(failedGrade);
+    }
+  }, [failedGrade, submitGrade]);
+
+  return { errorMessage, isSubmitting, retryGrade: failedGrade ? retryGrade : undefined, submitGrade };
 }
 
 function ReviewSessionSummary({
@@ -109,7 +120,7 @@ export function ReviewModeToolbar({
   onExitReviewMode,
   style
 }: ReviewModeToolbarProps) {
-  const { errorMessage, isSubmitting, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
+  const { errorMessage, isSubmitting, retryGrade, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
 
   if (!isStudyMode) {
     return null;
@@ -136,6 +147,7 @@ export function ReviewModeToolbar({
         <ReviewGradeActions
           errorMessage={errorMessage}
           isSubmitting={isSubmitting}
+          onRetry={retryGrade}
           submitGrade={submitGrade}
         />
       )}

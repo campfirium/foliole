@@ -25,12 +25,36 @@ function ReviewGradeButton(props: {
   );
 }
 
+function ReviewGradeErrorFeedback(props: {
+  errorMessage: string | null;
+  isSubmitting: boolean;
+  onRetry?: () => void;
+}) {
+  if (!props.errorMessage) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <p aria-live="assertive" className="text-xs text-error">
+        {props.errorMessage}
+      </p>
+      {props.onRetry ? (
+        <AppButton disabled={props.isSubmitting} onClick={props.onRetry} size="sm" variant="ghost">
+          Retry
+        </AppButton>
+      ) : null}
+    </div>
+  );
+}
+
 export function ReviewGradeActions({
   buttonClassName,
   buttonVariant = 'primary',
   errorMessage,
   groupClassName,
   isSubmitting,
+  onRetry,
   submitGrade
 }: {
   buttonClassName?: string;
@@ -38,6 +62,7 @@ export function ReviewGradeActions({
   errorMessage: string | null;
   groupClassName?: string;
   isSubmitting: boolean;
+  onRetry?: () => void;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
   return (
@@ -76,11 +101,7 @@ export function ReviewGradeActions({
           submitGrade={submitGrade}
         />
       </ToolbarActionGroup>
-      {errorMessage ? (
-        <p aria-live="assertive" className="text-xs text-error">
-          {errorMessage}
-        </p>
-      ) : null}
+      <ReviewGradeErrorFeedback errorMessage={errorMessage} isSubmitting={isSubmitting} onRetry={onRetry} />
     </div>
   );
 }

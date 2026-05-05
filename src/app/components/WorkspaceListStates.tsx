@@ -1,12 +1,36 @@
-import { AppEmptyState } from '../../shared/ui';
+import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+import { ensureWorkspaceHydrated } from '../../store/workspaceStoreHydration';
 
 export function WorkspaceListLoadingState() {
+  const hydrationError = useWorkspaceStore((state) => state.workspaceHydrationError);
+  if (hydrationError) {
+    return (
+      <aside
+        aria-label="Workspace list error"
+        className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 items-center justify-center px-6"
+      >
+        <AppErrorState
+          action={
+            <AppButton onClick={() => void ensureWorkspaceHydrated()} size="sm">
+              Retry
+            </AppButton>
+          }
+          description={hydrationError}
+          title="Workspace unavailable"
+        />
+      </aside>
+    );
+  }
+
   return (
     <aside
       aria-busy="true"
       aria-label="Loading workspace list"
-      className="workspace-region-main-folder min-h-0 min-w-0 flex-1"
-    />
+      className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 items-center justify-center px-6"
+    >
+      <AppLoadingState description="Loading topics and folders." title="Loading workspace" />
+    </aside>
   );
 }
 

@@ -70,3 +70,25 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
   expect(screen.getByLabelText('Review grade actions')).toBeInTheDocument();
   expect(onGrade).toHaveBeenCalledWith(3);
 });
+
+it('shows a retry action when saving a grade fails', async () => {
+  const onGrade = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  renderToolbar({
+    isAnswerRevealed: true,
+    isCurrentItemGradable: true,
+    onGrade
+  });
+
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Hard' }));
+  });
+
+  expect(screen.getByText('Failed to save grade. Please retry.')).toBeInTheDocument();
+
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  });
+
+  expect(onGrade).toHaveBeenNthCalledWith(1, 2);
+  expect(onGrade).toHaveBeenNthCalledWith(2, 2);
+});

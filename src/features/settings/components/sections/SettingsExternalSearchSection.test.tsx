@@ -16,12 +16,14 @@ const baseProps = {
   feedback: null,
   folders: [],
   isDesktopRuntime: true,
+  isLoading: false,
   isSaving: false,
   onAddFolder: vi.fn(),
   onChooseAttachmentRoot: vi.fn(),
   onChooseFolder: vi.fn(),
   onRebuildIndex: vi.fn(),
   onRemoveFolder: vi.fn(),
+  onRetryLoad: vi.fn(),
   onUpdateFolder: vi.fn()
 };
 
@@ -45,4 +47,21 @@ it('keeps the link panel browsing data action desktop-only', () => {
   render(<SettingsExternalSearchSection {...baseProps} isDesktopRuntime={false} />);
 
   expect(screen.getByRole('button', { name: 'Clear link panel browsing data' })).toBeDisabled();
+});
+
+it('shows a loading row while external sources load', () => {
+  render(<SettingsExternalSearchSection {...baseProps} isLoading />);
+
+  expect(screen.getByText('Loading external sources')).toBeInTheDocument();
+  expect(screen.getByText('Loading external source folders.')).toBeInTheDocument();
+});
+
+it('shows a retryable alert when external sources fail to load', () => {
+  render(<SettingsExternalSearchSection {...baseProps} error="Could not load the external library." />);
+
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not load the external library.');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+  expect(baseProps.onRetryLoad).toHaveBeenCalledTimes(1);
 });

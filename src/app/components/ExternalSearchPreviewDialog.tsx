@@ -1,17 +1,51 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import {
   importRuntimeExternalSearchDocument,
-  loadRuntimeExternalSearchPreview,
   type RuntimeExternalSearchPreview
 } from '../../shared/platform/externalSearchBridge';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppErrorState, AppLoadingState } from '../../shared/ui';
 
-function ExternalSearchPreviewBody(args: { error: string | null; preview: RuntimeExternalSearchPreview | null }) {
+import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
+
+function ExternalSearchPreviewBody(args: {
+  error: string | null;
+  isLoading: boolean;
+  onRetry: () => void;
+  preview: RuntimeExternalSearchPreview | null;
+}) {
+  if (args.isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center px-6">
+        <AppLoadingState description="Loading the selected external document." title="Loading external preview" />
+      </div>
+    );
+  }
+
+  if (args.error) {
+    return (
+      <div className="flex h-full items-center justify-center px-6">
+        <AppErrorState
+          action={
+            <AppButton onClick={args.onRetry} size="sm">
+              Retry
+            </AppButton>
+          }
+          description={args.error}
+          title="External preview unavailable"
+        />
+      </div>
+    );
+  }
+
   if (!args.preview) {
-    return <div className="flex h-full items-center justify-center px-6 text-sm text-foreground/60">{args.error ?? 'Loading preview...'}</div>;
+    return (
+      <div className="flex h-full items-center justify-center px-6">
+        <AppLoadingState description="Loading the selected external document." title="Loading external preview" />
+      </div>
+    );
   }
 
   return (
@@ -32,7 +66,7 @@ export function ExternalSearchPreviewDialog(props: {
   onImportComplete: (result: NativeTextImportResult) => void;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { error, preview } = useExternalSearchPreview(props.absolutePath);
+  const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(props.absolutePath);
   const [isImporting, setIsImporting] = useState(false);
 
   async function handleImport() {
@@ -73,39 +107,10 @@ export function ExternalSearchPreviewDialog(props: {
             </div>
           </div>
           <div className="min-h-0 flex-1">
-            <ExternalSearchPreviewBody error={error} preview={preview} />
+            <ExternalSearchPreviewBody error={error} isLoading={isLoading} onRetry={retry} preview={preview} />
           </div>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
   );
-}
-
-function useExternalSearchPreview(absolutePath: string | null) {
-  const [preview, setPreview] = useState<RuntimeExternalSearchPreview | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!absolutePath) {
-      setPreview(null);
-      setError(null);
-      return;
-    }
-    let alive = true;
-    loadRuntimeExternalSearchPreview(absolutePath)
-      .then((result) => {
-        if (!alive) return;
-        setPreview(result);
-        setError(result ? null : 'Could not load external document preview.');
-      })
-      .catch((nextError) => {
-        if (!alive) return;
-        setError(nextError instanceof Error ? nextError.message : 'Could not load external document preview.');
-      });
-    return () => {
-      alive = false;
-    };
-  }, [absolutePath]);
-
-  return { error, preview };
 }

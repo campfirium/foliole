@@ -1,4 +1,10 @@
-import { SettingsRow, SettingsSection } from '../../../../shared/ui';
+import {
+  SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsButtonClassName
+} from '../../../../shared/ui';
 
 import {
   BackupListSection,
@@ -6,6 +12,8 @@ import {
   BackupRulesSection
 } from './backupSettingsSectionParts';
 import { useBackupSettingsSectionState } from './useBackupSettingsSectionState';
+
+const RETRY_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
 
 function BackupLoadingState() {
   return (
@@ -23,9 +31,29 @@ function BackupLoadingState() {
   );
 }
 
+function BackupLoadErrorState(props: {
+  errorMessage: string;
+  onRetry: () => void;
+}) {
+  return (
+    <SettingsSection ariaLabel="Backup settings error section" title="Backups">
+      <SettingsRow description={props.errorMessage} title="Backup settings unavailable">
+        <SettingsControlSlot className="flex-[0_0_auto]">
+          <button className={RETRY_BUTTON_CLASS_NAME} onClick={props.onRetry} type="button">
+            Retry
+          </button>
+        </SettingsControlSlot>
+      </SettingsRow>
+    </SettingsSection>
+  );
+}
+
 export function SettingsBackupsSection() {
   const state = useBackupSettingsSectionState();
   if (!state.activeDraft) {
+    if (state.loadErrorMessage) {
+      return <BackupLoadErrorState errorMessage={state.loadErrorMessage} onRetry={state.retryInitialLoad} />;
+    }
     return <BackupLoadingState />;
   }
 

@@ -68,8 +68,10 @@ type SettingsPanelBodyProps = {
   externalSearchFolders: ReturnType<typeof useExternalSearchFolders>['externalSearchFolders'];
   inboxPath: string;
   isDesktopRuntime: boolean;
+  isLoadingLibraryPaths: boolean;
   isRebuildingMirrorLinks: boolean;
   isRebuildingMirrorOutput: boolean;
+  isLoadingExternalSearchFolders: boolean;
   isSavingExternalSearchFolders: boolean;
   libraryHomePath: string;
   description: string;
@@ -86,6 +88,7 @@ type SettingsPanelBodyProps = {
   onChooseExternalSearchFolder: (folderId: string) => void;
   onRebuildExternalSearchIndex: (folderId?: string) => void;
   onRemoveExternalSearchFolder: (folderId: string) => void;
+  onRetryLoadExternalSearchFolders: () => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
@@ -133,8 +136,10 @@ function createSettingsCategoryProps(
     externalSearchFolders: props.externalSearchFolders,
     inboxPath: props.inboxPath,
     isDesktopRuntime: props.isDesktopRuntime,
+    isLoadingLibraryPaths: props.isLoadingLibraryPaths,
     isRebuildingMirrorLinks: props.isRebuildingMirrorLinks,
     isRebuildingMirrorOutput: props.isRebuildingMirrorOutput,
+    isLoadingExternalSearchFolders: props.isLoadingExternalSearchFolders,
     isSavingExternalSearchFolders: props.isSavingExternalSearchFolders,
     libraryHomePath: props.libraryHomePath,
     mirrorLinkRebuildError: props.mirrorLinkRebuildError,
@@ -149,6 +154,7 @@ function createSettingsCategoryProps(
     onChooseExternalSearchFolder: props.onChooseExternalSearchFolder,
     onRebuildExternalSearchIndex: props.onRebuildExternalSearchIndex,
     onRemoveExternalSearchFolder: props.onRemoveExternalSearchFolder,
+    onRetryLoadExternalSearchFolders: props.onRetryLoadExternalSearchFolders,
     onRebuildMirrorLinks: props.onRebuildMirrorLinks,
     onRebuildMirrorOutput: props.onRebuildMirrorOutput,
     onRestoreDefault: props.onRestoreDefault,

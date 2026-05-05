@@ -5,6 +5,7 @@ export type SettingsImportSectionProps = {
   errorByLocation: Record<LibraryPathLocation, string | null>;
   inboxPath: string;
   isDesktopRuntime: boolean;
+  isLoadingLibraryPaths: boolean;
   isRebuildingMirrorLinks: boolean;
   isRebuildingMirrorOutput: boolean;
   libraryHomePath: string;

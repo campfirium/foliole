@@ -22,32 +22,47 @@ import {
 
 function useInitialBackupData(
   isDesktopRuntime: boolean,
+  reloadKey: number,
   setBackups: (value: DatabaseBackupEntry[]) => void,
   setDraft: (value: DatabaseBackupSettings) => void,
   setIsLoadingBackups: (value: boolean) => void,
+  setLoadErrorMessage: (value: string) => void,
   setSettings: (value: DatabaseBackupSettings) => void
 ) {
   useEffect(() => {
     let alive = true;
-    void loadDatabaseBackupSettings().then((value) => {
-      if (!alive) return;
-      setSettings(value);
-      setDraft(value);
-    });
+    setLoadErrorMessage('');
+    setIsLoadingBackups(true);
+    void loadDatabaseBackupSettings()
+      .then((value) => {
+        if (!alive) return;
+        setSettings(value);
+        setDraft(value);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setLoadErrorMessage('Could not load backup settings.');
+        setIsLoadingBackups(false);
+      });
     if (!isDesktopRuntime) {
       setBackups([]);
       setIsLoadingBackups(false);
     } else {
-      void listDatabaseBackups().then((entries) => {
-        if (!alive) return;
-        setBackups(entries);
-        setIsLoadingBackups(false);
-      });
+      void listDatabaseBackups()
+        .then((entries) => {
+          if (!alive) return;
+          setBackups(entries);
+        })
+        .finally(() => {
+          if (alive) {
+            setIsLoadingBackups(false);
+          }
+        });
     }
     return () => {
       alive = false;
     };
-  }, [isDesktopRuntime, setBackups, setDraft, setIsLoadingBackups, setSettings]);
+  }, [isDesktopRuntime, reloadKey, setBackups, setDraft, setIsLoadingBackups, setLoadErrorMessage, setSettings]);
 }
 
 function useBackupStateStore() {
@@ -60,6 +75,7 @@ function useBackupStateStore() {
   const [restoringPath, setRestoringPath] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [loadErrorMessage, setLoadErrorMessage] = useState('');
   const [pathErrorMessage, setPathErrorMessage] = useState('');
 
   return {
@@ -69,6 +85,7 @@ function useBackupStateStore() {
     isCreatingBackup,
     isLoadingBackups,
     isSavingSettings,
+    loadErrorMessage,
     pathErrorMessage,
     restoringPath,
     setBackups,
@@ -77,6 +94,7 @@ function useBackupStateStore() {
     setIsCreatingBackup,
     setIsLoadingBackups,
     setIsSavingSettings,
+    setLoadErrorMessage,
     setPathErrorMessage,
     setRestoringPath,
     setSettings,
@@ -169,12 +187,15 @@ export function useBackupSettingsSectionState() {
   const isDesktopRuntime = useRuntimeAvailability(areDatabaseBackupActionsAvailable);
   const state = useBackupStateStore();
   const saveRequestIdRef = useRef(0);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useInitialBackupData(
     isDesktopRuntime,
+    reloadKey,
     state.setBackups,
     state.setDraft,
     state.setIsLoadingBackups,
+    state.setLoadErrorMessage,
     state.setSettings
   );
   useDefaultBackupPath(isDesktopRuntime, state.setDefaultBackupPath);
@@ -201,7 +222,9 @@ export function useBackupSettingsSectionState() {
     isDesktopRuntime,
     isLoadingBackups: state.isLoadingBackups,
     isSavingSettings: state.isSavingSettings,
+    loadErrorMessage: state.loadErrorMessage,
     pathErrorMessage: state.pathErrorMessage,
+    retryInitialLoad: () => setReloadKey((value) => value + 1),
     restoringPath: state.restoringPath,
     statusMessage: state.statusMessage
   };

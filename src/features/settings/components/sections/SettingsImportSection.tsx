@@ -34,7 +34,7 @@ function LibraryLocationRow(props: {
           onRestoreDefault={() => props.onRestoreDefault(props.location)}
           path={props.path}
         />
-        {props.errorMessage ? <p className="text-sm text-error">{props.errorMessage}</p> : null}
+        {props.errorMessage ? <p className="text-sm text-error" role="alert">{props.errorMessage}</p> : null}
         {props.children}
       </SettingsControlSlot>
     </SettingsRow>
@@ -54,7 +54,7 @@ function MirrorActionRow(props: {
     <>
       <span className="block">{props.description}</span>
       {props.feedback ? <span className="mt-1 block text-foreground/70">{props.feedback}</span> : null}
-      {props.error ? <span className="mt-1 block text-error">{props.error}</span> : null}
+      {props.error ? <span className="mt-1 block text-error" role="alert">{props.error}</span> : null}
     </>
   );
 
@@ -126,7 +126,21 @@ function MirrorMaintenanceSection(props: SettingsImportSectionProps) {
   );
 }
 
+function LibraryPathLoadingRows() {
+  return (
+    <>
+      <SettingsRow description="Loading library folders." readonly title="Loading Library Home" />
+      <SettingsRow description="Loading attachment folders." readonly title="Loading Assets" />
+      <SettingsRow description="Loading incoming file folder." readonly title="Loading Inbox" />
+    </>
+  );
+}
+
 function LibraryPathRows(props: SettingsImportSectionProps) {
+  if (props.isLoadingLibraryPaths) {
+    return <LibraryPathLoadingRows />;
+  }
+
   return (
     <>
       <LibraryLocationRow

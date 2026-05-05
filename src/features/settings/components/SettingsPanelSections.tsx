@@ -32,8 +32,10 @@ export interface SettingsCategoryContentProps {
   hotkeyItems: HotkeySettingItem[];
   inboxPath: string;
   isDesktopRuntime: boolean;
+  isLoadingLibraryPaths: boolean;
   isRebuildingMirrorLinks: boolean;
   isRebuildingMirrorOutput: boolean;
+  isLoadingExternalSearchFolders: boolean;
   isSavingExternalSearchFolders: boolean;
   libraryHomePath: string;
   mirrorLinkRebuildError: string | null;
@@ -48,6 +50,7 @@ export interface SettingsCategoryContentProps {
   onChooseExternalSearchFolder: (folderId: string) => void;
   onRebuildExternalSearchIndex: (folderId?: string) => void;
   onRemoveExternalSearchFolder: (folderId: string) => void;
+  onRetryLoadExternalSearchFolders: () => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
@@ -120,6 +123,7 @@ function renderLibraryCategory(props: SettingsCategoryContentProps) {
       errorByLocation={props.errorByLocation}
       inboxPath={props.inboxPath}
       isDesktopRuntime={props.isDesktopRuntime}
+      isLoadingLibraryPaths={props.isLoadingLibraryPaths}
       isRebuildingMirrorLinks={props.isRebuildingMirrorLinks}
       isRebuildingMirrorOutput={props.isRebuildingMirrorOutput}
       libraryHomePath={props.libraryHomePath}
@@ -144,12 +148,14 @@ function renderExternalSearchCategory(props: SettingsCategoryContentProps) {
       feedback={props.externalSearchFeedback}
       folders={props.externalSearchFolders}
       isDesktopRuntime={props.isDesktopRuntime}
+      isLoading={props.isLoadingExternalSearchFolders}
       isSaving={props.isSavingExternalSearchFolders}
       onAddFolder={props.onAddExternalSearchFolder}
       onChooseAttachmentRoot={props.onChooseExternalAttachmentRoot}
       onChooseFolder={props.onChooseExternalSearchFolder}
       onRebuildIndex={props.onRebuildExternalSearchIndex}
       onRemoveFolder={props.onRemoveExternalSearchFolder}
+      onRetryLoad={props.onRetryLoadExternalSearchFolders}
       onUpdateFolder={props.onUpdateExternalSearchFolder}
     />
   );

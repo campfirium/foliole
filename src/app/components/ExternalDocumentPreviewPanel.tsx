@@ -1,5 +1,5 @@
 import { Maximize2, Minimize2, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { MutableRefObject, PointerEvent as ReactPointerEvent } from 'react';
 
 import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
@@ -7,14 +7,14 @@ import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor'
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import {
   importRuntimeExternalSearchDocument,
-  loadRuntimeExternalSearchPreview,
   type RuntimeExternalSearchPreview
 } from '../../shared/platform/externalSearchBridge';
-import { AppButton, AppEmptyState, AppIconButton, appFloatingSurfaceClassName } from '../../shared/ui';
+import { AppButton, AppErrorState, AppIconButton, AppLoadingState, appFloatingSurfaceClassName } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useExternalDocumentPreviewPanelFrame } from './externalDocumentPreviewPanelState';
 import type { ExternalDocumentPreviewRequest } from './externalDocumentPreviewState';
+import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
 import { LinkPanelStack } from './LinkPanelStack';
 import { useExternalLinkPanels } from './useExternalLinkPanels';
 
@@ -25,46 +25,8 @@ interface ExternalDocumentPreviewPanelProps {
   request: ExternalDocumentPreviewRequest | null;
 }
 
-function usePreviewDocument(request: ExternalDocumentPreviewRequest | null) {
-  const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<RuntimeExternalSearchPreview | null>(null);
-
-  useEffect(() => {
-    if (!request) {
-      setError(null);
-      setPreview(null);
-      return;
-    }
-
-    let alive = true;
-    setError(null);
-    setPreview(null);
-    void loadRuntimeExternalSearchPreview(request.absolutePath)
-      .then((result) => {
-        if (!alive) {
-          return;
-        }
-        setPreview(result);
-        setError(result ? null : 'Could not load external document preview.');
-      })
-      .catch((nextError) => {
-        if (!alive) {
-          return;
-        }
-        setPreview(null);
-        setError(nextError instanceof Error ? nextError.message : 'Could not load external document preview.');
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [request]);
-
-  return { error, preview };
-}
-
 export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanelProps) {
-  const { error, preview } = usePreviewDocument(props.request);
+  const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(props.request?.absolutePath ?? null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const frame = useExternalDocumentPreviewPanelFrame(overlayRef, Boolean(props.request));
   const { handleImport, isImporting } = usePreviewImportHandler(preview, props.onOpenImportedNode);
@@ -80,12 +42,14 @@ export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanel
       error={error}
       frame={frame}
       isImporting={isImporting}
+      isLoading={isLoading}
       onClose={props.onClose}
       onImport={() => void handleImport()}
       onOpenInExternalLibrary={() => {
         props.onOpenInExternalLibrary(request);
         props.onClose();
       }}
+      onRetry={retry}
       overlayRef={overlayRef}
       preview={preview}
       request={request}
@@ -123,9 +87,11 @@ function PreviewWindow(args: {
   error: string | null;
   frame: ReturnType<typeof useExternalDocumentPreviewPanelFrame>;
   isImporting: boolean;
+  isLoading: boolean;
   onClose: () => void;
   onImport: () => void;
   onOpenInExternalLibrary: () => void;
+  onRetry: () => void;
   overlayRef: MutableRefObject<HTMLDivElement | null>;
   preview: RuntimeExternalSearchPreview | null;
   request: ExternalDocumentPreviewRequest;
@@ -152,7 +118,13 @@ function PreviewWindow(args: {
           ready={Boolean(args.preview)}
         />
         <div className="relative min-h-0 flex-1 bg-canvas" ref={contentAreaRef}>
-          <PreviewBody error={args.error} onOpenExternalLink={handleOpenExternalLink} preview={args.preview} />
+          <PreviewBody
+            error={args.error}
+            isLoading={args.isLoading}
+            onOpenExternalLink={handleOpenExternalLink}
+            onRetry={args.onRetry}
+            preview={args.preview}
+          />
           <LinkPanelStack
             anchorRootRef={contentAreaRef}
             onClose={handleCloseExternalLink}
@@ -218,16 +190,39 @@ function PreviewHeader(args: {
 
 function PreviewBody(args: {
   error: string | null;
+  isLoading: boolean;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
+  onRetry: () => void;
   preview: RuntimeExternalSearchPreview | null;
 }) {
+  if (args.isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center px-6">
+        <AppLoadingState description="Loading the selected external document." title="Loading external document" />
+      </div>
+    );
+  }
+
+  if (args.error) {
+    return (
+      <div className="flex h-full items-center justify-center px-6">
+        <AppErrorState
+          action={
+            <AppButton onClick={args.onRetry} size="sm">
+              Retry
+            </AppButton>
+          }
+          description={args.error}
+          title="External preview unavailable"
+        />
+      </div>
+    );
+  }
+
   if (!args.preview) {
     return (
       <div className="flex h-full items-center justify-center px-6">
-        <AppEmptyState
-          description={args.error ?? 'Loading the selected external document.'}
-          title={args.error ? 'External preview unavailable' : 'Loading external document'}
-        />
+        <AppLoadingState description="Loading the selected external document." title="Loading external document" />
       </div>
     );
   }

@@ -91,3 +91,31 @@ it('renders compact sync controls', async () => {
     expect(pairingHookMocks.state?.removePairedDevice).toHaveBeenCalledWith('android-1');
   });
 });
+
+it('marks sync loading and errors with status semantics', () => {
+  pairingHookMocks.state = {
+    ...pairingHookMocks.state,
+    error: 'Could not remove paired device.',
+    isLoading: true,
+    overview: {
+      ...(pairingHookMocks.state?.overview as Record<string, unknown>),
+      server_status: {
+        advertised_urls: [],
+        last_error: 'Port unavailable.',
+        paired_device_count: 0,
+        pending_pair_request_count: 0,
+        port: null,
+        state: 'error'
+      }
+    }
+  };
+  pairingHookMocks.useDesktopCompanionPairingRequests.mockReturnValue(pairingHookMocks.state);
+
+  render(<SettingsCompanionSyncSection />);
+
+  expect(screen.getByRole('status')).toHaveTextContent('Loading connected devices...');
+  expect(screen.getAllByRole('alert').map((element) => element.textContent)).toEqual([
+    'Could not open sync. Port unavailable.',
+    'Could not remove paired device.'
+  ]);
+});

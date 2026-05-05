@@ -4,10 +4,10 @@ import { AppearanceSettingsProvider } from '../features/settings/context/Appeara
 import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
-import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/bridge';
+import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { installWorkspaceDebugBridge } from '../shared/testing/workspaceDebugBridge';
-import { ensureWorkspaceHydrated } from '../store/workspaceStore';
+import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
 import { CommandPalette } from './components/CommandPalette';
 import { CompanionPairingRequestsDialog } from './components/CompanionPairingRequestsDialog';
@@ -18,6 +18,8 @@ import { SearchPalette } from './components/SearchPalette';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { useAppController } from './hooks/useAppController';
 import { useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
+
+type AppController = ReturnType<typeof useAppController>;
 
 function AppContent() {
   const [externalPreviewRequest, setExternalPreviewRequest] = useState<ExternalDocumentPreviewRequest | null>(null);
@@ -33,9 +35,25 @@ function AppContent() {
     installWorkspaceDebugBridge();
     readPerformanceDiagnosticsProbe();
   }, []);
+  useReportAppReadyWhenHydrated(controller.layoutProps.isWorkspaceHydrated);
 
+  return (
+    <HotkeySettingsProvider {...controller.hotkeySettings}>
+      <>
+        <WorkspaceLayout {...controller.layoutProps} />
+        <AppOverlays
+          controller={controller}
+          externalPreviewRequest={externalPreviewRequest}
+          onCloseExternalPreview={() => setExternalPreviewRequest(null)}
+        />
+      </>
+    </HotkeySettingsProvider>
+  );
+}
+
+function useReportAppReadyWhenHydrated(isWorkspaceHydrated?: boolean) {
   useEffect(() => {
-    if (!controller.layoutProps.isWorkspaceHydrated) {
+    if (!isWorkspaceHydrated) {
       return;
     }
     reportRuntimeBootStage('app_ready_signal_registration', {
@@ -74,44 +92,51 @@ function AppContent() {
       window.cancelAnimationFrame(firstFrameId);
       window.cancelAnimationFrame(secondFrameId);
     };
-  }, [controller.layoutProps.isWorkspaceHydrated]);
+  }, [isWorkspaceHydrated]);
+}
 
+function AppOverlays({
+  controller,
+  externalPreviewRequest,
+  onCloseExternalPreview
+}: {
+  controller: AppController;
+  externalPreviewRequest: ExternalDocumentPreviewRequest | null;
+  onCloseExternalPreview: () => void;
+}) {
   return (
-    <HotkeySettingsProvider {...controller.hotkeySettings}>
-      <>
-        <WorkspaceLayout {...controller.layoutProps} />
-        <CompanionPairingRequestsDialog />
-        <CommandPalette {...controller.paletteState} />
-        <SearchPalette {...controller.searchState} />
-        <GoToNodePalette {...controller.goToNodeState} />
-        <GoToNodePalette
-          {...controller.moveToNodeState}
-          dialogLabel="Move to"
-          emptyLabel="Search destinations"
-          inputLabel="Move to"
-          noResultsLabel="No matching destinations"
-          onSelectNode={controller.moveToNodeState.onOpenNode}
-          placeholder="Type a title..."
-        />
-        <ExternalDocumentPreviewPanel
-          onClose={() => setExternalPreviewRequest(null)}
-          onOpenImportedNode={(result) => {
-            if (result.node_id) {
-              controller.layoutProps.onSelectNode(result.node_id);
-            }
-            setExternalPreviewRequest(null);
-          }}
-          onOpenInExternalLibrary={(request) => {
-            controller.layoutProps.onOpenExternalSelection({
-              absolutePath: request.absolutePath,
-              folderId: request.folderId,
-              kind: 'document'
-            });
-          }}
-          request={externalPreviewRequest}
-        />
-      </>
-    </HotkeySettingsProvider>
+    <>
+      <CompanionPairingRequestsDialog />
+      <CommandPalette {...controller.paletteState} />
+      <SearchPalette {...controller.searchState} />
+      <GoToNodePalette {...controller.goToNodeState} />
+      <GoToNodePalette
+        {...controller.moveToNodeState}
+        dialogLabel="Move to"
+        emptyLabel="Search destinations"
+        inputLabel="Move to"
+        noResultsLabel="No matching destinations"
+        onSelectNode={controller.moveToNodeState.onOpenNode}
+        placeholder="Type a title..."
+      />
+      <ExternalDocumentPreviewPanel
+        onClose={onCloseExternalPreview}
+        onOpenImportedNode={(result) => {
+          if (result.node_id) {
+            controller.layoutProps.onSelectNode(result.node_id);
+          }
+          onCloseExternalPreview();
+        }}
+        onOpenInExternalLibrary={(request) => {
+          controller.layoutProps.onOpenExternalSelection({
+            absolutePath: request.absolutePath,
+            folderId: request.folderId,
+            kind: 'document'
+          });
+        }}
+        request={externalPreviewRequest}
+      />
+    </>
   );
 }
 

@@ -133,6 +133,23 @@ it('shows backup settings and backup list in the backups section', async () => {
   expect(screen.getByText(/Auto backup · daily/)).toBeInTheDocument();
 });
 
+it('shows a retry action when backup settings fail to load', async () => {
+  vi.mocked(loadDatabaseBackupSettings)
+    .mockRejectedValueOnce(new Error('Settings IPC failed.'))
+    .mockResolvedValueOnce(defaultSettings);
+
+  render(<SettingsBackupsSection />);
+
+  expect(await screen.findByText('Could not load backup settings.')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+  await waitFor(() => {
+    expect(screen.getByDisplayValue('24')).toBeInTheDocument();
+  });
+  expect(loadDatabaseBackupSettings).toHaveBeenCalledTimes(2);
+});
+
 it('auto-saves edited backup settings without a save button', async () => {
   render(<SettingsBackupsSection />);
 

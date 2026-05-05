@@ -27,4 +27,23 @@ describe('ReviewActionControls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Good' }));
     expect(submitGrade).toHaveBeenCalledWith(3);
   });
+
+  it('renders an optional retry action next to grade errors', () => {
+    const onRetry = vi.fn();
+
+    render(
+      <ReviewGradeActions
+        errorMessage="Failed to save grade. Please retry."
+        isSubmitting={false}
+        onRetry={onRetry}
+        submitGrade={vi.fn(async () => undefined)}
+      />
+    );
+
+    expect(screen.getByText('Failed to save grade. Please retry.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
 });

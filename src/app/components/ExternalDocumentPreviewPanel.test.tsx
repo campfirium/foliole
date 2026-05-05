@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeAll, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { ExternalDocumentPreviewPanel } from './ExternalDocumentPreviewPanel';
 
@@ -26,6 +26,10 @@ beforeAll(() => {
   }
 
   vi.stubGlobal('ResizeObserver', MockResizeObserver);
+});
+
+beforeEach(() => {
+  loadRuntimeExternalSearchPreview.mockReset();
 });
 
 it('renders the external document preview panel as a floating window for a requested search hit', async () => {
@@ -70,6 +74,60 @@ it('renders the external document preview panel as a floating window for a reque
     absolutePath: '/library/topic.md',
     folderId: 'folder-1'
   });
+});
+
+it('shows a loading state while the floating external preview is loading', () => {
+  loadRuntimeExternalSearchPreview.mockReturnValueOnce(new Promise(() => undefined));
+
+  render(
+    <ExternalDocumentPreviewPanel
+      onClose={vi.fn()}
+      onOpenImportedNode={vi.fn()}
+      onOpenInExternalLibrary={vi.fn()}
+      request={{
+        absolutePath: '/library/topic.md',
+        folderId: 'folder-1'
+      }}
+    />
+  );
+
+  expect(screen.getByText('Loading external document')).toBeInTheDocument();
+  expect(screen.getByText('Loading the selected external document.')).toBeInTheDocument();
+});
+
+it('shows an alert and retries when the floating external preview fails', async () => {
+  loadRuntimeExternalSearchPreview
+    .mockRejectedValueOnce(new Error('External disk unavailable.'))
+    .mockResolvedValueOnce({
+      absolutePath: '/library/topic.md',
+      content: '# Topic after retry',
+      extension: 'md',
+      fileName: 'topic.md',
+      folderId: 'folder-1',
+      folderPath: '/library',
+      relativePath: 'topic.md'
+    });
+
+  render(
+    <ExternalDocumentPreviewPanel
+      onClose={vi.fn()}
+      onOpenImportedNode={vi.fn()}
+      onOpenInExternalLibrary={vi.fn()}
+      request={{
+        absolutePath: '/library/topic.md',
+        folderId: 'folder-1'
+      }}
+    />
+  );
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('External disk unavailable.');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+  await waitFor(() => {
+    expect(screen.getByText('# Topic after retry')).toBeInTheDocument();
+  });
+  expect(loadRuntimeExternalSearchPreview).toHaveBeenCalledTimes(2);
 });
 
 it('toggles the preview window into fullscreen mode', async () => {

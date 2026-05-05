@@ -84,3 +84,17 @@ it('routes allow and reject actions to the selected request', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
   expect(pairingHookMocks.state?.rejectRequest).toHaveBeenCalledWith('pair-request-1');
 });
+
+it('shows an alert when a pairing action fails', async () => {
+  pairingHookMocks.state = {
+    ...pairingHookMocks.state,
+    approveRequest: vi.fn().mockRejectedValue(new Error('Pairing approval failed.'))
+  };
+  pairingHookMocks.useDesktopCompanionPairingRequests.mockReturnValue(pairingHookMocks.state);
+
+  render(<CompanionPairingRequestsDialog />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Allow' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Pairing approval failed.');
+});

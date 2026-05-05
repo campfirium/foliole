@@ -106,32 +106,43 @@ async function runLocationUpdate(args: {
 }
 
 function useInitialLibraryPathSettings(
+  reloadKey: number,
   setIsDesktopRuntime: (value: boolean) => void,
+  setIsLoading: (value: boolean) => void,
   setPaths: (value: RuntimeLibraryPaths) => void
 ) {
   useEffect(() => {
     let alive = true;
-    loadRuntimeLibraryPathSettings().then((settings) => {
-      if (!alive || !settings) {
-        return;
-      }
-      setIsDesktopRuntime(true);
-      setPaths(settings);
-    });
+    setIsLoading(true);
+    loadRuntimeLibraryPathSettings()
+      .then((settings) => {
+        if (!alive || !settings) {
+          return;
+        }
+        setIsDesktopRuntime(true);
+        setPaths(settings);
+      })
+      .finally(() => {
+        if (alive) {
+          setIsLoading(false);
+        }
+      });
     return () => {
       alive = false;
     };
-  }, [setIsDesktopRuntime, setPaths]);
+  }, [reloadKey, setIsDesktopRuntime, setIsLoading, setPaths]);
 }
 
 export function useLibraryPathSettings() {
   const [paths, setPaths] = useState<RuntimeLibraryPaths>(() => createUnavailablePaths());
   const [errors, setErrors] = useState<LibraryPathErrorState>(() => createEmptyErrors());
+  const [isLoading, setIsLoading] = useState(true);
   const [isDesktopRuntime, setIsDesktopRuntime] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<RuntimeLibraryPathLocation | null>(null);
+  const [reloadKey] = useState(0);
   const mirrorRebuildState = useMirrorRebuildState();
 
-  useInitialLibraryPathSettings(setIsDesktopRuntime, setPaths);
+  useInitialLibraryPathSettings(reloadKey, setIsDesktopRuntime, setIsLoading, setPaths);
 
   async function handleChangeRequest(location: RuntimeLibraryPathLocation) {
     try {
@@ -172,6 +183,7 @@ export function useLibraryPathSettings() {
     assetsPath: paths.assetsDir,
     errorByLocation: errors,
     isDesktopRuntime,
+    isLoadingLibraryPaths: isLoading,
     libraryHomePath: paths.libraryHome,
     mirrorPath: paths.mirror,
     pendingLocation,

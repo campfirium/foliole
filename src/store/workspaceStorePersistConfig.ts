@@ -9,7 +9,7 @@ import type { WorkspacePersistedState, WorkspaceState } from './workspaceStore';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 
 export function createWorkspaceStorePersistConfig(
-  onHydrated: () => void
+  onHydrated: (error?: unknown) => void
 ) {
   return {
     name: 'foliole-workspace-v1',
@@ -58,8 +58,8 @@ export function createWorkspaceStorePersistConfig(
         current
       ) as WorkspaceState;
     },
-    onRehydrateStorage: () => () => {
-      onHydrated();
+    onRehydrateStorage: () => (_state: unknown, error?: unknown) => {
+      onHydrated(error);
     }
   };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
@@ -6,11 +6,10 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   importRuntimeExternalSearchDocument,
   type RuntimeExternalSearchBrowseEntry,
-  loadRuntimeExternalSearchPreview,
   type RuntimeExternalSearchFolder,
   type RuntimeExternalSearchPreview
 } from '../../shared/platform/externalSearchBridge';
-import { AppEmptyState } from '../../shared/ui';
+import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import {
@@ -22,6 +21,7 @@ import {
   resolveExternalSurfaceTitle
 } from './externalLibraryDocumentSurfaceSupport';
 import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
+import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
 import { FolderListView } from './FolderListView';
 
 interface ExternalLibraryDocumentSurfaceProps {
@@ -56,40 +56,6 @@ function toExternalDocumentNode(entry: Pick<RuntimeExternalSearchBrowseEntry, 'a
     title: entry.title,
     updatedAt: entry.modifiedAt
   };
-}
-
-function useExternalSearchPreview(selection: ExternalLibrarySelection) {
-  const [preview, setPreview] = useState<RuntimeExternalSearchPreview | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (selection.kind !== 'document') {
-      setPreview(null);
-      setError(null);
-      return;
-    }
-    let alive = true;
-    void loadRuntimeExternalSearchPreview(selection.absolutePath)
-      .then((result) => {
-        if (!alive) {
-          return;
-        }
-        setPreview(result);
-        setError(result ? null : 'Could not load external document preview.');
-      })
-      .catch((nextError) => {
-        if (!alive) {
-          return;
-        }
-        setPreview(null);
-        setError(nextError instanceof Error ? nextError.message : 'Could not load external document preview.');
-      });
-    return () => {
-      alive = false;
-    };
-  }, [selection]);
-
-  return { error, preview };
 }
 
 function useExternalFolderBrowseState(props: Pick<ExternalLibraryDocumentSurfaceProps, 'entriesByFolderId' | 'folders' | 'selection'>) {
@@ -158,15 +124,38 @@ function ExternalFolderListSurface(args: {
 }
 
 function ExternalEmptySurface(args: {
-  error: string | null;
   selectedFolder: RuntimeExternalSearchFolder | null;
   selection: Exclude<ExternalLibrarySelection, { kind: 'document' }>;
 }) {
   return (
     <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
       <AppEmptyState
-        description={resolveExternalSurfaceDescription(args.selection, args.selectedFolder, args.error)}
+        description={resolveExternalSurfaceDescription(args.selection, args.selectedFolder, null)}
         title={resolveExternalSurfaceTitle(args.selection, args.selectedFolder)}
+      />
+    </section>
+  );
+}
+
+function ExternalDocumentLoadingSurface() {
+  return (
+    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
+      <AppLoadingState description="Loading the selected external document." title="Loading document" />
+    </section>
+  );
+}
+
+function ExternalDocumentErrorSurface(args: { error: string; onRetry: () => void }) {
+  return (
+    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
+      <AppErrorState
+        action={
+          <AppButton onClick={args.onRetry} size="sm">
+            Retry
+          </AppButton>
+        }
+        description={args.error}
+        title="External preview unavailable"
       />
     </section>
   );
@@ -194,7 +183,8 @@ function renderExternalPreviewSurface(args: {
 }
 
 export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSurfaceProps) {
-  const { error, preview } = useExternalSearchPreview(props.selection);
+  const previewPath = props.selection.kind === 'document' ? props.selection.absolutePath : null;
+  const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(previewPath);
   const [isImporting, setIsImporting] = useState(false);
   const { activeFolderId, documentNodes, documentNodesById, selectedFolder } = useExternalFolderBrowseState(props);
 
@@ -232,18 +222,19 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
   }
 
   if (props.selection.kind !== 'document') {
-    return <ExternalEmptySurface error={error} selectedFolder={selectedFolder} selection={props.selection} />;
+    return <ExternalEmptySurface selectedFolder={selectedFolder} selection={props.selection} />;
+  }
+
+  if (isLoading) {
+    return <ExternalDocumentLoadingSurface />;
+  }
+
+  if (error) {
+    return <ExternalDocumentErrorSurface error={error} onRetry={retry} />;
   }
 
   if (!preview) {
-    return (
-      <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
-        <AppEmptyState
-          description={resolveExternalSurfaceDescription(props.selection, selectedFolder, error)}
-          title={resolveExternalSurfaceTitle(props.selection, selectedFolder)}
-        />
-      </section>
-    );
+    return <ExternalDocumentLoadingSurface />;
   }
 
   return renderExternalPreviewSurface({

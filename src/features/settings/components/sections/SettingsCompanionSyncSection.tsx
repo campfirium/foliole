@@ -99,7 +99,9 @@ function ConnectedDevicesRow({
         <p className="mt-0.5 text-sm text-foreground/65">Approved devices that can sync with this desktop.</p>
       </div>
       {isLoading ? (
-        <p className="mt-4 text-sm text-foreground/45">Loading...</p>
+        <p aria-busy="true" className="mt-4 text-sm text-foreground/45" role="status">
+          Loading connected devices...
+        </p>
       ) : (
         <ConnectedDeviceList devices={devices} onDisconnect={onDisconnect} pendingActionId={pendingActionId} />
       )}
@@ -134,6 +136,7 @@ function DeviceSyncSwitch(props: {
 export function SettingsCompanionSyncSection() {
   const state = useDesktopCompanionPairingRequests(3_000);
   const overview = state.overview;
+  const syncError = renderSyncError(overview);
 
   return (
     <SettingsSection
@@ -142,20 +145,29 @@ export function SettingsCompanionSyncSection() {
       title="Sync"
     >
       <SettingsRow
-        description={renderSyncError(overview) ?? undefined}
+        description={syncError ?? undefined}
         title="Enable on this desktop"
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <DeviceSyncSwitch state={state} />
         </SettingsControlSlot>
       </SettingsRow>
+      {syncError ? (
+        <p className="m-0 px-5 text-sm text-error" role="alert">
+          {syncError}
+        </p>
+      ) : null}
       <ConnectedDevicesRow
         devices={overview.paired_devices}
         isLoading={state.isLoading}
         onDisconnect={(deviceId) => void state.removePairedDevice(deviceId)}
         pendingActionId={state.pendingActionId}
       />
-      {state.error ? <p className="text-sm text-error">{state.error}</p> : null}
+      {state.error ? (
+        <p className="m-0 text-sm text-error" role="alert">
+          {state.error}
+        </p>
+      ) : null}
     </SettingsSection>
   );
 }

@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 
 import { useDesktopCompanionPairingRequests } from '../../shared/platform/useDesktopCompanionPairingRequests';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
@@ -115,26 +115,43 @@ function PairingDialogActions({
 }) {
   const disabled = state.pendingActionId === request.pair_request_id;
   const actionIcon = disabled ? <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.8} /> : null;
+  const [errorMessage, setErrorMessage] = useState('');
+  const runPairingAction = async (action: (pairRequestId: string) => Promise<unknown>) => {
+    setErrorMessage('');
+    try {
+      await action(request.pair_request_id);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Could not update the pairing request.');
+    }
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <AppButton
-        className="border border-border-strong bg-bg-panel text-foreground hover:bg-bg-subtle"
-        disabled={disabled}
-        onClick={() => void state.rejectRequest(request.pair_request_id)}
-        variant="primary"
-      >
-        {actionIcon}
-        {disabled ? 'Working...' : 'Reject'}
-      </AppButton>
-      <AppButton
-        className="border border-border-strong"
-        disabled={disabled}
-        onClick={() => void state.approveRequest(request.pair_request_id)}
-        variant="primary"
-      >
-        {actionIcon}
-        {disabled ? 'Working...' : 'Allow'}
-      </AppButton>
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <AppButton
+          className="border border-border-strong bg-bg-panel text-foreground hover:bg-bg-subtle"
+          disabled={disabled}
+          onClick={() => void runPairingAction(state.rejectRequest)}
+          variant="primary"
+        >
+          {actionIcon}
+          {disabled ? 'Working...' : 'Reject'}
+        </AppButton>
+        <AppButton
+          className="border border-border-strong"
+          disabled={disabled}
+          onClick={() => void runPairingAction(state.approveRequest)}
+          variant="primary"
+        >
+          {actionIcon}
+          {disabled ? 'Working...' : 'Allow'}
+        </AppButton>
+      </div>
+      {errorMessage ? (
+        <p className="m-0 text-center text-sm text-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
     </div>
   );
 }

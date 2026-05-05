@@ -1,7 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
+
+const loadRuntimeExternalSearchPreview = vi.fn();
+
+vi.mock('../../shared/platform/externalSearchBridge', () => ({
+  importRuntimeExternalSearchDocument: vi.fn(),
+  loadRuntimeExternalSearchPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
+}));
 
 const folders = [
   {
@@ -46,6 +53,31 @@ const entriesByFolderId = {
   ]
 };
 
+beforeEach(() => {
+  loadRuntimeExternalSearchPreview.mockReset();
+});
+
+function renderDocumentSurface(
+  selection: Parameters<typeof ExternalLibraryDocumentSurface>[0]['selection']
+) {
+  return render(
+    <ExternalLibraryDocumentSurface
+      canGoBack={false}
+      canGoForward={false}
+      documentMaxWidth={760}
+      entriesByFolderId={entriesByFolderId}
+      folders={folders}
+      onGoBack={vi.fn()}
+      onGoForward={vi.fn()}
+      onOpenImportedNode={vi.fn()}
+      onOpenSelection={vi.fn()}
+      onResetLayout={vi.fn()}
+      onStartDocumentResize={vi.fn()}
+      selection={selection}
+    />
+  );
+}
+
 it('renders the external folder contents in the center document area using the folder list view', () => {
   const onOpenSelection = vi.fn();
 
@@ -80,4 +112,38 @@ it('renders the external folder contents in the center document area using the f
     folderId: 'folder-1',
     kind: 'document'
   });
+});
+
+it('shows a loading state while an external library document is loading', () => {
+  loadRuntimeExternalSearchPreview.mockReturnValueOnce(new Promise(() => undefined));
+
+  renderDocumentSurface({
+    absolutePath: '/library/test 6/one.md',
+    folderId: 'folder-1',
+    kind: 'document'
+  });
+
+  expect(screen.getByText('Loading document')).toBeInTheDocument();
+  expect(screen.getByText('Loading the selected external document.')).toBeInTheDocument();
+});
+
+it('shows an alert and retries when an external library document fails to load', async () => {
+  loadRuntimeExternalSearchPreview
+    .mockRejectedValueOnce(new Error('External document missing.'))
+    .mockReturnValueOnce(new Promise(() => undefined));
+
+  renderDocumentSurface({
+    absolutePath: '/library/test 6/one.md',
+    folderId: 'folder-1',
+    kind: 'document'
+  });
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('External document missing.');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+  await waitFor(() => {
+    expect(loadRuntimeExternalSearchPreview).toHaveBeenCalledTimes(2);
+  });
+  expect(screen.getByText('Loading document')).toBeInTheDocument();
 });
