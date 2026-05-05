@@ -15,10 +15,10 @@ function createTestStore(now: Date) {
         return { activeNodeId: nodeId };
       });
     },
-    updateSourceContent: (nodeId, content) => {
+    updateNodeContent: (nodeId, content) => {
       set((state) => {
         const node = state.nodesById[nodeId];
-        if (!node || node.kind !== 'source') {
+        if (!node) {
           return state;
         }
 
@@ -34,31 +34,32 @@ function createTestStore(now: Date) {
         };
       });
     },
-    createExtractFromSelection: (sourceNodeId, quote) => {
-      const normalizedQuote = quote.trim();
-      if (!normalizedQuote) {
+    createChildNodeFromSelection: (parentNodeId, selectionContent) => {
+      const normalizedContent = selectionContent.trim();
+      if (!normalizedContent) {
         return null;
       }
 
-      const extractId = 'extract-test-id';
+      const childNodeId = 'node-test-id';
       const timestamp = new Date().toISOString();
 
       set((state) => {
-        const sourceNode = state.nodesById[sourceNodeId];
-        if (!sourceNode || sourceNode.kind !== 'source') {
+        const parentNode = state.nodesById[parentNodeId];
+        if (!parentNode) {
           return state;
         }
 
         return {
-          nodeOrder: [...state.nodeOrder, extractId],
+          nodeOrder: [...state.nodeOrder, childNodeId],
           nodesById: {
             ...state.nodesById,
-            [extractId]: {
-              id: extractId,
-              kind: 'extract',
-              sourceNodeId,
-              quote: normalizedQuote,
-              title: 'Extract 1',
+            [childNodeId]: {
+              id: childNodeId,
+              parentNodeId,
+              title: 'Node 2',
+              content: normalizedContent,
+              reveal: null,
+              review: null,
               createdAt: timestamp,
               updatedAt: timestamp
             }
@@ -66,40 +67,41 @@ function createTestStore(now: Date) {
         };
       });
 
-      return extractId;
+      return childNodeId;
     }
   }));
 }
 
 describe('workspaceStore', () => {
-  it('creates source seed node as initial state', () => {
+  it('creates seed node as initial state', () => {
     const initial = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
 
-    expect(initial.activeNodeId).toBe('source-1');
-    expect(initial.nodeOrder).toEqual(['source-1']);
-    expect(initial.nodesById['source-1']?.kind).toBe('source');
+    expect(initial.activeNodeId).toBe('node-1');
+    expect(initial.nodeOrder).toEqual(['node-1']);
+    expect(initial.nodesById['node-1']?.parentNodeId).toBeNull();
+    expect(initial.nodesById['node-1']?.review).toBeNull();
   });
 
-  it('updates source node content', () => {
+  it('updates node content', () => {
     const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
 
-    store.getState().updateSourceContent('source-1', 'updated markdown');
+    store.getState().updateNodeContent('node-1', 'updated markdown');
 
-    const node = store.getState().nodesById['source-1'];
-    expect(node?.kind).toBe('source');
-    if (!node || node.kind !== 'source') {
-      throw new Error('source node is required in this test');
+    const node = store.getState().nodesById['node-1'];
+    if (!node) {
+      throw new Error('seed node is required in this test');
     }
     expect(node.content).toBe('updated markdown');
   });
 
-  it('creates extract node from selected quote', () => {
+  it('creates child node from selected content', () => {
     const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
 
-    const extractId = store.getState().createExtractFromSelection('source-1', 'quoted text');
+    const childNodeId = store.getState().createChildNodeFromSelection('node-1', 'quoted text');
 
-    expect(extractId).toBe('extract-test-id');
-    expect(store.getState().nodeOrder).toContain('extract-test-id');
-    expect(store.getState().nodesById['extract-test-id']?.kind).toBe('extract');
+    expect(childNodeId).toBe('node-test-id');
+    expect(store.getState().nodeOrder).toContain('node-test-id');
+    expect(store.getState().nodesById['node-test-id']?.parentNodeId).toBe('node-1');
+    expect(store.getState().nodesById['node-test-id']?.content).toBe('quoted text');
   });
 });

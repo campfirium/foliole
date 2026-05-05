@@ -1,22 +1,38 @@
 import { create } from 'zustand';
 
-import type { LearningNode, SourceNode } from '../features/nodes/model/nodeTypes';
+import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 
 export interface WorkspaceState {
   activeNodeId: string | null;
   nodeOrder: string[];
-  nodesById: Record<string, LearningNode>;
+  nodesById: Record<string, Node>;
   setActiveNode: (nodeId: string) => void;
-  updateSourceContent: (nodeId: string, content: string) => void;
-  createExtractFromSelection: (sourceNodeId: string, quote: string) => string | null;
+  updateNodeContent: (nodeId: string, content: string) => void;
+  createChildNodeFromSelection: (parentNodeId: string, selectionContent: string) => string | null;
 }
 
-export function createSeedSourceNode(timestamp: string): SourceNode {
+export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile {
   return {
-    id: 'source-1',
-    kind: 'source',
+    due: timestamp,
+    lastReviewAt: null,
+    state: 0,
+    stability: 0,
+    difficulty: 0,
+    elapsedDays: 0,
+    scheduledDays: 0,
+    reps: 0,
+    lapses: 0
+  };
+}
+
+export function createSeedNode(timestamp: string): Node {
+  return {
+    id: 'node-1',
+    parentNodeId: null,
     title: 'Getting Started',
     content: '# Welcome to Foliole\n\nStart writing markdown here.',
+    reveal: null,
+    review: null,
     createdAt: timestamp,
     updatedAt: timestamp
   };
@@ -27,7 +43,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   'activeNodeId' | 'nodeOrder' | 'nodesById'
 > {
   const timestamp = now.toISOString();
-  const seedNode = createSeedSourceNode(timestamp);
+  const seedNode = createSeedNode(timestamp);
   return {
     activeNodeId: seedNode.id,
     nodeOrder: [seedNode.id],
@@ -47,10 +63,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       return { activeNodeId: nodeId };
     });
   },
-  updateSourceContent: (nodeId, content) => {
+  updateNodeContent: (nodeId, content) => {
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || node.kind !== 'source') {
+      if (!node) {
         return state;
       }
 
@@ -66,31 +82,32 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       };
     });
   },
-  createExtractFromSelection: (sourceNodeId, quote) => {
-    const normalizedQuote = quote.trim();
-    if (!normalizedQuote) {
+  createChildNodeFromSelection: (parentNodeId, selectionContent) => {
+    const normalizedContent = selectionContent.trim();
+    if (!normalizedContent) {
       return null;
     }
 
-    const extractId = `extract-${crypto.randomUUID()}`;
+    const childNodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
 
     set((state) => {
-      const sourceNode = state.nodesById[sourceNodeId];
-      if (!sourceNode || sourceNode.kind !== 'source') {
+      const parentNode = state.nodesById[parentNodeId];
+      if (!parentNode) {
         return state;
       }
 
       return {
-        nodeOrder: [...state.nodeOrder, extractId],
+        nodeOrder: [...state.nodeOrder, childNodeId],
         nodesById: {
           ...state.nodesById,
-          [extractId]: {
-            id: extractId,
-            kind: 'extract',
-            sourceNodeId,
-            quote: normalizedQuote,
-            title: `Extract ${state.nodeOrder.length}`,
+          [childNodeId]: {
+            id: childNodeId,
+            parentNodeId,
+            title: `Node ${state.nodeOrder.length + 1}`,
+            content: normalizedContent,
+            reveal: null,
+            review: null,
             createdAt: timestamp,
             updatedAt: timestamp
           }
@@ -98,6 +115,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       };
     });
 
-    return extractId;
+    return childNodeId;
   }
 }));

@@ -1,29 +1,22 @@
-export type NodeKind = 'source' | 'extract' | 'card';
+export interface NodeReviewProfile {
+  due: string;
+  lastReviewAt: string | null;
+  state: number;
+  stability: number;
+  difficulty: number;
+  elapsedDays: number;
+  scheduledDays: number;
+  reps: number;
+  lapses: number;
+}
 
-interface BaseNode {
+export interface Node {
   id: string;
-  kind: NodeKind;
+  parentNodeId: string | null;
   title: string;
+  content: string;
+  reveal: string | null;
+  review: NodeReviewProfile | null;
   createdAt: string;
   updatedAt: string;
 }
-
-export interface SourceNode extends BaseNode {
-  kind: 'source';
-  content: string;
-}
-
-export interface ExtractNode extends BaseNode {
-  kind: 'extract';
-  sourceNodeId: string;
-  quote: string;
-}
-
-export interface CardNode extends BaseNode {
-  kind: 'card';
-  sourceNodeId: string;
-  prompt: string;
-  response: string;
-}
-
-export type LearningNode = SourceNode | ExtractNode | CardNode;
