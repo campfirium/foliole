@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { listAvailableSystemFonts } from '../model/systemFonts';
@@ -8,34 +9,72 @@ import {
   changePushQueueValues,
   createDeferred,
   createProps,
-  createSavedPushQueueProps,
-  expectPushQueueChangeCallbacks,
   expectPushQueueValues,
   openReviewSettings
 } from './SettingsPanel.testUtils';
 
-function createPushQueueChangeHandlers() {
-  return {
-    onPriorityRatioChange: vi.fn(),
-    onQueueMixRatioReadingChange: vi.fn(),
-    onQueueMixRatioFsrsChange: vi.fn(),
-    onReadingInitialIntervalDaysChange: vi.fn(),
-    onReadingIntervalGrowthFactorMinChange: vi.fn(),
-    onReadingIntervalGrowthFactorMaxChange: vi.fn()
-  };
-}
+function PushQueueSettingsHarness() {
+  const [isOpen, setIsOpen] = useState(true);
+  const [props, setProps] = useState(createProps);
 
-function renderSettingsPanelWithPushQueueHandlers(
-  handlers: ReturnType<typeof createPushQueueChangeHandlers>
-) {
-  return render(<SettingsPanel {...createProps()} {...handlers} />);
+  return (
+    <>
+      <button onClick={() => setIsOpen(true)} type="button">
+        Reopen settings
+      </button>
+      {isOpen ? (
+        <SettingsPanel
+          {...props}
+          onClose={() => setIsOpen(false)}
+          onPriorityRatioChange={(value) =>
+            setProps((current) => ({
+              ...current,
+              priorityRatio: value
+            }))
+          }
+          onQueueMixRatioReadingChange={(value) =>
+            setProps((current) => ({
+              ...current,
+              queueMixRatioReading: value
+            }))
+          }
+          onQueueMixRatioFsrsChange={(value) =>
+            setProps((current) => ({
+              ...current,
+              queueMixRatioFsrs: value
+            }))
+          }
+          onReadingInitialIntervalDaysChange={(value) =>
+            setProps((current) => ({
+              ...current,
+              readingInitialIntervalMs: value * 24 * 60 * 60 * 1000
+            }))
+          }
+          onReadingIntervalGrowthFactorMinChange={(value) =>
+            setProps((current) => ({
+              ...current,
+              readingIntervalGrowthFactorMin: value
+            }))
+          }
+          onReadingIntervalGrowthFactorMaxChange={(value) =>
+            setProps((current) => ({
+              ...current,
+              readingIntervalGrowthFactorMax: value
+            }))
+          }
+        />
+      ) : null}
+    </>
+  );
 }
 
 function expectPushQueueSemanticCopy() {
   expect(screen.getByText('Dual queue mix ratio')).toBeInTheDocument();
   expect(screen.getByText('Priority strength (`priorityRatio`)')).toBeInTheDocument();
   expect(screen.getByText(/weight multiple of P1 relative to P9/i)).toBeInTheDocument();
-  expect(screen.getByText(/default `1:5` means one reading card is mixed after five FSRS cards/i)).toBeInTheDocument();
+  expect(screen.getByText(/weight ratio, not a percentage scale/i)).toBeInTheDocument();
+  expect(screen.getByText(/default `1:5` means one reading draw is mixed after five FSRS draws/i)).toBeInTheDocument();
+  expect(screen.getByText(/minimum maps to P1, the maximum maps to P9/i)).toBeInTheDocument();
 }
 
 vi.mock('../model/systemFonts', () => ({
@@ -129,10 +168,7 @@ it('updates remaining review scheduler controls from review settings section', a
 });
 
 it('keeps push queue defaults, saved values, and reopened review fields in sync', async () => {
-  const handlers = createPushQueueChangeHandlers();
-  const savedProps = createSavedPushQueueProps();
-
-  const view = renderSettingsPanelWithPushQueueHandlers(handlers);
+  render(<PushQueueSettingsHarness />);
 
   openReviewSettings();
   expectPushQueueSemanticCopy();
@@ -154,14 +190,18 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
   });
 
   await waitFor(() => {
-    expectPushQueueChangeCallbacks({
-      ...handlers
+    expectPushQueueValues({
+      reading: 2,
+      fsrs: 4,
+      priorityRatio: 7,
+      readingInitialIntervalDays: 2,
+      readingGrowthMin: 1.12,
+      readingGrowthMax: 1.44
     });
   });
 
-  view.unmount();
-
-  render(<SettingsPanel {...savedProps} />);
+  fireEvent.mouseDown(screen.getByLabelText('Settings'));
+  fireEvent.click(screen.getByRole('button', { name: 'Reopen settings' }));
 
   openReviewSettings();
 
