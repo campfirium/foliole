@@ -29,6 +29,7 @@ export interface DesktopDebugInvokeFailure {
 
 export interface DesktopDebugProbeSnapshot {
   bridgeAvailable: boolean;
+  preloadPath: string | null;
   recentInvokes: DesktopDebugInvokeRecord[];
   recentInvokeFailures: DesktopDebugInvokeFailure[];
   runtimeHead: string | null;
@@ -65,6 +66,10 @@ function getRuntimeHead() {
   return getElectronAPI()?.debug?.runtimeHead ?? null;
 }
 
+function getPreloadPath() {
+  return getElectronAPI()?.debug?.preloadPath ?? null;
+}
+
 function toErrorDetails(error: unknown) {
   if (error instanceof Error) {
     return {
@@ -87,6 +92,7 @@ function cloneArgs(args: unknown) {
 function getSnapshot(): DesktopDebugProbeSnapshot {
   return {
     bridgeAvailable: Boolean(getElectronAPI()),
+    preloadPath: getPreloadPath(),
     recentInvokes: recentInvokes.map((entry) => cloneValue(entry)),
     recentInvokeFailures: recentInvokeFailures.map((entry) => cloneValue(entry)),
     runtimeHead: getRuntimeHead()

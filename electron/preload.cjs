@@ -1,6 +1,8 @@
 const process = require('node:process');
 const { contextBridge, ipcRenderer } = require('electron');
 
+const preloadPath = require.resolve('./preload.cjs');
+
 const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
@@ -36,6 +38,7 @@ const electronApi = {
 
 if (isDesktopDebugProbeEnabled()) {
   electronApi.debug = {
+    preloadPath,
     runtimeHead: process.env.FOLIOLE_RUNTIME_HEAD ?? null
   };
 }

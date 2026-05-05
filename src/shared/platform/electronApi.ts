@@ -1,9 +1,12 @@
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
+export interface ElectronDebugMetadata {
+  preloadPath: string | null;
+  runtimeHead: string | null;
+}
+
 export interface ElectronAPI {
-  debug?: {
-    runtimeHead: string | null;
-  };
+  debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
   onNativeMenuCommand: (handler: (commandId: string) => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;

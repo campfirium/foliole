@@ -6,7 +6,7 @@ import type { ElectronAPI } from './electronApi';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke'], runtimeHead: string | null = null): ElectronAPI {
   return {
-    debug: { runtimeHead },
+    debug: { preloadPath: '/workspace/foliole/electron/preload.cjs', runtimeHead },
     invoke,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
@@ -26,6 +26,7 @@ it('exposes desktop debug probe snapshot with bridge availability and runtime he
 
   expect(window.__FOLIOLE_DESKTOP_DEBUG_PROBE__?.getSnapshot()).toEqual({
     bridgeAvailable: true,
+    preloadPath: '/workspace/foliole/electron/preload.cjs',
     recentInvokes: [],
     recentInvokeFailures: [],
     runtimeHead: 'abc123'
@@ -49,6 +50,7 @@ it('records recent native invoke history through runtime invoke wrapper', async 
 
   expect(readDesktopDebugProbe()).toEqual({
     bridgeAvailable: true,
+    preloadPath: '/workspace/foliole/electron/preload.cjs',
     recentInvokes: [
       expect.objectContaining({
         command: 'resolve_app_paths',

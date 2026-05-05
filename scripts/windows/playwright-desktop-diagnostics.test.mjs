@@ -15,12 +15,19 @@ import {
 } from './playwright-desktop-diagnostics.mjs';
 
 class MockPage extends EventEmitter {
-  constructor(snapshot) {
+  constructor(snapshot, runtimeState = {}) {
     super();
     this.snapshot = snapshot;
+    this.runtimeState = runtimeState;
   }
 
-  async evaluate(pageFunction) {
+  async evaluate(pageFunction, appReadyFlag) {
+    if (appReadyFlag) {
+      globalThis[appReadyFlag] = this.runtimeState.appReady ?? false;
+      globalThis.location = { href: this.runtimeState.rendererUrl ?? 'about:blank' };
+      globalThis.document = { readyState: this.runtimeState.readyState ?? 'loading' };
+      return pageFunction(appReadyFlag);
+    }
     globalThis.__FOLIOLE_DESKTOP_DEBUG_PROBE__ = {
       getSnapshot: () => this.snapshot
     };
@@ -29,14 +36,14 @@ class MockPage extends EventEmitter {
 }
 
 describe('playwright desktop diagnostics', () => {
-  it('collects renderer, main-process, boot, and invoke diagnostics', async () => {
+  it('collects current runtime readiness, preload path, renderer URL, and bridge availability for the active pid', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'desktop-diagnostics-test-'));
     try {
       const logsDir = path.join(tempRoot, 'logs', 'windows');
       await mkdir(logsDir, { recursive: true });
       await writeFile(
         path.join(tempRoot, '.windows-native-boot-ready.json'),
-        JSON.stringify({ stage: 'app_ready', timestamp: '2026-03-14T00:00:00.000Z' }),
+        JSON.stringify({ pid: 4821, stage: 'app_ready', timestamp: '2026-03-14T00:00:00.000Z' }),
         'utf8'
       );
       await writeFile(
@@ -46,13 +53,19 @@ describe('playwright desktop diagnostics', () => {
       );
 
       const windowPage = new MockPage({
-        bridgeAvailable: true,
+        bridgeAvailable: false,
+        preloadPath: '/workspace/foliole/electron/preload.cjs',
         recentInvokeFailures: [],
         recentInvokes: [{ command: 'resolve_app_paths', status: 'resolved', timestamp: 'now', durationMs: 4 }],
         runtimeHead: 'head-123'
+      }, {
+        appReady: true,
+        readyState: 'complete',
+        rendererUrl: 'file:///workspace/foliole/dist/index.html'
       });
       const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
       const childProcess = {
+        pid: 4821,
         stderr: new EventEmitter(),
         stdout: new EventEmitter()
       };
@@ -73,6 +86,13 @@ describe('playwright desktop diagnostics', () => {
         windowPage
       });
 
+      expect(diagnostics.currentRuntime).toEqual({
+        appReady: true,
+        bridgeAvailable: false,
+        pid: 4821,
+        preloadPath: '/workspace/foliole/electron/preload.cjs',
+        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+      });
       expect(diagnostics.runtimeHead).toBe('head-123');
       expect(diagnostics.nativeInvokeHistory).toEqual([
         expect.objectContaining({ command: 'resolve_app_paths', status: 'resolved' })
@@ -83,6 +103,7 @@ describe('playwright desktop diagnostics', () => {
       expect(diagnostics.mainProcessLogs.stdoutTail).toEqual(['main ok\n']);
       expect(diagnostics.mainProcessLogs.stderrTail).toEqual(['main failed\n']);
       expect(diagnostics.boot.readyMarker).toEqual({
+        pid: 4821,
         stage: 'app_ready',
         timestamp: '2026-03-14T00:00:00.000Z'
       });

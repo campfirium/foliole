@@ -140,6 +140,7 @@ describe('playwright desktop harness', () => {
     const calls = [];
     let closed = false;
     const childProcess = {
+      pid: 4821,
       stderr: new EventEmitter(),
       stdout: new EventEmitter()
     };
@@ -155,6 +156,7 @@ describe('playwright desktop harness', () => {
       globalThis.__FOLIOLE_DESKTOP_DEBUG_PROBE__ = {
         getSnapshot: () => ({
           bridgeAvailable: true,
+          preloadPath: '/workspace/foliole/electron/preload.cjs',
           recentInvokeFailures: [],
           recentInvokes: [{ command: 'resolve_app_paths', durationMs: 4, status: 'resolved', timestamp: 'now' }],
           runtimeHead: 'head-123'
@@ -243,7 +245,15 @@ describe('playwright desktop harness', () => {
 
     await expect(session.collectDiagnostics()).resolves.toMatchObject({
       bridgeAvailable: true,
+      currentRuntime: {
+        appReady: true,
+        bridgeAvailable: true,
+        pid: 4821,
+        preloadPath: '/workspace/foliole/electron/preload.cjs',
+        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+      },
       mainProcessLogs: {
+        pid: 4821,
         stdoutTail: ['main ok\n']
       },
       nativeInvokeHistory: [expect.objectContaining({ command: 'resolve_app_paths', status: 'resolved' })],

@@ -4,6 +4,7 @@ import path from 'node:path';
 const MAX_BOOT_EVENTS = 20;
 const MAX_MAIN_PROCESS_LOGS = 120;
 const MAX_RENDERER_CONSOLE_MESSAGES = 80;
+const APP_READY_FLAG = '__FOLIOLE_APP_READY_REPORTED__';
 
 function createRingBuffer(limit) {
   const entries = [];
@@ -94,6 +95,7 @@ export function createMainProcessLogCollector(childProcess, limit = MAX_MAIN_PRO
       const entries = buffer.snapshot();
       return {
         entries,
+        pid: childProcess?.pid ?? null,
         stderrTail: entries.filter((entry) => entry.stream === 'stderr').map((entry) => entry.text),
         stdoutTail: entries.filter((entry) => entry.stream === 'stdout').map((entry) => entry.text)
       };
@@ -149,6 +151,28 @@ async function readDesktopDebugProbe(windowPage) {
   }
 }
 
+async function readRendererRuntimeState(windowPage) {
+  try {
+    const snapshot = await windowPage.evaluate((appReadyFlag) => ({
+      appReady: globalThis[appReadyFlag] === true,
+      readyState: globalThis.document?.readyState ?? null,
+      rendererUrl: globalThis.location?.href ?? null
+    }), APP_READY_FLAG);
+    return {
+      appReady: snapshot?.appReady ?? snapshot?.reported ?? null,
+      readyState: snapshot?.readyState ?? null,
+      rendererUrl: snapshot?.rendererUrl ?? snapshot?.href ?? null
+    };
+  } catch (error) {
+    return {
+      appReady: null,
+      error: error instanceof Error ? error.message : String(error),
+      readyState: null,
+      rendererUrl: null
+    };
+  }
+}
+
 async function readBootDiagnostics(appRoot) {
   const readyMarkerPath = path.join(appRoot, '.windows-native-boot-ready.json');
   const bootEventLogPath = path.join(appRoot, 'logs', 'windows', 'native-boot-events.ndjson');
@@ -172,19 +196,29 @@ export async function collectDesktopFailureDiagnostics({
   rendererConsoleCollector,
   windowPage
 }) {
-  const [boot, debugProbe] = await Promise.all([
+  const [boot, debugProbe, rendererRuntime] = await Promise.all([
     readBootDiagnostics(appRoot),
-    readDesktopDebugProbe(windowPage)
+    readDesktopDebugProbe(windowPage),
+    readRendererRuntimeState(windowPage)
   ]);
+  const mainProcessLogs = mainProcessCollector.snapshot();
 
   return {
     boot,
     bridgeAvailable: debugProbe?.bridgeAvailable ?? null,
     collectedAt: new Date().toISOString(),
+    currentRuntime: {
+      appReady: rendererRuntime?.appReady ?? null,
+      bridgeAvailable: debugProbe?.bridgeAvailable ?? null,
+      pid: mainProcessLogs.pid,
+      preloadPath: debugProbe?.preloadPath ?? null,
+      rendererUrl: rendererRuntime?.rendererUrl ?? null
+    },
     debugProbe,
-    mainProcessLogs: mainProcessCollector.snapshot(),
+    mainProcessLogs,
     nativeInvokeHistory: debugProbe?.recentInvokes ?? [],
     rendererConsole: rendererConsoleCollector.snapshot(),
+    rendererRuntime,
     runtimeHead: debugProbe?.runtimeHead ?? null
   };
 }
