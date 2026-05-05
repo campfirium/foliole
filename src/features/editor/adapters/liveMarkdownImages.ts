@@ -46,32 +46,32 @@ function parseImageRange(value: number) {
   return Number.isInteger(value) && value >= 0 ? String(value) : '';
 }
 
-function createImageElement(alt: string, source: string) {
+function createImageElement(alt: string, source: string, display: MarkdownImageMatch['display']) {
   const image = document.createElement('img');
   image.alt = alt || 'Markdown image';
   image.src = source;
   image.loading = 'lazy';
   image.referrerPolicy = 'no-referrer';
   image.decoding = 'async';
-  image.className = 'cm-md-image-element';
+  image.className = display === 'inline' ? 'cm-md-image-element cm-md-image-element-inline' : 'cm-md-image-element cm-md-image-element-block';
   return image;
 }
 
-function createImageStatusElement(status: 'loading' | 'unavailable') {
+function createImageStatusElement(status: 'loading' | 'unavailable', display: MarkdownImageMatch['display']) {
   const element = document.createElement('span');
-  element.className = 'cm-md-image-status';
+  element.className = display === 'inline' ? 'cm-md-image-status cm-md-image-status-inline' : 'cm-md-image-status cm-md-image-status-block';
   element.dataset.mdImageStatus = status;
   element.textContent = status === 'loading' ? 'Loading image…' : 'Image unavailable';
   return element;
 }
 
-async function renderInternalImage(wrapper: HTMLElement, alt: string, source: string) {
+async function renderInternalImage(wrapper: HTMLElement, alt: string, source: string, display: MarkdownImageMatch['display']) {
   const resolution = await resolveRuntimeAttachmentResource(source);
   if (resolution?.status === 'ready' && resolution.resource_url) {
-    wrapper.replaceChildren(createImageElement(alt, resolution.resource_url));
+    wrapper.replaceChildren(createImageElement(alt, resolution.resource_url, display));
     return;
   }
-  wrapper.replaceChildren(createImageStatusElement('unavailable'));
+  wrapper.replaceChildren(createImageStatusElement('unavailable', display));
 }
 
 function resolveImageDisplay(text: string, matchIndex: number, raw: string) {
@@ -91,12 +91,12 @@ export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch) {
   wrapper.dataset.mdImageTo = parseImageRange(imageMatch.to);
 
   if (isRemoteImageSource(imageMatch.source)) {
-    wrapper.append(createImageElement(imageMatch.alt, imageMatch.source));
+    wrapper.append(createImageElement(imageMatch.alt, imageMatch.source, imageMatch.display));
     return wrapper;
   }
 
-  wrapper.append(createImageStatusElement('loading'));
-  void renderInternalImage(wrapper, imageMatch.alt, imageMatch.source);
+  wrapper.append(createImageStatusElement('loading', imageMatch.display));
+  void renderInternalImage(wrapper, imageMatch.alt, imageMatch.source, imageMatch.display);
   return wrapper;
 }
 

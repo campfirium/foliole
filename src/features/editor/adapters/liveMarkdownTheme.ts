@@ -57,9 +57,10 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list': { color: '#a0a5ad', fontWeight: '500', opacity: '0.95' },
   '.cm-md-image-widget': { maxWidth: '100%' },
   '.cm-md-image-widget-block': { display: 'block', marginBottom: '0.24rem', marginTop: '0.24rem' },
-  '.cm-md-image-widget-inline': { display: 'inline-flex', margin: '0 0.18rem', verticalAlign: 'text-bottom' },
-  '.cm-md-image-element': { border: '1px solid color-mix(in srgb, var(--color-border-strong) 36%, transparent)', borderRadius: '0.45rem', display: 'block', height: 'auto', maxWidth: '100%', width: 'auto', objectFit: 'contain' },
-  '.cm-md-image-widget-inline .cm-md-image-element': { display: 'inline-block', margin: 0, maxHeight: '1.9em' },
+  '.cm-md-image-widget-inline': { display: 'inline-block', height: '1lh', lineHeight: '1', margin: '0 0.18rem', maxWidth: '100%', overflow: 'hidden', verticalAlign: 'text-bottom' },
+  '.cm-md-image-element': { border: '1px solid color-mix(in srgb, var(--color-border-strong) 36%, transparent)', borderRadius: '0.45rem', boxSizing: 'border-box', display: 'block', height: 'auto', maxWidth: '100%', width: 'auto', objectFit: 'contain' },
+  '.cm-md-image-element-block': { height: 'auto' },
+  '.cm-md-image-element-inline': { height: '100%', margin: 0, maxHeight: '1lh', verticalAlign: 'bottom' },
   '.cm-md-image-status': {
     alignItems: 'center',
     backgroundColor: 'color-mix(in srgb, var(--color-bg-muted) 88%, transparent)',
@@ -71,6 +72,16 @@ export const liveMarkdownTheme = EditorView.theme({
     justifyContent: 'center',
     minHeight: '5rem',
     padding: '0.75rem'
+  },
+  '.cm-md-image-status-block': { minHeight: '5rem', padding: '0.75rem' },
+  '.cm-md-image-status-inline': {
+    borderRadius: '0.35rem',
+    display: 'inline-flex',
+    fontSize: '0.72em',
+    height: '1lh',
+    minHeight: '1lh',
+    padding: '0 0.45em',
+    verticalAlign: 'text-bottom'
   },
   '.cm-activeLine': { backgroundColor: 'transparent' },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {

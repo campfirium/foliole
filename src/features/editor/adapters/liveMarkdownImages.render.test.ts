@@ -92,9 +92,13 @@ describe('live markdown image rendering', () => {
     );
 
     const widgets = Array.from(host.querySelectorAll('.cm-md-image-widget'));
+    const images = Array.from(host.querySelectorAll('.cm-md-image-element'));
 
     expect(widgets[0]).toHaveAttribute('data-md-image-display', 'block');
     expect(widgets[1]).toHaveAttribute('data-md-image-display', 'inline');
+    expect(images[0]).toHaveClass('cm-md-image-element-block');
+    expect(images[1]).toHaveClass('cm-md-image-element-inline');
+    expect(getComputedStyle(widgets[1] as HTMLElement).height).toBe('1lh');
 
     adapter.destroy();
   });
