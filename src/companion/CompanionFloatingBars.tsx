@@ -37,7 +37,8 @@ function fsrsPriorityTotal(progress: CompanionDesktopSyncProgress) {
 }
 
 function isFsrsPriorityProgress(progress: CompanionDesktopSyncProgress) {
-  return fsrsPriorityTotal(progress) > 0;
+  const total = fsrsPriorityTotal(progress);
+  return total > 0 && progress.completed < total;
 }
 
 function formatBytes(bytes: number) {
@@ -94,13 +95,14 @@ function CompanionBottomSyncStatus(props: {
     return null;
   }
   const fsrsTotal = fsrsPriorityTotal(props.progress);
-  const total = fsrsTotal > 0 ? fsrsTotal : props.progress.total ?? 0;
+  const isFsrsPriority = isFsrsPriorityProgress(props.progress);
+  const total = isFsrsPriority ? fsrsTotal : props.progress.total ?? 0;
   const completed = Math.min(props.progress.completed, total);
   const ratio = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
-  const countLabel = props.progress.total === null && fsrsTotal === 0
+  const countLabel = props.progress.total === null && !isFsrsPriority
     ? `${props.progress.completed} cached`
     : `${completed}/${total}`;
-  const byteLabel = fsrsTotal > 0 || props.progress.totalBytes == null || props.progress.completedBytes == null
+  const byteLabel = isFsrsPriority || props.progress.totalBytes == null || props.progress.completedBytes == null
     ? null
     : `${formatBytes(props.progress.completedBytes)}/${formatBytes(props.progress.totalBytes)}`;
   const contentBreakdown = formatContentBreakdown(props.progress);
