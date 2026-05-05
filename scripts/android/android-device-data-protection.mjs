@@ -110,12 +110,15 @@ function countTable(database, table) {
 
 async function inspectDatabase(filePath, tables) {
   const size = (await stat(filePath)).size;
-  const database = new Database(filePath, { readonly: true, fileMustExist: true });
+  let database = null;
   try {
+    database = new Database(filePath, { readonly: true, fileMustExist: true });
     const counts = Object.fromEntries(tables.map((table) => [table, countTable(database, table)]));
     return { counts, exists: true, path: filePath, size };
+  } catch (error) {
+    return { counts: {}, error: error.message, exists: true, path: filePath, size, unreadable: true };
   } finally {
-    database.close();
+    database?.close();
   }
 }
 
@@ -170,7 +173,7 @@ async function backupDatabase(options, snapshot) {
   const database = snapshot.database;
   if (!database?.exists) return { created: false, reason: 'database unavailable' };
   await mkdir(options.backupRoot, { recursive: true });
-  const nodes = database.counts.nodes ?? 0;
+  const nodes = database.counts?.nodes ?? 'unknown';
   const baseName = `${timestamp()}_${safeName(snapshot.serial)}_${safeName(options.appId)}_nodes-${nodes}_bytes-${database.size}`;
   const dbBackupPath = path.join(options.backupRoot, `${baseName}.db`);
   const manifestPath = path.join(options.backupRoot, `${baseName}.json`);
@@ -185,6 +188,9 @@ function printSummary(label, snapshot) {
   const clearDataEvents = (snapshot.events ?? []).filter((event) => /installer_clear_app_data/i.test(event));
   console.log(`[android-data] ${label}: serial=${snapshot.serial || 'none'} installed=${snapshot.packageInfo?.installed ?? false}`);
   console.log(`[android-data] database=${snapshot.database?.exists ? 'present' : 'missing'} nodes=${counts.nodes ?? 'n/a'} node_order=${counts.node_order ?? 'n/a'} content_blobs=${counts.content_blobs ?? 'n/a'}`);
+  if (snapshot.database?.unreadable) {
+    console.log(`[android-data] warning: database backup was created but sqlite inspection failed (${snapshot.database.error})`);
+  }
   if (counts.nodes === 0 && clearDataEvents.length > 0) {
     console.log('[android-data] warning: current Android database is empty and recent installer clear-data evidence was found');
   }
