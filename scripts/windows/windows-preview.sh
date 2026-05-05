@@ -53,7 +53,17 @@ has_committed_electron_changes_since() {
   if ! git rev-parse --verify "${runtime_head}^{commit}" >/dev/null 2>&1; then
     return 0
   fi
-  git diff --name-only "${runtime_head}..${CURRENT_HEAD}" -- electron/ lib/core/ lib/platform/ | grep -q .
+  local committed_files=""
+  committed_files="$(git diff --name-only "${runtime_head}..${CURRENT_HEAD}" -- electron/ lib/core/ lib/platform/)"
+  if [ -z "${committed_files}" ]; then
+    return 1
+  fi
+  while IFS= read -r file; do
+    if is_runtime_file "${file}"; then
+      return 0
+    fi
+  done <<< "${committed_files}"
+  return 1
 }
 
 CURRENT_HEAD="$(resolve_current_head)"
@@ -134,9 +144,30 @@ run_windows_client_action() {
   return "${exit_code}"
 }
 
+is_runtime_file() {
+  local file="$1"
+  # Must be under a runtime directory
+  if ! echo "${file}" | grep -qE '^(electron/|lib/core/|lib/platform/)'; then
+    return 1
+  fi
+  # Exclude test files, config files, and non-runtime artifacts
+  if echo "${file}" | grep -qE '\.(test|spec)\.(ts|tsx|mjs|js)$'; then
+    return 1
+  fi
+  if echo "${file}" | grep -qE '(tsconfig\.json|\.eslintrc|\.prettierrc)$'; then
+    return 1
+  fi
+  return 0
+}
+
 has_runtime_code_changes() {
   local changed_files="$1"
-  echo "${changed_files}" | grep -qE '^(electron/|lib/core/|lib/platform/)'
+  while IFS= read -r file; do
+    if is_runtime_file "${file}"; then
+      return 0
+    fi
+  done <<< "${changed_files}"
+  return 1
 }
 
 ensure_fresh_electron_dist() {

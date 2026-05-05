@@ -358,6 +358,39 @@ describe('windows-preview script', () => {
     }
   });
 
+  it('chooses sync-only when electron changes are test-only files', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: RUNNING"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_RESTART_INTENT_ROOT: tempRoot,
+        WINDOWS_PREVIEW_CHANGED_FILES: ['electron/ipc/commands.test.ts', 'electron/database/nodeMutations.test.ts'].join('\n')
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('reason: Class A: renderer-only sync path');
+      expect(result.stdout).toContain('selected action: sync-only');
+      expect(result.stdout).not.toContain('[windows-sync] include electron-dist');
+      expect(await readActions(actionLog)).toEqual(['status']);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('does not fall back to start after selecting restart-intent', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
