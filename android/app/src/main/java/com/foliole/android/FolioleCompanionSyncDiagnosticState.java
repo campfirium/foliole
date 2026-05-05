@@ -23,17 +23,16 @@ final class FolioleCompanionSyncDiagnosticState {
             database,
             FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaCursors", "pack")
         );
-        JSONObject stateKeys = diagnosticObject(context, "stateKeys");
-        String maxStateSeqKey = stateKeys.getString("maxStateSeq");
+        String maxStateSeqKey = diagnosticStateKey(context, "maxStateSeq");
         long maxStateSeq = state.optLong(maxStateSeqKey, 0);
         state.remove(maxStateSeqKey);
-        state.put(stateKeys.getString("packCursor"), cursor <= 0 ? JSONObject.NULL : cursor);
+        state.put(diagnosticStateKey(context, "packCursor"), cursor <= 0 ? JSONObject.NULL : cursor);
         state.put(maxStateSeqKey, maxStateSeq <= 0 ? JSONObject.NULL : maxStateSeq);
         JSONArray rowGroups = FolioleCompanionSyncDiagnosticQueryRules.array(context, "stateRowGroups");
         for (int index = 0; index < rowGroups.length(); index += 1) {
             JSONObject rowGroup = rowGroups.getJSONObject(index);
             state.put(
-                stateKeys.getString(FolioleCompanionQueryDefinitionShapeKeys.diagnosticRowGroupOutputKey(context, rowGroup)),
+                diagnosticStateKey(context, FolioleCompanionQueryDefinitionShapeKeys.diagnosticRowGroupOutputKey(context, rowGroup)),
                 loadRows(context, database, FolioleCompanionQueryDefinitionShapeKeys.diagnosticRowGroupQueryKey(context, rowGroup))
             );
         }
@@ -54,7 +53,7 @@ final class FolioleCompanionSyncDiagnosticState {
         return stored == null ? 0 : Math.max(0, Integer.parseInt(stored));
     }
 
-    private static JSONObject diagnosticObject(Context context, String key) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.objectValue(context, "syncDiagnostics", key);
+    private static String diagnosticStateKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncDiagnosticStateKey(context, key);
     }
 }

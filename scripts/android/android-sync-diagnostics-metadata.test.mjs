@@ -88,7 +88,6 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", "events")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaOutputKeys", key)');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEventRecordKeys", key)');
-    expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.objectValue(context, "syncDiagnostics", key)');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticOutputKey(context, key)');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticIdentityKey(context, key)');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticConnectionKey(context, key)');
@@ -115,6 +114,7 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).not.toContain('outputKeys.getString("collectedAt")');
     expect(combined).not.toContain('identityKeys.getString("databasePath")');
     expect(combined).not.toContain('connectionKeys.getString("endpointUrl")');
+    expect(combined).not.toContain('stateKeys.getString("packCursor")');
     expect(combined).not.toContain('verdictKeys.getString("code")');
     expect(combined).not.toContain('metricKeys.getString("activeNodeCount")');
     expect(combined).not.toContain('identity.put("database_path"');
