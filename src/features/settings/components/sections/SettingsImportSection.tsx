@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 
-type LibraryPathLocation = 'inbox' | 'library_home' | 'mirror';
+type LibraryPathLocation = 'assets_dir' | 'inbox' | 'library_home' | 'mirror';
 
 function LibraryLocationRow(props: {
   children?: ReactNode;
@@ -153,6 +153,7 @@ function MirrorLocationRow(props: {
 }
 
 type SettingsImportSectionProps = {
+  assetsPath: string;
   errorByLocation: Record<LibraryPathLocation, string | null>;
   inboxPath: string;
   isDesktopRuntime: boolean;
@@ -175,7 +176,7 @@ function LibraryPathRows(props: SettingsImportSectionProps) {
   return (
     <>
       <LibraryLocationRow
-        description="Main library root for your long-term data. Database, Data, and Assets stay inside Library Home and are not configured separately."
+        description="Main library root for your long-term data. Database and Data stay inside Library Home. Assets can be moved separately when you need a different attachment folder."
         errorMessage={props.errorByLocation.library_home}
         isDesktopRuntime={props.isDesktopRuntime}
         isPending={props.pendingLocation === 'library_home'}
@@ -184,6 +185,17 @@ function LibraryPathRows(props: SettingsImportSectionProps) {
         onRestoreDefault={props.onRestoreDefault}
         path={props.libraryHomePath}
         title="Library Home"
+      />
+      <LibraryLocationRow
+        description="Folder for attachments and copied media. Move it when large files should live outside Library Home."
+        errorMessage={props.errorByLocation.assets_dir}
+        isDesktopRuntime={props.isDesktopRuntime}
+        isPending={props.pendingLocation === 'assets_dir'}
+        location="assets_dir"
+        onChangeLocation={props.onChangeLocation}
+        onRestoreDefault={props.onRestoreDefault}
+        path={props.assetsPath}
+        title="Assets"
       />
       <LibraryLocationRow
         description="Drop folder for incoming files. Foliole absorbs files quickly, so it should stay close to empty instead of becoming a long-term content folder."
@@ -223,7 +235,7 @@ export function SettingsImportSection(props: SettingsImportSectionProps) {
   return (
     <SettingsSection
       ariaLabel="Library settings section"
-      description="Library Home is your main root. Inbox is the drop folder. Mirror is a runtime-generated Markdown output folder, not a second library."
+      description="Library Home is your main root. Assets stores attachments, Inbox is the drop folder, and Mirror is a runtime-generated Markdown output folder."
       title="Library paths"
     >
       <LibraryPathRows {...props} />

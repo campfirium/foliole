@@ -47,7 +47,8 @@ function useSettingsPanelViewState() {
 
 type SettingsPanelBodyProps = {
   activeCategory: SettingsCategoryId;
-  errorByLocation: Record<'inbox' | 'library_home' | 'mirror', string | null>;
+  assetsPath: string;
+  errorByLocation: Record<'assets_dir' | 'inbox' | 'library_home' | 'mirror', string | null>;
   inboxPath: string;
   isDesktopRuntime: boolean;
   isRebuildingMirrorLinks: boolean;
@@ -59,11 +60,11 @@ type SettingsPanelBodyProps = {
   mirrorOutputRebuildFeedback: string | null;
   mirrorPath: string;
   onClose: () => void;
-  onChangeLocation: (location: 'inbox' | 'library_home' | 'mirror') => void;
+  onChangeLocation: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
-  onRestoreDefault: (location: 'inbox' | 'library_home' | 'mirror') => void;
-  pendingLocation: 'inbox' | 'library_home' | 'mirror' | null;
+  onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
+  pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
   setActiveCategory: (category: SettingsCategoryId) => void;
   title: string;
 };
@@ -77,6 +78,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
   const hotkeys = useHotkeySettings();
   const categoryProps: SettingsPanelCategoryProps = {
     activeCategory: props.activeCategory,
+    assetsPath: props.assetsPath,
     errorByLocation: props.errorByLocation,
     inboxPath: props.inboxPath,
     isDesktopRuntime: props.isDesktopRuntime,

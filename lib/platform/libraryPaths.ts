@@ -7,11 +7,12 @@ export const LIBRARY_ASSETS_DIRNAME = 'Assets';
 export const LIBRARY_INBOX_DIRNAME = 'Inbox';
 export const LIBRARY_MIRROR_DIRNAME = 'Mirror';
 
-export const LIBRARY_PATH_LOCATIONS = ['library_home', 'inbox', 'mirror'] as const;
+export const LIBRARY_PATH_LOCATIONS = ['library_home', 'assets_dir', 'inbox', 'mirror'] as const;
 
 export type LibraryPathLocation = (typeof LIBRARY_PATH_LOCATIONS)[number];
 
 export interface LibraryPathOverrides {
+  assets_dir: string | null;
   inbox: string | null;
   library_home: string | null;
   mirror: string | null;
@@ -43,6 +44,7 @@ export function normalizeLibraryPath(value: unknown): string | null {
 
 export function createEmptyLibraryPathOverrides(): LibraryPathOverrides {
   return {
+    assets_dir: null,
     inbox: null,
     library_home: null,
     mirror: null,
@@ -59,11 +61,12 @@ export function resolveLibraryPaths(
   overrides: Partial<LibraryPathOverrides> = {}
 ): ResolvedLibraryPaths {
   const libraryHome = normalizeLibraryPath(overrides.library_home) ?? resolveDefaultLibraryHome(documentsPath);
+  const assetsDir = normalizeLibraryPath(overrides.assets_dir) ?? path.join(libraryHome, LIBRARY_ASSETS_DIRNAME);
   const inbox = normalizeLibraryPath(overrides.inbox) ?? path.join(libraryHome, LIBRARY_INBOX_DIRNAME);
   const mirror = normalizeLibraryPath(overrides.mirror) ?? path.join(libraryHome, LIBRARY_MIRROR_DIRNAME);
   const dataDir = path.join(libraryHome, LIBRARY_DATA_DIRNAME);
   return {
-    assets_dir: path.join(libraryHome, LIBRARY_ASSETS_DIRNAME),
+    assets_dir: assetsDir,
     data_dir: dataDir,
     database_path: path.join(dataDir, LIBRARY_DATABASE_FILENAME),
     inbox,

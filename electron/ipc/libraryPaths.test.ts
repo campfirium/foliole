@@ -55,6 +55,20 @@ it('loads default library paths under Documents/Foliole with internal Data and A
   });
 });
 
+it('persists a custom assets path override separately from Library Home', async () => {
+  const assetsPath = path.join(tempRoot, 'AttachmentVault');
+
+  await expect(updateLibraryPathSetting({ location: 'assets_dir', path: assetsPath })).resolves.toMatchObject({
+    assets_dir: assetsPath,
+    library_home: path.join(mockedDocumentsDir, 'Foliole')
+  });
+
+  await expect(loadLibraryPathSettings()).resolves.toMatchObject({
+    assets_dir: assetsPath,
+    library_home: path.join(mockedDocumentsDir, 'Foliole')
+  });
+});
+
 it('falls back to the legacy managed inbox override before the new file is written', async () => {
   const legacyInboxPath = path.join(tempRoot, 'LegacyInbox');
   loadAppSettingsState.mockResolvedValue({ 'foliole-managed-inbox-path': legacyInboxPath });

@@ -1,5 +1,4 @@
 // @vitest-environment node
-
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { handleInvokeRequest } from './commands.js';
@@ -43,7 +42,7 @@ vi.mock('./libraryPaths.js', () => ({
     updated_at: '2026-03-30T00:00:00.000Z'
   }),
   updateLibraryPathSetting: vi.fn().mockImplementation(({ location, path }) => ({
-    assets_dir: '/library/Assets',
+    assets_dir: location === 'assets_dir' && path ? path : '/library/Assets',
     data_dir: '/library/Data',
     database_path: '/library/Data/foliole.db',
     inbox: location === 'inbox' && path ? path : '/library/Inbox',
@@ -132,12 +131,10 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
 vi.mock('../database/reviewMutations.js', () => ({ applyReviewGrade: vi.fn() }));
 vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn(), reviewPreview: vi.fn() }));
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+beforeEach(() => void vi.clearAllMocks());
 async function expectLibraryPathCommands() {
   await expect(handleInvokeRequest({ command: 'load_library_path_settings' })).resolves.toMatchObject({
+    assets_dir: '/library/Assets',
     library_home: '/library',
     inbox: '/library/Inbox',
     mirror: '/library/Mirror'
@@ -153,11 +150,14 @@ async function expectLibraryPathCommands() {
     rewritten_document_count: 1,
     rewritten_link_count: 3
   });
-  await expect(handleInvokeRequest({
-    command: 'update_library_path_setting',
-    args: { location: 'mirror', path: '/mirror-vault' }
-  })).resolves.toMatchObject({
+  await expect(handleInvokeRequest({ command: 'update_library_path_setting', args: { location: 'mirror', path: '/mirror-vault' } })).resolves.toMatchObject({
     mirror: '/mirror-vault'
+  });
+  await expect(handleInvokeRequest({ command: 'update_library_path_setting', args: { location: 'library_home', path: '/library-next' } })).resolves.toMatchObject({
+    library_home: '/library-next'
+  });
+  await expect(handleInvokeRequest({ command: 'update_library_path_setting', args: { location: 'assets_dir', path: '/attachment-vault' } })).resolves.toMatchObject({
+    assets_dir: '/attachment-vault'
   });
 }
 async function expectAppAndImportSettingsCommands() {
@@ -250,14 +250,5 @@ async function expectReviewSchedulerCommands() {
     }
   });
 }
-
-it('handles app and import settings storage commands', async () => {
-  await expectAppAndImportSettingsCommands();
-});
-
-it('handles review scheduler storage commands', async () => {
-  await expect(handleInvokeRequest({ command: 'load_review_scheduler_settings' })).resolves.toMatchObject({
-    desiredRetention: 0.9
-  });
-  await expectReviewSchedulerCommands();
-});
+it('handles app and import settings storage commands', async () => void (await expectAppAndImportSettingsCommands()));
+it('handles review scheduler storage commands', async () => void (await expect(handleInvokeRequest({ command: 'load_review_scheduler_settings' })).resolves.toMatchObject({ desiredRetention: 0.9 }), await expectReviewSchedulerCommands()));

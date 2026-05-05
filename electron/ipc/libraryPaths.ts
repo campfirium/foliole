@@ -15,12 +15,14 @@ import type {
   NativeUpdateLibraryPathSettingArgs
 } from '../../lib/platform/nativeUtilityContract.js';
 
+import { migrateLibraryPathChange } from './libraryPathMigration.js';
 import { resolveAppPaths } from './paths.js';
 import { loadAppSettingsState } from './storage.js';
 
 const LIBRARY_PATH_SETTINGS_FILE = 'library-path-settings.json';
 
 interface StoredLibraryPathSettings {
+  assets_dir?: unknown;
   inbox?: unknown;
   library_home?: unknown;
   mirror?: unknown;
@@ -37,6 +39,7 @@ function normalizeStoredLibraryPathSettings(
 ): LibraryPathOverrides {
   const fallback = createEmptyLibraryPathOverrides();
   return {
+    assets_dir: normalizeLibraryPath(payload?.assets_dir),
     inbox: normalizeLibraryPath(payload?.inbox) ?? normalizeLibraryPath(legacyManagedInboxPath) ?? fallback.inbox,
     library_home: normalizeLibraryPath(payload?.library_home),
     mirror: normalizeLibraryPath(payload?.mirror),
@@ -128,8 +131,18 @@ export async function updateLibraryPathSetting(
     [location]: normalizeUpdatedLibraryPath(args),
     updated_at: new Date().toISOString()
   };
+  const currentPaths = toNativeLibraryPaths(currentOverrides);
+  const nextPaths = toNativeLibraryPaths(nextOverrides);
+  await migrateLibraryPathChange({
+    currentOverrides,
+    currentPaths,
+    location,
+    nextOverrides,
+    nextPaths
+  });
   saveStoredLibraryPathOverrides(nextOverrides);
-  return toNativeLibraryPaths(nextOverrides);
+  ensureLibraryPathLayout(nextPaths);
+  return nextPaths;
 }
 
 export function resolveLibraryPathSettingsFileForTest() {

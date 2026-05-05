@@ -14,6 +14,7 @@ type LibraryPathErrorState = Record<RuntimeLibraryPathLocation, string | null>;
 
 function createEmptyErrors(): LibraryPathErrorState {
   return {
+    assets_dir: null,
     inbox: null,
     library_home: null,
     mirror: null
@@ -36,6 +37,9 @@ function getChangeErrorMessage(location: RuntimeLibraryPathLocation) {
   if (location === 'library_home') {
     return 'Could not choose a new Library Home folder.';
   }
+  if (location === 'assets_dir') {
+    return 'Could not choose a new Assets folder.';
+  }
   if (location === 'mirror') {
     return 'Could not choose a new Mirror folder.';
   }
@@ -46,10 +50,23 @@ function getRestoreErrorMessage(location: RuntimeLibraryPathLocation) {
   if (location === 'library_home') {
     return 'Could not restore the default Library Home folder.';
   }
+  if (location === 'assets_dir') {
+    return 'Could not restore the default Assets folder.';
+  }
   if (location === 'mirror') {
     return 'Could not restore the default Mirror folder.';
   }
   return 'Could not restore the default Inbox folder.';
+}
+
+function formatLocationError(
+  fallbackMessage: string,
+  error: unknown
+) {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return `${fallbackMessage} ${error.message}`;
+  }
+  return fallbackMessage;
 }
 
 function clearLocationError(
@@ -78,10 +95,10 @@ async function runLocationUpdate(args: {
   args.setPendingLocation(args.location);
   try {
     args.setPaths(await args.performUpdate());
-  } catch {
+  } catch (error) {
     args.setErrors((current) => ({
       ...current,
-      [args.location]: args.getErrorMessage(args.location)
+      [args.location]: formatLocationError(args.getErrorMessage(args.location), error)
     }));
   } finally {
     args.setPendingLocation(null);
@@ -131,10 +148,10 @@ export function useLibraryPathSettings() {
         setPaths,
         setPendingLocation
       });
-    } catch {
+    } catch (error) {
       setErrors((current) => ({
         ...current,
-        [location]: getChangeErrorMessage(location)
+        [location]: formatLocationError(getChangeErrorMessage(location), error)
       }));
     }
   }
@@ -152,6 +169,7 @@ export function useLibraryPathSettings() {
   }
 
   return {
+    assetsPath: paths.assetsDir,
     errorByLocation: errors,
     isDesktopRuntime,
     libraryHomePath: paths.libraryHome,

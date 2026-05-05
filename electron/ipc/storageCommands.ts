@@ -157,10 +157,14 @@ async function handleSettingsStorageCommand(
     return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
   }
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
+    const location = asString(args.location, 'location') as 'library_home' | 'assets_dir' | 'inbox' | 'mirror';
     const result = await updateLibraryPathSetting({
-      location: asString(args.location, 'location') as 'library_home' | 'inbox' | 'mirror',
+      location,
       path: asNullableString(args.path, 'path')
     });
+    if (location === 'assets_dir' || location === 'library_home') {
+      await rebuildMirrorAttachmentLinks();
+    }
     await refreshManagedInboxMonitorFromSettings();
     return result;
   }

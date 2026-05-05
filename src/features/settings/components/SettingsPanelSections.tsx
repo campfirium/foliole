@@ -13,7 +13,8 @@ import { cn } from '@/shared/lib/utils';
 
 export interface SettingsCategoryContentProps {
   activeCategory: SettingsCategoryId;
-  errorByLocation: Record<'inbox' | 'library_home' | 'mirror', string | null>;
+  assetsPath: string;
+  errorByLocation: Record<'assets_dir' | 'inbox' | 'library_home' | 'mirror', string | null>;
   hotkeyItems: HotkeySettingItem[];
   inboxPath: string;
   isDesktopRuntime: boolean;
@@ -25,11 +26,11 @@ export interface SettingsCategoryContentProps {
   mirrorOutputRebuildError: string | null;
   mirrorOutputRebuildFeedback: string | null;
   mirrorPath: string;
-  onChangeLocation: (location: 'inbox' | 'library_home' | 'mirror') => void;
+  onChangeLocation: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
-  onRestoreDefault: (location: 'inbox' | 'library_home' | 'mirror') => void;
-  pendingLocation: 'inbox' | 'library_home' | 'mirror' | null;
+  onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
+  pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
@@ -79,6 +80,7 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     return (
       <SettingsImportSection
         errorByLocation={props.errorByLocation}
+        assetsPath={props.assetsPath}
         inboxPath={props.inboxPath}
         isDesktopRuntime={props.isDesktopRuntime}
         isRebuildingMirrorLinks={props.isRebuildingMirrorLinks}

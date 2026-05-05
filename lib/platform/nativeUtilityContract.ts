@@ -5,7 +5,7 @@ export interface NativeResolvedAppPaths {
   app_log_dir: string;
 }
 
-export type NativeLibraryPathLocation = 'library_home' | 'inbox' | 'mirror';
+export type NativeLibraryPathLocation = 'library_home' | 'assets_dir' | 'inbox' | 'mirror';
 
 export interface NativeLibraryPaths {
   assets_dir: string;

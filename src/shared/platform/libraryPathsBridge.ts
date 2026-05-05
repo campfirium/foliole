@@ -3,7 +3,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
-export type RuntimeLibraryPathLocation = 'library_home' | 'inbox' | 'mirror';
+export type RuntimeLibraryPathLocation = 'library_home' | 'assets_dir' | 'inbox' | 'mirror';
 
 export interface RuntimeLibraryPaths {
   assetsDir: string;

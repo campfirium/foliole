@@ -67,6 +67,27 @@ it('updates a library path through the native bridge', async () => {
   });
 });
 
+it('updates the assets path through the native bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    assets_dir: '/attachment-vault',
+    data_dir: '/library/Data',
+    database_path: '/library/Data/foliole.db',
+    inbox: '/library/Inbox',
+    library_home: '/library',
+    mirror: '/library/Mirror',
+    updated_at: '2026-03-30T00:11:00.000Z'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(updateRuntimeLibraryPathSetting('assets_dir', '/attachment-vault')).resolves.toMatchObject({
+    assetsDir: '/attachment-vault'
+  });
+  expect(invoke).toHaveBeenCalledWith('update_library_path_setting', {
+    location: 'assets_dir',
+    path: '/attachment-vault'
+  });
+});
+
 it('rebuilds mirror attachment links through the native bridge', async () => {
   const invoke = vi.fn().mockResolvedValue({
     scanned_document_count: 2,
