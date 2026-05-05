@@ -50,6 +50,15 @@ describe('markdownTableInline GFM tokens', () => {
   });
 });
 
+describe('markdownTableInline Markdown Compatibility tokens', () => {
+  it('tokenizes lenient strong labels from the shared parser projection', () => {
+    expect(tokenizeMarkdownTableInlineText('**实操含义：**如果你的应用场景')).toEqual([
+      { kind: 'strong', text: '实操含义：' },
+      { kind: 'text', text: '如果你的应用场景' }
+    ]);
+  });
+});
+
 describe('markdownTableInline OB-like tokens', () => {
   it('tokenizes OB-like source highlights from the shared parser projection', () => {
     expect(tokenizeMarkdownTableInlineText('A ==marked== cell')).toEqual([

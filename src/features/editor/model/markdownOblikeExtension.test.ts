@@ -10,6 +10,22 @@ function collectNodeNames(markdown: string) {
   return names;
 }
 
+describe('markdownOblikeExtension Markdown Compatibility', () => {
+  it('recognizes Markdown Compatibility lenient strong emphasis before adjacent text', () => {
+    const names = collectNodeNames('**实操含义：**如果你的应用场景');
+
+    expect(names).toContain('LenientStrongEmphasis');
+    expect(names).toContain('EmphasisMark');
+  });
+
+  it('leaves standard strong emphasis on the base parser path', () => {
+    const names = collectNodeNames('**123**dsafdasdfasdf');
+
+    expect(names).toContain('StrongEmphasis');
+    expect(names).not.toContain('LenientStrongEmphasis');
+  });
+});
+
 describe('markdownOblikeExtension', () => {
   it('recognizes OB-like footnote nodes', () => {
     const names = collectNodeNames('Weight^[1]{note} matters.');

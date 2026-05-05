@@ -118,7 +118,7 @@ function visitInlineCandidates(args: {
   parentName: string | null;
   source: string;
 }) {
-  if (args.node.name === 'StrongEmphasis') {
+  if (args.node.name === 'StrongEmphasis' || args.node.name === 'LenientStrongEmphasis') {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'strong'));
     return;
   }
