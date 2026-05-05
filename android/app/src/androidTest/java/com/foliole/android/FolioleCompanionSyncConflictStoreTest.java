@@ -61,7 +61,8 @@ public class FolioleCompanionSyncConflictStoreTest {
                 "'{\"id\":\"node-1\",\"title\":\"Remote\"}', '2026-04-28T01:00:00.000Z')"
         );
 
-        JSObject result = FolioleCompanionSyncConflictStore.loadNodeConflicts(database);
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        JSObject result = FolioleCompanionNamedQueryStore.loadArray(context, database, "nodeConflicts");
         JSONArray conflicts = result.getJSONArray("conflicts");
         JSONObject conflict = conflicts.getJSONObject(0);
 
