@@ -249,13 +249,13 @@ it('supports Enter and Shift+Enter for in-view pdf search navigation', async () 
   fireEvent.keyDown(searchInput, { key: 'Enter', shiftKey: true });
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
 });
-it('shows a loading state while a pdf node source is refreshing', () => {
+it('keeps the pdf reading container visible while a linked pdf node source is refreshing', () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails({ isLoading: true }) as never);
 
   renderSection();
 
-  expect(screen.getByTestId('pdf-document-state-loading')).toBeInTheDocument();
-  expect(screen.getByText('Loading PDF reader')).toBeInTheDocument();
+  expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
+  expect(screen.queryByTestId('pdf-document-state-loading')).not.toBeInTheDocument();
 });
 
 it.each([

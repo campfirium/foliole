@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
 
@@ -14,6 +14,7 @@ const DEFAULT_STATE: NodeSourceDetailsState = {
 
 export function useNodeSourceDetails(nodeId: string | null) {
   const [state, setState] = useState<NodeSourceDetailsState>(DEFAULT_STATE);
+  const cacheRef = useRef<Record<string, RuntimeNodeSourceDetails | null>>({});
 
   useEffect(() => {
     if (!nodeId) {
@@ -22,12 +23,14 @@ export function useNodeSourceDetails(nodeId: string | null) {
     }
 
     let isDisposed = false;
-    setState((current) => ({ isLoading: true, value: current.value }));
+    const cachedValue = Object.prototype.hasOwnProperty.call(cacheRef.current, nodeId) ? cacheRef.current[nodeId] ?? null : null;
+    setState({ isLoading: !Object.prototype.hasOwnProperty.call(cacheRef.current, nodeId), value: cachedValue });
 
     void loadRuntimeNodeSourceDetails(nodeId).then((value) => {
       if (isDisposed) {
         return;
       }
+      cacheRef.current[nodeId] = value;
       setState({ isLoading: false, value });
     });
 

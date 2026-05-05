@@ -1,16 +1,16 @@
 import type { ComponentProps } from 'react';
+import { useState } from 'react';
 
 import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
-import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
-import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
+import { resolvePdfDocumentSurface, renderPdfDocumentSurface, type PdfDocumentSurfaceState } from './documentPanelPdfView';
 import { EditorContextMenu } from './EditorContextMenu';
 import { FolderListView } from './FolderListView';
-import { PdfDocumentSurface } from './PdfDocumentSurface';
+import { PdfDocumentSurfaceCache } from './PdfDocumentSurfaceCache';
 import { collectPdfHighlightLocators, type PdfHighlightLocator } from './pdfHighlightLocators';
 import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 import { useNodeSourceDetails } from './useNodeSourceDetails';
@@ -39,104 +39,77 @@ interface DocumentPanelContextMenuProps {
   onExportImage: () => void;
 }
 
-type PdfDocumentSurfaceState = 'empty' | 'failed' | 'loading' | 'ready';
-
-function isPdfPath(value: string | null | undefined) {
-  return typeof value === 'string' && value.trim().toLowerCase().endsWith('.pdf');
-}
-
-function isPdfSourceDetails(details: RuntimeNodeSourceDetails | null) {
-  if (!details) {
-    return false;
-  }
-  return details.importSource?.sourceKind.toLowerCase() === 'pdf' || isPdfPath(details.keepImportItem?.sourcePath);
-}
-
-function resolvePdfSourceHint(details: RuntimeNodeSourceDetails) {
-  return details.keepImportItem?.resolvedSourcePath || details.keepImportItem?.sourcePath || details.importSource?.sourceLocator || null;
-}
-
-function resolvePdfDocumentSurface(
-  isLoading: boolean,
-  details: RuntimeNodeSourceDetails | null
-): { sourceHint: string | null; state: PdfDocumentSurfaceState } | null {
-  if (!isPdfSourceDetails(details) || !details) {
-    return null;
-  }
-
-  const sourceHint = resolvePdfSourceHint(details);
-  if (details.inheritedFromParent) {
-    return null;
-  }
-  if (isLoading) {
-    return { sourceHint, state: 'loading' };
-  }
-  if (details.keepImportItem?.lastStatus === 'failed') {
-    return { sourceHint, state: 'failed' };
-  }
-  if (!sourceHint) {
-    return { sourceHint: null, state: 'empty' };
-  }
-  return { sourceHint, state: 'ready' };
-}
-
-function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>) {
-  if (state === 'loading') {
-    return (
-      <div data-testid="pdf-document-state-loading">
-        <AppEmptyState description="The reading container is checking the linked PDF source." title="Loading PDF reader" />
-      </div>
-    );
-  }
-  if (state === 'failed') {
-    return (
-      <div data-testid="pdf-document-state-failed">
-        <AppEmptyState
-          description="The PDF node was found, but the linked file could not be prepared. Re-import or reconnect the source."
-          title="PDF reader failed"
-        />
-      </div>
-    );
-  }
+function renderDocumentBody(activeNodeId: string | null, bodyProps: ComponentProps<typeof DocumentPanelBody>) {
   return (
-    <div data-testid="pdf-document-state-empty">
-      <AppEmptyState description="This PDF node uses the reader, but no file is linked yet." title="PDF file not linked yet" />
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="document-panel-content-body">
+      <ReadwiseBookActionsPanel activeNodeId={activeNodeId} />
+      <DocumentPanelBody {...bodyProps} />
     </div>
   );
 }
 
-function renderPdfDocumentSurface(
-  pdfDocumentSurface: { sourceHint: string | null; state: PdfDocumentSurfaceState },
-  pdfViewContext: {
-    editorNodeId: string | null;
-    editorNodeViewState: ComponentProps<typeof DocumentPanelBody>['editorNodeViewState'];
-  },
-  highlightLocators: PdfHighlightLocator[],
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean,
-  onPersistPdfViewState: (viewState: NodeViewState) => void
+function renderVirtualContent(
+  activeNode: Node,
+  nodesById: Record<string, Node>,
+  onNodeContentChange: (nodeId: string, content: string) => void,
+  onSelectNode: (nodeId: string) => void,
+  pdfCache: JSX.Element
 ) {
-  if (pdfDocumentSurface.state === 'ready') {
+  return (
+    <>
+      {pdfCache}
+      <VirtualNodeDetailView node={activeNode} nodesById={nodesById} onSelectNode={onSelectNode} onUpdateFilter={onNodeContentChange} />
+    </>
+  );
+}
+
+function renderFolderContent(
+  activeNodeId: string,
+  nodeOrder: string[],
+  nodesById: Record<string, Node>,
+  onSelectNode: (nodeId: string) => void,
+  pdfCache: JSX.Element
+) {
+  return (
+    <>
+      {pdfCache}
+      <FolderListView folderNodeId={activeNodeId} nodeOrder={nodeOrder} nodesById={nodesById} onSelectNode={onSelectNode} />
+    </>
+  );
+}
+
+function renderPdfOrBodyContent(args: {
+  activeNodeId: string | null;
+  bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  isActivePdfCachedVisible: boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onPersistPdfViewState: (viewState: NodeViewState) => void;
+  pdfCache: JSX.Element;
+  pdfDocumentSurface: { sourceHint: string | null; state: PdfDocumentSurfaceState } | null;
+  pdfHighlightLocators: PdfHighlightLocator[];
+}) {
+  if (!args.pdfDocumentSurface) {
     return (
-      <PdfDocumentSurface
-        highlightLocators={highlightLocators}
-        key={`${pdfViewContext.editorNodeId ?? 'pdf-node'}:${pdfDocumentSurface.sourceHint ?? ''}`}
-        nodeViewState={pdfViewContext.editorNodeViewState}
-        onCreateHighlightFromSelection={onCreatePdfHighlight}
-        onPersistViewState={onPersistPdfViewState}
-        nodeId={pdfViewContext.editorNodeId}
-        sourceHint={pdfDocumentSurface.sourceHint ?? ''}
-      />
+      <>
+        {args.pdfCache}
+        {renderDocumentBody(args.activeNodeId, args.bodyProps)}
+      </>
     );
   }
 
   return (
-    <section aria-label="PDF reader panel" className="flex min-h-0 flex-1 flex-col bg-bg-panel" data-testid="pdf-document-surface">
-      <div className="mx-auto flex min-h-0 w-full max-w-[var(--document-max-width)] flex-1 flex-col px-6 py-5 max-[1080px]:px-4">
-        <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-xl border border-border bg-bg-elevated px-6 py-8 shadow-sm">
-          {renderPdfStateSurface(pdfDocumentSurface.state)}
-        </div>
-      </div>
-    </section>
+    <>
+      {args.pdfCache}
+      {!args.isActivePdfCachedVisible
+        ? renderPdfDocumentSurface(
+            args.pdfDocumentSurface,
+            { editorNodeId: args.bodyProps.editorNodeId, editorNodeViewState: args.bodyProps.editorNodeViewState },
+            args.pdfHighlightLocators,
+            args.onCreatePdfHighlight,
+            args.onPersistPdfViewState
+          )
+        : null}
+    </>
   );
 }
 
@@ -151,50 +124,44 @@ export function DocumentPanelContent({
   onPersistPdfViewState,
   onSelectNode
 }: DocumentPanelContentProps) {
+  const [isActivePdfCachedVisible, setIsActivePdfCachedVisible] = useState(false);
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const shouldLoadSourceDetails = Boolean(activeNodeId && activeNode && !isVirtualNode(activeNode) && !isFolderListView);
   const sourceDetails = useNodeSourceDetails(shouldLoadSourceDetails ? activeNodeId : null);
   const pdfDocumentSurface = resolvePdfDocumentSurface(sourceDetails.isLoading, sourceDetails.value);
   const pdfHighlightLocators = activeNodeId ? collectPdfHighlightLocators(activeNodeId, nodeOrder, nodesById) : [];
 
-  if (activeNode && isVirtualNode(activeNode)) {
-    return (
-      <VirtualNodeDetailView
-        node={activeNode}
-        nodesById={nodesById}
-        onSelectNode={onSelectNode}
-        onUpdateFilter={onNodeContentChange}
-      />
-    );
-  }
-
-  if (isFolderListView && activeNodeId) {
-    return (
-      <FolderListView
-        folderNodeId={activeNodeId}
-        nodeOrder={nodeOrder}
-        nodesById={nodesById}
-        onSelectNode={onSelectNode}
-      />
-    );
-  }
-
-  if (pdfDocumentSurface) {
-    return renderPdfDocumentSurface(
-      pdfDocumentSurface,
-      { editorNodeId: bodyProps.editorNodeId, editorNodeViewState: bodyProps.editorNodeViewState },
-      pdfHighlightLocators,
-      onCreatePdfHighlight,
-      onPersistPdfViewState
-    );
-  }
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <ReadwiseBookActionsPanel activeNodeId={activeNodeId} />
-      <DocumentPanelBody {...bodyProps} />
-    </div>
+  const pdfCache = (
+    <PdfDocumentSurfaceCache
+      activeNodeId={activeNodeId}
+      activePdfState={pdfDocumentSurface?.state ?? null}
+      activeSourceHint={pdfDocumentSurface?.sourceHint ?? null}
+      editorNodeId={bodyProps.editorNodeId}
+      editorNodeViewState={bodyProps.editorNodeViewState}
+      highlightLocators={pdfHighlightLocators}
+      onActiveCacheVisibilityChange={setIsActivePdfCachedVisible}
+      onCreatePdfHighlight={onCreatePdfHighlight}
+      onPersistPdfViewState={onPersistPdfViewState}
+    />
   );
+
+  if (activeNode && isVirtualNode(activeNode)) {
+    return renderVirtualContent(activeNode, nodesById, onNodeContentChange, onSelectNode, pdfCache);
+  }
+  if (isFolderListView && activeNodeId) {
+    return renderFolderContent(activeNodeId, nodeOrder, nodesById, onSelectNode, pdfCache);
+  }
+
+  return renderPdfOrBodyContent({
+    activeNodeId,
+    bodyProps,
+    isActivePdfCachedVisible,
+    onCreatePdfHighlight,
+    onPersistPdfViewState,
+    pdfCache,
+    pdfDocumentSurface,
+    pdfHighlightLocators
+  });
 }
 
 export function DocumentPanelContextMenu({

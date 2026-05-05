@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
@@ -35,10 +35,10 @@ vi.mock('./useNodeSourceDetails', () => ({
   useNodeSourceDetails
 }));
 
-const baseNode = {
+const pdfNode = {
   id: 'node-1',
   kind: 'topic' as const,
-  title: 'Node 1',
+  title: 'PDF Node',
   parentNodeId: null,
   content: '',
   anchorLink: null,
@@ -46,6 +46,12 @@ const baseNode = {
   review: null,
   createdAt: '',
   updatedAt: ''
+};
+
+const textNode = {
+  ...pdfNode,
+  id: 'node-2',
+  title: 'Text Node'
 };
 
 const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
@@ -62,8 +68,8 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   editorNodeId: 'node-1',
   editorNodeViewState: undefined,
   isDocumentResizing: false,
-  nodeOrder: ['node-1'],
-  nodesById: { 'node-1': baseNode },
+  nodeOrder: ['node-1', 'node-2'],
+  nodesById: { 'node-1': pdfNode, 'node-2': textNode },
   onAnswerChange: () => undefined,
   onCloseContextMenu: () => undefined,
   onCopyImage: () => undefined,
@@ -90,8 +96,8 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   showAnswerSection: false
 };
 
-beforeEach(() => {
-  useNodeSourceDetails.mockReturnValue({
+function createSourceDetails(sourceKind: 'pdf' | 'markdown', sourceLocator: string) {
+  return {
     isLoading: false,
     value: {
       importRuns: [],
@@ -102,30 +108,41 @@ beforeEach(() => {
         latestNodeId: 'node-1',
         provider: 'desktop_text_file',
         sourceFingerprint: 'source-1',
-        sourceKind: 'pdf',
-        sourceLocator: '/tmp/sample.pdf',
-        sourceName: 'sample.pdf'
+        sourceKind,
+        sourceLocator,
+        sourceName: sourceKind === 'pdf' ? 'sample.pdf' : 'sample.md'
       },
       inheritedFromParent: false,
       keepImportItem: null,
       sourceNodeId: 'node-1'
     }
-  } as never);
-});
+  };
+}
 
-it('writes pdf page and zoom through onPersistPdfViewState callback', async () => {
-  const onPersistPdfViewState = vi.fn();
+it('keeps a cached pdf view visible when revisiting the same node during source refresh', async () => {
+  const sourceDetailsByNodeId: Record<string, { isLoading: boolean; value: unknown | null }> = {
+    'node-1': createSourceDetails('pdf', '/tmp/sample.pdf'),
+    'node-2': createSourceDetails('markdown', '/tmp/sample.md')
+  };
 
-  render(<DocumentPanelSection {...defaultProps} onPersistPdfViewState={onPersistPdfViewState} />);
+  useNodeSourceDetails.mockImplementation((nodeId: string | null) => {
+    if (!nodeId) {
+      return { isLoading: false, value: null };
+    }
+    return sourceDetailsByNodeId[nodeId] ?? { isLoading: false, value: null };
+  });
 
-  expect(onPersistPdfViewState).not.toHaveBeenCalled();
+  const rendered = render(<DocumentPanelSection {...defaultProps} />);
+  expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+  rendered.rerender(<DocumentPanelSection {...defaultProps} activeNodeId="node-2" editorNodeId="node-2" />);
+  expect(screen.getByTestId('document-panel-content-body')).toBeInTheDocument();
 
-  await waitFor(() =>
-    expect(onPersistPdfViewState).toHaveBeenCalledWith({
-      scrollTop: 1,
-      selection: { from: 1, to: 110 }
-    })
-  );
+  sourceDetailsByNodeId['node-1'] = { isLoading: true, value: null };
+  rendered.rerender(<DocumentPanelSection {...defaultProps} activeNodeId="node-1" editorNodeId="node-1" />);
+
+  await waitFor(() => {
+    expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
+    expect(screen.queryByTestId('pdf-document-state-loading')).not.toBeInTheDocument();
+  });
 });

@@ -39,11 +39,23 @@ function useSourceReset(
 
 function useViewStateSync(page: number, zoom: number, onPersistViewState: (viewState: NodeViewState) => void) {
   const onPersistViewStateRef = useRef(onPersistViewState);
+  const lastSyncedViewRef = useRef<{ page: number; zoom: number } | null>(null);
+  const didMountRef = useRef(false);
+
   useEffect(() => {
     onPersistViewStateRef.current = onPersistViewState;
   }, [onPersistViewState]);
 
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      lastSyncedViewRef.current = { page, zoom };
+      return;
+    }
+    if (lastSyncedViewRef.current && lastSyncedViewRef.current.page === page && lastSyncedViewRef.current.zoom === zoom) {
+      return;
+    }
+    lastSyncedViewRef.current = { page, zoom };
     onPersistViewStateRef.current({
       scrollTop: page,
       selection: {
