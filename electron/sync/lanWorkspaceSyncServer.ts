@@ -23,6 +23,7 @@ export interface LanWorkspaceSyncServerStatus {
   state: 'failed' | 'running' | 'stopped';
 }
 
+let activePairRequestHandler: (() => void) | null = null;
 let activeServer: http.Server | null = null;
 let activeStatus: LanWorkspaceSyncServerStatus = {
   advertised_urls: [],
@@ -67,6 +68,10 @@ function collectAdvertisedUrls(port: number) {
   return [...new Set([`http://127.0.0.1:${port}`, ...externalUrls])];
 }
 
+export function setLanWorkspaceSyncPairRequestHandler(handler: (() => void) | null) {
+  activePairRequestHandler = handler;
+}
+
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
   if (activeServer) {
     return activeStatus;
@@ -76,6 +81,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
   const server = http.createServer(
     createLanWorkspaceSyncRequestHandler({
       appVersion: args.appVersion,
+      onPairRequestCreated: activePairRequestHandler,
       peerId: args.peerId,
       updatePairingStatus: (pairing) => {
         activeStatus = { ...activeStatus, ...pairing };

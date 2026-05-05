@@ -5,5 +5,6 @@ export interface NativeCompanionBootstrapState {
   database_path: string | null;
   database_ready: boolean;
   device_id: string;
+  device_name?: string | null;
   runtime_kind: NativeCompanionRuntimeKind;
 }

@@ -61,7 +61,11 @@ import {
 import { resolveRuntimeMode } from './runtimeMode.js';
 import { runStartupTask } from './startupTasks.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
-import { ensureLanWorkspaceSyncServer, stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
+import {
+  ensureLanWorkspaceSyncServer,
+  setLanWorkspaceSyncPairRequestHandler,
+  stopLanWorkspaceSyncServer
+} from './sync/lanWorkspaceSyncServer.js';
 import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
@@ -242,6 +246,16 @@ app.whenReady().then(async () => {
   registerAttachmentProtocol();
   installInvokeHandler();
   installAppMenu();
+  setLanWorkspaceSyncPairRequestHandler(() => {
+    const window = BrowserWindow.getAllWindows()[0];
+    if (!window) {
+      return;
+    }
+    if (!window.isVisible()) {
+      window.show();
+    }
+    focusWindow(window);
+  });
   if (isDesktopCompanionSyncEnabled()) {
     await ensureLanWorkspaceSyncServer({
       appVersion: app.getVersion(),

@@ -5,7 +5,8 @@ param(
   [string]$MainActivity = "com.foliole.android.MainActivity",
   [int]$BootTimeoutSeconds = 180,
   [int]$LaunchTimeoutSeconds = 20,
-  [int]$LaunchStabilitySeconds = 4
+  [int]$LaunchStabilitySeconds = 4,
+  [int]$DevReverseSyncPort = 38641
 )
 
 $ErrorActionPreference = "Stop"
@@ -158,6 +159,14 @@ try {
   Invoke-GradleWrapper -TaskName "installDebug"
 } finally {
   Pop-Location
+}
+
+if ($DevReverseSyncPort -gt 0) {
+  Write-Info "configuring dev sync reverse: tcp:$DevReverseSyncPort"
+  & $adbPath -s $serial reverse "tcp:$DevReverseSyncPort" "tcp:$DevReverseSyncPort" | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    Write-Info "dev sync reverse unavailable; continuing without reverse"
+  }
 }
 
 Write-Info "launching activity: $MainActivity"

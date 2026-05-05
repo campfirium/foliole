@@ -5,10 +5,12 @@ const capacitorMock = vi.hoisted(() => ({
   isNativePlatform: vi.fn(() => false),
   plugin: {
     loadPairingState: vi.fn(),
+    loadDiscoveryCandidates: vi.fn(),
     loadReadableArticle: vi.fn(),
     loadWorkspaceSyncState: vi.fn(),
     replaceWorkspaceNode: vi.fn(),
     replaceWorkspaceSnapshot: vi.fn(),
+    saveSyncOnboardingStatus: vi.fn(),
     savePairingCredentials: vi.fn(),
     signCompanionSyncRequest: vi.fn(),
     saveWorkspaceSyncEndpoint: vi.fn()
@@ -25,15 +27,16 @@ vi.mock('@capacitor/core', () => ({
 
 import {
   loadCompanionDiscovery,
-  loadCompanionReadableArticle,
   loadCompanionPairingState,
+  loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
+  loadCompanionWorkspaceVersion,
   pairCompanionWithDesktop,
   persistCompanionWorkspaceSnapshot,
   pullCompanionWorkspaceSnapshot,
-  loadCompanionWorkspaceVersion,
   removeCompanionWorkspaceSyncRememberedTarget,
   requestCompanionPairing,
+  saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
 } from './companionWorkspaceSync';
 import {
@@ -45,6 +48,28 @@ import {
 } from './companionWorkspaceSync.testSupport';
 
 function registerEndpointPersistenceTest() {
+  it('defaults new companion sync onboarding to pending', async () => {
+    const state = await loadCompanionWorkspaceSyncState();
+
+    expect(state.sync_onboarding_status).toBe('pending');
+  });
+
+  it('persists companion sync onboarding decisions in web preview mode', async () => {
+    const state = await saveCompanionSyncOnboardingStatus('dismissed');
+
+    expect(state.sync_onboarding_status).toBe('dismissed');
+    expect((await loadCompanionWorkspaceSyncState()).sync_onboarding_status).toBe('dismissed');
+  });
+
+  it('treats legacy accepted onboarding as pending', async () => {
+    window.localStorage.setItem(
+      'foliole-companion-workspace-sync-state',
+      JSON.stringify({ sync_onboarding_status: 'accepted' })
+    );
+
+    expect((await loadCompanionWorkspaceSyncState()).sync_onboarding_status).toBe('pending');
+  });
+
   it('stores the sync endpoint in web preview mode', async () => {
     const state = await saveCompanionWorkspaceSyncEndpoint('http://10.0.2.2:38641/');
 
@@ -193,7 +218,83 @@ function registerPairingTest() {
     });
     await expect(loadCompanionPairingState()).resolves.toMatchObject({ is_paired: true });
   });
+
+  it('verifies native pairing credentials are readable after saving', async () => {
+    capacitorMock.getPlatform.mockReturnValue('android');
+    capacitorMock.isNativePlatform.mockReturnValue(true);
+    mockFetchJson({
+      device_id: 'android-test-device',
+      device_secret: 'test-secret',
+      paired_at: '2026-04-22T12:00:00.000Z',
+      peer_id: 'desktop-local'
+    });
+    capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
+      device_id: 'android-test-device',
+      device_kind: 'android-capacitor',
+      device_name: 'Pixel 9',
+      is_paired: true,
+      paired_at: '2026-04-22T12:00:00.000Z'
+    });
+    capacitorMock.plugin.loadPairingState.mockResolvedValue({
+      device_id: 'android-test-device',
+      device_kind: 'android-capacitor',
+      device_name: 'Pixel 9',
+      is_paired: true,
+      paired_at: '2026-04-22T12:00:00.000Z'
+    });
+
+    const state = await pairCompanionWithDesktop({
+      deviceKind: 'android-capacitor',
+      deviceName: 'Pixel 9',
+      endpointUrl: 'http://10.0.2.2:38641',
+      pairRequestId: 'pair-request-1'
+    });
+
+    expect(capacitorMock.plugin.savePairingCredentials).toHaveBeenCalledWith({
+      device_id: 'android-test-device',
+      device_kind: 'android-capacitor',
+      device_name: 'Pixel 9',
+      device_secret: 'test-secret',
+      paired_at: '2026-04-22T12:00:00.000Z'
+    });
+    expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(1);
+    expect(state).toMatchObject({ is_paired: true, device_name: 'Pixel 9' });
+  });
+
+  it('fails native pairing when credentials cannot be read back locally', async () => {
+    capacitorMock.getPlatform.mockReturnValue('android');
+    capacitorMock.isNativePlatform.mockReturnValue(true);
+    mockFetchJson({
+      device_id: 'android-test-device',
+      device_secret: 'test-secret',
+      paired_at: '2026-04-22T12:00:00.000Z',
+      peer_id: 'desktop-local'
+    });
+    capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
+      device_id: null,
+      device_kind: null,
+      device_name: null,
+      is_paired: false,
+      paired_at: null
+    });
+    capacitorMock.plugin.loadPairingState.mockResolvedValue({
+      device_id: null,
+      device_kind: null,
+      device_name: null,
+      is_paired: false,
+      paired_at: null
+    });
+
+    await expect(pairCompanionWithDesktop({
+      deviceKind: 'android-capacitor',
+      deviceName: 'Pixel 9',
+      endpointUrl: 'http://10.0.2.2:38641',
+      pairRequestId: 'pair-request-1'
+    })).rejects.toThrow('Android pairing credentials were not saved.');
+  });
+
 }
+
 
 function registerReadableArticleTest() {
   it('resolves the readable article from the stored snapshot in web preview mode', async () => {
@@ -240,6 +341,7 @@ function registerSnapshotPersistenceTest() {
       endpoint_url: updatedSnapshot.endpointUrl,
       last_synced_at: updatedSnapshot.lastSyncedAt,
       remembered_targets: ['http://10.0.2.2:38641'],
+      sync_onboarding_status: 'completed',
       workspace_snapshot: updatedSnapshot.workspaceSnapshot
     });
 

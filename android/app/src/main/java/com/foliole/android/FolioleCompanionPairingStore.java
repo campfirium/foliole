@@ -8,7 +8,6 @@ import com.getcapacitor.JSObject;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
-import java.security.SecureRandom;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -50,19 +49,24 @@ final class FolioleCompanionPairingStore {
         String deviceSecret,
         String pairedAt
     ) throws Exception {
-        byte[] iv = new byte[12];
-        new SecureRandom().nextBytes(iv);
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.ENCRYPT_MODE, loadOrCreateSecretKey(), new GCMParameterSpec(128, iv));
+        cipher.init(Cipher.ENCRYPT_MODE, loadOrCreateSecretKey());
+        byte[] iv = cipher.getIV();
+        if (iv == null || iv.length == 0) {
+            throw new IllegalStateException("Android Keystore did not provide an encryption IV.");
+        }
         byte[] encrypted = cipher.doFinal(deviceSecret.getBytes(StandardCharsets.UTF_8));
-        prefs(context).edit()
+        boolean saved = prefs(context).edit()
             .putString(DEVICE_ID_KEY, deviceId.trim())
             .putString(DEVICE_KIND_KEY, deviceKind.trim())
             .putString(DEVICE_NAME_KEY, deviceName.trim())
             .putString(DEVICE_SECRET_KEY, Base64.encodeToString(encrypted, Base64.NO_WRAP))
             .putString(IV_KEY, Base64.encodeToString(iv, Base64.NO_WRAP))
             .putString(PAIRED_AT_KEY, pairedAt.trim())
-            .apply();
+            .commit();
+        if (!saved) {
+            throw new IllegalStateException("Failed to persist companion pairing credentials.");
+        }
         return loadPairingState(context);
     }
 

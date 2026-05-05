@@ -1,6 +1,7 @@
 import { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  settingsButtonClassName,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
@@ -13,6 +14,97 @@ function renderSyncError(overview: ReturnType<typeof useDesktopCompanionPairingR
     return `Could not open sync. ${overview.server_status.last_error}`;
   }
   return undefined;
+}
+
+
+function formatDeviceKind(deviceKind: string) {
+  if (deviceKind === 'android-capacitor' || deviceKind === 'android') {
+    return 'Android';
+  }
+  return deviceKind || 'Client';
+}
+
+function resolveDeviceName(deviceName: string, deviceKind: string, clientAddress?: string | null) {
+  const normalizedName = deviceName.trim();
+  const isGeneratedAndroidName = normalizedName.toLowerCase().startsWith('android companion');
+  if (!normalizedName || isGeneratedAndroidName) {
+    if ((deviceKind === 'android-capacitor' || deviceKind === 'android') && clientAddress === '127.0.0.1') {
+      return 'Android Emulator';
+    }
+    return deviceKind === 'android-capacitor' || deviceKind === 'android' ? 'Android device' : 'Device';
+  }
+  return normalizedName || formatDeviceKind(deviceKind);
+}
+
+function ConnectedDeviceList({
+  devices,
+  onDisconnect,
+  pendingActionId
+}: {
+  devices: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']['paired_devices'];
+  onDisconnect(deviceId: string): void;
+  pendingActionId: string | null;
+}) {
+  if (devices.length === 0) {
+    return <p className="text-sm text-foreground/45">0 devices</p>;
+  }
+  return (
+    <div className="mt-3 flex flex-col gap-2" role="list">
+      {devices.map((device) => (
+        <div
+          className="flex items-center justify-between gap-4 py-2"
+          key={device.device_id}
+          role="listitem"
+        >
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">
+              {resolveDeviceName(device.device_name, device.device_kind, device.client_address)} <span className="text-foreground/55">({formatDeviceKind(device.device_kind)})</span>
+            </p>
+            {device.client_address ? (
+              <p className="mt-0.5 truncate text-xs text-foreground/50">{device.client_address}</p>
+            ) : null}
+          </div>
+          <button
+            className={settingsButtonClassName('h-8 px-2 text-xs')}
+            disabled={pendingActionId === `remove-paired-device:${device.device_id}`}
+            onClick={() => onDisconnect(device.device_id)}
+            type="button"
+          >
+            {pendingActionId === `remove-paired-device:${device.device_id}` ? 'Disconnecting...' : 'Disconnect'}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ConnectedDevicesRow({
+  devices,
+  isLoading,
+  onDisconnect,
+  pendingActionId
+}: {
+  devices: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']['paired_devices'];
+  isLoading: boolean;
+  onDisconnect(deviceId: string): void;
+  pendingActionId: string | null;
+}) {
+  return (
+    <div
+      className="relative px-5 py-5 before:absolute before:left-5 before:right-5 before:top-0 before:block before:border-t before:border-settings-divider/55"
+      data-settings-row
+    >
+      <div>
+        <h4 className="text-[0.95rem] font-normal text-foreground">Connected devices</h4>
+        <p className="mt-0.5 text-sm text-foreground/65">Approved devices that can sync with this desktop.</p>
+      </div>
+      {isLoading ? (
+        <p className="mt-4 text-sm text-foreground/45">Loading...</p>
+      ) : (
+        <ConnectedDeviceList devices={devices} onDisconnect={onDisconnect} pendingActionId={pendingActionId} />
+      )}
+    </div>
+  );
 }
 
 function DeviceSyncSwitch(props: {
@@ -57,14 +149,12 @@ export function SettingsCompanionSyncSection() {
           <DeviceSyncSwitch state={state} />
         </SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow
-        description="Approved devices that can sync with this desktop."
-        title="Connected devices"
-      >
-        <SettingsControlSlot className={`${SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME} text-sm text-foreground/65`}>
-          {state.isLoading ? 'Loading...' : overview.server_status.paired_device_count}
-        </SettingsControlSlot>
-      </SettingsRow>
+      <ConnectedDevicesRow
+        devices={overview.paired_devices}
+        isLoading={state.isLoading}
+        onDisconnect={(deviceId) => void state.removePairedDevice(deviceId)}
+        pendingActionId={state.pendingActionId}
+      />
       {state.error ? <p className="text-sm text-red-700">{state.error}</p> : null}
     </SettingsSection>
   );

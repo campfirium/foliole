@@ -25,5 +25,8 @@ export async function loadAppSettingsState(): Promise<Record<string, string>> {
 }
 
 export async function saveAppSettingsState(settings: Record<string, unknown>): Promise<void> {
-  saveJsonSetting(APP_SETTINGS_KEY, normalizeAppSettingsPayload(settings));
+  saveJsonSetting(APP_SETTINGS_KEY, {
+    ...normalizeAppSettingsPayload(loadJsonSetting(APP_SETTINGS_KEY)),
+    ...normalizeAppSettingsPayload(settings)
+  });
 }

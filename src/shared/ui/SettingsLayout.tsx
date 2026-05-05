@@ -29,7 +29,10 @@ export const SETTINGS_RANGE_WIDTH_CLASS_NAME = 'w-36';
 export const SETTINGS_VALUE_WIDTH_CLASS_NAME = 'min-w-10';
 export const SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME = SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME;
 export const SETTINGS_PATH_VALUE_WIDTH_CLASS_NAME = 'max-w-80';
-export const SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME = 'w-56 max-w-full';
+export const SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME = 'w-40 max-w-full';
+export const SETTINGS_PATH_CONTROL_CLASS_NAME = 'flex max-w-full items-center justify-end gap-2 max-[1080px]:justify-start';
+export const SETTINGS_PATH_RESET_BUTTON_CLASS_NAME = 'size-9 rounded-sm';
+export const SETTINGS_ACTION_ROW_CLASS_NAME = 'grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-4 max-[1080px]:grid-cols-1';
 export const SETTINGS_SELECT_WIDTH_CLASS_NAME = 'w-auto max-w-[260px]';
 export const SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME = 'xl:grid-cols-[minmax(0,1fr)_300px]';
 
@@ -201,6 +204,7 @@ export function SettingsControlSlot({ children, className }: { children: ReactNo
         'inline-flex max-w-full flex-[0_0_auto] items-center justify-end gap-2 self-center max-[1080px]:w-full max-[1080px]:flex-auto max-[1080px]:justify-start',
         className
       )}
+      data-settings-control-slot
     >
       {children}
     </div>

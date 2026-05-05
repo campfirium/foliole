@@ -1,4 +1,5 @@
 import type http from 'node:http';
+import os from 'node:os';
 
 import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
@@ -8,11 +9,11 @@ import {
   countPendingCompanionPairRequests,
   createCompanionPairRequest
 } from './companionPairingRequests.js';
-import { countPairedCompanionDevices, registerPairedCompanionDevice } from './companionPairingStore.js';
+import { countPairedCompanionDevices, registerPairedCompanionDevice, removePairedCompanionDevice } from './companionPairingStore.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 
 const MAX_PAIR_REQUEST_BYTES = 16 * 1024;
-const ALLOWED_CORS_ORIGINS = new Set(['capacitor://localhost', 'http://localhost']);
+const ALLOWED_CORS_PROTOCOLS = new Set(['capacitor:', 'http:', 'https:']);
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
 export const PAIR_ENDPOINT_PATH = '/companion/pair';
@@ -22,7 +23,18 @@ export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 
 function resolveCorsOrigin(request: http.IncomingMessage) {
   const origin = request.headers.origin;
-  return typeof origin === 'string' && ALLOWED_CORS_ORIGINS.has(origin) ? origin : null;
+  if (typeof origin !== 'string' || !origin.trim()) {
+    return null;
+  }
+  try {
+    const parsedOrigin = new URL(origin);
+    if (parsedOrigin.hostname === 'localhost' && ALLOWED_CORS_PROTOCOLS.has(parsedOrigin.protocol)) {
+      return origin;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function writeJson(
@@ -77,10 +89,33 @@ function buildWorkspaceVersionPayload(appVersion: string, peerId: string, snapsh
   };
 }
 
+function resolveDesktopPlatformLabel() {
+  const platform = os.platform();
+  if (platform === 'win32') {
+    return 'Windows';
+  }
+  if (platform === 'darwin') {
+    return 'macOS';
+  }
+  if (platform === 'linux') {
+    return 'Linux';
+  }
+  return platform;
+}
+
+function resolveDesktopDeviceName() {
+  const hostName = os.hostname().trim();
+  return hostName ? `Foliole Desktop on ${hostName}` : 'Foliole Desktop';
+}
+
 function buildDiscoveryPayload(appVersion: string, peerId: string) {
+  const hostName = os.hostname().trim();
   return {
     app_version: appVersion,
+    desktop_device_name: resolveDesktopDeviceName(),
     desktop_name: 'Foliole Desktop',
+    desktop_platform: resolveDesktopPlatformLabel(),
+    host_name: hostName || 'Desktop',
     pairing_mode: 'desktop-confirm' as const,
     peer_id: peerId
   };
@@ -130,10 +165,11 @@ async function handlePairRequest(
     return;
   }
   if (approvedRequest.status === 'rejected') {
-    writeJson(request, response, 409, { error: 'pair_request_rejected' });
+    writeJson(request, response, 403, { error: 'pair_request_rejected' });
     return;
   }
   const paired = registerPairedCompanionDevice({
+    clientAddress: approvedRequest.client_address,
     deviceId: approvedRequest.device_id,
     deviceKind: approvedRequest.device_kind,
     deviceName: approvedRequest.device_name
@@ -151,10 +187,22 @@ async function handlePairRequest(
   });
 }
 
+
+function normalizeClientAddress(address: string | undefined) {
+  if (!address) {
+    return null;
+  }
+  if (address.startsWith('::ffff:')) {
+    return address.slice('::ffff:'.length);
+  }
+  return address;
+}
+
 async function handlePairRequestCreate(
   request: http.IncomingMessage,
   response: http.ServerResponse,
-  updatePairingStatus: (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void
+  updatePairingStatus: (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void,
+  onPairRequestCreated: (() => void) | null
 ) {
   let payload: Record<string, unknown>;
   try {
@@ -171,12 +219,19 @@ async function handlePairRequestCreate(
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
   }
-  const created = createCompanionPairRequest({ deviceId, deviceKind, deviceName });
+  removePairedCompanionDevice(deviceId);
+  const created = createCompanionPairRequest({
+    clientAddress: normalizeClientAddress(request.socket.remoteAddress),
+    deviceId,
+    deviceKind,
+    deviceName
+  });
   const statusCode = created.created ? 202 : 409;
   updatePairingStatus({
     paired_device_count: countPairedCompanionDevices(),
     pending_pair_request_count: countPendingCompanionPairRequests()
   });
+  onPairRequestCreated?.();
   writeJson(request, response, statusCode, {
     expires_at: created.request.expires_at,
     pair_request_id: created.request.pair_request_id,
@@ -186,6 +241,7 @@ async function handlePairRequestCreate(
 
 export function createLanWorkspaceSyncRequestHandler(args: {
   appVersion: string;
+  onPairRequestCreated: (() => void) | null;
   peerId: string;
   updatePairingStatus: (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void;
 }) {
@@ -200,7 +256,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       return;
     }
     if (request.method === 'POST' && parsedRequestUrl.pathname === PAIR_REQUESTS_ENDPOINT_PATH) {
-      await handlePairRequestCreate(request, response, args.updatePairingStatus);
+      await handlePairRequestCreate(request, response, args.updatePairingStatus, args.onPairRequestCreated);
       return;
     }
     if (request.method === 'POST' && parsedRequestUrl.pathname === PAIR_ENDPOINT_PATH) {

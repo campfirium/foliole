@@ -17,7 +17,7 @@ function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootst
   }
 
   const rawState = value as Record<string, unknown>;
-  const { booted_at, database_path, database_ready, device_id, runtime_kind } = rawState;
+  const { booted_at, database_path, database_ready, device_id, device_name, runtime_kind } = rawState;
   if (typeof booted_at !== 'string' || !booted_at.trim()) {
     return null;
   }
@@ -39,6 +39,7 @@ function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootst
     database_path,
     database_ready,
     device_id,
+    device_name: typeof device_name === 'string' && device_name.trim() ? device_name.trim() : null,
     runtime_kind
   };
 }
@@ -78,6 +79,7 @@ function createWebPreviewBootstrapState(): NativeCompanionBootstrapState {
     database_path: WEB_PREVIEW_DATABASE_NAME,
     database_ready: false,
     device_id: createWebPreviewDeviceId(),
+    device_name: 'Web preview',
     runtime_kind: 'web-preview'
   };
 }

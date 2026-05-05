@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { selectRuntimeImportDirectory } from '../../../../shared/platform/importBridge';
+import { loadRuntimeLibraryPathSettings } from '../../../../shared/platform/libraryPathsBridge';
 import { useRuntimeAvailability } from '../../../../shared/platform/runtimeAvailability';
 import {
   areDatabaseBackupActionsAvailable,
@@ -53,6 +54,7 @@ function useBackupStateStore() {
   const [settings, setSettings] = useState<DatabaseBackupSettings | null>(null);
   const [draft, setDraft] = useState<DatabaseBackupSettings | null>(null);
   const [backups, setBackups] = useState<DatabaseBackupEntry[]>([]);
+  const [defaultBackupPath, setDefaultBackupPath] = useState('Library Home/Backups');
   const [isLoadingBackups, setIsLoadingBackups] = useState(true);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [restoringPath, setRestoringPath] = useState('');
@@ -63,12 +65,14 @@ function useBackupStateStore() {
   return {
     backups,
     draft,
+    defaultBackupPath,
     isCreatingBackup,
     isLoadingBackups,
     isSavingSettings,
     pathErrorMessage,
     restoringPath,
     setBackups,
+    setDefaultBackupPath,
     setDraft,
     setIsCreatingBackup,
     setIsLoadingBackups,
@@ -80,6 +84,30 @@ function useBackupStateStore() {
     settings,
     statusMessage
   };
+}
+
+function joinBackupPath(libraryHome: string) {
+  const separator = libraryHome.includes('\\') ? '\\' : '/';
+  return `${libraryHome.replace(/[\\/]+$/, '')}${separator}Backups`;
+}
+
+function useDefaultBackupPath(
+  isDesktopRuntime: boolean,
+  setDefaultBackupPath: (value: string) => void
+) {
+  useEffect(() => {
+    let alive = true;
+    if (!isDesktopRuntime) {
+      return undefined;
+    }
+    void loadRuntimeLibraryPathSettings().then((paths) => {
+      if (!alive || !paths) return;
+      setDefaultBackupPath(joinBackupPath(paths.libraryHome));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [isDesktopRuntime, setDefaultBackupPath]);
 }
 
 function useBackupActionHandlers(args: {
@@ -149,6 +177,7 @@ export function useBackupSettingsSectionState() {
     state.setIsLoadingBackups,
     state.setSettings
   );
+  useDefaultBackupPath(isDesktopRuntime, state.setDefaultBackupPath);
 
   const actions = useBackupActionHandlers({
     draft: state.draft,
@@ -167,6 +196,7 @@ export function useBackupSettingsSectionState() {
     activeDraft: state.draft ?? state.settings,
     ...actions,
     backups: state.backups,
+    defaultBackupPath: state.defaultBackupPath,
     isCreatingBackup: state.isCreatingBackup,
     isDesktopRuntime,
     isLoadingBackups: state.isLoadingBackups,

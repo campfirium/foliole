@@ -33,6 +33,7 @@ function expectNoInitialAutoPull(args: {
         endpoint_url: args.endpoint_url,
         last_synced_at: args.last_synced_at,
         remembered_targets: args.remembered_targets ?? [],
+        sync_onboarding_status: 'completed',
         workspace_snapshot: args.workspace_snapshot
       }
     })

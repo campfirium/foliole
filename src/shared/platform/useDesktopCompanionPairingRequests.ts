@@ -8,11 +8,13 @@ import {
   approveDesktopCompanionPairRequest,
   clearDesktopCompanionPairedDevices,
   loadDesktopCompanionPairingOverview,
+  removeDesktopCompanionPairedDevice,
   rejectDesktopCompanionPairRequest
 } from './desktopCompanionPairingBridge';
 import { isDesktopRuntime } from './runtime';
 
 const EMPTY_OVERVIEW: DesktopCompanionPairingOverviewPayload = {
+  paired_devices: [],
   pending_requests: [],
   server_status: {
     advertised_urls: [],
@@ -88,9 +90,6 @@ function useCompanionPairingPolling(
       };
     }
     const timer = window.setInterval(() => {
-      if (document.visibilityState === 'hidden') {
-        return;
-      }
       void safeRefresh();
     }, pollMs);
     return () => {
@@ -149,6 +148,30 @@ function useClearPairedDevicesAction(
   }, [setError, setIsLoading, setOverview, setPendingActionId]);
 }
 
+function useRemovePairedDeviceAction(
+  setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
+  setError: (value: string | null) => void,
+  setIsLoading: (value: boolean) => void,
+  setPendingActionId: (value: string | null) => void
+) {
+  return useCallback(async (deviceId: string) => {
+    const actionId = `remove-paired-device:${deviceId}`;
+    setPendingActionId(actionId);
+    try {
+      const nextOverview = await removeDesktopCompanionPairedDevice(deviceId);
+      setOverview(nextOverview);
+      setError(null);
+      return nextOverview;
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to disconnect companion device.');
+      throw actionError;
+    } finally {
+      setPendingActionId(null);
+      setIsLoading(false);
+    }
+  }, [setError, setIsLoading, setOverview, setPendingActionId]);
+}
+
 function useToggleCompanionSyncAction(
   setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
   setError: (value: string | null) => void,
@@ -187,6 +210,12 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
     state.setIsLoading,
     state.setPendingActionId
   );
+  const removePairedDevice = useRemovePairedDeviceAction(
+    state.setOverview,
+    state.setError,
+    state.setIsLoading,
+    state.setPendingActionId
+  );
   const toggleSync = useToggleCompanionSyncAction(
     state.setOverview,
     state.setError,
@@ -199,6 +228,7 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
     () => ({
       approveRequest: (pairRequestId: string) => runAction(pairRequestId, 'approve'),
       clearPairedDevices,
+      removePairedDevice,
       disableSync: () => toggleSync(false),
       enableSync: () => toggleSync(true),
       error: state.error,
@@ -209,6 +239,6 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
       refresh,
       rejectRequest: (pairRequestId: string) => runAction(pairRequestId, 'reject')
     }),
-    [clearPairedDevices, refresh, runAction, state.error, state.isLoading, state.overview, state.pendingActionId, toggleSync]
+    [clearPairedDevices, removePairedDevice, refresh, runAction, state.error, state.isLoading, state.overview, state.pendingActionId, toggleSync]
   );
 }

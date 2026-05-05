@@ -71,7 +71,12 @@ function mockFloatingBar() {
   return { revealBar };
 }
 
-function mockWorkspaceSync(snapshot = createSnapshot()) {
+function mockWorkspaceSync(args: {
+  isPaired?: boolean;
+  snapshot?: WorkspaceSnapshot | null;
+  syncOnboardingStatus?: 'completed' | 'dismissed' | 'pending';
+} = {}) {
+  const snapshot = args.snapshot === undefined ? createSnapshot() : args.snapshot;
   useCompanionWorkspaceSync.mockReturnValue({
     bootstrapState: {
       booted_at: '2026-04-22T09:05:00.000Z',
@@ -83,6 +88,7 @@ function mockWorkspaceSync(snapshot = createSnapshot()) {
     checkDesktop: vi.fn(),
     clearError: vi.fn(),
     completePairing: vi.fn(),
+    desktopDiscoveries: [],
     desktopDiscovery: null,
     error: null,
     pairingRequest: null,
@@ -90,8 +96,8 @@ function mockWorkspaceSync(snapshot = createSnapshot()) {
       device_id: 'android-test-device',
       device_kind: 'android-capacitor',
       device_name: 'Android companion',
-      is_paired: true,
-      paired_at: '2026-04-22T09:00:00.000Z'
+      is_paired: args.isPaired ?? true,
+      paired_at: args.isPaired === false ? null : '2026-04-22T09:00:00.000Z'
     },
     pairingStatus: 'idle',
     pullFromDesktop: vi.fn(),
@@ -99,10 +105,12 @@ function mockWorkspaceSync(snapshot = createSnapshot()) {
     removeRememberedTarget: vi.fn(),
     replaceSnapshot: vi.fn(),
     saveEndpoint: vi.fn(),
+    saveSyncOnboardingStatus: vi.fn(),
     state: {
       endpoint_url: 'http://10.0.2.2:38641',
       last_synced_at: '2026-04-22T09:00:00.000Z',
       remembered_targets: ['http://10.0.2.2:38641'],
+      sync_onboarding_status: args.syncOnboardingStatus ?? 'completed',
       workspace_snapshot: snapshot
     },
     status: 'idle'
@@ -127,6 +135,7 @@ async function renderShellWithSurface(surface: MockSurface) {
   );
   return { floatingBar };
 }
+
 
 function createReviewEmptySurface() {
   return {
@@ -207,6 +216,7 @@ function createReadingReviewSurface() {
 }
 
 describe('CompanionShell review surfaces', () => {
+
   it('shows the review empty state instead of falling back to reading content', async () => {
     await renderShellWithSurface(createReviewEmptySurface());
 
@@ -234,14 +244,15 @@ describe('CompanionShell review surfaces', () => {
     expect(floatingBar.revealBar).toHaveBeenCalled();
   });
 
-  it('shows the manual sync panel from the more action', async () => {
+  it('shows the compact sync status panel from the more action', async () => {
     await renderShellWithSurface({
       ...createReviewEmptySurface(),
       activeAction: 'more'
     });
 
-    expect(screen.getByText('Bring content from another device')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'http://10.0.2.2:38641' })).toBeInTheDocument();
+    expect(screen.getByText('Set up sync')).toBeInTheDocument();
+    expect(screen.getByText('Paired')).toBeInTheDocument();
+    expect(screen.queryByText('This device')).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue('http://10.0.2.2:38641')).not.toBeInTheDocument();
   });
 });

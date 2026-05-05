@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 
 import { CompanionArticleDocument } from './CompanionArticleDocument';
-import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { TopFloatingBar } from './CompanionFloatingBars';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
-import { CompanionSyncPanel } from './CompanionSyncPanel';
+import { CompanionShellOverlays } from './CompanionShellOverlays';
+import { CompanionSyncContent } from './CompanionSyncContent';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import { useFloatingBarVisibility } from './useFloatingBarVisibility';
@@ -70,7 +70,7 @@ function renderMainContent(
   onSelectReviewBreadcrumbItem: (id: string) => void
 ) {
   if (surface.activeAction === 'more') {
-    return renderSyncContent(workspaceSync);
+    return <CompanionSyncContent workspaceSync={workspaceSync} />;
   }
   if (surface.activeAction === 'recent') {
     return renderRecentBrowseContent(surface);
@@ -79,30 +79,6 @@ function renderMainContent(
     return renderReviewContent(surface, workspaceError, hasSnapshot, reviewBreadcrumbItems, onSelectReviewBreadcrumbItem);
   }
   return renderReadableArticleOrFallback(surface, workspaceError, hasSnapshot);
-}
-
-function renderSyncContent(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) {
-  return (
-    <CompanionSyncPanel
-      bootstrapState={workspaceSync.bootstrapState}
-      desktopDiscovery={workspaceSync.desktopDiscovery}
-      endpointUrl={workspaceSync.state.endpoint_url}
-      error={workspaceSync.error}
-      lastSyncedAt={workspaceSync.state.last_synced_at}
-      rememberedTargets={workspaceSync.state.remembered_targets}
-      onCheckDesktop={workspaceSync.checkDesktop}
-      onClearError={workspaceSync.clearError}
-      onCompletePairing={workspaceSync.completePairing}
-      onPull={workspaceSync.pullFromDesktop}
-      onRemoveRememberedTarget={workspaceSync.removeRememberedTarget}
-      onRequestPairing={workspaceSync.requestPairing}
-      onSaveEndpoint={workspaceSync.saveEndpoint}
-      pairingRequest={workspaceSync.pendingPairRequest}
-      pairingState={workspaceSync.pairingState}
-      pairingStatus={workspaceSync.pairingStatus}
-      status={workspaceSync.status}
-    />
-  );
 }
 
 function renderRecentBrowseContent(surface: ReturnType<typeof useCompanionArticleSurface>) {
@@ -256,17 +232,11 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
           </div>
         </div>
       </main>
-      <CompanionBottomReviewBar
-        disabled={isBottomBarDisabled}
-        isAnswerRevealed={surface.isAnswerRevealed}
-        itemKind={surface.reviewSession.currentCard?.itemKind ?? 'reading'}
-        onCompleteReviewItem={surface.handleCompleteReviewItem}
-        onDeferReviewItem={surface.handleDeferReviewItem}
-        onDismissReviewItem={surface.handleDismissReviewItem}
-        onGrade={surface.handleGradeReview}
-        onRevealAnswer={surface.handleRevealAnswer}
-        statusLabel={null}
-        visible={surface.activeAction === 'review' && Boolean(surface.reviewSession.currentCard)}
+      <CompanionShellOverlays
+        isBottomBarDisabled={isBottomBarDisabled}
+        isSyncPaired={workspaceSync.pairingState.is_paired}
+        surface={surface}
+        syncOnboardingStatus={workspaceSync.state.sync_onboarding_status}
       />
     </>
   );

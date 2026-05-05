@@ -108,7 +108,8 @@ it('shows backup settings and backup list in the backups section', async () => {
   });
 
   expect(screen.getByRole('button', { name: 'Change location' })).toHaveTextContent('Backups');
-  expect(screen.getByRole('button', { name: 'Change location' }).parentElement?.className).toContain('flex-[0_0_auto]');
+  expect(screen.getByRole('button', { name: 'Change location' })).toHaveAttribute('title', '/app/Backups');
+  expect(screen.getByRole('button', { name: 'Change location' }).closest('[data-settings-control-slot]')?.className).toContain('flex-[0_0_auto]');
   expect(screen.getByRole('button', { name: 'Change location' }).className).not.toContain('min-w-[');
   expect(screen.getByRole('button', { name: 'Create backup' }).className).not.toContain('min-w-[');
   expect(screen.getByDisplayValue('24').parentElement?.className).toContain('flex-[0_0_160px]');

@@ -4,6 +4,7 @@ export interface NativeCompanionWorkspaceSyncState {
   endpoint_url: string | null;
   last_synced_at: string | null;
   remembered_targets: string[];
+  sync_onboarding_status: 'accepted' | 'completed' | 'dismissed' | 'pending';
   workspace_snapshot: WorkspaceSnapshot | null;
 }
 
@@ -65,7 +66,10 @@ export interface CompanionWorkspaceSnapshotPayload {
 
 export interface CompanionWorkspaceDiscoveryPayload {
   app_version: string;
+  desktop_device_name: string;
   desktop_name: string;
+  desktop_platform: string;
+  host_name: string;
   pairing_mode: 'desktop-confirm';
   peer_id: string;
 }
@@ -84,6 +88,7 @@ export interface CompanionWorkspacePairPayload {
 }
 
 export interface DesktopCompanionPairRequestPayload {
+  client_address: string | null;
   device_id: string;
   device_kind: string;
   device_name: string;
@@ -91,6 +96,14 @@ export interface DesktopCompanionPairRequestPayload {
   pair_request_id: string;
   requested_at: string;
   status: 'approved' | 'pending' | 'rejected';
+}
+
+export interface DesktopCompanionPairedDevicePayload {
+  client_address: string | null;
+  device_id: string;
+  device_kind: string;
+  device_name: string;
+  paired_at: string;
 }
 
 export interface DesktopCompanionSyncServerStatusPayload {
@@ -103,6 +116,7 @@ export interface DesktopCompanionSyncServerStatusPayload {
 }
 
 export interface DesktopCompanionPairingOverviewPayload {
+  paired_devices: DesktopCompanionPairedDevicePayload[];
   pending_requests: DesktopCompanionPairRequestPayload[];
   server_status: DesktopCompanionSyncServerStatusPayload;
   sync_enabled: boolean;

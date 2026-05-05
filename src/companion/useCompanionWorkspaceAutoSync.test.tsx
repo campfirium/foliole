@@ -20,6 +20,7 @@ describe('useForegroundAutoSync', () => {
           endpoint_url: 'http://10.0.2.2:38641',
           last_synced_at: '2026-04-22T12:00:00.000Z',
           remembered_targets: ['http://10.0.2.2:38641'],
+          sync_onboarding_status: 'completed',
           workspace_snapshot: null
         },
         tryForegroundAutoSync

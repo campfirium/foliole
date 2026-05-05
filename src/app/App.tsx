@@ -35,7 +35,7 @@ function AppContent() {
     <HotkeySettingsProvider {...controller.hotkeySettings}>
       <>
         <WorkspaceLayout {...controller.layoutProps} />
-        <CompanionPairingRequestsDialog onOpenCompanionSyncSettings={controller.onOpenCompanionSyncSettings} />
+        <CompanionPairingRequestsDialog />
         <CommandPalette {...controller.paletteState} />
         <SearchPalette {...controller.searchState} />
         <GoToNodePalette {...controller.goToNodeState} />

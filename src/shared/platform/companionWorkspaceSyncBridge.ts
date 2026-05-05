@@ -17,12 +17,18 @@ export const PAIR_REQUESTS_ENDPOINT_PATH = '/companion/pair-requests';
 export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 
+export interface CompanionDiscoveryCandidatesPayload {
+  endpoint_urls: string[];
+}
+
 export interface CompanionWorkspaceSyncPlugin {
   loadPairingState(): Promise<NativeCompanionPairingState>;
+  loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
   loadDirtyNodes(): Promise<NativeCompanionDirtyNodePayload>;
   loadWorkspaceSyncState(): Promise<NativeCompanionWorkspaceSyncState>;
   loadReadableArticle(): Promise<NativeCompanionReadableArticlePayload>;
   removeWorkspaceSyncRememberedTarget(args: { endpoint_url: string }): Promise<NativeCompanionWorkspaceSyncState>;
+  saveSyncOnboardingStatus(args: { status: NativeCompanionWorkspaceSyncState['sync_onboarding_status'] }): Promise<NativeCompanionWorkspaceSyncState>;
   savePairingCredentials(args: {
     device_id: string;
     device_kind: string;

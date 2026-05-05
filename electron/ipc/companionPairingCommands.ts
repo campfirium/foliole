@@ -10,7 +10,7 @@ import {
   isDesktopCompanionSyncEnabled,
   setDesktopCompanionSyncEnabled
 } from '../sync/desktopCompanionSyncPreference.js';
-import { clearPairedCompanionDevices } from '../sync/companionPairingStore.js';
+import { clearPairedCompanionDevices, loadPairedCompanionDevices, removePairedCompanionDevice } from '../sync/companionPairingStore.js';
 import {
   ensureLanWorkspaceSyncServer,
   getLanWorkspaceSyncServerStatus,
@@ -22,6 +22,7 @@ import { asString } from './commandParsers.js';
 
 function buildDesktopCompanionPairingOverview() {
   return {
+    paired_devices: loadPairedCompanionDevices(),
     pending_requests: loadPendingCompanionPairRequests(),
     server_status: refreshLanWorkspaceSyncServerPairingStatus(),
     sync_enabled: isDesktopCompanionSyncEnabled()
@@ -47,6 +48,7 @@ function handleCompanionPairRequestMutation(
 export function handleCompanionPairingCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadCompanionPairingOverview) {
     return {
+      paired_devices: loadPairedCompanionDevices(),
       pending_requests: loadPendingCompanionPairRequests(),
       server_status: getLanWorkspaceSyncServerStatus(),
       sync_enabled: isDesktopCompanionSyncEnabled()
@@ -71,10 +73,12 @@ export function handleCompanionPairingCommand(command: string, args: Record<stri
   }
   if (command === NATIVE_COMMANDS.clearCompanionPairedDevices) {
     clearPairedCompanionDevices();
-    return {
-      pending_requests: loadPendingCompanionPairRequests(),
-      server_status: refreshLanWorkspaceSyncServerPairingStatus()
-    };
+    return buildDesktopCompanionPairingOverview();
+  }
+  if (command === NATIVE_COMMANDS.removeCompanionPairedDevice) {
+    const deviceId = asString(args.device_id, 'device_id');
+    removePairedCompanionDevice(deviceId);
+    return buildDesktopCompanionPairingOverview();
   }
   return undefined;
 }

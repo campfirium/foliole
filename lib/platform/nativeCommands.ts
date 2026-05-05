@@ -60,6 +60,7 @@ export const NATIVE_COMMANDS = {
   enableCompanionSync: 'enable_companion_sync',
   disableCompanionSync: 'disable_companion_sync',
   clearCompanionPairedDevices: 'clear_companion_paired_devices',
+  removeCompanionPairedDevice: 'remove_companion_paired_device',
   approveCompanionPairRequest: 'approve_companion_pair_request',
   rejectCompanionPairRequest: 'reject_companion_pair_request',
   loadSyncIndex: 'load_sync_index',

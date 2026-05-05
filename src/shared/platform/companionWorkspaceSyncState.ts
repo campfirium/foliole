@@ -2,12 +2,29 @@ import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/na
 
 export const WEB_SYNC_STATE_KEY = 'foliole-companion-workspace-sync-state';
 
+export type CompanionSyncOnboardingStatus = NativeCompanionWorkspaceSyncState['sync_onboarding_status'];
+
+function normalizeSyncOnboardingStatus(raw: Record<string, unknown>): CompanionSyncOnboardingStatus {
+  if (
+    raw.sync_onboarding_status === 'completed' ||
+    raw.sync_onboarding_status === 'dismissed' ||
+    raw.sync_onboarding_status === 'pending'
+  ) {
+    return raw.sync_onboarding_status;
+  }
+  if (raw.workspace_snapshot || raw.last_synced_at) {
+    return 'completed';
+  }
+  return 'pending';
+}
+
 export function normalizeWorkspaceSyncState(value: unknown): NativeCompanionWorkspaceSyncState {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
       endpoint_url: null,
       last_synced_at: null,
       remembered_targets: [],
+      sync_onboarding_status: 'pending',
       workspace_snapshot: null
     };
   }
@@ -19,6 +36,7 @@ export function normalizeWorkspaceSyncState(value: unknown): NativeCompanionWork
     remembered_targets: Array.isArray(raw.remembered_targets)
       ? raw.remembered_targets.filter((target): target is string => typeof target === 'string' && target.trim().length > 0)
       : [],
+    sync_onboarding_status: normalizeSyncOnboardingStatus(raw),
     workspace_snapshot:
       raw.workspace_snapshot && typeof raw.workspace_snapshot === 'object' && !Array.isArray(raw.workspace_snapshot)
         ? (raw.workspace_snapshot as NativeCompanionWorkspaceSyncState['workspace_snapshot'])
@@ -66,12 +84,14 @@ export function normalizePersistedSyncState(args: {
   endpointUrl: string | null;
   lastSyncedAt: string | null;
   rememberedTargets: NativeCompanionWorkspaceSyncState['remembered_targets'];
+  syncOnboardingStatus?: CompanionSyncOnboardingStatus;
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
   return {
     endpoint_url: args.endpointUrl,
     last_synced_at: args.lastSyncedAt,
     remembered_targets: args.rememberedTargets,
+    sync_onboarding_status: args.syncOnboardingStatus ?? (args.workspaceSnapshot ? 'completed' : 'accepted'),
     workspace_snapshot: args.workspaceSnapshot
   } satisfies NativeCompanionWorkspaceSyncState;
 }

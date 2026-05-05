@@ -10,6 +10,7 @@ import {
   persistCompanionWorkspaceSnapshot,
   pullCompanionWorkspaceSnapshot,
   removeCompanionWorkspaceSyncRememberedTarget,
+  saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
@@ -23,6 +24,7 @@ const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
   endpoint_url: null,
   last_synced_at: null,
   remembered_targets: [],
+  sync_onboarding_status: 'pending',
   workspace_snapshot: null
 };
 
@@ -156,7 +158,13 @@ function useWorkspaceSnapshotActions(args: {
     return nextState;
   }
 
-  return { pullFromDesktop, removeRememberedTarget, replaceSnapshot, saveEndpoint };
+  async function saveSyncOnboardingStatus(status: NativeCompanionWorkspaceSyncState['sync_onboarding_status']) {
+    const nextState = await saveCompanionSyncOnboardingStatus(status);
+    args.setState(nextState);
+    return nextState;
+  }
+
+  return { pullFromDesktop, removeRememberedTarget, replaceSnapshot, saveEndpoint, saveSyncOnboardingStatus };
 }
 
 function useWorkspaceSyncBootstrap(
@@ -223,6 +231,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     removeRememberedTarget: snapshotActions.removeRememberedTarget,
     replaceSnapshot: snapshotActions.replaceSnapshot,
     saveEndpoint: snapshotActions.saveEndpoint,
+    saveSyncOnboardingStatus: snapshotActions.saveSyncOnboardingStatus,
     ...pairing
   };
 }

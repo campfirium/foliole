@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 const PAIR_REQUEST_TTL_MS = 2 * 60 * 1000;
 
 export interface PendingCompanionPairRequest {
+  client_address: string | null;
   device_id: string;
   device_kind: string;
   device_name: string;
@@ -28,6 +29,7 @@ function pruneExpiredRequests(nowMs: number) {
 
 function toPublicRequest(request: StoredCompanionPairRequest): PendingCompanionPairRequest {
   return {
+    client_address: request.client_address,
     device_id: request.device_id,
     device_kind: request.device_kind,
     device_name: request.device_name,
@@ -39,6 +41,7 @@ function toPublicRequest(request: StoredCompanionPairRequest): PendingCompanionP
 }
 
 export function createCompanionPairRequest(args: {
+  clientAddress?: string | null;
   deviceId: string;
   deviceKind: string;
   deviceName: string;
@@ -57,6 +60,7 @@ export function createCompanionPairRequest(args: {
   }
   const expiresAtMs = nowMs + PAIR_REQUEST_TTL_MS;
   const request: StoredCompanionPairRequest = {
+    client_address: args.clientAddress?.trim() || null,
     device_id: args.deviceId.trim(),
     device_kind: args.deviceKind.trim(),
     device_name: args.deviceName.trim(),

@@ -12,25 +12,54 @@ vi.mock('./useCompanionWorkspaceSync', () => ({
   useCompanionWorkspaceSync
 }));
 
+function mockCompanionWorkspaceSync() {
+  useCompanionWorkspaceSync.mockReturnValue({
+    bootstrapState: {
+      booted_at: '2026-04-22T02:00:00.000Z',
+      database_path: '/data/user/0/com.foliole.android/databases/foliole-companion.db',
+      database_ready: true,
+      device_id: 'android-test-device',
+      runtime_kind: 'android-capacitor'
+    },
+    checkDesktop: vi.fn(),
+    clearError: vi.fn(),
+    completePairing: vi.fn(),
+    desktopDiscoveries: [],
+    desktopDiscovery: null,
+    error: null,
+    pairingRequest: null,
+    pairingState: {
+      device_id: null,
+      device_kind: null,
+      device_name: null,
+      is_paired: false,
+      paired_at: null
+    },
+    pairingStatus: 'idle',
+    pullFromDesktop: vi.fn(),
+    readableArticle: null,
+    removeRememberedTarget: vi.fn(),
+    replaceSnapshot: vi.fn(),
+    requestPairing: vi.fn(),
+    saveEndpoint: vi.fn(),
+    saveSyncOnboardingStatus: vi.fn(),
+    state: {
+      endpoint_url: null,
+      last_synced_at: null,
+      remembered_targets: [],
+      sync_onboarding_status: 'dismissed',
+      workspace_snapshot: null
+    },
+    status: 'idle'
+  });
+}
+
 describe('CompanionApp bootstrap states', () => {
   beforeEach(() => {
     vi.resetModules();
     useCompanionBootstrap.mockReset();
     useCompanionWorkspaceSync.mockReset();
-    useCompanionWorkspaceSync.mockReturnValue({
-      clearError: vi.fn(),
-      error: null,
-      pullFromDesktop: vi.fn(),
-      readableArticle: null,
-      saveEndpoint: vi.fn(),
-      state: {
-        endpoint_url: null,
-        last_synced_at: null,
-        remembered_targets: [],
-        workspace_snapshot: null
-      },
-      status: 'idle'
-    });
+    mockCompanionWorkspaceSync();
   });
 
   it('shows a booting state before the native bootstrap resolves', async () => {
@@ -57,7 +86,7 @@ describe('CompanionApp bootstrap states', () => {
 
     render(<CompanionApp />);
 
-    expect(screen.getByText(/No article has been synced to this device yet/i)).toBeInTheDocument();
+    expect(screen.getByText('Set up sync')).toBeInTheDocument();
     expect(screen.getByLabelText('Review')).toBeInTheDocument();
   });
 

@@ -6,6 +6,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WINDOWS_MIRROR_DIR="${WINDOWS_MIRROR_DIR:-/mnt/c/dev/foliole}"
 WINDOWS_SYNC_CHANGE_LOG="${WINDOWS_SYNC_CHANGE_LOG:-}"
 WINDOWS_SYNC_INCLUDE_ELECTRON_DIST="${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST:-}"
+WINDOWS_SYNC_LOCK_FILE="${WINDOWS_SYNC_LOCK_FILE:-/tmp/foliole-windows-mirror.lock}"
+WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED="${WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED:-0}"
 
 if [[ ! -d "${WINDOWS_MIRROR_DIR}" ]]; then
   echo "[windows-sync] mirror directory not found: ${WINDOWS_MIRROR_DIR}"
@@ -20,6 +22,13 @@ fi
 
 echo "[windows-sync] source: ${REPO_ROOT}"
 echo "[windows-sync] target: ${WINDOWS_MIRROR_DIR}"
+
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"${WINDOWS_SYNC_LOCK_FILE}"
+  echo "[windows-sync] waiting for lock: ${WINDOWS_SYNC_LOCK_FILE}"
+  flock 9
+  echo "[windows-sync] lock acquired"
+fi
 
 RSYNC_ARGS=(
   -rlt
@@ -53,6 +62,19 @@ RSYNC_ARGS=(
   --exclude "blob-report/"
   --exclude "logs/"
 )
+
+
+if [[ "${WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED}" == "1" ]]; then
+  RSYNC_ARGS+=(
+    --exclude "android/app/src/main/assets/public/"
+    --exclude "android/app/src/main/assets/capacitor.config.json"
+    --exclude "android/app/src/main/assets/capacitor.plugins.json"
+    --exclude "android/app/src/main/res/xml/config.xml"
+    --exclude "android/app/capacitor.build.gradle"
+    --exclude "android/capacitor.settings.gradle"
+    --exclude "android/capacitor-cordova-android-plugins/"
+  )
+fi
 
 if [[ -z "${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST}" ]]; then
   RSYNC_ARGS+=(--exclude "electron-dist/")

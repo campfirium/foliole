@@ -7,6 +7,7 @@ import { app, safeStorage } from 'electron';
 const PAIRED_DEVICE_STORE_FILE = 'companion-paired-devices.bin';
 
 export interface PairedCompanionDevice {
+  client_address: string | null;
   device_id: string;
   device_kind: string;
   device_name: string;
@@ -56,6 +57,7 @@ function isPairedDeviceRecord(value: unknown): value is PairedCompanionDevice {
   }
   const record = value as Record<string, unknown>;
   return (
+    (record.client_address === null || typeof record.client_address === 'string' || typeof record.client_address === 'undefined') &&
     typeof record.device_id === 'string' &&
     typeof record.device_kind === 'string' &&
     typeof record.device_name === 'string' &&
@@ -68,6 +70,13 @@ export function countPairedCompanionDevices() {
   return readStore().devices.length;
 }
 
+export function loadPairedCompanionDevices() {
+  return readStore().devices.map(({ device_secret: _deviceSecret, ...device }) => ({
+    ...device,
+    client_address: device.client_address ?? null
+  }));
+}
+
 export function loadPairedCompanionDevice(deviceId: string) {
   const normalizedDeviceId = deviceId.trim();
   if (!normalizedDeviceId) {
@@ -76,7 +85,23 @@ export function loadPairedCompanionDevice(deviceId: string) {
   return readStore().devices.find((device) => device.device_id === normalizedDeviceId) ?? null;
 }
 
+
+export function removePairedCompanionDevice(deviceId: string) {
+  const normalizedDeviceId = deviceId.trim();
+  if (!normalizedDeviceId) {
+    return false;
+  }
+  const store = readStore();
+  const nextDevices = store.devices.filter((device) => device.device_id !== normalizedDeviceId);
+  if (nextDevices.length === store.devices.length) {
+    return false;
+  }
+  writeStore({ devices: nextDevices });
+  return true;
+}
+
 export function registerPairedCompanionDevice(args: {
+  clientAddress?: string | null;
   deviceId: string;
   deviceKind: string;
   deviceName: string;
@@ -84,6 +109,7 @@ export function registerPairedCompanionDevice(args: {
 }) {
   const now = args.pairedAt ?? new Date().toISOString();
   const next: PairedCompanionDevice = {
+    client_address: args.clientAddress?.trim() || null,
     device_id: args.deviceId.trim(),
     device_kind: args.deviceKind.trim(),
     device_name: args.deviceName.trim(),

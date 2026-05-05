@@ -1,8 +1,7 @@
-import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 
 import {
-  ObjectConfigPathButton,
+  ObjectConfigPathControl,
   SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_INPUT_WIDTH_CLASS_NAME,
@@ -11,8 +10,7 @@ import {
   SettingsRow,
   SettingsSection,
   settingsButtonClassName,
-  settingsFieldClassName,
-  settingsResetButtonClassName
+  settingsFieldClassName
 } from '../../../../shared/ui';
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
@@ -79,6 +77,7 @@ function NumberRuleRow(props: {
 
 export function BackupPathRow(props: {
   backupPath: string;
+  defaultBackupPath: string;
   errorMessage: string;
   isDesktopRuntime: boolean;
   onChangePath: () => void;
@@ -88,25 +87,15 @@ export function BackupPathRow(props: {
     <SettingsRow description="Backups, auto backups, and safety snapshots are all stored in this folder." title="Backup location">
       <SettingsControlSlot className={`${SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME} items-start max-[1080px]:flex-auto`}>
         <div className="flex max-w-full flex-col items-end gap-1.5 max-[1080px]:items-start">
-          <div className="flex max-w-full items-center gap-2">
-            <button
-              aria-label="Restore default"
-              className={settingsResetButtonClassName('size-9 rounded-sm')}
-              disabled={!props.isDesktopRuntime}
-              onClick={props.onRestoreDefault}
-              title="Restore default"
-              type="button"
-            >
-              <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
-            </button>
-            <ObjectConfigPathButton
-              disabled={!props.isDesktopRuntime}
-              emptyLabel="Backups"
-              label="Change location"
-              onClick={props.onChangePath}
-              path={props.backupPath}
-            />
-          </div>
+          <ObjectConfigPathControl
+            disabled={!props.isDesktopRuntime}
+            emptyLabel="Backups"
+            label="Change location"
+            onClick={props.onChangePath}
+            onRestoreDefault={props.onRestoreDefault}
+            path={props.backupPath}
+            tooltipPath={props.defaultBackupPath}
+          />
           {props.errorMessage ? <p className="max-w-80 text-right text-sm text-red-700 max-[1080px]:text-left">{props.errorMessage}</p> : null}
         </div>
       </SettingsControlSlot>

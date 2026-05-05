@@ -1,21 +1,18 @@
-import { useEffect, useState } from 'react';
-
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionPairingState } from '../../lib/platform/nativeCompanionSyncContract';
 
-import { CompanionSyncTargetForm } from './CompanionSyncTargetForm';
+import { CompanionSyncDeviceList } from './CompanionSyncDeviceList';
+import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
 type CompanionSyncPanelProps = {
   bootstrapState: NativeCompanionBootstrapState;
-  desktopDiscovery: {
-    desktopName: string;
-    endpointUrl: string;
-    peerId: string;
-  } | null;
+  desktopDiscoveries?: CompanionDesktopDiscovery[];
+  desktopDiscovery: CompanionDesktopDiscovery | null;
   endpointUrl: string | null;
   error: string | null;
   lastSyncedAt: string | null;
   rememberedTargets: string[];
+  onCancelPairing(): void;
   onCheckDesktop(endpointUrl: string): Promise<unknown>;
   onClearError(): void;
   onCompletePairing(): Promise<unknown>;
@@ -35,185 +32,152 @@ type CompanionSyncPanelProps = {
 
 const EMULATOR_DEFAULT_ENDPOINT = 'http://10.0.2.2:38641';
 
-function formatTimestamp(timestamp: string | null) {
-  if (!timestamp) {
-    return null;
-  }
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) {
-    return timestamp;
-  }
-  return date.toLocaleString();
+function resolveEndpoint(props: CompanionSyncPanelProps) {
+  return props.pairingRequest?.endpointUrl ?? props.desktopDiscovery?.endpointUrl ?? props.endpointUrl ?? EMULATOR_DEFAULT_ENDPOINT;
 }
 
-function renderPairingStatus(pairingState: NativeCompanionPairingState) {
-  const pairedAtLabel = formatTimestamp(pairingState.paired_at);
-  if (pairingState.is_paired) {
-    return pairedAtLabel ? `Connected to another device since ${pairedAtLabel}.` : 'Connected to another device.';
-  }
-  return 'This device is not connected to another device yet.';
+function resolveDesktopDiscoveries(props: CompanionSyncPanelProps) {
+  return props.desktopDiscoveries?.length ? props.desktopDiscoveries : props.desktopDiscovery ? [props.desktopDiscovery] : [];
 }
 
-function DeviceCard(props: Pick<CompanionSyncPanelProps, 'bootstrapState' | 'pairingState'>) {
-  return (
-    <div className="rounded-2xl border border-border bg-canvas px-4 py-4">
-      <p className="text-sm font-medium text-foreground">This device</p>
-      <p className="mt-2 text-sm text-accent">
-        {props.bootstrapState.runtime_kind === 'android-capacitor' ? 'Android companion' : 'Web preview companion'}
-      </p>
-      <p className="mt-3 text-sm text-foreground">{renderPairingStatus(props.pairingState)}</p>
-    </div>
-  );
-}
-
-function SetupCard(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'pairingState'>) {
-  if (props.lastSyncedAt) {
-    return null;
-  }
-  return (
-    <div className="rounded-2xl border border-border bg-canvas px-4 py-4 text-sm text-foreground">
-      <p className="font-medium">{props.pairingState.is_paired ? 'Bring content to this device for the first time' : 'Connect to another device'}</p>
-      <p className="mt-2 text-accent">
-        {props.pairingState.is_paired
-          ? 'You are already connected. The next step is to bring your content here with one manual sync.'
-          : 'First make sure the device that already has your content has device sync turned on, then continue here.'}
-      </p>
-    </div>
-  );
-}
-
-function ConnectionIntro() {
-  return (
-    <div>
-      <p className="text-xs uppercase tracking-[0.22em] text-accent">Device sync</p>
-      <h2 className="mt-2 text-lg font-semibold text-foreground">Bring content from another device</h2>
-      <p className="mt-2 text-sm leading-6 text-accent">
-        Use this page to connect this device and pull content from a device you already use. After pairing, saved devices stay available for quiet reconnects.
-      </p>
-    </div>
-  );
-}
-
-function PairingActionRow(props: {
-  onCheckDesktop(): Promise<void>;
-  onCompletePairing(): Promise<unknown>;
-  onRequestPairing(): Promise<void>;
-  pairingRequest: CompanionSyncPanelProps['pairingRequest'];
-  pairingStatus: CompanionSyncPanelProps['pairingStatus'];
+function PrimaryAction(props: {
+  children: string;
+  disabled?: boolean;
+  onClick(): void;
 }) {
   return (
-    <div className="flex flex-wrap gap-3">
-      <button
-        className="rounded-2xl border border-border bg-canvas px-4 py-3 text-sm font-medium text-foreground shadow-panel transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={props.pairingStatus !== 'idle'}
-        onClick={() => void props.onCheckDesktop()}
-        type="button"
-      >
-        {props.pairingStatus === 'checking-desktop' ? 'Checking...' : 'Check this address'}
-      </button>
-      <button
-        className="rounded-2xl border border-border bg-canvas px-4 py-3 text-sm font-medium text-foreground shadow-panel transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={props.pairingStatus !== 'idle'}
-        onClick={() => void props.onRequestPairing()}
-        type="button"
-      >
-        {props.pairingStatus === 'requesting-pair' ? 'Requesting...' : 'Ask to connect'}
-      </button>
-      <button
-        className="rounded-2xl border border-border bg-canvas px-4 py-3 text-sm font-medium text-foreground shadow-panel transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={!props.pairingRequest || (props.pairingStatus !== 'awaiting-approval' && props.pairingStatus !== 'idle')}
-        onClick={() => void props.onCompletePairing()}
-        type="button"
-      >
-        {props.pairingStatus === 'completing-pair' ? 'Finishing...' : 'Finish pairing'}
-      </button>
+    <button
+      className="w-full rounded-2xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+      disabled={props.disabled}
+      onClick={props.onClick}
+      type="button"
+    >
+      {props.children}
+    </button>
+  );
+}
+
+function SyncStatusCard(props: {
+  children?: React.ReactNode;
+  detail: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-border bg-canvas px-5 py-5 text-foreground">
+      <h3 className="text-lg font-semibold leading-tight">{props.title}</h3>
+      <div className="mt-3 text-sm leading-6 text-accent">{props.detail}</div>
+      {props.children ? <div className="mt-5">{props.children}</div> : null}
     </div>
   );
 }
 
-function DiscoveryCard(props: { desktopDiscovery: CompanionSyncPanelProps['desktopDiscovery'] }) {
-  if (!props.desktopDiscovery) {
-    return null;
-  }
+function ConnectedState(props: Pick<CompanionSyncPanelProps, 'status'>) {
   return (
-    <div className="rounded-2xl border border-border bg-canvas px-4 py-4 text-sm text-foreground">
-      <p className="font-medium">Device found at this address</p>
-      <p className="mt-2 text-foreground">{props.desktopDiscovery.desktopName}</p>
-      <p className="mt-1 text-accent">{props.desktopDiscovery.endpointUrl}</p>
-    </div>
+    <SyncStatusCard
+      detail={props.status === 'syncing' ? 'Syncing data from the paired device.' : 'This device is paired. Data sync can continue from here.'}
+      title={props.status === 'syncing' ? 'Syncing data' : 'Paired'}
+    />
   );
 }
 
-function PendingPairRequestCard(props: { pairingRequest: CompanionSyncPanelProps['pairingRequest'] }) {
-  if (!props.pairingRequest) {
-    return null;
-  }
+function AwaitingApprovalState(props: {
+  disabled: boolean;
+  onCancel(): void;
+  onComplete(): void;
+}) {
   return (
-    <div className="rounded-2xl border border-border bg-canvas px-4 py-4 text-sm text-foreground">
-      <p className="font-medium">Waiting for approval</p>
-      <p className="mt-1 text-accent">Allow the request on the other device, then come back here and finish pairing.</p>
-      <p className="mt-2 text-xs text-accent">
-        Request expires at {formatTimestamp(props.pairingRequest.expiresAt) ?? props.pairingRequest.expiresAt}
+    <SyncStatusCard
+      detail="Approve this device on desktop. Then come back here to continue."
+      title="Waiting for desktop approval"
+    >
+      <div className="space-y-3">
+        <PrimaryAction disabled={props.disabled} onClick={props.onComplete}>
+          {props.disabled ? 'Checking approval...' : 'Continue'}
+        </PrimaryAction>
+        <button
+          className="w-full rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition hover:bg-bg-subtle disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={props.disabled}
+          onClick={props.onCancel}
+          type="button"
+        >
+          Choose another device
+        </button>
+      </div>
+    </SyncStatusCard>
+  );
+}
+
+function SearchingDiscoveryState() {
+  return (
+    <SyncStatusCard
+      detail="Looking for a desktop with Sync turned on. Keep both devices on the same Wi-Fi."
+      title="Looking for desktop"
+    />
+  );
+}
+
+function EmptyDiscoveryState(props: {
+  disabled: boolean;
+  onTryAgain(): void;
+}) {
+  return (
+    <div className="text-center">
+      <h2 className="text-xl font-semibold leading-tight text-foreground">No device found</h2>
+      <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-accent">
+        Turn on Sync on desktop and keep both devices on the same Wi-Fi.
       </p>
+      <div className="mt-6">
+        <PrimaryAction disabled={props.disabled} onClick={props.onTryAgain}>
+          {props.disabled ? 'Trying...' : 'Try again'}
+        </PrimaryAction>
+      </div>
     </div>
   );
 }
 
 export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
-  const [endpointInput, setEndpointInput] = useState(props.endpointUrl ?? EMULATOR_DEFAULT_ENDPOINT);
+  const endpointUrl = resolveEndpoint(props);
+  const isBusy = props.pairingStatus !== 'idle' && props.pairingStatus !== 'awaiting-approval';
+  const desktopDiscoveries = resolveDesktopDiscoveries(props);
 
-  useEffect(() => {
-    setEndpointInput(props.endpointUrl ?? EMULATOR_DEFAULT_ENDPOINT);
-  }, [props.endpointUrl]);
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleTryAgain() {
     props.onClearError();
-    await props.onSaveEndpoint(endpointInput);
-    await props.onPull(endpointInput);
+    await props.onCheckDesktop(endpointUrl);
   }
 
-  async function handleCheckDesktop() {
+  async function handlePair(pairingEndpointUrl: string) {
     props.onClearError();
-    await props.onCheckDesktop(endpointInput);
+    await props.onRequestPairing(pairingEndpointUrl);
   }
 
-  async function handleRequestPairing() {
+  async function handleCompletePairing() {
     props.onClearError();
-    await props.onRequestPairing(endpointInput);
+    await props.onCompletePairing();
+    await props.onPull(endpointUrl);
   }
 
   return (
-    <section className="mb-8 rounded-3xl border border-border bg-bg-panel px-5 py-5 shadow-panel">
+    <section className="mb-8 px-5 py-5">
       <div className="flex flex-col gap-5">
-        <ConnectionIntro />
-        <SetupCard lastSyncedAt={props.lastSyncedAt} pairingState={props.pairingState} />
-        <DeviceCard bootstrapState={props.bootstrapState} pairingState={props.pairingState} />
-        <CompanionSyncTargetForm
-          currentEndpointUrl={props.endpointUrl}
-          endpointInput={endpointInput}
-          isPaired={props.pairingState.is_paired}
-          onChange={setEndpointInput}
-          onRemoveRememberedTarget={(target) => {
-            void props.onRemoveRememberedTarget(target);
-          }}
-          onSelectRememberedTarget={setEndpointInput}
-          onSubmit={handleSubmit}
-          rememberedTargets={props.rememberedTargets}
-          status={props.status}
-        />
-        <PairingActionRow
-          onCheckDesktop={handleCheckDesktop}
-          onCompletePairing={props.onCompletePairing}
-          onRequestPairing={handleRequestPairing}
-          pairingRequest={props.pairingRequest}
-          pairingStatus={props.pairingStatus}
-        />
-        <DiscoveryCard desktopDiscovery={props.desktopDiscovery} />
-        <PendingPairRequestCard pairingRequest={props.pairingRequest} />
-        <p className="text-xs text-accent">
-          {props.lastSyncedAt ? `Last synced at ${formatTimestamp(props.lastSyncedAt)}` : 'This device does not have synced content yet.'}
-        </p>
+        {props.pairingState.is_paired ? (
+          <ConnectedState status={props.status} />
+        ) : props.pairingRequest ? (
+          <AwaitingApprovalState
+            disabled={props.pairingStatus === 'completing-pair'}
+            onCancel={props.onCancelPairing}
+            onComplete={() => void handleCompletePairing()}
+          />
+        ) : desktopDiscoveries.length > 0 ? (
+          <CompanionSyncDeviceList
+            desktops={desktopDiscoveries}
+            disabled={props.pairingStatus === 'requesting-pair'}
+            onPair={(pairingEndpointUrl) => void handlePair(pairingEndpointUrl)}
+          />
+        ) : props.pairingStatus === 'checking-desktop' ? (
+          <SearchingDiscoveryState />
+        ) : (
+          <EmptyDiscoveryState disabled={isBusy} onTryAgain={() => void handleTryAgain()} />
+        )}
         {props.error ? <p className="text-sm text-red-700">{props.error}</p> : null}
       </div>
     </section>

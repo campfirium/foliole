@@ -66,6 +66,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
     endpoint_url: 'http://10.0.2.2:38641',
     last_synced_at: '2026-04-22T08:03:00.000Z',
     remembered_targets: ['http://10.0.2.2:38641'],
+    sync_onboarding_status: 'completed' as const,
     workspace_snapshot: snapshot
   };
 
@@ -80,6 +81,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
     checkDesktop: vi.fn(),
     clearError: vi.fn(),
     completePairing: vi.fn(),
+    desktopDiscoveries: [],
     desktopDiscovery: null,
     error: null,
     pendingPairRequest: null,
@@ -95,6 +97,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
       endpoint_url: 'http://10.0.2.2:38641',
       last_synced_at: '2026-04-22T08:03:00.000Z',
       remembered_targets: ['http://10.0.2.2:38641'],
+      sync_onboarding_status: 'completed' as const,
       workspace_snapshot: snapshot
     })),
     readableArticle: {
@@ -107,6 +110,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
     replaceSnapshot: vi.fn(async () => state),
     removeRememberedTarget: vi.fn(),
     requestPairing: vi.fn(),
+    saveSyncOnboardingStatus: vi.fn(async () => state),
     saveEndpoint: vi.fn(),
     state,
     status: 'idle' as const
@@ -128,6 +132,7 @@ function createUnpairedWorkspaceSync() {
       endpoint_url: null,
       last_synced_at: null,
       remembered_targets: [],
+      sync_onboarding_status: 'pending' as const,
       workspace_snapshot: null
     }
   };
@@ -151,6 +156,31 @@ describe('useCompanionArticleSurface', () => {
     expect(result.current.activeAction).toBe('more');
   });
 
+  it('opens sync setup from the initial prompt without dismissing future prompts', async () => {
+    const workspaceSync = createUnpairedWorkspaceSync();
+    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+
+    await act(async () => {
+      await result.current.handleStartSyncOnboarding();
+    });
+
+    expect(workspaceSync.saveSyncOnboardingStatus).not.toHaveBeenCalled();
+    expect(result.current.activeAction).toBe('more');
+  });
+
+  it('persists the initial sync prompt dismissal', async () => {
+    const workspaceSync = createUnpairedWorkspaceSync();
+    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+
+    await act(async () => {
+      await result.current.handleDismissSyncOnboarding();
+    });
+
+    expect(workspaceSync.saveSyncOnboardingStatus).toHaveBeenCalledWith('dismissed');
+  });
+});
+
+describe('useCompanionArticleSurface browsing', () => {
   it('switches recent article selections into browse mode', () => {
     const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(), createFloatingBar()));
 

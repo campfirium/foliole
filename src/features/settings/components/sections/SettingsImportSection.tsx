@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react';
 
 import {
+  ObjectConfigPathControl,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
-  SETTINGS_PATH_VALUE_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
-  settingsButtonClassName,
-  settingsValueBoxClassName
+  settingsButtonClassName
 } from '../../../../shared/ui';
 
 import type { LibraryPathLocation, SettingsImportSectionProps } from './settingsImportSectionTypes';
@@ -27,27 +26,14 @@ function LibraryLocationRow(props: {
   return (
     <SettingsRow description={props.description} title={props.title}>
       <SettingsControlSlot className={`${SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME} flex-col items-end gap-2`}>
-        <div className={settingsValueBoxClassName(`${SETTINGS_PATH_VALUE_WIDTH_CLASS_NAME} text-right`)}>
-          <span className="break-all">{props.path}</span>
-        </div>
-        <div className="flex flex-wrap justify-end gap-2">
-          <button
-            className={settingsButtonClassName()}
-            disabled={!props.isDesktopRuntime || props.isPending}
-            onClick={() => props.onChangeLocation(props.location)}
-            type="button"
-          >
-            Change location
-          </button>
-          <button
-            className={settingsButtonClassName()}
-            disabled={!props.isDesktopRuntime || props.isPending}
-            onClick={() => props.onRestoreDefault(props.location)}
-            type="button"
-          >
-            Restore default
-          </button>
-        </div>
+        <ObjectConfigPathControl
+          disabled={!props.isDesktopRuntime || props.isPending}
+          emptyLabel={props.title}
+          label="Change location"
+          onClick={() => props.onChangeLocation(props.location)}
+          onRestoreDefault={() => props.onRestoreDefault(props.location)}
+          path={props.path}
+        />
         {props.errorMessage ? <p className="text-sm text-red-700">{props.errorMessage}</p> : null}
         {props.children}
       </SettingsControlSlot>
@@ -55,64 +41,37 @@ function LibraryLocationRow(props: {
   );
 }
 
-function MirrorRebuildControls(props: {
-  isDesktopRuntime: boolean;
-  isRebuildingMirrorLinks: boolean;
-  isRebuildingMirrorOutput: boolean;
-  mirrorLinkRebuildError: string | null;
-  mirrorLinkRebuildFeedback: string | null;
-  mirrorOutputRebuildError: string | null;
-  mirrorOutputRebuildFeedback: string | null;
-  onRebuildMirrorLinks: () => void;
-  onRebuildMirrorOutput: () => void;
-  pendingLocation: LibraryPathLocation | null;
+function MirrorActionRow(props: {
+  ariaLabel: string;
+  description: ReactNode;
+  disabled: boolean;
+  error: string | null;
+  feedback: string | null;
+  onClick: () => void;
+  title: string;
 }) {
-  return (
+  const description = (
     <>
-      <div className="space-y-3">
-        <div className="space-y-2">
-          <p className="text-sm text-foreground/70">
-            Daily mirror output is incremental. Startup only backfills missing article files when needed.
-          </p>
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              className={settingsButtonClassName()}
-              disabled={!props.isDesktopRuntime || props.isRebuildingMirrorOutput || props.pendingLocation !== null}
-              onClick={props.onRebuildMirrorOutput}
-              type="button"
-            >
-              Rebuild mirror output
-            </button>
-          </div>
-          <p className="text-sm text-foreground/60">
-            Manual rebuild regenerates article `.md` files. Use it for recovery or rule changes, not for daily syncing.
-          </p>
-          {props.mirrorOutputRebuildFeedback ? (
-            <p className="text-sm text-foreground/70">{props.mirrorOutputRebuildFeedback}</p>
-          ) : null}
-          {props.mirrorOutputRebuildError ? <p className="text-sm text-red-700">{props.mirrorOutputRebuildError}</p> : null}
-        </div>
-        <div className="space-y-2">
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              className={settingsButtonClassName()}
-              disabled={!props.isDesktopRuntime || props.isRebuildingMirrorLinks || props.pendingLocation !== null}
-              onClick={props.onRebuildMirrorLinks}
-              type="button"
-            >
-              Rebuild mirror links
-            </button>
-          </div>
-          <p className="text-sm text-foreground/60">
-            Link rebuild only repairs paths inside existing mirror `.md` files after Mirror or Assets move.
-          </p>
-          {props.mirrorLinkRebuildFeedback ? (
-            <p className="text-sm text-foreground/70">{props.mirrorLinkRebuildFeedback}</p>
-          ) : null}
-          {props.mirrorLinkRebuildError ? <p className="text-sm text-red-700">{props.mirrorLinkRebuildError}</p> : null}
-        </div>
-      </div>
+      <span className="block">{props.description}</span>
+      {props.feedback ? <span className="mt-1 block text-foreground/70">{props.feedback}</span> : null}
+      {props.error ? <span className="mt-1 block text-red-700">{props.error}</span> : null}
     </>
+  );
+
+  return (
+    <SettingsRow description={description} title={props.title}>
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <button
+          aria-label={props.ariaLabel}
+          className={settingsButtonClassName()}
+          disabled={props.disabled}
+          onClick={props.onClick}
+          type="button"
+        >
+          Rebuild
+        </button>
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }
 
@@ -121,42 +80,49 @@ function MirrorLocationRow(props: {
   isDesktopRuntime: boolean;
   isRebuildingMirrorLinks: boolean;
   isRebuildingMirrorOutput: boolean;
-  mirrorLinkRebuildError: string | null;
-  mirrorLinkRebuildFeedback: string | null;
-  mirrorOutputRebuildError: string | null;
-  mirrorOutputRebuildFeedback: string | null;
   mirrorPath: string;
   onChangeLocation: (location: LibraryPathLocation) => void;
-  onRebuildMirrorLinks: () => void;
-  onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: LibraryPathLocation) => void;
   pendingLocation: LibraryPathLocation | null;
 }) {
+  const isMirrorBusy = props.pendingLocation === 'mirror' || props.isRebuildingMirrorLinks || props.isRebuildingMirrorOutput;
   return (
     <LibraryLocationRow
       description="Runtime-generated Markdown output. Mirror is read-only, keeps one `.md` per article, and is not a second source of truth."
       errorMessage={props.errorMessage}
       isDesktopRuntime={props.isDesktopRuntime}
-      isPending={props.pendingLocation === 'mirror' || props.isRebuildingMirrorLinks || props.isRebuildingMirrorOutput}
+      isPending={isMirrorBusy}
       location="mirror"
       onChangeLocation={props.onChangeLocation}
       onRestoreDefault={props.onRestoreDefault}
       path={props.mirrorPath}
       title="Mirror"
-    >
-      <MirrorRebuildControls
-        isDesktopRuntime={props.isDesktopRuntime}
-        isRebuildingMirrorLinks={props.isRebuildingMirrorLinks}
-        isRebuildingMirrorOutput={props.isRebuildingMirrorOutput}
-        mirrorLinkRebuildError={props.mirrorLinkRebuildError}
-        mirrorLinkRebuildFeedback={props.mirrorLinkRebuildFeedback}
-        mirrorOutputRebuildError={props.mirrorOutputRebuildError}
-        mirrorOutputRebuildFeedback={props.mirrorOutputRebuildFeedback}
-        onRebuildMirrorLinks={props.onRebuildMirrorLinks}
-        onRebuildMirrorOutput={props.onRebuildMirrorOutput}
-        pendingLocation={props.pendingLocation}
+    />
+  );
+}
+
+function MirrorMaintenanceSection(props: SettingsImportSectionProps) {
+  return (
+    <SettingsSection ariaLabel="Mirror maintenance section" title="Mirror maintenance">
+      <MirrorActionRow
+        ariaLabel="Rebuild mirror output"
+        description="Daily output is incremental and normally needs no adjustment. Rebuild only for recovery or rule changes."
+        disabled={!props.isDesktopRuntime || props.isRebuildingMirrorOutput || props.pendingLocation !== null}
+        error={props.mirrorOutputRebuildError}
+        feedback={props.mirrorOutputRebuildFeedback}
+        onClick={props.onRebuildMirrorOutput}
+        title="Mirror output"
       />
-    </LibraryLocationRow>
+      <MirrorActionRow
+        ariaLabel="Rebuild mirror links"
+        description="Normally needs no adjustment. Rebuild links only after moving Mirror or Assets folders."
+        disabled={!props.isDesktopRuntime || props.isRebuildingMirrorLinks || props.pendingLocation !== null}
+        error={props.mirrorLinkRebuildError}
+        feedback={props.mirrorLinkRebuildFeedback}
+        onClick={props.onRebuildMirrorLinks}
+        title="Mirror links"
+      />
+    </SettingsSection>
   );
 }
 
@@ -204,14 +170,8 @@ function LibraryPathRows(props: SettingsImportSectionProps) {
         isDesktopRuntime={props.isDesktopRuntime}
         isRebuildingMirrorLinks={props.isRebuildingMirrorLinks}
         isRebuildingMirrorOutput={props.isRebuildingMirrorOutput}
-        mirrorLinkRebuildError={props.mirrorLinkRebuildError}
-        mirrorLinkRebuildFeedback={props.mirrorLinkRebuildFeedback}
-        mirrorOutputRebuildError={props.mirrorOutputRebuildError}
-        mirrorOutputRebuildFeedback={props.mirrorOutputRebuildFeedback}
         mirrorPath={props.mirrorPath}
         onChangeLocation={props.onChangeLocation}
-        onRebuildMirrorLinks={props.onRebuildMirrorLinks}
-        onRebuildMirrorOutput={props.onRebuildMirrorOutput}
         onRestoreDefault={props.onRestoreDefault}
         pendingLocation={props.pendingLocation}
       />
@@ -221,12 +181,15 @@ function LibraryPathRows(props: SettingsImportSectionProps) {
 
 export function SettingsImportSection(props: SettingsImportSectionProps) {
   return (
-    <SettingsSection
-      ariaLabel="Library settings section"
-      description="Library Home is your main root. Assets stores attachments, Inbox is the drop folder, and Mirror is a runtime-generated Markdown output folder."
-      title="Library paths"
-    >
-      <LibraryPathRows {...props} />
-    </SettingsSection>
+    <>
+      <SettingsSection
+        ariaLabel="Library settings section"
+        description="Defaults usually need no adjustment. Change these folders only when storage needs to live outside Library Home."
+        title="Library paths"
+      >
+        <LibraryPathRows {...props} />
+      </SettingsSection>
+      <MirrorMaintenanceSection {...props} />
+    </>
   );
 }

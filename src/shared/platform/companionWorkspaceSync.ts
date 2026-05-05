@@ -8,6 +8,8 @@ import type {
 import { resolveReadableCompanionArticle, type CompanionReadableArticle } from './companionReadableArticle';
 import {
   createSignedRequestHeaders,
+  discoverCompanionDesktop,
+  discoverCompanionDesktops,
   loadCompanionDiscovery,
   loadCompanionPairingState,
   pairCompanionWithDesktop,
@@ -22,6 +24,7 @@ import {
 } from './companionWorkspaceSyncBridge';
 import {
   appendRememberedTarget,
+  type CompanionSyncOnboardingStatus,
   normalizePersistedSyncState,
   normalizeWorkspaceSyncState,
   readWebSyncState,
@@ -89,6 +92,8 @@ export async function loadCompanionWorkspaceSyncState() {
 }
 
 export {
+  discoverCompanionDesktop,
+  discoverCompanionDesktops,
   loadCompanionDiscovery,
   loadCompanionPairingState,
   pairCompanionWithDesktop,
@@ -138,6 +143,17 @@ export async function removeCompanionWorkspaceSyncRememberedTarget(endpointUrl: 
   );
 }
 
+export async function saveCompanionSyncOnboardingStatus(status: CompanionSyncOnboardingStatus) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    const current = readWebSyncState();
+    return writeWebSyncState({
+      ...current,
+      sync_onboarding_status: status
+    });
+  }
+  return normalizeWorkspaceSyncState(await FolioleCompanionSync.saveSyncOnboardingStatus({ status }));
+}
+
 export async function loadCompanionReadableArticle(snapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
   if (!isNativeAndroidCompanionRuntime()) {
     return resolveReadableCompanionArticle(snapshot ?? readWebSyncState().workspace_snapshot);
@@ -172,6 +188,7 @@ export async function pullCompanionWorkspaceSnapshot(endpointUrl: string) {
     endpoint_url: normalizedEndpointUrl,
     last_synced_at: lastSyncedAt,
     remembered_targets: appendRememberedTarget(currentState?.remembered_targets ?? [], normalizedEndpointUrl),
+    sync_onboarding_status: 'completed',
     workspace_snapshot: payload.workspace_snapshot ?? null
   };
 

@@ -1,8 +1,14 @@
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { AppButton } from './Button';
-import { SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME, settingsButtonClassName } from './SettingsLayout';
+import {
+  SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME,
+  SETTINGS_PATH_CONTROL_CLASS_NAME,
+  SETTINGS_PATH_RESET_BUTTON_CLASS_NAME,
+  settingsButtonClassName,
+  settingsResetButtonClassName
+} from './SettingsLayout';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -22,11 +28,18 @@ interface ObjectConfigRowProps {
 }
 
 interface ObjectConfigPathButtonProps {
+  className?: string;
   disabled?: boolean;
   emptyLabel: string;
   label: string;
   path: string;
+  tooltipPath?: string;
   onClick: () => void;
+}
+
+interface ObjectConfigPathControlProps extends ObjectConfigPathButtonProps {
+  onRestoreDefault: () => void;
+  restoreDisabled?: boolean;
 }
 
 function compactPathLabel(path: string, emptyLabel: string) {
@@ -78,23 +91,48 @@ export function ObjectConfigRow({ children, columnsClassName }: ObjectConfigRowP
 }
 
 export function ObjectConfigPathButton({
+  className,
   disabled,
   emptyLabel,
   label,
   path,
+  tooltipPath,
   onClick
 }: ObjectConfigPathButtonProps) {
+  const resolvedTooltipPath = tooltipPath ?? path;
   return (
     <AppButton
       aria-label={label}
-      className={settingsButtonClassName(`${SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME} justify-between text-left`)}
+      className={settingsButtonClassName(`${SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME} justify-between text-left ${className ?? ''}`)}
       disabled={disabled}
       onClick={onClick}
-      title={disabled ? undefined : pathTooltip(path)}
+      title={pathTooltip(resolvedTooltipPath)}
       variant="ghost"
     >
       <span className="min-w-0 truncate">{compactPathLabel(path, emptyLabel)}</span>
       <FolderOpen aria-hidden="true" size={14} strokeWidth={1.8} />
     </AppButton>
+  );
+}
+
+export function ObjectConfigPathControl({
+  onRestoreDefault,
+  restoreDisabled,
+  ...buttonProps
+}: ObjectConfigPathControlProps) {
+  return (
+    <div className={SETTINGS_PATH_CONTROL_CLASS_NAME} data-settings-path-control>
+      <button
+        aria-label="Restore default"
+        className={settingsResetButtonClassName(SETTINGS_PATH_RESET_BUTTON_CLASS_NAME)}
+        disabled={restoreDisabled ?? buttonProps.disabled}
+        onClick={onRestoreDefault}
+        title="Restore default"
+        type="button"
+      >
+        <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
+      </button>
+      <ObjectConfigPathButton {...buttonProps} />
+    </div>
   );
 }

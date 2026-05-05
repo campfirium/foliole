@@ -67,6 +67,21 @@ it('persists app settings state into sqlite settings table', async () => {
   expect(row?.key).toBe('app_settings');
 });
 
+it('merges app settings saves without dropping runtime-only keys', async () => {
+  await saveAppSettingsState({
+    'foliole-desktop-device-sync-enabled': 'true'
+  });
+
+  await saveAppSettingsState({
+    'foliole-settings-active-category': 'appearance'
+  });
+
+  await expect(loadAppSettingsState()).resolves.toEqual({
+    'foliole-desktop-device-sync-enabled': 'true',
+    'foliole-settings-active-category': 'appearance'
+  });
+});
+
 it('returns empty object when sqlite payload is malformed json', async () => {
   openDatabaseConnection().sqlite
     .prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')

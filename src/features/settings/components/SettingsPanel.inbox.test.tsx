@@ -114,13 +114,13 @@ it('shows the default inbox path and lets the user choose a custom location thro
   fireEvent.click(screen.getByRole('button', { name: 'Library' }));
 
   await waitFor(() => {
-    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Inbox')).toBeInTheDocument();
+    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Inbox')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[2] as HTMLButtonElement);
 
   await waitFor(() => {
-    expect(screen.getByText('D:\\Capture\\Inbox')).toBeInTheDocument();
+    expect(screen.getByTitle('D:\\Capture\\Inbox')).toBeInTheDocument();
   });
   expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenCalledWith('inbox', 'D:\\Capture\\Inbox');
   expect(window.localStorage.getItem('foliole-managed-inbox-path')).toBeNull();
@@ -137,13 +137,13 @@ it('restores the default inbox path through the runtime bridge', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Library' }));
 
   await waitFor(() => {
-    expect(screen.getByText('D:\\Capture\\Inbox')).toBeInTheDocument();
+    expect(screen.getByTitle('D:\\Capture\\Inbox')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getAllByRole('button', { name: 'Restore default' })[2] as HTMLButtonElement);
 
   await waitFor(() => {
-    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Inbox')).toBeInTheDocument();
+    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Inbox')).toBeInTheDocument();
   });
   expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenCalledWith('inbox', null);
 });
@@ -162,9 +162,10 @@ it('shows Library Home, Assets, Inbox, and Mirror without exposing internal data
 
   expect(screen.getByText(/drop folder for incoming files/i)).toBeInTheDocument();
   expect(screen.getByText(/should stay close to empty/i)).toBeInTheDocument();
-  expect(screen.getByText(/runtime-generated markdown output folder/i)).toBeInTheDocument();
+  expect(screen.getByText(/defaults usually need no adjustment/i)).toBeInTheDocument();
   expect(screen.getByText(/one `.md` per article/i)).toBeInTheDocument();
-  expect(screen.getByText(/daily mirror output is incremental/i)).toBeInTheDocument();
+  expect(screen.getByText('Mirror maintenance')).toBeInTheDocument();
+  expect(screen.getByText(/daily output is incremental/i)).toBeInTheDocument();
   expect(screen.getByText(/folder for attachments and copied media/i)).toBeInTheDocument();
   expect(screen.queryByText('Database location')).not.toBeInTheDocument();
   expect(screen.queryByText('Data location')).not.toBeInTheDocument();
@@ -176,7 +177,7 @@ it('shows separate mirror output rebuild feedback from mirror link rebuild', asy
   fireEvent.click(screen.getByRole('button', { name: 'Library' }));
 
   await waitFor(() => {
-    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Mirror')).toBeInTheDocument();
+    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Mirror')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror output' }));
@@ -199,26 +200,26 @@ it('updates Library Home, Assets, and Mirror through the same runtime interface'
   fireEvent.click(screen.getByRole('button', { name: 'Library' }));
 
   await waitFor(() => {
-    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole')).toBeInTheDocument();
+    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[0] as HTMLButtonElement);
 
   await waitFor(() => {
-    expect(screen.getByText('E:\\LibraryRoot')).toBeInTheDocument();
-    expect(screen.getByText('E:\\LibraryRoot\\Mirror')).toBeInTheDocument();
+    expect(screen.getByTitle('E:\\LibraryRoot')).toBeInTheDocument();
+    expect(screen.getByTitle('E:\\LibraryRoot\\Mirror')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[1] as HTMLButtonElement);
 
   await waitFor(() => {
-    expect(screen.getByText('G:\\AttachmentVault')).toBeInTheDocument();
+    expect(screen.getByTitle('G:\\AttachmentVault')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[3] as HTMLButtonElement);
 
   await waitFor(() => {
-    expect(screen.getByText('F:\\MirrorVault')).toBeInTheDocument();
+    expect(screen.getByTitle('F:\\MirrorVault')).toBeInTheDocument();
   });
 
   expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenNthCalledWith(1, 'library_home', 'E:\\LibraryRoot');
@@ -237,13 +238,13 @@ it('restores the default assets path through the runtime bridge', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Library' }));
 
   await waitFor(() => {
-    expect(screen.getByText('G:\\AttachmentVault')).toBeInTheDocument();
+    expect(screen.getByTitle('G:\\AttachmentVault')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getAllByRole('button', { name: 'Restore default' })[1] as HTMLButtonElement);
 
   await waitFor(() => {
-    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Assets')).toBeInTheDocument();
+    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Assets')).toBeInTheDocument();
   });
   expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenCalledWith('assets_dir', null);
 });
@@ -254,7 +255,7 @@ it('runs the explicit mirror link rebuild flow from settings', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Library' }));
 
   await waitFor(() => {
-    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Mirror')).toBeInTheDocument();
+    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Mirror')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror links' }));

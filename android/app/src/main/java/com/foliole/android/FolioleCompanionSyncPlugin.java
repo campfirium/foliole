@@ -1,5 +1,13 @@
 package com.foliole.android;
 
+import android.net.ConnectivityManager;
+import android.net.LinkAddress;
+import android.net.LinkProperties;
+import android.net.Network;
+import android.net.RouteInfo;
+
+import com.getcapacitor.JSArray;
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -7,6 +15,62 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
+
+
+    @PluginMethod
+    public void loadDiscoveryCandidates(PluginCall call) {
+        try {
+            JSArray endpointUrls = new JSArray();
+            addEndpoint(endpointUrls, "10.0.2.2");
+            ConnectivityManager connectivityManager = (ConnectivityManager) getContext().getSystemService(android.content.Context.CONNECTIVITY_SERVICE);
+            if (connectivityManager != null) {
+                Network network = connectivityManager.getActiveNetwork();
+                LinkProperties linkProperties = network == null ? null : connectivityManager.getLinkProperties(network);
+                if (linkProperties != null) {
+                    addGatewayEndpoints(endpointUrls, linkProperties);
+                    addSubnetEndpoints(endpointUrls, linkProperties);
+                }
+            }
+            JSObject result = new JSObject();
+            result.put("endpoint_urls", endpointUrls);
+            call.resolve(result);
+        } catch (Exception exception) {
+            call.reject("Failed to load companion discovery candidates.", exception);
+        }
+    }
+
+
+    private void addGatewayEndpoints(JSArray endpointUrls, LinkProperties linkProperties) {
+        for (RouteInfo route : linkProperties.getRoutes()) {
+            if (!route.hasGateway() || route.getGateway() == null) {
+                continue;
+            }
+            String hostAddress = route.getGateway().getHostAddress();
+            if (hostAddress != null && hostAddress.indexOf(':') < 0) {
+                addEndpoint(endpointUrls, hostAddress);
+            }
+        }
+    }
+
+    private void addSubnetEndpoints(JSArray endpointUrls, LinkProperties linkProperties) {
+        for (LinkAddress address : linkProperties.getLinkAddresses()) {
+            String hostAddress = address.getAddress().getHostAddress();
+            if (hostAddress == null || hostAddress.indexOf(':') >= 0) {
+                continue;
+            }
+            String prefix = hostAddress.substring(0, hostAddress.lastIndexOf('.') + 1);
+            for (int index = 1; index <= 254; index += 1) {
+                String candidateAddress = prefix + index;
+                if (!candidateAddress.equals(hostAddress)) {
+                    addEndpoint(endpointUrls, candidateAddress);
+                }
+            }
+        }
+    }
+
+    private void addEndpoint(JSArray endpointUrls, String hostAddress) {
+        endpointUrls.put("http://" + hostAddress + ":38641");
+    }
 
     @PluginMethod
     public void loadPairingState(PluginCall call) {
@@ -118,6 +182,18 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             call.resolve(databaseHelper.saveWorkspaceSyncEndpoint(call.getString("endpoint_url")));
         } catch (Exception exception) {
             call.reject("Failed to save companion workspace sync endpoint.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+    @PluginMethod
+    public void saveSyncOnboardingStatus(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(databaseHelper.saveSyncOnboardingStatus(call.getString("status")));
+        } catch (Exception exception) {
+            call.reject("Failed to save companion sync onboarding status.", exception);
         } finally {
             databaseHelper.close();
         }

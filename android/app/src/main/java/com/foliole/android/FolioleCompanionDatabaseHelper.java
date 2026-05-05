@@ -25,6 +25,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     private static final String DEVICE_ID_KEY = "device_id";
     private static final String WORKSPACE_SYNC_ENDPOINT_URL_KEY = "workspace_sync_endpoint_url";
     private static final String WORKSPACE_SYNC_LAST_SYNCED_AT_KEY = "workspace_sync_last_synced_at";
+    private static final String WORKSPACE_SYNC_ONBOARDING_STATUS_KEY = "workspace_sync_onboarding_status";
     private static final String WORKSPACE_SYNC_REMEMBERED_TARGETS_KEY = "workspace_sync_remembered_targets";
     private final Context context;
 
@@ -74,8 +75,15 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         result.put("endpoint_url", endpointUrl);
         result.put("last_synced_at", lastSyncedAt);
         result.put("remembered_targets", new JSONArray(loadRememberedTargets(database)));
+        result.put("sync_onboarding_status", loadSyncOnboardingStatus(database, lastSyncedAt, workspaceSnapshot));
         result.put("workspace_snapshot", workspaceSnapshot);
         return result;
+    }
+
+    JSObject saveSyncOnboardingStatus(String status) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        saveMetaValue(database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY, normalizeSyncOnboardingStatus(status), Instant.now().toString());
+        return loadWorkspaceSyncState();
     }
 
     JSObject saveWorkspaceSyncEndpoint(String endpointUrl) throws Exception {
@@ -113,6 +121,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         FolioleCompanionSnapshotImporter.replaceWorkspaceSnapshot(database, workspaceSnapshotJson, lastSyncedAt);
         saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, endpointUrl.trim(), lastSyncedAt);
         saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, lastSyncedAt.trim(), lastSyncedAt);
+        saveMetaValue(database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY, "completed", lastSyncedAt);
         saveRememberedTargets(database, appendRememberedTarget(loadRememberedTargets(database), endpointUrl.trim()), lastSyncedAt);
         return loadWorkspaceSyncState();
     }
@@ -136,6 +145,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         }
         saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, endpointUrl.trim(), lastSyncedAt);
         saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, lastSyncedAt.trim(), lastSyncedAt);
+        saveMetaValue(database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY, "completed", lastSyncedAt);
         saveRememberedTargets(database, appendRememberedTarget(loadRememberedTargets(database), endpointUrl.trim()), lastSyncedAt);
         return loadWorkspaceSyncState();
     }
@@ -224,6 +234,32 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
             }
         }
         return nextTargets;
+    }
+
+    private String loadSyncOnboardingStatus(SQLiteDatabase database, String lastSyncedAt, JSObject workspaceSnapshot) {
+        String status = loadMetaValue(database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY);
+        if (isValidSyncOnboardingStatus(status)) {
+            return status.trim();
+        }
+        if (lastSyncedAt != null || workspaceSnapshot != null) {
+            return "completed";
+        }
+        return "pending";
+    }
+
+    private String normalizeSyncOnboardingStatus(String status) {
+        if (isValidSyncOnboardingStatus(status)) {
+            return status.trim();
+        }
+        return "pending";
+    }
+
+    private boolean isValidSyncOnboardingStatus(String status) {
+        if (status == null) {
+            return false;
+        }
+        String normalized = status.trim();
+        return normalized.equals("completed") || normalized.equals("dismissed") || normalized.equals("pending");
     }
 
     private void saveRememberedTargets(SQLiteDatabase database, List<String> rememberedTargets, String updatedAt) {

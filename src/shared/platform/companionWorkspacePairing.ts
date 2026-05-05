@@ -1,13 +1,14 @@
 import type { NativeCompanionPairingState } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import { discoverCompanionDesktop, discoverCompanionDesktops } from './companionWorkspaceDiscovery';
 import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime,
+  type LoadCompanionDiscoveryResponse,
   normalizeEndpointUrl,
   PAIR_ENDPOINT_PATH,
   PAIR_REQUESTS_ENDPOINT_PATH,
-  type LoadCompanionDiscoveryResponse,
   type PairCompanionWithDesktopArgs,
   type PairCompanionWithDesktopResponse,
   type RequestCompanionPairingArgs,
@@ -17,6 +18,8 @@ import {
 const WEB_PAIRING_STATE_KEY = 'foliole-companion-pairing-state';
 
 type WebCompanionPairingState = NativeCompanionPairingState & { device_secret?: string };
+
+export { discoverCompanionDesktop, discoverCompanionDesktops };
 
 export function normalizePairingState(value: unknown): NativeCompanionPairingState {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -173,7 +176,14 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     method: 'POST'
   });
   if (!response.ok) {
-    throw new Error(`Desktop pairing failed with ${response.status}.`);
+    let reason = 'unknown_error';
+    try {
+      const errorPayload = (await response.json()) as { error?: unknown };
+      reason = typeof errorPayload.error === 'string' && errorPayload.error.trim() ? errorPayload.error : reason;
+    } catch {
+      reason = 'invalid_error_payload';
+    }
+    throw new Error(`Desktop pairing failed with ${response.status}: ${reason}.`);
   }
   const payload = (await response.json()) as PairCompanionWithDesktopResponse;
   if (!isNativeAndroidCompanionRuntime()) {
@@ -186,13 +196,16 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
       paired_at: payload.paired_at
     });
   }
-  return normalizePairingState(
-    await FolioleCompanionSync.savePairingCredentials({
-      device_id: payload.device_id,
-      device_kind: args.deviceKind,
-      device_name: args.deviceName,
-      device_secret: payload.device_secret,
-      paired_at: payload.paired_at
-    })
-  );
+  await FolioleCompanionSync.savePairingCredentials({
+    device_id: payload.device_id,
+    device_kind: args.deviceKind,
+    device_name: args.deviceName,
+    device_secret: payload.device_secret,
+    paired_at: payload.paired_at
+  });
+  const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
+  if (!storedPairingState.is_paired) {
+    throw new Error('Android pairing credentials were not saved.');
+  }
+  return storedPairingState;
 }

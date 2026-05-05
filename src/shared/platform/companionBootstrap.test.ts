@@ -32,6 +32,7 @@ describe('companionBootstrap', () => {
     expect(first.database_ready).toBe(false);
     expect(first.database_path).toBe('foliole-companion-preview.db');
     expect(first.device_id).toMatch(/^web-preview-/);
+    expect(first.device_name).toBe('Web preview');
     expect(second.device_id).toBe(first.device_id);
   });
 
@@ -43,6 +44,7 @@ describe('companionBootstrap', () => {
       database_path: '/data/user/0/com.foliole.android/databases/foliole-companion.db',
       database_ready: true,
       device_id: 'android-test-device',
+      device_name: 'Pixel 9',
       runtime_kind: 'android-capacitor'
     });
 
@@ -52,6 +54,7 @@ describe('companionBootstrap', () => {
       database_path: '/data/user/0/com.foliole.android/databases/foliole-companion.db',
       database_ready: true,
       device_id: 'android-test-device',
+      device_name: 'Pixel 9',
       runtime_kind: 'android-capacitor'
     });
     expect(loadBootstrap).toHaveBeenCalledTimes(1);
@@ -63,6 +66,7 @@ describe('companionBootstrap', () => {
     loadBootstrap.mockResolvedValue({
       database_ready: true,
       device_id: 'android-test-device',
+      device_name: 'Pixel 9',
       runtime_kind: 'android-capacitor'
     });
 

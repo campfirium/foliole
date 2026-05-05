@@ -1,11 +1,35 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
+  DesktopCompanionPairedDevicePayload,
   DesktopCompanionPairingOverviewPayload,
   DesktopCompanionPairRequestPayload,
   DesktopCompanionSyncServerStatusPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
+
+
+function normalizePairedDevice(value: unknown): DesktopCompanionPairedDevicePayload | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.device_id !== 'string' ||
+    typeof raw.device_kind !== 'string' ||
+    typeof raw.device_name !== 'string' ||
+    typeof raw.paired_at !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    client_address: typeof raw.client_address === 'string' && raw.client_address.trim() ? raw.client_address : null,
+    device_id: raw.device_id,
+    device_kind: raw.device_kind,
+    device_name: raw.device_name,
+    paired_at: raw.paired_at
+  };
+}
 
 function normalizePendingRequest(value: unknown): DesktopCompanionPairRequestPayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -26,6 +50,7 @@ function normalizePendingRequest(value: unknown): DesktopCompanionPairRequestPay
     return null;
   }
   return {
+    client_address: typeof raw.client_address === 'string' && raw.client_address.trim() ? raw.client_address : null,
     device_id: raw.device_id,
     device_kind: raw.device_kind,
     device_name: raw.device_name,
@@ -63,6 +88,7 @@ function normalizeServerStatus(value: unknown): DesktopCompanionSyncServerStatus
 function normalizePairingOverview(value: unknown): DesktopCompanionPairingOverviewPayload {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
+      paired_devices: [],
       pending_requests: [],
       server_status: normalizeServerStatus(null),
       sync_enabled: false
@@ -70,6 +96,11 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
   }
   const raw = value as Record<string, unknown>;
   return {
+    paired_devices: Array.isArray(raw.paired_devices)
+      ? raw.paired_devices
+          .map((entry) => normalizePairedDevice(entry))
+          .filter((entry): entry is DesktopCompanionPairedDevicePayload => entry !== null)
+      : [],
     pending_requests: Array.isArray(raw.pending_requests)
       ? raw.pending_requests
           .map((entry) => normalizePendingRequest(entry))
@@ -86,6 +117,7 @@ async function invokeDesktopCompanionPairingCommand<
     | typeof NATIVE_COMMANDS.enableCompanionSync
     | typeof NATIVE_COMMANDS.disableCompanionSync
     | typeof NATIVE_COMMANDS.clearCompanionPairedDevices
+    | typeof NATIVE_COMMANDS.removeCompanionPairedDevice
     | typeof NATIVE_COMMANDS.approveCompanionPairRequest
     | typeof NATIVE_COMMANDS.rejectCompanionPairRequest
 >(
@@ -105,6 +137,12 @@ export function loadDesktopCompanionPairingOverview() {
 
 export function clearDesktopCompanionPairedDevices() {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.clearCompanionPairedDevices);
+}
+
+export function removeDesktopCompanionPairedDevice(deviceId: string) {
+  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.removeCompanionPairedDevice, {
+    device_id: deviceId
+  });
 }
 
 export function enableDesktopCompanionSync() {

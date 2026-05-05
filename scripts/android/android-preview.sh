@@ -12,6 +12,8 @@ ANDROID_PREVIEW_OPEN_STUDIO="${ANDROID_PREVIEW_OPEN_STUDIO:-1}"
 DEFAULT_ANDROID_AVD="${DEFAULT_ANDROID_AVD:-Foliole_API_36}"
 ANDROID_PREVIEW_AVD="${ANDROID_PREVIEW_AVD:-${FOLIOLE_ANDROID_AVD:-${DEFAULT_ANDROID_AVD}}}"
 ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS:-600}"
+ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR:-C:\dev\foliole-android-preview}"
+ANDROID_WINDOWS_MIRROR_DIR="${ANDROID_WINDOWS_MIRROR_DIR:-$(wslpath -u "${ANDROID_WINDOWS_WORKDIR}")}"
 PREVIEW_TOTAL_STEPS=3
 
 if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
@@ -45,11 +47,12 @@ run_with_timeout() {
   "$@"
 }
 
-echo "[android-preview] step 1/${PREVIEW_TOTAL_STEPS}: sync to windows mirror"
-run_preview_step "windows-sync" bash "${WINDOWS_SYNC_SCRIPT}"
+echo "[android-preview] step 1/${PREVIEW_TOTAL_STEPS}: sync to android preview workspace"
+mkdir -p "${ANDROID_WINDOWS_MIRROR_DIR}"
+run_preview_step "windows-sync" env WINDOWS_MIRROR_DIR="${ANDROID_WINDOWS_MIRROR_DIR}" WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED=1 bash "${WINDOWS_SYNC_SCRIPT}"
 
 echo "[android-preview] step 2/${PREVIEW_TOTAL_STEPS}: sync capacitor android host"
-if ! run_preview_step "android-cap-sync" env ANDROID_SKIP_WINDOWS_SYNC=1 bash "${ANDROID_SYNC_SCRIPT}"; then
+if ! run_preview_step "android-cap-sync" env ANDROID_SKIP_WINDOWS_SYNC=1 ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_SYNC_SCRIPT}"; then
   echo "[android-preview] failed at: android host sync"
   echo "[android-preview] status: FAILED"
   exit 1
@@ -64,7 +67,7 @@ if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
   fi
   echo "[android-preview] step 4/${PREVIEW_TOTAL_STEPS}: deploy app"
   echo "[android-preview] deploy timeout: ${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}s"
-  if ! run_preview_step "android-deploy" run_with_timeout "${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}" bash "${ANDROID_DEPLOY_SCRIPT}"; then
+  if ! run_preview_step "android-deploy" run_with_timeout "${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_DEPLOY_SCRIPT}"; then
     echo "[android-preview] failed at: app deploy"
     echo "[android-preview] status: FAILED"
     exit 1
@@ -75,7 +78,7 @@ fi
 
 if [[ "${ANDROID_PREVIEW_OPEN_STUDIO}" != "0" ]]; then
   echo "[android-preview] step 3/${PREVIEW_TOTAL_STEPS}: open android studio"
-  if ! bash "${ANDROID_OPEN_SCRIPT}"; then
+  if ! env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_OPEN_SCRIPT}"; then
     echo "[android-preview] failed at: android studio launch"
     echo "[android-preview] status: FAILED"
     exit 1

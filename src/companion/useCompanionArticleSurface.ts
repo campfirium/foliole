@@ -159,6 +159,21 @@ function useCompanionActionState(args: {
   return { handleSelectBrowseNode, handleSelectRecentArticle, handleTopBarAction };
 }
 
+function useCompanionSyncOnboardingActions(args: {
+  setActiveAction: (action: TopBarAction) => void;
+  workspaceSync: CompanionWorkspaceSyncApi;
+}) {
+  async function handleDismissSyncOnboarding() {
+    await args.workspaceSync.saveSyncOnboardingStatus('dismissed');
+  }
+
+  async function handleStartSyncOnboarding() {
+    args.setActiveAction('more');
+  }
+
+  return { handleDismissSyncOnboarding, handleStartSyncOnboarding };
+}
+
 function useCompanionInteractionState(
   floatingBar: FloatingBarVisibilityApi,
   reviewSession: ReturnType<typeof resolveCompanionReviewSession>,
@@ -192,6 +207,7 @@ function useCompanionInteractionState(
     setReviewError,
     setSelectedBrowseNodeId
   });
+  const syncOnboardingActions = useCompanionSyncOnboardingActions({ setActiveAction, workspaceSync });
 
   useEffect(() => {
     setIsAnswerRevealed(false);
@@ -209,6 +225,7 @@ function useCompanionInteractionState(
     handleRevealAnswer,
     handleSelectBrowseNode,
     handleSelectRecentArticle,
+    ...syncOnboardingActions,
     handleTopBarAction,
     isAnswerRevealed,
     isSubmittingGrade,

@@ -25,7 +25,7 @@ export { AppIconButton } from './IconButton';
 export { AppInput } from './Input';
 export { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
 export { NodeBrowseList, type NodeBrowseListItem } from './NodeBrowseList';
-export { ObjectConfigHeader, ObjectConfigPathButton, ObjectConfigRow, ObjectConfigTable } from './ObjectConfigTable';
+export { ObjectConfigHeader, ObjectConfigPathButton, ObjectConfigPathControl, ObjectConfigRow, ObjectConfigTable } from './ObjectConfigTable';
 export { AppPanel } from './Panel';
 export { InspectorSection } from './InspectorSection';
 export { ReviewActionBar } from './ReviewActionBar';
@@ -48,11 +48,14 @@ export {
   SETTINGS_INPUT_WIDTH_CLASS_NAME,
   SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
   SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME,
+  SETTINGS_PATH_CONTROL_CLASS_NAME,
   SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME,
+  SETTINGS_PATH_RESET_BUTTON_CLASS_NAME,
   SETTINGS_PATH_VALUE_WIDTH_CLASS_NAME,
   SETTINGS_RANGE_WIDTH_CLASS_NAME,
   SETTINGS_SELECT_WIDTH_CLASS_NAME,
   SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME,
+  SETTINGS_ACTION_ROW_CLASS_NAME,
   SETTINGS_VALUE_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsGroup,
