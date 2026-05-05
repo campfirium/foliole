@@ -108,8 +108,11 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "{\"active_node_id\":\"article-2\"}"
         ));
 
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database);
         JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
 
+        assertEquals("Blob article body", snapshot.getJSONObject("nodesById")
+            .getJSONObject("article-2").getString("content"));
         assertEquals("Blob article body", readable.getJSONObject("readable_article").getString("content"));
     }
 

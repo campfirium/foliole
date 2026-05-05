@@ -22,6 +22,9 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         if (orderedNodeIds.length() == 0) {
             return null;
         }
+        boolean canReadBodyBlobData = hasTable(database, "content_blob_data");
+        String contentExpression = canReadBodyBlobData ? "COALESCE(CAST(cbd.data AS TEXT), n.content)" : "n.content";
+        String contentBlobJoin = canReadBodyBlobData ? "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " : "";
 
         JSObject nodesById = new JSObject();
         JSONArray trashedNodeIds = new JSONArray();
@@ -30,13 +33,14 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         try (Cursor cursor = database.rawQuery(
             "SELECT " +
                 "n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.title, n.is_title_manual, " +
-                "n.hide_title_heading, n.content, n.opening_text, n.virtual_filter, n.reveal, n.anchor_link, " +
+                "n.hide_title_heading, " + contentExpression + ", n.opening_text, n.virtual_filter, n.reveal, n.anchor_link, " +
                 "n.image_regions, n.created_at, n.updated_at, n.deleted_at, " +
                 "rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority, " +
                 "rd.reading_position, rd.repetition_count, rd.state, " +
                 "nr.due, nr.last_review_at, nr.state, nr.stability, nr.difficulty, nr.elapsed_days, " +
                 "nr.scheduled_days, nr.reps, nr.lapses " +
             "FROM nodes n " +
+            contentBlobJoin +
             "LEFT JOIN node_reading rd ON rd.node_id = n.id " +
             "LEFT JOIN node_review nr ON nr.node_id = n.id " +
             "ORDER BY CASE WHEN EXISTS (SELECT 1 FROM node_order no WHERE no.node_id = n.id) THEN 0 ELSE 1 END, " +
@@ -66,6 +70,15 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         snapshot.put("trashedNodeIds", trashedNodeIds);
         snapshot.put("untitledSequenceByParent", loadUntitledSequenceByParent(database));
         return snapshot;
+    }
+
+    private static boolean hasTable(SQLiteDatabase database, String tableName) {
+        try (Cursor cursor = database.rawQuery(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
+            new String[] { tableName }
+        )) {
+            return cursor.moveToFirst();
+        }
     }
 
     private static JSONArray loadOrderedNodeIds(SQLiteDatabase database) {
