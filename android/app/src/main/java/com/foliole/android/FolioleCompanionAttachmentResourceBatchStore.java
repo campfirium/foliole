@@ -149,8 +149,8 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             .getJSONArray(resourceRule(context, "resultKey"));
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            String attachmentId = row.getString(resourceRule(context, "attachmentIdKey"));
-            String contentHash = row.getString(resourceRule(context, "contentHashKey"));
+            String attachmentId = rowString(context, row, "attachmentIdKey");
+            String contentHash = rowString(context, row, "contentHashKey");
             hashes.put(attachmentId, requireText(contentHash, resourceRule(context, "contentHashKey")));
         }
         return hashes;
@@ -182,6 +182,10 @@ final class FolioleCompanionAttachmentResourceBatchStore {
 
     private static String resourceRule(Context context, String key) throws Exception {
         return FolioleCompanionResourceReadQueryRules.attachmentString(context, key);
+    }
+
+    private static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.attachmentRowString(context, row, key);
     }
 
     private static String batchResponseKey(Context context, String key) throws Exception {

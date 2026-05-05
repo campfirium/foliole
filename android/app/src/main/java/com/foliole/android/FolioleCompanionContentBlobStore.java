@@ -78,11 +78,11 @@ final class FolioleCompanionContentBlobStore {
             throw new IllegalStateException("Content blob manifest is missing.");
         }
         return new ContentBlobManifest(
-            blob.getString(resourceRule(context, "compressionKey")),
-            blob.getLong(resourceRule(context, "originalSizeBytesKey")),
-            blob.getLong(resourceRule(context, "storedSizeBytesKey")),
-            blob.getString(resourceRule(context, "originalSha256Key")),
-            blob.getString(resourceRule(context, "storedSha256Key"))
+            rowString(context, blob, "compressionKey"),
+            rowLong(context, blob, "originalSizeBytesKey"),
+            rowLong(context, blob, "storedSizeBytesKey"),
+            rowString(context, blob, "originalSha256Key"),
+            rowString(context, blob, "storedSha256Key")
         );
     }
 
@@ -98,6 +98,14 @@ final class FolioleCompanionContentBlobStore {
 
     private static String resourceRule(Context context, String key) throws Exception {
         return FolioleCompanionResourceReadQueryRules.contentBlobString(context, key);
+    }
+
+    private static long rowLong(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobRowLong(context, row, key);
+    }
+
+    private static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobRowString(context, row, key);
     }
 
     private static JSObject markCached(Context context, SQLiteDatabase database, String hash) throws Exception {

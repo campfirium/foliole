@@ -35,6 +35,10 @@ final class FolioleCompanionResourceReadQueryRules {
         return attachmentObject(context, "syncResponseKeys").getString(key);
     }
 
+    static String attachmentRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(attachmentString(context, key));
+    }
+
     static String contentBlobString(Context context, String key) throws Exception {
         return group(context, "contentBlobs").getString(key);
     }
