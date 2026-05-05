@@ -5,6 +5,7 @@ import type { Node } from '../model/nodeTypes';
 import { NodeListContextMenu } from './NodeListContextMenu';
 import { hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
 import { NodeListHeader } from './NodeListHeader';
+import { resolveNodeListRowGap } from './nodeListRowSpacingSettings';
 import { useNodeListDragController } from './NodeListTreeDrag';
 import type {
   NodeListCollapseController,
@@ -12,6 +13,7 @@ import type {
 } from './NodeListTreeHooks';
 import { NodeListRows } from './NodeListTreeRows';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
+import { resolveNodeTreeClassName } from './NodeTreeRowStyle';
 
 interface NodeListPanelProps {
   activeCollapsedNodeIds: ReadonlySet<string>;
@@ -33,10 +35,60 @@ interface NodeListPanelProps {
   onRenameNode: (nodeId: string, title: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   reviewSession: ReviewSessionState;
+  rowSpacing: number;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
   trashRowIds: string[];
   trashRowsLength: number;
+}
+
+function renderRootDropHint(isRootDropActive: boolean) {
+  if (!isRootDropActive) {
+    return null;
+  }
+  return (
+    <div
+      aria-hidden="true"
+      className="rounded border border-dashed border-border-strong bg-foreground/[0.04] px-3 py-2 text-xs text-foreground/70"
+    >
+      Drop to move node to root
+    </div>
+  );
+}
+
+function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeof useNodeListDragController>) {
+  return (
+    <section
+      aria-multiselectable="true"
+      aria-label={props.isTrashViewOpen ? 'Trash section' : undefined}
+      className={resolveNodeTreeClassName()}
+      data-node-list-row-gap={String(resolveNodeListRowGap(props.rowSpacing))}
+      data-node-list-row-spacing={String(props.rowSpacing)}
+      role="tree"
+      style={{ gap: `${resolveNodeListRowGap(props.rowSpacing)}px` }}
+      onDoubleClick={(event) => event.target === event.currentTarget && props.createRootNode('')}
+      onDragOver={(event) => event.target === event.currentTarget && drag.onDragOverRoot(event)}
+      onDrop={(event) => event.target === event.currentTarget && drag.onDropRoot(event)}
+    >
+      {renderRootDropHint(drag.isRootDropActive)}
+      <NodeListRows
+        activeNodeId={props.activeNodeId}
+        collapsedNodeIds={props.activeCollapsedNodeIds}
+        drag={drag}
+        isTrashViewOpen={props.isTrashViewOpen}
+        nodesById={props.nodesById}
+        onContextMenu={props.contextMenu.openContextMenu}
+        onRename={props.onRenameNode}
+        onSelect={props.onSelect}
+        onToggleCollapse={props.collapse.toggleCollapse}
+        reviewSession={props.reviewSession}
+        rowSpacing={props.rowSpacing}
+        rows={props.activeRows}
+        selectedNodeIds={props.selectedNodeIds}
+        selectedTrashNodeId={props.selectedTrashNodeId}
+      />
+    </section>
+  );
 }
 
 function NodeListPanel(props: NodeListPanelProps) {
@@ -62,39 +114,7 @@ function NodeListPanel(props: NodeListPanelProps) {
         trashCount={props.trashRowsLength}
       />
       <div className="app-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-2">
-        <section
-          aria-multiselectable="true"
-          aria-label={props.isTrashViewOpen ? 'Trash section' : undefined}
-          className="flex flex-1 flex-col gap-2"
-          role="tree"
-          onDoubleClick={(event) => event.target === event.currentTarget && props.createRootNode('')}
-          onDragOver={(event) => event.target === event.currentTarget && drag.onDragOverRoot(event)}
-          onDrop={(event) => event.target === event.currentTarget && drag.onDropRoot(event)}
-        >
-          {drag.isRootDropActive ? (
-            <div
-              aria-hidden="true"
-              className="rounded border border-dashed border-border-strong bg-foreground/[0.04] px-3 py-2 text-xs text-foreground/70"
-            >
-              Drop to move node to root
-            </div>
-          ) : null}
-          <NodeListRows
-            activeNodeId={props.activeNodeId}
-            collapsedNodeIds={props.activeCollapsedNodeIds}
-            drag={drag}
-            isTrashViewOpen={props.isTrashViewOpen}
-            nodesById={props.nodesById}
-            onContextMenu={props.contextMenu.openContextMenu}
-            onRename={props.onRenameNode}
-            onSelect={props.onSelect}
-            onToggleCollapse={props.collapse.toggleCollapse}
-            rows={props.activeRows}
-            reviewSession={props.reviewSession}
-            selectedNodeIds={props.selectedNodeIds}
-            selectedTrashNodeId={props.selectedTrashNodeId}
-          />
-        </section>
+        {renderNodeTreeSection(props, drag)}
       </div>
     </aside>
   );
@@ -116,6 +136,7 @@ interface NodeListTreeContentProps {
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   reviewSession: ReviewSessionState;
+  rowSpacing: number;
   returnNode: (nodeId: string, now?: string) => boolean;
   updateNodeTitle: (nodeId: string, title: string) => void;
   restoreNode: (nodeId: string) => void;
@@ -220,6 +241,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         onRenameNode={props.updateNodeTitle}
         onSelect={props.onSelect}
         reviewSession={props.reviewSession}
+        rowSpacing={props.rowSpacing}
         selectedNodeIds={props.selectedNodeIds}
         selectedTrashNodeId={props.selectedTrashNodeId}
         trashRowIds={props.state.trashRowIds}

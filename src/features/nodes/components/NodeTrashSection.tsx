@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import { AppButton, AppEmptyState } from '../../../shared/ui';
 import type { NodeTreeRow as NodeTreeRowModel } from '../model/nodeTree';
 
+import { getNodeListRowSpacing } from './nodeListRowSpacingSettings';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow } from './NodeTreeRow';
 
@@ -45,6 +46,8 @@ export function NodeTrashSection({
   rows,
   selectedNodeIds
 }: NodeTrashSectionProps) {
+  const rowSpacing = getNodeListRowSpacing();
+
   return (
     <section
       aria-label="Trash section"
@@ -77,6 +80,7 @@ export function NodeTrashSection({
               key={row.node.id}
               label={row.node.title}
               nodeId={row.node.id}
+              rowSpacing={rowSpacing}
               onContextMenu={onContextMenu}
               onSelect={onSelect}
               onToggleCollapse={NOOP_TOGGLE_COLLAPSE}

@@ -14,6 +14,7 @@ import {
 } from '../../model/settingsPanelOptions';
 
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
+import { NodeListRowSpacingSection } from './NodeListRowSpacingSection';
 
 function settingsFieldClassName() {
   return 'w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground';
@@ -175,6 +176,7 @@ export function SettingsAppearanceSection(props: {
         </SettingsRow>
       </SettingsSection>
       <NodeIconSettingsSection />
+      <NodeListRowSpacingSection />
       <FontSection {...props} />
     </>
   );

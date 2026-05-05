@@ -32,6 +32,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   nodeIconDismissedFadeEnabled: 'foliole-node-icon-dismissed-fade-enabled',
   nodeIconDismissedFadeOpacity: 'foliole-node-icon-dismissed-fade-opacity',
   nodeIconDismissedFadeWholeRow: 'foliole-node-icon-dismissed-fade-whole-row',
+  nodeListRowSpacing: 'foliole-node-list-row-spacing',
   listCollapsed: 'foliole-workspace-list-collapsed',
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',
   commandRecents: 'foliole-command-recents',

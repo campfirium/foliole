@@ -4,6 +4,7 @@ import { onWindowKeydown } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
 import type { Node } from '../model/nodeTypes';
 
+import { getNodeListRowSpacing } from './nodeListRowSpacingSettings';
 import { NodeListTreeContent } from './NodeListTreeContent';
 import { useNodeCollapseControls, useNodeListContextMenu } from './NodeListTreeHooks';
 import {
@@ -124,6 +125,7 @@ export function NodeListTree({
   });
   const state = model.state;
   const runtimeState: NodeListTreeRuntimeState = { reviewSession: model.reviewSession };
+  const rowSpacing = getNodeListRowSpacing();
   const collapsedNodeIds = isTrashViewOpen
     ? model.collapsedState.collapsedTrashNodeIds
     : model.collapsedState.collapsedNoteNodeIds;
@@ -147,6 +149,7 @@ export function NodeListTree({
       onOpenNotesView={onOpenNotesView}
       onSelect={model.handleSelectNode}
       reviewSession={runtimeState.reviewSession}
+      rowSpacing={rowSpacing}
       returnNode={model.returnNode}
       updateNodeTitle={model.updateNodeTitle}
       restoreNode={model.restoreNode}

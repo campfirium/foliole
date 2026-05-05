@@ -20,7 +20,7 @@ function resolveVariantClass(variant: ButtonVariant) {
     return 'text-foreground/70 hover:text-foreground';
   }
   if (variant === 'list') {
-    return 'w-full justify-start px-3 py-2 text-left text-[13px] text-foreground/80 hover:bg-foreground/[0.03] hover:text-foreground';
+    return 'w-full justify-start px-3 text-left text-[13px] text-foreground/80 hover:bg-foreground/[0.03] hover:text-foreground';
   }
   return 'border border-transparent bg-transparent text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 }

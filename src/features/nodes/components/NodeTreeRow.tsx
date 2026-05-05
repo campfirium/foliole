@@ -13,7 +13,11 @@ import { NodeTreeRowIcon } from './NodeTreeRowIcon';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
 import { NodeTreeRowExpandToggle, renderNodeLabel } from './NodeTreeRowParts';
 import { useRenameState } from './NodeTreeRowRename';
-import { resolveNodeRowButtonClassName, resolveNodeVisibilityValue } from './NodeTreeRowStyle';
+import {
+  resolveNodeRowButtonClassName,
+  resolveNodeRowContentClassName,
+  resolveNodeVisibilityValue
+} from './NodeTreeRowStyle';
 interface NodeTreeRowProps {
   depth: number;
   isActive: boolean;
@@ -30,6 +34,7 @@ interface NodeTreeRowProps {
   dropIntent?: 'before' | 'after' | 'child' | null;
   label: string;
   nodeId: string;
+  rowSpacing: number;
   onDragEnd?: (event: ReactDragEvent<HTMLDivElement>) => void;
   onDragEnter?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragOver?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
@@ -50,8 +55,19 @@ function resolveSelectModifiers(event: ReactMouseEvent<HTMLButtonElement>): Node
   };
 }
 
-function resolveNodeRowStyle(depth: number) {
-  return { '--node-depth': depth } as CSSProperties;
+function resolveNodeRowStyle(depth: number, rowSpacing: number) {
+  return {
+    '--node-depth': depth,
+    paddingBottom: `${rowSpacing}px`,
+    paddingTop: `${rowSpacing}px`
+  } as CSSProperties;
+}
+
+function resolveNodeTreeItemState(isSelected: boolean) {
+  return {
+    'aria-pressed': isSelected,
+    'aria-selected': isSelected
+  };
 }
 
 function renderNodeTreeRowButton(props: {
@@ -67,6 +83,7 @@ function renderNodeTreeRowButton(props: {
   isSelected: boolean;
   label: string;
   nodeId: string;
+  rowSpacing: number;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
   onRename?: (nodeId: string, title: string) => void;
@@ -78,7 +95,7 @@ function renderNodeTreeRowButton(props: {
 }
 
 export function NodeTreeRow(props: NodeTreeRowProps) {
-  const style = resolveNodeRowStyle(props.depth);
+  const style = resolveNodeRowStyle(props.depth, props.rowSpacing);
   return (
     <NodeTreeRowFrame
       dropIntent={props.dropIntent ?? null}
@@ -104,6 +121,7 @@ export function NodeTreeRow(props: NodeTreeRowProps) {
         isSelected: props.isSelected,
         label: props.label,
         nodeId: props.nodeId,
+        rowSpacing: props.rowSpacing,
         onContextMenu: props.onContextMenu,
         onKeyDown: props.onKeyDown,
         onRename: props.onRename,
@@ -127,12 +145,32 @@ interface NodeTreeRowButtonProps {
   isSelected: boolean;
   label: string;
   nodeId: string;
+  rowSpacing: number;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
   onRename?: (nodeId: string, title: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
   style: CSSProperties;
+}
+
+function renderNodeTreeRowContent(props: {
+  isMuted: boolean;
+  label: string;
+  mutedOpacity: number;
+  nodeIconKind: NodeTreeRowIconKind;
+  nodeIconState: NodeTreeRowIconState;
+  rename: ReturnType<typeof useRenameState>;
+}) {
+  return (
+    <span
+      className={resolveNodeRowContentClassName()}
+      style={props.isMuted ? { opacity: props.mutedOpacity } : undefined}
+    >
+      <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} />
+      {renderNodeLabel(props.label, props.rename)}
+    </span>
+  );
 }
 
 function NodeTreeRowButton({
@@ -153,21 +191,24 @@ function NodeTreeRowButton({
   onRename,
   onSelect,
   onToggleCollapse,
+  rowSpacing,
   style
 }: NodeTreeRowButtonProps) {
   const rename = useRenameState(label, nodeId, onRename);
-  const buttonClassName = resolveNodeRowButtonClassName({ isDerived, isMuted, isSelected });
+  const buttonClassName = resolveNodeRowButtonClassName({ isDerived, isSelected });
+  const treeItemState = resolveNodeTreeItemState(isSelected);
   return (
     <AppButton
       active={false}
       aria-current={isActive ? 'page' : undefined}
       aria-expanded={hasChildren ? !isCollapsed : undefined}
       aria-level={depth + 1}
-      aria-pressed={isSelected} aria-selected={isSelected}
+      {...treeItemState}
       className={buttonClassName}
       data-node-derived={isDerived ? 'true' : 'false'}
       data-node-emphasis={isDerived ? 'secondary' : 'primary'}
       data-node-id={nodeId}
+      data-node-row-spacing={String(rowSpacing)}
       data-node-visibility={resolveNodeVisibilityValue(isMuted)}
       id={`node-treeitem-${nodeId}`}
       onContextMenu={onContextMenu ? (event) => onContextMenu(nodeId, event) : undefined}
@@ -177,7 +218,7 @@ function NodeTreeRowButton({
       role="treeitem"
       style={style}
       variant="list"
-      >
+    >
       <NodeTreeRowExpandToggle
         hasChildren={hasChildren}
         isCollapsed={isCollapsed}
@@ -185,10 +226,7 @@ function NodeTreeRowButton({
         nodeId={nodeId}
         onToggleCollapse={onToggleCollapse}
       />
-      <span className="node-tree-row-content inline-flex min-w-0 items-center" style={isMuted ? { opacity: mutedOpacity } : undefined}>
-        <NodeTreeRowIcon kind={nodeIconKind} state={nodeIconState} />
-        {renderNodeLabel(label, rename)}
-      </span>
+      {renderNodeTreeRowContent({ isMuted, label, mutedOpacity, nodeIconKind, nodeIconState, rename })}
     </AppButton>
   );
 }

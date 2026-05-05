@@ -24,6 +24,7 @@ interface NodeListRowsProps {
   onRename: (nodeId: string, title: string) => void;
   onToggleCollapse: (nodeId: string) => void;
   reviewSession: ReviewSessionState;
+  rowSpacing: number;
   rows: NodeTreeRow[];
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
@@ -76,6 +77,7 @@ export function NodeListRows(props: NodeListRowsProps) {
         nodeId={row.node.id}
         nodeIconKind={resolveNodeTreeRowIconKind(isReviewCard)}
         nodeIconState={nodeIconState}
+        rowSpacing={props.rowSpacing}
         onContextMenu={props.onContextMenu}
         onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
         onDragEnter={props.drag.onDragEnterNode}
