@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import type { PersistedImportRecord, PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
@@ -121,13 +122,16 @@ async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(
     return node;
   }
 
-  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
+  const connection = openDatabaseConnection();
+  const bodyBlobHash = upsertTextBodyBlob(connection.driver, rewrittenContent, importedAt);
+  connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
     rewrittenContent,
+    bodyBlobHash,
     resolveNodeOpeningText(rewrittenContent, node.title),
     importedAt,
     nodeId
   ]);
-  syncWorkspaceSearchIndexForNodeIds(openDatabaseConnection().driver, [nodeId]);
+  syncWorkspaceSearchIndexForNodeIds(connection.driver, [nodeId]);
 
   return {
     ...node,

@@ -269,14 +269,15 @@ it('imports embedded chapter images and rewrites relative epub image paths to st
   const database = openDatabaseConnection().sqlite;
   const child = database
     .prepare(
-      `SELECT n.id, n.content
+      `SELECT n.id, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
        FROM nodes n
+       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        JOIN node_order o ON o.node_id = n.id
        WHERE n.parent_id = ?
        ORDER BY o.position ASC
        LIMIT 1`
     )
-    .get(imported.nodeId) as { content: string; id: string };
+    .get(imported.nodeId) as { body_blob_data: string; body_blob_hash: string; content: string; id: string };
   const attachments = listNodeAttachments(child.id);
 
   expect(imported.resultStatus).toBe('imported');
@@ -286,6 +287,8 @@ it('imports embedded chapter images and rewrites relative epub image paths to st
   expect(child.content).toContain('![Image](asset://');
   expect(child.content).not.toContain('../images/00006.jpeg');
   expect(child.content).not.toContain('[EPUB image not imported:');
+  expect(child.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
+  expect(child.body_blob_data).toBe(child.content);
   expect(attachments).toHaveLength(1);
   expect(attachments[0]?.attachment.mimeType).toBe('image/jpeg');
   expect(attachments[0]?.attachment.originalName).toBe('00006.jpeg');
