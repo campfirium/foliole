@@ -234,6 +234,35 @@ function Stop-ProcessTree {
   Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
 }
 
+function Stop-MatchingProcesses {
+  param(
+    [string]$NamePattern,
+    [string]$CommandPattern
+  )
+
+  $candidates = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
+  foreach ($candidate in $candidates) {
+    if (-not [string]::IsNullOrWhiteSpace($NamePattern) -and $candidate.Name -notmatch $NamePattern) {
+      continue
+    }
+    $commandLine = $candidate.CommandLine
+    if (-not [string]::IsNullOrWhiteSpace($CommandPattern) -and ($null -eq $commandLine -or $commandLine -notmatch $CommandPattern)) {
+      continue
+    }
+    Stop-ProcessTree -ProcessId ([int]$candidate.ProcessId)
+  }
+}
+
+function Stop-StaleFolioleDevProcesses {
+  param([string]$WorkDir)
+
+  $escapedWorkDir = [regex]::Escape($WorkDir)
+  Stop-MatchingProcesses -NamePattern '^foliole-tauri-core(?:\.exe)?$' -CommandPattern ''
+  Stop-MatchingProcesses -NamePattern '^cargo(?:\.exe)?$' -CommandPattern $escapedWorkDir
+  Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*vite(?:\.js)?')
+  Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*tauri')
+}
+
 function Resolve-NpmCommand {
   $nvmVersionDirs = @()
   if (Test-Path -Path "D:\R\nvm") {
@@ -307,10 +336,15 @@ function Wait-ElectronHealthy {
 
 function Start-ElectronWithHealthCheck {
   param([string]$WorkDir)
+  Reset-ReadyMarker -WorkDir $WorkDir
+  Stop-StaleFolioleDevProcesses -WorkDir $WorkDir
   $started = Start-ElectronShell -WorkDir $WorkDir
   $health = Wait-ElectronHealthy -ShellPid $started.Id -MaxSeconds (Get-HealthCheckSeconds)
   if (-not $health.ok) {
     throw "startup health check failed: $($health.reason)"
+  }
+  if (-not (Wait-AppReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -MaxSeconds (Get-HealthCheckSeconds))) {
+    throw "startup health check failed: app-ready-timeout"
   }
 
   return @{ shellPid = $started.Id; runtimePid = $health.runtimePid }

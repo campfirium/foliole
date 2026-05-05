@@ -29,6 +29,25 @@ import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowS
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const FOLIOLE_APP_NAME = 'foliole';
+
+function configureAppIdentity() {
+  app.setName(FOLIOLE_APP_NAME);
+  const appDataRoot = app.getPath('appData');
+  const userDataPath = path.join(appDataRoot, FOLIOLE_APP_NAME);
+  fs.mkdirSync(userDataPath, { recursive: true });
+  app.setPath('userData', userDataPath);
+  app.setPath('sessionData', userDataPath);
+  if (process.platform === 'win32') {
+    app.setAppUserModelId(FOLIOLE_APP_NAME);
+  }
+  console.info('[electron-main] app identity configured', {
+    appDataRoot,
+    appName: app.getName(),
+    sessionDataPath: app.getPath('sessionData'),
+    userDataPath: app.getPath('userData')
+  });
+}
 
 function resolvePreloadPath() {
   return resolvePreloadScriptPath(__dirname, fs.existsSync);
@@ -188,6 +207,8 @@ function installInvokeHandler() {
     handleInvokeRequest(request, { sender: event.sender })
   );
 }
+
+configureAppIdentity();
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {

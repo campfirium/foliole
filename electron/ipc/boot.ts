@@ -35,6 +35,13 @@ export async function bootReport(stage: string, payload: unknown = null) {
     payload
   };
 
+  console.info('[boot-report]', {
+    eventLogPath,
+    pid: event.pid,
+    readyMarkerPath,
+    repoRoot,
+    stage
+  });
   await appendJsonLine(eventLogPath, event);
   if (stage === 'app_ready') {
     await writeJson(readyMarkerPath, event);
