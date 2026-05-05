@@ -5,9 +5,16 @@ function formatNumber(value: number | null | undefined) {
   return typeof value === 'number' ? `${value}` : 'None';
 }
 
+function formatBytes(value: number | null | undefined) {
+  if (typeof value !== 'number') return 'None';
+  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  if (value >= 1024) return `${Math.round(value / 1024)} KB`;
+  return `${value} B`;
+}
+
 function formatEvent(event: SyncDiagnosticEvent | null) {
   if (!event) return 'None';
-  if (event.status === 'completed') return 'Completed';
+  if (event.status === 'completed') return 'Finished pass';
   if (event.status === 'started') return 'Started';
   if (event.status === 'failed') return 'Needs retry';
   return 'Skipped';
@@ -68,6 +75,9 @@ export function CompanionSyncDiagnosticCheckpoint(props: { result: CombinedSyncD
         />
         <MetricRow label="Device changes to send" value={formatNumber(props.result.android?.sync_state.local_dirty_count)} />
         <MetricRow label="Topic bodies still caching" value={formatNumber(props.result.android?.content.missing_content_blob_count)} />
+        <MetricRow label="Body bytes still caching" value={formatBytes(props.result.android?.content.missing_content_blob_bytes)} />
+        <MetricRow label="Attachment files still caching" value={formatNumber(props.result.android?.content.missing_attachment_resource_count)} />
+        <MetricRow label="Attachment bytes still caching" value={formatBytes(props.result.android?.content.missing_attachment_resource_bytes)} />
         <MetricRow label="Current topic" value={formatActiveTopicBodyStatus(props.result)} wrap />
         <MetricRow label="Latest sync" value={formatEvent(latestAndroidEvent)} wrap />
       </div>

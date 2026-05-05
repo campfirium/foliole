@@ -40,7 +40,7 @@ const diagnosticResult = {
     }, {
       endpoint_url: 'http://10.0.2.2:38641',
       message: 'Failed to apply companion desktop sync pack.',
-      occurred_at: '2026-04-29T01:26:00.000Z',
+      occurred_at: '2026-04-29T01:18:00.000Z',
       status: 'failed'
     }],
     host: 'android',
@@ -133,6 +133,8 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getByText('Topic bodies still caching')).toBeInTheDocument();
     expect(screen.getByText('Current topic')).toBeInTheDocument();
     expect(screen.getByText('Caching: Current topic')).toBeInTheDocument();
+    expect(screen.getByText('Finished pass')).toBeInTheDocument();
+    expect(screen.queryByText('Completed')).not.toBeInTheDocument();
     expect(screen.getByText('3 changes')).toBeInTheDocument();
     expect(screen.queryByText('Lagging object types')).not.toBeInTheDocument();
     expect(screen.getByText('2 on device / 2 on desktop')).toBeInTheDocument();
@@ -143,8 +145,10 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getAllByText('node_review')).toHaveLength(3);
     expect(screen.getByText('1 waiting')).toBeInTheDocument();
     expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
-    expect(screen.getByText('5.0 MB')).toBeInTheDocument();
-    expect(screen.getByText('3.0 MB')).toBeInTheDocument();
+    expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Attachment bytes still caching').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('5.0 MB').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('3.0 MB').length).toBeGreaterThan(0);
     expect(screen.getByText('Desktop confirmations waiting')).toBeInTheDocument();
     expect(screen.getByText('accepted')).toBeInTheDocument();
     expect(screen.getByText('seq 7')).toBeInTheDocument();
