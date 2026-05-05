@@ -21,4 +21,4 @@ export type {
   RuntimeKeepImportItemDetails,
   RuntimeNodeImportSource,
   RuntimeNodeSourceDetails
-} from './nodeSourceBridgePayloads';
+} from './nodeSourceRuntimePayloads';

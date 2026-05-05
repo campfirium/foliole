@@ -5,11 +5,11 @@ import {
   toRuntimeNodeSourceUpdatePreview,
   type RuntimeNodeSourceDetails,
   type RuntimeNodeSourceUpdatePreview
-} from './nodeSourceBridgePayloads';
+} from './nodeSourceRuntimePayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
-export type { RuntimeNodeSourceDetails, RuntimeNodeSourceUpdatePreview } from './nodeSourceBridgePayloads';
+export type { RuntimeNodeSourceDetails, RuntimeNodeSourceUpdatePreview } from './nodeSourceRuntimePayloads';
 
 export async function loadRuntimeNodeSourceDetails(nodeId: string): Promise<RuntimeNodeSourceDetails | null> {
   const runtimeInvoke = getRuntimeInvoke();

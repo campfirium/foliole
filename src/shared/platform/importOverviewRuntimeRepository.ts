@@ -1,10 +1,10 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { toRuntimeImportOverview, type RuntimeImportOverview } from './importBridgePayloads';
+import { toRuntimeImportOverview, type RuntimeImportOverview } from './importRuntimePayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
-export type { RuntimeImportOverview } from './importBridgePayloads';
+export type { RuntimeImportOverview } from './importRuntimePayloads';
 
 export async function loadRuntimeImportOverview(): Promise<RuntimeImportOverview | null> {
   const runtimeInvoke = getRuntimeInvoke();

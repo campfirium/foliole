@@ -7,7 +7,7 @@ import {
   type RuntimeDirectoryImportResult,
   type RuntimeImportedTextFile,
   type RuntimeTextImportResult
-} from './importBridgePayloads';
+} from './importRuntimePayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
@@ -18,7 +18,7 @@ export type {
   RuntimeDirectoryImportResult,
   RuntimeImportedTextFile,
   RuntimeTextImportResult
-} from './importBridgePayloads';
+} from './importRuntimePayloads';
 
 function toImportArgs(highlightPolicy?: ImportHighlightPolicy, titleStrategy?: ImportNodeTitleStrategy) {
   return {
