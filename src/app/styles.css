@@ -199,6 +199,11 @@ body {
   width: min(100%, var(--document-max-width));
 }
 
+.document-editor-context-zone {
+  min-height: 0;
+  width: 100%;
+}
+
 .document-width-handle {
   flex: 1;
   min-width: 0;
@@ -272,6 +277,47 @@ body {
 
 .markdown-editor-host .cm-scroller::-webkit-scrollbar {
   display: none;
+}
+
+.editor-context-menu-scrim {
+  inset: 0;
+  position: fixed;
+  z-index: 50;
+}
+
+.editor-context-menu {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-12);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  min-width: 188px;
+  overflow: hidden;
+  position: fixed;
+  z-index: 60;
+}
+
+.editor-context-menu-item {
+  background: transparent;
+  border: 0;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-13);
+  font-weight: 600;
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  text-align: left;
+}
+
+.editor-context-menu-item:hover:not(:disabled) {
+  background: var(--color-overlay-hover);
+}
+
+.editor-context-menu-item:disabled {
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
 }
 
 body.workspace-resizing {

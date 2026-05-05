@@ -11,7 +11,11 @@ import {
   useWorkspaceStore
 } from '../store/workspaceStore';
 
-const mockEditorState: { content: string } = { content: '' };
+const mockEditorState: { content: string; selectionFrom: number; selectionTo: number } = {
+  content: '',
+  selectionFrom: 0,
+  selectionTo: 0
+};
 
 const mockEditorAdapter: EditorAdapter = {
   destroy: () => undefined,
@@ -20,11 +24,18 @@ const mockEditorAdapter: EditorAdapter = {
   setContent: (content: string) => {
     mockEditorState.content = content;
   },
-  getSelection: () => ({ from: 0, to: 0 }),
+  getSelection: () => ({ from: mockEditorState.selectionFrom, to: mockEditorState.selectionTo }),
   setSelection: () => undefined,
   getScrollTop: () => 0,
   setScrollTop: () => undefined,
-  replaceSelection: () => undefined,
+  replaceSelection: (content: string) => {
+    const from = Math.min(mockEditorState.selectionFrom, mockEditorState.selectionTo);
+    const to = Math.max(mockEditorState.selectionFrom, mockEditorState.selectionTo);
+    mockEditorState.content = `${mockEditorState.content.slice(0, from)}${content}${mockEditorState.content.slice(to)}`;
+    const nextCursor = from + content.length;
+    mockEditorState.selectionFrom = nextCursor;
+    mockEditorState.selectionTo = nextCursor;
+  },
   onContentChange: () => () => undefined
 };
 
@@ -60,6 +71,8 @@ describe('App', () => {
     localStorage.clear();
     useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
     mockEditorState.content = '# Welcome to Foliole\n\nStart writing markdown here.';
+    mockEditorState.selectionFrom = 0;
+    mockEditorState.selectionTo = 0;
   });
 
   it('renders note list and single document panel', () => {
@@ -213,6 +226,80 @@ describe('App', () => {
     });
 
     expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Alpha Beta Gamma');
+  });
+
+  it('creates highlight node from editor context menu without leaving current node', () => {
+    render(<App />);
+    const editor = screen.getByLabelText('Mock editor');
+    mockEditorState.selectionFrom = 2;
+    mockEditorState.selectionTo = 9;
+
+    fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Highlight' }));
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.activeNodeId).toBe('node-1');
+    const createdNodeId = workspace.nodeOrder.find((nodeId) => nodeId !== 'node-1');
+    expect(createdNodeId).toBeTruthy();
+    if (!createdNodeId) {
+      throw new Error('expected a child node');
+    }
+    expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
+    expect(workspace.nodesById[createdNodeId]?.content).toBe('Welcome');
+    expect(workspace.nodesById['node-1']?.content).toContain('==Welcome==');
+  });
+
+  it('creates cloze node from editor context menu without leaving current node', () => {
+    render(<App />);
+    const editor = screen.getByLabelText('Mock editor');
+    mockEditorState.selectionFrom = 2;
+    mockEditorState.selectionTo = 9;
+
+    fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Cloze' }));
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.activeNodeId).toBe('node-1');
+    const createdNodeId = workspace.nodeOrder.find((nodeId) => nodeId !== 'node-1');
+    expect(createdNodeId).toBeTruthy();
+    if (!createdNodeId) {
+      throw new Error('expected a child node');
+    }
+    expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
+    expect(workspace.nodesById[createdNodeId]?.content).toBe('# [[...]] to Foliole');
+    expect(workspace.nodesById[createdNodeId]?.reveal).toBe('Welcome');
+    expect(workspace.nodesById['node-1']?.content).toContain('{{Welcome}}');
+  });
+
+  it('deletes a node from node-list context menu', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const childNode: Node = {
+      id: 'node-2',
+      parentNodeId: 'node-1',
+      title: 'Child',
+      content: '# Child',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-2',
+      nodeOrder: ['node-1', 'node-2'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': childNode
+      }
+    }));
+
+    render(<App />);
+    const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+    fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.nodesById['node-2']).toBeUndefined();
+    expect(workspace.activeNodeId).toBe('node-1');
   });
 
   it('does not render save badge in document header', () => {

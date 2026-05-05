@@ -85,6 +85,56 @@ function createTestStore(now: Date) {
         };
       });
     },
+    deleteNode: (nodeId) => {
+      set((state) => {
+        if (!state.nodesById[nodeId]) {
+          return state;
+        }
+
+        const nextNodeOrder = state.nodeOrder.filter((id) => id !== nodeId);
+        const nextNodesById = Object.fromEntries(Object.entries(state.nodesById).filter(([id]) => id !== nodeId));
+        return {
+          activeNodeId: nextNodeOrder[0] ?? null,
+          nodeOrder: nextNodeOrder,
+          nodesById: nextNodesById
+        };
+      });
+    },
+    createHighlightNodeFromSelection: (parentNodeId, content) => {
+      const normalizedContent = content.trim();
+      if (!normalizedContent) {
+        return null;
+      }
+
+      const childNodeId = 'node-highlight-id';
+      const timestamp = new Date().toISOString();
+
+      set((state) => {
+        const parentNode = state.nodesById[parentNodeId];
+        if (!parentNode) {
+          return state;
+        }
+
+        return {
+          nodeOrder: [...state.nodeOrder, childNodeId],
+          nodesById: {
+            ...state.nodesById,
+            [childNodeId]: {
+              id: childNodeId,
+              parentNodeId,
+              title: 'Highlight 2',
+              content: normalizedContent,
+              reveal: null,
+              review: null,
+              createdAt: timestamp,
+              updatedAt: timestamp
+            }
+          }
+        };
+      });
+
+      return childNodeId;
+    },
     createQANodeFromSelection: (parentNodeId, promptContent, answerContent) => {
       const normalizedPrompt = promptContent.trim();
       const normalizedAnswer = answerContent.trim();
@@ -195,6 +245,30 @@ describe('workspaceStore', () => {
     expect(store.getState().nodesById['node-test-id']?.content).toBe('What is [[...]]?');
     expect(store.getState().nodesById['node-test-id']?.reveal).toBe('quoted text');
     expect(store.getState().nodesById['node-test-id']?.review).not.toBeNull();
+  });
+
+  it('creates highlight node from selected content', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+
+    const childNodeId = store.getState().createHighlightNodeFromSelection('node-1', 'selected text');
+
+    expect(childNodeId).toBe('node-highlight-id');
+    expect(store.getState().nodeOrder).toContain('node-highlight-id');
+    expect(store.getState().nodesById['node-highlight-id']?.parentNodeId).toBe('node-1');
+    expect(store.getState().nodesById['node-highlight-id']?.content).toBe('selected text');
+    expect(store.getState().nodesById['node-highlight-id']?.reveal).toBeNull();
+    expect(store.getState().nodesById['node-highlight-id']?.review).toBeNull();
+  });
+
+  it('deletes node and switches active node', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    store.getState().createHighlightNodeFromSelection('node-1', 'selected text');
+    store.getState().setActiveNode('node-highlight-id');
+
+    store.getState().deleteNode('node-highlight-id');
+
+    expect(store.getState().nodesById['node-highlight-id']).toBeUndefined();
+    expect(store.getState().activeNodeId).toBe('node-1');
   });
 
   it('updates layout widths without artificial range clamp and resets to defaults', () => {

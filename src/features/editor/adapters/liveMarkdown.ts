@@ -5,6 +5,8 @@ const CODE_FENCE_PATTERN = /^\s*`{3,}/;
 const PREFIX_PATTERN = /^\s*(#{1,6}\s*|[-*+]\s+|\d+\.\s+|>\s?)/;
 const INLINE_TOKEN_PATTERN = /(\*\*|__|~~|`+|!\[|\[|\]\(|\]|\(|\))/g;
 const INLINE_STRONG_PATTERN = /(\*\*|__)(.+?)\1/g;
+const INLINE_HIGHLIGHT_PATTERN = /==(.+?)==/g;
+const INLINE_CLOZE_PATTERN = /\{\{(.+?)\}\}/g;
 
 function createLineClass(text: string, inCodeBlock: boolean) {
   if (CODE_FENCE_PATTERN.test(text)) {
@@ -116,6 +118,54 @@ function addStrongTextDecorations(ranges: Range<Decoration>[], from: number, tex
   INLINE_STRONG_PATTERN.lastIndex = 0;
 }
 
+function addSemanticMarkDecorations(
+  ranges: Range<Decoration>[],
+  from: number,
+  text: string,
+  inCodeBlock: boolean,
+  isCursorLine: boolean
+) {
+  if (inCodeBlock) {
+    return;
+  }
+
+  let highlightMatch = INLINE_HIGHLIGHT_PATTERN.exec(text);
+  while (highlightMatch) {
+    const start = from + highlightMatch.index;
+    const matchText = highlightMatch[0];
+    const contentFrom = start + 2;
+    const contentTo = start + matchText.length - 2;
+    addMark(ranges, contentFrom, contentTo, 'cm-md-highlight');
+    if (isCursorLine) {
+      addMark(ranges, start, start + 2, 'cm-md-syntax-visible');
+      addMark(ranges, contentTo, contentTo + 2, 'cm-md-syntax-visible');
+    } else {
+      addReplace(ranges, start, start + 2);
+      addReplace(ranges, contentTo, contentTo + 2);
+    }
+    highlightMatch = INLINE_HIGHLIGHT_PATTERN.exec(text);
+  }
+  INLINE_HIGHLIGHT_PATTERN.lastIndex = 0;
+
+  let clozeMatch = INLINE_CLOZE_PATTERN.exec(text);
+  while (clozeMatch) {
+    const start = from + clozeMatch.index;
+    const matchText = clozeMatch[0];
+    const contentFrom = start + 2;
+    const contentTo = start + matchText.length - 2;
+    addMark(ranges, contentFrom, contentTo, 'cm-md-cloze');
+    if (isCursorLine) {
+      addMark(ranges, start, start + 2, 'cm-md-syntax-visible');
+      addMark(ranges, contentTo, contentTo + 2, 'cm-md-syntax-visible');
+    } else {
+      addReplace(ranges, start, start + 2);
+      addReplace(ranges, contentTo, contentTo + 2);
+    }
+    clozeMatch = INLINE_CLOZE_PATTERN.exec(text);
+  }
+  INLINE_CLOZE_PATTERN.lastIndex = 0;
+}
+
 function getCursorLineNumber(view: EditorView) {
   if (!view.hasFocus) {
     return null;
@@ -141,6 +191,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     addPrefixDecoration(ranges, line.from, line.text, isCursorLine);
     addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, isCursorLine);
     addStrongTextDecorations(ranges, line.from, line.text, inCodeBlock);
+    addSemanticMarkDecorations(ranges, line.from, line.text, inCodeBlock, isCursorLine);
 
     if (CODE_FENCE_PATTERN.test(line.text)) {
       inCodeBlock = !inCodeBlock;
@@ -237,6 +288,14 @@ const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-md-strong': {
     fontWeight: '700'
+  },
+  '.cm-md-highlight': {
+    backgroundColor: 'rgba(56, 189, 248, 0.28)',
+    borderRadius: '0.25rem'
+  },
+  '.cm-md-cloze': {
+    backgroundColor: 'rgba(250, 204, 21, 0.32)',
+    borderRadius: '0.25rem'
   },
   '.cm-activeLine': {
     backgroundColor: 'transparent'

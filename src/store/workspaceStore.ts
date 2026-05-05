@@ -2,7 +2,10 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
-import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
+import type { Node } from '../features/nodes/model/nodeTypes';
+
+import { collectNodeSubtreeIds, findFallbackActiveNodeId, normalizeWidth } from './workspaceHelpers';
+import { createDefaultReviewProfile, createInitialWorkspaceSnapshot } from './workspaceSeed';
 
 export interface WorkspaceState {
   activeNodeId: string | null;
@@ -16,6 +19,8 @@ export interface WorkspaceState {
   setListWidth: (width: number) => void;
   setActiveNode: (nodeId: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
+  deleteNode: (nodeId: string) => void;
+  createHighlightNodeFromSelection: (parentNodeId: string, content: string) => string | null;
   createQANodeFromSelection: (parentNodeId: string, promptContent: string, answerContent: string) => string | null;
 }
 
@@ -49,51 +54,11 @@ const defaultLayoutState: WorkspaceLayoutState = {
   listWidth: LIST_WIDTH_DEFAULT
 };
 
-function normalizeWidth(value: number) {
-  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
-}
-
-export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile {
-  return {
-    due: timestamp,
-    lastReviewAt: null,
-    state: 0,
-    stability: 0,
-    difficulty: 0,
-    elapsedDays: 0,
-    scheduledDays: 0,
-    reps: 0,
-    lapses: 0
-  };
-}
-
-export function createSeedNode(timestamp: string): Node {
-  const seedContent = '# Welcome to Foliole\n\nStart writing markdown here.';
-  return {
-    id: 'node-1',
-    parentNodeId: null,
-    title: deriveNodeTitleFromContent(seedContent),
-    content: seedContent,
-    reveal: null,
-    review: null,
-    createdAt: timestamp,
-    updatedAt: timestamp
-  };
-}
-
 export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
   'activeNodeId' | 'layout' | 'nodeOrder' | 'nodesById' | 'nodeViewById'
 > {
-  const timestamp = now.toISOString();
-  const seedNode = createSeedNode(timestamp);
-  return {
-    activeNodeId: seedNode.id,
-    layout: { ...defaultLayoutState },
-    nodeViewById: {},
-    nodeOrder: [seedNode.id],
-    nodesById: { [seedNode.id]: seedNode }
-  };
+  return createInitialWorkspaceSnapshot(now, defaultLayoutState);
 }
 
 const initialState = createInitialWorkspaceState();
@@ -177,6 +142,66 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
           };
         });
+      },
+      deleteNode: (nodeId) => {
+        set((state) => {
+          if (!state.nodesById[nodeId]) {
+            return state;
+          }
+
+          const deletedParentId = state.nodesById[nodeId]?.parentNodeId ?? null;
+          const idsToDelete = collectNodeSubtreeIds(nodeId, state.nodesById);
+          const idsToDeleteSet = new Set(idsToDelete);
+          const remainingNodeOrder = state.nodeOrder.filter((id) => !idsToDeleteSet.has(id));
+          const remainingNodesById = Object.fromEntries(
+            Object.entries(state.nodesById).filter(([id]) => !idsToDeleteSet.has(id))
+          );
+          const nextActiveNodeId =
+            state.activeNodeId && !idsToDeleteSet.has(state.activeNodeId)
+              ? state.activeNodeId
+              : findFallbackActiveNodeId(deletedParentId, remainingNodeOrder, remainingNodesById);
+
+          return {
+            activeNodeId: nextActiveNodeId,
+            nodeOrder: remainingNodeOrder,
+            nodesById: remainingNodesById
+          };
+        });
+      },
+      createHighlightNodeFromSelection: (parentNodeId, content) => {
+        const normalizedContent = content.trim();
+        if (!normalizedContent) {
+          return null;
+        }
+
+        const childNodeId = `node-${crypto.randomUUID()}`;
+        const timestamp = new Date().toISOString();
+
+        set((state) => {
+          const parentNode = state.nodesById[parentNodeId];
+          if (!parentNode) {
+            return state;
+          }
+
+          return {
+            nodeOrder: [...state.nodeOrder, childNodeId],
+            nodesById: {
+              ...state.nodesById,
+              [childNodeId]: {
+                id: childNodeId,
+                parentNodeId,
+                title: `Highlight ${state.nodeOrder.length + 1}`,
+                content: normalizedContent,
+                reveal: null,
+                review: null,
+                createdAt: timestamp,
+                updatedAt: timestamp
+              }
+            }
+          };
+        });
+
+        return childNodeId;
       },
       createQANodeFromSelection: (parentNodeId, promptContent, answerContent) => {
         const normalizedPrompt = promptContent.trim();

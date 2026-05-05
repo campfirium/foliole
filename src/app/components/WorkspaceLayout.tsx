@@ -14,8 +14,17 @@ import { Panel } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
+import { EditorContextMenu } from './EditorContextMenu';
+
+export interface WorkspaceEditorContextMenu {
+  canRunCommands: boolean;
+  left: number;
+  top: number;
+}
+
 export interface WorkspaceLayoutProps {
   activeNodeId: string | null;
+  contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
   editorContent: string;
   editorNodeId: string | null;
@@ -27,10 +36,14 @@ export interface WorkspaceLayoutProps {
   nodesById: Record<string, Node>;
   onEditorChange: (content: string) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
+  onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onCloseContextMenu: () => void;
+  onCreateHighlight: () => void;
+  onCreateCloze: () => void;
   onStartDocumentResize: (
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
@@ -39,6 +52,7 @@ export interface WorkspaceLayoutProps {
 
 export function WorkspaceLayout({
   activeNodeId,
+  contextMenu,
   documentMaxWidth,
   editorContent,
   editorNodeId,
@@ -50,10 +64,14 @@ export function WorkspaceLayout({
   nodesById,
   onEditorChange,
   onEditorReady,
+  onEditorContextMenu,
   onResetLayout,
   onSelectNode,
   onSplitterKeyDown,
   onSplitterPointerDown,
+  onCloseContextMenu,
+  onCreateHighlight,
+  onCreateCloze,
   onStartDocumentResize
 }: WorkspaceLayoutProps) {
   const workspaceGridStyle = {
@@ -79,11 +97,16 @@ export function WorkspaceLayout({
           activeNodeId={activeNodeId}
           documentMaxWidth={documentMaxWidth}
           editorContent={editorContent}
+          contextMenu={contextMenu}
           editorNodeId={editorNodeId}
           editorNodeViewState={editorNodeViewState}
           isDocumentResizing={isDocumentResizing}
           onEditorChange={onEditorChange}
+          onEditorContextMenu={onEditorContextMenu}
           onEditorReady={onEditorReady}
+          onCloseContextMenu={onCloseContextMenu}
+          onCreateHighlight={onCreateHighlight}
+          onCreateCloze={onCreateCloze}
           onResetLayout={onResetLayout}
           onSelectNode={onSelectNode}
           onStartDocumentResize={onStartDocumentResize}
@@ -119,13 +142,18 @@ function ListSplitter({ listWidth, onResetLayout, onSplitterKeyDown, onSplitterP
 
 interface DocumentPanelSectionProps {
   activeNodeId: string | null;
+  contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
   editorContent: string;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
   isDocumentResizing: boolean;
   onEditorChange: (content: string) => void;
+  onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
+  onCloseContextMenu: () => void;
+  onCreateHighlight: () => void;
+  onCreateCloze: () => void;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
   onStartDocumentResize: (
@@ -137,13 +165,18 @@ interface DocumentPanelSectionProps {
 
 function DocumentPanelSection({
   activeNodeId,
+  contextMenu,
   documentMaxWidth,
   editorContent,
   editorNodeId,
   editorNodeViewState,
   isDocumentResizing,
   onEditorChange,
+  onEditorContextMenu,
   onEditorReady,
+  onCloseContextMenu,
+  onCreateHighlight,
+  onCreateCloze,
   onResetLayout,
   onSelectNode,
   onStartDocumentResize,
@@ -170,13 +203,15 @@ function DocumentPanelSection({
             side="left"
           />
           <div className="document-width-frame">
-            <MarkdownEditor
-              nodeId={editorNodeId}
-              nodeViewState={editorNodeViewState}
-              onChange={onEditorChange}
-              onReady={onEditorReady}
-              value={editorContent}
-            />
+            <div className="document-editor-context-zone" onContextMenu={onEditorContextMenu}>
+              <MarkdownEditor
+                nodeId={editorNodeId}
+                nodeViewState={editorNodeViewState}
+                onChange={onEditorChange}
+                onReady={onEditorReady}
+                value={editorContent}
+              />
+            </div>
           </div>
           <DocumentWidthHandle
             ariaLabel="Resize document width from right"
@@ -186,6 +221,16 @@ function DocumentPanelSection({
           />
         </div>
       </Panel>
+      {contextMenu ? (
+        <EditorContextMenu
+          canRunCommands={contextMenu.canRunCommands}
+          left={contextMenu.left}
+          onClose={onCloseContextMenu}
+          onCreateHighlight={onCreateHighlight}
+          onCreateCloze={onCreateCloze}
+          top={contextMenu.top}
+        />
+      ) : null}
     </section>
   );
 }

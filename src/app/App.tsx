@@ -1,14 +1,23 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { WorkspaceLayout } from './components/WorkspaceLayout';
+import {
+  applySelectionMarkup,
+  getSelectionCommandPayload,
+  normalizeContextMenuPosition,
+  type SelectionCommandPayload
+} from './contextCommands';
 import { useDocumentWidthResizer } from './hooks/useDocumentWidthResizer';
 import { useListResizer } from './hooks/useListResizer';
 
 export function App() {
   const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
+  const createHighlightNodeFromSelection = useWorkspaceStore((state) => state.createHighlightNodeFromSelection);
+  const createQANodeFromSelection = useWorkspaceStore((state) => state.createQANodeFromSelection);
   const documentMaxWidth = useWorkspaceStore((state) => state.layout.documentMaxWidth);
   const listWidth = useWorkspaceStore((state) => state.layout.listWidth);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
@@ -21,6 +30,7 @@ export function App() {
   const setListWidth = useWorkspaceStore((state) => state.setListWidth);
   const updateNodeContent = useWorkspaceStore((state) => state.updateNodeContent);
   const editorRef = useRef<EditorAdapter | null>(null);
+  const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
 
   const listResize = useListResizer(listWidth, setListWidth);
   const documentResize = useDocumentWidthResizer(documentMaxWidth, setDocumentMaxWidth);
@@ -51,8 +61,60 @@ export function App() {
   };
 
   const handleSelectNode = (nodeId: string) => {
+    setContextMenu(null);
     saveActiveNodeView();
     setActiveNode(nodeId);
+  };
+
+  const handleEditorContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!activeNodeId || !activeNode) {
+      return;
+    }
+
+    const commandPayload = getSelectionCommandPayload(activeNodeId, editorRef.current);
+    const position = normalizeContextMenuPosition(event.clientX, event.clientY);
+    setContextMenu({
+      canRunCommands: !!commandPayload,
+      left: position.left,
+      payload: commandPayload,
+      top: position.top
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const syncActiveNodeContentFromEditor = () => {
+    if (!activeNodeId || !editorRef.current) {
+      return;
+    }
+    updateNodeContent(activeNodeId, editorRef.current.getContent());
+  };
+
+  const handleCreateHighlight = () => {
+    const payload = contextMenu?.payload;
+    if (!payload) {
+      return;
+    }
+    createHighlightNodeFromSelection(payload.parentNodeId, payload.selectionText);
+    if (applySelectionMarkup(editorRef.current, 'highlight')) {
+      syncActiveNodeContentFromEditor();
+    }
+    closeContextMenu();
+  };
+
+  const handleCreateCloze = () => {
+    const payload = contextMenu?.payload;
+    if (!payload) {
+      return;
+    }
+    const childNodeId = createQANodeFromSelection(payload.parentNodeId, payload.promptContent, payload.selectionText);
+    if (childNodeId && applySelectionMarkup(editorRef.current, 'cloze')) {
+      syncActiveNodeContentFromEditor();
+    }
+    closeContextMenu();
   };
 
   useEffect(() => {
@@ -67,9 +129,33 @@ export function App() {
     };
   }, [saveActiveNodeView]);
 
+  useEffect(() => {
+    const disableNativeContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener('contextmenu', disableNativeContextMenu);
+    return () => {
+      window.removeEventListener('contextmenu', disableNativeContextMenu);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeContextMenu();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
   return (
     <WorkspaceLayout
       activeNodeId={activeNodeId}
+      contextMenu={contextMenu ? { canRunCommands: contextMenu.canRunCommands, left: contextMenu.left, top: contextMenu.top } : null}
       documentMaxWidth={documentMaxWidth}
       editorContent={editorContent}
       editorNodeId={activeNodeId}
@@ -79,7 +165,11 @@ export function App() {
       listWidth={listWidth}
       nodeOrder={nodeOrder}
       nodesById={nodesById}
+      onCloseContextMenu={closeContextMenu}
+      onCreateHighlight={handleCreateHighlight}
+      onCreateCloze={handleCreateCloze}
       onEditorChange={handleEditorChange}
+      onEditorContextMenu={handleEditorContextMenu}
       onEditorReady={handleEditorReady}
       onResetLayout={resetLayout}
       onStartDocumentResize={documentResize.startResize}
@@ -88,4 +178,11 @@ export function App() {
       onSplitterPointerDown={listResize.handleSplitterPointerDown}
     />
   );
+}
+
+interface EditorContextMenuState {
+  canRunCommands: boolean;
+  left: number;
+  payload: SelectionCommandPayload | null;
+  top: number;
 }
