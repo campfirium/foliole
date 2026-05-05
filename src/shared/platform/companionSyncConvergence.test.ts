@@ -59,6 +59,41 @@ describe('buildSyncConvergenceReport', () => {
     ]));
   });
 
+  it('blocks pending acks that survive a later finished sync pass', () => {
+    const report = buildSyncConvergenceReport(result({
+      android: {
+        ...result().android!,
+        events: [{
+          endpoint_url: 'http://10.0.2.2:38641',
+          message: 'Sync pass finished; local changes are still waiting to settle.',
+          occurred_at: '2026-05-01T00:02:00.000Z',
+          status: 'skipped'
+        }],
+        sync_state: {
+          ...result().android!.sync_state,
+          pending_ack_count: 1,
+          pending_acks: [{
+            acked_at: '2026-05-01T00:01:00.000Z',
+            client_op_id: 'node_review:node-1:9',
+            object_id: 'node-1',
+            object_type: 'node_review',
+            state_seq: 12,
+            status: 'accepted'
+          }]
+        }
+      }
+    }));
+
+    expect(report.status).toBe('blocked');
+    expect(report.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'pending_ack_survived_finished_pass',
+        detail: '1 accepted push ack(s) remained pending after a later sync pass finished.',
+        severity: 'error'
+      })
+    ]));
+  });
+
   it('blocks completed events that still have structure or resource backlog', () => {
     const report = buildSyncConvergenceReport(result({
       android: {

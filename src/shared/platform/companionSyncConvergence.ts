@@ -78,9 +78,30 @@ function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
     checks.push(check('local_dirty_not_converged', 'warning', 'Device changes still need to send', `${dirtyCount} local change(s) are still dirty.`));
   }
   if (pendingAckCount > 0) {
-    checks.push(check('pending_ack_not_confirmed', 'warning', 'Desktop confirmations are still pending', `${pendingAckCount} accepted push ack(s) still need pull confirmation.`));
+    checks.push(buildPendingAckCheck(result));
   }
   return checks;
+}
+
+function buildPendingAckCheck(result: CombinedSyncDiagnosticResult) {
+  const pendingAckCount = result.android?.sync_state.pending_ack_count ?? 0;
+  const pendingAcks = result.android?.sync_state.pending_acks ?? [];
+  const finishedEvents = (result.android?.events ?? []).filter((event) => event.status === 'completed' || event.status === 'skipped');
+  const staleCount = pendingAcks.filter((ack) => finishedEvents.some((event) => event.occurred_at > ack.acked_at)).length;
+  if (staleCount > 0) {
+    return check(
+      'pending_ack_survived_finished_pass',
+      'error',
+      'Desktop confirmation was not pulled back',
+      `${staleCount} accepted push ack(s) remained pending after a later sync pass finished.`
+    );
+  }
+  return check(
+    'pending_ack_not_confirmed',
+    'warning',
+    'Desktop confirmations are still pending',
+    `${pendingAckCount} accepted push ack(s) still need pull confirmation.`
+  );
 }
 
 function buildStructureChecks(result: CombinedSyncDiagnosticResult) {
