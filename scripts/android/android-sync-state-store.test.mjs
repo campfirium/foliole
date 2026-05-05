@@ -79,73 +79,36 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(sql).toContain("state_seq > ?");
   });
 
-  it('marks remote-applied state rows clean', async () => {
+  it('loads sync object indexes and payloads through generated queries', async () => {
     const source = await readFile(SYNC_OBJECT_STORE, 'utf8');
-    const upsertStateBody = source.slice(
-      source.indexOf('private static void upsertState'),
-      source.indexOf('private static List<String> toStringList')
+    const loadBody = source.slice(
+      source.indexOf('static JSObject loadSyncObjects'),
+      source.indexOf('private static void appendPayloads')
     );
 
-    expect(upsertStateBody).toContain('record.optString("object_type")');
-    expect(upsertStateBody).toContain('record.optString("object_id")');
-    expect(upsertStateBody).toContain(',\n            0\n        );');
+    expect(source).toContain('FolioleCompanionNamedQueryStore.loadArray(context, database, "syncIndex")');
+    expect(loadBody).toContain('"syncObjects"');
+    expect(loadBody).toContain('syncObjectQueryReplacements');
+    expect(source).toContain('FolioleCompanionSyncObjectPayloadReader.readPayloadJson');
   });
 
-  it('rejects node records from the Android generic state-object apply path', async () => {
-    const source = await readFile(SYNC_OBJECT_STORE, 'utf8');
-    const applyBody = source.slice(
-      source.indexOf('static JSObject applySyncObjects'),
-      source.indexOf('private static boolean shouldApplyObject')
+  it('keeps removed Android state apply forks out of the sync store', async () => {
+    const removedFiles = [
+      'FolioleCompanionSyncConflictStore.java',
+      'FolioleCompanionSyncObjectApply.java',
+      'FolioleCompanionSyncStateRows.java'
+    ];
+
+    await Promise.all(
+      removedFiles.map((fileName) =>
+        expect(
+          readFile(
+            path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', fileName),
+            'utf8'
+          )
+        ).rejects.toMatchObject({ code: 'ENOENT' })
+      )
     );
-
-    expect(applyBody).toContain('isStateObjectType');
-    expect(source).toContain('type.equals("view_state")');
-    expect(source).not.toContain('type.equals("node")');
-  });
-
-  it('isolates Android remote object apply failures per record', async () => {
-    const source = await readFile(SYNC_OBJECT_STORE, 'utf8');
-    const applyBody = source.slice(
-      source.indexOf('static JSObject applySyncObjects'),
-      source.indexOf('private static boolean isStateObjectType')
-    );
-    const singleApplyBody = source.slice(
-      source.indexOf('private static String applySingleSyncObject'),
-      source.indexOf('private static boolean isStateObjectType')
-    );
-
-    expect(applyBody).toContain('try {');
-    expect(applyBody).toContain('applySingleSyncObject');
-    expect(applyBody).toContain('catch (Exception error)');
-    expect(singleApplyBody).toContain('database.beginTransaction();');
-    expect(singleApplyBody).toContain('database.setTransactionSuccessful();');
-    expect(singleApplyBody).toContain('FolioleCompanionSyncObjectApply.applyPayload');
-    expect(singleApplyBody).toContain('upsertState(database, object, deviceId)');
-  });
-
-  it('validates Android remote sync object envelope before apply', async () => {
-    const source = await readFile(SYNC_OBJECT_STORE, 'utf8');
-    const validationBody = source.slice(
-      source.indexOf('private static void validateSyncObjectRecord'),
-      source.indexOf('private static boolean isStateObjectType')
-    );
-
-    expect(validationBody).toContain('requireString(object, "object_type")');
-    expect(validationBody).toContain('requireString(object, "object_id")');
-    expect(validationBody).toContain('requireString(object, "content_hash")');
-    expect(validationBody).toContain('requireString(object, "updated_at")');
-    expect(validationBody).toContain('requireNullableString(object, "deleted_at")');
-    expect(validationBody).toContain('requireNullableString(object, "payload_json")');
-    expect(validationBody).toContain('Unsupported sync object type');
-  });
-
-  it('rejects unsupported Android payload types at the apply boundary', async () => {
-    const source = await readFile(
-      path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', 'FolioleCompanionSyncObjectApply.java'),
-      'utf8'
-    );
-
-    expect(source).toContain('throw new IllegalArgumentException("Unsupported sync object type: " + type)');
   });
 
   it('marks local learning and setting writes dirty for push', async () => {
@@ -169,7 +132,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(saveReviewBody).toContain('database.beginTransaction();');
     expect(saveReviewBody).toContain('FolioleCompanionLearningSyncPayload.applyReview');
     expect(saveReviewBody).toContain('FolioleCompanionSyncReviewLogStore.saveLocalReviewLog');
-    expect(saveReviewBody).toContain('upsertTypedObjectState(database, "node_review"');
+    expect(saveReviewBody).toContain('upsertTypedObjectState(context, database, "node_review"');
     expect(saveReviewBody).toContain('database.setTransactionSuccessful();');
   });
 
@@ -184,29 +147,19 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(writeStateBody).toContain(', 1)');
   });
 
-  it('keeps divergent Android node versions out of the current node row', async () => {
-    const source = await readFile(NODE_VERSION_STORE, 'utf8');
-    const applyBody = source.slice(
-      source.indexOf('static JSObject applyNodeVersions'),
-      source.indexOf('private static void upsertNode')
-    );
-
-    expect(applyBody).toContain('loadLocalVersionId');
-    expect(applyBody).toContain('isFastForward');
-    expect(applyBody).toContain('recordConflict');
-    expect(applyBody).toContain('continue;');
-  });
-
   it('exports Android node version ancestors for desktop fast-forward checks', async () => {
     const source = await readFile(NODE_VERSION_STORE, 'utf8');
+    const queryDefinitions = await readFile(COMPANION_QUERY_DEFINITIONS, 'utf8');
     const loadBody = source.slice(
       source.indexOf('static JSObject loadNodeVersions'),
-      source.indexOf('static JSObject applyNodeVersions')
+      source.indexOf('private static int normalizeLimit')
     );
 
-    expect(loadBody).toContain('listAncestorVersionIds(database, row.getString(0))');
+    expect(loadBody).toContain('FolioleCompanionNamedQueryStore.loadArray');
+    expect(loadBody).toContain('listAncestorVersionIds(context, database, node.getString("version_id"))');
     expect(source).toContain('private static JSONArray listAncestorVersionIds');
-    expect(source).toContain('"parent_version_id"');
+    expect(queryDefinitions).toContain('"syncNodeVersionParent"');
+    expect(queryDefinitions).toContain('parent_version_id');
   });
 
   it('installs the Android node conflict table in the fresh companion schema', async () => {
