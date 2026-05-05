@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
+import { createInternalDatabaseSnapshot } from './internalSnapshots.js';
 import { initializeDatabase } from './migrate.js';
 import {
   backupSqliteDatabase,
@@ -39,7 +40,13 @@ export async function createApplicationDatabaseBackup(
 export async function restoreApplicationDatabaseBackup(
   options: RestoreApplicationDatabaseBackupOptions
 ): Promise<SqliteRestoreResult> {
-  const targetPath = resolveDatabasePath();
+  const connection = openDatabaseConnection();
+  const targetPath = connection.dbPath;
+  createInternalDatabaseSnapshot({
+    reason: 'pre-restore',
+    sourceDatabase: connection.sqlite,
+    sourcePath: targetPath
+  });
   closeDatabaseConnection();
   const result = await restoreSqliteDatabase({ sourcePath: options.sourcePath, targetPath });
   initializeDatabase();
