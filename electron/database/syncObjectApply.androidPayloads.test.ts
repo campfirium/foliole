@@ -115,6 +115,7 @@ it('accepts Android-exported numeric strings when applying external documents', 
     object_type: 'external_document',
     payload_json: JSON.stringify({
       content: 'body',
+      body_blob_hash: 'blob-document-1',
       extension: '.md',
       file_name: 'doc.md',
       folder_id: 'folder-1',
@@ -127,9 +128,10 @@ it('accepts Android-exported numeric strings when applying external documents', 
   }]);
 
   expect(openDatabaseConnection().driver.queryOne<{
+    body_blob_hash: string;
     is_present: number;
     source_modified_ms: number;
     source_size_bytes: number;
-  }>('SELECT is_present, source_modified_ms, source_size_bytes FROM external_documents WHERE document_id = ?', ['document-1']))
-    .toEqual({ is_present: 0, source_modified_ms: 1777, source_size_bytes: 88 });
+  }>('SELECT body_blob_hash, is_present, source_modified_ms, source_size_bytes FROM external_documents WHERE document_id = ?', ['document-1']))
+    .toEqual({ body_blob_hash: 'blob-document-1', is_present: 0, source_modified_ms: 1777, source_size_bytes: 88 });
 });

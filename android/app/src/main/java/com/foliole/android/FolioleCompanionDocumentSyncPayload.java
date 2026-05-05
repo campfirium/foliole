@@ -31,6 +31,7 @@ final class FolioleCompanionDocumentSyncPayload {
         values.put("content_hash", payload.optString("content_hash", record.optString("content_hash")));
         values.put("title", nullIfEmpty(payload.optString("title", "")));
         values.put("opening_text", nullIfEmpty(payload.optString("opening_text", "")));
+        values.put("body_blob_hash", nullIfEmpty(payload.optString("body_blob_hash", "")));
         values.put("content", payload.optString("content", ""));
         values.put("indexed_at", payload.optString("indexed_at", record.optString("updated_at")));
         values.put("is_present", payload.optInt("is_present", 1));

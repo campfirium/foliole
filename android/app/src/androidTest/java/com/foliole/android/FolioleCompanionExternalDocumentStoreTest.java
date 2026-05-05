@@ -58,6 +58,19 @@ public class FolioleCompanionExternalDocumentStoreTest {
     }
 
     @Test
+    public void storesExternalDocumentBodyBlobHashFromSyncObjects() throws Exception {
+        JSONObject payload = payload("blob-ref.md", "");
+        payload.put("body_blob_hash", "blob-ref-hash");
+        FolioleCompanionSyncObjectStore.applySyncObjects(database, new JSONArray()
+            .put(record("folder-1:blob-ref.md", payload)), "desktop-1");
+
+        assertEquals(
+            "blob-ref-hash",
+            selectString("SELECT body_blob_hash FROM external_documents WHERE document_id = 'folder-1:blob-ref.md'")
+        );
+    }
+
+    @Test
     public void searchesCachedExternalDocumentsAppliedFromSyncObjects() throws Exception {
         FolioleCompanionSyncObjectStore.applySyncObjects(database, new JSONArray()
             .put(record("folder-1:alpha.md", "alpha.md", "cached alpha body"))
@@ -138,13 +151,23 @@ public class FolioleCompanionExternalDocumentStoreTest {
     }
 
     private static JSONObject record(String objectId, String relativePath, String content) throws Exception {
+        return record(objectId, payload(relativePath, content));
+    }
+
+    private static JSONObject record(String objectId, JSONObject payload) throws Exception {
         return new JSONObject()
             .put("object_type", "external_document")
             .put("object_id", objectId)
             .put("content_hash", "hash-" + objectId)
             .put("deleted_at", JSONObject.NULL)
-            .put("payload_json", payload(relativePath, content).toString())
+            .put("payload_json", payload.toString())
             .put("updated_at", "2026-04-26T01:00:00.000Z");
+    }
+
+    private String selectString(String sql) {
+        try (android.database.Cursor cursor = database.rawQuery(sql, null)) {
+            return cursor.moveToFirst() && !cursor.isNull(0) ? cursor.getString(0) : null;
+        }
     }
 
     private static JSONObject payload(String relativePath, String content) throws Exception {
