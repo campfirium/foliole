@@ -93,15 +93,14 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
     const blobs = await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
     if (blobs.length === 0) break;
     const hashes = blobs.map((blob) => blob.hash);
-    const batch = await pullContentBlobBatch(endpoint, hashes);
+    const sizeByHash = new Map(blobs.map((blob) => [blob.hash, Math.max(0, blob.size_bytes ?? 0)]));
+    const batch = await pullContentBlobBatch(endpoint, hashes, (syncedChunkHashes) => {
+      syncedContentBlobHashes.push(...syncedChunkHashes);
+      syncedBytes += syncedChunkHashes.reduce((sum, hash) => sum + (sizeByHash.get(hash) ?? 0), 0);
+      onProgress?.({ completed: syncedContentBlobHashes.length, completedBytes: syncedBytes, contentBreakdown, elapsedMs: Date.now() - startedAt, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'content', total, totalBytes });
+    });
     const syncedBatchHashes = batch.syncedContentBlobHashes;
     await ackContentBlobs(endpoint, syncedBatchHashes);
-    syncedContentBlobHashes.push(...syncedBatchHashes);
-    const syncedHashSet = new Set(syncedBatchHashes);
-    syncedBytes += blobs
-      .filter((blob) => syncedHashSet.has(blob.hash))
-      .reduce((sum, blob) => sum + Math.max(0, blob.size_bytes ?? 0), 0);
-    onProgress?.({ completed: syncedContentBlobHashes.length, completedBytes: syncedBytes, contentBreakdown, elapsedMs: Date.now() - startedAt, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'content', total, totalBytes });
     if (syncedBatchHashes.length === 0 && batch.failedContentBlobCount > 0) {
       if (syncedContentBlobHashes.length > 0) break;
       throw new Error('Topic body batch could not download any requested body.');
@@ -154,7 +153,11 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
   return { syncedAttachmentResourceBytes: syncedBytes, syncedAttachmentIds };
 }
 
-async function pullContentBlobBatch(endpoint: string, hashes: string[]) {
+async function pullContentBlobBatch(
+  endpoint: string,
+  hashes: string[],
+  onSyncedChunk?: (hashes: string[]) => void
+) {
   const syncedContentBlobHashes: string[] = [];
   let failedContentBlobCount = 0;
   for (let index = 0; index < hashes.length; index += CONTENT_BLOB_CONCURRENT_FETCH_LIMIT) {
@@ -167,7 +170,11 @@ async function pullContentBlobBatch(endpoint: string, hashes: string[]) {
         return null;
       }
     }));
-    syncedContentBlobHashes.push(...syncedChunkHashes.filter((hash): hash is string => Boolean(hash)));
+    const syncedHashes = syncedChunkHashes.filter((hash): hash is string => Boolean(hash));
+    syncedContentBlobHashes.push(...syncedHashes);
+    if (syncedHashes.length > 0) {
+      onSyncedChunk?.(syncedHashes);
+    }
   }
   return { failedContentBlobCount, syncedContentBlobHashes };
 }

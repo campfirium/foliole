@@ -33,6 +33,30 @@ async function testPullsContentBlobs() {
   expect(fetchMock).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/content-blob/ack', expect.any(Object));
 }
 
+async function testReportsContentProgressAfterEachConcurrentChunk() {
+  const { CONTENT_BLOB_CONCURRENT_FETCH_LIMIT } = await import('./companionDesktopSyncResources');
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const hashes = Array.from({ length: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT + 1 }, (_, index) => `${index}`.padStart(64, '0'));
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce(hashes.map((hash) => ({ hash, size_bytes: 2 })))
+    .mockResolvedValueOnce([]);
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: hashes, status: 'ok' }), { status: 200 })));
+  const onProgress = vi.fn();
+
+  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
+
+  expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+    completed: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT,
+    completedBytes: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT * 2,
+    phase: 'content'
+  }));
+  expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+    completed: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT + 1,
+    completedBytes: (CONTENT_BLOB_CONCURRENT_FETCH_LIMIT + 1) * 2,
+    phase: 'content'
+  }));
+}
+
 async function testPullsAttachmentResources() {
   syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
@@ -211,6 +235,8 @@ describe('companion desktop sync resources', () => {
   beforeEach(resetCompanionDesktopSyncMocks);
 
   it('pulls missing content blobs from desktop', testPullsContentBlobs);
+
+  it('reports missing content blob progress after each concurrent chunk', testReportsContentProgressAfterEachConcurrentChunk);
 
   it('pulls missing attachment resources after structure sync', testPullsAttachmentResources);
 
