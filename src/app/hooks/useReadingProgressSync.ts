@@ -46,6 +46,32 @@ function useLatestReadingProgressState(args: ReadingProgressSyncOptions) {
     pendingNodeViewByIdRef
   };
 }
+
+function useRestoreScrollCaptureSuppressor(getReadingPositionSyncState?: () => ReadingPositionSyncState | null) {
+  const ignorePostRestoreScrollRef = useRef(false);
+  const isClearScheduledRef = useRef(false);
+  const wasRestoreActiveRef = useRef(false);
+  const isRestoreActive = Boolean(getReadingPositionSyncState?.());
+  if (wasRestoreActiveRef.current && !isRestoreActive) {
+    ignorePostRestoreScrollRef.current = true;
+  }
+  wasRestoreActiveRef.current = isRestoreActive;
+
+  return useCallback(() => {
+    if (!ignorePostRestoreScrollRef.current) {
+      return false;
+    }
+    if (!isClearScheduledRef.current) {
+      isClearScheduledRef.current = true;
+      window.setTimeout(() => {
+        ignorePostRestoreScrollRef.current = false;
+        isClearScheduledRef.current = false;
+      }, 0);
+    }
+    return true;
+  }, []);
+}
+
 function createReadingProgressOptions(args: ReadingProgressSyncOptions): ReadingProgressSyncOptions {
   return args;
 }
@@ -139,6 +165,31 @@ function useReadingProgressFlushCallbacks(args: {
   return { flushReadingProgress, flushReadingProgressImmediately };
 }
 
+function useReadingProgressCaptureHooks(args: {
+  activeNodeId: string | null;
+  editorRef: MutableRefObject<EditorAdapter | null>;
+  flushReadingProgress: (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) => void;
+  getReadingPositionSelection?: () => { from: number; to: number } | null;
+  getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
+  isImmersiveMode: boolean;
+  isViewingTrashNode: boolean;
+  isWorkspaceHydrated: boolean;
+  nodeViewById: Record<string, NodeViewState | undefined>;
+  pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
+  shouldSuppressReadingProgressCapture: () => boolean;
+}) {
+  useImmediateReadingProgressCapture(args);
+  useDebouncedReadingProgressPersistence({
+    activeNodeId: args.activeNodeId,
+    editorRef: args.editorRef,
+    flushReadingProgress: () => args.flushReadingProgress(),
+    getReadingPositionSyncState: args.getReadingPositionSyncState,
+    isViewingTrashNode: args.isViewingTrashNode,
+    isWorkspaceHydrated: args.isWorkspaceHydrated,
+    shouldSuppressReadingProgressCapture: args.shouldSuppressReadingProgressCapture
+  });
+}
+
 export function useReadingProgressSync({
   activeNodeId,
   editorRef,
@@ -162,6 +213,7 @@ export function useReadingProgressSync({
     setNodeViewState
   });
   const latest = useLatestReadingProgressState(options);
+  const shouldSuppressReadingProgressCapture = useRestoreScrollCaptureSuppressor(getReadingPositionSyncState);
   const resolveCapturedReadingProgress = useResolvedReadingProgressState(options, latest);
   const { flushReadingProgress, flushReadingProgressImmediately } = useReadingProgressFlushCallbacks({
     getReadingPositionSyncState,
@@ -179,23 +231,17 @@ export function useReadingProgressSync({
     getReadingPositionSyncState,
     isWorkspaceHydrated
   });
-  useImmediateReadingProgressCapture({
+  useReadingProgressCaptureHooks({
     activeNodeId,
     editorRef,
+    flushReadingProgress,
     getReadingPositionSelection,
     getReadingPositionSyncState,
     isImmersiveMode,
     isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById,
-    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef
-  });
-  useDebouncedReadingProgressPersistence({
-    activeNodeId,
-    editorRef,
-    flushReadingProgress: () => flushReadingProgress(),
-    getReadingPositionSyncState,
-    isViewingTrashNode,
-    isWorkspaceHydrated
+    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef,
+    shouldSuppressReadingProgressCapture
   });
 }

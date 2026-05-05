@@ -111,10 +111,12 @@ it('releases the previous restore lock when switching to another document after 
     />
   );
 
-  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith(
-    'editor-restore-selection-settled',
-    { from: 48_000, to: 48_000 }
-  );
+  await waitFor(() => {
+    expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith(
+      'editor-restore-selection-settled',
+      { from: 51_200, to: 51_200 }
+    );
+  });
   await waitFor(() => {
     expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 51_200, to: 51_200 });
   });
@@ -128,7 +130,7 @@ it('releases the previous restore lock when switching to another document after 
   );
 });
 
-it('applies the saved scroll position before an unmount even when restore already settled', () => {
+it('applies the saved scroll position before an unmount while restore is pending', () => {
   const longDocument = createLongDocument();
   const onCompleteApplyingReadingPosition = vi.fn();
   const view = renderEditor(
@@ -144,10 +146,7 @@ it('applies the saved scroll position before an unmount even when restore alread
   view.unmount();
 
   expect(mockSetScrollTop).toHaveBeenCalledWith(5_400);
-  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith(
-    'editor-restore-selection-settled',
-    { from: 48_000, to: 48_000 }
-  );
+  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-cancelled', undefined);
 });
 
 it('does not restart the same restore request when typing before the first restore settles', () => {
@@ -194,6 +193,7 @@ it('starts a passive restore when saved node view state arrives after the node i
       nodeId="node-1"
       nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
       onBeginApplyingReadingPosition={onBeginApplyingReadingPosition}
+      onChange={vi.fn()}
       value={longDocument}
     />
   );
@@ -223,6 +223,7 @@ it('accepts a near-matching restored scroll position as settled without waiting 
       />
     );
 
+    expect(onCompleteApplyingReadingPosition).not.toHaveBeenCalled();
     act(() => {
       vi.runOnlyPendingTimers();
     });

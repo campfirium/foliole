@@ -1,14 +1,32 @@
-import { expect, test } from '@playwright/test';
-
 import { launchDesktopSession } from '../../scripts/windows/playwright-desktop-harness.mjs';
 
+import { expect, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const TARGET_TITLE = 'GTD 项目管理方法';
+const TARGET_ID = 'playwright-reading-progress-relaunch';
+const TARGET_TITLE = 'Playwright Reading Progress Relaunch';
 
-async function openScrollableDocument(windowPage: Awaited<ReturnType<typeof launchDesktopSession>>['firstWindow']) {
-  await windowPage.getByRole('treeitem', { name: new RegExp(TARGET_TITLE) }).first().click();
-  await expect(windowPage.getByRole('button', { name: TARGET_TITLE, exact: true })).toBeVisible();
+async function seedScrollableDocument(windowPage: Awaited<ReturnType<typeof launchDesktopSession>>['firstWindow']) {
+  await windowPage.evaluate(async ({ id, title }) => {
+    const api = globalThis.window?.__folioleWorkspaceDebug;
+    const longLines = Array.from(
+      { length: 320 },
+      (_, index) => `Line ${index + 1} keeps the relaunch reading progress document long enough to restore scroll.`
+    );
+    await api?.seedNodes?.([
+      {
+        content: longLines.join('\n'),
+        id,
+        kind: 'topic',
+        title
+      }
+    ]);
+    await api?.openNode?.(id);
+  }, { id: TARGET_ID, title: TARGET_TITLE });
+}
+
+async function openScrollableDocument(windowPage: DesktopSession['firstWindow']) {
+  await seedScrollableDocument(windowPage);
   await windowPage.locator('.prompt-editor-host .cm-scroller').waitFor({ state: 'visible' });
   return windowPage.evaluate(() => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
@@ -16,7 +34,7 @@ async function openScrollableDocument(windowPage: Awaited<ReturnType<typeof laun
   });
 }
 
-async function scrollAndCollect(windowPage: Awaited<ReturnType<typeof launchDesktopSession>>['firstWindow'], nodeId: string) {
+async function scrollAndCollect(windowPage: DesktopSession['firstWindow'], nodeId: string) {
   return windowPage.evaluate(async (targetNodeId) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     const scroller = document.querySelector('.prompt-editor-host .cm-scroller') as HTMLElement | null;
@@ -35,8 +53,7 @@ async function scrollAndCollect(windowPage: Awaited<ReturnType<typeof launchDesk
   }, nodeId);
 }
 
-async function collectRestoredState(windowPage: Awaited<ReturnType<typeof launchDesktopSession>>['firstWindow'], nodeId: string) {
-  await expect(windowPage.getByRole('button', { name: TARGET_TITLE, exact: true })).toBeVisible();
+async function collectRestoredState(windowPage: DesktopSession['firstWindow'], nodeId: string) {
   await windowPage.locator('.prompt-editor-host .cm-scroller').waitFor({ state: 'visible' });
   await windowPage.waitForTimeout(800);
   return windowPage.evaluate((targetNodeId) => {
@@ -50,18 +67,15 @@ async function collectRestoredState(windowPage: Awaited<ReturnType<typeof launch
   }, nodeId);
 }
 
-test('persists normal reading scroll position across relaunch', async ({ browserName }, testInfo) => {
-  void browserName;
-  let firstSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
+test('persists normal reading scroll position across relaunch', async ({ desktopSession, desktopWindow }, testInfo) => {
   let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
 
   try {
-    firstSession = await launchDesktopSession();
-    await expectWorkspaceShell(firstSession.firstWindow);
-    const nodeId = await openScrollableDocument(firstSession.firstWindow);
+    await expectWorkspaceShell(desktopWindow);
+    const nodeId = await openScrollableDocument(desktopWindow);
     expect(nodeId).toBeTruthy();
 
-    const beforeRestart = await scrollAndCollect(firstSession.firstWindow, nodeId as string);
+    const beforeRestart = await scrollAndCollect(desktopWindow, nodeId as string);
     await testInfo.attach('reading-progress-before-relaunch', {
       body: JSON.stringify(beforeRestart, null, 2),
       contentType: 'application/json'
@@ -71,8 +85,7 @@ test('persists normal reading scroll position across relaunch', async ({ browser
     expect(beforeRestart.scrollTop).toBeGreaterThan(0);
     expect(beforeRestart.nodeViewState?.scrollTop).toBeGreaterThan(0);
 
-    await firstSession.close();
-    firstSession = null;
+    await desktopSession.close();
 
     secondSession = await launchDesktopSession();
     await expectWorkspaceShell(secondSession.firstWindow);
@@ -87,6 +100,5 @@ test('persists normal reading scroll position across relaunch', async ({ browser
     expect(afterRelaunch.scrollTop).toBeGreaterThan(0);
   } finally {
     await secondSession?.close();
-    await firstSession?.close();
   }
 });

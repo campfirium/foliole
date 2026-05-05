@@ -101,6 +101,13 @@ export function useRestoreCompletionCleanup(args: {
         restoreCompletionFrameRef: args.restoreCompletionFrameRef,
         restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef
       }),
-    [args]
+    [
+      args.activeRestoreSelectionKeyRef,
+      args.completeApplyingReadingPosition,
+      args.isRestoreApplyingActiveRef,
+      args.restoreCompletionFrame2Ref,
+      args.restoreCompletionFrameRef,
+      args.restoreCompletionTimeoutRef
+    ]
   );
 }

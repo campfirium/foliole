@@ -28,6 +28,20 @@ interface ReadingProgressEffectsOptions {
   syncActiveNodeReadingProgress: (activeNodeIdOverride?: string | null) => void;
 }
 
+type ShouldSuppressReadingProgressCapture = () => boolean;
+type ImmediateReadingProgressCaptureArgs = {
+  activeNodeId: string | null;
+  editorRef: MutableRefObject<EditorAdapter | null>;
+  getReadingPositionSelection?: () => { from: number; to: number } | null;
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
+  isImmersiveMode: boolean;
+  isViewingTrashNode: boolean;
+  isWorkspaceHydrated: boolean;
+  nodeViewById: Record<string, NodeViewState | undefined>;
+  pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
+  shouldSuppressReadingProgressCapture?: ShouldSuppressReadingProgressCapture;
+};
+
 function isReadingPositionRestoreActive(
   getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null
 ) {
@@ -117,50 +131,14 @@ export function useReadingProgressLifecycle(args: {
   });
 }
 
-export function useImmediateReadingProgressCapture(args: {
-  activeNodeId: string | null;
-  editorRef: MutableRefObject<EditorAdapter | null>;
-  getReadingPositionSelection?: () => { from: number; to: number } | null;
-  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
-  isImmersiveMode: boolean;
-  isViewingTrashNode: boolean;
-  isWorkspaceHydrated: boolean;
-  nodeViewById: Record<string, NodeViewState | undefined>;
-  pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
-}) {
+export function useImmediateReadingProgressCapture(args: ImmediateReadingProgressCaptureArgs) {
   useEffect(() => {
     if (!args.isWorkspaceHydrated || !args.activeNodeId || args.isViewingTrashNode || !args.editorRef.current) {
       return;
     }
 
     const unsubscribe = args.editorRef.current.onScroll(() => {
-      if (isReadingPositionRestoreActive(args.getReadingPositionSyncState)) {
-        return;
-      }
-      const captured = captureEditorNodeViewState(
-        args.activeNodeId,
-        args.getReadingPositionSelection,
-        args.isImmersiveMode,
-        args.isViewingTrashNode,
-        args.editorRef
-      );
-      if (
-        !stagePendingNodeViewState({
-          captured,
-          nodeViewById: args.nodeViewById,
-          pendingNodeViewByIdRef: args.pendingNodeViewByIdRef
-        })
-      ) {
-        return;
-      }
-      if (!captured) {
-        return;
-      }
-      pushDebugTrace('reading-progress.capture-scroll', {
-        nodeId: captured.nodeId,
-        scrollTop: captured.viewState.scrollTop,
-        selection: captured.viewState.selection
-      });
+      captureImmediateReadingProgress(args);
     });
 
     return unsubscribe;
@@ -173,8 +151,38 @@ export function useImmediateReadingProgressCapture(args: {
     args.isViewingTrashNode,
     args.isWorkspaceHydrated,
     args.nodeViewById,
-    args.pendingNodeViewByIdRef
+    args.pendingNodeViewByIdRef,
+    args.shouldSuppressReadingProgressCapture
   ]);
+}
+
+function captureImmediateReadingProgress(args: ImmediateReadingProgressCaptureArgs) {
+  if (
+    isReadingPositionRestoreActive(args.getReadingPositionSyncState) ||
+    args.shouldSuppressReadingProgressCapture?.()
+  ) {
+    return;
+  }
+  const captured = captureEditorNodeViewState(
+    args.activeNodeId,
+    args.getReadingPositionSelection,
+    args.isImmersiveMode,
+    args.isViewingTrashNode,
+    args.editorRef
+  );
+  const staged = stagePendingNodeViewState({
+    captured,
+    nodeViewById: args.nodeViewById,
+    pendingNodeViewByIdRef: args.pendingNodeViewByIdRef
+  });
+  if (!staged || !captured) {
+    return;
+  }
+  pushDebugTrace('reading-progress.capture-scroll', {
+    nodeId: captured.nodeId,
+    scrollTop: captured.viewState.scrollTop,
+    selection: captured.viewState.selection
+  });
 }
 
 export function useDebouncedReadingProgressPersistence(args: {
@@ -184,6 +192,7 @@ export function useDebouncedReadingProgressPersistence(args: {
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  shouldSuppressReadingProgressCapture?: ShouldSuppressReadingProgressCapture;
 }) {
   useEffect(() => {
     if (!args.isWorkspaceHydrated || !args.activeNodeId || args.isViewingTrashNode || !args.editorRef.current) {
@@ -192,7 +201,10 @@ export function useDebouncedReadingProgressPersistence(args: {
 
     let timeoutId: number | null = null;
     const unsubscribe = args.editorRef.current.onScroll(() => {
-      if (isReadingPositionRestoreActive(args.getReadingPositionSyncState)) {
+      if (
+        isReadingPositionRestoreActive(args.getReadingPositionSyncState) ||
+        args.shouldSuppressReadingProgressCapture?.()
+      ) {
         if (timeoutId !== null) {
           window.clearTimeout(timeoutId);
           timeoutId = null;
@@ -221,5 +233,13 @@ export function useDebouncedReadingProgressPersistence(args: {
       }
       unsubscribe();
     };
-  }, [args.activeNodeId, args.editorRef, args.flushReadingProgress, args.getReadingPositionSyncState, args.isViewingTrashNode, args.isWorkspaceHydrated]);
+  }, [
+    args.activeNodeId,
+    args.editorRef,
+    args.flushReadingProgress,
+    args.getReadingPositionSyncState,
+    args.isViewingTrashNode,
+    args.isWorkspaceHydrated,
+    args.shouldSuppressReadingProgressCapture
+  ]);
 }

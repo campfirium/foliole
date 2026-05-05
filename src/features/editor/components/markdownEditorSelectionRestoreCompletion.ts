@@ -10,6 +10,7 @@ import { shouldCollapseSelectionAfterRestore } from './markdownEditorSelectionRe
 import type { EditorViewState } from './markdownEditorTypes';
 
 const RESTORE_SELECTION_TIMEOUT_MS = 180;
+const RESTORE_UNLOCK_COOLDOWN_MS = 150;
 const RESTORE_SCROLL_SETTLE_TOLERANCE_PX = 8;
 const RATIO_COMPLETION_MAX_ATTEMPTS = 12;
 const RATIO_COMPLETION_TIMEOUT_MS = 300;
@@ -27,13 +28,15 @@ export function finishRestoreApplying(args: {
 }) {
   args.isRestoreApplyingActiveRef.current = false;
   args.activeRestoreSelectionKeyRef.current = null;
-  args.completeApplyingReadingPosition?.(args.reason, args.selection ?? undefined);
   args.restoreCompletionFrameRef.current = null;
   args.restoreCompletionFrame2Ref.current = null;
   if (args.restoreCompletionTimeoutRef.current) {
     window.clearTimeout(args.restoreCompletionTimeoutRef.current);
     args.restoreCompletionTimeoutRef.current = null;
   }
+  window.setTimeout(() => {
+    args.completeApplyingReadingPosition?.(args.reason, args.selection ?? undefined);
+  }, RESTORE_UNLOCK_COOLDOWN_MS);
 }
 
 export function markRestoreSelectionSettled(args: {
@@ -123,13 +126,7 @@ export function scheduleRestoreSelectionCompletion(args: {
 }
 
 function scheduleNonRatioCompletion(args: Parameters<typeof scheduleRestoreSelectionCompletion>[0]) {
-  if (tryCompleteRestoreSelection(args, 'editor-restore-selection-settled')) {
-    return;
-  }
   args.restoreCompletionFrameRef.current = requestAnimationFrame(() => {
-    if (tryCompleteRestoreSelection(args, 'editor-restore-selection-settled')) {
-      return;
-    }
     args.restoreCompletionFrame2Ref.current = requestAnimationFrame(() => {
       tryCompleteRestoreSelection(args, 'editor-restore-selection-settled');
     });
