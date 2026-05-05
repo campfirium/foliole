@@ -12,6 +12,8 @@ import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { isDesktopRuntime } from '../shared/platform/runtime';
 import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
+import { resolvePendingNodeSync, stagePendingNodeSync } from './workspacePendingNodeSync';
+
 type FireAndForgetRuntimeCommand = Extract<
   NativeCommandName,
   | typeof NATIVE_COMMANDS.updateNodeContent
@@ -62,12 +64,46 @@ function runFireAndForgetRuntimeSync<T extends FireAndForgetRuntimeCommand>(
   });
 }
 
+function runFireAndForgetNodeSnapshotRuntimeSync(
+  command: typeof NATIVE_COMMANDS.updateNodeContent | typeof NATIVE_COMMANDS.updateNodeReveal,
+  payload: NativeNodeSnapshotArgs,
+  action: string
+) {
+  stagePendingNodeSync(payload);
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  void runtimeInvoke(command, payload).then(
+    () => {
+      resolvePendingNodeSync(payload.nodeId, payload.updatedAt);
+    },
+    (error) => {
+      logRuntimeError('runtime sync failed', {
+        area: 'native',
+        action,
+        command,
+        fallback: 'skip_sync',
+        error
+      });
+    }
+  );
+}
+
 export function syncNodeContentToRuntime(node: Node, position?: number) {
-  runFireAndForgetRuntimeSync(NATIVE_COMMANDS.updateNodeContent, toNodeSnapshotPayload(node, position), 'sync_node_content');
+  runFireAndForgetNodeSnapshotRuntimeSync(
+    NATIVE_COMMANDS.updateNodeContent,
+    toNodeSnapshotPayload(node, position),
+    'sync_node_content'
+  );
 }
 
 export function syncNodeRevealToRuntime(node: Node, position?: number) {
-  runFireAndForgetRuntimeSync(NATIVE_COMMANDS.updateNodeReveal, toNodeSnapshotPayload(node, position), 'sync_node_reveal');
+  runFireAndForgetNodeSnapshotRuntimeSync(
+    NATIVE_COMMANDS.updateNodeReveal,
+    toNodeSnapshotPayload(node, position),
+    'sync_node_reveal'
+  );
 }
 
 export function syncNodeOrderToRuntime(nodeOrder: string[]) {

@@ -34,7 +34,64 @@ function createSnapshotInvoke(
   });
 }
 
+function createPendingDismissedNodeSync() {
+  return {
+    nodesById: {
+      'node-2': {
+        nodeId: 'node-2',
+        parentNodeId: null,
+        priority: 0,
+        desiredRetention: null,
+        title: 'Node 2',
+        isTitleManual: false,
+        content: 'Node 2 content',
+        reveal: null,
+        anchorLink: null,
+        reading: {
+          intervalDurationMs: 0,
+          intervalGrowthFactor: 1,
+          lastHandledAt: '2026-03-18T00:00:00.000Z',
+          nextAt: '2026-03-18T00:00:00.000Z',
+          priority: 5,
+          readingPosition: 0,
+          repetitionCount: 0,
+          state: 'dismissed'
+        },
+        position: 1,
+        createdAt: '2026-03-06T00:00:00.000Z',
+        updatedAt: '2026-03-18T00:00:00.000Z'
+      }
+    }
+  };
+}
+
+function createRuntimeSnapshotWithoutReading() {
+  return {
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      'node-1': { id: 'node-1', reading: null, review: null },
+      'node-2': { id: 'node-2', reading: null, review: null }
+    },
+    trashedNodeIds: []
+  };
+}
+
 describe('workspacePersistStorage runtime merge', () => {
+  it('overlays pending node snapshot mutations during hydrate before replay finishes', async () => {
+    window.localStorage.setItem('foliole-pending-node-sync-v1', JSON.stringify(createPendingDismissedNodeSync()));
+    const invoke = createSnapshotInvoke({ activeNodeId: 'node-2', nodeViewStateById: {} }, createRuntimeSnapshotWithoutReading());
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+
+    expect(value).toContain('"state":"dismissed"');
+    expect(invoke).toHaveBeenCalledWith('update_node_content', expect.objectContaining({
+      nodeId: 'node-2',
+      reading: expect.objectContaining({ state: 'dismissed' })
+    }));
+  });
+
   it('merges node view and active node from reading progress', async () => {
     const invoke = createSnapshotInvoke({
       activeNodeId: 'node-2',

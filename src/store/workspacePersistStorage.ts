@@ -4,6 +4,7 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLogging';
 
+import { mergePendingNodeSyncIntoSnapshot, replayPendingNodeSync } from './workspacePendingNodeSync';
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
 
 function getLocalFallbackStorage(): Storage | null {
@@ -39,7 +40,21 @@ export const workspacePersistStorage: StateStorage = {
             return null;
           })
         ]);
-        return toPersistedStatePayload(mergeWorkspaceSnapshotWithReadingProgress(snapshot, readingProgress));
+        const mergedSnapshot = mergeWorkspaceSnapshotWithReadingProgress(
+          mergePendingNodeSyncIntoSnapshot(snapshot),
+          readingProgress
+        );
+        void replayPendingNodeSync(runtimeInvoke).catch((error) => {
+          logRuntimeWarning('pending node sync replay failed during workspace hydrate', {
+            area: 'persistence',
+            action: 'replay_pending_node_sync',
+            command: NATIVE_COMMANDS.updateNodeContent,
+            fallback: 'keep_pending_snapshot',
+            storageKey: name,
+            error
+          });
+        });
+        return toPersistedStatePayload(mergedSnapshot);
       } catch (error) {
         logRuntimeError('workspace hydrate failed', {
           area: 'persistence',

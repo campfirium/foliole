@@ -4,6 +4,7 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { isDesktopRuntime } from '../shared/platform/runtime';
 
+import { mergePendingNodeSyncIntoSnapshot } from './workspacePendingNodeSync';
 import {
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
@@ -43,6 +44,16 @@ function createNodeFixture(): Node {
     review: null,
     createdAt: '2026-03-06T00:00:00.000Z',
     updatedAt: '2026-03-06T00:00:01.000Z'
+  };
+}
+
+function createRuntimeSnapshotNodeFixture() {
+  const node = createNodeFixture();
+  return {
+    ...node,
+    isTitleManual: false,
+    anchorLink: node.anchorLink ?? null,
+    reading: null
   };
 }
 
@@ -107,6 +118,33 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
 }
 
 describe('workspaceRuntimeSync node mutations', () => {
+  it('stages node content updates into pending storage until runtime ack clears them', async () => {
+    const invoke = vi.fn().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    syncNodeContentToRuntime(createNodeFixture());
+
+    expect(mergePendingNodeSyncIntoSnapshot({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1'],
+      nodesById: {
+        'node-1': createRuntimeSnapshotNodeFixture()
+      },
+      trashedNodeIds: []
+    })?.nodesById['node-1']?.reading?.state).toBe('dismissed');
+
+    await Promise.resolve();
+
+    expect(mergePendingNodeSyncIntoSnapshot({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1'],
+      nodesById: {
+        'node-1': createRuntimeSnapshotNodeFixture()
+      },
+      trashedNodeIds: []
+    })?.nodesById['node-1']?.reading).toBeNull();
+  });
+
   it('sends node content updates through update_node_content command', () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
