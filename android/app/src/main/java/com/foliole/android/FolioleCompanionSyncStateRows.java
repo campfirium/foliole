@@ -32,6 +32,22 @@ final class FolioleCompanionSyncStateRows {
         values.put("deleted_at", deletedAt);
         values.put("sync_dirty", syncDirty);
         database.insertWithOnConflict("sync_object_state", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+        if (syncDirty == 1 && tableExists(database, "sync_push_ack")) {
+            database.delete(
+                "sync_push_ack",
+                "object_type = ? AND object_id = ?",
+                new String[] { objectType, objectId }
+            );
+        }
+    }
+
+    private static boolean tableExists(SQLiteDatabase database, String tableName) {
+        try (Cursor cursor = database.rawQuery(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
+            new String[] { tableName }
+        )) {
+            return cursor.moveToFirst();
+        }
     }
 
     private static String nextBaseContentHash(ExistingState current, int syncDirty) {

@@ -54,7 +54,9 @@ final class FolioleCompanionSyncObjectStore {
         JSArray objects = new JSArray();
         try (Cursor row = database.rawQuery(
             "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash " +
-                "FROM sync_object_state WHERE object_type <> 'node' AND sync_dirty = 1 AND state_seq > ? ORDER BY state_seq ASC LIMIT ?",
+                "FROM sync_object_state WHERE object_type <> 'node' AND sync_dirty = 1 AND state_seq > ? " +
+                "AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type " +
+                "AND ack.object_id = sync_object_state.object_id) ORDER BY state_seq ASC LIMIT ?",
             new String[] { String.valueOf(Math.max(0, cursor)), String.valueOf(normalizeLimit(limit)) }
         )) {
             while (row.moveToNext()) {

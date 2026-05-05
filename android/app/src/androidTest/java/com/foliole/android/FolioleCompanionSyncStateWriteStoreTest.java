@@ -63,6 +63,65 @@ public class FolioleCompanionSyncStateWriteStoreTest {
     }
 
     @Test
+    public void dirtyStateChangesWaitWhilePushAckExists() throws Exception {
+        insertExistingReviewState();
+        FolioleCompanionSyncStateWriteStore.saveNodeReview(
+            database,
+            new JSONObject()
+                .put("node_id", "node-1")
+                .put("review_json", reviewPayload().toString()),
+            "android-device-1"
+        );
+        saveAck("node_review:node-1:4", "node_review", "node-1", "accepted", 8);
+
+        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, 0, 10);
+
+        assertEquals(0, changes.getJSONArray("objects").length());
+    }
+
+    @Test
+    public void dirtyStateChangesWaitWhilePushIssueExists() throws Exception {
+        insertExistingReviewState();
+        FolioleCompanionSyncStateWriteStore.saveNodeReview(
+            database,
+            new JSONObject()
+                .put("node_id", "node-1")
+                .put("review_json", reviewPayload().toString()),
+            "android-device-1"
+        );
+        saveAck("node_review:node-1:4", "node_review", "node-1", "conflict", null);
+
+        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, 0, 10);
+
+        assertEquals(0, changes.getJSONArray("objects").length());
+    }
+
+    @Test
+    public void localRewriteClearsOldPushIssueAndExportsDirtyStateAgain() throws Exception {
+        insertExistingReviewState();
+        FolioleCompanionSyncStateWriteStore.saveNodeReview(
+            database,
+            new JSONObject()
+                .put("node_id", "node-1")
+                .put("review_json", reviewPayload().toString()),
+            "android-device-1"
+        );
+        saveAck("node_review:node-1:4", "node_review", "node-1", "conflict", null);
+
+        FolioleCompanionSyncStateWriteStore.saveNodeReview(
+            database,
+            new JSONObject()
+                .put("node_id", "node-1")
+                .put("review_json", reviewPayload().put("reps", 2).toString()),
+            "android-device-1"
+        );
+
+        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, 0, 10);
+        assertEquals(0, selectInt("SELECT COUNT(*) FROM sync_push_ack"));
+        assertEquals(1, changes.getJSONArray("objects").length());
+    }
+
+    @Test
     public void pushAckStoreRequiresConfirmableStateSeq() throws Exception {
         JSONArray acks = new JSONArray()
             .put(new JSONObject()
@@ -124,6 +183,19 @@ public class FolioleCompanionSyncStateWriteStoreTest {
         assertEquals(1, selectInt("SELECT COUNT(*) FROM sync_push_ack"));
         assertEquals("accepted", selectString("SELECT status FROM sync_push_ack WHERE object_type = 'node_review' AND object_id = 'node-1'"));
         assertEquals(8, selectInt("SELECT state_seq FROM sync_push_ack WHERE object_type = 'node_review' AND object_id = 'node-1'"));
+    }
+
+    private void saveAck(String clientOpId, String objectType, String objectId, String status, Integer stateSeq) throws Exception {
+        JSONObject ack = new JSONObject()
+            .put("client_op_id", clientOpId)
+            .put("identity", new JSONObject()
+                .put("objectType", objectType)
+                .put("objectId", objectId))
+            .put("status", status);
+        if (stateSeq != null) {
+            ack.put("state_seq", stateSeq);
+        }
+        FolioleCompanionSyncPushAckStore.saveAcks(database, new JSONArray().put(ack));
     }
 
     private void createTables() {
