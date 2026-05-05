@@ -8,10 +8,12 @@ it('writes clean local state rows from applyable sync pack rows', async () => {
 
   await expect(applySyncPackStateRowsWithDbPort(port, {
     deviceId: 'android-device',
-    incomingAlias: 'incoming'
+    incomingAlias: 'incoming',
+    objectTypes: ['node', 'setting']
   })).resolves.toBe(2);
 
   expect(port.query).toHaveBeenCalledWith('SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state');
+  expect(port.query).toHaveBeenCalledWith(expect.stringContaining('WHERE object_type IN (?, ?)'), ['node', 'setting']);
   expect(port.run).toHaveBeenNthCalledWith(
     1,
     expect.stringContaining('INSERT OR REPLACE INTO sync_object_state'),

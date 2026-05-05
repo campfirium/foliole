@@ -101,6 +101,9 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
     last_modified_by_device_id: 'android-device',
     sync_dirty: 0
   });
+  expect(connection.sqlite.prepare(
+    `SELECT object_id FROM sync_object_state WHERE object_type = 'setting' AND object_id = 'setting-1'`
+  ).get()).toBeUndefined();
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_push_ack').get()).toEqual({ count: 0 });
 });
 
@@ -115,6 +118,10 @@ function createIncomingPack(filePath: string) {
     db.prepare(
       `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
        VALUES ('node', 'node-1', 1, 'hash-node-1', '2026-05-04T01:00:00.000Z', NULL)`
+    ).run();
+    db.prepare(
+      `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
+       VALUES ('setting', 'setting-1', 1, 'hash-setting-1', '2026-05-04T01:00:00.000Z', NULL)`
     ).run();
     db.prepare(
       `INSERT INTO nodes (

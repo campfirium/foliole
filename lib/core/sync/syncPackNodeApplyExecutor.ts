@@ -40,7 +40,10 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
     await applySyncPackNodesWithDbPort(port, options);
     await applySyncPackExternalDocumentsWithDbPort(port, options);
-    appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, options);
+    appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
+      ...options,
+      objectTypes: ['node', 'external_document']
+    });
   }
   await clearConfirmedSyncPushAcksWithDbPort(port, {
     incomingAlias: options.incomingAlias,

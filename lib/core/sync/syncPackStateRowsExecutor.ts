@@ -3,6 +3,7 @@ import { buildSyncPackApplyableRowsSql, type SyncPackApplyableRowsOptions } from
 
 export interface SyncPackStateRowsApplyOptions extends SyncPackApplyableRowsOptions {
   deviceId: string;
+  objectTypes?: readonly string[];
 }
 
 interface NextSeqRow extends DbRow {
@@ -38,15 +39,27 @@ async function loadNextStateSeq(port: DbPort) {
 
 function loadPackStateRows(port: DbPort, options: SyncPackStateRowsApplyOptions) {
   const alias = options.incomingAlias ?? 'inc';
+  const objectTypes = options.objectTypes ?? [
+    'attachment',
+    'external_folder',
+    'import_source',
+    'node',
+    'external_document',
+    'node_reading',
+    'node_review',
+    'pdf_page_text',
+    'setting',
+    'view_state'
+  ];
+  if (objectTypes.length === 0) return Promise.resolve([]);
   return port.query<PackStateRow>(
     `SELECT object_type, object_id, content_hash, updated_at, deleted_at, ` +
     `CASE WHEN object_type = 'node' THEN (` +
     `SELECT current_version_id FROM ${alias}.nodes WHERE ${alias}.nodes.id = object_id` +
     `) ELSE NULL END AS current_version_id FROM ${buildSyncPackApplyableRowsSql(options)} ` +
-    `WHERE object_type IN (` +
-    `'attachment', 'external_folder', 'import_source', 'node', 'external_document', ` +
-    `'node_reading', 'node_review', 'pdf_page_text', 'setting', 'view_state') ` +
-    `ORDER BY state_seq ASC`
+    `WHERE object_type IN (${objectTypes.map(() => '?').join(', ')}) ` +
+    `ORDER BY state_seq ASC`,
+    objectTypes
   );
 }
 
