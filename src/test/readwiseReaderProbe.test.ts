@@ -61,9 +61,11 @@ it('fails when the separator does not split the highlights correctly', () => {
 });
 
 it('moves metadata into Obsidian frontmatter and removes the full document heading', () => {
-  expect(transformReadwiseFullDocument(FULL_DOCUMENT_MARKDOWN)).toBe(`---
+  expect(transformReadwiseFullDocument(FULL_DOCUMENT_MARKDOWN, ARTICLE_MARKDOWN)).toBe(`---
 author: Someone
 ---
+
+# Sample Article
 
 Before the quote. This is the highlighted sentence. After the quote.
 

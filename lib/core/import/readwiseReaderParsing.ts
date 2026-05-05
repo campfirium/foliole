@@ -26,6 +26,16 @@ function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function extractReadwiseDocumentTitle(markdown: string) {
+  const normalized = normalizeLineEndings(markdown);
+  const match = normalized.match(/^# (.+?)\s*$/m);
+  return match?.[1]?.trim() ?? '';
+}
+
+function bodyStartsWithLevelOneHeading(markdown: string) {
+  return /^#\s+\S/m.test(markdown);
+}
+
 export function normalizeReadwiseText(value: string) {
   return compactWhitespace(stripMarkdown(normalizeLineEndings(value)));
 }
@@ -129,17 +139,19 @@ export function extractReadwiseFullDocument(markdown: string) {
   return (nextHeadingIndex >= 0 ? section.slice(0, nextHeadingIndex) : section).trim();
 }
 
-export function transformReadwiseFullDocument(markdown: string) {
+export function transformReadwiseFullDocument(markdown: string, articleMarkdown = '') {
   const metadata = parseReadwiseMetadataSection(markdown);
   const frontmatter = renderReadwiseFrontmatter(metadata);
   const body = extractReadwiseFullDocument(markdown);
+  const title = extractReadwiseDocumentTitle(articleMarkdown);
+  const bodyWithTitle = title && !bodyStartsWithLevelOneHeading(body) ? `# ${title}\n\n${body}` : body;
   if (!frontmatter) {
-    return body;
+    return bodyWithTitle;
   }
-  if (!body) {
+  if (!bodyWithTitle) {
     return frontmatter;
   }
-  return `${frontmatter}\n\n${body}`;
+  return `${frontmatter}\n\n${bodyWithTitle}`;
 }
 
 export function extractReadwiseSidecarHighlights(

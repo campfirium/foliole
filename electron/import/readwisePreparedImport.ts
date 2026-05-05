@@ -40,7 +40,7 @@ export async function loadPreparedReadwiseImportRecord(
       fs.readFile(source.filePath, 'utf8')
     ]);
     return buildPreparedImportRecord(source, {
-      content: transformReadwiseFullDocument(fullDocumentMarkdown),
+      content: transformReadwiseFullDocument(fullDocumentMarkdown, articleMarkdown),
       highlightPolicy: options.highlightPolicy,
       highlightSidecar: extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig),
       importedAt: options.importedAt,
