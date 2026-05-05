@@ -64,11 +64,11 @@ final class FolioleCompanionViewStateSyncStore {
         String key = FolioleCompanionSyncPayloadQueryStore.viewObjectIdKey(context, objectId);
         String deviceId = FolioleCompanionSyncPayloadQueryStore.viewObjectIdDeviceId(context, objectId);
         String activeKey = activeNodeKey(context);
-        if (!record.isNull("deleted_at")) {
+        if (FolioleCompanionViewStatePayloadRules.isActiveDeleted(context, record)) {
             if (key.equals(activeKey)) {
                 FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "activeNodeDeleteMutationName"), new Object[] {});
             }
-            if (FolioleCompanionSyncPayloadQueryStore.isViewNodeKey(context, key)) {
+            if (FolioleCompanionSyncPayloadQueryStore.isViewNodeKey(context, key) && FolioleCompanionViewStatePayloadRules.isNodeDeleted(context, record)) {
                 FolioleCompanionNamedMutationStore.execute(
                     context,
                     database,
@@ -80,7 +80,12 @@ final class FolioleCompanionViewStateSyncStore {
         }
         JSONObject payload = payload(record);
         if (key.equals(activeKey)) {
-            upsertActiveNode(context, database, nullIfEmpty(payload.optString(activeNodePayloadKey(context), "")), record.optString("updated_at"));
+            upsertActiveNode(
+                context,
+                database,
+                nullIfEmpty(FolioleCompanionViewStatePayloadRules.activeNodeId(context, payload)),
+                FolioleCompanionViewStatePayloadRules.activeUpdatedAt(context, record)
+            );
         } else if (FolioleCompanionSyncPayloadQueryStore.isViewNodeKey(context, key)) {
             String sourceKey = sourcePayloadKey(context);
             String source = payload.has(sourceKey) ? syncAppliedSource(context) : localSource(context);
@@ -89,9 +94,9 @@ final class FolioleCompanionViewStateSyncStore {
                 database,
                 FolioleCompanionSyncPayloadQueryStore.viewNodeIdFromKey(context, key),
                 deviceId,
-                payload.optInt(scrollTopPayloadKey(context), 0),
+                FolioleCompanionViewStatePayloadRules.scrollTop(context, payload),
                 source,
-                record.optString("updated_at")
+                FolioleCompanionViewStatePayloadRules.nodeUpdatedAt(context, record)
             );
         }
     }

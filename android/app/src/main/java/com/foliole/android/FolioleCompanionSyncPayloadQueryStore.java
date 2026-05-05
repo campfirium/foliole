@@ -18,6 +18,9 @@ final class FolioleCompanionSyncPayloadQueryStore {
     static final String EXTERNAL_DOCUMENT_PAYLOAD_QUERY_NAME = "syncPayloadExternalDocument";
     private static final String NODE_READING_PAYLOAD_QUERY_NAME = "syncPayloadNodeReading";
     private static final String NODE_REVIEW_PAYLOAD_QUERY_NAME = "syncPayloadNodeReview";
+    static final String SETTING_PAYLOAD_QUERY_NAME = "syncPayloadSetting";
+    static final String VIEW_ACTIVE_NODE_PAYLOAD_QUERY_NAME = "syncPayloadViewActiveNode";
+    static final String VIEW_NODE_STATE_PAYLOAD_QUERY_NAME = "syncPayloadViewNodeState";
 
     private FolioleCompanionSyncPayloadQueryStore() {}
 
@@ -38,67 +41,63 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     static String viewActiveNodeKey(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewActiveNode", "objectIdKey");
+        return metadata(context, VIEW_ACTIVE_NODE_PAYLOAD_QUERY_NAME, "objectIdKey");
     }
 
     static String viewActiveNodePayloadKey(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewActiveNode", "activeNodePayloadKey");
+        return metadata(context, VIEW_ACTIVE_NODE_PAYLOAD_QUERY_NAME, "activeNodePayloadKey");
     }
 
     static String viewFormFactor(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewActiveNode", "formFactor");
+        return metadata(context, VIEW_ACTIVE_NODE_PAYLOAD_QUERY_NAME, "formFactor");
     }
 
     static Set<String> viewHashIgnoredPayloadKeys(Context context) throws Exception {
-        return metadataSet(context, "syncPayloadViewNodeState", "hashIgnoredPayloadKeys");
+        return metadataSet(context, VIEW_NODE_STATE_PAYLOAD_QUERY_NAME, "hashIgnoredPayloadKeys");
     }
 
     static String viewLocalSource(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewNodeState", "localSource");
+        return metadata(context, VIEW_NODE_STATE_PAYLOAD_QUERY_NAME, "localSource");
     }
 
     static String viewNodeIdPayloadKey(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewNodeState", "nodeIdPayloadKey");
+        return metadata(context, VIEW_NODE_STATE_PAYLOAD_QUERY_NAME, "nodeIdPayloadKey");
     }
 
     static String viewActiveNodeWorkspaceMetaKey(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewActiveNode", "workspaceMetaKey");
+        return metadata(context, VIEW_ACTIVE_NODE_PAYLOAD_QUERY_NAME, "workspaceMetaKey");
     }
 
     static String viewNodeKeyPrefix(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewNodeState", "objectIdPrefix");
+        return metadata(context, VIEW_NODE_STATE_PAYLOAD_QUERY_NAME, "objectIdPrefix");
     }
 
     static String viewPlatform(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewActiveNode", "platform");
+        return metadata(context, VIEW_ACTIVE_NODE_PAYLOAD_QUERY_NAME, "platform");
     }
 
     static String viewScrollTopPayloadKey(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewNodeState", "scrollTopPayloadKey");
+        return metadata(context, VIEW_NODE_STATE_PAYLOAD_QUERY_NAME, "scrollTopPayloadKey");
     }
 
     static String viewSelectionFromPayloadKey(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewNodeState", "selectionFromPayloadKey");
+        return metadata(context, VIEW_NODE_STATE_PAYLOAD_QUERY_NAME, "selectionFromPayloadKey");
     }
 
     static String viewSelectionToPayloadKey(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewNodeState", "selectionToPayloadKey");
+        return metadata(context, VIEW_NODE_STATE_PAYLOAD_QUERY_NAME, "selectionToPayloadKey");
     }
 
     static String viewSourcePayloadKey(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewNodeState", "sourcePayloadKey");
+        return metadata(context, VIEW_NODE_STATE_PAYLOAD_QUERY_NAME, "sourcePayloadKey");
     }
 
     static String viewSyncAppliedSource(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewNodeState", "appliedSource");
+        return metadata(context, VIEW_NODE_STATE_PAYLOAD_QUERY_NAME, "appliedSource");
     }
 
     static String viewScope(Context context) throws Exception {
-        return metadata(context, "syncPayloadViewActiveNode", "scope");
-    }
-
-    static String settingMetadata(Context context, String key) throws Exception {
-        return metadata(context, "syncPayloadSetting", key);
+        return metadata(context, VIEW_ACTIVE_NODE_PAYLOAD_QUERY_NAME, "scope");
     }
 
     static String nodeReadingPayloadQueryName() {

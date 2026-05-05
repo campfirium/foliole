@@ -158,10 +158,13 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
     syncPayload: {
       activeNodePayloadKey: 'active_node_id',
       argMode: 'none',
+      defaultActiveNodeId: '',
       formFactor: 'phone',
       objectIdKey: 'active_node',
       objectType: 'view_state',
       platform: 'android',
+      recordDeletedAtKey: 'deleted_at',
+      recordUpdatedAtKey: 'updated_at',
       scope: 'session_resume',
       workspaceMetaKey: 'active_node_id'
     },
@@ -173,11 +176,14 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
     syncPayload: {
       appliedSource: 'sync-apply',
       argMode: 'view_state_node',
+      defaultScrollTop: 0,
       hashIgnoredPayloadKeys: ['source'],
       localSource: 'user-scroll',
       nodeIdPayloadKey: 'node_id',
       objectIdPrefix: 'node:',
       objectType: 'view_state',
+      recordDeletedAtKey: 'deleted_at',
+      recordUpdatedAtKey: 'updated_at',
       scrollTopPayloadKey: 'scroll_top',
       selectionFromPayloadKey: 'selection_from',
       selectionToPayloadKey: 'selection_to',

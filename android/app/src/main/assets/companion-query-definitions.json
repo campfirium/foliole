@@ -1348,10 +1348,13 @@
       "syncPayload": {
         "activeNodePayloadKey": "active_node_id",
         "argMode": "none",
+        "defaultActiveNodeId": "",
         "formFactor": "phone",
         "objectIdKey": "active_node",
         "objectType": "view_state",
         "platform": "android",
+        "recordDeletedAtKey": "deleted_at",
+        "recordUpdatedAtKey": "updated_at",
         "scope": "session_resume",
         "workspaceMetaKey": "active_node_id"
       },
@@ -1361,6 +1364,7 @@
       "syncPayload": {
         "appliedSource": "sync-apply",
         "argMode": "view_state_node",
+        "defaultScrollTop": 0,
         "hashIgnoredPayloadKeys": [
           "source"
         ],
@@ -1368,6 +1372,8 @@
         "nodeIdPayloadKey": "node_id",
         "objectIdPrefix": "node:",
         "objectType": "view_state",
+        "recordDeletedAtKey": "deleted_at",
+        "recordUpdatedAtKey": "updated_at",
         "scrollTopPayloadKey": "scroll_top",
         "selectionFromPayloadKey": "selection_from",
         "selectionToPayloadKey": "selection_to",

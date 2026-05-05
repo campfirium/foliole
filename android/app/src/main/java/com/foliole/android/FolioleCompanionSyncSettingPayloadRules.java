@@ -62,6 +62,6 @@ final class FolioleCompanionSyncSettingPayloadRules {
     }
 
     private static String metadata(Context context, String key) throws Exception {
-        return FolioleCompanionSyncPayloadQueryStore.settingMetadata(context, key);
+        return FolioleCompanionSyncPayloadQueryStore.metadata(context, FolioleCompanionSyncPayloadQueryStore.SETTING_PAYLOAD_QUERY_NAME, key);
     }
 }

@@ -59,7 +59,7 @@ describe('Android setting sync payload metadata', () => {
 
     expect(stateWriteSource).toContain('FolioleCompanionSyncSettingPayloadRules.key(context, input)');
     expect(stateWriteSource).toContain('FolioleCompanionSyncSettingPayloadRules.payload(context');
-    expect(settingRulesSource).toContain('FolioleCompanionSyncPayloadQueryStore.settingMetadata(context, key)');
+    expect(settingRulesSource).toContain('FolioleCompanionSyncPayloadQueryStore.SETTING_PAYLOAD_QUERY_NAME');
     expect(settingRulesSource).toContain('FolioleCompanionSyncPayloadQueryStore.scopedObjectId');
     expect(stateWriteSource).not.toContain('input.optString("scope", "device")');
     expect(stateWriteSource).not.toContain('scope + ":" + platform');
