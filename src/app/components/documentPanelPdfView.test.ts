@@ -13,6 +13,8 @@ const pdfSourceDetails = {
     lastContentFingerprint: 'fingerprint-1',
     lastImportedAt: '2026-04-04T14:00:00.000Z',
     latestNodeId: 'node-1',
+    pdfIndexStatus: 'ready' as const,
+    pdfIndexedAt: '2026-04-04T14:00:02.000Z',
     provider: 'desktop_text_file',
     sourceFingerprint: 'source-1',
     sourceKind: 'pdf',
@@ -32,6 +34,6 @@ describe('resolvePdfDocumentSurface', () => {
 
   it('returns ready surface when active node is the pdf source node', () => {
     const surface = resolvePdfDocumentSurface('node-pdf-root', false, pdfSourceDetails);
-    expect(surface).toEqual({ sourceHint: '/tmp/sample.pdf', state: 'ready' });
+    expect(surface).toEqual({ pdfIndexStatus: 'ready', sourceHint: '/tmp/sample.pdf', state: 'ready' });
   });
 });

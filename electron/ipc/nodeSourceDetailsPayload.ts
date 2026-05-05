@@ -68,7 +68,9 @@ function toNativeImportSource(
     source_fingerprint: record.source_fingerprint,
     source_kind: record.source_kind,
     source_locator: sourceLocator,
-    source_name: record.source_name
+    source_name: record.source_name,
+    ...(typeof record.pdf_index_status === 'string' ? { pdf_index_status: record.pdf_index_status } : {}),
+    ...(typeof record.pdf_indexed_at === 'string' ? { pdf_indexed_at: record.pdf_indexed_at } : {})
   };
 }
 

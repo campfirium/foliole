@@ -1,4 +1,6 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { requestPdfAnchorJump, requestPdfSearch } from '../../features/pdf/model/pdfSystemBridge';
+import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import { buildSearchState, toSearchNodesById } from './appControllerHelpers';
 import type { useWorkspaceSelectors } from './appControllerState';
@@ -26,7 +28,7 @@ export interface AppSearchState {
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onClose: () => void;
-  onOpenNode: (nodeId: string) => void;
+  onOpenResult: (result: WorkspaceSearchResult) => void;
   trashedNodeIds: string[];
 }
 
@@ -37,9 +39,21 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
     toSearchNodesById(args.ws.nodesById),
     args.ws.trashedNodeIds,
     () => args.runtime.setIsSearchPaletteOpen(false),
-    (nodeId) => {
+    (result) => {
       args.trash.closeTrashView();
-      args.nav.handleSelectNode(nodeId);
+      args.nav.handleSelectNode(result.id);
+      if (result.kind === 'pdf' && result.pdfMatch) {
+        requestPdfAnchorJump(result.id, {
+          page: result.pdfMatch.page,
+          x: 0.5,
+          y: Math.min(0.95, Math.max(0.05, result.pdfMatch.matchStart / Math.max(1, result.pdfMatch.pageTextLength)))
+        });
+        requestPdfSearch(result.id, {
+          matchStart: result.pdfMatch.matchStart,
+          page: result.pdfMatch.page,
+          query: result.pdfMatch.query
+        });
+      }
       args.runtime.setIsSearchPaletteOpen(false);
     }
   );

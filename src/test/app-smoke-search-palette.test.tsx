@@ -22,8 +22,22 @@ function createSearchRuntimeInvoke() {
     if (command === 'search_workspace') {
       expect(args).toEqual({ query: 'Atlas' });
       return Promise.resolve([
-        { id: 'node-2', title: 'Project Atlas', excerpt: '...Project Atlas...' },
-        { id: 'node-3', title: 'Weekly Log', excerpt: '...Atlas launch checklist and follow-up notes....' }
+        {
+          id: 'node-2',
+          title: 'Project Atlas',
+          excerpt: '...Project Atlas...',
+          kind: 'node',
+          pdfMatch: null,
+          updatedAt: '2026-03-30T00:00:00.000Z'
+        },
+        {
+          id: 'node-3',
+          title: 'Weekly Log',
+          excerpt: '...Atlas launch checklist and follow-up notes....',
+          kind: 'node',
+          pdfMatch: null,
+          updatedAt: '2026-03-29T00:00:00.000Z'
+        }
       ]);
     }
     if (command === 'load_node_document' && args?.nodeId === 'node-3') {

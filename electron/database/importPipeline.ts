@@ -19,6 +19,7 @@ import {
 
 import { openDatabaseConnection } from './connection.js';
 import { rewriteInlineImageReferences } from './inlineImageReferences.js';
+import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from './pdfIndexing.js';
 
 export type { PersistedImportRecord, PreparedImportRecord };
 
@@ -160,6 +161,8 @@ function importPdfSourceAttachment(nodeId: string, sourcePath: string) {
   );
   const attachment = createAttachmentRecordIfNeeded(hash, sourcePath, PDF_MIME_TYPE, sourceBytes.byteLength);
   replaceNodePdfAttachmentLink(nodeId, attachment.id);
+  markPdfAttachmentIndexPending(attachment.id);
+  enqueuePdfAttachmentIndexing(attachment.id);
   return attachment.id;
 }
 

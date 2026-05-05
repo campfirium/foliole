@@ -13,6 +13,7 @@ import {
 import { registerAttachmentProtocol, registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
 import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
 import { initializeDatabase } from './database/migrate.js';
+import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { startKeepImportMonitor, stopKeepImportMonitor } from './import/keepImportMonitor.js';
@@ -225,6 +226,7 @@ app.whenReady().then(async () => {
   installInvokeHandler();
   installAppMenu();
   await migrateLegacyWebviewStorage();
+  resumePendingPdfAttachmentIndexing();
   await startManagedInboxMonitor();
   await startKeepImportMonitor();
   await loadReadwiseBooksInventory().catch((error) => {

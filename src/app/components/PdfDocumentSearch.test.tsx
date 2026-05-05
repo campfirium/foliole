@@ -30,6 +30,7 @@ function PdfSearchLateTextLayerHarness() {
     scrollContainerRef,
     searchQuery: 'keyword',
     searchRequest: null,
+    searchTarget: null,
     searchRevision,
     totalPages: 1
   });
@@ -68,6 +69,7 @@ function PdfSearchSingleRequestHarness() {
     scrollContainerRef,
     searchQuery: 'keyword',
     searchRequest,
+    searchTarget: null,
     searchRevision,
     totalPages: 1
   });

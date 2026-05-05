@@ -4,7 +4,16 @@ import type { WorkspaceListNode } from '../../features/nodes/model/workspaceList
 export interface WorkspaceSearchResult {
   excerpt: string;
   id: string;
+  kind: 'node' | 'pdf';
+  pdfMatch: {
+    attachmentId: string;
+    matchStart: number;
+    page: number;
+    pageTextLength: number;
+    query: string;
+  } | null;
   title: string;
+  updatedAt: string;
 }
 
 const MAX_RESULTS = 40;
@@ -55,7 +64,10 @@ export function buildWorkspaceSearchResults(
     results.push({
       excerpt: path,
       id: node.id,
-      title
+      kind: 'node',
+      pdfMatch: null,
+      title,
+      updatedAt: node.updatedAt
     });
     if (results.length >= MAX_RESULTS) {
       break;

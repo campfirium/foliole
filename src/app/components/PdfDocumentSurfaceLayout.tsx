@@ -2,7 +2,7 @@ import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
-import type { PdfSearchRequest, PdfSearchStatus } from './PdfDocumentSearch';
+import type { PdfSearchRequest, PdfSearchStatus, PdfSearchTarget } from './PdfDocumentSearch';
 import { PdfDocumentViewport } from './PdfDocumentViewport';
 
 interface PdfDocumentSurfaceLayoutProps {
@@ -22,8 +22,10 @@ interface PdfDocumentSurfaceLayoutProps {
   requestPageChange: (value: number) => void;
   rotateClockwise: () => void;
   rotation: number;
+  searchIndexingHint: string | null;
   searchQuery: string;
   searchRequest: PdfSearchRequest | null;
+  searchTarget: PdfSearchTarget | null;
   searchStatus: PdfSearchStatus;
   setSearchQuery: (value: string) => void;
   setSearchStatus: (status: PdfSearchStatus) => void;
@@ -50,6 +52,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       onPageChange={props.requestPageChange}
       onPreviousPage={() => props.stepPage(-1)}
       onRotateClockwise={props.rotateClockwise}
+      searchIndexingHint={props.searchIndexingHint}
       onSearchQueryChange={(value) => props.setSearchQuery(value)}
       onSearchRequest={props.handleSearchRequest}
       onSearchStatusChange={props.setSearchStatus}
@@ -62,6 +65,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       rotation={props.rotation}
       searchQuery={props.searchQuery}
       searchRequest={props.searchRequest}
+      searchTarget={props.searchTarget}
       searchStatus={props.searchStatus}
       setVisiblePage={props.setVisiblePage}
       totalPages={props.totalPages}

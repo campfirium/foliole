@@ -27,6 +27,7 @@ interface PdfDocumentViewportContentBodyProps {
   pdfSource: string;
   rotation: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
+  searchIndexingHint: string | null;
   searchQuery: string;
   searchStatus: PdfSearchStatus;
   totalPages: number | null;
@@ -47,6 +48,7 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
         onPageChange={props.onPageChange}
         onPreviousPage={props.onPreviousPage}
         onRotateClockwise={props.onRotateClockwise}
+        searchIndexingHint={props.searchIndexingHint}
         onSearchQueryChange={props.onSearchQueryChange}
         onSearchRequest={props.onSearchRequest}
         onZoomIn={props.onZoomIn}

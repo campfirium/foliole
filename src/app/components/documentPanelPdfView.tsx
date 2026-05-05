@@ -10,6 +10,7 @@ import { PdfDocumentSurface } from './PdfDocumentSurface';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 
 export type PdfDocumentSurfaceState = 'empty' | 'failed' | 'loading' | 'ready';
+type PdfIndexStatus = 'failed' | 'indexing' | 'pending' | 'ready' | null;
 
 function isPdfPath(value: string | null | undefined) {
   return typeof value === 'string' && value.trim().toLowerCase().endsWith('.pdf');
@@ -30,7 +31,7 @@ export function resolvePdfDocumentSurface(
   activeNodeId: string | null,
   isLoading: boolean,
   details: RuntimeNodeSourceDetails | null
-): { sourceHint: string | null; state: PdfDocumentSurfaceState } | null {
+): { pdfIndexStatus: PdfIndexStatus; sourceHint: string | null; state: PdfDocumentSurfaceState } | null {
   if (!isPdfSourceDetails(details) || !details || details.inheritedFromParent) {
     return null;
   }
@@ -40,12 +41,16 @@ export function resolvePdfDocumentSurface(
 
   const sourceHint = resolvePdfSourceHint(details);
   if (details.keepImportItem?.lastStatus === 'failed') {
-    return { sourceHint, state: 'failed' };
+    return { pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null, sourceHint, state: 'failed' };
   }
   if (!sourceHint) {
-    return { sourceHint: sourceHint ?? null, state: isLoading ? 'loading' : 'empty' };
+    return {
+      pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null,
+      sourceHint: sourceHint ?? null,
+      state: isLoading ? 'loading' : 'empty'
+    };
   }
-  return { sourceHint, state: 'ready' };
+  return { pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null, sourceHint, state: 'ready' };
 }
 
 function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>) {
@@ -74,7 +79,7 @@ function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>)
 }
 
 export function renderPdfDocumentSurface(
-  pdfDocumentSurface: { sourceHint: string | null; state: PdfDocumentSurfaceState },
+  pdfDocumentSurface: { pdfIndexStatus: PdfIndexStatus; sourceHint: string | null; state: PdfDocumentSurfaceState },
   pdfViewContext: {
     editorNodeId: string | null;
     editorNodeViewState: ComponentProps<typeof DocumentPanelBody>['editorNodeViewState'];
@@ -91,6 +96,7 @@ export function renderPdfDocumentSurface(
         onCreateHighlightFromSelection={onCreatePdfHighlight}
         onPersistViewState={onPersistPdfViewState}
         nodeId={pdfViewContext.editorNodeId}
+        pdfIndexStatus={pdfDocumentSurface.pdfIndexStatus}
         sourceHint={pdfDocumentSurface.sourceHint ?? ''}
       />
     );

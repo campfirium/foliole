@@ -19,6 +19,7 @@ interface PdfViewportToolbarProps {
   onZoomOut: () => void;
   page: number;
   rotation: number;
+  searchIndexingHint: string | null;
   searchQuery: string;
   searchStatus: PdfSearchStatus;
   zoom: number;
@@ -34,6 +35,7 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
       onPageChange={props.onPageChange}
       onPreviousPage={props.onPreviousPage}
       onRotateClockwise={props.onRotateClockwise}
+      searchIndexingHint={props.searchIndexingHint}
       onSearchQueryChange={props.onSearchQueryChange}
       onZoomIn={props.onZoomIn}
       onZoomOut={props.onZoomOut}

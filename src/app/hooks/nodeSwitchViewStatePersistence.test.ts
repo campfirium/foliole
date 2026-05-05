@@ -51,7 +51,14 @@ describe('node switch view-state persistence entrypoints', () => {
   it('routes search node opening through the shared navigation handler', () => {
     const args = createArgs();
 
-    buildControllerSearchState(args).onOpenNode('node-2');
+    buildControllerSearchState(args).onOpenResult({
+      excerpt: 'Beta',
+      id: 'node-2',
+      kind: 'node',
+      pdfMatch: null,
+      title: 'Beta',
+      updatedAt: '2026-03-06T10:00:00.000Z'
+    });
 
     expect(args.trash.closeTrashView).toHaveBeenCalledTimes(1);
     expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');

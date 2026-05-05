@@ -82,6 +82,7 @@ export function PdfDocumentSurfaceCache(props: {
                   props.onPersistPdfViewState(viewState);
                 }
               }}
+              pdfIndexStatus={null}
               sourceHint={entry.sourceHint}
             />
           </div>

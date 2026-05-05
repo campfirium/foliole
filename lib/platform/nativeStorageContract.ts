@@ -83,7 +83,16 @@ export interface NativeWorkspaceNodeDocument {
 export interface NativeWorkspaceSearchResult {
   excerpt: string;
   id: string;
+  kind: 'node' | 'pdf';
+  pdfMatch: {
+    attachmentId: string;
+    matchStart: number;
+    page: number;
+    pageTextLength: number;
+    query: string;
+  } | null;
   title: string;
+  updatedAt: string;
 }
 
 export interface NativeImportLocalImageAttachmentArgs {

@@ -2,6 +2,7 @@ import type { NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import type { useWorkspaceSelectors } from './appControllerState';
 import type { AppGoToNodeState } from './appGoToNodeState';
@@ -25,9 +26,9 @@ export function buildSearchState(
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: string[],
   onClose: () => void,
-  onOpenNode: (nodeId: string) => void
+  onOpenResult: (result: WorkspaceSearchResult) => void
 ): AppSearchState {
-  return { isOpen, nodeOrder, nodesById, onClose, onOpenNode, trashedNodeIds };
+  return { isOpen, nodeOrder, nodesById, onClose, onOpenResult, trashedNodeIds };
 }
 
 export function toSearchNodesById(nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById']) {

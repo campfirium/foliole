@@ -97,6 +97,8 @@ export interface NativeNodeImportSource {
   last_content_fingerprint: string;
   last_imported_at: string;
   latest_node_id: string | null;
+  pdf_index_status?: 'failed' | 'indexing' | 'pending' | 'ready' | null;
+  pdf_indexed_at?: string | null;
   provider: string;
   source_fingerprint: string;
   source_kind: string;

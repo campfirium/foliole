@@ -12,6 +12,7 @@ interface PdfDocumentToolbarProps {
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
   onRotateClockwise: () => void;
+  searchIndexingHint: string | null;
   onSearchQueryChange: (value: string) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -102,7 +103,10 @@ function PdfZoomControls({
   );
 }
 
-function resolveSearchStatusLabel(status: PdfSearchStatus) {
+function resolveSearchStatusLabel(status: PdfSearchStatus, indexingHint: string | null) {
+  if (indexingHint) {
+    return indexingHint;
+  }
   if (!status.hasQuery) {
     return 'Search';
   }
@@ -116,13 +120,14 @@ function PdfSearchControls({
   onFindNext,
   onFindPrevious,
   onSearchQueryChange,
+  searchIndexingHint,
   searchQuery,
   searchStatus
 }: Pick<
   PdfDocumentToolbarProps,
-  'onFindNext' | 'onFindPrevious' | 'onSearchQueryChange' | 'searchQuery' | 'searchStatus'
+  'onFindNext' | 'onFindPrevious' | 'onSearchQueryChange' | 'searchIndexingHint' | 'searchQuery' | 'searchStatus'
 >) {
-  const canNavigateMatches = searchStatus.hasQuery && searchStatus.total > 0;
+  const canNavigateMatches = !searchIndexingHint && searchStatus.hasQuery && searchStatus.total > 0;
 
   return (
     <div className="flex items-center gap-1">
@@ -160,7 +165,7 @@ function PdfSearchControls({
         onClick={onFindNext}
       />
       <p aria-live="polite" className="min-w-16 text-center text-xs text-foreground/70" data-testid="pdf-search-status">
-        {resolveSearchStatusLabel(searchStatus)}
+        {resolveSearchStatusLabel(searchStatus, searchIndexingHint)}
       </p>
     </div>
   );
@@ -174,6 +179,7 @@ export function PdfDocumentToolbar({
   onPageChange,
   onPreviousPage,
   onRotateClockwise,
+  searchIndexingHint,
   onSearchQueryChange,
   onZoomIn,
   onZoomOut,
@@ -208,6 +214,7 @@ export function PdfDocumentToolbar({
           onFindNext={onFindNext}
           onFindPrevious={onFindPrevious}
           onSearchQueryChange={onSearchQueryChange}
+          searchIndexingHint={searchIndexingHint}
           searchQuery={searchQuery}
           searchStatus={searchStatus}
         />

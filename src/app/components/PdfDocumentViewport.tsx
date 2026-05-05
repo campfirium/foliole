@@ -4,7 +4,7 @@ import type { MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
-import type { PdfSearchRequest, PdfSearchStatus } from './PdfDocumentSearch';
+import type { PdfSearchRequest, PdfSearchStatus, PdfSearchTarget } from './PdfDocumentSearch';
 import {
   PdfDocumentErrorState,
   PdfDocumentViewportContent,
@@ -34,8 +34,10 @@ interface PdfDocumentViewportProps {
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
+  searchIndexingHint: string | null;
   searchQuery: string;
   searchRequest: PdfSearchRequest | null;
+  searchTarget: PdfSearchTarget | null;
   searchStatus: PdfSearchStatus;
   clearPageJumpRequest: (requestId: number) => void;
   setVisiblePage: (page: number) => void;
@@ -76,10 +78,12 @@ function renderPdfViewportContent(args: {
       pdfSelectionLocator={args.pdfSelectionLocator}
       pdfSource={args.pdfSource}
       rotation={args.rotation}
+      searchIndexingHint={args.searchIndexingHint}
       scrollContainerRef={args.scrollContainerRef}
       searchQuery={args.searchQuery}
       searchRevision={args.searchRevision}
       searchRequest={args.searchRequest}
+      searchTarget={args.searchTarget}
       searchStatus={args.searchStatus}
       totalPages={args.totalPages}
       onTextLayerRender={args.handleTextLayerRender}

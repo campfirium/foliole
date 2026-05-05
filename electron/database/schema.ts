@@ -9,6 +9,7 @@ export {
   nodeReview,
   nodes,
   nodeViewState,
+  pdfPageText,
   reviewLog,
   settings,
   workspaceMeta

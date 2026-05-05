@@ -5,6 +5,8 @@ export interface RuntimeNodeImportSource {
   lastContentFingerprint: string;
   lastImportedAt: string;
   latestNodeId: string | null;
+  pdfIndexStatus?: 'failed' | 'indexing' | 'pending' | 'ready' | null;
+  pdfIndexedAt?: string | null;
   provider: string;
   sourceFingerprint: string;
   sourceKind: string;
@@ -59,6 +61,13 @@ function toRuntimeNodeImportSource(value: unknown): RuntimeNodeImportSource | nu
     typeof payload.last_content_fingerprint !== 'string' ||
     typeof payload.last_imported_at !== 'string' ||
     (payload.latest_node_id !== null && typeof payload.latest_node_id !== 'string') ||
+    (payload.pdf_index_status !== undefined &&
+      payload.pdf_index_status !== null &&
+      payload.pdf_index_status !== 'failed' &&
+      payload.pdf_index_status !== 'indexing' &&
+      payload.pdf_index_status !== 'pending' &&
+      payload.pdf_index_status !== 'ready') ||
+    (payload.pdf_indexed_at !== undefined && payload.pdf_indexed_at !== null && typeof payload.pdf_indexed_at !== 'string') ||
     typeof payload.provider !== 'string' ||
     typeof payload.source_fingerprint !== 'string' ||
     typeof payload.source_kind !== 'string' ||
@@ -76,7 +85,13 @@ function toRuntimeNodeImportSource(value: unknown): RuntimeNodeImportSource | nu
     sourceFingerprint: payload.source_fingerprint,
     sourceKind: payload.source_kind,
     sourceLocator: payload.source_locator,
-    sourceName: payload.source_name
+    sourceName: payload.source_name,
+    ...(Object.prototype.hasOwnProperty.call(payload, 'pdf_index_status')
+      ? { pdfIndexStatus: (payload.pdf_index_status as RuntimeNodeImportSource['pdfIndexStatus'] | undefined) ?? null }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(payload, 'pdf_indexed_at')
+      ? { pdfIndexedAt: (payload.pdf_indexed_at as string | null | undefined) ?? null }
+      : {})
   };
 }
 

@@ -13,7 +13,7 @@ interface SearchPaletteProps {
   nodesById: WorkspaceListNodesById;
   trashedNodeIds: string[];
   onClose: () => void;
-  onOpenNode: (nodeId: string) => void;
+  onOpenResult: (result: WorkspaceSearchResult) => void;
 }
 
 interface SearchInputProps {
@@ -83,7 +83,7 @@ function SearchPaletteEmptyState({ query }: { query: string }) {
   );
 }
 
-function SearchPaletteList(props: { activeIndex: number; onOpenNode: (nodeId: string) => void; results: WorkspaceSearchResult[] }) {
+function SearchPaletteList(props: { activeIndex: number; onOpenResult: (result: WorkspaceSearchResult) => void; results: WorkspaceSearchResult[] }) {
   if (!props.results.length) {
     return null;
   }
@@ -95,7 +95,7 @@ function SearchPaletteList(props: { activeIndex: number; onOpenNode: (nodeId: st
           <button
             className="flex w-full flex-col gap-1 rounded-md px-3 py-2 text-left hover:bg-bg-subtle data-[active=true]:bg-bg-subtle"
             data-active={index === props.activeIndex}
-            onClick={() => props.onOpenNode(item.id)}
+            onClick={() => props.onOpenResult(item)}
             type="button"
           >
             <span className="truncate text-sm font-medium text-foreground">{item.title}</span>
@@ -165,7 +165,7 @@ export function SearchPalette(props: SearchPaletteProps) {
   const openActiveNode = () => {
     const result = results[activeIndex];
     if (result) {
-      props.onOpenNode(result.id);
+      props.onOpenResult(result);
     }
   };
 
@@ -181,7 +181,7 @@ export function SearchPalette(props: SearchPaletteProps) {
           totalItems={results.length}
         />
         {results.length ? (
-          <SearchPaletteList activeIndex={activeIndex} onOpenNode={props.onOpenNode} results={results} />
+          <SearchPaletteList activeIndex={activeIndex} onOpenResult={props.onOpenResult} results={results} />
         ) : (
           <SearchPaletteEmptyState query={query} />
         )}

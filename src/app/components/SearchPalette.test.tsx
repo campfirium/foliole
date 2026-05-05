@@ -16,7 +16,10 @@ it('loads search results from runtime without renderer content mirrors', async (
         {
           id: 'node-2',
           title: 'Atlas note',
-          excerpt: '...launch checklist...'
+          excerpt: '...launch checklist...',
+          kind: 'node',
+          pdfMatch: null,
+          updatedAt: '2026-03-30T00:00:00.000Z'
         }
       ]);
     }
@@ -51,7 +54,7 @@ it('loads search results from runtime without renderer content mirrors', async (
         }
       }}
       onClose={() => undefined}
-      onOpenNode={() => undefined}
+      onOpenResult={() => undefined}
       trashedNodeIds={[]}
     />
   );

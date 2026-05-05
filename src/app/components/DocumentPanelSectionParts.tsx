@@ -7,7 +7,7 @@ import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
-import { resolvePdfDocumentSurface, renderPdfDocumentSurface, type PdfDocumentSurfaceState } from './documentPanelPdfView';
+import { resolvePdfDocumentSurface, renderPdfDocumentSurface } from './documentPanelPdfView';
 import { EditorContextMenu } from './EditorContextMenu';
 import { FolderListView } from './FolderListView';
 import { PdfDocumentSurfaceCache } from './PdfDocumentSurfaceCache';
@@ -86,7 +86,7 @@ function renderPdfOrBodyContent(args: {
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onPersistPdfViewState: (viewState: NodeViewState) => void;
   pdfCache: JSX.Element;
-  pdfDocumentSurface: { sourceHint: string | null; state: PdfDocumentSurfaceState } | null;
+  pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
   pdfHighlightLocators: PdfHighlightLocator[];
 }) {
   if (!args.pdfDocumentSurface) {

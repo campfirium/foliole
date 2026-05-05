@@ -5,6 +5,8 @@ interface ImportSourceRow extends DatabaseRow {
   last_content_fingerprint: string;
   last_imported_at: string;
   latest_node_id: string | null;
+  pdf_index_status: 'failed' | 'indexing' | 'pending' | 'ready' | null;
+  pdf_indexed_at: string | null;
   provider: string;
   source_fingerprint: string;
   source_kind: string;
@@ -88,8 +90,16 @@ function readImportSource(driver: DatabaseDriver, nodeId: string) {
          first_imported_at,
          last_imported_at,
          last_content_fingerprint,
-         latest_node_id
+         latest_node_id,
+         attachment.pdf_index_status,
+         attachment.pdf_indexed_at
        FROM import_sources
+       LEFT JOIN node_attachments node_attachment
+         ON node_attachment.node_id = import_sources.latest_node_id
+        AND node_attachment.role = 'reference'
+       LEFT JOIN attachments attachment
+         ON attachment.id = node_attachment.attachment_id
+        AND attachment.mime_type = 'application/pdf'
        WHERE latest_node_id = ?
        LIMIT 1`,
       [nodeId]

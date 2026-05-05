@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
+import type { ComponentProps, MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { registerPdfSystem, unregisterPdfSystem } from '../../features/pdf/model/pdfSystemBridge';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
 import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import { normalizeContextMenuPosition } from '../contextCommands';
 
-import type { PdfSearchRequest, PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfDocumentSurfaceLayout } from './PdfDocumentSurfaceLayout';
 import { resolvePdfSelectionLocator, resolvePdfSelectionText } from './pdfSelectionText';
+import { useRegisterPdfSurface } from './pdfSurfaceRegistration';
+import { usePdfSearchControls } from './pdfSurfaceSearchControls';
 
 function configurePdfWorker() {
   const workerUrl = new URL('react-pdf/dist/pdf.worker.entry.js', import.meta.url).toString();
@@ -33,9 +33,12 @@ interface PdfDocumentSurfaceProps {
   nodeId: string | null;
   onCreateHighlightFromSelection?: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onPersistViewState: (viewState: NodeViewState) => void;
+  pdfIndexStatus: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   sourceHint: string;
   nodeViewState?: NodeViewState;
 }
+
+type PdfSurfaceLayoutProps = ComponentProps<typeof PdfDocumentSurfaceLayout>;
 
 const CONTEXT_MENU_SELECTION_FALLBACK_WINDOW_MS = 1000;
 
@@ -182,89 +185,76 @@ function PdfSelectionContextMenu({
   );
 }
 
-function useRegisterPdfSurface(
-  nodeId: string | null,
-  requestAnchorJump: (locator: NonNullable<NodeAnchorLink['locator']>) => void
-) {
-  useEffect(() => {
-    if (!nodeId) {
-      return;
-    }
-    registerPdfSystem(nodeId, { requestAnchorJump });
-    return () => {
-      unregisterPdfSystem(nodeId);
-    };
-  }, [nodeId, requestAnchorJump]);
-}
+export function PdfDocumentSurface({
+  highlightLocators,
+  nodeId,
+  nodeViewState,
+  onCreateHighlightFromSelection,
+  onPersistViewState,
+  pdfIndexStatus,
+  sourceHint
+}: PdfDocumentSurfaceProps) {
+  const pdfSystem = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint);
+  const selectionState = usePdfSelectionContextMenu(onCreateHighlightFromSelection);
+  const searchState = usePdfSearchControls();
+  useRegisterPdfSurface(nodeId, pdfSystem.actions.requestAnchorJump, searchState.applyExternalSearch);
 
-function usePdfSearchControls() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchRequest, setSearchRequest] = useState<PdfSearchRequest | null>(null);
-  const [searchStatus, setSearchStatus] = useState<PdfSearchStatus>({ current: 0, hasQuery: false, total: 0 });
-  const searchRequestIdRef = useRef(1);
+  const searchIndexingHint = searchState.searchQuery.trim() && (pdfIndexStatus === 'pending' || pdfIndexStatus === 'indexing')
+    ? 'Indexing in progress'
+    : null;
 
-  const handleSearchRequest = (direction: 'next' | 'previous') => {
-    setSearchRequest({ direction, id: searchRequestIdRef.current });
-    searchRequestIdRef.current += 1;
-  };
-
-  return { handleSearchRequest, searchQuery, searchRequest, searchStatus, setSearchQuery, setSearchStatus };
-}
-
-export function PdfDocumentSurface({ highlightLocators, nodeId, nodeViewState, onCreateHighlightFromSelection, onPersistViewState, sourceHint }: PdfDocumentSurfaceProps) {
-  const {
-    actions: {
-      clearPageJumpRequest,
-      reportLoadError,
-      reportLoadSuccess,
-      requestPageChange,
-      requestAnchorJump,
-      rotateClockwise,
-      setVisiblePage,
-      stepPage,
-      zoomIn,
-      zoomOut
-    },
-    state: { loadError, maxPage, page, pageJumpRequest, pdfSource, rotation, totalPages, zoom }
-  } = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint);
-  const { closeSelectionMenu, handleContextMenu, handleCreateHighlight, selectionMenuState, selectionOverlayLocator, surfaceRef } = usePdfSelectionContextMenu(
-    onCreateHighlightFromSelection
-  );
-  useRegisterPdfSurface(nodeId, requestAnchorJump);
-  const { handleSearchRequest, searchQuery, searchRequest, searchStatus, setSearchQuery, setSearchStatus } = usePdfSearchControls();
+  const layoutProps = buildPdfSurfaceLayoutProps(highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint);
 
   return (
-    <PdfDocumentSurfaceLayout
-      clearPageJumpRequest={clearPageJumpRequest}
-      handleContextMenu={handleContextMenu}
-      handleSearchRequest={handleSearchRequest}
-      highlightLocators={highlightLocators}
-      loadError={loadError}
-      maxPage={maxPage}
-      page={page}
-      pageJumpRequest={pageJumpRequest}
-      pdfSelectionLocator={selectionOverlayLocator}
-      pdfSelectionContextMenu={
-        <PdfSelectionContextMenu onClose={closeSelectionMenu} onCreateHighlight={handleCreateHighlight} state={selectionMenuState} />
-      }
-      pdfSource={pdfSource}
-      reportLoadError={reportLoadError}
-      reportLoadSuccess={reportLoadSuccess}
-      requestPageChange={requestPageChange}
-      rotateClockwise={rotateClockwise}
-      searchQuery={searchQuery}
-      searchRequest={searchRequest}
-      searchStatus={searchStatus}
-      setSearchQuery={setSearchQuery}
-      setSearchStatus={setSearchStatus}
-      setVisiblePage={setVisiblePage}
-      stepPage={stepPage}
-      surfaceRef={surfaceRef}
-      totalPages={totalPages}
-      zoom={zoom}
-      zoomIn={zoomIn}
-      zoomOut={zoomOut}
-      rotation={rotation}
+    <PdfDocumentSurfaceLayout {...layoutProps} />
+  );
+}
+
+function buildPdfSurfaceLayoutProps(
+  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>,
+  pdfSystem: ReturnType<typeof usePdfSystemController>,
+  selectionState: ReturnType<typeof usePdfSelectionContextMenu>,
+  searchState: ReturnType<typeof usePdfSearchControls>,
+  searchIndexingHint: string | null
+): PdfSurfaceLayoutProps {
+  const selectionMenu = (
+    <PdfSelectionContextMenu
+      onClose={selectionState.closeSelectionMenu}
+      onCreateHighlight={selectionState.handleCreateHighlight}
+      state={selectionState.selectionMenuState}
     />
   );
+
+  return {
+    clearPageJumpRequest: pdfSystem.actions.clearPageJumpRequest,
+    handleContextMenu: selectionState.handleContextMenu,
+    handleSearchRequest: searchState.handleSearchRequest,
+    highlightLocators,
+    loadError: pdfSystem.state.loadError,
+    maxPage: pdfSystem.state.maxPage,
+    page: pdfSystem.state.page,
+    pageJumpRequest: pdfSystem.state.pageJumpRequest,
+    pdfSelectionLocator: selectionState.selectionOverlayLocator,
+    pdfSelectionContextMenu: selectionMenu,
+    pdfSource: pdfSystem.state.pdfSource,
+    reportLoadError: pdfSystem.actions.reportLoadError,
+    reportLoadSuccess: pdfSystem.actions.reportLoadSuccess,
+    requestPageChange: pdfSystem.actions.requestPageChange,
+    rotateClockwise: pdfSystem.actions.rotateClockwise,
+    rotation: pdfSystem.state.rotation,
+    searchIndexingHint,
+    searchQuery: searchState.searchQuery,
+    searchRequest: searchState.searchRequest,
+    searchStatus: searchState.searchStatus,
+    searchTarget: searchState.searchTarget,
+    setSearchQuery: searchState.setSearchQuery,
+    setSearchStatus: searchState.setSearchStatus,
+    setVisiblePage: pdfSystem.actions.setVisiblePage,
+    stepPage: pdfSystem.actions.stepPage,
+    surfaceRef: selectionState.surfaceRef,
+    totalPages: pdfSystem.state.totalPages,
+    zoom: pdfSystem.state.zoom,
+    zoomIn: pdfSystem.actions.zoomIn,
+    zoomOut: pdfSystem.actions.zoomOut
+  };
 }

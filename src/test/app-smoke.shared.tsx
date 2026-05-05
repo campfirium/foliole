@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { beforeEach, vi } from 'vitest';
 
+import './reactPdfMock';
+
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';

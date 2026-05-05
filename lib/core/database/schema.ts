@@ -88,7 +88,12 @@ export const attachments = sqliteTable('attachments', {
   originalName: text('original_name'),
   mimeType: text('mime_type'),
   sizeBytes: integer('size_bytes'),
-  createdAt: text('created_at').notNull()
+  createdAt: text('created_at').notNull(),
+  pdfIndexStatus: text('pdf_index_status'),
+  pdfIndexedAt: text('pdf_indexed_at'),
+  pdfIndexError: text('pdf_index_error'),
+  pdfIndexVersion: integer('pdf_index_version'),
+  pdfIndexAttempt: integer('pdf_index_attempt')
 });
 
 export const nodeAttachments = sqliteTable(
@@ -149,3 +154,13 @@ export const settings = sqliteTable('settings', {
   value: text('value').notNull(),
   updatedAt: text('updated_at').notNull()
 });
+
+export const pdfPageText = sqliteTable(
+  'pdf_page_text',
+  {
+    attachmentId: text('attachment_id').notNull(),
+    page: integer('page').notNull(),
+    text: text('text').notNull()
+  },
+  (table) => [primaryKey({ columns: [table.attachmentId, table.page] })]
+);

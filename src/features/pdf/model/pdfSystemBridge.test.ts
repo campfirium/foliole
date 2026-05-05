@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { registerPdfSystem, requestPdfAnchorJump, unregisterPdfSystem } from './pdfSystemBridge';
+import { registerPdfSystem, requestPdfAnchorJump, requestPdfSearch, unregisterPdfSystem } from './pdfSystemBridge';
 
 const NODE_ID = 'pdf-node-1';
 
@@ -15,7 +15,8 @@ it('returns false when requesting pdf anchor jump without an active pdf system',
 it('forwards anchor jump request to active pdf system', () => {
   const requestAnchorJump = vi.fn();
   registerPdfSystem(NODE_ID, {
-    requestAnchorJump
+    requestAnchorJump,
+    requestSearch: vi.fn()
   });
 
   expect(requestPdfAnchorJump(NODE_ID, { page: 5, x: 0.1, y: 0.7 })).toBe(true);
@@ -25,7 +26,8 @@ it('forwards anchor jump request to active pdf system', () => {
 it('stops forwarding after unregistering active pdf system', () => {
   const requestAnchorJump = vi.fn();
   registerPdfSystem(NODE_ID, {
-    requestAnchorJump
+    requestAnchorJump,
+    requestSearch: vi.fn()
   });
   unregisterPdfSystem(NODE_ID);
 
@@ -40,9 +42,23 @@ it('replays the latest queued jump when registration happens after request', () 
   expect(requestPdfAnchorJump(NODE_ID, { page: 6, x: 0.5, y: 0.8 })).toBe(false);
 
   registerPdfSystem(NODE_ID, {
-    requestAnchorJump
+    requestAnchorJump,
+    requestSearch: vi.fn()
   });
 
   expect(requestAnchorJump).toHaveBeenCalledTimes(1);
   expect(requestAnchorJump).toHaveBeenCalledWith({ page: 6, x: 0.5, y: 0.8 });
+});
+
+it('queues and replays external pdf search request', () => {
+  const requestSearch = vi.fn();
+
+  expect(requestPdfSearch(NODE_ID, { query: 'atlas', page: 4, matchStart: 32 })).toBe(false);
+
+  registerPdfSystem(NODE_ID, {
+    requestAnchorJump: vi.fn(),
+    requestSearch
+  });
+
+  expect(requestSearch).toHaveBeenCalledWith({ query: 'atlas', page: 4, matchStart: 32 });
 });

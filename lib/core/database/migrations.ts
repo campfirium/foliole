@@ -15,7 +15,7 @@ export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget 
   sqlite: TSqlite;
 }
 
-export const DATABASE_SCHEMA_VERSION = 14;
+export const DATABASE_SCHEMA_VERSION = 15;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -177,6 +177,19 @@ const CREATE_TABLE_STATEMENTS_V12 = ['CREATE TABLE IF NOT EXISTS mirror_articles
 const CREATE_TABLE_STATEMENTS_V13 = ['ALTER TABLE nodes ADD COLUMN kind TEXT NOT NULL DEFAULT \'topic\''];
 
 const CREATE_TABLE_STATEMENTS_V14 = ['ALTER TABLE nodes ADD COLUMN virtual_filter TEXT'];
+const CREATE_TABLE_STATEMENTS_V15 = [
+  'ALTER TABLE attachments ADD COLUMN pdf_index_status TEXT',
+  'ALTER TABLE attachments ADD COLUMN pdf_indexed_at TEXT',
+  'ALTER TABLE attachments ADD COLUMN pdf_index_error TEXT',
+  'ALTER TABLE attachments ADD COLUMN pdf_index_version INTEGER',
+  'ALTER TABLE attachments ADD COLUMN pdf_index_attempt INTEGER',
+  `CREATE TABLE IF NOT EXISTS pdf_page_text (
+    attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
+    page INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    PRIMARY KEY (attachment_id, page)
+  )`
+];
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -197,7 +210,8 @@ const MIGRATION_STEPS = [
   { migrate: migrateAttachmentIdsToHashes, version: 11 },
   { statements: CREATE_TABLE_STATEMENTS_V12, version: 12 },
   { migrate: migrateNodeKinds, statements: CREATE_TABLE_STATEMENTS_V13, version: 13 },
-  { statements: CREATE_TABLE_STATEMENTS_V14, version: 14 }
+  { statements: CREATE_TABLE_STATEMENTS_V14, version: 14 },
+  { statements: CREATE_TABLE_STATEMENTS_V15, version: 15 }
 ];
 function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
   if (currentVersion >= step.version) {
