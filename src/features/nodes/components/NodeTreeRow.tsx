@@ -11,7 +11,8 @@ import { AppButton } from '../../../shared/ui';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRowIcon } from './NodeTreeRowIcon';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
-import { NodeRenameInput, useRenameState } from './NodeTreeRowRename';
+import { NodeTreeRowExpandToggle, renderNodeLabel } from './NodeTreeRowParts';
+import { useRenameState } from './NodeTreeRowRename';
 import { resolveNodeRowButtonClassName, resolveNodeVisibilityValue } from './NodeTreeRowStyle';
 interface NodeTreeRowProps {
   depth: number;
@@ -19,6 +20,7 @@ interface NodeTreeRowProps {
   isCollapsed: boolean;
   isDerived?: boolean;
   isMuted?: boolean;
+  mutedOpacity?: number;
   nodeIconKind?: NodeTreeRowIconKind;
   nodeIconState?: NodeTreeRowIconState;
   isSelected: boolean;
@@ -63,12 +65,36 @@ function resolveNodeRowFrameClassName(
   );
 }
 
+function renderNodeTreeRowButton(props: {
+  depth: number;
+  hasChildren: boolean;
+  isActive: boolean;
+  isCollapsed: boolean;
+  isDerived: boolean;
+  isMuted: boolean;
+  mutedOpacity: number;
+  nodeIconKind: NodeTreeRowIconKind;
+  nodeIconState: NodeTreeRowIconState;
+  isSelected: boolean;
+  label: string;
+  nodeId: string;
+  onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
+  onRename?: (nodeId: string, title: string) => void;
+  onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
+  onToggleCollapse: (nodeId: string) => void;
+  style: CSSProperties;
+}) {
+  return <NodeTreeRowButton {...props} />;
+}
+
 export function NodeTreeRow({
   depth,
   isActive,
   isCollapsed,
   isDerived = false,
   isMuted = false,
+  mutedOpacity = 1,
   nodeIconKind = 'reading',
   nodeIconState = 'scheduled',
   isSelected,
@@ -101,25 +127,21 @@ export function NodeTreeRow({
       onDrop={onDrop ? (event) => onDrop(nodeId, event) : undefined}
       title={isDragDisabled ? 'Derived nodes cannot be moved.' : undefined}
     >
-      <NodeTreeRowButton
-        depth={depth}
-        hasChildren={hasChildren}
-        isActive={isActive}
-        isCollapsed={isCollapsed}
-        isDerived={isDerived}
-        isMuted={isMuted}
-        nodeIconKind={nodeIconKind}
-        nodeIconState={nodeIconState}
-        isSelected={isSelected}
-        label={label}
-        nodeId={nodeId}
-        onContextMenu={onContextMenu}
-        onKeyDown={onKeyDown}
-        onRename={onRename}
-        onSelect={onSelect}
-        onToggleCollapse={onToggleCollapse}
-        style={style}
-      />
+      {renderNodeTreeRowButton({
+        depth,
+        hasChildren,
+        isActive,
+        isCollapsed,
+        isDerived,
+        isMuted,
+        mutedOpacity,
+        nodeIconKind,
+        nodeIconState,
+        isSelected,
+        label,
+        nodeId,
+        onContextMenu, onKeyDown, onRename, onSelect, onToggleCollapse, style
+      })}
     </div>
   );
 }
@@ -130,6 +152,7 @@ interface NodeTreeRowButtonProps {
   isCollapsed: boolean;
   isDerived: boolean;
   isMuted: boolean;
+  mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
   isSelected: boolean;
@@ -143,21 +166,6 @@ interface NodeTreeRowButtonProps {
   style: CSSProperties;
 }
 
-function renderNodeLabel(label: string, rename: ReturnType<typeof useRenameState>) {
-  if (rename.isRenaming) {
-    return (
-      <NodeRenameInput
-        draftTitle={rename.draftTitle}
-        label={label}
-        onCancel={rename.cancelRename}
-        onChange={rename.setDraftTitle}
-        onSubmit={rename.submitRename}
-      />
-    );
-  }
-  return <span className="min-w-0 truncate">{label}</span>;
-}
-
 function NodeTreeRowButton({
   depth,
   hasChildren,
@@ -165,6 +173,7 @@ function NodeTreeRowButton({
   isCollapsed,
   isDerived,
   isMuted,
+  mutedOpacity,
   nodeIconKind,
   nodeIconState,
   isSelected,
@@ -179,7 +188,6 @@ function NodeTreeRowButton({
 }: NodeTreeRowButtonProps) {
   const rename = useRenameState(label, nodeId, onRename);
   const buttonClassName = resolveNodeRowButtonClassName({ isDerived, isMuted, isSelected });
-  const buttonStyle = isMuted ? { ...style, opacity: 0.35 } : style;
   return (
     <AppButton
       active={false}
@@ -198,7 +206,7 @@ function NodeTreeRowButton({
       onClick={(event) => onSelect(nodeId, resolveSelectModifiers(event))}
       onDoubleClick={(event) => (event.stopPropagation(), rename.beginRename())}
       role="treeitem"
-      style={buttonStyle}
+      style={style}
       variant="list"
       >
       <NodeTreeRowExpandToggle
@@ -208,62 +216,10 @@ function NodeTreeRowButton({
         nodeId={nodeId}
         onToggleCollapse={onToggleCollapse}
       />
-      <NodeTreeRowIcon kind={nodeIconKind} state={nodeIconState} />
-      {renderNodeLabel(label, rename)}
+      <span className="node-tree-row-content inline-flex min-w-0 items-center" style={isMuted ? { opacity: mutedOpacity } : undefined}>
+        <NodeTreeRowIcon kind={nodeIconKind} state={nodeIconState} />
+        {renderNodeLabel(label, rename)}
+      </span>
     </AppButton>
-  );
-}
-
-interface NodeTreeRowExpandToggleProps {
-  hasChildren: boolean;
-  isCollapsed: boolean;
-  label: string;
-  nodeId: string;
-  onToggleCollapse: (nodeId: string) => void;
-}
-
-function NodeTreeRowExpandToggle({
-  hasChildren,
-  isCollapsed,
-  label,
-  nodeId,
-  onToggleCollapse
-}: NodeTreeRowExpandToggleProps) {
-  if (!hasChildren) {
-    return <span aria-hidden="true" className="size-3 flex-none" />;
-  }
-  return (
-    <span
-      aria-label={isCollapsed ? `Expand ${label}` : `Collapse ${label}`}
-      className="flex size-3 flex-none items-center justify-center opacity-70"
-      onClick={(event) => (event.stopPropagation(), onToggleCollapse(nodeId))}
-      onKeyDown={(event) =>
-        event.key === 'Enter' || event.key === ' '
-          ? (event.preventDefault(), event.stopPropagation(), onToggleCollapse(nodeId))
-          : undefined
-      }
-      role="button"
-      tabIndex={0}
-    >
-      <ChevronDownIcon className={cn(isCollapsed && '-rotate-90')} />
-    </span>
-  );
-}
-function ChevronDownIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={cn('h-3 w-3 transition-transform', className)}
-      viewBox="0 0 16 16"
-    >
-      <path
-        d="M4.5 6.5 8 10l3.5-3.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-    </svg>
   );
 }

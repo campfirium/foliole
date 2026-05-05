@@ -59,10 +59,11 @@ body {
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-width: var(--node-icon-stroke-width, 2);
 }
 
 [data-node-icon='leaf'][data-node-icon-pattern='dash'] svg :is(path, circle, ellipse, line, polygon, polyline, rect) {
-  stroke-dasharray: 1 2;
+  stroke-dasharray: var(--node-icon-dash-length, 1) var(--node-icon-gap-length, 2);
   stroke-linecap: butt;
 }
 
@@ -534,9 +535,89 @@ body.workspace-resizing {
   max-width: 100%;
 }
 
+.settings-node-icon-inline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-node-icon-fade-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .settings-node-icon-field {
   display: flex;
   width: 100%;
+}
+
+.settings-node-icon-checkbox {
+  align-items: center;
+  color: #303640;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.settings-node-icon-color-field {
+  align-items: center;
+  background: #fbfbfa;
+  border: 1px solid #ccd0d6;
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 10px;
+}
+
+.settings-node-icon-color-input {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  height: 24px;
+  padding: 0;
+  width: 32px;
+}
+
+.settings-node-icon-color-value {
+  color: #4a5160;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-node-icon-number-field {
+  align-items: center;
+  background: #fbfbfa;
+  border: 1px solid #ccd0d6;
+  border-radius: 8px;
+  color: #303640;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 10px;
+}
+
+.settings-node-icon-number-label {
+  color: #4a5160;
+  font-size: 0.84rem;
+}
+
+.settings-node-icon-number-input {
+  background: transparent;
+  border: 0;
+  color: #1f2328;
+  font: inherit;
+  min-width: 72px;
+  width: 72px;
+}
+
+.settings-node-icon-number-input:disabled {
+  color: #8c9198;
+}
+
+.settings-select-wrap-compact {
+  flex: 0 0 auto;
+  width: 132px;
 }
 
 .settings-node-icon-textarea {
@@ -579,6 +660,12 @@ body.workspace-resizing {
   gap: 6px;
   min-height: 34px;
   padding: 4px 10px 4px 8px;
+}
+
+.settings-node-icon-preview-content {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
 }
 
 .settings-node-icon-preview-badge {

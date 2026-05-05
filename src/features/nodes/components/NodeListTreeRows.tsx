@@ -6,6 +6,7 @@ import { isFsrsReviewItemNode } from '../../review/model/reviewItemKind';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
 
+import { getDismissedFadeOpacity, shouldFadeDismissedWholeRow } from './nodeIconAppearanceSettings';
 import type { useNodeListDragController } from './NodeListTreeDrag';
 import { createNodeListRowKeydownHandler } from './NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from './NodeListTreeState';
@@ -66,7 +67,8 @@ export function NodeListRows(props: NodeListRowsProps) {
         isDerived={isDerivedNode}
         isDragDisabled={props.isTrashViewOpen || isDerivedNode}
         isDropTarget={props.drag.dropTargetNodeId === row.node.id}
-        isMuted={nodeIconState === 'dismissed'}
+        isMuted={nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow()}
+        mutedOpacity={nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow() ? getDismissedFadeOpacity() : 1}
         dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
         isSelected={props.selectedNodeIds.includes(row.node.id)}
         key={row.node.id}

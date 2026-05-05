@@ -10,7 +10,6 @@ export function resolveNodeRowButtonClassName(args: {
     'text-[#111317]',
     !args.isDerived && 'font-bold',
     args.isDerived && 'font-normal',
-    args.isMuted && 'opacity-35',
     args.isSelected && 'bg-foreground/[0.05]'
   );
 }
