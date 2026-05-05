@@ -20,6 +20,10 @@ export const attachmentResourceMock = {
   ) => requests.map((request) => request.attachmentId))
 };
 
+export const attachmentResolutionMock = {
+  invalidateAttachmentResourceResolution: vi.fn()
+};
+
 export const pairingMock = {
   createSignedRequestHeaders: vi.fn(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
     'X-Device-Id': 'android-test-device',
@@ -42,6 +46,7 @@ export const diagnosticsMock = {
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companionDesktopAttachmentResources', () => attachmentResourceMock);
+vi.mock('./attachmentResources', () => attachmentResolutionMock);
 vi.mock('./companionSyncDiagnostics', () => diagnosticsMock);
 vi.mock('./companionWorkspacePairing', () => pairingMock);
 vi.mock('@capacitor/core', () => ({
@@ -78,6 +83,7 @@ export function resetCompanionDesktopSyncMocks() {
     _endpointUrl: string,
     requests: Array<{ attachmentId: string }>
   ) => requests.map((request) => request.attachmentId));
+  attachmentResolutionMock.invalidateAttachmentResourceResolution.mockReset();
   pairingMock.createSignedRequestHeaders.mockImplementation(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
     'X-Device-Id': 'android-test-device',
     'X-Signature': `signed:${pathWithQuery}`

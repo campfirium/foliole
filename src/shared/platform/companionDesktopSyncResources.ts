@@ -1,3 +1,4 @@
+import { invalidateAttachmentResourceResolution } from './attachmentResources';
 import { syncCompanionAttachmentResourceRequestsFromDesktop } from './companionDesktopAttachmentResources';
 import { postDesktopJson } from './companionDesktopSyncHttp';
 import type { CompanionDesktopSyncProgress } from './companionDesktopSyncTypes';
@@ -129,6 +130,9 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
     }
     syncedAttachmentIds.push(...syncedBatchIds);
     const syncedIdSet = new Set(syncedBatchIds);
+    for (const attachmentId of syncedBatchIds) {
+      invalidateAttachmentResourceResolution(attachmentId);
+    }
     syncedBytes += resources
       .filter((resource) => syncedIdSet.has(resource.attachment_id))
       .reduce((sum, resource) => sum + Math.max(0, resource.size_bytes ?? 0), 0);

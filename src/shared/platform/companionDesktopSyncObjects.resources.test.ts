@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  attachmentResolutionMock,
   attachmentResourceMock,
   capacitorMock,
   diagnosticsMock,
@@ -47,6 +48,7 @@ async function testPullsAttachmentResources() {
     [{ attachmentId: 'att-1', contentHash: 'hash-att-1' }]
   );
   expect(result.syncedAttachmentIds).toEqual(['att-1']);
+  expect(attachmentResolutionMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith('att-1');
   expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
     completed: 1,
     completedBytes: 2048,
