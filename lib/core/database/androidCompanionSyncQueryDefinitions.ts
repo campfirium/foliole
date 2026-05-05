@@ -128,3 +128,25 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
     columns: [{ key: 'next_state_seq', source: 'next_state_seq', type: 'long' }]
   }
 };
+
+export const ANDROID_COMPANION_SYNC_OBJECT_READ_RULES = {
+  syncIndex: {
+    queryName: 'syncIndex'
+  },
+  syncObjects: {
+    emptyResultKey: 'objects',
+    objectIdsReplacement: ':objectIds',
+    objectTypesReplacement: ':objectTypes',
+    queryName: 'syncObjects',
+    resultKey: 'objects',
+    unfilteredObjectTypesReplacement: 'NULL'
+  },
+  syncStateChanges: {
+    defaultLimit: 500,
+    maxLimit: 1000,
+    minCursor: 0,
+    minLimit: 1,
+    queryName: 'syncStateChanges',
+    resultKey: 'objects'
+  }
+};

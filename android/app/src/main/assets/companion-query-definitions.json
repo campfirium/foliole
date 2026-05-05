@@ -1643,6 +1643,27 @@
       ]
     }
   },
+  "syncObjectRead": {
+    "syncIndex": {
+      "queryName": "syncIndex"
+    },
+    "syncObjects": {
+      "emptyResultKey": "objects",
+      "objectIdsReplacement": ":objectIds",
+      "objectTypesReplacement": ":objectTypes",
+      "queryName": "syncObjects",
+      "resultKey": "objects",
+      "unfilteredObjectTypesReplacement": "NULL"
+    },
+    "syncStateChanges": {
+      "defaultLimit": 500,
+      "maxLimit": 1000,
+      "minCursor": 0,
+      "minLimit": 1,
+      "queryName": "syncStateChanges",
+      "resultKey": "objects"
+    }
+  },
   "syncPayloadRouting": {
     "defaultDeviceId": "*",
     "objectIdDelimiter": ":",

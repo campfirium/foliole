@@ -18,6 +18,7 @@ import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/and
 import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from '../../lib/core/database/androidCompanionPayloadQueryDefinitions.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
+import { ANDROID_COMPANION_SYNC_OBJECT_READ_RULES } from '../../lib/core/database/androidCompanionSyncQueryDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,7 @@ await fs.writeFile(
   queryOutputPath,
   `${JSON.stringify({
     queries: ANDROID_COMPANION_QUERY_DEFINITIONS,
+    syncObjectRead: ANDROID_COMPANION_SYNC_OBJECT_READ_RULES,
     syncPayloadRouting: {
       ...ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING,
       routes: syncPayloadRoutes(ANDROID_COMPANION_QUERY_DEFINITIONS)

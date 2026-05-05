@@ -43,6 +43,18 @@ const SYNC_PAYLOAD_QUERY_STORE = path.join(
   'android',
   'FolioleCompanionSyncPayloadQueryStore.java'
 );
+const SYNC_OBJECT_QUERY_RULES = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionSyncObjectQueryRules.java'
+);
 const VIEW_STATE_SYNC_STORE = path.join(
   REPO_ROOT,
   'android',
@@ -93,6 +105,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
 
   it('loads sync object indexes and payloads through generated queries', async () => {
     const source = await readFile(SYNC_OBJECT_STORE, 'utf8');
+    const rulesSource = await readFile(SYNC_OBJECT_QUERY_RULES, 'utf8');
     const syncPayloadQueryStore = await readFile(SYNC_PAYLOAD_QUERY_STORE, 'utf8');
     const queryDefinitions = JSON.parse(await readFile(COMPANION_QUERY_DEFINITIONS, 'utf8'));
     const loadBody = source.slice(
@@ -100,10 +113,11 @@ describe('FolioleCompanionSyncObjectStore', () => {
       source.indexOf('private static Map')
     );
 
-    expect(source).toContain('FolioleCompanionNamedQueryStore.loadArray(context, database, "syncIndex")');
+    expect(source).toContain('FolioleCompanionSyncObjectQueryRules.syncIndexQueryName(context)');
     expect(source).toContain('FolioleCompanionSyncPayloadQueryStore.loadRowsWithPayloads');
-    expect(loadBody).toContain('"syncObjects"');
-    expect(loadBody).toContain('syncObjectQueryReplacements');
+    expect(loadBody).toContain('FolioleCompanionSyncObjectQueryRules.syncObjectsQueryName(context)');
+    expect(loadBody).toContain('FolioleCompanionSyncObjectQueryRules.syncObjectsReplacements(context');
+    expect(rulesSource).toContain('optJSONObject("syncObjectRead")');
     expect(source).not.toContain('objectTypeFilter');
     expect(source).not.toContain('private static void appendPayloads');
     expect(queryDefinitions.queries.syncObjects.sql).toContain('? = 0 OR object_type IN (:objectTypes)');

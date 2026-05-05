@@ -33,7 +33,7 @@ const ALLOWED_DIRECT_LOAD_ARRAY = [
   },
   {
     file: 'FolioleCompanionSyncObjectStore.java',
-    text: 'return FolioleCompanionNamedQueryStore.loadArray(context, database, "syncIndex");'
+    text: 'return FolioleCompanionNamedQueryStore.loadArray(context, database, FolioleCompanionSyncObjectQueryRules.syncIndexQueryName(context));'
   },
   {
     file: 'FolioleCompanionSyncPayloadQueryStore.java',
