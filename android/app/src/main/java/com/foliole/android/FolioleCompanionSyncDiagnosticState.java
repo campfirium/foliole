@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionSyncDiagnosticState {
@@ -28,10 +29,11 @@ final class FolioleCompanionSyncDiagnosticState {
         state.remove(maxStateSeqKey);
         state.put(stateKeys.getString("packCursor"), cursor <= 0 ? JSONObject.NULL : cursor);
         state.put(maxStateSeqKey, maxStateSeq <= 0 ? JSONObject.NULL : maxStateSeq);
-        state.put(stateKeys.getString("dirtyObjects"), loadRows(context, database, "dirtyObjects"));
-        state.put(stateKeys.getString("pendingAcks"), loadRows(context, database, "pendingAcks"));
-        state.put(stateKeys.getString("pushIssues"), loadRows(context, database, "pushIssues"));
-        state.put(stateKeys.getString("stateCounts"), loadRows(context, database, "stateCounts"));
+        JSONArray rowGroups = FolioleCompanionSyncDiagnosticQueryRules.array(context, "stateRowGroups");
+        for (int index = 0; index < rowGroups.length(); index += 1) {
+            JSONObject rowGroup = rowGroups.getJSONObject(index);
+            state.put(stateKeys.getString(rowGroup.getString("outputKey")), loadRows(context, database, rowGroup.getString("queryKey")));
+        }
         return state;
     }
 

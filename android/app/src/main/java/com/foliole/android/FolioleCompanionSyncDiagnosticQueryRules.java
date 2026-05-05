@@ -30,15 +30,24 @@ final class FolioleCompanionSyncDiagnosticQueryRules {
         return group(context, groupKey).getJSONArray(key);
     }
 
+    static JSONArray array(Context context, String key) throws Exception {
+        return rules(context).getJSONArray(key);
+    }
+
     private static JSONObject group(Context context, String key) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("diagnosticRead");
-        if (rules == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing diagnostic read rules.");
-        }
+        JSONObject rules = rules(context);
         JSONObject group = rules.optJSONObject(key);
         if (group == null) {
             throw new IllegalStateException("Companion query definitions asset is missing diagnostic read rule: " + key);
         }
         return group;
+    }
+
+    private static JSONObject rules(Context context) throws Exception {
+        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("diagnosticRead");
+        if (rules == null) {
+            throw new IllegalStateException("Companion query definitions asset is missing diagnostic read rules.");
+        }
+        return rules;
     }
 }

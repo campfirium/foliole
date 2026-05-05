@@ -93,6 +93,7 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdict(context, key)');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys")');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "metricRows")');
+    expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.array(context, "stateRowGroups")');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "verdictMetricKeys")');
     expect(combined).toContain('FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys")');
     expect(combined).toContain('optJSONObject("diagnosticRead")');
@@ -115,6 +116,8 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).not.toContain('getJSONArray("metrics"');
     expect(combined).not.toContain('getString("metric"');
     expect(combined).not.toContain('getLong("value"');
+    expect(combined).not.toContain('loadRows(context, database, "dirtyObjects"');
+    expect(combined).not.toContain('loadRows(context, database, "pendingAcks"');
   });
 
   it('generates Android diagnostic query routing metadata', async () => {
@@ -132,6 +135,10 @@ describe('Android sync diagnostics metadata', () => {
       dirtyObjects: { queryName: 'diagnosticDirtyObjects', resultKey: 'objects' },
       metaValue: { queryName: 'companionMetaValue' },
       metricRows: { resultKey: 'metrics', metricKey: 'metric', valueKey: 'value' },
+      stateRowGroups: expect.arrayContaining([
+        { outputKey: 'dirtyObjects', queryKey: 'dirtyObjects' },
+        { outputKey: 'stateCounts', queryKey: 'stateCounts' }
+      ]),
       stateMetrics: { queryName: 'diagnosticSyncStateMetrics' },
       storageMetrics: { queryName: 'diagnosticStorageMetrics' },
       verdictMetricKeys: {

@@ -1890,6 +1890,24 @@
       "queryName": "diagnosticSyncStateCounts",
       "resultKey": "counts"
     },
+    "stateRowGroups": [
+      {
+        "outputKey": "dirtyObjects",
+        "queryKey": "dirtyObjects"
+      },
+      {
+        "outputKey": "pendingAcks",
+        "queryKey": "pendingAcks"
+      },
+      {
+        "outputKey": "pushIssues",
+        "queryKey": "pushIssues"
+      },
+      {
+        "outputKey": "stateCounts",
+        "queryKey": "stateCounts"
+      }
+    ],
     "stateMetrics": {
       "queryName": "diagnosticSyncStateMetrics"
     },
