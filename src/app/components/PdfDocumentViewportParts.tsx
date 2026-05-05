@@ -130,6 +130,7 @@ interface PdfDocumentViewportContentProps {
   maxPage: number;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
+  onTextContentLoad: (pageNumber: number, text: string) => void;
   onTextLayerRender: (pageNumber: number) => void;
   onSearchStatusChange: (status: PdfSearchStatus) => void;
   onNextPage: () => void;
@@ -142,6 +143,7 @@ interface PdfDocumentViewportContentProps {
   onZoomOut: () => void;
   page: number;
   pageElementsRef: PdfPageElementsRef;
+  pageTextByNumberRef: MutableRefObject<Record<number, string>>;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
@@ -157,6 +159,7 @@ interface PdfDocumentViewportContentProps {
 function usePdfSearchRuntime({
   onSearchStatusChange,
   pageElementsRef,
+  pageTextByNumberRef,
   scrollContainerRef,
   searchQuery,
   searchRevision,
@@ -164,71 +167,62 @@ function usePdfSearchRuntime({
   totalPages
 }: Pick<
   PdfDocumentViewportContentProps,
-  'onSearchStatusChange' | 'pageElementsRef' | 'scrollContainerRef' | 'searchQuery' | 'searchRequest' | 'searchRevision' | 'totalPages'
+  'onSearchStatusChange' | 'pageElementsRef' | 'pageTextByNumberRef' | 'scrollContainerRef' | 'searchQuery' | 'searchRequest' | 'searchRevision' | 'totalPages'
 >) {
-  usePdfSearchEffect({ onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, searchRevision, totalPages });
+  usePdfSearchEffect({ onSearchStatusChange, pageElementsRef, pageTextByNumberRef, scrollContainerRef, searchQuery, searchRequest, searchRevision, totalPages });
 }
 
-export function PdfDocumentViewportContent({
-  handleContextMenu,
-  handleScroll,
-  highlightLocators,
-  maxPage,
-  onLoadError,
-  onLoadSuccess,
-  onTextLayerRender,
-  onSearchStatusChange,
-  onNextPage,
-  onPageChange,
-  onPreviousPage,
-  onRotateClockwise,
-  onSearchQueryChange,
-  onSearchRequest,
-  onZoomIn,
-  onZoomOut,
-  page,
-  pageElementsRef,
-  pdfSelectionLocator,
-  pdfSource,
-  rotation,
-  scrollContainerRef,
-  searchQuery,
-  searchRevision,
-  searchRequest,
-  searchStatus,
-  totalPages,
-  zoom
-}: PdfDocumentViewportContentProps) {
-  usePdfSearchRuntime({ onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, searchRevision, totalPages });
-  return renderPdfViewportContentBody({
-    handleContextMenu,
-    handleScroll,
-    highlightLocators,
-    maxPage,
-    onLoadError,
-    onLoadSuccess,
-    onNextPage,
-    onPageChange,
-    onPreviousPage,
-    onRotateClockwise,
-    onSearchQueryChange,
-    onSearchRequest,
-    onTextLayerRender,
-    onZoomIn,
-    onZoomOut,
-    page,
-    pageElementsRef,
-    pdfSelectionLocator,
-    pdfSource,
-    rotation,
-    scrollContainerRef,
-    searchQuery,
-    searchStatus,
-    totalPages,
-    zoom
-  });
+export function PdfDocumentViewportContent(props: PdfDocumentViewportContentProps) {
+  usePdfSearchRuntime(resolvePdfSearchRuntimeArgs(props));
+  return renderPdfViewportContentBody(resolveViewportContentBodyProps(props));
 }
 
-function renderPdfViewportContentBody(props: Omit<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'searchRequest' | 'searchRevision'>) {
+function renderPdfViewportContentBody(props: Omit<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision'>) {
   return <PdfDocumentViewportContentBody {...props} />;
+}
+
+function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {
+  return {
+    onSearchStatusChange: props.onSearchStatusChange,
+    pageElementsRef: props.pageElementsRef,
+    pageTextByNumberRef: props.pageTextByNumberRef,
+    scrollContainerRef: props.scrollContainerRef,
+    searchQuery: props.searchQuery,
+    searchRequest: props.searchRequest,
+    searchRevision: props.searchRevision,
+    totalPages: props.totalPages
+  } as const;
+}
+
+function resolveViewportContentBodyProps(
+  props: PdfDocumentViewportContentProps
+): Omit<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision'> {
+  return {
+    handleContextMenu: props.handleContextMenu,
+    handleScroll: props.handleScroll,
+    highlightLocators: props.highlightLocators,
+    maxPage: props.maxPage,
+    onLoadError: props.onLoadError,
+    onLoadSuccess: props.onLoadSuccess,
+    onTextContentLoad: props.onTextContentLoad,
+    onNextPage: props.onNextPage,
+    onPageChange: props.onPageChange,
+    onPreviousPage: props.onPreviousPage,
+    onRotateClockwise: props.onRotateClockwise,
+    onSearchQueryChange: props.onSearchQueryChange,
+    onSearchRequest: props.onSearchRequest,
+    onTextLayerRender: props.onTextLayerRender,
+    onZoomIn: props.onZoomIn,
+    onZoomOut: props.onZoomOut,
+    page: props.page,
+    pageElementsRef: props.pageElementsRef,
+    pdfSelectionLocator: props.pdfSelectionLocator,
+    pdfSource: props.pdfSource,
+    rotation: props.rotation,
+    scrollContainerRef: props.scrollContainerRef,
+    searchQuery: props.searchQuery,
+    searchStatus: props.searchStatus,
+    totalPages: props.totalPages,
+    zoom: props.zoom
+  };
 }

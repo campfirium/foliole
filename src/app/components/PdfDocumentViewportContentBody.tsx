@@ -11,6 +11,7 @@ interface PdfDocumentViewportContentBodyProps {
   maxPage: number;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
+  onTextContentLoad: (pageNumber: number, text: string) => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
@@ -60,6 +61,7 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
         highlightLocators={props.highlightLocators}
         onLoadError={props.onLoadError}
         onLoadSuccess={props.onLoadSuccess}
+        onTextContentLoad={props.onTextContentLoad}
         onTextLayerRender={props.onTextLayerRender}
         pageElementsRef={props.pageElementsRef}
         pdfSelectionLocator={props.pdfSelectionLocator}

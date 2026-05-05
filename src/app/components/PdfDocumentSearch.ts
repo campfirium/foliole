@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 
 export interface PdfSearchRequest {
@@ -14,6 +14,7 @@ export interface PdfSearchStatus {
 
 interface PdfSearchArgs {
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
+  pageTextByNumberRef: MutableRefObject<Record<number, string>>;
   searchRevision: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
   searchQuery: string;
@@ -39,7 +40,7 @@ interface TextSpanSegment {
 
 function collectTextSegments(shell: HTMLDivElement): TextSpanSegment[] {
   const segments: TextSpanSegment[] = [];
-  const textSpans = shell.querySelectorAll<HTMLElement>('.textLayer span');
+  const textSpans = resolveSearchTextSpans(shell);
   let cursor = 0;
   for (const span of textSpans) {
     const text = span.textContent ?? '';
@@ -52,6 +53,16 @@ function collectTextSegments(shell: HTMLDivElement): TextSpanSegment[] {
     cursor = end;
   }
   return segments;
+}
+
+function resolveSearchTextSpans(shell: HTMLDivElement) {
+  const presentationSpans = shell.querySelectorAll<HTMLElement>('.textLayer span[role="presentation"]');
+  if (presentationSpans.length > 0) {
+    return presentationSpans;
+  }
+  return Array.from(shell.querySelectorAll<HTMLElement>('.textLayer span')).filter(
+    (span) => !span.classList.contains('markedContent') && !span.querySelector('span')
+  );
 }
 
 function resolveSegmentAtPosition(segments: TextSpanSegment[], position: number) {
@@ -80,7 +91,12 @@ function collectQueryPositions(text: string, query: string) {
   return positions;
 }
 
-export function collectMatches(pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>, totalPages: number, query: string): PdfSearchMatch[] {
+export function collectMatches(
+  pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>,
+  totalPages: number,
+  query: string,
+  pageTextByNumberRef?: MutableRefObject<Record<number, string>>
+): PdfSearchMatch[] {
   const matches: PdfSearchMatch[] = [];
   for (let page = 1; page <= totalPages; page += 1) {
     const shell = pageElementsRef.current[page];
@@ -88,16 +104,24 @@ export function collectMatches(pageElementsRef: MutableRefObject<Record<number, 
       continue;
     }
     const segments = collectTextSegments(shell);
-    if (segments.length === 0) {
+    const indexedPageText = pageTextByNumberRef?.current[page];
+    const pageText =
+      (indexedPageText && indexedPageText.length > 0 ? indexedPageText : segments.map((segment) => segment.element.textContent ?? '').join('')).toLocaleLowerCase();
+    if (!pageText) {
       continue;
     }
-    const pageText = segments.map((segment) => segment.element.textContent ?? '').join('').toLocaleLowerCase();
     const positions = collectQueryPositions(pageText, query);
     for (const position of positions) {
-      const segment = resolveSegmentAtPosition(segments, position);
-      if (segment) {
-        matches.push({ element: segment.element, page });
+      if (segments.length === 0) {
+        matches.push({ element: shell, page });
+        continue;
       }
+      const segment = resolveSegmentAtPosition(segments, position);
+      if (!segment) {
+        matches.push({ element: shell, page });
+        continue;
+      }
+      matches.push({ element: segment.element, page });
     }
   }
   return matches;
@@ -128,9 +152,91 @@ function resolveNextCursor(request: PdfSearchRequest | null, current: number, to
   return (current + 1) % total;
 }
 
+function hasTextLayerInNodeList(nodes: NodeList) {
+  for (const node of nodes) {
+    if (!(node instanceof Element)) {
+      continue;
+    }
+    if (node.classList.contains('textLayer')) {
+      return true;
+    }
+    if (node.closest('.textLayer')) {
+      return true;
+    }
+    if (node.querySelector('.textLayer')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isTextLayerMutation(record: MutationRecord) {
+  if (record.type === 'characterData') {
+    return !!record.target.parentElement?.closest('.textLayer');
+  }
+  if (record.target instanceof Element && record.target.closest('.textLayer')) {
+    return true;
+  }
+  return hasTextLayerInNodeList(record.addedNodes) || hasTextLayerInNodeList(record.removedNodes);
+}
+
+function useTextLayerMutationRevision(
+  scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
+  searchQuery: string,
+  totalPages: number | null
+) {
+  const [mutationRevision, setMutationRevision] = useState(0);
+
+  useEffect(() => {
+    const query = normalizeQuery(searchQuery);
+    const container = scrollContainerRef.current;
+    if (!query || !container || !totalPages || typeof MutationObserver === 'undefined') {
+      return;
+    }
+
+    let frameId: number | null = null;
+    let timeoutId: number | null = null;
+    const observer = new MutationObserver((records) => {
+      if (!records.some(isTextLayerMutation)) {
+        return;
+      }
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      frameId = window.requestAnimationFrame(() => {
+        timeoutId = window.setTimeout(() => {
+          setMutationRevision((current) => current + 1);
+        }, 0);
+      });
+    });
+
+    observer.observe(container, {
+      characterData: true,
+      childList: true,
+      subtree: true
+    });
+
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [scrollContainerRef, searchQuery, totalPages]);
+
+  return mutationRevision;
+}
+
 export function usePdfSearchEffect({
   onSearchStatusChange,
   pageElementsRef,
+  pageTextByNumberRef,
   searchRevision,
   scrollContainerRef,
   searchQuery,
@@ -139,6 +245,7 @@ export function usePdfSearchEffect({
 }: PdfSearchArgs) {
   const cursorRef = useRef(0);
   const lastQueryRef = useRef('');
+  const textLayerMutationRevision = useTextLayerMutationRevision(scrollContainerRef, searchQuery, totalPages);
 
   useEffect(() => {
     const query = normalizeQuery(searchQuery);
@@ -150,7 +257,7 @@ export function usePdfSearchEffect({
       return;
     }
 
-    const matches = collectMatches(pageElementsRef, totalPages, query);
+    const matches = collectMatches(pageElementsRef, totalPages, query, pageTextByNumberRef);
     if (matches.length === 0) {
       cursorRef.current = 0;
       lastQueryRef.current = query;
@@ -173,5 +280,5 @@ export function usePdfSearchEffect({
 
     scrollToMatch(container, match);
     onSearchStatusChange({ current: cursorRef.current + 1, hasQuery: true, total: matches.length });
-  }, [onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, searchRevision, totalPages]);
+  }, [onSearchStatusChange, pageElementsRef, pageTextByNumberRef, scrollContainerRef, searchQuery, searchRequest, searchRevision, textLayerMutationRevision, totalPages]);
 }

@@ -44,9 +44,11 @@ interface PdfDocumentViewportProps {
 }
 
 function renderPdfViewportContent(args: {
+  handleTextContentLoad: (pageNumber: number, text: string) => void;
   handleTextLayerRender: (pageNumber: number) => void;
   handleScroll: () => void;
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
+  pageTextByNumberRef: MutableRefObject<Record<number, string>>;
   searchRevision: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
 } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>) {
@@ -58,6 +60,7 @@ function renderPdfViewportContent(args: {
       maxPage={args.maxPage}
       onLoadError={args.onLoadError}
       onLoadSuccess={args.onLoadSuccess}
+      onTextContentLoad={args.handleTextContentLoad}
       onSearchStatusChange={args.onSearchStatusChange}
       onNextPage={args.onNextPage}
       onPageChange={args.onPageChange}
@@ -69,6 +72,7 @@ function renderPdfViewportContent(args: {
       onZoomOut={args.onZoomOut}
       page={args.page}
       pageElementsRef={args.pageElementsRef}
+      pageTextByNumberRef={args.pageTextByNumberRef}
       pdfSelectionLocator={args.pdfSelectionLocator}
       pdfSource={args.pdfSource}
       rotation={args.rotation}
@@ -85,7 +89,7 @@ function renderPdfViewportContent(args: {
 }
 
 export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
-  const { handleScroll, handleTextLayerRender, pageElementsRef, scrollContainerRef, searchRevision } = usePdfViewportRuntime(
+  const { handleScroll, handleTextContentLoad, handleTextLayerRender, pageElementsRef, pageTextByNumberRef, scrollContainerRef, searchRevision } = usePdfViewportRuntime(
     props.clearPageJumpRequest,
     props.page,
     props.pageJumpRequest,
@@ -103,8 +107,10 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
   return (
     <PdfDocumentViewportReady
       handleScroll={handleScroll}
+      handleTextContentLoad={handleTextContentLoad}
       handleTextLayerRender={handleTextLayerRender}
       pageElementsRef={pageElementsRef}
+      pageTextByNumberRef={pageTextByNumberRef}
       searchRevision={searchRevision}
       scrollContainerRef={scrollContainerRef}
       {...props}
@@ -115,8 +121,10 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
 function PdfDocumentViewportReady(
   props: {
     handleScroll: () => void;
+    handleTextContentLoad: (pageNumber: number, text: string) => void;
     handleTextLayerRender: (pageNumber: number) => void;
     pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
+    pageTextByNumberRef: MutableRefObject<Record<number, string>>;
     searchRevision: number;
     scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
   } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>
@@ -136,11 +144,13 @@ function usePdfViewportRuntime(
 ) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
+  const pageTextByNumberRef = useRef<Record<number, string>>({});
   const renderedTextLayerPagesRef = useRef<Set<number>>(new Set());
   const [searchRevision, setSearchRevision] = useState(0);
 
   useEffect(() => {
     renderedTextLayerPagesRef.current.clear();
+    pageTextByNumberRef.current = {};
     setSearchRevision((current) => current + 1);
   }, [pdfSource]);
 
@@ -154,6 +164,13 @@ function usePdfViewportRuntime(
     renderedTextLayerPagesRef.current.add(pageNumber);
     setSearchRevision((current) => current + 1);
   };
+  const handleTextContentLoad = (pageNumber: number, text: string) => {
+    if (pageTextByNumberRef.current[pageNumber] === text) {
+      return;
+    }
+    pageTextByNumberRef.current[pageNumber] = text;
+    setSearchRevision((current) => current + 1);
+  };
 
-  return { handleScroll, pageElementsRef, searchRevision, scrollContainerRef, handleTextLayerRender };
+  return { handleScroll, handleTextContentLoad, pageElementsRef, pageTextByNumberRef, searchRevision, scrollContainerRef, handleTextLayerRender };
 }

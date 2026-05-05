@@ -1,9 +1,9 @@
-import { Document, Page } from 'react-pdf';
+import { Document } from 'react-pdf';
 
+import { renderPdfPage } from './PdfDocumentPageRender';
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfDocumentToolbar } from './PdfDocumentToolbar';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
-import { renderPdfOverlayMarker, renderPdfOverlayRects, resolvePdfOverlayMarkerSize } from './pdfOverlayRender';
 
 const PDF_PAGE_MIN = 1;
 
@@ -56,6 +56,7 @@ interface PdfViewportDocumentProps {
   }>;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
+  onTextContentLoad: (pageNumber: number, text: string) => void;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
@@ -82,6 +83,7 @@ export function PdfViewportDocument(props: PdfViewportDocumentProps) {
     >
       <PdfDocumentPages
         highlightLocators={props.highlightLocators}
+        onTextContentLoad={props.onTextContentLoad}
         onTextLayerRender={props.onTextLayerRender}
         pageElementsRef={props.pageElementsRef}
         pdfSelectionLocator={props.pdfSelectionLocator}
@@ -93,31 +95,9 @@ export function PdfViewportDocument(props: PdfViewportDocumentProps) {
   );
 }
 
-function stripTextLayerInlineFonts(page: HTMLDivElement | null) {
-  if (!page) {
-    return;
-  }
-  const spans = page.querySelectorAll<HTMLSpanElement>('.textLayer span');
-  for (const span of spans) {
-    span.style.fontFamily = '';
-  }
-}
-
-function resolvePageHighlightLocators(
-  highlightLocators: Array<{
-    id: string;
-    page: number;
-    rects?: Array<{ height: number; width: number; x: number; y: number }>;
-    x: number | null;
-    y: number | null;
-  }>,
-  page: number
-) {
-  return highlightLocators.filter((locator) => locator.page === page);
-}
-
 function PdfDocumentPages({
   highlightLocators,
+  onTextContentLoad,
   onTextLayerRender,
   pageElementsRef,
   pdfSelectionLocator,
@@ -132,6 +112,7 @@ function PdfDocumentPages({
     x: number | null;
     y: number | null;
   }>;
+  onTextContentLoad: (pageNumber: number, text: string) => void;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
@@ -146,6 +127,7 @@ function PdfDocumentPages({
     const pageNumber = index + PDF_PAGE_MIN;
     return renderPdfPage({
       highlightLocators,
+      onTextContentLoad,
       onTextLayerRender,
       pageElementsRef,
       pageNumber,
@@ -154,98 +136,4 @@ function PdfDocumentPages({
       zoom
     });
   });
-}
-
-function renderStoredHighlights(
-  pageHighlights: Array<{
-    id: string;
-    rects?: Array<{ height: number; width: number; x: number; y: number }>;
-    x: number | null;
-    y: number | null;
-  }>,
-  markerSize: number
-) {
-  return pageHighlights.map((locator) => {
-    const highlightRects = renderPdfOverlayRects(locator);
-    return highlightRects ?? renderPdfOverlayMarker(locator, markerSize);
-  });
-}
-
-function renderSelectionOverlay(
-  selectionLocator: { id: string; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | null,
-  markerSize: number
-) {
-  if (!selectionLocator) {
-    return null;
-  }
-  return (
-    renderPdfOverlayRects(
-      selectionLocator,
-      'pointer-events-none absolute z-20 rounded-[3px] bg-[var(--app-selection-surface-color)] ring-1 ring-[var(--app-selection-surface-color)]',
-      'pdf-selection-rect'
-    ) ??
-    renderPdfOverlayMarker(
-      selectionLocator,
-      markerSize,
-      'pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-selection-surface-color)] shadow-sm ring-1 ring-[var(--app-selection-surface-color)]',
-      'pdf-selection-marker'
-    )
-  );
-}
-
-function renderPdfPage({
-  highlightLocators,
-  onTextLayerRender,
-  pageElementsRef,
-  pageNumber,
-  pdfSelectionLocator,
-  rotation,
-  zoom
-}: {
-  highlightLocators: Array<{
-    id: string;
-    page: number;
-    rects?: Array<{ height: number; width: number; x: number; y: number }>;
-    x: number | null;
-    y: number | null;
-  }>;
-  onTextLayerRender: (pageNumber: number) => void;
-  pageElementsRef: PdfPageElementsRef;
-  pageNumber: number;
-  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
-  rotation: number;
-  zoom: number;
-}) {
-  const pageHighlights = resolvePageHighlightLocators(highlightLocators, pageNumber);
-  const markerSize = resolvePdfOverlayMarkerSize(zoom);
-  const selectionLocator = pdfSelectionLocator?.page === pageNumber ? { ...pdfSelectionLocator, id: 'pdf-selection-overlay' } : null;
-  return (
-    <div
-      className="relative flex w-full justify-center px-4"
-      data-pdf-page-number={pageNumber}
-      data-testid="pdf-document-page-shell"
-      key={pageNumber}
-      ref={(element) => {
-        pageElementsRef.current[pageNumber] = element;
-      }}
-    >
-      <div className="relative inline-block">
-        <Page
-          className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
-          data-testid="pdf-document-page"
-          onRenderTextLayerSuccess={() => {
-            stripTextLayerInlineFonts(pageElementsRef.current[pageNumber]);
-            onTextLayerRender(pageNumber);
-          }}
-          pageNumber={pageNumber}
-          renderAnnotationLayer
-          renderTextLayer
-          rotate={rotation}
-          scale={zoom / 100}
-        />
-        {renderStoredHighlights(pageHighlights, markerSize)}
-        {renderSelectionOverlay(selectionLocator, markerSize)}
-      </div>
-    </div>
-  );
 }
