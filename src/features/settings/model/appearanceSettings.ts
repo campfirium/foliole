@@ -30,6 +30,18 @@ import {
   setSelectionColorPreset
 } from './appearanceColorSettings';
 import {
+  clampFontSize,
+  sanitizeFontFamily
+} from './appearanceFontSettings';
+import {
+  DEFAULT_DIM_IMAGES_IN_DARK_MODE,
+  DEFAULT_PDF_READING_MODE,
+  PDF_READING_MODE_OPTIONS,
+  type InterfaceFontPreset,
+  type MonospaceFontPreset,
+  type PdfReadingMode
+} from './appearanceSettingsOptions';
+import {
   applyEditorTypographyScale,
   resolveInterfaceFontFamily,
   resolveMonospaceFontFamily
@@ -86,104 +98,43 @@ export {
   setWorkspaceSurfaceAssignments,
   setWorkspaceSurfacePalette
 };
-export const INTERFACE_FONT_OPTIONS = ['default', 'inter', 'system', 'source-sans', 'serif', 'rounded', 'custom'] as const;
-export const MONOSPACE_FONT_OPTIONS = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa', 'custom'] as const;
-export const PDF_READING_MODE_OPTIONS = ['original', 'inverted', 'warm'] as const;
-export type InterfaceFontPreset = (typeof INTERFACE_FONT_OPTIONS)[number];
-export type MonospaceFontPreset = (typeof MONOSPACE_FONT_OPTIONS)[number];
-export type PdfReadingMode = (typeof PDF_READING_MODE_OPTIONS)[number];
-export const INTERFACE_FONT_SIZE_MIN = 12;
-export const INTERFACE_FONT_SIZE_MAX = 36;
-export const INTERFACE_FONT_SIZE_DEFAULT = 17;
-export const DEFAULT_PDF_READING_MODE: PdfReadingMode = 'inverted';
-export const DEFAULT_DIM_IMAGES_IN_DARK_MODE = false;
+export {
+  getCustomInterfaceFont,
+  getCustomMonospaceFont,
+  getCustomUiFont,
+  getInterfaceFontPreset,
+  getInterfaceFontSize,
+  getMonospaceFontPreset,
+  getUiFontPreset,
+  setCustomInterfaceFont,
+  setCustomMonospaceFont,
+  setCustomUiFont,
+  setInterfaceFontPreset,
+  setInterfaceFontSize,
+  setMonospaceFontPreset,
+  setUiFontPreset
+} from './appearanceFontSettings';
+export {
+  DEFAULT_DIM_IMAGES_IN_DARK_MODE,
+  DEFAULT_PDF_READING_MODE,
+  INTERFACE_FONT_OPTIONS,
+  INTERFACE_FONT_SIZE_DEFAULT,
+  INTERFACE_FONT_SIZE_MAX,
+  INTERFACE_FONT_SIZE_MIN,
+  MONOSPACE_FONT_OPTIONS,
+  PDF_READING_MODE_OPTIONS,
+  type InterfaceFontPreset,
+  type MonospaceFontPreset,
+  type PdfReadingMode
+} from './appearanceSettingsOptions';
 const STORAGE_KEYS = {
-  uiFont: APP_SETTINGS_STORAGE_KEYS.uiFont,
-  customUiFont: APP_SETTINGS_STORAGE_KEYS.customUiFont,
-  interfaceFont: APP_SETTINGS_STORAGE_KEYS.interfaceFont,
-  monospaceFont: APP_SETTINGS_STORAGE_KEYS.monospaceFont,
   baseColor: APP_SETTINGS_STORAGE_KEYS.baseColor,
   pdfReadingMode: APP_SETTINGS_STORAGE_KEYS.pdfReadingMode,
-  dimImagesInDarkMode: APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode,
-  interfaceFontSize: APP_SETTINGS_STORAGE_KEYS.interfaceFontSize,
-  customInterfaceFont: APP_SETTINGS_STORAGE_KEYS.customInterfaceFont,
-  customMonospaceFont: APP_SETTINGS_STORAGE_KEYS.customMonospaceFont
+  dimImagesInDarkMode: APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode
 } as const;
-
-function isInterfaceFontPreset(value: string): value is InterfaceFontPreset {
-  return INTERFACE_FONT_OPTIONS.includes(value as InterfaceFontPreset);
-}
-
-function isMonospaceFontPreset(value: string): value is MonospaceFontPreset {
-  return MONOSPACE_FONT_OPTIONS.includes(value as MonospaceFontPreset);
-}
 
 function isPdfReadingMode(value: string): value is PdfReadingMode {
   return PDF_READING_MODE_OPTIONS.includes(value as PdfReadingMode);
-}
-
-function clampFontSize(value: number) {
-  return Math.max(INTERFACE_FONT_SIZE_MIN, Math.min(INTERFACE_FONT_SIZE_MAX, Math.round(value)));
-}
-
-function sanitizeFontFamily(value: string) {
-  const cleaned = value.replace(/[;{}]/g, '').replace(/^@/, '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
-  const primaryName = cleaned.split(/\s+&\s+/)[0]?.trim() ?? '';
-  return primaryName.slice(0, 256);
-}
-
-export function getInterfaceFontPreset(): InterfaceFontPreset {
-  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFont);
-  return raw && isInterfaceFontPreset(raw) ? raw : 'default';
-}
-
-export function getUiFontPreset(): InterfaceFontPreset {
-  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.uiFont);
-  return raw && isInterfaceFontPreset(raw) ? raw : 'default';
-}
-
-export function setUiFontPreset(value: InterfaceFontPreset) {
-  setWhitelistedLocalStorageItem(STORAGE_KEYS.uiFont, value);
-}
-
-export function setInterfaceFontPreset(value: InterfaceFontPreset) {
-  setWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFont, value);
-}
-
-export function getCustomUiFont() {
-  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.customUiFont);
-  return raw ? sanitizeFontFamily(raw) : '';
-}
-
-export function setCustomUiFont(value: string) {
-  setWhitelistedLocalStorageItem(STORAGE_KEYS.customUiFont, sanitizeFontFamily(value));
-}
-
-export function getCustomInterfaceFont() {
-  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.customInterfaceFont);
-  return raw ? sanitizeFontFamily(raw) : '';
-}
-
-export function setCustomInterfaceFont(value: string) {
-  setWhitelistedLocalStorageItem(STORAGE_KEYS.customInterfaceFont, sanitizeFontFamily(value));
-}
-
-export function getCustomMonospaceFont() {
-  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.customMonospaceFont);
-  return raw ? sanitizeFontFamily(raw) : '';
-}
-
-export function setCustomMonospaceFont(value: string) {
-  setWhitelistedLocalStorageItem(STORAGE_KEYS.customMonospaceFont, sanitizeFontFamily(value));
-}
-
-export function getMonospaceFontPreset(): MonospaceFontPreset {
-  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.monospaceFont);
-  return raw && isMonospaceFontPreset(raw) ? raw : 'default';
-}
-
-export function setMonospaceFontPreset(value: MonospaceFontPreset) {
-  setWhitelistedLocalStorageItem(STORAGE_KEYS.monospaceFont, value);
 }
 
 export function getBaseColorMode(): BaseColorMode {
@@ -211,16 +162,6 @@ export function getDimImagesInDarkMode() {
 
 export function setDimImagesInDarkMode(value: boolean) {
   setWhitelistedLocalStorageItem(STORAGE_KEYS.dimImagesInDarkMode, String(value));
-}
-
-export function getInterfaceFontSize() {
-  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFontSize);
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? clampFontSize(parsed) : INTERFACE_FONT_SIZE_DEFAULT;
-}
-
-export function setInterfaceFontSize(value: number) {
-  setWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFontSize, String(clampFontSize(value)));
 }
 
 interface ApplyAppearanceSettingsInput {
