@@ -52,12 +52,11 @@
 5. 在首个功能任务前，必须先完成“工程基线任务”：创建并打通上述脚本。
 
 ## Windows Native 客户端同步规则（强制）
-1. 日常开发默认执行 `npm run windows:dev:native`（apply -> sync），由 Tauri CLI 负责热更新/重编译重启决策。
-2. 任何影响用户可见行为的代码改动完成后，Agent 必须至少执行一次 `npm run windows:dev:native`，确保变更进入 Windows 客户端运行态，不得仅停留在本地构建或测试通过。
-3. `npm run windows:dev:restart` 仅用于异常恢复或高风险改动（窗口壳层/标题栏/启动流程/Tauri 配置/原生权限），不得作为日常默认动作。
-4. 执行 `stop/restart` 时采用“优雅退出优先、强制终止兜底”策略，禁止默认直接强停进程树。
-5. 对用户宣称“已可在 Windows 客户端验证”前，必须回报本次执行的实际命令与最终状态字段（如 `status: SYNCED` 或 `status: RESTARTED`）。
-6. 若同步或重启失败，必须先修复同步链路再继续功能结论输出；禁止以“代码已改完”替代客户端可见结果。
+1. Windows 端 Tauri 启动由用户手动负责（例如在 `C:\dev\foliole` 执行 `npm run tauri:dev`）。
+2. Agent 每次代码改动后默认执行 `npm run windows:deliver`：先过质量闸（`lint -> typecheck -> test -> build`），通过后再同步到 Windows 镜像目录。
+3. 仅在用户明确要求“只同步”时，才执行 `npm run windows:sync`。
+4. 对用户宣称“可在 Windows 客户端验收”前，必须回报本次执行的实际命令与最终状态字段（`status: SYNCED` 或 `status: DELIVERED`）。
+5. 若质量闸或同步失败，必须先修复失败项再继续功能结论输出；禁止以“代码已改完”替代客户端可见结果。
 
 ## 架构与代码约束
 1. 编辑器能力通过 `EditorAdapter` 抽象暴露，避免业务层散落具体编辑器 API。

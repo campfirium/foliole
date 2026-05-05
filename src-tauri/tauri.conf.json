@@ -17,9 +17,9 @@
         "width": 1400,
         "height": 900,
         "dataDirectory": "webview-main",
-        "decorations": true,
+        "decorations": false,
         "resizable": true,
-        "maximized": false
+        "maximized": true
       }
     ],
     "security": {

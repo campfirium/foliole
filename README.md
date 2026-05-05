@@ -5,9 +5,9 @@ Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Codi
 ## 快速开始（Agent 协作）
 1. 阅读产品规范：`.lab/specs/`
 2. 读取 Agent 约定：`AGENTS.md`
-3. 查看当前阶段指针：`.lab/agent/current-phase.md`
+3. 用户说“继续”时读取：`.lab/agent/handoffs/LATEST.md`
 4. 用任务模板执行：`.lab/agent/task-template.md`
-5. 完成后记录：`.lab/agent/iteration-log.md`
+5. 完成后记录：`.lab/agent/iteration-log/entries/*.md` 并更新 `.lab/agent/iteration-log.md`
 6. 提交前执行：`scripts/quality-gate.sh`
 
 ## 当前里程碑
@@ -29,28 +29,8 @@ Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Codi
 2. Set `VITE_REVIEW_SCHEDULER_MODE=rust-only` to hard-require Rust scheduler.
 3. In `rust-only`, grading throws when `window.__TAURI__.core.invoke` is unavailable.
 
-## Windows Prerequisite Check From WSL
-1. Run `npm run windows:env:check` in WSL.
-2. The command executes a Windows PowerShell check via `powershell.exe`.
-3. Logs are written to `logs/windows/windows-env-check-*.log`.
-4. Exit code is non-zero when required prerequisites are missing.
-
-## Windows Sync + Build + Test Pipeline From WSL
-1. Run default dev pipeline (no packaging): `npm run windows:pipeline`
-2. Explicit fast alias (same behavior): `npm run windows:pipeline:fast`
-3. Run release packaging check: `npm run windows:package`
-4. Optional mirror directory override: `WINDOWS_WORKDIR='C:\dev\foliole' npm run windows:pipeline`
-5. Pipeline steps:
-- Sync from WSL source to Windows mirror.
-- Run `lint -> typecheck -> test -> build` on Windows.
-- Run `tauri build --debug` only in `windows:package`.
-- Stream all errors back to WSL terminal and write `logs/windows/windows-pipeline-*.log`.
-
 ## Windows Native Dev Loop From WSL
-1. Keep Windows native client running during development. Start once with: `npm run windows:dev:start`
-2. After normal frontend edits (`src/**`, `styles`, most UI logic), run: `npm run windows:dev:sync`
-3. When runtime-sensitive files change (`src-tauri/**`, `package*.json`, `vite.config.ts`, `index.html`), run: `npm run windows:dev:restart`
-4. Use smart mode to auto-decide sync vs restart from changed files: `npm run windows:dev:native`
-5. Check process state any time: `npm run windows:dev:status`
-6. Stop all native dev processes when finishing: `npm run windows:dev:stop`
-7. All actions write logs to `logs/windows/windows-native-dev-*.log`.
+1. Start Tauri dev on Windows manually (for example from a `.bat` that runs `npm run tauri:dev` in `C:\dev\foliole`).
+2. After code changes in WSL, run `npm run windows:deliver`.
+3. `windows:deliver` executes `lint -> typecheck -> test -> build`, then syncs code to `C:\dev\foliole`.
+4. Optional one-shot sync only: `npm run windows:sync`.
