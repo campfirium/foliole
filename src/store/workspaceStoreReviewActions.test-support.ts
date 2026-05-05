@@ -102,6 +102,7 @@ export function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     gradeReviewCard: async () => false,
     completeReviewItem: () => false,
     deferReviewItem: () => false,
+    dismissReviewItem: () => false,
     exitReviewSession: () => undefined,
     deleteNode: () => undefined,
     restoreNode: () => undefined,

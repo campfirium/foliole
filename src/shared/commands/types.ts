@@ -6,12 +6,17 @@ export interface CommandShortcut {
   shiftKey?: boolean;
 }
 
+export interface CommandShortcutSet {
+  primary?: CommandShortcut;
+  secondary?: CommandShortcut;
+}
+
 export interface CommandPaletteItem {
   id: string;
   title: string;
   section?: string;
   keywords?: string[];
-  shortcut?: CommandShortcut;
+  shortcuts?: CommandShortcutSet;
   enabled: boolean;
 }
 
@@ -29,7 +34,7 @@ export interface CommandRegistration {
   palette?: boolean;
   execute: (context: CommandContext) => boolean | void;
   isEnabled?: (context: CommandContext) => boolean;
-  shortcut?: CommandShortcut;
+  shortcuts?: CommandShortcutSet;
 }
 
 export interface CommandContext {

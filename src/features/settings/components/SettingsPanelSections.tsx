@@ -43,7 +43,7 @@ export interface SettingsCategoryContentProps {
   onEnableShortTermChange: (value: boolean) => void;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
-  onHotkeyUpdate: (commandId: string, nextLabel: string) => HotkeyUpdateResult;
+  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;

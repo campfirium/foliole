@@ -4,7 +4,9 @@ export interface HotkeySettingItem {
   commandId: string;
   title: string;
   section?: string;
-  shortcutLabel: string;
+  primaryShortcutLabel: string;
+  secondaryShortcutLabel: string;
+  shortcutSummaryLabel: string;
   isCustomized: boolean;
   conflictSeverity?: 'warning' | 'error';
   conflictMessage?: string;

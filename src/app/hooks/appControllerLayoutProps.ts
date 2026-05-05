@@ -50,7 +50,7 @@ interface BuildControllerLayoutPropsArgs {
     setMonospaceFontPresetState: (value: MonospaceFontPreset) => void;
     setUiFontPresetState: (value: InterfaceFontPreset) => void;
   };
-  blockedHotkeyUpdate: () => HotkeyUpdateResult;
+  blockedHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   canStartStudyMode: boolean;
   documentResize: ReturnType<typeof useDocumentWidthResizer>;
   editorCtx: ReturnType<typeof useEditorContextCommands>;
@@ -76,6 +76,7 @@ interface BuildControllerLayoutPropsArgs {
     gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;
     completeReviewItem: () => boolean;
     deferReviewItem: () => boolean;
+    dismissReviewItem: () => boolean;
     isListCollapsed: boolean;
     isRightSidebarCollapsed: boolean;
     listWidth: number;
@@ -172,6 +173,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     exitStudyMode: args.exitStudyMode,
     completeReviewItem: args.ws.completeReviewItem,
     deferReviewItem: args.ws.deferReviewItem,
+    dismissReviewItem: args.ws.dismissReviewItem,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     nav: {
       onGoBack: args.nav.handleGoBack,
@@ -230,6 +232,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onToggleRightSidebarVisibility: createToggleRightSidebarVisibility(args),
     updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade),
     completeReviewItem: () => args.ws.completeReviewItem(),
-    deferReviewItem: () => args.ws.deferReviewItem()
+    deferReviewItem: () => args.ws.deferReviewItem(),
+    dismissReviewItem: () => args.ws.dismissReviewItem()
   };
 }

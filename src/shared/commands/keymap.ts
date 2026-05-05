@@ -2,14 +2,30 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../platform/storage';
 
 import { parseShortcutLabel, serializeShortcut } from './shortcuts';
-import type { CommandShortcut } from './types';
+import type { CommandShortcut, CommandShortcutSet } from './types';
 
-export type CommandShortcutOverrides = Record<string, string>;
+export interface CommandShortcutOverrideEntry {
+  primary?: string;
+  secondary?: string;
+}
+
+export type CommandShortcutOverrides = Record<string, CommandShortcutOverrideEntry>;
 
 export interface ResolveShortcutMapOptions {
   commandIds: string[];
-  defaults: Partial<Record<string, CommandShortcut>>;
+  defaults: Partial<Record<string, CommandShortcutSet>>;
   overrides: CommandShortcutOverrides;
+}
+
+function sanitizeShortcutLabel(value: unknown) {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const normalized = value.trim();
+  if (!normalized || !parseShortcutLabel(normalized)) {
+    return undefined;
+  }
+  return normalized;
 }
 
 function sanitizeOverrides(value: unknown): CommandShortcutOverrides {
@@ -19,18 +35,23 @@ function sanitizeOverrides(value: unknown): CommandShortcutOverrides {
 
   const entries = Object.entries(value);
   const sanitized: CommandShortcutOverrides = {};
-  for (const [commandId, label] of entries) {
-    if (typeof label !== 'string') {
+  for (const [commandId, rawEntry] of entries) {
+    if (typeof rawEntry === 'string') {
+      const primary = sanitizeShortcutLabel(rawEntry);
+      if (primary) {
+        sanitized[commandId] = { primary };
+      }
       continue;
     }
-    const normalized = label.trim();
-    if (!normalized) {
+    if (!rawEntry || typeof rawEntry !== 'object') {
       continue;
     }
-    if (!parseShortcutLabel(normalized)) {
+    const primary = sanitizeShortcutLabel((rawEntry as CommandShortcutOverrideEntry).primary);
+    const secondary = sanitizeShortcutLabel((rawEntry as CommandShortcutOverrideEntry).secondary);
+    if (!primary && !secondary) {
       continue;
     }
-    sanitized[commandId] = normalized;
+    sanitized[commandId] = { primary, secondary };
   }
 
   return sanitized;
@@ -53,17 +74,23 @@ export function setCommandShortcutOverrides(overrides: CommandShortcutOverrides)
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.commandShortcutOverrides, JSON.stringify(overrides));
 }
 
-export function resolveCommandShortcutMap({ commandIds, defaults, overrides }: ResolveShortcutMapOptions): Record<string, CommandShortcut | undefined> {
-  const resolved: Record<string, CommandShortcut | undefined> = {};
+function resolveOverrideShortcut(value: string | undefined) {
+  return value ? parseShortcutLabel(value) : null;
+}
+
+export function resolveCommandShortcutMap({ commandIds, defaults, overrides }: ResolveShortcutMapOptions): Record<string, CommandShortcutSet | undefined> {
+  const resolved: Record<string, CommandShortcutSet | undefined> = {};
 
   for (const commandId of commandIds) {
-    const overrideLabel = overrides[commandId];
-    const overrideShortcut = overrideLabel ? parseShortcutLabel(overrideLabel) : null;
-    if (overrideShortcut) {
-      resolved[commandId] = overrideShortcut;
+    const overrideEntry = overrides[commandId];
+    const defaultEntry = defaults[commandId];
+    const primary = resolveOverrideShortcut(overrideEntry?.primary) ?? defaultEntry?.primary;
+    const secondary = resolveOverrideShortcut(overrideEntry?.secondary) ?? defaultEntry?.secondary;
+    if (primary || secondary) {
+      resolved[commandId] = { primary, secondary };
       continue;
     }
-    resolved[commandId] = defaults[commandId];
+    resolved[commandId] = undefined;
   }
 
   return resolved;

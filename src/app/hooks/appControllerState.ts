@@ -1,0 +1,134 @@
+import { useCallback, useEffect, useState } from 'react';
+
+import { getEditorDisplayMode, type EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
+import {
+  getMarkdownSyntaxVisibility,
+  type MarkdownSyntaxVisibility
+} from '../../features/editor/model/markdownSyntaxSetting';
+import {
+  applyAppearanceSettings,
+  getAccentColorPreset,
+  getBaseColorMode,
+  getCustomInterfaceFont,
+  getCustomMonospaceFont,
+  getCustomUiFont,
+  getInterfaceFontPreset,
+  getInterfaceFontSize,
+  getMonospaceFontPreset,
+  getUiFontPreset,
+  type AccentColorPreset,
+  type BaseColorMode,
+  type InterfaceFontPreset,
+  type MonospaceFontPreset
+} from '../../features/settings/model/appearanceSettings';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+
+import { useAppRuntime } from './useAppRuntime';
+import { useDocumentWidthResizer } from './useDocumentWidthResizer';
+import { useEditorContextCommands } from './useEditorContextCommands';
+import { useListResizer } from './useListResizer';
+import { useReadingProgressSync } from './useReadingProgressSync';
+import { useRightSidebarResizer } from './useRightSidebarResizer';
+import { useStudyMode } from './useStudyMode';
+import { useTrashView } from './useTrashView';
+import { useWorkspaceNavigation } from './useWorkspaceNavigation';
+
+export function useWorkspaceSelectors() {
+  return {
+    activeNodeId: useWorkspaceStore((state) => state.activeNodeId),
+    createHighlightNodeFromSelection: useWorkspaceStore((state) => state.createHighlightNodeFromSelection),
+    createQANodeFromSelection: useWorkspaceStore((state) => state.createQANodeFromSelection),
+    createRootNode: useWorkspaceStore((state) => state.createRootNode),
+    dismissReviewItem: useWorkspaceStore((state) => state.dismissReviewItem),
+    documentMaxWidth: useWorkspaceStore((state) => state.layout.documentMaxWidth),
+    completeReviewItem: useWorkspaceStore((state) => state.completeReviewItem),
+    deferReviewItem: useWorkspaceStore((state) => state.deferReviewItem),
+    goBack: useWorkspaceStore((state) => state.goBack),
+    goForward: useWorkspaceStore((state) => state.goForward),
+    goToParent: useWorkspaceStore((state) => state.goToParent),
+    gradeReviewCard: useWorkspaceStore((state) => state.gradeReviewCard),
+    jumpToAncestorNode: useWorkspaceStore((state) => state.jumpToAncestorNode),
+    isListCollapsed: useWorkspaceStore((state) => state.layout.isListCollapsed),
+    isRightSidebarCollapsed: useWorkspaceStore((state) => state.layout.isRightSidebarCollapsed),
+    listWidth: useWorkspaceStore((state) => state.layout.listWidth),
+    navigation: useWorkspaceStore((state) => state.navigation),
+    nodesById: useWorkspaceStore((state) => state.nodesById),
+    nodeOrder: useWorkspaceStore((state) => state.nodeOrder),
+    nodeViewById: useWorkspaceStore((state) => state.nodeViewById),
+    openNode: useWorkspaceStore((state) => state.openNode),
+    revealReviewAnswer: useWorkspaceStore((state) => state.revealReviewAnswer),
+    reviewSession: useWorkspaceStore((state) => state.reviewSession),
+    resetLayout: useWorkspaceStore((state) => state.resetLayout),
+    setListCollapsed: useWorkspaceStore((state) => state.setListCollapsed),
+    setDocumentMaxWidth: useWorkspaceStore((state) => state.setDocumentMaxWidth),
+    setListWidth: useWorkspaceStore((state) => state.setListWidth),
+    setRightSidebarCollapsed: useWorkspaceStore((state) => state.setRightSidebarCollapsed),
+    setRightSidebarWidth: useWorkspaceStore((state) => state.setRightSidebarWidth),
+    setNodeViewState: useWorkspaceStore((state) => state.setNodeViewState),
+    startReviewSession: useWorkspaceStore((state) => state.startReviewSession),
+    rightSidebarWidth: useWorkspaceStore((state) => state.layout.rightSidebarWidth),
+    trashedNodeIds: useWorkspaceStore((state) => state.trashedNodeIds),
+    updateNodeContent: useWorkspaceStore((state) => state.updateNodeContent),
+    updateNodeDesiredRetention: useWorkspaceStore((state) => state.updateNodeDesiredRetention),
+    updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
+    updateNodeReveal: useWorkspaceStore((state) => state.updateNodeReveal),
+    exitReviewSession: useWorkspaceStore((state) => state.exitReviewSession)
+  };
+}
+
+export function useAppearanceState() {
+  const [markdownSyntaxVisibility, setMarkdownSyntaxVisibilityState] = useState<MarkdownSyntaxVisibility>(() => getMarkdownSyntaxVisibility());
+  const [editorDisplayMode, setEditorDisplayModeState] = useState<EditorDisplayMode>(() => getEditorDisplayMode());
+  const [baseColorMode, setBaseColorModeState] = useState<BaseColorMode>(() => getBaseColorMode());
+  const [accentColorPreset, setAccentColorPresetState] = useState<AccentColorPreset>(() => getAccentColorPreset());
+  const [uiFontPreset, setUiFontPresetState] = useState<InterfaceFontPreset>(() => getUiFontPreset());
+  const [customUiFont, setCustomUiFontState] = useState(() => getCustomUiFont());
+  const [interfaceFontPreset, setInterfaceFontPresetState] = useState<InterfaceFontPreset>(() => getInterfaceFontPreset());
+  const [customInterfaceFont, setCustomInterfaceFontState] = useState(() => getCustomInterfaceFont());
+  const [monospaceFontPreset, setMonospaceFontPresetState] = useState<MonospaceFontPreset>(() => getMonospaceFontPreset());
+  const [customMonospaceFont, setCustomMonospaceFontState] = useState(() => getCustomMonospaceFont());
+  const [interfaceFontSize, setInterfaceFontSizeState] = useState(() => getInterfaceFontSize());
+  useEffect(() => {
+    applyAppearanceSettings({ baseColor: baseColorMode, accentColor: accentColorPreset, uiFont: uiFontPreset, customUiFont, interfaceFont: interfaceFontPreset, interfaceFontSize, monospaceFont: monospaceFontPreset, customInterfaceFont, customMonospaceFont });
+  }, [accentColorPreset, baseColorMode, customInterfaceFont, customMonospaceFont, customUiFont, interfaceFontPreset, interfaceFontSize, monospaceFontPreset, uiFontPreset]);
+  return {
+    accentColorPreset, baseColorMode, customInterfaceFont, customMonospaceFont, customUiFont, editorDisplayMode,
+    interfaceFontPreset, interfaceFontSize, markdownSyntaxVisibility, monospaceFontPreset, uiFontPreset,
+    setAccentColorPresetState, setBaseColorModeState, setCustomInterfaceFontState, setCustomMonospaceFontState,
+    setCustomUiFontState, setEditorDisplayModeState, setInterfaceFontPresetState, setInterfaceFontSizeState,
+    setMarkdownSyntaxVisibilityState, setMonospaceFontPresetState, setUiFontPresetState
+  };
+}
+
+export function useNowIso(tickMs = 15_000) {
+  const [nowIso, setNowIso] = useState(() => new Date().toISOString());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowIso(new Date().toISOString()), tickMs);
+    return () => window.clearInterval(timer);
+  }, [tickMs]);
+  return nowIso;
+}
+
+export function useWorkspaceControllerState(
+  ws: ReturnType<typeof useWorkspaceSelectors>,
+  isWorkspaceHydrated: boolean
+) {
+  const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
+  const trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
+  const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
+  const study = useStudyMode({ activeNodeId: ws.activeNodeId, isViewingTrashNode: false });
+  const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
+  const listResize = useListResizer(ws.listWidth, ws.setListWidth);
+  const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
+  const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
+  const saveActiveNodeView = useCallback(() => {
+    if (runtime.isViewingTrashNode || !ws.activeNodeId || !runtime.editorRef.current) {
+      return;
+    }
+    ws.setNodeViewState(ws.activeNodeId, { scrollTop: runtime.editorRef.current.getScrollTop(), selection: runtime.editorRef.current.getSelection() });
+  }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
+  const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, closeContextMenu: () => undefined, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, openNode: ws.openNode, saveActiveNodeView });
+  const editorCtx = useEditorContextCommands({ activeNode, activeNodeId: ws.activeNodeId, createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection, createQANodeFromSelection: ws.createQANodeFromSelection, editorRef: runtime.editorRef, isTrashViewOpen: runtime.isViewingTrashNode, updateNodeContent: ws.updateNodeContent });
+  useReadingProgressSync({ activeNodeId: ws.activeNodeId, editorRef: runtime.editorRef, isViewingTrashNode: runtime.isViewingTrashNode, isWorkspaceHydrated, nodeViewById: ws.nodeViewById, setNodeViewState: ws.setNodeViewState });
+  return { activeNode, documentResize, editorCtx, listResize, nav, rightSidebarResize, runtime, selectedTrashNode, study, trash };
+}

@@ -10,7 +10,7 @@ import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
-type WorkspaceReviewActions = Pick<WorkspaceState, 'completeReviewItem' | 'deferReviewItem' | 'exitReviewSession' | 'gradeReviewCard' | 'revealReviewAnswer' | 'startReviewSession'>;
+type WorkspaceReviewActions = Pick<WorkspaceState, 'completeReviewItem' | 'deferReviewItem' | 'dismissReviewItem' | 'exitReviewSession' | 'gradeReviewCard' | 'revealReviewAnswer' | 'startReviewSession'>;
 
 function createEmptyReviewSession(): WorkspaceState['reviewSession'] {
   return { currentNodeId: null, isAnswerRevealed: false, queueNodeIds: [], totalNodeCount: 0 };
@@ -169,6 +169,49 @@ function createCompleteReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): W
   };
 }
 
+function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceReviewActions['dismissReviewItem'] {
+  return (now = new Date().toISOString()) => {
+    const snapshot = get();
+    const currentNodeId = snapshot.reviewSession.currentNodeId;
+    if (!currentNodeId) return false;
+    const currentNode = snapshot.nodesById[currentNodeId];
+    if (!currentNode || currentNode.reveal !== null) return false;
+    const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
+    const nextNodeId = nextQueue[0] ?? null;
+
+    set((state) => {
+      const node = state.nodesById[currentNodeId];
+      if (!node) return state;
+      return {
+        activeNodeId: nextNodeId ?? state.activeNodeId,
+        nodesById: {
+          ...state.nodesById,
+          [currentNodeId]: {
+            ...node,
+            reading: node.reading
+              ? {
+                  ...node.reading,
+                  state: 'dismissed'
+                }
+              : node.reading,
+            updatedAt: now
+          }
+        },
+        reviewSession: nextNodeId
+          ? {
+              currentNodeId: nextNodeId,
+              isAnswerRevealed: false,
+              queueNodeIds: nextQueue,
+              totalNodeCount: snapshot.reviewSession.totalNodeCount
+            }
+          : createEmptyReviewSession()
+      };
+    });
+
+    return true;
+  };
+}
+
 function createGradeReviewCardAction(
   set: WorkspaceSet,
   get: WorkspaceGet,
@@ -214,5 +257,13 @@ export function createWorkspaceReviewActions(
   get: WorkspaceGet,
   scheduler: ReviewSchedulerAdapter = createReviewSchedulerAdapter()
 ): WorkspaceReviewActions {
-  return { startReviewSession: createStartReviewSessionAction(set), revealReviewAnswer: createRevealReviewAnswerAction(set), gradeReviewCard: createGradeReviewCardAction(set, get, scheduler), completeReviewItem: createCompleteReviewItemAction(set, get), deferReviewItem: createDeferReviewItemAction(set, get), exitReviewSession: createExitReviewSessionAction(set) };
+  return {
+    startReviewSession: createStartReviewSessionAction(set),
+    revealReviewAnswer: createRevealReviewAnswerAction(set),
+    gradeReviewCard: createGradeReviewCardAction(set, get, scheduler),
+    completeReviewItem: createCompleteReviewItemAction(set, get),
+    deferReviewItem: createDeferReviewItemAction(set, get),
+    dismissReviewItem: createDismissReviewItemAction(set, get),
+    exitReviewSession: createExitReviewSessionAction(set)
+  };
 }

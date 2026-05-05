@@ -17,6 +17,7 @@ interface ReviewModeToolbarProps {
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
+  onDismissReviewItem: () => boolean;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
 }
@@ -186,6 +187,7 @@ export function ReviewModeToolbar({
   onGrade,
   onCompleteReviewItem,
   onDeferReviewItem,
+  onDismissReviewItem,
   onRevealAnswer,
   onExitReviewMode
 }: ReviewModeToolbarProps) {
@@ -213,6 +215,9 @@ export function ReviewModeToolbar({
           </AppButton>
           <AppButton aria-label="Read" onClick={onCompleteReviewItem} size="sm" variant="primary">
             Read
+          </AppButton>
+          <AppButton aria-label="Dismiss" onClick={onDismissReviewItem} size="sm" variant="ghost">
+            Dismiss
           </AppButton>
         </div>
       ) : !isAnswerRevealed ? (

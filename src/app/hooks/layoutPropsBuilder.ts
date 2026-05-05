@@ -93,7 +93,7 @@ interface BuildLayoutPropsArgs {
   onAnswerChange: WorkspaceLayoutProps['onAnswerChange'];
   onEditorChange: WorkspaceLayoutProps['onEditorChange'];
   onEditorReady: WorkspaceLayoutProps['onEditorReady'];
-  onHotkeyUpdate: () => HotkeyUpdateResult;
+  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   onOpenNotesView: () => void;
   onOpenSettings: () => void;
   onCloseSettings: () => void;
@@ -118,6 +118,7 @@ interface BuildLayoutPropsArgs {
   updateGrade: (grade: ReviewGrade) => Promise<boolean>;
   completeReviewItem: () => boolean;
   deferReviewItem: () => boolean;
+  dismissReviewItem: () => boolean;
   revealReviewAnswer: () => void;
 }
 
@@ -206,7 +207,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onToggleRightSidebarVisibility: args.onToggleRightSidebarVisibility,
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze,
     onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions, ...appearanceActions, ...reviewActions,
-    onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession, customUiFont: args.appearance.customUiFont,
+    onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession, customUiFont: args.appearance.customUiFont,
     customInterfaceFont: args.appearance.customInterfaceFont, customMonospaceFont: args.appearance.customMonospaceFont, baseColorMode: args.appearance.baseColorMode,
     accentColorPreset: args.appearance.accentColorPreset, uiFontPreset: args.appearance.uiFontPreset, interfaceFontPreset: args.appearance.interfaceFontPreset,
     interfaceFontSize: args.appearance.interfaceFontSize, reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, markdownSyntaxVisibility: args.appearance.markdownSyntaxVisibility, editorDisplayMode: args.appearance.editorDisplayMode,

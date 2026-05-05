@@ -9,6 +9,9 @@ interface BuildAppPaletteItemsOptions {
   canRevealAnswer: boolean;
   canToggleReviewMode: boolean;
   canGradeReview: boolean;
+  canDeferReadingReview: boolean;
+  canCompleteReadingReview: boolean;
+  canDismissReadingReview: boolean;
   isReviewMode: boolean;
 }
 
@@ -28,6 +31,9 @@ interface RunAppCommandActions {
   gradeReviewHard: () => void;
   gradeReviewGood: () => void;
   gradeReviewEasy: () => void;
+  readingReviewLater: () => void;
+  readingReviewRead: () => void;
+  readingReviewDismiss: () => void;
 }
 
 interface ReviewModeToggleActions {
@@ -57,7 +63,10 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.gradeReviewAgain, title: 'Grade Review: Again', section: 'Review', keywords: ['grade'] },
   { id: APP_COMMAND_IDS.gradeReviewHard, title: 'Grade Review: Hard', section: 'Review', keywords: ['grade'] },
   { id: APP_COMMAND_IDS.gradeReviewGood, title: 'Grade Review: Good', section: 'Review', keywords: ['grade'] },
-  { id: APP_COMMAND_IDS.gradeReviewEasy, title: 'Grade Review: Easy', section: 'Review', keywords: ['grade'] }
+  { id: APP_COMMAND_IDS.gradeReviewEasy, title: 'Grade Review: Easy', section: 'Review', keywords: ['grade'] },
+  { id: APP_COMMAND_IDS.readingReviewLater, title: 'Reading: Later', section: 'Review', keywords: ['reading'] },
+  { id: APP_COMMAND_IDS.readingReviewRead, title: 'Reading: Read', section: 'Review', keywords: ['reading'] },
+  { id: APP_COMMAND_IDS.readingReviewDismiss, title: 'Reading: Dismiss', section: 'Review', keywords: ['reading'] }
 ];
 
 function resolveCommandTitle(id: string, isReviewMode: boolean, title: string) {
@@ -91,6 +100,15 @@ function isCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
   ) {
     return options.canGradeReview;
   }
+  if (id === APP_COMMAND_IDS.readingReviewLater) {
+    return options.canDeferReadingReview;
+  }
+  if (id === APP_COMMAND_IDS.readingReviewRead) {
+    return options.canCompleteReadingReview;
+  }
+  if (id === APP_COMMAND_IDS.readingReviewDismiss) {
+    return options.canDismissReadingReview;
+  }
   return true;
 }
 
@@ -100,7 +118,7 @@ export function buildAppPaletteItems(options: BuildAppPaletteItemsOptions): Comm
     title: resolveCommandTitle(command.id, options.isReviewMode, command.title),
     section: command.section,
     keywords: command.keywords,
-    shortcut: DEFAULT_APP_COMMAND_SHORTCUTS[command.id as keyof typeof DEFAULT_APP_COMMAND_SHORTCUTS],
+    shortcuts: DEFAULT_APP_COMMAND_SHORTCUTS[command.id as keyof typeof DEFAULT_APP_COMMAND_SHORTCUTS],
     enabled: isCommandEnabled(command.id, options)
   }));
 }
@@ -129,7 +147,10 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.gradeReviewAgain]: actions.gradeReviewAgain,
     [APP_COMMAND_IDS.gradeReviewHard]: actions.gradeReviewHard,
     [APP_COMMAND_IDS.gradeReviewGood]: actions.gradeReviewGood,
-    [APP_COMMAND_IDS.gradeReviewEasy]: actions.gradeReviewEasy
+    [APP_COMMAND_IDS.gradeReviewEasy]: actions.gradeReviewEasy,
+    [APP_COMMAND_IDS.readingReviewLater]: actions.readingReviewLater,
+    [APP_COMMAND_IDS.readingReviewRead]: actions.readingReviewRead,
+    [APP_COMMAND_IDS.readingReviewDismiss]: actions.readingReviewDismiss
   };
 
   const handler = handlers[id];

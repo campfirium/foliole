@@ -1,51 +1,31 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-import { getEditorDisplayMode, type EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
-import {
-  getMarkdownSyntaxVisibility,
-  type MarkdownSyntaxVisibility
-} from '../../features/editor/model/markdownSyntaxSetting';
-import {
-  applyAppearanceSettings,
-  getAccentColorPreset,
-  getBaseColorMode,
-  getCustomInterfaceFont,
-  getCustomMonospaceFont,
-  getCustomUiFont,
-  getInterfaceFontPreset,
-  getInterfaceFontSize,
-  getMonospaceFontPreset,
-  getUiFontPreset,
-  type AccentColorPreset,
-  type BaseColorMode,
-  type InterfaceFontPreset,
-  type MonospaceFontPreset
-} from '../../features/settings/model/appearanceSettings';
-import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { formatShortcutLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { buildAppPaletteItems } from './appCommands';
 import { buildPaletteState, useCurrentReviewPreview } from './appControllerHelpers';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
+import {
+  useAppearanceState,
+  useNowIso,
+  useWorkspaceControllerState,
+  useWorkspaceSelectors
+} from './appControllerState';
 import { createPaletteCommandRunner } from './appPaletteCommandRunner';
 import { countDueReviewNodes } from './layoutPropsBuilder';
-import { useAppRuntime } from './useAppRuntime';
-import { useDocumentWidthResizer } from './useDocumentWidthResizer';
-import { useEditorContextCommands } from './useEditorContextCommands';
-import { useListResizer } from './useListResizer';
-import { useReadingProgressSync } from './useReadingProgressSync';
+import {
+  isReviewShortcutCommand,
+  mapPaletteItemsToHotkeyItems,
+  REVIEW_SHORTCUT_COMMAND_IDS,
+  useCommandShortcutState
+} from './reviewHotkeysState';
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
 import { useReviewSchedulerSettingsState } from './useReviewSchedulerSettingsState';
-import { useRightSidebarResizer } from './useRightSidebarResizer';
-import { useStudyMode } from './useStudyMode';
-import { useTrashView } from './useTrashView';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
-import { useWorkspaceNavigation } from './useWorkspaceNavigation';
+
 export interface AppPaletteState {
   isOpen: boolean;
   items: CommandPaletteItem[];
@@ -54,130 +34,26 @@ export interface AppPaletteState {
   onRunCommand: (id: string) => void;
 }
 
-export interface AppControllerResult { layoutProps: WorkspaceLayoutProps; paletteState: AppPaletteState; }
-const BLOCKED_HOTKEY_UPDATE = (): HotkeyUpdateResult => ({
-  status: 'blocked',
-  message: 'Hotkey customization is temporarily unavailable.'
-});
-
-function mapPaletteItemsToHotkeyItems(items: CommandPaletteItem[]): HotkeySettingItem[] {
-  return items.map((item) => ({
-    commandId: item.id,
-    title: item.title,
-    section: item.section,
-    shortcutLabel:
-      item.id === APP_COMMAND_IDS.gradeReviewGood
-        ? '3 / Space'
-        : item.shortcut
-          ? formatShortcutLabel(item.shortcut)
-          : '',
-    isCustomized: false
-  }));
-}
-function useWorkspaceSelectors() {
-  return {
-    activeNodeId: useWorkspaceStore((state) => state.activeNodeId),
-    createHighlightNodeFromSelection: useWorkspaceStore((state) => state.createHighlightNodeFromSelection),
-    createQANodeFromSelection: useWorkspaceStore((state) => state.createQANodeFromSelection),
-    createRootNode: useWorkspaceStore((state) => state.createRootNode),
-    documentMaxWidth: useWorkspaceStore((state) => state.layout.documentMaxWidth),
-    completeReviewItem: useWorkspaceStore((state) => state.completeReviewItem),
-    deferReviewItem: useWorkspaceStore((state) => state.deferReviewItem),
-    goBack: useWorkspaceStore((state) => state.goBack),
-    goForward: useWorkspaceStore((state) => state.goForward),
-    goToParent: useWorkspaceStore((state) => state.goToParent),
-    gradeReviewCard: useWorkspaceStore((state) => state.gradeReviewCard),
-    jumpToAncestorNode: useWorkspaceStore((state) => state.jumpToAncestorNode),
-    isListCollapsed: useWorkspaceStore((state) => state.layout.isListCollapsed),
-    isRightSidebarCollapsed: useWorkspaceStore((state) => state.layout.isRightSidebarCollapsed),
-    listWidth: useWorkspaceStore((state) => state.layout.listWidth),
-    navigation: useWorkspaceStore((state) => state.navigation),
-    nodesById: useWorkspaceStore((state) => state.nodesById),
-    nodeOrder: useWorkspaceStore((state) => state.nodeOrder),
-    nodeViewById: useWorkspaceStore((state) => state.nodeViewById),
-    openNode: useWorkspaceStore((state) => state.openNode),
-    revealReviewAnswer: useWorkspaceStore((state) => state.revealReviewAnswer),
-    reviewSession: useWorkspaceStore((state) => state.reviewSession),
-    resetLayout: useWorkspaceStore((state) => state.resetLayout),
-    setListCollapsed: useWorkspaceStore((state) => state.setListCollapsed),
-    setDocumentMaxWidth: useWorkspaceStore((state) => state.setDocumentMaxWidth),
-    setListWidth: useWorkspaceStore((state) => state.setListWidth),
-    setRightSidebarCollapsed: useWorkspaceStore((state) => state.setRightSidebarCollapsed),
-    setRightSidebarWidth: useWorkspaceStore((state) => state.setRightSidebarWidth),
-    setNodeViewState: useWorkspaceStore((state) => state.setNodeViewState),
-    startReviewSession: useWorkspaceStore((state) => state.startReviewSession),
-    rightSidebarWidth: useWorkspaceStore((state) => state.layout.rightSidebarWidth),
-    trashedNodeIds: useWorkspaceStore((state) => state.trashedNodeIds),
-    updateNodeContent: useWorkspaceStore((state) => state.updateNodeContent),
-    updateNodeDesiredRetention: useWorkspaceStore((state) => state.updateNodeDesiredRetention),
-    updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
-    updateNodeReveal: useWorkspaceStore((state) => state.updateNodeReveal),
-    exitReviewSession: useWorkspaceStore((state) => state.exitReviewSession)
-  };
-}
-function useAppearanceState() {
-  const [markdownSyntaxVisibility, setMarkdownSyntaxVisibilityState] = useState<MarkdownSyntaxVisibility>(() => getMarkdownSyntaxVisibility());
-  const [editorDisplayMode, setEditorDisplayModeState] = useState<EditorDisplayMode>(() => getEditorDisplayMode());
-  const [baseColorMode, setBaseColorModeState] = useState<BaseColorMode>(() => getBaseColorMode());
-  const [accentColorPreset, setAccentColorPresetState] = useState<AccentColorPreset>(() => getAccentColorPreset());
-  const [uiFontPreset, setUiFontPresetState] = useState<InterfaceFontPreset>(() => getUiFontPreset());
-  const [customUiFont, setCustomUiFontState] = useState(() => getCustomUiFont());
-  const [interfaceFontPreset, setInterfaceFontPresetState] = useState<InterfaceFontPreset>(() => getInterfaceFontPreset());
-  const [customInterfaceFont, setCustomInterfaceFontState] = useState(() => getCustomInterfaceFont());
-  const [monospaceFontPreset, setMonospaceFontPresetState] = useState<MonospaceFontPreset>(() => getMonospaceFontPreset());
-  const [customMonospaceFont, setCustomMonospaceFontState] = useState(() => getCustomMonospaceFont());
-  const [interfaceFontSize, setInterfaceFontSizeState] = useState(() => getInterfaceFontSize());
-  useEffect(() => {
-    applyAppearanceSettings({ baseColor: baseColorMode, accentColor: accentColorPreset, uiFont: uiFontPreset, customUiFont, interfaceFont: interfaceFontPreset, interfaceFontSize, monospaceFont: monospaceFontPreset, customInterfaceFont, customMonospaceFont });
-  }, [accentColorPreset, baseColorMode, customInterfaceFont, customMonospaceFont, customUiFont, interfaceFontPreset, interfaceFontSize, monospaceFontPreset, uiFontPreset]);
-  return {
-    accentColorPreset, baseColorMode, customInterfaceFont, customMonospaceFont, customUiFont, editorDisplayMode,
-    interfaceFontPreset, interfaceFontSize, markdownSyntaxVisibility, monospaceFontPreset, uiFontPreset,
-    setAccentColorPresetState, setBaseColorModeState, setCustomInterfaceFontState, setCustomMonospaceFontState,
-    setCustomUiFontState, setEditorDisplayModeState, setInterfaceFontPresetState, setInterfaceFontSizeState,
-    setMarkdownSyntaxVisibilityState, setMonospaceFontPresetState, setUiFontPresetState
-  };
-}
-function useNowIso(tickMs = 15_000) {
-  const [nowIso, setNowIso] = useState(() => new Date().toISOString());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNowIso(new Date().toISOString()), tickMs);
-    return () => window.clearInterval(timer);
-  }, [tickMs]);
-  return nowIso;
-}
-
-function useWorkspaceControllerState(
-  ws: ReturnType<typeof useWorkspaceSelectors>,
-  isWorkspaceHydrated: boolean
-) {
-  const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
-  const trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
-  const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
-  const study = useStudyMode({ activeNodeId: ws.activeNodeId, isViewingTrashNode: false });
-  const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
-  const listResize = useListResizer(ws.listWidth, ws.setListWidth);
-  const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
-  const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
-  const saveActiveNodeView = useCallback(() => { if (runtime.isViewingTrashNode || !ws.activeNodeId || !runtime.editorRef.current) return; ws.setNodeViewState(ws.activeNodeId, { scrollTop: runtime.editorRef.current.getScrollTop(), selection: runtime.editorRef.current.getSelection() }); }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
-  const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, closeContextMenu: () => undefined, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, openNode: ws.openNode, saveActiveNodeView });
-  const editorCtx = useEditorContextCommands({ activeNode, activeNodeId: ws.activeNodeId, createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection, createQANodeFromSelection: ws.createQANodeFromSelection, editorRef: runtime.editorRef, isTrashViewOpen: runtime.isViewingTrashNode, updateNodeContent: ws.updateNodeContent });
-  useReadingProgressSync({ activeNodeId: ws.activeNodeId, editorRef: runtime.editorRef, isViewingTrashNode: runtime.isViewingTrashNode, isWorkspaceHydrated, nodeViewById: ws.nodeViewById, setNodeViewState: ws.setNodeViewState });
-  return { activeNode, documentResize, editorCtx, listResize, nav, rightSidebarResize, runtime, selectedTrashNode, study, trash };
+export interface AppControllerResult {
+  layoutProps: WorkspaceLayoutProps;
+  paletteState: AppPaletteState;
 }
 
 function buildControllerPaletteState(args: {
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
-  nav: ReturnType<typeof useWorkspaceNavigation>;
+  nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   paletteItems: CommandPaletteItem[];
-  runtime: ReturnType<typeof useAppRuntime>;
-  study: ReturnType<typeof useStudyMode>;
-  trash: ReturnType<typeof useTrashView>;
+  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
+  study: ReturnType<typeof useWorkspaceControllerState>['study'];
+  trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   const runPaletteCommand = createPaletteCommandRunner({
     closeTrashView: args.trash.closeTrashView,
+    completeReviewItem: args.ws.completeReviewItem,
+    deferReviewItem: args.ws.deferReviewItem,
+    dismissReviewItem: args.ws.dismissReviewItem,
     exitReviewSession: args.ws.exitReviewSession,
     exitStudyMode: args.study.exitStudyMode,
     goBack: args.nav.handleGoBack,
@@ -207,61 +83,107 @@ function buildControllerPaletteState(args: {
   );
 }
 
-export function useAppController(): AppControllerResult {
-  const ws = useWorkspaceSelectors(), appearance = useAppearanceState(), reviewSettings = useReviewSchedulerSettingsState(), nowIso = useNowIso();
-  const isWorkspaceHydrated = useWorkspaceHydration();
-  const { activeNode, documentResize, editorCtx, listResize, nav, rightSidebarResize, runtime, selectedTrashNode, study, trash } = useWorkspaceControllerState(ws, isWorkspaceHydrated);
-  const { exitStudyMode, isStudyMode, startStudyMode } = study;
-  const reviewPreview = useCurrentReviewPreview(
-    isStudyMode,
-    ws,
-    getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings)
-  );
-  const isCurrentReviewItemGradable = Boolean(
-    ws.reviewSession.currentNodeId && ws.nodesById[ws.reviewSession.currentNodeId]?.reveal?.trim().length
-  );
-  const isReviewEditing = useReviewKeyboardShortcuts({ isStudyMode, isCommandPaletteOpen: runtime.isCommandPaletteOpen, isSettingsOpen: runtime.isSettingsOpen, reviewCurrentNodeId: ws.reviewSession.currentNodeId, isAnswerRevealed: ws.reviewSession.isAnswerRevealed, isCurrentItemGradable: isCurrentReviewItemGradable, completeReviewItem: ws.completeReviewItem, revealReviewAnswer: ws.revealReviewAnswer, gradeReviewCard: ws.gradeReviewCard });
-  const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso, reviewSettings.reviewSchedulerSettings.pushQueue), [nowIso, reviewSettings.reviewSchedulerSettings.pushQueue, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
-  const hasReviewCard = Boolean(ws.reviewSession.currentNodeId);
-  const paletteItems = useMemo<CommandPaletteItem[]>(
+function useReviewPaletteItems(args: {
+  hasReviewCard: boolean;
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
+  isCurrentReviewItemGradable: boolean;
+  isStudyMode: boolean;
+  nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
+  reviewSession: ReturnType<typeof useWorkspaceSelectors>['reviewSession'];
+  study: ReturnType<typeof useWorkspaceControllerState>['study'];
+}) {
+  return useMemo(
     () =>
       buildAppPaletteItems({
-        canGoBack: nav.canGoBack,
-        canGoForward: nav.canGoForward,
-        canGoParent: nav.canGoParent,
-        canRevealAnswer: hasReviewCard && isCurrentReviewItemGradable && !ws.reviewSession.isAnswerRevealed,
-        canToggleReviewMode: isStudyMode || study.canStartStudyMode,
-        canGradeReview: hasReviewCard && isCurrentReviewItemGradable && ws.reviewSession.isAnswerRevealed,
-        isReviewMode: isStudyMode
-      }),
-    [hasReviewCard, isCurrentReviewItemGradable, isStudyMode, nav.canGoBack, nav.canGoForward, nav.canGoParent, study.canStartStudyMode, ws.reviewSession.isAnswerRevealed]
+        canGoBack: args.nav.canGoBack,
+        canGoForward: args.nav.canGoForward,
+        canGoParent: args.nav.canGoParent,
+        canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
+        canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
+        canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,
+        canDeferReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+        canCompleteReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+        canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
+        isReviewMode: args.isStudyMode
+      }).map((item) => ({
+        ...item,
+        shortcuts: isReviewShortcutCommand(item.id) ? args.hotkeys.shortcutMap[item.id] : item.shortcuts
+      })),
+    [args]
   );
+}
+
+function useReviewEditingState(args: {
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
+  isCurrentReviewItemGradable: boolean;
+  isStudyMode: boolean;
+  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return useReviewKeyboardShortcuts({
+    isStudyMode: args.isStudyMode,
+    isCommandPaletteOpen: args.runtime.isCommandPaletteOpen,
+    isSettingsOpen: args.runtime.isSettingsOpen,
+    reviewCurrentNodeId: args.ws.reviewSession.currentNodeId,
+    isAnswerRevealed: args.ws.reviewSession.isAnswerRevealed,
+    isCurrentItemGradable: args.isCurrentReviewItemGradable,
+    revealAnswerShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.revealReviewAnswer],
+    gradeAgainShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.gradeReviewAgain],
+    gradeHardShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.gradeReviewHard],
+    gradeGoodShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.gradeReviewGood],
+    gradeEasyShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.gradeReviewEasy],
+    readingLaterShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.readingReviewLater],
+    readingReadShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.readingReviewRead],
+    readingDismissShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.readingReviewDismiss],
+    completeReviewItem: args.ws.completeReviewItem,
+    deferReviewItem: args.ws.deferReviewItem,
+    dismissReviewItem: args.ws.dismissReviewItem,
+    revealReviewAnswer: args.ws.revealReviewAnswer,
+    gradeReviewCard: args.ws.gradeReviewCard
+  });
+}
+
+export function useAppController(): AppControllerResult {
+  const ws = useWorkspaceSelectors();
+  const appearance = useAppearanceState();
+  const reviewSettings = useReviewSchedulerSettingsState();
+  const nowIso = useNowIso();
+  const isWorkspaceHydrated = useWorkspaceHydration();
+  const controller = useWorkspaceControllerState(ws, isWorkspaceHydrated);
+  const { exitStudyMode, isStudyMode, startStudyMode } = controller.study;
+  const hotkeys = useCommandShortcutState(REVIEW_SHORTCUT_COMMAND_IDS);
+  const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
+  const isCurrentReviewItemGradable = Boolean(ws.reviewSession.currentNodeId && ws.nodesById[ws.reviewSession.currentNodeId]?.reveal?.trim().length);
+  const isReviewEditing = useReviewEditingState({ hotkeys, isCurrentReviewItemGradable, isStudyMode, runtime: controller.runtime, ws });
+  const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso, reviewSettings.reviewSchedulerSettings.pushQueue), [nowIso, reviewSettings.reviewSchedulerSettings.pushQueue, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
+  const paletteItems = useReviewPaletteItems({ hasReviewCard: Boolean(ws.reviewSession.currentNodeId), hotkeys, isCurrentReviewItemGradable, isStudyMode, nav: controller.nav, reviewSession: ws.reviewSession, study: controller.study });
   const layoutProps = buildAppControllerLayoutProps({
-    activeNode,
+    activeNode: controller.activeNode,
     appearance,
-    blockedHotkeyUpdate: BLOCKED_HOTKEY_UPDATE,
-    canStartStudyMode: study.canStartStudyMode,
-    documentResize,
-    editorCtx,
+    blockedHotkeyUpdate: hotkeys.updateShortcut,
+    canStartStudyMode: controller.study.canStartStudyMode,
+    documentResize: controller.documentResize,
+    editorCtx: controller.editorCtx,
     exitStudyMode,
     hotkeyItems: paletteItems,
     isReviewEditing,
     isStudyMode,
-    listResize,
-    mapPaletteItemsToHotkeyItems,
-    nav,
+    listResize: controller.listResize,
+    mapPaletteItemsToHotkeyItems: (items) => mapPaletteItemsToHotkeyItems(items, hotkeys.overrides),
+    nav: controller.nav,
     reviewDueCount,
     reviewPreview,
     reviewSettings,
-    rightSidebarResize,
-    runtime,
-    selectedTrashNode,
+    rightSidebarResize: controller.rightSidebarResize,
+    runtime: controller.runtime,
+    selectedTrashNode: controller.selectedTrashNode,
     startStudyMode,
-    trash,
+    trash: controller.trash,
     ws
   });
+
   return {
-    layoutProps,
-    paletteState: buildControllerPaletteState({ isStudyMode, layoutProps, nav, paletteItems, runtime, study, trash, ws })
+    layoutProps: { ...layoutProps, onHotkeyReset: hotkeys.resetShortcut, onHotkeyResetAll: hotkeys.resetAllShortcuts },
+    paletteState: buildControllerPaletteState({ isStudyMode, layoutProps, nav: controller.nav, paletteItems, runtime: controller.runtime, study: controller.study, trash: controller.trash, ws })
   };
 }

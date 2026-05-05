@@ -1,16 +1,16 @@
-import type { CommandShortcut } from './types';
+import type { CommandShortcut, CommandShortcutSet } from './types';
 
 function normalizeShortcutFlag(value: boolean | undefined) {
   return value ?? false;
 }
 
 function normalizeShortcutKey(value: string) {
+  if (value === ' ') {
+    return ' ';
+  }
   const trimmed = value.trim();
   if (!trimmed) {
     return '';
-  }
-  if (trimmed === ' ') {
-    return ' ';
   }
   if (trimmed.length === 1) {
     return trimmed.toLowerCase();
@@ -98,6 +98,14 @@ export function serializeShortcut(shortcut: CommandShortcut) {
   return formatShortcutLabel(shortcut);
 }
 
+export function formatShortcutSetLabel(shortcuts: CommandShortcutSet | undefined) {
+  if (!shortcuts) {
+    return '';
+  }
+  const labels = [shortcuts.primary, shortcuts.secondary].filter(Boolean).map((shortcut) => formatShortcutLabel(shortcut as CommandShortcut));
+  return labels.join(' / ');
+}
+
 export function parseShortcutLabel(value: string): CommandShortcut | null {
   const raw = value.trim();
   if (!raw) {
@@ -146,4 +154,11 @@ export function parseShortcutLabel(value: string): CommandShortcut | null {
   }
 
   return shortcut;
+}
+
+export function matchesShortcutSet(event: KeyboardEvent, shortcuts: CommandShortcutSet | undefined) {
+  if (!shortcuts) {
+    return false;
+  }
+  return [shortcuts.primary, shortcuts.secondary].some((shortcut) => (shortcut ? matchesShortcut(event, shortcut) : false));
 }

@@ -1,4 +1,4 @@
-import { matchesShortcut } from './shortcuts';
+import { matchesShortcutSet } from './shortcuts';
 import type { CommandContext, CommandPaletteItem, CommandRegistration, CommandStateItem } from './types';
 
 export interface CommandRegistry {
@@ -26,7 +26,7 @@ export function createCommandRegistry(commands: CommandRegistration[], getContex
         title: command.title,
         section: command.section,
         keywords: command.keywords,
-        shortcut: command.shortcut,
+        shortcuts: command.shortcuts,
         enabled: statesById.get(command.id) ?? true
       }))
       .filter((item) => {
@@ -56,7 +56,7 @@ export function createCommandRegistry(commands: CommandRegistration[], getContex
     runById,
     runByShortcut: (event) => {
       for (const command of commands) {
-        if (!command.shortcut || !matchesShortcut(event, command.shortcut)) {
+        if (!command.shortcuts || !matchesShortcutSet(event, command.shortcuts)) {
           continue;
         }
         event.preventDefault();

@@ -20,7 +20,7 @@ describe('command registry shortcut execution', () => {
         id: 'navigation.goBack',
         title: 'Go Back',
         execute,
-        shortcut: { key: 'ArrowLeft', altKey: true }
+        shortcuts: { primary: { key: 'ArrowLeft', altKey: true } }
       }
     ]);
     const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true });
@@ -42,13 +42,13 @@ describe('command registry shortcut execution', () => {
         title: 'Close Settings',
         isEnabled: () => false,
         execute: firstExecute,
-        shortcut: { key: 'Escape' }
+        shortcuts: { primary: { key: 'Escape' } }
       },
       {
         id: 'ui.closeContextMenu',
         title: 'Close Context Menu',
         execute: secondExecute,
-        shortcut: { key: 'Escape' }
+        shortcuts: { primary: { key: 'Escape' } }
       }
     ]);
     const event = new KeyboardEvent('keydown', { key: 'Escape' });
@@ -143,7 +143,7 @@ describe('command registry palette state', () => {
         id: 'workspace.openSettings',
         title: 'Open Settings',
         execute,
-        shortcut: { key: 'o', ctrlKey: true, shiftKey: true }
+        shortcuts: { primary: { key: 'o', ctrlKey: true, shiftKey: true } }
       }
     ]);
 

@@ -165,3 +165,24 @@ it('defers reading items to the end of the current queue without advancing the i
   expect(harness.getState().reviewSession.queueNodeIds).toEqual(['reading-2', 'reading-1']);
   expect(harness.getState().nodesById['reading-1']?.reading?.lastHandledAt).toBe('2026-03-02T00:00:00.000Z');
 });
+
+it('dismisses reading items and removes them from future queues', () => {
+  const now = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createReadingNode('reading-1', now), createReadingNode('reading-2', now)])
+  );
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
+    grade: createSchedulerGradeMock(),
+    preview: previewStub
+  });
+
+  actions.startReviewSession(now);
+
+  const dismissed = actions.dismissReviewItem(now);
+
+  expect(dismissed).toBe(true);
+  expect(harness.getState().activeNodeId).toBe('reading-2');
+  expect(harness.getState().reviewSession.currentNodeId).toBe('reading-2');
+  expect(harness.getState().reviewSession.queueNodeIds).toEqual(['reading-2']);
+  expect(harness.getState().nodesById['reading-1']?.reading?.state).toBe('dismissed');
+});

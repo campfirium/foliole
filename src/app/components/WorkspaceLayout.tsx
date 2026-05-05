@@ -120,6 +120,7 @@ export interface WorkspaceLayoutProps {
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
+  onDismissReviewItem: () => boolean;
   onExitReviewMode: () => void;
   customUiFont: string;
   customInterfaceFont: string;
@@ -135,7 +136,7 @@ export interface WorkspaceLayoutProps {
   monospaceFontPreset: MonospaceFontPreset;
   hotkeyItems: HotkeySettingItem[];
   selectedTrashNodeId: string | null;
-  onHotkeyUpdate: (commandId: string, nextLabel: string) => HotkeyUpdateResult;
+  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
 }

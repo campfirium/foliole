@@ -51,6 +51,7 @@ function createWorkspaceFixture(): WorkspaceState {
     gradeReviewCard: async () => false,
     completeReviewItem: () => false,
     deferReviewItem: () => false,
+    dismissReviewItem: () => false,
     exitReviewSession: () => undefined,
     deleteNode: () => undefined,
     restoreNode: () => undefined,

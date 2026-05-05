@@ -1,19 +1,22 @@
 import { APP_COMMAND_IDS, type AppCommandId } from './ids';
-import type { CommandShortcut } from './types';
+import type { CommandShortcutSet } from './types';
 
-export type DefaultCommandShortcuts = Partial<Record<AppCommandId, CommandShortcut>>;
+export type DefaultCommandShortcuts = Partial<Record<AppCommandId, CommandShortcutSet>>;
 
 export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
-  [APP_COMMAND_IDS.toggleCommandPaletteMac]: { key: 'p', metaKey: true },
-  [APP_COMMAND_IDS.toggleCommandPaletteWin]: { key: 'p', ctrlKey: true },
-  [APP_COMMAND_IDS.closeCommandPalette]: { key: 'Escape' },
-  [APP_COMMAND_IDS.closeSettings]: { key: 'Escape' },
-  [APP_COMMAND_IDS.closeContextMenu]: { key: 'Escape' },
-  [APP_COMMAND_IDS.goBack]: { key: 'ArrowLeft', altKey: true },
-  [APP_COMMAND_IDS.goForward]: { key: 'ArrowRight', altKey: true },
-  [APP_COMMAND_IDS.revealReviewAnswer]: { key: ' ', shiftKey: true },
-  [APP_COMMAND_IDS.gradeReviewAgain]: { key: '1' },
-  [APP_COMMAND_IDS.gradeReviewHard]: { key: '2' },
-  [APP_COMMAND_IDS.gradeReviewGood]: { key: '3' },
-  [APP_COMMAND_IDS.gradeReviewEasy]: { key: '4' }
+  [APP_COMMAND_IDS.toggleCommandPaletteMac]: { primary: { key: 'p', metaKey: true } },
+  [APP_COMMAND_IDS.toggleCommandPaletteWin]: { primary: { key: 'p', ctrlKey: true } },
+  [APP_COMMAND_IDS.closeCommandPalette]: { primary: { key: 'Escape' } },
+  [APP_COMMAND_IDS.closeSettings]: { primary: { key: 'Escape' } },
+  [APP_COMMAND_IDS.closeContextMenu]: { primary: { key: 'Escape' } },
+  [APP_COMMAND_IDS.goBack]: { primary: { key: 'ArrowLeft', altKey: true } },
+  [APP_COMMAND_IDS.goForward]: { primary: { key: 'ArrowRight', altKey: true } },
+  [APP_COMMAND_IDS.revealReviewAnswer]: { primary: { key: ' ' } },
+  [APP_COMMAND_IDS.gradeReviewAgain]: { primary: { key: '1' } },
+  [APP_COMMAND_IDS.gradeReviewHard]: { primary: { key: '2' } },
+  [APP_COMMAND_IDS.gradeReviewGood]: { primary: { key: '3' } },
+  [APP_COMMAND_IDS.gradeReviewEasy]: { primary: { key: '4' } },
+  [APP_COMMAND_IDS.readingReviewLater]: { primary: { key: '1' } },
+  [APP_COMMAND_IDS.readingReviewRead]: { primary: { key: '3' }, secondary: { key: ' ' } },
+  [APP_COMMAND_IDS.readingReviewDismiss]: { primary: { key: '5' } }
 };

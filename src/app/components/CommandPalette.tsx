@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { buildCommandMenuSections } from '../../shared/commands/menuModel';
-import { formatShortcutLabel } from '../../shared/commands/shortcuts';
+import { formatShortcutSetLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
 interface CommandPaletteProps {
@@ -128,7 +128,7 @@ function CommandPaletteList({ activeIndex, emptyLabel, onRunItem, sections, visi
                       <span className="truncate font-medium text-foreground">{item.title}</span>
                       <span className="truncate text-xs text-foreground/60">{item.section ?? item.id}</span>
                     </span>
-                    {item.shortcut ? <span className="ml-4 text-xs text-foreground/55">{formatShortcutLabel(item.shortcut)}</span> : null}
+                    {item.shortcuts ? <span className="ml-4 text-xs text-foreground/55">{formatShortcutSetLabel(item.shortcuts)}</span> : null}
                   </button>
                 </li>
               );

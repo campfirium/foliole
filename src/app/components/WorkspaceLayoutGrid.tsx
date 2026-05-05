@@ -134,6 +134,7 @@ function WorkspaceDocumentArea({
         reviewQueueVisibility={props.reviewQueueVisibility}
         onCompleteReviewItem={props.onCompleteReviewItem}
         onDeferReviewItem={props.onDeferReviewItem}
+        onDismissReviewItem={props.onDismissReviewItem}
         onExitReviewMode={props.onExitReviewMode}
         onGrade={props.onGradeReview}
         onRevealAnswer={props.onRevealAnswer}

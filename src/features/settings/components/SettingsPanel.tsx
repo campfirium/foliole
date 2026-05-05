@@ -71,7 +71,7 @@ interface SettingsPanelProps {
   onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
-  onHotkeyUpdate: (commandId: string, nextLabel: string) => HotkeyUpdateResult;
+  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
 }
@@ -182,7 +182,7 @@ type SettingsPanelBodyProps = SettingsCategoryContentProps & {
   onCustomUiFontChange: (value: string) => void;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
-  onHotkeyUpdate: (commandId: string, nextLabel: string) => HotkeyUpdateResult;
+  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;

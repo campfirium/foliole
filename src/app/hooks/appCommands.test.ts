@@ -13,6 +13,9 @@ describe('buildAppPaletteItems', () => {
       canRevealAnswer: true,
       canToggleReviewMode: true,
       canGradeReview: true,
+      canDeferReadingReview: true,
+      canCompleteReadingReview: true,
+      canDismissReadingReview: true,
       isReviewMode: false
     });
 
@@ -30,6 +33,9 @@ describe('buildAppPaletteItems', () => {
       canRevealAnswer: true,
       canToggleReviewMode: true,
       canGradeReview: true,
+      canDeferReadingReview: true,
+      canCompleteReadingReview: true,
+      canDismissReadingReview: true,
       isReviewMode: true
     });
     const reviewModeItem = items.find((item) => item.id === APP_COMMAND_IDS.startStudyMode);

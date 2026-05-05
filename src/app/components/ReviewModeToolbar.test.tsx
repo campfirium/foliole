@@ -14,6 +14,7 @@ const baseProps = {
   onGrade: vi.fn(async () => true),
   onCompleteReviewItem: vi.fn(() => true),
   onDeferReviewItem: vi.fn(() => true),
+  onDismissReviewItem: vi.fn(() => true),
   onRevealAnswer: vi.fn(),
   onExitReviewMode: vi.fn()
 } as const;
@@ -118,9 +119,10 @@ it('clears grading error after a successful retry', async () => {
   expect(screen.queryByText('Failed to save grade. Please retry.')).not.toBeInTheDocument();
 });
 
-it('shows reading later/read actions instead of grading for non-qa items', () => {
+it('shows reading later/read/dismiss actions instead of grading for non-qa items', () => {
   const onCompleteReviewItem = vi.fn(() => true);
   const onDeferReviewItem = vi.fn(() => true);
+  const onDismissReviewItem = vi.fn(() => true);
   render(
     <ReviewModeToolbar
       {...baseProps}
@@ -128,11 +130,13 @@ it('shows reading later/read actions instead of grading for non-qa items', () =>
       isCurrentItemGradable={false}
       onCompleteReviewItem={onCompleteReviewItem}
       onDeferReviewItem={onDeferReviewItem}
+      onDismissReviewItem={onDismissReviewItem}
     />
   );
 
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
 
@@ -141,4 +145,7 @@ it('shows reading later/read actions instead of grading for non-qa items', () =>
 
   fireEvent.click(screen.getByRole('button', { name: 'Read' }));
   expect(onCompleteReviewItem).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+  expect(onDismissReviewItem).toHaveBeenCalledTimes(1);
 });

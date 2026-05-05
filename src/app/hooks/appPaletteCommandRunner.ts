@@ -10,6 +10,9 @@ interface PaletteCommandRunnerArgs {
   goForward: () => void;
   goParent: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
+  completeReviewItem: () => boolean;
+  deferReviewItem: () => boolean;
+  dismissReviewItem: () => boolean;
   isReviewMode: boolean;
   onToggleEditorDisplayMode: () => void;
   onToggleListVisibility: () => void;
@@ -54,7 +57,10 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       gradeReviewAgain: () => args.gradeReviewCard(1),
       gradeReviewHard: () => args.gradeReviewCard(2),
       gradeReviewGood: () => args.gradeReviewCard(3),
-      gradeReviewEasy: () => args.gradeReviewCard(4)
+      gradeReviewEasy: () => args.gradeReviewCard(4),
+      readingReviewLater: () => args.deferReviewItem(),
+      readingReviewRead: () => args.completeReviewItem(),
+      readingReviewDismiss: () => args.dismissReviewItem()
     });
     if (!handled) {
       return;

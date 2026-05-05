@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { matchesShortcutSet } from '../../shared/commands/shortcuts';
+import type { CommandShortcutSet } from '../../shared/commands/types';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 
 interface UseReviewKeyboardShortcutsArgs {
@@ -9,7 +11,17 @@ interface UseReviewKeyboardShortcutsArgs {
   reviewCurrentNodeId: string | null;
   isAnswerRevealed: boolean;
   isCurrentItemGradable: boolean;
+  revealAnswerShortcuts: CommandShortcutSet | undefined;
+  gradeAgainShortcuts: CommandShortcutSet | undefined;
+  gradeHardShortcuts: CommandShortcutSet | undefined;
+  gradeGoodShortcuts: CommandShortcutSet | undefined;
+  gradeEasyShortcuts: CommandShortcutSet | undefined;
+  readingLaterShortcuts: CommandShortcutSet | undefined;
+  readingReadShortcuts: CommandShortcutSet | undefined;
+  readingDismissShortcuts: CommandShortcutSet | undefined;
   completeReviewItem: () => boolean;
+  deferReviewItem: () => boolean;
+  dismissReviewItem: () => boolean;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => Promise<boolean>;
 }
@@ -67,19 +79,21 @@ function useReviewHotkeyHandler(
   useEffect(
     () =>
       onWindowKeydown((event) => handleReviewKeydown(event, args, isReviewEditing, setIsReviewEditing)),
-    [
-      args.gradeReviewCard,
-      args.isAnswerRevealed,
-      args.isCommandPaletteOpen,
-      args.isCurrentItemGradable,
-      args.isSettingsOpen,
-      args.isStudyMode,
-      args.completeReviewItem,
-      args.reviewCurrentNodeId,
-      args.revealReviewAnswer,
-      isReviewEditing
-    ]
+    [args, isReviewEditing, setIsReviewEditing]
   );
+}
+
+function tryRunShortcut(
+  event: KeyboardEvent,
+  shortcuts: CommandShortcutSet | undefined,
+  action: () => void | boolean
+) {
+  if (!matchesShortcutSet(event, shortcuts)) {
+    return false;
+  }
+  event.preventDefault();
+  action();
+  return true;
 }
 
 function handleReviewKeydown(
@@ -109,47 +123,31 @@ function handleReviewKeydown(
   if (isTargetEditing || !args.reviewCurrentNodeId) {
     return;
   }
-  if (event.key === ' ' || event.code === 'Space') {
-    handleReviewSpace(event, args);
-    return;
-  }
-  if (!args.isAnswerRevealed || !args.isCurrentItemGradable) {
-    return;
-  }
-  handleReviewGradeKey(event, args.gradeReviewCard);
-}
 
-function handleReviewSpace(event: KeyboardEvent, args: UseReviewKeyboardShortcutsArgs) {
-  event.preventDefault();
   if (!args.isCurrentItemGradable) {
-    args.completeReviewItem();
+    if (tryRunShortcut(event, args.readingLaterShortcuts, args.deferReviewItem)) {
+      return;
+    }
+    if (tryRunShortcut(event, args.readingReadShortcuts, args.completeReviewItem)) {
+      return;
+    }
+    tryRunShortcut(event, args.readingDismissShortcuts, args.dismissReviewItem);
     return;
   }
-  if (args.isAnswerRevealed) {
-    void args.gradeReviewCard(3);
-    return;
-  }
-  args.revealReviewAnswer();
-}
 
-function handleReviewGradeKey(event: KeyboardEvent, gradeReviewCard: UseReviewKeyboardShortcutsArgs['gradeReviewCard']) {
-  if (event.key === '1') {
-    event.preventDefault();
-    void gradeReviewCard(1);
+  if (!args.isAnswerRevealed) {
+    tryRunShortcut(event, args.revealAnswerShortcuts, args.revealReviewAnswer);
     return;
   }
-  if (event.key === '2') {
-    event.preventDefault();
-    void gradeReviewCard(2);
+
+  if (tryRunShortcut(event, args.gradeAgainShortcuts, () => void args.gradeReviewCard(1))) {
     return;
   }
-  if (event.key === '3') {
-    event.preventDefault();
-    void gradeReviewCard(3);
+  if (tryRunShortcut(event, args.gradeHardShortcuts, () => void args.gradeReviewCard(2))) {
     return;
   }
-  if (event.key === '4') {
-    event.preventDefault();
-    void gradeReviewCard(4);
+  if (tryRunShortcut(event, args.gradeGoodShortcuts, () => void args.gradeReviewCard(3))) {
+    return;
   }
+  tryRunShortcut(event, args.gradeEasyShortcuts, () => void args.gradeReviewCard(4));
 }

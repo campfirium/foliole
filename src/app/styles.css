@@ -604,6 +604,12 @@ body.workspace-resizing {
   gap: 8px;
 }
 
+.settings-hotkey-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .settings-hotkey-input {
   border: 1px solid #ccd0d6;
   border-radius: 8px;
