@@ -10,6 +10,7 @@ import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 interface DocumentPanelBodyProps {
   editorAppearanceKey: string;
   editorContent: string;
+  editorContentPaddingBottom?: string;
   emptyContent?: ReactNode;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -108,6 +109,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
       <MarkdownEditor
         ariaLabel="Prompt editor"
         className="prompt-editor-host"
+        contentPaddingBottom={props.editorContentPaddingBottom}
         debugId="prompt-editor"
         key={`prompt-${props.editorAppearanceKey}`}
         nodeId={props.editorNodeId}
@@ -138,6 +140,7 @@ function renderAnswerSection(props: DocumentPanelBodyProps) {
 export function DocumentPanelBody({
   editorAppearanceKey,
   editorContent,
+  editorContentPaddingBottom,
   emptyContent,
   editorNodeId,
   editorNodeViewState,
@@ -155,6 +158,7 @@ export function DocumentPanelBody({
   const bodyProps = {
     editorAppearanceKey,
     editorContent,
+    editorContentPaddingBottom,
     emptyContent,
     editorNodeId,
     editorNodeViewState,

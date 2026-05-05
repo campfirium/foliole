@@ -64,6 +64,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const hasAnswerSection = Boolean(
     !inboxEmptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && props.showAnswerSection
   );
+  const editorContentPaddingBottom = props.editorDisplayMode === 'preview' ? 'min(68dvh, 36rem)' : undefined;
   const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
 
   return (
@@ -85,6 +86,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         <DocumentPanelBody
           editorAppearanceKey={props.editorAppearanceKey}
           editorContent={props.editorContent}
+          editorContentPaddingBottom={editorContentPaddingBottom}
           editorNodeId={props.editorNodeId}
           editorNodeViewState={props.editorNodeViewState}
           emptyState={inboxEmptyState}

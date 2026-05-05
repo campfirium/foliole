@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockDestroy = vi.fn();
 const mockGetScrollMetrics = vi.fn(() => ({ clientHeight: 0, scrollHeight: 0, scrollTop: 0 }));
@@ -55,6 +55,16 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
 import { MarkdownEditor } from './MarkdownEditor';
 
 describe('MarkdownEditor', () => {
+  beforeEach(() => {
+    mockCtor.mockClear();
+    mockDestroy.mockClear();
+    mockGetContent.mockClear();
+    mockSetContent.mockClear();
+    mockSetSelection.mockClear();
+    mockSetScrollTop.mockClear();
+    mockOnScroll.mockClear();
+  });
+
   it('does not recreate editor adapter when value changes', () => {
     const onChange = vi.fn();
     const view = render(<MarkdownEditor nodeId="node-1" onChange={onChange} value="a" />);
@@ -69,5 +79,13 @@ describe('MarkdownEditor', () => {
 
     view.unmount();
     expect(mockDestroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies custom bottom padding when requested', () => {
+    const { container } = render(
+      <MarkdownEditor contentPaddingBottom="min(68dvh, 36rem)" nodeId="node-1" onChange={vi.fn()} value="a" />
+    );
+
+    expect(container.firstChild).toHaveStyle('--editor-content-padding-bottom: min(68dvh, 36rem)');
   });
 });
