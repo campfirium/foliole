@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const capacitorMock = vi.hoisted(() => ({
-  isNative: vi.fn(() => true),
-  platform: vi.fn(() => 'android'),
-  plugin: {
+function createApplyPluginMocks() {
+  return {
     applySyncObjects: vi.fn(async () => ({ applied_object_ids: ['setting:one'] })),
     applyDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 3, applied_object_count: 4, to_state_seq: 11 })),
     applySyncPack: vi.fn(async () => ({ applied_blob_count: 1, applied_object_count: 2, to_state_seq: 9 })),
-    applySyncNodeVersions: vi.fn(async () => ({ applied_node_ids: ['node-1'] })),
     applySyncReviewLog: vi.fn(async () => ({ applied_op_ids: ['op-1'] })),
+    saveSyncPushAcks: vi.fn(async () => ({ saved_client_op_ids: ['op-1'] }))
+  };
+}
+function createReadPluginMocks() {
+  return {
     loadSyncIndex: vi.fn(async () => ({ entries: [{ object_id: 'one', object_type: 'setting' }] })),
     loadSyncNodeConflicts: vi.fn(async () => ({
       conflicts: [{ conflict_version_id: 'phone#1', object_id: 'node-1', snapshot: { title: 'Remote' } }]
@@ -30,7 +31,12 @@ const capacitorMock = vi.hoisted(() => ({
     loadSyncNodeVersions: vi.fn(async () => ({ nodes: [{ object_id: 'node-1' }] })),
     loadSyncReviewLogCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncReviewLogPushCursor: vi.fn(async () => ({ cursor: null })),
-    loadSyncReviewLog: vi.fn(async () => ({ reviews: [{ op_id: 'op-1' }] })),
+    loadSyncReviewLog: vi.fn(async () => ({ reviews: [{ op_id: 'op-1' }] }))
+  };
+}
+
+function createSearchPluginMocks() {
+  return {
     loadPdfPageText: vi.fn(async () => ({
       attachment_id: 'att-1',
       pages: [{ page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }]
@@ -38,15 +44,15 @@ const capacitorMock = vi.hoisted(() => ({
     searchPdfPageText: vi.fn(async () => ({
       query: 'pdf',
       results: [{
-        attachment_id: 'att-1',
-        excerpt: 'indexed pdf text',
-        match_start: 8,
-        page: 1,
-        page_height: 200,
-        page_width: 100,
-        text: 'indexed pdf text'
+        attachment_id: 'att-1', excerpt: 'indexed pdf text', match_start: 8, page: 1,
+        page_height: 200, page_width: 100, text: 'indexed pdf text'
       }]
-    })),
+    }))
+  };
+}
+
+function createWritePluginMocks() {
+  return {
     saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
     saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
     saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1' })),
@@ -58,12 +64,23 @@ const capacitorMock = vi.hoisted(() => ({
     saveSyncNodeVersionPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncReviewLogCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncReviewLogPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncPushAcks: vi.fn(async () => ({ saved_client_op_ids: ['op-1'] })),
     saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' })),
     syncContentBlob: vi.fn(async ({ hash }) => ({ availability: 'cached', hash })),
     syncAttachmentResource: vi.fn(async () => ({ attachment_id: 'att-1', availability: 'cached' }))
+  };
+}
+
+const capacitorMock = vi.hoisted(() => ({
+  isNative: vi.fn(() => true),
+  platform: vi.fn(() => 'android'),
+  plugin: {
+    ...createApplyPluginMocks(),
+    ...createReadPluginMocks(),
+    ...createSearchPluginMocks(),
+    ...createWritePluginMocks()
   }
 }));
+
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -240,7 +257,6 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     headers: { 'X-Device-Id': 'android' },
     url: 'http://desktop/companion/sync-pack'
   });
-  await expect(api.applyCompanionSyncNodeVersions([])).resolves.toEqual(['node-1']);
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual(['op-1']);
 }
 

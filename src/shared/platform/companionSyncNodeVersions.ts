@@ -5,7 +5,6 @@ import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContr
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import {
-  FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceSyncBridge';
 
@@ -25,10 +24,10 @@ interface CompanionSqliteConnectionManager {
 }
 
 export async function applyCompanionSyncNodeVersions(nodes: NativeSyncNodeRecord[]) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeAndroidCompanionRuntime() || nodes.length === 0) {
     return [];
   }
-  return (await FolioleCompanionSync.applySyncNodeVersions({ nodes })).applied_node_ids;
+  return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes);
 }
 
 export async function applyCompanionSyncNodeVersionsWithSharedCore(
