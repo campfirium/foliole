@@ -18,40 +18,36 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
         JSObject content,
         JSArray events
     ) throws Exception {
-        JSONObject connectionKeys = diagnosticObject(context, "connectionKeys");
-        JSONObject stateKeys = diagnosticObject(context, "stateKeys");
-        JSONObject metricKeys = metricKeys(context);
         JSArray verdicts = new JSArray();
-        if (connection.optString(connectionKeys.getString("endpointUrl"), null) == null) {
+        if (connection.optString(diagnosticConnectionKey(context, "endpointUrl"), null) == null) {
             add(context, verdicts, "endpointMissing", connection);
         }
-        if (!syncState.has(stateKeys.getString("packCursor")) || syncState.isNull(stateKeys.getString("packCursor"))) {
+        if (!syncState.has(diagnosticStateKey(context, "packCursor")) || syncState.isNull(diagnosticStateKey(context, "packCursor"))) {
             add(context, verdicts, "packCursorMissing", syncState);
         }
-        if (storage.optLong(metricKeys.getString("activeNodeCount"), 0) == 0 && hasCompletedEvent(context, events)) {
+        if (storage.optLong(verdictMetricKey(context, "activeNodeCount"), 0) == 0 && hasCompletedEvent(context, events)) {
             add(context, verdicts, "noNodesAfterCompletedSync", storage);
         }
-        if (content.optLong(metricKeys.getString("missingContentBlobCount"), 0) > 0) {
+        if (content.optLong(verdictMetricKey(context, "missingContentBlobCount"), 0) > 0) {
             add(context, verdicts, "missingContentBlobs", content);
         }
-        if (content.optLong(metricKeys.getString("missingAttachmentResourceCount"), 0) > 0) {
+        if (content.optLong(verdictMetricKey(context, "missingAttachmentResourceCount"), 0) > 0) {
             add(context, verdicts, "missingAttachmentResources", content);
         }
         JSONObject failed = recentFailedEvent(context, events);
         if (failed != null) {
-            JSONObject evidenceKeys = diagnosticObject(context, "verdictEvidenceKeys");
             JSObject evidence = new JSObject();
-            evidence.put(evidenceKeys.getString("message"), failed.optString(evidenceKeys.getString("message")));
-            evidence.put(evidenceKeys.getString("occurredAt"), failed.optString(evidenceKeys.getString("occurredAt")));
+            evidence.put(diagnosticVerdictEvidenceKey(context, "message"), failed.optString(diagnosticVerdictEvidenceKey(context, "message")));
+            evidence.put(diagnosticVerdictEvidenceKey(context, "occurredAt"), failed.optString(diagnosticVerdictEvidenceKey(context, "occurredAt")));
             add(context, verdicts, "recentSyncFailed", evidence);
         }
-        if (syncState.optLong(metricKeys.getString("localDirtyCount"), 0) > 0) {
+        if (syncState.optLong(verdictMetricKey(context, "localDirtyCount"), 0) > 0) {
             add(context, verdicts, "hasLocalDirtyState", syncState);
         }
-        if (syncState.optLong(metricKeys.getString("pendingAckCount"), 0) > 0) {
+        if (syncState.optLong(verdictMetricKey(context, "pendingAckCount"), 0) > 0) {
             add(context, verdicts, "hasPendingPushAck", syncState);
         }
-        if (syncState.optLong(metricKeys.getString("pushIssueCount"), 0) > 0) {
+        if (syncState.optLong(verdictMetricKey(context, "pushIssueCount"), 0) > 0) {
             add(context, verdicts, "hasPushIssues", syncState);
         }
         if (verdicts.length() == 0) {
@@ -107,24 +103,35 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
 
     private static void add(Context context, JSArray verdicts, String key, JSObject evidence) throws Exception {
         JSONObject definition = FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdict(context, key);
-        JSONObject verdictKeys = diagnosticObject(context, "verdictKeys");
         JSObject verdict = new JSObject();
-        verdict.put(verdictKeys.getString("code"), definition.getString(verdictKeys.getString("code")));
-        verdict.put(verdictKeys.getString("severity"), definition.getString(verdictKeys.getString("severity")));
-        verdict.put(verdictKeys.getString("message"), definition.getString(verdictKeys.getString("message")));
-        verdict.put(verdictKeys.getString("evidence"), evidence);
+        verdict.put(diagnosticVerdictKey(context, "code"), definition.getString(diagnosticVerdictKey(context, "code")));
+        verdict.put(diagnosticVerdictKey(context, "severity"), definition.getString(diagnosticVerdictKey(context, "severity")));
+        verdict.put(diagnosticVerdictKey(context, "message"), definition.getString(diagnosticVerdictKey(context, "message")));
+        verdict.put(diagnosticVerdictKey(context, "evidence"), evidence);
         verdicts.put(verdict);
     }
 
-    private static JSONObject diagnosticObject(Context context, String key) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.objectValue(context, "syncDiagnostics", key);
+    private static String diagnosticConnectionKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncDiagnosticConnectionKey(context, key);
+    }
+
+    private static String diagnosticStateKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncDiagnosticStateKey(context, key);
+    }
+
+    private static String diagnosticVerdictEvidenceKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdictEvidenceKey(context, key);
+    }
+
+    private static String diagnosticVerdictKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdictKey(context, key);
     }
 
     private static String syncEventRecordKey(Context context, String key) throws Exception {
         return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEventRecordKeys", key);
     }
 
-    private static JSONObject metricKeys(Context context) throws Exception {
-        return FolioleCompanionSyncDiagnosticQueryRules.object(context, "verdictMetricKeys");
+    private static String verdictMetricKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncDiagnosticQueryRules.verdictMetricKey(context, key);
     }
 }

@@ -21,9 +21,8 @@ final class FolioleCompanionSyncDiagnosticContent {
             FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "contentBodyMetrics")
         ));
         copyAttachmentSummary(context, content, FolioleCompanionAttachmentResourceStore.summarizeMissingResources(context, database));
-        JSONObject outputKeys = contentOutputKeys(context);
-        content.put(outputKeys.getString("activeTopic"), loadActiveTopic(context, database));
-        content.put(outputKeys.getString("recentTopics"), loadRecentTopics(context, database));
+        content.put(contentOutputKey(context, "activeTopic"), loadActiveTopic(context, database));
+        content.put(contentOutputKey(context, "recentTopics"), loadRecentTopics(context, database));
         return content;
     }
 
@@ -72,7 +71,7 @@ final class FolioleCompanionSyncDiagnosticContent {
         );
     }
 
-    private static JSONObject contentOutputKeys(Context context) throws Exception {
-        return FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys");
+    private static String contentOutputKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncDiagnosticQueryRules.contentOutputKey(context, key);
     }
 }

@@ -45,6 +45,30 @@ final class FolioleCompanionSyncProtocolDefinitions {
         return verdict;
     }
 
+    static String syncDiagnosticConnectionKey(Context context, String key) throws Exception {
+        return syncDiagnosticString(context, "connectionKeys", key);
+    }
+
+    static String syncDiagnosticIdentityKey(Context context, String key) throws Exception {
+        return syncDiagnosticString(context, "identityKeys", key);
+    }
+
+    static String syncDiagnosticOutputKey(Context context, String key) throws Exception {
+        return syncDiagnosticString(context, "outputKeys", key);
+    }
+
+    static String syncDiagnosticStateKey(Context context, String key) throws Exception {
+        return syncDiagnosticString(context, "stateKeys", key);
+    }
+
+    static String syncDiagnosticVerdictEvidenceKey(Context context, String key) throws Exception {
+        return syncDiagnosticString(context, "verdictEvidenceKeys", key);
+    }
+
+    static String syncDiagnosticVerdictKey(Context context, String key) throws Exception {
+        return syncDiagnosticString(context, "verdictKeys", key);
+    }
+
     static String syncPluginAcksRequestKey(Context context) throws Exception {
         return syncPluginRequestKey(context, "acks");
     }
@@ -113,6 +137,10 @@ final class FolioleCompanionSyncProtocolDefinitions {
             throw new IllegalStateException("Companion sync protocol definitions asset is missing object: " + sectionName + "." + key);
         }
         return value;
+    }
+
+    private static String syncDiagnosticString(Context context, String objectName, String key) throws Exception {
+        return objectValue(context, "syncDiagnostics", objectName).getString(key);
     }
 
     private static JSONObject section(Context context, String sectionName) throws Exception {

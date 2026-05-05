@@ -20,29 +20,27 @@ final class FolioleCompanionSyncDiagnostics {
         JSObject syncState = FolioleCompanionSyncDiagnosticState.load(context, database);
         JSObject connection = loadConnection(context, database);
         JSObject result = new JSObject();
-        JSONObject outputKeys = diagnosticObject(context, "outputKeys");
-        result.put(outputKeys.getString("collectedAt"), collectedAt);
-        result.put(outputKeys.getString("host"), FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncDiagnostics", "host"));
-        result.put(outputKeys.getString("identity"), loadIdentity(context, databasePath));
-        result.put(outputKeys.getString("connection"), connection);
-        result.put(outputKeys.getString("storage"), storage);
-        result.put(outputKeys.getString("syncState"), syncState);
+        result.put(diagnosticOutputKey(context, "collectedAt"), collectedAt);
+        result.put(diagnosticOutputKey(context, "host"), FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncDiagnostics", "host"));
+        result.put(diagnosticOutputKey(context, "identity"), loadIdentity(context, databasePath));
+        result.put(diagnosticOutputKey(context, "connection"), connection);
+        result.put(diagnosticOutputKey(context, "storage"), storage);
+        result.put(diagnosticOutputKey(context, "syncState"), syncState);
         JSObject content = FolioleCompanionSyncDiagnosticContent.load(context, database);
         JSArray events = loadEvents(context, database);
-        result.put(outputKeys.getString("content"), content);
-        result.put(outputKeys.getString("events"), events);
-        result.put(outputKeys.getString("verdicts"), FolioleCompanionSyncDiagnosticVerdicts.build(context, connection, storage, syncState, content, events));
+        result.put(diagnosticOutputKey(context, "content"), content);
+        result.put(diagnosticOutputKey(context, "events"), events);
+        result.put(diagnosticOutputKey(context, "verdicts"), FolioleCompanionSyncDiagnosticVerdicts.build(context, connection, storage, syncState, content, events));
         return result;
     }
 
     private static JSObject loadIdentity(Context context, String databasePath) throws Exception {
         JSObject pairing = FolioleCompanionPairingStore.loadPairingState(context);
-        JSONObject identityKeys = diagnosticObject(context, "identityKeys");
         JSObject identity = new JSObject();
-        identity.put(identityKeys.getString("appVersion"), null);
-        identity.put(identityKeys.getString("databasePath"), databasePath);
-        identity.put(identityKeys.getString("deviceId"), pairing.optString(identityKeys.getString("deviceId"), null));
-        identity.put(identityKeys.getString("deviceName"), pairing.optString(identityKeys.getString("deviceName"), null));
+        identity.put(diagnosticIdentityKey(context, "appVersion"), null);
+        identity.put(diagnosticIdentityKey(context, "databasePath"), databasePath);
+        identity.put(diagnosticIdentityKey(context, "deviceId"), pairing.optString(diagnosticIdentityKey(context, "deviceId"), null));
+        identity.put(diagnosticIdentityKey(context, "deviceName"), pairing.optString(diagnosticIdentityKey(context, "deviceName"), null));
         return identity;
     }
 
@@ -53,14 +51,13 @@ final class FolioleCompanionSyncDiagnostics {
             database,
             FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", "endpointUrl")
         );
-        JSONObject connectionKeys = diagnosticObject(context, "connectionKeys");
         JSObject connection = new JSObject();
-        connection.put(connectionKeys.getString("endpointUrl"), endpointUrl == null ? JSONObject.NULL : endpointUrl);
-        connection.put(connectionKeys.getString("lastError"), JSONObject.NULL);
+        connection.put(diagnosticConnectionKey(context, "endpointUrl"), endpointUrl == null ? JSONObject.NULL : endpointUrl);
+        connection.put(diagnosticConnectionKey(context, "lastError"), JSONObject.NULL);
         String state = pairing.optBoolean("is_paired", false) && endpointUrl != null
             ? FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready")
             : FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "missing");
-        connection.put(connectionKeys.getString("state"), state);
+        connection.put(diagnosticConnectionKey(context, "state"), state);
         return connection;
     }
 
@@ -81,8 +78,16 @@ final class FolioleCompanionSyncDiagnostics {
         return events;
     }
 
-    private static JSONObject diagnosticObject(Context context, String key) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.objectValue(context, "syncDiagnostics", key);
+    private static String diagnosticConnectionKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncDiagnosticConnectionKey(context, key);
+    }
+
+    private static String diagnosticIdentityKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncDiagnosticIdentityKey(context, key);
+    }
+
+    private static String diagnosticOutputKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncDiagnosticOutputKey(context, key);
     }
 
 }
