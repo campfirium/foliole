@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
-import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   importRuntimeExternalSearchDocument,
@@ -11,7 +10,7 @@ import {
   type RuntimeExternalSearchFolder,
   type RuntimeExternalSearchPreview
 } from '../../shared/platform/externalSearchBridge';
-import { AppButton, AppEmptyState } from '../../shared/ui';
+import { AppEmptyState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import {
@@ -23,6 +22,7 @@ import {
   resolveExternalSurfaceTitle
 } from './externalLibraryDocumentSurfaceSupport';
 import { FolderListView } from './FolderListView';
+import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
 
 interface ExternalLibraryDocumentSurfaceProps {
   documentMaxWidth: number;
@@ -153,37 +153,6 @@ function ExternalFolderListSurface(args: {
   );
 }
 
-function ExternalPreviewSurface(args: {
-  isImporting: boolean;
-  onHandleImport: () => void;
-  preview: RuntimeExternalSearchPreview;
-}) {
-  return (
-    <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col bg-canvas">
-      <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
-        <div className="min-w-0">
-          <div className="truncate text-base font-semibold text-foreground">{args.preview.fileName}</div>
-          <div className="mt-1 break-all text-sm text-foreground/60">{args.preview.relativePath}</div>
-        </div>
-        <AppButton disabled={args.isImporting} onClick={args.onHandleImport}>
-          Import
-        </AppButton>
-      </div>
-      <div className="min-h-0 flex-1">
-        <MarkdownEditor
-          blockImageMaxHeightOverride={520}
-          blockImageWidthOverride="min(100%, 40rem)"
-          className="h-full"
-          nodeId={args.preview.absolutePath}
-          onChange={() => undefined}
-          readOnly
-          value={args.preview.content}
-        />
-      </div>
-    </section>
-  );
-}
-
 function ExternalEmptySurface(args: {
   error: string | null;
   selectedFolder: RuntimeExternalSearchFolder | null;
@@ -252,5 +221,5 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
     );
   }
 
-  return <ExternalPreviewSurface isImporting={isImporting} onHandleImport={() => void handleImport()} preview={preview} />;
+  return <ExternalLibraryPreviewSurface isImporting={isImporting} onHandleImport={() => void handleImport()} preview={preview} />;
 }

@@ -4,6 +4,7 @@ import { useReviewSchedulerSettings } from '../../features/settings/context/Revi
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import type { ExternalDocumentPreviewRequest } from '../components/externalDocumentPreviewState';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { useCurrentReviewPreview } from './appControllerHelpers';
@@ -187,7 +188,9 @@ function buildControllerLayoutState(args: {
   });
 }
 
-export function useAppController(): AppControllerResult {
+export function useAppController(args: {
+  onOpenExternalPreview: (request: ExternalDocumentPreviewRequest) => void;
+}): AppControllerResult {
   const ws = useWorkspaceSelectors();
   const appearance = useAppearanceSettings();
   const reviewSettings = useReviewSchedulerSettings();
@@ -231,6 +234,7 @@ export function useAppController(): AppControllerResult {
     hotkeys,
     isStudyMode,
     layoutProps,
+    onOpenExternalPreview: args.onOpenExternalPreview,
     paletteItems,
     ws
   });

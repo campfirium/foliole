@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
@@ -48,4 +48,25 @@ it('reuses the compact item row style for external library items without dates o
   expect(screen.getByRole('treeitem', { name: 'Alpha title' })).toBeInTheDocument();
   expect(screen.queryByText('2026-04-21')).toBeNull();
   expect(screen.queryByText('The first useful sentence inside this external document.')).toBeNull();
+});
+
+it('opens the selected document in the external workspace surface', () => {
+  const onOpenExternalSelection = vi.fn();
+
+  render(
+    <ExternalLibraryListPanel
+      entriesByFolderId={entriesByFolderId}
+      folders={folders}
+      onOpenExternalSelection={onOpenExternalSelection}
+      selection={{ folderId: 'folder-1', kind: 'folder' }}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Alpha title' }));
+
+  expect(onOpenExternalSelection).toHaveBeenCalledWith({
+    absolutePath: '/library/two think/a.md',
+    folderId: 'folder-1',
+    kind: 'document'
+  });
 });

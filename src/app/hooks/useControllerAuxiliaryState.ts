@@ -1,6 +1,7 @@
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import type { ExternalDocumentPreviewRequest } from '../components/externalDocumentPreviewState';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { buildControllerPaletteState } from './appControllerPaletteState';
@@ -20,6 +21,7 @@ export function useControllerAuxiliaryState(args: {
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
+  onOpenExternalPreview: (request: ExternalDocumentPreviewRequest) => void;
   paletteItems: CommandPaletteItem[];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
@@ -44,8 +46,10 @@ export function useControllerAuxiliaryState(args: {
   });
   const moveToNodeState = buildControllerMoveToNodeState({ runtime: args.controller.runtime, ws: args.ws });
   const searchState = buildControllerSearchState({
+    externalPreview: {
+      openExternalPreview: args.onOpenExternalPreview
+    },
     nav: args.controller.nav,
-    externalView: args.controller.externalView,
     runtime: args.controller.runtime,
     trash: args.controller.trash,
     virtualView: args.controller.virtualView,

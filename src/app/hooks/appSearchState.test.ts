@@ -40,12 +40,12 @@ it('keeps search palette data empty while closed', () => {
   expect(state.nodesById).toEqual({});
 });
 
-it('opens the external library view for external search results', () => {
-  const openExternalDocument = vi.fn();
+it('opens the external preview panel for external search results', () => {
+  const openExternalPreview = vi.fn();
   const setIsSearchPaletteOpen = vi.fn();
   const state = buildControllerSearchState({
-    externalView: {
-      openExternalDocument
+    externalPreview: {
+      openExternalPreview
     },
     nav: {
       handleSelectNode: () => undefined
@@ -86,7 +86,7 @@ it('opens the external library view for external search results', () => {
     updatedAt: '2026-04-21T00:00:00.000Z'
   });
 
-  expect(openExternalDocument).toHaveBeenCalledWith({
+  expect(openExternalPreview).toHaveBeenCalledWith({
     absolutePath: '/tmp/library/topic.md',
     folderId: 'folder-1'
   });

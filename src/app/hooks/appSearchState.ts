@@ -1,13 +1,14 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { requestPdfSearch } from '../../features/pdf/model/pdfSystemBridge';
+import type { ExternalDocumentPreviewRequest } from '../components/externalDocumentPreviewState';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import { buildSearchState, toSearchNodesById } from './appControllerHelpers';
 import type { useWorkspaceSelectors } from './appControllerState';
 
 interface SearchStateArgs {
-  externalView?: {
-    openExternalDocument: (args: { absolutePath: string; folderId: string }) => void;
+  externalPreview?: {
+    openExternalPreview: (request: ExternalDocumentPreviewRequest) => void;
   };
   nav: {
     handleSelectNode: (nodeId: string) => void;
@@ -52,7 +53,7 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
       args.trash.closeTrashView();
       args.virtualView?.closeVirtualView();
       if (result.kind === 'external' && result.externalMatch) {
-        args.externalView?.openExternalDocument({
+        args.externalPreview?.openExternalPreview({
           absolutePath: result.externalMatch.absolutePath,
           folderId: result.externalMatch.folderId
         });

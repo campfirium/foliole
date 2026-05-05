@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
-import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import {
   markDocumentPanelBound,
   markNodeBodyPainted,
@@ -22,9 +21,9 @@ import {
   useDocumentPanelInteractions
 } from './documentPanelSectionSupport';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
-import { appendLinkPanel, closeLinkPanel, patchLinkPanel, type LinkPanelRecord } from './linkPanelState';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
 import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
+import { useExternalLinkPanels } from './useExternalLinkPanels';
 import { useNodeBacklinks } from './useNodeBacklinks';
 
 export type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
@@ -156,35 +155,13 @@ function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
   );
 }
 
-function useLinkPanels() {
-  const [linkPanels, setLinkPanels] = useState<LinkPanelRecord[]>([]);
-  const handleOpenExternalLink = useCallback((request: ExternalLinkOpenRequest) => {
-    setLinkPanels((current) => appendLinkPanel(current, request));
-  }, []);
-  const handleCloseExternalLink = useCallback((panelId: string) => {
-    setLinkPanels((current) => closeLinkPanel(current, panelId));
-  }, []);
-  const handleLinkPanelStateChange = useCallback(
-    (panelId: string, state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>) => {
-      setLinkPanels((current) => patchLinkPanel(current, panelId, state));
-    },
-    []
-  );
-  return {
-    handleCloseExternalLink,
-    handleLinkPanelStateChange,
-    handleOpenExternalLink,
-    linkPanels
-  };
-}
-
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
   const draftProps = useDocumentPanelDraftProps(props);
   const model = useDocumentPanelSectionModel(draftProps);
   const interactions = useDocumentPanelInteractions(draftProps);
   const resolvedProps = buildResolvedDocumentPanelProps(draftProps);
-  const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useLinkPanels();
+  const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
   const topicBacklinks = buildTopicBacklinks({
     activeNodeId: draftProps.activeNodeId,
     backlinks: model.backlinks,

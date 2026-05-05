@@ -59,6 +59,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   externalSectionHeight: 'foliole-workspace-external-section-height',
   documentWidth: 'foliole-workspace-document-width',
   linkPanelSize: 'foliole-link-panel-size',
+  externalDocumentPreviewPanelSize: 'foliole-external-document-preview-panel-size',
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',
   rightSidebarWidth: 'foliole-workspace-right-sidebar-width',
   rightSidebarActivePanel: 'foliole-workspace-right-sidebar-active-panel',
