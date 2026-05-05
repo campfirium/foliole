@@ -1,5 +1,5 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { requestPdfAnchorJump, requestPdfSearch } from '../../features/pdf/model/pdfSystemBridge';
+import { requestPdfSearch } from '../../features/pdf/model/pdfSystemBridge';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import { buildSearchState, toSearchNodesById } from './appControllerHelpers';
@@ -43,11 +43,6 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
       args.trash.closeTrashView();
       args.nav.handleSelectNode(result.id);
       if (result.kind === 'pdf' && result.pdfMatch) {
-        requestPdfAnchorJump(result.id, {
-          page: result.pdfMatch.page,
-          x: 0.5,
-          y: 0.1
-        });
         requestPdfSearch(result.id, {
           matchStart: result.pdfMatch.matchStart,
           page: result.pdfMatch.page,

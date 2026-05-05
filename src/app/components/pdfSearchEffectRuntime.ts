@@ -27,6 +27,13 @@ export function scrollToMatch(container: HTMLDivElement, match: PdfSearchMatch) 
   }
 }
 
+export function canScrollToMatch(match: PdfSearchMatch, shell: HTMLElement | null) {
+  if (typeof match.x === 'number' && typeof match.y === 'number') {
+    return true;
+  }
+  return !!shell && match.element !== shell;
+}
+
 export function toSearchHighlights(matches: PdfSearchMatch[], activeMatchId: string): PdfSearchVisualHighlight[] {
   return matches.map((match) => ({
     id: match.id,
@@ -99,8 +106,6 @@ export function resolveCursorByRequest(args: {
 
   if (args.searchTarget && (queryChanged || args.searchTarget.id !== args.lastHandledTargetIdRef.current)) {
     args.cursorRef.current = resolveTargetCursor(args.matches, args.searchTarget);
-    args.lastHandledTargetIdRef.current = args.searchTarget.id;
-    args.lastRequestIdRef.current = null;
     handledAction = { id: args.searchTarget.id, kind: 'target' };
   } else if (args.searchRequest && args.searchRequest.id !== args.lastRequestIdRef.current) {
     args.cursorRef.current = resolveNextCursor(args.searchRequest, args.cursorRef.current, args.matches.length);

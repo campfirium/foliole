@@ -1,7 +1,7 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 
 import type { PdfPageTextEntry } from './pdfPageText';
-import { resetSearchCursorState, resolveCursorByRequest, scrollToMatch, toSearchHighlights } from './pdfSearchEffectRuntime';
+import { canScrollToMatch, resetSearchCursorState, resolveCursorByRequest, scrollToMatch, toSearchHighlights } from './pdfSearchEffectRuntime';
 import { collectMatches, getLastPdfSearchDebug } from './pdfSearchMatchCollection';
 
 export interface PdfSearchRequest {
@@ -112,13 +112,17 @@ function runPdfSearchCycle(args: {
     args.onSearchStatusChange({ current: 0, hasQuery: true, total: matches.length });
     return;
   }
+  const shell = args.pageElementsRef.current[match.page] ?? null;
 
   args.onSearchHighlightsChange(toSearchHighlights(matches, match.id));
-  if (queryChanged || handledAction) {
+  const targetPendingPreciseLocation = handledAction?.kind === 'target' && !canScrollToMatch(match, shell);
+  if ((queryChanged || handledAction) && !targetPendingPreciseLocation) {
     scrollToMatch(args.container, match);
   }
   args.onSearchStatusChange({ current: args.cursorRef.current + 1, hasQuery: true, total: matches.length });
-  if (handledAction?.kind === 'target') {
+  if (handledAction?.kind === 'target' && !targetPendingPreciseLocation) {
+    args.lastHandledTargetIdRef.current = handledAction.id;
+    args.lastRequestIdRef.current = null;
     args.onSearchTargetHandled?.(handledAction.id);
   }
   if (handledAction?.kind === 'request') {
