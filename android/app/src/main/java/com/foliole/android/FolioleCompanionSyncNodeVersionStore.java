@@ -46,7 +46,7 @@ final class FolioleCompanionSyncNodeVersionStore {
         return result;
     }
 
-    static JSObject applyNodeVersions(SQLiteDatabase database, JSONArray nodes) throws Exception {
+    static JSObject applyNodeVersions(SQLiteDatabase database, JSONArray nodes, String deviceId) throws Exception {
         JSArray appliedNodeIds = new JSArray();
         if (nodes == null) {
             JSObject result = new JSObject();
@@ -55,6 +55,7 @@ final class FolioleCompanionSyncNodeVersionStore {
         }
         database.beginTransaction();
         try {
+            String now = Instant.now().toString();
             for (int index = 0; index < nodes.length(); index += 1) {
                 JSONObject record = nodes.optJSONObject(index);
                 if (record == null) {
@@ -74,6 +75,7 @@ final class FolioleCompanionSyncNodeVersionStore {
                 upsertVersion(database, record, snapshot);
                 if (!isFastForward(record, localVersionId)) {
                     recordConflict(database, record, snapshot);
+                    FolioleCompanionSyncConflictCopies.create(database, record, snapshot, deviceId, now);
                     continue;
                 }
                 if (localVersionId.equals(record.optString("version_id", ""))) {

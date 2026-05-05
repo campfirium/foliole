@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 
 import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 import type { EditorViewState } from '@/features/editor/components/markdownEditorTypes';
@@ -43,12 +44,23 @@ function renderOriginalPdf(
 export function ReadableArticleDocument(props: {
   onAttachmentResourceSynced?: () => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
+  onSaveContent?: (nodeId: string, content: string) => Promise<void>;
   readableArticle: ReadableArticle;
   readingSelection?: EditorSelection | null;
   syncEndpointUrl?: string | null;
 }) {
   const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
+  const canEdit = Boolean(props.onSaveContent && (!props.readableArticle.bodyStatus || props.readableArticle.bodyStatus === 'ready'));
+  const saveContent = props.onSaveContent;
+  const editorState = useCompanionTopicEditAutosave({
+    canEdit: canEdit && !isViewingPdfOriginal,
+    initialContent: props.readableArticle.content,
+    nodeId: props.readableArticle.nodeId,
+    onSaveContent: saveContent
+      ? (content) => saveContent(props.readableArticle.nodeId, content)
+      : undefined
+  });
   const syncMissingAttachmentResource = useCallback(async (attachmentId: string) => {
     if (!props.syncEndpointUrl) return;
     await saveCompanionSyncActiveViewState(props.readableArticle.nodeId).catch(() => undefined);
@@ -74,17 +86,20 @@ export function ReadableArticleDocument(props: {
         </div>
       ) : null}
       <CompanionArticleDocument
-        content={props.readableArticle.content}
+        content={editorState.value}
         contentPaddingTop={props.readableArticle.contentPaddingTop}
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}
         nodeViewState={toEditorViewState(props.readableArticle)}
+        onBlurCapture={() => void editorState.flushPendingSave()}
+        onChange={canEdit ? editorState.handleChange : undefined}
         onEditorReady={props.onEditorReady}
         onMissingAttachmentResource={syncMissingAttachmentResource}
         readingSelection={props.readingSelection}
         readingTargetViewportMode="center"
         textAnchorDecorations={props.readableArticle.textAnchorDecorations}
       />
+      {editorState.error ? <p className="mt-3 px-1 text-sm text-error">{editorState.error}</p> : null}
     </>
   );
 }

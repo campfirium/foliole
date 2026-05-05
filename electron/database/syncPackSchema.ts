@@ -31,6 +31,7 @@ export const PACK_SCHEMA = [
     body_blob_hash TEXT,
     opening_text TEXT,
     content TEXT NOT NULL DEFAULT '',
+    current_version_id TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT

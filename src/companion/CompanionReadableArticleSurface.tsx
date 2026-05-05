@@ -34,6 +34,7 @@ interface ImmersiveReadableArticleProps {
   onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string) => Promise<string | null> | string | null;
   onDeleteExistingHighlight?: (nodeId: string) => Promise<string | null> | string | null;
   onExit(): void;
+  onSaveArticleContent?: (nodeId: string, content: string) => Promise<void>;
   readableArticle: ReadableArticle;
   snapshot: WorkspaceSnapshot | null;
   syncEndpointUrl?: string | null;
@@ -123,6 +124,7 @@ function ImmersiveChromeLayer(props: {
 function ImmersiveArticleContent(props: {
   onAttachmentResourceSynced?: () => void;
   onEditorReady(adapter: EditorAdapter | null): void;
+  onSaveArticleContent?: (nodeId: string, content: string) => Promise<void>;
   readableArticle: ReadableArticle;
   readingSelection: EditorSelection | null;
   syncEndpointUrl?: string | null;
@@ -132,6 +134,7 @@ function ImmersiveArticleContent(props: {
       <ReadableArticleDocument
         onAttachmentResourceSynced={props.onAttachmentResourceSynced}
         onEditorReady={props.onEditorReady}
+        onSaveContent={props.onSaveArticleContent}
         readableArticle={props.readableArticle}
         readingSelection={props.readingSelection}
         syncEndpointUrl={props.syncEndpointUrl}
@@ -206,6 +209,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       <ImmersiveArticleContent
         onAttachmentResourceSynced={props.onAttachmentResourceSynced}
         onEditorReady={toolbar.handleEditorReady}
+        onSaveArticleContent={props.onSaveArticleContent}
         readableArticle={props.readableArticle}
         readingSelection={reading.readingSelection}
         syncEndpointUrl={props.syncEndpointUrl}

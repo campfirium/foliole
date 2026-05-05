@@ -17,6 +17,8 @@ export function CompanionArticleDocument(props: {
   layout?: 'article' | 'review';
   nodeId: string;
   nodeViewState?: EditorViewState;
+  onBlurCapture?: () => void;
+  onChange?: (content: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   readingSelection?: EditorSelection | null;
@@ -33,10 +35,11 @@ export function CompanionArticleDocument(props: {
         hideScrollbar
         nodeId={props.nodeId}
         nodeViewState={props.nodeViewState}
-        onChange={() => undefined}
+        onBlurCapture={props.onBlurCapture}
+        onChange={(content) => props.onChange?.(content)}
         onReady={props.onEditorReady}
         onMissingAttachmentResource={props.onMissingAttachmentResource}
-        readOnly
+        readOnly={!props.onChange}
         readingSelection={props.readingSelection}
         readingTargetViewportMode={props.readingTargetViewportMode}
         textAnchorDecorations={props.textAnchorDecorations}

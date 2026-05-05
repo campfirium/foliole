@@ -1,5 +1,6 @@
 import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
+import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -18,6 +19,7 @@ export function ReadableArticleOrFallback(props: {
     return (
       <ReadableArticleDocument
         onAttachmentResourceSynced={props.onAttachmentResourceSynced}
+        onSaveContent={createCompanionTopicContentSaveHandler(props.workspaceSync)}
         readableArticle={props.surface.readableArticle}
         syncEndpointUrl={resolveCompanionWorkspaceSyncEndpoint(props.workspaceSync.state)}
       />

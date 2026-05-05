@@ -72,12 +72,22 @@ public class FolioleCompanionSyncEventStreamsTest {
             .put("snapshot", nodeSnapshot("remote body"))
             .put("ancestor_version_ids", new JSONArray().put("desktop#1")));
 
-        JSObject applied = FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes);
+        JSObject applied = FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
+        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
 
         assertEquals(0, applied.getJSONArray("applied_node_ids").length());
         assertEquals("local body", selectString("nodes", "content", "id = 'node-1'"));
         assertEquals(1, countRows("node_sync_conflicts", "conflict_version_id = 'phone#1'"));
         assertEquals(1, countRows("node_sync_versions", "version_id = 'phone#1'"));
+        String copyNodeId = selectString("nodes", "id", "id LIKE 'conflict-copy-%'");
+        assertEquals(1, countRows("nodes", "id LIKE 'conflict-copy-%'"));
+        assertEquals("special-inbox", selectString("nodes", "parent_id", "id = '" + copyNodeId + "'"));
+        assertEquals("remote body", selectString("nodes", "content", "id = '" + copyNodeId + "'"));
+        assertEquals(1, countRows("node_order", "node_id = '" + copyNodeId + "' AND position = 0"));
+        assertEquals(1, countRows("node_sync_versions", "object_id = '" + copyNodeId + "' AND device_id = 'android-test'"));
+        database.delete("nodes", "id = ?", new String[] { copyNodeId });
+        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
+        assertEquals(0, countRows("nodes", "id = '" + copyNodeId + "'"));
     }
 
     private void createTables() {
@@ -99,6 +109,15 @@ public class FolioleCompanionSyncEventStreamsTest {
         database.execSQL("CREATE TABLE node_sync_conflicts (" +
             "conflict_version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL, parent_version_id TEXT, " +
             "device_id TEXT, content_hash TEXT, snapshot_json TEXT NOT NULL, detected_at TEXT NOT NULL)");
+        database.execSQL("CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL)");
+        database.execSQL("CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL DEFAULT '', " +
+            "kind TEXT NOT NULL DEFAULT 'text_body', mime_type TEXT, compression TEXT NOT NULL DEFAULT 'none', " +
+            "original_size_bytes INTEGER NOT NULL DEFAULT 0, stored_size_bytes INTEGER NOT NULL DEFAULT 0, " +
+            "original_sha256 TEXT NOT NULL DEFAULT '', stored_sha256 TEXT NOT NULL DEFAULT '', " +
+            "availability TEXT NOT NULL DEFAULT 'missing', source_device_id TEXT, created_at TEXT NOT NULL, " +
+            "cached_at TEXT, last_verified_at TEXT)");
+        database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
+        database.execSQL("CREATE TABLE companion_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
     }
 
     private void insertNode(String nodeId, String currentVersionId, String content) {

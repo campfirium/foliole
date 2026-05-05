@@ -54,6 +54,7 @@ public class FolioleCompanionSyncPackApplyTest {
         assertEquals("", selectString("SELECT content FROM nodes WHERE id = 'node-1'"));
         assertEquals("Node opening preview", selectString("SELECT opening_text FROM nodes WHERE id = 'node-1'"));
         assertEquals("blob-1", selectString("SELECT body_blob_hash FROM nodes WHERE id = 'node-1'"));
+        assertEquals("desktop#node-1-v1", selectString("SELECT current_version_id FROM nodes WHERE id = 'node-1'"));
         assertEquals("att-1", selectString("SELECT attachment_id FROM node_attachments WHERE node_id = 'node-1'"));
         assertEquals("missing", selectString("SELECT availability FROM content_blobs WHERE hash = 'blob-1'"));
         assertEquals("android-test", selectString(
@@ -506,8 +507,8 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("CREATE TABLE nodes (" +
                 "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL, title TEXT NOT NULL, " +
                 "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
-                "body_blob_hash TEXT, opening_text TEXT, content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, " +
-                "updated_at TEXT NOT NULL, deleted_at TEXT)");
+                "body_blob_hash TEXT, opening_text TEXT, content TEXT NOT NULL DEFAULT '', current_version_id TEXT, " +
+                "created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");
             packDatabase.execSQL("CREATE TABLE node_attachments (" +
                 "node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT, " +
                 "PRIMARY KEY (node_id, attachment_id, role))");
@@ -543,8 +544,10 @@ public class FolioleCompanionSyncPackApplyTest {
         packDatabase.execSQL("INSERT INTO pack_manifest (key, value) VALUES (" +
             "'manifest_json', '{\"to_state_seq\":1}')");
         packDatabase.execSQL("INSERT INTO nodes (" +
-            "id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, content, created_at, updated_at) " +
-            "VALUES ('node-1', 'topic', 'Node 1', 1, 0, 'blob-1', 'Node opening preview', '', '" + now + "', '" + now + "')");
+            "id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, content, " +
+            "current_version_id, created_at, updated_at) VALUES (" +
+            "'node-1', 'topic', 'Node 1', 1, 0, 'blob-1', 'Node opening preview', '', " +
+            "'desktop#node-1-v1', '" + now + "', '" + now + "')");
         packDatabase.execSQL("INSERT INTO node_attachments (" +
             "node_id, attachment_id, role, created_at) VALUES ('node-1', 'att-1', 'image', '" + now + "')");
         packDatabase.execSQL("INSERT INTO content_blobs (" +

@@ -4,6 +4,7 @@ import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/work
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { recordNodeConflictAndCreateCopy } from './syncConflictCopies.js';
 
 interface ApplySyncNodesOptions {
   includeAlreadyApplied?: boolean;
@@ -74,39 +75,6 @@ function isRemoteFastForward(record: NativeSyncNodeRecord, localVersionId: strin
     return true;
   }
   return record.ancestor_version_ids.includes(localVersionId);
-}
-
-function recordRemoteNodeConflict(driver: DatabaseDriver, record: NativeSyncNodeRecord) {
-  if (!record.version_id) {
-    return;
-  }
-  driver.execute(
-    `INSERT INTO node_sync_conflicts (
-       conflict_version_id,
-       object_id,
-       parent_version_id,
-       device_id,
-       content_hash,
-       snapshot_json,
-       detected_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(conflict_version_id) DO UPDATE SET
-       object_id = excluded.object_id,
-       parent_version_id = excluded.parent_version_id,
-       device_id = excluded.device_id,
-       content_hash = excluded.content_hash,
-       snapshot_json = excluded.snapshot_json,
-       detected_at = excluded.detected_at`,
-    [
-      record.version_id,
-      record.object_id,
-      record.parent_version_id,
-      record.device_id,
-      record.content_hash,
-      JSON.stringify(record.snapshot),
-      new Date().toISOString()
-    ]
-  );
 }
 
 function upsertRemoteNode(driver: DatabaseDriver, record: NativeSyncNodeRecord) {
@@ -203,8 +171,10 @@ export function applySyncNodes(records: NativeSyncNodeRecord[], options: ApplySy
   const connection = openDatabaseConnection();
   const ordered = orderNodesForApply(records);
   const appliedIds: string[] = [];
+  const conflictCopyIds: string[] = [];
 
   connection.driver.transaction(() => {
+    const timestamp = new Date().toISOString();
     for (const record of ordered) {
       const localNode = loadLocalNodeVersion(connection.driver, record.object_id);
       if (!localNode) {
@@ -217,7 +187,14 @@ export function applySyncNodes(records: NativeSyncNodeRecord[], options: ApplySy
       }
       upsertRemoteVersion(connection.driver, record);
       if (!isRemoteFastForward(record, localNode?.current_version_id)) {
-        recordRemoteNodeConflict(connection.driver, record);
+        const copyNodeId = recordNodeConflictAndCreateCopy({
+          driver: connection.driver,
+          record,
+          timestamp
+        });
+        if (copyNodeId) {
+          conflictCopyIds.push(copyNodeId);
+        }
         continue;
       }
       if (record.version_id === localNode.current_version_id) {
@@ -231,7 +208,7 @@ export function applySyncNodes(records: NativeSyncNodeRecord[], options: ApplySy
       replaceNodeAttachmentLinks(connection.driver, record);
       appliedIds.push(record.object_id);
     }
-    syncWorkspaceSearchIndexForNodeIds(connection.driver, appliedIds);
+    syncWorkspaceSearchIndexForNodeIds(connection.driver, [...appliedIds, ...conflictCopyIds]);
   });
 
   return appliedIds;

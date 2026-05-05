@@ -93,12 +93,15 @@ final class FolioleCompanionSyncPackApply {
     }
 
     private static void upsertNodes(SQLiteDatabase database) {
+        String incomingCurrentVersionId = incomingColumnExists(database, "nodes", "current_version_id")
+            ? "current_version_id"
+            : "(SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = inc.nodes.id)";
         database.execSQL(
             "INSERT OR REPLACE INTO main.nodes (" +
                 "id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
-                "opening_text, content, created_at, updated_at, deleted_at) " +
+                "opening_text, content, current_version_id, created_at, updated_at, deleted_at) " +
                 "SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
-                "opening_text, content, created_at, updated_at, deleted_at FROM inc.nodes " +
+                "opening_text, content, " + incomingCurrentVersionId + ", created_at, updated_at, deleted_at FROM inc.nodes " +
                 "WHERE id IN (SELECT object_id FROM " + FolioleCompanionSyncPackApplyableRows.sql("node") + ")"
         );
     }
@@ -190,6 +193,17 @@ final class FolioleCompanionSyncPackApply {
         )) {
             return cursor.moveToFirst();
         }
+    }
+
+    private static boolean incomingColumnExists(SQLiteDatabase database, String tableName, String columnName) {
+        try (Cursor cursor = database.rawQuery("PRAGMA inc.table_info(" + tableName + ")", null)) {
+            while (cursor.moveToNext()) {
+                if (columnName.equals(cursor.getString(1))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static int upsertStateRows(SQLiteDatabase database, String deviceId) {
