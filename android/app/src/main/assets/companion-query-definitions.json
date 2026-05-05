@@ -1727,6 +1727,18 @@
       "summaryQueryName": "contentBlobMissingSummaryRows"
     }
   },
+  "nodeAttachmentRead": {
+    "backfillSnapshots": {
+      "idKey": "id",
+      "queryName": "nodeAttachmentBackfillSnapshots",
+      "resultKey": "snapshots",
+      "snapshotJsonKey": "snapshot_json"
+    },
+    "nodeAttachments": {
+      "queryName": "nodeAttachments",
+      "resultKey": "attachments"
+    }
+  },
   "runtimeQueries": {
     "companionMeta": {
       "queryName": "companionMetaValue"

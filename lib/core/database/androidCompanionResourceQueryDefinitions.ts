@@ -58,6 +58,19 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
   }
 } as const;
 
+export const ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES = {
+  backfillSnapshots: {
+    idKey: 'id',
+    queryName: 'nodeAttachmentBackfillSnapshots',
+    resultKey: 'snapshots',
+    snapshotJsonKey: 'snapshot_json'
+  },
+  nodeAttachments: {
+    queryName: 'nodeAttachments',
+    resultKey: 'attachments'
+  }
+} as const;
+
 export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
   snapshot: {
     bodyStatusExpressionToken: '__BODY_STATUS_EXPRESSION__',

@@ -12,11 +12,16 @@ final class FolioleCompanionNodeAttachmentStore {
 
     static void backfillNodeAttachmentsFromVersions(Context context, SQLiteDatabase database) {
         try {
-            JSONArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "nodeAttachmentBackfillSnapshots", "snapshots");
+            JSONArray rows = FolioleCompanionNamedQueryStore.loadRows(
+                context,
+                database,
+                backfillSnapshotRule(context, "queryName"),
+                backfillSnapshotRule(context, "resultKey")
+            );
             for (int index = 0; index < rows.length(); index += 1) {
                 JSONObject row = rows.getJSONObject(index);
-                JSONObject snapshot = new JSONObject(row.getString("snapshot_json"));
-                replaceNodeAttachments(context, database, row.getString("id"), snapshot.optJSONArray("attachments"));
+                JSONObject snapshot = new JSONObject(row.getString(backfillSnapshotRule(context, "snapshotJsonKey")));
+                replaceNodeAttachments(context, database, row.getString(backfillSnapshotRule(context, "idKey")), snapshot.optJSONArray("attachments"));
             }
         } catch (Exception ignored) {
             // Best-effort compatibility repair for pre-link-schema Android databases.
@@ -46,8 +51,16 @@ final class FolioleCompanionNodeAttachmentStore {
         return FolioleCompanionNamedQueryStore.loadArray(
             context,
             database,
-            "nodeAttachments",
+            nodeAttachmentRule(context, "queryName"),
             new String[] { nodeId }
-        ).getJSONArray("attachments");
+        ).getJSONArray(nodeAttachmentRule(context, "resultKey"));
+    }
+
+    private static String backfillSnapshotRule(Context context, String key) throws Exception {
+        return FolioleCompanionNodeAttachmentQueryRules.backfillSnapshotString(context, key);
+    }
+
+    private static String nodeAttachmentRule(Context context, String key) throws Exception {
+        return FolioleCompanionNodeAttachmentQueryRules.nodeAttachmentString(context, key);
     }
 }
