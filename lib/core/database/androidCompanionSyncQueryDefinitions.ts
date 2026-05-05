@@ -157,6 +157,10 @@ export const ANDROID_COMPANION_SYNC_OBJECT_READ_RULES = {
 };
 
 export const ANDROID_COMPANION_SYNC_STREAM_READ_RULES = {
+  groupKeys: {
+    nodeVersions: 'nodeVersions',
+    reviewLog: 'reviewLog'
+  },
   nodeVersions: {
     ancestorDepthLimit: 1000,
     ancestorVersionIdsKey: 'ancestor_version_ids',

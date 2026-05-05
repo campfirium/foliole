@@ -59,10 +59,18 @@ final class FolioleCompanionSyncStreamQueryRules {
 
     private static JSONObject group(Context context, String streamName) throws Exception {
         JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "syncStreamRead");
-        JSONObject group = rules.optJSONObject(streamName);
+        JSONObject group = rules.optJSONObject(groupKey(rules, streamName));
         if (group == null) {
             throw new IllegalStateException("Companion query definitions asset is missing sync stream read rule: " + streamName);
         }
         return group;
+    }
+
+    private static String groupKey(JSONObject rules, String streamName) throws Exception {
+        JSONObject groupKeys = rules.optJSONObject("groupKeys");
+        if (groupKeys == null) {
+            throw new IllegalStateException("Companion query definitions asset is missing sync stream read group keys.");
+        }
+        return groupKeys.getString(streamName);
     }
 }

@@ -2156,6 +2156,10 @@
     }
   },
   "syncStreamRead": {
+    "groupKeys": {
+      "nodeVersions": "nodeVersions",
+      "reviewLog": "reviewLog"
+    },
     "nodeVersions": {
       "ancestorDepthLimit": 1000,
       "ancestorVersionIdsKey": "ancestor_version_ids",

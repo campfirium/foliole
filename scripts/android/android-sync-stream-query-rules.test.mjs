@@ -23,6 +23,10 @@ describe('Android sync stream query rules', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.syncStreamRead).toEqual(ANDROID_COMPANION_SYNC_STREAM_READ_RULES);
+    expect(definitions.syncStreamRead.groupKeys).toEqual({
+      nodeVersions: 'nodeVersions',
+      reviewLog: 'reviewLog'
+    });
     expect(definitions.syncStreamRead.nodeVersions).toMatchObject({
       ancestorDepthLimit: 1000,
       ancestorVersionIdsKey: 'ancestor_version_ids',
