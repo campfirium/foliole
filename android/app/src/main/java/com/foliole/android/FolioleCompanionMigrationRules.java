@@ -42,6 +42,22 @@ final class FolioleCompanionMigrationRules {
         return section(context, "repairRuleKeys").getString(key);
     }
 
+    static String repairColumnName(Context context, String groupName) throws Exception {
+        return stringValue(context, groupName, repairRuleKey(context, "columnName"));
+    }
+
+    static String repairErrorMessage(Context context, String groupName) throws Exception {
+        return stringValue(context, groupName, repairRuleKey(context, "errorMessage"));
+    }
+
+    static String repairStatementName(Context context, String groupName) throws Exception {
+        return stringValue(context, groupName, repairRuleKey(context, "statementName"));
+    }
+
+    static String repairTableName(Context context, String groupName) throws Exception {
+        return stringValue(context, groupName, repairRuleKey(context, "tableName"));
+    }
+
     static String rowKey(Context context, String key) throws Exception {
         return group(context, "syncObjectStateSequence").getJSONObject("rowKeys").getString(key);
     }

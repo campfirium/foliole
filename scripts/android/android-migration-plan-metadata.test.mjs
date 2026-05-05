@@ -115,7 +115,8 @@ describe('Android migration plan metadata', () => {
     expect(installerSource).not.toContain('optJSONArray("plan")');
     expect(migrationSource).toContain('FolioleCompanionSchemaInstaller.migrationPlan(context)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.actionType(context, key)');
-    expect(migrationSource).toContain('FolioleCompanionMigrationRules.repairRuleKey(context, key)');
+    expect(migrationSource).toContain('FolioleCompanionMigrationRules.repairStatementName(context, groupName)');
+    expect(migrationSource).toContain('FolioleCompanionMigrationRules.repairTableName(context, groupName)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.stringValue');
     expect(migrationSource).toContain('oldVersion < step.getInt(planKey(context, "beforeVersion"))');
     expect(migrationSource).toContain('step.getJSONArray(planKey(context, "actions"))');
@@ -128,6 +129,7 @@ describe('Android migration plan metadata', () => {
     expect(migrationSource).not.toContain('repairRuleValue(context, "syncBaseContentHash", "errorMessage")');
     expect(migrationSource).not.toContain('repairRuleValue(context, "nodeViewStateSource", "statementName")');
     expect(migrationSource).not.toContain('repairRuleValue(context, "nodeViewStateSource", "errorMessage")');
+    expect(migrationSource).not.toContain('repairRuleKey(context, "statementName")');
     expect(migrationSource).not.toContain('oldVersion < 4');
     expect(migrationSource).not.toContain('oldVersion < 14');
     expect(migrationSource).not.toContain('"migrationLegacySyncObjectStateRows"');
