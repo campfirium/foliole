@@ -14,58 +14,64 @@ function runWindowAction(action: () => Promise<void>) {
 
 export function WindowTitleBar() {
   const controlsEnabled = isTauriRuntime();
+  const appWindow = controlsEnabled ? getCurrentWindow() : null;
 
   const handleMinimize = () => {
-    if (!controlsEnabled) {
+    if (!appWindow) {
       return;
     }
-    runWindowAction(() => getCurrentWindow().minimize());
+    runWindowAction(() => appWindow.minimize());
   };
 
   const handleToggleMaximize = () => {
-    if (!controlsEnabled) {
+    if (!appWindow) {
       return;
     }
-    runWindowAction(() => getCurrentWindow().toggleMaximize());
+    runWindowAction(() => appWindow.toggleMaximize());
   };
 
   const handleClose = () => {
-    if (!controlsEnabled) {
+    if (!appWindow) {
       return;
     }
-    runWindowAction(() => getCurrentWindow().close());
+    runWindowAction(() => appWindow.close());
+  };
+
+  const handleTitleDoubleClick = () => {
+    if (!appWindow) {
+      return;
+    }
+    runWindowAction(() => appWindow.toggleMaximize());
   };
 
   return (
-    <header className="window-titlebar" data-tauri-drag-region>
+    <header className="window-titlebar">
       <div className="window-titlebar-title" data-tauri-drag-region>
         Foliole
       </div>
-      <div className="window-titlebar-controls" data-tauri-drag-region="false">
+      <div className="window-titlebar-drag-fill" data-tauri-drag-region onDoubleClick={handleTitleDoubleClick} />
+      <div className="window-titlebar-controls">
         <button
           aria-label="Minimize window"
           className="window-titlebar-button"
-          data-tauri-drag-region="false"
           disabled={!controlsEnabled}
           onClick={handleMinimize}
           type="button"
         >
-          _
+          -
         </button>
         <button
           aria-label="Toggle maximize window"
           className="window-titlebar-button"
-          data-tauri-drag-region="false"
           disabled={!controlsEnabled}
           onClick={handleToggleMaximize}
           type="button"
         >
-          []
+          [ ]
         </button>
         <button
           aria-label="Close window"
           className="window-titlebar-button window-titlebar-button-close"
-          data-tauri-drag-region="false"
           disabled={!controlsEnabled}
           onClick={handleClose}
           type="button"

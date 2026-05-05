@@ -21,49 +21,57 @@ body {
 
 .window-titlebar {
   align-items: center;
-  background: linear-gradient(180deg, #fdfefe, #f3f8ff);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-12);
+  background: linear-gradient(180deg, #f7faff, #eef4fc);
+  border: 1px solid #d6deeb;
+  border-radius: 10px 10px 0 0;
   display: flex;
   flex: 0 0 auto;
-  justify-content: space-between;
-  min-height: 34px;
-  padding-inline: var(--space-12) var(--space-4);
+  min-height: 36px;
+  padding-inline: var(--space-10) var(--space-2);
   user-select: none;
 }
 
 .window-titlebar-title {
-  color: var(--color-text-secondary);
+  color: #4a6187;
   font-size: var(--font-size-12);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.04em;
+  padding-inline: var(--space-2);
+  padding-top: 1px;
   text-transform: uppercase;
+}
+
+.window-titlebar-drag-fill {
+  flex: 1;
+  min-height: 100%;
 }
 
 .window-titlebar-controls {
   display: inline-flex;
-  gap: var(--space-4);
+  gap: 0;
+  margin-left: var(--space-6);
 }
 
 .window-titlebar-button {
   align-items: center;
   background: transparent;
   border: 0;
-  border-radius: var(--radius-8);
-  color: var(--color-text-secondary);
+  border-radius: 6px;
+  color: #64789a;
   cursor: pointer;
   display: inline-flex;
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-12);
-  height: 26px;
+  font-size: 11px;
+  font-weight: 700;
+  height: 30px;
   justify-content: center;
   line-height: 1;
-  min-width: 34px;
+  min-width: 42px;
 }
 
 .window-titlebar-button:hover:not(:disabled) {
-  background: var(--color-overlay-hover);
-  color: var(--color-text-primary);
+  background: rgba(96, 112, 136, 0.12);
+  color: #2b3f5f;
 }
 
 .window-titlebar-button:disabled {
@@ -72,8 +80,8 @@ body {
 }
 
 .window-titlebar-button-close:hover:not(:disabled) {
-  background: rgba(251, 113, 133, 0.18);
-  color: #b42342;
+  background: #dc3545;
+  color: #fff;
 }
 
 .workspace-shell {

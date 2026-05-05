@@ -3,7 +3,10 @@ param(
   [string]$WindowsWorkDir,
   [Parameter(Mandatory = $true)]
   [string]$LogDir,
-  [double]$MinNonBlackRatio = 0.03
+  [double]$MinNonBlackRatio = 0.03,
+  [double]$MinLumaStdDev = 8.0,
+  [double]$MinTopBandStdDev = 12.0,
+  [int]$KeepLatestScreenshots = 3
 )
 
 Set-StrictMode -Version Latest
@@ -99,28 +102,93 @@ function Measure-NonBlackRatio {
     $stepY = [Math]::Max(1, [Math]::Floor($bitmap.Height / 120))
     $total = 0
     $nonBlack = 0
+    $lumaSum = 0.0
+    $lumaSquareSum = 0.0
+    $topBandCount = 0
+    $topBandSum = 0.0
+    $topBandSquareSum = 0.0
+
+    $bandStartY = [Math]::Max(24, [Math]::Floor($bitmap.Height * 0.05))
+    $bandHeight = [Math]::Max(120, [Math]::Floor($bitmap.Height * 0.2))
+    $bandEndY = [Math]::Min($bitmap.Height - 1, $bandStartY + $bandHeight)
+    $marginX = [Math]::Max(18, [Math]::Floor($bitmap.Width * 0.08))
 
     for ($y = 0; $y -lt $bitmap.Height; $y += $stepY) {
       for ($x = 0; $x -lt $bitmap.Width; $x += $stepX) {
         $pixel = $bitmap.GetPixel($x, $y)
         $total += 1
+        $luma = (0.2126 * $pixel.R) + (0.7152 * $pixel.G) + (0.0722 * $pixel.B)
+        $lumaSum += $luma
+        $lumaSquareSum += ($luma * $luma)
         if (($pixel.R + $pixel.G + $pixel.B) -gt 36) {
           $nonBlack += 1
+        }
+        if ($y -ge $bandStartY -and $y -lt $bandEndY -and $x -ge $marginX -and $x -lt ($bitmap.Width - $marginX)) {
+          $topBandCount += 1
+          $topBandSum += $luma
+          $topBandSquareSum += ($luma * $luma)
         }
       }
     }
 
     if ($total -eq 0) {
-      return 0.0
+      return @{
+        nonBlackRatio = 0.0
+        lumaStdDev = 0.0
+      }
     }
 
-    return [Math]::Round(($nonBlack / $total), 4)
+    $mean = $lumaSum / $total
+    $variance = ($lumaSquareSum / $total) - ($mean * $mean)
+    if ($variance -lt 0) {
+      $variance = 0
+    }
+
+    $topBandStdDev = 0.0
+    if ($topBandCount -gt 0) {
+      $topBandMean = $topBandSum / $topBandCount
+      $topBandVariance = ($topBandSquareSum / $topBandCount) - ($topBandMean * $topBandMean)
+      if ($topBandVariance -lt 0) {
+        $topBandVariance = 0
+      }
+      $topBandStdDev = [Math]::Sqrt($topBandVariance)
+    }
+
+    return @{
+      nonBlackRatio = [Math]::Round(($nonBlack / $total), 4)
+      lumaStdDev = [Math]::Round([Math]::Sqrt($variance), 4)
+      topBandStdDev = [Math]::Round($topBandStdDev, 4)
+    }
   } finally {
     $bitmap.Dispose()
   }
 }
 
+function Prune-OldScreenshots {
+  param(
+    [string]$Directory,
+    [int]$KeepCount
+  )
+
+  if ($KeepCount -lt 1) {
+    $KeepCount = 1
+  }
+
+  $shots = Get-ChildItem -Path $Directory -Filter "windows-native-ui-*.png" -File -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending
+
+  if (-not $shots) {
+    return
+  }
+
+  $toDelete = $shots | Select-Object -Skip $KeepCount
+  foreach ($item in $toDelete) {
+    Remove-Item -Force $item.FullName -ErrorAction SilentlyContinue
+  }
+}
+
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+Prune-OldScreenshots -Directory $LogDir -KeepCount $KeepLatestScreenshots
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $outputImage = Join-Path $LogDir "windows-native-ui-$timestamp.png"
 
@@ -169,17 +237,33 @@ if ($foregroundPid -ne $managed.Id) {
 }
 
 $rectInfo = Capture-WindowPng -WindowHandle $windowHandle -OutputPath $outputImage
-$nonBlackRatio = Measure-NonBlackRatio -ImagePath $outputImage
+$visualStats = Measure-NonBlackRatio -ImagePath $outputImage
+$nonBlackRatio = $visualStats.nonBlackRatio
+$lumaStdDev = $visualStats.lumaStdDev
+$topBandStdDev = $visualStats.topBandStdDev
+Prune-OldScreenshots -Directory $LogDir -KeepCount $KeepLatestScreenshots
 
 Write-Output "[windows-ui-check] screenshot: $outputImage"
 Write-Output "[windows-ui-check] rect: left=$($rectInfo.left), top=$($rectInfo.top), width=$($rectInfo.width), height=$($rectInfo.height)"
 Write-Output "[windows-ui-check] capture_mode=$($rectInfo.capture_mode)"
 Write-Output "[windows-ui-check] app_pid=$($managed.Id), foreground_pid=$foregroundPid"
 Write-Output "[windows-ui-check] non_black_ratio=$nonBlackRatio"
+Write-Output "[windows-ui-check] luma_std_dev=$lumaStdDev"
+Write-Output "[windows-ui-check] top_band_std_dev=$topBandStdDev"
 
 if ($nonBlackRatio -lt $MinNonBlackRatio) {
   Write-Output "[windows-ui-check] failed: ratio below threshold $MinNonBlackRatio"
   exit 4
+}
+
+if ($lumaStdDev -lt $MinLumaStdDev) {
+  Write-Output "[windows-ui-check] failed: luma std-dev below threshold $MinLumaStdDev"
+  exit 6
+}
+
+if ($topBandStdDev -lt $MinTopBandStdDev) {
+  Write-Output "[windows-ui-check] failed: top-band std-dev below threshold $MinTopBandStdDev"
+  exit 7
 }
 
 Write-Output "[windows-ui-check] passed."
