@@ -66,11 +66,20 @@ describe('codex-loop helpers', () => {
         buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
         commitTrackedChangesFn,
         readGitStatusFn,
-        readTodoTaskFn: vi
+        readTodoEntryFn: vi
           .fn()
-          .mockResolvedValueOnce('fix loop failure semantics')
-          .mockResolvedValueOnce('fix loop failure semantics')
-          .mockResolvedValueOnce(''),
+          .mockResolvedValueOnce({
+            raw: '[auto] fix loop failure semantics',
+            task: 'fix loop failure semantics',
+            mode: 'auto'
+          })
+          .mockResolvedValueOnce({
+            raw: '[auto] fix loop failure semantics',
+            task: 'fix loop failure semantics',
+            mode: 'auto'
+          })
+          .mockResolvedValueOnce(null),
+        isGateEntryFn: (entry) => entry?.mode === 'gate',
         runCodexTaskFn,
         runQualityGateFn,
         stdout: { write: (value) => writes.push(value) }
@@ -84,5 +93,31 @@ describe('codex-loop helpers', () => {
     expect(writes.join('')).toContain('task failed with dirty workspace; attempting repair');
     expect(writes.join('')).toContain('repair-round 1/2');
     expect(writes.join('')).toContain('repaired failed task workspace and committed changes');
+  });
+
+  it('waits when the first pending item is an explicit gate task', async () => {
+    const writes = [];
+    const runCodexTaskFn = vi.fn().mockResolvedValue(undefined);
+
+    const exitCode = await runLoop(
+      { completeGate: false, dryRun: false, maxIterations: 2, model: '' },
+      {
+        readGitStatusFn: vi.fn().mockResolvedValue(''),
+        readTodoEntryFn: vi
+          .fn()
+          .mockResolvedValueOnce({ raw: '[gate] windows acceptance', task: 'windows acceptance', mode: 'gate' })
+          .mockResolvedValueOnce({ raw: '[gate] windows acceptance', task: 'windows acceptance', mode: 'gate' }),
+        runCodexTaskFn,
+        runQualityGateFn: vi.fn().mockResolvedValue(undefined),
+        commitTrackedChangesFn: vi.fn().mockResolvedValue(false),
+        buildCommitMessageFn: vi.fn().mockResolvedValue(''),
+        isGateEntryFn: (entry) => entry?.mode === 'gate',
+        stdout: { write: (value) => writes.push(value) }
+      }
+    );
+
+    expect(exitCode).toBe(20);
+    expect(runCodexTaskFn).not.toHaveBeenCalled();
+    expect(writes.join('')).toContain('waiting-for-gate: windows acceptance');
   });
 });

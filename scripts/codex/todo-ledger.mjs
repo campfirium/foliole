@@ -70,17 +70,24 @@ export function parseFirstTodoTask(markdown) {
 }
 
 export function selectNextTodoTask(markdown) {
-  const entries = parseTodoEntries(markdown);
-  return entries.find((entry) => entry.mode === 'auto') ?? entries[0] ?? null;
+  return parseTodoEntries(markdown)[0] ?? null;
 }
 
 export function isPauseTask(task, patterns = DEFAULT_PAUSE_PATTERNS) {
   return patterns.some((pattern) => pattern.test(task));
 }
 
-export async function readTodoTask() {
+export function isGateEntry(entry) {
+  return entry?.mode === 'gate';
+}
+
+export async function readTodoEntry() {
   const content = await readFile(TODO_PATH, 'utf8');
-  return selectNextTodoTask(content)?.task ?? '';
+  return selectNextTodoTask(content);
+}
+
+export async function readTodoTask() {
+  return (await readTodoEntry())?.task ?? '';
 }
 
 function removeFirstPendingTask(markdown, task) {
@@ -130,7 +137,7 @@ export async function completePauseTask(task, note = 'manual acceptance complete
   if (currentTask.task !== task) {
     throw new Error(`first pending task mismatch: expected "${task}", got "${currentTask.task}"`);
   }
-  if (currentTask.mode !== 'gate') {
+  if (!isGateEntry(currentTask)) {
     throw new Error(`complete-gate requires a gate task, got "${currentTask.mode}"`);
   }
 

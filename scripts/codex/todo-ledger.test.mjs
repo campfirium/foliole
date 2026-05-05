@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isPauseTask, parseFirstTodoTask, parseTodoEntries, selectNextTodoTask } from './todo-ledger.mjs';
+import { isGateEntry, isPauseTask, parseFirstTodoTask, parseTodoEntries, selectNextTodoTask } from './todo-ledger.mjs';
 
 describe('todo-ledger helpers', () => {
   it('parses the first pending todo item', () => {
@@ -16,7 +16,7 @@ describe('todo-ledger helpers', () => {
     ]);
   });
 
-  it('selects auto tasks before earlier gate tasks', () => {
+  it('keeps the first pending gate task as the next task', () => {
     const markdown = [
       '# TODO',
       '',
@@ -28,10 +28,15 @@ describe('todo-ledger helpers', () => {
     ].join('\n');
 
     expect(selectNextTodoTask(markdown)).toEqual({
-      raw: '[auto] cleanup contract',
-      task: 'cleanup contract',
-      mode: 'auto'
+      raw: '[gate] windows acceptance',
+      task: 'windows acceptance',
+      mode: 'gate'
     });
+  });
+
+  it('treats explicit gate entries as blocking items', () => {
+    expect(isGateEntry({ raw: '[gate] windows acceptance', task: 'windows acceptance', mode: 'gate' })).toBe(true);
+    expect(isGateEntry({ raw: '[auto] cleanup contract', task: 'cleanup contract', mode: 'auto' })).toBe(false);
   });
 
   it('detects pause tasks for acceptance gates', () => {

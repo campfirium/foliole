@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCodexArgs, buildPrompt } from './codex-task.mjs';
+import { buildCodexArgs, buildPrompt, parseTaskRequest } from './codex-task.mjs';
 import { parseFirstTodoTask } from './todo-ledger.mjs';
 
 describe('codex-task helpers', () => {
@@ -54,5 +54,35 @@ describe('codex-task helpers', () => {
     expect(prompt).toContain('Read AGENTS.md first');
     expect(prompt).toContain('Implement exactly one minimal acceptable task');
     expect(prompt).toContain('implement one task');
+  });
+
+  it('adds explicit commit-note skill trigger for commit-like requests', () => {
+    const prompt = buildPrompt('执行提交指令');
+
+    expect(prompt).toContain('Explicit skill triggers for this task:');
+    expect(prompt).toContain('Use skill: commit-note');
+  });
+
+  it('adds explicit session-handoff skill trigger for exact continue requests', () => {
+    const prompt = buildPrompt('继续');
+
+    expect(prompt).toContain('Use skill: session-handoff');
+  });
+
+  it('does not map ordinary implementation tasks containing continue-like words to session-handoff', () => {
+    const request = parseTaskRequest('继续收口 platform bridge');
+
+    expect(request.skills).toEqual([]);
+    expect(request.task).toBe('继续收口 platform bridge');
+  });
+
+  it('supports manual skill directives in the task text', () => {
+    const request = parseTaskRequest('[skills: commit-note, session-handoff] 执行提交指令');
+    const prompt = buildPrompt('[skills: commit-note, session-handoff] 执行提交指令');
+
+    expect(request.skills).toEqual(['commit-note', 'session-handoff']);
+    expect(request.task).toBe('执行提交指令');
+    expect(prompt).toContain('Use skill: commit-note');
+    expect(prompt).toContain('Use skill: session-handoff');
   });
 });
