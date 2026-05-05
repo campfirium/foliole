@@ -1,13 +1,9 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
 import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
+import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
-
-interface WorkspaceAnchorLink {
-  id: string;
-  kind: 'highlight' | 'cloze';
-}
 
 interface WorkspaceReviewProfile {
   due: string;
@@ -44,7 +40,7 @@ interface WorkspaceNodeSnapshot {
   content: string;
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
-  anchorLink: WorkspaceAnchorLink | null;
+  anchorLink: StoredAnchorLink | null;
   reading: WorkspaceReadingProfile | null;
   review: WorkspaceReviewProfile | null;
   createdAt: string;
@@ -96,24 +92,6 @@ interface WorkspaceNodeRow extends DatabaseRow {
 
 interface NodeOrderRow extends DatabaseRow {
   node_id: string;
-}
-
-function parseAnchorLink(value: string | null): WorkspaceAnchorLink | null {
-  if (!value) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(value) as { id?: unknown; kind?: unknown };
-    if (typeof parsed.id !== 'string') {
-      return null;
-    }
-    if (parsed.kind !== 'highlight' && parsed.kind !== 'cloze') {
-      return null;
-    }
-    return { id: parsed.id, kind: parsed.kind };
-  } catch {
-    return null;
-  }
 }
 
 function parseNodeKind(value: string | null): NodeKind {
@@ -216,7 +194,7 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
       content: row.content,
       virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
       reveal: row.reveal,
-      anchorLink: parseAnchorLink(row.anchor_link),
+      anchorLink: parseStoredAnchorLink(row.anchor_link),
       reading: toReadingProfile(row),
       review: toReviewProfile(row),
       createdAt: row.created_at,

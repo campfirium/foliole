@@ -1,13 +1,17 @@
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
 
 import type { useCurrentReviewPreview } from './appControllerHelpers';
+import { createLayoutNav, createSelectTrashNodeHandler } from './appControllerNavHandlers';
+import { createPdfHighlightHandler } from './appControllerPdfHighlight';
 import {
+  createPersistPdfViewState,
   createRevealAnchorInDocument,
   createRevealDocumentPosition,
   createRevealDocumentSelection,
@@ -50,7 +54,12 @@ export interface BuildControllerLayoutPropsArgs {
   ws: {
     activeNodeId: string | null;
     createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
-    createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string) => string | null;
+    createHighlightNodeFromSelection: (
+      parentNodeId: string,
+      content: string,
+      anchorId?: string,
+      anchorLink?: NodeAnchorLink
+    ) => string | null;
     createVirtualNode: () => string;
     createRootNode: (content?: string, kind?: NodeKind) => string;
     documentMaxWidth: number;
@@ -110,26 +119,11 @@ function createLayoutEditorCtx(args: BuildControllerLayoutPropsArgs) {
     onCopyImage: args.editorCtx.handleCopyImage,
     onCreateCloze: args.editorCtx.handleCreateCloze,
     onCreateHighlight: args.editorCtx.handleCreateHighlight,
-    onCreatePdfHighlight: (selectionText: string) => {
-      if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
-        return false;
-      }
-      return Boolean(args.ws.createHighlightNodeFromSelection(args.ws.activeNodeId, selectionText));
-    },
+    onCreatePdfHighlight: createPdfHighlightHandler(args),
     onCutImage: args.editorCtx.handleCutImage,
     onDeleteImage: args.editorCtx.handleDeleteImage,
     onEditorContextMenu: args.editorCtx.handleEditorContextMenu,
     onExportImage: args.editorCtx.handleExportImage
-  };
-}
-
-function createLayoutNav(args: BuildControllerLayoutPropsArgs) {
-  return {
-    onGoBack: args.nav.handleGoBack,
-    onGoForward: args.nav.handleGoForward,
-    onGoParent: args.nav.handleGoParent,
-    onSelectBreadcrumbNode: args.nav.handleSelectBreadcrumbNode,
-    onSelectNode: args.nav.handleSelectNode
   };
 }
 
@@ -187,6 +181,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
 
 function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
   const openNotesView = createOpenNotesView(args);
+  const persistPdfViewState = createPersistPdfViewState(args);
   const revealAnchorInDocument = createRevealAnchorInDocument(args);
   const revealDocumentPosition = createRevealDocumentPosition(args);
   const revealDocumentSelection = createRevealDocumentSelection(args);
@@ -204,6 +199,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
       args.runtime.editorRef.current = adapter;
     },
     onRevealAnchorInDocument: revealAnchorInDocument,
+    onPersistPdfViewState: persistPdfViewState,
     onRevealDocumentPosition: revealDocumentPosition,
     onRevealDocumentSelection: revealDocumentSelection,
     onResolveDocumentPositionAtViewportY: resolveDocumentPositionAtViewportY,
@@ -233,14 +229,6 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     completeReviewItem: () => args.ws.completeReviewItem(),
     deferReviewItem: () => args.ws.deferReviewItem(),
     dismissReviewItem: () => args.ws.dismissReviewItem()
-  };
-}
-
-function createSelectTrashNodeHandler(args: BuildControllerLayoutPropsArgs) {
-  return (nodeId: string) => {
-    args.runtime.setIsViewingTrashNode(true);
-    args.trash.openTrashView();
-    args.trash.setSelectedTrashNodeId(nodeId);
   };
 }
 

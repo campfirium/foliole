@@ -1,6 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createRevealDocumentPosition, createRevealDocumentSelection } from './appControllerRuntimeActions';
+const { requestPdfAnchorJump } = vi.hoisted(() => ({
+  requestPdfAnchorJump: vi.fn()
+}));
+
+vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
+  requestPdfAnchorJump
+}));
+
+import {
+  createPersistPdfViewState,
+  createRevealAnchorInDocument,
+  createRevealDocumentPosition,
+  createRevealDocumentSelection
+} from './appControllerRuntimeActions';
 
 describe('createRevealDocumentPosition', () => {
   it('stores the revealed document position as the new reading anchor', () => {
@@ -67,5 +80,86 @@ describe('createRevealDocumentPosition', () => {
       scrollTop: 24,
       selection: { from: 3, to: 125 }
     });
+  });
+});
+
+describe('createRevealAnchorInDocument', () => {
+  it('routes to pdf locator jump when editor adapter is unavailable', () => {
+    const revealAnchorInDocument = createRevealAnchorInDocument({
+      runtime: {
+        editorRef: {
+          current: null
+        },
+        isViewingTrashNode: false
+      },
+      ws: {
+        activeNodeId: 'node-pdf-parent',
+        nodesById: {
+          'node-pdf-parent': {
+            id: 'node-pdf-parent',
+            parentNodeId: null,
+            kind: 'topic',
+            title: 'PDF Parent',
+            content: 'No inline anchor tags',
+            anchorLink: null,
+            reveal: null,
+            review: null,
+            createdAt: '2026-04-05T00:00:00.000Z',
+            updatedAt: '2026-04-05T00:00:00.000Z'
+          }
+        }
+      }
+    } as never);
+
+    revealAnchorInDocument({ id: 'pdf-hl-2', kind: 'highlight', locator: { page: 7, x: 0.2, y: 0.2 } });
+    revealAnchorInDocument({ id: 'pdf-hl-3', kind: 'highlight', locator: { page: 7, x: 0.9, y: 0.8 } });
+
+    expect(requestPdfAnchorJump).toHaveBeenNthCalledWith(1, 'node-pdf-parent', { page: 7, x: 0.2, y: 0.2 });
+    expect(requestPdfAnchorJump).toHaveBeenNthCalledWith(2, 'node-pdf-parent', { page: 7, x: 0.9, y: 0.8 });
+  });
+});
+
+describe('createPersistPdfViewState', () => {
+  it('writes pdf view state for active node', () => {
+    const setNodeViewState = vi.fn();
+    const persistPdfViewState = createPersistPdfViewState({
+      runtime: {
+        isViewingTrashNode: false
+      },
+      ws: {
+        activeNodeId: 'node-1',
+        setNodeViewState
+      }
+    } as never);
+
+    persistPdfViewState({
+      scrollTop: 7,
+      selection: { from: 7, to: 120 }
+    });
+
+    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
+      scrollTop: 7,
+      selection: { from: 7, to: 120 }
+    });
+  });
+
+  it('skips persistence when viewing trash node', () => {
+    const setNodeViewState = vi.fn();
+    const persistPdfViewState = createPersistPdfViewState({
+      runtime: {
+        isViewingTrashNode: true
+      },
+      ws: {
+        activeNodeId: 'node-1',
+        setNodeViewState
+      }
+    } as never);
+
+    persistPdfViewState({
+      scrollTop: 2,
+      selection: { from: 2, to: 100 }
+    });
+
+    expect(setNodeViewState).not.toHaveBeenCalled();
   });
 });

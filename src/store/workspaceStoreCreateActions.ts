@@ -3,6 +3,7 @@ import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
+import type { NodeAnchorLink } from '../features/nodes/model/nodeTypes';
 
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createDefaultReviewProfile } from './workspaceSeed';
@@ -111,7 +112,7 @@ export function createHighlightFromSelectionAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
 ): WorkspaceState['createHighlightNodeFromSelection'] {
-  return (parentNodeId, content, anchorId) => {
+  return (parentNodeId, content, anchorId, anchorLink) => {
     const normalizedContent = content.trim();
     if (!normalizedContent) {
       return null;
@@ -138,7 +139,7 @@ export function createHighlightFromSelectionAction(
         title: untitledState.title,
         hasContent: normalizedContent.length > 0,
         content: normalizedContent,
-        anchorLink: anchorId ? { id: anchorId, kind: 'highlight' } : null,
+        anchorLink: resolveHighlightAnchorLink(anchorId, anchorLink),
         hasReveal: false,
         reveal: null,
         review: null,
@@ -168,6 +169,16 @@ export function createHighlightFromSelectionAction(
     }
     return childNodeId;
   };
+}
+
+function resolveHighlightAnchorLink(anchorId?: string, anchorLink?: NodeAnchorLink): NodeAnchorLink | null {
+  if (anchorLink && anchorLink.kind === 'highlight' && typeof anchorLink.id === 'string' && anchorLink.id.trim().length > 0) {
+    return anchorLink;
+  }
+  if (anchorId) {
+    return { id: anchorId, kind: 'highlight' };
+  }
+  return null;
 }
 
 export function createQAFromSelectionAction(

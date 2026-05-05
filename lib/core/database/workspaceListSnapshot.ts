@@ -1,6 +1,7 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
 import { parseVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
+import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
@@ -41,24 +42,6 @@ interface WorkspaceNodeRow extends DatabaseRow {
 
 interface NodeOrderRow extends DatabaseRow {
   node_id: string;
-}
-
-function parseAnchorLink(value: string | null) {
-  if (!value) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(value) as { id?: unknown; kind?: unknown };
-    if (typeof parsed.id !== 'string') {
-      return null;
-    }
-    if (parsed.kind !== 'highlight' && parsed.kind !== 'cloze') {
-      return null;
-    }
-    return { id: parsed.id, kind: parsed.kind };
-  } catch {
-    return null;
-  }
 }
 
 function parseNodeKind(value: string | null): NodeKind {
@@ -169,7 +152,7 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
       content: '',
       virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
       reveal: null,
-      anchorLink: parseAnchorLink(row.anchor_link),
+      anchorLink: parseStoredAnchorLink(row.anchor_link),
       reading: toReadingProfile(row),
       review: toReviewProfile(row),
       createdAt: row.created_at,

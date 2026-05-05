@@ -27,6 +27,11 @@ export interface NodeReadingProfile {
 export interface NodeAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze';
+  locator?: {
+    page: number;
+    x: number;
+    y: number;
+  };
 }
 
 export type NodeSpecialKind = 'inbox' | 'virtual-root' | 'virtual';

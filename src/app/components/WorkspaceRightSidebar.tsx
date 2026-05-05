@@ -55,7 +55,17 @@ function renderPanel(
         nodeOrder={props.nodeOrder}
         trashedNodeIds={props.trashedNodeIds}
         nodesById={props.nodesById}
-        onRevealHighlight={(nodeId) => props.onSelectNode(nodeId)}
+        onRevealHighlight={(nodeId) => {
+          const highlightNode = props.nodesById[nodeId];
+          if (highlightNode?.anchorLink?.kind === 'highlight' && highlightNode.parentNodeId) {
+            props.onSelectNode(highlightNode.parentNodeId);
+            window.requestAnimationFrame(() => {
+              props.onRevealAnchorInDocument(highlightNode.anchorLink as NodeAnchorLink);
+            });
+            return;
+          }
+          props.onSelectNode(nodeId);
+        }}
       />
     );
   }

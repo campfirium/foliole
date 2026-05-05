@@ -2,16 +2,23 @@ import { ChevronDown, ChevronUp, RotateCw, ZoomIn, ZoomOut } from 'lucide-react'
 
 import { AppIconButton, AppInput } from '../../shared/ui';
 
+import type { PdfSearchStatus } from './PdfDocumentSearch';
+
 interface PdfDocumentToolbarProps {
   maxPage: number;
+  onFindNext: () => void;
+  onFindPrevious: () => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
   onRotateClockwise: () => void;
+  onSearchQueryChange: (value: string) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
   rotation: number;
+  searchQuery: string;
+  searchStatus: PdfSearchStatus;
   zoom: number;
 }
 
@@ -95,16 +102,85 @@ function PdfZoomControls({
   );
 }
 
+function resolveSearchStatusLabel(status: PdfSearchStatus) {
+  if (!status.hasQuery) {
+    return 'Search';
+  }
+  if (status.total === 0) {
+    return 'No matches';
+  }
+  return `${status.current} / ${status.total}`;
+}
+
+function PdfSearchControls({
+  onFindNext,
+  onFindPrevious,
+  onSearchQueryChange,
+  searchQuery,
+  searchStatus
+}: Pick<
+  PdfDocumentToolbarProps,
+  'onFindNext' | 'onFindPrevious' | 'onSearchQueryChange' | 'searchQuery' | 'searchStatus'
+>) {
+  const canNavigateMatches = searchStatus.hasQuery && searchStatus.total > 0;
+
+  return (
+    <div className="flex items-center gap-1">
+      <AppInput
+        aria-label="PDF search"
+        className="h-8 w-36 border-transparent bg-transparent px-2 text-xs"
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' || !canNavigateMatches) {
+            return;
+          }
+          event.preventDefault();
+          if (event.shiftKey) {
+            onFindPrevious();
+            return;
+          }
+          onFindNext();
+        }}
+        onChange={(event) => onSearchQueryChange(event.target.value)}
+        placeholder="Search PDF…"
+        type="text"
+        value={searchQuery}
+      />
+      <AppIconButton
+        className="size-8"
+        disabled={!canNavigateMatches}
+        icon={<ChevronUp aria-hidden="true" size={15} strokeWidth={2.1} />}
+        label="Previous match"
+        onClick={onFindPrevious}
+      />
+      <AppIconButton
+        className="size-8"
+        disabled={!canNavigateMatches}
+        icon={<ChevronDown aria-hidden="true" size={15} strokeWidth={2.1} />}
+        label="Next match"
+        onClick={onFindNext}
+      />
+      <p aria-live="polite" className="min-w-16 text-center text-xs text-foreground/70" data-testid="pdf-search-status">
+        {resolveSearchStatusLabel(searchStatus)}
+      </p>
+    </div>
+  );
+}
+
 export function PdfDocumentToolbar({
   maxPage,
+  onFindNext,
+  onFindPrevious,
   onNextPage,
   onPageChange,
   onPreviousPage,
   onRotateClockwise,
+  onSearchQueryChange,
   onZoomIn,
   onZoomOut,
   page,
   rotation,
+  searchQuery,
+  searchStatus,
   zoom
 }: PdfDocumentToolbarProps) {
   return (
@@ -126,6 +202,14 @@ export function PdfDocumentToolbar({
           onPageChange={onPageChange}
           onPreviousPage={onPreviousPage}
           page={page}
+        />
+        <div className="h-5 w-px bg-border/30" />
+        <PdfSearchControls
+          onFindNext={onFindNext}
+          onFindPrevious={onFindPrevious}
+          onSearchQueryChange={onSearchQueryChange}
+          searchQuery={searchQuery}
+          searchStatus={searchStatus}
         />
       </div>
     </div>

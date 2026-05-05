@@ -1,6 +1,7 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 
@@ -37,7 +38,14 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
     }
     const activeNode = args.ws.nodesById[args.ws.activeNodeId];
     const adapter = args.runtime.editorRef.current;
-    if (!activeNode || !adapter) {
+    if (!activeNode) {
+      return;
+    }
+    if (!adapter && anchor.kind === 'highlight' && anchor.locator) {
+      requestPdfAnchorJump(args.ws.activeNodeId, anchor.locator);
+      return;
+    }
+    if (!adapter) {
       return;
     }
     const selection = findAnchorSelection(activeNode.content, anchor);
@@ -88,6 +96,15 @@ export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArg
         to: position
       }
     });
+  };
+}
+
+export function createPersistPdfViewState(args: BuildControllerLayoutPropsArgs) {
+  return (viewState: { scrollTop: number; selection: { from: number; to: number } }) => {
+    if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
+      return;
+    }
+    args.ws.setNodeViewState(args.ws.activeNodeId, viewState);
   };
 }
 

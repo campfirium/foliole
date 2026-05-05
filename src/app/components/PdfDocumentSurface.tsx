@@ -1,16 +1,19 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { registerPdfSystem, unregisterPdfSystem } from '../../features/pdf/model/pdfSystemBridge';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
 import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import { normalizeContextMenuPosition } from '../contextCommands';
 
-import { PdfDocumentViewport } from './PdfDocumentViewport';
-import { resolvePdfSelectionText } from './pdfSelectionText';
+import type { PdfSearchRequest, PdfSearchStatus } from './PdfDocumentSearch';
+import { PdfDocumentSurfaceLayout } from './PdfDocumentSurfaceLayout';
+import { resolvePdfSelectionLocator, resolvePdfSelectionText } from './pdfSelectionText';
 
 function configurePdfWorker() {
   const workerUrl = new URL('react-pdf/dist/pdf.worker.entry.js', import.meta.url).toString();
@@ -26,15 +29,20 @@ function configurePdfWorker() {
 configurePdfWorker();
 
 interface PdfDocumentSurfaceProps {
-  onCreateHighlightFromSelection?: (selectionText: string) => boolean;
+  nodeId: string | null;
+  onCreateHighlightFromSelection?: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onPersistViewState: (viewState: NodeViewState) => void;
   sourceHint: string;
-  sourceLabel: string;
   nodeViewState?: NodeViewState;
-  onViewStateChange: (viewState: NodeViewState) => void;
 }
 
-function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionText: string) => boolean) {
-  const [selectionMenuState, setSelectionMenuState] = useState<{ left: number; top: number; selectionText: string } | null>(null);
+function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean) {
+  const [selectionMenuState, setSelectionMenuState] = useState<{
+    left: number;
+    top: number;
+    selectionText: string;
+    locator: NodeAnchorLink['locator'];
+  } | null>(null);
   const surfaceRef = useRef<HTMLElement | null>(null);
 
   const handleContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -47,6 +55,7 @@ function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionT
     const position = normalizeContextMenuPosition(event.clientX, event.clientY);
     setSelectionMenuState({
       left: position.left,
+      locator: resolvePdfSelectionLocator(surfaceRef.current, window.getSelection()),
       top: position.top,
       selectionText
     });
@@ -61,7 +70,7 @@ function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionT
       closeSelectionMenu();
       return;
     }
-    onCreateHighlightFromSelection?.(selectionMenuState.selectionText);
+    onCreateHighlightFromSelection?.(selectionMenuState.selectionText, selectionMenuState.locator);
     closeSelectionMenu();
   };
 
@@ -94,13 +103,43 @@ function PdfSelectionContextMenu({
   );
 }
 
-export function PdfDocumentSurface({ nodeViewState, onCreateHighlightFromSelection, onViewStateChange, sourceHint }: PdfDocumentSurfaceProps) {
+function useRegisterPdfSurface(
+  nodeId: string | null,
+  requestAnchorJump: (locator: NonNullable<NodeAnchorLink['locator']>) => void
+) {
+  useEffect(() => {
+    if (!nodeId) {
+      return;
+    }
+    registerPdfSystem(nodeId, { requestAnchorJump });
+    return () => {
+      unregisterPdfSystem(nodeId);
+    };
+  }, [nodeId, requestAnchorJump]);
+}
+
+function usePdfSearchControls() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchRequest, setSearchRequest] = useState<PdfSearchRequest | null>(null);
+  const [searchStatus, setSearchStatus] = useState<PdfSearchStatus>({ current: 0, hasQuery: false, total: 0 });
+  const searchRequestIdRef = useRef(1);
+
+  const handleSearchRequest = (direction: 'next' | 'previous') => {
+    setSearchRequest({ direction, id: searchRequestIdRef.current });
+    searchRequestIdRef.current += 1;
+  };
+
+  return { handleSearchRequest, searchQuery, searchRequest, searchStatus, setSearchQuery, setSearchStatus };
+}
+
+export function PdfDocumentSurface({ nodeId, nodeViewState, onCreateHighlightFromSelection, onPersistViewState, sourceHint }: PdfDocumentSurfaceProps) {
   const {
     actions: {
       clearPageJumpRequest,
       reportLoadError,
       reportLoadSuccess,
       requestPageChange,
+      requestAnchorJump,
       rotateClockwise,
       setVisiblePage,
       stepPage,
@@ -108,44 +147,43 @@ export function PdfDocumentSurface({ nodeViewState, onCreateHighlightFromSelecti
       zoomOut
     },
     state: { loadError, maxPage, page, pageJumpRequest, pdfSource, rotation, totalPages, zoom }
-  } = usePdfSystemController(nodeViewState, onViewStateChange, sourceHint);
+  } = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint);
   const { closeSelectionMenu, handleContextMenu, handleCreateHighlight, selectionMenuState, surfaceRef } = usePdfSelectionContextMenu(
     onCreateHighlightFromSelection
   );
+  useRegisterPdfSurface(nodeId, requestAnchorJump);
+  const { handleSearchRequest, searchQuery, searchRequest, searchStatus, setSearchQuery, setSearchStatus } = usePdfSearchControls();
 
   return (
-    <section
-      aria-label="PDF reader panel"
-      className="pdf-document-surface relative flex min-h-0 flex-1 flex-col bg-bg-canvas"
-      data-testid="pdf-document-surface"
-      ref={surfaceRef}
-    >
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <PdfDocumentViewport
-          loadError={loadError}
-          maxPage={maxPage}
-          onContextMenu={handleContextMenu}
-          onNextPage={() => stepPage(1)}
-          onLoadError={(message) => reportLoadError(message)}
-          onLoadSuccess={(numPages) => {
-            reportLoadSuccess(numPages);
-          }}
-          onPageChange={requestPageChange}
-          onPreviousPage={() => stepPage(-1)}
-          onRotateClockwise={rotateClockwise}
-          onZoomIn={zoomIn}
-          onZoomOut={zoomOut}
-          page={page}
-          pageJumpRequest={pageJumpRequest}
-          pdfSource={pdfSource}
-          rotation={rotation}
-          clearPageJumpRequest={clearPageJumpRequest}
-          setVisiblePage={setVisiblePage}
-          totalPages={totalPages}
-          zoom={zoom}
-        />
-      </div>
-      <PdfSelectionContextMenu onClose={closeSelectionMenu} onCreateHighlight={handleCreateHighlight} state={selectionMenuState} />
-    </section>
+    <PdfDocumentSurfaceLayout
+      clearPageJumpRequest={clearPageJumpRequest}
+      handleContextMenu={handleContextMenu}
+      handleSearchRequest={handleSearchRequest}
+      loadError={loadError}
+      maxPage={maxPage}
+      page={page}
+      pageJumpRequest={pageJumpRequest}
+      pdfSelectionContextMenu={
+        <PdfSelectionContextMenu onClose={closeSelectionMenu} onCreateHighlight={handleCreateHighlight} state={selectionMenuState} />
+      }
+      pdfSource={pdfSource}
+      reportLoadError={reportLoadError}
+      reportLoadSuccess={reportLoadSuccess}
+      requestPageChange={requestPageChange}
+      rotateClockwise={rotateClockwise}
+      searchQuery={searchQuery}
+      searchRequest={searchRequest}
+      searchStatus={searchStatus}
+      setSearchQuery={setSearchQuery}
+      setSearchStatus={setSearchStatus}
+      setVisiblePage={setVisiblePage}
+      stepPage={stepPage}
+      surfaceRef={surfaceRef}
+      totalPages={totalPages}
+      zoom={zoom}
+      zoomIn={zoomIn}
+      zoomOut={zoomOut}
+      rotation={rotation}
+    />
   );
 }

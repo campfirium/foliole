@@ -60,6 +60,11 @@ export function asTimestamp(value: unknown, field: string): string {
 interface AnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze';
+  locator?: {
+    page: number;
+    x: number;
+    y: number;
+  };
 }
 
 interface ReadingProfilePayload {
@@ -80,14 +85,39 @@ function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`invalid argument: ${field}`);
   }
-  const payload = value as { id?: unknown; kind?: unknown };
+  const payload = value as {
+    id?: unknown;
+    kind?: unknown;
+    locator?: { page?: unknown; x?: unknown; y?: unknown };
+  };
   if (typeof payload.id !== 'string') {
     throw new Error(`invalid argument: ${field}.id`);
   }
   if (payload.kind !== 'highlight' && payload.kind !== 'cloze') {
     throw new Error(`invalid argument: ${field}.kind`);
   }
-  return { id: payload.id, kind: payload.kind };
+  const anchorLink: AnchorLinkPayload = { id: payload.id, kind: payload.kind };
+  if (payload.locator !== undefined) {
+    const locator = payload.locator;
+    if (!locator || typeof locator !== 'object' || Array.isArray(locator)) {
+      throw new Error(`invalid argument: ${field}.locator`);
+    }
+    if (typeof locator.page !== 'number' || !Number.isInteger(locator.page) || locator.page < 1) {
+      throw new Error(`invalid argument: ${field}.locator.page`);
+    }
+    if (typeof locator.x !== 'number' || !Number.isFinite(locator.x)) {
+      throw new Error(`invalid argument: ${field}.locator.x`);
+    }
+    if (typeof locator.y !== 'number' || !Number.isFinite(locator.y)) {
+      throw new Error(`invalid argument: ${field}.locator.y`);
+    }
+    anchorLink.locator = {
+      page: locator.page,
+      x: Math.max(0, Math.min(1, locator.x)),
+      y: Math.max(0, Math.min(1, locator.y))
+    };
+  }
+  return anchorLink;
 }
 
 function asReadingState(value: unknown, field: string): ReadingProfilePayload['state'] {

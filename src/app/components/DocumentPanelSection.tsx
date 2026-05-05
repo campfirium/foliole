@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -38,7 +38,7 @@ interface DocumentPanelSectionProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
-  onCreatePdfHighlight: (selectionText: string) => boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
@@ -46,6 +46,7 @@ interface DocumentPanelSectionProps {
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
+  onPersistPdfViewState: (viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
@@ -225,13 +226,14 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         <DocumentPanelContent
           activeNodeId={props.activeNodeId}
           bodyProps={bodyProps}
-        isFolderListView={isFolderListView}
-        nodeOrder={props.nodeOrder}
-        nodesById={props.nodesById}
-        onCreatePdfHighlight={props.onCreatePdfHighlight}
-        onSelectNode={props.onSelectNode}
-        onNodeContentChange={props.onNodeContentChange}
-      />
+          isFolderListView={isFolderListView}
+          nodeOrder={props.nodeOrder}
+          nodesById={props.nodesById}
+          onCreatePdfHighlight={props.onCreatePdfHighlight}
+          onNodeContentChange={props.onNodeContentChange}
+          onPersistPdfViewState={props.onPersistPdfViewState}
+          onSelectNode={props.onSelectNode}
+        />
       </section>
       {sourceUpdatePreview.value ? (
         <DocumentPanelSourceUpdatePanel

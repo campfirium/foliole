@@ -13,6 +13,11 @@ const SPECIAL_ROOT_NODE_RECORDS = {
 interface NodeAnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze';
+  locator?: {
+    page: number;
+    x: number;
+    y: number;
+  };
 }
 
 interface NodeReadingPayload {

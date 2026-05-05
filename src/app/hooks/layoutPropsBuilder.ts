@@ -74,6 +74,7 @@ interface BuildLayoutPropsArgs {
   onResetLayout: () => void;
   onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
   onRevealAnchorInDocument: WorkspaceLayoutProps['onRevealAnchorInDocument'];
+  onPersistPdfViewState: WorkspaceLayoutProps['onPersistPdfViewState'];
   onRevealDocumentPosition: WorkspaceLayoutProps['onRevealDocumentPosition'];
   onRevealDocumentSelection: WorkspaceLayoutProps['onRevealDocumentSelection'];
   onResolveDocumentPositionAtViewportY: WorkspaceLayoutProps['onResolveDocumentPositionAtViewportY'];
@@ -172,6 +173,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     isListCollapsed: args.isListCollapsed, isRightSidebarCollapsed: args.isRightSidebarCollapsed, showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, trashedNodeIds: args.trashedNodeIds, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange, onNodeContentChange: args.onNodeContentChange,
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode,
     onRevealAnchorInDocument: args.onRevealAnchorInDocument,
+    onPersistPdfViewState: args.onPersistPdfViewState,
     onRevealDocumentPosition: args.onRevealDocumentPosition,
     onRevealDocumentSelection: args.onRevealDocumentSelection,
     onResolveDocumentPositionAtViewportY: args.onResolveDocumentPositionAtViewportY,

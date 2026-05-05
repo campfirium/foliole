@@ -113,6 +113,7 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       onGoForward={props.onGoForward}
       onGoParent={props.onGoParent}
       onResetLayout={props.onResetLayout}
+      onPersistPdfViewState={props.onPersistPdfViewState}
       onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
       onRevealDocumentPosition={props.onRevealDocumentPosition}
       onSelectNode={props.onSelectNode}

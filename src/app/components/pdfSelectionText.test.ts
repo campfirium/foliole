@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolvePdfSelectionText } from './pdfSelectionText';
+import { resolvePdfSelectionLocator, resolvePdfSelectionText } from './pdfSelectionText';
 
 function createSelectionForNode(node: Text) {
   const range = document.createRange();
@@ -39,5 +39,31 @@ describe('resolvePdfSelectionText', () => {
     selection?.removeAllRanges();
     container.remove();
     outside.remove();
+  });
+
+  it('resolves page locator when selection is inside a page shell', () => {
+    const container = document.createElement('div');
+    const pageShell = document.createElement('div');
+    pageShell.dataset.pdfPageNumber = '3';
+    const textNode = document.createTextNode('Anchor text');
+    pageShell.appendChild(textNode);
+    container.appendChild(pageShell);
+    document.body.appendChild(container);
+
+    Object.defineProperty(pageShell, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 260, height: 200, left: 10, right: 210, top: 60, width: 200, x: 10, y: 60, toJSON: () => ({}) })
+    });
+    const selection = createSelectionForNode(textNode);
+    const range = selection?.getRangeAt(0);
+    Object.defineProperty(range as Range, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 130, height: 20, left: 60, right: 140, top: 110, width: 80, x: 60, y: 110, toJSON: () => ({}) })
+    });
+
+    expect(resolvePdfSelectionLocator(container, selection)).toEqual({ page: 3, x: 0.45, y: 0.3 });
+
+    selection?.removeAllRanges();
+    container.remove();
   });
 });

@@ -1,10 +1,11 @@
 import type { ComponentProps } from 'react';
 
 import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
 import { AppEmptyState } from '../../shared/ui';
+import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { EditorContextMenu } from './EditorContextMenu';
@@ -20,8 +21,9 @@ interface DocumentPanelContentProps {
   isFolderListView: boolean;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
-  onCreatePdfHighlight: (selectionText: string) => boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onNodeContentChange: (nodeId: string, content: string) => void;
+  onPersistPdfViewState: (viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
 }
 
@@ -49,10 +51,6 @@ function isPdfSourceDetails(details: RuntimeNodeSourceDetails | null) {
   return details.importSource?.sourceKind.toLowerCase() === 'pdf' || isPdfPath(details.keepImportItem?.sourcePath);
 }
 
-function resolvePdfSourceLabel(details: RuntimeNodeSourceDetails) {
-  return details.importSource?.sourceName || details.keepImportItem?.sourcePath || 'PDF document';
-}
-
 function resolvePdfSourceHint(details: RuntimeNodeSourceDetails) {
   return details.keepImportItem?.resolvedSourcePath || details.keepImportItem?.sourcePath || details.importSource?.sourceLocator || null;
 }
@@ -60,22 +58,22 @@ function resolvePdfSourceHint(details: RuntimeNodeSourceDetails) {
 function resolvePdfDocumentSurface(
   isLoading: boolean,
   details: RuntimeNodeSourceDetails | null
-): { sourceHint: string | null; sourceLabel: string; state: PdfDocumentSurfaceState } | null {
+): { sourceHint: string | null; state: PdfDocumentSurfaceState } | null {
   if (!isPdfSourceDetails(details) || !details) {
     return null;
   }
 
   const sourceHint = resolvePdfSourceHint(details);
   if (isLoading) {
-    return { sourceHint, sourceLabel: resolvePdfSourceLabel(details), state: 'loading' };
+    return { sourceHint, state: 'loading' };
   }
   if (details.keepImportItem?.lastStatus === 'failed') {
-    return { sourceHint, sourceLabel: resolvePdfSourceLabel(details), state: 'failed' };
+    return { sourceHint, state: 'failed' };
   }
   if (!sourceHint) {
-    return { sourceHint: null, sourceLabel: resolvePdfSourceLabel(details), state: 'empty' };
+    return { sourceHint: null, state: 'empty' };
   }
-  return { sourceHint, sourceLabel: resolvePdfSourceLabel(details), state: 'ready' };
+  return { sourceHint, state: 'ready' };
 }
 
 function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>) {
@@ -104,18 +102,22 @@ function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>)
 }
 
 function renderPdfDocumentSurface(
-  pdfDocumentSurface: { sourceHint: string | null; sourceLabel: string; state: PdfDocumentSurfaceState },
-  bodyProps: ComponentProps<typeof DocumentPanelBody>,
-  onCreatePdfHighlight: (selectionText: string) => boolean
+  pdfDocumentSurface: { sourceHint: string | null; state: PdfDocumentSurfaceState },
+  pdfViewContext: {
+    editorNodeId: string | null;
+    editorNodeViewState: ComponentProps<typeof DocumentPanelBody>['editorNodeViewState'];
+  },
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean,
+  onPersistPdfViewState: (viewState: NodeViewState) => void
 ) {
   if (pdfDocumentSurface.state === 'ready') {
     return (
       <PdfDocumentSurface
-        nodeViewState={bodyProps.editorNodeViewState}
+        nodeViewState={pdfViewContext.editorNodeViewState}
         onCreateHighlightFromSelection={onCreatePdfHighlight}
-        onViewStateChange={(viewState) => bodyProps.onRevealDocumentSelection(viewState.selection)}
+        onPersistViewState={onPersistPdfViewState}
+        nodeId={pdfViewContext.editorNodeId}
         sourceHint={pdfDocumentSurface.sourceHint ?? ''}
-        sourceLabel={pdfDocumentSurface.sourceLabel}
       />
     );
   }
@@ -139,6 +141,7 @@ export function DocumentPanelContent({
   nodesById,
   onCreatePdfHighlight,
   onNodeContentChange,
+  onPersistPdfViewState,
   onSelectNode
 }: DocumentPanelContentProps) {
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
@@ -169,7 +172,12 @@ export function DocumentPanelContent({
   }
 
   if (pdfDocumentSurface) {
-    return renderPdfDocumentSurface(pdfDocumentSurface, bodyProps, onCreatePdfHighlight);
+    return renderPdfDocumentSurface(
+      pdfDocumentSurface,
+      { editorNodeId: bodyProps.editorNodeId, editorNodeViewState: bodyProps.editorNodeViewState },
+      onCreatePdfHighlight,
+      onPersistPdfViewState
+    );
   }
 
   return (

@@ -94,6 +94,7 @@ function renderSectionWithProps(overrides: Partial<ComponentProps<typeof Documen
       onGoBack={() => undefined}
       onGoForward={() => undefined}
       onGoParent={() => undefined}
+      onPersistPdfViewState={() => undefined}
       onResetLayout={() => undefined}
       onResolveDocumentPositionAtViewportY={() => null}
       onRevealDocumentPosition={() => undefined}

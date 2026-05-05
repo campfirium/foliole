@@ -7,6 +7,11 @@ import type { NativeSchedulerCard } from './nativeContract.js';
 export interface NativeWorkspaceAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze';
+  locator?: {
+    page: number;
+    x: number;
+    y: number;
+  };
 }
 
 export interface NativeWorkspaceReviewProfile {

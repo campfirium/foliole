@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
-import type { Node } from '../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
@@ -65,7 +65,12 @@ export interface WorkspaceState {
   createRootNode: (content?: string, kind?: NodeKind) => string;
   createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
   createVirtualNode: () => string;
-  createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string) => string | null;
+  createHighlightNodeFromSelection: (
+    parentNodeId: string,
+    content: string,
+    anchorId?: string,
+    anchorLink?: NodeAnchorLink
+  ) => string | null;
   createQANodeFromSelection: (
     parentNodeId: string,
     promptContent: string,

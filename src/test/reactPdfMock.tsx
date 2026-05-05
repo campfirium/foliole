@@ -26,7 +26,11 @@ vi.mock('react-pdf', async () => {
       );
     },
     Page: ({ pageNumber, rotate, scale }: { pageNumber: number; rotate?: number; scale: number }) => (
-      <div data-page={pageNumber} data-rotate={rotate ?? 0} data-scale={scale} data-testid="pdf-document-page" />
+      <div data-page={pageNumber} data-rotate={rotate ?? 0} data-scale={scale} data-testid="pdf-document-page">
+        <div className="textLayer">
+          <span>{`keyword match on page ${pageNumber}`}</span>
+        </div>
+      </div>
     ),
     pdfjs: {
       version: '5.4.296',

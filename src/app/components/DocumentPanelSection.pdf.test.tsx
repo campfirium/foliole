@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -92,6 +92,7 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   onGoBack: () => undefined,
   onGoForward: () => undefined,
   onGoParent: () => undefined,
+  onPersistPdfViewState: () => undefined,
   onResetLayout: () => undefined,
   onResolveDocumentPositionAtViewportY: () => null,
   onRevealDocumentPosition: () => undefined,
@@ -186,7 +187,50 @@ it('supports pdf controls with zoom, page navigation, and rotation', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Rotate page clockwise' }));
   expect(screen.getAllByTestId('pdf-document-page')[0]).toHaveAttribute('data-rotate', '90');
 });
+it('supports in-view pdf search navigation and empty-state feedback', async () => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
+  renderSection();
+
+  const previousMatchButton = screen.getByRole('button', { name: 'Previous match' });
+  const nextMatchButton = screen.getByRole('button', { name: 'Next match' });
+  expect(previousMatchButton).toBeDisabled();
+  expect(nextMatchButton).toBeDisabled();
+
+  const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
+  fireEvent.change(searchInput, { target: { value: 'keyword' } });
+  await waitFor(() => {
+    expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9');
+    expect(previousMatchButton).toBeEnabled();
+    expect(nextMatchButton).toBeEnabled();
+  });
+
+  fireEvent.click(nextMatchButton);
+  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'));
+
+  fireEvent.change(searchInput, { target: { value: 'not-found-token' } });
+  await waitFor(() => {
+    expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('No matches');
+    expect(previousMatchButton).toBeDisabled();
+    expect(nextMatchButton).toBeDisabled();
+  });
+});
+
+it('supports Enter and Shift+Enter for in-view pdf search navigation', async () => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
+
+  renderSection();
+
+  const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
+  fireEvent.change(searchInput, { target: { value: 'keyword' } });
+  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
+
+  fireEvent.keyDown(searchInput, { key: 'Enter' });
+  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'));
+
+  fireEvent.keyDown(searchInput, { key: 'Enter', shiftKey: true });
+  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
+});
 it('shows a loading state while a pdf node source is refreshing', () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails({ isLoading: true }) as never);
 

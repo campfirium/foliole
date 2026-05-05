@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
-import type { MutableRefObject } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
-import { Document, Page } from 'react-pdf';
+import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
-import { PdfDocumentToolbar } from './PdfDocumentToolbar';
+import type { PdfSearchRequest, PdfSearchStatus } from './PdfDocumentSearch';
+import { usePdfSearchEffect } from './PdfDocumentSearch';
+import { PdfViewportDocument, PdfViewportToolbar } from './PdfDocumentViewportRenderParts';
 
 const PDF_PAGE_MIN = 1;
 
@@ -26,7 +26,11 @@ export function usePageJumpEffect(
     if (!container || !target) {
       return;
     }
-    const top = Math.max(0, target.offsetTop - 8);
+    const positionY = typeof pageJumpRequest.positionY === 'number' ? Math.max(0, Math.min(1, pageJumpRequest.positionY)) : null;
+    const top =
+      positionY === null
+        ? Math.max(0, target.offsetTop - 8)
+        : Math.max(0, target.offsetTop + target.clientHeight * positionY - container.clientHeight * 0.35);
     if (typeof container.scrollTo === 'function') {
       container.scrollTo({ behavior: 'smooth', top });
     } else {
@@ -108,47 +112,6 @@ export function useViewportTransformAnchor(
     };
   }, [rotation, scrollContainerRef, zoom]);
 }
-
-function stripTextLayerInlineFonts(page: HTMLDivElement | null) {
-  if (!page) {
-    return;
-  }
-  const spans = page.querySelectorAll<HTMLSpanElement>('.textLayer span');
-  for (const span of spans) {
-    span.style.fontFamily = '';
-  }
-}
-
-function PdfDocumentPages({ pageElementsRef, rotation, totalPages, zoom }: { pageElementsRef: PdfPageElementsRef; rotation: number; totalPages: number | null; zoom: number }) {
-  if (!totalPages) {
-    return null;
-  }
-  return Array.from({ length: totalPages }, (_, index) => {
-    const pageNumber = index + PDF_PAGE_MIN;
-    return (
-      <div
-        className="flex w-full justify-center px-4"
-        data-testid="pdf-document-page-shell"
-        key={pageNumber}
-        ref={(element) => {
-          pageElementsRef.current[pageNumber] = element;
-        }}
-      >
-        <Page
-          className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
-          data-testid="pdf-document-page"
-          onRenderTextLayerSuccess={() => stripTextLayerInlineFonts(pageElementsRef.current[pageNumber])}
-          pageNumber={pageNumber}
-          renderAnnotationLayer
-          renderTextLayer
-          rotate={rotation}
-          scale={zoom / 100}
-        />
-      </div>
-    );
-  });
-}
-
 export function PdfDocumentErrorState({ loadError }: { loadError: string }) {
   return (
     <div className="flex min-h-[360px] w-full items-center justify-center rounded-md bg-bg-panel/55 p-6">
@@ -165,10 +128,13 @@ interface PdfDocumentViewportContentProps {
   maxPage: number;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
+  onSearchStatusChange: (status: PdfSearchStatus) => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
   onRotateClockwise: () => void;
+  onSearchQueryChange: (value: string) => void;
+  onSearchRequest: (direction: 'next' | 'previous') => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
@@ -176,11 +142,80 @@ interface PdfDocumentViewportContentProps {
   pdfSource: string;
   rotation: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
+  searchQuery: string;
+  searchRequest: PdfSearchRequest | null;
+  searchStatus: PdfSearchStatus;
   totalPages: number | null;
   zoom: number;
 }
 
+function usePdfSearchRuntime({
+  onSearchStatusChange,
+  pageElementsRef,
+  scrollContainerRef,
+  searchQuery,
+  searchRequest,
+  totalPages
+}: Pick<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'pageElementsRef' | 'scrollContainerRef' | 'searchQuery' | 'searchRequest' | 'totalPages'>) {
+  usePdfSearchEffect({ onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, totalPages });
+}
+
 export function PdfDocumentViewportContent({
+  handleContextMenu,
+  handleScroll,
+  maxPage,
+  onLoadError,
+  onLoadSuccess,
+  onSearchStatusChange,
+  onNextPage,
+  onPageChange,
+  onPreviousPage,
+  onRotateClockwise,
+  onSearchQueryChange,
+  onSearchRequest,
+  onZoomIn,
+  onZoomOut,
+  page,
+  pageElementsRef,
+  pdfSource,
+  rotation,
+  scrollContainerRef,
+  searchQuery,
+  searchRequest,
+  searchStatus,
+  totalPages,
+  zoom
+}: PdfDocumentViewportContentProps) {
+  usePdfSearchRuntime({ onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, totalPages });
+  return (
+    <PdfViewportContentBody
+      handleContextMenu={handleContextMenu}
+      handleScroll={handleScroll}
+      maxPage={maxPage}
+      onLoadError={onLoadError}
+      onLoadSuccess={onLoadSuccess}
+      onNextPage={onNextPage}
+      onPageChange={onPageChange}
+      onPreviousPage={onPreviousPage}
+      onRotateClockwise={onRotateClockwise}
+      onSearchQueryChange={onSearchQueryChange}
+      onSearchRequest={onSearchRequest}
+      onZoomIn={onZoomIn}
+      onZoomOut={onZoomOut}
+      page={page}
+      pageElementsRef={pageElementsRef}
+      pdfSource={pdfSource}
+      rotation={rotation}
+      scrollContainerRef={scrollContainerRef}
+      searchQuery={searchQuery}
+      searchStatus={searchStatus}
+      totalPages={totalPages}
+      zoom={zoom}
+    />
+  );
+}
+
+function PdfViewportContentBody({
   handleContextMenu,
   handleScroll,
   maxPage,
@@ -190,6 +225,8 @@ export function PdfDocumentViewportContent({
   onPageChange,
   onPreviousPage,
   onRotateClockwise,
+  onSearchQueryChange,
+  onSearchRequest,
   onZoomIn,
   onZoomOut,
   page,
@@ -197,9 +234,11 @@ export function PdfDocumentViewportContent({
   pdfSource,
   rotation,
   scrollContainerRef,
+  searchQuery,
+  searchStatus,
   totalPages,
   zoom
-}: PdfDocumentViewportContentProps) {
+}: Omit<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'searchRequest'>) {
   return (
     <div
       className="app-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-auto px-2 pb-5"
@@ -207,33 +246,31 @@ export function PdfDocumentViewportContent({
       onScroll={handleScroll}
       ref={scrollContainerRef}
     >
-      <PdfDocumentToolbar
+      <PdfViewportToolbar
         maxPage={maxPage}
         onNextPage={onNextPage}
         onPageChange={onPageChange}
         onPreviousPage={onPreviousPage}
         onRotateClockwise={onRotateClockwise}
+        onSearchQueryChange={onSearchQueryChange}
+        onSearchRequest={onSearchRequest}
         onZoomIn={onZoomIn}
         onZoomOut={onZoomOut}
         page={page}
         rotation={rotation}
+        searchQuery={searchQuery}
+        searchStatus={searchStatus}
         zoom={zoom}
       />
-      <Document
-        className="mx-auto flex w-full max-w-none flex-col items-center gap-4"
-        data-testid="pdf-document-view"
-        file={pdfSource}
-        loading={
-          <div className="flex min-h-[360px] items-center justify-center rounded-md bg-bg-panel/55">
-            <p className="text-sm text-foreground/70">Loading PDF...</p>
-          </div>
-        }
-        noData={<p className="text-sm text-foreground/70">No PDF file selected.</p>}
-        onLoadError={(error) => onLoadError(error.message || 'Failed to load PDF document.')}
-        onLoadSuccess={({ numPages }: { numPages: number }) => onLoadSuccess(numPages)}
-      >
-        <PdfDocumentPages pageElementsRef={pageElementsRef} rotation={rotation} totalPages={totalPages} zoom={zoom} />
-      </Document>
+      <PdfViewportDocument
+        onLoadError={onLoadError}
+        onLoadSuccess={onLoadSuccess}
+        pageElementsRef={pageElementsRef}
+        pdfSource={pdfSource}
+        rotation={rotation}
+        totalPages={totalPages}
+        zoom={zoom}
+      />
     </div>
   );
 }

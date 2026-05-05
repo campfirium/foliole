@@ -1,8 +1,9 @@
-import type { NodeViewState } from '../../../store/workspaceStore';
+import type { NodeAnchorLink } from '../../nodes/model/nodeTypes';
 
 export interface PdfJumpRequest {
   id: number;
   page: number;
+  positionY?: number;
 }
 
 export interface PdfSystemState {
@@ -18,7 +19,7 @@ export interface PdfSystemState {
 
 export interface PdfSystemExternalApi {
   clearPageJumpRequest: (requestId: number) => void;
-  openSource: (sourceHint: string, nodeViewState?: NodeViewState) => void;
+  requestAnchorJump: (locator: NonNullable<NodeAnchorLink['locator']>) => void;
   reportLoadError: (message: string | null) => void;
   reportLoadSuccess: (numPages: number) => void;
   requestPageChange: (value: number) => void;

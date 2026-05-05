@@ -78,6 +78,7 @@ export interface WorkspaceLayoutProps {
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
+  onPersistPdfViewState: (viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
@@ -103,7 +104,7 @@ export interface WorkspaceLayoutProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
-  onCreatePdfHighlight: (selectionText: string) => boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
