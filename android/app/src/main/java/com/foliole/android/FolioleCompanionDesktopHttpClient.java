@@ -1,5 +1,7 @@
 package com.foliole.android;
 
+import android.content.Context;
+
 import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
@@ -34,7 +36,7 @@ final class FolioleCompanionDesktopHttpClient {
         }
     }
 
-    static JSObject request(String url, String method, JSONObject headers, String body) throws Exception {
+    static JSObject request(Context context, String url, String method, JSONObject headers, String body) throws Exception {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
@@ -48,8 +50,8 @@ final class FolioleCompanionDesktopHttpClient {
         }
         int status = connection.getResponseCode();
         JSObject result = new JSObject();
-        result.put("status", status);
-        result.put("body", readBody(connection, status));
+        result.put(responseKey(context, "status"), status);
+        result.put(responseKey(context, "body"), readBody(connection, status));
         return result;
     }
 
@@ -114,6 +116,10 @@ final class FolioleCompanionDesktopHttpClient {
                 connection.setRequestProperty(key, (String) value);
             }
         }
+    }
+
+    private static String responseKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.networkResponseKey(context, key);
     }
 
     private static String readBody(HttpURLConnection connection, int status) throws Exception {

@@ -9,24 +9,27 @@ import com.getcapacitor.PluginCall;
 final class FolioleCompanionNetworkPluginActions {
     private FolioleCompanionNetworkPluginActions() {}
 
-    static void desktopHttpRequest(PluginCall call) {
+    static void desktopHttpRequest(Context context, PluginCall call) {
         new Thread(() -> {
             try {
-                String url = call.getString("url");
-                String method = call.getString("method");
+                String urlKey = requestKey(context, "url");
+                String methodKey = requestKey(context, "method");
+                String url = call.getString(urlKey);
+                String method = call.getString(methodKey);
                 if (url == null || url.trim().isEmpty()) {
-                    call.reject("url is required.");
+                    call.reject(urlKey + " is required.");
                     return;
                 }
                 if (method == null || method.trim().isEmpty()) {
-                    call.reject("method is required.");
+                    call.reject(methodKey + " is required.");
                     return;
                 }
                 call.resolve(FolioleCompanionDesktopHttpClient.request(
+                    context,
                     url,
                     method,
-                    call.getData().optJSONObject("headers"),
-                    call.getString("body")
+                    call.getData().optJSONObject(requestKey(context, "headers")),
+                    call.getString(requestKey(context, "body"))
                 ));
             } catch (Exception exception) {
                 call.reject("Desktop HTTP request failed.", exception);
@@ -43,7 +46,7 @@ final class FolioleCompanionNetworkPluginActions {
                     endpointUrls.put(endpointUrl);
                 }
                 JSObject result = new JSObject();
-                result.put("endpoint_urls", endpointUrls);
+                result.put(discoveryResponseKey(context, "endpointUrls"), endpointUrls);
                 call.resolve(result);
             } catch (Exception exception) {
                 call.reject("Failed to load companion discovery candidates.", exception);
@@ -53,5 +56,13 @@ final class FolioleCompanionNetworkPluginActions {
 
     private static void addEndpoint(JSArray endpointUrls, String hostAddress) {
         endpointUrls.put("http://" + hostAddress + ":38641");
+    }
+
+    private static String discoveryResponseKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.networkDiscoveryResponseKey(context, key);
+    }
+
+    private static String requestKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.networkRequestKey(context, key);
     }
 }

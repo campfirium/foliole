@@ -30,6 +30,22 @@ const PAIRING_STORE = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingStore.java'
 );
+const BOOTSTRAP_STATE = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionBootstrapState.java'
+);
+const DESKTOP_HTTP_CLIENT = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionDesktopHttpClient.java'
+);
+const NETWORK_PLUGIN_ACTIONS = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionNetworkPluginActions.java'
+);
+const SYNC_PACK_TRANSFER_PLUGIN = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPackTransferPlugin.java'
+);
 
 describe('Android bridge contract metadata', () => {
   it('generates resource plugin request contract keys', async () => {
@@ -47,6 +63,39 @@ describe('Android bridge contract metadata', () => {
       query: 'query',
       resources: 'resources',
       url: 'url'
+    });
+  });
+
+  it('generates host API bridge contract keys', async () => {
+    const definitions = JSON.parse(await readFile(BRIDGE_CONTRACT_DEFINITIONS, 'utf8'));
+
+    expect(definitions.hostApi).toEqual(ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS.hostApi);
+    expect(definitions.hostApi.bootstrap).toMatchObject({
+      outputKeys: {
+        bootedAt: 'booted_at',
+        databasePath: 'database_path',
+        databaseReady: 'database_ready',
+        runtimeKind: 'runtime_kind'
+      },
+      runtimeKind: 'android-capacitor'
+    });
+    expect(definitions.hostApi.network).toMatchObject({
+      discoveryResponseKeys: {
+        endpointUrls: 'endpoint_urls'
+      },
+      responseKeys: {
+        body: 'body',
+        status: 'status'
+      }
+    });
+    expect(definitions.hostApi.syncPackTransfer).toMatchObject({
+      requestKeys: {
+        packPath: 'pack_path'
+      },
+      responseKeys: {
+        deleted: 'deleted',
+        packPath: 'pack_path'
+      }
     });
   });
 
@@ -124,5 +173,36 @@ describe('Android bridge contract metadata', () => {
     expect(combinedSource).not.toContain('put("X-Timestamp"');
     expect(combinedSource).not.toContain('put("X-Nonce"');
     expect(combinedSource).not.toContain('put("X-Signature"');
+  });
+
+  it('keeps host API Java wired to generated bridge contract keys', async () => {
+    const combinedSource = [
+      await readFile(BOOTSTRAP_STATE, 'utf8'),
+      await readFile(DESKTOP_HTTP_CLIENT, 'utf8'),
+      await readFile(NETWORK_PLUGIN_ACTIONS, 'utf8'),
+      await readFile(SYNC_PACK_TRANSFER_PLUGIN, 'utf8')
+    ].join('\n');
+
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.bootstrapOutputKey(context, key)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.bootstrapRuntimeKind(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.networkDiscoveryResponseKey(context, key)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.networkRequestKey(context, key)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.networkResponseKey(context, key)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.syncPackTransferRequestKey(getContext(), key)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.syncPackTransferResponseKey(getContext(), key)');
+    expect(combinedSource).not.toContain('put("booted_at"');
+    expect(combinedSource).not.toContain('put("database_path"');
+    expect(combinedSource).not.toContain('put("database_ready"');
+    expect(combinedSource).not.toContain('put("runtime_kind"');
+    expect(combinedSource).not.toContain('put("endpoint_urls"');
+    expect(combinedSource).not.toContain('put("pack_path"');
+    expect(combinedSource).not.toContain('put("deleted"');
+    expect(combinedSource).not.toContain('put("status"');
+    expect(combinedSource).not.toContain('put("body"');
+    expect(combinedSource).not.toContain('getString("pack_path"');
+    expect(combinedSource).not.toContain('getString("url"');
+    expect(combinedSource).not.toContain('getString("method"');
+    expect(combinedSource).not.toContain('getString("body"');
+    expect(combinedSource).not.toContain('optJSONObject("headers"');
   });
 });

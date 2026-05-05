@@ -9,6 +9,26 @@ final class FolioleCompanionBridgeContractDefinitions {
 
     private FolioleCompanionBridgeContractDefinitions() {}
 
+    static String bootstrapOutputKey(Context context, String key) throws Exception {
+        return hostApiString(context, "bootstrap", "outputKeys", key);
+    }
+
+    static String bootstrapRuntimeKind(Context context) throws Exception {
+        return section(context, "hostApi").getJSONObject("bootstrap").getString("runtimeKind");
+    }
+
+    static String networkDiscoveryResponseKey(Context context, String key) throws Exception {
+        return hostApiString(context, "network", "discoveryResponseKeys", key);
+    }
+
+    static String networkRequestKey(Context context, String key) throws Exception {
+        return hostApiString(context, "network", "requestKeys", key);
+    }
+
+    static String networkResponseKey(Context context, String key) throws Exception {
+        return hostApiString(context, "network", "responseKeys", key);
+    }
+
     static int resourceDefault(Context context, String key) throws Exception {
         return section(context, "resourcePlugin").getJSONObject("defaults").getInt(key);
     }
@@ -39,6 +59,24 @@ final class FolioleCompanionBridgeContractDefinitions {
 
     static String resourceRequestKey(Context context, String key) throws Exception {
         return string(context, "resourcePlugin", "requestKeys", key);
+    }
+
+    static String syncPackTransferRequestKey(Context context, String key) throws Exception {
+        return hostApiString(context, "syncPackTransfer", "requestKeys", key);
+    }
+
+    static String syncPackTransferResponseKey(Context context, String key) throws Exception {
+        return hostApiString(context, "syncPackTransfer", "responseKeys", key);
+    }
+
+    private static String hostApiString(Context context, String groupName, String objectName, String key) throws Exception {
+        JSONObject object = section(context, "hostApi").getJSONObject(groupName).optJSONObject(objectName);
+        if (object == null || !object.has(key)) {
+            throw new IllegalStateException(
+                "Companion bridge contract asset is missing key: hostApi." + groupName + "." + objectName + "." + key
+            );
+        }
+        return object.getString(key);
     }
 
     private static String pairingSignatureString(Context context, String objectName, String key) throws Exception {

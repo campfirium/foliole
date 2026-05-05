@@ -46,7 +46,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         String now = Instant.now().toString();
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, now);
         File databaseFile = context.getDatabasePath(DATABASE_NAME);
-        return new FolioleCompanionBootstrapState(now, databaseFile.getAbsolutePath(), true, deviceId);
+        return new FolioleCompanionBootstrapState(context, now, databaseFile.getAbsolutePath(), true, deviceId);
     }
 
     JSObject loadWorkspaceSyncState() throws Exception {

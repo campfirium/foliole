@@ -1,4 +1,43 @@
 export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
+  hostApi: {
+    bootstrap: {
+      outputKeys: {
+        bootedAt: 'booted_at',
+        databasePath: 'database_path',
+        databaseReady: 'database_ready',
+        deviceId: 'device_id',
+        deviceName: 'device_name',
+        runtimeKind: 'runtime_kind'
+      },
+      runtimeKind: 'android-capacitor'
+    },
+    network: {
+      discoveryResponseKeys: {
+        endpointUrls: 'endpoint_urls'
+      },
+      requestKeys: {
+        body: 'body',
+        headers: 'headers',
+        method: 'method',
+        url: 'url'
+      },
+      responseKeys: {
+        body: 'body',
+        status: 'status'
+      }
+    },
+    syncPackTransfer: {
+      requestKeys: {
+        headers: 'headers',
+        packPath: 'pack_path',
+        url: 'url'
+      },
+      responseKeys: {
+        deleted: 'deleted',
+        packPath: 'pack_path'
+      }
+    }
+  },
   pairingPlugin: {
     credentialRequestKeys: {
       deviceId: 'device_id',

@@ -1,5 +1,6 @@
 package com.foliole.android;
 
+import android.content.Context;
 import android.os.Build;
 
 import com.getcapacitor.JSObject;
@@ -11,8 +12,10 @@ final class FolioleCompanionBootstrapState {
     private final boolean databaseReady;
     private final String deviceId;
     private final String deviceName;
+    private final Context context;
 
-    FolioleCompanionBootstrapState(String bootedAt, String databasePath, boolean databaseReady, String deviceId) {
+    FolioleCompanionBootstrapState(Context context, String bootedAt, String databasePath, boolean databaseReady, String deviceId) {
+        this.context = context;
         this.bootedAt = bootedAt;
         this.databasePath = databasePath;
         this.databaseReady = databaseReady;
@@ -36,14 +39,18 @@ final class FolioleCompanionBootstrapState {
         return model;
     }
 
-    JSObject toJsObject() {
+    JSObject toJsObject() throws Exception {
         JSObject result = new JSObject();
-        result.put("booted_at", bootedAt);
-        result.put("database_path", databasePath);
-        result.put("database_ready", databaseReady);
-        result.put("device_id", deviceId);
-        result.put("device_name", deviceName);
-        result.put("runtime_kind", "android-capacitor");
+        result.put(outputKey("bootedAt"), bootedAt);
+        result.put(outputKey("databasePath"), databasePath);
+        result.put(outputKey("databaseReady"), databaseReady);
+        result.put(outputKey("deviceId"), deviceId);
+        result.put(outputKey("deviceName"), deviceName);
+        result.put(outputKey("runtimeKind"), FolioleCompanionBridgeContractDefinitions.bootstrapRuntimeKind(context));
         return result;
+    }
+
+    private String outputKey(String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.bootstrapOutputKey(context, key);
     }
 }

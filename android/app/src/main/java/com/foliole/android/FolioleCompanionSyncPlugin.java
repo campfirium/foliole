@@ -9,7 +9,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     @PluginMethod
     public void desktopHttpRequest(PluginCall call) {
-        FolioleCompanionNetworkPluginActions.desktopHttpRequest(call);
+        FolioleCompanionNetworkPluginActions.desktopHttpRequest(getContext(), call);
     }
 
     @PluginMethod
