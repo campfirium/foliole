@@ -93,6 +93,16 @@ final class FolioleCompanionNamedQueryStore {
         return payload == null ? "{}" : payload;
     }
 
+    static JSObject loadLongMetrics(Context context, SQLiteDatabase database, String queryName) throws Exception {
+        JSONArray metrics = loadArray(context, database, queryName).getJSONArray("metrics");
+        JSObject result = new JSObject();
+        for (int index = 0; index < metrics.length(); index += 1) {
+            JSONObject metric = metrics.getJSONObject(index);
+            result.put(metric.getString("metric"), metric.getLong("value"));
+        }
+        return result;
+    }
+
     private static String replaceTokens(String sql, Map<String, String> replacements) {
         if (replacements == null) {
             return sql;
