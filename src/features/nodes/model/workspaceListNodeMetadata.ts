@@ -11,6 +11,7 @@ const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 export const WORKSPACE_LIST_SUMMARY_FALLBACK = 'No summary yet.';
 export const WORKSPACE_LIST_OPENING_FALLBACK = NODE_OPENING_PREVIEW_FALLBACK;
 export const WORKSPACE_LIST_DATE_FALLBACK = 'Unknown date';
+export const WORKSPACE_LIST_LAST_OPENED_FALLBACK = 'Never opened';
 
 const WORKSPACE_LIST_SUMMARY_MAX_LENGTH = 160;
 
@@ -150,6 +151,14 @@ function resolveWorkspaceListDateTimestamp(node: Pick<Node, 'createdAt' | 'updat
 
   return null;
 }
+
+function resolveWorkspaceListLastOpenedTimestamp(nodeViewState: { updatedAt?: string | null } | null | undefined) {
+  const updatedAt = nodeViewState?.updatedAt?.trim();
+  if (updatedAt && !Number.isNaN(new Date(updatedAt).getTime())) {
+    return updatedAt;
+  }
+  return null;
+}
 export function getWorkspaceListNodeAuthor(node: Pick<Node, 'content'>) {
   const authorValues = getFrontmatterEntryValues(node.content, 'author').map(normalizeText).filter(Boolean);
   if (authorValues.length === 0) {
@@ -214,6 +223,15 @@ export function getWorkspaceListNodeDateLabel(node: Pick<Node, 'createdAt' | 'up
   const timestamp = resolveWorkspaceListDateTimestamp(node);
   if (!timestamp) {
     return WORKSPACE_LIST_DATE_FALLBACK;
+  }
+
+  return new Date(timestamp).toISOString().slice(0, 10);
+}
+
+export function getWorkspaceListNodeLastOpenedLabel(nodeViewState: { updatedAt?: string | null } | null | undefined) {
+  const timestamp = resolveWorkspaceListLastOpenedTimestamp(nodeViewState);
+  if (!timestamp) {
+    return WORKSPACE_LIST_LAST_OPENED_FALLBACK;
   }
 
   return new Date(timestamp).toISOString().slice(0, 10);

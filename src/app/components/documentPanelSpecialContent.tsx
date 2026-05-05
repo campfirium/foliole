@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { ImageClozeCardView } from '../../features/image-cloze/components/ImageClozeCardView';
 import { isLegacyImageClozeNode } from '../../features/image-cloze/model/imageCloze';
 import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
-import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -52,7 +52,9 @@ function renderFolderContent(
   documentMaxWidth: number,
   activeNodeId: string,
   folderTitle: string,
+  folderListSortDirection: FolderListSortDirection,
   folderListSortKey: FolderListSortKey,
+  onChangeFolderListSortDirection: (sortDirection: FolderListSortDirection) => void,
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void,
   nodeOrder: string[],
   nodesById: Record<string, Node>,
@@ -70,10 +72,12 @@ function renderFolderContent(
         folderTitle={folderTitle}
         nodeOrder={nodeOrder}
         nodesById={nodesById}
+        onChangeSortDirection={onChangeFolderListSortDirection}
         onChangeSortKey={onChangeFolderListSortKey}
         onResetLayout={onResetLayout}
         onSelectNode={onSelectNode}
         onStartDocumentResize={onStartDocumentResize}
+        sortDirection={folderListSortDirection}
         sortKey={folderListSortKey}
       />
     </>
@@ -138,7 +142,9 @@ export function resolveDocumentPanelContentBody(args: {
   activeNode: Node | undefined;
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
+  onChangeFolderListSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void;
   isActivePdfCachedVisible: boolean;
   isFolderListView: boolean;
@@ -186,7 +192,9 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
       args.bodyProps.documentMaxWidth,
       args.activeNodeId,
       args.activeNode?.title ?? 'Folder',
+      args.folderListSortDirection,
       args.folderListSortKey,
+      args.onChangeFolderListSortDirection,
       args.onChangeFolderListSortKey,
       args.nodeOrder,
       args.nodesById,

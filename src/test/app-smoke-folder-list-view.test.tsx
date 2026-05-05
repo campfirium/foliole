@@ -14,8 +14,8 @@ function getFolderListTitles() {
     .map((button) => button.getAttribute('aria-label')?.replace(/^Open\s+/, '') ?? '');
 }
 
-function chooseFolderSort(label: 'Author' | 'Title') {
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date' }), { key: 'ArrowDown' });
+function chooseFolderSort(label: 'Date last opened' | 'Title') {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date saved' }), { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('menuitem', { name: label }));
 }
 
@@ -164,32 +164,37 @@ it('switches to title sorting and keeps folder open until an item is opened', as
   });
 });
 
-it('keeps author display and author sorting on the same fallback rule', () => {
+it('supports date last opened sorting from recent to old', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1', 'note-1', 'note-2', 'note-3'],
+    nodeViewById: {
+      ...state.nodeViewById,
+      'note-1': { scrollTop: 20, selection: { from: 1, to: 1 }, updatedAt: '2026-04-01T09:00:00.000Z' },
+      'note-2': { scrollTop: 20, selection: { from: 1, to: 1 }, updatedAt: '2026-04-03T09:00:00.000Z' }
+    },
     nodesById: {
       ...state.nodesById,
       'folder-1': createNode({ id: 'folder-1', kind: 'folder', title: 'Project folder', content: '' }),
       'note-1': createNode({
         id: 'note-1',
         parentNodeId: 'folder-1',
-        title: 'No author B',
-        content: '# No author B\n\nBody only',
+        title: 'Opened earlier',
+        content: '# Opened earlier\n\nBody only',
         updatedAt: '2026-04-03T09:00:00.000Z'
       }),
       'note-2': createNode({
         id: 'note-2',
         parentNodeId: 'folder-1',
-        title: 'Named author',
-        content: '---\nauthor: Ada\n---\n# Named author\n\nBody only',
+        title: 'Opened latest',
+        content: '# Opened latest\n\nBody only',
         updatedAt: '2026-04-02T09:00:00.000Z'
       }),
       'note-3': createNode({
         id: 'note-3',
         parentNodeId: 'folder-1',
-        title: 'No author A',
-        content: '# No author A\n\nMore body only',
+        title: 'Never opened',
+        content: '# Never opened\n\nMore body only',
         updatedAt: '2026-04-01T09:00:00.000Z'
       })
     }
@@ -197,12 +202,11 @@ it('keeps author display and author sorting on the same fallback rule', () => {
 
   render(<App />);
 
-  chooseFolderSort('Author');
+  chooseFolderSort('Date last opened');
 
-  expect(getFolderListTitles()).toEqual(['Named author', 'No author A', 'No author B']);
-  expect(screen.getByTestId('folder-list-meta-note-2')).toHaveTextContent('Ada');
-  expect(screen.queryByTestId('folder-list-meta-note-1')).not.toBeInTheDocument();
-  expect(screen.queryByTestId('folder-list-meta-note-3')).not.toBeInTheDocument();
+  expect(getFolderListTitles()).toEqual(['Opened latest', 'Opened earlier', 'Never opened']);
+  expect(screen.getByTestId('folder-list-date-note-2')).toHaveTextContent('2026-04-03');
+  expect(screen.getByTestId('folder-list-date-note-3')).toHaveTextContent('Never opened');
 });
 
 it('falls back to the empty summary copy when a child node has no usable body text', () => {

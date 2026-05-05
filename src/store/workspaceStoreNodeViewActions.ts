@@ -11,7 +11,11 @@ function normalizeNodeViewState(viewState: WorkspaceState['nodeViewById'][string
     selection: {
       from: Math.max(0, viewState.selection.from),
       to: Math.max(0, viewState.selection.to)
-    }
+    },
+    updatedAt:
+      typeof viewState.updatedAt === 'string' && viewState.updatedAt.trim().length > 0
+        ? viewState.updatedAt
+        : new Date().toISOString()
   };
 }
 

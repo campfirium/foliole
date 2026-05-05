@@ -1,5 +1,5 @@
+import { DocumentPanelContextMenu } from './DocumentPanelContextMenu';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
-import { DocumentPanelContextMenu } from './DocumentPanelSectionParts';
 import { DocumentPanelSourceUpdatePanel } from './DocumentPanelSourceUpdatePanel';
 
 interface DocumentPanelSectionOverlaysProps {

@@ -11,6 +11,8 @@ import { onWindowKeydown } from '@/shared/platform/keyboard';
 const AppDropdownMenu = DropdownMenuPrimitive.Root;
 const AppDropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 const AppDropdownMenuPortal = DropdownMenuPrimitive.Portal;
+const AppDropdownMenuLabel = DropdownMenuPrimitive.Label;
+const AppDropdownMenuSeparator = DropdownMenuPrimitive.Separator;
 
 interface AppSelectionDropdownMenuProps {
   children: ReactNode;
@@ -130,7 +132,9 @@ export {
   AppDropdownMenu,
   AppDropdownMenuContent,
   AppDropdownMenuItem,
+  AppDropdownMenuLabel,
   AppDropdownMenuPortal,
+  AppDropdownMenuSeparator,
   AppDropdownMenuTrigger,
   AppSelectionDropdownMenu,
   AppSelectionDropdownMenuItem

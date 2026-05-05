@@ -2,8 +2,9 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, it } from 'vitest';
 
-import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
 
@@ -30,21 +31,26 @@ function getRenderedEntryTitles() {
 
 it('updates a controlled sort key through the toolbar menu', () => {
   function ControlledFolderList() {
-    const [sortKey, setSortKey] = useState<FolderListSortKey>('date');
+    const [sortKey, setSortKey] = useState<FolderListSortKey>('dateSaved');
+    const [sortDirection, setSortDirection] = useState<FolderListSortDirection>('desc');
     const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
     const children = [
       createNode({ id: 'node-1', title: 'Beta', updatedAt: '2026-04-01T09:00:00.000Z' }),
       createNode({ id: 'node-2', title: 'Alpha', updatedAt: '2026-04-03T09:00:00.000Z' })
     ];
     const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
+    const nodeViewById: Record<string, NodeViewState | undefined> = {};
 
     return (
       <FolderListView
         folderNodeId="folder-1"
         nodeOrder={['folder-1', ...children.map((node) => node.id)]}
+        nodeViewById={nodeViewById}
         nodesById={nodesById}
+        onChangeSortDirection={setSortDirection}
         onChangeSortKey={setSortKey}
         onSelectNode={() => undefined}
+        sortDirection={sortDirection}
         sortKey={sortKey}
       />
     );
@@ -52,9 +58,43 @@ it('updates a controlled sort key through the toolbar menu', () => {
 
   render(<ControlledFolderList />);
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date' }), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date saved' }), { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Title' }));
 
   expect(screen.getByRole('button', { name: 'Sort list by Title' })).toBeInTheDocument();
   expect(getRenderedEntryTitles()).toEqual(['Alpha', 'Beta']);
+});
+
+it('updates a controlled sort direction through the toolbar menu', () => {
+  function ControlledFolderList() {
+    const [sortKey] = useState<FolderListSortKey>('dateSaved');
+    const [sortDirection, setSortDirection] = useState<FolderListSortDirection>('desc');
+    const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
+    const children = [
+      createNode({ id: 'node-1', title: 'First saved', updatedAt: '2026-04-01T09:00:00.000Z' }),
+      createNode({ id: 'node-2', title: 'Last saved', updatedAt: '2026-04-03T09:00:00.000Z' })
+    ];
+    const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
+
+    return (
+      <FolderListView
+        folderNodeId="folder-1"
+        nodeOrder={['folder-1', ...children.map((node) => node.id)]}
+        nodeViewById={{}}
+        nodesById={nodesById}
+        onChangeSortDirection={setSortDirection}
+        onChangeSortKey={() => undefined}
+        onSelectNode={() => undefined}
+        sortDirection={sortDirection}
+        sortKey={sortKey}
+      />
+    );
+  }
+
+  render(<ControlledFolderList />);
+
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date saved' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Old -> Recent' }));
+
+  expect(getRenderedEntryTitles()).toEqual(['First saved', 'Last saved']);
 });

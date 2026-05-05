@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_KEY,
+  type FolderListSortDirection,
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -10,8 +11,10 @@ import {
   WORKSPACE_LIST_OPENING_FALLBACK,
   getWorkspaceListNodeAuthor,
   getWorkspaceListNodeDateLabel,
+  getWorkspaceListNodeLastOpenedLabel,
   getWorkspaceListNodeOpening
 } from '../../features/nodes/model/workspaceListNode';
+import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { FolderListViewLayout } from './FolderListViewLayout';
@@ -23,7 +26,9 @@ interface FolderListViewProps {
   folderTitle?: string;
   nodeOrder?: string[];
   nodes?: Node[];
+  nodeViewById?: Record<string, NodeViewState | undefined>;
   nodesById: Record<string, Node>;
+  onChangeSortDirection?: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey?: (sortKey: FolderListSortKey) => void;
   onResetLayout?: () => void;
   onSelectNode: (nodeId: string) => void;
@@ -37,6 +42,7 @@ interface FolderListViewProps {
   };
   regionLabel?: string;
   showEmbeddedHeader?: boolean;
+  sortDirection?: FolderListSortDirection;
   sortKey?: FolderListSortKey;
 }
 
@@ -61,10 +67,19 @@ function resolveFolderTitle(folderTitle: string | undefined, folderNodeId: strin
   return 'Folder';
 }
 
-function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => void }) {
+function FolderListItem(props: {
+  node: Node;
+  nodeViewState?: NodeViewState;
+  onSelectNode: (nodeId: string) => void;
+  sortKey: FolderListSortKey;
+}) {
   const author = getWorkspaceListNodeAuthor(props.node);
   const opening = getWorkspaceListNodeOpening(props.node);
   const summary = opening === WORKSPACE_LIST_OPENING_FALLBACK ? '' : opening;
+  const dateLabel =
+    props.sortKey === 'dateLastOpened'
+      ? getWorkspaceListNodeLastOpenedLabel(props.nodeViewState)
+      : getWorkspaceListNodeDateLabel(props.node);
 
   return (
     <li>
@@ -85,7 +100,7 @@ function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => v
             className="shrink-0 pt-1 text-[13px] leading-5 text-foreground/56"
             data-testid={`folder-list-date-${props.node.id}`}
           >
-            {getWorkspaceListNodeDateLabel(props.node)}
+            {dateLabel}
           </span>
         </div>
         <span
@@ -131,52 +146,61 @@ function buildFolderListEmptyState(
   return resolvedEmptyState ?? DEFAULT_EMPTY_STATE;
 }
 
-export function FolderListView({
-  documentMaxWidth,
-  emptyState,
-  folderNodeId,
-  folderTitle,
-  nodeOrder,
-  nodes,
-  nodesById,
-  onChangeSortKey,
-  onResetLayout,
-  onSelectNode,
-  onStartDocumentResize,
-  regionLabel,
-  showEmbeddedHeader = true,
-  sortKey: controlledSortKey
-}: FolderListViewProps) {
+function useResolvedFolderListState(props: FolderListViewProps) {
+  const storeNodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const nodeViewById = props.nodeViewById ?? storeNodeViewById;
   const listedNodes = useMemo(
-    () => resolveListedNodes({ emptyState, folderNodeId, nodeOrder, nodes, nodesById, onSelectNode, regionLabel }),
-    [emptyState, folderNodeId, nodeOrder, nodes, nodesById, onSelectNode, regionLabel]
+    () => resolveListedNodes(props),
+    [props.emptyState, props.folderNodeId, props.nodeOrder, props.nodes, props.nodesById, props.onSelectNode, props.regionLabel]
   );
   const state = useFolderListViewState(
     listedNodes,
-    controlledSortKey,
-    onChangeSortKey,
+    nodeViewById,
+    props.sortKey,
+    props.sortDirection,
+    props.onChangeSortKey,
+    props.onChangeSortDirection,
     DEFAULT_FOLDER_LIST_SORT_KEY
   );
-  const resolvedEmptyState = emptyState ?? DEFAULT_EMPTY_STATE;
-  const currentEmptyState = buildFolderListEmptyState(resolvedEmptyState, state.searchQuery);
-  const resolvedFolderTitle = resolveFolderTitle(folderTitle, folderNodeId, nodesById);
+
+  return {
+    nodeViewById,
+    resolvedFolderTitle: resolveFolderTitle(props.folderTitle, props.folderNodeId, props.nodesById),
+    resolvedEmptyState: buildFolderListEmptyState(props.emptyState ?? DEFAULT_EMPTY_STATE, state.searchQuery),
+    state
+  };
+}
+
+export function FolderListView(props: FolderListViewProps) {
+  const { nodeViewById, resolvedEmptyState, resolvedFolderTitle, state } = useResolvedFolderListState(props);
+  const showEmbeddedHeader = props.showEmbeddedHeader ?? true;
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
-      <section aria-label={regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
+      <section aria-label={props.regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
-          currentEmptyState={currentEmptyState}
-          documentMaxWidth={documentMaxWidth}
+          currentEmptyState={resolvedEmptyState}
+          documentMaxWidth={props.documentMaxWidth}
           filteredNodes={state.filteredNodes}
           folderTitle={resolvedFolderTitle}
           itemCountLabel={state.itemCountLabel}
           onChangeSearchQuery={state.setSearchQuery}
+          onChangeSortDirection={state.updateSortDirection}
           onChangeSortKey={state.updateSortKey}
-          onRenderItem={(node) => <FolderListItem key={node.id} node={node} onSelectNode={onSelectNode} />}
-          onResetLayout={onResetLayout}
-          onStartDocumentResize={onStartDocumentResize}
+          onRenderItem={(node) => (
+            <FolderListItem
+              key={node.id}
+              node={node}
+              nodeViewState={nodeViewById[node.id]}
+              onSelectNode={props.onSelectNode}
+              sortKey={state.sortKey}
+            />
+          )}
+          onResetLayout={props.onResetLayout}
+          onStartDocumentResize={props.onStartDocumentResize}
           searchQuery={state.searchQuery}
           showEmbeddedHeader={showEmbeddedHeader}
+          sortDirection={state.sortDirection}
           sortKey={state.sortKey}
         />
       </section>

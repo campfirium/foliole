@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
 
@@ -21,7 +22,15 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
   };
 }
 
-function renderFolderList(children: Node[], options?: { onSelectNode?: ReturnType<typeof vi.fn>; sortKey?: FolderListSortKey }) {
+function renderFolderList(
+  children: Node[],
+  options?: {
+    nodeViewById?: Record<string, NodeViewState | undefined>;
+    onSelectNode?: ReturnType<typeof vi.fn>;
+    sortDirection?: FolderListSortDirection;
+    sortKey?: FolderListSortKey;
+  }
+) {
   const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
   const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
   const onSelectNode = options?.onSelectNode ?? vi.fn();
@@ -30,9 +39,12 @@ function renderFolderList(children: Node[], options?: { onSelectNode?: ReturnTyp
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1', ...children.map((node) => node.id)]}
+      nodeViewById={options?.nodeViewById ?? {}}
       nodesById={nodesById}
+      onChangeSortDirection={() => undefined}
       onChangeSortKey={() => undefined}
       onSelectNode={onSelectNode}
+      sortDirection={options?.sortDirection}
       sortKey={options?.sortKey}
     />
   );
@@ -60,7 +72,7 @@ describe('FolderListView content', () => {
     expect(screen.getByTestId('folder-list-title-node-1')).toHaveTextContent('Child topic');
     expect(screen.getByRole('heading', { level: 2, name: 'Library root' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1');
-    expect(screen.getByRole('button', { name: 'Sort list by Date' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sort list by Date saved' })).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-excerpt-node-1')).toHaveTextContent(
       'This is the first useful sentence inside the folder list body.'
@@ -178,6 +190,35 @@ describe('FolderListView date sorting', () => {
     expect(screen.getByTestId('folder-list-date-node-4')).toHaveTextContent('2026-04-03');
     expect(screen.getByTestId('folder-list-date-node-5')).toHaveTextContent('2026-04-02');
   });
+
+  it('sorts by most recently opened when requested', () => {
+    renderFolderList(
+      [
+        createNode({ id: 'node-1', title: 'Old open', updatedAt: '2026-04-03T09:00:00.000Z' }),
+        createNode({ id: 'node-2', title: 'Newest open', updatedAt: '2026-04-01T09:00:00.000Z' }),
+        createNode({ id: 'node-3', title: 'Never opened', updatedAt: '2026-04-02T09:00:00.000Z' })
+      ],
+      {
+        nodeViewById: {
+          'node-1': {
+            scrollTop: 10,
+            selection: { from: 1, to: 2 },
+            updatedAt: '2026-04-02T09:00:00.000Z'
+          },
+          'node-2': {
+            scrollTop: 20,
+            selection: { from: 2, to: 3 },
+            updatedAt: '2026-04-04T09:00:00.000Z'
+          }
+        },
+        sortKey: 'dateLastOpened'
+      }
+    );
+
+    expect(getRenderedEntryTitles()).toEqual(['Newest open', 'Old open', 'Never opened']);
+    expect(screen.getByTestId('folder-list-date-node-2')).toHaveTextContent('2026-04-04');
+    expect(screen.getByTestId('folder-list-date-node-3')).toHaveTextContent('Never opened');
+  });
 });
 
 describe('FolderListView secondary sorting', () => {
@@ -186,37 +227,10 @@ describe('FolderListView secondary sorting', () => {
       createNode({ id: 'node-1', title: 'Beta', updatedAt: '2026-04-01T09:00:00.000Z' }),
       createNode({ id: 'node-2', title: 'Alpha', updatedAt: '2026-04-03T09:00:00.000Z' }),
       createNode({ id: 'node-3', title: 'Alpha', updatedAt: '2026-04-02T09:00:00.000Z' })
-    ], { sortKey: 'title' });
+    ], { sortDirection: 'asc', sortKey: 'title' });
 
     expect(getRenderedEntryTitles()).toEqual(['Alpha', 'Alpha', 'Beta']);
   });
-
-  it('keeps author sorting stable when some authors are missing', () => {
-    renderFolderList([
-      createNode({
-        id: 'node-1',
-        title: 'No author B',
-        content: 'Body only',
-        updatedAt: '2026-04-03T09:00:00.000Z'
-      }),
-      createNode({
-        id: 'node-2',
-        title: 'Named author',
-        content: '---\nauthor: Zoe\n---\nBody only',
-        updatedAt: '2026-04-02T09:00:00.000Z'
-      }),
-      createNode({
-        id: 'node-3',
-        title: 'No author A',
-        content: 'More body only',
-        updatedAt: '2026-04-01T09:00:00.000Z'
-      })
-    ], { sortKey: 'author' });
-
-    expect(getRenderedEntryTitles()).toEqual(['Named author', 'No author A', 'No author B']);
-    expect(screen.getByTestId('folder-list-meta-node-2')).toHaveTextContent('Zoe');
-  });
-
 });
 
 describe('FolderListView interactions', () => {
@@ -243,50 +257,5 @@ describe('FolderListView interactions', () => {
     expect(screen.queryByRole('button', { name: 'Open Alpha note' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open Beta note' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1 / 2');
-  });
-});
-
-describe('FolderListView layout', () => {
-  it('keeps long titles, empty bodies, and long summaries clamped inside the row', () => {
-    renderFolderList([
-      createNode({
-        id: 'node-4',
-        title: 'An extremely long title that should stay readable without pushing the whole folder list row out of shape',
-        content: ''
-      }),
-      createNode({
-        id: 'node-5',
-        title: 'Long summary',
-        content: 'This summary keeps going '.repeat(40)
-      })
-    ]);
-
-    expect(screen.getByTestId('folder-list-title-node-4').className).toContain('line-clamp-2');
-    expect(screen.getByTestId('folder-list-excerpt-node-4')).toHaveTextContent('');
-    expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('line-clamp-2');
-    expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('min-h-14');
-    expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('line-clamp-2');
-    expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('min-h-14');
-    expect(screen.queryByText('Topic')).not.toBeInTheDocument();
-  });
-
-  it('reuses the shared width resize handles when the document width props are provided', () => {
-    render(
-      <FolderListView
-        documentMaxWidth={760}
-        folderNodeId="folder-1"
-        nodeOrder={['folder-1']}
-        nodesById={{
-          'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' })
-        }}
-        onChangeSortKey={() => undefined}
-        onResetLayout={() => undefined}
-        onSelectNode={() => undefined}
-        onStartDocumentResize={() => undefined}
-      />
-    );
-
-    expect(screen.getByRole('separator', { name: 'Resize document width from left' })).toBeInTheDocument();
-    expect(screen.getByRole('separator', { name: 'Resize document width from right' })).toBeInTheDocument();
   });
 });

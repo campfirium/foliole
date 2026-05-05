@@ -5,6 +5,7 @@ import type { EditorDiffDecorations } from '../../features/editor/adapters/Edito
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
+import { cn } from '../../shared/lib/utils';
 import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';

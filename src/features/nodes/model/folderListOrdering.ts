@@ -2,9 +2,15 @@ import type { Node } from './nodeTypes';
 import { compareWorkspaceListNodeDateDesc } from './workspaceListNode';
 import { compareWorkspaceListNodeAuthor } from './workspaceListNodeMetadata';
 
-export type FolderListSortKey = 'date' | 'title' | 'author';
+export type FolderListSortKey = 'dateSaved' | 'dateLastOpened' | 'title';
+export type FolderListSortDirection = 'desc' | 'asc';
 
-export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'date';
+export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'dateSaved';
+export const DEFAULT_FOLDER_LIST_SORT_DIRECTION: FolderListSortDirection = 'desc';
+
+export function resolveDefaultFolderListSortDirection(sortKey: FolderListSortKey): FolderListSortDirection {
+  return sortKey === 'title' ? 'asc' : 'desc';
+}
 
 function normalizeSortText(value: string) {
   return value.trim().replace(/\s+/g, ' ');
@@ -14,7 +20,86 @@ function compareText(left: string, right: string) {
   return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
 }
 
-export function sortFolderListNodes(nodes: Node[], sortKey: FolderListSortKey) {
+function resolveNodeLastOpenedTimestamp(nodeId: string, nodeViewById: Record<string, { updatedAt?: string | null } | undefined>) {
+  const updatedAt = nodeViewById[nodeId]?.updatedAt?.trim();
+  if (updatedAt && !Number.isNaN(new Date(updatedAt).getTime())) {
+    return updatedAt;
+  }
+  return null;
+}
+
+function compareLastOpenedDesc(
+  leftNodeId: string,
+  rightNodeId: string,
+  nodeViewById: Record<string, { updatedAt?: string | null } | undefined>
+) {
+  const leftTimestamp = resolveNodeLastOpenedTimestamp(leftNodeId, nodeViewById);
+  const rightTimestamp = resolveNodeLastOpenedTimestamp(rightNodeId, nodeViewById);
+  if (!leftTimestamp && !rightTimestamp) {
+    return 0;
+  }
+  if (!leftTimestamp) {
+    return 1;
+  }
+  if (!rightTimestamp) {
+    return -1;
+  }
+  return rightTimestamp.localeCompare(leftTimestamp);
+}
+
+function compareTitle(
+  left: { node: Node; title: string },
+  right: { node: Node; title: string },
+  sortDirection: FolderListSortDirection
+) {
+  const titleResult = compareText(left.title, right.title) * (sortDirection === 'asc' ? 1 : -1);
+  if (titleResult !== 0) {
+    return titleResult;
+  }
+  return compareWorkspaceListNodeDateDesc(left.node, right.node);
+}
+
+function compareSavedDate(
+  left: { node: Node; title: string },
+  right: { node: Node; title: string },
+  directionMultiplier: number
+) {
+  const dateResult = compareWorkspaceListNodeDateDesc(left.node, right.node) * directionMultiplier;
+  if (dateResult !== 0) {
+    return dateResult;
+  }
+  return compareText(left.title, right.title);
+}
+
+function compareLastOpened(
+  left: { node: Node; title: string },
+  right: { node: Node; title: string },
+  directionMultiplier: number,
+  nodeViewById: Record<string, { updatedAt?: string | null } | undefined>
+) {
+  const dateResult = compareLastOpenedDesc(left.node.id, right.node.id, nodeViewById) * directionMultiplier;
+  if (dateResult !== 0) {
+    return dateResult;
+  }
+  const titleResult = compareText(left.title, right.title);
+  if (titleResult !== 0) {
+    return titleResult;
+  }
+  const savedDateResult = compareWorkspaceListNodeDateDesc(left.node, right.node);
+  if (savedDateResult !== 0) {
+    return savedDateResult;
+  }
+  return compareWorkspaceListNodeAuthor(left.node, right.node);
+}
+
+export function sortFolderListNodes(
+  nodes: Node[],
+  sortKey: FolderListSortKey,
+  sortDirection: FolderListSortDirection,
+  nodeViewById: Record<string, { updatedAt?: string | null } | undefined>
+) {
+  const directionMultiplier = sortDirection === 'asc' ? -1 : 1;
+
   return nodes
     .map((node, index) => ({
       index,
@@ -23,39 +108,23 @@ export function sortFolderListNodes(nodes: Node[], sortKey: FolderListSortKey) {
     }))
     .sort((left, right) => {
       if (sortKey === 'title') {
-        const titleResult = compareText(left.title, right.title);
-        if (titleResult !== 0) {
-          return titleResult;
-        }
-        const authorResult = compareWorkspaceListNodeAuthor(left.node, right.node);
-        if (authorResult !== 0) {
-          return authorResult;
-        }
-      }
-
-      if (sortKey === 'author') {
-        const authorResult = compareWorkspaceListNodeAuthor(left.node, right.node);
-        if (authorResult !== 0) {
-          return authorResult;
-        }
-        const titleResult = compareText(left.title, right.title);
+        const titleResult = compareTitle(left, right, sortDirection);
         if (titleResult !== 0) {
           return titleResult;
         }
       }
 
-      if (sortKey === 'date') {
-        const dateResult = compareWorkspaceListNodeDateDesc(left.node, right.node);
+      if (sortKey === 'dateSaved') {
+        const dateResult = compareSavedDate(left, right, directionMultiplier);
         if (dateResult !== 0) {
           return dateResult;
         }
-        const titleResult = compareText(left.title, right.title);
-        if (titleResult !== 0) {
-          return titleResult;
-        }
-        const authorResult = compareWorkspaceListNodeAuthor(left.node, right.node);
-        if (authorResult !== 0) {
-          return authorResult;
+      }
+
+      if (sortKey === 'dateLastOpened') {
+        const dateResult = compareLastOpened(left, right, directionMultiplier, nodeViewById);
+        if (dateResult !== 0) {
+          return dateResult;
         }
       }
 

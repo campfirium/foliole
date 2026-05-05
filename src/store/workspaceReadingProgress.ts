@@ -10,6 +10,7 @@ interface RuntimeNodeViewState {
   scrollTop: number;
   selectionFrom: number | null;
   selectionTo: number | null;
+  updatedAt?: string | null;
 }
 
 interface RuntimeReadingProgressSnapshot {
@@ -23,6 +24,7 @@ interface NodeViewState {
     from: number;
     to: number;
   };
+  updatedAt?: string | null;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -64,6 +66,7 @@ function toRuntimeReadingProgressSnapshot(value: unknown): RuntimeReadingProgres
     const scrollTop = rawState.scrollTop;
     const selectionFrom = rawState.selectionFrom;
     const selectionTo = rawState.selectionTo;
+    const updatedAt = rawState.updatedAt;
     if (typeof scrollTop !== 'number' || !Number.isFinite(scrollTop) || scrollTop < 0) {
       continue;
     }
@@ -76,7 +79,8 @@ function toRuntimeReadingProgressSnapshot(value: unknown): RuntimeReadingProgres
     normalizedNodeViewStateById[nodeId] = {
       scrollTop,
       selectionFrom: selectionFrom === null ? null : Math.max(0, Math.trunc(selectionFrom)),
-      selectionTo: selectionTo === null ? null : Math.max(0, Math.trunc(selectionTo))
+      selectionTo: selectionTo === null ? null : Math.max(0, Math.trunc(selectionTo)),
+      updatedAt: typeof updatedAt === 'string' && updatedAt.trim().length > 0 ? updatedAt : null
     };
   }
 
@@ -96,7 +100,8 @@ function toLocalNodeViewById(nodeViewStateById: Record<string, RuntimeNodeViewSt
       selection: {
         from: selectionFrom,
         to: selectionTo
-      }
+      },
+      updatedAt: state.updatedAt ?? null
     };
   }
   return localNodeViewById;

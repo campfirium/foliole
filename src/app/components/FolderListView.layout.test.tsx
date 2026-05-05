@@ -1,0 +1,75 @@
+import { render, screen } from '@testing-library/react';
+import { expect, it } from 'vitest';
+
+import type { Node } from '../../features/nodes/model/nodeTypes';
+
+import { FolderListView } from './FolderListView';
+
+function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node {
+  return {
+    id: overrides.id,
+    parentNodeId: overrides.parentNodeId === undefined ? 'folder-1' : overrides.parentNodeId,
+    kind: overrides.kind ?? 'topic',
+    title: overrides.title,
+    content: overrides.content ?? '',
+    openingText: overrides.openingText ?? null,
+    reveal: overrides.reveal ?? null,
+    review: overrides.review ?? null,
+    createdAt: overrides.createdAt ?? '2026-04-01T09:00:00.000Z',
+    updatedAt: overrides.updatedAt ?? '2026-04-02T10:30:00.000Z'
+  };
+}
+
+it('keeps long titles, empty bodies, and long summaries clamped inside the row', () => {
+  render(
+    <FolderListView
+      folderNodeId="folder-1"
+      nodeOrder={['folder-1', 'node-4', 'node-5']}
+      nodesById={{
+        'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' }),
+        'node-4': createNode({
+          id: 'node-4',
+          title: 'An extremely long title that should stay readable without pushing the whole folder list row out of shape',
+          content: ''
+        }),
+        'node-5': createNode({
+          id: 'node-5',
+          title: 'Long summary',
+          content: 'This summary keeps going '.repeat(40)
+        })
+      }}
+      onChangeSortDirection={() => undefined}
+      onChangeSortKey={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  expect(screen.getByTestId('folder-list-title-node-4').className).toContain('line-clamp-2');
+  expect(screen.getByTestId('folder-list-excerpt-node-4')).toHaveTextContent('');
+  expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('line-clamp-2');
+  expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('min-h-14');
+  expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('line-clamp-2');
+  expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('min-h-14');
+  expect(screen.queryByText('Topic')).not.toBeInTheDocument();
+});
+
+it('reuses the shared width resize handles when the document width props are provided', () => {
+  render(
+    <FolderListView
+      documentMaxWidth={760}
+      folderNodeId="folder-1"
+      nodeOrder={['folder-1']}
+      nodesById={{
+        'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' })
+      }}
+      onChangeSortDirection={() => undefined}
+      onChangeSortKey={() => undefined}
+      onResetLayout={() => undefined}
+      onSelectNode={() => undefined}
+      onStartDocumentResize={() => undefined}
+    />
+  );
+
+  expect(screen.getByRole('separator', { name: 'Resize document width from left' })).toBeInTheDocument();
+  expect(screen.getByRole('separator', { name: 'Resize document width from right' })).toBeInTheDocument();
+});

@@ -124,6 +124,7 @@ export interface NodeViewState {
     from: number;
     to: number;
   };
+  updatedAt?: string | null;
 }
 
 export const WORKSPACE_STORAGE_KEY = 'foliole-workspace-v1';

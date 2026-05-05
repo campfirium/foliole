@@ -1,7 +1,7 @@
 import { Search } from 'lucide-react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 
-import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { AppEmptyState, AppInput } from '../../shared/ui';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
@@ -13,15 +13,19 @@ function FolderListHeader({
   folderTitle,
   itemCountLabel,
   onChangeSearchQuery,
+  onChangeSortDirection,
   searchQuery,
+  sortDirection,
   sortKey,
   onChangeSortKey
 }: {
   folderTitle: string;
   itemCountLabel: string;
   searchQuery: string;
+  sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
   onChangeSearchQuery: (value: string) => void;
+  onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
 }) {
   return (
@@ -50,7 +54,12 @@ function FolderListHeader({
         </div>
       </div>
       <div className="ml-auto shrink-0">
-        <FolderListSortControls onChangeSortKey={onChangeSortKey} sortKey={sortKey} />
+        <FolderListSortControls
+          onChangeSortDirection={onChangeSortDirection}
+          onChangeSortKey={onChangeSortKey}
+          sortDirection={sortDirection}
+          sortKey={sortKey}
+        />
       </div>
     </div>
   );
@@ -80,8 +89,8 @@ function FolderListSurface({
       {children}
       {shouldShowResizeHandles ? (
         <DocumentWidthResizeHandles
-          onResetLayout={onResetLayout}
-          onStartDocumentResize={onStartDocumentResize}
+          onResetLayout={onResetLayout!}
+          onStartDocumentResize={onStartDocumentResize!}
         />
       ) : null}
     </div>
@@ -119,6 +128,7 @@ export function FolderListViewLayout(props: {
   folderTitle: string;
   itemCountLabel: string;
   onChangeSearchQuery: (value: string) => void;
+  onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
   onRenderItem: (node: Node) => ReactNode;
   onResetLayout?: () => void;
@@ -128,6 +138,7 @@ export function FolderListViewLayout(props: {
   ) => void;
   searchQuery: string;
   showEmbeddedHeader: boolean;
+  sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
   return (
@@ -142,8 +153,10 @@ export function FolderListViewLayout(props: {
             folderTitle={props.folderTitle}
             itemCountLabel={props.itemCountLabel}
             onChangeSearchQuery={props.onChangeSearchQuery}
+            onChangeSortDirection={props.onChangeSortDirection}
             onChangeSortKey={props.onChangeSortKey}
             searchQuery={props.searchQuery}
+            sortDirection={props.sortDirection}
             sortKey={props.sortKey}
           />
         ) : null}

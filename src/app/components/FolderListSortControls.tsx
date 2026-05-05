@@ -1,22 +1,41 @@
-import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
   AppDropdownMenuItem,
+  AppDropdownMenuLabel,
+  AppDropdownMenuSeparator,
   AppDropdownMenuTrigger
 } from '../../shared/ui';
 
 export const FOLDER_LIST_SORT_OPTIONS: { key: FolderListSortKey; label: string }[] = [
-  { key: 'date', label: 'Date' },
-  { key: 'title', label: 'Title' },
-  { key: 'author', label: 'Author' }
+  { key: 'dateLastOpened', label: 'Date last opened' },
+  { key: 'dateSaved', label: 'Date saved' },
+  { key: 'title', label: 'Title' }
 ];
 
+function getOrderOptions(sortKey: FolderListSortKey): { label: string; value: FolderListSortDirection }[] {
+  if (sortKey === 'title') {
+    return [
+      { label: 'A -> Z', value: 'asc' },
+      { label: 'Z -> A', value: 'desc' }
+    ];
+  }
+
+  return [
+    { label: 'Recent -> Old', value: 'desc' },
+    { label: 'Old -> Recent', value: 'asc' }
+  ];
+}
+
 export function FolderListSortControls(props: {
+  onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
+  sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
-  const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Date';
+  const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Date saved';
+  const orderOptions = getOrderOptions(props.sortKey);
 
   return (
     <AppDropdownMenu>
@@ -31,7 +50,10 @@ export function FolderListSortControls(props: {
           <ChevronDownIcon />
         </button>
       </AppDropdownMenuTrigger>
-      <AppDropdownMenuContent align="end" className="min-w-[200px] p-1" sideOffset={8}>
+      <AppDropdownMenuContent align="end" className="min-w-[240px] p-1" sideOffset={8}>
+        <AppDropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-medium text-foreground/45">
+          Sort by
+        </AppDropdownMenuLabel>
         {FOLDER_LIST_SORT_OPTIONS.map((option) => (
           <AppDropdownMenuItem
             className="justify-between rounded-md px-3 font-medium"
@@ -40,6 +62,22 @@ export function FolderListSortControls(props: {
           >
             <span>{option.label}</span>
             <span aria-hidden="true" className={props.sortKey === option.key ? 'text-foreground' : 'invisible'}>
+              <CheckIcon />
+            </span>
+          </AppDropdownMenuItem>
+        ))}
+        <AppDropdownMenuSeparator className="my-1 h-px bg-border/10" />
+        <AppDropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-medium text-foreground/45">
+          Order by
+        </AppDropdownMenuLabel>
+        {orderOptions.map((option) => (
+          <AppDropdownMenuItem
+            className="justify-between rounded-md px-3 font-medium"
+            key={option.value}
+            onSelect={() => props.onChangeSortDirection(option.value)}
+          >
+            <span>{option.label}</span>
+            <span aria-hidden="true" className={props.sortDirection === option.value ? 'text-foreground' : 'invisible'}>
               <CheckIcon />
             </span>
           </AppDropdownMenuItem>

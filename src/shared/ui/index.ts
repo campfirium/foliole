@@ -13,7 +13,9 @@ export {
   AppDropdownMenu,
   AppDropdownMenuContent,
   AppDropdownMenuItem,
+  AppDropdownMenuLabel,
   AppDropdownMenuPortal,
+  AppDropdownMenuSeparator,
   AppDropdownMenuTrigger,
   AppSelectionDropdownMenu,
   AppSelectionDropdownMenuItem

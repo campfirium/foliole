@@ -1,6 +1,11 @@
 import { useState } from 'react';
 
-import { DEFAULT_FOLDER_LIST_SORT_KEY, type FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+import {
+  DEFAULT_FOLDER_LIST_SORT_DIRECTION,
+  DEFAULT_FOLDER_LIST_SORT_KEY,
+  type FolderListSortDirection,
+  type FolderListSortKey
+} from '../../features/nodes/model/folderListOrdering';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
@@ -25,6 +30,9 @@ export function DocumentPanelSectionShell({
   showSourceUpdateAction
 }: DocumentPanelShellProps) {
   const [folderListSortKey, setFolderListSortKey] = useState<FolderListSortKey>(DEFAULT_FOLDER_LIST_SORT_KEY);
+  const [folderListSortDirection, setFolderListSortDirection] = useState<FolderListSortDirection>(
+    DEFAULT_FOLDER_LIST_SORT_DIRECTION
+  );
 
   return (
     <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
@@ -34,7 +42,14 @@ export function DocumentPanelSectionShell({
           canGoBack={props.canGoBack}
           canGoForward={props.canGoForward}
           canGoParent={props.canGoParent}
-          folderListToolbar={<FolderListSortControls onChangeSortKey={setFolderListSortKey} sortKey={folderListSortKey} />}
+          folderListToolbar={
+            <FolderListSortControls
+              onChangeSortDirection={setFolderListSortDirection}
+              onChangeSortKey={setFolderListSortKey}
+              sortDirection={folderListSortDirection}
+              sortKey={folderListSortKey}
+            />
+          }
           isFolderListView={isFolderListView}
           isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
           nodesById={props.nodesById}
@@ -49,7 +64,9 @@ export function DocumentPanelSectionShell({
       <DocumentPanelContent
         activeNodeId={props.activeNodeId}
         bodyProps={bodyProps}
+        folderListSortDirection={folderListSortDirection}
         folderListSortKey={folderListSortKey}
+        onChangeFolderListSortDirection={setFolderListSortDirection}
         onChangeFolderListSortKey={setFolderListSortKey}
         isFolderListView={isFolderListView}
         nodeOrder={props.nodeOrder}

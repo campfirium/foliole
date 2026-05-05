@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
 
-import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -9,17 +9,17 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { resolvePdfDocumentSurface } from './documentPanelPdfView';
 import { resolveDocumentPanelContentBody } from './documentPanelSpecialContent';
-import { EditorContextMenu } from './EditorContextMenu';
 import { PdfDocumentSurfaceCache } from './PdfDocumentSurfaceCache';
-import { collectPdfHighlightLocators } from './pdfHighlightLocators';
+import { collectPdfHighlightLocators, type PdfHighlightLocator } from './pdfHighlightLocators';
 import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 import { useNodeSourceDetails } from './useNodeSourceDetails';
-import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 interface DocumentPanelContentProps {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
+  onChangeFolderListSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void;
   isFolderListView: boolean;
   nodeOrder: string[];
@@ -29,17 +29,6 @@ interface DocumentPanelContentProps {
   onNodeContentChange: (nodeId: string, content: string) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
-}
-
-interface DocumentPanelContextMenuProps {
-  contextMenu: WorkspaceEditorContextMenu | null;
-  onCloseContextMenu: () => void;
-  onCopyImage: () => void;
-  onCreateHighlight: () => void;
-  onCreateCloze: () => void;
-  onCutImage: () => void;
-  onDeleteImage: () => void;
-  onExportImage: () => void;
 }
 
 const PDF_READER_PLACEHOLDER_TEXT = 'Linked PDF source ready for the reader surface.';
@@ -178,20 +167,41 @@ function useResetEditorReadyWhenHidden(
   }, [bodyProps, shouldRenderEditorBody]);
 }
 
-export function DocumentPanelContent({
-  activeNodeId,
-  bodyProps,
-  folderListSortKey,
-  onChangeFolderListSortKey,
-  isFolderListView,
-  nodeOrder,
-  trashedNodeIds,
-  nodesById,
-  onCreatePdfHighlight,
-  onNodeContentChange,
-  onPersistPdfViewState,
-  onSelectNode
-}: DocumentPanelContentProps) {
+function buildDocumentPanelContentBodyArgs(
+  props: DocumentPanelContentProps,
+  derived: {
+    activeNode: Node | undefined;
+    isActivePdfCachedVisible: boolean;
+    pdfCache: JSX.Element;
+    pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
+    pdfHighlightLocators: PdfHighlightLocator[];
+    shouldHideEditorBodyDuringSourceLoad: boolean;
+  }
+) {
+  return {
+    activeNode: derived.activeNode,
+    activeNodeId: props.activeNodeId,
+    bodyProps: props.bodyProps,
+    folderListSortDirection: props.folderListSortDirection,
+    folderListSortKey: props.folderListSortKey,
+    onChangeFolderListSortDirection: props.onChangeFolderListSortDirection,
+    onChangeFolderListSortKey: props.onChangeFolderListSortKey,
+    isActivePdfCachedVisible: derived.isActivePdfCachedVisible,
+    isFolderListView: props.isFolderListView,
+    nodeOrder: props.nodeOrder,
+    nodesById: props.nodesById,
+    onCreatePdfHighlight: props.onCreatePdfHighlight,
+    onNodeContentChange: props.onNodeContentChange,
+    onPersistPdfViewState: props.onPersistPdfViewState,
+    onSelectNode: props.onSelectNode,
+    pdfCache: derived.pdfCache,
+    pdfDocumentSurface: derived.pdfDocumentSurface,
+    pdfHighlightLocators: derived.pdfHighlightLocators,
+    shouldHideEditorBodyDuringSourceLoad: derived.shouldHideEditorBodyDuringSourceLoad
+  };
+}
+
+export function DocumentPanelContent(props: DocumentPanelContentProps) {
   const [isActivePdfCachedVisible, setIsActivePdfCachedVisible] = useState(false);
   const {
     activeNode,
@@ -200,73 +210,33 @@ export function DocumentPanelContent({
     shouldHideEditorBodyDuringSourceLoad,
     shouldRenderEditorBody
   } = useDocumentPanelContentState({
-    activeNodeId,
-    bodyProps,
-    isFolderListView,
-    nodeOrder,
-    nodesById,
-    trashedNodeIds
+    activeNodeId: props.activeNodeId,
+    bodyProps: props.bodyProps,
+    isFolderListView: props.isFolderListView,
+    nodeOrder: props.nodeOrder,
+    nodesById: props.nodesById,
+    trashedNodeIds: props.trashedNodeIds
   });
-  useResetEditorReadyWhenHidden(bodyProps, shouldRenderEditorBody);
+  useResetEditorReadyWhenHidden(props.bodyProps, shouldRenderEditorBody);
 
   const pdfCache = createPdfCache({
-    activeNodeId,
-    bodyProps,
-    onCreatePdfHighlight,
-    onPersistPdfViewState,
+    activeNodeId: props.activeNodeId,
+    bodyProps: props.bodyProps,
+    onCreatePdfHighlight: props.onCreatePdfHighlight,
+    onPersistPdfViewState: props.onPersistPdfViewState,
     pdfDocumentSurface,
     pdfHighlightLocators,
     setIsActivePdfCachedVisible
   });
 
-  return resolveDocumentPanelContentBody({
-    activeNode,
-    activeNodeId,
-    bodyProps,
-    folderListSortKey,
-    onChangeFolderListSortKey,
-    isActivePdfCachedVisible,
-    isFolderListView,
-    nodeOrder,
-    nodesById,
-    onCreatePdfHighlight,
-    onNodeContentChange,
-    onPersistPdfViewState,
-    onSelectNode,
-    pdfCache,
-    pdfDocumentSurface,
-    pdfHighlightLocators,
-    shouldHideEditorBodyDuringSourceLoad
-  });
-}
-
-export function DocumentPanelContextMenu({
-  contextMenu,
-  onCloseContextMenu,
-  onCopyImage,
-  onCreateHighlight,
-  onCreateCloze,
-  onCutImage,
-  onDeleteImage,
-  onExportImage
-}: DocumentPanelContextMenuProps) {
-  if (!contextMenu) {
-    return null;
-  }
-
-  return (
-    <EditorContextMenu
-      canRunCommands={contextMenu.canRunCommands}
-      kind={contextMenu.kind}
-      left={contextMenu.left}
-      onClose={onCloseContextMenu}
-      onCopyImage={onCopyImage}
-      onCreateCloze={onCreateCloze}
-      onCreateHighlight={onCreateHighlight}
-      onCutImage={onCutImage}
-      onDeleteImage={onDeleteImage}
-      onExportImage={onExportImage}
-      top={contextMenu.top}
-    />
+  return resolveDocumentPanelContentBody(
+    buildDocumentPanelContentBodyArgs(props, {
+      activeNode,
+      isActivePdfCachedVisible,
+      pdfCache,
+      pdfDocumentSurface,
+      pdfHighlightLocators,
+      shouldHideEditorBodyDuringSourceLoad
+    })
   );
 }
