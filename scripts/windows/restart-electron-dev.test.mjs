@@ -77,4 +77,19 @@ describe('restart-electron-dev script', () => {
     expect(script).not.toContain("^cargo(?:\\.exe)?$");
     expect(script).not.toContain('.*tauri');
   });
+
+  it('preflights native modules with Electron before waiting for app-ready markers', async () => {
+    const script = await readFile(SCRIPT_PATH, 'utf8');
+
+    expect(script).toContain('function Assert-NativeModulesLoadInElectron');
+    expect(script).toContain("$env:ELECTRON_RUN_AS_NODE = \"1\"");
+    expect(script).toContain('foliole-native-module-preflight.js');
+    expect(script).toContain("Replace('\\', '/')");
+    expect(script).toContain('node_modules\\better-sqlite3');
+    expect(script).toContain("require('$betterSqliteModulePath');");
+    expect(script).toContain('& $electronPath $preflightScript');
+    expect(script).toContain('$exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }');
+    expect(script).toContain('native module preflight failed: better-sqlite3 load failed');
+    expect(script).toContain('Assert-NativeModulesLoadInElectron -WorkDir $WorkDir');
+  });
 });
