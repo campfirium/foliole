@@ -70,21 +70,26 @@ async function clickNodeByTitle(page, title) {
 }
 
 async function openNodeByTitle(page, title) {
-  const openedViaDebugBridge = await page.evaluate((targetTitle) => {
-    const api = (window).__folioleWorkspaceDebug;
-    if (!api?.listNodes || !api?.openNode) {
-      return false;
-    }
-    const targetNode = api.listNodes().find((node) => String(node.title ?? '').trim() === targetTitle);
-    if (!targetNode) {
-      return false;
-    }
-    return api.openNode(targetNode.id);
-  }, title);
-  if (openedViaDebugBridge) {
+  try {
+    await clickNodeByTitle(page, title);
     return;
+  } catch {
+    const openedViaDebugBridge = await page.evaluate((targetTitle) => {
+      const api = (window).__folioleWorkspaceDebug;
+      if (!api?.listNodes || !api?.openNode) {
+        return false;
+      }
+      const targetNode = api.listNodes().find((node) => String(node.title ?? '').trim() === targetTitle);
+      if (!targetNode) {
+        return false;
+      }
+      return api.openNode(targetNode.id);
+    }, title);
+    if (openedViaDebugBridge) {
+      return;
+    }
+    throw new Error(`unable to open node "${title}"`);
   }
-  await clickNodeByTitle(page, title);
 }
 
 async function clickPivotNode(page, excludedTitle) {
@@ -160,8 +165,12 @@ function summarizeSamples(samples) {
     avgDocumentLoadStartMs: average('documentLoadStartDurationMs'),
     avgNodeListTreeRenders: averageFromNested('componentRenderCounts', 'nodeListTree', validSamples),
     avgOverallMs: average('overallReadyDurationMs'),
+    avgPanelBoundMs: average('panelBoundDurationMs'),
+    avgRealContentReadyMs: average('realContentReadyDurationMs'),
+    avgRealReadyMs: average('realReadyDurationMs'),
     avgRenderedRowCount: average('renderedRowCount'),
     avgRenderedRowUniqueCount: average('renderedRowUniqueCount'),
+    avgRequestToApplyMs: average('requestToApplyDurationMs'),
     avgRightSidebarRenders: averageFromNested('componentRenderCounts', 'rightSidebar', validSamples),
     avgWorkspaceGridRenders: averageFromNested('componentRenderCounts', 'workspaceGrid', validSamples),
     samples: validSamples.length

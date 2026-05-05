@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState, type MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
+import { markNodeSelectionRequested } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 interface WorkspaceNavigationDependencies {
@@ -18,6 +19,7 @@ interface WorkspaceNavigationDependencies {
   goForward: () => NodeNavigationResult | null;
   goToParent: () => NodeNavigationResult | null;
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null;
+  nodesById: Record<string, Node>;
   openNode: (nodeId: string) => NodeNavigationResult | null;
   saveActiveNodeView: () => void;
 }
@@ -103,14 +105,16 @@ function useNavigationAction(
 function useSelectNodeAction(
   action: (nodeId: string) => NodeNavigationResult | null,
   beforeNavigate: () => void,
-  finalize: (result: NodeNavigationResult | null) => void
+  finalize: (result: NodeNavigationResult | null) => void,
+  markRequested: (nodeId: string) => void
 ) {
   return useCallback(
     (nodeId: string) => {
+      markRequested(nodeId);
       beforeNavigate();
       finalize(action(nodeId));
     },
-    [action, beforeNavigate, finalize]
+    [action, beforeNavigate, finalize, markRequested]
   );
 }
 
@@ -126,10 +130,17 @@ export function useWorkspaceNavigation({
   goForward,
   goToParent,
   jumpToAncestorNode,
+  nodesById,
   openNode,
   saveActiveNodeView
 }: WorkspaceNavigationDependencies): WorkspaceNavigationHandlers {
   const applyNavigationResult = usePendingAnchorNavigation(activeNodeContent, activeNodeId, editorRef);
+  const markSelectionRequested = useCallback(
+    (nodeId: string) => {
+      markNodeSelectionRequested(nodeId, nodesById);
+    },
+    [nodesById]
+  );
 
   const finalizeNavigation = useCallback(
     (result: NodeNavigationResult | null) => {
@@ -139,11 +150,12 @@ export function useWorkspaceNavigation({
     [applyNavigationResult, closeContextMenu]
   );
 
-  const handleSelectNode = useSelectNodeAction(openNode, saveActiveNodeView, finalizeNavigation);
+  const handleSelectNode = useSelectNodeAction(openNode, saveActiveNodeView, finalizeNavigation, markSelectionRequested);
   const handleSelectBreadcrumbNode = useSelectNodeAction(
     (nodeId) => jumpToAncestorNode(nodeId) ?? openNode(nodeId),
     saveActiveNodeView,
-    finalizeNavigation
+    finalizeNavigation,
+    markSelectionRequested
   );
 
   return {

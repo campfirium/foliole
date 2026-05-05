@@ -89,12 +89,15 @@ export function WorkspaceRightSidebarPerformancePanel(props: WorkspaceRightSideb
         title="Timing"
       >
         <dl className="contents">
-          <InfoRow label="Overall" value={formatDuration(diagnostics.flow.overallReadyDurationMs, 'Waiting')} />
-          <InfoRow label="Body usable" value={formatDuration(diagnostics.flow.bodyReadyDurationMs, 'Pending')} />
+          <InfoRow label="Real overall" value={formatDuration(diagnostics.flow.overallReadyDurationMs, 'Waiting')} />
+          <InfoRow label="Click to switch" value={formatDuration(diagnostics.flow.requestToApplyDurationMs, 'Pending')} />
+          <InfoRow label="Panel shown" value={formatDuration(diagnostics.flow.panelBoundDurationMs, 'Pending')} />
+          <InfoRow label="Content ready" value={formatDuration(diagnostics.flow.realContentReadyDurationMs, 'Pending')} />
+          <InfoRow label="Content stable" value={formatDuration(diagnostics.flow.realReadyDurationMs, 'Pending')} />
+          <InfoRow label="Shell stable" value={formatDuration(diagnostics.flow.bodyReadyDurationMs, 'Pending')} />
           <InfoRow label="Load start" value={formatDuration(diagnostics.flow.documentLoadStartDurationMs, 'Hot cache')} />
           <InfoRow label="Load spent" value={formatDuration(diagnostics.flow.documentLoadDurationMs, 'Hot cache')} />
           <InfoRow label="First paint" value={formatDuration(diagnostics.flow.bodyPaintDurationMs, 'Pending')} />
-          <InfoRow label="Body stable" value={formatDuration(diagnostics.flow.bodyReadyDurationMs, 'Pending')} />
           <InfoRow label="Position wait" value={formatPositionWait(diagnostics.flow.positionStatus, diagnostics.flow.positionWaitDurationMs)} />
           <InfoRow label="Position done" value={formatPositionDone(diagnostics.flow.positionStatus, diagnostics.flow.positionReadyDurationMs)} />
           <InfoRow label="First image" value={formatImageDuration(diagnostics.flow.imageStatus, diagnostics.flow.firstImageReadyDurationMs)} />

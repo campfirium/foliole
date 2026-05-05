@@ -1,6 +1,7 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
+import { resolveContentLength, resolveEmptyContentReady, resolveReady } from './performanceDiagnosticsFlowHelpers';
 import {
   POSITION_REQUEST_GRACE_MS,
   createNodeSelectionFlow,
@@ -13,23 +14,29 @@ import {
 export function markNodeSelectionRequested(nodeId: string, nodesById: Record<string, Node>) {
   const now = Date.now();
   state.activeFlow = createNodeSelectionFlow({
+    appliedAt: null,
     nodeId,
     nodeTitle: resolveNodeTitle(nodesById, nodeId),
+    requestedAt: now,
     selectedAt: now,
     timeline: [{ atMs: 0, name: 'selection_requested' }]
   });
 }
 
 export function markNodeSelectionApplied(nodeId: string, nodesById: Record<string, Node>) {
+  const now = Date.now();
   const existingFlow = state.activeFlow?.nodeId === nodeId ? state.activeFlow : null;
   const flow =
     existingFlow ??
     createNodeSelectionFlow({
       nodeId,
       nodeTitle: resolveNodeTitle(nodesById, nodeId),
-      selectedAt: Date.now()
+      requestedAt: now,
+      selectedAt: now
     });
   flow.nodeTitle = resolveNodeTitle(nodesById, nodeId) ?? flow.nodeTitle;
+  flow.appliedAt = flow.appliedAt ?? now;
+  flow.selectedAt = flow.appliedAt;
   if (!existingFlow) {
     flow.timeline.push({ atMs: 0, name: 'selection_applied' });
   } else {
@@ -47,18 +54,28 @@ export function beginNodeSelectionFlow(nodeId: string, nodesById: Record<string,
     now - existingFlow.positionRequestedAt <= POSITION_REQUEST_GRACE_MS;
 
   state.activeFlow = createNodeSelectionFlow({
+    appliedAt: existingFlow?.appliedAt ?? now,
     nodeId,
     nodeTitle: resolveNodeTitle(nodesById, nodeId),
     positionRequestedAt: shouldCarryPendingPosition ? existingFlow?.positionRequestedAt ?? null : null,
-    selectedAt: existingFlow?.selectedAt ?? now,
+    requestedAt: existingFlow?.requestedAt ?? existingFlow?.selectedAt ?? now,
+    selectedAt: existingFlow?.selectedAt ?? existingFlow?.appliedAt ?? now,
     timeline: existingFlow?.timeline
   });
+  state.activeFlow.lastContentSyncCompletedAt = existingFlow?.lastContentSyncCompletedAt ?? null;
+  state.activeFlow.lastContentSyncLength = existingFlow?.lastContentSyncLength ?? null;
+  state.activeFlow.panelBoundAt = existingFlow?.panelBoundAt ?? null;
+  state.activeFlow.resolvedContentReadyAt = existingFlow?.resolvedContentReadyAt ?? null;
+  state.activeFlow.resolvedReadyAt = existingFlow?.resolvedReadyAt ?? null;
+  state.activeFlow.bodyPaintAt = existingFlow?.bodyPaintAt ?? null;
+  state.activeFlow.bodyReadyAt = existingFlow?.bodyReadyAt ?? null;
   recordFlowEvent(state.activeFlow, 'flow_started');
 
   state.nodeDocumentCache.entries = Object.values(nodesById).filter((node) => isNodeDocumentLoaded(node)).length;
   if (isNodeDocumentLoaded(nodesById[nodeId])) {
     state.nodeDocumentCache.hits += 1;
     recordFlowEvent(state.activeFlow, 'node_cache_hit');
+    resolveEmptyContentReady(state.activeFlow);
     return;
   }
   state.nodeDocumentCache.misses += 1;
@@ -76,6 +93,11 @@ function markFlowTimestamp(nodeId: string, field: 'bodyReadyAt' | 'bodyPaintAt' 
 
 export function markNodeBodyReady(nodeId: string) {
   markFlowTimestamp(nodeId, 'bodyReadyAt', 'body_ready');
+  const flow = getFlow(nodeId);
+  if (!flow) {
+    return;
+  }
+  resolveReady(flow);
 }
 
 export function markNodeBodyPainted(nodeId: string) {
@@ -94,6 +116,7 @@ export function markNodeDocumentLoadResolved(nodeId: string) {
   flow.documentLoadStartedAt = flow.documentLoadStartedAt ?? flow.selectedAt;
   flow.documentLoadResolvedAt = flow.documentLoadResolvedAt ?? Date.now();
   recordFlowEvent(flow, 'document_load_resolved');
+  resolveReady(flow);
 }
 
 function markFlowEventByNode(nodeId: string, eventName: string, detail?: string) {
@@ -104,12 +127,25 @@ function markFlowEventByNode(nodeId: string, eventName: string, detail?: string)
   recordFlowEvent(flow, eventName, detail);
 }
 
-export function markNodeDocumentMerged(nodeId: string) {
-  markFlowEventByNode(nodeId, 'document_merged');
+export function markNodeDocumentMerged(nodeId: string, detail?: string) {
+  const flow = getFlow(nodeId);
+  if (!flow) {
+    return;
+  }
+  recordFlowEvent(flow, 'document_merged', detail);
+  if (resolveContentLength(detail) === 0 && flow.documentLoadResolvedAt !== null) {
+    flow.resolvedContentReadyAt = flow.resolvedContentReadyAt ?? flow.documentLoadResolvedAt;
+  }
+  resolveReady(flow);
 }
 
 export function markDocumentPanelBound(nodeId: string, detail?: string) {
-  markFlowEventByNode(nodeId, 'document_panel_bound', detail);
+  const flow = getFlow(nodeId);
+  if (!flow) {
+    return;
+  }
+  flow.panelBoundAt = flow.panelBoundAt ?? Date.now();
+  recordFlowEvent(flow, 'document_panel_bound', detail);
 }
 
 export function markEditorContentSyncStarted(nodeId: string, detail?: string) {
@@ -117,7 +153,17 @@ export function markEditorContentSyncStarted(nodeId: string, detail?: string) {
 }
 
 export function markEditorContentSyncCompleted(nodeId: string, detail?: string) {
-  markFlowEventByNode(nodeId, 'editor_content_sync_completed', detail);
+  const flow = getFlow(nodeId);
+  if (!flow) {
+    return;
+  }
+  flow.lastContentSyncCompletedAt = Date.now();
+  flow.lastContentSyncLength = resolveContentLength(detail);
+  recordFlowEvent(flow, 'editor_content_sync_completed', detail);
+  if ((flow.lastContentSyncLength ?? 0) > 0) {
+    flow.resolvedContentReadyAt = flow.resolvedContentReadyAt ?? flow.lastContentSyncCompletedAt;
+  }
+  resolveReady(flow);
 }
 
 export function markSelectionComputation(nodeId: string, name: string, durationMs: number, detail?: string) {
@@ -151,9 +197,11 @@ export function markNodePositionRequested(nodeId: string) {
   }
 
   state.activeFlow = createNodeSelectionFlow({
+    appliedAt: null,
     nodeId,
     nodeTitle: null,
     positionRequestedAt: Date.now(),
+    requestedAt: Date.now(),
     selectedAt: Date.now(),
     timeline: [{ atMs: 0, name: 'position_requested' }]
   });
@@ -211,6 +259,7 @@ export function updateNodeImageState(nodeId: string, totalCount: number, loadedC
   if (loadedCount >= totalCount) {
     flow.imageState.readyAt = flow.imageState.readyAt ?? Date.now();
     recordFlowEvent(flow, 'all_images_ready');
+    resolveReady(flow);
     return;
   }
   flow.imageState.readyAt = null;

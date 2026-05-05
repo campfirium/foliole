@@ -38,25 +38,34 @@ export function createImageState() {
 }
 
 export function createNodeSelectionFlow(args: {
+  appliedAt?: number | null;
   nodeId: string;
   nodeTitle: string | null;
   positionRequestedAt?: number | null;
+  requestedAt?: number;
   selectedAt: number;
   timeline?: FlowTimelineEvent[];
 }) {
   return {
+    appliedAt: args.appliedAt === undefined ? args.selectedAt : args.appliedAt,
     bodyPaintAt: null,
     bodyReadyAt: null,
     componentRenderCounts: createComponentRenderCounts(),
     documentLoadResolvedAt: null,
     documentLoadStartedAt: null,
     imageState: createImageState(),
+    lastContentSyncCompletedAt: null,
+    lastContentSyncLength: null,
     nodeId: args.nodeId,
     nodeTitle: args.nodeTitle,
+    panelBoundAt: null,
     positionReadyAt: null,
     positionRequestedAt: args.positionRequestedAt ?? null,
     renderedRowCount: 0,
     renderedRowIds: new Set<string>(),
+    requestedAt: args.requestedAt ?? args.selectedAt,
+    resolvedContentReadyAt: null,
+    resolvedReadyAt: null,
     selectedAt: args.selectedAt,
     timeline: args.timeline ? [...args.timeline] : []
   } satisfies NodeSelectionFlow;
@@ -81,7 +90,7 @@ export function getFlow(nodeId: string | null) {
 
 export function recordFlowEvent(flow: NodeSelectionFlow, name: string, detail?: string) {
   flow.timeline.push({
-    atMs: Math.max(0, Date.now() - flow.selectedAt),
+    atMs: Math.max(0, Date.now() - flow.requestedAt),
     ...(detail ? { detail } : {}),
     name
   });
@@ -99,12 +108,18 @@ function createEmptyFlowSnapshot(): FlowDiagnosticsSnapshot {
     imagesReadyDurationMs: null,
     nodeId: null,
     nodeTitle: null,
+    panelBoundDurationMs: null,
     overallReadyDurationMs: null,
+    realContentReadyDurationMs: null,
+    realReadyDurationMs: null,
+    requestToApplyDurationMs: null,
+    requestedAt: null,
     positionStatus: 'not-requested',
     positionWaitDurationMs: null,
     positionReadyDurationMs: null,
     renderedRowCount: 0,
     renderedRowUniqueCount: 0,
+    selectionAppliedAt: null,
     selectedAt: null,
     timeline: []
   };
@@ -133,18 +148,23 @@ export function resolveFlowSnapshot(flow: NodeSelectionFlow | null): FlowDiagnos
     return createEmptyFlowSnapshot();
   }
 
-  const bodyPaintDurationMs = resolveDuration(flow.bodyPaintAt, flow.selectedAt);
-  const bodyReadyDurationMs = resolveDuration(flow.bodyReadyAt, flow.selectedAt);
-  const documentLoadStartDurationMs = resolveDuration(flow.documentLoadStartedAt, flow.selectedAt);
+  const bodyPaintDurationMs = resolveDuration(flow.bodyPaintAt, flow.requestedAt);
+  const bodyReadyDurationMs = resolveDuration(flow.bodyReadyAt, flow.requestedAt);
+  const documentLoadStartDurationMs = resolveDuration(flow.documentLoadStartedAt, flow.requestedAt);
   const documentLoadDurationMs =
     flow.documentLoadStartedAt === null || flow.documentLoadResolvedAt === null
       ? null
       : Math.max(0, flow.documentLoadResolvedAt - flow.documentLoadStartedAt);
-  const firstImageReadyDurationMs = resolveDuration(flow.imageState.firstReadyAt, flow.selectedAt);
-  const positionWaitDurationMs = resolveDuration(flow.positionRequestedAt, flow.selectedAt);
-  const positionReadyDurationMs = resolveDuration(flow.positionReadyAt, flow.selectedAt);
-  const imagesReadyDurationMs = resolveDuration(flow.imageState.readyAt, flow.selectedAt);
-  const overallReadyDurationMs = Math.max(bodyReadyDurationMs ?? 0, positionReadyDurationMs ?? 0, imagesReadyDurationMs ?? 0);
+  const firstImageReadyDurationMs = resolveDuration(flow.imageState.firstReadyAt, flow.requestedAt);
+  const panelBoundDurationMs = resolveDuration(flow.panelBoundAt, flow.requestedAt);
+  const positionWaitDurationMs = resolveDuration(flow.positionRequestedAt, flow.requestedAt);
+  const positionReadyDurationMs = resolveDuration(flow.positionReadyAt, flow.requestedAt);
+  const realContentReadyDurationMs = resolveDuration(flow.resolvedContentReadyAt, flow.requestedAt);
+  const realReadyDurationMs = resolveDuration(flow.resolvedReadyAt, flow.requestedAt);
+  const imagesReadyDurationMs = resolveDuration(flow.imageState.readyAt, flow.requestedAt);
+  const requestToApplyDurationMs =
+    flow.appliedAt === null ? null : Math.max(0, flow.appliedAt - flow.requestedAt);
+  const overallReadyDurationMs = Math.max(realReadyDurationMs ?? 0, positionReadyDurationMs ?? 0, imagesReadyDurationMs ?? 0);
 
   return {
     bodyPaintDurationMs,
@@ -157,12 +177,18 @@ export function resolveFlowSnapshot(flow: NodeSelectionFlow | null): FlowDiagnos
     imagesReadyDurationMs,
     nodeId: flow.nodeId,
     nodeTitle: flow.nodeTitle,
+    panelBoundDurationMs,
     overallReadyDurationMs: overallReadyDurationMs > 0 ? overallReadyDurationMs : bodyReadyDurationMs,
+    realContentReadyDurationMs,
+    realReadyDurationMs,
+    requestToApplyDurationMs,
+    requestedAt: new Date(flow.requestedAt).toISOString(),
     positionStatus: resolvePositionStatus(flow),
     positionWaitDurationMs,
     positionReadyDurationMs,
     renderedRowCount: flow.renderedRowCount,
     renderedRowUniqueCount: flow.renderedRowIds.size,
+    selectionAppliedAt: flow.appliedAt === null ? null : new Date(flow.appliedAt).toISOString(),
     selectedAt: new Date(flow.selectedAt).toISOString(),
     timeline: [...flow.timeline]
   };

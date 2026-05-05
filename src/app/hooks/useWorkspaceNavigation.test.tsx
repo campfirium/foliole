@@ -5,13 +5,54 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
-const { requestPdfAnchorJump } = vi.hoisted(() => ({
+const { markNodeSelectionRequested, requestPdfAnchorJump } = vi.hoisted(() => ({
+  markNodeSelectionRequested: vi.fn(),
   requestPdfAnchorJump: vi.fn()
 }));
 
 vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
   requestPdfAnchorJump
 }));
+
+vi.mock('../../shared/platform/performanceDiagnosticsProbe', () => ({
+  markNodeSelectionRequested
+}));
+
+const nodesById = {
+  'node-1': {
+    id: 'node-1',
+    parentNodeId: null,
+    kind: 'topic' as const,
+    title: 'Node 1',
+    content: '',
+    reveal: null,
+    review: null,
+    createdAt: '',
+    updatedAt: ''
+  },
+  'node-2': {
+    id: 'node-2',
+    parentNodeId: null,
+    kind: 'topic' as const,
+    title: 'Node 2',
+    content: '',
+    reveal: null,
+    review: null,
+    createdAt: '',
+    updatedAt: ''
+  },
+  'pdf-parent': {
+    id: 'pdf-parent',
+    parentNodeId: null,
+    kind: 'topic' as const,
+    title: 'PDF Parent',
+    content: '',
+    reveal: null,
+    review: null,
+    createdAt: '',
+    updatedAt: ''
+  }
+};
 
 function runPdfBreadcrumbJumpTest() {
   const saveActiveNodeView = vi.fn();
@@ -38,6 +79,7 @@ function runPdfBreadcrumbJumpTest() {
         goForward: vi.fn(() => null),
         goToParent: vi.fn(() => null),
         jumpToAncestorNode,
+        nodesById,
         openNode: vi.fn(() => null),
         saveActiveNodeView
       }),
@@ -79,6 +121,7 @@ function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
         goForward: vi.fn(() => null),
         goToParent: vi.fn(() => null),
         jumpToAncestorNode,
+        nodesById,
         openNode: vi.fn(() => null),
         saveActiveNodeView
       }),
@@ -103,6 +146,9 @@ function runSavePositionBeforeNodeSelectionTest() {
   const saveActiveNodeView = vi.fn(() => {
     callOrder.push('save-view');
   });
+  markNodeSelectionRequested.mockImplementation(() => {
+    callOrder.push('selection-requested');
+  });
 
   const { result } = renderHook(() =>
     useWorkspaceNavigation({
@@ -117,6 +163,7 @@ function runSavePositionBeforeNodeSelectionTest() {
       goForward: vi.fn(() => null),
       goToParent: vi.fn(() => null),
       jumpToAncestorNode: vi.fn(() => null),
+      nodesById,
       openNode,
       saveActiveNodeView
     })
@@ -126,7 +173,8 @@ function runSavePositionBeforeNodeSelectionTest() {
     result.current.handleSelectNode('node-2');
   });
 
-  expect(callOrder).toEqual(['save-view', 'open-node']);
+  expect(callOrder).toEqual(['selection-requested', 'save-view', 'open-node']);
+  expect(markNodeSelectionRequested).toHaveBeenCalledWith('node-2', nodesById);
 }
 
 describe('useWorkspaceNavigation', () => {

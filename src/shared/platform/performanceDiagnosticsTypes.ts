@@ -20,17 +20,24 @@ export interface FlowDiagnosticsSnapshot {
   imagesReadyDurationMs: number | null;
   nodeId: string | null;
   nodeTitle: string | null;
+  panelBoundDurationMs: number | null;
   overallReadyDurationMs: number | null;
+  realContentReadyDurationMs: number | null;
+  realReadyDurationMs: number | null;
+  requestToApplyDurationMs: number | null;
+  requestedAt: string | null;
   positionStatus: 'done' | 'not-requested' | 'pending';
   positionWaitDurationMs: number | null;
   positionReadyDurationMs: number | null;
   renderedRowCount: number;
   renderedRowUniqueCount: number;
+  selectionAppliedAt: string | null;
   selectedAt: string | null;
   timeline: FlowTimelineEvent[];
 }
 
 export interface NodeSelectionFlow {
+  appliedAt: number | null;
   bodyPaintAt: number | null;
   bodyReadyAt: number | null;
   componentRenderCounts: {
@@ -47,12 +54,18 @@ export interface NodeSelectionFlow {
     readyAt: number | null;
     totalCount: number;
   };
+  lastContentSyncCompletedAt: number | null;
+  lastContentSyncLength: number | null;
   nodeId: string;
   nodeTitle: string | null;
+  panelBoundAt: number | null;
   positionReadyAt: number | null;
   positionRequestedAt: number | null;
   renderedRowIds: Set<string>;
   renderedRowCount: number;
+  requestedAt: number;
+  resolvedContentReadyAt: number | null;
+  resolvedReadyAt: number | null;
   selectedAt: number;
   timeline: FlowTimelineEvent[];
 }

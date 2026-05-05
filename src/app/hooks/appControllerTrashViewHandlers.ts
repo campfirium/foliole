@@ -1,5 +1,4 @@
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
-import { markNodeSelectionRequested } from '../../shared/platform/performanceDiagnosticsProbe';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 
@@ -23,7 +22,6 @@ export function createToggleTrashView(args: BuildControllerLayoutPropsArgs, open
 
 export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string) => {
-    markNodeSelectionRequested(nodeId, args.ws.nodesById);
     args.runtime.setIsViewingTrashNode(false);
     const selectedNode = args.ws.nodesById[nodeId];
     if (selectedNode?.anchorLink?.kind === 'highlight' && selectedNode.parentNodeId) {
