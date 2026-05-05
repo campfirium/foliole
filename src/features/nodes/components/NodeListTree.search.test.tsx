@@ -78,6 +78,30 @@ it('filters node titles while keeping the matched path visible', () => {
   expect(within(listPanel).getByRole('treeitem', { name: 'Vue Notes' })).toBeInTheDocument();
 });
 
+it('toggles between collapsing and expanding all node groups from the toolbar button', () => {
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    trashedNodeIds: []
+  }));
+
+  render(<NodeListTreeSearchHarness />);
+
+  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+
+  expect(within(listPanel).getByRole('button', { name: 'Collapse all' })).toBeInTheDocument();
+  expect(within(listPanel).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+
+  fireEvent.click(within(listPanel).getByRole('button', { name: 'Collapse all' }));
+
+  expect(within(listPanel).queryByRole('treeitem', { name: 'Hook Summary' })).toBeNull();
+  expect(within(listPanel).getByRole('button', { name: 'Expand all' })).toBeInTheDocument();
+
+  fireEvent.click(within(listPanel).getByRole('button', { name: 'Expand all' }));
+
+  expect(within(listPanel).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+  expect(within(listPanel).getByRole('button', { name: 'Collapse all' })).toBeInTheDocument();
+});
+
 it('shows original path for trashed rows', () => {
   useWorkspaceStore.setState((state) => ({
     ...state,

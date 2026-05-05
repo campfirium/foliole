@@ -9,14 +9,15 @@ export function WorkspaceListLoadingState() {
       className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground"
     >
       <NodeListHeader
+        hasCollapsibleNodes={false}
+        hasCollapsedNodes={false}
         isTrashViewOpen={false}
         isVirtualViewOpen={false}
-        onCollapseAll={() => undefined}
         onCreateCommand={() => undefined}
         onEmptyTrash={() => undefined}
-        onExpandAll={() => undefined}
         onOpenNotesView={() => undefined}
         onSearchQueryChange={() => undefined}
+        onToggleCollapseAll={() => undefined}
         searchQuery=""
         trashCount={0}
       />

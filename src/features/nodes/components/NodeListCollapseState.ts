@@ -17,6 +17,8 @@ import {
 } from './nodeListCollapseSettings';
 
 export interface CollapsedNodeState {
+  hasCollapsedNotes: boolean;
+  hasCollapsibleNotes: boolean;
   collapsedNoteNodeIds: ReadonlySet<string>;
   collapsedTrashNodeIds: ReadonlySet<string>;
   setCollapsedTrashNodeIdList: Dispatch<SetStateAction<string[]>>;
@@ -57,6 +59,8 @@ export function useCollapsedNodeState({
   }, [collapsedTrashNodeIdList]);
 
   return {
+    hasCollapsedNotes: noteState.hasCollapsedNotes,
+    hasCollapsibleNotes: noteState.hasCollapsibleNotes,
     collapsedNoteNodeIds: noteState.collapsedNoteNodeIds,
     collapsedTrashNodeIds,
     setCollapsedTrashNodeIdList,
@@ -78,10 +82,7 @@ function useNoteCollapsedState({
   noteParentById,
   noteRowsAll
 }: Omit<UseCollapsedNodeStateInput, 'trashRowsAll'>) {
-  const noteCollapsibleNodeIds = useMemo(
-    () => new Set(noteRowsAll.filter((row) => row.hasChildren).map((row) => row.node.id)),
-    [noteRowsAll]
-  );
+  const noteCollapsibleNodeIds = useNoteCollapsibleNodeIds(noteRowsAll);
   const {
     collapseAllNotes,
     expandAllNotes,
@@ -126,11 +127,20 @@ function useNoteCollapsedState({
 
   return {
     collapseAllNotes,
+    hasCollapsibleNotes: noteCollapsibleNodeIds.size > 0,
     collapsedNoteNodeIds,
     expandAllNotes,
+    hasCollapsedNotes: checkHasCollapsedNotes(noteCollapsibleNodeIds, collapsedNoteNodeIds),
     setManualCollapsedNoteNodeIdList,
     setManualExpandedNoteNodeIdList
   };
+}
+
+function useNoteCollapsibleNodeIds(noteRowsAll: NodeTreeRow[]) {
+  return useMemo(
+    () => new Set(noteRowsAll.filter((row) => row.hasChildren).map((row) => row.node.id)),
+    [noteRowsAll]
+  );
 }
 
 function useNoteManualCollapseState(noteCollapsibleNodeIds: ReadonlySet<string>) {
@@ -215,6 +225,16 @@ function setManualCollapseState(
 ) {
   setManualCollapsedNoteNodeIdList(mode === 'collapsed' ? nodeIds : []);
   setManualExpandedNoteNodeIdList(mode === 'expanded' ? nodeIds : []);
+}
+
+function checkHasCollapsedNotes(
+  noteCollapsibleNodeIds: ReadonlySet<string>,
+  collapsedNoteNodeIds: ReadonlySet<string>
+) {
+  return (
+    noteCollapsibleNodeIds.size > 0 &&
+    [...noteCollapsibleNodeIds].some((nodeId) => collapsedNoteNodeIds.has(nodeId))
+  );
 }
 
 function mergeCollapsedNodeIds(

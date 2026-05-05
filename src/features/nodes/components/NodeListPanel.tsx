@@ -161,10 +161,11 @@ export function NodeListPanel(props: NodeListPanelProps) {
   return (
     <aside aria-label="Node list panel" className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground">
       <NodeListHeader
+        hasCollapsibleNodes={props.collapse.hasCollapsibleNotes}
+        hasCollapsedNodes={props.collapse.hasCollapsedNotes}
         isTrashViewOpen={props.isTrashViewOpen}
         isVirtualViewOpen={props.isVirtualViewOpen}
         showVirtualCreateAction={props.showVirtualCreateAction}
-        onCollapseAll={props.collapse.collapseAllNotes}
         onCreateCommand={(commandId) => {
           if (commandId === VIRTUAL_NODE_APP_COMMAND_ID) {
             props.createVirtualNode();
@@ -176,9 +177,11 @@ export function NodeListPanel(props: NodeListPanelProps) {
           }
         }}
         onEmptyTrash={() => (props.deleteNodesPermanently(props.trashRowIds), props.contextMenu.closeContextMenu())}
-        onExpandAll={props.collapse.expandAllNotes}
         onOpenNotesView={props.onOpenNotesView}
         onSearchQueryChange={props.onSearchQueryChange}
+        onToggleCollapseAll={() =>
+          props.collapse.hasCollapsedNotes ? props.collapse.expandAllNotes() : props.collapse.collapseAllNotes()
+        }
         searchQuery={props.searchQuery}
         showTitleSearch={props.showTitleSearch}
         trashCount={props.trashRowsLength}

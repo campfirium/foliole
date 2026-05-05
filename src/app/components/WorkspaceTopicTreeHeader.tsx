@@ -1,21 +1,23 @@
-import { ChevronDown, ChevronUp, FilePlus2 } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, FilePlus2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
 interface WorkspaceTopicTreeHeaderProps {
+  hasCollapsibleNodes: boolean;
+  hasCollapsedNodes: boolean;
   onCreateTopic: () => void;
-  onCollapseAll: () => void;
-  onExpandAll: () => void;
+  onToggleCollapseAll: () => void;
   onSearchQueryChange: (searchQuery: string) => void;
   searchQuery: string;
 }
 
 export function WorkspaceTopicTreeHeader({
+  hasCollapsibleNodes,
+  hasCollapsedNodes,
   onCreateTopic,
-  onCollapseAll,
-  onExpandAll,
+  onToggleCollapseAll,
   onSearchQueryChange,
   searchQuery
 }: WorkspaceTopicTreeHeaderProps) {
@@ -42,15 +44,16 @@ export function WorkspaceTopicTreeHeader({
       <ToolbarActionGroup ariaLabel="Current folder item actions">
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-          icon={<ChevronDown size={16} strokeWidth={1.9} />}
-          label="Expand all items"
-          onClick={onExpandAll}
-        />
-        <AppIconButton
-          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-          icon={<ChevronUp size={16} strokeWidth={1.9} />}
-          label="Collapse all items"
-          onClick={onCollapseAll}
+          icon={
+            hasCollapsedNodes ? (
+              <ChevronsDownUp size={16} strokeWidth={1.9} />
+            ) : (
+              <ChevronsUpDown size={16} strokeWidth={1.9} />
+            )
+          }
+          disabled={!hasCollapsibleNodes}
+          label={hasCollapsedNodes ? 'Expand all items' : 'Collapse all items'}
+          onClick={onToggleCollapseAll}
         />
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"

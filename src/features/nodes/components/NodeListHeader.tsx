@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, FolderPlus } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, FolderPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
@@ -12,14 +12,15 @@ import {
 import { NodeListSearchOverlay, renderSearchLauncher } from './NodeListSearchOverlay';
 
 interface NodeListHeaderProps {
+  hasCollapsibleNodes: boolean;
+  hasCollapsedNodes: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   showVirtualCreateAction?: boolean;
   onOpenNotesView: () => void;
   onCreateCommand: (commandId: string) => void;
   onEmptyTrash: () => void;
-  onCollapseAll: () => void;
-  onExpandAll: () => void;
+  onToggleCollapseAll: () => void;
   onSearchQueryChange: (searchQuery: string) => void;
   searchQuery: string;
   showTitleSearch?: boolean;
@@ -27,23 +28,25 @@ interface NodeListHeaderProps {
 }
 
 function renderNodeListActions(
-  onCollapseAll: () => void,
+  hasCollapsibleNodes: boolean,
+  hasCollapsedNodes: boolean,
   onCreateCommand: (commandId: string) => void,
-  onExpandAll: () => void
+  onToggleCollapseAll: () => void
 ) {
   return (
     <>
       <AppIconButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-        icon={<ChevronDown size={16} strokeWidth={1.9} />}
-        label="Expand all"
-        onClick={onExpandAll}
-      />
-      <AppIconButton
-        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-        icon={<ChevronUp size={16} strokeWidth={1.9} />}
-        label="Collapse all"
-        onClick={onCollapseAll}
+        icon={
+          hasCollapsedNodes ? (
+            <ChevronsDownUp size={16} strokeWidth={1.9} />
+          ) : (
+            <ChevronsUpDown size={16} strokeWidth={1.9} />
+          )
+        }
+        disabled={!hasCollapsibleNodes}
+        label={hasCollapsedNodes ? 'Expand all' : 'Collapse all'}
+        onClick={onToggleCollapseAll}
       />
       <AppIconButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
@@ -85,16 +88,17 @@ function shouldHideNodeListHeader(args: {
 
 function renderNodeListHeaderShell(args: {
   closeSearch: () => void;
+  hasCollapsibleNodes: boolean;
+  hasCollapsedNodes: boolean;
   isSearchOpen: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
-  onCollapseAll: () => void;
   onCreateCommand: (commandId: string) => void;
   onEmptyTrash: () => void;
-  onExpandAll: () => void;
   onOpenSearch: () => void;
   onOpenNotesView: () => void;
   onSearchQueryChange: (searchQuery: string) => void;
+  onToggleCollapseAll: () => void;
   searchQuery: string;
   showTitleSearch: boolean;
   showVirtualCreateAction: boolean;
@@ -115,7 +119,12 @@ function renderNodeListHeaderShell(args: {
           ? renderTrashActions(args.onEmptyTrash, args.trashCount)
           : args.isVirtualViewOpen
             ? null
-            : renderNodeListActions(args.onCollapseAll, args.onCreateCommand, args.onExpandAll)}
+            : renderNodeListActions(
+                args.hasCollapsibleNodes,
+                args.hasCollapsedNodes,
+                args.onCreateCommand,
+                args.onToggleCollapseAll
+              )}
       </ToolbarActionGroup>
       {args.showTitleSearch && !args.isVirtualViewOpen && args.isSearchOpen ? (
         <NodeListSearchOverlay
@@ -129,14 +138,15 @@ function renderNodeListHeaderShell(args: {
 }
 
 export function NodeListHeader({
+  hasCollapsibleNodes,
+  hasCollapsedNodes,
   isTrashViewOpen,
   isVirtualViewOpen,
   showVirtualCreateAction = true,
   onOpenNotesView,
   onCreateCommand,
   onEmptyTrash,
-  onCollapseAll,
-  onExpandAll,
+  onToggleCollapseAll,
   onSearchQueryChange,
   searchQuery,
   showTitleSearch = true,
@@ -161,16 +171,17 @@ export function NodeListHeader({
 
   return renderNodeListHeaderShell({
     closeSearch,
+    hasCollapsibleNodes,
+    hasCollapsedNodes,
     isSearchOpen,
     isTrashViewOpen,
     isVirtualViewOpen,
-    onCollapseAll,
     onCreateCommand,
     onEmptyTrash,
-    onExpandAll,
     onOpenSearch: () => setIsSearchOpen(true),
     onOpenNotesView,
     onSearchQueryChange,
+    onToggleCollapseAll,
     searchQuery,
     showTitleSearch,
     showVirtualCreateAction,

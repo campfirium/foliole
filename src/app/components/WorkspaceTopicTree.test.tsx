@@ -58,11 +58,15 @@ it('places title search in the item column and keeps matches visible while searc
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
 
   expect(within(itemColumn).getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('button', { name: 'Expand all items' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Collapse all items' })).toBeInTheDocument();
-
-  fireEvent.click(within(itemColumn).getByRole('treeitem', { name: 'React Notes' }));
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Collapse all items' }));
   expect(within(itemColumn).queryByRole('treeitem', { name: 'Hook Summary' })).not.toBeInTheDocument();
+  expect(within(itemColumn).getByRole('button', { name: 'Expand all items' })).toBeInTheDocument();
+  expect(within(itemColumn).queryByRole('button', { name: 'Collapse all items' })).toBeNull();
+  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Expand all items' }));
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('button', { name: 'Collapse all items' })).toBeInTheDocument();
 
   fireEvent.click(within(itemColumn).getByRole('button', { name: 'Open title search' }));
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search node titles' }), {

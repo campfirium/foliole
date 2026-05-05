@@ -118,6 +118,8 @@ function useNodeListTreeControllers(args: {
   const collapse = useNodeCollapseControls({
     collapseAllNotes: args.collapsedState.collapseAllNotes,
     expandAllNotes: args.collapsedState.expandAllNotes,
+    hasCollapsibleNotes: args.collapsedState.hasCollapsibleNotes,
+    hasCollapsedNotes: args.collapsedState.hasCollapsedNotes,
     setCollapsedTrashNodeIdList: args.collapsedState.setCollapsedTrashNodeIdList,
     toggleNoteCollapse: args.collapsedState.toggleNoteCollapse,
     trashRowsAll: args.trashRowsAll,

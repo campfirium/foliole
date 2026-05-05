@@ -8,16 +8,47 @@ it('adds a create topic action alongside current folder tools', () => {
 
   render(
     <WorkspaceTopicTreeHeader
-      onCollapseAll={vi.fn()}
+      hasCollapsibleNodes
+      hasCollapsedNodes={false}
       onCreateTopic={onCreateTopic}
-      onExpandAll={vi.fn()}
       onSearchQueryChange={vi.fn()}
+      onToggleCollapseAll={vi.fn()}
+      searchQuery=""
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Collapse all items' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
+  expect(onCreateTopic).toHaveBeenCalledTimes(1);
+});
+
+it('shows an expand action after some items are collapsed', () => {
+  render(
+    <WorkspaceTopicTreeHeader
+      hasCollapsibleNodes
+      hasCollapsedNodes
+      onCreateTopic={vi.fn()}
+      onSearchQueryChange={vi.fn()}
+      onToggleCollapseAll={vi.fn()}
       searchQuery=""
     />
   );
 
   expect(screen.getByRole('button', { name: 'Expand all items' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Collapse all items' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
-  expect(onCreateTopic).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: 'Collapse all items' })).toBeNull();
+});
+
+it('disables the toggle when the current folder has no collapsible items', () => {
+  render(
+    <WorkspaceTopicTreeHeader
+      hasCollapsibleNodes={false}
+      hasCollapsedNodes={false}
+      onCreateTopic={vi.fn()}
+      onSearchQueryChange={vi.fn()}
+      onToggleCollapseAll={vi.fn()}
+      searchQuery=""
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Collapse all items' })).toBeDisabled();
 });
