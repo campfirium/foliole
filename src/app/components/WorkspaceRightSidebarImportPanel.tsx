@@ -1,30 +1,18 @@
 import { AppButton, AppStatusBadge, InspectorSection } from '../../shared/ui';
-
-const importStatusItems = [
-  {
-    label: 'Last run',
-    value: 'No imports yet'
-  },
-  {
-    label: 'Inbox landing',
-    value: 'Inbox is available in the node tree'
-  },
-  {
-    label: 'Failures',
-    value: 'Nothing recorded'
-  }
-] as const;
+import { useFormalImport } from '../hooks/useFormalImport';
 
 function EntryActionCard({
   title,
   description,
   actionLabel,
-  disabled
+  disabled,
+  onAction
 }: {
   title: string;
   description: string;
   actionLabel: string;
   disabled?: boolean;
+  onAction?: () => void;
 }) {
   return (
     <div className="rounded-lg border border-border bg-bg-panel px-3 py-3">
@@ -35,7 +23,7 @@ function EntryActionCard({
         </div>
         <AppStatusBadge label={disabled ? 'Later' : 'Ready'} tone={disabled ? 'neutral' : 'info'} />
       </div>
-      <AppButton className="mt-3 w-full justify-center" disabled={disabled} variant="primary">
+      <AppButton className="mt-3 w-full justify-center" disabled={disabled} onClick={onAction} variant="primary">
         {actionLabel}
       </AppButton>
     </div>
@@ -43,6 +31,13 @@ function EntryActionCard({
 }
 
 export function WorkspaceRightSidebarImportPanel() {
+  const formalImport = useFormalImport();
+  const importStatusItems = [
+    { label: 'Last run', value: formalImport.status.lastRun },
+    { label: 'Inbox landing', value: formalImport.status.inboxLanding },
+    { label: 'Failures', value: formalImport.status.failures }
+  ] as const;
+
   return (
     <div className="flex min-h-0 flex-col gap-3">
       <InspectorSection
@@ -56,9 +51,12 @@ export function WorkspaceRightSidebarImportPanel() {
             title="Quick capture"
           />
           <EntryActionCard
-            actionLabel="Formal import coming soon"
-            description="Use this surface as the visible hand-off point for file and adapter-based import. The full Import Manager and runtime pipeline land in follow-up tasks."
-            disabled
+            actionLabel={formalImport.isImporting ? 'Importing…' : 'Import Markdown / TXT file'}
+            description="Select a Markdown or TXT file through Electron and land it as a child node under Inbox. The imported node is persisted through the normal desktop sync path."
+            disabled={!formalImport.isAvailable || formalImport.isImporting}
+            onAction={() => {
+              void formalImport.startImport();
+            }}
             title="Formal import"
           />
         </div>

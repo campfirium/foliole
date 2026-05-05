@@ -83,6 +83,13 @@ export interface NativeSqliteRestoreResult {
   remainingPages: number;
 }
 
+export interface NativeImportedTextFile {
+  file_name: string;
+  file_path: string;
+  content: string;
+  kind: 'markdown' | 'text';
+}
+
 export type NativeCommandMap = {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
@@ -104,6 +111,10 @@ export type NativeCommandMap = {
       url: string;
     };
     result: null;
+  };
+  [NATIVE_COMMANDS.selectImportTextFile]: {
+    args: undefined;
+    result: NativeImportedTextFile | null;
   };
   [NATIVE_COMMANDS.resolveAppPaths]: {
     args: undefined;

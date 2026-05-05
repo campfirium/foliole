@@ -17,6 +17,7 @@ export const APP_COMMAND_IDS = {
   readingReviewLater: 'review.readingLater',
   readingReviewRead: 'review.readingRead',
   readingReviewDismiss: 'review.readingDismiss',
+  importSingleFile: 'import.singleFileToInbox',
   openNotes: 'workspace.openNotes',
   openTrash: 'workspace.openTrash',
   openSettings: 'workspace.openSettings',

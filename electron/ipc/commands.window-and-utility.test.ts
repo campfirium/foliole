@@ -6,7 +6,7 @@ import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 
 import { handleInvokeRequest } from './commands.js';
 
-const { defaultReviewSchedulerSettings, openExternal, syncAppMenuState } = vi.hoisted(() => ({
+const { defaultReviewSchedulerSettings, openExternal, readFile, showOpenDialog, syncAppMenuState } = vi.hoisted(() => ({
   defaultReviewSchedulerSettings: {
     algorithm: 'ts-fsrs@4.3.0',
     desiredRetention: 0.9,
@@ -23,6 +23,8 @@ const { defaultReviewSchedulerSettings, openExternal, syncAppMenuState } = vi.ho
     updatedAt: '2026-03-06T00:00:00.000Z'
   },
   openExternal: vi.fn().mockResolvedValue(undefined),
+  readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
+  showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] }),
   syncAppMenuState: vi.fn()
 }));
 
@@ -41,7 +43,12 @@ vi.mock('electron', () => ({
     getFocusedWindow: vi.fn(() => mockWindow)
   },
   app: { getVersion: () => '1.0.0' },
+  dialog: { showOpenDialog },
   shell: { openExternal }
+}));
+vi.mock('node:fs/promises', () => ({
+  default: { readFile },
+  readFile
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState }));
 vi.mock('./paths.js', () => ({
@@ -75,6 +82,8 @@ vi.mock('./review.js', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockWindow.isMaximized.mockReturnValue(false);
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] });
+  readFile.mockResolvedValue('# Imported title\nBody');
 });
 
 it('handles typed native utility commands', async () => {
@@ -101,6 +110,25 @@ it('throws on unsupported command', async () => {
   await expect(handleInvokeRequest({ command: 'unknown.command' })).rejects.toThrow(
     'unsupported native command'
   );
+});
+
+it('selects a Markdown or TXT file through the native import command', async () => {
+  await expect(handleInvokeRequest({ command: 'select_import_text_file' })).resolves.toEqual({
+    content: '# Imported title\nBody',
+    file_name: 'inbox.md',
+    file_path: '/tmp/inbox.md',
+    kind: 'markdown'
+  });
+
+  expect(showOpenDialog).toHaveBeenCalledTimes(1);
+  expect(readFile).toHaveBeenCalledWith('/tmp/inbox.md', 'utf8');
+});
+
+it('returns null when native import selection is cancelled', async () => {
+  showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+
+  await expect(handleInvokeRequest({ command: 'select_import_text_file' })).resolves.toBeNull();
+  expect(readFile).not.toHaveBeenCalled();
 });
 
 it('handles window commands through invoke channel', async () => {

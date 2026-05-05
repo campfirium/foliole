@@ -7,6 +7,7 @@ import { buildAppPaletteItems, runAppCommand, runReviewModeToggle } from './appC
 describe('buildAppPaletteItems', () => {
   it('includes migrated command entries instead of a minimal fallback list', () => {
     const items = buildAppPaletteItems({
+      canImportFile: true,
       canGoBack: true,
       canGoForward: true,
       canGoParent: true,
@@ -24,10 +25,12 @@ describe('buildAppPaletteItems', () => {
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
   });
 
   it('shows review-mode command as exit when already in review mode', () => {
     const items = buildAppPaletteItems({
+      canImportFile: true,
       canGoBack: true,
       canGoForward: true,
       canGoParent: true,
@@ -47,6 +50,7 @@ describe('buildAppPaletteItems', () => {
 describe('runAppCommand', () => {
   it('runs toggle devtools through the shared command handler', () => {
     const toggleDevTools = vi.fn();
+    const importSingleFile = vi.fn();
 
     expect(
       runAppCommand(APP_COMMAND_IDS.toggleDevTools, {
@@ -54,6 +58,7 @@ describe('runAppCommand', () => {
         goBack: () => undefined,
         goForward: () => undefined,
         goParent: () => undefined,
+        importSingleFile,
         openNotes: () => undefined,
         openSettings: () => undefined,
         openTrash: () => undefined,
@@ -73,6 +78,38 @@ describe('runAppCommand', () => {
     ).toBe(true);
 
     expect(toggleDevTools).toHaveBeenCalledTimes(1);
+    expect(importSingleFile).not.toHaveBeenCalled();
+  });
+
+  it('runs formal import through the shared command handler', () => {
+    const importSingleFile = vi.fn();
+
+    expect(
+      runAppCommand(APP_COMMAND_IDS.importSingleFile, {
+        closeSettings: () => undefined,
+        goBack: () => undefined,
+        goForward: () => undefined,
+        goParent: () => undefined,
+        importSingleFile,
+        openNotes: () => undefined,
+        openSettings: () => undefined,
+        openTrash: () => undefined,
+        revealReviewAnswer: () => undefined,
+        toggleReviewMode: () => undefined,
+        toggleEditorDisplayMode: () => undefined,
+        toggleList: () => undefined,
+        gradeReviewAgain: () => undefined,
+        gradeReviewHard: () => undefined,
+        gradeReviewGood: () => undefined,
+        gradeReviewEasy: () => undefined,
+        readingReviewLater: () => undefined,
+        readingReviewRead: () => undefined,
+        readingReviewDismiss: () => undefined,
+        toggleDevTools: () => undefined
+      })
+    ).toBe(true);
+
+    expect(importSingleFile).toHaveBeenCalledTimes(1);
   });
 });
 

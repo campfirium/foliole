@@ -10,6 +10,7 @@ interface PaletteCommandRunnerArgs {
   goForward: () => void;
   goParent: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
+  importSingleFile: () => Promise<boolean>;
   completeReviewItem: () => boolean;
   deferReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
@@ -48,6 +49,9 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       goBack: args.goBack,
       goForward: args.goForward,
       goParent: args.goParent,
+      importSingleFile: () => {
+        void args.importSingleFile();
+      },
       openNotes: args.closeTrashView,
       openSettings: () => args.setSettingsOpen(true),
       openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),

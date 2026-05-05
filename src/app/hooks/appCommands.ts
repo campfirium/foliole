@@ -3,6 +3,7 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
 interface BuildAppPaletteItemsOptions {
+  canImportFile: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
@@ -20,6 +21,7 @@ interface RunAppCommandActions {
   goBack: () => void;
   goForward: () => void;
   goParent: () => void;
+  importSingleFile: () => void | Promise<void>;
   openNotes: () => void;
   openSettings: () => void;
   openTrash: () => void;
@@ -50,6 +52,12 @@ interface AppPaletteCommandMeta {
 }
 
 const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
+  {
+    id: APP_COMMAND_IDS.importSingleFile,
+    title: 'Import Markdown / TXT to Inbox',
+    section: 'Import',
+    keywords: ['markdown', 'txt', 'inbox', 'file']
+  },
   { id: APP_COMMAND_IDS.openNotes, title: 'Open Notes', section: 'Workspace' },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
@@ -79,6 +87,9 @@ function resolveCommandTitle(id: string, isReviewMode: boolean, title: string) {
 }
 
 function isCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+  if (id === APP_COMMAND_IDS.importSingleFile) {
+    return options.canImportFile;
+  }
   if (id === APP_COMMAND_IDS.goBack) {
     return options.canGoBack;
   }
@@ -135,6 +146,7 @@ export function runReviewModeToggle(isReviewMode: boolean, actions: ReviewModeTo
 
 export function runAppCommand(id: string, actions: RunAppCommandActions) {
   const handlers: Record<string, () => void> = {
+    [APP_COMMAND_IDS.importSingleFile]: actions.importSingleFile,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,

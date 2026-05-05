@@ -10,6 +10,7 @@ import { bootReport } from './boot.js';
 import { asString, asStringArray } from './commandParsers.js';
 import type { InvokeRequest } from './contracts.js';
 import { listSystemFonts } from './fonts.js';
+import { selectImportTextFile } from './importTextFile.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
 import { reviewGrade, reviewPreview } from './review.js';
@@ -78,6 +79,9 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
     }
     await shell.openExternal(url);
     return null;
+  }
+  if (isTypedRequest(request, NATIVE_COMMANDS.selectImportTextFile)) {
+    return selectImportTextFile(resolveTargetWindow(context));
   }
 
   if (isTypedRequest(request, NATIVE_COMMANDS.resolveAppPaths)) {

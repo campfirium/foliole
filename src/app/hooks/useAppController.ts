@@ -24,6 +24,7 @@ import {
   REVIEW_SHORTCUT_COMMAND_IDS,
   useCommandShortcutState
 } from './reviewHotkeysState';
+import { useFormalImport } from './useFormalImport';
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
 import { useReviewSchedulerSettingsState } from './useReviewSchedulerSettingsState';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
@@ -42,6 +43,7 @@ export interface AppControllerResult {
 }
 
 function buildControllerPaletteState(args: {
+  formalImport: ReturnType<typeof useFormalImport>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
@@ -62,6 +64,7 @@ function buildControllerPaletteState(args: {
     goForward: args.nav.handleGoForward,
     goParent: args.nav.handleGoParent,
     gradeReviewCard: args.ws.gradeReviewCard,
+    importSingleFile: args.formalImport.startImport,
     isReviewMode: args.isStudyMode,
     onToggleEditorDisplayMode: args.layoutProps.onToggleEditorDisplayMode,
     onToggleListVisibility: args.layoutProps.onToggleListVisibility,
@@ -87,6 +90,7 @@ function buildControllerPaletteState(args: {
 }
 
 function useReviewPaletteItems(args: {
+  formalImportAvailable: boolean;
   hasReviewCard: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isCurrentReviewItemGradable: boolean;
@@ -98,6 +102,7 @@ function useReviewPaletteItems(args: {
   return useMemo(
     () =>
       buildAppPaletteItems({
+        canImportFile: args.formalImportAvailable,
         canGoBack: args.nav.canGoBack,
         canGoForward: args.nav.canGoForward,
         canGoParent: args.nav.canGoParent,
@@ -153,6 +158,7 @@ export function useAppController(): AppControllerResult {
   const nowIso = useNowIso();
   const isWorkspaceHydrated = useWorkspaceHydration();
   const controller = useWorkspaceControllerState(ws, isWorkspaceHydrated);
+  const formalImport = useFormalImport();
   const { exitStudyMode, isStudyMode, startStudyMode } = controller.study;
   const hotkeys = useCommandShortcutState(REVIEW_SHORTCUT_COMMAND_IDS);
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
@@ -160,7 +166,7 @@ export function useAppController(): AppControllerResult {
   const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
   const isReviewEditing = useReviewEditingState({ hotkeys, isCurrentReviewItemGradable, isStudyMode, runtime: controller.runtime, ws });
   const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso, reviewSettings.reviewSchedulerSettings.pushQueue), [nowIso, reviewSettings.reviewSchedulerSettings.pushQueue, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
-  const paletteItems = useReviewPaletteItems({ hasReviewCard: Boolean(ws.reviewSession.currentNodeId), hotkeys, isCurrentReviewItemGradable, isStudyMode, nav: controller.nav, reviewSession: ws.reviewSession, study: controller.study });
+  const paletteItems = useReviewPaletteItems({ formalImportAvailable: formalImport.isAvailable && !formalImport.isImporting, hasReviewCard: Boolean(ws.reviewSession.currentNodeId), hotkeys, isCurrentReviewItemGradable, isStudyMode, nav: controller.nav, reviewSession: ws.reviewSession, study: controller.study });
   const layoutProps = buildAppControllerLayoutProps({
     activeNode: controller.activeNode,
     appearance,
@@ -189,6 +195,6 @@ export function useAppController(): AppControllerResult {
 
   return {
     layoutProps: { ...layoutProps, onHotkeyReset: hotkeys.resetShortcut, onHotkeyResetAll: hotkeys.resetAllShortcuts },
-    paletteState: buildControllerPaletteState({ isStudyMode, layoutProps, nav: controller.nav, paletteItems, runtime: controller.runtime, study: controller.study, trash: controller.trash, ws })
+    paletteState: buildControllerPaletteState({ formalImport, isStudyMode, layoutProps, nav: controller.nav, paletteItems, runtime: controller.runtime, study: controller.study, trash: controller.trash, ws })
   };
 }
