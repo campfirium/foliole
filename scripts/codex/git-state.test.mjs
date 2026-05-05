@@ -24,6 +24,11 @@ afterEach(async () => {
 });
 
 describe('git-state commitTrackedChanges', () => {
+  it('waits for inherited stdout pipes to close before resolving', async () => {
+    const result = await runCommand('bash', ['-lc', '(sleep 0.02; printf tail) & printf head']);
+    expect(result.stdout).toBe('headtail');
+  });
+
   it('builds repository-standard commit notes with next numeric sequence', async () => {
     const repoDir = await createRepo();
     await writeFile(path.join(repoDir, 'tracked.txt'), 'seed\n');

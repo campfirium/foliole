@@ -30,6 +30,15 @@ export function runCommand(command, args, options = {}) {
     const child = spawn(command, args, options);
     let stdout = '';
     let stderr = '';
+    let settled = false;
+
+    const rejectOnce = (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      reject(error);
+    };
 
     child.stdout?.on('data', (chunk) => {
       stdout += chunk.toString();
@@ -37,13 +46,17 @@ export function runCommand(command, args, options = {}) {
     child.stderr?.on('data', (chunk) => {
       stderr += chunk.toString();
     });
-    child.on('error', reject);
-    child.on('exit', (code) => {
+    child.on('error', rejectOnce);
+    child.on('close', (code) => {
+      if (settled) {
+        return;
+      }
       if (code === 0) {
+        settled = true;
         resolve({ stdout, stderr });
         return;
       }
-      reject(new Error(`${command} ${args.join(' ')} failed with code ${code ?? 'null'}\n${stderr}`));
+      rejectOnce(new Error(`${command} ${args.join(' ')} failed with code ${code ?? 'null'}\n${stderr}`));
     });
   });
 }
