@@ -77,7 +77,7 @@ async function testUsesStreamSyncDirectly() {
   );
   expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync completed.',
+    message: 'Sync fully completed.',
     status: 'completed'
   }));
   expect(setState).toHaveBeenCalledWith(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));

@@ -25,7 +25,7 @@ function passInput(overrides: Partial<CompanionSyncPassInput> = {}): CompanionSy
 describe('describeCompanionSyncPassResult', () => {
   it('marks the pass completed only when resources and local work are clear', () => {
     expect(describeCompanionSyncPassResult(passInput())).toEqual({
-      message: 'Sync completed.',
+      message: 'Sync fully completed.',
       outcome: 'completed',
       status: 'completed'
     });

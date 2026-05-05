@@ -74,7 +74,7 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
     result.localDirtyCount === 0 &&
     result.pendingAckCount === 0
   ) {
-    return createPassResult('Sync completed.', 'completed');
+    return createPassResult('Sync fully completed.', 'completed');
   }
   if (result.remainingContentBlobCount === 0 && result.remainingAttachmentResourceCount === 0) {
     return createPassResult('Sync pass finished; local changes are still waiting to settle.', 'skipped');

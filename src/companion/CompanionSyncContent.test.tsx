@@ -125,7 +125,7 @@ describe('CompanionSyncContent paired flow', () => {
       sync_events: [{
         endpoint_url: 'http://10.0.2.2:38641',
         id: 'sync-event-1',
-        message: 'Sync completed.',
+        message: 'Sync fully completed.',
         occurred_at: '2026-04-24T10:04:00.000Z',
         status: 'completed'
       }]

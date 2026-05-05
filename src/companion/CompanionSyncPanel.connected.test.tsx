@@ -119,7 +119,7 @@ function testManualPassIsNotAutomatic() {
       syncEvents={[{
         endpoint_url: 'http://10.0.2.2:38641',
         id: 'manual-completed-event',
-        message: 'Sync completed.',
+        message: 'Sync fully completed.',
         occurred_at: '2026-04-29T02:24:44.000Z',
         status: 'completed'
       }]}
