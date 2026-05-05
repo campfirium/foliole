@@ -1,0 +1,26 @@
+:root {
+  color: #0f172a;
+  background-color: #f8fafc;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  display: grid;
+  place-content: center;
+  min-height: 100vh;
+  gap: 0.5rem;
+  padding: 2rem;
+}
+
+h1,
+p {
+  margin: 0;
+}

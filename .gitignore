@@ -1,2 +1,6 @@
 .lab/
 ref/
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
