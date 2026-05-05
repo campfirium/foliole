@@ -35,6 +35,19 @@ const SYNC_STATE_PATH = '/companion/sync-state';
 const CHANGE_PAGE_LIMIT = 500;
 const MAX_CHANGE_PAGES = 20;
 
+export interface CompanionDesktopSyncResult {
+  appliedNodeIds: string[];
+  appliedObjectIds: string[];
+  appliedReviewOpIds: string[];
+  changedObjectIds: string[];
+  pushedNodeIds: string[];
+  pushedObjectIds: string[];
+  pushedReviewOpIds: string[];
+  requestedObjectIds: string[];
+}
+
+const inFlightSyncByEndpoint = new Map<string, Promise<CompanionDesktopSyncResult>>();
+
 function buildStatePath(cursor: number | null) {
   const params = new URLSearchParams();
   params.set('limit', String(CHANGE_PAGE_LIMIT));
@@ -190,7 +203,7 @@ async function pushLocalReviewLog(endpointUrl: string) {
   return { pushedReviewOpIds };
 }
 
-export async function syncCompanionObjectsFromDesktop(endpointUrl: string) {
+async function runCompanionObjectsSync(endpointUrl: string): Promise<CompanionDesktopSyncResult> {
   const pushedNodes = await pushLocalNodeVersions(endpointUrl);
   const pushed = await pushLocalStateChanges(endpointUrl);
   const pushedReviews = await pushLocalReviewLog(endpointUrl);
@@ -207,4 +220,19 @@ export async function syncCompanionObjectsFromDesktop(endpointUrl: string) {
     pushedReviewOpIds: pushedReviews.pushedReviewOpIds,
     requestedObjectIds: []
   };
+}
+
+export function syncCompanionObjectsFromDesktop(endpointUrl: string): Promise<CompanionDesktopSyncResult> {
+  const cacheKey = endpointUrl.trim();
+  const inFlightSync = inFlightSyncByEndpoint.get(cacheKey);
+  if (inFlightSync) {
+    return inFlightSync;
+  }
+  const nextSync = runCompanionObjectsSync(endpointUrl).finally(() => {
+    if (inFlightSyncByEndpoint.get(cacheKey) === nextSync) {
+      inFlightSyncByEndpoint.delete(cacheKey);
+    }
+  });
+  inFlightSyncByEndpoint.set(cacheKey, nextSync);
+  return nextSync;
 }

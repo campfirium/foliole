@@ -12,6 +12,7 @@ import {
 } from './shared/platform/bridge';
 import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
 import { bootstrapApp } from './startupBootstrap';
+import { renderStartupErrorView } from './startupErrorView';
 
 const ROOT_ID = 'root';
 
@@ -22,13 +23,7 @@ function renderStartupError(message: string) {
     return;
   }
 
-  rootElement.innerHTML = `
-    <section style="padding:16px;font-family:var(--font-family-interface),Segoe UI,Arial,sans-serif;">
-      <h1 style="margin:0 0 8px;font-size:18px;">Foliole failed to start</h1>
-      <p style="margin:0;color:#b91c1c;">${message}</p>
-      <p style="margin:8px 0 0;color:#475569;">Open devtools for details.</p>
-    </section>
-  `;
+  renderStartupErrorView(rootElement, message);
 }
 
 function registerBootDiagnostics() {

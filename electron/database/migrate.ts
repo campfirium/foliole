@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-
 import {
   initializeDatabaseConnection,
   isLegacyDatabaseRebuildRequiredError
@@ -8,6 +6,7 @@ import {
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
 import {
   isDatabaseCorruptionError,
+  moveDatabaseToPreRebuildSnapshot,
   recoverCorruptedDatabase,
   verifyDatabaseIntegrity
 } from './integrity.js';
@@ -79,24 +78,12 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
 function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: DatabaseInitStageReporter) {
   reportStage?.('database_legacy_rebuild_start', { databasePath });
   closeDatabaseConnection();
-  deleteSqliteDatabaseFiles(databasePath);
-  reportStage?.('database_legacy_rebuild_deleted', { databasePath });
+  const snapshot = moveDatabaseToPreRebuildSnapshot(databasePath);
+  reportStage?.('database_legacy_rebuild_snapshot_created', snapshot);
   const connection = openDatabaseConnection();
   reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
   const initializedConnection = initializeDatabaseConnection(connection);
   reportStage?.('database_legacy_rebuild_schema_init_complete');
   seedInitialWorkspace(initializedConnection);
   return initializedConnection;
-}
-
-function deleteSqliteDatabaseFiles(databasePath: string) {
-  for (const filePath of [databasePath, `${databasePath}-wal`, `${databasePath}-shm`]) {
-    try {
-      fs.rmSync(filePath, { force: true });
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error;
-      }
-    }
-  }
 }

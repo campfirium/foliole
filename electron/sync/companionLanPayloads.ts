@@ -1,6 +1,6 @@
 import os from 'node:os';
 
-import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
 export function buildWorkspaceSnapshotPayload(appVersion: string, peerId: string, snapshot: WorkspaceSnapshot | null) {
   return {
@@ -13,13 +13,14 @@ export function buildWorkspaceSnapshotPayload(appVersion: string, peerId: string
   };
 }
 
-export function buildWorkspaceVersionPayload(appVersion: string, peerId: string, snapshot: WorkspaceSnapshot | null) {
+export function buildWorkspaceVersionPayload(appVersion: string, peerId: string, version: WorkspaceVersionMetadata) {
   return {
     app_version: appVersion,
     desktop_name: 'Foliole Desktop',
     exported_at: new Date().toISOString(),
-    has_snapshot: snapshot !== null,
-    peer_id: peerId
+    has_snapshot: version.hasSnapshot,
+    peer_id: peerId,
+    workspace_version: version.workspaceVersion
   };
 }
 

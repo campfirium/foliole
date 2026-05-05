@@ -130,7 +130,8 @@ function registerWorkspaceVersionTest() {
       app_version: '0.1.0',
       exported_at: '2026-04-22T12:00:00.000Z',
       has_snapshot: true,
-      peer_id: 'desktop-local'
+      peer_id: 'desktop-local',
+      workspace_version: '2026-04-22T11:59:00.000Z'
     });
 
     const payload = await loadCompanionWorkspaceVersion('http://10.0.2.2:38641');
@@ -139,7 +140,8 @@ function registerWorkspaceVersionTest() {
     expect(payload).toMatchObject({
       exported_at: '2026-04-22T12:00:00.000Z',
       has_snapshot: true,
-      peer_id: 'desktop-local'
+      peer_id: 'desktop-local',
+      workspace_version: '2026-04-22T11:59:00.000Z'
     });
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       headers: expect.objectContaining({

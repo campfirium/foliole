@@ -54,7 +54,8 @@ const syncDatabaseMock = vi.hoisted(() => ({
   }])
 }));
 const workspaceSnapshotMock = vi.hoisted(() => ({
-  loadWorkspaceSnapshot: vi.fn(() => null)
+  loadWorkspaceSnapshot: vi.fn(() => null),
+  loadWorkspaceVersionMetadata: vi.fn(() => ({ hasSnapshot: false, workspaceVersion: null }))
 }));
 const syncAppliedEventsMock = vi.hoisted(() => ({ notifyWorkspaceSyncApplied: vi.fn() }));
 
@@ -67,7 +68,10 @@ vi.mock('electron', () => ({
   }
 }));
 
-vi.mock('../database/workspaceSnapshot.js', () => ({ loadWorkspaceSnapshot: workspaceSnapshotMock.loadWorkspaceSnapshot }));
+vi.mock('../database/workspaceSnapshot.js', () => ({
+  loadWorkspaceSnapshot: workspaceSnapshotMock.loadWorkspaceSnapshot,
+  loadWorkspaceVersionMetadata: workspaceSnapshotMock.loadWorkspaceVersionMetadata
+}));
 vi.mock('../database/syncIndex.js', () => ({ loadSyncIndex: syncDatabaseMock.loadSyncIndex }));
 vi.mock('../database/syncObjects.js', () => ({
   loadSyncObjects: syncDatabaseMock.loadSyncObjects,

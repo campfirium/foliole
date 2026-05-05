@@ -48,6 +48,7 @@ export interface CompanionWorkspaceVersionPayload {
   exported_at: string;
   has_snapshot: boolean;
   peer_id: string;
+  workspace_version: string | null;
 }
 
 export interface CompanionWorkspaceSnapshotPayload {

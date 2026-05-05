@@ -1,6 +1,6 @@
 import type http from 'node:http';
 
-import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
 import { handlePairRequest, handlePairRequestCreate } from './companionLanPairingEndpoints.js';
 import {
@@ -176,15 +176,16 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       writeJson(request, response, 200, buildSyncEndpointPayload(parsedRequestUrl));
       return;
     }
-    const snapshot = loadWorkspaceSnapshot();
     if (parsedRequestUrl.pathname === WORKSPACE_VERSION_PATH) {
-      writeJson(request, response, 200, buildWorkspaceVersionPayload(args.appVersion, args.peerId, snapshot));
+      const version = loadWorkspaceVersionMetadata();
+      writeJson(request, response, 200, buildWorkspaceVersionPayload(args.appVersion, args.peerId, version));
       return;
     }
     if (parsedRequestUrl.pathname !== WORKSPACE_SNAPSHOT_PATH) {
       writeJson(request, response, 404, { error: 'not_found' });
       return;
     }
+    const snapshot = loadWorkspaceSnapshot();
     writeJson(request, response, 200, buildWorkspaceSnapshotPayload(args.appVersion, args.peerId, snapshot));
   };
 }

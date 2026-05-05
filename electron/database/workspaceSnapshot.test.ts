@@ -20,7 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { closeDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
-import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
+import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from './workspaceSnapshot.js';
 
 let tempRoot = '';
 
@@ -99,6 +99,28 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
   expect(snapshot?.activeNodeId).toBe('starter-welcome');
   expect(snapshot?.nodesById['node-2']?.content).toBe('content:node-2');
   expect(snapshot?.untitledSequenceByParent).toEqual({});
+});
+
+it('loads lightweight workspace version metadata without building a snapshot', () => {
+  seedNode('node-1', 0);
+  upsertNodeSnapshot({
+    nodeId: 'node-2',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'title:node-2',
+    isTitleManual: true,
+    content: 'content:node-2',
+    reveal: null,
+    anchorLink: null,
+    position: 1,
+    createdAt: '2026-03-06T00:00:00.000Z',
+    updatedAt: '2099-03-07T00:00:00.000Z'
+  });
+
+  expect(loadWorkspaceVersionMetadata()).toEqual({
+    hasSnapshot: true,
+    workspaceVersion: '2099-03-07T00:00:00.000Z'
+  });
 });
 
 it('loads persisted reading profiles from sqlite snapshot', () => {

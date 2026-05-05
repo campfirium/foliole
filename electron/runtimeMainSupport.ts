@@ -45,11 +45,23 @@ export function installMainRuntimeDiagnostics() {
 
 export function bindEmbeddedLinkPanelContents(contents: WebContents) {
   contents.setWindowOpenHandler(({ url }) => {
-    if (contents.getType() === 'webview' && url.trim()) {
+    if (contents.getType() === 'webview' && isAllowedEmbeddedLinkPanelUrl(url)) {
       void contents.loadURL(url);
     }
     return { action: 'deny' };
   });
+}
+
+export function isAllowedEmbeddedLinkPanelUrl(url: string) {
+  if (!url.trim()) {
+    return false;
+  }
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 export async function loadMainWindowRenderer(args: {

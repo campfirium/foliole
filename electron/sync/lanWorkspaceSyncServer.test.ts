@@ -21,6 +21,10 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('../database/workspaceSnapshot.js', () => ({
+  loadWorkspaceVersionMetadata: vi.fn(() => ({
+    hasSnapshot: true,
+    workspaceVersion: '2026-04-25T00:00:00.000Z'
+  })),
   loadWorkspaceSnapshot: vi.fn(() => ({
     activeNodeId: 'node-1',
     nodeOrder: ['node-1'],
