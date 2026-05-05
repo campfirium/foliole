@@ -5,6 +5,8 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import type { ReadwiseBookInventoryItem, ReadwiseBooksInventory } from './readwiseBooksInventory.js';
 
+export const READWISE_BOOK_AUTO_NODE_POLICY = 'all_books';
+
 function formatAnnotationStatus(status: ReadwiseBookInventoryItem['annotationStatus']) {
   return status === 'has_highlights' ? 'Highlights available' : 'No highlights yet';
 }
@@ -70,13 +72,21 @@ function createReadwiseBookNode(book: ReadwiseBookInventoryItem, position: numbe
   return nodeId;
 }
 
+export function shouldAutoGenerateReadwiseBookNode(book: ReadwiseBookInventoryItem) {
+  if (book.annotationStatus === 'has_highlights') {
+    return true;
+  }
+
+  return READWISE_BOOK_AUTO_NODE_POLICY === 'all_books';
+}
+
 export function ensureReadwiseBookNodes(inventory: ReadwiseBooksInventory): ReadwiseBooksInventory {
   let nextNodePosition = resolveNextNodePosition();
 
   return {
     ...inventory,
     books: inventory.books.map((book) => {
-      if (book.generatedNodeId) {
+      if (book.generatedNodeId || !shouldAutoGenerateReadwiseBookNode(book)) {
         return book;
       }
 

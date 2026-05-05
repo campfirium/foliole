@@ -24,7 +24,11 @@ import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
-import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
+import {
+  READWISE_BOOK_AUTO_NODE_POLICY,
+  buildReadwiseBookPlaceholderNodeId,
+  shouldAutoGenerateReadwiseBookNode
+} from './readwiseBookNodes.js';
 import { scanReadwiseBooksInventory } from './readwiseBooksInventory.js';
 
 let tempRoot = '';
@@ -52,6 +56,9 @@ async function createBooksFixture() {
     'utf8'
   );
   await fs.writeFile(path.join(fullDocumentDir, 'Annotated Book.md'), '# Annotated Book\n\nKeep this quote.\n', 'utf8');
+
+  await fs.writeFile(path.join(highlightDir, 'Plain Book.md'), '# Plain Book\n\n## Highlights\n', 'utf8');
+  await fs.writeFile(path.join(fullDocumentDir, 'Plain Book.md'), '# Plain Book\n\nWaiting for import.\n', 'utf8');
 
   const importedBookPath = path.join(fullDocumentDir, 'Imported Book.md');
   await fs.writeFile(path.join(highlightDir, 'Imported Book.md'), '# Imported Book\n\n## Highlights\n', 'utf8');
@@ -101,6 +108,31 @@ it('creates minimal readwise book nodes with status and action placeholders', as
   expect(placeholderNode?.content).toContain('## Next actions');
   expect(placeholderNode?.content).toContain('Download EPUB*');
   expect(placeholderNode?.content).toContain('Load EPUB*');
+});
+
+it('uses the same executable auto-node rule for annotated and unannotated books', async () => {
+  const { fullDocumentDir, highlightDir } = await createBooksFixture();
+
+  const inventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+
+  expect(READWISE_BOOK_AUTO_NODE_POLICY).toBe('all_books');
+
+  const annotatedBook = inventory.books.find((book) => book.bookKey === 'annotated book');
+  const plainBook = inventory.books.find((book) => book.bookKey === 'plain book');
+
+  expect(annotatedBook).toBeDefined();
+  expect(plainBook).toBeDefined();
+  expect(shouldAutoGenerateReadwiseBookNode(annotatedBook!)).toBe(true);
+  expect(shouldAutoGenerateReadwiseBookNode(plainBook!)).toBe(true);
+  expect(plainBook).toMatchObject({
+    annotationStatus: 'no_highlights',
+    generatedNodeId: expect.any(String),
+    nodeStatus: 'generated'
+  });
 });
 
 it('keeps existing imported book content instead of replacing it with the placeholder body', async () => {
