@@ -366,7 +366,7 @@
     },
     "pdfPageTextSearch": {
       "resultKey": "results",
-      "sql": "SELECT attachment_id, page, text, page_width, page_height, instr(lower(text), ?) AS match_index FROM pdf_page_text WHERE instr(lower(text), ?) > 0 ORDER BY attachment_id ASC, page ASC LIMIT ?",
+      "sql": "SELECT attachment_id, page, text, page_width, page_height, max(0, instr(lower(text), ?) - 1) AS match_start, trim(substr(text, max(1, instr(lower(text), ?) - 80), 160)) AS excerpt FROM pdf_page_text WHERE instr(lower(text), ?) > 0 ORDER BY attachment_id ASC, page ASC LIMIT ?",
       "columns": [
         {
           "key": "attachment_id",
@@ -394,9 +394,14 @@
           "type": "double"
         },
         {
-          "key": "match_index",
-          "source": "match_index",
+          "key": "match_start",
+          "source": "match_start",
           "type": "long"
+        },
+        {
+          "key": "excerpt",
+          "source": "excerpt",
+          "type": "string"
         }
       ]
     },
@@ -413,7 +418,7 @@
     },
     "readableArticleByNodeId": {
       "resultKey": "articles",
-      "sql": "SELECT n.id, n.title, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash LEFT JOIN node_order no ON no.node_id = n.id WHERE n.id = ? LIMIT 1",
+      "sql": "SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.body_blob_hash, CASE WHEN instr(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), ''), 'Linked PDF source ready for the reader surface.') > 0 AND (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) IS NOT NULL THEN '# ' || COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') || char(10) || char(10) || (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) ELSE COALESCE(CAST(cbd.data AS TEXT), n.content) END AS content, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AS pdf_attachment_id FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash LEFT JOIN node_order no ON no.node_id = n.id WHERE n.id = ? LIMIT 1",
       "columns": [
         {
           "key": "id",
@@ -423,7 +428,7 @@
         {
           "key": "title",
           "source": "title",
-          "type": "nullableString"
+          "type": "string"
         },
         {
           "key": "content",
@@ -436,20 +441,20 @@
           "type": "nullableString"
         },
         {
-          "key": "body_blob_data",
-          "source": "body_blob_data",
-          "type": "nullableString"
+          "key": "content_status",
+          "source": "content_status",
+          "type": "string"
         },
         {
-          "key": "availability",
-          "source": "availability",
+          "key": "pdf_attachment_id",
+          "source": "pdf_attachment_id",
           "type": "nullableString"
         }
       ]
     },
     "readableArticleFirstNode": {
       "resultKey": "articles",
-      "sql": "SELECT n.id, n.title, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash LEFT JOIN node_order no ON no.node_id = n.id WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> '' ORDER BY COALESCE(no.position, 2147483647) ASC, n.created_at ASC LIMIT 1",
+      "sql": "SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.body_blob_hash, CASE WHEN instr(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), ''), 'Linked PDF source ready for the reader surface.') > 0 AND (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) IS NOT NULL THEN '# ' || COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') || char(10) || char(10) || (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) ELSE COALESCE(CAST(cbd.data AS TEXT), n.content) END AS content, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AS pdf_attachment_id FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash LEFT JOIN node_order no ON no.node_id = n.id WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> '' ORDER BY COALESCE(no.position, 2147483647) ASC, n.created_at ASC LIMIT 1",
       "columns": [
         {
           "key": "id",
@@ -459,7 +464,7 @@
         {
           "key": "title",
           "source": "title",
-          "type": "nullableString"
+          "type": "string"
         },
         {
           "key": "content",
@@ -472,20 +477,20 @@
           "type": "nullableString"
         },
         {
-          "key": "body_blob_data",
-          "source": "body_blob_data",
-          "type": "nullableString"
+          "key": "content_status",
+          "source": "content_status",
+          "type": "string"
         },
         {
-          "key": "availability",
-          "source": "availability",
+          "key": "pdf_attachment_id",
+          "source": "pdf_attachment_id",
           "type": "nullableString"
         }
       ]
     },
     "readableArticleReferencePdfAttachment": {
       "resultKey": "attachments",
-      "sql": "SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = ? AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1",
+      "sql": "SELECT (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = ? AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AS attachment_id",
       "columns": [
         {
           "key": "attachment_id",
@@ -1006,7 +1011,7 @@
     },
     "externalDocumentById": {
       "resultKey": "documents",
-      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability, updated_at FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE document_id = ? AND is_present = 1 LIMIT 1",
+      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, ed.body_blob_hash, CASE WHEN ed.body_blob_hash IS NOT NULL AND TRIM(ed.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END ELSE 'ready' END AS content_status, updated_at FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE document_id = ? AND is_present = 1 LIMIT 1",
       "columns": [
         {
           "key": "document_id",
@@ -1054,14 +1059,9 @@
           "type": "nullableString"
         },
         {
-          "key": "body_blob_data",
-          "source": "body_blob_data",
-          "type": "nullableString"
-        },
-        {
-          "key": "availability",
-          "source": "availability",
-          "type": "nullableString"
+          "key": "content_status",
+          "source": "content_status",
+          "type": "string"
         },
         {
           "key": "updated_at",
@@ -1072,7 +1072,7 @@
     },
     "externalDocumentSearch": {
       "resultKey": "documents",
-      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability, updated_at, instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) AS match_index FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE is_present = 1 AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 OR instr(lower(relative_path), ?) > 0 OR instr(lower(coalesce(opening_text, '')), ?) > 0 OR instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) > 0) ORDER BY updated_at DESC LIMIT ?",
+      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, ed.body_blob_hash, CASE WHEN ed.body_blob_hash IS NOT NULL AND TRIM(ed.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END ELSE 'ready' END AS content_status, updated_at, max(0, instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) - 1) AS match_start, trim(substr(COALESCE(CAST(cbd.data AS TEXT), ed.content), max(1, instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) - 80), 160)) AS excerpt FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE is_present = 1 AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 OR instr(lower(relative_path), ?) > 0 OR instr(lower(coalesce(opening_text, '')), ?) > 0 OR instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) > 0) ORDER BY updated_at DESC LIMIT ?",
       "columns": [
         {
           "key": "document_id",
@@ -1120,14 +1120,9 @@
           "type": "nullableString"
         },
         {
-          "key": "body_blob_data",
-          "source": "body_blob_data",
-          "type": "nullableString"
-        },
-        {
-          "key": "availability",
-          "source": "availability",
-          "type": "nullableString"
+          "key": "content_status",
+          "source": "content_status",
+          "type": "string"
         },
         {
           "key": "updated_at",
@@ -1135,9 +1130,14 @@
           "type": "string"
         },
         {
-          "key": "match_index",
-          "source": "match_index",
+          "key": "match_start",
+          "source": "match_start",
           "type": "long"
+        },
+        {
+          "key": "excerpt",
+          "source": "excerpt",
+          "type": "string"
         }
       ]
     },
@@ -1728,12 +1728,12 @@
         "results": "results"
       },
       "rowKeys": {
-        "availability": "availability",
-        "bodyBlobData": "body_blob_data",
         "bodyBlobHash": "body_blob_hash",
         "content": "content",
+        "contentStatus": "content_status",
         "documentId": "document_id",
-        "matchIndex": "match_index"
+        "excerpt": "excerpt",
+        "matchStart": "match_start"
       },
       "directoryEntryFields": [
         {
@@ -1816,17 +1816,79 @@
         {
           "outputKey": "content",
           "rowKey": "content",
-          "type": "resolvedContent"
+          "type": "nullableString"
         },
         {
           "outputKey": "content_status",
-          "rowKey": "availability",
-          "type": "contentStatus"
+          "rowKey": "content_status",
+          "type": "string"
         },
         {
           "outputKey": "updated_at",
           "rowKey": "updated_at",
           "type": "nullableString"
+        }
+      ],
+      "searchResultFields": [
+        {
+          "outputKey": "document_id",
+          "rowKey": "document_id",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "folder_id",
+          "rowKey": "folder_id",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "relative_path",
+          "rowKey": "relative_path",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "file_name",
+          "rowKey": "file_name",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "extension",
+          "rowKey": "extension",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "title",
+          "rowKey": "title",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "opening_text",
+          "rowKey": "opening_text",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "content",
+          "rowKey": "content",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "content_status",
+          "rowKey": "content_status",
+          "type": "string"
+        },
+        {
+          "outputKey": "updated_at",
+          "rowKey": "updated_at",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "match_start",
+          "rowKey": "match_start",
+          "type": "long"
+        },
+        {
+          "outputKey": "excerpt",
+          "rowKey": "excerpt",
+          "type": "string"
         }
       ]
     },
@@ -1842,11 +1904,11 @@
       "referencePdfAttachmentQueryName": "readableArticleReferencePdfAttachment",
       "untitledTitle": "Untitled",
       "rowKeys": {
-        "availability": "availability",
-        "bodyBlobData": "body_blob_data",
         "bodyBlobHash": "body_blob_hash",
         "content": "content",
+        "contentStatus": "content_status",
         "id": "id",
+        "pdfAttachmentId": "pdf_attachment_id",
         "title": "title"
       },
       "outputKeys": {
@@ -1856,7 +1918,39 @@
         "nodeId": "node_id",
         "pdfAttachmentId": "pdf_attachment_id",
         "title": "title"
-      }
+      },
+      "articleFields": [
+        {
+          "outputKey": "node_id",
+          "rowKey": "id",
+          "type": "string"
+        },
+        {
+          "outputKey": "title",
+          "rowKey": "title",
+          "type": "string"
+        },
+        {
+          "outputKey": "body_blob_hash",
+          "rowKey": "body_blob_hash",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "content",
+          "rowKey": "content",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "content_status",
+          "rowKey": "content_status",
+          "type": "string"
+        },
+        {
+          "outputKey": "pdf_attachment_id",
+          "rowKey": "pdf_attachment_id",
+          "type": "nullableString"
+        }
+      ]
     }
   },
   "diagnosticRead": {
@@ -2194,7 +2288,44 @@
       "pageWidthKey": "page_width",
       "searchQueryName": "pdfPageTextSearch",
       "searchResultKey": "results",
-      "textKey": "text"
+      "textKey": "text",
+      "searchResultFields": [
+        {
+          "outputKey": "attachment_id",
+          "rowKey": "attachment_id",
+          "type": "string"
+        },
+        {
+          "outputKey": "page",
+          "rowKey": "page",
+          "type": "long"
+        },
+        {
+          "outputKey": "text",
+          "rowKey": "text",
+          "type": "string"
+        },
+        {
+          "outputKey": "page_width",
+          "rowKey": "page_width",
+          "type": "double"
+        },
+        {
+          "outputKey": "page_height",
+          "rowKey": "page_height",
+          "type": "double"
+        },
+        {
+          "outputKey": "match_start",
+          "rowKey": "match_start",
+          "type": "long"
+        },
+        {
+          "outputKey": "excerpt",
+          "rowKey": "excerpt",
+          "type": "string"
+        }
+      ]
     }
   },
   "runtimeQueries": {
@@ -2377,8 +2508,13 @@
     },
     "snapshot": {
       "bodyStatusExpressionToken": "__BODY_STATUS_EXPRESSION__",
+      "bodyStatusExpressionInlineSql": "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END",
+      "bodyStatusExpressionWithBodyBlobSql": "CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END",
       "contentBlobJoinToken": "__CONTENT_BLOB_JOIN__",
+      "contentBlobJoinSql": "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ",
       "contentExpressionToken": "__CONTENT_EXPRESSION__",
+      "contentExpressionInlineSql": "n.content",
+      "contentExpressionWithBodyBlobSql": "COALESCE(CAST(cbd.data AS TEXT), n.content)",
       "deletedAtRowKey": "deleted_at",
       "nodeIdRowKey": "id",
       "metaValueQueryName": "workspaceMetaValue",

@@ -30,13 +30,16 @@ describe('Android content read query rules', () => {
       excerptRadius: 80,
       outputKeys: {
         document: 'document',
+        excerpt: 'excerpt',
         matchStart: 'match_start',
         results: 'results'
       },
       rowKeys: {
-        bodyBlobData: 'body_blob_data',
+        bodyBlobHash: 'body_blob_hash',
+        contentStatus: 'content_status',
         documentId: 'document_id',
-        matchIndex: 'match_index'
+        excerpt: 'excerpt',
+        matchStart: 'match_start'
       },
       searchQueryName: 'externalDocumentSearch'
     });
@@ -51,7 +54,9 @@ describe('Android content read query rules', () => {
       referencePdfAttachmentQueryName: 'readableArticleReferencePdfAttachment',
       rowKeys: {
         bodyBlobHash: 'body_blob_hash',
-        id: 'id'
+        contentStatus: 'content_status',
+        id: 'id',
+        pdfAttachmentId: 'pdf_attachment_id'
       }
     });
   });
@@ -63,10 +68,10 @@ describe('Android content read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentArray(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentOutputKey(context, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowInt(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowNullableString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowLong(context, row, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowNullableString(context, row, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
