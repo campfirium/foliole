@@ -28,3 +28,20 @@ Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Codi
 1. Default mode is `prefer-rust`: use Tauri invoke when available, otherwise fallback to local scheduler.
 2. Set `VITE_REVIEW_SCHEDULER_MODE=rust-only` to hard-require Rust scheduler.
 3. In `rust-only`, grading throws when `window.__TAURI__.core.invoke` is unavailable.
+
+## Windows Prerequisite Check From WSL
+1. Run `npm run windows:env:check` in WSL.
+2. The command executes a Windows PowerShell check via `powershell.exe`.
+3. Logs are written to `logs/windows/windows-env-check-*.log`.
+4. Exit code is non-zero when required prerequisites are missing.
+
+## Windows Sync + Build + Test Pipeline From WSL
+1. Run default dev pipeline (no packaging): `npm run windows:pipeline`
+2. Explicit fast alias (same behavior): `npm run windows:pipeline:fast`
+3. Run release packaging check: `npm run windows:package`
+4. Optional mirror directory override: `WINDOWS_WORKDIR='C:\dev\foliole' npm run windows:pipeline`
+4. Pipeline steps:
+- Sync from WSL source to Windows mirror.
+- Run `lint -> typecheck -> test -> build` on Windows.
+- Run `tauri build --debug` only in `windows:package`.
+- Stream all errors back to WSL terminal and write `logs/windows/windows-pipeline-*.log`.

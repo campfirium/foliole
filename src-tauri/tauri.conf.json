@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.foliole.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev -- --host 127.0.0.1 --port 1420",
+    "beforeDevCommand": "npm run dev -- --host 127.0.0.1 --port 4600",
     "beforeBuildCommand": "npm run build",
-    "devUrl": "http://127.0.0.1:1420",
+    "devUrl": "http://127.0.0.1:4600",
     "frontendDist": "../dist"
   },
   "app": {

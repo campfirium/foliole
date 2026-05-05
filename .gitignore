@@ -10,3 +10,4 @@ blob-report/
 src-tauri/target/
 src-tauri/gen/
 **/*.rs.bk
+logs/
