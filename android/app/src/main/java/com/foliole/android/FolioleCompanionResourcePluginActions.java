@@ -51,11 +51,11 @@ final class FolioleCompanionResourcePluginActions {
         return databaseHelper.resolveAttachmentResource(call.getString("attachment_id"));
     }
 
-    static JSObject loadPdfPageText(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) {
+    static JSObject loadPdfPageText(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.loadPdfPageText(call.getString("attachment_id"));
     }
 
-    static JSObject searchPdfPageText(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) {
+    static JSObject searchPdfPageText(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.searchPdfPageText(call.getString("query"), call.getInt("limit", 20));
     }
 

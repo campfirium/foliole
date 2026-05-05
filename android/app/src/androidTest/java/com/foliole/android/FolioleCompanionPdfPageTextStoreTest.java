@@ -45,7 +45,7 @@ public class FolioleCompanionPdfPageTextStoreTest {
             .put(record("pdf-1:1", "{\"attachment_id\":\"pdf-1\",\"page\":1,\"text\":\"first page\",\"page_width\":612,\"page_height\":792}"));
 
         FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, records, "desktop-1");
-        JSObject loaded = FolioleCompanionPdfPageTextStore.loadPageText(database, "pdf-1");
+        JSObject loaded = FolioleCompanionPdfPageTextStore.loadPageText(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "pdf-1");
 
         JSONArray pages = loaded.getJSONArray("pages");
         assertEquals("pdf-1", loaded.getString("attachment_id"));
@@ -64,7 +64,7 @@ public class FolioleCompanionPdfPageTextStoreTest {
             .put(record("pdf-3:1", "{\"attachment_id\":\"pdf-3\",\"page\":1,\"text\":\"no match\",\"page_width\":612,\"page_height\":792}"));
 
         FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, records, "desktop-1");
-        JSObject loaded = FolioleCompanionPdfPageTextStore.searchPageText(database, "BETA", 10);
+        JSObject loaded = FolioleCompanionPdfPageTextStore.searchPageText(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "BETA", 10);
 
         JSONArray results = loaded.getJSONArray("results");
         assertEquals("BETA", loaded.getString("query"));

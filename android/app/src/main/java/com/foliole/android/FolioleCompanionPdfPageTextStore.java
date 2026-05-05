@@ -1,11 +1,12 @@
 package com.foliole.android;
 
-import android.database.Cursor;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionPdfPageTextStore {
@@ -15,31 +16,24 @@ final class FolioleCompanionPdfPageTextStore {
 
     private FolioleCompanionPdfPageTextStore() {}
 
-    static JSObject loadPageText(SQLiteDatabase database, String attachmentId) {
+    static JSObject loadPageText(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
         JSObject result = new JSObject();
-        JSArray pages = new JSArray();
         result.put("attachment_id", attachmentId);
-        result.put("pages", pages);
+        result.put("pages", new JSArray());
         if (attachmentId == null || attachmentId.trim().isEmpty()) {
             return result;
         }
-        try (Cursor cursor = database.query(
-            "pdf_page_text",
-            new String[] { "page", "text", "page_width", "page_height" },
-            "attachment_id = ?",
-            new String[] { attachmentId.trim() },
-            null,
-            null,
-            "page ASC"
-        )) {
-            while (cursor.moveToNext()) {
-                pages.put(toPage(cursor));
-            }
-        }
-        return result;
+        JSObject loaded = FolioleCompanionNamedQueryStore.loadArray(
+            context,
+            database,
+            "pdfPageTextPages",
+            new String[] { attachmentId.trim() }
+        );
+        loaded.put("attachment_id", attachmentId);
+        return loaded;
     }
 
-    static JSObject searchPageText(SQLiteDatabase database, String query, int limit) {
+    static JSObject searchPageText(Context context, SQLiteDatabase database, String query, int limit) throws Exception {
         JSObject result = new JSObject();
         JSArray results = new JSArray();
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
@@ -48,15 +42,14 @@ final class FolioleCompanionPdfPageTextStore {
         if (normalizedQuery.isEmpty()) {
             return result;
         }
-        try (Cursor cursor = database.rawQuery(
-            "SELECT attachment_id, page, text, page_width, page_height, instr(lower(text), ?) AS match_index " +
-                "FROM pdf_page_text WHERE instr(lower(text), ?) > 0 " +
-                "ORDER BY attachment_id ASC, page ASC LIMIT ?",
+        JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(
+            context,
+            database,
+            "pdfPageTextSearch",
             new String[] { normalizedQuery, normalizedQuery, Integer.toString(resolveLimit(limit)) }
-        )) {
-            while (cursor.moveToNext()) {
-                results.put(toSearchResult(cursor));
-            }
+        ).getJSONArray("results");
+        for (int index = 0; index < rows.length(); index += 1) {
+            results.put(toSearchResult(rows.getJSONObject(index)));
         }
         return result;
     }
@@ -68,24 +61,15 @@ final class FolioleCompanionPdfPageTextStore {
         return Math.min(limit, 100);
     }
 
-    private static JSObject toPage(Cursor cursor) {
-        JSObject page = new JSObject();
-        page.put("page", cursor.getInt(0));
-        page.put("text", cursor.getString(1));
-        putNullableDouble(page, "page_width", cursor, 2);
-        putNullableDouble(page, "page_height", cursor, 3);
-        return page;
-    }
-
-    private static JSObject toSearchResult(Cursor cursor) {
+    private static JSObject toSearchResult(JSONObject row) throws Exception {
         JSObject result = new JSObject();
-        String text = cursor.getString(2);
-        int matchStart = Math.max(0, cursor.getInt(5) - 1);
-        result.put("attachment_id", cursor.getString(0));
-        result.put("page", cursor.getInt(1));
+        String text = row.optString("text", "");
+        int matchStart = Math.max(0, row.optInt("match_index") - 1);
+        result.put("attachment_id", row.getString("attachment_id"));
+        result.put("page", row.getInt("page"));
         result.put("text", text);
-        putNullableDouble(result, "page_width", cursor, 3);
-        putNullableDouble(result, "page_height", cursor, 4);
+        result.put("page_width", row.opt("page_width"));
+        result.put("page_height", row.opt("page_height"));
         result.put("match_start", matchStart);
         result.put("excerpt", buildExcerpt(text, matchStart));
         return result;
@@ -100,11 +84,4 @@ final class FolioleCompanionPdfPageTextStore {
         return text.substring(start, end).trim();
     }
 
-    private static void putNullableDouble(JSObject target, String key, Cursor cursor, int index) {
-        if (cursor.isNull(index)) {
-            target.put(key, JSONObject.NULL);
-        } else {
-            target.put(key, cursor.getDouble(index));
-        }
-    }
 }

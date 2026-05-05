@@ -129,14 +129,14 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionAttachmentResourceStore.resolveResource(context, database, attachmentId);
     }
 
-    JSObject loadPdfPageText(String attachmentId) {
+    JSObject loadPdfPageText(String attachmentId) throws Exception {
         SQLiteDatabase database = getReadableDatabase();
-        return FolioleCompanionPdfPageTextStore.loadPageText(database, attachmentId);
+        return FolioleCompanionPdfPageTextStore.loadPageText(context, database, attachmentId);
     }
 
-    JSObject searchPdfPageText(String query, int limit) {
+    JSObject searchPdfPageText(String query, int limit) throws Exception {
         SQLiteDatabase database = getReadableDatabase();
-        return FolioleCompanionPdfPageTextStore.searchPageText(database, query, limit);
+        return FolioleCompanionPdfPageTextStore.searchPageText(context, database, query, limit);
     }
 
     JSObject loadExternalDocument(String documentId) {

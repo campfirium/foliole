@@ -72,6 +72,32 @@ export const ANDROID_COMPANION_QUERY_DEFINITIONS = {
       { key: 'originalName', source: 'original_name', type: 'nullableString' }
     ]
   },
+  pdfPageTextPages: {
+    resultKey: 'pages',
+    sql:
+      'SELECT page, text, page_width, page_height FROM pdf_page_text ' +
+      'WHERE attachment_id = ? ORDER BY page ASC',
+    columns: [
+      { key: 'page', source: 'page', type: 'long' },
+      { key: 'text', source: 'text', type: 'string' },
+      { key: 'page_width', source: 'page_width', type: 'double' },
+      { key: 'page_height', source: 'page_height', type: 'double' }
+    ]
+  },
+  pdfPageTextSearch: {
+    resultKey: 'results',
+    sql:
+      'SELECT attachment_id, page, text, page_width, page_height, instr(lower(text), ?) AS match_index ' +
+      'FROM pdf_page_text WHERE instr(lower(text), ?) > 0 ORDER BY attachment_id ASC, page ASC LIMIT ?',
+    columns: [
+      { key: 'attachment_id', source: 'attachment_id', type: 'string' },
+      { key: 'page', source: 'page', type: 'long' },
+      { key: 'text', source: 'text', type: 'string' },
+      { key: 'page_width', source: 'page_width', type: 'double' },
+      { key: 'page_height', source: 'page_height', type: 'double' },
+      { key: 'match_index', source: 'match_index', type: 'long' }
+    ]
+  },
   syncPayloadAttachment: {
     sql:
       "SELECT json_object('attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type, " +
