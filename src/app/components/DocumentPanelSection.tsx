@@ -175,18 +175,18 @@ export function DocumentPanelSection({
 
 function ArrowLeftIcon() {
   return (
-    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
-      <path d="M12.4 8H4.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.3" />
-      <path d="M7.6 5.2 4.8 8l2.8 2.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3" />
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <path d="M12.4 8H4.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
+      <path d="M7.6 5.2 4.8 8l2.8 2.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.05" />
     </svg>
   );
 }
 
 function ArrowRightIcon() {
   return (
-    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
-      <path d="M3.6 8h7.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.3" />
-      <path d="m8.4 5.2 2.8 2.8-2.8 2.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3" />
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <path d="M3.6 8h7.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
+      <path d="m8.4 5.2 2.8 2.8-2.8 2.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.05" />
     </svg>
   );
 }

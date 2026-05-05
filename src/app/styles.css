@@ -45,7 +45,7 @@ body {
   display: flex;
   flex: 0 0 auto;
   min-height: 38px;
-  padding-inline: 8px 0;
+  padding-inline: 0;
   user-select: none;
 }
 
@@ -58,9 +58,22 @@ body {
 
 .window-titlebar-leading {
   align-items: center;
+  display: grid;
+  grid-template-columns: 40px auto;
+  min-height: 38px;
+  width: 100%;
+}
+
+.window-titlebar-leading-primary {
+  display: flex;
+  justify-content: center;
+}
+
+.window-titlebar-leading-secondary {
+  align-items: center;
   display: inline-flex;
-  gap: 2px;
-  padding-left: 6px;
+  gap: 6px;
+  padding-left: 10px;
 }
 
 .window-titlebar-leading-button {
@@ -71,9 +84,9 @@ body {
   color: #5f6368;
   cursor: pointer;
   display: inline-flex;
-  height: 28px;
+  height: 30px;
   justify-content: center;
-  width: 28px;
+  width: 30px;
 }
 
 .window-titlebar-leading-button:hover {
@@ -88,12 +101,12 @@ body {
 
 .window-titlebar-leading-icon {
   fill: none;
-  height: 18px;
+  height: 20px;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.2;
-  width: 18px;
+  stroke-width: 1.05;
+  width: 20px;
 }
 
 .window-titlebar-drag-fill {
@@ -137,12 +150,12 @@ body {
 
 .window-titlebar-icon {
   fill: none;
-  height: 11px;
+  height: 12px;
   stroke: currentColor;
   stroke-linecap: square;
   stroke-linejoin: miter;
-  stroke-width: 1.2;
-  width: 11px;
+  stroke-width: 1.05;
+  width: 12px;
 }
 
 .markdown-editor-host {

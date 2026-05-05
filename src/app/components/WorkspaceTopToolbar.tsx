@@ -44,30 +44,30 @@ export function WorkspaceTopToolbar({
 
 function ToggleSidebarIcon() {
   return (
-    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
-      <path d="M2.5 3h11v10h-11z" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M5.2 3v10" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M3.9 8h1.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.2" />
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <path d="M2.5 3h11v10h-11z" fill="none" stroke="currentColor" strokeWidth="1.05" />
+      <path d="M5.2 3v10" fill="none" stroke="currentColor" strokeWidth="1.05" />
+      <path d="M3.9 8h1.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
     </svg>
   );
 }
 
 function NotesIcon() {
   return (
-    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
-      <path d="M3 2.5h10v11H3z" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M5 5h6M5 8h6M5 11h4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.2" />
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <path d="M3 2.5h10v11H3z" fill="none" stroke="currentColor" strokeWidth="1.05" />
+      <path d="M5 5h6M5 8h6M5 11h4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
     </svg>
   );
 }
 
 function TrashIcon() {
   return (
-    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
-      <path d="M3.5 4.5h9" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.2" />
-      <path d="M6 2.8h4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.2" />
-      <path d="M5 4.5v8h6v-8" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M7 6.5v4M9 6.5v4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.2" />
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <path d="M3.5 4.5h9" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
+      <path d="M6 2.8h4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
+      <path d="M5 4.5v8h6v-8" fill="none" stroke="currentColor" strokeWidth="1.05" />
+      <path d="M7 6.5v4M9 6.5v4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
     </svg>
   );
 }

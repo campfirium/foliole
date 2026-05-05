@@ -33,7 +33,7 @@ export function NodeTreeRow({
       active={isSelected}
       aria-current={isActive ? 'page' : undefined}
       aria-pressed={isSelected}
-      className="gap-2 pl-[calc(0.5rem+var(--node-depth,0)*1rem)]"
+      className="gap-2 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4"
       onContextMenu={onContextMenu ? (event) => onContextMenu(nodeId, event) : undefined}
       onClick={(event) => onSelect(nodeId, event)}
       style={style}
@@ -50,7 +50,7 @@ export function NodeTreeRow({
 function ChevronDownIcon() {
   return (
     <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16">
-      <path d="M4.5 6.5 8 10l3.5-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" />
+      <path d="M4.5 6.5 8 10l3.5-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.05" />
     </svg>
   );
 }

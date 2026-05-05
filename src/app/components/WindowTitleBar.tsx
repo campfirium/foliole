@@ -99,33 +99,37 @@ export function WindowTitleBar({
     <header className="window-titlebar" data-window-maximized={isMaximized} style={{ '--workspace-list-width': `${listWidth}px` } as CSSProperties}>
       <div className="window-titlebar-left-zone">
         <div className="window-titlebar-leading">
-        <button
-          aria-label="Toggle left panel"
-          className="window-titlebar-leading-button"
-          data-active={isListHidden}
-          onClick={onToggleListVisibility}
-          type="button"
-        >
-          <ToggleSidebarIcon />
-        </button>
-        <button
-          aria-label="Notes"
-          className="window-titlebar-leading-button"
-          data-active={!isTrashViewOpen}
-          onClick={onOpenNotesView}
-          type="button"
-        >
-          <NotesIcon />
-        </button>
-        <button
-          aria-label="Trash"
-          className="window-titlebar-leading-button"
-          data-active={isTrashViewOpen}
-          onClick={onOpenTrashView}
-          type="button"
-        >
-          <TrashIcon />
-        </button>
+          <div className="window-titlebar-leading-primary">
+            <button
+              aria-label="Toggle left panel"
+              className="window-titlebar-leading-button"
+              data-active={isListHidden}
+              onClick={onToggleListVisibility}
+              type="button"
+            >
+              <ToggleSidebarIcon />
+            </button>
+          </div>
+          <div className="window-titlebar-leading-secondary">
+            <button
+              aria-label="Notes"
+              className="window-titlebar-leading-button"
+              data-active={!isTrashViewOpen}
+              onClick={onOpenNotesView}
+              type="button"
+            >
+              <NotesIcon />
+            </button>
+            <button
+              aria-label="Trash"
+              className="window-titlebar-leading-button"
+              data-active={isTrashViewOpen}
+              onClick={onOpenTrashView}
+              type="button"
+            >
+              <TrashIcon />
+            </button>
+          </div>
         </div>
       </div>
       <div className="window-titlebar-drag-fill" data-tauri-drag-region onDoubleClick={handleToggleMaximize} />

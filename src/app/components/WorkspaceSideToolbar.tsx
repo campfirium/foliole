@@ -30,9 +30,9 @@ export function WorkspaceSideToolbar({
 
 function StudyIcon() {
   return (
-    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
-      <path d="M2.5 5.2 8 2.5l5.5 2.7L8 7.9z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.2" />
-      <path d="M4.8 6.6v2.7c0 .9 1.5 1.9 3.2 1.9s3.2-1 3.2-1.9V6.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.2" />
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <path d="M2.5 5.2 8 2.5l5.5 2.7L8 7.9z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.05" />
+      <path d="M4.8 6.6v2.7c0 .9 1.5 1.9 3.2 1.9s3.2-1 3.2-1.9V6.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
     </svg>
   );
 }

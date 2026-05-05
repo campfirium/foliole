@@ -222,7 +222,7 @@ export function NodeListTree({
             />
           )}
         </header>
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-2">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-2">
           <section aria-label={isTrashViewOpen ? 'Trash section' : undefined} className="flex flex-1 flex-col gap-2">
             {activeRows.length === 0 ? (
               isTrashViewOpen ? (
@@ -265,10 +265,10 @@ export function NodeListTree({
 
 function NewNoteIcon() {
   return (
-    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
-      <path d="M3 2.5h6.8L13 5.7v7.8H3z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.2" />
-      <path d="M9.8 2.5v3.2H13" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.2" />
-      <path d="m6.2 10.8 2.9-2.9 1.2 1.2-2.9 2.9-1.8.6z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.1" />
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <path d="M3 2.5h6.8L13 5.7v7.8H3z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.05" />
+      <path d="M9.8 2.5v3.2H13" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.05" />
+      <path d="m6.2 10.8 2.9-2.9 1.2 1.2-2.9 2.9-1.8.6z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.05" />
     </svg>
   );
 }
