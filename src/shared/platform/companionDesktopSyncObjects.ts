@@ -49,7 +49,9 @@ export interface CompanionDesktopSyncResult {
   syncedAttachmentIds: string[];
   attachmentResourceError: string | null;
   contentBlobError: string | null;
+  remainingAttachmentResourceBytes: number | null;
   remainingAttachmentResourceCount: number | null;
+  remainingContentBlobBytes: number | null;
   remainingContentBlobCount: number | null;
   syncedContentBlobHashes: string[];
 }
@@ -92,22 +94,12 @@ async function pullRemoteStructurePack(endpointUrl: string) {
   };
 }
 
-async function loadMissingContentBlobCount() {
-  const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
-  return diagnostics?.content.missing_content_blob_count ?? null;
-}
-
 async function loadMissingContentBlobSummary() {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   return {
     total: diagnostics?.content.missing_content_blob_count ?? null,
     totalBytes: diagnostics?.content.missing_content_blob_bytes ?? null
   };
-}
-
-async function loadMissingAttachmentResourceCount() {
-  const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
-  return diagnostics?.content.missing_attachment_resource_count ?? null;
 }
 
 async function loadMissingAttachmentResourceSummary() {
@@ -262,9 +254,9 @@ async function runCompanionObjectsSync(
   } catch (error) {
     contentBlobError = errorMessage(error);
   }
-  const [remainingAttachmentResourceCount, remainingContentBlobCount] = await Promise.all([
-    loadMissingAttachmentResourceCount(),
-    loadMissingContentBlobCount()
+  const [remainingAttachmentResourceSummary, remainingContentBlobSummary] = await Promise.all([
+    loadMissingAttachmentResourceSummary(),
+    loadMissingContentBlobSummary()
   ]);
   return {
     appliedNodeIds: [],
@@ -280,8 +272,10 @@ async function runCompanionObjectsSync(
     syncedAttachmentIds,
     attachmentResourceError,
     contentBlobError,
-    remainingAttachmentResourceCount,
-    remainingContentBlobCount,
+    remainingAttachmentResourceBytes: remainingAttachmentResourceSummary.totalBytes,
+    remainingAttachmentResourceCount: remainingAttachmentResourceSummary.total,
+    remainingContentBlobBytes: remainingContentBlobSummary.totalBytes,
+    remainingContentBlobCount: remainingContentBlobSummary.total,
     syncedContentBlobHashes
   };
 }

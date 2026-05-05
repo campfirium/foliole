@@ -111,6 +111,33 @@ async function testKeepsUnreachableDesktopQuiet() {
   }));
 }
 
+async function testRecordsBacklogBytes() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue({
+    attachmentResourceError: null,
+    contentBlobError: null,
+    remainingAttachmentResourceBytes: 3145728,
+    remainingAttachmentResourceCount: 2,
+    remainingContentBlobBytes: 5242880,
+    remainingContentBlobCount: 5
+  });
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync pass finished; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still caching.',
+    status: 'skipped'
+  }));
+}
+
 describe('tryForegroundAutoSync', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -128,4 +155,6 @@ describe('tryForegroundAutoSync', () => {
   it('uses a remembered sync target when the active endpoint is missing', testUsesRememberedSyncTarget);
 
   it('does not surface unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
+
+  it('records remaining cache bytes when a pass leaves body or attachment backlog', testRecordsBacklogBytes);
 });

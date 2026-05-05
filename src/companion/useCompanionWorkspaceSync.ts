@@ -29,7 +29,9 @@ import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
 function describeManualSyncPassResult(result: {
   attachmentResourceError: string | null;
   contentBlobError: string | null;
+  remainingAttachmentResourceBytes?: number | null;
   remainingAttachmentResourceCount: number | null;
+  remainingContentBlobBytes?: number | null;
   remainingContentBlobCount: number | null;
 }) {
   if (result.attachmentResourceError) {
@@ -46,6 +48,8 @@ function describeManualSyncPassResult(result: {
   }
   const remainingBodies = result.remainingContentBlobCount;
   const remainingAttachments = result.remainingAttachmentResourceCount;
+  const bodyLabel = formatBacklogLabel('topic bodies', remainingBodies, result.remainingContentBlobBytes);
+  const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
   if (remainingBodies === 0 && remainingAttachments === 0) {
     return {
       message: 'Sync pass finished; topic bodies and attachment files are cached.',
@@ -53,25 +57,32 @@ function describeManualSyncPassResult(result: {
     };
   }
   if (remainingBodies === 0) {
-    const remaining = remainingAttachments === null ? 'some' : String(remainingAttachments);
     return {
-      message: `Sync pass finished; ${remaining} attachment files still caching.`,
+      message: `Sync pass finished; ${attachmentLabel} still caching.`,
       status: 'skipped' as const
     };
   }
   if (remainingAttachments === 0) {
-    const remaining = remainingBodies === null ? 'some' : String(remainingBodies);
     return {
-      message: `Sync pass finished; ${remaining} topic bodies still caching.`,
+      message: `Sync pass finished; ${bodyLabel} still caching.`,
       status: 'skipped' as const
     };
   }
-  const remainingBodyLabel = remainingBodies === null ? 'some' : String(remainingBodies);
-  const remainingAttachmentLabel = remainingAttachments === null ? 'some' : String(remainingAttachments);
   return {
-    message: `Sync pass finished; ${remainingBodyLabel} topic bodies and ${remainingAttachmentLabel} attachment files still caching.`,
+    message: `Sync pass finished; ${bodyLabel} and ${attachmentLabel} still caching.`,
     status: 'skipped' as const
   };
+}
+
+function formatBytes(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
+
+function formatBacklogLabel(label: string, count: number | null, bytes?: number | null) {
+  const countLabel = count === null ? `some ${label}` : `${count} ${label}`;
+  return typeof bytes === 'number' && bytes > 0 ? `${countLabel} (${formatBytes(bytes)})` : countLabel;
 }
 
 const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
