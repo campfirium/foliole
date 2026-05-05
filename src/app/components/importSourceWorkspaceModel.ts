@@ -1,6 +1,16 @@
 export type ImportHighlightMode = 'merged' | 'split';
 export type ImportSourceAction = 'delete' | 'keep' | 'move';
 export type ImportTriggerMode = 'manual' | 'scheduled';
+export type ReadwiseSourceKind = 'books' | 'articles' | 'tweets' | 'podcasts';
+
+const READWISE_SOURCE_KINDS: ReadwiseSourceKind[] = ['books', 'articles', 'tweets', 'podcasts'];
+
+const readwiseSourceTitles: Record<ReadwiseSourceKind, string> = {
+  articles: 'Articles',
+  books: 'Books',
+  podcasts: 'Podcasts',
+  tweets: 'Tweets'
+};
 
 export interface DraftImportSource {
   actionMode: ImportSourceAction;
@@ -9,6 +19,7 @@ export interface DraftImportSource {
   highlightMode: ImportHighlightMode;
   highlightPath: string;
   id: string;
+  kind?: ReadwiseSourceKind;
   primaryPath: string;
   triggerMode: ImportTriggerMode;
 }
@@ -29,6 +40,21 @@ function createImportSourceId(index: number) {
   return `draft-import-source-${index}`;
 }
 
+function joinReadwisePath(rootPath: string, suffix: string) {
+  if (!rootPath.trim()) {
+    return '';
+  }
+  return `${rootPath.replace(/[\\/]+$/, '')}/${suffix}`;
+}
+
+function resolveReadwiseOriginalPath(rootPath: string, kind: ReadwiseSourceKind) {
+  return joinReadwisePath(rootPath, `Documents/Content/${kind}`);
+}
+
+function resolveReadwiseHighlightPath(rootPath: string, kind: ReadwiseSourceKind) {
+  return joinReadwisePath(rootPath, kind);
+}
+
 export function createDraftImportSource(index: number): DraftImportSource {
   return {
     actionMode: 'keep',
@@ -40,6 +66,28 @@ export function createDraftImportSource(index: number): DraftImportSource {
     primaryPath: '',
     triggerMode: 'scheduled'
   };
+}
+
+function createReadwiseDraftImportSource(index: number, kind: ReadwiseSourceKind, rootPath = ''): DraftImportSource {
+  return {
+    actionMode: 'keep',
+    archivePath: '',
+    frequency: importFrequencyOptions[0],
+    highlightMode: 'split',
+    highlightPath: resolveReadwiseHighlightPath(rootPath, kind),
+    id: createImportSourceId(index),
+    kind,
+    primaryPath: resolveReadwiseOriginalPath(rootPath, kind),
+    triggerMode: 'scheduled'
+  };
+}
+
+export function formatReadwiseSourceLabel(kind: ReadwiseSourceKind) {
+  return readwiseSourceTitles[kind];
+}
+
+export function createReadwiseImportSources(rootPath = '') {
+  return READWISE_SOURCE_KINDS.map((kind, index) => createReadwiseDraftImportSource(index + 1, kind, rootPath));
 }
 
 export function cloneDraftImportSource(source: DraftImportSource, index: number): DraftImportSource {
@@ -55,6 +103,19 @@ export function formatHighlightModeLabel(mode: ImportHighlightMode) {
 
 export function formatTriggerModeLabel(mode: ImportTriggerMode) {
   return mode === 'scheduled' ? 'Scheduled' : 'Manual';
+}
+
+export function applyReadwiseRootPath(sources: DraftImportSource[], rootPath: string) {
+  return sources.map((source) => {
+    if (!source.kind) {
+      return source;
+    }
+    return {
+      ...source,
+      highlightPath: resolveReadwiseHighlightPath(rootPath, source.kind),
+      primaryPath: resolveReadwiseOriginalPath(rootPath, source.kind)
+    };
+  });
 }
 
 export function updateDraftImportSource(

@@ -36,7 +36,7 @@ it('opens import management from the left toolbar instead of replacing Inbox', (
   fireEvent.click(screen.getByRole('button', { name: 'Import Management' }));
 
   expect(screen.getByRole('heading', { name: 'Import management' })).toBeInTheDocument();
-  expect(screen.getByText(/long-running sources like Readwise/i)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Readwise Reader for Obsidian' })).toBeInTheDocument();
   expect(screen.getByLabelText('Trigger draft-import-source-1')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Close import management' }));

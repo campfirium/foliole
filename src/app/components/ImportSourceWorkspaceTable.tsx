@@ -1,5 +1,19 @@
-import { formatHighlightModeLabel, formatTriggerModeLabel, importSourceSelectClassName, type DraftImportSource, type DraftImportSourceField } from './importSourceWorkspaceModel';
-import { ColumnHeader, FolderButton, HandlingCell, resolveFolderPathLabel, RowActions, rowGridClassName, TriggerCell } from './ImportSourceWorkspaceTableParts';
+import {
+  formatHighlightModeLabel,
+  formatTriggerModeLabel,
+  importSourceSelectClassName,
+  type DraftImportSource,
+  type DraftImportSourceField
+} from './importSourceWorkspaceModel';
+import {
+  ColumnHeader,
+  FolderButton,
+  HandlingCell,
+  resolveFolderPathLabel,
+  RowActions,
+  rowGridClassName,
+  TriggerCell
+} from './ImportSourceWorkspaceTableParts';
 
 function SourceRow({
   source,
