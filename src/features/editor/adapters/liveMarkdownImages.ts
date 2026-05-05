@@ -2,7 +2,7 @@ import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource
 } from '../../../shared/platform/attachmentResources';
-import { isNativeAndroidCompanionRuntime } from '../../../shared/platform/companionWorkspaceSyncBridge';
+import { isNativeAndroidCompanionRuntime } from '../../../shared/platform/companionWorkspaceRuntimeRepository';
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';

@@ -4,7 +4,7 @@ import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativ
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
-import { isNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceSyncBridge';
+import { isNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { shouldRunForegroundAutoSyncCheck } from './companionAutoSync';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';

@@ -17,7 +17,7 @@ async function renderAutoSyncHook(
   endpointUrl: string | null = 'http://10.0.2.2:38641',
   tryForegroundAutoSync: (args: unknown) => Promise<'backlog' | 'completed' | 'failed' | 'skipped'> = vi.fn(async () => 'completed' as const)
 ) {
-  vi.doMock('../shared/platform/companionWorkspaceSyncBridge', () => ({
+  vi.doMock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
   }));
   const foregroundHandlers: Array<() => void> = [];
