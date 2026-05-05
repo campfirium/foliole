@@ -2,18 +2,15 @@ import type { Range, Text } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
 import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
-import type { MarkdownTableCellAlignment, MarkdownTableCellPlan, MarkdownTablePlan } from '../model/markdownTablePlans';
+import {
+  getMarkdownTableCellAnchorClasses,
+  type MarkdownTableCellAlignment,
+  type MarkdownTableCellPlan,
+  type MarkdownTablePlan
+} from '../model/markdownTablePlans';
 import { dispatchMarkdownTablePreviewRequest } from '../model/markdownTablePreview';
 
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
-
-function getCellAnchorClasses(cell: MarkdownTableCellPlan, decorations: readonly EditorTextAnchorDecoration[]) {
-  const overlapping = decorations.filter((decoration) => decoration.from < cell.to && decoration.to > cell.from);
-  return {
-    hasCloze: overlapping.some((decoration) => decoration.kind === 'cloze'),
-    hasHighlight: overlapping.some((decoration) => decoration.kind === 'highlight')
-  };
-}
 
 function appendInlineText(container: HTMLElement, text: string) {
   for (const token of tokenizeMarkdownTableInlineText(text)) {
@@ -69,7 +66,7 @@ function createCellElement(
 ) {
   const element = document.createElement(tagName);
   element.className = 'cm-md-table-cell';
-  const { hasCloze, hasHighlight } = getCellAnchorClasses(cell, decorations);
+  const { hasCloze, hasHighlight } = getMarkdownTableCellAnchorClasses(cell, decorations);
   if (hasHighlight) element.classList.add('cm-md-highlight');
   if (hasCloze) element.classList.add('cm-md-cloze');
   applyCellAlignment(element, cell.align);

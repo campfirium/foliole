@@ -1,6 +1,6 @@
-import { folioleMarkdownParser } from './folioleMarkdownParser';
-
 import type { EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
+
+import { folioleMarkdownParser } from './folioleMarkdownParser';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -28,6 +28,17 @@ export interface MarkdownTablePlan {
   from: number;
   rows: MarkdownTableRowPlan[];
   to: number;
+}
+
+export function getMarkdownTableCellAnchorClasses(
+  cell: MarkdownTableCellPlan,
+  decorations: readonly EditorTextAnchorDecoration[]
+) {
+  const overlapping = decorations.filter((decoration) => decoration.from < cell.to && decoration.to > cell.from);
+  return {
+    hasCloze: overlapping.some((decoration) => decoration.kind === 'cloze'),
+    hasHighlight: overlapping.some((decoration) => decoration.kind === 'highlight')
+  };
 }
 
 function collectChildCells(

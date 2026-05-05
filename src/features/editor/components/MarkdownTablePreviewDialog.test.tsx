@@ -49,6 +49,39 @@ const SOURCE_HIGHLIGHT_TABLE_PREVIEW = {
   }
 };
 
+const ANCHORED_TABLE_PREVIEW = {
+  table: {
+    active: false,
+    anchorDecorations: [
+      { from: 18, kind: 'highlight' as const, to: 23 },
+      { from: 27, kind: 'cloze' as const, to: 31 }
+    ],
+    columnCount: 2,
+    from: 0,
+    rows: [
+      {
+        cells: [
+          { align: null, from: 2, text: 'A', to: 3 },
+          { align: null, from: 6, text: 'B', to: 7 }
+        ],
+        from: 0,
+        kind: 'header' as const,
+        to: 9
+      },
+      {
+        cells: [
+          { align: null, from: 18, text: 'Alpha', to: 23 },
+          { align: null, from: 27, text: 'Beta', to: 31 }
+        ],
+        from: 16,
+        kind: 'body' as const,
+        to: 33
+      }
+    ],
+    to: 33
+  }
+};
+
 describe('MarkdownTablePreviewDialog', () => {
   it('applies GFM table alignment inside the full table preview', async () => {
     render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={ALIGNED_TABLE_PREVIEW} />);
@@ -64,5 +97,13 @@ describe('MarkdownTablePreviewDialog', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('td .cm-md-source-highlight')?.textContent).toBe('Marked');
     expect(screen.getByRole('cell', { name: 'Marked' })).toBeInTheDocument();
+  });
+
+  it('projects table-scoped highlight and cloze decorations into the full table preview', async () => {
+    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={ANCHORED_TABLE_PREVIEW} />);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('td.cm-md-highlight')?.textContent).toBe('Alpha');
+    expect(dialog.querySelector('td.cm-md-cloze')?.textContent).toBe('Beta');
   });
 });

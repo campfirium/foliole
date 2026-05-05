@@ -1,5 +1,6 @@
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
 import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
+import { getMarkdownTableCellAnchorClasses } from '../model/markdownTablePlans';
 import type { MarkdownTablePreviewRequest } from '../model/markdownTablePreview';
 
 const tableClassName =
@@ -92,7 +93,7 @@ function renderPreviewTable(preview: MarkdownTablePreviewRequest) {
       <table className={tableClassName}>
         {renderColumnGroup(columnWidths)}
         <tbody>
-          {preview.table.rows.map((row, rowIndex) => renderTableRow(row, columnCount, rowIndex))}
+          {preview.table.rows.map((row, rowIndex) => renderTableRow(preview, row, columnCount, rowIndex))}
         </tbody>
       </table>
     </div>
@@ -108,7 +109,7 @@ function renderPreviewHeaderOverlay(preview: MarkdownTablePreviewRequest, column
     <div className="pointer-events-none absolute inset-x-10 top-8 z-[2] bg-canvas">
       <table className={tableClassName} aria-hidden="true">
         {renderColumnGroup(columnWidths)}
-        <tbody>{headerRows.map((row, rowIndex) => renderTableRow(row, columnCount, rowIndex))}</tbody>
+        <tbody>{headerRows.map((row, rowIndex) => renderTableRow(preview, row, columnCount, rowIndex))}</tbody>
       </table>
     </div>
   );
@@ -124,20 +125,41 @@ function renderColumnGroup(columnWidths: number[]) {
   );
 }
 
-function renderTableRow(previewRow: MarkdownTablePreviewRequest['table']['rows'][number], columnCount: number, rowIndex: number) {
+function renderTableRow(
+  preview: MarkdownTablePreviewRequest,
+  previewRow: MarkdownTablePreviewRequest['table']['rows'][number],
+  columnCount: number,
+  rowIndex: number
+) {
   return (
     <tr className="last:[&_td]:border-b-0" key={rowIndex}>
       {Array.from({ length: columnCount }, (_, columnIndex) => {
         const cell = previewRow.cells[columnIndex] ?? { align: null, from: previewRow.to, text: '', to: previewRow.to };
         const Tag = previewRow.kind === 'header' ? 'th' : 'td';
         return (
-          <Tag className={previewRow.kind === 'header' ? headerCellClassName : cellClassName} key={columnIndex} style={cell.align ? { textAlign: cell.align } : undefined}>
+          <Tag
+            className={resolveCellClassName(preview, cell, previewRow.kind === 'header')}
+            key={columnIndex}
+            style={cell.align ? { textAlign: cell.align } : undefined}
+          >
             {renderCellInlineContent(cell.text.trim())}
           </Tag>
         );
       })}
     </tr>
   );
+}
+
+function resolveCellClassName(
+  preview: MarkdownTablePreviewRequest,
+  cell: MarkdownTablePreviewRequest['table']['rows'][number]['cells'][number],
+  isHeader: boolean
+) {
+  const classNames = [isHeader ? headerCellClassName : cellClassName];
+  const { hasCloze, hasHighlight } = getMarkdownTableCellAnchorClasses(cell, preview.table.anchorDecorations);
+  if (hasHighlight) classNames.push('cm-md-highlight');
+  if (hasCloze) classNames.push('cm-md-cloze');
+  return classNames.join(' ');
 }
 
 function renderCellInlineContent(text: string) {
