@@ -1,11 +1,19 @@
 export type NativeImportHighlightPolicy = 'adopt' | 'reference_only';
 
+export type NativeDirectoryImportSourceAdapter = 'external_directory' | 'foliole_managed_inbox_folder';
+
+export type NativeManagedInboxConsumePolicy = 'archive' | 'clear';
+
+export type NativeDirectoryImportConsumePolicy = 'archive' | 'clear' | 'keep';
+
 export interface NativeTextImportArgs {
   highlight_policy?: NativeImportHighlightPolicy;
 }
 
 export interface NativeDirectoryImportArgs extends NativeTextImportArgs {
   directory_path?: string;
+  consume_policy?: NativeManagedInboxConsumePolicy;
+  source_adapter?: NativeDirectoryImportSourceAdapter;
 }
 
 export interface NativeImportedTextFile {
@@ -36,7 +44,11 @@ export interface NativeDirectoryImportEntry extends NativeTextImportResult {
 }
 
 export interface NativeDirectoryImportResult {
+  archive_root_path: string | null;
+  consume_policy: NativeDirectoryImportConsumePolicy;
+  consumed_count: number;
   root_path: string;
+  source_adapter: NativeDirectoryImportSourceAdapter;
   discovered_count: number;
   imported_count: number;
   failed_count: number;

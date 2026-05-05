@@ -10,8 +10,26 @@ import {
   loadPreparedImportRecord,
   resolveImportHighlightPolicy
 } from './importSourcePipeline.js';
+import {
+  applyManagedInboxConsumePolicy,
+  ensureManagedInboxRoot,
+  resolveDirectoryImportConsumePolicy,
+  resolveDirectoryImportSourceAdapter,
+  resolveManagedInboxPaths
+} from './managedInboxFolder.js';
+import { resolveAppPaths } from './paths.js';
 
 async function selectImportDirectoryPath(window?: BrowserWindow | null, args?: NativeDirectoryImportArgs) {
+  const sourceAdapter = resolveDirectoryImportSourceAdapter(args?.source_adapter);
+  if (sourceAdapter === 'foliole_managed_inbox_folder') {
+    if (typeof args?.directory_path === 'string' && args.directory_path.trim().length > 0) {
+      throw new Error('managed inbox folder path is runtime-owned');
+    }
+    const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir);
+    await ensureManagedInboxRoot(managedPaths.rootPath);
+    return managedPaths.rootPath;
+  }
+
   if (typeof args?.directory_path === 'string' && args.directory_path.trim().length > 0) {
     return args.directory_path;
   }
@@ -52,6 +70,8 @@ export async function runDirectoryImport(
   window?: BrowserWindow | null,
   args?: NativeDirectoryImportArgs
 ): Promise<NativeDirectoryImportResult | null> {
+  const sourceAdapter = resolveDirectoryImportSourceAdapter(args?.source_adapter);
+  const consumePolicy = resolveDirectoryImportConsumePolicy(sourceAdapter, args?.consume_policy);
   const rootPath = await selectImportDirectoryPath(window, args);
   if (!rootPath) {
     return null;
@@ -81,11 +101,29 @@ export async function runDirectoryImport(
     }
   }
 
+  let archiveRootPath: string | null = null;
+  let consumedCount = 0;
+  if (sourceAdapter === 'foliole_managed_inbox_folder' && consumePolicy !== 'keep') {
+    const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir);
+    const consumed = await applyManagedInboxConsumePolicy(entries, {
+      archiveRootPath: managedPaths.archiveRootPath,
+      importedAt: new Date().toISOString(),
+      policy: consumePolicy,
+      rootPath: managedPaths.rootPath
+    });
+    archiveRootPath = consumed.archiveRootPath;
+    consumedCount = consumed.consumedCount;
+  }
+
   return {
+    archive_root_path: archiveRootPath,
+    consume_policy: consumePolicy,
+    consumed_count: consumedCount,
     discovered_count: sources.length,
     failed_count: entries.filter((entry) => entry.result_status === 'failed').length,
     imported_count: entries.filter((entry) => entry.result_status !== 'failed').length,
     root_path: rootPath,
+    source_adapter: sourceAdapter,
     entries
   };
 }

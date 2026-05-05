@@ -4,11 +4,15 @@ import { expect, it, vi } from 'vitest';
 
 const { runDirectoryImport } = vi.hoisted(() => ({
   runDirectoryImport: vi.fn().mockResolvedValue({
+    archive_root_path: null,
+    consume_policy: 'keep',
+    consumed_count: 0,
     discovered_count: 1,
     entries: [],
     failed_count: 0,
     imported_count: 1,
-    root_path: '/tmp/library'
+    root_path: '/tmp/library',
+    source_adapter: 'external_directory'
   })
 }));
 
@@ -38,11 +42,15 @@ it('routes run_directory_import through the invoke handler', async () => {
   await expect(
     handleInvokeRequest({ command: 'run_directory_import', args: { directory_path: '/tmp/library' } })
   ).resolves.toEqual({
+    archive_root_path: null,
+    consume_policy: 'keep',
+    consumed_count: 0,
     discovered_count: 1,
     entries: [],
     failed_count: 0,
     imported_count: 1,
-    root_path: '/tmp/library'
+    root_path: '/tmp/library',
+    source_adapter: 'external_directory'
   });
 
   expect(runDirectoryImport).toHaveBeenCalledWith(null, { directory_path: '/tmp/library' });

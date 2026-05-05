@@ -26,9 +26,12 @@ export type {
 } from './nativeStorageContract.js';
 export type {
   NativeDirectoryImportArgs,
+  NativeDirectoryImportConsumePolicy,
   NativeDirectoryImportEntry,
   NativeDirectoryImportResult,
+  NativeDirectoryImportSourceAdapter,
   NativeImportedTextFile,
+  NativeManagedInboxConsumePolicy,
   NativeTextImportArgs,
   NativeTextImportResult
 } from './nativeImportContract.js';
