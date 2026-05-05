@@ -13,6 +13,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   customMonospaceFont: 'foliole-custom-monospace-font-family',
   nodeIconPrimarySvg: 'foliole-node-icon-primary-svg',
   nodeIconSecondarySvg: 'foliole-node-icon-secondary-svg',
+  nodeIconReviewVariantMode: 'foliole-node-icon-review-variant-mode',
   listCollapsed: 'foliole-workspace-list-collapsed',
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',
   commandRecents: 'foliole-command-recents',

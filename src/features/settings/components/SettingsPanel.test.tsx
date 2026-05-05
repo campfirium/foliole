@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -226,5 +227,54 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
       readingGrowthMin: 1.12,
       readingGrowthMax: 1.44
     });
+  });
+});
+
+it('stores node icon svg inputs, supports flip mode, and restores defaults', async () => {
+  render(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+
+  fireEvent.change(screen.getByLabelText('Primary node icon SVG'), {
+    target: {
+      value: '<svg viewBox="0 0 16 16"><path d="M2 12L14 4" fill="none" stroke="currentColor"/></svg>'
+    }
+  });
+  fireEvent.change(screen.getByLabelText('Review icon variant mode'), {
+    target: { value: 'flip-x' }
+  });
+
+  await waitFor(() => {
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg)).toContain('<svg');
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconReviewVariantMode)).toBe('flip-x');
+  });
+
+  const preview = screen.getByLabelText('Node icon preview');
+  expect(
+    within(preview)
+      .getByText('Review')
+      .closest('[data-node-icon-preview="review"]')
+      ?.querySelector('[data-node-icon="leaf"]')
+  ).toHaveAttribute('data-node-icon-mirror', 'flip-x');
+
+  fireEvent.change(screen.getByLabelText('Review icon variant mode'), {
+    target: { value: 'svg' }
+  });
+  fireEvent.change(screen.getByLabelText('Review node icon SVG'), {
+    target: {
+      value: '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>'
+    }
+  });
+
+  await waitFor(() => {
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg)).toContain('<svg');
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Restore default icons' }));
+
+  await waitFor(() => {
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg)).toBeNull();
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg)).toBeNull();
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconReviewVariantMode)).toBeNull();
   });
 });

@@ -5,13 +5,28 @@ import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIco
 
 const STORAGE_KEYS = {
   primarySvg: APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg,
-  secondarySvg: APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg
+  secondarySvg: APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg,
+  reviewVariantMode: APP_SETTINGS_STORAGE_KEYS.nodeIconReviewVariantMode
 } as const;
+
+export type NodeIconReviewVariantMode = 'svg' | 'flip-x' | 'flip-y';
+
+export const DEFAULT_NODE_ICON_REVIEW_VARIANT_MODE: NodeIconReviewVariantMode = 'flip-y';
 
 interface NodeTreeRowCustomIconResult {
   markup: string | null;
   slot: 'primary' | 'secondary' | null;
-  usesMirrorFallback: boolean;
+  transformMode: 'none' | 'flip-x' | 'flip-y';
+}
+
+export function normalizeNodeIconReviewVariantMode(
+  value: string | null,
+  hasSecondarySvg: boolean
+): NodeIconReviewVariantMode {
+  if (value === 'svg' || value === 'flip-x' || value === 'flip-y') {
+    return value;
+  }
+  return hasSecondarySvg ? 'svg' : DEFAULT_NODE_ICON_REVIEW_VARIANT_MODE;
 }
 
 function sanitizeSvgMarkup(value: string | null): string | null {
@@ -60,11 +75,17 @@ export function resolveNodeTreeRowCustomIcon(args: {
 }): NodeTreeRowCustomIconResult {
   const primarySvg = sanitizeSvgMarkup(getWhitelistedLocalStorageItem(STORAGE_KEYS.primarySvg));
   const secondarySvg = sanitizeSvgMarkup(getWhitelistedLocalStorageItem(STORAGE_KEYS.secondarySvg));
-  const usesSecondarySvg = args.kind === 'review' && Boolean(secondarySvg);
+  const reviewVariantMode = normalizeNodeIconReviewVariantMode(
+    getWhitelistedLocalStorageItem(STORAGE_KEYS.reviewVariantMode),
+    Boolean(secondarySvg)
+  );
+  const usesSecondarySvg = args.kind === 'review' && reviewVariantMode === 'svg' && Boolean(secondarySvg);
   const markup = usesSecondarySvg ? secondarySvg : primarySvg;
+  const transformMode =
+    args.kind !== 'review' ? 'none' : usesSecondarySvg ? 'none' : reviewVariantMode === 'svg' ? 'flip-y' : reviewVariantMode;
 
   if (!markup) {
-    return { markup: null, slot: null, usesMirrorFallback: false };
+    return { markup: null, slot: null, transformMode: 'none' };
   }
 
   return {
@@ -79,6 +100,6 @@ export function resolveNodeTreeRowCustomIcon(args: {
       'stroke-dasharray': args.state === 'queued' ? '2.2 1.4' : undefined
     }),
     slot: usesSecondarySvg ? 'secondary' : 'primary',
-    usesMirrorFallback: args.kind === 'review' && !usesSecondarySvg
+    transformMode
   };
 }

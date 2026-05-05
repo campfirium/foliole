@@ -139,7 +139,7 @@ it('uses a single custom svg with review mirror fallback', () => {
   );
   expect(reviewNodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-mirror',
-    'fallback'
+    'flip-y'
   );
   expect(reviewNodeButton.querySelector('svg[data-node-custom-slot="primary"]')).not.toBeNull();
 });
@@ -178,5 +178,37 @@ it('uses separate custom svgs for reading and review variants', () => {
   expect(reviewNodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-mirror',
     'none'
+  );
+});
+
+it('supports horizontal flip as the review variant mode', () => {
+  window.localStorage.setItem(
+    APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg,
+    '<svg viewBox="0 0 16 16"><path d="M2 12C6 10 10 6 14 2" fill="none" stroke="#2f855a"/></svg>'
+  );
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.nodeIconReviewVariantMode, 'flip-x');
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-qa'],
+    nodesById: {
+      ...state.nodesById,
+      'node-qa': createNode({
+        id: 'node-qa',
+        title: 'QA Node',
+        content: '# QA Node',
+        reveal: 'Answer'
+      })
+    }
+  }));
+
+  render(<App />);
+
+  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const reviewNodeButton = within(listPanel).getByRole('treeitem', { name: 'QA Node' });
+
+  expect(reviewNodeButton.querySelector('svg[data-node-custom-slot="primary"]')).not.toBeNull();
+  expect(reviewNodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
+    'data-node-icon-mirror',
+    'flip-x'
   );
 });

@@ -12,6 +12,8 @@ import {
   presetLabel
 } from '../../model/settingsPanelOptions';
 
+import { NodeIconSettingsSection } from './NodeIconSettingsSection';
+
 export function SettingsAppearanceSection(props: {
   baseColorMode: BaseColorMode;
   safeAccentColor: AccentColorPreset;
@@ -42,6 +44,7 @@ export function SettingsAppearanceSection(props: {
         <div className="settings-row"><div className="settings-row-copy"><h4>Accent color</h4><p>Choose accent color for selected states, links, and quote rendering.</p></div><div className="settings-accent-controls"><button aria-label="Reset accent color" className="settings-reset" disabled={props.safeAccentColor === DEFAULT_ACCENT_COLOR_PRESET} onClick={props.onAccentColorPresetReset} type="button">↺</button><button aria-label="Pick accent color" className="settings-accent-trigger" onClick={props.onOpenAccentColorPicker} type="button"><span aria-hidden="true" className="settings-accent-swatch" style={{ backgroundColor: props.safeAccentColor }} /></button><input aria-label="Accent color picker" className="settings-accent-native-input" onChange={(event) => props.onAccentColorPresetChange(event.target.value as AccentColorPreset)} ref={props.accentColorInputRef} type="color" value={props.safeAccentColor} /></div></div>
         <div className="settings-row settings-row-readonly"><div className="settings-row-copy"><h4>Theme</h4><p>Theme package management will be added in a follow-up task.</p></div><span className="settings-pill">Planned</span></div>
       </section>
+      <NodeIconSettingsSection />
       <FontSection {...props} />
     </>
   );
