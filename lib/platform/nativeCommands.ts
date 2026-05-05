@@ -17,6 +17,8 @@ export const NATIVE_COMMANDS = {
   importLocalImageAttachment: 'import_local_image_attachment',
   resolveAttachmentResource: 'resolve_attachment_resource',
   resolveAppPaths: 'resolve_app_paths',
+  loadLibraryPathSettings: 'load_library_path_settings',
+  updateLibraryPathSetting: 'update_library_path_setting',
   reviewGrade: 'review_grade',
   reviewPreview: 'review_preview',
   syncAppMenuState: 'sync_app_menu_state',

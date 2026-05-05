@@ -32,6 +32,26 @@ vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
   saveAppSettingsState: vi.fn().mockResolvedValue(undefined)
 }));
+vi.mock('./libraryPaths.js', () => ({
+  loadLibraryPathSettings: vi.fn().mockResolvedValue({
+    assets_dir: '/library/Assets',
+    data_dir: '/library/Data',
+    database_path: '/library/Data/foliole.db',
+    inbox: '/library/Inbox',
+    library_home: '/library',
+    mirror: '/library/Mirror',
+    updated_at: '2026-03-30T00:00:00.000Z'
+  }),
+  updateLibraryPathSetting: vi.fn().mockImplementation(({ location, path }) => ({
+    assets_dir: '/library/Assets',
+    data_dir: '/library/Data',
+    database_path: '/library/Data/foliole.db',
+    inbox: location === 'inbox' && path ? path : '/library/Inbox',
+    library_home: location === 'library_home' && path ? path : '/library',
+    mirror: location === 'mirror' && path ? path : '/library/Mirror',
+    updated_at: '2026-03-30T00:05:00.000Z'
+  }))
+}));
 vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn().mockReturnValue({
     detailsOpen: true,
@@ -97,6 +117,25 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+async function expectLibraryPathCommands() {
+  await expect(handleInvokeRequest({ command: 'load_library_path_settings' })).resolves.toMatchObject({
+    library_home: '/library',
+    inbox: '/library/Inbox',
+    mirror: '/library/Mirror'
+  });
+  await expect(
+    handleInvokeRequest({
+      command: 'update_library_path_setting',
+      args: {
+        location: 'mirror',
+        path: '/mirror-vault'
+      }
+    })
+  ).resolves.toMatchObject({
+    mirror: '/mirror-vault'
+  });
+}
+
 async function expectAppAndImportSettingsCommands() {
   await expect(handleInvokeRequest({ command: 'load_app_settings_state' })).resolves.toEqual({
     'foliole-ui-font-preset': 'inter'
@@ -116,6 +155,7 @@ async function expectAppAndImportSettingsCommands() {
   await expect(handleInvokeRequest({ command: 'load_review_scheduler_settings' })).resolves.toMatchObject({
     desiredRetention: 0.9
   });
+  await expectLibraryPathCommands();
   await expect(handleInvokeRequest({ command: 'load_import_manager_settings' })).resolves.toMatchObject({
     detailsOpen: true,
     readwiseRootPath: '/tmp/readwise'

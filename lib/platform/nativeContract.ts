@@ -1,4 +1,4 @@
-import { NATIVE_COMMANDS, isTypedNativeCommand } from './nativeCommands.js';
+import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
   NativeDirectoryImportArgs, NativeDirectoryImportResult, NativeNodeSourceDetails, NativeKeepImportPreviewArgs,
   NativeKeepImportPreviewResult, NativeImportedTextFile, NativeTextImportArgs, NativeTextImportResult
@@ -15,9 +15,9 @@ import type {
   NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
 import type {
-  NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult,
+  NativeAttachmentResourceResolution, NativeLibraryPaths, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult,
   NativeReviewPreviewArgs, NativeReviewPreviewResult,
-  NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog
+  NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog, NativeUpdateLibraryPathSettingArgs
 } from './nativeUtilityContract.js';
 export type * from './nativeStorageContract.js';
 export type * from './nativeImportContract.js';
@@ -109,6 +109,14 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.resolveAppPaths]: {
     args: undefined;
     result: NativeResolvedAppPaths;
+  };
+  [NATIVE_COMMANDS.loadLibraryPathSettings]: {
+    args: undefined;
+    result: NativeLibraryPaths;
+  };
+  [NATIVE_COMMANDS.updateLibraryPathSetting]: {
+    args: NativeUpdateLibraryPathSettingArgs;
+    result: NativeLibraryPaths;
   };
   [NATIVE_COMMANDS.reviewGrade]: {
     args: NativeReviewGradeArgs;
@@ -233,31 +241,18 @@ export type NativeCommandMap = {
     result: null;
   };
 };
-
 export type NativeCommandName = keyof NativeCommandMap;
-
 export type NativeCommandArgs<T extends NativeCommandName> = NativeCommandMap[T]['args'];
-
 export type NativeCommandResult<T extends NativeCommandName> = NativeCommandMap[T]['result'];
-
 type NativeInvokeTuple<T extends NativeCommandName> = NativeCommandArgs<T> extends undefined
   ? []
   : [args: NativeCommandArgs<T>];
-
 export type NativeInvokeRequest<T extends NativeCommandName = NativeCommandName> = T extends NativeCommandName
   ? NativeCommandArgs<T> extends undefined
     ? { command: T; args?: undefined }
     : { command: T; args: NativeCommandArgs<T> }
   : never;
-
 export interface NativeInvoke {
   <T extends NativeCommandName>(command: T, ...args: NativeInvokeTuple<T>): Promise<NativeCommandResult<T>>;
   (command: string, args?: Record<string, unknown>): Promise<unknown>;
-}
-
-export function isTypedNativeRequest<T extends NativeCommandName>(
-  request: { command: string; args?: unknown },
-  command: T
-): request is NativeInvokeRequest<T> {
-  return isTypedNativeCommand(request.command) && request.command === command;
 }

@@ -5,6 +5,23 @@ export interface NativeResolvedAppPaths {
   app_log_dir: string;
 }
 
+export type NativeLibraryPathLocation = 'library_home' | 'inbox' | 'mirror';
+
+export interface NativeLibraryPaths {
+  assets_dir: string;
+  data_dir: string;
+  database_path: string;
+  inbox: string;
+  library_home: string;
+  mirror: string;
+  updated_at: string;
+}
+
+export interface NativeUpdateLibraryPathSettingArgs {
+  location: NativeLibraryPathLocation;
+  path: string | null;
+}
+
 export type NativeAttachmentResourceResolution =
   | {
       status: 'ready';

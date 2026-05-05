@@ -38,6 +38,7 @@ import {
   parseNodeViewStatePayloadArray
 } from './commandParsers.js';
 import { toNativeImportOverview } from './importOverviewPayload.js';
+import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
 import {
   parseDeleteNodesPermanentlyArgs,
   parseRestoreNodesArgs,
@@ -107,6 +108,17 @@ async function handleSettingsStorageCommand(command: string, args: Record<string
     await saveAppSettingsState(readSettingsObject(args.settings));
     await refreshManagedInboxMonitorFromSettings();
     return null;
+  }
+  if (command === NATIVE_COMMANDS.loadLibraryPathSettings) {
+    return loadLibraryPathSettings();
+  }
+  if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
+    const result = await updateLibraryPathSetting({
+      location: asString(args.location, 'location') as 'library_home' | 'inbox' | 'mirror',
+      path: asNullableString(args.path, 'path')
+    });
+    await refreshManagedInboxMonitorFromSettings();
+    return result;
   }
   if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
     const result = saveImportManagerSettings(readSettingsObject(args.settings));

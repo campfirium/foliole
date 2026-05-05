@@ -13,8 +13,8 @@ const { recordPreparedImportFailure, runPreparedImport } = vi.hoisted(() => ({
 const { resolveAppPaths } = vi.hoisted(() => ({
   resolveAppPaths: vi.fn()
 }));
-const { loadAppSettingsState } = vi.hoisted(() => ({
-  loadAppSettingsState: vi.fn()
+const { loadLibraryPathSettings } = vi.hoisted(() => ({
+  loadLibraryPathSettings: vi.fn()
 }));
 const { logDirectoryImportCompleted, logDirectoryImportFailed } = vi.hoisted(() => ({
   logDirectoryImportCompleted: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock('../import/importRunLogger.js', () => ({
   logDirectoryImportFailed
 }));
 vi.mock('./paths.js', () => ({ resolveAppPaths }));
-vi.mock('./storage.js', () => ({ loadAppSettingsState }));
+vi.mock('./libraryPaths.js', () => ({ loadLibraryPathSettings }));
 vi.mock('electron', () => ({
   BrowserWindow: {},
   dialog: { showOpenDialog: vi.fn() },
@@ -58,7 +58,7 @@ beforeEach(() => {
     app_data_dir: '/tmp/app-data',
     app_log_dir: '/tmp/logs'
   });
-  loadAppSettingsState.mockResolvedValue({});
+  loadLibraryPathSettings.mockResolvedValue({ inbox: '/tmp/app-data/Inbox' });
   runPreparedImport.mockImplementation((prepared) => createPersistedRecord(prepared));
   recordPreparedImportFailure.mockImplementation((prepared, failureReason: string) =>
     createPersistedRecord(prepared, { failureReason, nodeId: null, resultStatus: 'failed' })
@@ -201,7 +201,7 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
     app_data_dir: appDataDir,
     app_log_dir: path.join(appDataDir, 'logs')
   });
-  loadAppSettingsState.mockResolvedValue({ 'foliole-managed-inbox-path': managedRoot });
+  loadLibraryPathSettings.mockResolvedValue({ inbox: managedRoot });
   await fs.mkdir(path.dirname(importedPath), { recursive: true });
   await fs.writeFile(importedPath, 'Imported managed note', 'utf8');
   await fs.writeFile(failedPath, '# Failed managed note', 'utf8');

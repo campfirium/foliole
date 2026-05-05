@@ -52,6 +52,9 @@ const { failingSources, runDirectoryImportBatch } = vi.hoisted(() => ({
     };
   })
 }));
+const { loadLibraryPathSettings } = vi.hoisted(() => ({
+  loadLibraryPathSettings: vi.fn()
+}));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -63,9 +66,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 vi.mock('./directoryImportBatch.js', () => ({ runDirectoryImportBatch }));
-vi.mock('../ipc/storage.js', () => ({
-  loadAppSettingsState: vi.fn().mockResolvedValue({})
-}));
+vi.mock('../ipc/libraryPaths.js', () => ({ loadLibraryPathSettings }));
 
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -84,6 +85,8 @@ beforeEach(async () => {
   initializeDatabase();
   failingSources.clear();
   runDirectoryImportBatch.mockClear();
+  loadLibraryPathSettings.mockReset();
+  loadLibraryPathSettings.mockResolvedValue({ inbox: path.join(mockedAppDataDir, 'Inbox') });
 });
 
 afterEach(async () => {
@@ -93,7 +96,7 @@ afterEach(async () => {
 
 it('persists watch cursors per configured adapter and skips unchanged sources after restart', async () => {
   const externalRoot = path.join(tempRoot, 'external-library');
-  const managedRoot = path.join(mockedAppDataDir, 'inbox');
+  const managedRoot = path.join(mockedAppDataDir, 'Inbox');
   await fs.mkdir(managedRoot, { recursive: true });
   await fs.mkdir(externalRoot, { recursive: true });
   await fs.writeFile(path.join(externalRoot, 'note.md'), '# External', 'utf8');

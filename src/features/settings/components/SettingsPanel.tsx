@@ -15,7 +15,7 @@ import {
   SettingsSidebar,
   type SettingsCategoryContentProps
 } from './SettingsPanelSections';
-import { useManagedInboxSettings } from './useManagedInboxSettings';
+import { useLibraryPathSettings } from './useLibraryPathSettings';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -32,7 +32,7 @@ function SettingsPanelContent(props: SettingsPanelProps) {
 
 function useSettingsPanelViewState() {
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => getInitialSettingsCategory());
-  const managedInboxSettings = useManagedInboxSettings();
+  const libraryPathSettings = useLibraryPathSettings();
 
   useEffect(() => setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory), [activeCategory]);
   const title = SETTINGS_CATEGORIES.find((category) => category.id === activeCategory)?.label ?? 'Settings';
@@ -41,19 +41,21 @@ function useSettingsPanelViewState() {
     activeCategory,
     setActiveCategory,
     title,
-    ...managedInboxSettings
+    ...libraryPathSettings
   };
 }
 
 type SettingsPanelBodyProps = {
   activeCategory: SettingsCategoryId;
+  errorByLocation: Record<'inbox' | 'library_home' | 'mirror', string | null>;
   inboxPath: string;
-  inboxPathError: string | null;
-  isInboxDesktopRuntime: boolean;
-  isInboxPathPending: boolean;
+  isDesktopRuntime: boolean;
+  libraryHomePath: string;
+  mirrorPath: string;
   onClose: () => void;
-  onInboxPathChangeRequest: () => void;
-  onInboxPathRestoreDefault: () => void;
+  onChangeLocation: (location: 'inbox' | 'library_home' | 'mirror') => void;
+  onRestoreDefault: (location: 'inbox' | 'library_home' | 'mirror') => void;
+  pendingLocation: 'inbox' | 'library_home' | 'mirror' | null;
   setActiveCategory: (category: SettingsCategoryId) => void;
   title: string;
 };
@@ -67,12 +69,14 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
   const hotkeys = useHotkeySettings();
   const categoryProps: SettingsPanelCategoryProps = {
     activeCategory: props.activeCategory,
+    errorByLocation: props.errorByLocation,
     inboxPath: props.inboxPath,
-    inboxPathError: props.inboxPathError,
-    isInboxDesktopRuntime: props.isInboxDesktopRuntime,
-    isInboxPathPending: props.isInboxPathPending,
-    onInboxPathChangeRequest: props.onInboxPathChangeRequest,
-    onInboxPathRestoreDefault: props.onInboxPathRestoreDefault
+    isDesktopRuntime: props.isDesktopRuntime,
+    libraryHomePath: props.libraryHomePath,
+    mirrorPath: props.mirrorPath,
+    onChangeLocation: props.onChangeLocation,
+    onRestoreDefault: props.onRestoreDefault,
+    pendingLocation: props.pendingLocation
   };
 
   return (

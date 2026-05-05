@@ -1,9 +1,11 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
-import { resolveRuntimeAppPaths } from '../../../shared/platform/bridge';
 import { selectRuntimeImportDirectory } from '../../../shared/platform/importBridge';
+import {
+  loadRuntimeLibraryPathSettings,
+  updateRuntimeLibraryPathSetting
+} from '../../../shared/platform/libraryPathsBridge';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -12,15 +14,6 @@ import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.tes
 vi.mock('../model/systemFonts', () => ({
   listAvailableSystemFonts: vi.fn()
 }));
-vi.mock('../../../shared/platform/bridge', async () => {
-  const actual = await vi.importActual<typeof import('../../../shared/platform/bridge')>(
-    '../../../shared/platform/bridge'
-  );
-  return {
-    ...actual,
-    resolveRuntimeAppPaths: vi.fn()
-  };
-});
 vi.mock('../../../shared/platform/importBridge', async () => {
   const actual = await vi.importActual<typeof import('../../../shared/platform/importBridge')>(
     '../../../shared/platform/importBridge'
@@ -30,28 +23,63 @@ vi.mock('../../../shared/platform/importBridge', async () => {
     selectRuntimeImportDirectory: vi.fn()
   };
 });
+vi.mock('../../../shared/platform/libraryPathsBridge', async () => {
+  const actual = await vi.importActual<typeof import('../../../shared/platform/libraryPathsBridge')>(
+    '../../../shared/platform/libraryPathsBridge'
+  );
+  return {
+    ...actual,
+    loadRuntimeLibraryPathSettings: vi.fn(),
+    updateRuntimeLibraryPathSetting: vi.fn()
+  };
+});
 
 const mockedListAvailableSystemFonts = vi.mocked(listAvailableSystemFonts);
-const mockedResolveRuntimeAppPaths = vi.mocked(resolveRuntimeAppPaths);
 const mockedSelectRuntimeImportDirectory = vi.mocked(selectRuntimeImportDirectory);
+const mockedLoadRuntimeLibraryPathSettings = vi.mocked(loadRuntimeLibraryPathSettings);
+const mockedUpdateRuntimeLibraryPathSetting = vi.mocked(updateRuntimeLibraryPathSetting);
+
+const defaultLibraryPaths = {
+  assetsDir: 'C:\\Users\\Tester\\Documents\\Foliole\\Assets',
+  dataDir: 'C:\\Users\\Tester\\Documents\\Foliole\\Data',
+  databasePath: 'C:\\Users\\Tester\\Documents\\Foliole\\Data\\foliole.db',
+  inbox: 'C:\\Users\\Tester\\Documents\\Foliole\\Inbox',
+  libraryHome: 'C:\\Users\\Tester\\Documents\\Foliole',
+  mirror: 'C:\\Users\\Tester\\Documents\\Foliole\\Mirror',
+  updatedAt: '2026-03-30T00:00:00.000Z'
+};
 
 beforeEach(() => {
   window.localStorage.clear();
   window.electronAPI = undefined;
   mockedListAvailableSystemFonts.mockReset();
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
-  mockedResolveRuntimeAppPaths.mockReset();
-  mockedResolveRuntimeAppPaths.mockResolvedValue({
-    appCacheDir: '/tmp/cache',
-    appConfigDir: '/tmp/config',
-    appDataDir: 'C:\\Users\\Tester\\AppData\\Roaming\\Foliole',
-    appLogDir: '/tmp/logs'
+  mockedLoadRuntimeLibraryPathSettings.mockReset();
+  mockedLoadRuntimeLibraryPathSettings.mockResolvedValue(defaultLibraryPaths);
+  mockedUpdateRuntimeLibraryPathSetting.mockReset();
+  mockedUpdateRuntimeLibraryPathSetting.mockImplementation(async (location, nextPath) => {
+    if (location === 'library_home') {
+      const libraryHome = nextPath ?? defaultLibraryPaths.libraryHome;
+      return {
+        ...defaultLibraryPaths,
+        assetsDir: `${libraryHome}\\Assets`,
+        dataDir: `${libraryHome}\\Data`,
+        databasePath: `${libraryHome}\\Data\\foliole.db`,
+        inbox: `${libraryHome}\\Inbox`,
+        libraryHome,
+        mirror: `${libraryHome}\\Mirror`
+      };
+    }
+    return {
+      ...defaultLibraryPaths,
+      [location === 'inbox' ? 'inbox' : 'mirror']: nextPath ?? defaultLibraryPaths[location === 'inbox' ? 'inbox' : 'mirror']
+    };
   });
   mockedSelectRuntimeImportDirectory.mockReset();
   mockedSelectRuntimeImportDirectory.mockResolvedValue(null);
 });
 
-it('shows the default inbox path and lets the user choose a custom location', async () => {
+it('shows the default inbox path and lets the user choose a custom location through the runtime bridge', async () => {
   mockedSelectRuntimeImportDirectory.mockResolvedValue('D:\\Capture\\Inbox');
 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
@@ -59,19 +87,23 @@ it('shows the default inbox path and lets the user choose a custom location', as
   fireEvent.click(screen.getByRole('button', { name: 'Library' }));
 
   await waitFor(() => {
-    expect(screen.getByText('C:\\Users\\Tester\\AppData\\Roaming\\Foliole\\inbox')).toBeInTheDocument();
+    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Inbox')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Change location' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[1] as HTMLButtonElement);
 
   await waitFor(() => {
     expect(screen.getByText('D:\\Capture\\Inbox')).toBeInTheDocument();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.managedInboxPath)).toBe('D:\\Capture\\Inbox');
   });
+  expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenCalledWith('inbox', 'D:\\Capture\\Inbox');
+  expect(window.localStorage.getItem('foliole-managed-inbox-path')).toBeNull();
 });
 
-it('restores the default inbox path and clears the stored override', async () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.managedInboxPath, 'D:\\Capture\\Inbox');
+it('restores the default inbox path through the runtime bridge', async () => {
+  mockedLoadRuntimeLibraryPathSettings.mockResolvedValue({
+    ...defaultLibraryPaths,
+    inbox: 'D:\\Capture\\Inbox'
+  });
 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
@@ -81,12 +113,12 @@ it('restores the default inbox path and clears the stored override', async () =>
     expect(screen.getByText('D:\\Capture\\Inbox')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Restore default' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Restore default' })[1] as HTMLButtonElement);
 
   await waitFor(() => {
-    expect(screen.getByText('C:\\Users\\Tester\\AppData\\Roaming\\Foliole\\inbox')).toBeInTheDocument();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.managedInboxPath)).toBeNull();
+    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Inbox')).toBeInTheDocument();
   });
+  expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenCalledWith('inbox', null);
 });
 
 it('shows Library Home, Inbox, and Mirror without exposing internal data folders', async () => {
@@ -108,4 +140,34 @@ it('shows Library Home, Inbox, and Mirror without exposing internal data folders
   expect(screen.queryByText('Database location')).not.toBeInTheDocument();
   expect(screen.queryByText('Assets location')).not.toBeInTheDocument();
   expect(screen.queryByText('Data location')).not.toBeInTheDocument();
+});
+
+it('updates Library Home and Mirror through the same runtime interface', async () => {
+  mockedSelectRuntimeImportDirectory
+    .mockResolvedValueOnce('E:\\LibraryRoot')
+    .mockResolvedValueOnce('F:\\MirrorVault');
+
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+
+  await waitFor(() => {
+    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole')).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[0] as HTMLButtonElement);
+
+  await waitFor(() => {
+    expect(screen.getByText('E:\\LibraryRoot')).toBeInTheDocument();
+    expect(screen.getByText('E:\\LibraryRoot\\Mirror')).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[2] as HTMLButtonElement);
+
+  await waitFor(() => {
+    expect(screen.getByText('F:\\MirrorVault')).toBeInTheDocument();
+  });
+
+  expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenNthCalledWith(1, 'library_home', 'E:\\LibraryRoot');
+  expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenNthCalledWith(2, 'mirror', 'F:\\MirrorVault');
 });

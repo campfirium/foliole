@@ -1,11 +1,10 @@
 import fs from 'node:fs';
 
-import { MANAGED_INBOX_APP_SETTING_KEY, normalizeManagedInboxPath } from '../../lib/platform/managedInbox.js';
 import type { NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
 import { runManagedInboxImport } from '../ipc/importDirectory.js';
+import { loadLibraryPathSettings } from '../ipc/libraryPaths.js';
 import { ensureManagedInboxRoot, resolveManagedInboxPaths } from '../ipc/managedInboxFolder.js';
 import { resolveAppPaths } from '../ipc/paths.js';
-import { loadAppSettingsState } from '../ipc/storage.js';
 
 import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
 
@@ -30,9 +29,7 @@ export interface ManagedInboxMonitor {
 }
 
 async function loadConfiguredManagedInboxRootPath() {
-  const settings = await loadAppSettingsState();
-  const configuredRootPath = normalizeManagedInboxPath(settings[MANAGED_INBOX_APP_SETTING_KEY]);
-  return resolveManagedInboxPaths(resolveAppPaths().app_data_dir, configuredRootPath).rootPath;
+  return resolveManagedInboxPaths(resolveAppPaths().app_data_dir, (await loadLibraryPathSettings()).inbox).rootPath;
 }
 
 function watchManagedInboxDirectory(rootPath: string, listener: () => void): ManagedInboxWatchHandle {

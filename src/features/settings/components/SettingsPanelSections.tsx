@@ -13,13 +13,15 @@ import { cn } from '@/shared/lib/utils';
 
 export interface SettingsCategoryContentProps {
   activeCategory: SettingsCategoryId;
+  errorByLocation: Record<'inbox' | 'library_home' | 'mirror', string | null>;
   hotkeyItems: HotkeySettingItem[];
   inboxPath: string;
-  inboxPathError: string | null;
-  isInboxDesktopRuntime: boolean;
-  isInboxPathPending: boolean;
-  onInboxPathChangeRequest: () => void;
-  onInboxPathRestoreDefault: () => void;
+  isDesktopRuntime: boolean;
+  libraryHomePath: string;
+  mirrorPath: string;
+  onChangeLocation: (location: 'inbox' | 'library_home' | 'mirror') => void;
+  onRestoreDefault: (location: 'inbox' | 'library_home' | 'mirror') => void;
+  pendingLocation: 'inbox' | 'library_home' | 'mirror' | null;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
@@ -68,12 +70,14 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
   if (props.activeCategory === 'import') {
     return (
       <SettingsImportSection
-        errorMessage={props.inboxPathError}
+        errorByLocation={props.errorByLocation}
         inboxPath={props.inboxPath}
-        isDesktopRuntime={props.isInboxDesktopRuntime}
-        isPending={props.isInboxPathPending}
-        onChangeLocation={props.onInboxPathChangeRequest}
-        onRestoreDefault={props.onInboxPathRestoreDefault}
+        isDesktopRuntime={props.isDesktopRuntime}
+        libraryHomePath={props.libraryHomePath}
+        mirrorPath={props.mirrorPath}
+        onChangeLocation={props.onChangeLocation}
+        onRestoreDefault={props.onRestoreDefault}
+        pendingLocation={props.pendingLocation}
       />
     );
   }

@@ -1,10 +1,7 @@
 import { BrowserWindow, app, dialog, shell, type WebContents } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-import {
-  isTypedNativeRequest,
-  type NativeInvokeRequest
-} from '../../lib/platform/nativeContract.js';
+import { type NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 import { previewKeepImportRule } from '../import/keepImportService.js';
 
 import { bootReport } from './boot.js';
@@ -41,11 +38,8 @@ function resolveTargetWindow(context?: InvokeContext) {
   return BrowserWindow.getFocusedWindow();
 }
 
-function isTypedRequest<T extends NativeInvokeRequest['command']>(
-  request: InvokeRequest,
-  command: T
-): request is NativeInvokeRequest<T> {
-  return isTypedNativeRequest(request, command);
+function isTypedRequest<T extends NativeInvokeRequest['command']>(request: InvokeRequest, command: T): request is NativeInvokeRequest<T> {
+  return request.command === command;
 }
 
 async function handleWindowCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {

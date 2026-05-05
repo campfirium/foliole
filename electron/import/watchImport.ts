@@ -1,11 +1,11 @@
 import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
-import { MANAGED_INBOX_APP_SETTING_KEY } from '../../lib/platform/managedInbox.js';
 import type {
   NativeDirectoryImportResult,
   NativeDirectoryImportSourceAdapter,
   NativeManagedInboxConsumePolicy
 } from '../../lib/platform/nativeContract.js';
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
+import { loadLibraryPathSettings } from '../ipc/libraryPaths.js';
 import {
   ensureManagedInboxRoot,
   resolveDirectoryImportConsumePolicy,
@@ -13,7 +13,6 @@ import {
   resolveManagedInboxPaths
 } from '../ipc/managedInboxFolder.js';
 import { resolveAppPaths } from '../ipc/paths.js';
-import { loadAppSettingsState } from '../ipc/storage.js';
 
 import { runDirectoryImportBatch } from './directoryImportBatch.js';
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -58,10 +57,7 @@ function isSourceChanged(source: DirectoryImportSourceDescriptor, previousEntry?
 
 async function resolveWatchImportRootPath(config: WatchImportAdapterConfig, sourceAdapter: NativeDirectoryImportSourceAdapter) {
   if (sourceAdapter === 'foliole_managed_inbox_folder') {
-    const managedPaths = resolveManagedInboxPaths(
-      resolveAppPaths().app_data_dir,
-      (await loadAppSettingsState())[MANAGED_INBOX_APP_SETTING_KEY]
-    );
+    const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir, (await loadLibraryPathSettings()).inbox);
     await ensureManagedInboxRoot(managedPaths.rootPath);
     return managedPaths.rootPath;
   }

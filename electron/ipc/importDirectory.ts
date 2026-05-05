@@ -1,6 +1,5 @@
 import { dialog, type BrowserWindow } from 'electron';
 
-import { MANAGED_INBOX_APP_SETTING_KEY } from '../../lib/platform/managedInbox.js';
 import type { NativeDirectoryImportArgs, NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
 import { runDirectoryImportBatch } from '../import/directoryImportBatch.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
@@ -11,6 +10,7 @@ import {
   resolveImportHighlightPolicy,
   resolveImportNodeTitleStrategy
 } from './importSourcePipeline.js';
+import { loadLibraryPathSettings } from './libraryPaths.js';
 import {
   ensureManagedInboxRoot,
   resolveDirectoryImportConsumePolicy,
@@ -18,13 +18,9 @@ import {
   resolveManagedInboxPaths
 } from './managedInboxFolder.js';
 import { resolveAppPaths } from './paths.js';
-import { loadAppSettingsState } from './storage.js';
 
 async function resolveManagedInboxRootPath() {
-  const managedPaths = resolveManagedInboxPaths(
-    resolveAppPaths().app_data_dir,
-    (await loadAppSettingsState())[MANAGED_INBOX_APP_SETTING_KEY]
-  );
+  const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir, (await loadLibraryPathSettings()).inbox);
   await ensureManagedInboxRoot(managedPaths.rootPath);
   return managedPaths.rootPath;
 }
