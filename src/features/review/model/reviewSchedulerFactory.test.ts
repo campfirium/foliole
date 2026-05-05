@@ -65,9 +65,11 @@ describe('createReviewSchedulerAdapter', () => {
     });
 
     expect(invoke).toHaveBeenCalledWith('review_grade', {
-      card: { ...BASE_CARD },
-      rating: 'Easy',
-      now: '2026-02-26T00:00:00.000Z'
+      request: {
+        card: { ...BASE_CARD },
+        rating: 'Easy',
+        now: '2026-02-26T00:00:00.000Z'
+      }
     });
     expect(result.card.reps).toBe(9);
   });

@@ -117,6 +117,14 @@ function useNodeListState(activeNodeId: string | null, nodeOrder: string[], node
     setSelectionAnchorNodeId((prev) => prev ?? selectedTrashNodeId);
   }, [selectedTrashNodeId, trashedNodeIds]);
 
+  useEffect(() => {
+    if (!activeNodeId || trashedNodeIds.includes(activeNodeId)) {
+      return;
+    }
+    setSelectedNodeIds((prev) => (prev.includes(activeNodeId) ? prev : [activeNodeId]));
+    setSelectionAnchorNodeId(activeNodeId);
+  }, [activeNodeId, trashedNodeIds]);
+
   return {
     noteRows,
     trashRows,

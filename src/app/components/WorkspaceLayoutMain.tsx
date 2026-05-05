@@ -80,6 +80,8 @@ function WorkspaceDocumentArea({ documentNodeId, props }: WorkspaceContentProps)
       <ReviewModeToolbar
         isAnswerRevealed={props.isAnswerRevealed}
         isStudyMode={props.isStudyMode}
+        reviewCurrentNodeId={props.reviewCurrentNodeId}
+        onExitReviewMode={props.onExitReviewMode}
         onGrade={props.onGradeReview}
         onRevealAnswer={props.onRevealAnswer}
       />

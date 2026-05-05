@@ -56,9 +56,10 @@ function useEditorAdapter(
   debugId: string | undefined,
   onChange: (value: string) => void,
   onReady: ((adapter: EditorAdapter | null) => void) | undefined,
-  value: string
+  initialValue: string
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
+  const initialValueRef = useRef(initialValue);
   const onChangeRef = useRef(onChange);
   const onReadyRef = useRef(onReady);
 
@@ -72,7 +73,7 @@ function useEditorAdapter(
     }
 
     const adapter = new CodeMirrorEditorAdapter(host, {
-      initialContent: value,
+      initialContent: initialValueRef.current,
       onChange: (nextValue) => onChangeRef.current(nextValue)
     });
 
@@ -90,7 +91,7 @@ function useEditorAdapter(
       adapter.destroy();
       adapterRef.current = null;
     };
-  }, [debugId, hostRef, value]);
+  }, [debugId, hostRef]);
 
   return adapterRef;
 }

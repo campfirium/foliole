@@ -14,9 +14,11 @@ export function createRustReviewSchedulerAdapter(invoke: RustInvoke): ReviewSche
       assertSchedulerGradeInput(input);
 
       const result = await invoke('review_grade', {
-        card: input.card,
-        rating: mapGradeToRustRating(input.grade),
-        now: input.now
+        request: {
+          card: input.card,
+          rating: mapGradeToRustRating(input.grade),
+          now: input.now
+        }
       });
 
       assertSchedulerGradeResult(result);

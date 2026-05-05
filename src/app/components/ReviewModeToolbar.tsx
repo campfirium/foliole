@@ -4,18 +4,36 @@ import { AppButton } from '../../shared/ui';
 interface ReviewModeToolbarProps {
   isStudyMode: boolean;
   isAnswerRevealed: boolean;
+  reviewCurrentNodeId: string | null;
   onGrade: (grade: ReviewGrade) => void;
   onRevealAnswer: () => void;
+  onExitReviewMode: () => void;
 }
 
 export function ReviewModeToolbar({
   isStudyMode,
   isAnswerRevealed,
+  reviewCurrentNodeId,
   onGrade,
-  onRevealAnswer
+  onRevealAnswer,
+  onExitReviewMode
 }: ReviewModeToolbarProps) {
   if (!isStudyMode) {
     return null;
+  }
+
+  if (!reviewCurrentNodeId) {
+    return (
+      <div
+        aria-label="Review mode toolbar"
+        className="flex h-[56px] w-full flex-none items-center justify-center border-t border-border bg-bg-elevated px-4"
+        data-mode="study"
+      >
+        <AppButton aria-label="Review complete" onClick={onExitReviewMode} size="sm" variant="subtle">
+          Review complete
+        </AppButton>
+      </div>
+    );
   }
 
   return (

@@ -38,6 +38,7 @@ export interface WorkspaceLayoutProps {
   isStudyMode: boolean;
   isSettingsOpen: boolean;
   isAnswerRevealed: boolean;
+  reviewCurrentNodeId: string | null;
   isDocumentResizing: boolean;
   isResizingList: boolean;
   isTrashViewOpen: boolean;
@@ -88,6 +89,7 @@ export interface WorkspaceLayoutProps {
   onToggleEditorDisplayMode: () => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => void;
+  onExitReviewMode: () => void;
   customUiFont: string;
   customInterfaceFont: string;
   customMonospaceFont: string;

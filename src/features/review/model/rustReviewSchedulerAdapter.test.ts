@@ -35,9 +35,11 @@ describe('createRustReviewSchedulerAdapter', () => {
     const result = await adapter.grade(BASE_INPUT);
 
     expect(invoke).toHaveBeenCalledWith('review_grade', {
-      card: BASE_INPUT.card,
-      rating: 'Good',
-      now: BASE_INPUT.now
+      request: {
+        card: BASE_INPUT.card,
+        rating: 'Good',
+        now: BASE_INPUT.now
+      }
     });
     expect(result.reviewed_at).toBe(BASE_INPUT.now);
   });

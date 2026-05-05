@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -68,6 +68,104 @@ it('runs study flow as Study -> Show Answer -> Grade buttons enabled', () => {
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Again' })).toBeInTheDocument();
   expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument();
+});
+
+it('syncs node list selection when review grading advances active node', async () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      ...state.nodesById,
+      'node-1': {
+        ...state.nodesById['node-1'],
+        reveal: 'Answer 1',
+        review: {
+          due: FIXED_TIMESTAMP,
+          lastReviewAt: null,
+          state: 0,
+          stability: 0,
+          difficulty: 0,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          reps: 0,
+          lapses: 0
+        }
+      },
+      'node-2': createNode({
+        id: 'node-2',
+        parentNodeId: 'node-1',
+        title: 'QA 2',
+        content: 'Prompt 2',
+        reveal: 'Answer 2',
+        review: {
+          due: FIXED_TIMESTAMP,
+          lastReviewAt: null,
+          state: 0,
+          stability: 0,
+          difficulty: 0,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          reps: 0,
+          lapses: 0
+        }
+      })
+    }
+  }));
+
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Good' }));
+
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  });
+  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  await waitFor(() => {
+    expect(within(listPanel).getByRole('button', { name: 'QA 2' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+it('keeps review toolbar visible in completed state until user exits', async () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1'],
+    nodesById: {
+      ...state.nodesById,
+      'node-1': {
+        ...state.nodesById['node-1'],
+        reveal: 'Answer 1',
+        review: {
+          due: FIXED_TIMESTAMP,
+          lastReviewAt: null,
+          state: 0,
+          stability: 0,
+          difficulty: 0,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          reps: 0,
+          lapses: 0
+        }
+      }
+    }
+  }));
+
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Good' }));
+
+  await waitFor(() => {
+    expect(screen.getByText('Review complete')).toBeInTheDocument();
+  });
+  expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Review complete' }));
+  await waitFor(() => {
+    expect(screen.queryByLabelText('Review mode toolbar')).not.toBeInTheDocument();
+  });
 });
 
 it('loads selected node content into editor', () => {

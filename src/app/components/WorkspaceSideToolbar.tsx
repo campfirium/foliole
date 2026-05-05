@@ -1,4 +1,4 @@
-import { BookOpen, BookOpenCheck, Settings } from 'lucide-react';
+import { Route, Settings } from 'lucide-react';
 
 import { AppIconButton, AppToolbar } from '../../shared/ui';
 
@@ -40,12 +40,16 @@ export function WorkspaceSideToolbar({
           onClick={onOpenSettings}
         />
       </div>
-      <div className="flex h-[56px] w-full flex-none items-center justify-center border-t border-border bg-[#f6f6f6]">
+      <div
+        className={`flex h-[56px] w-full flex-none items-center justify-center bg-[#f6f6f6]${
+          isStudyMode ? ' border-t border-border' : ''
+        }`}
+      >
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           data-active={false}
           disabled={!canStartStudyMode && !isStudyMode}
-          icon={isStudyMode ? <BookOpenCheck aria-hidden="true" size={16} strokeWidth={1.75} /> : <BookOpen aria-hidden="true" size={16} strokeWidth={1.75} />}
+          icon={<Route aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Study"
           onClick={onToggleReviewSession}
           title={reviewStatusText}
