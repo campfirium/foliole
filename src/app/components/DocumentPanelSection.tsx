@@ -82,20 +82,20 @@ export function DocumentPanelSection({
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
       <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
-        <header className="flex min-h-[40px] items-center border-b border-border px-3">
+        <header className="flex min-h-[40px] items-center px-3">
           <h2 className="sr-only">Content</h2>
           <div className="flex shrink-0 items-center gap-1">
             <AppIconButton
-              className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
               disabled={!canGoBack}
-              icon="←"
+              icon={<ArrowLeftIcon />}
               label="Go back"
               onClick={onGoBack}
             />
             <AppIconButton
-              className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
               disabled={!canGoForward}
-              icon="→"
+              icon={<ArrowRightIcon />}
               label="Go forward"
               onClick={onGoForward}
             />
@@ -170,6 +170,24 @@ export function DocumentPanelSection({
         />
       ) : null}
     </section>
+  );
+}
+
+function ArrowLeftIcon() {
+  return (
+    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
+      <path d="M12.4 8H4.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.3" />
+      <path d="M7.6 5.2 4.8 8l2.8 2.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
+      <path d="M3.6 8h7.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.3" />
+      <path d="m8.4 5.2 2.8 2.8-2.8 2.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3" />
+    </svg>
   );
 }
 

@@ -39,8 +39,18 @@ export function NodeTreeRow({
       style={style}
       variant="list"
     >
-      <span aria-hidden="true" className={cn('h-px w-3 flex-none border-b border-border opacity-0', showBranch && 'opacity-85')} />
+      <span aria-hidden="true" className={cn('flex size-3 flex-none items-center justify-center opacity-0', showBranch && 'opacity-70')}>
+        <ChevronDownIcon />
+      </span>
       <span className="min-w-0 truncate">{label}</span>
     </AppButton>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16">
+      <path d="M4.5 6.5 8 10l3.5-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" />
+    </svg>
   );
 }

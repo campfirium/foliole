@@ -1,12 +1,11 @@
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 
-import { AppButton, AppEmptyState } from '../../../shared/ui';
+import { AppButton, AppEmptyState, AppIconButton } from '../../../shared/ui';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTreeRows } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
-import { NodeTrashSection } from './NodeTrashSection';
 import { NodeTreeRow } from './NodeTreeRow';
 
 interface NodeListTreeProps {
@@ -43,6 +42,7 @@ export function NodeListTree({
   const trashRows = buildNodeTreeRows(trashedNodeOrder, nodesById);
   const noteRowIds = noteRows.map((row) => row.node.id);
   const trashRowIds = trashRows.map((row) => row.node.id);
+  const activeRows = isTrashViewOpen ? trashRows : noteRows;
 
   const [contextNodeId, setContextNodeId] = useState<string | null>(null);
   const [contextMenuMode, setContextMenuMode] = useState<MenuMode>(null);
@@ -149,11 +149,6 @@ export function NodeListTree({
     createRootNode('');
   };
 
-  const handleOpenNotesView = (event: ReactMouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    onOpenNotesView();
-  };
-
   const handleSelectNode = (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
     const isTrashNode = trashedNodeIds.includes(nodeId);
     const scopeNodeIds = isTrashNode ? trashRowIds : noteRowIds;
@@ -195,29 +190,51 @@ export function NodeListTree({
 
   return (
     <>
-      <aside aria-label="Node list panel" className="flex min-h-0 flex-col border-r border-border bg-bg-panel text-foreground">
-        <header className="flex min-h-[40px] items-center justify-end border-b border-border px-3">
+      <aside aria-label="Node list panel" className="flex min-h-0 flex-col bg-bg-panel text-foreground">
+        <header className="flex min-h-[40px] items-center justify-end px-3">
           <h2 className="sr-only">Nodes</h2>
-          <button className="sr-only" onClick={handleOpenNotesView} type="button">
+          <button className="sr-only" onClick={onOpenNotesView} type="button">
             Nodes
           </button>
-          <AppButton aria-label="New" onClick={handleCreateRootNode} size="sm" variant="subtle">
-            New
-          </AppButton>
+          {isTrashViewOpen ? (
+            <>
+              <button aria-label="New" className="sr-only" onClick={handleCreateRootNode} type="button">
+                New
+              </button>
+              <AppButton
+                aria-label="Empty"
+                className="text-foreground/70 hover:text-foreground"
+                disabled={trashRows.length === 0}
+                onClick={handleEmptyTrash}
+                size="sm"
+                variant="subtle"
+              >
+                Empty
+              </AppButton>
+            </>
+          ) : (
+            <AppIconButton
+              aria-label="New"
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+              icon={<NewNoteIcon />}
+              label="New"
+              onClick={handleCreateRootNode}
+            />
+          )}
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-2">
-          <section
-            aria-hidden={isTrashViewOpen}
-            className="flex max-h-[120dvh] flex-1 flex-col gap-2 overflow-hidden transition-all duration-200 data-[collapsed=true]:pointer-events-none data-[collapsed=true]:max-h-0 data-[collapsed=true]:translate-y-[-4px] data-[collapsed=true]:opacity-0"
-            data-collapsed={isTrashViewOpen}
-          >
-            {noteRows.length === 0 ? (
-              <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
+          <section aria-label={isTrashViewOpen ? 'Trash section' : undefined} className="flex flex-1 flex-col gap-2">
+            {activeRows.length === 0 ? (
+              isTrashViewOpen ? (
+                <AppEmptyState description="Deleted nodes will appear here." title="Trash is empty" />
+              ) : (
+                <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
+              )
             ) : (
-              noteRows.map((row) => (
+              activeRows.map((row) => (
                 <NodeTreeRow
                   depth={row.depth}
-                  isActive={activeNodeId === row.node.id}
+                  isActive={(isTrashViewOpen ? selectedTrashNodeId : activeNodeId) === row.node.id}
                   isSelected={selectedNodeIds.includes(row.node.id)}
                   key={row.node.id}
                   label={row.node.title}
@@ -229,15 +246,6 @@ export function NodeListTree({
               ))
             )}
           </section>
-
-          <NodeTrashSection
-            isOpen={isTrashViewOpen}
-            onContextMenu={openContextMenu}
-            onEmptyTrash={handleEmptyTrash}
-            onSelect={handleSelectNode}
-            rows={trashRows}
-            selectedNodeIds={selectedNodeIds}
-          />
         </div>
       </aside>
       {menuPosition ? (
@@ -252,6 +260,16 @@ export function NodeListTree({
         />
       ) : null}
     </>
+  );
+}
+
+function NewNoteIcon() {
+  return (
+    <svg aria-hidden="true" className="h-[18px] w-[18px]" viewBox="0 0 16 16">
+      <path d="M3 2.5h6.8L13 5.7v7.8H3z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.2" />
+      <path d="M9.8 2.5v3.2H13" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.2" />
+      <path d="m6.2 10.8 2.9-2.9 1.2 1.2-2.9 2.9-1.8.6z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.1" />
+    </svg>
   );
 }
 

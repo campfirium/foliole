@@ -42,6 +42,7 @@ export function App() {
   const exitReviewSession = useWorkspaceStore((state) => state.exitReviewSession);
 
   const editorRef = useRef<EditorAdapter | null>(null);
+  const lastExpandedListWidthRef = useRef(listWidth);
 
   const listResize = useListResizer(listWidth, setListWidth);
   const documentResize = useDocumentWidthResizer(documentMaxWidth, setDocumentMaxWidth);
@@ -153,6 +154,15 @@ export function App() {
     setIsViewingTrashNode(false);
     closeTrashView();
     closeContextMenu();
+  };
+
+  const handleToggleListVisibility = () => {
+    if (listWidth <= 0) {
+      setListWidth(Math.max(220, lastExpandedListWidthRef.current || 300));
+      return;
+    }
+    lastExpandedListWidthRef.current = listWidth;
+    setListWidth(0);
   };
 
   const handleSelectNode = (nodeId: string) => {
@@ -293,6 +303,7 @@ export function App() {
       onStartStudyMode={handleStartStudyMode}
       onOpenNotesView={handleOpenNotesView}
       onOpenTrashView={handleOpenTrashView}
+      onToggleListVisibility={handleToggleListVisibility}
       selectedTrashNodeId={selectedTrashNodeId}
       showAnswerSection={!isStudyMode || reviewSession.isAnswerRevealed}
     />

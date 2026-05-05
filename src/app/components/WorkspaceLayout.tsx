@@ -52,6 +52,7 @@ export interface WorkspaceLayoutProps {
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onOpenNotesView: () => void;
   onOpenTrashView: () => void;
+  onToggleListVisibility: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
@@ -101,6 +102,7 @@ export function WorkspaceLayout({
   onSplitterPointerDown,
   onOpenNotesView,
   onOpenTrashView,
+  onToggleListVisibility,
   onGoBack,
   onGoForward,
   onGoParent,
@@ -119,20 +121,29 @@ export function WorkspaceLayout({
   const documentNodeId = isViewingTrashNode ? selectedTrashNodeId : activeNodeId;
 
   return (
-    <main aria-label="Foliole workspace" className="flex h-dvh flex-col overflow-hidden p-0">
-      <WindowTitleBar />
+    <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border max-[1080px]:hidden"
+        style={{ left: 'calc(40px + var(--workspace-list-width, 300px))' }}
+      />
+      <WindowTitleBar
+        isListHidden={listWidth <= 0}
+        isTrashViewOpen={isTrashViewOpen}
+        listWidth={listWidth}
+        onOpenNotesView={onOpenNotesView}
+        onOpenTrashView={onOpenTrashView}
+        onToggleListVisibility={onToggleListVisibility}
+      />
       <section aria-label="Workspace top toolbar" className="sr-only" />
       <div
         className="grid min-h-0 flex-1 overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
-        style={{ gridTemplateColumns: '50px minmax(0, 1fr)' }}
+        style={{ gridTemplateColumns: '40px minmax(0, 1fr)' }}
       >
-        <div className="max-[1080px]:hidden">
+        <div className="h-full bg-[#f6f6f6] max-[1080px]:hidden">
           <WorkspaceSideToolbar
             canStartStudyMode={canStartStudyMode}
             isStudyMode={isStudyMode}
-            isTrashViewOpen={isTrashViewOpen}
-            onOpenNotesView={onOpenNotesView}
-            onOpenTrashView={onOpenTrashView}
             onStartStudyMode={onStartStudyMode}
           />
         </div>
@@ -140,7 +151,7 @@ export function WorkspaceLayout({
           <div
             className="grid h-full min-h-0 gap-0 overflow-hidden max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
             data-resizing={isResizingList}
-            style={{ ...workspaceGridStyle, gridTemplateColumns: 'minmax(0, var(--workspace-list-width, 300px)) 4px minmax(0, 1fr)' }}
+            style={{ gridTemplateColumns: 'minmax(0, var(--workspace-list-width, 300px)) 1px minmax(0, 1fr)' }}
           >
             <NodeListTree
               activeNodeId={activeNodeId}
@@ -223,19 +234,15 @@ function ListSplitter({
       aria-label="Resize node list"
       aria-orientation="vertical"
       aria-valuenow={Math.round(listWidth)}
-      className="group relative self-stretch max-[1080px]:hidden"
+      className={cn('group relative self-stretch bg-transparent max-[1080px]:hidden')}
       onDoubleClick={onResetLayout}
       onKeyDown={onSplitterKeyDown}
       onPointerDown={onSplitterPointerDown}
       role="separator"
       tabIndex={0}
     >
-      <span
-        className={cn(
-          'pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 border-l border-border opacity-100',
-          isResizingList && 'w-px border-l border-border-strong opacity-100'
-        )}
-      />
+      <span aria-hidden="true" className="absolute inset-y-0 -left-1 w-3 cursor-col-resize" />
+      {isResizingList ? <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-px bg-border-strong" /> : null}
     </div>
   );
 }

@@ -45,17 +45,55 @@ body {
   display: flex;
   flex: 0 0 auto;
   min-height: 38px;
-  padding-inline: 12px 0;
+  padding-inline: 8px 0;
   user-select: none;
 }
 
-.window-titlebar-title {
-  color: #3c4043;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  padding-inline: 4px;
-  text-transform: none;
+.window-titlebar-left-zone {
+  align-items: center;
+  display: flex;
+  flex: 0 0 calc(40px + var(--workspace-list-width, 300px));
+  min-width: 0;
+}
+
+.window-titlebar-leading {
+  align-items: center;
+  display: inline-flex;
+  gap: 2px;
+  padding-left: 6px;
+}
+
+.window-titlebar-leading-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: #5f6368;
+  cursor: pointer;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.window-titlebar-leading-button:hover {
+  background: rgba(32, 33, 36, 0.08);
+  color: #202124;
+}
+
+.window-titlebar-leading-button[data-active='true'] {
+  background: rgba(32, 33, 36, 0.08);
+  color: #202124;
+}
+
+.window-titlebar-leading-icon {
+  fill: none;
+  height: 18px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.2;
+  width: 18px;
 }
 
 .window-titlebar-drag-fill {
@@ -78,7 +116,7 @@ body {
   display: inline-flex;
   height: 38px;
   justify-content: center;
-  min-width: 48px;
+  min-width: 46px;
   transition: background-color 140ms, color 140ms;
 }
 
@@ -99,12 +137,12 @@ body {
 
 .window-titlebar-icon {
   fill: none;
-  height: 10px;
+  height: 11px;
   stroke: currentColor;
   stroke-linecap: square;
   stroke-linejoin: miter;
-  stroke-width: 1.1;
-  width: 10px;
+  stroke-width: 1.2;
+  width: 11px;
 }
 
 .markdown-editor-host {
