@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
@@ -18,10 +18,10 @@ import {
 import { useLibraryPathSettings } from './useLibraryPathSettings';
 
 interface SettingsPanelProps {
+  importCategoryContent?: ReactNode;
   onClose: () => void;
-  onOpenReadwiseReaderSettings?: () => void;
+  readwiseReaderCategoryContent?: ReactNode;
   requestedCategory?: SettingsCategoryId | null;
-  readwiseReaderConfigured?: boolean;
 }
 
 export function SettingsPanel(props: SettingsPanelProps) {
@@ -67,14 +67,14 @@ type SettingsPanelBodyProps = {
   mirrorOutputRebuildError: string | null;
   mirrorOutputRebuildFeedback: string | null;
   mirrorPath: string;
+  importCategoryContent?: ReactNode;
   onClose: () => void;
   onChangeLocation: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
-  onOpenReadwiseReaderSettings?: () => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
-  readwiseReaderConfigured?: boolean;
+  readwiseReaderCategoryContent?: ReactNode;
   setActiveCategory: (category: SettingsCategoryId) => void;
   title: string;
 };
@@ -100,13 +100,13 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
     mirrorOutputRebuildError: props.mirrorOutputRebuildError,
     mirrorOutputRebuildFeedback: props.mirrorOutputRebuildFeedback,
     mirrorPath: props.mirrorPath,
+    importCategoryContent: props.importCategoryContent,
     onChangeLocation: props.onChangeLocation,
-    onOpenReadwiseReaderSettings: props.onOpenReadwiseReaderSettings,
     onRebuildMirrorLinks: props.onRebuildMirrorLinks,
     onRebuildMirrorOutput: props.onRebuildMirrorOutput,
     onRestoreDefault: props.onRestoreDefault,
     pendingLocation: props.pendingLocation,
-    readwiseReaderConfigured: props.readwiseReaderConfigured
+    readwiseReaderCategoryContent: props.readwiseReaderCategoryContent
   };
 
   return (

@@ -22,7 +22,7 @@ export function createCloseSettingsHandler(runtime: AppRuntime) {
 }
 
 export function openReadwiseReaderSettings(runtime: AppRuntime) {
-  runtime.setRequestedSettingsCategory('import');
+  runtime.setRequestedSettingsCategory('readwise-reader');
   runtime.setRequestedSettingsDialog('readwise-reader');
   runtime.setIsSettingsOpen(true);
 }

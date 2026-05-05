@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 import { SETTINGS_CATEGORIES, type SettingsCategoryId } from '../model/settingsPanelOptions';
 
@@ -27,13 +29,13 @@ export interface SettingsCategoryContentProps {
   mirrorOutputRebuildError: string | null;
   mirrorOutputRebuildFeedback: string | null;
   mirrorPath: string;
+  importCategoryContent?: ReactNode;
   onChangeLocation: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
-  onOpenReadwiseReaderSettings?: () => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
-  readwiseReaderConfigured?: boolean;
+  readwiseReaderCategoryContent?: ReactNode;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
@@ -79,7 +81,7 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
   if (props.activeCategory === 'mouse-gestures') {
     return <SettingsMouseGesturesSection />;
   }
-  if (props.activeCategory === 'import') {
+  if (props.activeCategory === 'library') {
     return (
       <SettingsImportSection
         errorByLocation={props.errorByLocation}
@@ -95,14 +97,18 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
         mirrorOutputRebuildFeedback={props.mirrorOutputRebuildFeedback}
         mirrorPath={props.mirrorPath}
         onChangeLocation={props.onChangeLocation}
-        onOpenReadwiseReaderSettings={props.onOpenReadwiseReaderSettings}
         onRebuildMirrorLinks={props.onRebuildMirrorLinks}
         onRebuildMirrorOutput={props.onRebuildMirrorOutput}
         onRestoreDefault={props.onRestoreDefault}
         pendingLocation={props.pendingLocation}
-        readwiseReaderConfigured={props.readwiseReaderConfigured}
       />
     );
+  }
+  if (props.activeCategory === 'import') {
+    return props.importCategoryContent ?? <p className="text-sm text-foreground/65">Import content is not available yet.</p>;
+  }
+  if (props.activeCategory === 'readwise-reader') {
+    return props.readwiseReaderCategoryContent ?? <p className="text-sm text-foreground/65">Readwise Reader content is not available yet.</p>;
   }
   if (props.activeCategory === 'review') {
     return <ReviewSettingsContent />;

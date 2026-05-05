@@ -66,25 +66,45 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
 
-it('shows the Readwise Reader settings entry inside Library and keeps it actionable', async () => {
-  const onOpenReadwiseReaderSettings = vi.fn();
+it('shows Library, Import, and Readwise Reader as separate left sidebar entries', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="library" />);
 
+  const buttons = screen.getAllByRole('button');
+  const labels = buttons.map((button) => button.textContent).filter(Boolean);
+
+  expect(labels).toContain('Library');
+  expect(labels).toContain('Import');
+  expect(labels).toContain('Readwise Reader');
+  expect(labels.indexOf('Import')).toBeGreaterThan(labels.indexOf('Library'));
+  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('Import'));
+  expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
+});
+
+it('renders direct Import content in the right panel instead of a jump button', async () => {
   renderWithMouseGestureProvider(
     <SettingsPanel
       {...createProps()}
-      onOpenReadwiseReaderSettings={onOpenReadwiseReaderSettings}
-      readwiseReaderConfigured
+      importCategoryContent={<div>Restored import panel content</div>}
       requestedCategory="import"
     />
   );
 
-  expect(screen.getByRole('heading', { name: 'Library' })).toBeInTheDocument();
-  expect(screen.getByText('Readwise Reader settings')).toBeInTheDocument();
-  expect(screen.getByText('Status: configured')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Import' })).toBeInTheDocument();
+  expect(screen.getByText('Restored import panel content')).toBeInTheDocument();
+});
 
-  fireEvent.click(screen.getByRole('button', { name: 'Open Readwise Reader settings' }));
+it('renders direct Readwise Reader content in the right panel instead of a jump button', async () => {
+  renderWithMouseGestureProvider(
+    <SettingsPanel
+      {...createProps()}
+      readwiseReaderCategoryContent={<div>Restored Readwise Reader content</div>}
+      requestedCategory="readwise-reader"
+    />
+  );
 
-  expect(onOpenReadwiseReaderSettings).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('heading', { level: 2, name: 'Readwise Reader' })).toBeInTheDocument();
+  expect(screen.getByText('Restored Readwise Reader content')).toBeInTheDocument();
 });
 
 it('keeps font selects disabled until system fonts are loaded', async () => {
