@@ -1,8 +1,8 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -12,7 +12,9 @@ import org.json.JSONObject;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 final class FolioleCompanionContentBlobBatchStore {
     private FolioleCompanionContentBlobBatchStore() {}
@@ -28,8 +30,9 @@ final class FolioleCompanionContentBlobBatchStore {
             FolioleCompanionContentBlobMultipartBatch.parse(response.body, response.contentType);
         JSArray syncedHashes = new JSArray();
         List<CachedBlob> cachedBlobs = new ArrayList<>();
+        Map<String, ContentBlobManifest> manifests = loadManifests(database, blobs);
         for (FolioleCompanionContentBlobMultipartBatch.Blob blob : blobs) {
-            addBatchBlob(database, blob, cachedBlobs, syncedHashes);
+            addBatchBlob(blob, manifests, cachedBlobs, syncedHashes);
         }
         storeCachedBlobs(database, cachedBlobs);
         JSObject result = new JSObject();
@@ -38,17 +41,16 @@ final class FolioleCompanionContentBlobBatchStore {
     }
 
     private static void addBatchBlob(
-        SQLiteDatabase database,
         FolioleCompanionContentBlobMultipartBatch.Blob blob,
+        Map<String, ContentBlobManifest> manifests,
         List<CachedBlob> cachedBlobs,
         JSArray syncedHashes
     ) throws Exception {
         String hash = requireHash(blob.hash);
-        if (hasCachedBlobData(database, hash)) {
-            syncedHashes.put(hash);
-            return;
+        ContentBlobManifest manifest = manifests.get(hash);
+        if (manifest == null) {
+            throw new IllegalStateException("Content blob manifest is missing.");
         }
-        ContentBlobManifest manifest = loadManifest(database, hash);
         if (!"none".equals(manifest.compression)) {
             throw new IllegalStateException("Unsupported content blob compression.");
         }
@@ -68,8 +70,14 @@ final class FolioleCompanionContentBlobBatchStore {
         String now = Instant.now().toString();
         database.beginTransaction();
         try {
+            SQLiteStatement insertData = database.compileStatement(
+                "INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)"
+            );
+            SQLiteStatement updateManifest = database.compileStatement(
+                "UPDATE content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ? WHERE hash = ?"
+            );
             for (CachedBlob blob : blobs) {
-                storeCachedBlob(database, blob, now);
+                storeCachedBlob(insertData, updateManifest, blob, now);
             }
             database.setTransactionSuccessful();
         } finally {
@@ -77,48 +85,58 @@ final class FolioleCompanionContentBlobBatchStore {
         }
     }
 
-    private static void storeCachedBlob(SQLiteDatabase database, CachedBlob blob, String now) {
-        ContentValues data = new ContentValues();
-        data.put("hash", blob.hash);
-        data.put("data", blob.bytes);
-        database.insertWithOnConflict("content_blob_data", null, data, SQLiteDatabase.CONFLICT_REPLACE);
+    private static void storeCachedBlob(
+        SQLiteStatement insertData,
+        SQLiteStatement updateManifest,
+        CachedBlob blob,
+        String now
+    ) {
+        insertData.clearBindings();
+        insertData.bindString(1, blob.hash);
+        insertData.bindBlob(2, blob.bytes);
+        insertData.executeInsert();
 
-        ContentValues updates = new ContentValues();
-        updates.put("availability", "cached");
-        updates.put("cached_at", now);
-        updates.put("last_verified_at", now);
-        int updated = database.update("content_blobs", updates, "hash = ?", new String[] { blob.hash });
+        updateManifest.clearBindings();
+        updateManifest.bindString(1, now);
+        updateManifest.bindString(2, now);
+        updateManifest.bindString(3, blob.hash);
+        int updated = updateManifest.executeUpdateDelete();
         if (updated <= 0) {
             throw new IllegalStateException("Content blob manifest is missing.");
         }
     }
 
-    private static ContentBlobManifest loadManifest(SQLiteDatabase database, String hash) {
+    private static Map<String, ContentBlobManifest> loadManifests(
+        SQLiteDatabase database,
+        List<FolioleCompanionContentBlobMultipartBatch.Blob> blobs
+    ) {
+        Map<String, ContentBlobManifest> manifests = new HashMap<>();
+        if (blobs.isEmpty()) {
+            return manifests;
+        }
+        String[] hashes = new String[blobs.size()];
+        StringBuilder placeholders = new StringBuilder();
+        for (int index = 0; index < blobs.size(); index += 1) {
+            hashes[index] = requireHash(blobs.get(index).hash);
+            if (index > 0) placeholders.append(", ");
+            placeholders.append("?");
+        }
         try (Cursor cursor = database.rawQuery(
-            "SELECT compression, original_size_bytes, stored_size_bytes, original_sha256, stored_sha256 " +
-                "FROM content_blobs WHERE hash = ? LIMIT 1",
-            new String[] { hash }
+            "SELECT hash, compression, original_size_bytes, stored_size_bytes, original_sha256, stored_sha256 " +
+                "FROM content_blobs WHERE hash IN (" + placeholders + ")",
+            hashes
         )) {
-            if (!cursor.moveToFirst()) {
-                throw new IllegalStateException("Content blob manifest is missing.");
+            while (cursor.moveToNext()) {
+                manifests.put(cursor.getString(0), new ContentBlobManifest(
+                    cursor.getString(1),
+                    cursor.getLong(2),
+                    cursor.getLong(3),
+                    cursor.getString(4),
+                    cursor.getString(5)
+                ));
             }
-            return new ContentBlobManifest(
-                cursor.getString(0),
-                cursor.getLong(1),
-                cursor.getLong(2),
-                cursor.getString(3),
-                cursor.getString(4)
-            );
         }
-    }
-
-    private static boolean hasCachedBlobData(SQLiteDatabase database, String hash) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT 1 FROM content_blob_data WHERE hash = ? LIMIT 1",
-            new String[] { hash }
-        )) {
-            return cursor.moveToFirst();
-        }
+        return manifests;
     }
 
     private static String requireHash(String value) {

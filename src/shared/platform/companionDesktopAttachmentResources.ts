@@ -10,7 +10,7 @@ import {
 } from './companionWorkspaceSyncBridge';
 
 const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
-export const ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT = 6;
+export const ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT = 64;
 
 interface AttachmentResourceRequest {
   attachmentId: string;

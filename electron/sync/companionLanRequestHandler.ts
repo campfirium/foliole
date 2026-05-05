@@ -1,4 +1,6 @@
+import { createReadStream } from 'node:fs';
 import type http from 'node:http';
+import { pipeline } from 'node:stream/promises';
 
 import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
@@ -110,6 +112,18 @@ function writeBinary(response: http.ServerResponse, statusCode: number, body: Bu
   response.end(body);
 }
 
+async function writeFileStream(
+  response: http.ServerResponse,
+  statusCode: number,
+  resource: { contentLength: number; filePath: string; mimeType: string | null }
+) {
+  response.writeHead(statusCode, {
+    'Content-Length': resource.contentLength,
+    'Content-Type': resource.mimeType ?? 'application/octet-stream'
+  });
+  await pipeline(createReadStream(resource.filePath), response);
+}
+
 function handleWorkspaceMetadataGet(
   request: http.IncomingMessage,
   response: http.ServerResponse,
@@ -177,7 +191,7 @@ async function handleAuthenticatedGet(
       parsedRequestUrl.searchParams.get('content_hash')
     );
     if (resource.status === 'ready') {
-      writeBinary(response, 200, resource.body, resource.mimeType);
+      await writeFileStream(response, 200, resource);
     } else {
       writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
     }

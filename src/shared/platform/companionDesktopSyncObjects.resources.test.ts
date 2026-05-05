@@ -156,7 +156,7 @@ async function testStopsContentPassAtResourceBudget() {
   expect(result.contentBlobError).toBeNull();
   expect(result.syncedContentBlobHashes).toHaveLength(CONTENT_BLOB_BATCH_LIMIT);
   expect(syncBridgeMock.loadCompanionMissingContentBlobs).toHaveBeenCalledTimes(1);
-  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
+  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).toHaveBeenCalled();
 }
 
 async function testDefersAttachmentsUntilContentBacklogClears() {
@@ -178,8 +178,8 @@ async function testDefersAttachmentsUntilContentBacklogClears() {
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
   expect(result.syncedContentBlobHashes).toHaveLength(CONTENT_BLOB_BATCH_LIMIT);
-  expect(result.syncedAttachmentIds).toEqual([]);
-  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
+  expect(result.syncedAttachmentIds).toEqual(['att-1']);
+  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).toHaveBeenCalled();
 }
 
 async function testStopsAttachmentPassAtResourceBudget() {
@@ -262,13 +262,13 @@ describe('companion desktop sync resources', () => {
 
   it('reports attachment resource breakdown in sync progress', testReportsAttachmentBreakdown);
 
-  it('pulls topic bodies before attachment resources', testPullsBodiesBeforeAttachments);
+  it('starts topic body resource work before attachment resource work', testPullsBodiesBeforeAttachments);
 
   it('refreshes structure before running bounded content blob batches', testRefreshesStructureBeforeContentBatch);
 
   it('stops a content body pass at the resource time budget without failing sync', testStopsContentPassAtResourceBudget);
 
-  it('defers attachment resources until the topic body backlog is clear', testDefersAttachmentsUntilContentBacklogClears);
+  it('runs attachment resources even when the topic body budget is consumed', testDefersAttachmentsUntilContentBacklogClears);
 
   it('stops an attachment pass at the resource time budget without failing sync', testStopsAttachmentPassAtResourceBudget);
 

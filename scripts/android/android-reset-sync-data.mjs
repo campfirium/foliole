@@ -3,14 +3,14 @@
 import Database from 'better-sqlite3';
 import { Buffer } from 'node:buffer';
 import { execFile, spawn } from 'node:child_process';
-import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { URL } from 'node:url';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_APP_ID = 'com.foliole.android';
-const DEFAULT_BACKUP_ROOT = '.lab/internal/android-device-sync-reset';
 const DEVICE_DB_PATH = 'databases/foliole-companion.db';
 const PRESERVED_COMPANION_META_KEYS = [
   'device_id',
@@ -49,7 +49,7 @@ function parseArgs(argv) {
   const options = {
     adb: process.env.ANDROID_ADB || 'adb',
     appId: DEFAULT_APP_ID,
-    backupRoot: path.resolve(DEFAULT_BACKUP_ROOT),
+    preferAdbReverse: false,
     serial: ''
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -58,7 +58,10 @@ function parseArgs(argv) {
     if (key === '--help') options.help = true;
     if (key === '--adb' && value) options.adb = value;
     if (key === '--app-id' && value) options.appId = value;
-    if (key === '--backup-root' && value) options.backupRoot = path.resolve(value);
+    if (key === '--prefer-adb-reverse') {
+      options.preferAdbReverse = true;
+      continue;
+    }
     if (key === '--serial' && value) options.serial = value;
     if (key.startsWith('--') && value) index += 1;
   }
@@ -72,8 +75,9 @@ Resets Android companion sync data for a cold resync test without unpairing:
 - keeps Android app data, SharedPreferences, Keystore, device id, endpoint, and remembered targets
 - clears synced nodes, external documents, content manifests, bodies, attachments, review state, settings, cursors, dirty state, and sync events
 - removes files/attachments
+- optionally rewrites emulator 10.0.2.2 endpoints to 127.0.0.1 with --prefer-adb-reverse
 
-A database backup is always written before modifying the device.`);
+No database backup is written; this is a repeatable test reset tool.`);
 }
 
 function adbCandidates(adbPath) {
@@ -137,14 +141,6 @@ async function resolveSerial(options) {
   return line.trim().split(/\s+/)[0];
 }
 
-function timestamp() {
-  return new Date().toISOString().replace(/[:.]/g, '').replace('T', '-').slice(0, 15);
-}
-
-function safeName(value) {
-  return String(value || 'unknown').replace(/[^A-Za-z0-9._-]+/g, '_');
-}
-
 export function inspectSyncDataCounts(databasePath) {
   const database = new Database(databasePath, { readonly: true, fileMustExist: true });
   try {
@@ -187,10 +183,11 @@ function readCompanionMeta(database) {
   return Object.fromEntries(database.prepare('SELECT key, value FROM companion_meta ORDER BY key').all().map((row) => [row.key, row.value]));
 }
 
-export function resetSyncDataInDatabase(databasePath) {
+export function resetSyncDataInDatabase(databasePath, options = {}) {
   const database = new Database(databasePath, { fileMustExist: true });
   try {
     const before = readSyncDataCounts(database);
+    let endpointRewrite = null;
     database.transaction(() => {
       for (const table of CLEARED_TABLES) {
         if (tableExists(database, table)) database.prepare(`DELETE FROM ${table}`).run();
@@ -198,24 +195,51 @@ export function resetSyncDataInDatabase(databasePath) {
       if (tableExists(database, 'companion_meta')) {
         const placeholders = PRESERVED_COMPANION_META_KEYS.map(() => '?').join(', ');
         database.prepare(`DELETE FROM companion_meta WHERE key NOT IN (${placeholders})`).run(...PRESERVED_COMPANION_META_KEYS);
+        endpointRewrite = maybeRewriteEndpointForAdbReverse(database, before.preservedMeta, options);
       }
     })();
     database.prepare('VACUUM').run();
     const after = readSyncDataCounts(database);
-    assertResetResult(before, after);
-    return { after, before, clearedTables: CLEARED_TABLES, preservedCompanionMetaKeys: PRESERVED_COMPANION_META_KEYS };
+    assertResetResult(before, after, endpointRewrite);
+    return { after, before, clearedTables: CLEARED_TABLES, endpointRewrite, preservedCompanionMetaKeys: PRESERVED_COMPANION_META_KEYS };
   } finally {
     database.close();
   }
 }
 
-function assertResetResult(before, after) {
+function maybeRewriteEndpointForAdbReverse(database, preservedMeta, options) {
+  if (!options.preferAdbReverse) return null;
+  const endpoint = rewriteEmulatorHost(preservedMeta.workspace_sync_endpoint_url);
+  if (!endpoint) return null;
+  const now = new Date().toISOString();
+  database.prepare("UPDATE companion_meta SET value = ?, updated_at = ? WHERE key = 'workspace_sync_endpoint_url'")
+    .run(endpoint, now);
+  if (preservedMeta.workspace_sync_remembered_targets) {
+    database.prepare("UPDATE companion_meta SET value = ?, updated_at = ? WHERE key = 'workspace_sync_remembered_targets'")
+      .run(JSON.stringify([endpoint]), now);
+  }
+  return { from: preservedMeta.workspace_sync_endpoint_url, to: endpoint };
+}
+
+function rewriteEmulatorHost(endpointUrl) {
+  if (!endpointUrl) return null;
+  try {
+    const url = new URL(endpointUrl);
+    if (url.hostname !== '10.0.2.2') return null;
+    url.hostname = '127.0.0.1';
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return null;
+  }
+}
+
+function assertResetResult(before, after, endpointRewrite) {
   if (before.preservedMeta.device_id && after.preservedMeta.device_id !== before.preservedMeta.device_id) {
     throw new Error('Reset changed Android device identity.');
   }
   if (
     before.preservedMeta.workspace_sync_endpoint_url &&
-    after.preservedMeta.workspace_sync_endpoint_url !== before.preservedMeta.workspace_sync_endpoint_url
+    after.preservedMeta.workspace_sync_endpoint_url !== (endpointRewrite?.to ?? before.preservedMeta.workspace_sync_endpoint_url)
   ) {
     throw new Error('Reset changed workspace sync endpoint.');
   }
@@ -251,19 +275,15 @@ async function run(options) {
   const serial = await resolveSerial(options);
   const resolved = { ...options, serial };
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-android-reset-sync-data-'));
-  await mkdir(options.backupRoot, { recursive: true });
-  const backupPath = path.join(options.backupRoot, `${timestamp()}_${safeName(serial)}_${safeName(options.appId)}_before-sync-reset.db`);
   const workingPath = path.join(tempDir, 'foliole-companion-reset.db');
   try {
-    await pullDeviceDatabase(resolved, backupPath);
-    await copyFile(backupPath, workingPath);
-    const result = resetSyncDataInDatabase(workingPath);
+    await pullDeviceDatabase(resolved, workingPath);
+    const result = resetSyncDataInDatabase(workingPath, resolved);
     await writeDeviceDatabase(resolved, workingPath);
     const verifyPath = path.join(tempDir, 'foliole-companion-after-reset.db');
     await pullDeviceDatabase(resolved, verifyPath);
     const verified = inspectSyncDataCounts(verifyPath);
-    const backupSize = (await stat(backupPath)).size;
-    console.log(JSON.stringify({ backupPath, backupSize, reset: result, serial, verified }, null, 2));
+    console.log(JSON.stringify({ reset: result, serial, verified }, null, 2));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

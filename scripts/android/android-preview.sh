@@ -11,6 +11,7 @@ ANDROID_EMULATOR_SCRIPT="${ANDROID_EMULATOR_SCRIPT:-scripts/android/windows-run-
 ANDROID_DEPLOY_SCRIPT="${ANDROID_DEPLOY_SCRIPT:-scripts/android/windows-deploy-app.sh}"
 ANDROID_DATA_PROTECTION_SCRIPT="${ANDROID_DATA_PROTECTION_SCRIPT:-scripts/android/android-device-data-protection.mjs}"
 ANDROID_DATA_PROTECTION_BACKUP_DIR="${ANDROID_DATA_PROTECTION_BACKUP_DIR:-.lab/internal/android-device-backups}"
+ANDROID_DATA_PROTECTION_MANIFEST_DIR="${ANDROID_DATA_PROTECTION_MANIFEST_DIR:-.lab/internal/runtime}"
 ANDROID_DATA_PROTECTION="${ANDROID_DATA_PROTECTION:-1}"
 ANDROID_PREVIEW_OPEN_STUDIO="${ANDROID_PREVIEW_OPEN_STUDIO:-1}"
 DEFAULT_ANDROID_AVD="${DEFAULT_ANDROID_AVD:-Foliole_API_36}"
@@ -96,7 +97,8 @@ if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
   DATA_PROTECTION_MANIFEST=""
   if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
     mkdir -p "${ANDROID_DATA_PROTECTION_BACKUP_DIR}"
-    DATA_PROTECTION_MANIFEST="${ANDROID_DATA_PROTECTION_BACKUP_DIR}/preview-before-$(date +%Y%m%d-%H%M%S).json"
+    mkdir -p "${ANDROID_DATA_PROTECTION_MANIFEST_DIR}"
+    DATA_PROTECTION_MANIFEST="${ANDROID_DATA_PROTECTION_MANIFEST_DIR}/android-preview-before-$(date +%Y%m%d-%H%M%S).json"
     echo "[android-preview] step 4/${PREVIEW_TOTAL_STEPS}: backup android app data"
     if ! run_timed_preview_step "android-data-backup" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" node "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode backup --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}"; then
       echo "[android-preview] failed at: data protection preflight"

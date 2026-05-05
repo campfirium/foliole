@@ -7,7 +7,8 @@ export const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
 
 export type CompanionAttachmentResourceResult =
   | {
-      body: Buffer;
+      contentLength: number;
+      filePath: string;
       mimeType: string | null;
       status: 'ready';
     }
@@ -49,6 +50,6 @@ export async function loadCompanionAttachmentResource(
     return errorResult('missing_file', 404);
   }
 
-  const body = await fs.readFile(resolved.filePath);
-  return { body, mimeType: resolved.mimeType, status: 'ready' };
+  const stats = await fs.stat(resolved.filePath);
+  return { contentLength: stats.size, filePath: resolved.filePath, mimeType: resolved.mimeType, status: 'ready' };
 }

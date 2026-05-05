@@ -47,7 +47,10 @@ export interface CompanionDesktopSyncResult {
   requestedObjectIds: string[];
   syncedAttachmentIds: string[];
   syncedAttachmentResourceBytes: number;
+  syncedAttachmentResourceElapsedMs?: number;
+  syncedContentBlobElapsedMs?: number;
   syncedResourceElapsedMs: number;
+  syncedStructureElapsedMs?: number;
   attachmentResourceError: string | null;
   contentBlobError: string | null;
   localDirtyCount: number | null;

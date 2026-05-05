@@ -14,33 +14,71 @@ import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 final class FolioleCompanionAttachmentResourceBatchStore {
+    private static final int DOWNLOAD_CONCURRENCY = 6;
+
     private FolioleCompanionAttachmentResourceBatchStore() {}
 
     static JSObject syncResources(Context context, SQLiteDatabase database, JSONArray resources) throws Exception {
         if (resources == null) {
             throw new IllegalArgumentException("resources is required.");
         }
-        List<String> syncedIds = new ArrayList<>();
-        for (int index = 0; index < resources.length(); index += 1) {
-            JSONObject resource = resources.getJSONObject(index);
+        DownloadResult result = downloadResources(context, resources);
+        for (String attachmentId : result.failedIds) {
+            markFailed(database, attachmentId);
+        }
+        markCached(database, result.syncedIds);
+        JSArray syncedAttachmentIds = new JSArray();
+        for (String attachmentId : result.syncedIds) {
+            syncedAttachmentIds.put(attachmentId);
+        }
+        JSObject response = new JSObject();
+        response.put("synced_attachment_ids", syncedAttachmentIds);
+        return response;
+    }
+
+    private static DownloadResult downloadResources(Context context, JSONArray resources) throws Exception {
+        int workerCount = Math.max(1, Math.min(DOWNLOAD_CONCURRENCY, resources.length()));
+        ExecutorService executor = Executors.newFixedThreadPool(workerCount);
+        ExecutorCompletionService<SingleDownloadResult> completionService = new ExecutorCompletionService<>(executor);
+        try {
+            for (int index = 0; index < resources.length(); index += 1) {
+                JSONObject resource = resources.getJSONObject(index);
+                completionService.submit(downloadTask(context, resource));
+            }
+            List<String> syncedIds = new ArrayList<>();
+            List<String> failedIds = new ArrayList<>();
+            for (int index = 0; index < resources.length(); index += 1) {
+                Future<SingleDownloadResult> future = completionService.take();
+                SingleDownloadResult result = future.get();
+                if (result.synced) {
+                    syncedIds.add(result.attachmentId);
+                } else {
+                    failedIds.add(result.attachmentId);
+                }
+            }
+            return new DownloadResult(syncedIds, failedIds);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private static Callable<SingleDownloadResult> downloadTask(Context context, JSONObject resource) {
+        return () -> {
             String attachmentId = requireText(resource.optString("attachment_id", null), "attachment_id");
             try {
                 syncResourceFile(context, attachmentId, resource);
-                syncedIds.add(attachmentId);
+                return new SingleDownloadResult(attachmentId, true);
             } catch (Exception error) {
-                markFailed(database, attachmentId);
+                return new SingleDownloadResult(attachmentId, false);
             }
-        }
-        markCached(database, syncedIds);
-        JSArray syncedAttachmentIds = new JSArray();
-        for (String attachmentId : syncedIds) {
-            syncedAttachmentIds.put(attachmentId);
-        }
-        JSObject result = new JSObject();
-        result.put("synced_attachment_ids", syncedAttachmentIds);
-        return result;
+        };
     }
 
     private static void syncResourceFile(Context context, String attachmentId, JSONObject resource) throws Exception {
@@ -108,5 +146,25 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             throw new IllegalArgumentException(field + " is required.");
         }
         return value.trim();
+    }
+
+    private static final class DownloadResult {
+        final List<String> syncedIds;
+        final List<String> failedIds;
+
+        DownloadResult(List<String> syncedIds, List<String> failedIds) {
+            this.syncedIds = syncedIds;
+            this.failedIds = failedIds;
+        }
+    }
+
+    private static final class SingleDownloadResult {
+        final String attachmentId;
+        final boolean synced;
+
+        SingleDownloadResult(String attachmentId, boolean synced) {
+            this.attachmentId = attachmentId;
+            this.synced = synced;
+        }
     }
 }

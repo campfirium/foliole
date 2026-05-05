@@ -19,6 +19,9 @@ interface PairedDeviceStorePayload {
   devices: PairedCompanionDevice[];
 }
 
+let cachedStore: PairedDeviceStorePayload | null = null;
+let cachedStorePath: string | null = null;
+
 function resolveStorePath() {
   return path.join(app.getPath('userData'), PAIRED_DEVICE_STORE_FILE);
 }
@@ -32,16 +35,23 @@ function ensureEncryptionAvailable() {
 
 function readStore(): PairedDeviceStorePayload {
   const storePath = resolveStorePath();
+  if (cachedStore && cachedStorePath === storePath) {
+    return cachedStore;
+  }
   if (!fs.existsSync(storePath)) {
-    return { devices: [] };
+    cachedStorePath = storePath;
+    cachedStore = { devices: [] };
+    return cachedStore;
   }
   ensureEncryptionAvailable();
   const encrypted = fs.readFileSync(storePath);
   const decrypted = safeStorage.decryptString(encrypted);
   const parsed = JSON.parse(decrypted) as Partial<PairedDeviceStorePayload>;
-  return {
+  cachedStore = {
     devices: Array.isArray(parsed.devices) ? parsed.devices.filter(isPairedDeviceRecord) : []
   };
+  cachedStorePath = storePath;
+  return cachedStore;
 }
 
 function writeStore(payload: PairedDeviceStorePayload) {
@@ -49,6 +59,10 @@ function writeStore(payload: PairedDeviceStorePayload) {
   fs.mkdirSync(path.dirname(resolveStorePath()), { recursive: true });
   const encrypted = safeStorage.encryptString(JSON.stringify(payload));
   fs.writeFileSync(resolveStorePath(), encrypted);
+  cachedStore = {
+    devices: payload.devices.map((device) => ({ ...device }))
+  };
+  cachedStorePath = resolveStorePath();
 }
 
 function isPairedDeviceRecord(value: unknown): value is PairedCompanionDevice {

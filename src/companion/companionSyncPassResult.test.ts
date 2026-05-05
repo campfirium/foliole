@@ -46,7 +46,9 @@ describe('describeCompanionSyncPassResult', () => {
       status: 'completed'
     });
   });
+});
 
+describe('describeCompanionSyncPassResult backlog', () => {
   it('keeps body and attachment backlog as a skipped download pass', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingAttachmentResourceBytes: 3145728,
@@ -99,7 +101,23 @@ describe('describeCompanionSyncPassResult', () => {
       status: 'skipped'
     });
   });
+});
 
+describe('describeCompanionSyncPassResult timing', () => {
+  it('records stage timing when a pass completes', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      syncedAttachmentIds: ['att-1'],
+      syncedAttachmentResourceElapsedMs: 12200,
+      syncedContentBlobElapsedMs: 8100,
+      syncedContentBlobHashes: ['hash-1'],
+      syncedResourceElapsedMs: 20300,
+      syncedStructureElapsedMs: 1300
+    }))).toEqual({
+      message: 'Sync fully completed; downloaded 1 topic body and 1 attachment file in this sync in 20s; timing: topic list 1s, topic bodies 8s, attachment files 12s',
+      outcome: 'completed',
+      status: 'completed'
+    });
+  });
 });
 
 describe('describeCompanionSyncPassResult errors', () => {

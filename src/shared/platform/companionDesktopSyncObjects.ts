@@ -63,6 +63,7 @@ async function saveConfirmedReviewLogPushCursor(confirmedOpIds: string[]) {
 }
 
 async function pullRemoteStructurePack(endpointUrl: string) {
+  const startedAt = Date.now();
   const cursor = await loadCompanionSyncPackCursor();
   const pathWithQuery = buildPackPath(cursor);
   const result = await applyCompanionDesktopSyncPack({
@@ -77,7 +78,8 @@ async function pullRemoteStructurePack(endpointUrl: string) {
   return {
     appliedPackBlobCount: result.applied_blob_count,
     appliedPackObjectCount: result.applied_object_count,
-    appliedReviewOpIds
+    appliedReviewOpIds,
+    syncedStructureElapsedMs: Date.now() - startedAt
   };
 }
 
@@ -111,45 +113,36 @@ function pushErrorMessage(error: unknown) {
 
 async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   const startedAt = Date.now();
-  let attachmentResourceError: string | null = null;
-  let contentBlobError: string | null = null;
-  let syncedAttachmentResourceBytes = 0;
-  let syncedAttachmentIds: string[] = [];
-  let syncedContentBlobBytes = 0;
-  let syncedContentBlobHashes: string[] = [];
-  let contentBacklogRemaining = true;
-  try {
+  const contentPull = (async () => {
+    const contentStartedAt = Date.now();
     const blobs = await withSyncStepTimeout(
       'fetching topic bodies',
       pullMissingContentBlobs(endpointUrl, onProgress),
       COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
     );
-    contentBacklogRemaining = blobs.contentBacklogRemaining;
-    syncedContentBlobBytes = blobs.syncedContentBlobBytes;
-    syncedContentBlobHashes = blobs.syncedContentBlobHashes;
-  } catch (error) {
-    contentBlobError = errorMessage(error);
-  }
-  if (!contentBlobError && !contentBacklogRemaining) {
-    try {
-      const attachments = await withSyncStepTimeout(
-        'fetching attachment resources',
-        pullMissingAttachmentResources(endpointUrl, onProgress),
-        COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
-      );
-      syncedAttachmentResourceBytes = attachments.syncedAttachmentResourceBytes;
-      syncedAttachmentIds = attachments.syncedAttachmentIds;
-    } catch (error) {
-      attachmentResourceError = errorMessage(error);
-    }
-  }
+    return { ...blobs, syncedContentBlobElapsedMs: Date.now() - contentStartedAt };
+  })();
+  const attachmentPull = (async () => {
+    const attachmentStartedAt = Date.now();
+    const attachments = await withSyncStepTimeout(
+      'fetching attachment resources',
+      pullMissingAttachmentResources(endpointUrl, onProgress),
+      COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
+    );
+    return { ...attachments, syncedAttachmentResourceElapsedMs: Date.now() - attachmentStartedAt };
+  })();
+  const [content, attachments] = await Promise.allSettled([contentPull, attachmentPull]);
+  const contentValue = content.status === 'fulfilled' ? content.value : null;
+  const attachmentValue = attachments.status === 'fulfilled' ? attachments.value : null;
   return {
-    attachmentResourceError,
-    contentBlobError,
-    syncedAttachmentIds,
-    syncedAttachmentResourceBytes,
-    syncedContentBlobBytes,
-    syncedContentBlobHashes,
+    attachmentResourceError: attachments.status === 'rejected' ? errorMessage(attachments.reason) : null,
+    contentBlobError: content.status === 'rejected' ? errorMessage(content.reason) : null,
+    syncedAttachmentResourceElapsedMs: attachmentValue?.syncedAttachmentResourceElapsedMs ?? 0,
+    syncedAttachmentIds: attachmentValue?.syncedAttachmentIds ?? [],
+    syncedAttachmentResourceBytes: attachmentValue?.syncedAttachmentResourceBytes ?? 0,
+    syncedContentBlobElapsedMs: contentValue?.syncedContentBlobElapsedMs ?? 0,
+    syncedContentBlobBytes: contentValue?.syncedContentBlobBytes ?? 0,
+    syncedContentBlobHashes: contentValue?.syncedContentBlobHashes ?? [],
     syncedResourceElapsedMs: Date.now() - startedAt
   };
 }
@@ -184,8 +177,10 @@ async function runCompanionObjectsSync(
     pushError: pushed.pushError,
     requestedObjectIds: [],
     syncedAttachmentIds: resources.syncedAttachmentIds,
+    syncedAttachmentResourceElapsedMs: resources.syncedAttachmentResourceElapsedMs,
     syncedAttachmentResourceBytes: resources.syncedAttachmentResourceBytes,
     syncedResourceElapsedMs: resources.syncedResourceElapsedMs,
+    syncedStructureElapsedMs: pack.syncedStructureElapsedMs,
     attachmentResourceError: resources.attachmentResourceError,
     contentBlobError: resources.contentBlobError,
     localDirtyCount: finalSummary.localDirtyCount,
@@ -204,6 +199,7 @@ async function runCompanionObjectsSync(
     remainingFailedContentBlobCount: finalSummary.remainingFailedContentBlobCount,
     remainingStructureChangeCount: finalSummary.remainingStructureChangeCount,
     syncedContentBlobHashes: resources.syncedContentBlobHashes,
+    syncedContentBlobElapsedMs: resources.syncedContentBlobElapsedMs,
     syncedContentBlobBytes: resources.syncedContentBlobBytes,
     pushRejectedCount: pushed.pushRejectedCount
   };

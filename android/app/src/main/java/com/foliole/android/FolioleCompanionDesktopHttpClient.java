@@ -4,6 +4,8 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
@@ -17,6 +19,7 @@ import java.util.Iterator;
 
 final class FolioleCompanionDesktopHttpClient {
     private static final int CONNECT_TIMEOUT_MS = 5000;
+    private static final int COPY_BUFFER_BYTES = 256 * 1024;
     private static final int READ_TIMEOUT_MS = 5 * 60 * 1000;
 
     private FolioleCompanionDesktopHttpClient() {}
@@ -47,7 +50,6 @@ final class FolioleCompanionDesktopHttpClient {
         JSObject result = new JSObject();
         result.put("status", status);
         result.put("body", readBody(connection, status));
-        connection.disconnect();
         return result;
     }
 
@@ -73,12 +75,11 @@ final class FolioleCompanionDesktopHttpClient {
         }
         int status = connection.getResponseCode();
         if (status < 200 || status >= 300) {
+            connection.disconnect();
             throw new IllegalStateException("Desktop binary resource returned " + status + ".");
         }
         try (InputStream inputStream = connection.getInputStream()) {
             return new BinaryResponse(readBytes(inputStream), connection.getContentType());
-        } finally {
-            connection.disconnect();
         }
     }
 
@@ -90,15 +91,14 @@ final class FolioleCompanionDesktopHttpClient {
         applyHeaders(connection, headers);
         int status = connection.getResponseCode();
         if (status < 200 || status >= 300) {
+            connection.disconnect();
             throw new IllegalStateException("Desktop binary resource returned " + status + ".");
         }
         try (
-            InputStream inputStream = connection.getInputStream();
-            FileOutputStream outputStream = new FileOutputStream(outputFile)
+            InputStream inputStream = new BufferedInputStream(connection.getInputStream(), COPY_BUFFER_BYTES);
+            OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(outputFile), COPY_BUFFER_BYTES)
         ) {
             copy(inputStream, outputStream);
-        } finally {
-            connection.disconnect();
         }
     }
 
@@ -133,12 +133,14 @@ final class FolioleCompanionDesktopHttpClient {
 
     private static byte[] readBytes(InputStream inputStream) throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        copy(inputStream, output);
+        try (InputStream buffered = new BufferedInputStream(inputStream, COPY_BUFFER_BYTES)) {
+            copy(buffered, output);
+        }
         return output.toByteArray();
     }
 
     private static void copy(InputStream inputStream, OutputStream output) throws Exception {
-        byte[] buffer = new byte[8192];
+        byte[] buffer = new byte[COPY_BUFFER_BYTES];
         int read;
         while ((read = inputStream.read(buffer)) >= 0) {
             output.write(buffer, 0, read);

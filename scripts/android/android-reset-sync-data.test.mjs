@@ -44,6 +44,20 @@ describe('android-reset-sync-data', () => {
     expect(result.after.preservedMeta.sync_pack_cursor).toBeUndefined();
     expect(result.after.preservedMeta.workspace_sync_events).toBeUndefined();
   });
+
+  it('can rewrite emulator endpoints to adb reverse localhost for cold sync tests', async () => {
+    const databasePath = await createDatabase();
+    seedDatabase(databasePath);
+
+    const result = resetSyncDataInDatabase(databasePath, { preferAdbReverse: true });
+
+    expect(result.endpointRewrite).toEqual({
+      from: 'http://10.0.2.2:38641',
+      to: 'http://127.0.0.1:38641'
+    });
+    expect(result.after.preservedMeta.workspace_sync_endpoint_url).toBe('http://127.0.0.1:38641');
+    expect(result.after.preservedMeta.workspace_sync_remembered_targets).toBe('["http://127.0.0.1:38641"]');
+  });
 });
 
 async function createDatabase() {

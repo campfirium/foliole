@@ -35,21 +35,21 @@ final class FolioleCompanionSyncPackApply {
             attached = true;
             database.beginTransaction();
             try {
-                PackCursor packCursor = readPackCursor(database);
+                FolioleCompanionSyncPackCursor packCursor = readPackCursor(database);
                 toStateSeq = packCursor.toStateSeq;
                 if (packCursor.toStateSeq > currentCursor) {
                     if (packCursor.fromStateSeq != currentCursor) {
                         throw new IllegalArgumentException("Sync pack cursor is not contiguous.");
                     }
-                    appliedBlobs = upsertContentBlobs(database);
+                    appliedBlobs = FolioleCompanionSyncPackContentBlobs.upsert(database);
                     upsertNodes(database);
                     replaceNodeAttachments(database);
                     upsertExternalDocuments(database);
                     upsertSyncObjects(database, deviceId);
                     appliedReviewOpIds = applyReviewLog(database);
                     appliedObjects = upsertStateRows(database, deviceId);
-                    clearConfirmedPushAcks(database);
                 }
+                clearConfirmedPushAcks(database, packCursor.toStateSeq);
                 database.setTransactionSuccessful();
             } finally {
                 database.endTransaction();
@@ -76,7 +76,7 @@ final class FolioleCompanionSyncPackApply {
         database.execSQL("DETACH DATABASE " + INCOMING_ALIAS);
     }
 
-    private static PackCursor readPackCursor(SQLiteDatabase database) throws Exception {
+    private static FolioleCompanionSyncPackCursor readPackCursor(SQLiteDatabase database) throws Exception {
         try (Cursor cursor = database.rawQuery(
             "SELECT value FROM inc.pack_manifest WHERE key = 'manifest_json'",
             null
@@ -85,33 +85,11 @@ final class FolioleCompanionSyncPackApply {
                 throw new IllegalArgumentException("Invalid sync pack manifest.");
             }
             JSONObject manifest = new JSONObject(cursor.getString(0));
-            return new PackCursor(
+            return new FolioleCompanionSyncPackCursor(
                 Math.max(0, manifest.optInt("from_state_seq", 0)),
                 Math.max(0, manifest.optInt("to_state_seq", 0))
             );
         }
-    }
-
-    private static int upsertContentBlobs(SQLiteDatabase database) {
-        database.execSQL(
-            "INSERT OR REPLACE INTO main.content_blobs (" +
-                "hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
-                "original_sha256, stored_sha256, availability, source_device_id, created_at, cached_at, last_verified_at) " +
-                "SELECT incoming.hash, incoming.storage_key, incoming.kind, incoming.mime_type, incoming.compression, " +
-                "incoming.original_size_bytes, incoming.stored_size_bytes, incoming.original_sha256, incoming.stored_sha256, " +
-                "CASE WHEN data.hash IS NOT NULL THEN 'cached' ELSE 'missing' END, " +
-                "incoming.source_device_id, incoming.created_at, " +
-                "CASE WHEN data.hash IS NOT NULL THEN incoming.cached_at ELSE NULL END, " +
-                "CASE WHEN data.hash IS NOT NULL THEN incoming.last_verified_at ELSE NULL END " +
-                "FROM inc.content_blobs incoming " +
-                "LEFT JOIN main.content_blob_data data ON data.hash = incoming.hash " +
-                "WHERE incoming.hash IN (" +
-                "SELECT body_blob_hash FROM inc.nodes WHERE body_blob_hash IS NOT NULL " +
-                "AND id IN (SELECT object_id FROM " + applyableStateRowsSql("node") + ") " +
-                "UNION SELECT body_blob_hash FROM inc.external_documents WHERE body_blob_hash IS NOT NULL " +
-                "AND document_id IN (SELECT object_id FROM " + applyableStateRowsSql("external_document") + "))"
-        );
-        return changedRows(database);
     }
 
     private static void upsertNodes(SQLiteDatabase database) {
@@ -121,7 +99,7 @@ final class FolioleCompanionSyncPackApply {
                 "opening_text, content, created_at, updated_at, deleted_at) " +
                 "SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
                 "opening_text, content, created_at, updated_at, deleted_at FROM inc.nodes " +
-                "WHERE id IN (SELECT object_id FROM " + applyableStateRowsSql("node") + ")"
+                "WHERE id IN (SELECT object_id FROM " + FolioleCompanionSyncPackApplyableRows.sql("node") + ")"
         );
     }
 
@@ -134,26 +112,26 @@ final class FolioleCompanionSyncPackApply {
                 "SELECT document_id, folder_id, relative_path, file_name, extension, source_size_bytes, " +
                 "source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, " +
                 "content, indexed_at, is_present, missing_at, created_at, updated_at FROM inc.external_documents " +
-                "WHERE document_id IN (SELECT object_id FROM " + applyableStateRowsSql("external_document") + ")"
+                "WHERE document_id IN (SELECT object_id FROM " + FolioleCompanionSyncPackApplyableRows.sql("external_document") + ")"
         );
     }
 
     private static void replaceNodeAttachments(SQLiteDatabase database) {
         database.execSQL(
             "DELETE FROM main.node_attachments WHERE node_id IN (" +
-                "SELECT object_id FROM " + applyableStateRowsSql("node") + ")"
+                "SELECT object_id FROM " + FolioleCompanionSyncPackApplyableRows.sql("node") + ")"
         );
         database.execSQL(
             "INSERT OR REPLACE INTO main.node_attachments (node_id, attachment_id, role) " +
                 "SELECT node_id, attachment_id, role FROM inc.node_attachments " +
-                "WHERE node_id IN (SELECT object_id FROM " + applyableStateRowsSql("node") + ")"
+                "WHERE node_id IN (SELECT object_id FROM " + FolioleCompanionSyncPackApplyableRows.sql("node") + ")"
         );
     }
 
     private static void upsertSyncObjects(SQLiteDatabase database, String deviceId) throws Exception {
         try (Cursor cursor = database.rawQuery(
             "SELECT object_type, object_id, content_hash, payload_json, updated_at, deleted_at FROM inc.sync_objects incoming " +
-                "WHERE EXISTS (SELECT 1 FROM " + applyableStateRowsSql(null) + " state " +
+                "WHERE EXISTS (SELECT 1 FROM " + FolioleCompanionSyncPackApplyableRows.sql(null) + " state " +
                 "WHERE state.object_type = incoming.object_type AND state.object_id = incoming.object_id) " +
                 "ORDER BY updated_at ASC, object_type ASC, object_id ASC",
             null
@@ -215,30 +193,7 @@ final class FolioleCompanionSyncPackApply {
     }
 
     private static int upsertStateRows(SQLiteDatabase database, String deviceId) {
-        int count = 0;
-        try (Cursor cursor = database.rawQuery(
-                "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM " +
-                applyableStateRowsSql(null) + " WHERE object_type IN (" +
-                "'attachment', 'external_folder', 'import_source', 'node', 'external_document', " +
-                "'node_reading', 'node_review', 'pdf_page_text', 'setting', 'view_state') ORDER BY state_seq ASC",
-            null
-        )) {
-            while (cursor.moveToNext()) {
-                FolioleCompanionSyncStateRows.upsert(
-                    database,
-                    cursor.getString(0),
-                    cursor.getString(1),
-                    null,
-                    cursor.getString(2),
-                    deviceId,
-                    cursor.getString(3),
-                    cursor.isNull(4) ? null : cursor.getString(4),
-                    0
-                );
-                count += 1;
-            }
-        }
-        return count;
+        return FolioleCompanionSyncPackStateRows.upsert(database, deviceId, FolioleCompanionSyncPackApplyableRows.sql(null));
     }
 
     private static boolean isConsumableSyncObject(String objectType, String objectId, String deviceId) {
@@ -249,7 +204,7 @@ final class FolioleCompanionSyncPackApply {
         return parts.length == 5 && parts[1].equals("android") && parts[3].equals(deviceId);
     }
 
-    private static void clearConfirmedPushAcks(SQLiteDatabase database) {
+    private static void clearConfirmedPushAcks(SQLiteDatabase database, int toStateSeq) {
         database.execSQL(
             "UPDATE sync_object_state SET sync_dirty = 0, base_content_hash = NULL " +
                 "WHERE sync_dirty = 1 AND EXISTS (" +
@@ -262,43 +217,23 @@ final class FolioleCompanionSyncPackApply {
                 "AND incoming.content_hash = sync_object_state.content_hash)"
         );
         database.execSQL(
+            "UPDATE sync_object_state SET sync_dirty = 0, base_content_hash = NULL " +
+                "WHERE sync_dirty = 1 AND EXISTS (" +
+                "SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type " +
+                "AND ack.object_id = sync_object_state.object_id " +
+                "AND ack.status IN ('accepted', 'already_applied') " +
+                "AND ack.state_seq IS NOT NULL AND ack.state_seq <= ?)",
+            new Object[] { toStateSeq }
+        );
+        database.execSQL(
             "DELETE FROM sync_push_ack WHERE EXISTS (" +
                 "SELECT 1 FROM sync_object_state state WHERE state.object_type = sync_push_ack.object_type " +
                 "AND state.object_id = sync_push_ack.object_id AND state.sync_dirty = 0)"
         );
     }
 
-    private static String applyableStateRowsSql(String objectType) {
-        String typeFilter = objectType == null ? "" : " AND incoming.object_type = '" + objectType + "'";
-        return "(SELECT incoming.object_type, incoming.object_id, incoming.state_seq, incoming.content_hash, " +
-            "incoming.updated_at, incoming.deleted_at FROM inc.sync_object_state incoming " +
-            "LEFT JOIN main.sync_object_state current ON current.object_type = incoming.object_type " +
-            "AND current.object_id = incoming.object_id WHERE " +
-            "(current.object_id IS NULL OR (current.updated_at <= incoming.updated_at " +
-            "AND (current.sync_dirty <> 1 OR EXISTS (" +
-            "SELECT 1 FROM main.sync_push_ack ack WHERE ack.object_type = incoming.object_type " +
-            "AND ack.object_id = incoming.object_id AND ack.state_seq IS NOT NULL " +
-            "AND incoming.state_seq >= ack.state_seq AND incoming.content_hash = current.content_hash))))" +
-            typeFilter + ")";
-    }
-
-    private static int changedRows(SQLiteDatabase database) {
-        try (Cursor cursor = database.rawQuery("SELECT changes()", null)) {
-            return cursor.moveToFirst() ? cursor.getInt(0) : 0;
-        }
-    }
-
     private static String sqlString(String value) {
         return "'" + value.replace("'", "''") + "'";
     }
 
-    private static final class PackCursor {
-        final int fromStateSeq;
-        final int toStateSeq;
-
-        PackCursor(int fromStateSeq, int toStateSeq) {
-            this.fromStateSeq = fromStateSeq;
-            this.toStateSeq = toStateSeq;
-        }
-    }
 }

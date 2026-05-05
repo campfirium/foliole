@@ -38,7 +38,8 @@ it('loads attachment bytes when the manifest hash matches the requested hash', a
   attachmentMock.resolveAttachmentFile.mockReturnValue({ filePath, mimeType: 'application/octet-stream', status: 'ready' });
 
   await expect(loadCompanionAttachmentResource('att-1', contentHash)).resolves.toEqual({
-    body,
+    contentLength: body.byteLength,
+    filePath,
     mimeType: 'application/octet-stream',
     status: 'ready'
   });

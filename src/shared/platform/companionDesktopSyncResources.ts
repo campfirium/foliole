@@ -14,7 +14,7 @@ import { createSignedRequestHeaders } from './companionWorkspacePairing';
 const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';
 const CONTENT_BLOB_BATCH_PATH = '/companion/content-blobs';
 const CONTENT_BLOB_ACK_PATH = '/companion/content-blob/ack';
-export const CONTENT_BLOB_BATCH_LIMIT = 64;
+export const CONTENT_BLOB_BATCH_LIMIT = 256;
 export const CONTENT_BLOB_MAX_BATCHES_PER_SYNC = 20;
 export const CONTENT_BLOB_CONCURRENT_FETCH_LIMIT = 6;
 export const ATTACHMENT_RESOURCE_BATCH_LIMIT = 64;

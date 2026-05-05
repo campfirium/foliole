@@ -8,10 +8,13 @@ export interface CompanionSyncPassInput {
   pushIssueCount?: number | null;
   pushRejectedCount?: number;
   syncedAttachmentIds?: string[];
+  syncedAttachmentResourceElapsedMs?: number;
   syncedAttachmentResourceBytes?: number;
+  syncedContentBlobElapsedMs?: number;
   syncedContentBlobBytes?: number;
   syncedContentBlobHashes?: string[];
   syncedResourceElapsedMs?: number;
+  syncedStructureElapsedMs?: number;
   remainingAttachmentBreakdown?: {
     activeTopicAttachments?: number;
     dueReviewAttachments?: number;
@@ -68,7 +71,8 @@ function formatDownloadLabel(count: number, singular: string, plural: string, by
 }
 
 function formatElapsedTime(elapsedMs: number | undefined) {
-  if (typeof elapsedMs !== 'number' || elapsedMs < 1000) return null;
+  if (typeof elapsedMs !== 'number' || elapsedMs <= 0) return null;
+  if (elapsedMs < 1000) return `${(elapsedMs / 1000).toFixed(1)}s`;
   const seconds = Math.round(elapsedMs / 1000);
   if (seconds < 60) return `${seconds}s`;
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
@@ -102,6 +106,19 @@ function appendDownloadSuffix(prefix: string, result: CompanionSyncPassInput) {
   const elapsed = formatElapsedTime(result.syncedResourceElapsedMs);
   const timeSuffix = elapsed ? ` in ${elapsed}` : '';
   return joinBacklogSuffix(prefix, `downloaded ${suffixes.join(' and ')} in this sync${timeSuffix}`);
+}
+
+function appendStageTimingSuffix(prefix: string, result: CompanionSyncPassInput) {
+  const timingInputs: Array<[string, number | undefined]> = [
+    ['topic list', result.syncedStructureElapsedMs],
+    ['topic bodies', result.syncedContentBlobElapsedMs],
+    ['attachment files', result.syncedAttachmentResourceElapsedMs]
+  ];
+  const timings = timingInputs.flatMap(([label, elapsedMs]) => {
+    const elapsed = formatElapsedTime(elapsedMs);
+    return elapsed ? [`${label} ${elapsed}`] : [];
+  });
+  return timings.length === 0 ? prefix : joinBacklogSuffix(prefix, `timing: ${timings.join(', ')}`);
 }
 
 function syncCheckedPrefix(result: CompanionSyncPassInput) {
@@ -157,27 +174,28 @@ function isKnownBacklog(count: number | null) {
 }
 
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {
+  const withTiming = (message: string) => appendStageTimingSuffix(message, result);
   if (result.attachmentResourceError) {
     if (hasRemainingResourceBacklog(result)) {
       return createPassResult(
-        appendBacklogSuffix(`Sync checked; attachment files could not download in this pass: ${result.attachmentResourceError}`, result),
+        withTiming(appendBacklogSuffix(`Sync checked; attachment files could not download in this pass: ${result.attachmentResourceError}`, result)),
         'skipped'
       );
     }
-    return createPassResult(`Attachment download failed: ${result.attachmentResourceError}`, 'failed');
+    return createPassResult(withTiming(`Attachment download failed: ${result.attachmentResourceError}`), 'failed');
   }
   if (result.contentBlobError) {
     if (hasRemainingResourceBacklog(result)) {
       return createPassResult(
-        appendBacklogSuffix(`Sync checked; topic bodies could not download in this pass: ${result.contentBlobError}`, result),
+        withTiming(appendBacklogSuffix(`Sync checked; topic bodies could not download in this pass: ${result.contentBlobError}`, result)),
         'skipped'
       );
     }
-    return createPassResult(`Topic body download failed: ${result.contentBlobError}`, 'failed');
+    return createPassResult(withTiming(`Topic body download failed: ${result.contentBlobError}`), 'failed');
   }
   if (result.pushError) {
     return createPassResult(
-      appendBacklogSuffix(appendDownloadSuffix(`${syncCheckedPrefix(result)}; device changes could not be sent: ${result.pushError}`, result), result),
+      withTiming(appendBacklogSuffix(appendDownloadSuffix(`${syncCheckedPrefix(result)}; device changes could not be sent: ${result.pushError}`, result), result)),
       'skipped'
     );
   }
@@ -187,13 +205,13 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
   );
   if (rejectedOrConflicted > 0) {
     return createPassResult(
-      appendBacklogSuffix(
+      withTiming(appendBacklogSuffix(
         appendDownloadSuffix(
           `${syncCheckedPrefix(result)}; ${formatCount(rejectedOrConflicted, 'device change', 'device changes')} ${rejectedOrConflicted === 1 ? 'needs' : 'need'} review before sending.`,
           result
         ),
         result
-      ),
+      )),
       'skipped'
     );
   }
@@ -204,14 +222,14 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
     result.localDirtyCount === 0 &&
     result.pendingAckCount === 0
   ) {
-    return createPassResult(appendDownloadSuffix('Sync fully completed.', result), 'completed');
+    return createPassResult(withTiming(appendDownloadSuffix('Sync fully completed.', result)), 'completed');
   }
   if (
     result.remainingContentBlobCount === 0 &&
     result.remainingAttachmentResourceCount === 0 &&
     (result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0)
   ) {
-    return createPassResult(appendDownloadSuffix(`${syncCheckedPrefix(result)}; local changes are still waiting to settle.`, result), 'skipped');
+    return createPassResult(withTiming(appendDownloadSuffix(`${syncCheckedPrefix(result)}; local changes are still waiting to settle.`, result)), 'skipped');
   }
-  return createPassResult(appendBacklogSuffix(appendDownloadSuffix(syncCheckedPrefix(result), result), result), 'skipped');
+  return createPassResult(withTiming(appendBacklogSuffix(appendDownloadSuffix(syncCheckedPrefix(result), result), result)), 'skipped');
 }
