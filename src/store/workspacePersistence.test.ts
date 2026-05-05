@@ -18,6 +18,8 @@ describe('workspace persistence', () => {
 
   it('writes workspace changes into localStorage', async () => {
     useWorkspaceStore.getState().updateNodeContent('node-1', 'Persisted markdown');
+    const createdNodeId = useWorkspaceStore.getState().createRootNode('Trash me');
+    useWorkspaceStore.getState().deleteNode(createdNodeId);
     await Promise.resolve();
 
     const raw = localStorage.getItem(WORKSPACE_STORAGE_KEY);
@@ -25,6 +27,7 @@ describe('workspace persistence', () => {
 
     const payload = raw ? (JSON.parse(raw) as { state: ReturnType<typeof createInitialWorkspaceState> }) : null;
     expect(payload?.state.nodesById['node-1']?.content).toBe('Persisted markdown');
+    expect(payload?.state.trashedNodeIds).toContain(createdNodeId);
   });
 
   it('rehydrates workspace state from localStorage', async () => {
@@ -34,6 +37,7 @@ describe('workspace persistence', () => {
       content: 'Recovered markdown',
       updatedAt: '2026-02-25T00:00:01.000Z'
     };
+    persisted.trashedNodeIds = ['node-1'];
 
     useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-24T00:00:00.000Z')));
     localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify({ state: persisted, version: 0 }));
@@ -41,5 +45,6 @@ describe('workspace persistence', () => {
     await useWorkspaceStore.persist.rehydrate();
 
     expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Recovered markdown');
+    expect(useWorkspaceStore.getState().trashedNodeIds).toEqual(['node-1']);
   });
 });

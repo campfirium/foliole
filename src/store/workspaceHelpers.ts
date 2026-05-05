@@ -28,10 +28,12 @@ export function collectNodeSubtreeIds(nodeId: string, nodesById: Record<string, 
 export function findFallbackActiveNodeId(
   deletedParentId: string | null,
   nodeOrder: string[],
-  nodesById: Record<string, Node>
+  nodesById: Record<string, Node>,
+  excludedNodeIds: ReadonlySet<string> = new Set<string>()
 ): string | null {
-  if (deletedParentId && nodesById[deletedParentId]) {
+  if (deletedParentId && nodesById[deletedParentId] && !excludedNodeIds.has(deletedParentId)) {
     return deletedParentId;
   }
-  return nodeOrder[0] ?? null;
+  const firstVisibleNodeId = nodeOrder.find((nodeId) => !excludedNodeIds.has(nodeId));
+  return firstVisibleNodeId ?? null;
 }

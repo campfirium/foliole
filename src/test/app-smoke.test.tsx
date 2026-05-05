@@ -193,7 +193,7 @@ describe('App', () => {
       id: 'node-2',
       parentNodeId: 'node-1',
       title: 'Parent',
-      content: '# Parent <highlight id="1">Needle</highlight>',
+      content: '# Parent <highlight id="1">Needle</highlight id="1">',
       reveal: null,
       review: null,
       createdAt: timestamp,
@@ -224,6 +224,7 @@ describe('App', () => {
     render(<App />);
 
     const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
+    expect(screen.getByText('Path')).toBeInTheDocument();
     expect(nav).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Parent' })).toBeInTheDocument();
     fireEvent.click(within(nav).getByRole('button', { name: 'Parent' }));
@@ -239,7 +240,7 @@ describe('App', () => {
       id: 'node-2',
       parentNodeId: 'node-1',
       title: 'Parent',
-      content: '# Parent <highlight id="1">Needle</highlight>',
+      content: '# Parent <highlight id="1">Needle</highlight id="1">',
       reveal: null,
       review: null,
       createdAt: timestamp,
@@ -436,7 +437,7 @@ describe('App', () => {
     expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
     expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome');
     expect(workspace.nodesById[createdNodeId]?.content).toBe('Welcome');
-    expect(workspace.nodesById['node-1']?.content).toContain('<highlight id="1">Welcome</highlight>');
+    expect(workspace.nodesById['node-1']?.content).toContain('<highlight id="1">Welcome</highlight id="1">');
   });
 
   it('creates cloze node from editor context menu without leaving current node', () => {
@@ -459,11 +460,11 @@ describe('App', () => {
     expect(workspace.nodesById[createdNodeId]?.title).toBe('[...] to Foliole Start writing markdown here.');
     expect(workspace.nodesById[createdNodeId]?.content).toBe('# [...] to Foliole\n\nStart writing markdown here.');
     expect(workspace.nodesById[createdNodeId]?.reveal).toBe('Welcome');
-    expect(workspace.nodesById['node-1']?.content).toContain('<cloze id="1">Welcome</cloze>');
+    expect(workspace.nodesById['node-1']?.content).toContain('<cloze id="1">Welcome</cloze id="1">');
   });
 
   it('creates cloze child content without inheriting anchor tags from parent', () => {
-    useWorkspaceStore.getState().updateNodeContent('node-1', '# A <highlight id="1">B</highlight> C');
+    useWorkspaceStore.getState().updateNodeContent('node-1', '# A <highlight id="1">B</highlight id="1"> C');
     render(<App />);
     const editor = screen.getByLabelText('Prompt editor');
     const content = mockEditorState.content;
@@ -482,7 +483,7 @@ describe('App', () => {
     }
     expect(workspace.nodesById[createdNodeId]?.content).toBe('# A B [...]');
     expect(workspace.nodesById[createdNodeId]?.content).not.toContain('<highlight');
-    expect(workspace.nodesById[createdNodeId]?.content).not.toContain('</highlight>');
+    expect(workspace.nodesById[createdNodeId]?.content).not.toContain('</highlight id="1">');
   });
 
   it('deletes a node from node-list context menu', () => {
@@ -512,8 +513,19 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
 
     const workspace = useWorkspaceStore.getState();
-    expect(workspace.nodesById['node-2']).toBeUndefined();
+    expect(workspace.nodesById['node-2']).toBeDefined();
+    expect(workspace.trashedNodeIds).toContain('node-2');
     expect(workspace.activeNodeId).toBe('node-1');
+    expect(within(nodePanel).queryByRole('button', { name: 'Child' })).not.toBeInTheDocument();
+    const trashButton = within(nodePanel).getByRole('button', { name: 'Trash' });
+    expect(trashButton).toHaveTextContent('Trash');
+    fireEvent.click(trashButton);
+    expect(within(nodePanel).getByRole('heading', { name: 'Trash' })).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('button', { name: 'Child' })).toBeInTheDocument();
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Child' }));
+    expect(within(nodePanel).getByLabelText('Trash item preview')).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('button', { name: 'Restore' })).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('button', { name: 'Delete Permanently' })).toBeInTheDocument();
   });
 
   it('deletes all selected nodes from node-list context menu', () => {
@@ -560,10 +572,58 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
 
     const workspace = useWorkspaceStore.getState();
-    expect(workspace.nodesById['node-2']).toBeUndefined();
-    expect(workspace.nodesById['node-3']).toBeUndefined();
-    expect(workspace.nodeOrder).toEqual(['node-1']);
+    expect(workspace.nodesById['node-2']).toBeDefined();
+    expect(workspace.nodesById['node-3']).toBeDefined();
+    expect(workspace.trashedNodeIds).toEqual(expect.arrayContaining(['node-2', 'node-3']));
+    expect(workspace.nodeOrder).toEqual(['node-1', 'node-2', 'node-3']);
     expect(workspace.activeNodeId).toBe('node-1');
+    const trashButton = within(nodePanel).getByRole('button', { name: 'Trash' });
+    expect(trashButton).toHaveTextContent('Trash');
+    fireEvent.click(trashButton);
+    expect(within(nodePanel).getByRole('heading', { name: 'Trash' })).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('button', { name: 'Node 2' })).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('button', { name: 'Node 3' })).toBeInTheDocument();
+  });
+
+  it('restores and permanently deletes nodes from trash preview actions', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const childNode: Node = {
+      id: 'node-2',
+      parentNodeId: 'node-1',
+      title: 'Child',
+      content: '# Child content',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-2',
+      nodeOrder: ['node-1', 'node-2'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': childNode
+      }
+    }));
+
+    render(<App />);
+    const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+    fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Child' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Restore' }));
+    expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
+
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
+    fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Child' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Delete Permanently' }));
+    expect(useWorkspaceStore.getState().nodesById['node-2']).toBeUndefined();
+    expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
   });
 
   it('does not render save badge in document header', () => {

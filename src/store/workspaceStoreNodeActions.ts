@@ -1,13 +1,8 @@
-import { parseAnchorBlocks } from '../features/editor/model/anchorBlocks';
 import { deriveNodeTitleForCloze, deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 
-import { collectNodeSubtreeIds, findFallbackActiveNodeId } from './workspaceHelpers';
-import {
-  INITIAL_WORKSPACE_NAVIGATION_STATE,
-  sanitizeNavigationState
-} from './workspaceNavigation';
 import { createDefaultReviewProfile } from './workspaceSeed';
 import type { WorkspaceState } from './workspaceStore';
+import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
 
 type WorkspaceSet = (
   partial:
@@ -15,18 +10,6 @@ type WorkspaceSet = (
     | Partial<WorkspaceState>
     | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
-
-function removeAnchorTagsForLink(content: string, anchor: { id: string; kind: 'highlight' | 'cloze' }) {
-  const matchedBlock = parseAnchorBlocks(content).blocks.find((block) => block.id === anchor.id && block.kind === anchor.kind);
-  if (!matchedBlock) {
-    return content;
-  }
-
-  const before = content.slice(0, matchedBlock.openTagFrom);
-  const inner = content.slice(matchedBlock.openTagTo, matchedBlock.closeTagFrom);
-  const after = content.slice(matchedBlock.closeTagTo);
-  return `${before}${inner}${after}`;
-}
 
 export function createWorkspaceNodeActions(
   set: WorkspaceSet
@@ -36,11 +19,15 @@ export function createWorkspaceNodeActions(
   | 'createQANodeFromSelection'
   | 'createRootNode'
   | 'deleteNode'
+  | 'deleteNodePermanently'
+  | 'restoreNode'
   | 'setNodeViewState'
   | 'updateNodeContent'
   | 'updateNodeReveal'
 > {
+  const trashActions = createWorkspaceTrashActions(set);
   return {
+    ...trashActions,
     setNodeViewState: (nodeId, viewState) => {
       set((state) => {
         if (!state.nodesById[nodeId]) {
@@ -98,63 +85,6 @@ export function createWorkspaceNodeActions(
               updatedAt: new Date().toISOString()
             }
           }
-        };
-      });
-    },
-    deleteNode: (nodeId) => {
-      set((state) => {
-        if (!state.nodesById[nodeId]) {
-          return state;
-        }
-
-        const deletedParentId = state.nodesById[nodeId]?.parentNodeId ?? null;
-        const idsToDelete = collectNodeSubtreeIds(nodeId, state.nodesById);
-        const idsToDeleteSet = new Set(idsToDelete);
-        const remainingNodeOrder = state.nodeOrder.filter((id) => !idsToDeleteSet.has(id));
-        const remainingNodesById = Object.fromEntries(
-          Object.entries(state.nodesById).filter(([id]) => !idsToDeleteSet.has(id))
-        );
-
-        for (const deletedId of idsToDelete) {
-          const deletedNode = state.nodesById[deletedId];
-          const anchorLink = deletedNode?.anchorLink;
-          const parentNodeId = deletedNode?.parentNodeId;
-          if (!anchorLink || !parentNodeId || idsToDeleteSet.has(parentNodeId)) {
-            continue;
-          }
-
-          const parentNode = remainingNodesById[parentNodeId];
-          if (!parentNode) {
-            continue;
-          }
-
-          const cleanedContent = removeAnchorTagsForLink(parentNode.content, anchorLink);
-          if (cleanedContent === parentNode.content) {
-            continue;
-          }
-
-          remainingNodesById[parentNodeId] = {
-            ...parentNode,
-            content: cleanedContent,
-            title: deriveNodeTitleFromContent(cleanedContent),
-            updatedAt: new Date().toISOString()
-          };
-        }
-
-        const nextActiveNodeId =
-          state.activeNodeId && !idsToDeleteSet.has(state.activeNodeId)
-            ? state.activeNodeId
-            : findFallbackActiveNodeId(deletedParentId, remainingNodeOrder, remainingNodesById);
-        const nextNavigation =
-          nextActiveNodeId === null
-            ? { ...INITIAL_WORKSPACE_NAVIGATION_STATE }
-            : sanitizeNavigationState(state.navigation, remainingNodesById, idsToDeleteSet);
-
-        return {
-          activeNodeId: nextActiveNodeId,
-          navigation: nextNavigation,
-          nodeOrder: remainingNodeOrder,
-          nodesById: remainingNodesById
         };
       });
     },

@@ -7,6 +7,7 @@ interface PanelProps<T extends PanelElement = 'section'> {
   title: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
+  footer?: ReactNode;
   className?: string;
   bodyClassName?: string;
   ariaLabel?: string;
@@ -22,6 +23,7 @@ export function Panel<T extends PanelElement = 'section'>({
   title,
   actions,
   children,
+  footer,
   className,
   bodyClassName,
   ariaLabel,
@@ -44,6 +46,7 @@ export function Panel<T extends PanelElement = 'section'>({
       <div className={joinClassNames('ui-panel-body', scrollBody && 'ui-panel-body-scroll', bodyClassName)}>
         {children}
       </div>
+      {footer ? <footer className="ui-panel-footer">{footer}</footer> : null}
     </Component>
   );
 }

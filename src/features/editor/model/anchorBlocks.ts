@@ -20,7 +20,7 @@ export interface ParsedAnchorBlock {
 
 export interface InvalidAnchorToken {
   from: number;
-  reason: 'invalid-close' | 'invalid-open' | 'nested-not-allowed' | 'unclosed-open';
+  reason: 'duplicate-open' | 'invalid-close' | 'invalid-open' | 'unclosed-open';
   to: number;
 }
 
@@ -40,6 +40,11 @@ interface AnchorToken {
 interface OpenAnchorToken extends AnchorToken {
   id: string;
   slash: false;
+}
+
+interface CloseAnchorToken extends AnchorToken {
+  id: string;
+  slash: true;
 }
 
 const TOKEN_PATTERN = /<(\/?)(highlight|cloze)(?:\s+id="([^"]+)")?\s*>/g;
@@ -73,6 +78,23 @@ function asOpenToken(token: AnchorToken): OpenAnchorToken | null {
   };
 }
 
+function asCloseToken(token: AnchorToken): CloseAnchorToken | null {
+  if (!token.slash || !token.id) {
+    return null;
+  }
+  return {
+    from: token.from,
+    id: token.id,
+    kind: token.kind,
+    slash: true,
+    to: token.to
+  };
+}
+
+function createTokenKey(token: { id: string; kind: AnchorKind }) {
+  return `${token.kind}:${token.id}`;
+}
+
 function tokenize(content: string): AnchorToken[] {
   const tokens: AnchorToken[] = [];
   for (const match of content.matchAll(TOKEN_PATTERN)) {
@@ -87,33 +109,23 @@ function tokenize(content: string): AnchorToken[] {
       continue;
     }
 
-    if (!slash) {
-      if (!id || !isValidAnchorId(id)) {
-        tokens.push({ from, kind, slash, to });
-        continue;
-      }
-
-      tokens.push({ from, id, kind, slash, to });
-      continue;
-    }
-
-    if (id !== undefined) {
+    if (!id || !isValidAnchorId(id)) {
       tokens.push({ from, kind, slash, to });
       continue;
     }
 
-    tokens.push({ from, kind, slash, to });
+    tokens.push({ from, id, kind, slash, to });
   }
   return tokens;
 }
 
 export function serializeAnchorBlock(payload: AnchorBlockPayload): string {
   const normalized = normalizePayload(payload);
-  return `<${normalized.kind} id="${normalized.id}"></${normalized.kind}>`;
+  return `<${normalized.kind} id="${normalized.id}"></${normalized.kind} id="${normalized.id}">`;
 }
 
 export function parseAnchorBlock(value: string): AnchorBlockPayload | null {
-  const match = value.match(/^<(highlight|cloze)\s+id="([^"]+)"><\/\1>$/);
+  const match = value.match(/^<(highlight|cloze)\s+id="([^"]+)"><\/\1\s+id="\2">$/);
   if (!match) {
     return null;
   }
@@ -131,8 +143,7 @@ export function parseAnchorBlocks(content: string): ParsedAnchorBlocksResult {
   const blocks: ParsedAnchorBlock[] = [];
   const invalidTokens: InvalidAnchorToken[] = [];
   const tokens = tokenize(content);
-  let activeToken: OpenAnchorToken | null = null;
-  let activeTokenTainted = false;
+  const openTokensByKey = new Map<string, OpenAnchorToken>();
 
   for (const token of tokens) {
     if (!token.slash) {
@@ -141,47 +152,49 @@ export function parseAnchorBlocks(content: string): ParsedAnchorBlocksResult {
         invalidTokens.push({ from: token.from, reason: 'invalid-open', to: token.to });
         continue;
       }
-      if (activeToken) {
-        invalidTokens.push({ from: token.from, reason: 'nested-not-allowed', to: token.to });
-        activeTokenTainted = true;
+      const key = createTokenKey(openToken);
+      if (openTokensByKey.has(key)) {
+        invalidTokens.push({ from: token.from, reason: 'duplicate-open', to: token.to });
         continue;
       }
-      activeToken = openToken;
-      activeTokenTainted = false;
+      openTokensByKey.set(key, openToken);
       continue;
     }
 
-    if (!activeToken || activeToken.kind !== token.kind) {
+    const closeToken = asCloseToken(token);
+    if (!closeToken) {
       invalidTokens.push({ from: token.from, reason: 'invalid-close', to: token.to });
-      if (activeToken) {
-        activeTokenTainted = true;
-      }
       continue;
     }
 
-    if (!activeTokenTainted) {
-      blocks.push({
-        closeTagFrom: token.from,
-        closeTagTo: token.to,
-        contentFrom: activeToken.to,
-        contentTo: token.from,
-        from: activeToken.from,
-        id: activeToken.id,
-        kind: activeToken.kind,
-        openTagFrom: activeToken.from,
-        openTagTo: activeToken.to,
-        to: token.to
-      });
+    const key = createTokenKey(closeToken);
+    const openToken = openTokensByKey.get(key);
+    if (!openToken) {
+      invalidTokens.push({ from: token.from, reason: 'invalid-close', to: token.to });
+      continue;
     }
-    activeToken = null;
-    activeTokenTainted = false;
+
+    blocks.push({
+      closeTagFrom: closeToken.from,
+      closeTagTo: closeToken.to,
+      contentFrom: openToken.to,
+      contentTo: closeToken.from,
+      from: openToken.from,
+      id: openToken.id,
+      kind: openToken.kind,
+      openTagFrom: openToken.from,
+      openTagTo: openToken.to,
+      to: closeToken.to
+    });
+    openTokensByKey.delete(key);
   }
 
-  if (activeToken) {
+  const unclosedTokens = [...openTokensByKey.values()].sort((left, right) => left.from - right.from);
+  for (const openToken of unclosedTokens) {
     invalidTokens.push({
-      from: activeToken.from,
+      from: openToken.from,
       reason: 'unclosed-open',
-      to: activeToken.to
+      to: openToken.to
     });
   }
 

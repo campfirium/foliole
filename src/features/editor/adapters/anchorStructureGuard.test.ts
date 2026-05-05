@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { shouldBlockAnchorTagMutation } from './anchorStructureGuard';
 
 describe('anchorStructureGuard', () => {
-  const content = 'AA<highlight id="1">BC</highlight>DD';
+  const content = 'AA<highlight id="1">BC</highlight id="1">DD';
 
   it('allows edits outside anchor tags', () => {
     expect(shouldBlockAnchorTagMutation(content, [{ from: 0, to: 1 }])).toBe(false);
@@ -16,7 +16,7 @@ describe('anchorStructureGuard', () => {
 
   it('blocks deletion that intersects open or close tags', () => {
     const openTagStart = content.indexOf('<highlight');
-    const closeTagStart = content.indexOf('</highlight>');
+    const closeTagStart = content.indexOf('</highlight id="1">');
     expect(shouldBlockAnchorTagMutation(content, [{ from: openTagStart, to: openTagStart + 1 }])).toBe(true);
     expect(shouldBlockAnchorTagMutation(content, [{ from: closeTagStart, to: closeTagStart + 2 }])).toBe(true);
   });

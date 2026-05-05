@@ -39,6 +39,7 @@ export function createInitialWorkspaceSnapshot(now: Date, defaultLayoutState: Wo
     layout: { ...defaultLayoutState },
     nodeViewById: {},
     nodeOrder: [seedNode.id],
-    nodesById: { [seedNode.id]: seedNode }
+    nodesById: { [seedNode.id]: seedNode },
+    trashedNodeIds: []
   };
 }

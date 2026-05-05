@@ -17,11 +17,14 @@ interface WorkspaceNavigationActions {
 }
 
 export function createWorkspaceNavigationActions(set: WorkspaceSet): WorkspaceNavigationActions {
+  const isAvailableNode = (state: WorkspaceState, nodeId: string) =>
+    Boolean(state.nodesById[nodeId]) && !state.trashedNodeIds.includes(nodeId);
+
   return {
     openNode: (nodeId) => {
       let nextResult: NodeNavigationResult | null = null;
       set((state) => {
-        if (!state.nodesById[nodeId] || state.activeNodeId === nodeId) {
+        if (!isAvailableNode(state, nodeId) || state.activeNodeId === nodeId) {
           return state;
         }
 
@@ -46,7 +49,7 @@ export function createWorkspaceNavigationActions(set: WorkspaceSet): WorkspaceNa
       set((state) => {
         const currentNodeId = state.activeNodeId;
         const targetNodeId = state.navigation.backStack[state.navigation.backStack.length - 1];
-        if (!currentNodeId || !targetNodeId || !state.nodesById[targetNodeId]) {
+        if (!currentNodeId || !targetNodeId || !isAvailableNode(state, targetNodeId)) {
           return state;
         }
 
@@ -69,7 +72,7 @@ export function createWorkspaceNavigationActions(set: WorkspaceSet): WorkspaceNa
       set((state) => {
         const currentNodeId = state.activeNodeId;
         const targetNodeId = state.navigation.forwardStack[0];
-        if (!currentNodeId || !targetNodeId || !state.nodesById[targetNodeId]) {
+        if (!currentNodeId || !targetNodeId || !isAvailableNode(state, targetNodeId)) {
           return state;
         }
 
@@ -96,7 +99,7 @@ export function createWorkspaceNavigationActions(set: WorkspaceSet): WorkspaceNa
         }
         const currentNode = state.nodesById[currentNodeId];
         const parentNodeId = currentNode?.parentNodeId;
-        if (!currentNode || !parentNodeId || !state.nodesById[parentNodeId]) {
+        if (!currentNode || !parentNodeId || !isAvailableNode(state, parentNodeId)) {
           return state;
         }
 
@@ -118,7 +121,7 @@ export function createWorkspaceNavigationActions(set: WorkspaceSet): WorkspaceNa
       let nextResult: NodeNavigationResult | null = null;
       set((state) => {
         const currentNodeId = state.activeNodeId;
-        if (!currentNodeId || currentNodeId === ancestorNodeId || !state.nodesById[ancestorNodeId]) {
+        if (!currentNodeId || currentNodeId === ancestorNodeId || !isAvailableNode(state, ancestorNodeId)) {
           return state;
         }
 

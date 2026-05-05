@@ -1,7 +1,7 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
-import { parseAnchorBlocks } from '../model/anchorBlocks';
+import { collectAnchorTagTokenRanges, collectAnchorTextSegments } from '../model/anchorTagSegments';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
 const CODE_FENCE_PATTERN = /^\s*`{3,}/;
@@ -198,12 +198,20 @@ function addSemanticMarkDecorations(
 }
 
 function addAnchorTagDecorations(ranges: Range<Decoration>[], content: string) {
-  const { blocks } = parseAnchorBlocks(content);
+  const segments = collectAnchorTextSegments(content);
+  const tokenRanges = collectAnchorTagTokenRanges(content);
 
-  for (const block of blocks) {
-    addReplace(ranges, block.openTagFrom, block.openTagTo);
-    addReplace(ranges, block.closeTagFrom, block.closeTagTo);
-    addMark(ranges, block.contentFrom, block.contentTo, block.kind === 'highlight' ? 'cm-md-highlight' : 'cm-md-cloze');
+  for (const tokenRange of tokenRanges) {
+    addReplace(ranges, tokenRange.from, tokenRange.to);
+  }
+
+  for (const segment of segments) {
+    if (segment.activeHighlightCount > 0) {
+      addMark(ranges, segment.from, segment.to, 'cm-md-highlight');
+    }
+    if (segment.activeClozeCount > 0) {
+      addMark(ranges, segment.from, segment.to, 'cm-md-cloze');
+    }
   }
 }
 

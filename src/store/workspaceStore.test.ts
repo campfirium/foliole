@@ -126,15 +126,15 @@ function createTestStore(now: Date) {
           return state;
         }
 
-        const nextNodeOrder = state.nodeOrder.filter((id) => id !== nodeId);
-        const nextNodesById = Object.fromEntries(Object.entries(state.nodesById).filter(([id]) => id !== nodeId));
-        const deletedNode = state.nodesById[nodeId];
+        const nextNodesById = { ...state.nodesById };
+        const nextTrashedNodeIds = [...new Set([...state.trashedNodeIds, nodeId])];
+        const deletedNode = nextNodesById[nodeId];
         const anchorLink = deletedNode?.anchorLink;
         const parentNodeId = deletedNode?.parentNodeId;
-        if (anchorLink && parentNodeId && nextNodesById[parentNodeId]) {
+        if (anchorLink && parentNodeId && nextNodesById[parentNodeId] && !nextTrashedNodeIds.includes(parentNodeId)) {
           const parentNode = nextNodesById[parentNodeId];
           const pattern = new RegExp(
-            `<${anchorLink.kind}\\s+id="${anchorLink.id}">([\\s\\S]*?)<\\/${anchorLink.kind}>`
+            `<${anchorLink.kind}\\s+id="${anchorLink.id}">([\\s\\S]*?)<\\/${anchorLink.kind}\\s+id="${anchorLink.id}">`
           );
           const nextContent = parentNode.content.replace(pattern, '$1');
           nextNodesById[parentNodeId] = {
@@ -144,10 +144,35 @@ function createTestStore(now: Date) {
             updatedAt: new Date().toISOString()
           };
         }
+        const nextVisibleNodeOrder = state.nodeOrder.filter((id) => !nextTrashedNodeIds.includes(id));
         return {
-          activeNodeId: nextNodeOrder[0] ?? null,
-          nodeOrder: nextNodeOrder,
-          nodesById: nextNodesById
+          activeNodeId: nextVisibleNodeOrder[0] ?? null,
+          nodeOrder: state.nodeOrder,
+          nodesById: nextNodesById,
+          trashedNodeIds: nextTrashedNodeIds
+        };
+      });
+    },
+    restoreNode: (nodeId) => {
+      set((state) => {
+        if (!state.nodesById[nodeId] || !state.trashedNodeIds.includes(nodeId)) {
+          return state;
+        }
+        return {
+          trashedNodeIds: state.trashedNodeIds.filter((id) => id !== nodeId)
+        };
+      });
+    },
+    deleteNodePermanently: (nodeId) => {
+      set((state) => {
+        if (!state.nodesById[nodeId]) {
+          return state;
+        }
+        return {
+          activeNodeId: state.activeNodeId === nodeId ? null : state.activeNodeId,
+          nodeOrder: state.nodeOrder.filter((id) => id !== nodeId),
+          nodesById: Object.fromEntries(Object.entries(state.nodesById).filter(([id]) => id !== nodeId)),
+          trashedNodeIds: state.trashedNodeIds.filter((id) => id !== nodeId)
         };
       });
     },
@@ -313,7 +338,7 @@ describe('workspaceStore', () => {
 
   it('does not include anchor tags in derived title', () => {
     const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
-    store.getState().updateNodeContent('node-1', '# Intro <cloze id="1">answer</cloze>');
+    store.getState().updateNodeContent('node-1', '# Intro <cloze id="1">answer</cloze id="1">');
 
     expect(store.getState().nodesById['node-1']?.title).toBe('Intro answer');
   });
@@ -403,27 +428,28 @@ describe('workspaceStore', () => {
 
     store.getState().deleteNode('node-highlight-id');
 
-    expect(store.getState().nodesById['node-highlight-id']).toBeUndefined();
+    expect(store.getState().nodesById['node-highlight-id']).toBeDefined();
+    expect(store.getState().trashedNodeIds).toContain('node-highlight-id');
     expect(store.getState().activeNodeId).toBe('node-1');
   });
 
   it('removes matching anchor tags from parent content when deleting linked child node', () => {
     const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
-    const parentContent = 'before <cloze id="1">answer</cloze> and <highlight id="2">keep</highlight> after';
+    const parentContent = 'before <cloze id="1">answer</cloze id="1"> and <highlight id="2">keep</highlight id="2"> after';
     store.getState().updateNodeContent('node-1', parentContent);
     store.getState().createQANodeFromSelection('node-1', 'Prompt [...]', 'answer', '1');
 
     store.getState().deleteNode('node-test-id');
 
     expect(store.getState().nodesById['node-1']?.content).toBe(
-      'before answer and <highlight id="2">keep</highlight> after'
+      'before answer and <highlight id="2">keep</highlight id="2"> after'
     );
-    expect(store.getState().nodesById['node-1']?.content).toContain('<highlight id="2">keep</highlight>');
+    expect(store.getState().nodesById['node-1']?.content).toContain('<highlight id="2">keep</highlight id="2">');
   });
 
   it('keeps parent content unchanged when deleting child node without anchor link', () => {
     const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
-    const parentContent = 'before <highlight id="1">text</highlight> after';
+    const parentContent = 'before <highlight id="1">text</highlight id="1"> after';
     store.getState().updateNodeContent('node-1', parentContent);
     store.getState().createHighlightNodeFromSelection('node-1', 'text');
 

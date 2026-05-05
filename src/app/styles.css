@@ -96,6 +96,64 @@ body {
   gap: var(--space-8);
 }
 
+.trash-footer-button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-10);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-12);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  min-height: 34px;
+  text-align: left;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.trash-footer-button:hover {
+  background: var(--color-overlay-hover);
+  color: var(--color-text-primary);
+}
+
+.trash-footer-button[aria-pressed='true'] {
+  background: var(--color-overlay-hover);
+  color: var(--color-text-primary);
+}
+
+.trash-preview {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-10);
+}
+
+.trash-preview-title {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-13);
+  font-weight: 700;
+  margin: 0;
+}
+
+.trash-preview-content {
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-12);
+  margin: 0;
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.trash-preview-actions {
+  display: flex;
+  gap: var(--space-8);
+}
+
 .node-row {
   font-size: var(--font-size-13);
   padding-inline: 0;
@@ -147,11 +205,30 @@ body {
   padding-inline: var(--space-16);
 }
 
+.panel-list .ui-panel-footer {
+  padding-inline: var(--space-16);
+}
+
 .panel-editor .ui-panel-header {
   align-items: center;
   gap: 0;
   justify-content: flex-start;
   padding-inline: calc((100% - min(100%, var(--document-max-width))) / 2 + var(--space-16));
+}
+
+.document-header-title {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-10);
+  min-width: 0;
+}
+
+.document-header-label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-12);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .node-breadcrumbs {

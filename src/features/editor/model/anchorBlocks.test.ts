@@ -16,7 +16,7 @@ describe('anchorBlocks', () => {
       kind: 'highlight'
     });
 
-    expect(block).toBe('<highlight id="12"></highlight>');
+    expect(block).toBe('<highlight id="12"></highlight id="12">');
     expect(parseAnchorBlock(block)).toEqual({
       id: '12',
       kind: 'highlight'
@@ -24,15 +24,15 @@ describe('anchorBlocks', () => {
   });
 
   it('rejects malformed ids or malformed tag shapes', () => {
-    expect(parseAnchorBlock('<highlight id="001"></highlight>')).toBeNull();
-    expect(parseAnchorBlock('<highlight></highlight>')).toBeNull();
-    expect(parseAnchorBlock('<highlight id="2"></cloze>')).toBeNull();
-    expect(parseAnchorBlock('<cloze id="2">x</cloze>')).toBeNull();
-    expect(parseAnchorBlock('<highlight id="2"></highlight id="2">')).toBeNull();
+    expect(parseAnchorBlock('<highlight id="001"></highlight id="001">')).toBeNull();
+    expect(parseAnchorBlock('<highlight></highlight id="1">')).toBeNull();
+    expect(parseAnchorBlock('<highlight id="2"></cloze id="2">')).toBeNull();
+    expect(parseAnchorBlock('<cloze id="2">x</cloze id="2">')).toBeNull();
+    expect(parseAnchorBlock('<highlight id="2"></highlight id="3">')).toBeNull();
   });
 
   it('extracts ranges from content and strips markup tags', () => {
-    const content = 'A<highlight id="1">BC</highlight>D<cloze id="2">EF</cloze>G';
+    const content = 'A<highlight id="1">BC</highlight id="1">D<cloze id="2">EF</cloze id="2">G';
     const blocks = extractAnchorBlocks(content);
 
     expect(blocks).toHaveLength(2);
@@ -45,17 +45,29 @@ describe('anchorBlocks', () => {
     expect(stripAnchorBlocks(content)).toBe('ABCDEFG');
   });
 
-  it('flags nested or cross-close structures as invalid', () => {
-    const nested = '<highlight id="1">a<cloze id="2">b</cloze>c</highlight>';
-    const nestedResult = parseAnchorBlocks(nested);
-    expect(nestedResult.blocks).toHaveLength(0);
-    expect(nestedResult.invalidTokens.some((token) => token.reason === 'nested-not-allowed')).toBe(true);
-    expect(nestedResult.invalidTokens.some((token) => token.reason === 'invalid-close')).toBe(true);
+  it('supports overlapping anchors by explicit close-id matching', () => {
+    const content = 'X<highlight id="1">12<cloze id="2">34</highlight id="1">56</cloze id="2">Y';
+    const result = parseAnchorBlocks(content);
+    expect(result.invalidTokens).toHaveLength(0);
+    expect(result.blocks).toHaveLength(2);
 
-    const crossClose = '<highlight id="1">a</cloze><cloze id="2">b</highlight>';
-    const crossResult = parseAnchorBlocks(crossClose);
-    expect(crossResult.blocks).toHaveLength(0);
-    expect(crossResult.invalidTokens.some((token) => token.reason === 'invalid-close')).toBe(true);
+    const highlightBlock = result.blocks.find((block) => block.kind === 'highlight' && block.id === '1');
+    const clozeBlock = result.blocks.find((block) => block.kind === 'cloze' && block.id === '2');
+    expect(highlightBlock).toBeDefined();
+    expect(clozeBlock).toBeDefined();
+    expect(content.slice(highlightBlock!.contentFrom, highlightBlock!.contentTo)).toBe('12<cloze id="2">34');
+    expect(content.slice(clozeBlock!.contentFrom, clozeBlock!.contentTo)).toBe('34</highlight id="1">56');
+  });
+
+  it('flags mismatched close ids and duplicate open ids as invalid', () => {
+    const mismatched = '<highlight id="1">a</highlight id="2">';
+    const mismatchedResult = parseAnchorBlocks(mismatched);
+    expect(mismatchedResult.invalidTokens.some((token) => token.reason === 'invalid-close')).toBe(true);
+    expect(mismatchedResult.invalidTokens.some((token) => token.reason === 'unclosed-open')).toBe(true);
+
+    const duplicateOpen = '<highlight id="1">a<highlight id="1">b</highlight id="1">';
+    const duplicateResult = parseAnchorBlocks(duplicateOpen);
+    expect(duplicateResult.invalidTokens.some((token) => token.reason === 'duplicate-open')).toBe(true);
   });
 
   it('appends block pair with expected newline behavior', () => {
@@ -64,8 +76,8 @@ describe('anchorBlocks', () => {
       kind: 'cloze' as const
     };
 
-    expect(appendAnchorBlock('', payload)).toBe('<cloze id="3"></cloze>');
-    expect(appendAnchorBlock('Body', payload)).toBe('Body\n<cloze id="3"></cloze>');
-    expect(appendAnchorBlock('Body\n', payload)).toBe('Body\n<cloze id="3"></cloze>');
+    expect(appendAnchorBlock('', payload)).toBe('<cloze id="3"></cloze id="3">');
+    expect(appendAnchorBlock('Body', payload)).toBe('Body\n<cloze id="3"></cloze id="3">');
+    expect(appendAnchorBlock('Body\n', payload)).toBe('Body\n<cloze id="3"></cloze id="3">');
   });
 });

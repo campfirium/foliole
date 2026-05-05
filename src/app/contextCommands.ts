@@ -85,7 +85,7 @@ export function applySelectionMarkup(
   }
 
   const tagName = markupType === 'highlight' ? 'highlight' : 'cloze';
-  adapter.replaceSelection(`<${tagName} id="${anchorId}">${selectedText}</${tagName}>`);
+  adapter.replaceSelection(`<${tagName} id="${anchorId}">${selectedText}</${tagName} id="${anchorId}">`);
   return true;
 }
 

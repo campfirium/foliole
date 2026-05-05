@@ -16,6 +16,7 @@ export interface WorkspaceState {
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  trashedNodeIds: string[];
   goBack: () => NodeNavigationResult | null;
   goForward: () => NodeNavigationResult | null;
   goToParent: () => NodeNavigationResult | null;
@@ -29,6 +30,8 @@ export interface WorkspaceState {
   updateNodeContent: (nodeId: string, content: string) => void;
   updateNodeReveal: (nodeId: string, reveal: string) => void;
   deleteNode: (nodeId: string) => void;
+  restoreNode: (nodeId: string) => void;
+  deleteNodePermanently: (nodeId: string) => void;
   createRootNode: (content?: string) => string;
   createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string) => string | null;
   createQANodeFromSelection: (
@@ -45,6 +48,7 @@ interface WorkspacePersistedState {
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  trashedNodeIds: string[];
 }
 
 export interface WorkspaceLayoutState {
@@ -71,7 +75,7 @@ const defaultLayoutState: WorkspaceLayoutState = {
 
 export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
-  'activeNodeId' | 'layout' | 'navigation' | 'nodeOrder' | 'nodesById' | 'nodeViewById'
+  'activeNodeId' | 'layout' | 'navigation' | 'nodeOrder' | 'nodesById' | 'nodeViewById' | 'trashedNodeIds'
 > {
   return {
     ...createInitialWorkspaceSnapshot(now, defaultLayoutState),
@@ -114,7 +118,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
       setActiveNode: (nodeId) => {
         set((state) => {
-          if (!state.nodesById[nodeId]) {
+          if (!state.nodesById[nodeId] || state.trashedNodeIds.includes(nodeId)) {
             return state;
           }
           return { activeNodeId: nodeId };
@@ -131,7 +135,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         layout: state.layout,
         nodeViewById: state.nodeViewById,
         nodeOrder: state.nodeOrder,
-        nodesById: state.nodesById
+        nodesById: state.nodesById,
+        trashedNodeIds: state.trashedNodeIds
       })
     }
   )

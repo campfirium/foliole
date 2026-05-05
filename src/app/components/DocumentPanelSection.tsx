@@ -69,7 +69,12 @@ export function DocumentPanelSection({
         bodyClassName="editor-body"
         className="panel-editor"
         style={documentLayoutStyle}
-        title={<NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />}
+        title={
+          <div className="document-header-title">
+            <span className="document-header-label">Path</span>
+            <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
+          </div>
+        }
       >
         <div className="document-width-shell" data-resizing={isDocumentResizing}>
           <DocumentWidthHandle
