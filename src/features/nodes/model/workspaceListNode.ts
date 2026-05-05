@@ -12,8 +12,10 @@ export {
   compareWorkspaceListNodeDateDesc,
   getWorkspaceListNodeAuthor,
   getWorkspaceListNodeDateLabel,
+  getWorkspaceListNodeOpening,
   getWorkspaceListNodeSummary,
   WORKSPACE_LIST_DATE_FALLBACK,
+  WORKSPACE_LIST_OPENING_FALLBACK,
   WORKSPACE_LIST_SUMMARY_FALLBACK
 } from './workspaceListNodeMetadata';
 

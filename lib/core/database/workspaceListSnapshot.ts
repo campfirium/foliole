@@ -1,9 +1,11 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
+import { extractNodeOpeningPreview } from '../nodes/nodeOpeningPreview.js';
 import { parseVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { parseStoredImageRegions } from './imageRegionCodec.js';
+import { applyResolvedOpenings, buildPdfOpeningById } from './workspaceListSnapshotOpening.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 interface WorkspaceNodeRow extends DatabaseRow {
@@ -16,6 +18,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   is_title_manual: number;
   hide_title_heading: number;
   virtual_filter: string | null;
+  content: string;
   has_content: number;
   has_reveal: number;
   anchor_link: string | null;
@@ -44,6 +47,11 @@ interface WorkspaceNodeRow extends DatabaseRow {
 
 interface NodeOrderRow extends DatabaseRow {
   node_id: string;
+}
+
+interface PdfOpeningRow extends DatabaseRow {
+  node_id: string;
+  text: string;
 }
 
 interface WorkspaceMetaRow extends DatabaseRow {
@@ -104,6 +112,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        n.is_title_manual,
        n.hide_title_heading,
        n.virtual_filter,
+       n.content,
        CASE WHEN LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
        CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
        n.anchor_link,
@@ -138,6 +147,22 @@ function queryNodeOrderRows(driver: DatabaseDriver) {
   return driver.queryAll<NodeOrderRow>('SELECT node_id FROM node_order ORDER BY position ASC');
 }
 
+function queryPdfOpeningRows(driver: DatabaseDriver) {
+  return driver.queryAll<PdfOpeningRow>(
+    `SELECT
+       na.node_id,
+       ppt.text
+     FROM node_attachments na
+     INNER JOIN attachments a
+       ON a.id = na.attachment_id
+     INNER JOIN pdf_page_text ppt
+       ON ppt.attachment_id = a.id
+     WHERE na.role = 'reference'
+       AND a.mime_type = 'application/pdf'
+     ORDER BY na.node_id ASC, ppt.page ASC`
+  );
+}
+
 function loadPersistedActiveNodeId(driver: DatabaseDriver) {
   const row = driver.queryOne<WorkspaceMetaRow>(
     'SELECT value FROM workspace_meta WHERE key = ?',
@@ -146,16 +171,14 @@ function loadPersistedActiveNodeId(driver: DatabaseDriver) {
   return row && row.value !== '' ? row.value : null;
 }
 
-export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
-  const rows = queryWorkspaceRows(driver);
-  if (rows.length === 0) {
-    return null;
-  }
-
+function buildNodesById(rows: WorkspaceNodeRow[]) {
   const nodesById: Record<string, Record<string, unknown>> = {};
   const trashedNodeIds: string[] = [];
+  const directOpeningById = new Map<string, string | null>();
   for (const row of rows) {
     const imageRegions = parseStoredImageRegions(row.image_regions);
+    const directOpening = row.has_content === 1 ? extractNodeOpeningPreview(row.content, row.title) : null;
+    directOpeningById.set(row.id, directOpening);
     nodesById[row.id] = {
       id: row.id,
       parentNodeId: row.parent_id,
@@ -167,6 +190,7 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
       hideTitleHeading: row.hide_title_heading === 1,
       hasContent: row.has_content === 1,
       hasReveal: row.has_reveal === 1,
+      opening: null,
       content: '',
       virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
       reveal: null,
@@ -181,7 +205,10 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
       trashedNodeIds.push(row.id);
     }
   }
+  return { directOpeningById, nodesById, trashedNodeIds };
+}
 
+function buildNodeOrder(driver: DatabaseDriver, rows: WorkspaceNodeRow[], nodesById: Record<string, Record<string, unknown>>) {
   const nodeOrder = queryNodeOrderRows(driver)
     .map((row) => row.node_id)
     .filter((nodeId) => Boolean(nodesById[nodeId]));
@@ -191,13 +218,34 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
       nodeOrder.push(row.id);
     }
   }
+  return nodeOrder;
+}
 
+function resolveActiveNodeId(
+  driver: DatabaseDriver,
+  nodeOrder: string[],
+  nodesById: Record<string, Record<string, unknown>>,
+  trashedNodeIds: string[]
+) {
   const trashedNodeSet = new Set(trashedNodeIds);
   const persistedActiveNodeId = loadPersistedActiveNodeId(driver);
-  const activeNodeId =
+  return (
     (persistedActiveNodeId && nodesById[persistedActiveNodeId] && !trashedNodeSet.has(persistedActiveNodeId)
       ? persistedActiveNodeId
-      : null) ?? nodeOrder.find((nodeId) => !trashedNodeSet.has(nodeId)) ?? null;
+      : null) ?? nodeOrder.find((nodeId) => !trashedNodeSet.has(nodeId)) ?? null
+  );
+}
+
+export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
+  const rows = queryWorkspaceRows(driver);
+  if (rows.length === 0) {
+    return null;
+  }
+  const { directOpeningById, nodesById, trashedNodeIds } = buildNodesById(rows);
+  const pdfOpeningById = buildPdfOpeningById(queryPdfOpeningRows(driver), nodesById);
+  const nodeOrder = buildNodeOrder(driver, rows, nodesById);
+  applyResolvedOpenings({ directOpeningById, nodeOrder, nodesById, pdfOpeningById });
+  const activeNodeId = resolveActiveNodeId(driver, nodeOrder, nodesById, trashedNodeIds);
 
   return {
     activeNodeId,

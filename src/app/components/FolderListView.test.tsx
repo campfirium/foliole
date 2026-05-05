@@ -12,6 +12,7 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
     kind: overrides.kind ?? 'topic',
     title: overrides.title,
     content: overrides.content ?? '',
+    opening: overrides.opening ?? null,
     reveal: overrides.reveal ?? null,
     review: overrides.review ?? null,
     createdAt: overrides.createdAt ?? '2026-04-01T09:00:00.000Z',
@@ -42,21 +43,24 @@ function getRenderedEntryTitles() {
 }
 
 describe('FolderListView content', () => {
-  it('shows title, summary, and date for entries with content', () => {
+  it('shows title, opening, and date for entries with content', () => {
     renderFolderList([
       createNode({
         id: 'node-1',
         title: 'Child topic',
-        content: '# Child topic\nThis is the first useful sentence inside the folder list body.',
+        content: '# Child topic\n\nThis is the first useful sentence inside the folder list body.\n\nSecond paragraph.',
         updatedAt: '2026-04-02T10:30:00.000Z'
       })
     ]);
 
     expect(screen.getByTestId('folder-list-title-node-1')).toHaveTextContent('Child topic');
+    expect(screen.getByRole('heading', { level: 2, name: 'Content list' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-excerpt-node-1')).toHaveTextContent(
       'This is the first useful sentence inside the folder list body.'
     );
-    expect(screen.getByTestId('folder-list-date-node-1')).toHaveTextContent('2026-04-02');
+    expect(screen.getByTestId('folder-list-date-node-1')).toHaveTextContent('Updated 2026-04-02');
+    expect(screen.getByText('No author')).toBeInTheDocument();
+    expect(screen.getByText('Has opening')).toBeInTheDocument();
   });
 
   it('keeps the author slot stable when author data is missing', () => {
@@ -70,17 +74,19 @@ describe('FolderListView content', () => {
 
     const authorSlot = screen.getByTestId('folder-list-author-node-2');
     expect(authorSlot).toBeInTheDocument();
-    expect(authorSlot).toHaveTextContent('');
-    expect(authorSlot).toHaveAttribute('aria-label', 'Author unavailable');
+    expect(authorSlot).toHaveTextContent('Topic');
     expect(authorSlot.className).toContain('min-h-4');
+    expect(screen.getByText('No author')).toBeInTheDocument();
   });
+});
 
-  it('skips frontmatter in summaries and falls back to created date when updated date is unusable', () => {
+describe('FolderListView opening metadata', () => {
+  it('skips frontmatter in openings and falls back to created date when updated date is unusable', () => {
     renderFolderList([
       createNode({
         id: 'node-3',
         title: 'Child topic',
-        content: '---\nauthor: Ada\n---\n# Child topic\nUseful body text',
+        content: '---\nauthor: Ada\n---\n# Child topic\n\nUseful body text\n\nLater paragraph',
         createdAt: '2026-04-03T10:30:00.000Z',
         updatedAt: ''
       })
@@ -88,9 +94,41 @@ describe('FolderListView content', () => {
 
     expect(screen.getByTestId('folder-list-excerpt-node-3')).toHaveTextContent('Useful body text');
     expect(screen.getByTestId('folder-list-excerpt-node-3')).not.toHaveTextContent('author: Ada');
-    expect(screen.getByTestId('folder-list-date-node-3')).toHaveTextContent('2026-04-03');
+    expect(screen.getByTestId('folder-list-date-node-3')).toHaveTextContent('Updated 2026-04-03');
+    expect(screen.getByText('Author listed')).toBeInTheDocument();
   });
 
+  it('shows the opening from the list snapshot when the node body is not loaded', () => {
+    renderFolderList([
+      createNode({
+        id: 'node-6',
+        title: 'Atomic Habits',
+        content: '',
+        opening: 'Tiny changes compound into remarkable results.',
+        updatedAt: '2026-04-03T10:30:00.000Z'
+      })
+    ]);
+
+    expect(screen.getByTestId('folder-list-excerpt-node-6')).toHaveTextContent(
+      'Tiny changes compound into remarkable results.'
+    );
+    expect(screen.getByText('Has opening')).toBeInTheDocument();
+  });
+
+  it('keeps the opening area blank when no opening is available', () => {
+    renderFolderList([
+      createNode({
+        id: 'node-7',
+        title: 'No body yet',
+        content: '',
+        opening: null
+      })
+    ]);
+
+    expect(screen.getByTestId('folder-list-excerpt-node-7')).toHaveTextContent('');
+    expect(screen.queryByText('No opening')).not.toBeInTheDocument();
+    expect(screen.queryByText('No opening yet.')).not.toBeInTheDocument();
+  });
 });
 
 describe('FolderListView date sorting', () => {
@@ -121,8 +159,8 @@ describe('FolderListView date sorting', () => {
     ]);
 
     expect(getRenderedEntryTitles()).toEqual(['Created fallback', 'Updated value']);
-    expect(screen.getByTestId('folder-list-date-node-4')).toHaveTextContent('2026-04-03');
-    expect(screen.getByTestId('folder-list-date-node-5')).toHaveTextContent('2026-04-02');
+    expect(screen.getByTestId('folder-list-date-node-4')).toHaveTextContent('Updated 2026-04-03');
+    expect(screen.getByTestId('folder-list-date-node-5')).toHaveTextContent('Updated 2026-04-02');
   });
 });
 
@@ -164,9 +202,8 @@ describe('FolderListView secondary sorting', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Author' }));
 
     expect(getRenderedEntryTitles()).toEqual(['Named author', 'No author A', 'No author B']);
-    expect(screen.getByTestId('folder-list-author-node-2')).toHaveTextContent('Zoe');
+    expect(screen.getByTestId('folder-list-author-node-2')).toHaveTextContent('Topic · Zoe');
   });
-
 });
 
 describe('FolderListView interactions', () => {
@@ -179,7 +216,6 @@ describe('FolderListView interactions', () => {
 
     expect(onSelectNode).toHaveBeenCalledWith('node-3');
   });
-
 });
 
 describe('FolderListView layout', () => {
@@ -198,9 +234,11 @@ describe('FolderListView layout', () => {
     ]);
 
     expect(screen.getByTestId('folder-list-title-node-4').className).toContain('line-clamp-2');
-    expect(screen.getByTestId('folder-list-excerpt-node-4')).toHaveTextContent('No summary yet.');
+    expect(screen.getByTestId('folder-list-excerpt-node-4')).toHaveTextContent('');
     expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('line-clamp-2');
+    expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('min-h-10');
     expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('line-clamp-2');
     expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('min-h-10');
+    expect(screen.getAllByText('Topic').length).toBeGreaterThan(0);
   });
 });

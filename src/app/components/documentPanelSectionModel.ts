@@ -44,16 +44,6 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
   };
 }
 
-function resolveInboxEmptyState(activeNode: Node | undefined) {
-  return isInboxNode(activeNode)
-    ? {
-        title: 'Inbox is ready',
-        description:
-          'Formal imports will land under Inbox. When items arrive, select a child node to read or edit it.'
-      }
-    : undefined;
-}
-
 function getDocumentPanelState(
   props: DocumentPanelSectionProps,
   activeNode: Node | undefined,
@@ -61,7 +51,7 @@ function getDocumentPanelState(
   showAnswerSection: boolean
 ) {
   const startupState = resolveDocumentStartupState(props, activeNode);
-  const emptyState = startupState.emptyState ?? resolveInboxEmptyState(activeNode);
+  const emptyState = startupState.emptyState;
   const reveal = activeNode?.reveal ?? '';
   const shouldPadDocumentTail = editorDisplayMode === 'preview' && activeNode?.kind !== 'item';
   const shouldCheckItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection);
@@ -136,9 +126,8 @@ export function getDocumentPanelView(
     isFolderListView: Boolean(
       activeNode &&
         activeNode.kind === 'folder' &&
-        !isInboxNode(activeNode) &&
         !isVirtualNode(activeNode) &&
-        props.editorNodeId === props.activeNodeId
+        (props.editorNodeId === props.activeNodeId || isInboxNode(activeNode))
     )
   };
 }

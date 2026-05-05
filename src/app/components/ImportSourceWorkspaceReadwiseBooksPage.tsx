@@ -7,6 +7,8 @@ import {
 } from '../../shared/platform/readwiseBooksBridge';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { matchesImportSearch } from './importManagementSearch';
+import { ImportManagementSearchBar } from './ImportManagementSearchBar';
 import { ReadwiseBooksInventorySection } from './ImportOverviewSections';
 import {
   applyResetReadwiseBookImportToWorkspace,
@@ -59,6 +61,25 @@ async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
   return result.node_id;
 }
 
+function filterBooksInventory(query: string, booksInventory: RuntimeReadwiseBooksInventory | null) {
+  if (!booksInventory) {
+    return null;
+  }
+
+  return {
+    ...booksInventory,
+    books: booksInventory.books.filter((book) =>
+      matchesImportSearch(query, [
+        book.title,
+        book.bookKey,
+        book.importStatus,
+        book.nodeStatus,
+        book.annotationStatus
+      ])
+    )
+  };
+}
+
 export function ImportSourceWorkspaceReadwiseBooksPage({
   open,
   onOpenChange,
@@ -69,8 +90,10 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
   onSelectNode?: (nodeId: string) => void;
 }) {
   const { booksInventory, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
+  const nodesById = useWorkspaceStore((state) => state.nodesById);
   const [resettingNodeId, setResettingNodeId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState('');
+  const [query, setQuery] = useState('');
   const handleOpenBookNode = useCallback(
     (nodeId: string) => {
       selectReadwiseBookNode(nodeId, onSelectNode);
@@ -95,11 +118,20 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
     },
     [handleOpenBookNode, refreshBooksInventory]
   );
+  const filteredInventory = filterBooksInventory(query, booksInventory);
+  const filteredCount = filteredInventory?.books.length ?? 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <ImportManagementSearchBar
+        countLabel={`${filteredCount} matches`}
+        onChange={setQuery}
+        placeholder="Search imported books"
+        value={query}
+      />
       <ReadwiseBooksInventorySection
-        inventory={booksInventory}
+        inventory={filteredInventory}
+        nodesById={nodesById}
         onOpenBookNode={handleOpenBookNode}
         onResetBookImport={handleReimportBook}
         resettingNodeId={resettingNodeId}

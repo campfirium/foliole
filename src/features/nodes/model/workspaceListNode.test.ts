@@ -5,6 +5,7 @@ import {
   compareWorkspaceListNodeDateDesc,
   getWorkspaceListNodeAuthor,
   getWorkspaceListNodeDateLabel,
+  getWorkspaceListNodeOpening,
   getWorkspaceListNodeSummary,
   projectWorkspaceListNodesById,
   toWorkspaceListNode,
@@ -57,6 +58,71 @@ it('falls back to the empty summary copy when no usable content remains', () => 
       title: 'Atlas'
     })
   ).toBe(WORKSPACE_LIST_SUMMARY_FALLBACK);
+});
+
+it('uses the opening from the list snapshot when body content is not loaded', () => {
+  expect(
+    getWorkspaceListNodeOpening({
+      content: '',
+      kind: 'topic',
+      opening: 'Tiny changes compound into remarkable results.',
+      title: 'Atomic Habits'
+    })
+  ).toBe('Tiny changes compound into remarkable results.');
+});
+
+it('truncates the opening preview to about 100 characters', () => {
+  const opening = getWorkspaceListNodeOpening({
+    content: '# Atomic Habits\n\n' + 'Tiny changes compound into remarkable results '.repeat(6),
+    kind: 'topic',
+    title: 'Atomic Habits'
+  });
+
+  expect(opening.endsWith('…')).toBe(true);
+  expect(opening.length).toBeLessThanOrEqual(101);
+});
+
+it('skips a leading h1 line when building the opening preview', () => {
+  expect(
+    getWorkspaceListNodeOpening({
+      content: '# Atomic Habits\nTiny changes compound into remarkable results.',
+      kind: 'topic',
+      title: 'Atomic Habits'
+    })
+  ).toBe('Tiny changes compound into remarkable results.');
+});
+
+it('falls back to the stored opening when loaded body content is only a PDF placeholder', () => {
+  expect(
+    getWorkspaceListNodeOpening({
+      content: '# Paper\n\nLinked PDF source ready for the reader surface.',
+      kind: 'topic',
+      opening: 'The real PDF body starts here.',
+      title: 'Paper'
+    })
+  ).toBe('The real PDF body starts here.');
+});
+
+it('skips cover-only content when deciding the opening preview', () => {
+  expect(
+    getWorkspaceListNodeOpening({
+      content: '# Book Title\n\n![Cover](asset://cover.png)',
+      kind: 'topic',
+      opening: 'Chapter one body starts here.',
+      title: 'Book Title'
+    })
+  ).toBe('Chapter one body starts here.');
+});
+
+it('suppresses opening previews for folder rows', () => {
+  expect(
+    getWorkspaceListNodeOpening({
+      content: '# Folder\n\nChild intro text.',
+      kind: 'folder',
+      opening: 'Child intro text.',
+      title: 'Folder'
+    })
+  ).toBe('No opening yet.');
 });
 
 it('keeps author display and sorting on the same fallback rule', () => {

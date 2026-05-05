@@ -1,3 +1,5 @@
+import { extractNodeOpeningPreview, NODE_OPENING_PREVIEW_FALLBACK } from '../../../../lib/core/nodes/nodeOpeningPreview';
+
 import type { Node } from './nodeTypes';
 
 const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
@@ -7,6 +9,7 @@ const WIKILINK_WRAPPER_PATTERN = /\[\[([^\]]+)\]\]/g;
 const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 
 export const WORKSPACE_LIST_SUMMARY_FALLBACK = 'No summary yet.';
+export const WORKSPACE_LIST_OPENING_FALLBACK = NODE_OPENING_PREVIEW_FALLBACK;
 export const WORKSPACE_LIST_DATE_FALLBACK = 'Unknown date';
 
 const WORKSPACE_LIST_SUMMARY_MAX_LENGTH = 160;
@@ -190,6 +193,21 @@ export function getWorkspaceListNodeSummary(node: Pick<Node, 'content' | 'title'
   const summary = strippedSummary || WORKSPACE_LIST_SUMMARY_FALLBACK;
 
   return truncateSummary(summary);
+}
+
+export function getWorkspaceListNodeOpening(node: Pick<Node, 'content' | 'kind' | 'title' | 'opening'>) {
+  if (node.kind === 'folder') {
+    return WORKSPACE_LIST_OPENING_FALLBACK;
+  }
+
+  const contentOpening = node.content.trim() ? extractNodeOpeningPreview(node.content, node.title) : WORKSPACE_LIST_OPENING_FALLBACK;
+  if (contentOpening !== WORKSPACE_LIST_OPENING_FALLBACK) {
+    return contentOpening;
+  }
+  if (typeof node.opening === 'string' && node.opening.trim()) {
+    return node.opening;
+  }
+  return contentOpening;
 }
 
 export function getWorkspaceListNodeDateLabel(node: Pick<Node, 'createdAt' | 'updatedAt'>) {

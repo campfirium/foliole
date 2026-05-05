@@ -35,6 +35,7 @@ const workspaceListRow = {
   is_title_manual: 1,
   hide_title_heading: 1,
   virtual_filter: null,
+  content: '# Node 1\n\nThe first body paragraph.',
   has_content: 1,
   has_reveal: 1,
   anchor_link: null,
@@ -75,6 +76,7 @@ const expectedWorkspaceListSnapshot = {
       hideTitleHeading: true,
       hasContent: true,
       hasReveal: true,
+      opening: 'The first body paragraph.',
       content: '',
       virtualFilter: null,
       reveal: null,
@@ -98,17 +100,17 @@ beforeEach(() => {
 });
 
 it('loads workspace list snapshot without long-lived node documents', () => {
-  queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([{ node_id: 'node-1' }]);
+  queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([]).mockReturnValueOnce([{ node_id: 'node-1' }]);
   queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceListSnapshot(driver)).toEqual(expectedWorkspaceListSnapshot);
 
-  expect(queryAllSpy).toHaveBeenCalledTimes(2);
+  expect(queryAllSpy).toHaveBeenCalledTimes(3);
   expect(queryOneSpy).toHaveBeenCalledTimes(2);
 });
 
-it('queries lightweight content flags instead of full node documents', () => {
-  queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([{ node_id: 'node-1' }]);
+it('queries lightweight list fields and includes content only to compute the opening', () => {
+  queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([]).mockReturnValueOnce([{ node_id: 'node-1' }]);
   queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   loadWorkspaceListSnapshot(driver);
@@ -116,7 +118,7 @@ it('queries lightweight content flags instead of full node documents', () => {
   const workspaceListSql = queryAllSpy.mock.calls[0]?.[0];
   expect(workspaceListSql).toContain('AS has_content');
   expect(workspaceListSql).toContain('AS has_reveal');
-  expect(workspaceListSql).not.toContain('n.content,');
+  expect(workspaceListSql).toContain('n.content,');
   expect(workspaceListSql).not.toContain('n.reveal,');
 });
 
@@ -128,10 +130,52 @@ it('prefers the persisted active node when it is still available', () => {
       id: 'node-2',
       title: 'Node 2'
     }
-  ]).mockReturnValueOnce([{ node_id: 'node-1' }, { node_id: 'node-2' }]);
+  ]).mockReturnValueOnce([]).mockReturnValueOnce([{ node_id: 'node-1' }, { node_id: 'node-2' }]);
   queryOneSpy
     .mockReturnValueOnce({ value: 'node-2' })
     .mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceListSnapshot(driver)?.activeNodeId).toBe('node-2');
+});
+
+it('uses indexed pdf text as the opening when the node body only contains the pdf placeholder', () => {
+  queryAllSpy
+    .mockReturnValueOnce([
+      {
+        ...workspaceListRow,
+        content: '# paper\n\nLinked PDF source ready for the reader surface.',
+        title: 'paper'
+      }
+    ])
+    .mockReturnValueOnce([{ node_id: 'node-1', text: 'The actual PDF body starts here. More text follows.' }])
+    .mockReturnValueOnce([{ node_id: 'node-1' }]);
+  queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
+
+  expect(loadWorkspaceListSnapshot(driver)?.nodesById['node-1']?.opening).toBe('The actual PDF body starts here. More text follows.');
+});
+
+it('falls back to the first descendant opening when the parent body is only a cover', () => {
+  queryAllSpy
+    .mockReturnValueOnce([
+      {
+        ...workspaceListRow,
+        id: 'node-book',
+        title: 'Book Title',
+        content: '# Book Title\n\n![Cover](asset://cover.png)'
+      },
+      {
+        ...workspaceListRow,
+        id: 'node-chapter',
+        parent_id: 'node-book',
+        title: 'Chapter 1',
+        content: '# Chapter 1\n\nThe first real chapter body.'
+      }
+    ])
+    .mockReturnValueOnce([])
+    .mockReturnValueOnce([{ node_id: 'node-book' }, { node_id: 'node-chapter' }]);
+  queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
+
+  const snapshot = loadWorkspaceListSnapshot(driver);
+  expect(snapshot?.nodesById['node-book']?.opening).toBe('The first real chapter body.');
+  expect(snapshot?.nodesById['node-chapter']?.opening).toBe('The first real chapter body.');
 });

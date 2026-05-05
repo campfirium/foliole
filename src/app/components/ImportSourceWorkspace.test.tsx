@@ -80,6 +80,7 @@ it('shows the import management navigation shell without readwise settings contr
   expect(screen.queryByRole('heading', { name: 'Inbox' })).not.toBeInTheDocument();
   expect(screen.queryByText('Readwise Reader settings')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Open Readwise Reader settings' })).not.toBeInTheDocument();
+  expect(screen.getByText('Inbox imports')).toBeInTheDocument();
 });
 
 it('switches the content container when a navigation item is selected', async () => {
@@ -89,9 +90,31 @@ it('switches the content container when a navigation item is selected', async ()
   await waitFor(() => {
     expect(screen.getByText('Book A')).toBeInTheDocument();
   });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search imported books' }), { target: { value: 'missing' } });
+  expect(screen.queryByText('Book A')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Articles' }));
   expect(screen.getByText('Readwise article content will appear here once the list view is ready.')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
+  await waitFor(() => {
+    expect(screen.getByText('Book A.pdf')).toBeInTheDocument();
+  });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search imported PDFs' }), { target: { value: 'missing' } });
+  expect(screen.queryByText('Book A.pdf')).not.toBeInTheDocument();
+});
+
+it('filters inbox items from the shared import search field', () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search inbox imports' }), { target: { value: 'missing' } });
+
+  expect(screen.getByText('0 linked nodes · 0 recent runs')).toBeInTheDocument();
+  expect(screen.queryByText('No import result recorded yet.')).toBeInTheDocument();
+});
+
+it('shows pdf status badges before filtering them away', async () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
   fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
   await waitFor(() => {

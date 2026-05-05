@@ -6,8 +6,8 @@ import './app-smoke.shared';
 import { App } from '../app/App';
 import type { ElectronAPI } from '../shared/platform/electronApi';
 
-function getNodeListPanel() {
-  return screen.getByRole('complementary', { name: 'Node list panel' });
+async function getNodeListPanel() {
+  return screen.findByRole('complementary', { name: 'Node list panel' });
 }
 
 function createImportedWorkspaceSnapshot(title = 'Imported note') {
@@ -118,27 +118,31 @@ function createImportedNodeRuntimeInvoke(options?: {
   });
 }
 
-it('shows Inbox in the node tree and opens its empty state landing', () => {
+it('shows Inbox in the node tree and opens the folder list surface', async () => {
+  window.electronAPI = {
+    invoke: createImportedNodeRuntimeInvoke(),
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
+
   render(<App />);
 
-  const inboxItem = within(getNodeListPanel()).getByRole('treeitem', { name: 'Inbox' });
+  const inboxItem = within(await getNodeListPanel()).getByRole('treeitem', { name: 'Inbox' });
   expect(inboxItem).toBeInTheDocument();
 
   fireEvent.click(inboxItem);
 
-  expect(screen.getByText('Inbox is ready')).toBeInTheDocument();
-  expect(
-    screen.getByText(
-      'Formal imports will land under Inbox. When items arrive, select a child node to read or edit it.'
-    )
-  ).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Content list' })).toBeInTheDocument();
+  expect(screen.getByRole('list', { name: 'Folder contents' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open Imported note' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
 });
 
-it('keeps virtual nodes out of the main tree and opens the virtual list from the titlebar switch', () => {
+it('keeps virtual nodes out of the main tree and opens the virtual list from the titlebar switch', async () => {
   render(<App />);
 
-  expect(within(getNodeListPanel()).queryByRole('treeitem', { name: 'Virtual Nodes' })).not.toBeInTheDocument();
+  expect(within(await getNodeListPanel()).queryByRole('treeitem', { name: 'Virtual Nodes' })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Virtual Nodes' }));
 
@@ -146,10 +150,17 @@ it('keeps virtual nodes out of the main tree and opens the virtual list from the
   expect(screen.getByRole('button', { name: 'Create Virtual Node' })).toBeInTheDocument();
 });
 
-it('opens import management from the left toolbar instead of replacing Inbox', () => {
+it('opens import management from the left toolbar instead of replacing Inbox', async () => {
+  window.electronAPI = {
+    invoke: createImportedNodeRuntimeInvoke(),
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
+
   render(<App />);
 
-  const inboxItem = within(getNodeListPanel()).getByRole('treeitem', { name: 'Inbox' });
+  const inboxItem = within(await getNodeListPanel()).getByRole('treeitem', { name: 'Inbox' });
   fireEvent.click(inboxItem);
 
   fireEvent.click(screen.getByRole('button', { name: 'Import Management' }));
@@ -163,7 +174,7 @@ it('opens import management from the left toolbar instead of replacing Inbox', (
 
   fireEvent.click(screen.getByRole('button', { name: 'Close import management' }));
 
-  expect(screen.getByText('Inbox is ready')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Content list' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Import management' })).not.toBeInTheDocument();
 });
 
@@ -235,7 +246,7 @@ it('shows a newly imported inbox child immediately after import without restarti
   fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 
   await waitFor(() => {
-    expect(within(getNodeListPanel()).getByRole('treeitem', { name: 'Imported note' })).toBeInTheDocument();
+    expect(screen.getByRole('treeitem', { name: 'Imported note' })).toBeInTheDocument();
   });
 });
 
@@ -262,7 +273,7 @@ it('shows the imported PDF node in Inbox after manual import', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 
   await waitFor(() => {
-    expect(within(getNodeListPanel()).getByRole('treeitem', { name: 'Imported PDF' })).toBeInTheDocument();
+    expect(screen.getByRole('treeitem', { name: 'Imported PDF' })).toBeInTheDocument();
   });
 });
 

@@ -1,38 +1,16 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimeTextImportResult } from '../../shared/platform/importBridge';
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
-import { AppButton, AppStatusBadge, InspectorSection } from '../../shared/ui';
+import { AppButton, AppListItem, AppListSectionHeader, AppListSurface, AppStatusBadge } from '../../shared/ui';
+
+import { ReadwiseBookInventoryItem } from './ImportInventoryListItems';
+import { renderImportDate, renderImportMeta, renderImportOpening } from './ImportNodeListBits';
+import {
+  buildImportNodePresentation
+} from './importNodePresentation';
 
 function formatImportTime(timestamp: string) {
   return timestamp.replace('T', ' ').slice(0, 16);
-}
-
-function formatReadwiseAnnotationStatus(annotationStatus: RuntimeReadwiseBooksInventory['books'][number]['annotationStatus']) {
-  return annotationStatus === 'has_highlights' ? 'Has highlights' : 'No highlights';
-}
-
-function formatReadwiseImportStatus(book: RuntimeReadwiseBooksInventory['books'][number]) {
-  if (book.importStatus === 'completed' && book.nodeStatus === 'generated') {
-    return 'Loaded';
-  }
-  if (book.nodeStatus !== 'generated' && book.generatedNodeId) {
-    return 'Deleted';
-  }
-  return 'Not loaded';
-}
-
-function resolveReadwiseAnnotationTone(annotationStatus: RuntimeReadwiseBooksInventory['books'][number]['annotationStatus']) {
-  return annotationStatus === 'has_highlights' ? ('success' as const) : ('neutral' as const);
-}
-
-function resolveReadwiseImportTone(book: RuntimeReadwiseBooksInventory['books'][number]) {
-  if (book.importStatus === 'completed' && book.nodeStatus === 'generated') {
-    return 'success' as const;
-  }
-  if (book.nodeStatus !== 'generated' && book.generatedNodeId) {
-    return 'warning' as const;
-  }
-  return 'neutral' as const;
 }
 
 function formatImportOutcome(entry: RuntimeTextImportResult) {
@@ -71,41 +49,6 @@ function resolveDetail(entry: RuntimeTextImportResult) {
   return `${entry.sourceKind} · ${entry.sourceLocator}`;
 }
 
-export function ImportRunSection({
-  emptyLabel,
-  entry,
-  title
-}: {
-  emptyLabel: string;
-  entry: RuntimeTextImportResult | null;
-  title: string;
-}) {
-  return (
-    <InspectorSection title={title}>
-      {entry ? (
-        <div className="rounded-lg border border-border bg-bg-panel px-3 py-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">{formatImportOutcome(entry)}</p>
-              <p className="mt-1 text-xs text-foreground/50">{formatImportTime(entry.importedAt)}</p>
-              <p className="mt-2 break-all text-sm text-foreground/65">{resolveDetail(entry)}</p>
-            </div>
-            <AppStatusBadge label={entry.resultStatus} tone={resolveTone(entry)} />
-          </div>
-          <dl className="mt-3 space-y-2 text-sm text-foreground/70">
-            <div className="flex items-start justify-between gap-3">
-              <dt className="text-foreground/45">Source</dt>
-              <dd className="text-right">{entry.sourceName}</dd>
-            </div>
-          </dl>
-        </div>
-      ) : (
-        <p className="text-sm text-foreground/65">{emptyLabel}</p>
-      )}
-    </InspectorSection>
-  );
-}
-
 function collectRecentInboxEntries(entries: RuntimeTextImportResult[]) {
   const seenNodeIds = new Set<string>();
   return entries.filter((entry) => {
@@ -115,6 +58,58 @@ function collectRecentInboxEntries(entries: RuntimeTextImportResult[]) {
     seenNodeIds.add(entry.nodeId);
     return true;
   });
+}
+
+function renderImportTrailing(date: string, prefix: string, status: RuntimeTextImportResult['resultStatus'], tone: ReturnType<typeof resolveTone>) {
+  return (
+    <div className="flex flex-col items-end gap-2">
+      {renderImportDate(date, prefix)}
+      <AppStatusBadge label={status} tone={tone} />
+    </div>
+  );
+}
+
+function buildRunPresentation(entry: RuntimeTextImportResult, nodesById: Record<string, Node>) {
+  return buildImportNodePresentation({
+    fallbackDate: formatImportTime(entry.importedAt),
+    fallbackOpening: resolveDetail(entry),
+    fallbackPath: entry.sourceLocator,
+    fallbackTitle: entry.resultStatus === 'failed' ? formatImportOutcome(entry) : entry.sourceName,
+    fallbackType: entry.sourceKind,
+    nodeId: entry.nodeId,
+    nodesById
+  });
+}
+
+function InboxImportedNodeRow({
+  entry,
+  nodesById,
+  onOpenNode
+}: {
+  entry: RuntimeTextImportResult;
+  nodesById: Record<string, Node>;
+  onOpenNode: (nodeId: string) => void;
+}) {
+  if (!entry.nodeId || !nodesById[entry.nodeId]) {
+    return null;
+  }
+
+  const presentation = buildRunPresentation(entry, nodesById);
+
+  return (
+    <AppListItem
+      actions={
+        <AppButton onClick={() => onOpenNode(entry.nodeId!)} variant="ghost">
+          Open node
+        </AppButton>
+      }
+      interactive={false}
+      meta={renderImportMeta(presentation.meta)}
+      summary={renderImportOpening(presentation.opening)}
+      title={presentation.title}
+      trailing={renderImportTrailing(presentation.date, 'Updated', entry.resultStatus, resolveTone(entry))}
+    />
+  );
 }
 
 export function InboxImportedNodesSection({
@@ -129,51 +124,99 @@ export function InboxImportedNodesSection({
   const recentNodes = collectRecentInboxEntries(entries);
 
   return (
-    <InspectorSection
-      description="Recent imports stay reachable from Inbox before you sort them into the main tree."
-      title="Imported nodes"
+    <AppListSurface
+      ariaLabel="Inbox inventory"
+      emptyState={{ description: 'No imported Inbox children yet.', title: 'Inbox inventory is empty' }}
+      header={
+        <AppListSectionHeader
+          countLabel={`${recentNodes.length} items`}
+          description="Recent imports stay reachable from Inbox before you sort them into the main tree."
+          title="Inbox inventory"
+        />
+      }
+      isEmpty={recentNodes.length === 0}
     >
       {recentNodes.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          {recentNodes.map((entry) => {
-            const node = entry.nodeId ? nodesById[entry.nodeId] : undefined;
-            if (!node || !entry.nodeId) {
-              return null;
-            }
-
-            return (
-              <div className="rounded-lg border border-border bg-bg-panel px-3 py-3" key={entry.importId}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{node.title}</p>
-                    <p className="mt-1 text-xs text-foreground/50">{formatImportTime(entry.importedAt)}</p>
-                    <p className="mt-2 break-all text-sm text-foreground/65">{entry.sourceKind} · {entry.sourceLocator}</p>
-                  </div>
-                  <AppStatusBadge label={entry.resultStatus} tone={resolveTone(entry)} />
-                </div>
-                <div className="mt-3 flex items-center justify-end gap-3">
-                  <AppButton onClick={() => onOpenNode(entry.nodeId!)} variant="ghost">
-                    Open node
-                  </AppButton>
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex flex-col">
+          {recentNodes.map((entry) => (
+            <InboxImportedNodeRow entry={entry} key={entry.importId} nodesById={nodesById} onOpenNode={onOpenNode} />
+          ))}
         </div>
-      ) : (
-        <p className="text-sm text-foreground/65">No imported Inbox children yet.</p>
-      )}
-    </InspectorSection>
+      ) : null}
+    </AppListSurface>
+  );
+}
+
+function InboxRecentRunRow({
+  entry,
+  nodesById,
+  onOpenNode
+}: {
+  entry: RuntimeTextImportResult;
+  nodesById: Record<string, Node>;
+  onOpenNode: (nodeId: string) => void;
+}) {
+  const canOpenNode = Boolean(entry.nodeId && nodesById[entry.nodeId]);
+  const presentation = buildRunPresentation(entry, nodesById);
+
+  return (
+    <AppListItem
+      actions={
+        canOpenNode ? (
+          <AppButton onClick={() => onOpenNode(entry.nodeId!)} variant="ghost">
+            Open node
+          </AppButton>
+        ) : undefined
+      }
+      interactive={false}
+      meta={renderImportMeta(presentation.meta)}
+      summary={renderImportOpening(presentation.opening)}
+      title={presentation.title}
+      trailing={renderImportTrailing(presentation.date, canOpenNode ? 'Updated' : 'Imported', entry.resultStatus, resolveTone(entry))}
+    />
+  );
+}
+
+export function InboxRecentRunsSection({
+  entries,
+  nodesById,
+  onOpenNode
+}: {
+  entries: RuntimeTextImportResult[];
+  nodesById: Record<string, Node>;
+  onOpenNode: (nodeId: string) => void;
+}) {
+  return (
+    <AppListSurface
+      ariaLabel="Recent import runs"
+      emptyState={{ description: 'No import result recorded yet.', title: 'Recent import runs are empty' }}
+      header={
+        <AppListSectionHeader
+          countLabel={`${entries.length} items`}
+          description="The latest import outcomes stay visible here, including failures and reused files."
+          title="Recent import runs"
+        />
+      }
+      isEmpty={entries.length === 0}
+    >
+      <div className="flex flex-col">
+        {entries.map((entry) => (
+          <InboxRecentRunRow entry={entry} key={entry.importId} nodesById={nodesById} onOpenNode={onOpenNode} />
+        ))}
+      </div>
+    </AppListSurface>
   );
 }
 
 export function ReadwiseBooksInventorySection({
   inventory,
+  nodesById,
   onOpenBookNode,
   onResetBookImport,
   resettingNodeId
 }: {
   inventory: RuntimeReadwiseBooksInventory | null;
+  nodesById?: Record<string, Node>;
   onOpenBookNode?: (nodeId: string) => void;
   onResetBookImport?: (input: { nodeId: string; title: string }) => void;
   resettingNodeId?: string | null;
@@ -184,84 +227,27 @@ export function ReadwiseBooksInventorySection({
     : 'Shared books list is not available yet.';
 
   return (
-    <InspectorSection description={description} title="Books inventory">
-      {books.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          {books.map((book) => (
-            <ReadwiseBookInventoryCard
-              book={book}
-              key={book.bookKey}
-              onOpenBookNode={onOpenBookNode}
-              onResetBookImport={onResetBookImport}
-              resettingNodeId={resettingNodeId}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-foreground/65">No books discovered yet.</p>
-      )}
-    </InspectorSection>
-  );
-}
-
-function ReadwiseBookInventoryCard({
-  book,
-  onOpenBookNode,
-  onResetBookImport,
-  resettingNodeId
-}: {
-  book: RuntimeReadwiseBooksInventory['books'][number];
-  onOpenBookNode?: (nodeId: string) => void;
-  onResetBookImport?: (input: { nodeId: string; title: string }) => void;
-  resettingNodeId?: string | null;
-}) {
-  const generatedNodeId = book.generatedNodeId;
-  const showOpenNode = Boolean(generatedNodeId && onOpenBookNode);
-  const isResetting = resettingNodeId === generatedNodeId;
-  const handleOpenBookNode = () => {
-    if (!generatedNodeId || !onOpenBookNode) {
-      return;
-    }
-    onOpenBookNode(generatedNodeId);
-  };
-
-  return (
-    <div className="rounded-lg border border-border bg-bg-panel px-3 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {showOpenNode ? (
-            <button
-              className="text-left text-sm font-semibold text-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-              onClick={handleOpenBookNode}
-              type="button"
-            >
-              {book.title}
-            </button>
-          ) : (
-            <p className="text-sm font-semibold text-foreground">{book.title}</p>
-          )}
-          <p className="mt-1 break-all text-xs text-foreground/50">{book.bookKey}</p>
-        </div>
+    <AppListSurface
+      ariaLabel="Books inventory"
+      emptyState={{ description: 'No books discovered yet.', title: 'Books inventory is empty' }}
+      header={
+        <AppListSectionHeader countLabel={`${books.length} items`} description={description} title="Books inventory" />
+      }
+      isEmpty={books.length === 0}
+    >
+      <div className="flex flex-col">
+        {books.map((book) => (
+          <ReadwiseBookInventoryItem
+            book={book}
+            key={book.bookKey}
+            nodesById={nodesById}
+            onOpenBookNode={onOpenBookNode}
+            onResetBookImport={onResetBookImport}
+            scannedAt={formatImportTime(inventory?.scannedAt ?? '')}
+            resettingNodeId={resettingNodeId}
+          />
+        ))}
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <AppStatusBadge
-          label={formatReadwiseAnnotationStatus(book.annotationStatus)}
-          tone={resolveReadwiseAnnotationTone(book.annotationStatus)}
-        />
-        <AppStatusBadge
-          label={formatReadwiseImportStatus(book)}
-          tone={resolveReadwiseImportTone(book)}
-        />
-      </div>
-      <div className="mt-3 flex items-center justify-end">
-        <AppButton
-          disabled={!generatedNodeId || isResetting}
-          onClick={() => generatedNodeId && onResetBookImport?.({ nodeId: generatedNodeId, title: book.title })}
-          variant="ghost"
-        >
-          {isResetting ? 'Importing…' : 'Import'}
-        </AppButton>
-      </div>
-    </div>
+    </AppListSurface>
   );
 }

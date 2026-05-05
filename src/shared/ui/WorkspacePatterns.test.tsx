@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import { InspectorSection } from './InspectorSection';
+import { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
 import { ReviewActionBar } from './ReviewActionBar';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
 
@@ -49,4 +50,46 @@ it('renders toolbar action groups with shared grouping semantics', () => {
   expect(screen.getByLabelText('Primary toolbar actions')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Forward' })).toBeInTheDocument();
+});
+
+it('renders list surfaces with shared header, rows, and empty state', () => {
+  const { rerender } = render(
+    <AppListSurface
+      ariaLabel="Shared list"
+      header={
+        <AppListHeader actions={<p>2 items</p>}>
+          <p>Unified list header</p>
+        </AppListHeader>
+      }
+    >
+      <AppListItem meta="Meta" summary="Summary" title="Entry title" trailing="Updated today" />
+    </AppListSurface>
+  );
+
+  expect(screen.getByLabelText('Shared list')).toBeInTheDocument();
+  expect(screen.getByText('Unified list header')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Entry title/i })).toBeInTheDocument();
+  expect(screen.getByText('Updated today')).toBeInTheDocument();
+
+  rerender(
+    <AppListSurface
+      ariaLabel="Shared list"
+      emptyState={{ description: 'Nothing to review yet.', title: 'No entries' }}
+      isEmpty
+    />
+  );
+
+  expect(screen.getByText('No entries')).toBeInTheDocument();
+  expect(screen.getByText('Nothing to review yet.')).toBeInTheDocument();
+});
+
+it('renders shared list section headers with title, description, count, and toolbar', () => {
+  render(
+    <AppListSectionHeader countLabel="6 items" description="Shared section description." title="Shared section" toolbar={<span>Toolbar row</span>} />
+  );
+
+  expect(screen.getByRole('heading', { level: 2, name: 'Shared section' })).toBeInTheDocument();
+  expect(screen.getByText('Shared section description.')).toBeInTheDocument();
+  expect(screen.getByText('6 items')).toBeInTheDocument();
+  expect(screen.getByText('Toolbar row')).toBeInTheDocument();
 });

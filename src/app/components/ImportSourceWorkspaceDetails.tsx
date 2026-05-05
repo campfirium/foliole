@@ -4,9 +4,11 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppEmptyState } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ImportSourceWorkspacePdfPage } from './ImportSourceWorkspacePdfPage';
 import { ImportSourceWorkspaceReadwiseBooksPage } from './ImportSourceWorkspaceReadwiseBooksPage';
+import { InboxImportLanding } from './InboxImportLanding';
 
 type ImportManagementPageId = 'inbox' | 'readwise-books' | 'readwise-articles' | 'pdf';
 
@@ -112,6 +114,16 @@ function ImportSourceWorkspacePageContent({
   onSelectNode?: (nodeId: string) => void;
   pageId: ImportManagementPageId;
 }) {
+  const nodesById = useWorkspaceStore((state) => state.nodesById);
+
+  if (pageId === 'inbox') {
+    return (
+      <ImportSourceWorkspacePage pageId={pageId}>
+        <InboxImportLanding nodesById={nodesById} onSelectNode={onSelectNode ?? (() => undefined)} />
+      </ImportSourceWorkspacePage>
+    );
+  }
+
   if (pageId === 'readwise-books') {
     return (
       <ImportSourceWorkspacePage pageId={pageId}>
