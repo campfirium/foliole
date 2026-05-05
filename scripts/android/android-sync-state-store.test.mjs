@@ -88,15 +88,18 @@ describe('FolioleCompanionSyncObjectStore', () => {
     const queryDefinitions = JSON.parse(await readFile(COMPANION_QUERY_DEFINITIONS, 'utf8'));
     const loadBody = source.slice(
       source.indexOf('static JSObject loadSyncObjects'),
-      source.indexOf('private static void appendPayloads')
+      source.indexOf('private static Map')
     );
 
     expect(source).toContain('FolioleCompanionNamedQueryStore.loadArray(context, database, "syncIndex")');
+    expect(source).toContain('FolioleCompanionNamedQueryStore.loadSyncRowsWithPayloads');
     expect(loadBody).toContain('"syncObjects"');
     expect(loadBody).toContain('syncObjectQueryReplacements');
     expect(source).not.toContain('objectTypeFilter');
+    expect(source).not.toContain('private static void appendPayloads');
     expect(queryDefinitions.queries.syncObjects.sql).toContain('? = 0 OR object_type IN (:objectTypes)');
-    expect(source).toContain('FolioleCompanionNamedQueryStore.loadSyncPayload');
+    expect(namedQueryStore).toContain('static JSObject loadSyncRowsWithPayloads');
+    expect(namedQueryStore).toContain('loadSyncPayload(context, database');
     expect(queryDefinitions.queries.syncPayloadAttachment.syncPayload).toEqual({
       argMode: 'object_id',
       objectType: 'attachment'

@@ -7,7 +7,6 @@ import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,38 +28,25 @@ final class FolioleCompanionSyncObjectStore {
             empty.put("objects", new JSArray());
             return empty;
         }
-        JSObject result = FolioleCompanionNamedQueryStore.loadArray(
+        return FolioleCompanionNamedQueryStore.loadSyncRowsWithPayloads(
             context,
             database,
             "syncObjects",
+            "objects",
             syncObjectQueryReplacements(ids.size(), types.size()),
             syncObjectQueryArgs(ids, types)
         );
-        appendPayloads(context, database, result.getJSONArray("objects"));
-        return result;
     }
 
     static JSObject loadSyncStateChanges(Context context, SQLiteDatabase database, int cursor, int limit) throws Exception {
-        JSObject result = FolioleCompanionNamedQueryStore.loadArray(context, database, "syncStateChanges", new String[] {
-            String.valueOf(Math.max(0, cursor)),
-            String.valueOf(normalizeLimit(limit))
-        });
-        appendPayloads(context, database, result.getJSONArray("objects"));
-        return result;
-    }
-
-    private static void appendPayloads(Context context, SQLiteDatabase database, JSONArray objects) throws Exception {
-        for (int index = 0; index < objects.length(); index += 1) {
-            JSONObject object = objects.getJSONObject(index);
-            object.put("payload_json", object.isNull("deleted_at") ?
-                FolioleCompanionNamedQueryStore.loadSyncPayload(
-                    context,
-                    database,
-                    object.getString("object_type"),
-                    object.getString("object_id")
-                ) :
-                JSONObject.NULL);
-        }
+        return FolioleCompanionNamedQueryStore.loadSyncRowsWithPayloads(
+            context,
+            database,
+            "syncStateChanges",
+            "objects",
+            null,
+            new String[] { String.valueOf(Math.max(0, cursor)), String.valueOf(normalizeLimit(limit)) }
+        );
     }
 
     private static Map<String, String> syncObjectQueryReplacements(int idCount, int typeCount) {

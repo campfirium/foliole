@@ -93,6 +93,28 @@ final class FolioleCompanionNamedQueryStore {
         return payload == null ? "{}" : payload;
     }
 
+    static JSObject loadSyncRowsWithPayloads(
+        Context context,
+        SQLiteDatabase database,
+        String queryName,
+        String resultKey,
+        Map<String, String> replacements,
+        String[] args
+    ) throws Exception {
+        JSObject result = loadArray(context, database, queryName, replacements, args);
+        JSONArray rows = result.getJSONArray(resultKey);
+        for (int index = 0; index < rows.length(); index += 1) {
+            JSONObject row = rows.getJSONObject(index);
+            row.put(
+                "payload_json",
+                row.isNull("deleted_at")
+                    ? loadSyncPayload(context, database, row.getString("object_type"), row.getString("object_id"))
+                    : JSONObject.NULL
+            );
+        }
+        return result;
+    }
+
     static JSObject loadLongMetrics(Context context, SQLiteDatabase database, String queryName) throws Exception {
         JSONArray metrics = loadArray(context, database, queryName).getJSONArray("metrics");
         JSObject result = new JSObject();
