@@ -29,11 +29,11 @@ it('keeps random palette column hierarchy stable while varying overall tone', ()
     const sidebarL = getLightness(sidebar!);
 
     expect(railL).toBeLessThan(folderL);
-    expect(folderL).toBeLessThan(sidebarL);
-    expect(sidebarL).toBeLessThan(topicL);
+    expect(folderL).toBeLessThan(topicL);
+    expect(topicL).toBeLessThan(sidebarL);
     expect(topicL).toBeLessThan(documentL);
     expect(folderL).toBeGreaterThanOrEqual(62);
-    expect(sidebarL).toBeGreaterThanOrEqual(72);
+    expect(sidebarL).toBeGreaterThanOrEqual(82);
   }
 });
 

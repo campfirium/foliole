@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
-  SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
   appFloatingSurfaceClassName,
   settingsColorSwatchClassName,
   settingsFieldClassName,
@@ -64,8 +63,9 @@ function buildAutomaticSeedSwatches(
     }
     const palette = buildWorkspaceSurfaceAutoColumnPalette(parsed, options, undefined, mode);
     const signature = palette.join('|');
-    if (!uniqueSwatches.has(signature)) {
-      uniqueSwatches.set(signature, {
+    const displayHex = (palette[0] ?? preset.hex).toLowerCase();
+    if (!uniqueSwatches.has(displayHex)) {
+      uniqueSwatches.set(displayHex, {
         displayHex: palette[0] ?? preset.hex,
         hex: preset.hex,
         id: preset.id,
@@ -123,6 +123,7 @@ function useAutomaticSeedPopoverState(color: WorkspaceSurfaceColorValue) {
 }
 
 function AutomaticSeedSwatchGrid(props: {
+  activeDisplayHex: string;
   activeSignature: string;
   onSelect: (hex: string) => void;
   options: WorkspaceSurfaceAutoPaletteOptions;
@@ -134,17 +135,36 @@ function AutomaticSeedSwatchGrid(props: {
   );
 
   return (
-    <div className="grid grid-cols-8 gap-1.5">
+    <div className="grid grid-cols-7 gap-1.5">
       {swatches.map((preset) => (
         <button
           aria-label={`Use automatic seed ${preset.label}`}
-          className={settingsPaletteButtonClassName(props.activeSignature === preset.signature, 'size-9')}
+          className={settingsPaletteButtonClassName(
+            props.activeSignature === preset.signature || props.activeDisplayHex === preset.displayHex.toLowerCase(),
+            'size-7 p-0'
+          )}
           key={preset.id}
           onClick={() => props.onSelect(preset.hex)}
           style={{ backgroundColor: preset.displayHex }}
           type="button"
         />
       ))}
+    </div>
+  );
+}
+
+function AutomaticSeedPopoverSurface(props: {
+  activeDisplayHex: string;
+  activeSignature: string;
+  onSelect: (hex: string) => void;
+  options: WorkspaceSurfaceAutoPaletteOptions;
+  resolvedBaseColorMode: WorkspaceSurfaceAutoPaletteMode;
+}) {
+  return (
+    <div
+      className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-[95] max-h-80 w-72 overflow-y-auto rounded-md p-2.5 shadow-panel')}
+    >
+      <AutomaticSeedSwatchGrid {...props} />
     </div>
   );
 }
@@ -194,19 +214,16 @@ export function WorkspaceSurfaceAutomaticSeedPopover(props: {
         </label>
       </div>
       {open ? (
-        <div
-          className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-[95] w-[416px] rounded-md p-3 shadow-panel')}
-        >
-          <AutomaticSeedSwatchGrid
-            activeSignature={activeSignature}
-            onSelect={(hex) => {
-              applyHex(hex);
-              setOpen(false);
-            }}
-            options={props.options}
-            resolvedBaseColorMode={props.resolvedBaseColorMode}
-          />
-        </div>
+        <AutomaticSeedPopoverSurface
+          activeDisplayHex={activeDisplayHex}
+          activeSignature={activeSignature}
+          onSelect={(hex) => {
+            applyHex(hex);
+            setOpen(false);
+          }}
+          options={props.options}
+          resolvedBaseColorMode={props.resolvedBaseColorMode}
+        />
       ) : null}
     </div>
   );

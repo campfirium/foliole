@@ -31,8 +31,8 @@ it('removes favorites by palette signature', () => {
   expect(getWorkspaceSurfaceFavorites()).toEqual([B]);
 });
 
-it('keeps only the six most recent history entries', () => {
-  const entries = Array.from({ length: 7 }, (_, index) => (
+it('keeps only the eight most recent history entries', () => {
+  const entries = Array.from({ length: 9 }, (_, index) => (
     [`#00000${index}`, `#11111${index}`, `#22222${index}`, `#33333${index}`, `#44444${index}`]
   ));
 
@@ -41,7 +41,7 @@ it('keeps only the six most recent history entries', () => {
   });
 
   const history = getWorkspaceSurfaceRandomHistory();
-  expect(history).toHaveLength(6);
-  expect(history[0]).toEqual(entries[6]);
+  expect(history).toHaveLength(8);
+  expect(history[0]).toEqual(entries[8]);
   expect(history.at(-1)).toEqual(entries[1]);
 });

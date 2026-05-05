@@ -343,7 +343,7 @@ it('restores workspace surface generator preferences and active mode from storag
   });
 });
 
-it('keeps workspace preview lines on the workspace divider without a gray fill', async () => {
+it('keeps workspace preview proportions while adding an outer frame', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -353,8 +353,8 @@ it('keeps workspace preview lines on the workspace divider without a gray fill',
     const grid = mainDocumentCell.parentElement;
     const gridFrame = grid?.parentElement;
     expect(gridFrame).toBeInstanceOf(HTMLDivElement);
+    expect(gridFrame).toHaveClass('border-divider');
     expect(gridFrame).toHaveClass('bg-transparent');
-    expect(gridFrame?.getAttribute('class')).not.toContain('border-settings-divider');
     expect(grid).toHaveClass('bg-divider');
     expect(mainDocumentCell?.getAttribute('class')).not.toContain('border-settings-divider');
   });

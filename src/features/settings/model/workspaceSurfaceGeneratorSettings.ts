@@ -24,7 +24,7 @@ const DEFAULT_AUTO_OPTIONS: WorkspaceSurfaceAutoPaletteOptions = {
 
 export const DEFAULT_WORKSPACE_SURFACE_AUTO_SEED = '#7a7a7a';
 export const DEFAULT_DARK_WORKSPACE_SURFACE_AUTO_SEED = '#30362f';
-const WORKSPACE_SURFACE_RANDOM_HISTORY_LIMIT = 6;
+const WORKSPACE_SURFACE_RANDOM_HISTORY_LIMIT = 8;
 
 function modeKey(mode: WorkspaceSurfaceColorMode, lightKey: string, darkKey: string) {
   return mode === 'dark' ? darkKey : lightKey;

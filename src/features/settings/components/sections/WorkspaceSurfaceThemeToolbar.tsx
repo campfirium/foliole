@@ -55,7 +55,7 @@ function ThemeHistorySlots(props: {
 }) {
   return (
     <div aria-label="Theme history" className="flex items-center gap-1.5">
-      {Array.from({ length: 5 }, (_, index) => {
+      {Array.from({ length: 8 }, (_, index) => {
         const palette = props.history[index];
         const label = `Restore theme history ${index + 1}`;
         return palette ? (

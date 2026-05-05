@@ -60,3 +60,31 @@ it('derives sidebar panel and scrollbar colors from the assigned workspace surfa
   expect(root.style.getPropertyValue('--workspace-region-main-sidebar-panel-bg')).toBe('#5e5e5e');
   expect(root.style.getPropertyValue('--workspace-region-main-sidebar-panel-elevated-bg')).toBe('#696969');
 });
+
+it('keeps light sidebar panels tinted instead of washing them to white', () => {
+  const root = document.documentElement;
+
+  applyWorkspaceSurfaceSettings(root, {
+    assignments: {
+      'titlebar-rail': 0,
+      'titlebar-folder': 0,
+      'titlebar-topic': 0,
+      'titlebar-document': 0,
+      'titlebar-sidebar': 0,
+      'main-rail': 0,
+      'main-folder': 0,
+      'main-topic': 0,
+      'main-document': 0,
+      'main-sidebar': 1,
+      'footer-rail': 0,
+      'footer-folder': 0,
+      'footer-topic': 0,
+      'footer-document': 0,
+      'footer-sidebar': 0
+    },
+    palette: ['#f0f0f0', '#e3e6f0']
+  });
+
+  expect(root.style.getPropertyValue('--workspace-region-main-sidebar-panel-bg')).toBe('#e1e4ef');
+  expect(root.style.getPropertyValue('--workspace-region-main-sidebar-panel-elevated-bg')).toBe('#e8eaf3');
+});

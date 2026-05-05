@@ -32,7 +32,7 @@ export function WorkspaceSurfaceGrid(props: {
   paintRegion: (regionId: WorkspaceSurfaceRegionId) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-sm bg-transparent">
+    <div className="overflow-hidden rounded-sm border border-divider bg-transparent">
       <div className="grid gap-px bg-divider" style={{ aspectRatio: '16 / 9', gridTemplateColumns: GRID_TEMPLATE_COLUMNS, gridTemplateRows: GRID_TEMPLATE_ROWS }}>
         {GRID_CELLS.map((cell) => {
           const swatchIndex = props.appearance.workspaceSurfaceAssignments[cell.id];

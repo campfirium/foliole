@@ -74,8 +74,10 @@ const STORAGE_KEYS = {
 } as const;
 const WORKSPACE_FOLDER_TOPIC_DIVIDER_ROWS = ['titlebar', 'main', 'footer'] as const;
 const LIGHT_SURFACE_THRESHOLD = 62;
-const SIDEBAR_PANEL_LIGHTNESS_OFFSET = 4;
-const SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET = 8;
+const LIGHT_SIDEBAR_PANEL_LIGHTNESS_OFFSET = -1;
+const LIGHT_SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET = 1;
+const DARK_SIDEBAR_PANEL_LIGHTNESS_OFFSET = 6;
+const DARK_SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET = 10;
 const LIGHT_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET = 8;
 const DARK_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET = 12;
 
@@ -167,15 +169,13 @@ function deriveScrollbarThumbColor(color: string) {
   return shiftSurfaceLightness(color, offset);
 }
 
-function derivePanelSurfaceColor(color: string, lightnessOffset: number) {
+function derivePanelSurfaceColor(color: string, lightOffset: number, darkOffset: number) {
   const parsed = parseWorkspaceSurfaceColor(color);
   if (!parsed) {
     return color;
   }
   const lightness = workspaceSurfaceColorToHsl(parsed).l;
-  const offset = lightness >= LIGHT_SURFACE_THRESHOLD
-    ? lightnessOffset
-    : Math.max(lightnessOffset, lightnessOffset + 2);
+  const offset = lightness >= LIGHT_SURFACE_THRESHOLD ? lightOffset : darkOffset;
   return shiftSurfaceLightness(color, offset);
 }
 
@@ -229,10 +229,10 @@ export function applyWorkspaceSurfaceSettings(
   const sidebarColor = palette[assignments['main-sidebar']] ?? palette[0];
   root.style.setProperty(
     '--workspace-region-main-sidebar-panel-bg',
-    derivePanelSurfaceColor(sidebarColor, SIDEBAR_PANEL_LIGHTNESS_OFFSET)
+    derivePanelSurfaceColor(sidebarColor, LIGHT_SIDEBAR_PANEL_LIGHTNESS_OFFSET, DARK_SIDEBAR_PANEL_LIGHTNESS_OFFSET)
   );
   root.style.setProperty(
     '--workspace-region-main-sidebar-panel-elevated-bg',
-    derivePanelSurfaceColor(sidebarColor, SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET)
+    derivePanelSurfaceColor(sidebarColor, LIGHT_SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET, DARK_SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET)
   );
 }
