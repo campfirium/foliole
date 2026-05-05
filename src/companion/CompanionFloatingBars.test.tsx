@@ -33,7 +33,7 @@ function expectUnknownStructureConfirmation() {
   expect(screen.queryByText('0 cached')).not.toBeInTheDocument();
 }
 
-function expectFsrsPriorityBodyStage() {
+function expectReviewQueueBodyStage() {
   renderBottomBar({
     completed: 3,
     completedBytes: 1048576,
@@ -80,7 +80,7 @@ function expectActiveTopicBodyStage() {
   expect(screen.queryByText('Stage 2 · Review queue')).not.toBeInTheDocument();
 }
 
-function expectTopicBodyStageAfterFsrsPriority() {
+function expectTopicBodyStageAfterReviewQueue() {
   renderBottomBar({
     completed: 128,
     completedBytes: 1048576,
@@ -147,7 +147,7 @@ function expectAttachmentStage() {
   expect(screen.getByText('Images 5 · PDFs 4 · Other 3')).toBeInTheDocument();
 }
 
-function expectFsrsPriorityAttachmentStage() {
+function expectReviewQueueAttachmentStage() {
   renderBottomBar({
     attachmentBreakdown: {
       activeTopicAttachments: 0,
@@ -225,19 +225,19 @@ describe('CompanionBottomTabBar', () => {
 
   it('shows unknown structure confirmation without cache wording', expectUnknownStructureConfirmation);
 
-  it('shows FSRS priority progress while due review bodies are first in the body queue', expectFsrsPriorityBodyStage);
+  it('shows Review queue progress while due review bodies are first in the body queue', expectReviewQueueBodyStage);
 
   it('shows current topic progress before due review bodies', expectActiveTopicBodyStage);
 
-  it('shows topic body progress when no due review bodies remain', expectTopicBodyStageAfterFsrsPriority);
+  it('shows topic body progress when no due review bodies remain', expectTopicBodyStageAfterReviewQueue);
 
-  it('leaves FSRS priority after due review bodies are fetched', expectTopicBodyStageAfterDueReviewBodiesComplete);
+  it('leaves Review queue after due review bodies are fetched', expectTopicBodyStageAfterDueReviewBodiesComplete);
 
   it('shows attachment resource progress above the bottom tabs', expectAttachmentStage);
 
-  it('shows FSRS priority progress while due review attachments are first in the attachment queue', expectFsrsPriorityAttachmentStage);
+  it('shows Review queue progress while due review attachments are first in the attachment queue', expectReviewQueueAttachmentStage);
 
   it('shows current topic attachment progress before due review attachments', expectActiveTopicAttachmentStage);
 
-  it('leaves FSRS priority after due review attachments are fetched', expectAttachmentStageAfterDueReviewAttachmentsComplete);
+  it('leaves Review queue after due review attachments are fetched', expectAttachmentStageAfterDueReviewAttachmentsComplete);
 });

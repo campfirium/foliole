@@ -20,7 +20,7 @@ function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
   if (isActiveTopicProgress(progress)) {
     return 'Current topic';
   }
-  if (isFsrsPriorityProgress(progress)) {
+  if (isReviewQueueProgress(progress)) {
     return 'Stage 2 · Review queue';
   }
   if (progress.phase === 'attachment') {
@@ -34,7 +34,7 @@ function formatCountLabel(count: number | undefined, singular: string, plural: s
   return `${value} ${value === 1 ? singular : plural}`;
 }
 
-function fsrsPriorityTotal(progress: CompanionDesktopSyncProgress) {
+function reviewQueueTotal(progress: CompanionDesktopSyncProgress) {
   if (progress.phase === 'content') {
     return progress.contentBreakdown?.dueReviewBodies ?? 0;
   }
@@ -59,8 +59,8 @@ function isActiveTopicProgress(progress: CompanionDesktopSyncProgress) {
   return total > 0 && progress.completed < total;
 }
 
-function isFsrsPriorityProgress(progress: CompanionDesktopSyncProgress) {
-  const total = fsrsPriorityTotal(progress);
+function isReviewQueueProgress(progress: CompanionDesktopSyncProgress) {
+  const total = reviewQueueTotal(progress);
   return total > 0 && progress.completed < total;
 }
 
@@ -82,7 +82,7 @@ function formatContentBreakdown(progress: CompanionDesktopSyncProgress) {
   if (isActiveTopicProgress(progress)) {
     return `Current topic: ${formatCountLabel(breakdown.activeTopicBodies, 'body', 'bodies')}`;
   }
-  if (isFsrsPriorityProgress(progress)) {
+  if (isReviewQueueProgress(progress)) {
     return `Review queue: ${formatCountLabel(breakdown.dueReviewBodies, 'body', 'bodies')}`;
   }
   const segments = [
@@ -104,7 +104,7 @@ function formatAttachmentBreakdown(progress: CompanionDesktopSyncProgress) {
   if (isActiveTopicProgress(progress)) {
     return `Current topic: ${formatCountLabel(breakdown.activeTopicAttachments, 'attachment', 'attachments')}`;
   }
-  if (isFsrsPriorityProgress(progress)) {
+  if (isReviewQueueProgress(progress)) {
     return `Review queue: ${formatCountLabel(breakdown.dueReviewAttachments, 'attachment', 'attachments')}`;
   }
   const segments = [
@@ -119,7 +119,7 @@ function formatAttachmentBreakdown(progress: CompanionDesktopSyncProgress) {
 
 function formatProgressCount(args: {
   completed: number;
-  isFsrsPriority: boolean;
+  isReviewQueue: boolean;
   progress: CompanionDesktopSyncProgress;
   total: number;
 }) {
@@ -136,14 +136,14 @@ function CompanionBottomSyncStatus(props: {
     return null;
   }
   const activeTotal = activeTopicTotal(props.progress);
-  const fsrsTotal = fsrsPriorityTotal(props.progress);
-  const isFsrsPriority = isFsrsPriorityProgress(props.progress);
+  const fsrsTotal = reviewQueueTotal(props.progress);
+  const isReviewQueue = isReviewQueueProgress(props.progress);
   const isActiveTopic = isActiveTopicProgress(props.progress);
-  const total = isActiveTopic ? activeTotal : isFsrsPriority ? fsrsTotal : props.progress.total ?? 0;
+  const total = isActiveTopic ? activeTotal : isReviewQueue ? fsrsTotal : props.progress.total ?? 0;
   const completed = Math.min(props.progress.completed, total);
   const ratio = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
-  const countLabel = formatProgressCount({ completed, isFsrsPriority, progress: props.progress, total });
-  const byteLabel = isActiveTopic || isFsrsPriority || props.progress.totalBytes == null || props.progress.completedBytes == null
+  const countLabel = formatProgressCount({ completed, isReviewQueue, progress: props.progress, total });
+  const byteLabel = isActiveTopic || isReviewQueue || props.progress.totalBytes == null || props.progress.completedBytes == null
     ? null
     : `${formatBytes(props.progress.completedBytes)}/${formatBytes(props.progress.totalBytes)}`;
   const contentBreakdown = formatContentBreakdown(props.progress);

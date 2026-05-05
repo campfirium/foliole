@@ -142,7 +142,7 @@ function expectDiagnosticSummary() {
 function expectStageCheckpoint() {
   expect(screen.getByText('Topic list')).toBeInTheDocument();
   expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
-  expect(screen.getByText('Stage 2 · FSRS priority')).toBeInTheDocument();
+  expect(screen.getByText('Stage 2 · Review queue')).toBeInTheDocument();
   expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
   expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
   expect(screen.getByText('Current topic: 1 body, 1 attachment remaining')).toBeInTheDocument();
