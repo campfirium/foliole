@@ -1,8 +1,12 @@
+import { forgetting_curve } from 'ts-fsrs';
+
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { toSchedulerCard } from '../features/review/model/reviewTypes';
 import { assembleFsrsPushQueue, assembleReadingPushQueue } from '../features/review/model/unifiedPushQueueAssembler';
 import {
   buildQueueMixCycle,
-  DEFAULT_UNIFIED_PUSH_QUEUE_RULES
+  normalizePushQueuePriority,
+  resolveInheritedPushQueuePriority
 } from '../features/review/model/unifiedPushQueueRules';
 
 export interface ReviewQueuePlan {
@@ -35,28 +39,68 @@ function createSeededRandom(seedInput: string) {
   };
 }
 
-function isQueueableReadingNode(node: Node | undefined) {
-  return Boolean(node && node.reveal === null && node.content.trim().length > 0);
+function isQueueableReadingNode(node: Node | undefined, now: string) {
+  if (!node || node.reveal !== null || node.content.trim().length === 0) {
+    return false;
+  }
+  if (node.reading && node.reading.state !== 'active') {
+    return false;
+  }
+  return parseTimestamp(resolveReadingNextAt(node)) <= parseTimestamp(now);
 }
 
 function isDueFsrsNode(node: Node | undefined, now: string) {
   if (!node || node.reveal === null) {
     return false;
   }
-  return (node.review?.due ?? now) <= now;
+  return parseTimestamp(node.review?.due ?? now) <= parseTimestamp(now);
+}
+
+function resolveReadingNextAt(node: Node) {
+  return node.reading?.nextAt ?? node.createdAt;
+}
+
+function resolveNodePriority(node: Node, nodesById: Record<string, Node>) {
+  const priorityChain: unknown[] = [];
+  const visitedNodeIds = new Set<string>();
+  let currentNode: Node | undefined = node;
+
+  while (currentNode && !visitedNodeIds.has(currentNode.id)) {
+    visitedNodeIds.add(currentNode.id);
+    priorityChain.push(currentNode.priority);
+    currentNode = currentNode.parentNodeId ? nodesById[currentNode.parentNodeId] : undefined;
+  }
+
+  const inheritedPriority = resolveInheritedPushQueuePriority(priorityChain);
+  if (priorityChain.some((candidate) => candidate !== null && candidate !== undefined)) {
+    return inheritedPriority;
+  }
+
+  return normalizePushQueuePriority(node.reading?.priority);
+}
+
+function resolveFsrsRetrievability(node: Node, now: string) {
+  const card = toSchedulerCard(node.review, now);
+  if (!card.last_review || card.stability <= 0) {
+    return 0;
+  }
+  const elapsedDays = Math.max((parseTimestamp(now) - parseTimestamp(card.last_review)) / (24 * 60 * 60 * 1000), 0);
+  const retrievability = forgetting_curve(elapsedDays, card.stability);
+  return Number.isFinite(retrievability) ? retrievability : 0;
 }
 
 function resolveFsrsQueueNodeIds(args: {
   candidates: Node[];
   nodeOrder: string[];
+  nodesById: Record<string, Node>;
   now: string;
 }) {
   const random = createSeededRandom(`fsrs|${args.nodeOrder.join('|')}`);
   return assembleFsrsPushQueue(
     args.candidates.map((node) => ({
       id: node.id,
-      priority: DEFAULT_UNIFIED_PUSH_QUEUE_RULES.defaultPriority,
-      retrievability: parseTimestamp(node.review?.due ?? args.now)
+      priority: resolveNodePriority(node, args.nodesById),
+      retrievability: resolveFsrsRetrievability(node, args.now)
     })),
     { random }
   ).map((entry) => entry.id);
@@ -65,13 +109,14 @@ function resolveFsrsQueueNodeIds(args: {
 function resolveReadingQueueNodeIds(args: {
   candidates: Node[];
   nodeOrder: string[];
+  nodesById: Record<string, Node>;
 }) {
   const random = createSeededRandom(`reading|${args.nodeOrder.join('|')}`);
   return assembleReadingPushQueue(
     args.candidates.map((node) => ({
       id: node.id,
-      priority: DEFAULT_UNIFIED_PUSH_QUEUE_RULES.defaultPriority,
-      nextAt: node.createdAt
+      priority: resolveNodePriority(node, args.nodesById),
+      nextAt: resolveReadingNextAt(node)
     })),
     { random }
   ).map((entry) => entry.id);
@@ -126,7 +171,7 @@ export function buildReviewQueuePlan(args: {
     }
 
     const node = args.nodesById[nodeId];
-    if (isQueueableReadingNode(node)) {
+    if (isQueueableReadingNode(node, args.now)) {
       readingCandidates.push(node);
       return;
     }
@@ -139,11 +184,13 @@ export function buildReviewQueuePlan(args: {
   const fsrsQueueNodeIds = resolveFsrsQueueNodeIds({
     candidates: fsrsCandidates,
     nodeOrder: args.nodeOrder,
+    nodesById: args.nodesById,
     now: args.now
   });
   const readingQueueNodeIds = resolveReadingQueueNodeIds({
     candidates: readingCandidates,
-    nodeOrder: args.nodeOrder
+    nodeOrder: args.nodeOrder,
+    nodesById: args.nodesById
   });
   const queueNodeIds = mixUnifiedPushQueues({
     fsrsQueueNodeIds,

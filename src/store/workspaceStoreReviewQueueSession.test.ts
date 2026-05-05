@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
+import type { Node, NodeReadingProfile, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
 import type { WorkspaceState } from './workspaceStore';
@@ -40,17 +40,77 @@ function createReviewNode(id: string, due: string, overrides: Partial<NodeReview
   };
 }
 
-function createReadingNode(id: string, timestamp: string): Node {
+function createReadingProfile(nextAt: string, overrides: Partial<NodeReadingProfile> = {}): NodeReadingProfile {
+  return {
+    intervalDurationMs: 24 * 60 * 60 * 1000,
+    intervalGrowthFactor: 1.3,
+    lastHandledAt: '2026-03-09T08:00:00.000Z',
+    nextAt,
+    priority: 5,
+    readingPosition: 0,
+    repetitionCount: 1,
+    state: 'active',
+    ...overrides
+  };
+}
+
+function createReadingNode(id: string, timestamp: string, reading: NodeReadingProfile | null = null): Node {
   return {
     id,
     parentNodeId: null,
     title: id,
     content: `${id}-content`,
     reveal: null,
+    reading,
     review: null,
     createdAt: timestamp,
     updatedAt: timestamp
   };
+}
+
+const priorityParentNode: Node = {
+  id: 'priority-parent',
+  parentNodeId: null,
+  priority: 0,
+  title: 'priority-parent',
+  content: '   ',
+  reveal: null,
+  reading: null,
+  review: null,
+  createdAt: '2026-03-01T08:00:00.000Z',
+  updatedAt: '2026-03-01T08:00:00.000Z'
+};
+
+function createPlannerBackedFsrsNodes(): Node[] {
+  return [
+    {
+      ...createReviewNode('fsrs-absolute', '2026-03-08T08:00:00.000Z', {
+        lastReviewAt: '2026-03-06T08:00:00.000Z',
+        reps: 2,
+        scheduledDays: 2,
+        stability: 2,
+        state: 2
+      }),
+      parentNodeId: priorityParentNode.id
+    },
+    createReviewNode('fsrs-low-r', '2026-03-10T11:00:00.000Z', { lastReviewAt: '2026-03-09T10:00:00.000Z', reps: 4, scheduledDays: 1, stability: 0.3, state: 2 }),
+    createReviewNode('fsrs-high-r', '2026-03-07T08:00:00.000Z', { lastReviewAt: '2026-03-09T08:00:00.000Z', reps: 4, scheduledDays: 5, stability: 12, state: 2 }),
+    createReviewNode('fsrs-4', '2026-03-06T08:00:00.000Z', { lastReviewAt: '2026-03-02T08:00:00.000Z', reps: 2, scheduledDays: 4, stability: 4, state: 2 }),
+    createReviewNode('fsrs-5', '2026-03-05T08:00:00.000Z', { lastReviewAt: '2026-03-01T08:00:00.000Z', reps: 2, scheduledDays: 5, stability: 5, state: 2 }),
+    createReviewNode('fsrs-6', '2026-03-04T08:00:00.000Z', { lastReviewAt: '2026-02-28T08:00:00.000Z', reps: 2, scheduledDays: 6, stability: 6, state: 2 })
+  ];
+}
+
+function createPlannerBackedReadingNodes(): Node[] {
+  return [
+    createReadingNode('reading-late-nextAt', '2026-03-01T08:00:00.000Z', createReadingProfile('2026-03-10T11:30:00.000Z')),
+    createReadingNode('reading-early-nextAt', '2026-03-02T08:00:00.000Z', createReadingProfile('2026-03-10T09:00:00.000Z')),
+    createReadingNode('reading-future', '2026-03-03T08:00:00.000Z', createReadingProfile('2026-03-11T09:00:00.000Z'))
+  ];
+}
+
+function createPlannerBackedQueueNodes(): Node[] {
+  return [priorityParentNode, ...createPlannerBackedFsrsNodes(), ...createPlannerBackedReadingNodes()];
 }
 
 function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
@@ -116,58 +176,23 @@ const schedulerStub: ReviewSchedulerAdapter = {
   }
 };
 
-it('starts a session from the unified FSRS/reading mixed queue order', () => {
+it('starts a session from the planner-backed FSRS/reading mixed queue order', () => {
   const now = '2026-03-10T12:00:00.000Z';
-  const harness = createSetStateHarness(
-    createWorkspaceFixture([
-      createReviewNode('fsrs-1', '2026-03-01T08:00:00.000Z', {
-        reps: 4,
-        state: 2,
-        lastReviewAt: '2026-02-24T08:00:00.000Z'
-      }),
-      createReadingNode('reading-1', '2026-03-02T08:00:00.000Z'),
-      createReviewNode('fsrs-2', '2026-03-02T08:00:00.000Z', {
-        reps: 2,
-        state: 2,
-        lastReviewAt: '2026-02-25T08:00:00.000Z'
-      }),
-      createReviewNode('fsrs-3', '2026-03-03T07:00:00.000Z', {
-        reps: 2,
-        state: 2,
-        lastReviewAt: '2026-02-26T07:00:00.000Z'
-      }),
-      createReviewNode('fsrs-4', '2026-03-04T06:00:00.000Z', {
-        reps: 2,
-        state: 2,
-        lastReviewAt: '2026-02-27T06:00:00.000Z'
-      }),
-      createReviewNode('fsrs-5', '2026-03-05T09:00:00.000Z', {
-        reps: 2,
-        state: 2,
-        lastReviewAt: '2026-02-28T09:00:00.000Z'
-      }),
-      createReadingNode('reading-2', '2026-03-06T08:00:00.000Z'),
-      createReviewNode('fsrs-6', '2026-03-06T10:00:00.000Z', {
-        reps: 1,
-        state: 1,
-        lastReviewAt: '2026-03-01T10:00:00.000Z'
-      })
-    ])
-  );
+  const harness = createSetStateHarness(createWorkspaceFixture(createPlannerBackedQueueNodes()));
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, schedulerStub);
 
   const started = actions.startReviewSession(now);
 
   expect(started).toBe(true);
-  expect(harness.getState().reviewSession.currentNodeId).toBe('fsrs-1');
+  expect(harness.getState().reviewSession.currentNodeId).toBe('fsrs-absolute');
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([
-    'fsrs-1',
-    'fsrs-2',
-    'fsrs-3',
+    'fsrs-absolute',
+    'fsrs-low-r',
     'fsrs-4',
     'fsrs-5',
-    'reading-1',
     'fsrs-6',
-    'reading-2'
+    'reading-early-nextAt',
+    'fsrs-high-r',
+    'reading-late-nextAt'
   ]);
 });
