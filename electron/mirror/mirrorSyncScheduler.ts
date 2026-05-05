@@ -1,4 +1,5 @@
-import { exportArticleToMirror, resolveArticleIdFromNodeId } from './exportArticleMirror.js';
+import { resolveArticleIdFromNodeId } from './exportArticleMirror.js';
+import { syncIncrementalMirrorOutput } from './rebuildMirrorOutput.js';
 
 const DEBOUNCE_MS = 10_000;
 const MAX_WAIT_MS = 60_000;
@@ -24,12 +25,17 @@ async function drainQueue() {
   pendingArticleIds = new Set();
   clearTimers();
 
-  for (const articleId of articleIds) {
-    try {
-      await exportArticleToMirror(articleId);
-    } catch (error) {
-      console.error('[mirror] export failed', { articleId, error });
-    }
+  if (articleIds.size === 0) {
+    return;
+  }
+
+  try {
+    await syncIncrementalMirrorOutput();
+  } catch (error) {
+    console.error('[mirror] incremental export failed', {
+      articleIds: [...articleIds],
+      error
+    });
   }
 }
 
