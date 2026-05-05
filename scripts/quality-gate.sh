@@ -17,6 +17,9 @@ if quality_gate_should_print_step; then
 fi
 run_quality_gate_script "quality-gate" "${pm}" "lint"
 run_quality_gate_script "quality-gate" "${pm}" "typecheck"
+if [[ -f "scripts/check-workspace-settings-boundary.mjs" ]]; then
+  node scripts/check-workspace-settings-boundary.mjs
+fi
 run_quality_gate_script "quality-gate" "${pm}" "test"
 run_quality_gate_script "quality-gate" "${pm}" "build"
 

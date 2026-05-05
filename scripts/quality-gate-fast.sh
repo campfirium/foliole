@@ -54,6 +54,14 @@ if quality_gate_should_print_step; then
   echo "[quality-gate-fast] passed: lint + typecheck"
 fi
 
+if [[ -f "scripts/check-workspace-settings-boundary.mjs" ]]; then
+  if quality_gate_should_print_step; then
+    echo "[quality-gate-fast] running: workspace settings boundary"
+  fi
+
+  node scripts/check-workspace-settings-boundary.mjs
+fi
+
 # --- test: only tests related to changed files ---------------------------------
 # Collect changed + untracked files (staged, unstaged, untracked).
 changed_files="$(git diff --name-only HEAD -- 'src/' 'electron/' 'scripts/' 2>/dev/null || true)"
