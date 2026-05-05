@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -11,7 +11,7 @@ interface SettingsSectionProps {
   title?: string;
 }
 
-interface SettingsRowProps {
+interface SettingsRowProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
   className?: string;
   description?: ReactNode;
@@ -220,7 +220,14 @@ export function SettingsGroup({ children, className }: { children: ReactNode; cl
   );
 }
 
-export function SettingsRow({ children, className, description, readonly = false, title }: SettingsRowProps) {
+export function SettingsRow({
+  children,
+  className,
+  description,
+  readonly = false,
+  title,
+  ...rest
+}: SettingsRowProps) {
   return (
     <div
       className={cn(
@@ -229,6 +236,7 @@ export function SettingsRow({ children, className, description, readonly = false
         className
       )}
       data-settings-row
+      {...rest}
     >
       <div className="min-w-0 flex-1">
         <h4 className="text-[0.95rem] font-normal text-foreground">{title}</h4>

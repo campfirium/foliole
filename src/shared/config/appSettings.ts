@@ -5,6 +5,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   autoLocalizeRemoteImages: 'foliole-auto-localize-remote-images',
   editorDisplayMode: 'foliole-editor-display-mode',
   settingsActiveCategory: 'foliole-settings-active-category',
+  workspaceRailItems: 'foliole-workspace-rail-items',
   uiFont: 'foliole-ui-font-preset',
   customUiFont: 'foliole-custom-ui-font-family',
   interfaceFont: 'foliole-interface-font-preset',

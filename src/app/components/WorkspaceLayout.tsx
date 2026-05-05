@@ -160,6 +160,7 @@ export interface WorkspaceLayoutProps {
   onStartStudyMode: () => void;
   onToggleReviewSession: () => void;
   onOpenSettings: () => void;
+  onRunRailAction?: (commandId: string) => void;
   onCloseSettings: () => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;

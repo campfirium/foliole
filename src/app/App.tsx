@@ -4,6 +4,7 @@ import { AppearanceSettingsProvider } from '../features/settings/context/Appeara
 import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
+import { WorkspaceRailSettingsProvider } from '../features/settings/context/WorkspaceRailSettingsProvider';
 import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/bridge';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { installWorkspaceDebugBridge } from '../shared/testing/workspaceDebugBridge';
@@ -40,7 +41,10 @@ function AppContent() {
   return (
     <HotkeySettingsProvider {...controller.hotkeySettings}>
       <>
-        <WorkspaceLayout {...controller.layoutProps} />
+        <WorkspaceLayout
+          {...controller.layoutProps}
+          onRunRailAction={controller.paletteState.onRunCommand}
+        />
         <AppOverlays
           controller={controller}
           externalPreviewRequest={externalPreviewRequest}
@@ -163,7 +167,9 @@ export function App() {
     <AppearanceSettingsProvider>
       <MouseGestureSettingsProvider>
         <ReviewSchedulerSettingsProvider>
-          <AppContent />
+          <WorkspaceRailSettingsProvider>
+            <AppContent />
+          </WorkspaceRailSettingsProvider>
         </ReviewSchedulerSettingsProvider>
       </MouseGestureSettingsProvider>
     </AppearanceSettingsProvider>

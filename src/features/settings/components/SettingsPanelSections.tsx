@@ -17,6 +17,7 @@ import { SettingsEditorSection } from './sections/SettingsEditorSection';
 import { SettingsExternalSearchSection } from './sections/SettingsExternalSearchSection';
 import { SettingsImportSection } from './sections/SettingsImportSection';
 import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSection';
+import { SettingsRailSection } from './sections/SettingsRailSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
 
 import { cn } from '@/shared/lib/utils';
@@ -198,6 +199,8 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
       return <SettingsEditorSection />;
     case 'appearance':
       return <SettingsAppearanceSection onEnterPreview={props.onEnterPreview} />;
+    case 'rail':
+      return <SettingsRailSection actionItems={props.hotkeyItems} />;
     case 'mouse-gestures':
       return <SettingsMouseGesturesSection />;
     case 'library':

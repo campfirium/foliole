@@ -25,3 +25,16 @@ it('renders settings pattern structure with shared copy and action slot', () => 
   expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Save' }).closest('.bg-settings-group')).not.toBeNull();
 });
+
+it('passes row DOM props through to the settings row element', () => {
+  render(
+    <SettingsRow
+      data-testid="draggable-row"
+      draggable
+      onDragStart={(event) => event.dataTransfer.setData('text/plain', 'row')}
+      title="Draggable row"
+    />
+  );
+
+  expect(screen.getByTestId('draggable-row')).toHaveAttribute('draggable', 'true');
+});

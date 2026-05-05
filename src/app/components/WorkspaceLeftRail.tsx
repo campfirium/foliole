@@ -9,6 +9,7 @@ export interface WorkspaceLeftRailProps {
   isStudyMode: boolean;
   onOpenImportManagement: () => void;
   onOpenSettings: () => void;
+  onRunRailAction?: (commandId: string) => void;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
   onToggleReviewSession: () => void;
@@ -21,6 +22,7 @@ export interface WorkspaceLeftRailSource {
   isSettingsOpen: boolean;
   isStudyMode: boolean;
   onOpenSettings: () => void;
+  onRunRailAction?: (commandId: string) => void;
   onToggleReviewSession: () => void;
   reviewDueCount: number;
 }
@@ -47,6 +49,7 @@ export function selectWorkspaceLeftRailProps({
     isStudyMode: props.isStudyMode,
     onOpenImportManagement,
     onOpenSettings: props.onOpenSettings,
+    onRunRailAction: props.onRunRailAction,
     onStartClipboardImport,
     onStartImport,
     onToggleReviewSession: props.onToggleReviewSession,
@@ -62,6 +65,7 @@ export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
   isStudyMode,
   onOpenImportManagement,
   onOpenSettings,
+  onRunRailAction,
   onStartClipboardImport,
   onStartImport,
   onToggleReviewSession,
@@ -79,6 +83,7 @@ export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
         showStudyDock={showStudyDock}
         onOpenImportManagement={onOpenImportManagement}
         onOpenSettings={onOpenSettings}
+        onRunRailAction={onRunRailAction}
         onStartClipboardImport={onStartClipboardImport}
         onStartImport={onStartImport}
         onToggleReviewSession={onToggleReviewSession}
