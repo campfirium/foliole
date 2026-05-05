@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState, type MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 interface WorkspaceNavigationDependencies {
@@ -31,7 +33,7 @@ interface WorkspaceNavigationHandlers {
   handleSelectNode: (nodeId: string) => void;
 }
 
-type PendingAnchor = { id: string; kind: 'highlight' | 'cloze' };
+type PendingAnchor = NodeAnchorLink;
 
 function usePendingAnchorNavigation(
   activeNodeContent: string | null,
@@ -55,7 +57,16 @@ function usePendingAnchorNavigation(
   }, []);
 
   useEffect(() => {
-    if (!activeNodeId || !pendingAnchorNodeId || !pendingAnchor || pendingAnchorNodeId !== activeNodeId || !activeNodeContent) {
+    if (!activeNodeId || !pendingAnchorNodeId || !pendingAnchor || pendingAnchorNodeId !== activeNodeId) {
+      return;
+    }
+    if (pendingAnchor.kind === 'highlight' && pendingAnchor.locator) {
+      requestPdfAnchorJump(activeNodeId, pendingAnchor.locator);
+      clearPendingAnchor();
+      return;
+    }
+    if (!activeNodeContent) {
+      clearPendingAnchor();
       return;
     }
     const selection = findAnchorSelection(activeNodeContent, pendingAnchor);

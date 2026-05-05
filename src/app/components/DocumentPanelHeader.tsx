@@ -24,7 +24,7 @@ interface DocumentPanelHeaderProps {
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
-  onSelectNode: (nodeId: string) => void;
+  onSelectBreadcrumbNode: (nodeId: string) => void;
   onToggleSourceUpdatePanel: () => void;
   showSourceUpdateAction: boolean;
 }
@@ -84,7 +84,7 @@ export function DocumentPanelHeader({
   onGoBack,
   onGoForward,
   onGoParent,
-  onSelectNode,
+  onSelectBreadcrumbNode,
   onToggleSourceUpdatePanel,
   showSourceUpdateAction
 }: DocumentPanelHeaderProps) {
@@ -106,7 +106,7 @@ export function DocumentPanelHeader({
       </ToolbarActionGroup>
       <div className="min-w-0 flex-1">
         <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
-          <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={listNodesById} onSelectNode={onSelectNode} />
+          <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={listNodesById} onSelectNode={onSelectBreadcrumbNode} />
         </div>
       </div>
       <ToolbarActionGroup ariaLabel="Document editor actions">

@@ -92,6 +92,7 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   onResolveDocumentPositionAtViewportY: () => null,
   onRevealDocumentPosition: () => undefined,
   onRevealDocumentSelection: () => undefined,
+  onSelectBreadcrumbNode: () => undefined,
   onSelectNode: () => undefined,
   onStartDocumentResize: () => undefined,
   showAnswerSection: false

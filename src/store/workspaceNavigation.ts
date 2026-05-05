@@ -51,14 +51,22 @@ export function resolveAncestorAnchorLink(
   nodesById: Record<string, Node>
 ): AncestorNavigationTarget {
   let cursorId: string | null = activeNodeId;
+  let nearestAnchor: NodeAnchorLink | null = null;
+  let nearestLocatorAnchor: NodeAnchorLink | null = null;
   while (cursorId !== null) {
     const cursor: Node | undefined = nodesById[cursorId];
     if (!cursor) {
       return { focusAnchor: null, isAncestor: false };
     }
+    if (!nearestAnchor && cursor.anchorLink) {
+      nearestAnchor = cursor.anchorLink;
+    }
+    if (!nearestLocatorAnchor && cursor.anchorLink?.kind === 'highlight' && cursor.anchorLink.locator) {
+      nearestLocatorAnchor = cursor.anchorLink;
+    }
     if (cursor.parentNodeId === ancestorNodeId) {
       return {
-        focusAnchor: cursor.anchorLink ?? null,
+        focusAnchor: nearestLocatorAnchor ?? nearestAnchor ?? null,
         isAncestor: true
       };
     }

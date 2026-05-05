@@ -100,6 +100,7 @@ function renderSectionWithProps(overrides: Partial<ComponentProps<typeof Documen
       onResolveDocumentPositionAtViewportY={() => null}
       onRevealDocumentPosition={() => undefined}
       onRevealDocumentSelection={() => undefined}
+      onSelectBreadcrumbNode={() => undefined}
       onSelectNode={() => undefined}
       onStartDocumentResize={() => undefined}
       showAnswerSection={false}

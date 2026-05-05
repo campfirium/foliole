@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
@@ -10,23 +10,33 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   })
 }));
 
-it('shows the breadcrumb title without a kind label in the document header', () => {
+vi.mock('../../features/nodes/components/NodeBreadcrumbs', () => ({
+  NodeBreadcrumbs: ({ onSelectNode }: { onSelectNode: (nodeId: string) => void }) => (
+    <button onClick={() => onSelectNode('breadcrumb-target')} type="button">
+      trigger breadcrumb
+    </button>
+  )
+}));
+
+it('routes breadcrumb clicks to onSelectBreadcrumbNode', () => {
+  const onSelectBreadcrumbNode = vi.fn();
+
   render(
     <DocumentPanelHeader
       activeNodeId="node-1"
-      canGoBack
-      canGoForward
+      canGoBack={false}
+      canGoForward={false}
       canGoParent={false}
       isSourceUpdatePanelOpen={false}
       nodesById={{
         'node-1': {
           id: 'node-1',
-          kind: 'item',
-          title: 'Prompt',
+          kind: 'topic',
+          title: 'A',
           parentNodeId: null,
-          content: 'Q',
+          content: '',
           anchorLink: null,
-          reveal: 'A',
+          reveal: null,
           review: null,
           createdAt: '',
           updatedAt: ''
@@ -35,12 +45,13 @@ it('shows the breadcrumb title without a kind label in the document header', () 
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onGoParent={vi.fn()}
-      onSelectBreadcrumbNode={vi.fn()}
+      onSelectBreadcrumbNode={onSelectBreadcrumbNode}
       onToggleSourceUpdatePanel={vi.fn()}
       showSourceUpdateAction={false}
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Prompt' })).toBeInTheDocument();
-  expect(screen.queryByText('Item')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'trigger breadcrumb' }));
+
+  expect(onSelectBreadcrumbNode).toHaveBeenCalledWith('breadcrumb-target');
 });

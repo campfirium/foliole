@@ -46,6 +46,7 @@ interface DocumentPanelSectionProps {
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
+  onSelectBreadcrumbNode: (nodeId: string) => void;
   onPersistPdfViewState: (viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
@@ -220,7 +221,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onGoBack={props.onGoBack}
           onGoForward={props.onGoForward}
           onGoParent={props.onGoParent}
-          onSelectNode={props.onSelectNode}
+          onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
           onToggleSourceUpdatePanel={() => handleSourceUpdatePanelOpenChange(!isSourceUpdatePanelOpen)}
           showSourceUpdateAction={Boolean(sourceUpdatePreview.value)}
         />
