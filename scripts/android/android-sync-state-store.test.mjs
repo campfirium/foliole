@@ -56,7 +56,7 @@ const NODE_VERSION_STORE = path.join(
   'FolioleCompanionSyncNodeVersionStore.java'
 );
 const COMPANION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-core-schema.json');
-const COMPANION_DATABASE_HELPER = path.join(
+const SYNC_META_STORE = path.join(
   REPO_ROOT,
   'android',
   'app',
@@ -66,7 +66,7 @@ const COMPANION_DATABASE_HELPER = path.join(
   'com',
   'foliole',
   'android',
-  'FolioleCompanionDatabaseHelper.java'
+  'FolioleCompanionSyncMetaStore.java'
 );
 
 describe('FolioleCompanionSyncObjectStore', () => {
@@ -219,10 +219,10 @@ describe('FolioleCompanionSyncObjectStore', () => {
   });
 
   it('keeps accepted onboarding state on Android after the user starts setup', async () => {
-    const source = await readFile(COMPANION_DATABASE_HELPER, 'utf8');
+    const source = await readFile(SYNC_META_STORE, 'utf8');
     const statusBody = source.slice(
-      source.indexOf('private boolean isValidSyncOnboardingStatus'),
-      source.indexOf('private void saveRememberedTargets')
+      source.indexOf('private static boolean isValidSyncOnboardingStatus'),
+      source.indexOf('private static void saveRememberedTargets')
     );
 
     expect(statusBody).toContain('normalized.equals("accepted")');
