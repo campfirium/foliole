@@ -22,6 +22,7 @@ export interface CodeMirrorEditorAdapterOptions {
   onPreviewNodeLink?: (request: EditorNodeLinkPreviewRequest | null) => void;
   onPastedAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   readOnly?: boolean;
+  trailingDivider?: boolean;
 }
 
 export interface EditorDocumentChangeMeta {

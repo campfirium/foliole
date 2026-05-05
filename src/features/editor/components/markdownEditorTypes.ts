@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { FocusEvent as ReactFocusEvent, MouseEvent as ReactMouseEvent } from 'react';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type {
@@ -33,6 +33,7 @@ export interface MarkdownEditorProps {
   debugId?: string;
   hideTitleHeading?: boolean;
   hideScrollbar?: boolean;
+  trailingDivider?: boolean;
   immersiveEditing?: boolean;
   lineDiffDecorations?: EditorDiffDecorations | null;
   nodeId: string | null;
@@ -41,6 +42,7 @@ export interface MarkdownEditorProps {
   readingTargetViewportRatio?: number | null;
   nodeViewState?: EditorViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
+  onBlurCapture?: (event: ReactFocusEvent<HTMLDivElement>) => void;
   onChange: (value: string, meta?: EditorContentChangeMeta) => void;
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;

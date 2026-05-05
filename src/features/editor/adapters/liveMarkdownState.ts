@@ -62,6 +62,10 @@ export const pastedAnchorsFacet = Facet.define<
   combine: (values) => values[0] ?? null
 });
 
+export const trailingDividerFacet = Facet.define<boolean, boolean>({
+  combine: (values) => values[0] ?? false
+});
+
 export function createLiveMarkdownStateExtensions(args: {
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;

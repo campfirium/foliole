@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
@@ -13,10 +13,8 @@ import { cn } from '../../shared/lib/utils';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
-import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { DocumentOutlineLayer } from './DocumentOutlineLayer';
-import { DocumentWidthResizeHandles } from './DocumentWidthResizeHandles';
 
 export interface BlockImageMetrics {
   imageCount: number;
@@ -51,7 +49,6 @@ export interface DocumentPanelBodyLayoutProps {
   fitBlockImagesToViewport?: boolean;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   hasAnswerSection: boolean;
-  isDocumentResizing: boolean;
   onAnswerChange: (answer: string) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
@@ -70,17 +67,11 @@ export interface DocumentPanelBodyLayoutProps {
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
-  onResetLayout: () => void;
-  onStartDocumentResize: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
   promptEditorDebugId?: string;
   readOnly?: boolean;
   reveal: string;
   sharedBlockImageMaxHeight?: number;
   showDocumentOutline?: boolean;
-  showDocumentResizeHandles?: boolean;
 }
 
 function AnswerSection(props: DocumentPanelBodyLayoutProps) {
@@ -168,6 +159,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         readOnly={props.readOnly}
         onSetReadingPositionSelection={props.onSetReadingPositionSelection}
         textAnchorDecorations={props.textAnchorDecorations}
+        trailingDivider={props.hasAnswerSection}
         value={props.editorContent}
       />
     </div>
@@ -188,34 +180,16 @@ function renderDocumentOutline(props: DocumentPanelBodyLayoutProps) {
   );
 }
 
-function DocumentSectionDivider(props: Pick<DocumentPanelBodyLayoutProps, 'documentMaxWidth'>) {
-  void props.documentMaxWidth;
-  return (
-    <div aria-hidden="true" className="relative h-3 shrink-0">
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-px -translate-x-1/2 -translate-y-1/2 bg-border [width:min(100%,var(--document-max-width))]" />
-    </div>
-  );
-}
-
 export function renderDocumentPanelBodyLayout(props: DocumentPanelBodyLayoutProps) {
   return (
-    <div className="relative flex h-full min-h-0 w-full" data-resizing={props.isDocumentResizing}>
+    <div className="relative flex h-full min-h-0 w-full">
       {renderDocumentOutline(props)}
       <div className="document-panel-editor-stack flex h-full min-h-0 w-full flex-1 flex-col">
         {renderDocumentBodyContent(props)}
         {props.hasAnswerSection && !props.emptyState ? (
-          <>
-            <DocumentSectionDivider documentMaxWidth={props.documentMaxWidth} />
-            <AnswerSection {...props} />
-          </>
+          <AnswerSection {...props} />
         ) : null}
       </div>
-      {props.showDocumentResizeHandles === false ? null : (
-        <DocumentWidthResizeHandles
-          onResetLayout={props.onResetLayout}
-          onStartDocumentResize={props.onStartDocumentResize}
-        />
-      )}
     </div>
   );
 }

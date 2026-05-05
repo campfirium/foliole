@@ -30,6 +30,7 @@ function MarkdownEditorSurface(args: {
   hostRef: MutableRefObject<HTMLDivElement | null>;
   immersiveEditing: boolean;
   mouseGesture: ReturnType<typeof useEditorMouseGesture>;
+  onBlurCapture: MarkdownEditorProps['onBlurCapture'];
   onContextMenu: MarkdownEditorProps['onContextMenu'];
   onDoubleClick: MarkdownEditorProps['onDoubleClick'];
   readOnly: boolean;
@@ -38,6 +39,7 @@ function MarkdownEditorSurface(args: {
   return (
     <div
       className="relative h-full w-full overflow-hidden"
+      onBlurCapture={args.onBlurCapture}
       onContextMenu={(event) => args.mouseGesture.handleContextMenu(event, args.onContextMenu)}
       onDoubleClick={args.onDoubleClick}
       onMouseDownCapture={args.mouseGesture.handleMouseDownCapture}
@@ -121,7 +123,8 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.onOpenNodeLink,
     props.onPreviewNodeLink,
     props.onPastedAnchors,
-    props.readOnly
+    props.readOnly,
+    props.trailingDivider
   );
   const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
   const { closePreview: closeTablePreview, previewTable } = useMarkdownTablePreview(hostRef);
@@ -175,6 +178,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         hostRef={hostRef}
         immersiveEditing={props.immersiveEditing === true}
         mouseGesture={surface.mouseGesture}
+        onBlurCapture={props.onBlurCapture}
         onContextMenu={props.onContextMenu}
         onDoubleClick={props.onDoubleClick}
         readOnly={props.readOnly === true}

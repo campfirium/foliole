@@ -5,10 +5,10 @@ import { setEditorDisplayMode } from '../model/editorDisplayMode';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
-function createAdapterHost(initialContent: string) {
+function createAdapterHost(initialContent: string, options: { trailingDivider?: boolean } = {}) {
   const host = document.createElement('div');
   document.body.append(host);
-  const adapter = new CodeMirrorEditorAdapter(host, { initialContent });
+  const adapter = new CodeMirrorEditorAdapter(host, { initialContent, ...options });
   return { adapter, host };
 }
 
@@ -47,6 +47,14 @@ describe('live markdown thematic break rendering', () => {
 
     expect(host.querySelector('.cm-line-h2')).toBeNull();
     expect(host.querySelector('.cm-md-thematic-break')).not.toBeNull();
+
+    adapter.destroy();
+  });
+
+  it('renders a trailing answer divider as an editor block widget', () => {
+    const { adapter, host } = createAdapterHost('Prompt body', { trailingDivider: true });
+
+    expect(host.querySelector('.cm-document-section-divider .cm-md-thematic-break')).not.toBeNull();
 
     adapter.destroy();
   });

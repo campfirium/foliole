@@ -1,7 +1,7 @@
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { EditorState, type Extension } from '@codemirror/state';
-import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
+import { Decoration, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import { folioleMarkdownExtensions } from '../model/markdownOblikeExtension';
@@ -14,7 +14,8 @@ import {
 } from './codeMirrorEditorAdapterSupport';
 import { createTextAnchorDecorationsExtension } from './codeMirrorTextAnchorState';
 import { createLiveMarkdownExtensions } from './liveMarkdown';
-import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
+import { createLiveMarkdownStateExtensions, trailingDividerFacet } from './liveMarkdownState';
+import { trailingDividerExtension } from './liveMarkdownTrailingDivider';
 import { markdownInputAssist } from './markdownInputAssist';
 
 export function createCodeMirrorEditorExtensions(args: {
@@ -39,7 +40,6 @@ export function createCodeMirrorEditorExtensions(args: {
     EditorState.allowMultipleSelections.of(true),
     keymap.of([...defaultKeymap, ...historyKeymap]),
     args.readOnlyCompartment.of(createReadOnlyExtensions(args.options.readOnly === true)),
-    drawSelection(),
     EditorView.lineWrapping,
     highlightActiveLine(),
     markdownInputAssist,
@@ -48,6 +48,8 @@ export function createCodeMirrorEditorExtensions(args: {
     args.searchDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.textAnchorDecorationsCompartment.of(createTextAnchorDecorationsExtension(args.textAnchorDecorations)),
     args.liveMarkdownCompartment.of(createLiveMarkdownExtensions()),
+    trailingDividerFacet.of(args.options.trailingDivider === true),
+    trailingDividerExtension,
     args.liveMarkdownStateCompartment.of(
       createLiveMarkdownStateExtensions({
         textAnchorDecorations: args.textAnchorDecorations,

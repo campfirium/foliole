@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { useEffect } from 'react';
+import { createElement, useEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const editorLifecycle = vi.hoisted(() => ({
@@ -8,21 +8,42 @@ const editorLifecycle = vi.hoisted(() => ({
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { nodeId: string | null }) => {
+  MarkdownEditor: (props: { nodeId: string | null; trailingDivider?: boolean }) => {
     useEffect(() => {
       editorLifecycle.mountedNodeIds.push(props.nodeId ?? 'none');
       return () => {
         editorLifecycle.unmountedNodeIds.push(props.nodeId ?? 'none');
       };
     }, [props.nodeId]);
-    return null;
+    return createElement('div', {
+      'data-testid': `editor-${props.nodeId ?? 'none'}`,
+      'data-trailing-divider': props.trailingDivider ? 'true' : 'false'
+    });
   }
 }));
 
 import {
   computeSharedBlockImageMaxHeight,
+  type DocumentPanelBodyLayoutProps,
   renderDocumentPanelBodyLayout
 } from './documentPanelBodyLayout';
+
+function createLayoutProps(overrides: Partial<DocumentPanelBodyLayoutProps> = {}): DocumentPanelBodyLayoutProps {
+  return {
+    documentMaxWidth: 760,
+    editorAppearanceKey: 'appearance-1',
+    editorContent: 'Alpha',
+    editorNodeId: 'node-1',
+    hasAnswerSection: false,
+    onAnswerChange: vi.fn(),
+    onEditorChange: vi.fn(),
+    onRevealDocumentPosition: vi.fn(),
+    onRevealDocumentSelection: vi.fn(),
+    onResolveDocumentPositionAtViewportY: vi.fn(() => null),
+    reveal: '',
+    ...overrides
+  };
+}
 
 describe('computeSharedBlockImageMaxHeight', () => {
   it('splits remaining height evenly across prompt and answer images when space is sufficient', () => {
@@ -63,48 +84,31 @@ describe('renderDocumentPanelBodyLayout', () => {
   });
 
   it('recreates the prompt editor when switching to another node', () => {
-    const view = render(
-      renderDocumentPanelBodyLayout({
-        documentMaxWidth: 760,
-        editorAppearanceKey: 'appearance-1',
-        editorContent: 'Alpha',
-        editorNodeId: 'node-1',
-        hasAnswerSection: false,
-        isDocumentResizing: false,
-        onAnswerChange: vi.fn(),
-        onEditorChange: vi.fn(),
-        onResetLayout: vi.fn(),
-        onRevealDocumentPosition: vi.fn(),
-        onRevealDocumentSelection: vi.fn(),
-        onResolveDocumentPositionAtViewportY: vi.fn(() => null),
-        onStartDocumentResize: vi.fn(),
-        reveal: ''
-      })
-    );
+    const view = render(renderDocumentPanelBodyLayout(createLayoutProps()));
 
     expect(editorLifecycle.mountedNodeIds).toEqual(['node-1']);
     expect(editorLifecycle.unmountedNodeIds).toEqual([]);
 
     view.rerender(
-      renderDocumentPanelBodyLayout({
-        documentMaxWidth: 760,
-        editorAppearanceKey: 'appearance-1',
+      renderDocumentPanelBodyLayout(createLayoutProps({
         editorContent: 'Beta',
-        editorNodeId: 'node-2',
-        hasAnswerSection: false,
-        isDocumentResizing: false,
-        onAnswerChange: vi.fn(),
-        onEditorChange: vi.fn(),
-        onResetLayout: vi.fn(),
-        onRevealDocumentPosition: vi.fn(),
-        onRevealDocumentSelection: vi.fn(),
-        onResolveDocumentPositionAtViewportY: vi.fn(() => null),
-        onStartDocumentResize: vi.fn(),
-        reveal: ''
-      })
+        editorNodeId: 'node-2'
+      }))
     );
 
     expect(editorLifecycle.unmountedNodeIds).toEqual(['node-1']);
     expect(editorLifecycle.mountedNodeIds).toEqual(['node-1', 'node-2']);
+  });
+
+  it('moves the answer divider into the prompt editor layer', () => {
+    const view = render(
+      renderDocumentPanelBodyLayout(createLayoutProps({
+        hasAnswerSection: true,
+        reveal: 'Beta'
+      }))
+    );
+
+    expect(view.container.querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(view.getByTestId('editor-node-1')).toHaveAttribute('data-trailing-divider', 'true');
   });
 });

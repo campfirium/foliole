@@ -100,6 +100,7 @@ function createEditorAdapter(args: {
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'];
   readOnly: boolean | undefined;
   textAnchorDecorations: ReturnType<typeof resolveTextAnchorDecorations>;
+  trailingDivider: boolean | undefined;
 }) {
   const adapter = new CodeMirrorEditorAdapter(args.host, {
     hideTitleHeading: args.hideTitleHeading,
@@ -111,7 +112,8 @@ function createEditorAdapter(args: {
     onPreviewNodeLink: args.onPreviewNodeLink,
     onPastedAnchors: args.onPastedAnchors,
     readOnly: args.readOnly,
-    textAnchorDecorations: args.textAnchorDecorations
+    textAnchorDecorations: args.textAnchorDecorations,
+    trailingDivider: args.trailingDivider
   });
   if (args.debugId) {
     registerDebugEditorAdapter(args.debugId, adapter);
@@ -131,6 +133,7 @@ function useEditorAdapterInputs(args: {
   onReady: ((adapter: EditorAdapter | null) => void) | undefined;
   readOnly: boolean | undefined;
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'];
+  trailingDivider: boolean | undefined;
 }) {
   const initialValueRef = useRef(args.initialValue);
   const onChangeRef = useRef(args.onChange);
@@ -142,6 +145,7 @@ function useEditorAdapterInputs(args: {
   const onReadyRef = useRef(args.onReady);
   const hideTitleHeadingRef = useRef(args.hideTitleHeading);
   const readOnlyRef = useRef(args.readOnly);
+  const trailingDividerRef = useRef(args.trailingDivider);
   const resolvedTextAnchorDecorations = resolveTextAnchorDecorations(args.textAnchorDecorations);
   const textAnchorDecorationsRef = useRef(resolvedTextAnchorDecorations);
 
@@ -155,6 +159,7 @@ function useEditorAdapterInputs(args: {
   onReadyRef.current = args.onReady;
   hideTitleHeadingRef.current = args.hideTitleHeading;
   readOnlyRef.current = args.readOnly;
+  trailingDividerRef.current = args.trailingDivider;
   textAnchorDecorationsRef.current = resolvedTextAnchorDecorations;
 
   return {
@@ -169,7 +174,8 @@ function useEditorAdapterInputs(args: {
     onReadyRef,
     readOnlyRef,
     resolvedTextAnchorDecorations,
-    textAnchorDecorationsRef
+    textAnchorDecorationsRef,
+    trailingDividerRef
   };
 }
 
@@ -198,7 +204,8 @@ function useEditorAdapterLifecycle(args: {
       onPreviewNodeLink: (request) => inputs.onPreviewNodeLinkRef.current?.(request),
       onPastedAnchors: (payload) => inputs.onPastedAnchorsRef.current?.(payload),
       readOnly: inputs.readOnlyRef.current,
-      textAnchorDecorations: inputs.textAnchorDecorationsRef.current
+      textAnchorDecorations: inputs.textAnchorDecorationsRef.current,
+      trailingDivider: inputs.trailingDividerRef.current
     });
     adapterRef.current = adapter;
     inputs.onReadyRef.current?.(adapter);
@@ -227,7 +234,8 @@ export function useEditorAdapter(
   onOpenNodeLink: ((title: string) => void) | undefined,
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined,
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'],
-  readOnly: boolean | undefined
+  readOnly: boolean | undefined,
+  trailingDivider: boolean | undefined
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const inputs = useEditorAdapterInputs({
@@ -241,7 +249,8 @@ export function useEditorAdapter(
     onPastedAnchors,
     onReady,
     readOnly,
-    textAnchorDecorations
+    textAnchorDecorations,
+    trailingDivider
   });
 
   useEditorAdapterLifecycle({ adapterRef, debugId, hostRef, inputs });

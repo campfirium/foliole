@@ -14,8 +14,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '&': { backgroundColor: 'transparent', height: '100%' },
   '.cm-scroller': {
     color: 'var(--content-panel-text-color, var(--color-text-primary))',
-    lineHeight: 'var(--content-panel-line-height, 1.75)',
-    scrollbarGutter: 'stable both-edges'
+    lineHeight: 'var(--content-panel-line-height, 1.75)'
   },
   '.cm-cursor, .cm-dropCursor': {
     borderLeftColor: 'var(--color-text-primary)'
@@ -73,6 +72,7 @@ export const liveMarkdownTheme = EditorView.theme({
     margin: '0.72rem 0',
     width: '100%'
   },
+  '.cm-document-section-divider': { padding: '0.9rem 0 0.85rem' },
   '.cm-md-inline-code': { backgroundColor: 'rgb(var(--color-foreground) / 0.08)', borderRadius: 'var(--editor-radius-md)', fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 var(--editor-space-xxs)' },
   '.cm-md-footnote-widget': { display: 'inline-block', lineHeight: '1', marginInline: '0.05em', position: 'relative', verticalAlign: 'super' },
   '.cm-md-footnote-marker': {
@@ -226,16 +226,12 @@ export const liveMarkdownTheme = EditorView.theme({
     width: '3px'
   },
   '.cm-activeLine': { backgroundColor: 'transparent' },
-  '.cm-selectionBackground, & > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
-    backgroundColor: TEXT_SELECTION_BACKGROUND_COLOR,
-    borderRadius: 'var(--editor-radius-xs)'
-  },
   '.cm-content ::selection': {
-    backgroundColor: 'transparent',
-    color: 'inherit',
-    WebkitTextFillColor: 'inherit'
+    backgroundColor: TEXT_SELECTION_BACKGROUND_COLOR,
+    color: 'var(--app-text-selection-fg-color)',
+    WebkitTextFillColor: 'var(--app-text-selection-fg-color)'
   },
-  '&[data-paragraph-marker-active="true"] .cm-selectionBackground, &[data-paragraph-marker-active="true"].cm-focused .cm-selectionBackground, &[data-paragraph-marker-active="true"] .cm-content ::selection': {
+  '&[data-paragraph-marker-active="true"] .cm-content ::selection': {
     backgroundColor: 'transparent'
   }
 });
