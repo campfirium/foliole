@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
 import {
+  buildReadingScheduleCoreFields,
   DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   buildQueueMixCycle,
   compareReadingNextAtAscending,
@@ -9,6 +10,8 @@ import {
   isAbsolutePushQueuePriority,
   normalizePushQueuePriority,
   normalizeRegularPushQueuePriority,
+  resolveInheritedPushQueuePriority,
+  resolveInheritedRegularPushQueuePriority,
   normalizeUnifiedPushQueueRules,
   resolveReadingNextAt
 } from './unifiedPushQueueRules';
@@ -49,6 +52,27 @@ it('maps every regular priority to the spec growth factor table', () => {
   ]);
 });
 
+it('inherits priority from the closest configured ancestor before building reading fields', () => {
+  expect(resolveInheritedPushQueuePriority([undefined, null, 2, 8])).toBe(2);
+  expect(resolveInheritedRegularPushQueuePriority([0, 3])).toBe(5);
+
+  expect(
+    buildReadingScheduleCoreFields({
+      intervalDurationMs: 90 * 60 * 1000,
+      lastHandledAt: '2026-03-16T09:15:30.000Z',
+      priorityChain: [undefined, 2, 8],
+      repetitionCount: 4
+    })
+  ).toEqual({
+    intervalDurationMs: 90 * 60 * 1000,
+    intervalGrowthFactor: 1.15,
+    lastHandledAt: '2026-03-16T09:15:30.000Z',
+    nextAt: '2026-03-16T10:45:30.000Z',
+    priority: 2,
+    repetitionCount: 4
+  });
+});
+
 it('keeps priorityRatio semantics as the P1:P9 weight multiple', () => {
   const p1Weight = getPriorityWeight(1);
   const p9Weight = getPriorityWeight(9);
@@ -69,11 +93,11 @@ it('keeps reading nextAt on exact timestamps instead of day buckets', () => {
   expect(nextAt).toBe('2026-03-16T10:45:30.000Z');
 });
 
-it('sorts reading queue candidates by exact nextAt timestamps', () => {
+it('sorts same-day reading queue candidates by exact nextAt timestamps instead of priority', () => {
   const queue = [
-    { nextAt: '2026-03-16T15:00:00.000Z' },
-    { nextAt: '2026-03-16T09:30:00.000Z' },
-    { nextAt: '2026-03-16T09:00:00.000Z' }
+    { nextAt: '2026-03-16T15:00:00.000Z', priority: 1 },
+    { nextAt: '2026-03-16T09:30:00.000Z', priority: 9 },
+    { nextAt: '2026-03-16T09:00:00.000Z', priority: 5 }
   ];
 
   queue.sort(compareReadingNextAtAscending);
@@ -83,6 +107,7 @@ it('sorts reading queue candidates by exact nextAt timestamps', () => {
     '2026-03-16T09:30:00.000Z',
     '2026-03-16T15:00:00.000Z'
   ]);
+  expect(queue.map((item) => item.priority)).toEqual([5, 9, 1]);
 });
 
 it('normalizes partial rule payloads back onto the frozen defaults', () => {

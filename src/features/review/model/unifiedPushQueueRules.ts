@@ -15,6 +15,15 @@ export interface ReadingIntervalGrowthFactorRange {
   max: number;
 }
 
+export interface ReadingScheduleCoreFields {
+  intervalDurationMs: number;
+  intervalGrowthFactor: number;
+  lastHandledAt: string;
+  nextAt: string;
+  priority: RegularPushQueuePriority;
+  repetitionCount: number;
+}
+
 export interface UnifiedPushQueueRules {
   defaultPriority: RegularPushQueuePriority;
   priorityRatio: number;
@@ -72,6 +81,26 @@ export function normalizeRegularPushQueuePriority(
   fallback: RegularPushQueuePriority = DEFAULT_UNIFIED_PUSH_QUEUE_RULES.defaultPriority
 ): RegularPushQueuePriority {
   const priority = normalizePushQueuePriority(value, fallback);
+  return priority === 0 ? fallback : priority;
+}
+
+export function resolveInheritedPushQueuePriority(
+  priorityChain: readonly unknown[],
+  fallback: PushQueuePriority = DEFAULT_UNIFIED_PUSH_QUEUE_RULES.defaultPriority
+): PushQueuePriority {
+  for (const candidate of priorityChain) {
+    if (candidate !== null && candidate !== undefined) {
+      return normalizePushQueuePriority(candidate, fallback);
+    }
+  }
+  return fallback;
+}
+
+export function resolveInheritedRegularPushQueuePriority(
+  priorityChain: readonly unknown[],
+  fallback: RegularPushQueuePriority = DEFAULT_UNIFIED_PUSH_QUEUE_RULES.defaultPriority
+): RegularPushQueuePriority {
+  const priority = resolveInheritedPushQueuePriority(priorityChain, fallback);
   return priority === 0 ? fallback : priority;
 }
 
@@ -167,6 +196,24 @@ export function resolveReadingNextAt(lastHandledAt: string, intervalDurationMs: 
     throw new TypeError(`Invalid interval duration: ${intervalDurationMs}`);
   }
   return new Date(lastHandledAtMs + intervalDurationMs).toISOString();
+}
+
+export function buildReadingScheduleCoreFields(args: {
+  intervalDurationMs: number;
+  lastHandledAt: string;
+  priorityChain?: readonly unknown[];
+  repetitionCount: number;
+  range?: ReadingIntervalGrowthFactorRange;
+}): ReadingScheduleCoreFields {
+  const priority = resolveInheritedRegularPushQueuePriority(args.priorityChain ?? []);
+  return {
+    intervalDurationMs: args.intervalDurationMs,
+    intervalGrowthFactor: getReadingIntervalGrowthFactor(priority, args.range),
+    lastHandledAt: args.lastHandledAt,
+    nextAt: resolveReadingNextAt(args.lastHandledAt, args.intervalDurationMs),
+    priority,
+    repetitionCount: args.repetitionCount
+  };
 }
 
 export function compareReadingNextAtAscending(
