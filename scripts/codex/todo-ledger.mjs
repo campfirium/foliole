@@ -16,13 +16,31 @@ const DEFAULT_PAUSE_PATTERNS = [
 ];
 const TASK_MODE_PREFIX = /^\[(auto|gate)\]\s*/i;
 const BRACKET_PREFIX = /^\[[^\]]+\]\s*/;
+const CANONICAL_TASK_PATTERN = /^- \[ \] (.+)$/;
+const LEGACY_TASK_PATTERN = /^- \[(auto|gate)\]\s+(.+)$/i;
 
 function inferTaskMode(task, patterns = DEFAULT_PAUSE_PATTERNS) {
   return isPauseTask(task, patterns) ? 'gate' : 'auto';
 }
 
+export function normalizeTodoLine(line) {
+  const legacyMatch = line.match(LEGACY_TASK_PATTERN);
+  if (!legacyMatch) {
+    return line;
+  }
+  const [, mode, task] = legacyMatch;
+  return `- [ ] [${mode.toLowerCase()}] ${task.trim()}`;
+}
+
+export function normalizeTodoMarkdown(markdown) {
+  return markdown
+    .split('\n')
+    .map((line) => normalizeTodoLine(line))
+    .join('\n');
+}
+
 function parsePendingTask(line, patterns = DEFAULT_PAUSE_PATTERNS) {
-  const match = line.trim().match(/^- \[ \] (.+)$/);
+  const match = normalizeTodoLine(line.trim()).match(CANONICAL_TASK_PATTERN);
   if (!match) {
     return null;
   }
@@ -43,19 +61,15 @@ function parsePendingTask(line, patterns = DEFAULT_PAUSE_PATTERNS) {
 }
 
 export function validateTodoEntries(markdown, fileLabel = 'todo') {
-  const lines = markdown.split('\n');
+  const lines = normalizeTodoMarkdown(markdown).split('\n');
   const issues = [];
 
   lines.forEach((line, index) => {
     const trimmed = line.trim();
-    if (/^- \[(?:auto|gate)\]\s+/i.test(trimmed)) {
-      issues.push(`line ${index + 1}: ${fileLabel} entry must use unchecked checkbox format "- [ ] [auto|gate] task"`);
-      return;
-    }
     if (!trimmed.startsWith('- [ ] ')) {
       return;
     }
-    const match = trimmed.match(/^- \[ \] (.+)$/);
+    const match = trimmed.match(CANONICAL_TASK_PATTERN);
     if (!match) {
       return;
     }
@@ -84,8 +98,21 @@ function assertValidTodoEntries(markdown) {
   }
 }
 
+async function readNormalizedLedger(filePath, fileLabel) {
+  const originalMarkdown = await readFile(filePath, 'utf8');
+  const normalizedMarkdown = normalizeTodoMarkdown(originalMarkdown);
+  const issues = validateTodoEntries(normalizedMarkdown, fileLabel);
+  if (issues.length > 0) {
+    throw new Error(`invalid ${fileLabel} entries:\n${issues.join('\n')}`);
+  }
+  if (normalizedMarkdown !== originalMarkdown) {
+    await writeFile(filePath, normalizedMarkdown, 'utf8');
+  }
+  return normalizedMarkdown;
+}
+
 export function parseTodoEntries(markdown, sectionName = '待办', patterns = DEFAULT_PAUSE_PATTERNS) {
-  return markdown
+  return normalizeTodoMarkdown(markdown)
     .split('\n')
     .map((line) => parsePendingTask(line.trim(), patterns))
     .filter(Boolean)
@@ -124,17 +151,14 @@ export function isGateEntry(entry) {
 
 export async function readTodoEntry() {
   const [pendingContent, optionalContent] = await Promise.all([
-    readFile(TODO_PATH, 'utf8'),
-    readFile(OPTIONAL_PATH, 'utf8')
+    readNormalizedLedger(TODO_PATH, 'todo'),
+    readNormalizedLedger(OPTIONAL_PATH, 'optional')
   ]);
-  assertValidTodoEntries(pendingContent);
-  assertValidTodoEntries(optionalContent);
   return selectNextExecutableTodoTask(pendingContent, optionalContent);
 }
 
 export async function readPrimaryTodoEntry() {
-  const content = await readFile(TODO_PATH, 'utf8');
-  assertValidTodoEntries(content);
+  const content = await readNormalizedLedger(TODO_PATH, 'todo');
   return selectNextTodoTask(content);
 }
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isGateEntry,
   isPauseTask,
+  normalizeTodoMarkdown,
   parseFirstTodoTask,
   parseTodoEntries,
   selectNextExecutableTodoTask,
@@ -92,9 +93,8 @@ describe('todo-ledger helpers', () => {
 
   it('flags task entries that omit the unchecked checkbox marker', () => {
     const markdown = ['# Pending TODO', '', '- [auto] first task'].join('\n');
-    expect(validateTodoEntries(markdown, 'pending')).toEqual([
-      'line 3: pending entry must use unchecked checkbox format "- [ ] [auto|gate] task"'
-    ]);
+    expect(validateTodoEntries(markdown, 'pending')).toEqual([]);
+    expect(normalizeTodoMarkdown(markdown)).toBe(['# Pending TODO', '', '- [ ] [auto] first task'].join('\n'));
   });
 
   it('flags extra bracket prefixes after the execution mode', () => {
