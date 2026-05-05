@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
-import {
-  loadRuntimeNodeSourceDetails,
-  type RuntimeNodeSourceDetails
-} from '../../shared/platform/nodeSourceBridge';
 import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useExternalSectionStatus } from './searchPaletteExternalStatus';
-import { SearchPaletteEmptyState, SearchPaletteList } from './SearchPaletteResults';
+import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList } from './SearchPaletteResults';
+import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
 import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
 
 interface SearchPaletteProps {
@@ -33,90 +30,37 @@ function useSearchResults(
     [props.nodeOrder, props.nodesById, props.trashedNodeIds, query]
   );
   const [runtimeResults, setRuntimeResults] = useState<WorkspaceSearchResult[]>([]);
+  const [runtimeError, setRuntimeError] = useState(false);
 
   useEffect(() => {
     const runtimeInvoke = getRuntimeInvoke();
     if (!props.isOpen || !runtimeInvoke || !query.trim()) {
       setRuntimeResults([]);
+      setRuntimeError(false);
       return;
     }
 
     let cancelled = false;
     setRuntimeResults([]);
-    void runtimeInvoke(NATIVE_COMMANDS.searchWorkspace, { query }).then((results) => {
-      if (!cancelled) {
-        setRuntimeResults(results);
-      }
-    });
+    setRuntimeError(false);
+    void runtimeInvoke(NATIVE_COMMANDS.searchWorkspace, { query })
+      .then((results) => {
+        if (!cancelled) {
+          setRuntimeResults(results);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRuntimeError(true);
+        }
+      });
 
     return () => {
       cancelled = true;
     };
   }, [props.isOpen, query]);
 
-  return getRuntimeInvoke() ? runtimeResults : localResults;
-}
-
-function useSearchResultSourceDetails(results: WorkspaceSearchResult[]) {
-  const [sourceDetailsByNodeId, setSourceDetailsByNodeId] = useState<
-    Record<string, RuntimeNodeSourceDetails | null | undefined>
-  >({});
-  const cacheRef = useRef<Record<string, RuntimeNodeSourceDetails | null>>({});
-
-  useEffect(() => {
-    const nodeIds = [
-      ...new Set(
-        results
-          .filter((result) => result.kind !== 'external')
-          .map((result) => result.id)
-          .filter(Boolean)
-      )
-    ];
-    if (nodeIds.length === 0) {
-      setSourceDetailsByNodeId({});
-      return;
-    }
-
-    setSourceDetailsByNodeId((current) => {
-      const nextEntries = Object.fromEntries(
-        nodeIds.map((nodeId) => [nodeId, cacheRef.current[nodeId]])
-      );
-      const currentKeys = Object.keys(current);
-      if (
-        currentKeys.length === nodeIds.length &&
-        nodeIds.every((nodeId) => current[nodeId] === nextEntries[nodeId])
-      ) {
-        return current;
-      }
-      return nextEntries;
-    });
-
-    const missingNodeIds = nodeIds.filter(
-      (nodeId) => !Object.prototype.hasOwnProperty.call(cacheRef.current, nodeId)
-    );
-    if (missingNodeIds.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-    missingNodeIds.forEach((nodeId) => {
-      void loadRuntimeNodeSourceDetails(nodeId).then((details) => {
-        if (cancelled) {
-          return;
-        }
-        cacheRef.current[nodeId] = details;
-        setSourceDetailsByNodeId((current) =>
-          current[nodeId] === details ? current : { ...current, [nodeId]: details }
-        );
-      });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [results]);
-
-  return sourceDetailsByNodeId;
+  return { error: getRuntimeInvoke() ? runtimeError : false, results: getRuntimeInvoke() ? runtimeResults : localResults };
 }
 
 function useOrderedSearchResults(
@@ -145,8 +89,8 @@ function useOrderedSearchResults(
 export function SearchPalette(props: SearchPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const rawResults = useSearchResults(props, query);
-  const results = useOrderedSearchResults(rawResults, props.nodesById);
+  const searchState = useSearchResults(props, query);
+  const results = useOrderedSearchResults(searchState.results, props.nodesById);
   const externalSectionStatus = useExternalSectionStatus(props.isOpen);
   const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
   useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setQuery);
@@ -183,7 +127,9 @@ export function SearchPalette(props: SearchPaletteProps) {
           query={query}
           totalItems={results.length}
         />
-        {results.length ? (
+        {searchState.error ? (
+          <SearchPaletteErrorState />
+        ) : results.length ? (
           <SearchPaletteList
             activeIndex={activeIndex}
             nodesById={props.nodesById}

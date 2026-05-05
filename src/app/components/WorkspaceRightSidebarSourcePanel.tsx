@@ -187,6 +187,9 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
   if (details.isLoading && !details.value) {
     return <EmptySourceInfoState description="Loading source info..." />;
   }
+  if (details.errorMessage && !details.value) {
+    return <EmptySourceInfoState description={details.errorMessage} />;
+  }
   if (!details.value) {
     return <EmptySourceInfoState description="This topic has no recorded import source yet." />;
   }

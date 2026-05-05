@@ -144,6 +144,16 @@ describe('WorkspaceRightSidebarSourcePanel', () => {
     });
   });
 
+  it('shows a source info error when source details fail to load', async () => {
+    loadRuntimeNodeSourceDetails.mockRejectedValue(new Error('source unavailable'));
+    renderSourcePanel();
+
+    await waitFor(() => {
+      expect(screen.getByText('Source info could not be loaded.')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('This topic has no recorded import source yet.')).not.toBeInTheDocument();
+  });
+
   it('shows inherited source info without a parent-jump button', async () => {
     loadRuntimeNodeSourceDetails.mockResolvedValue(createNodeSourceDetails({ inheritedFromParent: true }));
     render(

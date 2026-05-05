@@ -72,7 +72,7 @@ describe('useNodeSourceDetails', () => {
     });
 
     rerender({ nodeId: null });
-    expect(result.current).toEqual({ isLoading: false, value: null });
+    expect(result.current).toEqual({ errorMessage: '', isLoading: false, value: null });
 
     rerender({ nodeId: 'node-pdf' });
 
@@ -84,5 +84,21 @@ describe('useNodeSourceDetails', () => {
     });
 
     await waitFor(() => expect(loadRuntimeNodeSourceDetails).toHaveBeenCalledTimes(2));
+  });
+
+  it('exposes a load error without turning it into an empty source state', async () => {
+    loadRuntimeNodeSourceDetails.mockRejectedValue(new Error('source unavailable'));
+
+    const { result } = renderHook(() => useNodeSourceDetails('node-source'));
+
+    expect(result.current.isLoading).toBe(true);
+
+    await waitFor(() => {
+      expect(result.current).toEqual({
+        errorMessage: 'Source info could not be loaded.',
+        isLoading: false,
+        value: null
+      });
+    });
   });
 });

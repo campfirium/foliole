@@ -47,3 +47,25 @@ it('clears stale runtime results immediately when the query changes', async () =
   secondSearch.resolve([]);
   await waitFor(() => expect(screen.getByText('No matching results')).toBeInTheDocument());
 });
+
+it('shows a search error instead of an empty result when runtime search fails', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockRejectedValue(new Error('search failed')));
+
+  render(
+    <SearchPalette
+      isOpen
+      nodeOrder={['root']}
+      nodesById={{ root: { id: 'root', parentNodeId: null, title: 'Folder A', hasContent: false, hasReveal: false, review: null, createdAt: '2026-03-29T00:00:00.000Z', updatedAt: '2026-03-29T00:00:00.000Z' } }}
+      onClose={() => undefined}
+      onOpenResult={() => undefined}
+      trashedNodeIds={[]}
+    />
+  );
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), { target: { value: 'missing' } });
+
+  await waitFor(() => {
+    expect(screen.getByText('Search is unavailable. Try again in a moment.')).toBeInTheDocument();
+  });
+  expect(screen.queryByText('No matching results')).not.toBeInTheDocument();
+});

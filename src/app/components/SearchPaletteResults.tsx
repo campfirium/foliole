@@ -28,6 +28,14 @@ export function SearchPaletteEmptyState({ query }: { query: string }) {
   );
 }
 
+export function SearchPaletteErrorState() {
+  return (
+    <ul className={appFloatingListClassName()}>
+      <li className={appFloatingEmptyStateClassName()}>Search is unavailable. Try again in a moment.</li>
+    </ul>
+  );
+}
+
 export function SearchPaletteList(props: {
   activeIndex: number;
   externalSectionStatus: string | null;

@@ -4,11 +4,13 @@ import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../
 import { updateSourceDetailsCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
 
 interface NodeSourceDetailsState {
+  errorMessage: string;
   isLoading: boolean;
   value: RuntimeNodeSourceDetails | null;
 }
 
 const DEFAULT_STATE: NodeSourceDetailsState = {
+  errorMessage: '',
   isLoading: false,
   value: null
 };
@@ -37,23 +39,30 @@ export function useNodeSourceDetails(nodeId: string | null) {
       entries: Object.keys(cacheRef.current).length,
       hit: hasCachedValue
     });
-    setState({ isLoading: !hasCachedValue, value: cachedValue });
+    setState({ errorMessage: '', isLoading: !hasCachedValue, value: cachedValue });
 
     const refresh = () =>
-      loadRuntimeNodeSourceDetails(nodeId).then((value) => {
-        if (isDisposed) {
-          return;
-        }
-        cacheRef.current[nodeId] = value;
-        updateSourceDetailsCacheStats({
-          entries: Object.keys(cacheRef.current).length,
-          hit: true
+      loadRuntimeNodeSourceDetails(nodeId)
+        .then((value) => {
+          if (isDisposed) {
+            return;
+          }
+          cacheRef.current[nodeId] = value;
+          updateSourceDetailsCacheStats({
+            entries: Object.keys(cacheRef.current).length,
+            hit: true
+          });
+          setState({ errorMessage: '', isLoading: false, value });
+          if (shouldPollPdfIndexStatus(value)) {
+            refreshTimer = window.setTimeout(refresh, REFRESH_INTERVAL_MS);
+          }
+        })
+        .catch(() => {
+          if (isDisposed) {
+            return;
+          }
+          setState({ errorMessage: 'Source info could not be loaded.', isLoading: false, value: cachedValue });
         });
-        setState({ isLoading: false, value });
-        if (shouldPollPdfIndexStatus(value)) {
-          refreshTimer = window.setTimeout(refresh, REFRESH_INTERVAL_MS);
-        }
-      });
 
     void refresh();
 
