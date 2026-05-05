@@ -204,10 +204,4 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
   }
 };
 
-export const ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING = {
-  defaultDeviceId: '*',
-  objectIdDelimiter: ':',
-  objectIdDeviceIdPartIndex: 3,
-  objectIdKeyPartIndex: 4,
-  objectIdPartLimit: 5
-} as const;
+export { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from './androidCompanionSyncPayloadRoutingDefinitions.ts';

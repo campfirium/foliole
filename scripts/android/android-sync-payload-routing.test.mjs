@@ -38,11 +38,18 @@ describe('Android sync payload routing metadata', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.syncPayloadRouting).toMatchObject({
+      argModeKey: 'argMode',
       defaultDeviceId: '*',
+      deletedAtKey: 'deleted_at',
+      objectIdArgMode: 'object_id',
       objectIdDelimiter: ':',
       objectIdDeviceIdPartIndex: 3,
+      objectIdKey: 'object_id',
       objectIdKeyPartIndex: 4,
-      objectIdPartLimit: 5
+      objectIdPartLimit: 5,
+      objectTypeKey: 'object_type',
+      payloadJsonKey: 'payload_json',
+      queryNameKey: 'queryName'
     });
     expect(definitions.syncPayloadRouting.routes).toEqual(
       expect.arrayContaining([
@@ -71,6 +78,8 @@ describe('Android sync payload routing metadata', () => {
     expect(payloadStore).toContain('syncPayloadRouting(context).getJSONArray("routes")');
     expect(payloadStore).toContain('routingString(context, "objectIdDelimiter")');
     expect(payloadStore).toContain('routingInt(context, "objectIdPartLimit")');
+    expect(payloadStore).toContain('row.getString(routingString(context, "objectTypeKey"))');
+    expect(payloadStore).toContain('route.getString(routingString(context, "queryNameKey"))');
     expect(viewStateStore).toContain('FolioleCompanionSyncPayloadQueryStore.viewObjectId(context, deviceId, key)');
     expect(viewStateStore).toContain('FolioleCompanionSyncPayloadQueryStore.viewObjectIdKey(context, objectId)');
     expect(viewStateStore).toContain('FolioleCompanionSyncPayloadQueryStore.viewObjectIdDeviceId(context, objectId)');
@@ -82,6 +91,9 @@ describe('Android sync payload routing metadata', () => {
     expect(viewStateStore).not.toContain('key.startsWith(nodePrefix)');
     expect(viewStateStore).not.toContain('key.substring(nodePrefix.length())');
     expect(payloadStore).not.toContain('objectId.split(":", 5)');
+    expect(payloadStore).not.toContain('row.getString("object_type")');
+    expect(payloadStore).not.toContain('row.put("payload_json"');
+    expect(payloadStore).not.toContain('route.getString("queryName")');
     expect(payloadStore).not.toContain('Iterator<String> names = queries.keys()');
   });
 });

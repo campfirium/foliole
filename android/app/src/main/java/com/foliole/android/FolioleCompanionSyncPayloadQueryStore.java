@@ -150,9 +150,9 @@ final class FolioleCompanionSyncPayloadQueryStore {
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
             row.put(
-                "payload_json",
-                row.isNull("deleted_at")
-                    ? loadPayload(context, database, row.getString("object_type"), row.getString("object_id"))
+                routingString(context, "payloadJsonKey"),
+                row.isNull(routingString(context, "deletedAtKey"))
+                    ? loadPayload(context, database, row.getString(routingString(context, "objectTypeKey")), row.getString(routingString(context, "objectIdKey")))
                     : JSONObject.NULL
             );
         }
@@ -165,7 +165,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
         if (route == null) {
             return "{}";
         }
-        String queryName = route.getString("queryName");
+        String queryName = route.getString(routingString(context, "queryNameKey"));
         String payload = FolioleCompanionGeneratedQueryRunner.loadString(
             context,
             database,
@@ -179,16 +179,16 @@ final class FolioleCompanionSyncPayloadQueryStore {
         JSONArray routes = syncPayloadRouting(context).getJSONArray("routes");
         for (int index = 0; index < routes.length(); index += 1) {
             JSONObject route = routes.getJSONObject(index);
-            if (matches(route, objectType, objectIdKey)) return route;
+            if (matches(context, route, objectType, objectIdKey)) return route;
         }
         return null;
     }
 
     private static String[] queryArgs(Context context, JSONObject route, String objectId, String objectIdKey, String deviceId) throws Exception {
-        String argMode = route.optString("argMode", "object_id");
-        if (argMode.equals("none")) return null;
-        if (argMode.equals("view_state_node")) {
-            String prefix = route.getString("objectIdPrefix");
+        String argMode = route.optString(routingString(context, "argModeKey"), routingString(context, "objectIdArgMode"));
+        if (argMode.equals(routingString(context, "noneArgMode"))) return null;
+        if (argMode.equals(routingString(context, "viewStateNodeArgMode"))) {
+            String prefix = route.getString(routingString(context, "objectIdPrefixKey"));
             return new String[] { objectIdKey.substring(prefix.length()), deviceId };
         }
         return new String[] { objectId };
@@ -248,11 +248,11 @@ final class FolioleCompanionSyncPayloadQueryStore {
         return result;
     }
 
-    private static boolean matches(JSONObject route, String objectType, String objectIdKey) {
-        if (!objectType.equals(route.optString("objectType"))) return false;
-        String exactKey = route.optString("objectIdKey", "");
+    private static boolean matches(Context context, JSONObject route, String objectType, String objectIdKey) throws Exception {
+        if (!objectType.equals(route.optString(routingString(context, "objectTypeRouteKey")))) return false;
+        String exactKey = route.optString(routingString(context, "objectIdRouteKey"), "");
         if (!exactKey.isEmpty()) return exactKey.equals(objectIdKey);
-        String prefix = route.optString("objectIdPrefix", "");
+        String prefix = route.optString(routingString(context, "objectIdPrefixKey"), "");
         return prefix.isEmpty() || objectIdKey.startsWith(prefix);
     }
 
