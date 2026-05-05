@@ -1,6 +1,12 @@
 import { BrowserWindow, app, shell, type WebContents } from 'electron';
 
-import { replaceNodeOrder, upsertNodeSnapshot } from '../database/nodeMutations.js';
+import {
+  deleteNodesPermanently,
+  replaceNodeOrder,
+  restoreNodes,
+  softDeleteNodes,
+  upsertNodeSnapshot
+} from '../database/nodeMutations.js';
 import { applyReviewGrade } from '../database/reviewMutations.js';
 import {
   clearWorkspaceStateFromSqlite,
@@ -12,6 +18,11 @@ import { bootReport } from './boot.js';
 import type { InvokeRequest } from './contracts.js';
 import { listSystemFonts } from './fonts.js';
 import { syncAppMenuState } from './menu.js';
+import {
+  parseDeleteNodesPermanentlyArgs,
+  parseRestoreNodesArgs,
+  parseSoftDeleteNodesArgs
+} from './nodeCommandArgs.js';
 import { resolveAppPaths } from './paths.js';
 import { reviewGrade, type ReviewGradeRequest } from './review.js';
 import { parseApplyReviewGradeArgs } from './reviewCommandArgs.js';
@@ -166,6 +177,18 @@ async function handleStorageCommand(command: string, args: Record<string, unknow
   }
   if (command === 'replace_node_order') {
     replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));
+    return null;
+  }
+  if (command === 'soft_delete_nodes') {
+    softDeleteNodes(parseSoftDeleteNodesArgs(args));
+    return null;
+  }
+  if (command === 'restore_nodes') {
+    restoreNodes(parseRestoreNodesArgs(args));
+    return null;
+  }
+  if (command === 'delete_nodes_permanently') {
+    deleteNodesPermanently(parseDeleteNodesPermanentlyArgs(args));
     return null;
   }
   if (command === 'apply_review_grade') {

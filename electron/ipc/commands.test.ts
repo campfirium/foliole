@@ -2,7 +2,13 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { replaceNodeOrder, upsertNodeSnapshot } from '../database/nodeMutations.js';
+import {
+  deleteNodesPermanently,
+  replaceNodeOrder,
+  restoreNodes,
+  softDeleteNodes,
+  upsertNodeSnapshot
+} from '../database/nodeMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -38,7 +44,10 @@ vi.mock('../database/workspaceState.js', () => ({
   saveWorkspaceStateToSqlite: vi.fn()
 }));
 vi.mock('../database/nodeMutations.js', () => ({
+  deleteNodesPermanently: vi.fn(),
   replaceNodeOrder: vi.fn(),
+  restoreNodes: vi.fn(),
+  softDeleteNodes: vi.fn(),
   upsertNodeSnapshot: vi.fn()
 }));
 vi.mock('./storage.js', () => ({
@@ -154,6 +163,55 @@ it('handles node order replacement command', async () => {
     })
   ).resolves.toBeNull();
   expect(replaceNodeOrder).toHaveBeenCalledWith(['node-1', 'node-2']);
+});
+
+it('handles soft delete node command', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'soft_delete_nodes',
+      args: {
+        nodeIds: ['node-1', 'node-2'],
+        deletedAt: '2026-03-06T00:00:00.000Z'
+      }
+    })
+  ).resolves.toBeNull();
+
+  expect(softDeleteNodes).toHaveBeenCalledWith({
+    nodeIds: ['node-1', 'node-2'],
+    deletedAt: '2026-03-06T00:00:00.000Z'
+  });
+});
+
+it('handles restore node command', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'restore_nodes',
+      args: {
+        nodeIds: ['node-1']
+      }
+    })
+  ).resolves.toBeNull();
+
+  expect(restoreNodes).toHaveBeenCalledWith({
+    nodeIds: ['node-1']
+  });
+});
+
+it('handles permanent delete node command', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'delete_nodes_permanently',
+      args: {
+        nodeIds: ['node-3'],
+        nodeOrder: ['node-1', 'node-2']
+      }
+    })
+  ).resolves.toBeNull();
+
+  expect(deleteNodesPermanently).toHaveBeenCalledWith({
+    nodeIds: ['node-3'],
+    nodeOrder: ['node-1', 'node-2']
+  });
 });
 
 it('handles app settings storage commands', async () => {

@@ -6,9 +6,12 @@ import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
-  syncNodeRevealToRuntime: vi.fn()
+  syncNodeRevealToRuntime: vi.fn(),
+  syncRestoreNodesToRuntime: vi.fn(),
+  syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
 type WorkspaceSetInput =

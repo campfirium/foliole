@@ -4,9 +4,12 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 
 import {
+  syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime,
+  syncRestoreNodesToRuntime,
+  syncSoftDeleteNodesToRuntime,
   syncReviewGradeToRuntime
 } from './workspaceRuntimeSync';
 
@@ -128,6 +131,50 @@ describe('workspaceRuntimeSync review mutations', () => {
     syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD);
 
     expect(invoke).toHaveBeenCalledWith('apply_review_grade', REVIEW_GRADE_PAYLOAD);
+    expectNoWorkspacePersist(invoke);
+  });
+});
+
+describe('workspaceRuntimeSync trash mutations', () => {
+  it('syncs soft delete mutations through soft_delete_nodes command', () => {
+    const invoke = vi.fn().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    syncSoftDeleteNodesToRuntime({
+      nodeIds: ['node-1', 'node-2'],
+      deletedAt: '2026-03-06T00:00:00.000Z'
+    });
+
+    expect(invoke).toHaveBeenCalledWith('soft_delete_nodes', {
+      nodeIds: ['node-1', 'node-2'],
+      deletedAt: '2026-03-06T00:00:00.000Z'
+    });
+    expectNoWorkspacePersist(invoke);
+  });
+
+  it('syncs restore mutations through restore_nodes command', () => {
+    const invoke = vi.fn().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    syncRestoreNodesToRuntime({ nodeIds: ['node-1'] });
+
+    expect(invoke).toHaveBeenCalledWith('restore_nodes', { nodeIds: ['node-1'] });
+    expectNoWorkspacePersist(invoke);
+  });
+
+  it('syncs permanent delete mutations through delete_nodes_permanently command', () => {
+    const invoke = vi.fn().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    syncDeleteNodesPermanentlyToRuntime({
+      nodeIds: ['node-3'],
+      nodeOrder: ['node-1', 'node-2']
+    });
+
+    expect(invoke).toHaveBeenCalledWith('delete_nodes_permanently', {
+      nodeIds: ['node-3'],
+      nodeOrder: ['node-1', 'node-2']
+    });
     expectNoWorkspacePersist(invoke);
   });
 });

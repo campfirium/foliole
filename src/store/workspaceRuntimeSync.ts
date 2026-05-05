@@ -21,6 +21,20 @@ interface ReviewGradeRuntimePayload {
   cardAfter: ReviewCardSnapshot;
 }
 
+interface SoftDeleteNodesRuntimePayload {
+  nodeIds: string[];
+  deletedAt: string;
+}
+
+interface RestoreNodesRuntimePayload {
+  nodeIds: string[];
+}
+
+interface DeleteNodesPermanentlyRuntimePayload {
+  nodeIds: string[];
+  nodeOrder: string[];
+}
+
 function toNodeSnapshotPayload(node: Node, position?: number) {
   return {
     nodeId: node.id,
@@ -66,4 +80,28 @@ export function syncReviewGradeToRuntime(payload: ReviewGradeRuntimePayload) {
     return;
   }
   void runtimeInvoke('apply_review_grade', payload as unknown as Record<string, unknown>).catch(() => undefined);
+}
+
+export function syncSoftDeleteNodesToRuntime(payload: SoftDeleteNodesRuntimePayload) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  void runtimeInvoke('soft_delete_nodes', payload as unknown as Record<string, unknown>).catch(() => undefined);
+}
+
+export function syncRestoreNodesToRuntime(payload: RestoreNodesRuntimePayload) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  void runtimeInvoke('restore_nodes', payload as unknown as Record<string, unknown>).catch(() => undefined);
+}
+
+export function syncDeleteNodesPermanentlyToRuntime(payload: DeleteNodesPermanentlyRuntimePayload) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  void runtimeInvoke('delete_nodes_permanently', payload as unknown as Record<string, unknown>).catch(() => undefined);
 }

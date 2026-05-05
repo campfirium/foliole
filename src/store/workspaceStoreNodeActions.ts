@@ -1,9 +1,12 @@
 import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 
 import {
+  syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
-  syncNodeRevealToRuntime
+  syncNodeRevealToRuntime,
+  syncRestoreNodesToRuntime,
+  syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
 import { type WorkspaceState } from './workspaceStore';
 import {
@@ -146,7 +149,12 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
 }
 
 export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActions {
-  const trashActions = createWorkspaceTrashActions(set);
+  const trashActions = createWorkspaceTrashActions(set, {
+    syncNodeContent: syncNodeContentToRuntime,
+    syncSoftDeleteNodes: syncSoftDeleteNodesToRuntime,
+    syncRestoreNodes: syncRestoreNodesToRuntime,
+    syncDeleteNodesPermanently: syncDeleteNodesPermanentlyToRuntime
+  });
   const runtimeHandlers = {
     syncNodeContent: syncNodeContentToRuntime,
     syncNodeOrder: syncNodeOrderToRuntime

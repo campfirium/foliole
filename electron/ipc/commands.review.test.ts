@@ -29,7 +29,10 @@ vi.mock('../database/workspaceState.js', () => ({
   saveWorkspaceStateToSqlite: vi.fn()
 }));
 vi.mock('../database/nodeMutations.js', () => ({
+  deleteNodesPermanently: vi.fn(),
   replaceNodeOrder: vi.fn(),
+  restoreNodes: vi.fn(),
+  softDeleteNodes: vi.fn(),
   upsertNodeSnapshot: vi.fn()
 }));
 vi.mock('../database/reviewMutations.js', () => ({
