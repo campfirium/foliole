@@ -93,22 +93,8 @@ function createGenericSourceActions(setSettings: SetSettings) {
     }));
   };
   return {
-    async handleChangeAction(sourceId: string, value: string) {
-      if (value !== 'move') {
-        handleChangeSource(sourceId, 'actionMode', value);
-        return;
-      }
-      const selectedPath = await selectFolderPath();
-      if (!selectedPath) {
-        return;
-      }
-      setSettings((current) => ({
-        ...current,
-        sources: replaceSource(current.sources, sourceId, (source) => ({
-          ...updateDraftImportSource(source, 'actionMode', 'move'),
-          archivePath: selectedPath
-        }))
-      }));
+    handleChangeAction(sourceId: string, value: string) {
+      handleChangeSource(sourceId, 'actionMode', value);
     },
     handleChangeSource,
     async handleChooseFolder(sourceId: string, field: 'primaryPath' | 'highlightPath') {

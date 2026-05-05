@@ -71,8 +71,8 @@ const IMPORT_MANAGER_SETTINGS_INPUT = {
   titleStrategy: 'heading',
   sources: [
     {
-      actionMode: 'move',
-      archivePath: '/tmp/archive-a',
+      actionMode: 'keep',
+      archivePath: '',
       id: 'draft-import-source-101',
       primaryPath: '/tmp/source-a',
       highlightPath: '/tmp/highlight-a',
@@ -128,8 +128,8 @@ function expectNormalizedSavedSettings() {
     ],
     sources: [
       {
-        actionMode: 'move',
-        archivePath: '/tmp/archive-a',
+        actionMode: 'keep',
+        archivePath: '',
         id: 'draft-import-source-101',
         keepState: 'draft'
       },
@@ -182,8 +182,8 @@ function expectReloadedSettingsAfterRestart() {
     ],
     sources: [
       {
-        actionMode: 'move',
-        archivePath: '/tmp/archive-a',
+        actionMode: 'keep',
+        archivePath: '',
         id: 'draft-import-source-101',
         primaryPath: '/tmp/source-a'
       },
@@ -203,4 +203,30 @@ it('persists import manager settings into sqlite and reloads them after restart'
 
 it('falls back to the default import manager settings when the payload is missing', () => {
   expect(loadImportManagerSettings()).toEqual(createDefaultImportManagerSettings());
+});
+
+it('normalizes legacy move handling payloads to keep when loading', () => {
+  const saved = saveImportManagerSettings({
+    ...IMPORT_MANAGER_SETTINGS_INPUT,
+    sources: [
+      {
+        actionMode: 'move',
+        archivePath: '/tmp/archive-a',
+        id: 'draft-import-source-101',
+        primaryPath: '/tmp/source-a',
+        highlightPath: '',
+        highlightMode: 'merged',
+        keepPreview: null,
+        keepState: 'draft'
+      }
+    ]
+  });
+
+  expect(saved.sources).toEqual([
+    expect.objectContaining({
+      actionMode: 'keep',
+      archivePath: '',
+      id: 'draft-import-source-101'
+    })
+  ]);
 });

@@ -8,7 +8,6 @@ import {
   type ImportHighlightMode,
   type ImportManagerSourceDraft as DraftImportSource
 } from '../../../lib/core/import/importManagerSettings';
-import { importActionOptions } from '../../../lib/core/import/importSourceActions';
 
 export type DraftImportSourceField = keyof DraftImportSource;
 export type { DraftImportSource };
@@ -25,11 +24,6 @@ export function cloneDraftImportSource(source: DraftImportSource, index: number)
 
 export function formatHighlightModeLabel(mode: ImportHighlightMode) {
   return mode === 'split' ? 'Split' : 'Merged';
-}
-
-export function formatSourceActionLabel(mode: DraftImportSource['actionMode']) {
-  const matchedOption = importActionOptions.find((option) => option.value === mode);
-  return matchedOption?.label ?? 'Keep';
 }
 
 export function formatKeepStateLabel(state: DraftImportSource['keepState']) {
@@ -59,11 +53,11 @@ export function updateDraftImportSource(
   }
 
   if (field === 'actionMode') {
-    const actionMode = value === 'move' || value === 'delete' ? value : 'keep';
+    const actionMode = value === 'delete' ? 'delete' : 'keep';
     return {
       ...source,
       actionMode,
-      archivePath: actionMode === 'move' ? source.archivePath : ''
+      archivePath: ''
     };
   }
 

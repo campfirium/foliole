@@ -108,10 +108,11 @@ function normalizeSource(
 ): ImportManagerSourceDraft {
   const payload = isRecord(value) ? value : {};
   const highlightMode = normalizeHighlightMode(payload.highlightMode, fallback.highlightMode);
+  const actionMode = normalizeImportSourceAction(payload.actionMode, fallback.actionMode);
 
   return {
-    actionMode: normalizeImportSourceAction(payload.actionMode, fallback.actionMode),
-    archivePath: normalizeString(payload.archivePath, fallback.archivePath),
+    actionMode,
+    archivePath: actionMode === 'keep' ? '' : normalizeString(payload.archivePath, fallback.archivePath),
     highlightMode,
     highlightPath: highlightMode === 'split' ? normalizeString(payload.highlightPath, fallback.highlightPath) : '',
     id: normalizeString(payload.id, fallback.id).trim() || fallback.id,

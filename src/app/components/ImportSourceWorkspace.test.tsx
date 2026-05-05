@@ -43,8 +43,8 @@ vi.mock('../../shared/platform/importBridge', () => ({
   selectRuntimeImportDirectory: vi.fn(async () => '/tmp/chosen-folder')
 }));
 
-function createMockElectronApi() {
-  let persistedSettings: Record<string, unknown> | null = null;
+function createMockElectronApi(initialSettings: Record<string, unknown> | null = null) {
+  let persistedSettings: Record<string, unknown> | null = initialSettings;
   return {
     invoke: vi.fn(async (command: string, args?: { settings?: Record<string, unknown> }) => {
       if (command === 'load_import_manager_settings') {
@@ -104,6 +104,8 @@ it('shows the generic handling selector without restoring trigger controls', asy
   expect(screen.queryByText('Actions')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Preview draft-import-source-101' })).toBeDisabled();
   expect(screen.getByLabelText('Imported title source')).toHaveValue('file_name');
+  expect(screen.getByLabelText('Handling draft-import-source-101')).toHaveTextContent('KeepDelete');
+  expect(screen.queryByRole('option', { name: 'Move' })).not.toBeInTheDocument();
 });
 
 it('persists the imported title source setting', async () => {
@@ -224,36 +226,33 @@ it('persists import manager settings after the panel remounts', async () => {
   expect(screen.getByLabelText('Original folder draft-import-source-103')).toBeInTheDocument();
 });
 
-it('stores the move destination for a generic source and restores it after remount', async () => {
-  const { unmount } = render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
-
-  fireEvent.change(screen.getByLabelText('Handling draft-import-source-101'), { target: { value: 'move' } });
-
-  await waitFor(() => {
-    expect(window.electronAPI?.invoke).toHaveBeenLastCalledWith(
-      'save_import_manager_settings',
-      expect.objectContaining({
-        settings: expect.objectContaining({
-          sources: expect.arrayContaining([
-            expect.objectContaining({
-              actionMode: 'move',
-              archivePath: '/tmp/chosen-folder',
-              id: 'draft-import-source-101'
-            })
-          ])
-        })
-      })
-    );
+it('normalizes legacy move handling back to keep after reload', async () => {
+  window.electronAPI = createMockElectronApi({
+    detailsOpen: true,
+    readwiseReaderConfig: null,
+    readwiseRootPath: '',
+    readwiseSources: [],
+    sources: [
+      {
+        actionMode: 'move',
+        archivePath: '/tmp/old-move-target',
+        highlightMode: 'merged',
+        highlightPath: '',
+        id: 'draft-import-source-101',
+        keepPreview: null,
+        keepState: 'draft',
+        primaryPath: '/tmp/source-a'
+      }
+    ],
+    titleStrategy: 'file_name',
+    updatedAt: '2026-04-02T00:00:00.000Z',
+    version: 4
   });
 
-  expect(screen.getByLabelText('Handling draft-import-source-101')).toHaveValue('move');
-  expect(screen.getByLabelText('Handling draft-import-source-101')).toHaveAttribute('title', '/tmp/chosen-folder');
-
-  unmount();
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
-  expect(await screen.findByLabelText('Handling draft-import-source-101')).toHaveValue('move');
-  expect(screen.getByLabelText('Handling draft-import-source-101')).toHaveAttribute('title', '/tmp/chosen-folder');
+  expect(await screen.findByLabelText('Handling draft-import-source-101')).toHaveValue('keep');
+  expect(screen.getByLabelText('Handling draft-import-source-101')).not.toHaveAttribute('title');
 });
 
 it('asks for confirmation before turning an enabled keep import off', async () => {

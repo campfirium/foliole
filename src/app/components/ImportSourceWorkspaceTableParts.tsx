@@ -3,7 +3,7 @@ import { Copy, FolderOpen, X } from 'lucide-react';
 import { importActionOptions } from '../../../lib/core/import/importSourceActions';
 import { AppButton } from '../../shared/ui';
 
-import { formatSourceActionLabel, importSourceSelectClassName, type DraftImportSource } from './importSourceWorkspaceModel';
+import { importSourceSelectClassName, type DraftImportSource } from './importSourceWorkspaceModel';
 
 export const rowGridClassName =
   'grid grid-cols-[minmax(118px,0.9fr)_minmax(118px,0.9fr)_92px_110px_minmax(180px,0.72fr)] gap-2';
@@ -40,12 +40,11 @@ export function HandlingCell({
       aria-label={`Handling ${source.id}`}
       className={importSourceSelectClassName}
       onChange={(event) => onChangeAction(source.id, event.target.value)}
-      title={source.actionMode === 'move' && source.archivePath.trim() ? source.archivePath : undefined}
       value={source.actionMode}
     >
       {importActionOptions.map((option) => (
         <option key={option.value} value={option.value}>
-          {option.value === 'move' ? formatSourceActionLabel(source.actionMode) : option.label}
+          {option.label}
         </option>
       ))}
     </select>
