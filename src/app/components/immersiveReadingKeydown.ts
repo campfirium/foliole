@@ -5,6 +5,7 @@ import { getSelectionCommandPayload } from '../contextCommands';
 import { isImmersiveEditableElement } from './immersiveReadingKeyboard';
 import { blurImmersiveActiveElement, clearParagraphMarker } from './immersiveReadingMarker';
 import { resolveParagraphSelection } from './immersiveReadingModel';
+import { revealSelectionForImmersiveBand, shouldRevealSelectionInImmersiveBand } from './immersiveReadingViewportBand';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
 export function getReadableNodeIds(nodeOrder: string[], nodesById: Record<string, Node>, trashedNodeIds: string[]) {
@@ -70,8 +71,18 @@ function selectParagraph(args: {
     args.setReadingSelection({ from: nextSelection.from, to: nextSelection.from }, 'immersive-keydown');
     editor.setSelection(nextSelection);
     editor.setParagraphMarker?.(nextSelection);
-    args.markNextProgrammaticScroll();
-    editor.revealSelection(nextSelection);
+    if (shouldRevealSelectionInImmersiveBand({
+      direction: args.direction,
+      props: args.props,
+      selection: nextSelection
+    })) {
+      args.markNextProgrammaticScroll();
+      revealSelectionForImmersiveBand({
+        direction: args.direction,
+        props: args.props,
+        selection: nextSelection
+      });
+    }
     return true;
   }
   editor.setParagraphMarker?.(null);

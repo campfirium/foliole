@@ -210,14 +210,18 @@ it('ignores the immediate scroll event caused by paragraph navigation', () => {
   const { adapter, props, triggerScroll } = buildProps();
   mountViewportHost();
   vi.mocked(adapter.getPrimaryVisiblePosition).mockReturnValue(7);
+  vi.mocked(adapter.getDocumentPositionAtViewportY)
+    .mockReturnValueOnce(2)
+    .mockReturnValueOnce(7);
   renderHook(() => useImmersiveReadingMode(props));
   vi.mocked(adapter.setSelection).mockClear();
 
   act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
   });
 
-  expect(adapter.setSelection).toHaveBeenCalledWith({ from: 0, to: 5 });
+  expect(adapter.setSelection).toHaveBeenLastCalledWith({ from: 7, to: 11 });
   vi.mocked(adapter.setSelection).mockClear();
 
   act(() => {
@@ -230,5 +234,6 @@ it('ignores the immediate scroll event caused by paragraph navigation', () => {
     triggerScroll();
   });
 
-  expect(adapter.setSelection).toHaveBeenCalledWith({ from: 7, to: 7 });
+  expect(props.getReadingPositionSelection()).toEqual({ from: 7, to: 7 });
+  expect(adapter.setSelection).not.toHaveBeenCalled();
 });

@@ -3,6 +3,10 @@ import { expect, it, vi } from 'vitest';
 
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 
+import {
+  IMMERSIVE_READING_BACKWARD_REVEAL_RATIO,
+  IMMERSIVE_READING_FORWARD_REVEAL_RATIO
+} from './immersiveReadingViewportBand';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 
 type ImmersiveProps = Parameters<typeof useImmersiveReadingMode>[0];
@@ -162,6 +166,9 @@ it('runs highlight and note actions from the current paragraph selection', () =>
 });
 it('shows a paragraph marker when moving with space', () => {
   const { adapter, onRevealDocumentSelection, props } = buildProps();
+  vi.mocked(adapter.getDocumentPositionAtViewportY)
+    .mockReturnValueOnce(0)
+    .mockReturnValueOnce(7);
   renderHook(() => useImmersiveReadingMode(props));
 
   act(() => {
@@ -170,7 +177,8 @@ it('shows a paragraph marker when moving with space', () => {
 
   expect(onRevealDocumentSelection).not.toHaveBeenCalled();
   expect(adapter.setParagraphMarker).toHaveBeenCalledWith({ from: 0, to: 5 });
-  expect(adapter.revealSelection).toHaveBeenCalledWith({ from: 0, to: 5 });
+  expect(adapter.revealSelection).not.toHaveBeenCalled();
+  expect(adapter.revealSelectionAtViewportRatio).not.toHaveBeenCalled();
 });
 it('moves the paragraph marker with arrow keys', () => {
   const { adapter, props } = buildProps();
@@ -201,7 +209,48 @@ it('starts the paragraph marker from the persisted reading position', () => {
   });
 
   expect(adapter.setParagraphMarker).toHaveBeenCalledWith({ from: 7, to: 11 });
-  expect(adapter.revealSelection).toHaveBeenCalledWith({ from: 7, to: 11 });
+  expect(adapter.revealSelection).not.toHaveBeenCalled();
+});
+
+it('reveals the next paragraph only after it leaves the immersive safe band', () => {
+  const { adapter, props } = buildProps();
+  vi.mocked(adapter.getDocumentPositionAtViewportY)
+    .mockReturnValueOnce(0)
+    .mockReturnValueOnce(5)
+    .mockReturnValueOnce(0)
+    .mockReturnValueOnce(5);
+  renderHook(() => useImmersiveReadingMode(props));
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+  });
+
+  expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledTimes(1);
+  expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
+    { from: 7, to: 11 },
+    IMMERSIVE_READING_FORWARD_REVEAL_RATIO
+  );
+});
+
+it('repositions upward navigation near the bottom of the safe band when needed', () => {
+  const { adapter, props } = buildProps();
+  (props as { editorNodeViewState?: { scrollTop: number; selection: EditorSelection } }).editorNodeViewState = {
+    scrollTop: 120,
+    selection: { from: 7, to: 7 }
+  };
+  vi.mocked(adapter.getDocumentPositionAtViewportY).mockReturnValue(3);
+  renderHook(() => useImmersiveReadingMode(props));
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+  });
+
+  expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
+    { from: 0, to: 5 },
+    IMMERSIVE_READING_BACKWARD_REVEAL_RATIO
+  );
 });
 it('toggles the shortcuts overlay with question mark', () => {
   const { props } = buildProps();
