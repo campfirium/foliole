@@ -71,7 +71,8 @@ export async function syncCompanionAttachmentResourcesFromDesktop(
 
 export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   endpointUrl: string,
-  requests: AttachmentResourceRequest[]
+  requests: AttachmentResourceRequest[],
+  onSyncedChunk?: (attachmentIds: string[]) => void
 ) {
   if (!isNativeAndroidCompanionRuntime()) {
     return [];
@@ -88,6 +89,10 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
       } else {
         failedAttachmentCount += 1;
       }
+    }
+    const syncedChunkIds = results.filter((result): result is string => Boolean(result));
+    if (syncedChunkIds.length > 0) {
+      onSyncedChunk?.(syncedChunkIds);
     }
   }
   if (requests.length > 0 && failedAttachmentCount === requests.length) {

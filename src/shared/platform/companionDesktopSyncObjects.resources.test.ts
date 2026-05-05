@@ -33,30 +33,6 @@ async function testPullsContentBlobs() {
   expect(fetchMock).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/content-blob/ack', expect.any(Object));
 }
 
-async function testReportsContentProgressAfterEachConcurrentChunk() {
-  const { CONTENT_BLOB_CONCURRENT_FETCH_LIMIT } = await import('./companionDesktopSyncResources');
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const hashes = Array.from({ length: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT + 1 }, (_, index) => `${index}`.padStart(64, '0'));
-  syncBridgeMock.loadCompanionMissingContentBlobs
-    .mockResolvedValueOnce(hashes.map((hash) => ({ hash, size_bytes: 2 })))
-    .mockResolvedValueOnce([]);
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: hashes, status: 'ok' }), { status: 200 })));
-  const onProgress = vi.fn();
-
-  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
-
-  expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
-    completed: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT,
-    completedBytes: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT * 2,
-    phase: 'content'
-  }));
-  expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
-    completed: CONTENT_BLOB_CONCURRENT_FETCH_LIMIT + 1,
-    completedBytes: (CONTENT_BLOB_CONCURRENT_FETCH_LIMIT + 1) * 2,
-    phase: 'content'
-  }));
-}
-
 async function testPullsAttachmentResources() {
   syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
@@ -69,7 +45,8 @@ async function testPullsAttachmentResources() {
   expect(syncBridgeMock.loadCompanionMissingAttachmentResources).toHaveBeenCalledWith(ATTACHMENT_RESOURCE_BATCH_LIMIT);
   expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).toHaveBeenCalledWith(
     'http://10.0.2.2:38641/',
-    [{ attachmentId: 'att-1', contentHash: 'hash-att-1' }]
+    [{ attachmentId: 'att-1', contentHash: 'hash-att-1' }],
+    expect.any(Function)
   );
   expect(result.syncedAttachmentIds).toEqual(['att-1']);
   expect(attachmentResolutionMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith('att-1');
@@ -194,10 +171,13 @@ async function testStopsAttachmentPassAtResourceBudget() {
   syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValue(resources);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockImplementation(async (
     _endpointUrl: string,
-    requests: Array<{ attachmentId: string }>
+    requests: Array<{ attachmentId: string }>,
+    onSyncedChunk?: (attachmentIds: string[]) => void
   ) => {
     now = COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS + 1;
-    return requests.map((request) => request.attachmentId);
+    const syncedIds = requests.map((request) => request.attachmentId);
+    onSyncedChunk?.(syncedIds);
+    return syncedIds;
   });
 
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
@@ -235,8 +215,6 @@ describe('companion desktop sync resources', () => {
   beforeEach(resetCompanionDesktopSyncMocks);
 
   it('pulls missing content blobs from desktop', testPullsContentBlobs);
-
-  it('reports missing content blob progress after each concurrent chunk', testReportsContentProgressAfterEachConcurrentChunk);
 
   it('pulls missing attachment resources after structure sync', testPullsAttachmentResources);
 

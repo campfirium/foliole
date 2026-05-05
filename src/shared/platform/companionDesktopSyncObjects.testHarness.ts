@@ -14,10 +14,16 @@ export const syncBridgeMock = {
 };
 
 export const attachmentResourceMock = {
+  ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT: 6,
   syncCompanionAttachmentResourceRequestsFromDesktop: vi.fn(async (
     _endpointUrl: string,
-    requests: Array<{ attachmentId: string }>
-  ) => requests.map((request) => request.attachmentId))
+    requests: Array<{ attachmentId: string }>,
+    onSyncedChunk?: (attachmentIds: string[]) => void
+  ) => {
+    const syncedIds = requests.map((request) => request.attachmentId);
+    onSyncedChunk?.(syncedIds);
+    return syncedIds;
+  })
 };
 
 export const attachmentResolutionMock = {
@@ -81,8 +87,13 @@ export function resetCompanionDesktopSyncMocks() {
   diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue(null);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockImplementation(async (
     _endpointUrl: string,
-    requests: Array<{ attachmentId: string }>
-  ) => requests.map((request) => request.attachmentId));
+    requests: Array<{ attachmentId: string }>,
+    onSyncedChunk?: (attachmentIds: string[]) => void
+  ) => {
+    const syncedIds = requests.map((request) => request.attachmentId);
+    onSyncedChunk?.(syncedIds);
+    return syncedIds;
+  });
   attachmentResolutionMock.invalidateAttachmentResourceResolution.mockReset();
   pairingMock.createSignedRequestHeaders.mockImplementation(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
     'X-Device-Id': 'android-test-device',

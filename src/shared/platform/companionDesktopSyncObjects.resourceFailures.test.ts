@@ -110,10 +110,13 @@ async function testKeepsEarlierAttachmentsWhenLaterBatchFails() {
     .mockResolvedValueOnce([{ attachment_id: 'att-fail', content_hash: 'hash-fail', size_bytes: 1024 }]);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockImplementation(async (
     _endpointUrl: string,
-    requests: Array<{ attachmentId: string }>
+    requests: Array<{ attachmentId: string }>,
+    onSyncedChunk?: (attachmentIds: string[]) => void
   ) => {
     if (requests[0]?.attachmentId === 'att-fail') throw new Error('Attachment batch could not download any requested file.');
-    return requests.map((request) => request.attachmentId);
+    const syncedIds = requests.map((request) => request.attachmentId);
+    onSyncedChunk?.(syncedIds);
+    return syncedIds;
   });
 
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');

@@ -123,27 +123,30 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
     const resources = await loadCompanionMissingAttachmentResources(ATTACHMENT_RESOURCE_BATCH_LIMIT);
     if (resources.length === 0) break;
     let syncedBatchIds: string[];
+    const sizeByAttachmentId = new Map(resources.map((resource) => [
+      resource.attachment_id,
+      Math.max(0, resource.size_bytes ?? 0)
+    ]));
     try {
       syncedBatchIds = await syncCompanionAttachmentResourceRequestsFromDesktop(
         endpointUrl,
         resources.map((resource) => ({
           attachmentId: resource.attachment_id,
           contentHash: resource.content_hash
-        }))
+        })),
+        (syncedChunkIds) => {
+          syncedAttachmentIds.push(...syncedChunkIds);
+          for (const attachmentId of syncedChunkIds) {
+            invalidateAttachmentResourceResolution(attachmentId);
+          }
+          syncedBytes += syncedChunkIds.reduce((sum, attachmentId) => sum + (sizeByAttachmentId.get(attachmentId) ?? 0), 0);
+          onProgress?.({ attachmentBreakdown, completed: syncedAttachmentIds.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'attachment', total, totalBytes });
+        }
       );
     } catch (error) {
       if (syncedAttachmentIds.length > 0) break;
       throw error;
     }
-    syncedAttachmentIds.push(...syncedBatchIds);
-    const syncedIdSet = new Set(syncedBatchIds);
-    for (const attachmentId of syncedBatchIds) {
-      invalidateAttachmentResourceResolution(attachmentId);
-    }
-    syncedBytes += resources
-      .filter((resource) => syncedIdSet.has(resource.attachment_id))
-      .reduce((sum, resource) => sum + Math.max(0, resource.size_bytes ?? 0), 0);
-    onProgress?.({ attachmentBreakdown, completed: syncedAttachmentIds.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'attachment', total, totalBytes });
     if (syncedBatchIds.length === 0) {
       if (syncedAttachmentIds.length > 0) break;
       throw new Error('Attachment file batch could not download any requested file.');
