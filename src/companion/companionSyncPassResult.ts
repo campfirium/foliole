@@ -11,6 +11,7 @@ export interface CompanionSyncPassInput {
   remainingAttachmentResourceCount: number | null;
   remainingContentBlobBytes?: number | null;
   remainingContentBlobCount: number | null;
+  remainingStructureChangeCount?: number | null;
 }
 
 export interface CompanionSyncPassResult {
@@ -37,12 +38,23 @@ function joinBacklogSuffix(prefix: string, suffix: string) {
 function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
   const remainingBodies = result.remainingContentBlobCount;
   const remainingAttachments = result.remainingAttachmentResourceCount;
+  const remainingStructure = result.remainingStructureChangeCount === undefined ? 0 : result.remainingStructureChangeCount;
   const bodyLabel = formatBacklogLabel('topic bodies', remainingBodies, result.remainingContentBlobBytes);
   const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
-  if (remainingBodies === 0 && remainingAttachments === 0) return prefix;
-  if (remainingBodies === 0) return joinBacklogSuffix(prefix, `${attachmentLabel} still caching.`);
-  if (remainingAttachments === 0) return joinBacklogSuffix(prefix, `${bodyLabel} still caching.`);
-  return joinBacklogSuffix(prefix, `${bodyLabel} and ${attachmentLabel} still caching.`);
+  const suffixes: string[] = [];
+  if (typeof remainingStructure === 'number' && remainingStructure > 0) {
+    suffixes.push(`${remainingStructure} structure change(s) still applying`);
+  } else if (remainingStructure === null) {
+    suffixes.push('structure confirmation is still pending');
+  }
+  if (remainingBodies !== 0 && remainingAttachments !== 0) {
+    suffixes.push(`${bodyLabel} and ${attachmentLabel} still caching`);
+  } else if (remainingBodies !== 0) {
+    suffixes.push(`${bodyLabel} still caching`);
+  } else if (remainingAttachments !== 0) {
+    suffixes.push(`${attachmentLabel} still caching`);
+  }
+  return suffixes.length === 0 ? prefix : joinBacklogSuffix(prefix, `${suffixes.join(', and ')}.`);
 }
 
 function createPassResult(message: string, status: CompanionSyncPassResult['status']): CompanionSyncPassResult {
@@ -75,12 +87,17 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
   if (
     result.remainingContentBlobCount === 0 &&
     result.remainingAttachmentResourceCount === 0 &&
+    (result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0) &&
     result.localDirtyCount === 0 &&
     result.pendingAckCount === 0
   ) {
     return createPassResult('Sync fully completed.', 'completed');
   }
-  if (result.remainingContentBlobCount === 0 && result.remainingAttachmentResourceCount === 0) {
+  if (
+    result.remainingContentBlobCount === 0 &&
+    result.remainingAttachmentResourceCount === 0 &&
+    (result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0)
+  ) {
     return createPassResult('Sync pass finished; local changes are still waiting to settle.', 'skipped');
   }
   return createPassResult(appendBacklogSuffix('Sync pass finished', result), 'skipped');

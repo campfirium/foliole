@@ -39,6 +39,7 @@ const syncBridgeMock = vi.hoisted(() => ({
 }));
 
 const diagnosticsMock = vi.hoisted(() => ({
+  loadDesktopSyncDiagnostics: vi.fn(async () => null),
   loadLocalSyncDiagnostics: vi.fn(async () => null)
 }));
 
@@ -134,6 +135,7 @@ describe('companion desktop sync push acknowledgements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue(null);
+    diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => ({
       json: async () => {

@@ -19,6 +19,7 @@ function passInput(overrides: Partial<CompanionSyncPassInput> = {}): CompanionSy
     remainingAttachmentResourceCount: 0,
     remainingContentBlobBytes: null,
     remainingContentBlobCount: 0,
+    remainingStructureChangeCount: 0,
     ...overrides
   };
 }
@@ -84,6 +85,26 @@ describe('describeCompanionSyncPassResult', () => {
       pushIssueCount: 1
     }))).toEqual({
       message: 'Sync pass finished; 1 device change(s) need review before they can be sent.',
+      outcome: 'skipped',
+      status: 'skipped'
+    });
+  });
+
+  it('keeps structure lag out of completed events', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      remainingStructureChangeCount: 4
+    }))).toEqual({
+      message: 'Sync pass finished; 4 structure change(s) still applying.',
+      outcome: 'skipped',
+      status: 'skipped'
+    });
+  });
+
+  it('keeps unknown structure confirmation out of completed events', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      remainingStructureChangeCount: null
+    }))).toEqual({
+      message: 'Sync pass finished; structure confirmation is still pending.',
       outcome: 'skipped',
       status: 'skipped'
     });

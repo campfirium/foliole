@@ -155,4 +155,22 @@ describe('useForegroundAutoSync', () => {
 
     expect(tryForegroundAutoSync).toHaveBeenCalledTimes(3);
   });
+
+  it('keeps retrying long backlog sync passes after the initial backoff window', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const tryForegroundAutoSync = vi.fn(async () => 'skipped' as const);
+    await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    for (const delay of [2_000, 5_000, 15_000, 30_000, 60_000, 60_000]) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(delay);
+      });
+    }
+
+    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(7);
+  });
 });

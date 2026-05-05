@@ -1,7 +1,10 @@
 import { syncCompanionAttachmentResourceRequestsFromDesktop } from './companionDesktopAttachmentResources';
 import { postDesktopJson } from './companionDesktopSyncHttp';
 import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
-import { loadLocalSyncDiagnostics } from './companionSyncDiagnostics';
+import {
+  loadDesktopSyncDiagnostics,
+  loadLocalSyncDiagnostics
+} from './companionSyncDiagnostics';
 import {
   applyCompanionDesktopSyncPack,
   loadCompanionMissingAttachmentResources,
@@ -79,6 +82,7 @@ export interface CompanionDesktopSyncResult {
   remainingAttachmentResourceCount: number | null;
   remainingContentBlobBytes: number | null;
   remainingContentBlobCount: number | null;
+  remainingStructureChangeCount: number | null;
   syncedContentBlobHashes: string[];
 }
 
@@ -174,8 +178,11 @@ async function loadMissingAttachmentResourceSummary() {
   };
 }
 
-async function loadFinalLocalSyncSummary() {
+async function loadFinalSyncSummary(endpointUrl: string) {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
+  const desktopDiagnostics = await loadDesktopSyncDiagnostics(endpointUrl).catch(() => null);
+  const desktopStateSeq = desktopDiagnostics?.sync_state.max_state_seq;
+  const androidCursor = diagnostics?.sync_state.pack_cursor;
   return {
     localDirtyCount: diagnostics?.sync_state.local_dirty_count ?? null,
     pendingAckCount: diagnostics?.sync_state.pending_ack_count ?? null,
@@ -183,7 +190,10 @@ async function loadFinalLocalSyncSummary() {
     remainingAttachmentResourceBytes: diagnostics?.content.missing_attachment_resource_bytes ?? null,
     remainingAttachmentResourceCount: diagnostics?.content.missing_attachment_resource_count ?? null,
     remainingContentBlobBytes: diagnostics?.content.missing_content_blob_bytes ?? null,
-    remainingContentBlobCount: diagnostics?.content.missing_content_blob_count ?? null
+    remainingContentBlobCount: diagnostics?.content.missing_content_blob_count ?? null,
+    remainingStructureChangeCount: typeof desktopStateSeq === 'number' && typeof androidCursor === 'number'
+      ? Math.max(0, desktopStateSeq - androidCursor)
+      : null
   };
 }
 
@@ -355,7 +365,7 @@ async function runCompanionObjectsSync(
   } catch (error) {
     attachmentResourceError = errorMessage(error);
   }
-  const finalSummary = await loadFinalLocalSyncSummary();
+  const finalSummary = await loadFinalSyncSummary(endpointUrl);
   return {
     appliedNodeIds: [],
     appliedPackBlobCount: pack.appliedPackBlobCount,
@@ -379,6 +389,7 @@ async function runCompanionObjectsSync(
     remainingAttachmentResourceCount: finalSummary.remainingAttachmentResourceCount,
     remainingContentBlobBytes: finalSummary.remainingContentBlobBytes,
     remainingContentBlobCount: finalSummary.remainingContentBlobCount,
+    remainingStructureChangeCount: finalSummary.remainingStructureChangeCount,
     syncedContentBlobHashes,
     pushRejectedCount: pushed.pushRejectedCount
   };

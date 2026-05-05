@@ -38,6 +38,7 @@ function createSyncObjectsResult(overrides: Partial<CompanionDesktopSyncResult> 
     remainingAttachmentResourceCount: 0,
     remainingContentBlobBytes: null,
     remainingContentBlobCount: 0,
+    remainingStructureChangeCount: 0,
     requestedObjectIds: [],
     syncedAttachmentIds: [],
     syncedContentBlobHashes: [],
@@ -158,6 +159,29 @@ async function testRecordsBacklogBytes() {
 
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Sync pass finished; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still caching.',
+    status: 'skipped'
+  }));
+}
+
+async function testRecordsStructureLagWithoutCompleting() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    remainingStructureChangeCount: 4
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('skipped');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync pass finished; 4 structure change(s) still applying.',
     status: 'skipped'
   }));
 }
@@ -293,6 +317,8 @@ describe('tryForegroundAutoSync', () => {
   it('does not surface unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
 
   it('records remaining cache bytes when a pass leaves body or attachment backlog', testRecordsBacklogBytes);
+
+  it('records structure lag without marking the pass completed', testRecordsStructureLagWithoutCompleting);
 
   it('keeps sync progress visible when a pass leaves resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
 

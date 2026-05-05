@@ -34,6 +34,7 @@ const capacitorMock = vi.hoisted(() => ({
 }));
 
 const diagnosticsMock = vi.hoisted(() => ({
+  loadDesktopSyncDiagnostics: vi.fn(async () => null),
   loadLocalSyncDiagnostics: vi.fn(async () => null)
 }));
 
@@ -357,6 +358,37 @@ async function testAllowsLongerContentCachingPass() {
   vi.useRealTimers();
 }
 
+async function testReportsRemainingStructureLagFromFinalDiagnostics() {
+  diagnosticsMock.loadLocalSyncDiagnostics
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce({
+      content: {
+        missing_attachment_resource_bytes: 0,
+        missing_attachment_resource_count: 0,
+        missing_content_blob_bytes: 0,
+        missing_content_blob_count: 0
+      },
+      sync_state: {
+        local_dirty_count: 0,
+        pack_cursor: 8,
+        pending_ack_count: 0,
+        push_issue_count: 0
+      }
+    });
+  diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue({
+    sync_state: {
+      max_state_seq: 10
+    }
+  });
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(diagnosticsMock.loadDesktopSyncDiagnostics).toHaveBeenCalledWith('http://10.0.2.2:38641/');
+  expect(result.remainingStructureChangeCount).toBe(2);
+}
+
 describe('companion desktop sync objects', () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -376,6 +408,7 @@ describe('companion desktop sync objects', () => {
     syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);
     syncBridgeMock.saveCompanionSyncPackCursor.mockImplementation(async (cursor: number | null) => cursor);
     diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue(null);
+    diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue(null);
     syncBridgeMock.syncCompanionContentBlob.mockImplementation(async ({ hash }: { hash: string }) => ({
       availability: 'cached',
       hash
@@ -415,4 +448,6 @@ describe('companion desktop sync objects', () => {
   it('fails instead of staying in sync when a desktop sync stage never returns', testFailsWhenStageNeverReturns);
 
   it('allows a resource caching pass to run longer than the structure timeout', testAllowsLongerContentCachingPass);
+
+  it('reports remaining structure lag from final diagnostics', testReportsRemainingStructureLagFromFinalDiagnostics);
 });

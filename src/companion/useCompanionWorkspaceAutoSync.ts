@@ -49,8 +49,8 @@ function createForegroundSyncRunner(args: {
 }) {
   function scheduleRetry(runForegroundSyncCheck: (reason: ForegroundSyncReason) => void) {
     if (args.cancelled() || args.retryTimerRef.current) return;
-    const delay = AUTO_SYNC_RETRY_DELAYS_MS[args.retryAttemptRef.current];
-    if (typeof delay !== 'number') return;
+    const delayIndex = Math.min(args.retryAttemptRef.current, AUTO_SYNC_RETRY_DELAYS_MS.length - 1);
+    const delay = AUTO_SYNC_RETRY_DELAYS_MS[delayIndex];
     args.retryAttemptRef.current += 1;
     args.retryTimerRef.current = setTimeout(() => {
       args.retryTimerRef.current = null;

@@ -17,7 +17,8 @@ const syncObjectsMock = vi.hoisted(() => ({
     pushIssueCount: 0,
     pushRejectedCount: 0,
     remainingAttachmentResourceCount: 0,
-    remainingContentBlobCount: 0
+    remainingContentBlobCount: 0,
+    remainingStructureChangeCount: 0
   }))
 }));
 const workspaceSyncMock = vi.hoisted(() => ({
