@@ -8,10 +8,12 @@ function normalizeNodeViewState(viewState: WorkspaceState['nodeViewById'][string
   }
   return {
     scrollTop: Math.max(0, viewState.scrollTop),
-    selection: {
-      from: Math.max(0, viewState.selection.from),
-      to: Math.max(0, viewState.selection.to)
-    },
+    selection: viewState.selection
+      ? {
+          from: Math.max(0, viewState.selection.from),
+          to: Math.max(0, viewState.selection.to)
+        }
+      : null,
     updatedAt:
       typeof viewState.updatedAt === 'string' && viewState.updatedAt.trim().length > 0
         ? viewState.updatedAt
@@ -28,8 +30,8 @@ function hasSameNodeViewState(
   }
   return (
     previousViewState.scrollTop === nextViewState.scrollTop &&
-    previousViewState.selection.from === nextViewState.selection.from &&
-    previousViewState.selection.to === nextViewState.selection.to
+    previousViewState.selection?.from === nextViewState.selection?.from &&
+    previousViewState.selection?.to === nextViewState.selection?.to
   );
 }
 

@@ -21,7 +21,7 @@ export function clampInteger(value: number, minimum: number, maximum: number) {
 }
 
 export function resolveInitialPage(nodeViewState?: NodeViewState) {
-  return clampInteger(nodeViewState?.selection.from ?? PDF_PAGE_MIN, PDF_PAGE_MIN, Number.MAX_SAFE_INTEGER);
+  return clampInteger(nodeViewState?.selection?.from ?? PDF_PAGE_MIN, PDF_PAGE_MIN, Number.MAX_SAFE_INTEGER);
 }
 
 function clampPositionY(value: number) {
@@ -36,7 +36,7 @@ export function resolveInitialPositionY(nodeViewState?: NodeViewState) {
 }
 
 export function resolveInitialZoomMode(nodeViewState?: NodeViewState): PdfZoomMode {
-  const encodedZoom = nodeViewState?.selection.to;
+  const encodedZoom = nodeViewState?.selection?.to;
   if (typeof encodedZoom === 'number' && encodedZoom >= PDF_ZOOM_MIN) {
     return PDF_ZOOM_MODE_CUSTOM;
   }
@@ -44,7 +44,7 @@ export function resolveInitialZoomMode(nodeViewState?: NodeViewState): PdfZoomMo
 }
 
 export function resolveInitialCustomZoom(nodeViewState?: NodeViewState) {
-  const encodedZoom = nodeViewState?.selection.to;
+  const encodedZoom = nodeViewState?.selection?.to;
   if (typeof encodedZoom === 'number' && encodedZoom >= PDF_ZOOM_MIN) {
     return clampInteger(encodedZoom, PDF_ZOOM_MIN, PDF_ZOOM_MAX);
   }

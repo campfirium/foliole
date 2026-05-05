@@ -3,6 +3,9 @@ import type { EditorViewportMode } from '../adapters/EditorAdapter';
 import type { EditorViewState } from './markdownEditorTypes';
 
 export function normalizeRestoreSelection(selection: EditorViewState['selection']) {
+  if (!selection) {
+    return null;
+  }
   return selection.from === selection.to
     ? selection
     : {
@@ -32,7 +35,7 @@ export function resolveRestoreScrollTop(
   return undefined;
 }
 
-export function shouldCollapseSelectionAfterRestore(selection: EditorViewState['selection']) {
+export function shouldCollapseSelectionAfterRestore(selection: NonNullable<EditorViewState['selection']>) {
   if (selection.from !== selection.to || (selection.from === 0 && selection.to === 0)) {
     return undefined;
   }
@@ -47,8 +50,12 @@ export function createPendingRestoreSelectionKey(
 ) {
   const selectionSource = readingSelection ?? nodeViewState?.selection;
   const selection = selectionSource ? normalizeRestoreSelection(selectionSource) : null;
-  if (!nodeId || !selection) {
+  const scrollTop = resolveRestoreScrollTop(readingSelection, nodeViewState);
+  if (!nodeId || (!selection && !(typeof scrollTop === 'number' && scrollTop > 0))) {
     return null;
   }
-  return `${nodeId}:${selection.from}:${selection.to}:${resolveRestoreScrollTop(readingSelection, nodeViewState) ?? 'auto'}:${targetViewportMode ?? 'default'}`;
+  if (!selection) {
+    return `${nodeId}:scroll-only:${scrollTop}:${targetViewportMode ?? 'default'}`;
+  }
+  return `${nodeId}:${selection.from}:${selection.to}:${scrollTop ?? 'auto'}:${targetViewportMode ?? 'default'}`;
 }

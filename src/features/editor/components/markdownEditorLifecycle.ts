@@ -39,9 +39,9 @@ export function useEditorLayoutEffects(
   readingTargetViewportMode: EditorViewportMode | null | undefined,
   readingTargetViewportRatio: number | null | undefined,
   nodeViewState: EditorViewState | undefined,
-  beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined,
-  completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined,
-  setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined,
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined,
+  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined,
+  setReadingPositionSelection: ((selection: NonNullable<EditorViewState['selection']>) => void) | undefined,
   shouldSuppressSelectionRestore: (() => boolean) | undefined,
   value: string,
   lineDiffDecorations: EditorDiffDecorations | null | undefined

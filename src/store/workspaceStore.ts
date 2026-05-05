@@ -128,7 +128,7 @@ export interface NodeViewState {
   selection: {
     from: number;
     to: number;
-  };
+  } | null;
   updatedAt?: string | null;
 }
 

@@ -58,7 +58,7 @@ function createLongDocument() {
 function createScrollOnlyViewState() {
   return {
     scrollTop: 5_400,
-    selection: { from: 0, to: 0 }
+    selection: null
   };
 }
 
@@ -107,7 +107,7 @@ it('retries a saved scroll-only restore after a short placeholder body fails to 
     <MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value="Short preview body." />
   );
 
-  expect(mockRestoreSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  expect(mockRestoreSelection).not.toHaveBeenCalled();
   await waitFor(() => {
     expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
   });

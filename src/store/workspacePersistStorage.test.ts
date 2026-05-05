@@ -141,6 +141,7 @@ describe('workspacePersistStorage runtime merge', () => {
     expect(invoke).toHaveBeenCalledWith('load_reading_progress');
     expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
   });
+
 });
 
 describe('workspacePersistStorage runtime fallback', () => {

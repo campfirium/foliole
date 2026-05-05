@@ -23,7 +23,7 @@ interface NodeViewState {
   selection: {
     from: number;
     to: number;
-  };
+  } | null;
   updatedAt?: string | null;
 }
 
@@ -93,14 +93,16 @@ function toRuntimeReadingProgressSnapshot(value: unknown): RuntimeReadingProgres
 function toLocalNodeViewById(nodeViewStateById: Record<string, RuntimeNodeViewState>): Record<string, NodeViewState> {
   const localNodeViewById: Record<string, NodeViewState> = {};
   for (const [nodeId, state] of Object.entries(nodeViewStateById)) {
-    const selectionFrom = state.selectionFrom ?? 0;
-    const selectionTo = state.selectionTo ?? selectionFrom;
+    const selection =
+      state.selectionFrom === null || state.selectionTo === null
+        ? null
+        : {
+            from: state.selectionFrom,
+            to: state.selectionTo
+          };
     localNodeViewById[nodeId] = {
       scrollTop: Math.max(0, Math.trunc(state.scrollTop)),
-      selection: {
-        from: selectionFrom,
-        to: selectionTo
-      },
+      selection,
       updatedAt: state.updatedAt ?? null
     };
   }
@@ -139,8 +141,8 @@ export function toRuntimeNodeViewStates(nodeViewById: Record<string, NodeViewSta
   const nodeViewStates: Array<{
     nodeId: string;
     scrollTop: number;
-    selectionFrom: number;
-    selectionTo: number;
+    selectionFrom: number | null;
+    selectionTo: number | null;
   }> = [];
 
   for (const [nodeId, viewState] of Object.entries(nodeViewById)) {
@@ -150,8 +152,8 @@ export function toRuntimeNodeViewStates(nodeViewById: Record<string, NodeViewSta
     nodeViewStates.push({
       nodeId,
       scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
-      selectionFrom: Math.max(0, Math.trunc(viewState.selection.from)),
-      selectionTo: Math.max(0, Math.trunc(viewState.selection.to))
+      selectionFrom: viewState.selection ? Math.max(0, Math.trunc(viewState.selection.from)) : null,
+      selectionTo: viewState.selection ? Math.max(0, Math.trunc(viewState.selection.to)) : null
     });
   }
 

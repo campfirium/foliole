@@ -25,10 +25,12 @@ export interface PendingNodeViewStateMap {
 export function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
   return {
     scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
-    selection: {
-      from: Math.max(0, Math.trunc(viewState.selection.from)),
-      to: Math.max(0, Math.trunc(viewState.selection.to))
-    }
+    selection: viewState.selection
+      ? {
+          from: Math.max(0, Math.trunc(viewState.selection.from)),
+          to: Math.max(0, Math.trunc(viewState.selection.to))
+        }
+      : null
   };
 }
 
@@ -38,8 +40,8 @@ export function isSameNodeViewState(left: NodeViewState | undefined, right: Node
   }
   return (
     left.scrollTop === right.scrollTop &&
-    left.selection.from === right.selection.from &&
-    left.selection.to === right.selection.to
+    left.selection?.from === right.selection?.from &&
+    left.selection?.to === right.selection?.to
   );
 }
 

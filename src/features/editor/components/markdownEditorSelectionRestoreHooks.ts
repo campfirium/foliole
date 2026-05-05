@@ -45,7 +45,7 @@ export function usePendingRestoreKey(args: {
 
 export function useRestoreCompletionCleanup(args: {
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;

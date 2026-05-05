@@ -16,7 +16,7 @@ export interface EditorViewState {
   selection: {
     from: number;
     to: number;
-  };
+  } | null;
 }
 
 export interface MarkdownEditorProps {

@@ -45,17 +45,17 @@ beforeEach(() => {
   mockSetScrollTop.mockClear();
 });
 
-it('restores saved scroll position even when the saved selection stays at the document start', async () => {
+it('restores a scroll-only saved position without applying a fake selection', async () => {
   renderEditor(
     <MarkdownEditor
       nodeId="node-1"
-      nodeViewState={{ scrollTop: 5_400, selection: { from: 0, to: 0 } }}
+      nodeViewState={{ scrollTop: 5_400, selection: null }}
       onChange={vi.fn()}
       value={'Paragraph\n\n'.repeat(200)}
     />
   );
 
-  expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 0, to: 0 });
+  expect(mockRestoreSelection).not.toHaveBeenCalled();
   await waitFor(() => {
     expect(mockSetScrollTop).toHaveBeenLastCalledWith(5_400);
   });
