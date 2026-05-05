@@ -22,8 +22,10 @@ it('toggles both sidebars from the titlebar buttons', () => {
   expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(true);
   expect(screen.queryByRole('complementary', { name: 'Inspector' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Review queue panel' })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle right sidebar' }));
   expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(false);
+  expect(screen.getByRole('button', { name: 'Review queue panel' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
 });

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -37,6 +37,8 @@ it('renders the dev panel with resolved scheduling and raw node fields', () => {
   }));
 
   render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Dev panel' }));
 
   expect(screen.getByRole('button', { name: 'Dev panel' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByText('Scheduling')).toBeInTheDocument();

@@ -1,8 +1,8 @@
-import { Bug, FileText, PanelLeft, Trash2 } from 'lucide-react';
+import { Bug, FileText, ListOrdered, PanelLeft, Trash2 } from 'lucide-react';
 
 import { AppIconButton, AppToolbar } from '../../shared/ui';
 
-export type WorkspaceRightPanelId = 'dev';
+export type WorkspaceRightPanelId = 'review-queue' | 'dev';
 
 interface WorkspaceTopToolbarProps {
   isTrashViewOpen: boolean;
@@ -49,6 +49,14 @@ export function WorkspaceTopToolbar({
       </div>
       <div className="flex-1" />
       <div className="flex items-center gap-1.5">
+        <AppIconButton
+          aria-pressed={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
+          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+          data-active={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
+          icon={<ListOrdered aria-hidden="true" size={16} strokeWidth={1.75} />}
+          label="Review queue panel"
+          onClick={() => onSelectRightPanel('review-queue')}
+        />
         <AppIconButton
           aria-pressed={!isRightSidebarCollapsed && activeRightPanelId === 'dev'}
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"

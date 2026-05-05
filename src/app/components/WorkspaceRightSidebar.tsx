@@ -1,16 +1,19 @@
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceRightSidebarDevPanel } from './WorkspaceRightSidebarDevPanel';
+import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export function WorkspaceRightSidebar(props: Pick<
   WorkspaceLayoutProps,
   | 'activeNodeId'
   | 'nodesById'
+  | 'reviewCurrentNodeId'
+  | 'reviewQueueNodeIds'
   | 'reviewSchedulerSettings'
 > & {
   activePanelId: WorkspaceRightPanelId;
 }) {
-  const panelTitle = props.activePanelId === 'dev' ? 'Dev panel' : 'Inspector';
+  const panelTitle = props.activePanelId === 'dev' ? 'Dev panel' : 'Review queue';
 
   return (
     <aside
@@ -30,7 +33,13 @@ export function WorkspaceRightSidebar(props: Pick<
             nodesById={props.nodesById}
             reviewSchedulerSettings={props.reviewSchedulerSettings}
           />
-        ) : null}
+        ) : (
+          <WorkspaceRightSidebarReviewQueuePanel
+            currentNodeId={props.reviewCurrentNodeId}
+            nodesById={props.nodesById}
+            queueNodeIds={props.reviewQueueNodeIds}
+          />
+        )}
       </div>
     </aside>
   );

@@ -46,6 +46,7 @@ export interface WorkspaceLayoutProps {
   isCurrentReviewItemGradable: boolean;
   isReviewEditing: boolean;
   reviewCurrentNodeId: string | null;
+  reviewQueueNodeIds: string[];
   reviewQueueVisibility: ReviewQueueVisibility | null;
   reviewQueueCount: number;
   reviewCompletedCount: number;

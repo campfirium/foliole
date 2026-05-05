@@ -87,6 +87,7 @@ describe('WindowTitleBar', () => {
     renderTitleBar({ isRightSidebarCollapsed: true });
 
     expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Review queue panel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
   });
 
@@ -115,5 +116,7 @@ describe('WindowTitleBar', () => {
     expect(shell.contains(toggleAction)).toBe(true);
     expect(shell.contains(anchor)).toBe(true);
     expect(anchor.contains(panelActions)).toBe(true);
+    expect(screen.getByRole('button', { name: 'Review queue panel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
   });
 });
