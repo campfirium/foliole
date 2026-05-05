@@ -1,15 +1,25 @@
 {
   "pushAck": {
+    "clientOpIdKeys": [
+      "client_op_id",
+      "clientOpId"
+    ],
     "confirmingStatuses": [
       "accepted",
       "already_applied"
     ],
+    "identityKey": "identity",
+    "identityObjectIdKey": "objectId",
+    "identityObjectTypeKey": "objectType",
+    "resultSavedClientOpIdsKey": "saved_client_op_ids",
+    "stateSeqKey": "state_seq",
     "stateSeqOptionalObjectTypes": [
       "node"
     ],
     "stateSeqRejectedObjectTypes": [
       "review_log"
     ],
+    "statusKey": "status",
     "statuses": [
       "accepted",
       "already_applied",

@@ -97,7 +97,22 @@ describe('Android sync push ack protocol rules', () => {
     const source = await readFile(SYNC_PUSH_ACK_STORE, 'utf8');
 
     expect(definitions).toEqual(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS);
+    expect(definitions.pushAck).toMatchObject({
+      clientOpIdKeys: ['client_op_id', 'clientOpId'],
+      identityKey: 'identity',
+      identityObjectIdKey: 'objectId',
+      identityObjectTypeKey: 'objectType',
+      resultSavedClientOpIdsKey: 'saved_client_op_ids',
+      stateSeqKey: 'state_seq',
+      statusKey: 'status'
+    });
     expect(source).toContain('FolioleCompanionSyncPushAckRules.load(context)');
+    expect(source).toContain('rules.resultSavedClientOpIdsKey()');
+    expect(source).not.toContain('"saved_client_op_ids"');
+    expect(source).not.toContain('"client_op_id"');
+    expect(source).not.toContain('"clientOpId"');
+    expect(source).not.toContain('"identity"');
+    expect(source).not.toContain('"state_seq"');
     expect(source).not.toContain('status.equals("accepted")');
     expect(source).not.toContain('objectType.equals("review_log")');
   });

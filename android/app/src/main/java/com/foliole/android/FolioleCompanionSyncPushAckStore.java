@@ -17,13 +17,13 @@ final class FolioleCompanionSyncPushAckStore {
 
     static JSObject saveAcks(Context context, SQLiteDatabase database, JSONArray acks) throws Exception {
         JSArray savedClientOpIds = new JSArray();
+        FolioleCompanionSyncPushAckRules rules = FolioleCompanionSyncPushAckRules.load(context);
         if (acks == null) {
             JSObject result = new JSObject();
-            result.put("saved_client_op_ids", savedClientOpIds);
+            result.put(rules.resultSavedClientOpIdsKey(), savedClientOpIds);
             return result;
         }
         String now = Instant.now().toString();
-        FolioleCompanionSyncPushAckRules rules = FolioleCompanionSyncPushAckRules.load(context);
         database.beginTransaction();
         try {
             for (int index = 0; index < acks.length(); index += 1) {
@@ -31,13 +31,13 @@ final class FolioleCompanionSyncPushAckStore {
                 if (ack == null || !rules.isKnownStatus(ack)) {
                     continue;
                 }
-                JSONObject identity = ack.optJSONObject("identity");
+                JSONObject identity = rules.identity(ack);
                 if (!rules.hasRequiredFields(ack, identity)) {
                     continue;
                 }
-                String clientOpId = ack.optString("client_op_id", ack.optString("clientOpId"));
-                String objectType = identity.optString("objectType");
-                String objectId = identity.optString("objectId");
+                String clientOpId = rules.clientOpId(ack);
+                String objectType = rules.objectType(identity);
+                String objectId = rules.objectId(identity);
                 FolioleCompanionGeneratedMutationRunner.execute(
                     context,
                     database,
@@ -52,8 +52,8 @@ final class FolioleCompanionSyncPushAckStore {
                         clientOpId,
                         objectType,
                         objectId,
-                        ack.has("state_seq") && !ack.isNull("state_seq") ? ack.optLong("state_seq") : null,
-                        ack.optString("status"),
+                        rules.stateSeq(ack),
+                        rules.status(ack),
                         now
                     }
                 );
@@ -64,7 +64,7 @@ final class FolioleCompanionSyncPushAckStore {
             database.endTransaction();
         }
         JSObject result = new JSObject();
-        result.put("saved_client_op_ids", savedClientOpIds);
+        result.put(rules.resultSavedClientOpIdsKey(), savedClientOpIds);
         return result;
     }
 
