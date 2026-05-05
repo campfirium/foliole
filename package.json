@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "deps:scan": "knip --dependencies --reporter compact",
+    "deps:hardening:check": "bash scripts/npm-hardening-check.sh",
     "windows:preview": "bash scripts/windows/windows-preview.sh",
     "desktop:spike:electron": "node scripts/windows/playwright-electron-spike.mjs",
     "electron:compile": "tsc -p electron/tsconfig.json",
