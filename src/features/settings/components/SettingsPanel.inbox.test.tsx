@@ -7,7 +7,7 @@ import {
   rebuildRuntimeMirrorAttachmentLinks,
   rebuildRuntimeMirrorOutput,
   updateRuntimeLibraryPathSetting
-} from '../../../shared/platform/libraryPathsBridge';
+} from '../../../shared/platform/libraryPathsRuntimeRepository';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -25,9 +25,9 @@ vi.mock('../../../shared/platform/importDirectoryRuntimeRepository', async () =>
     selectRuntimeImportDirectory: vi.fn()
   };
 });
-vi.mock('../../../shared/platform/libraryPathsBridge', async () => {
-  const actual = await vi.importActual<typeof import('../../../shared/platform/libraryPathsBridge')>(
-    '../../../shared/platform/libraryPathsBridge'
+vi.mock('../../../shared/platform/libraryPathsRuntimeRepository', async () => {
+  const actual = await vi.importActual<typeof import('../../../shared/platform/libraryPathsRuntimeRepository')>(
+    '../../../shared/platform/libraryPathsRuntimeRepository'
   );
   return {
     ...actual,

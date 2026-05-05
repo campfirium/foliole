@@ -6,7 +6,7 @@ import {
   rebuildRuntimeMirrorAttachmentLinks,
   rebuildRuntimeMirrorOutput,
   updateRuntimeLibraryPathSetting
-} from './libraryPathsBridge';
+} from './libraryPathsRuntimeRepository';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {

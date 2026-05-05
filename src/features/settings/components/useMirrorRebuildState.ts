@@ -5,7 +5,7 @@ import {
   rebuildRuntimeMirrorOutput,
   type RuntimeMirrorAttachmentLinkRebuildResult,
   type RuntimeMirrorOutputRebuildResult
-} from '../../../shared/platform/libraryPathsBridge';
+} from '../../../shared/platform/libraryPathsRuntimeRepository';
 
 function formatMirrorOutputFeedback(result: RuntimeMirrorOutputRebuildResult) {
   const summary = `Rebuilt ${result.rebuiltArticleCount} mirror article files from ${result.queuedArticleCount} queued articles.`;

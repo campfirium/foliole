@@ -6,7 +6,7 @@ import {
   updateRuntimeLibraryPathSetting,
   type RuntimeLibraryPathLocation,
   type RuntimeLibraryPaths
-} from '../../../shared/platform/libraryPathsBridge';
+} from '../../../shared/platform/libraryPathsRuntimeRepository';
 
 import { useMirrorRebuildState } from './useMirrorRebuildState';
 

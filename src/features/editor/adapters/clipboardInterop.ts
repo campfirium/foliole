@@ -1,7 +1,7 @@
 import type { EditorView } from '@codemirror/view';
 
 import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
-import { loadRuntimeLibraryPathSettings } from '../../../shared/platform/libraryPathsBridge';
+import { loadRuntimeLibraryPathSettings } from '../../../shared/platform/libraryPathsRuntimeRepository';
 import {
   createClipboardExportPayload as createClipboardExportPayloadInModel,
   type ClipboardExportPayload

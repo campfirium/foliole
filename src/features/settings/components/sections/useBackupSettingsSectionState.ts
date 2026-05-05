@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { selectRuntimeImportDirectory } from '../../../../shared/platform/importDirectoryRuntimeRepository';
-import { loadRuntimeLibraryPathSettings } from '../../../../shared/platform/libraryPathsBridge';
+import { loadRuntimeLibraryPathSettings } from '../../../../shared/platform/libraryPathsRuntimeRepository';
 import { useRuntimeAvailability } from '../../../../shared/platform/runtimeAvailability';
 import {
   areDatabaseBackupActionsAvailable,
