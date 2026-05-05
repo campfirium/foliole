@@ -7,7 +7,7 @@ import { buildRetainedDegradedImportContent } from '../../lib/core/import/contro
 import { readEpubArchiveEntries } from './epubArchive.js';
 import { buildChapterMarkdown } from './epubChapterMarkdown.js';
 import { collectManagedEpubImages } from './epubEmbeddedImages.js';
-import { isCoverLikeChapter, isTocLikeChapter } from './epubImportChapterHeuristics.js';
+import { isCoverLikeChapter } from './epubImportChapterHeuristics.js';
 import {
   buildCoverRootContentFromChapter,
   buildRootCoverFromImage,
@@ -138,11 +138,7 @@ function buildSpineChapterNode(input: {
   href: string;
   index: number;
   mediaType: string | null;
-  properties: string[];
 }): SpineChapterBuildResult {
-  if (input.properties.includes('nav')) {
-    return { chapter: null, rootCover: null };
-  }
   if (input.mediaType && !['application/xhtml+xml', 'text/html'].includes(input.mediaType)) {
     return buildDegradedSpineChapterResult({
       fallbackTitle: input.fallbackTitle,
@@ -167,9 +163,6 @@ function buildSpineChapterNode(input: {
       chapter: null,
       rootCover: buildCoverRootContentFromChapter({ content: chapter.content, degradedReason: chapter.degradedReason, embeddedImages })
     };
-  }
-  if (isTocLikeChapter({ content: chapter.content, title: chapter.title })) {
-    return { chapter: null, rootCover: null };
   }
   return {
     chapter: {
@@ -216,8 +209,7 @@ function buildSpineChapterNodes(input: {
       guideCoverPaths: input.guideCoverPaths,
       href: item.href,
       index,
-      mediaType: item.mediaType,
-      properties: item.properties
+      mediaType: item.mediaType
     });
     if (built?.chapter) {
       result.chapters.push(built.chapter);

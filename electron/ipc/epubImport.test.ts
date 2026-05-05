@@ -91,7 +91,7 @@ it('imports chapters in spine order and uses page title before first heading', a
   expect(children[1]?.content).toContain('Second spine body.');
 });
 
-it('skips nav documents and guide-marked cover pages during epub chapter import', async () => {
+it('keeps nav documents as real chapters while still skipping guide-marked cover pages', async () => {
   const filePath = await writeEpub('skip-nav-and-cover.epub', [
     { content: 'application/epub+zip', name: 'mimetype' },
     {
@@ -105,7 +105,8 @@ it('skips nav documents and guide-marked cover pages during epub chapter import'
       name: 'OPS/book.opf'
     },
     {
-      content: '<html><head><title>Contents</title></head><body><nav><ol><li><a href="text/chapter.xhtml">Chapter 1</a></li></ol></nav></body></html>',
+      content:
+        '<html><head><title>Contents</title></head><body><h1>Contents</h1><nav><ol><li><a href="text/chapter.xhtml">Chapter 1</a></li></ol></nav></body></html>',
       name: 'OPS/nav.xhtml'
     },
     {
@@ -119,13 +120,21 @@ it('skips nav documents and guide-marked cover pages during epub chapter import'
   ]);
 
   const imported = await runEpubImport(source(filePath), '2026-04-01T12:03:00.000Z');
+  const root = openDatabaseConnection().sqlite.prepare('SELECT title, content FROM nodes WHERE id = ?').get(imported.nodeId) as { content: string; title: string };
   const children = readImportedChildren(imported.nodeId as string);
 
-  expect(children).toHaveLength(1);
-  expect(children[0]).toEqual({
+  expect(children).toHaveLength(2);
+  expect(children[0]?.title).toBe('Contents');
+  expect(children[0]?.content).toContain('# Contents');
+  expect(children[0]?.content).toContain('[Chapter 1](text/chapter.xhtml)');
+  expect(children[1]).toEqual({
     content: '# Real Chapter\n\nHello world.',
     title: 'Real Chapter'
   });
+  expect(root.title).toBe('Sample Book');
+  expect(root.content).toContain('# Sample Book');
+  expect(root.content).not.toContain('Contents');
+  expect(root.content).not.toContain('Chapter 1');
 });
 
 it('uses body headings when generic page titles would otherwise produce unknown chapter names', async () => {
@@ -157,7 +166,7 @@ it('uses body headings when generic page titles would otherwise produce unknown 
   });
 });
 
-it('skips toc-like chapters even when the epub does not mark them as nav documents', async () => {
+it('keeps toc-like chapters even when the epub does not mark them as nav documents', async () => {
   const filePath = await writeEpub('toc-like.epub', [
     { content: 'application/epub+zip', name: 'mimetype' },
     {
@@ -184,8 +193,13 @@ it('skips toc-like chapters even when the epub does not mark them as nav documen
   const imported = await runEpubImport(source(filePath), '2026-04-01T12:06:00.000Z');
   const children = readImportedChildren(imported.nodeId as string);
 
-  expect(children).toHaveLength(1);
-  expect(children[0]).toEqual({
+  expect(children).toHaveLength(2);
+  expect(children[0]?.title).toBe('Contents');
+  expect(children[0]?.content).toContain('# Contents');
+  expect(children[0]?.content).toContain('目录');
+  expect(children[0]?.content).toContain('[One](chapter.xhtml#c1)');
+  expect(children[0]?.content).toContain('[Five](chapter.xhtml#c5)');
+  expect(children[1]).toEqual({
     content: '# Real Chapter\n\nHello world.',
     title: 'Real Chapter'
   });
