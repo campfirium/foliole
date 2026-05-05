@@ -2,10 +2,12 @@
 
 import Database from 'better-sqlite3';
 import { execFile } from 'node:child_process';
-import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { backupDatabase, writeManifest } from './android-data-backup-files.mjs';
+import { classifyInstallerClearAppDataEvents } from './android-install-events.mjs';
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_TABLES = ['nodes', 'node_order', 'content_blobs', 'sync_object_state', 'workspace_meta', 'companion_meta'];
@@ -155,47 +157,22 @@ export async function collectSnapshot(rawOptions) {
   }
 }
 
-function safeName(value) {
-  return String(value || 'unknown').replace(/[^A-Za-z0-9._-]+/g, '_');
-}
-
-function timestamp() {
-  return new Date().toISOString().replace(/[:.]/g, '').replace('T', '-').slice(0, 15);
-}
-
-async function writeManifest(filePath, payload) {
-  if (!filePath) return;
-  await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`);
-}
-
-async function backupDatabase(options, snapshot) {
-  const database = snapshot.database;
-  if (!database?.exists) return { created: false, reason: 'database unavailable' };
-  await mkdir(options.backupRoot, { recursive: true });
-  const nodes = database.counts?.nodes ?? 'unknown';
-  const baseName = `${timestamp()}_${safeName(snapshot.serial)}_${safeName(options.appId)}_nodes-${nodes}_bytes-${database.size}`;
-  const dbBackupPath = path.join(options.backupRoot, `${baseName}.db`);
-  const manifestPath = path.join(options.backupRoot, `${baseName}.json`);
-  await copyFile(database.path, dbBackupPath);
-  const backup = { created: true, databasePath: dbBackupPath, manifestPath };
-  await writeManifest(manifestPath, { backup, snapshot });
-  return backup;
-}
-
 function printSummary(label, snapshot) {
   const counts = snapshot.database?.counts ?? {};
-  const clearDataEvents = (snapshot.events ?? []).filter((event) => /installer_clear_app_data/i.test(event));
+  const clearDataEvents = classifyInstallerClearAppDataEvents(snapshot.events ?? []);
   console.log(`[android-data] ${label}: serial=${snapshot.serial || 'none'} installed=${snapshot.packageInfo?.installed ?? false}`);
   console.log(`[android-data] database=${snapshot.database?.exists ? 'present' : 'missing'} nodes=${counts.nodes ?? 'n/a'} node_order=${counts.node_order ?? 'n/a'} content_blobs=${counts.content_blobs ?? 'n/a'}`);
   if (snapshot.database?.unreadable) {
     console.log(`[android-data] warning: database backup was created but sqlite inspection failed (${snapshot.database.error})`);
   }
-  if (counts.nodes === 0 && clearDataEvents.length > 0) {
+  if (counts.nodes === 0 && clearDataEvents.potentialDataClear.length > 0) {
     console.log('[android-data] warning: current Android database is empty and recent installer clear-data evidence was found');
   }
-  for (const event of clearDataEvents) {
-    console.log(`[android-data] clear-data evidence: ${event}`);
+  for (const event of clearDataEvents.potentialDataClear) {
+    console.log(`[android-data] clear-data evidence: ${event.line}`);
+  }
+  for (const event of clearDataEvents.codeCacheOnly) {
+    console.log(`[android-data] code-cache clear event: ${event.line}`);
   }
 }
 
@@ -229,8 +206,9 @@ async function runCheck(options) {
   }
   if (isDataCleared(before, after)) {
     console.error('[android-data] data protection failure: Android database had nodes before install and is empty after install');
-    if (after.events?.some((event) => /installer_clear_app_data/i.test(event))) {
-      console.error('[android-data] cause evidence: installer_clear_app_data was present in recent event log');
+    const clearDataEvents = classifyInstallerClearAppDataEvents(after.events ?? []);
+    if (clearDataEvents.potentialDataClear.length > 0) {
+      console.error('[android-data] cause evidence: destructive installer_clear_app_data was present in recent event log');
     }
     process.exit(2);
   }
