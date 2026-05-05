@@ -77,7 +77,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         snapshot.put("activeNodeId", resolveActiveNodeId(database, nodesById, trashedNodeIds, firstActiveNodeId));
         snapshot.put("nodeOrder", orderedNodeIds);
         snapshot.put("nodesById", nodesById);
-        snapshot.put("persistedNodeViewById", FolioleCompanionWorkspaceViewStateExporter.loadPersistedNodeViewById(database, deviceId));
+        snapshot.put("persistedNodeViewById", FolioleCompanionWorkspaceViewStateExporter.loadPersistedNodeViewById(context, database, deviceId));
         snapshot.put("trashedNodeIds", trashedNodeIds);
         snapshot.put("untitledSequenceByParent", loadUntitledSequenceByParent(database));
         return snapshot;

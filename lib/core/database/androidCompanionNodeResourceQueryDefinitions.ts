@@ -62,6 +62,18 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       "INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' " +
       "WHERE na.node_id = ? AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1",
     columns: [{ key: 'attachment_id', source: 'attachment_id', type: 'string' }]
+  },
+  nodeViewStatesByDevice: {
+    resultKey: 'states',
+    sql: 'SELECT node_id, scroll_top, selection_from, selection_to, updated_at, source FROM node_view_state WHERE device_id = ?',
+    columns: [
+      { key: 'node_id', source: 'node_id', type: 'string' },
+      { key: 'scroll_top', source: 'scroll_top', type: 'long' },
+      { key: 'selection_from', source: 'selection_from', type: 'long' },
+      { key: 'selection_to', source: 'selection_to', type: 'long' },
+      { key: 'updated_at', source: 'updated_at', type: 'string' },
+      { key: 'source', source: 'source', type: 'nullableString' }
+    ]
   }
 };
 
