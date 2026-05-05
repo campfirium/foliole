@@ -42,6 +42,7 @@
 4. 格式化：`prettier`（只负责格式，不替代 lint）。
 5. 测试框架：由仓库现状决定（例如 `vitest`/`jest`），以 `package.json` 脚本为准。
 6. 提交前检查入口：`scripts/quality-gate.sh`。
+7. npm 安装稳定性：默认禁用 `audit/fund`（通过仓库 `.npmrc`），若需手动安装依赖优先使用 `npm install --no-audit --no-fund`；若安装超过 120s 无输出，视为异常并切换到 `--loglevel=verbose` 诊断。
 
 ## 质量闸（Zero Tolerance，可执行）
 1. 不允许通过“降低检查标准”来过关（例如跳过构建、跳过测试、注释掉关键校验）。

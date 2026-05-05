@@ -5,7 +5,8 @@ use thiserror::Error;
 
 const DESIRED_RETENTION: f32 = 0.9;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ReviewError {
     #[error("invalid timestamp: {0}")]
     InvalidTimestamp(String),
@@ -50,6 +51,7 @@ pub struct ReviewGradeResponse {
     pub reviewed_at: String,
 }
 
+#[cfg_attr(feature = "tauri-command", tauri::command)]
 pub fn review_grade(request: ReviewGradeRequest) -> Result<ReviewGradeResponse, ReviewError> {
     let now = parse_utc(&request.now)?;
     let elapsed_days = calc_elapsed_days(request.card.last_review.as_deref(), now)?;

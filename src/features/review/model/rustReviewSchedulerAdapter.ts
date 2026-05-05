@@ -1,3 +1,4 @@
+import { assertSchedulerGradeInput, assertSchedulerGradeResult } from './reviewSchedulerContract';
 import {
   mapGradeToRustRating,
   type ReviewSchedulerAdapter,
@@ -5,16 +6,21 @@ import {
   type SchedulerGradeResult
 } from './reviewTypes';
 
-type RustInvoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
+type RustInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
 
 export function createRustReviewSchedulerAdapter(invoke: RustInvoke): ReviewSchedulerAdapter {
   return {
     grade: async (input: SchedulerGradeInput): Promise<SchedulerGradeResult> => {
-      return invoke<SchedulerGradeResult>('review_grade', {
+      assertSchedulerGradeInput(input);
+
+      const result = await invoke('review_grade', {
         card: input.card,
         rating: mapGradeToRustRating(input.grade),
         now: input.now
       });
+
+      assertSchedulerGradeResult(result);
+      return result;
     }
   };
 }

@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "tauri:dev": "tauri dev",
+    "tauri:dev:wslg": "GDK_BACKEND=x11 WEBKIT_DISABLE_DMABUF_RENDERER=1 GDK_SCALE=1 GDK_DPI_SCALE=0.5 XCURSOR_THEME=Adwaita XCURSOR_SIZE=16 tauri dev",
+    "tauri:build": "tauri build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -26,6 +29,7 @@
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@playwright/test": "^1.58.2",
+    "@tauri-apps/cli": "^2.10.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/react": "^18.3.18",

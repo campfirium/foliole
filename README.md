@@ -23,3 +23,8 @@ Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Codi
 2. 列出 E2E 用例：`npm run test:e2e -- --list`
 3. 运行 E2E（默认无头）：`npm run test:e2e`
 4. 可视化调试：`npm run test:e2e:headed` 或 `npm run test:e2e:ui`
+
+## Rust Scheduler Mode
+1. Default mode is `prefer-rust`: use Tauri invoke when available, otherwise fallback to local scheduler.
+2. Set `VITE_REVIEW_SCHEDULER_MODE=rust-only` to hard-require Rust scheduler.
+3. In `rust-only`, grading throws when `window.__TAURI__.core.invoke` is unavailable.

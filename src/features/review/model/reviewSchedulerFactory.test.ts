@@ -26,6 +26,18 @@ describe('createReviewSchedulerAdapter', () => {
     expect(result.reviewed_at).toBe('2026-02-26T00:00:00.000Z');
   });
 
+  it('throws when rust-only mode is set and tauri invoke is unavailable', async () => {
+    const adapter = createReviewSchedulerAdapter('rust-only');
+
+    await expect(
+      adapter.grade({
+        card: { ...BASE_CARD },
+        grade: 3,
+        now: '2026-02-26T00:00:00.000Z'
+      })
+    ).rejects.toThrow('Rust scheduler is required');
+  });
+
   it('uses tauri invoke when available', async () => {
     const tauriWindow = window as Window & {
       __TAURI__?: {
@@ -41,7 +53,7 @@ describe('createReviewSchedulerAdapter', () => {
     });
     tauriWindow.__TAURI__ = { core: { invoke } };
 
-    const adapter = createReviewSchedulerAdapter();
+    const adapter = createReviewSchedulerAdapter('rust-only');
     const result = await adapter.grade({
       card: { ...BASE_CARD },
       grade: 4,

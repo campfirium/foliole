@@ -8,4 +8,5 @@ test-results/
 blob-report/
 *.tsbuildinfo
 src-tauri/target/
+src-tauri/gen/
 **/*.rs.bk
