@@ -176,6 +176,35 @@ function ReviewGradeActions({
   );
 }
 
+function ReadingReviewActions({
+  onCompleteReviewItem,
+  onDeferReviewItem,
+  onDismissReviewItem
+}: Pick<ReviewModeToolbarProps, 'onCompleteReviewItem' | 'onDeferReviewItem' | 'onDismissReviewItem'>) {
+  return (
+    <div className="flex items-center gap-2" data-review-toolbar-kind="reading">
+      <AppButton aria-label="Later" onClick={onDeferReviewItem} size="sm" variant="ghost">
+        Later
+      </AppButton>
+      <AppButton aria-label="Read" onClick={onCompleteReviewItem} size="sm" variant="primary">
+        Read
+      </AppButton>
+      <AppButton aria-label="Dismiss" onClick={onDismissReviewItem} size="sm" variant="ghost">
+        Dismiss
+      </AppButton>
+    </div>
+  );
+}
+
+function FsrsRevealAction({ onRevealAnswer }: Pick<ReviewModeToolbarProps, 'onRevealAnswer'>) {
+  return (
+    <div className="flex items-center gap-2" data-review-toolbar-kind="fsrs-prompt">
+      <AppButton aria-label="Show Answer" onClick={onRevealAnswer} size="sm" variant="primary">
+        Show Answer
+      </AppButton>
+    </div>
+  );
+}
 export function ReviewModeToolbar({
   isStudyMode,
   isAnswerRevealed,
@@ -207,25 +236,16 @@ export function ReviewModeToolbar({
       className="flex min-h-[56px] w-full flex-none flex-col items-center justify-center gap-1 border-t border-border bg-bg-elevated px-4 py-1"
       data-mode={isStudyMode ? 'study' : 'edit'}
       data-review-input-mode={isReviewEditing ? 'editing' : 'hotkeys'}
+      data-review-item-kind={isCurrentItemGradable ? 'fsrs' : 'reading'}
     >
       {!isCurrentItemGradable ? (
-        <div className="flex items-center gap-2">
-          <AppButton aria-label="Later" onClick={onDeferReviewItem} size="sm" variant="ghost">
-            Later
-          </AppButton>
-          <AppButton aria-label="Read" onClick={onCompleteReviewItem} size="sm" variant="primary">
-            Read
-          </AppButton>
-          <AppButton aria-label="Dismiss" onClick={onDismissReviewItem} size="sm" variant="ghost">
-            Dismiss
-          </AppButton>
-        </div>
+        <ReadingReviewActions
+          onCompleteReviewItem={onCompleteReviewItem}
+          onDeferReviewItem={onDeferReviewItem}
+          onDismissReviewItem={onDismissReviewItem}
+        />
       ) : !isAnswerRevealed ? (
-        <div className="flex items-center gap-2">
-          <AppButton aria-label="Show Answer" onClick={onRevealAnswer} size="sm" variant="primary">
-            Show Answer
-          </AppButton>
-        </div>
+        <FsrsRevealAction onRevealAnswer={onRevealAnswer} />
       ) : (
         <ReviewGradeActions
           errorMessage={errorMessage}

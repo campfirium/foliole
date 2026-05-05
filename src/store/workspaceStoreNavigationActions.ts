@@ -20,6 +20,18 @@ function isAvailableNode(state: WorkspaceState, nodeId: string) {
   return Boolean(state.nodesById[nodeId]) && !state.trashedNodeIds.includes(nodeId);
 }
 
+function syncReviewSessionSelection(state: WorkspaceState, nodeId: string) {
+  if (!state.reviewSession.currentNodeId || !state.reviewSession.queueNodeIds.includes(nodeId)) {
+    return state.reviewSession;
+  }
+  return {
+    ...state.reviewSession,
+    currentNodeId: nodeId,
+    isAnswerRevealed: false,
+    queueNodeIds: [nodeId, ...state.reviewSession.queueNodeIds.filter((queuedNodeId) => queuedNodeId !== nodeId)]
+  };
+}
+
 function createOpenNodeAction(set: WorkspaceSet) {
   return (nodeId: string) => {
     let nextResult: NodeNavigationResult | null = null;
@@ -35,7 +47,8 @@ function createOpenNodeAction(set: WorkspaceSet) {
               backStack: pushNavigationHistory(state.navigation.backStack, state.activeNodeId),
               forwardStack: []
             }
-          : { ...state.navigation, forwardStack: [] }
+          : { ...state.navigation, forwardStack: [] },
+        reviewSession: syncReviewSessionSelection(state, nodeId)
       };
     });
     return nextResult;

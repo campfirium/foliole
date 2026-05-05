@@ -137,6 +137,7 @@ it('shows reading later/read/dismiss actions instead of grading for non-qa items
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Review mode toolbar')).toHaveAttribute('data-review-item-kind', 'reading');
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
 
@@ -148,4 +149,19 @@ it('shows reading later/read/dismiss actions instead of grading for non-qa items
 
   fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
   expect(onDismissReviewItem).toHaveBeenCalledTimes(1);
+});
+
+it('switches toolbar kind when props move from reading to fsrs card', () => {
+  const { rerender } = render(
+    <ReviewModeToolbar {...baseProps} isAnswerRevealed={false} isCurrentItemGradable={false} />
+  );
+
+  expect(screen.getByLabelText('Review mode toolbar')).toHaveAttribute('data-review-item-kind', 'reading');
+  expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
+
+  rerender(<ReviewModeToolbar {...baseProps} isAnswerRevealed={false} isCurrentItemGradable />);
+
+  expect(screen.getByLabelText('Review mode toolbar')).toHaveAttribute('data-review-item-kind', 'fsrs');
+  expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Read' })).not.toBeInTheDocument();
 });

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -153,7 +154,8 @@ export function useAppController(): AppControllerResult {
   const { exitStudyMode, isStudyMode, startStudyMode } = controller.study;
   const hotkeys = useCommandShortcutState(REVIEW_SHORTCUT_COMMAND_IDS);
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
-  const isCurrentReviewItemGradable = Boolean(ws.reviewSession.currentNodeId && ws.nodesById[ws.reviewSession.currentNodeId]?.reveal?.trim().length);
+  const currentReviewNode = ws.reviewSession.currentNodeId ? ws.nodesById[ws.reviewSession.currentNodeId] : undefined;
+  const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
   const isReviewEditing = useReviewEditingState({ hotkeys, isCurrentReviewItemGradable, isStudyMode, runtime: controller.runtime, ws });
   const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso, reviewSettings.reviewSchedulerSettings.pushQueue), [nowIso, reviewSettings.reviewSchedulerSettings.pushQueue, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
   const paletteItems = useReviewPaletteItems({ hasReviewCard: Boolean(ws.reviewSession.currentNodeId), hotkeys, isCurrentReviewItemGradable, isStudyMode, nav: controller.nav, reviewSession: ws.reviewSession, study: controller.study });
