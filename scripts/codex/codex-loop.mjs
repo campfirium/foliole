@@ -1,6 +1,7 @@
 import { appendFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import { clearTimeout, setTimeout } from 'node:timers';
 
 import { runCodexTask } from './codex-task.mjs';
 import { buildCommitMessage, commitTrackedChanges, readGitStatus, runCommand } from './git-state.mjs';
@@ -11,6 +12,7 @@ const REPAIR_ATTEMPT_LIMIT = 2;
 const TASK_CONVERSATION_LIMIT = 3;
 const SAME_SIGNATURE_LIMIT = 2;
 const EXIT_UNRECOVERABLE_FAILURE = 50;
+const DEFAULT_LOOP_ROUND_TIMEOUT_MS = 90 * 60 * 1000;
 const LOG_DIR = path.join(REPO_ROOT, 'logs', 'codex');
 
 function parseArgs(argv) {
@@ -18,7 +20,8 @@ function parseArgs(argv) {
     completeGate: false,
     dryRun: false,
     maxIterations: 20,
-    model: process.env.FOLIOLE_CODEX_MODEL ?? ''
+    model: process.env.FOLIOLE_CODEX_MODEL ?? '',
+    roundTimeoutMs: process.env.FOLIOLE_LOOP_ROUND_TIMEOUT_MS ?? ''
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -41,13 +44,61 @@ function parseArgs(argv) {
       index += 1;
       continue;
     }
+    if (value === '--round-timeout-ms') {
+      options.roundTimeoutMs = argv[index + 1]?.trim() ?? '';
+      index += 1;
+      continue;
+    }
     throw new Error(`unsupported argument: ${value}`);
   }
 
   if (!Number.isInteger(options.maxIterations) || options.maxIterations <= 0) {
     throw new Error('max iterations must be a positive integer');
   }
+  options.roundTimeoutMs = resolveRoundTimeoutMs(options.roundTimeoutMs);
   return options;
+}
+
+function parsePositiveInteger(input) {
+  if (typeof input === 'number') {
+    return Number.isInteger(input) && input > 0 ? input : null;
+  }
+  if (typeof input !== 'string') {
+    return null;
+  }
+  const normalized = input.trim();
+  if (!/^\d+$/u.test(normalized)) {
+    return null;
+  }
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function resolveRoundTimeoutMs(rawTimeout) {
+  return parsePositiveInteger(rawTimeout) ?? DEFAULT_LOOP_ROUND_TIMEOUT_MS;
+}
+
+function createRoundTimeoutError(task, round, timeoutMs) {
+  const error = new Error(`loop round timeout after ${timeoutMs}ms (task: ${task}, round: ${round}/${TASK_CONVERSATION_LIMIT})`);
+  error.code = 'LOOP_ROUND_TIMEOUT';
+  return error;
+}
+
+async function withRoundTimeout(operation, task, round, timeoutMs) {
+  let timer;
+  try {
+    return await Promise.race([
+      operation(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(createRoundTimeoutError(task, round, timeoutMs)), timeoutMs);
+        timer.unref();
+      })
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 async function runQualityGate() {
@@ -179,6 +230,10 @@ async function resolveGate(options, dependencies) {
 }
 
 async function runLoop(options, overrides = {}) {
+  const normalizedOptions = {
+    ...options,
+    roundTimeoutMs: resolveRoundTimeoutMs(options.roundTimeoutMs)
+  };
   const dependencies = {
     appendLoopFailureRecordFn: appendLoopFailureRecord,
     buildCommitMessageFn: (task) => buildCommitMessage(REPO_ROOT, task),
@@ -195,10 +250,10 @@ async function runLoop(options, overrides = {}) {
     ...overrides
   };
   const pendingEntry = await dependencies.readTodoEntryFn();
-  await reconcileDirtyWorkspace(pendingEntry?.task ?? '', options, dependencies);
-  let taskEntry = await resolveGate(options, dependencies);
+  await reconcileDirtyWorkspace(pendingEntry?.task ?? '', normalizedOptions, dependencies);
+  let taskEntry = await resolveGate(normalizedOptions, dependencies);
 
-  for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
+  for (let iteration = 1; iteration <= normalizedOptions.maxIterations; iteration += 1) {
     if (!taskEntry) {
       dependencies.stdout.write('[codex-loop] no pending TODO item found\n');
       return 0;
@@ -207,7 +262,7 @@ async function runLoop(options, overrides = {}) {
       dependencies.stdout.write(`[codex-loop] waiting-for-gate: ${taskEntry.task}\n`);
       return 20;
     }
-    if (options.dryRun) {
+    if (normalizedOptions.dryRun) {
       dependencies.stdout.write(`[codex-loop] dry-run next task: ${taskEntry.task}\n`);
       return 0;
     }
@@ -221,11 +276,16 @@ async function runLoop(options, overrides = {}) {
         `[codex-loop] iteration ${iteration}, round ${round}/${TASK_CONVERSATION_LIMIT}: ${taskEntry.task}\n`
       );
       try {
-        committed = await executeTaskRound(taskEntry, round, options, dependencies, lastSignature);
+        committed = await withRoundTimeout(
+          () => executeTaskRound(taskEntry, round, normalizedOptions, dependencies, lastSignature),
+          taskEntry.task,
+          round,
+          normalizedOptions.roundTimeoutMs
+        );
         break;
       } catch (error) {
         try {
-          committed = await recoverFailedTask(taskEntry.task, options, dependencies, error);
+          committed = await recoverFailedTask(taskEntry.task, normalizedOptions, dependencies, error);
           break;
         } catch (recoveryError) {
           const signature = await recordLoopFailure(taskEntry.task, round, recoveryError, dependencies);
@@ -248,7 +308,7 @@ async function runLoop(options, overrides = {}) {
     taskEntry = nextTaskEntry;
   }
 
-  dependencies.stdout.write(`[codex-loop] reached max iterations: ${options.maxIterations}\n`);
+  dependencies.stdout.write(`[codex-loop] reached max iterations: ${normalizedOptions.maxIterations}\n`);
   return 40;
 }
 
@@ -262,4 +322,4 @@ if (isMainModule) {
   process.exit(exitCode);
 }
 
-export { buildFailureSignature, buildRepairTask, parseArgs, runLoop };
+export { buildFailureSignature, buildRepairTask, DEFAULT_LOOP_ROUND_TIMEOUT_MS, parseArgs, resolveRoundTimeoutMs, runLoop };

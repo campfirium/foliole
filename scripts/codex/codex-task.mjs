@@ -2,11 +2,14 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import process from 'node:process';
 import path from 'node:path';
+import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
 import { REPO_ROOT, TODO_PATH, parseFirstTodoTask } from './todo-ledger.mjs';
 
 const LOG_DIR = path.join(REPO_ROOT, 'logs', 'codex');
+const DEFAULT_CODEX_TASK_TIMEOUT_MS = 30 * 60 * 1000;
+const CODEX_TASK_TIMEOUT_KILL_GRACE_MS = 5_000;
 const TASK_SKILL_DIRECTIVE = /^\[skills?:\s*([^\]]+)\]\s*/i;
 const EXPLICIT_SKILL_RULES = [
   { skill: 'build-sync', patterns: [/执行构建并同步指令/, /build and sync/i] },
@@ -24,7 +27,8 @@ function parseArgs(argv) {
     dryRun: false,
     fullAuto: true,
     model: process.env.FOLIOLE_CODEX_MODEL ?? '',
-    task: process.env.FOLIOLE_CODEX_TASK?.trim() ?? ''
+    task: process.env.FOLIOLE_CODEX_TASK?.trim() ?? '',
+    timeoutMs: process.env.FOLIOLE_CODEX_TASK_TIMEOUT_MS ?? ''
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -47,10 +51,59 @@ function parseArgs(argv) {
       index += 1;
       continue;
     }
+    if (value === '--timeout-ms') {
+      options.timeoutMs = argv[index + 1]?.trim() ?? '';
+      index += 1;
+      continue;
+    }
     throw new Error(`unsupported argument: ${value}`);
   }
 
   return options;
+}
+
+function parsePositiveInteger(input) {
+  if (typeof input === 'number') {
+    return Number.isInteger(input) && input > 0 ? input : null;
+  }
+  if (typeof input !== 'string') {
+    return null;
+  }
+  const normalized = input.trim();
+  if (!/^\d+$/u.test(normalized)) {
+    return null;
+  }
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function resolveCodexTaskTimeoutMs(rawTimeout) {
+  return parsePositiveInteger(rawTimeout) ?? DEFAULT_CODEX_TASK_TIMEOUT_MS;
+}
+
+function createCodexTaskTimeoutError(task, timeoutMs) {
+  const error = new Error(`codex task timeout after ${timeoutMs}ms for task: ${task}`);
+  error.code = 'CODEX_TASK_TIMEOUT';
+  return error;
+}
+
+function terminateChildProcessTree(child, signal) {
+  if (!child.pid) {
+    return;
+  }
+  if (process.platform !== 'win32') {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch (error) {
+      void error;
+    }
+  }
+  try {
+    child.kill(signal);
+  } catch (error) {
+    void error;
+  }
 }
 
 async function resolveTask(task) {
@@ -133,6 +186,7 @@ async function ensureLogDir() {
 export async function runCodexTask(options) {
   const task = await resolveTask(options.task);
   await ensureLogDir();
+  const timeoutMs = resolveCodexTaskTimeoutMs(options.timeoutMs);
 
   const lastMessageFile = path.join(LOG_DIR, `last-message-${createTimestamp()}.md`);
   const { args, prompt } = buildCodexArgs({
@@ -144,6 +198,7 @@ export async function runCodexTask(options) {
 
   if (options.dryRun) {
     process.stdout.write(`[codex-task] task: ${task}\n`);
+    process.stdout.write(`[codex-task] timeout: ${timeoutMs}ms\n`);
     process.stdout.write(`[codex-task] last message: ${lastMessageFile}\n`);
     process.stdout.write(`[codex-task] command: codex ${args.join(' ')}\n`);
     process.stdout.write('[codex-task] prompt preview:\n');
@@ -154,13 +209,26 @@ export async function runCodexTask(options) {
   await new Promise((resolve, reject) => {
     const child = spawn('codex', args, {
       cwd: REPO_ROOT,
+      detached: process.platform !== 'win32',
       stdio: ['pipe', 'inherit', 'inherit']
     });
+    let didTimeout = false;
+    const timeout = setTimeout(() => {
+      didTimeout = true;
+      terminateChildProcessTree(child, 'SIGTERM');
+      setTimeout(() => terminateChildProcessTree(child, 'SIGKILL'), CODEX_TASK_TIMEOUT_KILL_GRACE_MS).unref();
+    }, timeoutMs);
+    timeout.unref();
 
     child.stdin.write(prompt);
     child.stdin.end();
     child.on('error', reject);
     child.on('exit', (code) => {
+      clearTimeout(timeout);
+      if (didTimeout) {
+        reject(createCodexTaskTimeoutError(task, timeoutMs));
+        return;
+      }
       if (code === 0) {
         resolve(undefined);
         return;
@@ -183,3 +251,5 @@ const isMainModule = process.argv[1]
 if (isMainModule) {
   await run();
 }
+
+export { DEFAULT_CODEX_TASK_TIMEOUT_MS, resolveCodexTaskTimeoutMs };

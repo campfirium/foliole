@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildFailureSignature, buildRepairTask, parseArgs, reconcileDirtyWorkspace, runLoop } from './codex-loop.mjs';
+import { buildFailureSignature, buildRepairTask, DEFAULT_LOOP_ROUND_TIMEOUT_MS, parseArgs, reconcileDirtyWorkspace, resolveRoundTimeoutMs, runLoop } from './codex-loop.mjs';
 
 const loopTaskEntry = { raw: '[auto] fix loop failure semantics', task: 'fix loop failure semantics', mode: 'auto' };
 const createReadMock = (...values) => values.reduce((mock, value) => mock.mockResolvedValueOnce(value), vi.fn());
@@ -9,6 +9,17 @@ describe('codex-loop helpers', () => {
   it('parses loop arguments', () => {
     expect(parseArgs(['--complete-gate', '--max-iterations', '3']).completeGate).toBe(true);
     expect(parseArgs(['--complete-gate', '--max-iterations', '3']).maxIterations).toBe(3);
+  });
+
+  it('uses default round timeout when loop timeout input is missing or invalid', () => {
+    expect(resolveRoundTimeoutMs('')).toBe(DEFAULT_LOOP_ROUND_TIMEOUT_MS);
+    expect(resolveRoundTimeoutMs('abc')).toBe(DEFAULT_LOOP_ROUND_TIMEOUT_MS);
+    expect(resolveRoundTimeoutMs('-1')).toBe(DEFAULT_LOOP_ROUND_TIMEOUT_MS);
+  });
+
+  it('accepts positive integer loop round timeout input', () => {
+    expect(resolveRoundTimeoutMs('60000')).toBe(60_000);
+    expect(resolveRoundTimeoutMs(90_000)).toBe(90_000);
   });
 
   it('builds a repair task prompt from failure context', () => {
@@ -293,5 +304,31 @@ describe('codex-loop helpers', () => {
 
     expect(appendLoopFailureRecordFn).toHaveBeenCalledTimes(2);
     expect(writes.join('')).toContain('recorded failed round 2/3: lint failed');
+  });
+
+  it('fails the round when task execution exceeds the configured round timeout', async () => {
+    const runCodexTaskFn = vi.fn(() => new Promise(() => {}));
+
+    await expect(async () => {
+      await runLoop(
+        { completeGate: false, dryRun: false, maxIterations: 1, model: '', roundTimeoutMs: 20 },
+        {
+          appendLoopFailureRecordFn: vi.fn().mockResolvedValue(undefined),
+          buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
+          commitTrackedChangesFn: vi.fn().mockResolvedValue(false),
+          completeAutoTaskFn: vi.fn().mockResolvedValue(true),
+          readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
+          readGitStatusFn: createReadMock('', ''),
+          readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry),
+          isGateEntryFn: (entry) => entry?.mode === 'gate',
+          runCodexTaskFn,
+          runQualityGateFn: vi.fn().mockResolvedValue(undefined),
+          stdout: { write: () => {} }
+        }
+      );
+    }).rejects.toMatchObject({
+      code: 'QUALITY_GATE_REPAIR_EXHAUSTED',
+      message: expect.stringContaining('loop round timeout')
+    });
   });
 });

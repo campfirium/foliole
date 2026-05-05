@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCodexArgs, buildPrompt, parseTaskRequest } from './codex-task.mjs';
+import { buildCodexArgs, buildPrompt, DEFAULT_CODEX_TASK_TIMEOUT_MS, parseTaskRequest, resolveCodexTaskTimeoutMs } from './codex-task.mjs';
 import { parseFirstTodoTask } from './todo-ledger.mjs';
 
 describe('codex-task helpers', () => {
@@ -66,5 +66,16 @@ describe('codex-task helpers', () => {
     expect(request.task).toBe('执行提交指令');
     expect(prompt).toContain('Use skill: commit-note');
     expect(prompt).toContain('Use skill: session-handoff');
+  });
+
+  it('uses default timeout when codex task timeout input is missing or invalid', () => {
+    expect(resolveCodexTaskTimeoutMs('')).toBe(DEFAULT_CODEX_TASK_TIMEOUT_MS);
+    expect(resolveCodexTaskTimeoutMs('abc')).toBe(DEFAULT_CODEX_TASK_TIMEOUT_MS);
+    expect(resolveCodexTaskTimeoutMs('-1')).toBe(DEFAULT_CODEX_TASK_TIMEOUT_MS);
+  });
+
+  it('accepts positive integer codex task timeout input', () => {
+    expect(resolveCodexTaskTimeoutMs('60000')).toBe(60_000);
+    expect(resolveCodexTaskTimeoutMs(90_000)).toBe(90_000);
   });
 });
