@@ -6,10 +6,9 @@
 
 - 当前仓库是多平台单仓：`Electron + React + TypeScript + Vite + Capacitor`。
 - 当前已存在的主要宿主与表面为：`electron/`、`android/`、`src/app/`、`src/companion/`、`src/shared/platform/`。
-- 默认按 Track-Based 迭代推进，以“当前主目标 + 最小可验收任务”为单位，不再以阶段号驱动执行。
+- 默认按 Track-Based 迭代推进，以“当前主目标 + 最小可验收任务”为单位。
 - 默认在 `dev` 主干连续小步迭代；不创建 feature branch / worktree，除非用户明确要求。
 - 单次只做一个 30-90 分钟内可运行、可验证、可回退的最小任务；禁止混入无关重构。
-- 当前主工作台仍是 desktop / Electron，但移动端已进入正式规则范围；禁止再按“桌面唯一宿主”编写新规则。
 - 共享目标是“共享核心 + 薄宿主适配”，不是为每个平台复制一套业务逻辑。
 - 多宿主任务默认遵循“桌面现成业务语义优先复用”原则：先检查 desktop / shared 现有实现是否已经覆盖该能力；若已存在且属于跨端业务规则，必须先抽到共享层，再由其他宿主接入；禁止在 Android / companion 侧先临时重写一版相近逻辑。
 - 除 Android / companion 明确特有的界面形态、触屏交互、宿主能力入口与少量宿主壳布局外，新增移动端能力默认都必须先落到共享层；节点列表、内容列表、breadcrumb 跳转、选择动作、浏览语义、状态切换与其他非宿主专属逻辑，一律先抽象到 `src/shared/**`、`src/features/**` 或现有共享层，再做两端适配；除非用户明确要求或该能力天然只能存在于移动端 / 原生宿主，否则不得先写 `src/companion/**` 私有实现。
@@ -33,28 +32,20 @@
 ## Document Read Order
 
 - 启动时只读 `AGENTS.md`。
-- 仅当用户在新会话首条有效指令明确说“继续”时，先读取 `.lab/atlas/todo.md`；必要时按需补读 `.lab/atlas/verify.md`、`.lab/atlas/optional.md`、`.lab/atlas/notes.md`、`.lab/atlas/done.md` 与 `git log --oneline -n 5`。
 - 任务涉及 renderer UI 改动（`src/app/**`、`src/companion/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须先读取 `DESIGN.md`，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
 - 任务涉及 UI 文案、产品对象命名、空状态、按钮、菜单、队列与阅读单元称呼时，实施前必须读取 `.lab/specs/_product/terminology-and-copy.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增或重写 agent 规则、目录式 `AGENTS.md`、规则路由或治理结构时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
-- 任务涉及台账、继续 / 停车协议等执行细则时，读取 `.lab/atlas/task-protocol.md`。
 - 仅在判断验证或停车策略时读取 `.lab/internal/runtime/windows-preview.flag` 与 `.lab/internal/runtime/park.flag`。
 
 ## Task Execution
 
-1. 任务来源优先级：用户当次明确指令 > 当前代码现状 > `.lab/atlas/todo.md` 首项。
-2. 若用户未给清晰任务范围，先补齐任务说明，再实施；禁止凭短标题脑补。
-3. 任务说明至少应覆盖：当前问题或背景、预期目标、影响范围、明确边界、已知约束或依赖。
-4. 需求、边界、验收标准或预期行为存在歧义时，必须先向用户澄清；禁止靠猜测开工。
-5. 复杂任务、高风险改动或影响范围暂不清晰时，实施前先向用户说明方案并等待批准；范围明确的小任务可直接实施。
-6. 当改动预计超过 3 个文件时，优先评估是否应拆成更小的可验证任务；若无法合理拆分，需先说明原因再继续。
-7. 若根因未确认，允许写“现象 + 当前怀疑 + 待确认点”；禁止把猜测写成事实。
-8. 若本轮入口是“继续”，在选择任务前必须先做台账对账：逐条比对 `todo` 首项、`done` 最近记录与 `git log --oneline -n 5`，必要时再核对 `verify` / `optional`，确认该任务是否其实已完成但未同步。
-9. 若 `todo`、`verify`、`optional`、`done` 与最近提交不一致，先更新台账或向用户明确差异，再实施代码任务；禁止跳过对账直接认领下一条。
-10. `verify` 仅表示“已实现但仍待复核 / 待人工确认”的备注区，不是默认任务来源；除非用户明确要求补做其中缺口，否则不得把它当作新的实施任务直接开工。
-11. 只改当前任务相关文件；发现结构性阻塞时，先写回 TODO，再决定是否提升优先级。
-12. `.lab/atlas/todo.md`、`.lab/atlas/verify.md`、`.lab/atlas/optional.md` 共同构成未完成工作的真实来源，其中默认接手入口只有 `todo`；`.lab/atlas/notes.md` 只承载长期备注，`.lab/atlas/done.md` 只记录已完成项；但当“继续”恢复发现台账滞后于代码与提交时，必须先修正台账真相。
+1. 若用户未给清晰任务范围，先补齐任务说明，再实施；禁止凭短标题脑补。
+2. 任务说明至少应覆盖：当前问题或背景、预期目标、影响范围、明确边界、已知约束或依赖。
+3. 需求、边界、验收标准或预期行为存在歧义时，必须先向用户澄清；禁止靠猜测开工。
+4. 复杂任务、高风险改动或影响范围暂不清晰时，实施前先向用户说明方案并等待批准；范围明确的小任务可直接实施。
+5. 若根因未确认，允许写“现象 + 当前怀疑 + 待确认点”；禁止把猜测写成事实。
+6. 只改当前任务相关文件；发现结构性阻塞时，先向用户说明阻塞与建议。
 
 ## Architecture And Troubleshooting
 
@@ -156,7 +147,7 @@
 - `.lab/specs/**` 文件名使用英文 slug，正文默认中文；其他落库文档默认中文，除非用户明确要求英文。
 - 新增 spec 默认采用“主题分组 + 组内小文件”，避免继续新增超长单文档。
 - 旧 spec 不做全量回拆；仅在当前任务直接涉及且单文档维护成本已明显过高时，允许局部拆分。
-- TODO、台账与任务说明默认引用主题入口文档，不直接罗列大量碎文件。
+- 任务说明默认引用主题入口文档，不直接罗列大量碎文件。
 - 文档拆分目标是降低修改成本与歧义，不以原子化本身为目标。
 - 重要边界决策与异常处理结论写入 `.lab/specs/**` 或迭代日志；不要只停留在口头汇报。
 - `.lab/**` 全部视为本地工作文档，默认全忽略、不提交；仅当用户在当次会话中明确要求时，才单独调整。
@@ -165,7 +156,6 @@
 ## Detail Pointers
 
 - 开发方法论（BDD、UI 先行、任务拆分顺序）：`.lab/specs/_product/methodology.md`
-- agent 台账与执行协议：`.lab/atlas/task-protocol.md`
 - 文档治理与准入规则：`.lab/specs/_governance/doc-update-expectation.md`、`.lab/specs/_governance/spec-organization.md`、`.lab/specs/_governance/doc-organization-expectation.md`
 - 共享 UI 规范：`DESIGN.md`、`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`
 - 产品术语与 UI 文案规则：`.lab/specs/_product/terminology-and-copy.md`
