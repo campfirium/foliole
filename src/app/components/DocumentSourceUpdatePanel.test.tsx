@@ -63,6 +63,16 @@ function getPanelBodyCall(callNumber: number) {
   return (documentPanelBodyMock.mock.calls[callNumber]?.[0] ?? {}) as PanelBodyCall;
 }
 
+function attachPanelAdapters(currentAdapter: ReturnType<typeof createScrollAdapter>, updatedAdapter: ReturnType<typeof createScrollAdapter>) {
+  const currentReady = getPanelBodyCall(0).onEditorReady;
+  const updatedReady = getPanelBodyCall(1).onEditorReady;
+
+  act(() => {
+    currentReady?.(currentAdapter as never);
+    updatedReady?.(updatedAdapter as never);
+  });
+}
+
 function resetPanelBodyMock() {
   beforeEach(() => {
     documentPanelBodyMock.mockClear();
@@ -213,18 +223,18 @@ describe('DocumentSourceUpdatePanel scroll sync', () => {
     expect(updatedAdapter.setScrollTop).toHaveBeenLastCalledWith(260);
   });
 
+});
+
+describe('DocumentSourceUpdatePanel overview ruler', () => {
+  resetPanelBodyMock();
+
   it('renders overview markers and jumps to the clicked diff segment', () => {
     renderPanel('title\nsame\nleft only\nend', 'title\nsame\nright only\nend');
 
-    const currentReady = getPanelBodyCall(0).onEditorReady;
-    const updatedReady = getPanelBodyCall(1).onEditorReady;
     const currentAdapter = createScrollAdapter();
     const updatedAdapter = createScrollAdapter();
 
-    act(() => {
-      currentReady?.(currentAdapter as never);
-      updatedReady?.(updatedAdapter as never);
-    });
+    attachPanelAdapters(currentAdapter, updatedAdapter);
 
     const markers = screen.getAllByTestId('source-update-overview-marker');
     expect(markers).toHaveLength(1);
@@ -233,5 +243,41 @@ describe('DocumentSourceUpdatePanel scroll sync', () => {
 
     expect(currentAdapter.revealPosition).toHaveBeenCalledWith(11);
     expect(updatedAdapter.revealPosition).toHaveBeenCalledWith(11);
+  });
+
+  it('jumps between diff segments with overview navigation buttons', () => {
+    renderPanel('one\ntwo\nleft only\nfour\nleft tail', 'one\ntwo\nright only\nfour\nright tail');
+
+    const currentAdapter = createScrollAdapter();
+    const updatedAdapter = createScrollAdapter();
+
+    attachPanelAdapters(currentAdapter, updatedAdapter);
+
+    const previousButton = screen.getByLabelText('Jump to previous diff') as HTMLButtonElement;
+    const nextButton = screen.getByLabelText('Jump to next diff') as HTMLButtonElement;
+
+    expect(previousButton.disabled).toBe(false);
+    expect(nextButton.disabled).toBe(false);
+
+    fireEvent.click(previousButton);
+
+    expect(currentAdapter.revealPosition).toHaveBeenLastCalledWith(23);
+    expect(updatedAdapter.revealPosition).toHaveBeenLastCalledWith(24);
+
+    fireEvent.click(nextButton);
+
+    expect(currentAdapter.revealPosition).toHaveBeenLastCalledWith(8);
+    expect(updatedAdapter.revealPosition).toHaveBeenLastCalledWith(8);
+
+    fireEvent.click(previousButton);
+
+    expect(currentAdapter.revealPosition).toHaveBeenLastCalledWith(23);
+    expect(updatedAdapter.revealPosition).toHaveBeenLastCalledWith(24);
+
+    fireEvent.click(nextButton);
+    fireEvent.click(nextButton);
+
+    expect(currentAdapter.revealPosition).toHaveBeenLastCalledWith(23);
+    expect(updatedAdapter.revealPosition).toHaveBeenLastCalledWith(24);
   });
 });

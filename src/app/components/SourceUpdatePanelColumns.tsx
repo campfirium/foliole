@@ -148,6 +148,12 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
         title="Current"
       />
       <section className="relative flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40">
+        <SourceUpdatePaneSection
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+        description="This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines."
+        paneProps={updatedPaneProps}
+        title="Updated Source"
+        />
         <SourceUpdateOverviewRuler
           currentContent={props.props.currentContent}
           currentEditor={props.currentEditor}
@@ -155,12 +161,6 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
           totalRows={props.totalRows}
           updatedContent={props.props.updatedContent}
           updatedEditor={props.updatedEditor}
-        />
-        <SourceUpdatePaneSection
-          className="flex min-h-0 min-w-0 flex-col overflow-hidden"
-        description="This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines."
-        paneProps={updatedPaneProps}
-        title="Updated Source"
         />
       </section>
     </div>
