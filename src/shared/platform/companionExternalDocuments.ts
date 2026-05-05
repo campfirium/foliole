@@ -2,6 +2,10 @@ import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceSyncBridge';
+import type {
+  ExternalLibraryBrowseEntry,
+  ExternalLibraryFolder
+} from './externalLibraryBrowseModel';
 
 export interface CompanionExternalDocument {
   bodyStatus?: 'failed' | 'fetching' | 'missing' | 'ready';
@@ -21,6 +25,15 @@ export interface CompanionExternalDocumentSearchResult extends CompanionExternal
   match_start: number;
 }
 
+export interface CompanionExternalDirectoryEntry extends ExternalLibraryBrowseEntry {
+  documentId: string;
+}
+
+export interface CompanionExternalDirectory {
+  entries: CompanionExternalDirectoryEntry[];
+  folders: ExternalLibraryFolder[];
+}
+
 type NativeExternalDocument = Omit<CompanionExternalDocument, 'bodyStatus'> & {
   content_status?: 'failed' | 'fetching' | 'missing' | 'ready';
 };
@@ -35,6 +48,31 @@ export async function loadCompanionExternalDocument(documentId: string) {
   }
   const document = (await FolioleCompanionSync.loadExternalDocument({ document_id: documentId })).document as NativeExternalDocument | null;
   return document ? normalizeExternalDocument(document) : null;
+}
+
+export async function loadCompanionExternalDirectory() {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return { entries: [], folders: [] } satisfies CompanionExternalDirectory;
+  }
+  const directory = await FolioleCompanionSync.loadExternalDirectory();
+  return {
+    entries: directory.entries.map((entry) => ({
+      absolutePath: entry.absolute_path,
+      documentId: entry.document_id,
+      extension: entry.extension,
+      fileName: entry.file_name,
+      folderId: entry.folder_id,
+      modifiedAt: entry.modified_at,
+      openingText: entry.opening_text,
+      relativePath: entry.relative_path,
+      title: entry.title
+    })),
+    folders: directory.folders.map((folder) => ({
+      documentCount: folder.document_count,
+      folderPath: folder.folder_path,
+      id: folder.id
+    }))
+  } satisfies CompanionExternalDirectory;
 }
 
 export async function searchCompanionExternalDocuments(query: string, limit?: number) {

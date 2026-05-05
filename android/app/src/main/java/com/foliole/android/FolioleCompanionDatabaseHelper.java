@@ -348,6 +348,11 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionExternalDocumentStore.loadDocument(database, documentId);
     }
 
+    JSObject loadExternalDirectory() {
+        SQLiteDatabase database = getReadableDatabase();
+        return FolioleCompanionExternalDocumentStore.loadDirectory(database);
+    }
+
     JSObject searchExternalDocuments(String query, int limit) {
         SQLiteDatabase database = getReadableDatabase();
         return FolioleCompanionExternalDocumentStore.searchDocuments(database, query, limit);

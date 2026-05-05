@@ -4,39 +4,48 @@ const capacitorMock = vi.hoisted(() => ({
   isNative: vi.fn(() => true),
   platform: vi.fn(() => 'android'),
   plugin: {
+    loadExternalDirectory: vi.fn(async () => ({
+      entries: [externalEntry()],
+      folders: [{ document_count: 1, folder_path: '/library/two think', id: 'folder-1' }]
+    })),
     loadExternalDocument: vi.fn(async () => ({
-      document: {
-        content: 'cached external content',
-        content_status: 'missing',
-        document_id: 'folder-1:doc.md',
-        extension: 'md',
-        file_name: 'doc.md',
-        folder_id: 'folder-1',
-        opening_text: 'cached external',
-        relative_path: 'doc.md',
-        title: 'Doc',
-        updated_at: '2026-04-26T01:00:00.000Z'
-      }
+      document: externalDocument({ content_status: 'missing' })
     })),
     searchExternalDocuments: vi.fn(async () => ({
       query: 'external',
-      results: [{
-        content: 'cached external content',
-        content_status: 'ready',
-        document_id: 'folder-1:doc.md',
-        excerpt: 'cached external content',
-        extension: 'md',
-        file_name: 'doc.md',
-        folder_id: 'folder-1',
-        match_start: 7,
-        opening_text: 'cached external',
-        relative_path: 'doc.md',
-        title: 'Doc',
-        updated_at: '2026-04-26T01:00:00.000Z'
-      }]
+      results: [{ ...externalDocument({ content_status: 'ready' }), excerpt: 'cached external content', match_start: 7 }]
     }))
   }
 }));
+
+function externalEntry() {
+  return {
+    absolute_path: 'folder-1:doc.md',
+    document_id: 'folder-1:doc.md',
+    extension: 'md',
+    file_name: 'doc.md',
+    folder_id: 'folder-1',
+    modified_at: '2026-04-26T01:00:00.000Z',
+    opening_text: 'cached external',
+    relative_path: 'doc.md',
+    title: 'Doc'
+  };
+}
+
+function externalDocument(overrides: Record<string, string> = {}) {
+  return {
+    content: 'cached external content',
+    document_id: 'folder-1:doc.md',
+    extension: 'md',
+    file_name: 'doc.md',
+    folder_id: 'folder-1',
+    opening_text: 'cached external',
+    relative_path: 'doc.md',
+    title: 'Doc',
+    updated_at: '2026-04-26T01:00:00.000Z',
+    ...overrides
+  };
+}
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -46,13 +55,13 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
 
-describe('companion external documents bridge', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    capacitorMock.isNative.mockReturnValue(true);
-    capacitorMock.platform.mockReturnValue('android');
-  });
+beforeEach(() => {
+  vi.resetModules();
+  capacitorMock.isNative.mockReturnValue(true);
+  capacitorMock.platform.mockReturnValue('android');
+});
 
+describe('companion external documents bridge', () => {
   it('loads and searches cached external documents through the native plugin', async () => {
     const api = await import('./companionExternalDocuments');
 
@@ -71,37 +80,35 @@ describe('companion external documents bridge', () => {
     expect(capacitorMock.plugin.searchExternalDocuments).toHaveBeenCalledWith({ limit: 5, query: 'external' });
   });
 
+  it('loads cached external directory folders and documents through the native plugin', async () => {
+    const api = await import('./companionExternalDocuments');
+
+    await expect(api.loadCompanionExternalDirectory()).resolves.toEqual({
+      entries: [expect.objectContaining({
+        absolutePath: 'folder-1:doc.md',
+        documentId: 'folder-1:doc.md',
+        folderId: 'folder-1',
+        relativePath: 'doc.md',
+        title: 'Doc'
+      })],
+      folders: [{
+        documentCount: 1,
+        folderPath: '/library/two think',
+        id: 'folder-1'
+      }]
+    });
+    expect(capacitorMock.plugin.loadExternalDirectory).toHaveBeenCalledWith();
+  });
+});
+
+describe('companion external document body status', () => {
   it('preserves external document fetching and failed body status', async () => {
     capacitorMock.plugin.loadExternalDocument.mockResolvedValueOnce({
-      document: {
-        content: '',
-        content_status: 'fetching',
-        document_id: 'folder-1:doc.md',
-        extension: 'md',
-        file_name: 'doc.md',
-        folder_id: 'folder-1',
-        opening_text: 'cached external',
-        relative_path: 'doc.md',
-        title: 'Doc',
-        updated_at: '2026-04-26T01:00:00.000Z'
-      }
+      document: externalDocument({ content: '', content_status: 'fetching' })
     });
     capacitorMock.plugin.searchExternalDocuments.mockResolvedValueOnce({
       query: 'external',
-      results: [{
-        content: '',
-        content_status: 'failed',
-        document_id: 'folder-1:doc.md',
-        excerpt: '',
-        extension: 'md',
-        file_name: 'doc.md',
-        folder_id: 'folder-1',
-        match_start: 0,
-        opening_text: 'cached external',
-        relative_path: 'doc.md',
-        title: 'Doc',
-        updated_at: '2026-04-26T01:00:00.000Z'
-      }]
+      results: [{ ...externalDocument({ content: '', content_status: 'failed' }), excerpt: '', match_start: 0 }]
     });
     const api = await import('./companionExternalDocuments');
 
@@ -118,6 +125,7 @@ describe('companion external documents bridge', () => {
     const api = await import('./companionExternalDocuments');
 
     await expect(api.loadCompanionExternalDocument('folder-1:doc.md')).resolves.toBeNull();
+    await expect(api.loadCompanionExternalDirectory()).resolves.toEqual({ entries: [], folders: [] });
     await expect(api.searchCompanionExternalDocuments('external')).resolves.toEqual([]);
   });
 });

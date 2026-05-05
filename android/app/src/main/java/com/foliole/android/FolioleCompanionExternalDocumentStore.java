@@ -37,6 +37,13 @@ final class FolioleCompanionExternalDocumentStore {
         return result;
     }
 
+    static JSObject loadDirectory(SQLiteDatabase database) {
+        JSObject result = new JSObject();
+        result.put("folders", loadFolders(database));
+        result.put("entries", loadEntries(database));
+        return result;
+    }
+
     static JSObject searchDocuments(SQLiteDatabase database, String query, int limit) {
         JSObject result = new JSObject();
         JSArray results = new JSArray();
@@ -73,6 +80,49 @@ final class FolioleCompanionExternalDocumentStore {
             }
         }
         return result;
+    }
+
+    private static JSArray loadFolders(SQLiteDatabase database) {
+        JSArray folders = new JSArray();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT id, folder_path, document_count FROM external_search_folders ORDER BY folder_path COLLATE NOCASE ASC",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                JSObject folder = new JSObject();
+                folder.put("id", cursor.getString(0));
+                folder.put("folder_path", cursor.getString(1));
+                folder.put("document_count", cursor.getInt(2));
+                folders.put(folder);
+            }
+        }
+        return folders;
+    }
+
+    private static JSArray loadEntries(SQLiteDatabase database) {
+        JSArray entries = new JSArray();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, updated_at " +
+                "FROM external_documents WHERE is_present = 1 ORDER BY folder_id ASC, relative_path COLLATE NOCASE ASC",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                JSObject entry = new JSObject();
+                String documentId = cursor.getString(0);
+                String relativePath = cursor.getString(2);
+                entry.put("document_id", documentId);
+                entry.put("folder_id", cursor.getString(1));
+                entry.put("relative_path", relativePath);
+                entry.put("file_name", cursor.getString(3));
+                entry.put("extension", cursor.getString(4));
+                entry.put("title", cursor.getString(5));
+                entry.put("opening_text", cursor.getString(6));
+                entry.put("modified_at", cursor.getString(7));
+                entry.put("absolute_path", documentId);
+                entries.put(entry);
+            }
+        }
+        return entries;
     }
 
     private static JSObject toDocument(Cursor cursor) {

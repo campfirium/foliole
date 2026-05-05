@@ -1,9 +1,10 @@
 import { FolderTree, ListFilter, X } from 'lucide-react';
 
 import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
-import { CompanionDirectoryContent } from './CompanionDirectoryContent';
+import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
-import { ImmersiveReadableArticle, ReadableArticleDocument } from './CompanionReadableArticleSurface';
+import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
+import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
@@ -107,38 +108,49 @@ function ReviewContent(props: {
   );
 }
 
-function ReadableArticleOrFallback(props: {
-  error: string | null;
-  hasSnapshot: boolean;
-  surface: Surface;
-  workspaceSync: WorkspaceSync;
-}) {
-  if (props.surface.readableArticle) {
-    return (
-      <ReadableArticleDocument
-        onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
-        readableArticle={props.surface.readableArticle}
-        syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
-      />
-    );
-  }
-  return <CompanionReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} reviewSession={props.surface.reviewSession} />;
-}
-
 function renderRecentContent(props: Parameters<typeof renderCompanionShellContent>[0]) {
   if (props.isBrowseDirectoryOpen) {
-    if (props.surface.readableArticle && props.surface.selectedBrowseNodeId && !props.surface.browsedFolder) {
+    if (
+      props.directorySelection.kind === 'internal' &&
+      props.surface.readableArticle &&
+      props.surface.selectedBrowseNodeId &&
+      !props.surface.browsedFolder
+    ) {
       return (
         <ImmersiveReadableArticle
           onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
-          onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
+          onExit={props.onBackDirectorySelection}
           onSearch={() => props.surface.handleTabAction('search')}
           readableArticle={props.surface.readableArticle}
           syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
         />
       );
     }
-    return <CompanionDirectoryContent currentNodeId={props.surface.selectedBrowseNodeId} onSelectNode={props.surface.handleSelectBrowseNode} snapshot={props.workspaceSync.state.workspace_snapshot} />;
+    if (
+      props.directorySelection.kind === 'virtual' &&
+      props.surface.readableArticle &&
+      props.surface.selectedBrowseNodeId &&
+      !props.surface.browsedFolder
+    ) {
+      return (
+        <ImmersiveReadableArticle
+          onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
+          onExit={props.onBackDirectorySelection}
+          onSearch={() => props.surface.handleTabAction('search')}
+          readableArticle={props.surface.readableArticle}
+          syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
+        />
+      );
+    }
+    return (
+      <CompanionDirectoryContent
+        onChangeSelection={props.onChangeDirectorySelection}
+        onSearch={() => props.surface.handleTabAction('search')}
+        onSelectNode={props.surface.handleSelectBrowseNode}
+        selection={props.directorySelection}
+        snapshot={props.workspaceSync.state.workspace_snapshot}
+      />
+    );
   }
   return <RecentBrowseContent surface={props.surface} workspaceSync={props.workspaceSync} />;
 }
@@ -148,8 +160,11 @@ export function resolveCompanionTopBarProps(
   settingsPage: CompanionSettingsPage,
   isBrowseDirectoryOpen: boolean,
   isOnlyReviewOpen: boolean,
+  directorySelection: CompanionDirectorySelection,
   onOpenBrowseDirectory: () => void,
   onCloseBrowseDirectory: () => void,
+  onResetDirectorySelection: () => void,
+  onBackDirectorySelection: () => void,
   onOpenAddSheet: () => void,
   onOpenOnlyReview: () => void,
   onCloseOnlyReview: () => void,
@@ -180,7 +195,9 @@ export function resolveCompanionTopBarProps(
   }
   if (surface.activeAction === 'recent') {
     if (isBrowseDirectoryOpen) {
-      return { backLabel: 'Browse', onBack: onCloseBrowseDirectory };
+      return directorySelection.kind === 'root'
+        ? {}
+        : { backLabel: 'Back', onBack: onBackDirectorySelection };
     }
     return {
       leftAction: { icon: FolderTree, label: 'Directory', onClick: onOpenBrowseDirectory },
@@ -200,15 +217,19 @@ export function resolveCompanionTopBarProps(
 }
 
 export function renderCompanionShellContent(props: {
+  directorySelection: CompanionDirectorySelection;
   hasSnapshot: boolean;
   isBrowseDirectoryOpen: boolean;
   isOnlyReviewOpen: boolean;
   onBackToSettingsList: () => void;
+  onBackDirectorySelection: () => void;
+  onChangeDirectorySelection: (selection: CompanionDirectorySelection) => void;
   companionTabConfig: CompanionTabConfig;
   onCompanionTabConfigChange: (config: CompanionTabConfig) => void;
   onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   onOpenSyncSettings: () => void;
   onOpenTabsSettings: () => void;
+  onResetDirectorySelection: () => void;
   onSelectReviewBreadcrumbItem: (id: string) => void;
   reviewBreadcrumbItems: ReviewBreadcrumbItem[];
   settingsPage: CompanionSettingsPage;
@@ -243,6 +264,7 @@ export function renderCompanionShellContent(props: {
     <ReadableArticleOrFallback
       error={props.workspaceError}
       hasSnapshot={props.hasSnapshot}
+      onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
       surface={props.surface}
       workspaceSync={props.workspaceSync}
     />

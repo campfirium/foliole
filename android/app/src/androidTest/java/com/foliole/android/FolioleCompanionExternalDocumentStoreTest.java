@@ -42,6 +42,10 @@ public class FolioleCompanionExternalDocumentStoreTest {
             "current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL, " +
             "updated_at TEXT NOT NULL, deleted_at TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0, base_content_hash TEXT, " +
             "PRIMARY KEY (object_type, object_id), UNIQUE (state_seq))");
+        database.execSQL("CREATE TABLE external_search_folders (" +
+            "id TEXT PRIMARY KEY, folder_path TEXT NOT NULL UNIQUE, attachment_mode TEXT NOT NULL, " +
+            "attachment_root_path TEXT, excluded_dirs_json TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'idle', " +
+            "document_count INTEGER NOT NULL DEFAULT 0, indexed_at TEXT, last_error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
     }
 
     @After
@@ -90,6 +94,30 @@ public class FolioleCompanionExternalDocumentStoreTest {
         assertEquals("folder-1:beta.md", results.getJSONObject(0).getString("document_id"));
         assertEquals("cached beta body", results.getJSONObject(0).getString("excerpt"));
         assertEquals("ready", results.getJSONObject(0).getString("content_status"));
+    }
+
+    @Test
+    public void loadsExternalDirectoryFromDesktopSyncedCache() throws Exception {
+        database.execSQL(
+            "INSERT INTO external_search_folders (" +
+                "id, folder_path, attachment_mode, document_count, created_at, updated_at" +
+                ") VALUES ('folder-1', '/library/two think', 'document_relative_first_then_fixed_root', 2, " +
+                "'2026-04-26T00:00:00.000Z', '2026-04-26T01:00:00.000Z')"
+        );
+        FolioleCompanionSyncObjectStore.applySyncObjects(database, new JSONArray()
+            .put(record("folder-1:alpha.md", "alpha.md", "cached alpha body"))
+            .put(record("folder-1:sub/beta.md", "sub/beta.md", "cached beta body")), "desktop-1");
+
+        JSObject directory = FolioleCompanionExternalDocumentStore.loadDirectory(database);
+        JSONArray folders = directory.getJSONArray("folders");
+        JSONArray entries = directory.getJSONArray("entries");
+
+        assertEquals(1, folders.length());
+        assertEquals("/library/two think", folders.getJSONObject(0).getString("folder_path"));
+        assertEquals(2, entries.length());
+        assertEquals("folder-1:sub/beta.md", entries.getJSONObject(1).getString("document_id"));
+        assertEquals("sub/beta.md", entries.getJSONObject(1).getString("relative_path"));
+        assertEquals("folder-1:sub/beta.md", entries.getJSONObject(1).getString("absolute_path"));
     }
 
     @Test

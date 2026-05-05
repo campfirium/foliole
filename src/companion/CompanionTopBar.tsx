@@ -30,7 +30,9 @@ export function CompanionTopBar(props: {
   title?: string;
   visible: boolean;
 }) {
-  if (!props.visible) {
+  const hasTitleRow = Boolean(props.leftAction || props.rightAction || props.rightSlot || props.title);
+  const hasChrome = Boolean(props.onBack || hasTitleRow);
+  if (!props.visible || !hasChrome) {
     return null;
   }
 
@@ -38,7 +40,7 @@ export function CompanionTopBar(props: {
     <header className="sticky top-0 z-10 -mx-6 bg-companion-base/95 px-6 pb-3 pt-4 backdrop-blur sm:-mx-7 sm:px-7">
       {props.onBack ? (
         <button
-          className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground"
+          className={`inline-flex items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground ${hasTitleRow ? 'mb-3' : ''}`}
           onClick={props.onBack}
           type="button"
         >
@@ -46,19 +48,21 @@ export function CompanionTopBar(props: {
           {props.backLabel ?? 'Back'}
         </button>
       ) : null}
-      <div className="flex min-h-10 items-center justify-between gap-3">
-        <div className="flex w-10 justify-start">
-          {props.leftAction ? <TopBarIconButton {...props.leftAction} /> : null}
+      {hasTitleRow ? (
+        <div className="flex min-h-10 items-center justify-between gap-3">
+          <div className="flex w-10 justify-start">
+            {props.leftAction ? <TopBarIconButton {...props.leftAction} /> : null}
+          </div>
+          {props.title ? (
+            <h1 className="min-w-0 flex-1 truncate text-center text-2xl font-semibold leading-tight text-foreground">{props.title}</h1>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+          <div className="flex min-w-10 justify-end">
+            {props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null)}
+          </div>
         </div>
-        {props.title ? (
-          <h1 className="min-w-0 flex-1 truncate text-center text-2xl font-semibold leading-tight text-foreground">{props.title}</h1>
-        ) : (
-          <div className="min-w-0 flex-1" />
-        )}
-        <div className="flex min-w-10 justify-end">
-          {props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null)}
-        </div>
-      </div>
+      ) : null}
     </header>
   );
 }

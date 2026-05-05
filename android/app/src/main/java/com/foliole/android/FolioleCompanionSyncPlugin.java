@@ -151,6 +151,15 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         );
     }
 
+    @PluginMethod
+    public void loadExternalDirectory(PluginCall call) {
+        resolveWithDatabase(
+            call,
+            "Failed to load companion external directory.",
+            FolioleCompanionDatabaseHelper::loadExternalDirectory
+        );
+    }
+
 
     @PluginMethod
     public void searchExternalDocuments(PluginCall call) {
