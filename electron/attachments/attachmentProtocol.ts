@@ -1,6 +1,6 @@
-import { promises as fs } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
-import { protocol } from 'electron';
+import { net, protocol } from 'electron';
 
 import { ATTACHMENT_PROTOCOL_SCHEME, parseAttachmentAssetUrl } from './attachmentAssetUrl.js';
 import { resolveAttachmentFile } from './resourceResolver.js';
@@ -32,13 +32,13 @@ export function registerAttachmentProtocol() {
       return new Response(null, { status: 404 });
     }
 
-    const body = await fs.readFile(resolved.filePath);
-    return new Response(body, {
+    const response = await net.fetch(pathToFileURL(resolved.filePath).toString());
+    return new Response(response.body, {
       headers: {
         'content-type': resolved.mimeType ?? 'application/octet-stream',
         'cache-control': 'public, max-age=31536000, immutable'
       },
-      status: 200
+      status: response.status
     });
   });
 }

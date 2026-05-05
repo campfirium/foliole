@@ -7,8 +7,8 @@ const { handle, registerSchemesAsPrivileged } = vi.hoisted(() => ({
   registerSchemesAsPrivileged: vi.fn()
 }));
 
-const { readFile } = vi.hoisted(() => ({
-  readFile: vi.fn()
+const { fetch } = vi.hoisted(() => ({
+  fetch: vi.fn()
 }));
 
 const { resolveAttachmentFile } = vi.hoisted(() => ({
@@ -16,14 +16,13 @@ const { resolveAttachmentFile } = vi.hoisted(() => ({
 }));
 
 vi.mock('electron', () => ({
+  net: {
+    fetch
+  },
   protocol: {
     handle,
     registerSchemesAsPrivileged
   }
-}));
-
-vi.mock('node:fs', () => ({
-  promises: { readFile }
 }));
 
 vi.mock('./resourceResolver.js', () => ({
@@ -56,8 +55,8 @@ it('registers the attachment scheme with secure standard privileges', () => {
   ]);
 });
 
-it('serves attachment bytes with the stored mime type through the custom protocol', async () => {
-  readFile.mockResolvedValue(Buffer.from('image-bytes'));
+it('serves attachment files through Electron net fetch with the stored mime type', async () => {
+  fetch.mockResolvedValue(new Response(Buffer.from('image-bytes'), { status: 200 }));
   resolveAttachmentFile.mockReturnValue({
     status: 'ready',
     filePath: '/tmp/attachment-hash',
@@ -71,7 +70,7 @@ it('serves attachment bytes with the stored mime type through the custom protoco
   const response = await handler({ url: buildAttachmentAssetUrl('hash-1') });
 
   expect(resolveAttachmentFile).toHaveBeenCalledWith('hash-1');
-  expect(readFile).toHaveBeenCalledWith('/tmp/attachment-hash');
+  expect(fetch).toHaveBeenCalledWith('file:///tmp/attachment-hash');
   expect(response.status).toBe(200);
   expect(response.headers.get('content-type')).toBe('image/png');
   await expect(response.arrayBuffer()).resolves.toMatchObject(Buffer.from('image-bytes').buffer);
