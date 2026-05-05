@@ -1,23 +1,24 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { listAvailableSystemFonts } from '../model/systemFonts';
+
+import { SettingsPanel } from './SettingsPanel';
+import {
+  changePushQueueValues,
+  createDeferred,
+  createProps,
+  createSavedPushQueueProps,
+  expectPushQueueChangeCallbacks,
+  expectPushQueueValues,
+  openReviewSettings
+} from './SettingsPanel.testUtils';
+
 vi.mock('../model/systemFonts', () => ({
   listAvailableSystemFonts: vi.fn()
 }));
 
-import { listAvailableSystemFonts } from '../model/systemFonts';
-
-import { SettingsPanel } from './SettingsPanel';
-
 const mockedListAvailableSystemFonts = vi.mocked(listAvailableSystemFonts);
-
-function createDeferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((nextResolve) => {
-    resolve = nextResolve;
-  });
-  return { promise, resolve };
-}
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -25,46 +26,6 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockReset();
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
-
-function createProps() {
-  return {
-    accentColorPreset: '#3f8f68' as const,
-    baseColorMode: 'light' as const,
-    customInterfaceFont: '',
-    customMonospaceFont: '',
-    customUiFont: '',
-    desiredRetention: 0.9,
-    maximumIntervalDays: 36500,
-    enableFuzz: false,
-    enableShortTerm: false,
-    hotkeyItems: [],
-    interfaceFontPreset: 'default' as const,
-    interfaceFontSize: 17,
-    markdownSyntaxVisibility: 'visible' as const,
-    monospaceFontPreset: 'default' as const,
-    onAccentColorPresetChange: () => undefined,
-    onAccentColorPresetReset: () => undefined,
-    onBaseColorModeChange: () => undefined,
-    onClose: () => undefined,
-    onCustomInterfaceFontChange: () => undefined,
-    onCustomMonospaceFontChange: () => undefined,
-    onCustomUiFontChange: () => undefined,
-    onDesiredRetentionChange: () => undefined,
-    onMaximumIntervalDaysChange: () => undefined,
-    onEnableFuzzChange: () => undefined,
-    onEnableShortTermChange: () => undefined,
-    onHotkeyReset: () => undefined,
-    onHotkeyResetAll: () => undefined,
-    onHotkeyUpdate: () => ({ status: 'blocked' as const }),
-    onInterfaceFontPresetChange: () => undefined,
-    onInterfaceFontSizeChange: () => undefined,
-    onInterfaceFontSizeReset: () => undefined,
-    onMarkdownSyntaxVisibilityChange: () => undefined,
-    onMonospaceFontPresetChange: () => undefined,
-    onUiFontPresetChange: () => undefined,
-    uiFontPreset: 'default' as const
-  };
-}
 
 it('keeps font selects disabled until system fonts are loaded', async () => {
   const deferred = createDeferred<{ fonts: string[]; monospaceFonts: string[] }>();
@@ -100,7 +61,7 @@ it('updates desired retention from review settings slider', async () => {
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+  openReviewSettings();
   fireEvent.change(screen.getByLabelText('Desired retention'), {
     target: { value: '0.8' }
   });
@@ -125,7 +86,7 @@ it('updates remaining review scheduler controls from review settings section', a
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+  openReviewSettings();
   fireEvent.change(screen.getByLabelText('Maximum interval days'), {
     target: { value: '365' }
   });
@@ -140,5 +101,73 @@ it('updates remaining review scheduler controls from review settings section', a
     expect(onMaximumIntervalDaysChange).toHaveBeenCalledWith(365);
     expect(onEnableFuzzChange).toHaveBeenCalledWith(true);
     expect(onEnableShortTermChange).toHaveBeenCalledWith(true);
+  });
+});
+
+it('keeps push queue defaults, saved values, and reopened review fields in sync', async () => {
+  const onPriorityRatioChange = vi.fn();
+  const onQueueMixRatioReadingChange = vi.fn();
+  const onQueueMixRatioFsrsChange = vi.fn();
+  const onReadingInitialIntervalDaysChange = vi.fn();
+  const onReadingIntervalGrowthFactorMinChange = vi.fn();
+  const onReadingIntervalGrowthFactorMaxChange = vi.fn();
+  const savedProps = createSavedPushQueueProps();
+
+  const view = render(
+    <SettingsPanel
+      {...createProps()}
+      onPriorityRatioChange={onPriorityRatioChange}
+      onQueueMixRatioReadingChange={onQueueMixRatioReadingChange}
+      onQueueMixRatioFsrsChange={onQueueMixRatioFsrsChange}
+      onReadingInitialIntervalDaysChange={onReadingInitialIntervalDaysChange}
+      onReadingIntervalGrowthFactorMinChange={onReadingIntervalGrowthFactorMinChange}
+      onReadingIntervalGrowthFactorMaxChange={onReadingIntervalGrowthFactorMaxChange}
+    />
+  );
+
+  openReviewSettings();
+  expectPushQueueValues({
+    reading: 1,
+    fsrs: 5,
+    priorityRatio: 5,
+    readingInitialIntervalDays: 1,
+    readingGrowthMin: 1.1,
+    readingGrowthMax: 1.5
+  });
+  changePushQueueValues({
+    reading: '2',
+    fsrs: '4',
+    priorityRatio: '7',
+    readingInitialIntervalDays: '2',
+    readingGrowthMin: '1.12',
+    readingGrowthMax: '1.44'
+  });
+
+  await waitFor(() => {
+    expectPushQueueChangeCallbacks({
+      onQueueMixRatioReadingChange,
+      onQueueMixRatioFsrsChange,
+      onPriorityRatioChange,
+      onReadingInitialIntervalDaysChange,
+      onReadingIntervalGrowthFactorMinChange,
+      onReadingIntervalGrowthFactorMaxChange
+    });
+  });
+
+  view.unmount();
+
+  render(<SettingsPanel {...savedProps} />);
+
+  openReviewSettings();
+
+  await waitFor(() => {
+    expectPushQueueValues({
+      reading: 2,
+      fsrs: 4,
+      priorityRatio: 7,
+      readingInitialIntervalDays: 2,
+      readingGrowthMin: 1.12,
+      readingGrowthMax: 1.44
+    });
   });
 });

@@ -176,6 +176,12 @@ function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
       maximumIntervalDays={props.reviewSchedulerSettings.maximumIntervalDays}
       enableFuzz={props.reviewSchedulerSettings.enableFuzz}
       enableShortTerm={props.reviewSchedulerSettings.enableShortTerm}
+      priorityRatio={props.reviewSchedulerSettings.pushQueue.priorityRatio}
+      queueMixRatioReading={props.reviewSchedulerSettings.pushQueue.queueMixRatio.reading}
+      queueMixRatioFsrs={props.reviewSchedulerSettings.pushQueue.queueMixRatio.fsrs}
+      readingInitialIntervalMs={props.reviewSchedulerSettings.pushQueue.readingInitialIntervalMs}
+      readingIntervalGrowthFactorMin={props.reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.min}
+      readingIntervalGrowthFactorMax={props.reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.max}
       hotkeyItems={props.hotkeyItems}
       markdownSyntaxVisibility={props.markdownSyntaxVisibility}
       monospaceFontPreset={props.monospaceFontPreset}
@@ -194,6 +200,12 @@ function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
       onMaximumIntervalDaysChange={props.onMaximumIntervalDaysChange}
       onEnableFuzzChange={props.onEnableFuzzChange}
       onEnableShortTermChange={props.onEnableShortTermChange}
+      onPriorityRatioChange={props.onPriorityRatioChange}
+      onQueueMixRatioReadingChange={props.onQueueMixRatioReadingChange}
+      onQueueMixRatioFsrsChange={props.onQueueMixRatioFsrsChange}
+      onReadingInitialIntervalDaysChange={props.onReadingInitialIntervalDaysChange}
+      onReadingIntervalGrowthFactorMinChange={props.onReadingIntervalGrowthFactorMinChange}
+      onReadingIntervalGrowthFactorMaxChange={props.onReadingIntervalGrowthFactorMaxChange}
       onMarkdownSyntaxVisibilityChange={props.onMarkdownSyntaxVisibilityChange}
       onMonospaceFontPresetChange={props.onMonospaceFontPresetChange}
       onHotkeyUpdate={props.onHotkeyUpdate}

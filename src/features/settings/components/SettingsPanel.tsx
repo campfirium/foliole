@@ -18,11 +18,11 @@ import {
 } from '../model/settingsPanelOptions';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
-import { HotkeySettingsSection } from './HotkeySettingsSection';
-import { SettingsAboutSection } from './sections/SettingsAboutSection';
-import { SettingsAppearanceSection } from './sections/SettingsAppearanceSection';
-import { SettingsEditorSection } from './sections/SettingsEditorSection';
-import { SettingsReviewSection } from './sections/SettingsReviewSection';
+import {
+  SettingsCategoryContent,
+  SettingsSidebar,
+  type SettingsCategoryContentProps
+} from './SettingsPanelSections';
 
 interface SettingsPanelProps {
   baseColorMode: BaseColorMode;
@@ -37,6 +37,12 @@ interface SettingsPanelProps {
   maximumIntervalDays: number;
   enableFuzz: boolean;
   enableShortTerm: boolean;
+  priorityRatio: number;
+  queueMixRatioReading: number;
+  queueMixRatioFsrs: number;
+  readingInitialIntervalMs: number;
+  readingIntervalGrowthFactorMin: number;
+  readingIntervalGrowthFactorMax: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
   hotkeyItems: HotkeySettingItem[];
@@ -55,6 +61,12 @@ interface SettingsPanelProps {
   onMaximumIntervalDaysChange: (value: number) => void;
   onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
+  onPriorityRatioChange: (value: number) => void;
+  onQueueMixRatioReadingChange: (value: number) => void;
+  onQueueMixRatioFsrsChange: (value: number) => void;
+  onReadingInitialIntervalDaysChange: (value: number) => void;
+  onReadingIntervalGrowthFactorMinChange: (value: number) => void;
+  onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
   onHotkeyUpdate: (commandId: string, nextLabel: string) => HotkeyUpdateResult;
@@ -138,7 +150,7 @@ function useSettingsPanelViewState(props: SettingsPanelProps) {
   };
 }
 
-function SettingsPanelBody(props: {
+type SettingsPanelBodyProps = SettingsCategoryContentProps & {
   activeCategory: SettingsCategoryId;
   accentColorInputRef: React.RefObject<HTMLInputElement>;
   areFontOptionsReady: boolean;
@@ -150,6 +162,12 @@ function SettingsPanelBody(props: {
   maximumIntervalDays: number;
   enableFuzz: boolean;
   enableShortTerm: boolean;
+  priorityRatio: number;
+  queueMixRatioReading: number;
+  queueMixRatioFsrs: number;
+  readingInitialIntervalMs: number;
+  readingIntervalGrowthFactorMin: number;
+  readingIntervalGrowthFactorMax: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontOptions: string[];
   onAccentColorPresetChange: (value: AccentColorPreset) => void;
@@ -169,6 +187,12 @@ function SettingsPanelBody(props: {
   onMaximumIntervalDaysChange: (value: number) => void;
   onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
+  onPriorityRatioChange: (value: number) => void;
+  onQueueMixRatioReadingChange: (value: number) => void;
+  onQueueMixRatioFsrsChange: (value: number) => void;
+  onReadingInitialIntervalDaysChange: (value: number) => void;
+  onReadingIntervalGrowthFactorMinChange: (value: number) => void;
+  onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
   onUiFontPresetChange: (value: InterfaceFontPreset) => void;
@@ -179,17 +203,15 @@ function SettingsPanelBody(props: {
   setActiveCategory: (category: SettingsCategoryId) => void;
   title: string;
   uiFontOptions: string[];
-}) {
+};
+
+function SettingsPanelBody(props: SettingsPanelBodyProps) {
   return (
     <section aria-label="Settings" className="settings-root" onMouseDown={props.onClose} role="presentation">
       <div aria-label="Settings dialog" aria-modal="true" className="settings-shell" onMouseDown={(event) => event.stopPropagation()} role="dialog">
-        <aside aria-label="Settings categories" className="settings-sidebar"><p className="settings-sidebar-title">Options</p><nav aria-label="Settings navigation" className="settings-nav">{SETTINGS_CATEGORIES.map((category) => <button className={`settings-nav-item${category.id === props.activeCategory ? ' settings-nav-item-active' : ''}`} key={category.id} onClick={() => props.setActiveCategory(category.id)} type="button">{category.label}</button>)}</nav></aside>
+        <SettingsSidebar activeCategory={props.activeCategory} setActiveCategory={props.setActiveCategory} />
         <div className="settings-content"><header className="settings-content-header"><h2>{props.title}</h2></header>
-          {props.activeCategory === 'editor' ? <SettingsEditorSection markdownSyntaxVisibility={props.markdownSyntaxVisibility} onMarkdownSyntaxVisibilityChange={props.onMarkdownSyntaxVisibilityChange} /> : null}
-          {props.activeCategory === 'appearance' ? <SettingsAppearanceSection accentColorInputRef={props.accentColorInputRef} areFontOptionsReady={props.areFontOptionsReady} baseColorMode={props.baseColorMode} interfaceFontOptions={props.interfaceFontOptions} interfaceFontSize={props.interfaceFontSize} monospaceFontOptions={props.monospaceFontOptions} onAccentColorPresetChange={props.onAccentColorPresetChange} onAccentColorPresetReset={props.onAccentColorPresetReset} onBaseColorModeChange={props.onBaseColorModeChange} onInterfaceFontSelectionChange={(value) => value.startsWith('preset:') ? props.onInterfaceFontPresetChange(value.slice('preset:'.length) as InterfaceFontPreset) : value.startsWith('font:') && (props.onCustomInterfaceFontChange(value.slice('font:'.length)), props.onInterfaceFontPresetChange('custom'))} onInterfaceFontSizeChange={props.onInterfaceFontSizeChange} onInterfaceFontSizeReset={props.onInterfaceFontSizeReset} onMonospaceFontSelectionChange={(value) => value.startsWith('mono-preset:') ? props.onMonospaceFontPresetChange(value.slice('mono-preset:'.length) as MonospaceFontPreset) : value.startsWith('mono-font:') && (props.onCustomMonospaceFontChange(value.slice('mono-font:'.length)), props.onMonospaceFontPresetChange('custom'))} onOpenAccentColorPicker={() => props.accentColorInputRef.current?.click()} onUiFontSelectionChange={(value) => value.startsWith('ui-preset:') ? props.onUiFontPresetChange(value.slice('ui-preset:'.length) as InterfaceFontPreset) : value.startsWith('ui-font:') && (props.onCustomUiFontChange(value.slice('ui-font:'.length)), props.onUiFontPresetChange('custom'))} safeAccentColor={props.safeAccentColor} selectedInterfaceFontValue={props.selectedInterfaceFontValue} selectedMonospaceFontValue={props.selectedMonospaceFontValue} selectedUiFontValue={props.selectedUiFontValue} uiFontOptions={props.uiFontOptions} /> : null}
-          {props.activeCategory === 'review' ? <SettingsReviewSection desiredRetention={props.desiredRetention} maximumIntervalDays={props.maximumIntervalDays} enableFuzz={props.enableFuzz} enableShortTerm={props.enableShortTerm} onDesiredRetentionChange={props.onDesiredRetentionChange} onMaximumIntervalDaysChange={props.onMaximumIntervalDaysChange} onEnableFuzzChange={props.onEnableFuzzChange} onEnableShortTermChange={props.onEnableShortTermChange} /> : null}
-          {props.activeCategory === 'about' ? <SettingsAboutSection /> : null}
-          {props.activeCategory === 'hotkeys' ? <HotkeySettingsSection items={props.hotkeyItems} onReset={props.onHotkeyReset} onResetAll={props.onHotkeyResetAll} onUpdate={props.onHotkeyUpdate} /> : null}
+          <SettingsCategoryContent {...props} />
         </div>
       </div>
     </section>

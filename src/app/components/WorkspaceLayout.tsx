@@ -95,6 +95,12 @@ export interface WorkspaceLayoutProps {
   onMaximumIntervalDaysChange: (value: number) => void;
   onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
+  onPriorityRatioChange: (value: number) => void;
+  onQueueMixRatioReadingChange: (value: number) => void;
+  onQueueMixRatioFsrsChange: (value: number) => void;
+  onReadingInitialIntervalDaysChange: (value: number) => void;
+  onReadingIntervalGrowthFactorMinChange: (value: number) => void;
+  onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onToggleEditorDisplayMode: () => void;
   onRevealAnswer: () => void;

@@ -17,13 +17,12 @@ import {
   setUiFontPreset
 } from '../../features/settings/model/appearanceSettings';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
-import {
-  type ReviewSchedulerSettings,
-  saveReviewSchedulerSettings
-} from '../../features/settings/model/reviewSchedulerSettings';
+import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { buildReviewQueuePlan } from '../../store/reviewQueuePlanner';
 import type { WorkspaceState } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
+
+import { createReviewActions } from './reviewSettingsLayoutActions';
 
 interface AppearanceLayoutState {
   accentColorPreset: WorkspaceLayoutProps['accentColorPreset'];
@@ -154,39 +153,6 @@ function createAppearanceActions(args: BuildLayoutPropsArgs) {
       const next = args.appearance.editorDisplayMode === 'preview' ? 'source' : 'preview';
       setEditorDisplayMode(next);
       args.appearance.setEditorDisplayModeState(next);
-    }
-  };
-}
-
-function createReviewActions(args: BuildLayoutPropsArgs) {
-  const saveSettings = (
-    patch: Partial<
-      Pick<ReviewSchedulerSettings, 'desiredRetention' | 'maximumIntervalDays' | 'enableFuzz' | 'enableShortTerm'>
-    >
-  ) => {
-    const nextSettings = {
-      ...args.reviewSettings.reviewSchedulerSettings,
-      ...patch
-    };
-    args.reviewSettings.setReviewSchedulerSettingsState(nextSettings);
-    void saveReviewSchedulerSettings(patch).then(args.reviewSettings.setReviewSchedulerSettingsState);
-  };
-
-  return {
-    onDesiredRetentionChange: (value: number) => {
-      saveSettings({ desiredRetention: Number(value.toFixed(2)) });
-    },
-    onMaximumIntervalDaysChange: (value: number) => {
-      if (!Number.isFinite(value) || value <= 0) {
-        return;
-      }
-      saveSettings({ maximumIntervalDays: Math.round(value) });
-    },
-    onEnableFuzzChange: (value: boolean) => {
-      saveSettings({ enableFuzz: value });
-    },
-    onEnableShortTermChange: (value: boolean) => {
-      saveSettings({ enableShortTerm: value });
     }
   };
 }
