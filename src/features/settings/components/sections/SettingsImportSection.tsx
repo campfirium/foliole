@@ -1,5 +1,18 @@
 import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 
+function PlannedLibraryLocationRow(props: { description: string; note: string; title: string }) {
+  return (
+    <SettingsRow description={props.description} readonly title={props.title}>
+      <SettingsControlSlot className="flex-col items-stretch gap-2">
+        <div className="rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm text-foreground/75">
+          {props.note}
+        </div>
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-[0.82rem] text-foreground/70">Planned</span>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
 export function SettingsImportSection(props: {
   errorMessage: string | null;
   inboxPath: string;
@@ -10,13 +23,18 @@ export function SettingsImportSection(props: {
 }) {
   return (
     <SettingsSection
-      ariaLabel="Import settings section"
-      description="Foliole watches one Inbox folder automatically. Supported files are imported into the Inbox node as soon as they appear."
-      title="Inbox folder"
+      ariaLabel="Library settings section"
+      description="Library Home is the main root for your library. Inbox is the drop folder, and Mirror is a read-only copy that can be rebuilt."
+      title="Library paths"
     >
+      <PlannedLibraryLocationRow
+        description="Main library root for your long-term data. Database, Data, and Assets stay inside Library Home and are not configured separately."
+        note="Library Home path controls land in a follow-up task."
+        title="Library Home"
+      />
       <SettingsRow
-        description="This folder is watched on startup and while the app is running. Imported `.md` and `.txt` files are moved to the system Trash after success."
-        title="Folder location"
+        description="Drop folder for incoming files. Foliole absorbs files quickly, so it should stay close to empty instead of becoming a long-term content folder."
+        title="Inbox"
       >
         <SettingsControlSlot className="flex-col items-stretch gap-2">
           <div className="rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm text-foreground">
@@ -46,6 +64,11 @@ export function SettingsImportSection(props: {
           ) : null}
         </SettingsControlSlot>
       </SettingsRow>
+      <PlannedLibraryLocationRow
+        description="Read-only Markdown mirror generated from library data. It is not the source of truth and can be rebuilt at any time."
+        note="Mirror path controls land in a follow-up task."
+        title="Mirror"
+      />
     </SettingsSection>
   );
 }

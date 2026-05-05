@@ -56,7 +56,7 @@ it('shows the default inbox path and lets the user choose a custom location', as
 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
 
   await waitFor(() => {
     expect(screen.getByText('C:\\Users\\Tester\\AppData\\Roaming\\Foliole\\inbox')).toBeInTheDocument();
@@ -75,7 +75,7 @@ it('restores the default inbox path and clears the stored override', async () =>
 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
 
   await waitFor(() => {
     expect(screen.getByText('D:\\Capture\\Inbox')).toBeInTheDocument();
@@ -87,4 +87,25 @@ it('restores the default inbox path and clears the stored override', async () =>
     expect(screen.getByText('C:\\Users\\Tester\\AppData\\Roaming\\Foliole\\inbox')).toBeInTheDocument();
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.managedInboxPath)).toBeNull();
   });
+});
+
+it('shows Library Home, Inbox, and Mirror without exposing internal data folders', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+
+  await waitFor(() => {
+    expect(screen.getByText('Library Home')).toBeInTheDocument();
+    expect(screen.getByText('Inbox')).toBeInTheDocument();
+    expect(screen.getByText('Mirror')).toBeInTheDocument();
+  });
+
+  expect(screen.getByText(/drop folder for incoming files/i)).toBeInTheDocument();
+  expect(screen.getByText(/should stay close to empty/i)).toBeInTheDocument();
+  expect(screen.getByText(/read-only markdown mirror/i)).toBeInTheDocument();
+  expect(screen.getByText(/can be rebuilt at any time/i)).toBeInTheDocument();
+  expect(screen.getByText(/database, data, and assets stay inside library home/i)).toBeInTheDocument();
+  expect(screen.queryByText('Database location')).not.toBeInTheDocument();
+  expect(screen.queryByText('Assets location')).not.toBeInTheDocument();
+  expect(screen.queryByText('Data location')).not.toBeInTheDocument();
 });

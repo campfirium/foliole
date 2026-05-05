@@ -10,7 +10,7 @@ export const SETTINGS_CATEGORIES: Array<{ id: SettingsCategoryId; label: string 
   { id: 'editor', label: 'Editor' },
   { id: 'mouse-gestures', label: 'Mouse gestures' },
   { id: 'appearance', label: 'Appearance' },
-  { id: 'import', label: 'Import' },
+  { id: 'import', label: 'Library' },
   { id: 'review', label: 'Review' },
   { id: 'hotkeys', label: 'Hotkeys' }
 ];
