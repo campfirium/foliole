@@ -102,8 +102,8 @@ function useWorkspaceTopicTreeInteraction(args: {
 export function WorkspaceTopicTree({
   activeFolderId,
   activeNodeId,
-  emptyStateDescription = 'Select a folder with items, or add an item inside the current folder.',
-  emptyStateTitle = 'No items in this folder',
+  emptyStateDescription = 'Add a topic to get started.',
+  emptyStateTitle = 'No topics in this folder',
   itemIds,
   nodesById,
   onOpenMoveToNode,

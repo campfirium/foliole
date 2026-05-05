@@ -249,6 +249,10 @@ if quality_gate_should_print_step; then
   echo "[quality-gate-fast] selected level: ${level}"
 fi
 
+if [[ -f "scripts/check-ui-copy-guard.mjs" ]]; then
+  run_quality_gate_script "quality-gate-fast" "${pm}" "copy:guard"
+fi
+
 if [[ "${level}" == "full" ]]; then
   exec bash "${SCRIPT_DIR}/quality-gate.sh"
 fi

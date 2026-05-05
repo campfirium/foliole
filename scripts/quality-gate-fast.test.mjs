@@ -274,11 +274,13 @@ describe('quality-gate-fast.sh', () => {
     const lintMarker = path.join(tempRoot, 'lint.marker');
     try {
       await writePackageJson(tempRoot, {
+        'copy:guard': 'node scripts/check-ui-copy-guard.mjs',
         lint: 'node -e "console.log(\'repo lint should stay unused\')"',
         typecheck: `node -e "require('node:fs').writeFileSync('${typecheckMarker}', 'ok')"`,
         test: 'node -e "console.log(\'repo test should stay unused\')"',
         build: 'node -e "console.log(\'repo build should stay unused\')"'
       });
+      await writeFixtureFile(tempRoot, 'scripts/check-ui-copy-guard.mjs', 'console.log("copy guard ok");\n');
       await writeExecutable(
         tempRoot,
         'node_modules/.bin/eslint',
@@ -296,6 +298,7 @@ describe('quality-gate-fast.sh', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: light');
+      expect(result.stdout).toContain('copy guard ok');
       expect(await readFile(lintMarker, 'utf8')).toContain('src/features/image-cloze/components/ImageClozeCardView.tsx');
       expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
       expect(result.stdout).not.toContain('repo lint should stay unused');

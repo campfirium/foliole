@@ -39,9 +39,9 @@ export function WorkspaceTopicTreeHeader({
       as="header"
       className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4"
     >
-      <h2 className="sr-only">Current folder items</h2>
+      <h2 className="sr-only">Current folder topics</h2>
       {renderSearchLauncher(() => setIsSearchOpen(true))}
-      <ToolbarActionGroup ariaLabel="Current folder item actions">
+      <ToolbarActionGroup ariaLabel="Current folder topic actions">
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           icon={
@@ -52,7 +52,7 @@ export function WorkspaceTopicTreeHeader({
             )
           }
           disabled={!hasCollapsibleNodes}
-          label={hasCollapsedNodes ? 'Expand all items' : 'Collapse all items'}
+          label={hasCollapsedNodes ? 'Expand all topics' : 'Collapse all topics'}
           onClick={onToggleCollapseAll}
         />
         <AppIconButton

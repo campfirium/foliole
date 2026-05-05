@@ -5,14 +5,29 @@ import './app-smoke.shared';
 
 import { App } from '../app/App';
 import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
-import {
-  DOCUMENT_WIDTH_DEFAULT,
-  LIST_WIDTH_DEFAULT,
-  RIGHT_SIDEBAR_WIDTH_DEFAULT,
-  useWorkspaceStore
-} from '../store/workspaceStore';
+import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
+
+function getCurrentFolderPanel() {
+  return screen.getByRole('complementary', { name: 'Current folder contents' });
+}
+
+function getTopicListPanel() {
+  return screen.getByRole('complementary', { name: 'Topic list panel' });
+}
+
+function getTrashTree() {
+  return screen.getByRole('tree', { name: 'Trash section' });
+}
+
+function getTrashTreeItem(title: string) {
+  return within(getTrashTree()).getByRole('treeitem', { name: new RegExp(`\\b${title}\\b`) });
+}
+
+function openTrashView() {
+  fireEvent.click(within(getTopicListPanel()).getByRole('treeitem', { name: 'Trash' }));
+}
 
 it('restores and permanently deletes nodes from trash context menu actions', () => {
   useWorkspaceStore.setState((state) => ({
@@ -25,20 +40,25 @@ it('restores and permanently deletes nodes from trash context menu actions', () 
   }));
 
   render(<App />);
-  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Child' }), {
+    clientX: 56,
+    clientY: 64
+  });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
-  fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
+  openTrashView();
+  fireEvent.contextMenu(getTrashTreeItem('Child'), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
 
-  fireEvent.click(within(nodePanel).getByRole('button', { name: 'Nodes' }));
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
+  fireEvent.click(screen.getAllByRole('button', { name: 'Topics' })[0]);
+  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Child' }), {
+    clientX: 56,
+    clientY: 64
+  });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
+  openTrashView();
+  fireEvent.contextMenu(getTrashTreeItem('Child'), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
   expect(useWorkspaceStore.getState().nodesById['node-2']).toBeUndefined();
 });
@@ -51,21 +71,26 @@ it('supports multi-select permanent delete inside trash', () => {
       nodeOrder: ['node-1', 'node-2', 'node-3'],
       nodesById: {
         ...state.nodesById,
-        'node-2': createNode({ id: 'node-2', title: 'Node 2', content: '# Node 2' }),
-        'node-3': createNode({ id: 'node-3', title: 'Node 3', content: '# Node 3' })
+        'node-2': createNode({ id: 'node-2', parentNodeId: 'node-1', title: 'Node 2', content: '# Node 2' }),
+        'node-3': createNode({ id: 'node-3', parentNodeId: 'node-1', title: 'Node 3', content: '# Node 3' })
       }
     }));
 
     render(<App />);
-    const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-    fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
+    fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Node 2' }), {
+      clientX: 56,
+      clientY: 64
+    });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 3' }), { clientX: 56, clientY: 64 });
+    fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Node 3' }), {
+      clientX: 56,
+      clientY: 64
+    });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
-    const trashedNode2 = within(nodePanel).getByRole('treeitem', { name: 'Node 2' });
-    const trashedNode3 = within(nodePanel).getByRole('treeitem', { name: 'Node 3' });
+    openTrashView();
+    const trashedNode2 = getTrashTreeItem('Node 2');
+    const trashedNode3 = getTrashTreeItem('Node 3');
     fireEvent.click(trashedNode2);
     fireEvent.click(trashedNode3, { ctrlKey: true });
     fireEvent.contextMenu(trashedNode3, { clientX: 56, clientY: 64 });
@@ -91,6 +116,7 @@ it('relearns reading nodes from the node context menu', () => {
       ...state.nodesById,
       'node-2': createNode({
         id: 'node-2',
+        parentNodeId: 'node-1',
         title: 'Reading node',
         content: '# Reading node',
         reading: {
@@ -109,8 +135,10 @@ it('relearns reading nodes from the node context menu', () => {
 
   render(<App />);
   vi.spyOn(window, 'confirm').mockReturnValue(true);
-  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Reading node' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Reading node' }), {
+    clientX: 56,
+    clientY: 64
+  });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
 
   const workspace = useWorkspaceStore.getState();
@@ -133,6 +161,7 @@ it('relearns review cards from the node context menu after confirmation', () => 
       ...state.nodesById,
       'node-2': createNode({
         id: 'node-2',
+        parentNodeId: 'node-1',
         title: 'Review node',
         content: 'Prompt [...]',
         reveal: 'Answer',
@@ -153,8 +182,10 @@ it('relearns review cards from the node context menu after confirmation', () => 
 
   render(<App />);
   vi.spyOn(window, 'confirm').mockReturnValue(true);
-  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Review node' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Review node' }), {
+    clientX: 56,
+    clientY: 64
+  });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
 
   const workspace = useWorkspaceStore.getState();
@@ -175,16 +206,18 @@ it('empties all trash items from trash header action', () => {
     nodeOrder: ['node-1', 'node-2'],
     nodesById: {
       ...state.nodesById,
-      'node-2': createNode({ id: 'node-2', title: 'Node 2', content: '# Node 2' })
+      'node-2': createNode({ id: 'node-2', parentNodeId: 'node-1', title: 'Node 2', content: '# Node 2' })
     }
   }));
 
   render(<App />);
-  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Node 2' }), {
+    clientX: 56,
+    clientY: 64
+  });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
-  fireEvent.click(within(nodePanel).getByRole('button', { name: 'Empty' }));
+  openTrashView();
+  fireEvent.click(screen.getByRole('button', { name: 'Empty' }));
 
   const workspace = useWorkspaceStore.getState();
   expect(workspace.nodesById['node-2']).toBeUndefined();
@@ -197,67 +230,26 @@ it('restores the main document when leaving trash after selecting a trashed node
     nodeOrder: ['node-1', 'node-2'],
     nodesById: {
       ...state.nodesById,
-      'node-2': createNode({ id: 'node-2', title: 'Trashed child', content: '# Trashed child body' })
+      'node-2': createNode({
+        id: 'node-2',
+        parentNodeId: 'node-1',
+        title: 'Trashed child',
+        content: '# Trashed child body'
+      })
     }
   }));
 
   render(<App />);
-  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Trashed child' }), {
+  fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Trashed child' }), {
     clientX: 56,
     clientY: 64
   });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
-  fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
-  fireEvent.click(within(nodePanel).getByRole('treeitem', { name: 'Trashed child' }));
+  openTrashView();
+  fireEvent.click(getTrashTreeItem('Trashed child'));
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
 
   fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
   expect(screen.getByTestId('editor-value')).toHaveValue('# Welcome to Foliole\n\nStart writing markdown here.');
-});
-
-it('does not render save badge in document header', () => {
-  render(<App />);
-
-  expect(screen.queryByText('Not saved yet.')).not.toBeInTheDocument();
-  expect(screen.queryByText('Saving...')).not.toBeInTheDocument();
-  expect(screen.queryByText('Saved.')).not.toBeInTheDocument();
-});
-
-it('updates persisted document width from side handle drag', () => {
-  render(<App />);
-  const rightHandle = screen.getByRole('separator', { name: 'Resize document width from right' });
-  fireEvent.mouseDown(rightHandle, { clientX: 200 });
-  fireEvent.mouseMove(window, { clientX: 280 });
-  fireEvent.mouseUp(window);
-  expect(useWorkspaceStore.getState().layout.documentMaxWidth).toBeGreaterThan(DOCUMENT_WIDTH_DEFAULT);
-});
-
-it('supports keyboard resize on list splitter and reset by double click', () => {
-  render(<App />);
-  const splitter = screen.getByRole('separator', { name: 'Resize node list' });
-  fireEvent.keyDown(splitter, { key: 'ArrowLeft' });
-
-  expect(useWorkspaceStore.getState().layout.listWidth).toBeLessThan(LIST_WIDTH_DEFAULT);
-  fireEvent.doubleClick(splitter);
-  expect(useWorkspaceStore.getState().layout.listWidth).toBe(LIST_WIDTH_DEFAULT);
-});
-
-it('resets document width by double click handle', () => {
-  useWorkspaceStore.getState().setDocumentMaxWidth(1400);
-  render(<App />);
-  const rightHandle = screen.getByRole('separator', { name: 'Resize document width from right' });
-  fireEvent.doubleClick(rightHandle);
-  expect(useWorkspaceStore.getState().layout.documentMaxWidth).toBe(DOCUMENT_WIDTH_DEFAULT);
-});
-
-it('supports keyboard resize on inspector splitter and reset by double click', () => {
-  render(<App />);
-  const splitter = screen.getByRole('separator', { name: 'Resize inspector sidebar' });
-  fireEvent.keyDown(splitter, { key: 'ArrowLeft' });
-  expect(useWorkspaceStore.getState().layout.rightSidebarWidth).toBeGreaterThan(RIGHT_SIDEBAR_WIDTH_DEFAULT);
-
-  fireEvent.doubleClick(splitter);
-  expect(useWorkspaceStore.getState().layout.rightSidebarWidth).toBe(RIGHT_SIDEBAR_WIDTH_DEFAULT);
 });

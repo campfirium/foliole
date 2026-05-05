@@ -35,6 +35,7 @@
 - 启动时只读 `AGENTS.md`。
 - 仅当用户在新会话首条有效指令明确说“继续”时，先读取 `.lab/atlas/todo.md`；必要时按需补读 `.lab/atlas/verify.md`、`.lab/atlas/optional.md`、`.lab/atlas/notes.md`、`.lab/atlas/done.md` 与 `git log --oneline -n 5`。
 - 任务涉及 renderer UI 改动（`src/app/**`、`src/companion/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须先读取 `DESIGN.md`，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
+- 任务涉及 UI 文案、产品对象命名、空状态、按钮、菜单、队列与阅读单元称呼时，实施前必须读取 `.lab/specs/_product/terminology-and-copy.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增或重写 agent 规则、目录式 `AGENTS.md`、规则路由或治理结构时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
 - 任务涉及台账、继续 / 停车协议等执行细则时，读取 `.lab/atlas/task-protocol.md`。
@@ -104,6 +105,10 @@
 - 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
 - 执行 `android:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `OPENED` / `FAILED` 与失败阶段或失败原因；不得只汇报“已验证”。
 - 最终汇报默认言简意赅，只说用户关心的结果、必要状态与下一步；禁止套用固定“改动 / 验证”模板，禁止逐条罗列文件路径、函数名、测试命令或实现细节，除非用户明确要求追踪细节，或存在失败、风险、未完成项必须说明。
+- 默认交付汇报应采用“结果一句话 + 必要风险/失败 + 下一步”口径；不要把实现文件、函数名、测试列表当作默认交付内容。用户问“改了哪些文件 / 细节 / 怎么实现 / 验证命令”时，才展开文件路径、函数名、测试命令和实现说明。
+- 验证汇报默认只报验证结论与失败原因；若验证全部通过，可概括为“相关检查通过”，不逐条列命令。例外：`windows:preview` / `android:preview` 必须按本节规则报告实际命令和最终 `status` 字段。
+- UI 文案术语检查入口为 `npm run copy:guard`；该检查默认只报告 warning，不阻塞质量闸。只有用户明确要求或任务目标是收敛文案术语债时，才使用 `npm run copy:guard:strict`。
+- 若 `copy:guard` 报出 warning，修复前必须先读取 `.lab/specs/_product/terminology-and-copy.md`，按术语规则判断后再修改；禁止只根据脚本命中词机械替换。
 - `build` 仅在用户明确要求执行构建、或当前任务已触及依赖 / 构建根链路且必须验证构建结果时执行；对应入口为 `scripts/quality-gate.sh` 或交付脚本。
 
 ## Decision Escalation And Official Sources
@@ -161,6 +166,7 @@
 - agent 台账与执行协议：`.lab/atlas/task-protocol.md`
 - 文档治理与准入规则：`.lab/specs/_governance/doc-update-expectation.md`、`.lab/specs/_governance/spec-organization.md`、`.lab/specs/_governance/doc-organization-expectation.md`
 - 共享 UI 规范：`DESIGN.md`、`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`
+- 产品术语与 UI 文案规则：`.lab/specs/_product/terminology-and-copy.md`
 - Desktop workspace 规则：`.lab/specs/desktop/workspace/shell-layout.md`
 - Windows / Electron 开发与启动排障：`.lab/specs/desktop/electron/windows-dev-loop.md`
 - 多 target 仓库与 companion 方向：`.lab/specs/_governance/multi-target-repository-expectation.md`、`.lab/specs/architecture/multi-target-repo-layout-expectation.md`

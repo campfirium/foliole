@@ -95,18 +95,18 @@ it('places title search in the item column and keeps matches visible while searc
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
 
   expect(within(itemColumn).getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('button', { name: 'Collapse all items' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
-  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Collapse all items' }));
+  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Collapse all topics' }));
   expect(within(itemColumn).queryByRole('treeitem', { name: 'Hook Summary' })).not.toBeInTheDocument();
-  expect(within(itemColumn).getByRole('button', { name: 'Expand all items' })).toBeInTheDocument();
-  expect(within(itemColumn).queryByRole('button', { name: 'Collapse all items' })).toBeNull();
-  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Expand all items' }));
+  expect(within(itemColumn).getByRole('button', { name: 'Expand all topics' })).toBeInTheDocument();
+  expect(within(itemColumn).queryByRole('button', { name: 'Collapse all topics' })).toBeNull();
+  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Expand all topics' }));
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('button', { name: 'Collapse all items' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
 
   fireEvent.click(within(itemColumn).getByRole('button', { name: 'Open title search' }));
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Search node titles' }), {
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), {
     target: { value: 'hook' }
   });
 
@@ -126,5 +126,5 @@ it('collapses a newly opened folder by default but expands the selected topic it
 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Section B' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('treeitem', { name: 'Child B' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('button', { name: 'Collapse all items' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
 });

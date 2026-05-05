@@ -50,22 +50,31 @@ async function writeWorkspaceBoundaryScript(rootDir, message = 'workspace bounda
   );
 }
 
+async function writeCopyGuardScript(rootDir, message = 'copy guard ok') {
+  const scriptsDir = path.join(rootDir, 'scripts');
+  await mkdir(scriptsDir, { recursive: true });
+  await writeFile(path.join(scriptsDir, 'check-ui-copy-guard.mjs'), `console.log('${message}')\n`, 'utf8');
+}
+
 describe('quality-gate-target.sh', () => {
   it('runs the desktop gate steps in order', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
+        'copy:guard': 'node scripts/check-ui-copy-guard.mjs',
         'lint:desktop': 'node -e "console.log(\'desktop lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'test:desktop': 'node -e "console.log(\'desktop test ok\')"',
         build: 'node -e "console.log(\'desktop build ok\')"',
         'electron:compile': 'node -e "console.log(\'electron compile ok\')"'
       });
+      await writeCopyGuardScript(tempRoot);
       await writeWorkspaceBoundaryScript(tempRoot);
 
       const result = await runTargetGate(tempRoot, 'desktop');
 
       expect(result.code).toBe(0);
+      expect(result.stdout).toContain('copy guard ok');
       expect(result.stdout).toContain('desktop lint ok');
       expect(result.stdout).toContain('desktop typecheck ok');
       expect(result.stdout).toContain('desktop test ok');

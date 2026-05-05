@@ -17,7 +17,7 @@ it('adds a create topic action alongside current folder tools', () => {
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Collapse all items' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
   expect(onCreateTopic).toHaveBeenCalledTimes(1);
 });
@@ -34,8 +34,8 @@ it('shows an expand action after some items are collapsed', () => {
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Expand all items' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Collapse all items' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Expand all topics' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Collapse all topics' })).toBeNull();
 });
 
 it('disables the toggle when the current folder has no collapsible items', () => {
@@ -50,5 +50,5 @@ it('disables the toggle when the current folder has no collapsible items', () =>
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Collapse all items' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Collapse all topics' })).toBeDisabled();
 });
