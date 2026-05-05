@@ -163,4 +163,10 @@ describe('footnote markdown matches', () => {
       { from: 0, to: 15, label: '1', note: 'A } note' }
     ]);
   });
+
+  it('does not collect footnotes inside inline code', () => {
+    expect(collectFootnoteMatches(0, '`^[1]` ^[2]', [])).toEqual([
+      { from: 7, to: 11, label: '2', note: null }
+    ]);
+  });
 });

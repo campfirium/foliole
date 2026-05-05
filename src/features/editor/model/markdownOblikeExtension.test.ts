@@ -11,6 +11,23 @@ function collectNodeNames(markdown: string) {
 }
 
 describe('markdownOblikeExtension', () => {
+  it('recognizes OB-like footnote nodes', () => {
+    const names = collectNodeNames('Weight^[1]{note} matters.');
+
+    expect(names).toContain('Footnote');
+    expect(names).toContain('FootnoteLabel');
+    expect(names).toContain('FootnoteNote');
+    expect(names).toContain('FootnoteMark');
+  });
+
+  it('recognizes OB-like callout marker nodes', () => {
+    const names = collectNodeNames('> [!note] Title');
+
+    expect(names).toContain('CalloutMarker');
+    expect(names).toContain('CalloutKind');
+    expect(names).toContain('CalloutMark');
+  });
+
   it('recognizes OB-like wiki link nodes', () => {
     const names = collectNodeNames('Open [[Page|Alias]]');
 

@@ -1,4 +1,4 @@
-import type { MarkdownConfig } from '@lezer/markdown';
+import type { InlineContext, MarkdownConfig } from '@lezer/markdown';
 
 const SourceHighlightDelimiter = {
   mark: 'SourceHighlightMark',
@@ -11,7 +11,7 @@ function isWhitespaceCode(value: number) {
   return value === 9 || value === 10 || value === 13 || value === 32;
 }
 
-function findWikiLinkClose(cx: Parameters<NonNullable<MarkdownConfig['parseInline']>[number]['parse']>[0], pos: number) {
+function findWikiLinkClose(cx: InlineContext, pos: number) {
   for (let cursor = pos + 2; cursor < cx.end - 1; cursor += 1) {
     const char = cx.char(cursor);
     if (char === 10 || char === 13) return -1;
@@ -20,14 +20,14 @@ function findWikiLinkClose(cx: Parameters<NonNullable<MarkdownConfig['parseInlin
   return -1;
 }
 
-function findAliasSeparator(cx: Parameters<NonNullable<MarkdownConfig['parseInline']>[number]['parse']>[0], from: number, to: number) {
+function findAliasSeparator(cx: InlineContext, from: number, to: number) {
   for (let cursor = from; cursor < to; cursor += 1) {
     if (cx.char(cursor) === 124) return cursor;
   }
   return -1;
 }
 
-function trimBounds(cx: Parameters<NonNullable<MarkdownConfig['parseInline']>[number]['parse']>[0], from: number, to: number) {
+function trimBounds(cx: InlineContext, from: number, to: number) {
   let start = from;
   let end = to;
   while (start < end && isWhitespaceCode(cx.char(start))) start += 1;
@@ -35,10 +35,98 @@ function trimBounds(cx: Parameters<NonNullable<MarkdownConfig['parseInline']>[nu
   return { from: start, to: end };
 }
 
+function parseCalloutMarker(cx: InlineContext, pos: number) {
+  if (cx.char(pos + 1) !== 33) return -1;
+  let cursor = pos + 2;
+  if (!isAsciiLetter(cx.char(cursor))) return -1;
+  while (isCalloutKindCode(cx.char(cursor))) cursor += 1;
+  if (cx.char(cursor) !== 93) return -1;
+  return cx.addElement(cx.elt('CalloutMarker', pos, cursor + 1, [
+    cx.elt('CalloutMark', pos, pos + 2),
+    cx.elt('CalloutKind', pos + 2, cursor),
+    cx.elt('CalloutMark', cursor, cursor + 1)
+  ]));
+}
+
+function parseFootnote(cx: InlineContext, pos: number) {
+  if (cx.char(pos + 1) !== 91) return -1;
+  const labelTo = findClosingChar(cx, pos + 2, 93);
+  if (labelTo < 0 || labelTo === pos + 2) return -1;
+  const noteBounds = cx.char(labelTo + 1) === 123 ? findFootnoteNoteBounds(cx, labelTo + 2) : null;
+  const to = noteBounds ? noteBounds.to + 1 : labelTo + 1;
+  const children = [
+    cx.elt('FootnoteMark', pos, pos + 2),
+    cx.elt('FootnoteLabel', pos + 2, labelTo),
+    cx.elt('FootnoteMark', labelTo, labelTo + 1)
+  ];
+  if (noteBounds) {
+    children.push(cx.elt('FootnoteMark', labelTo + 1, labelTo + 2));
+    children.push(cx.elt('FootnoteNote', noteBounds.from, noteBounds.to));
+    children.push(cx.elt('FootnoteMark', noteBounds.to, noteBounds.to + 1));
+  }
+  return cx.addElement(cx.elt('Footnote', pos, to, children));
+}
+
+function findClosingChar(cx: InlineContext, from: number, closeCode: number) {
+  for (let cursor = from; cursor < cx.end; cursor += 1) {
+    const char = cx.char(cursor);
+    if (char === 10 || char === 13) return -1;
+    if (char === closeCode) return cursor;
+  }
+  return -1;
+}
+
+function findFootnoteNoteBounds(cx: InlineContext, from: number) {
+  let escaped = false;
+  for (let cursor = from; cursor < cx.end; cursor += 1) {
+    const char = cx.char(cursor);
+    if (char === 10 || char === 13) return null;
+    if (!escaped && char === 125) return { from, to: cursor };
+    escaped = !escaped && char === 92;
+  }
+  return null;
+}
+
+function isAsciiLetter(value: number) {
+  return (value >= 65 && value <= 90) || (value >= 97 && value <= 122);
+}
+
+function isCalloutKindCode(value: number) {
+  return isAsciiLetter(value) || (value >= 48 && value <= 57) || value === 45 || value === 95;
+}
+
 export const folioleMarkdownExtensions: MarkdownConfig[] = [
   {
-    defineNodes: ['SourceHighlight', 'SourceHighlightMark', 'WikiLink', 'WikiLinkAlias', 'WikiLinkMark', 'WikiLinkTarget'],
+    defineNodes: [
+      'CalloutKind',
+      'CalloutMark',
+      'CalloutMarker',
+      'Footnote',
+      'FootnoteLabel',
+      'FootnoteMark',
+      'FootnoteNote',
+      'SourceHighlight',
+      'SourceHighlightMark',
+      'WikiLink',
+      'WikiLinkAlias',
+      'WikiLinkMark',
+      'WikiLinkTarget'
+    ],
     parseInline: [
+      {
+        name: 'Footnote',
+        parse(cx, next, pos) {
+          return next === 94 ? parseFootnote(cx, pos) : -1;
+        },
+        before: 'Superscript'
+      },
+      {
+        name: 'CalloutMarker',
+        parse(cx, next, pos) {
+          return next === 91 ? parseCalloutMarker(cx, pos) : -1;
+        },
+        before: 'Link'
+      },
       {
         name: 'WikiLink',
         parse(cx, next, pos) {

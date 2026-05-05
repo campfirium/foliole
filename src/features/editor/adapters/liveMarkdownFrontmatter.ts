@@ -1,23 +1,15 @@
-import { Text, type Range } from '@codemirror/state';
+import { type Range } from '@codemirror/state';
 import { Decoration, WidgetType, type DecorationSet, type EditorView } from '@codemirror/view';
+
+import { collectMarkdownLineClassRanges } from '../model/markdownBlockProjection';
+import {
+  projectMarkdownFrontmatter,
+  type FrontmatterBounds
+} from '../model/markdownFrontmatterProjection';
 
 import { addLine, addReplace } from './liveMarkdownPrimitives';
 
-const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
-const FRONTMATTER_KEY_VALUE_PATTERN = /^([^:#\s][^:]*?)(\s*:\s*)(.*)$/;
-const FRONTMATTER_LIST_ITEM_PATTERN = /^(\s*)-\s+(.*)$/;
-const WIKILINK_WRAPPER_PATTERN = /\[\[([^\]]+)\]\]/g;
-const HEADING_PATTERN = /^\s*#\s+.+$/;
-
-interface FrontmatterBounds {
-  startLine: number;
-  endLine: number;
-}
-
-interface FrontmatterEntry {
-  key: string;
-  values: string[];
-}
+export { extractFrontmatterEntries, resolveFrontmatterBounds } from '../model/markdownFrontmatterProjection';
 
 export interface FrontmatterDecorationState {
   decorations: DecorationSet;
@@ -53,85 +45,19 @@ class FrontmatterSummaryWidget extends WidgetType {
   }
 }
 
-function isDelimiterLine(text: string) {
-  return FRONTMATTER_DELIMITER_PATTERN.test(text);
-}
-
-function normalizeValue(value: string) {
-  return value.replace(WIKILINK_WRAPPER_PATTERN, '$1').trim();
-}
-
-function resolveFrontmatterBoundsInDoc(doc: Text): FrontmatterBounds | null {
-  if (doc.lines < 3 || !isDelimiterLine(doc.line(1).text)) {
-    return null;
-  }
-
-  for (let lineNumber = 2; lineNumber <= doc.lines; lineNumber += 1) {
-    if (isDelimiterLine(doc.line(lineNumber).text)) {
-      return {
-        startLine: 1,
-        endLine: lineNumber
-      };
-    }
-  }
-
-  return null;
-}
-
-function extractFrontmatterEntriesInDoc(doc: Text, bounds: FrontmatterBounds): FrontmatterEntry[] {
-  const entries: FrontmatterEntry[] = [];
-  let currentEntry: FrontmatterEntry | null = null;
-
-  for (let lineNumber = bounds.startLine + 1; lineNumber < bounds.endLine; lineNumber += 1) {
-    const line = doc.line(lineNumber).text;
-    const keyMatch = line.match(FRONTMATTER_KEY_VALUE_PATTERN);
-    if (keyMatch) {
-      const key = keyMatch[1]?.trim() ?? '';
-      const value = normalizeValue(keyMatch[3] ?? '');
-      currentEntry = {
-        key,
-        values: value ? [value] : []
-      };
-      entries.push(currentEntry);
-      continue;
-    }
-
-    const listMatch = line.match(FRONTMATTER_LIST_ITEM_PATTERN);
-    if (listMatch && currentEntry) {
-      const value = normalizeValue(listMatch[2] ?? '');
-      if (value) currentEntry.values.push(value);
-    }
-  }
-
-  return entries.filter((entry) => entry.values.length > 0);
-}
-
-function buildFrontmatterSummary(entries: FrontmatterEntry[]) {
-  return entries.flatMap((entry) => entry.values).join('  ·  ');
-}
-
-export function resolveFrontmatterBounds(content: string): FrontmatterBounds | null {
-  const lines = content.split('\n');
-  const doc = Text.of(lines);
-  return resolveFrontmatterBoundsInDoc(doc);
-}
-
 export function isLineWithinFrontmatter(bounds: FrontmatterBounds | null, lineNumber: number) {
   return Boolean(bounds && lineNumber >= bounds.startLine && lineNumber <= bounds.endLine);
 }
 
-export function extractFrontmatterEntries(content: string): FrontmatterEntry[] {
-  const lines = content.split('\n');
-  const doc = Text.of(lines);
-  const bounds = resolveFrontmatterBoundsInDoc(doc);
-  if (!bounds) return [];
-  return extractFrontmatterEntriesInDoc(doc, bounds);
-}
-
 function resolveSummaryHeadingLineNumber(view: EditorView, bounds: FrontmatterBounds) {
+  const h1LineFroms = new Set(
+    collectMarkdownLineClassRanges(view.state.doc.toString())
+      .filter((range) => range.className === 'cm-line-h1')
+      .map((range) => range.from)
+  );
   for (let lineNumber = bounds.endLine + 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
-    if (HEADING_PATTERN.test(line.text)) {
+    if (h1LineFroms.has(line.from)) {
       return lineNumber;
     }
     if (line.text.trim().length > 0) {
@@ -178,13 +104,13 @@ export function buildFrontmatterDecorationSet(view: EditorView): DecorationSet {
 export function buildFrontmatterDecorationState(view: EditorView): FrontmatterDecorationState {
   const { doc } = view.state;
   const ranges: Range<Decoration>[] = [];
-  const bounds = resolveFrontmatterBoundsInDoc(doc);
+  const projection = projectMarkdownFrontmatter(doc.toString());
+  const { bounds } = projection;
 
   if (!bounds) {
-    const inspectedUntilLine = doc.lines > 0 && isDelimiterLine(doc.line(1).text) ? doc.lines : 1;
     return {
       decorations: Decoration.set(ranges, true),
-      inspectedUntilLine
+      inspectedUntilLine: projection.inspectedUntilLine
     };
   }
 
@@ -194,7 +120,7 @@ export function buildFrontmatterDecorationState(view: EditorView): FrontmatterDe
     addReplace(ranges, line.from, line.to);
   }
 
-  const summary = buildFrontmatterSummary(extractFrontmatterEntriesInDoc(doc, bounds));
+  const summary = projection.summary;
   const headingLineNumber = resolveSummaryHeadingLineNumber(view, bounds);
   const inspectedUntilLine = headingLineNumber ?? resolveSummaryInspectionLineNumber(view, bounds);
 

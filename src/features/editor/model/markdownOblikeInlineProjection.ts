@@ -12,6 +12,13 @@ export interface MarkdownWikiLinkRange {
   to: number;
 }
 
+export interface MarkdownFootnoteRange {
+  from: number;
+  label: string;
+  note: string | null;
+  to: number;
+}
+
 function collectChildNode(node: MarkdownSyntaxNode, name: string) {
   for (let child = node.firstChild; child; child = child.nextSibling) {
     if (child.name === name) return child;
@@ -25,6 +32,24 @@ function collectChildRanges(node: MarkdownSyntaxNode, name: string) {
     if (child.name === name) ranges.push({ from: child.from, to: child.to });
   }
   return ranges;
+}
+
+function createFootnoteRange(node: MarkdownSyntaxNode, source: string, offset: number): MarkdownFootnoteRange | null {
+  const label = collectChildNode(node, 'FootnoteLabel');
+  if (!label) return null;
+  const rawLabel = source.slice(label.from, label.to).trim();
+  if (!rawLabel) return null;
+  const note = collectChildNode(node, 'FootnoteNote');
+  return {
+    from: offset + node.from,
+    label: rawLabel,
+    note: note ? unescapeFootnoteText(source.slice(note.from, note.to)) : null,
+    to: offset + node.to
+  };
+}
+
+function unescapeFootnoteText(note: string) {
+  return note.replace(/\\([\\}])/g, '$1').trim() || null;
 }
 
 function createWikiLinkRange(node: MarkdownSyntaxNode, source: string, offset: number): MarkdownWikiLinkRange | null {
@@ -72,6 +97,22 @@ function mergeRanges(ranges: Array<{ from: number; to: number }>) {
   return merged;
 }
 
+function visitFootnotes(args: {
+  footnotes: MarkdownFootnoteRange[];
+  node: MarkdownSyntaxNode;
+  offset: number;
+  source: string;
+}) {
+  if (args.node.name === 'Footnote') {
+    const range = createFootnoteRange(args.node, args.source, args.offset);
+    if (range) args.footnotes.push(range);
+    return;
+  }
+  for (let child = args.node.firstChild; child; child = child.nextSibling) {
+    visitFootnotes({ footnotes: args.footnotes, node: child, offset: args.offset, source: args.source });
+  }
+}
+
 function visitWikiLinks(args: {
   links: MarkdownWikiLinkRange[];
   node: MarkdownSyntaxNode;
@@ -93,4 +134,11 @@ export function collectMarkdownWikiLinkRanges(text: string, offset = 0): Markdow
   const links: MarkdownWikiLinkRange[] = [];
   visitWikiLinks({ links, node: tree.topNode, offset, source: text });
   return links.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+}
+
+export function collectMarkdownFootnoteRanges(text: string, offset = 0): MarkdownFootnoteRange[] {
+  const tree = folioleMarkdownParser.parse(text);
+  const footnotes: MarkdownFootnoteRange[] = [];
+  visitFootnotes({ footnotes, node: tree.topNode, offset, source: text });
+  return footnotes.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }

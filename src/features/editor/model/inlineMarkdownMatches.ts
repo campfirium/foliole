@@ -1,8 +1,6 @@
 import type { SemanticRange } from './inlineSemanticMarks';
 import { collectMarkdownInlineLinkRanges, collectMarkdownInlineRanges } from './markdownInlineProjection';
-import { collectMarkdownWikiLinkRanges } from './markdownOblikeInlineProjection';
-
-const FOOTNOTE_PATTERN = /\^\[(?<label>[^\]\n]+)\](?:\{(?<note>(?:\\.|[^}\n])*)\})?/g;
+import { collectMarkdownFootnoteRanges, collectMarkdownWikiLinkRanges } from './markdownOblikeInlineProjection';
 
 export interface RangeBounds {
   from: number;
@@ -110,35 +108,16 @@ export function collectFootnoteMatches(
   text: string,
   preservedRanges: ReadonlyArray<RangeBounds>
 ): FootnoteMatch[] {
-  const matches: FootnoteMatch[] = [];
-  let match = FOOTNOTE_PATTERN.exec(text);
-
-  while (match) {
-    const start = from + match.index;
-    const fullText = match[0] ?? '';
-    const end = start + fullText.length;
-    if (!isWithinRanges(start, end, preservedRanges)) {
-      matches.push({
-        from: start,
-        label: (match.groups?.label ?? '').trim(),
-        note: unescapeFootnoteText(match.groups?.note ?? null),
-        to: end
-      });
-    }
-    match = FOOTNOTE_PATTERN.exec(text);
-  }
-
-  FOOTNOTE_PATTERN.lastIndex = 0;
-  return matches;
+  return collectMarkdownFootnoteRanges(text, from)
+    .filter((match) => !isWithinRanges(match.from, match.to, preservedRanges))
+    .map((match) => ({
+      from: match.from,
+      label: match.label,
+      note: match.note,
+      to: match.to
+    }));
 }
 
 export function toRangeBounds(ranges: ReadonlyArray<SemanticRange>): RangeBounds[] {
   return ranges.map((range) => ({ from: range.from, to: range.to }));
-}
-
-function unescapeFootnoteText(note: string | null) {
-  if (!note) {
-    return null;
-  }
-  return note.replace(/\\([\\}])/g, '$1').trim() || null;
 }

@@ -2,10 +2,9 @@ import type { Range } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
 import type { MarkdownPrefixRange } from '../model/markdownBlockProjection';
+import type { MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
 
 import { addMark, addReplace } from './liveMarkdownPrimitives';
-
-const CALLOUT_PREFIX_PATTERN = /^(\[!([A-Za-z][\w-]*)\]\s*)/;
 
 type PrefixWidgetKind = 'unordered-list' | 'ordered-list' | 'task-list' | 'callout';
 
@@ -22,10 +21,13 @@ export function addPrefixDecoration(
   from: number,
   text: string,
   showSyntax: boolean,
-  options: { forceHideHeadingSyntax?: boolean; prefixRanges?: readonly MarkdownPrefixRange[] } = {}
+  options: {
+    calloutPrefixRange?: MarkdownCalloutPrefixRange;
+    forceHideHeadingSyntax?: boolean;
+    prefixRanges?: readonly MarkdownPrefixRange[];
+  } = {}
 ) {
-  if (addParserPrefixDecoration(ranges, from, text, showSyntax, options)) return;
-  addCalloutPrefixDecoration(ranges, from, text, showSyntax);
+  addParserPrefixDecoration(ranges, from, text, showSyntax, options);
 }
 
 function addParserPrefixDecoration(
@@ -33,14 +35,17 @@ function addParserPrefixDecoration(
   from: number,
   text: string,
   showSyntax: boolean,
-  options: { forceHideHeadingSyntax?: boolean; prefixRanges?: readonly MarkdownPrefixRange[] }
+  options: {
+    calloutPrefixRange?: MarkdownCalloutPrefixRange;
+    forceHideHeadingSyntax?: boolean;
+    prefixRanges?: readonly MarkdownPrefixRange[];
+  }
 ) {
   const prefixRanges = options.prefixRanges ?? [];
-  if (prefixRanges.length === 0) return false;
   const heading = prefixRanges.find((range) => range.kind === 'heading');
   if (heading) {
     addMark(ranges, heading.from, heading.to, showSyntax && options.forceHideHeadingSyntax !== true ? 'cm-md-syntax-visible' : 'cm-md-heading-syntax-hidden');
-    return true;
+    return;
   }
 
   const quoteRanges = prefixRanges.filter((range) => range.kind === 'quote');
@@ -48,15 +53,18 @@ function addParserPrefixDecoration(
     if (showSyntax) addMark(ranges, quoteRange.from, quoteRange.to, 'cm-md-syntax-visible');
     else addReplace(ranges, quoteRange.from, quoteRange.to);
   }
-  const innerFrom = quoteRanges.reduce((max, range) => Math.max(max, range.to), from);
-  const calloutMatch = collectCalloutPrefixMatch(innerFrom, text.slice(innerFrom - from));
-  if (calloutMatch) {
-    addPrefixMatch(ranges, calloutMatch, showSyntax);
-    return true;
+  if (options.calloutPrefixRange) {
+    addPrefixMatch(ranges, {
+      from: options.calloutPrefixRange.from,
+      kind: 'callout',
+      markerText: options.calloutPrefixRange.markerText,
+      to: options.calloutPrefixRange.to
+    }, showSyntax);
+    return;
   }
 
   const widgetRange = prefixRanges.find(isWidgetPrefixRange);
-  if (!widgetRange) return quoteRanges.length > 0;
+  if (!widgetRange) return;
   addPrefixMatch(ranges, {
     checked: widgetRange.checked,
     from: widgetRange.from,
@@ -64,16 +72,10 @@ function addParserPrefixDecoration(
     markerText: widgetRange.markerText,
     to: widgetRange.to
   }, showSyntax);
-  return true;
 }
 
 function isWidgetPrefixRange(range: MarkdownPrefixRange): range is MarkdownPrefixRange & { kind: PrefixWidgetKind } {
   return range.kind === 'unordered-list' || range.kind === 'ordered-list' || range.kind === 'task-list';
-}
-
-function addCalloutPrefixDecoration(ranges: Range<Decoration>[], from: number, text: string, showSyntax: boolean) {
-  const calloutMatch = collectCalloutPrefixMatch(from, text);
-  if (calloutMatch) addPrefixMatch(ranges, calloutMatch, showSyntax);
 }
 
 function addPrefixMatch(ranges: Range<Decoration>[], match: PrefixWidgetMatch, showSyntax: boolean) {
@@ -82,14 +84,6 @@ function addPrefixMatch(ranges: Range<Decoration>[], match: PrefixWidgetMatch, s
     return;
   }
   addPrefixWidget(ranges, match);
-}
-
-function collectCalloutPrefixMatch(from: number, text: string): PrefixWidgetMatch | null {
-  const match = text.match(CALLOUT_PREFIX_PATTERN);
-  if (!match) return null;
-  const prefix = match[1] ?? '';
-  const kind = match[2] ?? 'note';
-  return { from, to: from + prefix.length, kind: 'callout', markerText: formatCalloutLabel(kind) };
 }
 
 class PrefixWidget extends WidgetType {
@@ -132,8 +126,4 @@ function createTaskCheckboxElement(checked: boolean) {
   checkbox.className = 'cm-md-task-checkbox';
   checkbox.dataset.mdTaskChecked = checked ? 'true' : 'false';
   return checkbox;
-}
-
-function formatCalloutLabel(kind: string) {
-  return `${kind.slice(0, 1).toUpperCase()}${kind.slice(1).toLowerCase()}`;
 }

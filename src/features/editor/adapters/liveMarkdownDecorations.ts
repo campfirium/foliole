@@ -15,6 +15,7 @@ import {
   type MarkdownPrefixRange
 } from '../model/markdownBlockProjection';
 import { collectMarkdownCodeFenceProjection } from '../model/markdownCodeFenceProjection';
+import { collectMarkdownCalloutPrefixRanges, type MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
 import { collectMarkdownTablePlans, isPositionInsideInactiveTable } from '../model/markdownTablePlans';
 
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
@@ -83,12 +84,21 @@ function collectPrefixRangesByLineFrom(view: EditorView) {
   return rangesByLineFrom;
 }
 
+function collectCalloutPrefixRangeByLineFrom(view: EditorView) {
+  const rangesByLineFrom = new Map<number, MarkdownCalloutPrefixRange>();
+  for (const range of collectMarkdownCalloutPrefixRanges(view.state.doc.toString())) {
+    rangesByLineFrom.set(range.lineFrom, range);
+  }
+  return rangesByLineFrom;
+}
+
 export function buildPreviewDecorationSet(view: EditorView, context: DecorationBuildContext): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const startLine = view.state.doc.line(startLineNumber);
   const endLine = view.state.doc.line(endLineNumber);
   const codeFenceProjection = collectCodeFenceProjection(view);
+  const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
   const lineClassByFrom = collectLineClassByFrom(view);
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
   const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
@@ -123,6 +133,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
 
     if (plan.prefixVisible) {
       addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, {
+        calloutPrefixRange: calloutPrefixRangeByLineFrom.get(lineFrom),
         forceHideHeadingSyntax: true,
         prefixRanges: prefixRangesByLineFrom.get(lineFrom)
       });
@@ -141,6 +152,7 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const codeFenceProjection = collectCodeFenceProjection(view);
+  const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
   const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
   const viewportPlans = collectSourceViewportPlans({
@@ -152,7 +164,10 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
   });
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
-    addPrefixDecoration(ranges, lineFrom, lineText, true, { prefixRanges: prefixRangesByLineFrom.get(lineFrom) });
+    addPrefixDecoration(ranges, lineFrom, lineText, true, {
+      calloutPrefixRange: calloutPrefixRangeByLineFrom.get(lineFrom),
+      prefixRanges: prefixRangesByLineFrom.get(lineFrom)
+    });
     addThematicBreakDecoration(ranges, lineFrom, lineText, true, plan.isThematicBreak);
     addCodeFenceDecoration(ranges, lineFrom, lineText, true, plan.isCodeFenceLine);
     addFootnoteDecorations(ranges, plan.footnoteMatches);
