@@ -76,7 +76,7 @@ function mountApp() {
   const bootContext = {
     href: window.location.href,
     readyState: document.readyState,
-    tauriInvokeReady: Boolean(getRuntimeInvoke()),
+    nativeInvokeReady: Boolean(getRuntimeInvoke()),
     userAgent: navigator.userAgent
   };
   console.info('[startup] boot context', {

@@ -1,6 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
-
-import { isTauriRuntime } from './runtime';
+import { getElectronAPI } from './electronApi';
+import { isDesktopRuntime } from './runtime';
 
 const EXTERNAL_URL_WINDOW_FEATURES = 'noopener,noreferrer';
 export type RuntimeInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -30,10 +29,10 @@ interface ListSystemFontsResult {
 }
 
 export function getRuntimeInvoke(): RuntimeInvoke | null {
-  if (!isTauriRuntime()) {
+  if (!isDesktopRuntime()) {
     return null;
   }
-  return invoke as RuntimeInvoke;
+  return getElectronAPI()?.invoke ?? null;
 }
 
 function resolveExternalUrl(target: string) {

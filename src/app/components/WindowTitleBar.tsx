@@ -180,7 +180,7 @@ export function WindowTitleBar(props: WindowTitleBarProps) {
   return (
     <header className="window-titlebar" data-window-maximized={isMaximized} style={{ '--workspace-list-width': `${props.listWidth}px` } as CSSProperties}>
       <WindowLeadingActions {...props} />
-      <div className="window-titlebar-drag-fill" data-tauri-drag-region onDoubleClick={handleToggleMaximize} />
+      <div className="window-titlebar-drag-fill" onDoubleClick={handleToggleMaximize} />
       <WindowControlButtons
         controlsEnabled={controlsEnabled}
         isMaximized={isMaximized}

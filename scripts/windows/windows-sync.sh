@@ -30,14 +30,16 @@ RSYNC_ARGS=(
   --exclude ".git/"
   --exclude ".lab/"
   --exclude "ref/"
+  --exclude "src-tauri/"
   --exclude "node_modules/"
   --exclude "dist/"
+  --exclude "electron-dist/"
+  --exclude "release/"
   --exclude "coverage/"
   --exclude "playwright-report/"
   --exclude "test-results/"
   --exclude "blob-report/"
   --exclude "logs/"
-  --exclude "src-tauri/target/"
 )
 
 if [[ -n "${WINDOWS_SYNC_CHANGE_LOG}" ]]; then

@@ -1,12 +1,5 @@
-interface TauriBridgeWindow extends Window {
-  __TAURI__?: unknown;
-  __TAURI_INTERNALS__?: unknown;
-}
+import { getElectronAPI } from './electronApi';
 
-export function isTauriRuntime() {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-  const tauriWindow = window as TauriBridgeWindow;
-  return Boolean(tauriWindow.__TAURI__ || tauriWindow.__TAURI_INTERNALS__);
+export function isDesktopRuntime() {
+  return Boolean(getElectronAPI());
 }

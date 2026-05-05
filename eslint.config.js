@@ -6,7 +6,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'ref/**', '.lab/**', 'src-tauri/target/**']
+    ignores: ['dist/**', 'electron-dist/**', 'coverage/**', 'node_modules/**', 'ref/**', '.lab/**', 'src-tauri/**']
   },
   js.configs.recommended,
   {

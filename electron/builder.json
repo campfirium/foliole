@@ -1,0 +1,21 @@
+{
+  "appId": "com.foliole.desktop",
+  "productName": "Foliole",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "electron-dist/**/*",
+    "package.json"
+  ],
+  "win": {
+    "target": ["nsis"]
+  },
+  "linux": {
+    "target": ["AppImage"]
+  },
+  "mac": {
+    "target": ["dmg"]
+  }
+}

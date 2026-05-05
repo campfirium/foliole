@@ -25,18 +25,15 @@ Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Codi
 4. 可视化调试：`npm run test:e2e:headed` 或 `npm run test:e2e:ui`
 
 ## Rust Scheduler Mode
-1. Default mode is `prefer-rust`: use Tauri invoke when available, otherwise fallback to local scheduler.
-2. Set `VITE_REVIEW_SCHEDULER_MODE=rust-only` to hard-require Rust scheduler.
-3. In `rust-only`, grading throws when `window.__TAURI__.core.invoke` is unavailable.
+1. Default mode is `prefer-rust`: use desktop native invoke when available, otherwise fallback to local scheduler.
+2. Set `VITE_REVIEW_SCHEDULER_MODE=rust-only` to hard-require native scheduler.
+3. In `rust-only`, grading throws when desktop invoke is unavailable.
 
 ## Windows Native Dev Loop From WSL
 1. After code changes in WSL, run `npm run windows:deliver`.
 2. `windows:deliver` executes `lint -> typecheck -> test -> build`, then syncs code to `C:\dev\foliole`.
-3. Client startup is manual: run `npm run tauri:dev` in your original Windows console.
-4. `windows:deliver` does not spawn new client consoles:
-   - client running + restart-sensitive changes -> stop client and ask for manual start
-   - client stopped -> keep stopped and ask for manual start
-   - client running + normal `src/**` changes -> keep running (no restart)
+3. Client startup is manual: run `npm run electron:dev` in your original Windows console.
+4. `windows:deliver` does not auto-restart desktop client.
 5. Optional one-shot sync only: `npm run windows:sync`.
 6. Manual client helpers: `npm run windows:client:status`, `npm run windows:client:start`, `npm run windows:client:stop`.
-7. `npm run windows:client:start` starts `tauri:dev` in the same console (foreground, blocking) and does not open a new console window.
+7. `npm run windows:client:start` starts `electron:dev` in a Windows shell process.

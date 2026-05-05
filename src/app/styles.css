@@ -58,6 +58,7 @@ body {
   min-height: 38px;
   padding-inline: 0;
   user-select: none;
+  -webkit-app-region: drag;
 }
 
 .window-titlebar-left-zone {
@@ -98,6 +99,7 @@ body {
   height: 30px;
   justify-content: center;
   width: 30px;
+  -webkit-app-region: no-drag;
 }
 
 .window-titlebar-leading-button:hover {
@@ -123,6 +125,7 @@ body {
 .window-titlebar-drag-fill {
   flex: 1;
   min-height: 100%;
+  -webkit-app-region: drag;
 }
 
 .window-titlebar-controls {
@@ -142,6 +145,7 @@ body {
   justify-content: center;
   min-width: 46px;
   transition: background-color 140ms, color 140ms;
+  -webkit-app-region: no-drag;
 }
 
 .window-titlebar-button:hover:not(:disabled) {

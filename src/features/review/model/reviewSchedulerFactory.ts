@@ -1,8 +1,8 @@
 import { getRuntimeInvoke } from '../../../shared/platform/bridge';
 
 import { createLocalReviewSchedulerAdapter } from './localReviewSchedulerAdapter';
+import { createNativeReviewSchedulerAdapter } from './nativeReviewSchedulerAdapter';
 import type { ReviewSchedulerAdapter } from './reviewTypes';
-import { createRustReviewSchedulerAdapter } from './rustReviewSchedulerAdapter';
 
 export type ReviewSchedulerMode = 'prefer-rust' | 'rust-only';
 
@@ -25,7 +25,7 @@ function createUnavailableRustAdapter(): ReviewSchedulerAdapter {
 export function createReviewSchedulerAdapter(mode = getSchedulerModeFromEnv()): ReviewSchedulerAdapter {
   const invoke = getRuntimeInvoke();
   if (invoke) {
-    return createRustReviewSchedulerAdapter(invoke);
+    return createNativeReviewSchedulerAdapter(invoke);
   }
   if (mode === 'rust-only') {
     return createUnavailableRustAdapter();

@@ -1,56 +1,55 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
-
-import { isTauriRuntime } from './runtime';
+import { getElectronAPI } from './electronApi';
+import { isDesktopRuntime } from './runtime';
 
 export type WindowResizeUnlisten = (() => void) | null;
 
-function getMainWindow() {
-  if (!isTauriRuntime()) {
+function getWindowControls() {
+  if (!isDesktopRuntime()) {
     return null;
   }
-  return getCurrentWindow();
+  return getElectronAPI()?.windowControls ?? null;
 }
 
 export function isWindowControlsAvailable() {
-  return isTauriRuntime();
+  return Boolean(getWindowControls());
 }
 
 export async function queryMainWindowMaximized() {
-  const window = getMainWindow();
-  if (!window) {
+  const controls = getWindowControls();
+  if (!controls) {
     return false;
   }
-  return window.isMaximized();
+  return controls.isMaximized();
 }
 
 export async function onMainWindowResized(handler: () => void): Promise<WindowResizeUnlisten> {
-  const window = getMainWindow();
-  if (!window) {
+  const controls = getWindowControls();
+  if (!controls) {
     return null;
   }
-  return window.onResized(handler);
+  return controls.onResized(handler);
 }
 
 export async function minimizeMainWindow() {
-  const window = getMainWindow();
-  if (!window) {
+  const controls = getWindowControls();
+  if (!controls) {
     return;
   }
-  await window.minimize();
+  await controls.minimize();
 }
 
 export async function toggleMainWindowMaximize() {
-  const window = getMainWindow();
-  if (!window) {
+  const controls = getWindowControls();
+  if (!controls) {
     return;
   }
-  await window.toggleMaximize();
+  await controls.toggleMaximize();
 }
 
 export async function closeMainWindow() {
-  const window = getMainWindow();
-  if (!window) {
+  const controls = getWindowControls();
+  if (!controls) {
     return;
   }
-  await window.close();
+  await controls.close();
 }

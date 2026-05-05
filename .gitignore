@@ -2,12 +2,12 @@
 ref/
 node_modules/
 dist/
+electron-dist/
+release/
 coverage/
 playwright-report/
 test-results/
 blob-report/
 *.tsbuildinfo
-src-tauri/target/
-src-tauri/gen/
-**/*.rs.bk
 logs/
+src-tauri/
