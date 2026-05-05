@@ -1,5 +1,6 @@
+import { resolveTextAnchorLocatorSelection } from '../../features/editor/model/textAnchorLocatorResolution';
 import { buildNodeTreeRows } from '../../features/nodes/model/nodeTree';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { InspectorSection } from '../../shared/ui';
 
@@ -16,6 +17,7 @@ function EmptyHighlightsState({ description }: { description: string }) {
 }
 
 interface NodeHighlightItem {
+  kind: 'highlight' | 'cloze';
   nodeId: string;
   text: string;
 }
@@ -56,6 +58,28 @@ function normalizeNodeHighlightText(node: Node) {
   return node.title.trim();
 }
 
+function isSidebarAnchorKind(node: Node) {
+  return node.anchorLink?.kind === 'highlight' || node.anchorLink?.kind === 'cloze';
+}
+
+function shouldIncludeHighlightInSidebar(node: Node, nodesById: Record<string, Node>) {
+  if (!isSidebarAnchorKind(node)) {
+    return false;
+  }
+  const anchorLink = node.anchorLink;
+  if (!anchorLink || !isTextAnchorLocator(anchorLink.locator)) {
+    return true;
+  }
+  const parentNode = node.parentNodeId ? nodesById[node.parentNodeId] : null;
+  if (!parentNode) {
+    return true;
+  }
+  if (parentNode.hasContent === true && parentNode.content.length === 0) {
+    return true;
+  }
+  return Boolean(resolveTextAnchorLocatorSelection(parentNode.content, anchorLink.locator));
+}
+
 function collectSubtreeHighlights(
   activeNodeId: string,
   nodeOrder: string[],
@@ -64,11 +88,10 @@ function collectSubtreeHighlights(
 ): NodeHighlightItem[] {
   const subtreeNodeIds = collectOrderedSubtreeNodeIds(activeNodeId, nodeOrder, nodesById, trashedNodeIds);
   const highlights: NodeHighlightItem[] = [];
-  const seenHighlightTexts = new Set<string>();
 
   for (const nodeId of subtreeNodeIds) {
     const node = nodesById[nodeId];
-    if (!node || node.anchorLink?.kind !== 'highlight') {
+    if (!node || !shouldIncludeHighlightInSidebar(node, nodesById)) {
       continue;
     }
 
@@ -76,13 +99,9 @@ function collectSubtreeHighlights(
     if (!text) {
       continue;
     }
-    const textKey = text.toLocaleLowerCase();
-    if (seenHighlightTexts.has(textKey)) {
-      continue;
-    }
-    seenHighlightTexts.add(textKey);
 
     highlights.push({
+      kind: node.anchorLink?.kind === 'cloze' ? 'cloze' : 'highlight',
       nodeId: node.id,
       text
     });
@@ -119,6 +138,9 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
               onClick={() => props.onRevealHighlight(highlight.nodeId)}
               type="button"
             >
+              <span className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45">
+                {highlight.kind === 'cloze' ? 'Cloze' : 'Highlight'}
+              </span>
               <span className="text-sm leading-7 text-foreground">{highlight.text}</span>
             </button>
           </li>

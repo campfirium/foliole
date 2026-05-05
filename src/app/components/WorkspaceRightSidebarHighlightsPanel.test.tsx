@@ -53,7 +53,7 @@ it('renders highlight child nodes from the subtree and emits selected node id', 
   const rows = within(screen.getByRole('list', { name: 'Document highlights' }))
     .getAllByRole('button')
     .map((item) => item.textContent);
-  expect(rows).toEqual(['first marked text', 'Second marked text']);
+  expect(rows).toEqual(['Highlightfirst marked text', 'HighlightSecond marked text']);
 
   fireEvent.click(screen.getByRole('button', { name: /Second marked text/i }));
   expect(onRevealHighlight).toHaveBeenCalledWith('node-3');
@@ -136,7 +136,7 @@ it('follows tree order from nodeOrder instead of object insertion order', () => 
   const rows = within(screen.getByRole('list', { name: 'Document highlights' }))
     .getAllByRole('button')
     .map((item) => item.textContent);
-  expect(rows).toEqual(['A highlight', 'B highlight']);
+  expect(rows).toEqual(['HighlightA highlight', 'HighlightB highlight']);
 });
 
 it('keeps subtree traversal order when nodeOrder is not contiguous by subtree', () => {
@@ -181,10 +181,10 @@ it('keeps subtree traversal order when nodeOrder is not contiguous by subtree', 
   const rows = within(screen.getByRole('list', { name: 'Document highlights' }))
     .getAllByRole('button')
     .map((item) => item.textContent);
-  expect(rows).toEqual(['A from chapter', 'B sibling highlight']);
+  expect(rows).toEqual(['HighlightA from chapter', 'HighlightB sibling highlight']);
 });
 
-it('deduplicates repeated highlight text entries', () => {
+it('keeps repeated highlight text entries as separate items when they are different objects', () => {
   const onRevealHighlight = vi.fn();
   const highlightA: Node = {
     ...BASE_NODE,
@@ -212,7 +212,76 @@ it('deduplicates repeated highlight text entries', () => {
   );
 
   const rows = within(screen.getByRole('list', { name: 'Document highlights' })).getAllByRole('button');
-  expect(rows).toHaveLength(1);
+  expect(rows).toHaveLength(2);
+  expect(rows[0]).toHaveTextContent('Highlight');
   expect(rows[0]).toHaveTextContent('Repeated line');
+  expect(rows[1]).toHaveTextContent('Highlight');
+  expect(rows[1]).toHaveTextContent('Repeated line');
+  expect(screen.getByText('Total highlights: 2')).toBeInTheDocument();
+});
+
+it('keeps highlight and cloze items separate even when their text matches', () => {
+  const onRevealHighlight = vi.fn();
+  const highlightNode: Node = {
+    ...BASE_NODE,
+    id: 'node-hl',
+    parentNodeId: 'node-1',
+    content: 'Shared text',
+    anchorLink: { id: 'ha', kind: 'highlight' }
+  };
+  const clozeNode: Node = {
+    ...BASE_NODE,
+    id: 'node-cloze',
+    parentNodeId: 'node-1',
+    content: 'Shared text',
+    reveal: 'Shared text',
+    anchorLink: { id: 'ca', kind: 'cloze' }
+  };
+
+  render(
+    <WorkspaceRightSidebarHighlightsPanel
+      activeNodeId="node-1"
+      nodeOrder={['node-1', 'node-hl', 'node-cloze']}
+      trashedNodeIds={[]}
+      nodesById={{ 'node-1': BASE_NODE, 'node-hl': highlightNode, 'node-cloze': clozeNode }}
+      onRevealHighlight={onRevealHighlight}
+    />
+  );
+
+  const rows = within(screen.getByRole('list', { name: 'Document highlights' })).getAllByRole('button');
+  expect(rows).toHaveLength(2);
+  expect(rows[0]).toHaveTextContent('Highlight');
+  expect(rows[0]).toHaveTextContent('Shared text');
+  expect(rows[1]).toHaveTextContent('Cloze');
+  expect(rows[1]).toHaveTextContent('Shared text');
+  expect(screen.getByText('Total highlights: 2')).toBeInTheDocument();
+});
+
+it('includes cloze child nodes in the sidebar list', () => {
+  const onRevealHighlight = vi.fn();
+  const clozeNode: Node = {
+    ...BASE_NODE,
+    id: 'node-cloze',
+    parentNodeId: 'node-1',
+    content: 'Study [...] today',
+    reveal: 'answer',
+    anchorLink: { id: 'c1', kind: 'cloze' }
+  };
+
+  render(
+    <WorkspaceRightSidebarHighlightsPanel
+      activeNodeId="node-1"
+      nodeOrder={['node-1', 'node-cloze']}
+      trashedNodeIds={[]}
+      nodesById={{ 'node-1': BASE_NODE, 'node-cloze': clozeNode }}
+      onRevealHighlight={onRevealHighlight}
+    />
+  );
+
+  expect(screen.getByRole('button', { name: /Study \[\.\.\.\] today/i })).toBeInTheDocument();
+  expect(screen.getByText('Cloze')).toBeInTheDocument();
   expect(screen.getByText('Total highlights: 1')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /Study \[\.\.\.\] today/i }));
+  expect(onRevealHighlight).toHaveBeenCalledWith('node-cloze');
 });
