@@ -4,6 +4,7 @@ import { renderPdfPage } from './PdfDocumentPageRender';
 import type { PdfSearchStatus, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { PdfDocumentToolbar } from './PdfDocumentToolbar';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
+import type { PdfPageTextEntry } from './pdfPageText';
 
 const PDF_PAGE_MIN = 1;
 
@@ -58,7 +59,7 @@ interface PdfViewportDocumentProps {
   }>;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
-  onTextContentLoad: (pageNumber: number, text: string) => void;
+  onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
@@ -117,7 +118,7 @@ function PdfDocumentPages({
     x: number | null;
     y: number | null;
   }>;
-  onTextContentLoad: (pageNumber: number, text: string) => void;
+  onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;

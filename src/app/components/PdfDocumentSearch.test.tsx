@@ -24,6 +24,7 @@ function PdfSearchLateTextLayerHarness() {
   }, []);
 
   usePdfSearchEffect({
+    onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: () => undefined,
     onSearchStatusChange: setSearchStatus,
     pageElementsRef,
@@ -60,11 +61,15 @@ function PdfSearchSingleRequestHarness() {
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const pageTextByNumberRef = useRef<Record<number, string>>({ 1: 'keyword keyword' });
   const [searchStatus, setSearchStatus] = useState({ current: 0, hasQuery: false, total: 0 });
+  const [searchHighlights, setSearchHighlights] = useState({ active: 0, total: 0 });
   const [searchRevision, setSearchRevision] = useState(0);
   const [searchRequest, setSearchRequest] = useState<{ direction: 'next' | 'previous'; id: number } | null>(null);
 
   usePdfSearchEffect({
-    onSearchHighlightsChange: () => undefined,
+    onSearchDebugChange: () => undefined,
+    onSearchHighlightsChange: (highlights) => {
+      setSearchHighlights({ active: highlights.filter((item) => item.isActive).length, total: highlights.length });
+    },
     onSearchStatusChange: setSearchStatus,
     pageElementsRef,
     pageTextByNumberRef,
@@ -95,7 +100,7 @@ function PdfSearchSingleRequestHarness() {
       <button onClick={() => setSearchRequest({ direction: 'next', id: 7 })} type="button">
         request-next
       </button>
-      <p data-testid="pdf-search-single-request-status">{`${searchStatus.current}/${searchStatus.total}`}</p>
+      <p data-testid="pdf-search-single-request-status">{`${searchStatus.current}/${searchStatus.total}/${searchHighlights.active}/${searchHighlights.total}`}</p>
     </div>
   );
 }
@@ -114,6 +119,7 @@ function PdfSearchLinkedEntryHarness() {
   const [searchTarget, setSearchTarget] = useState<{ id: number; matchStart: number; page: number } | null>(null);
 
   usePdfSearchEffect({
+    onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: () => undefined,
     onSearchStatusChange: setSearchStatus,
     pageElementsRef,
@@ -168,6 +174,7 @@ function PdfSearchDualHighlightHarness() {
   const [searchHighlights, setSearchHighlights] = useState<{ active: number; total: number }>({ active: 0, total: 0 });
 
   usePdfSearchEffect({
+    onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: (highlights) => {
       setSearchHighlights({ active: highlights.filter((item) => item.isActive).length, total: highlights.length });
     },
@@ -216,21 +223,18 @@ describe('usePdfSearchEffect', () => {
     render(<PdfSearchSingleRequestHarness />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('pdf-search-single-request-status')).toHaveTextContent('1/2');
+      expect(screen.getByTestId('pdf-search-single-request-status')).toHaveTextContent('1/2/1/2');
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'request-next' }));
     await waitFor(() => {
-      expect(screen.getByTestId('pdf-search-single-request-status')).toHaveTextContent('2/2');
-      expect(document.querySelectorAll('.textLayer span[data-pdf-search-hit="active"]')).toHaveLength(1);
-      expect(document.querySelectorAll('.textLayer span[data-pdf-search-hit="match"]')).toHaveLength(1);
+      expect(screen.getByTestId('pdf-search-single-request-status')).toHaveTextContent('2/2/1/2');
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'tick' }));
 
     await waitFor(() => {
-      expect(screen.getByTestId('pdf-search-single-request-status')).toHaveTextContent('2/2');
-      expect(document.querySelectorAll('.textLayer span[data-pdf-search-hit="active"]')).toHaveLength(1);
+      expect(screen.getByTestId('pdf-search-single-request-status')).toHaveTextContent('2/2/1/2');
     });
   });
 
@@ -242,10 +246,6 @@ describe('usePdfSearchEffect', () => {
     await clickLinkedEntryButtonAndExpectStatus('toolbar-next', '1/3');
     await clickLinkedEntryButtonAndExpectStatus('toolbar-next', '2/3');
     await clickLinkedEntryButtonAndExpectStatus('toolbar-previous', '1/3');
-
-    await waitFor(() => {
-      expect(document.querySelectorAll('.textLayer span[data-pdf-search-hit="active"]')).toHaveLength(1);
-    });
   });
 
   it('keeps all matches weak-highlighted while only one current match stays strong-highlighted', async () => {

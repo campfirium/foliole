@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 import type { PdfSearchStatus, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import { PdfViewportDocument, PdfViewportToolbar } from './PdfDocumentViewportRenderParts';
+import type { PdfPageTextEntry } from './pdfPageText';
 
 interface PdfDocumentViewportContentBodyProps {
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -11,7 +12,7 @@ interface PdfDocumentViewportContentBodyProps {
   maxPage: number;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
-  onTextContentLoad: (pageNumber: number, text: string) => void;
+  onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;

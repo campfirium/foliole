@@ -1,6 +1,7 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 
-import { collectMatches, type PdfSearchMatch } from './pdfSearchMatchCollection';
+import type { PdfPageTextEntry } from './pdfPageText';
+import { collectMatches, getLastPdfSearchDebug, type PdfSearchMatch } from './pdfSearchMatchCollection';
 
 export interface PdfSearchRequest {
   direction: 'next' | 'previous';
@@ -14,9 +15,10 @@ export interface PdfSearchStatus {
 }
 
 interface PdfSearchArgs {
+  onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
-  pageTextByNumberRef: MutableRefObject<Record<number, string>>;
+  pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
   searchRevision: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
   searchTarget: PdfSearchTarget | null;
@@ -41,9 +43,22 @@ export interface PdfSearchVisualHighlight {
   y: number | null;
 }
 
-const SEARCH_HIT_ATTR = 'data-pdf-search-hit';
-const SEARCH_HIT_MATCH = 'match';
-const SEARCH_HIT_ACTIVE = 'active';
+export interface PdfSearchDebugInfo {
+  pages: Array<{
+    hasTextLayer: boolean;
+    indexedRangeCount: number;
+    indexedTextLength: number;
+    itemNodeCount: number;
+    matchCount: number;
+    page: number;
+    pageTextLength: number;
+    renderedRangeCount: number;
+    renderedTextLength: number;
+    textLayerChildCount: number;
+    textLayerTextLength: number;
+    route: 'indexed-pending' | 'rendered' | 'none';
+  }>;
+}
 
 function normalizeQuery(value: string) {
   return value.trim().toLocaleLowerCase();
@@ -77,13 +92,6 @@ function scrollToMatch(container: HTMLDivElement, match: PdfSearchMatch) {
   }
 }
 
-function clearSearchHitMarker(container: HTMLDivElement) {
-  const markedHits = container.querySelectorAll<HTMLElement>(`[${SEARCH_HIT_ATTR}]`);
-  for (const hit of markedHits) {
-    hit.removeAttribute(SEARCH_HIT_ATTR);
-  }
-}
-
 function toSearchHighlights(matches: PdfSearchMatch[], activeMatchId: string) {
   return matches.map((match) => ({
     id: match.id,
@@ -101,18 +109,19 @@ function runPdfSearchCycle(args: {
   lastHandledTargetIdRef: { current: number | null };
   lastQueryRef: { current: string };
   lastRequestIdRef: { current: number | null };
+  onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   onSearchStatusChange: (status: PdfSearchStatus) => void;
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
-  pageTextByNumberRef: MutableRefObject<Record<number, string>>;
+  pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
   query: string;
   searchRequest: PdfSearchRequest | null;
   searchTarget: PdfSearchTarget | null;
   totalPages: number;
 }) {
   const matches = collectMatches(args.pageElementsRef, args.totalPages, args.query, args.pageTextByNumberRef);
+  args.onSearchDebugChange({ pages: getLastPdfSearchDebug() });
   if (matches.length === 0) {
-    clearSearchHitMarker(args.container);
     args.onSearchHighlightsChange([]);
     resetSearchCursorState(args);
     args.onSearchStatusChange({ current: 0, hasQuery: true, total: 0 });
@@ -131,33 +140,14 @@ function runPdfSearchCycle(args: {
   });
   const match = matches[args.cursorRef.current];
   if (!match) {
-    clearSearchHitMarker(args.container);
     args.onSearchHighlightsChange([]);
     args.onSearchStatusChange({ current: 0, hasQuery: true, total: matches.length });
     return;
   }
 
-  clearSearchHitMarker(args.container);
-  markSearchHits(matches);
-  markActiveSearchHit(match);
   args.onSearchHighlightsChange(toSearchHighlights(matches, match.id));
   scrollToMatch(args.container, match);
   args.onSearchStatusChange({ current: args.cursorRef.current + 1, hasQuery: true, total: matches.length });
-}
-
-function markSearchHits(matches: PdfSearchMatch[]) {
-  const seen = new Set<HTMLElement>();
-  for (const match of matches) {
-    if (seen.has(match.element)) {
-      continue;
-    }
-    seen.add(match.element);
-    match.element.setAttribute(SEARCH_HIT_ATTR, SEARCH_HIT_MATCH);
-  }
-}
-
-function markActiveSearchHit(match: PdfSearchMatch) {
-  match.element.setAttribute(SEARCH_HIT_ATTR, SEARCH_HIT_ACTIVE);
 }
 
 function resolveNextCursor(request: PdfSearchRequest | null, current: number, total: number) {
@@ -230,6 +220,7 @@ function resolveCursorByRequest(args: {
 }
 
 export function usePdfSearchEffect({
+  onSearchDebugChange,
   onSearchHighlightsChange,
   onSearchStatusChange,
   pageElementsRef,
@@ -245,8 +236,13 @@ export function usePdfSearchEffect({
   const lastHandledTargetIdRef = useRef<number | null>(null);
   const lastRequestIdRef = useRef<number | null>(null);
   const lastQueryRef = useRef('');
+  const onSearchDebugChangeRef = useRef(onSearchDebugChange);
   const onSearchStatusChangeRef = useRef(onSearchStatusChange);
   const onSearchHighlightsChangeRef = useRef(onSearchHighlightsChange);
+
+  useEffect(() => {
+    onSearchDebugChangeRef.current = onSearchDebugChange;
+  }, [onSearchDebugChange]);
 
   useEffect(() => {
     onSearchStatusChangeRef.current = onSearchStatusChange;
@@ -260,9 +256,7 @@ export function usePdfSearchEffect({
     const query = normalizeQuery(searchQuery);
     const container = scrollContainerRef.current;
     if (!query || !container || !totalPages) {
-      if (container) {
-        clearSearchHitMarker(container);
-      }
+      onSearchDebugChangeRef.current({ pages: [] });
       onSearchHighlightsChangeRef.current([]);
       resetSearchCursorState({ cursorRef, lastHandledTargetIdRef, lastRequestIdRef, lastQueryRef, query });
       onSearchStatusChangeRef.current({ current: 0, hasQuery: query.length > 0, total: 0 });
@@ -274,6 +268,7 @@ export function usePdfSearchEffect({
       lastHandledTargetIdRef,
       lastQueryRef,
       lastRequestIdRef,
+      onSearchDebugChange: onSearchDebugChangeRef.current,
       onSearchHighlightsChange: onSearchHighlightsChangeRef.current,
       onSearchStatusChange: onSearchStatusChangeRef.current,
       pageElementsRef,

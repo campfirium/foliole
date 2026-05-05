@@ -12,6 +12,7 @@ function PdfSearchReopenConsistencyHarness() {
   const [searchTarget] = useState({ id: 9, matchStart: 'keyword bridge '.length, page: 1 });
 
   usePdfSearchEffect({
+    onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: () => undefined,
     onSearchStatusChange: setSearchStatus,
     pageElementsRef,

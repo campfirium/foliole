@@ -17,11 +17,13 @@ export function usePdfSearchControls() {
 
   const handleSearchQueryChange = (value: string) => {
     setSearchQuery(value);
+    setSearchRequest(null);
     setSearchTarget(null);
   };
 
   const applyExternalSearch = (request: { matchStart: number; page: number; query: string }) => {
     setSearchQuery(request.query);
+    setSearchRequest(null);
     setSearchTarget({
       id: searchTargetIdRef.current,
       matchStart: request.matchStart,

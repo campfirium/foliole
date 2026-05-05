@@ -3,9 +3,10 @@ import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
-import type { PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
+import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { usePdfSearchEffect } from './PdfDocumentSearch';
 import { PdfDocumentViewportContentBody } from './PdfDocumentViewportContentBody';
+import type { PdfPageTextEntry } from './pdfPageText';
 
 const PDF_PAGE_MIN = 1;
 
@@ -130,10 +131,11 @@ interface PdfDocumentViewportContentProps {
   maxPage: number;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
-  onTextContentLoad: (pageNumber: number, text: string) => void;
+  onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   onSearchStatusChange: (status: PdfSearchStatus) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
+  onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
@@ -144,7 +146,7 @@ interface PdfDocumentViewportContentProps {
   onZoomOut: () => void;
   page: number;
   pageElementsRef: PdfPageElementsRef;
-  pageTextByNumberRef: MutableRefObject<Record<number, string>>;
+  pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
@@ -162,6 +164,7 @@ interface PdfDocumentViewportContentProps {
 
 function usePdfSearchRuntime({
   onSearchHighlightsChange,
+  onSearchDebugChange,
   onSearchStatusChange,
   pageElementsRef,
   pageTextByNumberRef,
@@ -174,6 +177,7 @@ function usePdfSearchRuntime({
 }: Pick<
   PdfDocumentViewportContentProps,
   | 'onSearchHighlightsChange'
+  | 'onSearchDebugChange'
   | 'onSearchStatusChange'
   | 'pageElementsRef'
   | 'pageTextByNumberRef'
@@ -185,6 +189,7 @@ function usePdfSearchRuntime({
   | 'totalPages'
 >) {
   usePdfSearchEffect({
+    onSearchDebugChange,
     onSearchHighlightsChange,
     onSearchStatusChange,
     pageElementsRef,
@@ -204,7 +209,7 @@ export function PdfDocumentViewportContent(props: PdfDocumentViewportContentProp
 }
 
 function renderPdfViewportContentBody(
-  props: Omit<PdfDocumentViewportContentProps, 'onSearchHighlightsChange' | 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'>
+  props: Omit<PdfDocumentViewportContentProps, 'onSearchDebugChange' | 'onSearchHighlightsChange' | 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'>
 ) {
   return <PdfDocumentViewportContentBody {...props} />;
 }
@@ -212,6 +217,7 @@ function renderPdfViewportContentBody(
 function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {
   return {
     onSearchHighlightsChange: props.onSearchHighlightsChange,
+    onSearchDebugChange: props.onSearchDebugChange,
     onSearchStatusChange: props.onSearchStatusChange,
     pageElementsRef: props.pageElementsRef,
     pageTextByNumberRef: props.pageTextByNumberRef,
@@ -226,7 +232,7 @@ function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {
 
 function resolveViewportContentBodyProps(
   props: PdfDocumentViewportContentProps
-): Omit<PdfDocumentViewportContentProps, 'onSearchHighlightsChange' | 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'> {
+): Omit<PdfDocumentViewportContentProps, 'onSearchDebugChange' | 'onSearchHighlightsChange' | 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'> {
   return {
     handleContextMenu: props.handleContextMenu,
     handleScroll: props.handleScroll,

@@ -3,7 +3,7 @@ import { Page } from 'react-pdf';
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import { renderPdfOverlayMarker, renderPdfOverlayRects, resolvePdfOverlayMarkerSize } from './pdfOverlayRender';
-import { resolvePageText } from './pdfPageText';
+import { resolvePageText, type PdfPageTextEntry } from './pdfPageText';
 
 interface PdfPageRenderLocator {
   id: string;
@@ -15,7 +15,7 @@ interface PdfPageRenderLocator {
 
 interface RenderPdfPageArgs {
   highlightLocators: PdfPageRenderLocator[];
-  onTextContentLoad: (pageNumber: number, text: string) => void;
+  onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
   pageNumber: number;
