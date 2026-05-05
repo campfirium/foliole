@@ -43,7 +43,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
   });
-  expect(screen.getByLabelText('FSRS reveal actions')).toBeInTheDocument();
+  expect(screen.getByLabelText('Review item reveal actions')).toBeInTheDocument();
   expect(onRevealAnswer).toHaveBeenCalledTimes(1);
 
   rerender(

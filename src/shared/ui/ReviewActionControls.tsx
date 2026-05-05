@@ -132,7 +132,7 @@ export function ReadingReviewActions({
 
 export function FsrsRevealAction({ onRevealAnswer }: { onRevealAnswer: () => void }) {
   return (
-    <ToolbarActionGroup ariaLabel="FSRS reveal actions" className="gap-2" data-review-toolbar-kind="fsrs-prompt">
+    <ToolbarActionGroup ariaLabel="Review item reveal actions" className="gap-2" data-review-toolbar-kind="fsrs-prompt">
       <AppButton aria-label="Show Answer" className="min-w-32 px-5" onClick={onRevealAnswer} size="md" variant="primary">
         Show Answer
       </AppButton>

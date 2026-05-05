@@ -70,7 +70,7 @@ export function expectPushQueueValues(values: {
   readingGrowthMax: number;
 }) {
   expect(screen.getByLabelText('Reading queue mix ratio')).toHaveValue(values.reading);
-  expect(screen.getByLabelText('FSRS queue mix ratio')).toHaveValue(values.fsrs);
+  expect(screen.getByLabelText('Review item queue mix ratio')).toHaveValue(values.fsrs);
   expect(screen.getByLabelText('Default topic priority')).toHaveValue(String(values.defaultPriority));
   expect(screen.getByLabelText('Priority weight')).toHaveValue(values.priorityRatio);
   expect(screen.getByLabelText('Reading initial interval days')).toHaveValue(values.readingInitialIntervalDays);
@@ -88,7 +88,7 @@ export function changePushQueueValues(values: {
   readingGrowthMax: string;
 }) {
   fireEvent.change(screen.getByLabelText('Reading queue mix ratio'), { target: { value: values.reading } });
-  fireEvent.change(screen.getByLabelText('FSRS queue mix ratio'), { target: { value: values.fsrs } });
+  fireEvent.change(screen.getByLabelText('Review item queue mix ratio'), { target: { value: values.fsrs } });
   fireEvent.change(screen.getByLabelText('Default topic priority'), { target: { value: values.defaultPriority } });
   fireEvent.change(screen.getByLabelText('Priority weight'), { target: { value: values.priorityRatio } });
   fireEvent.change(screen.getByLabelText('Reading initial interval days'), { target: { value: values.readingInitialIntervalDays } });

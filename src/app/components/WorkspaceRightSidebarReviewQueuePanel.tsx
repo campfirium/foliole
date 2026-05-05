@@ -16,18 +16,18 @@ function buildDisplayQueueNodeIds(queueNodeIds: string[], currentNodeId: string 
 }
 
 function getQueueItemKindLabel(node: Node | undefined) {
-  return isFsrsReviewItemNode(node) ? 'FSRS' : 'Reading';
+  return isFsrsReviewItemNode(node) ? 'Review item' : 'Reading';
 }
 
 function getQueueItemTitle(node: Node | undefined) {
   if (!node) {
-    return 'Missing node';
+    return 'Missing topic';
   }
   const title = node.title.trim();
   if (title.length > 0) {
     return title;
   }
-  return 'Untitled node';
+  return 'Untitled topic';
 }
 
 function formatShortDateTime(value: string | null | undefined) {
@@ -71,7 +71,7 @@ function QueueSummary({ fsrsCount, readingCount, totalCount }: { fsrsCount: numb
           <dd className="mt-1 text-base font-semibold text-foreground">{totalCount}</dd>
         </div>
         <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">FSRS</dt>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Review items</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{fsrsCount}</dd>
         </div>
         <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">

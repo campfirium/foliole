@@ -64,7 +64,7 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
 
-it('groups settings sidebar entries by general, workspace, input, storage, and sources', async () => {
+it('groups settings sidebar entries by workspace, storage, and sources', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="library" />);
 
   const buttons = screen.getAllByRole('button');
@@ -72,18 +72,17 @@ it('groups settings sidebar entries by general, workspace, input, storage, and s
 
   expect(screen.getByText('General')).toBeInTheDocument();
   expect(screen.getByText('Workspace')).toBeInTheDocument();
-  expect(screen.getByText('Input')).toBeInTheDocument();
   expect(screen.getByText('Storage')).toBeInTheDocument();
   expect(screen.getByText('Sources')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
-  expect(labels.slice(0, 6)).toEqual(['About', 'Appearance', 'Editor', 'Review', 'Hotkeys', 'Mouse gestures']);
+  expect(labels.slice(0, 7)).toEqual(['General', 'Appearance', 'Editor', 'Review', 'Hotkeys', 'Mouse gestures', 'Action bar']);
   expect(labels).toContain('Library');
   expect(labels).toContain('Watched folders');
   expect(labels).toContain('Readwise Reader');
   expect(labels).toContain('External sources');
-  expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('About'));
+  expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('General'));
   expect(labels.indexOf('Hotkeys')).toBeGreaterThan(labels.indexOf('Review'));
-  expect(labels.indexOf('Library')).toBeGreaterThan(labels.indexOf('Mouse gestures'));
+  expect(labels.indexOf('Library')).toBeGreaterThan(labels.indexOf('Action bar'));
   expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Library'));
   expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
   expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Backups'));

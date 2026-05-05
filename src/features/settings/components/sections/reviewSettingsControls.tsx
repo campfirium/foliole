@@ -85,7 +85,7 @@ export function QueueMixRatioControl(props: {
     <SettingsControlSlot className={SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
       <ReviewNumberInput ariaLabel="Reading queue mix ratio" min={1} onChange={props.onReadingChange} step={1} value={props.reading} />
       <span className="text-[0.86rem] text-foreground/65">:</span>
-      <ReviewNumberInput ariaLabel="FSRS queue mix ratio" min={1} onChange={props.onFsrsChange} step={1} value={props.fsrs} />
+      <ReviewNumberInput ariaLabel="Review item queue mix ratio" min={1} onChange={props.onFsrsChange} step={1} value={props.fsrs} />
     </SettingsControlSlot>
   );
 }
