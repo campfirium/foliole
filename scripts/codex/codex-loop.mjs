@@ -86,6 +86,28 @@ async function stabilizeWorkspace(task, options, dependencies, reason) {
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
+async function recoverFailedTask(task, options, dependencies, error) {
+  const status = await dependencies.readGitStatusFn(REPO_ROOT);
+  if (!status) {
+    throw error;
+  }
+
+  dependencies.stdout.write(`[codex-loop] task failed with dirty workspace; attempting repair: ${task}\n`);
+  await stabilizeWorkspace(task, options, dependencies, `task failure after ${task}`);
+  const committed = await dependencies.commitTrackedChangesFn(
+    REPO_ROOT,
+    await dependencies.buildCommitMessageFn(task)
+  );
+
+  if (committed) {
+    dependencies.stdout.write('[codex-loop] repaired failed task workspace and committed changes\n');
+  } else {
+    dependencies.stdout.write('[codex-loop] repaired failed task workspace but found no committable changes\n');
+  }
+
+  return committed;
+}
+
 export async function reconcileDirtyWorkspace(task, options, dependencies) {
   const status = await dependencies.readGitStatusFn(REPO_ROOT);
   if (!status) {
@@ -106,38 +128,42 @@ export async function reconcileDirtyWorkspace(task, options, dependencies) {
   return true;
 }
 
-async function resolveGate(options) {
-  const firstTask = await readTodoTask();
+async function resolveGate(options, dependencies) {
+  const firstTask = await dependencies.readTodoTaskFn();
   if (!options.completeGate) {
     return firstTask;
   }
-  if (!firstTask || !isPauseTask(firstTask)) {
+  if (!firstTask || !dependencies.isPauseTaskFn(firstTask)) {
     throw new Error('complete-gate requires the first pending TODO item to be a pause task');
   }
-  await completePauseTask(firstTask);
+  await dependencies.completePauseTaskFn(firstTask);
   process.stdout.write(`[codex-loop] completed gate task: ${firstTask}\n`);
-  return readTodoTask();
+  return dependencies.readTodoTaskFn();
 }
 
-async function runLoop(options) {
+async function runLoop(options, overrides = {}) {
   const dependencies = {
     buildCommitMessageFn: (task) => buildCommitMessage(REPO_ROOT, task),
     commitTrackedChangesFn: commitTrackedChanges,
+    completePauseTaskFn: completePauseTask,
+    isPauseTaskFn: isPauseTask,
     readGitStatusFn: readGitStatus,
+    readTodoTaskFn: readTodoTask,
     runCodexTaskFn: runCodexTask,
     runQualityGateFn: runQualityGate,
-    stdout: process.stdout
+    stdout: process.stdout,
+    ...overrides
   };
-  const pendingTask = await readTodoTask();
+  const pendingTask = await dependencies.readTodoTaskFn();
   await reconcileDirtyWorkspace(pendingTask, options, dependencies);
-  let task = await resolveGate(options);
+  let task = await resolveGate(options, dependencies);
 
   for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
     if (!task) {
       process.stdout.write('[codex-loop] no pending TODO item found\n');
       return 0;
     }
-    if (isPauseTask(task)) {
+    if (dependencies.isPauseTaskFn(task)) {
       process.stdout.write(`[codex-loop] waiting-for-gate: ${task}\n`);
       return 20;
     }
@@ -147,10 +173,18 @@ async function runLoop(options) {
     }
 
     process.stdout.write(`[codex-loop] iteration ${iteration}: ${task}\n`);
-    await runCodexTask({ fullAuto: true, model: options.model, task });
-    await stabilizeWorkspace(task, options, dependencies, `quality gate after task: ${task}`);
-    const committed = await commitTrackedChanges(REPO_ROOT, await buildCommitMessage(REPO_ROOT, task));
-    const nextTask = await readTodoTask();
+    let committed;
+    try {
+      await dependencies.runCodexTaskFn({ fullAuto: true, model: options.model, task });
+      await stabilizeWorkspace(task, options, dependencies, `quality gate after task: ${task}`);
+      committed = await dependencies.commitTrackedChangesFn(
+        REPO_ROOT,
+        await dependencies.buildCommitMessageFn(task)
+      );
+    } catch (error) {
+      committed = await recoverFailedTask(task, options, dependencies, error);
+    }
+    const nextTask = await dependencies.readTodoTaskFn();
 
     if (!committed && nextTask === task) {
       process.stdout.write(`[codex-loop] stalled on task: ${task}\n`);
