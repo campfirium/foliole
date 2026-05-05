@@ -13,7 +13,7 @@
     "windows:deliver:full": "bash scripts/windows/windows-deliver-full.sh",
     "windows:preview": "bash scripts/windows/windows-preview.sh",
     "windows:sync": "bash scripts/windows/windows-sync.sh",
-    "windows:restart-client": "bash scripts/windows/windows-restart-client.sh",
+    "windows:restart-client": "WINDOWS_CLIENT_ACTION=restart bash scripts/windows/windows-restart-client.sh",
     "windows:client:status": "WINDOWS_CLIENT_ACTION=status bash scripts/windows/windows-restart-client.sh",
     "windows:client:start": "WINDOWS_CLIENT_ACTION=start bash scripts/windows/windows-restart-client.sh",
     "windows:client:stop": "WINDOWS_CLIENT_ACTION=stop bash scripts/windows/windows-restart-client.sh",

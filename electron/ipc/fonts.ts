@@ -32,6 +32,13 @@ function runCommand(exec: ExecFileSyncFn, file: string, args: string[]) {
   }
 }
 
+function parsePowerShellFontPropertyNames(rawOutput: string) {
+  return rawOutput
+    .split(/\r?\n/)
+    .map((row) => row.trim())
+    .filter((row) => row.length > 0);
+}
+
 function parseWindowsRegistryFonts(rawOutput: string) {
   const rows = rawOutput.split(/\r?\n/);
   const names: string[] = [];
@@ -48,7 +55,35 @@ function parseWindowsRegistryFonts(rawOutput: string) {
   return names;
 }
 
+function listWindowsFontsViaPowerShell(exec: ExecFileSyncFn) {
+  const hklmScript =
+    "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts' | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name";
+  const hkcuScript =
+    "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;Get-ItemProperty -Path 'Registry::HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts' | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name";
+  const hklmOutput = runCommand(exec, 'powershell', [
+    '-NoProfile',
+    '-NonInteractive',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    hklmScript
+  ]);
+  const hkcuOutput = runCommand(exec, 'powershell', [
+    '-NoProfile',
+    '-NonInteractive',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    hkcuScript
+  ]);
+  return [...parsePowerShellFontPropertyNames(hklmOutput), ...parsePowerShellFontPropertyNames(hkcuOutput)];
+}
+
 function listWindowsFonts(exec: ExecFileSyncFn) {
+  const powershellFonts = listWindowsFontsViaPowerShell(exec);
+  if (powershellFonts.length > 0) {
+    return powershellFonts;
+  }
   const hklmOutput = runCommand(exec, 'reg', ['query', 'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts']);
   const hkcuOutput = runCommand(exec, 'reg', ['query', 'HKCU\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts']);
   return [...parseWindowsRegistryFonts(hklmOutput), ...parseWindowsRegistryFonts(hkcuOutput)];
