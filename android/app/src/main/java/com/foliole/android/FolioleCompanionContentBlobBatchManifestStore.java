@@ -41,12 +41,12 @@ final class FolioleCompanionContentBlobBatchManifestStore {
             .getJSONArray(resourceRule(context, "resultKey"));
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            manifests.put(row.getString(resourceRule(context, "hashKey")), new Manifest(
-                row.getString(resourceRule(context, "compressionKey")),
-                row.getLong(resourceRule(context, "originalSizeBytesKey")),
-                row.getLong(resourceRule(context, "storedSizeBytesKey")),
-                row.getString(resourceRule(context, "originalSha256Key")),
-                row.getString(resourceRule(context, "storedSha256Key"))
+            manifests.put(rowString(context, row, "hashKey"), new Manifest(
+                rowString(context, row, "compressionKey"),
+                rowLong(context, row, "originalSizeBytesKey"),
+                rowLong(context, row, "storedSizeBytesKey"),
+                rowString(context, row, "originalSha256Key"),
+                rowString(context, row, "storedSha256Key")
             ));
         }
         return manifests;
@@ -64,6 +64,14 @@ final class FolioleCompanionContentBlobBatchManifestStore {
 
     private static String resourceRule(Context context, String key) throws Exception {
         return FolioleCompanionResourceReadQueryRules.contentBlobString(context, key);
+    }
+
+    private static long rowLong(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobRowLong(context, row, key);
+    }
+
+    private static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobRowString(context, row, key);
     }
 
     static final class Manifest {

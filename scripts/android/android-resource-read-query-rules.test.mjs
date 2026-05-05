@@ -130,6 +130,8 @@ describe('Android resource read query rules', () => {
     const rulesSource = await readFile(RESOURCE_RULES, 'utf8');
 
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobRowLong(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobBatchResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobSyncResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentString(context, key)');
@@ -159,6 +161,7 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).not.toContain('put("excerpt"');
     expect(combinedStoreSource).not.toContain('optString("attachment_id"');
     expect(combinedStoreSource).not.toContain('optString("content_hash"');
+    expect(combinedStoreSource).not.toContain('row.getString(resourceRule(context, "hashKey"))');
     expect(combinedStoreSource).not.toContain('DEFAULT_SEARCH_LIMIT');
     expect(combinedStoreSource).not.toContain('EXCERPT_RADIUS');
   });

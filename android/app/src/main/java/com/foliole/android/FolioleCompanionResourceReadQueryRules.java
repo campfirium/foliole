@@ -51,6 +51,14 @@ final class FolioleCompanionResourceReadQueryRules {
         return contentBlobObject(context, "syncResponseKeys").getString(key);
     }
 
+    static long contentBlobRowLong(Context context, JSONObject row, String key) throws Exception {
+        return row.getLong(contentBlobString(context, key));
+    }
+
+    static String contentBlobRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(contentBlobString(context, key));
+    }
+
     static int pdfPageTextInt(Context context, String key) throws Exception {
         return group(context, "pdfPageText").getInt(key);
     }
