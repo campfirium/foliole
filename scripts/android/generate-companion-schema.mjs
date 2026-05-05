@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.ts';
+import { ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS } from '../../lib/core/database/androidCompanionBridgeContractDefinitions.ts';
 import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
 import {
   ANDROID_COMPANION_MIGRATION_ACTION_TYPES,
@@ -47,6 +48,7 @@ const migrationOutputPath = path.join(repoRoot, 'android/app/src/main/assets/com
 const mutationOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-mutation-definitions.json');
 const queryOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-query-definitions.json');
 const syncProtocolOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-sync-protocol-definitions.json');
+const bridgeContractOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-bridge-contract-definitions.json');
 const statements = [
   ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
   ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
@@ -100,11 +102,13 @@ await fs.writeFile(
   'utf8'
 );
 await fs.writeFile(syncProtocolOutputPath, `${JSON.stringify(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS, null, 2)}\n`, 'utf8');
+await fs.writeFile(bridgeContractOutputPath, `${JSON.stringify(ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS, null, 2)}\n`, 'utf8');
 console.info('[android-schema] wrote companion schema artifact', outputPath);
 console.info('[android-schema] wrote companion migration schema artifact', migrationOutputPath);
 console.info('[android-schema] wrote companion mutation definitions artifact', mutationOutputPath);
 console.info('[android-schema] wrote companion query definitions artifact', queryOutputPath);
 console.info('[android-schema] wrote companion sync protocol definitions artifact', syncProtocolOutputPath);
+console.info('[android-schema] wrote companion bridge contract definitions artifact', bridgeContractOutputPath);
 
 function syncPayloadRoutes(queries) {
   return Object.entries(queries)
