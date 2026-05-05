@@ -14,6 +14,7 @@ const HOVER_ZONE_WIDTH_PX = 72;
 const OUTLINE_DEFAULT_ANCHOR_Y = 240;
 const OUTLINE_RIGHT_GAP_RATIO = 0.1;
 const OUTLINE_VISIBLE_OPACITY = 0.8;
+const OUTLINE_EDGE_CLEARANCE_PX = 12;
 
 interface OutlineDisplayItem {
   from: number;
@@ -258,7 +259,7 @@ export function DocumentOutlineLayer({
       }}
       onMouseLeave={() => setIsOpen(false)}
       ref={layerRef}
-      style={{ width: `${getOutlineLayerWidth(horizontalMetrics, isOpen)}px` }}
+      style={{ right: `${OUTLINE_EDGE_CLEARANCE_PX}px`, width: `${getOutlineLayerWidth(horizontalMetrics, isOpen)}px` }}
     >
       <OutlineList
         activeIndex={activeIndex}
