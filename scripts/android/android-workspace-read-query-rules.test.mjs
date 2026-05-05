@@ -64,7 +64,7 @@ describe('Android workspace read query rules', () => {
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.viewStateString(context');
     expect(combinedSource).toContain('snapshotObject(context, "outputKeys")');
     expect(combinedSource).toContain('field.getString("outputKey")');
-    expect(rulesSource).toContain('optJSONObject("workspaceRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "workspaceRead")');
     expect(combinedSource).not.toContain('"parentNodeId"');
     expect(combinedSource).not.toContain('"scrollTop"');
     expect(combinedSource).not.toContain('"selectionFrom"');

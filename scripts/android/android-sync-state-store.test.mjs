@@ -117,7 +117,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(source).toContain('FolioleCompanionSyncPayloadQueryStore.loadRowsWithPayloads');
     expect(loadBody).toContain('FolioleCompanionSyncObjectQueryRules.syncObjectsQueryName(context)');
     expect(loadBody).toContain('FolioleCompanionSyncObjectQueryRules.syncObjectsReplacements(context');
-    expect(rulesSource).toContain('optJSONObject("syncObjectRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "syncObjectRead")');
     expect(source).not.toContain('objectTypeFilter');
     expect(source).not.toContain('private static void appendPayloads');
     expect(queryDefinitions.queries.syncObjects.sql).toContain('? = 0 OR object_type IN (:objectTypes)');

@@ -6,8 +6,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionWorkspaceReadQueryRules {
-    private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
-
     private FolioleCompanionWorkspaceReadQueryRules() {}
 
     static String snapshotString(Context context, String key) throws Exception {
@@ -27,10 +25,7 @@ final class FolioleCompanionWorkspaceReadQueryRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("workspaceRead");
-        if (rules == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing workspace read rules.");
-        }
+        JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "workspaceRead");
         JSONObject group = rules.optJSONObject(groupName);
         if (group == null) {
             throw new IllegalStateException("Companion query definitions asset is missing workspace read rule: " + groupName);

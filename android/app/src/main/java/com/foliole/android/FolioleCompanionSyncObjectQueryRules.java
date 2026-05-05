@@ -13,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 final class FolioleCompanionSyncObjectQueryRules {
-    private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
-
     private FolioleCompanionSyncObjectQueryRules() {}
 
     static String syncIndexQueryName(Context context) throws Exception {
@@ -71,10 +69,7 @@ final class FolioleCompanionSyncObjectQueryRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("syncObjectRead");
-        if (rules == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing sync object read rules.");
-        }
+        JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "syncObjectRead");
         JSONObject group = rules.optJSONObject(groupName);
         if (group == null) {
             throw new IllegalStateException("Companion query definitions asset is missing sync object read rule: " + groupName);

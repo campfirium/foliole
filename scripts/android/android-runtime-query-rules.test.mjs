@@ -30,7 +30,7 @@ describe('Android runtime query rules', () => {
     const rulesSource = await readFile(RUNTIME_RULES, 'utf8');
 
     expect(combinedSource).toContain('FolioleCompanionRuntimeQueryRules.stringValue(context, groupName, key)');
-    expect(rulesSource).toContain('optJSONObject("runtimeQueries")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "runtimeQueries")');
     expect(combinedSource).not.toContain('"companionMetaValue"');
     expect(combinedSource).not.toContain('"syncStateNextSeqForMutation"');
     expect(combinedSource).not.toContain('"next_state_seq"');

@@ -105,7 +105,7 @@ describe('schema inventory drift gate', () => {
     const conflictRulesSource = await readFile(COMPANION_SYNC_CONFLICT_STORE, 'utf8');
 
     expect(schema.queries).toEqual(ANDROID_COMPANION_QUERY_DEFINITIONS);
-    expect(conflictRulesSource).toContain('optJSONObject("syncConflictRead")');
+    expect(conflictRulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "syncConflictRead")');
     expect(conflictRulesSource).not.toContain('database, "nodeConflicts"');
   });
 

@@ -13,6 +13,16 @@ export const ANDROID_COMPANION_QUERY_DEFINITIONS = {
 };
 
 export const ANDROID_COMPANION_QUERY_ASSET_KEYS = {
+  contentRead: 'contentRead',
+  diagnosticRead: 'diagnosticRead',
+  missingResourceRead: 'missingResourceRead',
+  nodeAttachmentRead: 'nodeAttachmentRead',
   queries: 'queries',
-  syncPayloadRouting: 'syncPayloadRouting'
+  resourceRead: 'resourceRead',
+  runtimeQueries: 'runtimeQueries',
+  syncConflictRead: 'syncConflictRead',
+  syncObjectRead: 'syncObjectRead',
+  syncStreamRead: 'syncStreamRead',
+  syncPayloadRouting: 'syncPayloadRouting',
+  workspaceRead: 'workspaceRead'
 } as const;

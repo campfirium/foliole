@@ -40,7 +40,7 @@ describe('Android content read query rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleString(context, key)');
-    expect(rulesSource).toContain('optJSONObject("contentRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "contentRead")');
     expect(combinedStoreSource).not.toContain('"externalDocumentById"');
     expect(combinedStoreSource).not.toContain('"readableArticleFirstNode"');
     expect(combinedStoreSource).not.toContain('"pdfPageTextPages"');

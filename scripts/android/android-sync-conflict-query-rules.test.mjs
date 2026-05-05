@@ -27,7 +27,7 @@ describe('Android sync conflict query rules', () => {
 
     expect(helperSource).toContain('FolioleCompanionSyncConflictQueryRules.nodeConflictsQueryName(context)');
     expect(helperSource).not.toContain('"nodeConflicts"');
-    expect(conflictRulesSource).toContain('optJSONObject("syncConflictRead")');
+    expect(conflictRulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "syncConflictRead")');
     expect(conflictRulesSource).toContain('nodeConflictsQueryName(Context context)');
     expect(conflictRulesSource).not.toContain('database, "nodeConflicts"');
   });

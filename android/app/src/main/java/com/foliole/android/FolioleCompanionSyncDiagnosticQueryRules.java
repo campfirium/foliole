@@ -6,8 +6,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionSyncDiagnosticQueryRules {
-    private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
-
     private FolioleCompanionSyncDiagnosticQueryRules() {}
 
     static String queryName(Context context, String key) throws Exception {
@@ -44,10 +42,6 @@ final class FolioleCompanionSyncDiagnosticQueryRules {
     }
 
     private static JSONObject rules(Context context) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("diagnosticRead");
-        if (rules == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing diagnostic read rules.");
-        }
-        return rules;
+        return FolioleCompanionQueryAssetKeys.section(context, "diagnosticRead");
     }
 }

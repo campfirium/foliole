@@ -128,7 +128,7 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentObject(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextObject(context, "outputKeys")');
-    expect(rulesSource).toContain('optJSONObject("resourceRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "resourceRead")');
     expect(rulesSource).toContain('getJSONObject(key)');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestByHash"');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestsByHashes"');

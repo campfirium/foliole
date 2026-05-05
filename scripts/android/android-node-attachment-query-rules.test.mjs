@@ -39,7 +39,7 @@ describe('Android node attachment read query rules', () => {
 
     expect(storeSource).toContain('FolioleCompanionNodeAttachmentQueryRules.backfillSnapshotString(context, key)');
     expect(storeSource).toContain('FolioleCompanionNodeAttachmentQueryRules.nodeAttachmentString(context, key)');
-    expect(rulesSource).toContain('optJSONObject("nodeAttachmentRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "nodeAttachmentRead")');
     expect(storeSource).not.toContain('"nodeAttachmentBackfillSnapshots"');
     expect(storeSource).not.toContain('"nodeAttachments"');
     expect(storeSource).not.toContain('"snapshots"');

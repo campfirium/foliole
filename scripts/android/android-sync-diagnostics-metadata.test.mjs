@@ -96,7 +96,7 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.array(context, "stateRowGroups")');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "verdictMetricKeys")');
     expect(combined).toContain('FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys")');
-    expect(combined).toContain('optJSONObject("diagnosticRead")');
+    expect(combined).toContain('FolioleCompanionQueryAssetKeys.section(context, "diagnosticRead")');
     expect(combined).not.toContain('"workspace_sync_endpoint_url"');
     expect(combined).not.toContain('"workspace_sync_events"');
     expect(combined).not.toContain('result.put("endpoint_url"');

@@ -5,8 +5,6 @@ import android.content.Context;
 import org.json.JSONObject;
 
 final class FolioleCompanionSyncStreamQueryRules {
-    private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
-
     private FolioleCompanionSyncStreamQueryRules() {}
 
     static String nodeVersionsQueryName(Context context) throws Exception {
@@ -60,10 +58,7 @@ final class FolioleCompanionSyncStreamQueryRules {
     }
 
     private static JSONObject group(Context context, String streamName) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("syncStreamRead");
-        if (rules == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing sync stream read rules.");
-        }
+        JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "syncStreamRead");
         JSONObject group = rules.optJSONObject(streamName);
         if (group == null) {
             throw new IllegalStateException("Companion query definitions asset is missing sync stream read rule: " + streamName);

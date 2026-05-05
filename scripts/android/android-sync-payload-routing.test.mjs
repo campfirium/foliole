@@ -50,8 +50,18 @@ describe('Android sync payload routing metadata', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.assetKeys).toMatchObject({
+      contentRead: 'contentRead',
+      diagnosticRead: 'diagnosticRead',
+      missingResourceRead: 'missingResourceRead',
+      nodeAttachmentRead: 'nodeAttachmentRead',
       queries: 'queries',
-      syncPayloadRouting: 'syncPayloadRouting'
+      resourceRead: 'resourceRead',
+      runtimeQueries: 'runtimeQueries',
+      syncConflictRead: 'syncConflictRead',
+      syncObjectRead: 'syncObjectRead',
+      syncStreamRead: 'syncStreamRead',
+      syncPayloadRouting: 'syncPayloadRouting',
+      workspaceRead: 'workspaceRead'
     });
     expect(definitions.syncPayloadRouting).toMatchObject({
       argModeKey: 'argMode',

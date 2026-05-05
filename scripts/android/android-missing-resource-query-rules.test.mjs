@@ -57,7 +57,7 @@ describe('Android missing resource query rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.attachmentRowsQueryName(context)');
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.contentHashesQueryName(context)');
-    expect(rulesSource).toContain('optJSONObject("missingResourceRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "missingResourceRead")');
     expect(combinedStoreSource).not.toContain('"attachmentResourceMissingRows"');
     expect(combinedStoreSource).not.toContain('"contentBlobMissingHashes"');
     expect(combinedStoreSource).not.toContain('"missing_attachment_resource_count"');

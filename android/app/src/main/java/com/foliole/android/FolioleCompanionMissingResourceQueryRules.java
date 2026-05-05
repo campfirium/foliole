@@ -6,8 +6,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionMissingResourceQueryRules {
-    private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
-
     private FolioleCompanionMissingResourceQueryRules() {}
 
     static String attachmentRowsQueryName(Context context) throws Exception {
@@ -75,10 +73,7 @@ final class FolioleCompanionMissingResourceQueryRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("missingResourceRead");
-        if (rules == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing resource read rules.");
-        }
+        JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "missingResourceRead");
         JSONObject group = rules.optJSONObject(groupName);
         if (group == null) {
             throw new IllegalStateException("Companion query definitions asset is missing resource read rule: " + groupName);

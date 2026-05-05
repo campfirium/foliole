@@ -49,7 +49,7 @@ describe('Android sync stream query rules', () => {
     expect(reviewLogSource).toContain('FolioleCompanionSyncReviewLogRecordRules.key(context, queryName, key)');
     expect(reviewLogSource).toContain('FolioleCompanionSyncPayloadQueryStore.metadata(context');
     expect(reviewLogRulesSource).toContain('column.getString("source")');
-    expect(rulesSource).toContain('optJSONObject("syncStreamRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "syncStreamRead")');
     expect(nodeVersionSource).not.toContain('"syncNodeVersions"');
     expect(nodeVersionSource).not.toContain('"syncNodeVersionParent"');
     expect(reviewLogSource).not.toContain('"syncReviewLog"');

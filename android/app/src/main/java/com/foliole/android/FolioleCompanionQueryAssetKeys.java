@@ -9,6 +9,15 @@ final class FolioleCompanionQueryAssetKeys {
 
     private FolioleCompanionQueryAssetKeys() {}
 
+    static JSONObject section(Context context, String key) throws Exception {
+        JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH));
+        JSONObject section = payload.optJSONObject(key(context, key));
+        if (section == null) {
+            throw new IllegalStateException("Companion query definitions asset is missing section: " + key);
+        }
+        return section;
+    }
+
     static String key(Context context, String key) throws Exception {
         JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH));
         JSONObject assetKeys = payload.optJSONObject("assetKeys");
