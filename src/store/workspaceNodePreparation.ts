@@ -1,0 +1,189 @@
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
+import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
+
+import { pushNavigationHistory } from './workspaceNavigation';
+import type { WorkspaceNodeDocument } from './workspaceRendererBoundary';
+import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
+import { RECENT_RENDERER_BOUNDARY_NODE_LIMIT } from './workspaceRendererBoundaryKeepNodeIds';
+import type { WorkspaceState } from './workspaceStore';
+import { useWorkspaceStore } from './workspaceStore';
+
+interface EnsureWorkspaceNodeDocumentReadyOptions {
+  keepWarm?: boolean;
+  onDocumentMerged?: (document: WorkspaceNodeDocument) => void;
+  onLoadResolved?: (document: WorkspaceNodeDocument) => void;
+  onLoadStarted?: () => void;
+  preloadedDocument?: WorkspaceNodeDocument | null;
+}
+
+const pendingNodeDocumentLoadById = new Map<string, Promise<WorkspaceNodeDocument | null>>();
+
+function shouldSkipNodePreparation(nodeId: string) {
+  const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
+  return !targetNode || isNodeDocumentLoaded(targetNode);
+}
+
+async function loadWorkspaceNodeDocument(
+  nodeId: string,
+  options: EnsureWorkspaceNodeDocumentReadyOptions
+) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke && !options.preloadedDocument) {
+    return null;
+  }
+
+  let document = options.preloadedDocument ?? null;
+  if (!document) {
+    const pendingLoad = pendingNodeDocumentLoadById.get(nodeId);
+    if (pendingLoad) {
+      document = await pendingLoad;
+    } else {
+      options.onLoadStarted?.();
+      const loadPromise =
+        runtimeInvoke?.(NATIVE_COMMANDS.loadNodeDocument, { nodeId })?.then((loadedDocument) => loadedDocument ?? null) ??
+        Promise.resolve(null);
+      pendingNodeDocumentLoadById.set(nodeId, loadPromise);
+      try {
+        document = await loadPromise;
+      } finally {
+        pendingNodeDocumentLoadById.delete(nodeId);
+      }
+      if (document) {
+        options.onLoadResolved?.(document);
+      }
+    }
+  } else {
+    options.onLoadResolved?.(document);
+  }
+  return document;
+}
+
+function mergePreparedNodeDocument(
+  nodeId: string,
+  document: WorkspaceNodeDocument,
+  options: EnsureWorkspaceNodeDocumentReadyOptions
+) {
+  useWorkspaceStore.setState((state) => {
+    const nextNode = state.nodesById[nodeId];
+    if (!nextNode || isNodeDocumentLoaded(nextNode)) {
+      return state;
+    }
+
+    return {
+      nodesById: {
+        ...state.nodesById,
+        [nodeId]: mergeWorkspaceNodeDocument(nextNode, document)
+      },
+      ...(options.keepWarm
+        ? {
+            rendererBoundaryKeepNodeIds: [
+              nodeId,
+              ...state.rendererBoundaryKeepNodeIds.filter((keepNodeId) => keepNodeId !== nodeId)
+            ].slice(0, RECENT_RENDERER_BOUNDARY_NODE_LIMIT)
+          }
+        : {})
+    };
+  });
+  options.onDocumentMerged?.(document);
+}
+
+function syncReviewSessionSelection(state: WorkspaceState, nodeId: string) {
+  if (!state.reviewSession.currentNodeId || !state.reviewSession.queueNodeIds.includes(nodeId)) {
+    return state.reviewSession;
+  }
+  return {
+    ...state.reviewSession,
+    currentNodeId: nodeId,
+    isAnswerRevealed: false,
+    queueNodeIds: [nodeId, ...state.reviewSession.queueNodeIds.filter((queuedNodeId) => queuedNodeId !== nodeId)]
+  };
+}
+
+function isReviewSessionSelectionSynced(state: WorkspaceState, nodeId: string) {
+  if (state.reviewSession.currentNodeId !== nodeId) {
+    return false;
+  }
+  return state.reviewSession.queueNodeIds[0] === nodeId;
+}
+
+function buildPreparedOpenState(
+  state: WorkspaceState,
+  nodeId: string,
+  document: WorkspaceNodeDocument | null
+): WorkspaceState {
+  const targetNode = state.nodesById[nodeId];
+  if (!targetNode || state.trashedNodeIds.includes(nodeId)) {
+    return state;
+  }
+
+  const mergedTargetNode =
+    document && !isNodeDocumentLoaded(targetNode) ? mergeWorkspaceNodeDocument(targetNode, document) : targetNode;
+  const nextNodesById =
+    mergedTargetNode === targetNode
+      ? state.nodesById
+      : {
+          ...state.nodesById,
+          [nodeId]: mergedTargetNode
+        };
+
+  if (state.activeNodeId === nodeId && isReviewSessionSelectionSynced(state, nodeId) && nextNodesById === state.nodesById) {
+    return state;
+  }
+
+  markNodeSelectionApplied(nodeId, nextNodesById);
+
+  return {
+    ...state,
+    activeNodeId: nodeId,
+    navigation: state.activeNodeId
+      ? {
+          backStack: pushNavigationHistory(state.navigation.backStack, state.activeNodeId),
+          forwardStack: []
+        }
+      : { ...state.navigation, forwardStack: [] },
+    nodesById: nextNodesById,
+    reviewSession: syncReviewSessionSelection(
+      {
+        ...state,
+        nodesById: nextNodesById
+      },
+      nodeId
+    ),
+    rendererBoundaryKeepNodeIds: [
+      ...(state.activeNodeId ? [state.activeNodeId] : []),
+      ...state.rendererBoundaryKeepNodeIds.filter((keepNodeId) => keepNodeId !== state.activeNodeId && keepNodeId !== nodeId)
+    ].slice(0, RECENT_RENDERER_BOUNDARY_NODE_LIMIT)
+  };
+}
+
+export async function ensureWorkspaceNodeDocumentReady(
+  nodeId: string,
+  options: EnsureWorkspaceNodeDocumentReadyOptions = {}
+) {
+  if (shouldSkipNodePreparation(nodeId)) {
+    return null;
+  }
+
+  const document = await loadWorkspaceNodeDocument(nodeId, options);
+  if (!document) {
+    return null;
+  }
+
+  mergePreparedNodeDocument(nodeId, document, options);
+  return document;
+}
+
+export async function openWorkspaceNodeWithPreparedDocument(
+  nodeId: string,
+  options: EnsureWorkspaceNodeDocumentReadyOptions = {}
+) {
+  const document = shouldSkipNodePreparation(nodeId)
+    ? options.preloadedDocument ?? null
+    : await loadWorkspaceNodeDocument(nodeId, options);
+  useWorkspaceStore.setState((state) => buildPreparedOpenState(state, nodeId, document));
+  if (document) {
+    options.onDocumentMerged?.(document);
+  }
+  return { focusAnchor: null, nodeId };
+}

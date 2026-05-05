@@ -47,6 +47,10 @@ export function resolveDisplayItems(content: string): OutlineDisplayItem[] {
   }));
 }
 
+export function mayHaveOutline(content: string) {
+  return /^\s{0,3}#{1,6}[ \t]+/m.test(content);
+}
+
 export function resolveActiveIndex(items: OutlineDisplayItem[], anchorPosition: number) {
   for (let index = items.length - 1; index >= 0; index -= 1) {
     if (anchorPosition >= items[index].from) {

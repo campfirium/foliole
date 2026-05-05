@@ -4,8 +4,9 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
-import { markNodeSelectionRequested } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
+
+import { usePreparedNavigationHandlers } from './useWorkspaceNavigationPrefetch';
 
 interface WorkspaceNavigationDependencies {
   activeNodeContent: string | null;
@@ -91,33 +92,6 @@ function usePendingAnchorNavigation(
   return applyNavigationResult;
 }
 
-function useNavigationAction(
-  action: () => NodeNavigationResult | null,
-  beforeNavigate: () => void,
-  finalize: (result: NodeNavigationResult | null) => void
-) {
-  return useCallback(() => {
-    beforeNavigate();
-    finalize(action());
-  }, [action, beforeNavigate, finalize]);
-}
-
-function useSelectNodeAction(
-  action: (nodeId: string) => NodeNavigationResult | null,
-  beforeNavigate: () => void,
-  finalize: (result: NodeNavigationResult | null) => void,
-  markRequested: (nodeId: string) => void
-) {
-  return useCallback(
-    (nodeId: string) => {
-      markRequested(nodeId);
-      beforeNavigate();
-      finalize(action(nodeId));
-    },
-    [action, beforeNavigate, finalize, markRequested]
-  );
-}
-
 export function useWorkspaceNavigation({
   activeNodeContent,
   activeNodeId,
@@ -135,37 +109,25 @@ export function useWorkspaceNavigation({
   saveActiveNodeView
 }: WorkspaceNavigationDependencies): WorkspaceNavigationHandlers {
   const applyNavigationResult = usePendingAnchorNavigation(activeNodeContent, activeNodeId, editorRef);
-  const markSelectionRequested = useCallback(
-    (nodeId: string) => {
-      markNodeSelectionRequested(nodeId, nodesById);
-    },
-    [nodesById]
-  );
-
-  const finalizeNavigation = useCallback(
-    (result: NodeNavigationResult | null) => {
-      closeContextMenu();
-      applyNavigationResult(result);
-    },
-    [applyNavigationResult, closeContextMenu]
-  );
-
-  const handleSelectNode = useSelectNodeAction(openNode, saveActiveNodeView, finalizeNavigation, markSelectionRequested);
-  const handleSelectBreadcrumbNode = useSelectNodeAction(
-    (nodeId) => jumpToAncestorNode(nodeId) ?? openNode(nodeId),
-    saveActiveNodeView,
-    finalizeNavigation,
-    markSelectionRequested
-  );
+  const preparedHandlers = usePreparedNavigationHandlers({
+    applyNavigationResult,
+    activeNodeContent,
+    activeNodeId,
+    closeContextMenu,
+    editorRef,
+    goBack,
+    goForward,
+    goToParent,
+    jumpToAncestorNode,
+    nodesById,
+    openNode,
+    saveActiveNodeView
+  });
 
   return {
     canGoBack: backStackSize > 0,
     canGoForward: forwardStackSize > 0,
     canGoParent: Boolean(activeNodeParentId),
-    handleGoBack: useNavigationAction(goBack, saveActiveNodeView, finalizeNavigation),
-    handleGoForward: useNavigationAction(goForward, saveActiveNodeView, finalizeNavigation),
-    handleGoParent: useNavigationAction(goToParent, saveActiveNodeView, finalizeNavigation),
-    handleSelectBreadcrumbNode,
-    handleSelectNode
+    ...preparedHandlers
   };
 }

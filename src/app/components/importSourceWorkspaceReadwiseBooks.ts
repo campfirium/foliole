@@ -1,3 +1,4 @@
+import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const INBOX_NODE_ID = 'special-inbox';
@@ -7,7 +8,7 @@ export function selectReadwiseBookNode(nodeId: string, onSelectNode?: (nodeId: s
     onSelectNode(nodeId);
     return;
   }
-  useWorkspaceStore.getState().openNode(nodeId);
+  void openWorkspaceNodeWithPreparedDocument(nodeId);
 }
 
 function placeNodeAtInboxTop(

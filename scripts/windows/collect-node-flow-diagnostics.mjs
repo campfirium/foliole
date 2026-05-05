@@ -4,8 +4,22 @@ import process from 'node:process';
 
 import { launchDesktopSession } from './playwright-desktop-harness.mjs';
 
-const SAMPLE_COUNT = 5;
-const SETTLE_TIMEOUT_MS = 15000;
+const DEFAULT_SAMPLE_COUNT = 5;
+const DEFAULT_SETTLE_TIMEOUT_MS = 15000;
+
+function resolvePositiveInteger(rawValue, fallback) {
+  const parsed = Number.parseInt(String(rawValue ?? ''), 10);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return fallback;
+}
+
+const SAMPLE_COUNT = resolvePositiveInteger(process.env.FOLIOLE_NODE_FLOW_SAMPLE_COUNT, DEFAULT_SAMPLE_COUNT);
+const SETTLE_TIMEOUT_MS = resolvePositiveInteger(
+  process.env.FOLIOLE_NODE_FLOW_SETTLE_TIMEOUT_MS,
+  DEFAULT_SETTLE_TIMEOUT_MS
+);
 
 function escapeForRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -74,7 +88,7 @@ async function openNodeByTitle(page, title) {
     await clickNodeByTitle(page, title);
     return;
   } catch {
-    const openedViaDebugBridge = await page.evaluate((targetTitle) => {
+    const openedViaDebugBridge = await page.evaluate(async (targetTitle) => {
       const api = (window).__folioleWorkspaceDebug;
       if (!api?.listNodes || !api?.openNode) {
         return false;
@@ -83,7 +97,7 @@ async function openNodeByTitle(page, title) {
       if (!targetNode) {
         return false;
       }
-      return api.openNode(targetNode.id);
+      return await api.openNode(targetNode.id);
     }, title);
     if (openedViaDebugBridge) {
       return;
@@ -126,6 +140,7 @@ async function waitForFlowToSettle(page, title) {
 async function sampleNodeFlow(page, title) {
   const samples = [];
   for (let index = 0; index < SAMPLE_COUNT; index += 1) {
+    console.error(`[collect-node-flow] ${title}: sample ${index + 1}/${SAMPLE_COUNT} starting`);
     await clickPivotNode(page, title);
     await resetPerformanceSnapshot(page);
     await openNodeByTitle(page, title);
@@ -141,6 +156,7 @@ async function sampleNodeFlow(page, title) {
     await page.waitForTimeout(120);
     const snapshot = await readPerformanceSnapshot(page);
     samples.push(snapshot?.flow ?? null);
+    console.error(`[collect-node-flow] ${title}: sample ${index + 1}/${SAMPLE_COUNT} captured`);
   }
   return samples;
 }
@@ -189,11 +205,13 @@ function averageFromNested(rootKey, key, validSamples) {
 
 async function main() {
   const { seedFixture, titles: requestedTitles } = resolveArgs(process.argv);
+  console.error('[collect-node-flow] launching desktop session');
   const session = await launchDesktopSession();
 
   try {
     let titles = requestedTitles;
     if (seedFixture) {
+      console.error('[collect-node-flow] seeding diagnostic fixture');
       titles = await seedDiagnosticNodes(session.firstWindow);
     }
     if (titles.length === 0) {
@@ -204,15 +222,18 @@ async function main() {
     }
     const results = [];
     for (const title of titles) {
+      console.error(`[collect-node-flow] collecting "${title}"`);
       const samples = await sampleNodeFlow(session.firstWindow, title);
       results.push({
         summary: summarizeSamples(samples),
         title,
         timelineSamples: samples
       });
+      console.error(`[collect-node-flow] collected "${title}"`);
     }
     console.log(JSON.stringify({ collectedAt: new Date().toISOString(), results }, null, 2));
   } finally {
+    console.error('[collect-node-flow] closing desktop session');
     await session.close();
   }
 }

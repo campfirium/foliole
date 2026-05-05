@@ -226,7 +226,7 @@ export function installDevRendererReloadIntentWatcher(options: {
     return null;
   }
 
-  const rootDir = (env.FOLIOLE_RESTART_INTENT_ROOT ?? options.cwd ?? process.cwd()).trim();
+  const rootDir = (env.FOLIOLE_RENDERER_RELOAD_INTENT_ROOT ?? env.FOLIOLE_RESTART_INTENT_ROOT ?? options.cwd ?? process.cwd()).trim();
   const intentPath = resolveDevRendererReloadIntentPath(rootDir);
   const fileSystem = options.fileSystem ?? createNodeFileSystem();
   const logger = options.logger ?? console;

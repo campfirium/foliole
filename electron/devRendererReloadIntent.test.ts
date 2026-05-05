@@ -111,6 +111,40 @@ function createWatcherHarness() {
   };
 }
 
+function createRendererRootOverrideHarness() {
+  const repoRoot = path.join('C:', 'dev', 'foliole');
+  const customRoot = path.join('D:', 'foliole-intents');
+  const watchedPaths: string[] = [];
+
+  const watcher = installDevRendererReloadIntentWatcher({
+    cwd: repoRoot,
+    env: {
+      ELECTRON_RENDERER_URL: 'http://127.0.0.1:24600',
+      FOLIOLE_RENDERER_RELOAD_INTENT_ROOT: customRoot,
+      FOLIOLE_RESTART_INTENT_ROOT: path.join('E:', 'wrong-root')
+    },
+    fileSystem: {
+      deleteIntentFile() {},
+      readIntentFile() {
+        throw createMissingFileError();
+      },
+      unwatchIntentFile() {},
+      watchIntentFile(filePath) {
+        watchedPaths.push(filePath);
+      },
+      writeDeliveryFile() {}
+    },
+    getWindows: () => [],
+    logger: { error: vi.fn(), info: vi.fn() }
+  });
+
+  return {
+    customRoot,
+    watchedPaths,
+    watcher
+  };
+}
+
 describe('installDevRendererReloadIntentWatcher', () => {
   it('consumes one renderer reload intent exactly once, then reloads visible windows', () => {
     const harness = createWatcherHarness();
@@ -162,6 +196,14 @@ describe('installDevRendererReloadIntentWatcher', () => {
 
     expect(harness.reloadIgnoringCache).toHaveBeenCalledTimes(1);
     expect(harness.writeDeliveryFile).toHaveBeenCalledTimes(1);
+    harness.watcher?.close();
+  });
+
+  it('prefers the dedicated renderer reload root override', () => {
+    const harness = createRendererRootOverrideHarness();
+
+    expect(harness.watcher?.intentPath).toBe(path.join(harness.customRoot, DEV_RENDERER_RELOAD_INTENT_FILE));
+    expect(harness.watchedPaths).toEqual([path.join(harness.customRoot, DEV_RENDERER_RELOAD_INTENT_FILE)]);
     harness.watcher?.close();
   });
 });

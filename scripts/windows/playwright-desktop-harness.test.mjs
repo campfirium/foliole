@@ -12,18 +12,30 @@ import {
   createDesktopLaunchOptions,
   launchDesktopSession,
   resolveDesktopAppRoot,
+  resolveElectronExecutablePath,
   resolveDesktopLaunchTarget,
   waitForDesktopAppReady
 } from './playwright-desktop-harness.mjs';
 
 describe('playwright desktop harness', () => {
   it('prefers configured app root over mirror detection', () => {
-    const appRoot = resolveDesktopAppRoot(
-      { FOLIOLE_ELECTRON_APP_ROOT: '/tmp/custom-root' },
-      () => true
-    );
+    const appRoot = resolveDesktopAppRoot({ FOLIOLE_ELECTRON_APP_ROOT: '/tmp/custom-root' });
 
     expect(appRoot).toBe('/tmp/custom-root');
+  });
+
+  it('defaults to the fixed windows mirror root instead of current working directory', () => {
+    const appRoot = resolveDesktopAppRoot({});
+
+    expect(appRoot).toBe('/mnt/c/dev/foliole');
+  });
+
+  it('derives the mirror root from the configured windows workdir', () => {
+    const appRoot = resolveDesktopAppRoot({
+      FOLIOLE_WINDOWS_WORKDIR: 'D:\\foliole-dev\\sandbox'
+    });
+
+    expect(appRoot).toBe('/mnt/d/foliole-dev/sandbox');
   });
 
   it('resolves current build output paths in args launch mode', () => {
@@ -62,14 +74,19 @@ describe('playwright desktop harness', () => {
       FOLIOLE_WORKDIR: stateRoot
     };
 
-    expect(createDesktopLaunchOptions(target, 12_345, { FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot })).toEqual({
+    expect(
+      createDesktopLaunchOptions(target, 12_345, {
+        ELECTRON_RUN_AS_NODE: '1',
+        FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot
+      }, undefined, (filePath) => filePath === '/workspace/foliole/node_modules/electron/dist/electron')
+    ).toEqual({
       args: ['/workspace/foliole/electron-dist/electron/main.js'],
       cwd: '/workspace/foliole',
       env: {
         ...isolationEnv,
         FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
       },
-      executablePath: undefined,
+      executablePath: '/workspace/foliole/node_modules/electron/dist/electron',
       timeout: 12_345
     });
 
@@ -77,7 +94,7 @@ describe('playwright desktop harness', () => {
       createDesktopLaunchOptions(target, 9_999, {
         FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
         FOLIOLE_ELECTRON_EXECUTABLE_PATH: '../Electron/electron.exe'
-      })
+      }, undefined, () => false)
     ).toMatchObject({
       env: {
         ...isolationEnv,
@@ -87,6 +104,24 @@ describe('playwright desktop harness', () => {
       executablePath: expect.stringMatching(/Electron\/electron\.exe$/),
       timeout: 9_999
     });
+  });
+
+  it('infers the electron executable from the app root when no override is provided', () => {
+    expect(
+      resolveElectronExecutablePath(
+        '/mnt/c/dev/foliole',
+        {},
+        (filePath) => filePath === '/mnt/c/dev/foliole/node_modules/electron/dist/electron.exe'
+      )
+    ).toBe('/mnt/c/dev/foliole/node_modules/electron/dist/electron.exe');
+
+    expect(
+      resolveElectronExecutablePath(
+        '/workspace/foliole',
+        {},
+        (filePath) => filePath === '/workspace/foliole/node_modules/electron/dist/electron'
+      )
+    ).toBe('/workspace/foliole/node_modules/electron/dist/electron');
   });
 
   it('waits for a non-blank desktop window before returning it', async () => {
@@ -227,7 +262,7 @@ describe('playwright desktop harness', () => {
         FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '12345',
         FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state'
       },
-      existsSync: () => true
+      existsSync: (filePath) => filePath !== '/workspace/foliole/node_modules/electron/dist/electron.exe'
     });
 
     expect(calls).toEqual([
@@ -243,7 +278,7 @@ describe('playwright desktop harness', () => {
           FOLIOLE_USER_DATA_PATH: '/tmp/foliole-playwright-state/user-data',
           FOLIOLE_WORKDIR: '/tmp/foliole-playwright-state'
         },
-        executablePath: undefined,
+        executablePath: '/workspace/foliole/node_modules/electron/dist/electron',
         timeout: 12_345
       }
     ]);

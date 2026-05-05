@@ -11,7 +11,7 @@ import {
 import { createDesktopIsolationContext } from './playwright-desktop-isolation.mjs';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
-const WINDOWS_MIRROR_ROOT = '/mnt/c/dev/foliole';
+const DEFAULT_WINDOWS_WORKDIR = 'C:\\dev\\foliole';
 export const APP_READY_FLAG = '__FOLIOLE_APP_READY_REPORTED__';
 
 function resolveTimeoutMs(rawValue) {
@@ -22,15 +22,36 @@ function resolveTimeoutMs(rawValue) {
   return DEFAULT_TIMEOUT_MS;
 }
 
-export function resolveDesktopAppRoot(env = process.env, existsSync = fs.existsSync) {
+function resolveConfiguredWindowsWorkdir(env = process.env) {
+  const configuredWorkdir = env.FOLIOLE_WINDOWS_WORKDIR?.trim() || env.WINDOWS_WORKDIR?.trim();
+  if (configuredWorkdir) {
+    return path.win32.resolve(configuredWorkdir);
+  }
+  return DEFAULT_WINDOWS_WORKDIR;
+}
+
+function resolveWslMirrorRoot(windowsWorkdir) {
+  const normalized = windowsWorkdir.replace(/\\/g, '/');
+  const driveMatch = normalized.match(/^([A-Za-z]):\/(.*)$/);
+  if (!driveMatch) {
+    return path.posix.resolve(normalized);
+  }
+
+  const [, driveLetter, remainder] = driveMatch;
+  return path.posix.join('/mnt', driveLetter.toLowerCase(), remainder);
+}
+
+export function resolveDesktopAppRoot(env = process.env) {
   const configuredRoot = env.FOLIOLE_ELECTRON_APP_ROOT?.trim();
   if (configuredRoot) {
     return path.resolve(configuredRoot);
   }
-  if (existsSync(WINDOWS_MIRROR_ROOT)) {
-    return WINDOWS_MIRROR_ROOT;
+
+  const windowsWorkdir = resolveConfiguredWindowsWorkdir(env);
+  if (process.platform === 'win32') {
+    return windowsWorkdir;
   }
-  return process.cwd();
+  return resolveWslMirrorRoot(windowsWorkdir);
 }
 
 export function resolveDesktopLaunchTarget(appRoot, existsSync = fs.existsSync) {
@@ -50,20 +71,47 @@ export function resolveDesktopLaunchTarget(appRoot, existsSync = fs.existsSync) 
   };
 }
 
-export function createDesktopLaunchOptions(target, timeoutMs, env = process.env, isolation = createDesktopIsolationContext(env)) {
-  const executablePath = env.FOLIOLE_ELECTRON_EXECUTABLE_PATH?.trim();
+export function createDesktopLaunchOptions(
+  target,
+  timeoutMs,
+  env = process.env,
+  isolation = createDesktopIsolationContext(env),
+  existsSync = fs.existsSync
+) {
+  const executablePath = resolveElectronExecutablePath(target.appRoot, env, existsSync);
+  const launchEnv = {
+    ...env,
+    ...isolation.env,
+    FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE?.trim() || '1'
+  };
+  delete launchEnv.ELECTRON_RUN_AS_NODE;
 
   return {
     args: [target.mainEntry],
     cwd: target.appRoot,
-    env: {
-      ...env,
-      ...isolation.env,
-      FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE?.trim() || '1'
-    },
+    env: launchEnv,
     executablePath: executablePath ? path.resolve(executablePath) : undefined,
     timeout: timeoutMs
   };
+}
+
+export function resolveElectronExecutablePath(
+  appRoot,
+  env = process.env,
+  existsSync = fs.existsSync
+) {
+  const configuredPath = env.FOLIOLE_ELECTRON_EXECUTABLE_PATH?.trim();
+  if (configuredPath) {
+    return path.resolve(configuredPath);
+  }
+
+  const resolvedAppRoot = path.resolve(appRoot);
+  const candidatePaths = [
+    path.join(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'electron.exe'),
+    path.join(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'electron')
+  ];
+
+  return candidatePaths.find((candidatePath) => existsSync(candidatePath));
 }
 
 function getRemainingTimeout(deadline) {
@@ -182,7 +230,7 @@ export async function launchDesktopSession({
   const launcher = electronLauncher ?? (await loadElectronLauncher());
   const isolation = createDesktopIsolationContext(env);
   target.runtimeStateRoot = isolation.runtimeStateRoot;
-  const launchOptions = createDesktopLaunchOptions(target, timeoutMs, env, isolation);
+  const launchOptions = createDesktopLaunchOptions(target, timeoutMs, env, isolation, existsSync);
   const deadline = Date.now() + timeoutMs;
   let electronApp;
   try {

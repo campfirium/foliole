@@ -2,10 +2,30 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
+import {
+  createPrefetchInvokeMock,
+  navigationTestNodes,
+  resetWorkspaceNavigationTestState,
+  seedPrefetchTestState,
+  trackPrefetchCallOrder
+} from './useWorkspaceNavigation.testSupport';
 
-const { markNodeSelectionRequested, requestPdfAnchorJump } = vi.hoisted(() => ({
+const {
+  markNodeDocumentMerged,
+  markNodeDocumentLoadResolved,
+  markNodeDocumentLoadStarted,
+  markNodeSelectionApplied,
+  markNodeSelectionRequested,
+  requestPdfAnchorJump
+} = vi.hoisted(() => ({
+  markNodeDocumentMerged: vi.fn(),
+  markNodeDocumentLoadResolved: vi.fn(),
+  markNodeDocumentLoadStarted: vi.fn(),
+  markNodeSelectionApplied: vi.fn(),
   markNodeSelectionRequested: vi.fn(),
   requestPdfAnchorJump: vi.fn()
 }));
@@ -14,47 +34,19 @@ vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
   requestPdfAnchorJump
 }));
 
+vi.mock('../../shared/platform/bridge', () => ({
+  getRuntimeInvoke: vi.fn()
+}));
+
 vi.mock('../../shared/platform/performanceDiagnosticsProbe', () => ({
+  markNodeDocumentMerged,
+  markNodeDocumentLoadResolved,
+  markNodeDocumentLoadStarted,
+  markNodeSelectionApplied,
   markNodeSelectionRequested
 }));
 
-const nodesById = {
-  'node-1': {
-    id: 'node-1',
-    parentNodeId: null,
-    kind: 'topic' as const,
-    title: 'Node 1',
-    content: '',
-    reveal: null,
-    review: null,
-    createdAt: '',
-    updatedAt: ''
-  },
-  'node-2': {
-    id: 'node-2',
-    parentNodeId: null,
-    kind: 'topic' as const,
-    title: 'Node 2',
-    content: '',
-    reveal: null,
-    review: null,
-    createdAt: '',
-    updatedAt: ''
-  },
-  'pdf-parent': {
-    id: 'pdf-parent',
-    parentNodeId: null,
-    kind: 'topic' as const,
-    title: 'PDF Parent',
-    content: '',
-    reveal: null,
-    review: null,
-    createdAt: '',
-    updatedAt: ''
-  }
-};
-
-function runPdfBreadcrumbJumpTest() {
+async function runPdfBreadcrumbJumpTest() {
   const saveActiveNodeView = vi.fn();
   const jumpToAncestorNode = vi.fn(() => ({
     focusAnchor: {
@@ -79,22 +71,22 @@ function runPdfBreadcrumbJumpTest() {
         goForward: vi.fn(() => null),
         goToParent: vi.fn(() => null),
         jumpToAncestorNode,
-        nodesById,
+        nodesById: navigationTestNodes,
         openNode: vi.fn(() => null),
         saveActiveNodeView
       }),
     { initialProps: { activeNodeId: 'pdf-hl-child' } }
   );
 
-  act(() => {
-    result.current.handleSelectBreadcrumbNode('pdf-parent');
+  await act(async () => {
+    await result.current.handleSelectBreadcrumbNode('pdf-parent');
     rerender({ activeNodeId: 'pdf-parent' });
   });
 
   expect(requestPdfAnchorJump).toHaveBeenCalledWith('pdf-parent', { page: 5, x: 0.35, y: 0.7 });
 }
 
-function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
+async function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
   const saveActiveNodeView = vi.fn();
   const jumpToAncestorNode = vi.fn(() => ({
     focusAnchor: {
@@ -121,15 +113,15 @@ function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
         goForward: vi.fn(() => null),
         goToParent: vi.fn(() => null),
         jumpToAncestorNode,
-        nodesById,
+        nodesById: navigationTestNodes,
         openNode: vi.fn(() => null),
         saveActiveNodeView
       }),
     { initialProps: { activeNodeId: 'pdf-hl-child' } }
   );
 
-  act(() => {
-    result.current.handleSelectBreadcrumbNode('pdf-parent');
+  await act(async () => {
+    await result.current.handleSelectBreadcrumbNode('pdf-parent');
     rerender({ activeNodeId: 'pdf-parent' });
   });
 
@@ -137,7 +129,7 @@ function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
   expect(revealSelection).not.toHaveBeenCalled();
 }
 
-function runSavePositionBeforeNodeSelectionTest() {
+async function runSavePositionBeforeNodeSelectionTest() {
   const callOrder: string[] = [];
   const openNode = vi.fn(() => {
     callOrder.push('open-node');
@@ -163,28 +155,103 @@ function runSavePositionBeforeNodeSelectionTest() {
       goForward: vi.fn(() => null),
       goToParent: vi.fn(() => null),
       jumpToAncestorNode: vi.fn(() => null),
-      nodesById,
+      nodesById: navigationTestNodes,
       openNode,
       saveActiveNodeView
     })
   );
 
-  act(() => {
-    result.current.handleSelectNode('node-2');
+  await act(async () => {
+    await result.current.handleSelectNode('node-2');
   });
 
-  expect(callOrder).toEqual(['selection-requested', 'save-view', 'open-node']);
-  expect(markNodeSelectionRequested).toHaveBeenCalledWith('node-2', nodesById);
+  expect(callOrder).toEqual(['selection-requested', 'save-view']);
+  expect(markNodeSelectionRequested).toHaveBeenCalledWith('node-2', navigationTestNodes);
+}
+
+function createPrefetchHookHarness(callOrder: string[]) {
+  const openNode = vi.fn(() => {
+    callOrder.push('open-node');
+    useWorkspaceStore.getState().setActiveNode('node-2');
+    return { focusAnchor: null, nodeId: 'node-2' };
+  });
+  const saveActiveNodeView = vi.fn(() => {
+    callOrder.push('save-view');
+  });
+
+  const view = renderHook(() =>
+    useWorkspaceNavigation({
+      activeNodeContent: 'Alpha body',
+      activeNodeId: 'node-1',
+      activeNodeParentId: null,
+      backStackSize: 0,
+      closeContextMenu: vi.fn(),
+      editorRef: { current: null },
+      forwardStackSize: 0,
+      goBack: vi.fn(() => null),
+      goForward: vi.fn(() => null),
+      goToParent: vi.fn(() => null),
+      jumpToAncestorNode: vi.fn(() => null),
+      nodesById: navigationTestNodes,
+      openNode,
+      saveActiveNodeView
+    })
+  );
+
+  return { openNode, view };
+}
+
+async function runPrefetchBeforeNodeSelectionTest() {
+  seedPrefetchTestState();
+  const invoke = createPrefetchInvokeMock();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  const callOrder = trackPrefetchCallOrder({
+    markNodeDocumentMerged,
+    markNodeDocumentLoadResolved,
+    markNodeDocumentLoadStarted,
+    markNodeSelectionRequested
+  });
+  const { view } = createPrefetchHookHarness(callOrder);
+
+  await act(async () => {
+    await view.result.current.handleSelectNode('node-2');
+  });
+
+  expect(callOrder).toEqual([
+    'selection-requested',
+    'save-view',
+    'load-started',
+    'load-resolved',
+    'load-merged'
+  ]);
+  expect(invoke.mock.calls).toEqual([['load_node_document', { nodeId: 'node-2' }]]);
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+    content: 'Loaded node 2 body',
+    hasContent: true
+  });
 }
 
 describe('useWorkspaceNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetWorkspaceNavigationTestState();
+    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
   });
 
-  it('requests a pdf anchor jump when breadcrumb navigation lands on a pdf parent node', runPdfBreadcrumbJumpTest);
+  it('requests a pdf anchor jump when breadcrumb navigation lands on a pdf parent node', async () => {
+    await runPdfBreadcrumbJumpTest();
+  });
 
-  it('still requests a pdf anchor jump when editor ref still exists', runPdfBreadcrumbJumpTestWhenEditorRefExists);
+  it('still requests a pdf anchor jump when editor ref still exists', async () => {
+    await runPdfBreadcrumbJumpTestWhenEditorRefExists();
+  });
 
-  it('saves the current reading position before selecting another node', runSavePositionBeforeNodeSelectionTest);
+  it('saves the current reading position before selecting another node', async () => {
+    await runSavePositionBeforeNodeSelectionTest();
+  });
+
+  it('prefetches a trimmed document before opening the target node', async () => {
+    await runPrefetchBeforeNodeSelectionTest();
+  });
 });

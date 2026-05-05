@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -16,51 +17,53 @@ import { useWorkspaceActiveNodeDocument } from './useWorkspaceActiveNodeDocument
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
 export function useWorkspaceSelectors() {
-  return {
-    activeNodeId: useWorkspaceStore((state) => state.activeNodeId),
-    createChildNode: useWorkspaceStore((state) => state.createChildNode),
-    createVirtualNode: useWorkspaceStore((state) => state.createVirtualNode),
-    createHighlightNodeFromSelection: useWorkspaceStore((state) => state.createHighlightNodeFromSelection),
-    createImageClozeNodes: useWorkspaceStore((state) => state.createImageClozeNodes),
-    createQANodeFromSelection: useWorkspaceStore((state) => state.createQANodeFromSelection),
-    createRootNode: useWorkspaceStore((state) => state.createRootNode),
-    dismissReviewItem: useWorkspaceStore((state) => state.dismissReviewItem),
-    documentMaxWidth: useWorkspaceStore((state) => state.layout.documentMaxWidth),
-    completeReviewItem: useWorkspaceStore((state) => state.completeReviewItem),
-    deferReviewItem: useWorkspaceStore((state) => state.deferReviewItem),
-    goBack: useWorkspaceStore((state) => state.goBack),
-    goForward: useWorkspaceStore((state) => state.goForward),
-    goToParent: useWorkspaceStore((state) => state.goToParent),
-    gradeReviewCard: useWorkspaceStore((state) => state.gradeReviewCard),
-    jumpToAncestorNode: useWorkspaceStore((state) => state.jumpToAncestorNode),
-    isListCollapsed: useWorkspaceStore((state) => state.layout.isListCollapsed),
-    isRightSidebarCollapsed: useWorkspaceStore((state) => state.layout.isRightSidebarCollapsed),
-    listWidth: useWorkspaceStore((state) => state.layout.listWidth),
-    moveNode: useWorkspaceStore((state) => state.moveNode),
-    navigation: useWorkspaceStore((state) => state.navigation),
-    nodesById: useWorkspaceStore((state) => state.nodesById),
-    nodeOrder: useWorkspaceStore((state) => state.nodeOrder),
-    nodeViewById: useWorkspaceStore((state) => state.nodeViewById),
-    openNode: useWorkspaceStore((state) => state.openNode),
-    revealReviewAnswer: useWorkspaceStore((state) => state.revealReviewAnswer),
-    reviewSession: useWorkspaceStore((state) => state.reviewSession),
-    resetLayout: useWorkspaceStore((state) => state.resetLayout),
-    setListCollapsed: useWorkspaceStore((state) => state.setListCollapsed),
-    setDocumentMaxWidth: useWorkspaceStore((state) => state.setDocumentMaxWidth),
-    setListWidth: useWorkspaceStore((state) => state.setListWidth),
-    setRightSidebarCollapsed: useWorkspaceStore((state) => state.setRightSidebarCollapsed),
-    setRightSidebarWidth: useWorkspaceStore((state) => state.setRightSidebarWidth),
-    setNodeViewState: useWorkspaceStore((state) => state.setNodeViewState),
-    startReviewSession: useWorkspaceStore((state) => state.startReviewSession),
-    rightSidebarWidth: useWorkspaceStore((state) => state.layout.rightSidebarWidth),
-    trashedNodeIds: useWorkspaceStore((state) => state.trashedNodeIds),
-    updateNodeContent: useWorkspaceStore((state) => state.updateNodeContent),
-    updateVirtualNodeFilter: useWorkspaceStore((state) => state.updateVirtualNodeFilter),
-    updateNodeDesiredRetention: useWorkspaceStore((state) => state.updateNodeDesiredRetention),
-    updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
-    updateNodeReveal: useWorkspaceStore((state) => state.updateNodeReveal),
-    exitReviewSession: useWorkspaceStore((state) => state.exitReviewSession)
-  };
+  return useWorkspaceStore(
+    useShallow((state) => ({
+      activeNodeId: state.activeNodeId,
+      createChildNode: state.createChildNode,
+      createVirtualNode: state.createVirtualNode,
+      createHighlightNodeFromSelection: state.createHighlightNodeFromSelection,
+      createImageClozeNodes: state.createImageClozeNodes,
+      createQANodeFromSelection: state.createQANodeFromSelection,
+      createRootNode: state.createRootNode,
+      dismissReviewItem: state.dismissReviewItem,
+      documentMaxWidth: state.layout.documentMaxWidth,
+      completeReviewItem: state.completeReviewItem,
+      deferReviewItem: state.deferReviewItem,
+      goBack: state.goBack,
+      goForward: state.goForward,
+      goToParent: state.goToParent,
+      gradeReviewCard: state.gradeReviewCard,
+      jumpToAncestorNode: state.jumpToAncestorNode,
+      isListCollapsed: state.layout.isListCollapsed,
+      isRightSidebarCollapsed: state.layout.isRightSidebarCollapsed,
+      listWidth: state.layout.listWidth,
+      moveNode: state.moveNode,
+      navigation: state.navigation,
+      nodesById: state.nodesById,
+      nodeOrder: state.nodeOrder,
+      nodeViewById: state.nodeViewById,
+      openNode: state.openNode,
+      revealReviewAnswer: state.revealReviewAnswer,
+      reviewSession: state.reviewSession,
+      resetLayout: state.resetLayout,
+      setListCollapsed: state.setListCollapsed,
+      setDocumentMaxWidth: state.setDocumentMaxWidth,
+      setListWidth: state.setListWidth,
+      setRightSidebarCollapsed: state.setRightSidebarCollapsed,
+      setRightSidebarWidth: state.setRightSidebarWidth,
+      setNodeViewState: state.setNodeViewState,
+      startReviewSession: state.startReviewSession,
+      rightSidebarWidth: state.layout.rightSidebarWidth,
+      trashedNodeIds: state.trashedNodeIds,
+      updateNodeContent: state.updateNodeContent,
+      updateVirtualNodeFilter: state.updateVirtualNodeFilter,
+      updateNodeDesiredRetention: state.updateNodeDesiredRetention,
+      updateNodePriority: state.updateNodePriority,
+      updateNodeReveal: state.updateNodeReveal,
+      exitReviewSession: state.exitReviewSession
+    }))
+  );
 }
 
 export function useNowIso(tickMs = 15_000) {

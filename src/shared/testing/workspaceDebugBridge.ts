@@ -1,3 +1,4 @@
+import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
 interface DebugNodeSeed {
@@ -9,8 +10,10 @@ interface DebugNodeSeed {
 }
 
 interface WorkspaceDebugApi {
+  getActiveNodeId: () => string | null;
+  getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } } | null;
   listNodes: () => Array<{ id: string; title: string }>;
-  openNode: (nodeId: string) => boolean;
+  openNode: (nodeId: string) => Promise<boolean>;
   seedNodes: (nodes: DebugNodeSeed[]) => void;
 }
 
@@ -40,17 +43,23 @@ export function installWorkspaceDebugBridge() {
   }
 
   targetWindow.__folioleWorkspaceDebug = {
+    getActiveNodeId: () => useWorkspaceStore.getState().activeNodeId,
+    getNodeViewState: (nodeId) => useWorkspaceStore.getState().nodeViewById[nodeId] ?? null,
     listNodes: () =>
       useWorkspaceStore
         .getState()
         .nodeOrder.map((nodeId) => ({ id: nodeId, title: useWorkspaceStore.getState().nodesById[nodeId]?.title ?? nodeId })),
-    openNode: (nodeId) => {
+    openNode: async (nodeId) => {
       const state = useWorkspaceStore.getState();
       if (!state.nodesById[nodeId]) {
         return false;
       }
-      state.openNode(nodeId);
-      return true;
+      try {
+        await openWorkspaceNodeWithPreparedDocument(nodeId);
+        return true;
+      } catch {
+        return false;
+      }
     },
     seedNodes: (nodes) => {
       const initial = createInitialWorkspaceState(new Date('2026-04-08T00:00:00.000Z'));

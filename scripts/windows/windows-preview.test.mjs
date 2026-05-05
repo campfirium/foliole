@@ -540,6 +540,58 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
+  it('falls back to restart-intent when renderer reload delivery times out', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    const consumer = startIntentConsumer(tempRoot, 'restart');
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  if [ -f "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json" ]; then',
+          '    echo "[windows-restart-client] status: RUNNING head=$(node -e "const fs=require(\\"node:fs\\");const p=JSON.parse(fs.readFileSync(process.argv[1],\\"utf8\\"));process.stdout.write(p.head||\\"\\")" "${WINDOWS_RESTART_INTENT_ROOT}/.windows-dev-restart-delivered.json")"',
+          '    exit 0',
+          '  fi',
+          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
+        WINDOWS_RESTART_INTENT_ROOT: tempRoot,
+        WINDOWS_RENDERER_RELOAD_INTENT_ROOT: path.join(tempRoot, 'missing-renderer-consumer'),
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx',
+        WINDOWS_PREVIEW_TIMEOUT_SECONDS: '1',
+        WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '1',
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '5'
+      });
+
+      const restartDelivery = await readRestartDelivery(tempRoot);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('selected action: renderer-reload-intent');
+      expect(result.stdout).toContain('renderer reload delivery timed out nonce=1');
+      expect(result.stdout).toContain('renderer reload delivery missing; falling back to restart-intent');
+      expect(result.stdout).toContain('selected action: restart-intent');
+      expect(result.stdout).toContain('status: RESTARTED');
+      expect(restartDelivery).toMatchObject({
+        nonce: 1,
+        target: 'electron-dev'
+      });
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+    } finally {
+      consumer.kill('SIGTERM');
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('does not use fallback-start when client status is unavailable', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {

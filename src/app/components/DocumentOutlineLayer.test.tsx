@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DocumentOutlineLayer } from './DocumentOutlineLayer';
 import { resolvePanelScrollTop } from './DocumentOutlineLayerModel';
+import * as outlineModel from './DocumentOutlineLayerModel';
 
 function renderOutline(content: string, anchorPosition = 0, documentMaxWidth = 860) {
   return render(
@@ -51,6 +52,19 @@ describe('DocumentOutlineLayer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Deep dive' }));
 
     expect(onRevealPosition).toHaveBeenCalledWith(11);
+  });
+
+  it('defers outline parsing until the hover zone is actually used', () => {
+    const resolveDisplayItemsSpy = vi.spyOn(outlineModel, 'resolveDisplayItems');
+    renderOutline('# Intro\n## Deep dive', 11);
+
+    expect(resolveDisplayItemsSpy).not.toHaveBeenCalled();
+
+    vi.useFakeTimers();
+    fireEvent.mouseEnter(screen.getByLabelText('Document outline hover zone'));
+    advanceOutlineOpenDelay();
+
+    expect(resolveDisplayItemsSpy).toHaveBeenCalledTimes(1);
   });
 
   it('hides outline entries after leaving the hover zone', () => {

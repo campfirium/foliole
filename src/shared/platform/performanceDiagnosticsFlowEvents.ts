@@ -65,6 +65,8 @@ export function beginNodeSelectionFlow(nodeId: string, nodesById: Record<string,
   state.activeFlow.lastContentSyncCompletedAt = existingFlow?.lastContentSyncCompletedAt ?? null;
   state.activeFlow.lastContentSyncLength = existingFlow?.lastContentSyncLength ?? null;
   state.activeFlow.panelBoundAt = existingFlow?.panelBoundAt ?? null;
+  state.activeFlow.documentLoadStartedAt = existingFlow?.documentLoadStartedAt ?? null;
+  state.activeFlow.documentLoadResolvedAt = existingFlow?.documentLoadResolvedAt ?? null;
   state.activeFlow.resolvedContentReadyAt = existingFlow?.resolvedContentReadyAt ?? null;
   state.activeFlow.resolvedReadyAt = existingFlow?.resolvedReadyAt ?? null;
   state.activeFlow.bodyPaintAt = existingFlow?.bodyPaintAt ?? null;

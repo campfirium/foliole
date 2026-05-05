@@ -25,10 +25,12 @@ if (!(Test-Path -Path $playwrightBin)) {
 }
 
 $previousAppRoot = $env:FOLIOLE_ELECTRON_APP_ROOT
+$previousWindowsWorkDir = $env:FOLIOLE_WINDOWS_WORKDIR
 
 Push-Location $WindowsWorkDir
 try {
   $env:FOLIOLE_ELECTRON_APP_ROOT = $WindowsWorkDir
+  $env:FOLIOLE_WINDOWS_WORKDIR = $WindowsWorkDir
   if (-not $SkipBuild) {
     Write-Info "build command=$BuildCommand"
     cmd.exe /d /c $BuildCommand
@@ -51,6 +53,11 @@ try {
     Remove-Item Env:FOLIOLE_ELECTRON_APP_ROOT -ErrorAction SilentlyContinue
   } else {
     $env:FOLIOLE_ELECTRON_APP_ROOT = $previousAppRoot
+  }
+  if ($null -eq $previousWindowsWorkDir) {
+    Remove-Item Env:FOLIOLE_WINDOWS_WORKDIR -ErrorAction SilentlyContinue
+  } else {
+    $env:FOLIOLE_WINDOWS_WORKDIR = $previousWindowsWorkDir
   }
   Pop-Location
 }

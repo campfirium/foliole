@@ -10,6 +10,7 @@ WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT="${WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT:-
 WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT="${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT:-scripts/windows/check-electron-dist-fresh.mjs}"
 WINDOWS_ELECTRON_COMPILE_COMMAND="${WINDOWS_ELECTRON_COMPILE_COMMAND:-npm run electron:compile}"
 WINDOWS_RESTART_INTENT_ROOT="${WINDOWS_RESTART_INTENT_ROOT:-}"
+WINDOWS_RENDERER_RELOAD_INTENT_ROOT="${WINDOWS_RENDERER_RELOAD_INTENT_ROOT:-}"
 WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-C:\\dev\\foliole}"
 WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
 WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS:-${WINDOWS_PREVIEW_TIMEOUT_SECONDS}}"
@@ -301,6 +302,10 @@ run_sync_only() {
 }
 
 resolve_renderer_reload_intent_root() {
+  if [ -n "${WINDOWS_RENDERER_RELOAD_INTENT_ROOT}" ]; then
+    printf '%s' "${WINDOWS_RENDERER_RELOAD_INTENT_ROOT}"
+    return 0
+  fi
   if [ -n "${WINDOWS_RESTART_INTENT_ROOT}" ]; then
     printf '%s' "${WINDOWS_RESTART_INTENT_ROOT}"
     return 0
@@ -434,8 +439,16 @@ run_renderer_reload_intent() {
       echo "[windows-preview] renderer reload intent missing nonce"
       return 1
     fi
-    wait_for_delivery_nonce "$(resolve_renderer_reload_delivery_path)" "${reload_nonce}" "${WINDOWS_PREVIEW_TIMEOUT_SECONDS}" "renderer reload" || return 1
-    wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_SECONDS}" "renderer reload status" || return 1
+    if ! wait_for_delivery_nonce "$(resolve_renderer_reload_delivery_path)" "${reload_nonce}" "${WINDOWS_PREVIEW_TIMEOUT_SECONDS}" "renderer reload"; then
+      echo "[windows-preview] renderer reload delivery missing; falling back to restart-intent"
+      run_restart_intent
+      return $?
+    fi
+    if ! wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_SECONDS}" "renderer reload status"; then
+      echo "[windows-preview] renderer reload status missing; falling back to restart-intent"
+      run_restart_intent
+      return $?
+    fi
     echo "[windows-preview] status: DELIVERED"
     return 0
   fi

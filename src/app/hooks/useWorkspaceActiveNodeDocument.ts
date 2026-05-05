@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import {
   beginNodeSelectionFlow,
@@ -8,7 +7,8 @@ import {
   markNodeDocumentLoadResolved,
   markNodeDocumentLoadStarted
 } from '../../shared/platform/performanceDiagnosticsProbe';
-import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from '../../store/workspaceRendererBoundary';
+import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
+import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
@@ -26,25 +26,22 @@ export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
     }
 
     let cancelled = false;
-    markNodeDocumentLoadStarted(activeNodeId);
-    void runtimeInvoke(NATIVE_COMMANDS.loadNodeDocument, { nodeId: activeNodeId }).then((document) => {
-      if (!document || cancelled) {
-        return;
-      }
-      markNodeDocumentLoadResolved(activeNodeId);
-      markNodeDocumentMerged(activeNodeId, `content:${document.content.length}`);
-      useWorkspaceStore.setState((state) => {
-        const nextNode = state.nodesById[activeNodeId];
-        if (!nextNode) {
-          return state;
+    void ensureWorkspaceNodeDocumentReady(activeNodeId, {
+      onDocumentMerged: (document) => {
+        if (!cancelled) {
+          markNodeDocumentMerged(activeNodeId, `content:${document.content.length}`);
         }
-        return {
-          nodesById: {
-            ...state.nodesById,
-            [activeNodeId]: mergeWorkspaceNodeDocument(nextNode, document)
-          }
-        };
-      });
+      },
+      onLoadResolved: () => {
+        if (!cancelled) {
+          markNodeDocumentLoadResolved(activeNodeId);
+        }
+      },
+      onLoadStarted: () => {
+        if (!cancelled) {
+          markNodeDocumentLoadStarted(activeNodeId);
+        }
+      }
     });
 
     return () => {

@@ -1,17 +1,17 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { cn } from '../../shared/lib/utils';
 
 import {
   getOutlineLayerWidth,
+  mayHaveOutline,
   type OutlineDisplayItem,
   type OutlineHorizontalMetrics,
   resolveActiveIndex,
   resolveDisplayItems,
-  resolveOutlineHorizontalMetrics,
-  resolvePanelScrollTop,
-  resolvePanelSlack
+  resolveOutlineHorizontalMetrics
 } from './DocumentOutlineLayerModel';
+import { useOutlinePanelPositioning } from './documentOutlineLayerPositioning';
 
 interface DocumentOutlineLayerProps {
   content: string;
@@ -117,44 +117,11 @@ function OutlineList({
   );
 }
 
-function useOutlinePanelPositioning(args: {
-  activeIndex: number;
-  anchorY: number;
-  isOpen: boolean;
-  items: OutlineDisplayItem[];
-}) {
-  const [panelPaddingTop, setPanelPaddingTop] = useState(0);
-  const [panelPaddingBottom, setPanelPaddingBottom] = useState(0);
-  const activeItemRef = useRef<HTMLButtonElement | null>(null);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-
-  useLayoutEffect(() => {
-    if (!args.isOpen || !panelRef.current || !activeItemRef.current) {
-      return;
-    }
-
-    const activeTop = activeItemRef.current.offsetTop;
-    const panelHeight = panelRef.current.offsetHeight;
-    const scrollHeight = panelRef.current.scrollHeight;
-    const panelSlack = resolvePanelSlack(panelHeight);
-    setPanelPaddingTop(panelSlack);
-    setPanelPaddingBottom(panelSlack);
-    panelRef.current.scrollTop = resolvePanelScrollTop(args.anchorY, activeTop, panelHeight, scrollHeight);
-  }, [args.activeIndex, args.anchorY, args.isOpen, args.items]);
-
-  return {
-    panelPaddingTop,
-    panelPaddingBottom,
-    setActiveItemRef: (node: HTMLButtonElement | null) => {
-      activeItemRef.current = node;
-    },
-    setPanelRef: (node: HTMLDivElement | null) => {
-      panelRef.current = node;
-    }
-  };
-}
-
-function useOutlineHoverState(documentMaxWidth: number, onResolveDocumentPositionAtViewportY: (clientY: number) => number | null) {
+function useOutlineHoverState(
+  documentMaxWidth: number,
+  onResolveDocumentPositionAtViewportY: (clientY: number) => number | null,
+  resolveOutlineItems: () => OutlineDisplayItem[]
+) {
   const [anchorY, setAnchorY] = useState(OUTLINE_DEFAULT_ANCHOR_Y);
   const [anchorPosition, setAnchorPosition] = useState(0);
   const [horizontalMetrics, setHorizontalMetrics] = useState<OutlineHorizontalMetrics>({
@@ -178,6 +145,9 @@ function useOutlineHoverState(documentMaxWidth: number, onResolveDocumentPositio
     openDelayTimerRef.current = window.setTimeout(() => {
       openDelayTimerRef.current = null;
       if (!layerRef.current) {
+        return;
+      }
+      if (resolveOutlineItems().length === 0) {
         return;
       }
       const rect = layerRef.current.getBoundingClientRect();
@@ -216,18 +186,34 @@ export function DocumentOutlineLayer({
   onRevealPosition,
   onResolveDocumentPositionAtViewportY
 }: DocumentOutlineLayerProps) {
+  const [outlineItems, setOutlineItems] = useState<OutlineDisplayItem[] | null>(null);
+  const hasOutlineCandidate = useMemo(() => mayHaveOutline(content), [content]);
+  const resolveOutlineItems = useCallback(() => {
+    if (outlineItems !== null) {
+      return outlineItems;
+    }
+    const nextItems = resolveDisplayItems(content);
+    setOutlineItems(nextItems);
+    return nextItems;
+  }, [content, outlineItems]);
+  useEffect(() => {
+    setOutlineItems(null);
+  }, [content]);
   const { anchorPosition, anchorY, closeOutline, horizontalMetrics, isOpen, layerRef, openOutline } =
-    useOutlineHoverState(documentMaxWidth, onResolveDocumentPositionAtViewportY);
-  const outlineItems = useMemo(() => resolveDisplayItems(content), [content]);
-  const activeIndex = useMemo(() => resolveActiveIndex(outlineItems, anchorPosition), [anchorPosition, outlineItems]);
+    useOutlineHoverState(documentMaxWidth, onResolveDocumentPositionAtViewportY, resolveOutlineItems);
+  const resolvedOutlineItems = outlineItems ?? [];
+  const activeIndex = useMemo(
+    () => resolveActiveIndex(resolvedOutlineItems, anchorPosition),
+    [anchorPosition, resolvedOutlineItems]
+  );
   const { panelPaddingTop, panelPaddingBottom, setActiveItemRef, setPanelRef } = useOutlinePanelPositioning({
     activeIndex,
     anchorY,
     isOpen,
-    items: outlineItems
+    items: resolvedOutlineItems
   });
 
-  if (outlineItems.length === 0) {
+  if (!hasOutlineCandidate) {
     return null;
   }
 
@@ -246,7 +232,7 @@ export function DocumentOutlineLayer({
         activeIndex={activeIndex}
         horizontalMetrics={horizontalMetrics}
         isOpen={isOpen}
-        items={outlineItems}
+        items={resolvedOutlineItems}
         onRevealPosition={onRevealPosition}
         panelPaddingTop={panelPaddingTop}
         panelPaddingBottom={panelPaddingBottom}

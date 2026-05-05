@@ -10,12 +10,15 @@ import {
 
 describe('playwright electron spike', () => {
   it('prefers configured app root over mirror detection', () => {
-    const appRoot = resolveDefaultAppRoot(
-      { FOLIOLE_ELECTRON_APP_ROOT: '/tmp/custom-root' },
-      () => true
-    );
+    const appRoot = resolveDefaultAppRoot({ FOLIOLE_ELECTRON_APP_ROOT: '/tmp/custom-root' });
 
     expect(appRoot).toBe('/tmp/custom-root');
+  });
+
+  it('uses the fixed windows mirror root by default', () => {
+    const appRoot = resolveDefaultAppRoot({});
+
+    expect(appRoot).toBe('/mnt/c/dev/foliole');
   });
 
   it('resolves current build output paths in args launch mode', () => {
@@ -113,7 +116,7 @@ describe('playwright electron spike', () => {
           FOLIOLE_USER_DATA_PATH: path.join('/tmp/foliole-playwright-state', 'user-data'),
           FOLIOLE_WORKDIR: '/tmp/foliole-playwright-state'
         },
-        executablePath: undefined,
+        executablePath: '/workspace/foliole/node_modules/electron/dist/electron.exe',
         timeout: 12_345
       }
     ]);
