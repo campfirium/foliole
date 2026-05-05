@@ -386,6 +386,15 @@ function Launch-NativeDev {
     Remove-Item -Force $bootReadyFile -ErrorAction SilentlyContinue
   }
 
+  # Clear stale WebView2 UDD lock before launch (defensive, in case last session
+  # exited without going through Stop-NativeDevSession).
+  $appId = "com.foliole.desktop"
+  $uddLock = "$env:LOCALAPPDATA\$appId\EBWebView\Default\LOCK"
+  if (Test-Path $uddLock) {
+    Remove-Item -Force $uddLock -ErrorAction SilentlyContinue
+    Write-Log "[windows-native-dev] cleared stale WebView2 UDD lock before launch"
+  }
+
   $bootSession = [Guid]::NewGuid().ToString("N")
   $tauriLogTimestamp = Get-Date -Format "yyyyMMdd-HHmmss"
   $tauriLogPath = Join-Path $LogDir "tauri-dev-$tauriLogTimestamp.log"
@@ -494,6 +503,8 @@ function Wait-FrontendReadyWithSingleRetry {
 
   Write-Log "[windows-native-dev] boot readiness check failed (reason=$script:LastBootFailureReason), retrying launch once."
   Stop-NativeDevSession -WorkDir $WorkDir
+  # Brief pause to let TCP port 4600 drain before re-launch avoids "port already in use"
+  Start-Sleep -Milliseconds 2000
   $retryBootSession = Launch-NativeDev -WorkDir $WorkDir
   Ensure-AppWindowForeground -WorkDir $WorkDir
   if ((Wait-ForDevUrlReady -TimeoutSeconds $TimeoutSeconds) -and
@@ -586,6 +597,8 @@ if (-not (Test-Path $packageJsonPath)) {
 if ($Action -eq "restart") {
   Write-Log "[windows-native-dev] step: stop existing native dev session before dependency install"
   Stop-NativeDevSession -WorkDir $WindowsWorkDir
+  # Brief pause to let TCP port 4600 drain before re-launch avoids "port already in use"
+  Start-Sleep -Milliseconds 2000
 }
 
 Ensure-NpmDependencies -WorkDir $WindowsWorkDir
