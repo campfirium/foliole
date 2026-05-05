@@ -1,4 +1,5 @@
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
+import { isFullSyncCompletedEvent } from '../shared/platform/companionSyncEventSemantics';
 
 import { CompanionSyncDiagnosticsPanel } from './CompanionSyncDiagnosticsPanel';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -82,7 +83,7 @@ function resolveLastSyncRow(props: {
   syncEvents: NativeCompanionSyncEvent[];
 }) {
   const latestEvent = props.syncEvents[0] ?? null;
-  const latestCompletedEvent = props.syncEvents.find((event) => event.status === 'completed') ?? null;
+  const latestCompletedEvent = props.syncEvents.find(isFullSyncCompletedEvent) ?? null;
   if (props.status === 'syncing') {
     return {
       detail: 'Pulling changes now.',
@@ -112,28 +113,27 @@ function resolveLastSyncRow(props: {
 }
 
 function formatLastCompletedDetail(event: NativeCompanionSyncEvent | null) {
-  return event?.message === 'Auto sync completed.' ? 'Finished automatic pass' : 'Finished pass';
+  return event ? 'All sync stages completed' : 'Full sync confirmation recorded';
 }
 
-function formatEventStatus(status: NativeCompanionSyncEvent['status']) {
-  if (status === 'completed') {
-    return 'Finished pass';
+function formatEventStatus(event: NativeCompanionSyncEvent) {
+  if (event.status === 'completed') {
+    return isFullSyncCompletedEvent(event) ? 'Fully synced' : 'Legacy pass';
   }
-  if (status === 'failed') {
+  if (event.status === 'failed') {
     return 'Failed';
   }
-  if (status === 'skipped') {
+  if (event.status === 'skipped') {
     return 'Checked';
   }
   return 'Started';
 }
 
 function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
-  if (event.status === 'completed' && event.message === 'Auto sync completed.') {
-    return 'Finished automatic pass';
-  }
   if (event.status === 'completed') {
-    return 'Finished sync pass';
+    return isFullSyncCompletedEvent(event)
+      ? 'All sync stages completed'
+      : 'Legacy sync pass finished';
   }
   if (event.status === 'started' && event.message === 'Auto sync started.') {
     return 'Started auto sync';
@@ -146,7 +146,7 @@ function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: Nat
   if (event.status === 'skipped') {
     return event.message;
   }
-  return `${formatEventStatus(event.status)} ${event.message}`;
+  return `${formatEventStatus(event)} ${event.message}`;
 }
 
 function isSupersededFailure(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
@@ -160,7 +160,7 @@ function statusClass(event: NativeCompanionSyncEvent, laterEvents: NativeCompani
   if (event.status === 'failed' && !isSupersededFailure(event, laterEvents)) {
     return 'text-error';
   }
-  if (event.status === 'completed') {
+  if (isFullSyncCompletedEvent(event)) {
     return 'text-companion-accent';
   }
   return 'text-companion-text-secondary';
@@ -172,7 +172,7 @@ function SyncActivitySummary(props: {
 }) {
   const latestEvent = props.events[0] ?? null;
   const summary = latestEvent
-    ? `${formatEventStatus(latestEvent.status)} ${formatClock(latestEvent.occurred_at)}`
+    ? `${formatEventStatus(latestEvent)} ${formatClock(latestEvent.occurred_at)}`
     : 'No activity';
   return (
     <SettingsLinkRow detail="Sync history" label="Activity" onClick={props.onOpen} value={summary} />

@@ -126,7 +126,7 @@ function testManualPassIsNotAutomatic() {
     />
   );
 
-  expect(screen.getByText('Finished pass')).toBeInTheDocument();
+  expect(screen.getByText('All sync stages completed')).toBeInTheDocument();
   expect(screen.queryByText('Finished automatic pass')).not.toBeInTheDocument();
 }
 
@@ -139,10 +139,11 @@ function testOlderFailuresAreNeutralAfterCompletedPass() {
     />
   );
 
-  expect(screen.getByText('Finished automatic pass')).toBeInTheDocument();
+  expect(screen.getByText('Legacy sync pass finished')).toBeInTheDocument();
   const oldFailure = screen.getByText('Earlier sync attempt did not complete');
   expect(oldFailure).toBeInTheDocument();
   expect(oldFailure.className).not.toContain('text-error');
+  expect(screen.getByText('Legacy sync pass finished').className).not.toContain('text-companion-accent');
 }
 
 function testHealthyBacklogPassAvoidsStrictCompletion() {

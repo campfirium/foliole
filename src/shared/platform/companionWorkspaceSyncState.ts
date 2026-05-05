@@ -1,4 +1,5 @@
 import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
+import { isFullSyncCompletedEvent } from './companionSyncEventSemantics';
 
 export const WEB_SYNC_STATE_KEY = 'foliole-companion-workspace-sync-state';
 
@@ -53,7 +54,7 @@ function resolveLastSyncedAt(raw: Record<string, unknown>, syncEvents: NativeCom
   if (typeof raw.last_synced_at === 'string' && raw.last_synced_at.trim()) {
     return raw.last_synced_at.trim();
   }
-  return syncEvents.find((event) => event.status === 'completed')?.occurred_at ?? null;
+  return syncEvents.find(isFullSyncCompletedEvent)?.occurred_at ?? null;
 }
 
 export function prependSyncEvent(

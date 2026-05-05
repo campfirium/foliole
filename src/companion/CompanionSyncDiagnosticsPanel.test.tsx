@@ -146,7 +146,7 @@ function expectStageCheckpoint() {
 function expectCheckpointDetails() {
   expect(screen.getByText('Current topic')).toBeInTheDocument();
   expect(screen.getByText('Caching: Current topic')).toBeInTheDocument();
-  expect(screen.getByText('Finished pass')).toBeInTheDocument();
+  expect(screen.getByText('Legacy sync pass finished')).toBeInTheDocument();
   expect(screen.queryByText('Completed')).not.toBeInTheDocument();
   expect(screen.getByText('3 changes')).toBeInTheDocument();
   expect(screen.queryByText('Lagging object types')).not.toBeInTheDocument();

@@ -28,6 +28,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     private static final String WORKSPACE_SYNC_ONBOARDING_STATUS_KEY = "workspace_sync_onboarding_status";
     private static final String WORKSPACE_SYNC_REMEMBERED_TARGETS_KEY = "workspace_sync_remembered_targets";
     private static final String WORKSPACE_SYNC_EVENTS_KEY = "workspace_sync_events";
+    private static final String FULL_SYNC_COMPLETED_MESSAGE = "Sync fully completed.";
     private static final String SYNC_STATE_CURSOR_KEY = "sync_state_cursor";
     private static final String SYNC_STATE_PUSH_CURSOR_KEY = "sync_state_push_cursor";
     private static final String SYNC_PACK_CURSOR_KEY = "sync_pack_cursor";
@@ -587,7 +588,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
             nextEvents.put(events.get(index));
         }
         saveMetaValue(database, WORKSPACE_SYNC_EVENTS_KEY, nextEvents.toString(), Instant.now().toString());
-        if ("completed".equals(normalizedStatus)) {
+        if ("completed".equals(normalizedStatus) && FULL_SYNC_COMPLETED_MESSAGE.equals(event.optString("message"))) {
             saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, normalizedOccurredAt, normalizedOccurredAt);
         }
     }

@@ -1,4 +1,5 @@
 import type { SyncDiagnosticEvent } from '../../lib/platform/syncDiagnosticsContract';
+import { FULL_SYNC_COMPLETED_MESSAGE } from '../shared/platform/companionSyncEventSemantics';
 import type { CombinedSyncDiagnosticResult } from '../shared/platform/companionSyncDiagnostics';
 
 function formatNumber(value: number | null | undefined) {
@@ -14,7 +15,9 @@ function formatBytes(value: number | null | undefined) {
 
 function formatEvent(event: SyncDiagnosticEvent | null) {
   if (!event) return 'None';
-  if (event.status === 'completed') return 'Finished pass';
+  if (event.status === 'completed') {
+    return event.message === FULL_SYNC_COMPLETED_MESSAGE ? 'All sync stages completed' : 'Legacy sync pass finished';
+  }
   if (event.status === 'started') return 'Started';
   if (event.status === 'failed') return 'Needs retry';
   return 'Checked';

@@ -13,6 +13,8 @@ import org.json.JSONObject;
 import java.time.Instant;
 
 final class FolioleCompanionSyncDiagnostics {
+    private static final String FULL_SYNC_COMPLETED_MESSAGE = "Sync fully completed.";
+
     private FolioleCompanionSyncDiagnostics() {}
 
     static JSObject diagnose(Context context, SQLiteDatabase database, String databasePath) throws Exception {
@@ -351,7 +353,11 @@ final class FolioleCompanionSyncDiagnostics {
     private static boolean hasCompletedEvent(JSArray events) {
         for (int index = 0; index < events.length(); index += 1) {
             JSONObject event = events.optJSONObject(index);
-            if (event != null && "completed".equals(event.optString("status"))) {
+            if (
+                event != null &&
+                "completed".equals(event.optString("status")) &&
+                FULL_SYNC_COMPLETED_MESSAGE.equals(event.optString("message"))
+            ) {
                 return true;
             }
         }
