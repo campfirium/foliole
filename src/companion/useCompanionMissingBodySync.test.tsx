@@ -37,7 +37,9 @@ function createReadyArticle(): MissingBodyArticle {
 
 function createWorkspaceSync() {
   return {
+    pullFromDesktop: vi.fn(async () => undefined),
     refreshFromDevice: vi.fn(async () => undefined),
+    status: 'idle',
     state: {
       endpoint_url: 'http://10.0.2.2:38641',
       remembered_targets: [],
@@ -79,5 +81,19 @@ describe('useCompanionMissingBodySync', () => {
 
     expect(desktopSyncMock.syncCompanionContentBlobFromDesktop).toHaveBeenCalledTimes(2);
     expect(workspaceSync.refreshFromDevice).toHaveBeenCalledTimes(1);
+    expect(workspaceSync.pullFromDesktop).toHaveBeenCalledTimes(1);
+    expect(workspaceSync.pullFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
+  });
+
+  it('does not start a background sync while the main sync is already running', async () => {
+    const workspaceSync = { ...createWorkspaceSync(), status: 'syncing' as const };
+    renderHook(() => useCompanionMissingBodySync({ readableArticle: createMissingArticle(), workspaceSync }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(workspaceSync.refreshFromDevice).toHaveBeenCalledTimes(1);
+    expect(workspaceSync.pullFromDesktop).not.toHaveBeenCalled();
   });
 });

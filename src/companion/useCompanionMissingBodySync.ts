@@ -41,9 +41,12 @@ export function useCompanionMissingBodySync(args: {
     setFetchingBodyKey(syncKey);
 
     void syncCompanionContentBlobFromDesktop(endpointUrl, article.bodyBlobHash)
-      .then(async () => {
+      .then(async (result) => {
         if (currentArticleNodeIdRef.current === article.nodeId) {
           await args.workspaceSync.refreshFromDevice();
+        }
+        if (result.availability === 'cached' && args.workspaceSync.status !== 'syncing') {
+          void args.workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined);
         }
       })
       .catch(() => undefined)
