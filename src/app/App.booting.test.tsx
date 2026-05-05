@@ -65,7 +65,7 @@ it('keeps the booting shell visible until workspace hydration finishes', async (
   render(<App />);
 
   expect(screen.getByRole('status', { name: 'Loading workspace' })).toBeInTheDocument();
-  expect(screen.queryByText('Foliole is booting...')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Loading indicator')).toBeInTheDocument();
   expect(useAppController).not.toHaveBeenCalled();
 });
 

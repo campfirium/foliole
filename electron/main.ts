@@ -216,27 +216,29 @@ app.on('before-quit', (event) => {
 app.whenReady().then(async () => {
   installRuntimeDiagnostics();
   initializeDatabase();
-  try {
-    await reconcileAutomaticDatabaseBackups();
-  } catch (error) {
-    console.error('[backup] automatic backup reconcile failed', error);
-  }
-  try {
-    await backfillMissingMirrorOutput();
-  } catch (error) {
-    console.error('[mirror] startup backfill failed', error);
-  }
   registerAttachmentProtocol();
   installInvokeHandler();
   installAppMenu();
-  await migrateLegacyWebviewStorage();
+  await createMainWindow();
+  void reconcileAutomaticDatabaseBackups().catch((error) => {
+    console.error('[backup] automatic backup reconcile failed', error);
+  });
+  void backfillMissingMirrorOutput().catch((error) => {
+    console.error('[mirror] startup backfill failed', error);
+  });
+  void migrateLegacyWebviewStorage().catch((error) => {
+    console.error('[storage] legacy webview migration failed', error);
+  });
   resumePendingPdfAttachmentIndexing();
-  await startManagedInboxMonitor();
-  await startKeepImportMonitor();
-  await loadReadwiseBooksInventory().catch((error) => {
+  void startManagedInboxMonitor().catch((error) => {
+    console.error('[managed-inbox] startup monitor failed', error);
+  });
+  void startKeepImportMonitor().catch((error) => {
+    console.error('[keep-import] startup monitor failed', error);
+  });
+  void loadReadwiseBooksInventory().catch((error) => {
     console.error('[readwise-books] startup node sync failed', error);
   });
-  await createMainWindow();
 
   app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
