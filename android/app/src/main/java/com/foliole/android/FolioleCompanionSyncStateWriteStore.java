@@ -55,10 +55,11 @@ final class FolioleCompanionSyncStateWriteStore {
         hashPayload.remove("device_id");
         hashPayload.remove("reading_position");
         String contentHash = FolioleCompanionSyncContentHash.hash(hashPayload);
+        String objectType = syncObjectType(context, "nodeReading");
         database.beginTransaction();
         try {
-            FolioleCompanionLearningSyncPayload.applyReading(context, database, nodeId, buildRecord("node_reading", nodeId, payload, contentHash, now));
-            upsertTypedObjectState(context, database, "node_reading", nodeId, contentHash, modifiedByDeviceId, now);
+            FolioleCompanionLearningSyncPayload.applyReading(context, database, nodeId, buildRecord(objectType, nodeId, payload, contentHash, now));
+            upsertTypedObjectState(context, database, objectType, nodeId, contentHash, modifiedByDeviceId, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
@@ -76,13 +77,14 @@ final class FolioleCompanionSyncStateWriteStore {
         payload.put("node_id", nodeId);
         String contentHash = FolioleCompanionSyncContentHash.hash(payload);
         String opId = null;
+        String objectType = syncObjectType(context, "nodeReview");
         database.beginTransaction();
         try {
-            FolioleCompanionLearningSyncPayload.applyReview(context, database, nodeId, buildRecord("node_review", nodeId, payload, contentHash, now));
+            FolioleCompanionLearningSyncPayload.applyReview(context, database, nodeId, buildRecord(objectType, nodeId, payload, contentHash, now));
             if (reviewLog != null) {
                 opId = FolioleCompanionSyncReviewLogStore.saveLocalReviewLog(context, database, nodeId, reviewLog, modifiedByDeviceId);
             }
-            upsertTypedObjectState(context, database, "node_review", nodeId, contentHash, modifiedByDeviceId, now);
+            upsertTypedObjectState(context, database, objectType, nodeId, contentHash, modifiedByDeviceId, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
@@ -119,7 +121,7 @@ final class FolioleCompanionSyncStateWriteStore {
     }
 
     private static void upsertObjectState(Context context, SQLiteDatabase database, String objectId, String contentHash, String deviceId, String now) throws Exception {
-        upsertTypedObjectState(context, database, "setting", objectId, contentHash, deviceId, now);
+        upsertTypedObjectState(context, database, syncObjectType(context, "settingRecord"), objectId, contentHash, deviceId, now);
     }
 
     private static void upsertTypedObjectState(
@@ -155,5 +157,9 @@ final class FolioleCompanionSyncStateWriteStore {
         result.put("object_id", objectId);
         result.put("content_hash", contentHash);
         return result;
+    }
+
+    private static String syncObjectType(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncObjectType(context, key);
     }
 }

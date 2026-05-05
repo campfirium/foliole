@@ -16,5 +16,11 @@
       "conflict",
       "rejected"
     ]
+  },
+  "syncObjectTypes": {
+    "nodeReading": "node_reading",
+    "nodeReview": "node_review",
+    "settingRecord": "setting",
+    "viewState": "view_state"
   }
 }

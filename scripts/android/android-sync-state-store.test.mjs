@@ -172,7 +172,8 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(saveReviewBody).toContain('database.beginTransaction();');
     expect(saveReviewBody).toContain('FolioleCompanionLearningSyncPayload.applyReview');
     expect(saveReviewBody).toContain('FolioleCompanionSyncReviewLogStore.saveLocalReviewLog');
-    expect(saveReviewBody).toContain('upsertTypedObjectState(context, database, "node_review"');
+    expect(saveReviewBody).toContain('String objectType = syncObjectType(context, "nodeReview");');
+    expect(saveReviewBody).toContain('upsertTypedObjectState(context, database, objectType');
     expect(saveReviewBody).toContain('database.setTransactionSuccessful();');
   });
 

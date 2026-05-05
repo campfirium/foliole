@@ -84,7 +84,7 @@ final class FolioleCompanionViewStateSyncStore {
     }
 
     private static void writeSyncRows(Context context, SQLiteDatabase database, String objectId, String deviceId, String contentHash, JSONObject payload, String now) throws Exception {
-        FolioleCompanionNamedMutationStore.upsertSyncStateRow(context, database, "view_state", objectId, null, contentHash, deviceId, now, null, 1);
+        FolioleCompanionNamedMutationStore.upsertSyncStateRow(context, database, syncObjectType(context), objectId, null, contentHash, deviceId, now, null, 1);
     }
 
     private static void upsertActiveNode(Context context, SQLiteDatabase database, String nodeId, String now) throws Exception {
@@ -158,5 +158,9 @@ final class FolioleCompanionViewStateSyncStore {
 
     private static String nullIfEmpty(String value) {
         return value == null || value.trim().isEmpty() ? null : value;
+    }
+
+    private static String syncObjectType(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncObjectType(context, "viewState");
     }
 }

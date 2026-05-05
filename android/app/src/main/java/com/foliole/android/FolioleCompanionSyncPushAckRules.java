@@ -9,8 +9,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 final class FolioleCompanionSyncPushAckRules {
-    private static final String PROTOCOL_ASSET_PATH = "companion-sync-protocol-definitions.json";
-
     private final Set<String> confirmingStatuses;
     private final Set<String> stateSeqOptionalObjectTypes;
     private final Set<String> stateSeqRejectedObjectTypes;
@@ -25,7 +23,7 @@ final class FolioleCompanionSyncPushAckRules {
     }
 
     static FolioleCompanionSyncPushAckRules load(Context context) throws Exception {
-        return new FolioleCompanionSyncPushAckRules(new JSONObject(FolioleCompanionAssetReader.read(context, PROTOCOL_ASSET_PATH)));
+        return new FolioleCompanionSyncPushAckRules(FolioleCompanionSyncProtocolDefinitions.load(context));
     }
 
     boolean isKnownStatus(JSONObject ack) {
