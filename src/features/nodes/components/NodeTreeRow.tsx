@@ -218,8 +218,6 @@ function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
   });
   const treeItemState = resolveNodeTreeItemState(props.isSelected);
   const handlers = createNodeTreeRowButtonHandlers(
-    props.hasChildren,
-    props.onToggleCollapse,
     props.nodeId,
     props.onContextMenu,
     props.onKeyDown,

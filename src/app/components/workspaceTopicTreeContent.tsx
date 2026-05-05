@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
 
 import { type NodeListContextMenuController } from '../../features/nodes/components/NodeListTreeHooks';
 import { useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
@@ -63,6 +63,7 @@ export function useWorkspaceTopicTreeCollapse(
   parentById: Record<string, string | null>
 ) {
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
+  const previousActiveFolderIdRef = useRef<string | null>(null);
   const collapsibleNodeIds = useMemo(
     () => treeRows.filter((row) => row.hasChildren).map((row) => row.node.id),
     [treeRows]
@@ -73,7 +74,11 @@ export function useWorkspaceTopicTreeCollapse(
   );
 
   useEffect(() => {
-    setCollapsedNodeIds(new Set(collapsibleNodeIds));
+    const isNewFolder = previousActiveFolderIdRef.current !== activeFolderId;
+    previousActiveFolderIdRef.current = activeFolderId;
+    setCollapsedNodeIds((current) =>
+      isNewFolder ? new Set(collapsibleNodeIds) : pruneCollapsedNodeIds(current, collapsibleNodeIds)
+    );
   }, [activeFolderId, collapsibleNodeIds]);
 
   useEffect(() => {
@@ -99,6 +104,15 @@ export function useWorkspaceTopicTreeCollapse(
   }, [activeNodeId, parentById, treeRowById]);
 
   return { collapsedNodeIds, setCollapsedNodeIds };
+}
+
+function pruneCollapsedNodeIds(
+  current: ReadonlySet<string>,
+  collapsibleNodeIds: readonly string[]
+) {
+  const validNodeIds = new Set(collapsibleNodeIds);
+  const next = new Set([...current].filter((nodeId) => validNodeIds.has(nodeId)));
+  return next.size === current.size ? current : next;
 }
 
 export function useWorkspaceTopicTreeRows(

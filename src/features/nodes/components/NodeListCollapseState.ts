@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import type { NodeTreeRow } from '../model/nodeTree';
-import {
-  buildDefaultCollapsedNodeIds,
-  collectAutoExpandedNodeIds
-} from '../model/nodeTreeAutoCollapse';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import {
+  useAutoExpandedNoteNodeIds,
+  useDefaultCollapsedNoteNodeIds,
+  useStickyAutoExpandedNodeIds
+} from './NodeListAutoExpansionMemory';
 import {
   loadCollapsedTrashNodeIds,
   loadManualCollapsedNoteNodeIds,
@@ -91,23 +92,16 @@ function useNoteCollapsedState({
     setManualCollapsedNoteNodeIdList,
     setManualExpandedNoteNodeIdList
   } = useNoteManualCollapseState(noteCollapsibleNodeIds);
-  const defaultCollapsedNoteNodeIds = useMemo(
-    () =>
-      buildDefaultCollapsedNodeIds({
-        nodesById,
-        rows: noteRowsAll
-      }),
-    [nodesById, noteRowsAll]
+  const defaultCollapsedNoteNodeIds = useDefaultCollapsedNoteNodeIds(nodesById, noteRowsAll);
+  const autoExpandedNoteNodeIds = useAutoExpandedNoteNodeIds(
+    activeNodeId,
+    nodesById,
+    noteParentById,
+    noteRowsAll
   );
-  const autoExpandedNoteNodeIds = useMemo(
-    () =>
-      collectAutoExpandedNodeIds({
-        activeNodeId,
-        nodesById,
-        parentById: noteParentById,
-        rows: noteRowsAll
-      }),
-    [activeNodeId, nodesById, noteParentById, noteRowsAll]
+  const stickyAutoExpandedNoteNodeIds = useStickyAutoExpandedNodeIds(
+    autoExpandedNoteNodeIds,
+    noteCollapsibleNodeIds
   );
   const collapsedNoteNodeIds = useMemo(
     () =>
@@ -115,13 +109,13 @@ function useNoteCollapsedState({
         defaultCollapsedNoteNodeIds,
         manualCollapsedNoteNodeIdList,
         manualExpandedNoteNodeIdList,
-        autoExpandedNoteNodeIds
+        stickyAutoExpandedNoteNodeIds
       ),
     [
-      autoExpandedNoteNodeIds,
       defaultCollapsedNoteNodeIds,
       manualCollapsedNoteNodeIdList,
-      manualExpandedNoteNodeIdList
+      manualExpandedNoteNodeIdList,
+      stickyAutoExpandedNoteNodeIds
     ]
   );
 

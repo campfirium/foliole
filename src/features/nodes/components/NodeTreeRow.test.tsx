@@ -95,7 +95,7 @@ it('keeps bulk-selected rows in place without using the active button style', ()
   expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
 });
 
-it('toggles collapse on plain row click when children exist', () => {
+it('selects a row without toggling collapse on plain row click', () => {
   const onSelect = vi.fn();
   const onToggleCollapse = vi.fn();
 
@@ -121,7 +121,7 @@ it('toggles collapse on plain row click when children exist', () => {
     metaKey: false,
     shiftKey: false
   });
-  expect(onToggleCollapse).toHaveBeenCalledWith('node-folder');
+  expect(onToggleCollapse).not.toHaveBeenCalled();
 });
 
 it('does not toggle collapse on modified row click', () => {

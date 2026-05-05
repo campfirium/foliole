@@ -167,6 +167,19 @@ it('shows every ctrl-selected current-folder topic as selected', () => {
   expect(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' })).toHaveAttribute('data-node-bulk-selected', 'true');
 });
 
+it('keeps an expanded branch open when selecting another current-folder topic', () => {
+  render(<WorkspaceTopicTreeHarness />);
+
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+
+  fireEvent.click(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' }));
+
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' })).toHaveAttribute('aria-current', 'page');
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+});
+
 it('selects shift ranges by the sorted visible order in the item column', () => {
   render(<WorkspaceTopicTreeSortedSelectionHarness />);
 

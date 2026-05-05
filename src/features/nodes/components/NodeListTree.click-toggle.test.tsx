@@ -62,7 +62,7 @@ beforeEach(() => {
   }));
 });
 
-it('opens the clicked row and toggles its branch when children exist', () => {
+it('opens the clicked row without toggling its branch when children exist', () => {
   render(<NodeListTreeHarness />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
@@ -72,9 +72,10 @@ it('opens the clicked row and toggles its branch when children exist', () => {
 
   fireEvent.click(articleRow);
   expect(articleRow).toHaveAttribute('aria-current', 'page');
-  expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
+  expect(within(listPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();
 
-  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Article A' }));
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Folder A' }));
+  expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();
 });
 

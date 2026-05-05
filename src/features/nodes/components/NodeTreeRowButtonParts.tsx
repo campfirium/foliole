@@ -58,8 +58,6 @@ export function renderNodeTreeRowContent(props: {
 }
 
 export function createNodeTreeRowButtonHandlers(
-  hasChildren: boolean,
-  onToggleCollapse: (nodeId: string) => void,
   nodeId: string,
   onContextMenu: ((nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void) | undefined,
   onKeyDown: ((nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void) | undefined,
@@ -70,10 +68,6 @@ export function createNodeTreeRowButtonHandlers(
     onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
       const modifiers = resolveSelectModifiers(event);
       onSelect(nodeId, modifiers);
-      if (!hasChildren || modifiers.ctrlKey || modifiers.metaKey || modifiers.shiftKey) {
-        return;
-      }
-      onToggleCollapse(nodeId);
     },
     onContextMenu: onContextMenu ? (event: ReactMouseEvent<HTMLButtonElement>) => onContextMenu(nodeId, event) : undefined,
     onDoubleClick: (event: ReactMouseEvent<HTMLButtonElement>) => (event.stopPropagation(), rename.beginRename()),
