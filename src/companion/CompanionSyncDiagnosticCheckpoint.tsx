@@ -1,6 +1,6 @@
 import type { SyncDiagnosticEvent } from '../../lib/platform/syncDiagnosticsContract';
-import { FULL_SYNC_COMPLETED_MESSAGE } from '../shared/platform/companionSyncEventSemantics';
 import type { CombinedSyncDiagnosticResult } from '../shared/platform/companionSyncDiagnostics';
+import { FULL_SYNC_COMPLETED_MESSAGE } from '../shared/platform/companionSyncEventSemantics';
 
 function formatNumber(value: number | null | undefined) {
   return typeof value === 'number' ? `${value}` : 'None';
@@ -44,6 +44,14 @@ function formatBacklogStage(count: number | null | undefined) {
 }
 
 function formatFsrsPriorityStatus(result: CombinedSyncDiagnosticResult) {
+  const activeBodies = result.android?.content.missing_active_topic_body_count;
+  const activeAttachments = result.android?.content.missing_active_topic_attachment_resource_count;
+  if (typeof activeBodies === 'number' && typeof activeAttachments === 'number' && (activeBodies > 0 || activeAttachments > 0)) {
+    const segments = [];
+    if (activeBodies > 0) segments.push(`${activeBodies} ${activeBodies === 1 ? 'body' : 'bodies'}`);
+    if (activeAttachments > 0) segments.push(`${activeAttachments} ${activeAttachments === 1 ? 'attachment' : 'attachments'}`);
+    return `Current topic: ${segments.join(', ')} remaining`;
+  }
   const bodies = result.android?.content.missing_due_review_body_count;
   const attachments = result.android?.content.missing_due_review_attachment_resource_count;
   if (typeof bodies !== 'number' || typeof attachments !== 'number') return 'Missing data';

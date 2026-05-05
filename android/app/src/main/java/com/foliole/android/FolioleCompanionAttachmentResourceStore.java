@@ -67,6 +67,7 @@ final class FolioleCompanionAttachmentResourceStore {
         long pdfBytes = 0;
         long otherCount = 0;
         long otherBytes = 0;
+        long activeTopicCount = 0;
         long dueReviewCount = 0;
         try (Cursor cursor = database.rawQuery(
             "SELECT b.availability, b.storage_key, COALESCE(b.size_bytes, 0), lower(COALESCE(b.mime_type, '')), " +
@@ -76,6 +77,11 @@ final class FolioleCompanionAttachmentResourceStore {
                     "JOIN node_review nr ON nr.node_id = n.id " +
                     "WHERE na.attachment_id = b.attachment_id AND n.deleted_at IS NULL " +
                     "AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') LIMIT 1" +
+                "), " +
+                "EXISTS(" +
+                    "SELECT 1 FROM node_attachments na JOIN nodes n ON n.id = na.node_id " +
+                    "WHERE na.attachment_id = b.attachment_id AND n.deleted_at IS NULL " +
+                    "AND n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) LIMIT 1" +
                 ") " +
             "FROM attachment_blobs b WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != ''",
             null
@@ -101,6 +107,9 @@ final class FolioleCompanionAttachmentResourceStore {
                 if (cursor.getLong(4) > 0) {
                     dueReviewCount++;
                 }
+                if (cursor.getLong(5) > 0) {
+                    activeTopicCount++;
+                }
             }
         }
         JSObject summary = new JSObject();
@@ -112,6 +121,7 @@ final class FolioleCompanionAttachmentResourceStore {
         summary.put("missing_pdf_attachment_resource_bytes", pdfBytes);
         summary.put("missing_other_attachment_resource_count", otherCount);
         summary.put("missing_other_attachment_resource_bytes", otherBytes);
+        summary.put("missing_active_topic_attachment_resource_count", activeTopicCount);
         summary.put("missing_due_review_attachment_resource_count", dueReviewCount);
         return summary;
     }

@@ -138,6 +138,14 @@ final class FolioleCompanionSyncDiagnostics {
                 "AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') " +
                 "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
         ));
+        content.put("missing_active_topic_body_count", count(database,
+            "SELECT COUNT(DISTINCT n.body_blob_hash) FROM nodes n " +
+                "JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
+                "WHERE n.deleted_at IS NULL AND n.body_blob_hash IS NOT NULL " +
+                "AND n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) " +
+                "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
+        ));
         copyAttachmentSummary(content, FolioleCompanionAttachmentResourceStore.summarizeMissingResources(context, database));
         content.put("active_topic", loadActiveTopic(database));
         content.put("recent_topics", loadRecentTopics(database));
@@ -152,6 +160,7 @@ final class FolioleCompanionSyncDiagnostics {
     private static void copyAttachmentSummary(JSObject content, JSObject summary) throws Exception {
         content.put("missing_attachment_resource_count", summary.optLong("missing_attachment_resource_count", 0));
         content.put("missing_attachment_resource_bytes", summary.optLong("missing_attachment_resource_bytes", 0));
+        content.put("missing_active_topic_attachment_resource_count", summary.optLong("missing_active_topic_attachment_resource_count", 0));
         content.put("missing_image_attachment_resource_count", summary.optLong("missing_image_attachment_resource_count", 0));
         content.put("missing_image_attachment_resource_bytes", summary.optLong("missing_image_attachment_resource_bytes", 0));
         content.put("missing_pdf_attachment_resource_count", summary.optLong("missing_pdf_attachment_resource_count", 0));

@@ -27,6 +27,8 @@ const diagnosticResult = {
       active_topic: { body_status: 'missing', id: 'topic-1', title: 'Current topic' },
       missing_attachment_resource_bytes: 3145728,
       missing_attachment_resource_count: 2,
+      missing_active_topic_attachment_resource_count: 1,
+      missing_active_topic_body_count: 1,
       missing_content_blob_bytes: 5242880,
       missing_content_blob_count: 5,
       missing_due_review_attachment_resource_count: 1,
@@ -135,7 +137,7 @@ function expectStageCheckpoint() {
   expect(screen.getByText('Stage 2 · FSRS priority')).toBeInTheDocument();
   expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
   expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
-  expect(screen.getByText('2 bodies, 1 attachment remaining')).toBeInTheDocument();
+  expect(screen.getByText('Current topic: 1 body, 1 attachment remaining')).toBeInTheDocument();
   expect(screen.queryByText('Not tracked yet')).not.toBeInTheDocument();
   expect(screen.getByText('5 remaining')).toBeInTheDocument();
   expect(screen.getByText('2 remaining')).toBeInTheDocument();
@@ -165,9 +167,11 @@ function expectAndroidDiagnosticRows() {
   expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Attachment bytes still caching').length).toBeGreaterThan(0);
   expect(screen.getByText('Due review bodies')).toBeInTheDocument();
+  expect(screen.getByText('Current topic body')).toBeInTheDocument();
   expect(screen.getByText('Top-level topic bodies')).toBeInTheDocument();
   expect(screen.getByText('Nested topic bodies')).toBeInTheDocument();
   expect(screen.getByText('Due review attachments')).toBeInTheDocument();
+  expect(screen.getByText('Current topic attachments')).toBeInTheDocument();
   expect(screen.getByText('Image attachments')).toBeInTheDocument();
   expect(screen.getByText('PDF attachments')).toBeInTheDocument();
   expect(screen.getByText('Other attachments')).toBeInTheDocument();

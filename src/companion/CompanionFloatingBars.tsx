@@ -17,6 +17,9 @@ function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
   if (progress.phase === 'structure') {
     return 'Stage 1 · Library index';
   }
+  if (isActiveTopicProgress(progress)) {
+    return 'Current topic';
+  }
   if (isFsrsPriorityProgress(progress)) {
     return 'Stage 2 · FSRS priority';
   }
@@ -34,6 +37,21 @@ function fsrsPriorityTotal(progress: CompanionDesktopSyncProgress) {
     return progress.attachmentBreakdown?.dueReviewAttachments ?? 0;
   }
   return 0;
+}
+
+function activeTopicTotal(progress: CompanionDesktopSyncProgress) {
+  if (progress.phase === 'content') {
+    return progress.contentBreakdown?.activeTopicBodies ?? 0;
+  }
+  if (progress.phase === 'attachment') {
+    return progress.attachmentBreakdown?.activeTopicAttachments ?? 0;
+  }
+  return 0;
+}
+
+function isActiveTopicProgress(progress: CompanionDesktopSyncProgress) {
+  const total = activeTopicTotal(progress);
+  return total > 0 && progress.completed < total;
 }
 
 function isFsrsPriorityProgress(progress: CompanionDesktopSyncProgress) {
@@ -56,6 +74,9 @@ function formatContentBreakdown(progress: CompanionDesktopSyncProgress) {
     return null;
   }
   const breakdown = progress.contentBreakdown;
+  if (isActiveTopicProgress(progress)) {
+    return `Current topic body ${breakdown.activeTopicBodies}`;
+  }
   if (isFsrsPriorityProgress(progress)) {
     return `Due review bodies ${breakdown.dueReviewBodies}`;
   }
@@ -75,6 +96,9 @@ function formatAttachmentBreakdown(progress: CompanionDesktopSyncProgress) {
     return null;
   }
   const breakdown = progress.attachmentBreakdown;
+  if (isActiveTopicProgress(progress)) {
+    return `Current topic attachments ${breakdown.activeTopicAttachments}`;
+  }
   if (isFsrsPriorityProgress(progress)) {
     return `Due review attachments ${breakdown.dueReviewAttachments}`;
   }
@@ -109,13 +133,15 @@ function CompanionBottomSyncStatus(props: {
   if (!props.progress) {
     return null;
   }
+  const activeTotal = activeTopicTotal(props.progress);
   const fsrsTotal = fsrsPriorityTotal(props.progress);
   const isFsrsPriority = isFsrsPriorityProgress(props.progress);
-  const total = isFsrsPriority ? fsrsTotal : props.progress.total ?? 0;
+  const isActiveTopic = isActiveTopicProgress(props.progress);
+  const total = isActiveTopic ? activeTotal : isFsrsPriority ? fsrsTotal : props.progress.total ?? 0;
   const completed = Math.min(props.progress.completed, total);
   const ratio = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
   const countLabel = formatProgressCount({ completed, isFsrsPriority, progress: props.progress, total });
-  const byteLabel = isFsrsPriority || props.progress.totalBytes == null || props.progress.completedBytes == null
+  const byteLabel = isActiveTopic || isFsrsPriority || props.progress.totalBytes == null || props.progress.completedBytes == null
     ? null
     : `${formatBytes(props.progress.completedBytes)}/${formatBytes(props.progress.totalBytes)}`;
   const contentBreakdown = formatContentBreakdown(props.progress);

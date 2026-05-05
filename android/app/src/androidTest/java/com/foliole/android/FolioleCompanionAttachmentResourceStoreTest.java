@@ -154,6 +154,23 @@ public class FolioleCompanionAttachmentResourceStoreTest {
     }
 
     @Test
+    public void summarizesActiveTopicMissingResources() throws Exception {
+        insertAttachmentManifest("active-att", "hash-active", "2026-04-25T00:00:00.000Z");
+        insertAttachmentManifest("other-att", "hash-other", "2026-04-25T00:00:00.000Z");
+        insertNode("active-node", "2026-04-26T00:00:00.000Z");
+        insertNode("other-node", "2026-04-27T00:00:00.000Z");
+        insertNodeAttachment("active-node", "active-att");
+        insertNodeAttachment("other-node", "other-att");
+        database.execSQL("INSERT INTO workspace_meta (key, value, updated_at) VALUES " +
+            "('active_node_id', 'active-node', '2026-04-28T00:00:00.000Z')");
+
+        JSObject summary = FolioleCompanionAttachmentResourceStore.summarizeMissingResources(context, database);
+
+        assertEquals(2, summary.getLong("missing_attachment_resource_count"));
+        assertEquals(1, summary.getLong("missing_active_topic_attachment_resource_count"));
+    }
+
+    @Test
     public void ordersMissingManifestResourcesByActiveThenRecentTopicLinks() throws Exception {
         insertAttachmentManifest("old-att", "hash-old", "2026-04-25T00:00:00.000Z");
         insertAttachmentManifest("active-att", "hash-active", "2026-04-25T00:00:00.000Z");
