@@ -7,18 +7,20 @@ import type {
 
 import { openDatabaseConnection } from './connection.js';
 
-type NonNodeSyncObjectType = Exclude<NativeSyncObjectType, 'import_run' | 'node'>;
+type JsonSyncObjectType = Exclude<NativeSyncObjectType, 'external_document' | 'import_run' | 'node'>;
 
 interface SyncObjectStateRow extends DatabaseRow {
   content_hash: string;
   deleted_at: string | null;
   object_id: string;
-  object_type: NonNodeSyncObjectType;
+  object_type: JsonSyncObjectType;
   state_seq?: number;
   updated_at: string;
 }
 
-const PAYLOAD_SQL_BY_TYPE: Partial<Record<NonNodeSyncObjectType, string>> = {
+const JSON_SYNC_EXCLUDED_TYPES = new Set(['external_document', 'node']);
+
+const PAYLOAD_SQL_BY_TYPE: Partial<Record<JsonSyncObjectType, string>> = {
   attachment: `SELECT json_object(
     'attachment_id', a.id,
     'original_name', a.original_name,
@@ -39,26 +41,6 @@ const PAYLOAD_SQL_BY_TYPE: Partial<Record<NonNodeSyncObjectType, string>> = {
   ) AS payload_json
   FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id
   WHERE a.id = ?`,
-  external_document: `SELECT json_object(
-    'document_id', document_id,
-    'folder_id', folder_id,
-    'relative_path', relative_path,
-    'file_name', file_name,
-    'extension', extension,
-    'source_size_bytes', source_size_bytes,
-    'source_modified_at', source_modified_at,
-    'source_modified_ms', source_modified_ms,
-    'content_hash', content_hash,
-    'title', title,
-    'opening_text', opening_text,
-    'content', content,
-    'indexed_at', indexed_at,
-    'is_present', is_present,
-    'missing_at', missing_at,
-    'created_at', created_at,
-    'updated_at', updated_at
-  ) AS payload_json
-  FROM external_documents WHERE document_id = ?`,
   external_folder: `SELECT json_object(
     'id', id,
     'folder_path', folder_path,
@@ -157,7 +139,7 @@ function readViewStatePayloadJson(objectId: string) {
   return null;
 }
 
-function readPayloadJson(type: NonNodeSyncObjectType, objectId: string) {
+function readPayloadJson(type: JsonSyncObjectType, objectId: string) {
   if (type === 'view_state') return readViewStatePayloadJson(objectId);
   const sql = PAYLOAD_SQL_BY_TYPE[type];
   if (!sql) return null;
@@ -184,14 +166,16 @@ function toStateRecord(row: SyncObjectStateRow): NativeSyncStateObjectRecord {
 
 export function loadSyncObjects(objectIds: string[], objectTypes?: string[]) {
   if (objectIds.length === 0) return [];
+  const requestedObjectTypes = objectTypes?.filter((type) => !JSON_SYNC_EXCLUDED_TYPES.has(type));
+  if (objectTypes?.length && requestedObjectTypes?.length === 0) return [];
   const objectPlaceholders = objectIds.map(() => '?').join(', ');
-  const typeFilter = objectTypes?.length ? ` AND object_type IN (${objectTypes.map(() => '?').join(', ')})` : '';
+  const typeFilter = requestedObjectTypes?.length ? ` AND object_type IN (${requestedObjectTypes.map(() => '?').join(', ')})` : '';
   const rows = openDatabaseConnection().driver.queryAll<SyncObjectStateRow>(
     `SELECT object_type, object_id, content_hash, updated_at, deleted_at
      FROM sync_object_state
-     WHERE object_type <> 'node' AND object_id IN (${objectPlaceholders})${typeFilter}
+     WHERE object_type NOT IN ('external_document', 'node') AND object_id IN (${objectPlaceholders})${typeFilter}
      ORDER BY updated_at ASC, object_type ASC, object_id ASC`,
-    [...objectIds, ...(objectTypes ?? [])]
+    [...objectIds, ...(requestedObjectTypes ?? [])]
   );
   return rows.map(toRecord);
 }
@@ -200,7 +184,7 @@ export function loadSyncStateObjectsSince(cursor: number, limit = 500) {
   const rows = openDatabaseConnection().driver.queryAll<Required<SyncObjectStateRow>>(
     `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
      FROM sync_object_state
-     WHERE object_type <> 'node' AND state_seq > ?
+     WHERE object_type NOT IN ('external_document', 'node') AND state_seq > ?
      ORDER BY state_seq ASC
      LIMIT ?`,
     [Math.max(0, Math.trunc(cursor)), Math.max(1, Math.min(1000, Math.trunc(limit)))]

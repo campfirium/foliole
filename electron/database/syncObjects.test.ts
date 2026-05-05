@@ -22,7 +22,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { loadSyncObjects } from './syncObjects.js';
+import { loadSyncObjects, loadSyncStateObjectsSince } from './syncObjects.js';
 
 let tempRoot = '';
 
@@ -86,6 +86,26 @@ function insertExternalFolderRecord() {
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['external_folder', 'folder-1', 'hash-external-folder', 'desktop', '2026-04-21T16:00:00.000Z', 1]
+  );
+}
+
+function insertExternalDocumentRecord() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO external_documents (
+       document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
+       source_modified_at, source_modified_ms, content_hash, title, opening_text,
+       content, indexed_at, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['doc-1', 'folder-1', 'alpha.md', 'alpha.md', 'md', 42, '2026-04-21T10:00:00.000Z',
+      1, 'hash-doc-content', 'Alpha', 'Opening', 'Long external body',
+      '2026-04-21T16:00:00.000Z', '2026-04-21T10:00:00.000Z', '2026-04-21T16:00:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
+    ['external_document', 'doc-1', 'hash-external-document', 'desktop', '2026-04-21T16:00:00.000Z', 1]
   );
 }
 
@@ -172,6 +192,14 @@ it('loads attachment metadata and blob manifest sync payloads', () => {
       storage_key: 'sha256-att-1.png'
     }
   });
+});
+
+it('excludes pack-owned documents from JSON sync object streams', () => {
+  insertExternalDocumentRecord();
+
+  expect(loadSyncObjects(['doc-1'], ['external_document'])).toEqual([]);
+  expect(loadSyncObjects(['doc-1'])).toEqual([]);
+  expect(loadSyncStateObjectsSince(0)).toEqual([]);
 });
 
 it('records import sources as sync objects when written', () => {
