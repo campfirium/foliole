@@ -20,6 +20,7 @@ async function createFixtureRoot() {
   await mkdir(path.join(fixtureRoot, 'src', 'features', 'review'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'features', 'settings'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'app', 'hooks'), { recursive: true });
+  await mkdir(path.join(fixtureRoot, 'src', 'companion'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'shared', 'platform'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'shared', 'testing'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'lib', 'core', 'nodes'), { recursive: true });
@@ -124,6 +125,19 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
         { file: 'src/app/SearchPalette.tsx', line: 1, kind: 'runtime-command-import' }
       ])
     );
+  });
+
+  it('blocks companion production code from importing runtime command details', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/companion/companionRuntime.ts', `
+      import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual([
+      { file: 'src/companion/companionRuntime.ts', line: 1, kind: 'runtime-command-import' }
+    ]);
   });
 
   it('blocks core modules from importing native platform contracts', async () => {
