@@ -42,7 +42,7 @@ final class FolioleCompanionDocumentSyncPayload {
     }
 
     private static JSONObject payload(JSONObject record) throws Exception {
-        return FolioleCompanionSyncObjectApply.payload(record);
+        return FolioleCompanionSyncPayloadJson.payload(record);
     }
 
     private static String nullIfEmpty(String value) {
