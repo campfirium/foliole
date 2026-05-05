@@ -17,7 +17,7 @@ function formatEvent(event: SyncDiagnosticEvent | null) {
   if (event.status === 'completed') return 'Finished pass';
   if (event.status === 'started') return 'Started';
   if (event.status === 'failed') return 'Needs retry';
-  return 'Skipped';
+  return 'Checked';
 }
 
 function formatLag(result: CombinedSyncDiagnosticResult) {

@@ -169,4 +169,25 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getByText('Completed was recorded while 1 dirty change(s) and 1 pending ack(s) remain.')).toBeInTheDocument();
     expect(convergenceMock.runSyncConvergenceCheck).toHaveBeenCalledWith('http://10.0.2.2:38641');
   });
+
+  it('shows checked instead of the internal skipped status', async () => {
+    diagnosticsMock.runCombinedSyncDiagnostics.mockResolvedValue({
+      ...diagnosticResult,
+      android: {
+        ...diagnosticResult.android,
+        events: [{
+          endpoint_url: 'http://10.0.2.2:38641',
+          message: 'Some topic bodies are still being cached.',
+          occurred_at: '2026-04-29T01:20:00.000Z',
+          status: 'skipped'
+        }]
+      }
+    });
+    render(<CompanionSyncDiagnosticsPanel endpointUrl="http://10.0.2.2:38641" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run sync diagnostic' }));
+
+    await waitFor(() => expect(screen.getByText('Checked')).toBeInTheDocument());
+    expect(screen.queryByText('Skipped')).not.toBeInTheDocument();
+  });
 });
