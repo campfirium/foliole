@@ -3,6 +3,7 @@ import {
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
+  SettingsSegmentedRow,
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
@@ -23,8 +24,7 @@ import {
   ClozeColorRow,
   FontColorRow,
   HighlightColorRow,
-  SelectionColorRow,
-  SettingsSelectRow
+  SelectionColorRow
 } from './settingsAppearanceControls';
 import { SettingsAppearanceFontSection } from './SettingsAppearanceFontSection';
 import { WorkspaceSurfaceColorSection } from './WorkspaceSurfaceColorSection';
@@ -75,7 +75,7 @@ function AppearanceColorModeSection(props: ReturnType<typeof useAppearanceSectio
 
   return (
     <SettingsSection ariaLabel="Appearance color mode section" title="Color mode">
-      <SettingsSelectRow
+      <SettingsSegmentedRow
         ariaLabel="Mode"
         description="Choose whether Foliole stays light, stays dark, or follows the system appearance."
         label="Base color mode"
@@ -83,11 +83,56 @@ function AppearanceColorModeSection(props: ReturnType<typeof useAppearanceSectio
         options={[
           { label: 'Light', value: 'light' },
           { label: 'Dark', value: 'dark' },
-          { label: 'Follow system', value: 'system' }
+          { label: 'System', value: 'system' }
         ]}
         value={appearance.baseColorMode}
       />
     </SettingsSection>
+  );
+}
+
+function AppearancePdfReadingModeRow(props: ReturnType<typeof useAppearanceSectionState>) {
+  const { appearance } = props;
+
+  return (
+    <SettingsSegmentedRow
+      description="Choose how PDF pages render in the reader. Original keeps the source page, inverted uses a softer dark reading preset, and warm keeps a paper-like tone."
+      label="PDF reading mode"
+      onChange={(value) => appearance.setPdfReadingMode(value as typeof appearance.pdfReadingMode)}
+      options={[
+        { label: 'Original', value: 'original' },
+        { label: 'Inverted', value: 'inverted' },
+        { label: 'Warm', value: 'warm' }
+      ]}
+      value={appearance.pdfReadingMode}
+    />
+  );
+}
+
+function DimImagesInDarkModeRow(props: ReturnType<typeof useAppearanceSectionState>) {
+  const { appearance } = props;
+
+  return (
+    <SettingsRow
+      description="Apply a gentle dimming filter to regular document images when the app is in dark mode."
+      title="Dim images in dark mode"
+    >
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <button
+          aria-checked={appearance.dimImagesInDarkMode}
+          aria-label="Dim images in dark mode"
+          className={settingsSwitchClassName(appearance.dimImagesInDarkMode)}
+          onClick={() => appearance.setDimImagesInDarkMode(!appearance.dimImagesInDarkMode)}
+          role="switch"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className={settingsSwitchKnobClassName(appearance.dimImagesInDarkMode)}
+          />
+        </button>
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }
 
@@ -132,37 +177,8 @@ function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionSta
         safeClozeColor={safeClozeColor}
         setClozeColorPreset={(value) => appearance.setClozeColorPreset(value as typeof appearance.clozeColorPreset)}
       />
-      <SettingsSelectRow
-        description="Choose how PDF pages render in the reader. Original keeps the source page, inverted uses a softer dark reading preset, and warm keeps a paper-like tone."
-        label="PDF reading mode"
-        onChange={(value) => appearance.setPdfReadingMode(value as typeof appearance.pdfReadingMode)}
-        options={[
-          { label: 'Original', value: 'original' },
-          { label: 'Inverted', value: 'inverted' },
-          { label: 'Warm', value: 'warm' }
-        ]}
-        value={appearance.pdfReadingMode}
-      />
-      <SettingsRow
-        description="Apply a gentle dimming filter to regular document images when the app is in dark mode."
-        title="Dim images in dark mode"
-      >
-        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <button
-            aria-checked={appearance.dimImagesInDarkMode}
-            aria-label="Dim images in dark mode"
-            className={settingsSwitchClassName(appearance.dimImagesInDarkMode)}
-            onClick={() => appearance.setDimImagesInDarkMode(!appearance.dimImagesInDarkMode)}
-            role="switch"
-            type="button"
-          >
-            <span
-              aria-hidden="true"
-              className={settingsSwitchKnobClassName(appearance.dimImagesInDarkMode)}
-            />
-          </button>
-        </SettingsControlSlot>
-      </SettingsRow>
+      <AppearancePdfReadingModeRow {...props} />
+      <DimImagesInDarkModeRow {...props} />
     </SettingsSection>
   );
 }

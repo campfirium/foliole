@@ -1,10 +1,9 @@
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
-  SETTINGS_SELECT_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
-  settingsFieldClassName,
+  SettingsSegmentedControl,
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
@@ -45,16 +44,15 @@ export function SettingsEditorSection() {
         title="Markdown syntax visibility"
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <span className="sr-only">Markdown syntax visibility</span>
-          <select
-            aria-label="Markdown syntax visibility"
-            className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
-            onChange={(event) => setMarkdownSyntaxVisibility(event.target.value as typeof markdownSyntaxVisibility)}
+          <SettingsSegmentedControl
+            ariaLabel="Markdown syntax visibility"
+            onChange={(value) => setMarkdownSyntaxVisibility(value as typeof markdownSyntaxVisibility)}
+            options={[
+              { label: 'Hidden', value: 'hidden' },
+              { label: 'Active line', value: 'visible' }
+            ]}
             value={markdownSyntaxVisibility}
-          >
-            <option value="hidden">Hidden</option>
-            <option value="visible">Visible on active line</option>
-          </select>
+          />
         </SettingsControlSlot>
       </SettingsRow>
     </SettingsSection>

@@ -62,6 +62,8 @@
   --app-settings-control-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 34%, var(--workspace-region-main-document-bg) 66%);
   --app-settings-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 54%, var(--workspace-region-main-document-bg) 46%);
   --app-settings-control-active-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 70%, rgb(var(--color-foreground)) 6%);
+  --app-settings-segmented-active-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 70%, rgb(var(--color-foreground)) 8%);
+  --app-settings-segmented-active-fg: rgb(var(--color-foreground));
   --app-settings-control-border-color: rgb(var(--color-foreground) / 0.22);
   --app-settings-control-border-hover-color: rgb(var(--color-foreground) / 0.36);
   --app-settings-icon-color: rgb(var(--color-foreground) / 0.36);
@@ -146,6 +148,8 @@
   --app-settings-control-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 40%, var(--workspace-region-main-document-bg) 60%);
   --app-settings-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 56%, var(--workspace-region-main-document-bg) 44%);
   --app-settings-control-active-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 68%, rgb(var(--color-foreground)) 8%);
+  --app-settings-segmented-active-bg: rgb(var(--color-foreground) / 0.9);
+  --app-settings-segmented-active-fg: rgb(var(--color-accent-foreground));
   --app-settings-control-border-color: rgb(var(--color-foreground) / 0.34);
   --app-settings-control-border-hover-color: rgb(var(--color-foreground) / 0.5);
   --app-settings-icon-color: rgb(var(--color-foreground) / 0.42);

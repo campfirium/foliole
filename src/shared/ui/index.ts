@@ -92,3 +92,5 @@ export {
   settingsColorSwatchClassName,
   settingsValueBoxClassName
 } from './SettingsLayout';
+export type { SettingsSegmentedOption } from './SettingsSegmentedControl';
+export { SettingsSegmentedControl, SettingsSegmentedRow } from './SettingsSegmentedControl';
