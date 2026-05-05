@@ -1,5 +1,30 @@
 import { spawn } from 'node:child_process';
 
+const UNTRACKED_STAGE_ALLOWLIST = [
+  /^(?:apps|assets|docs|electron|lib|native|packages|public|scripts|src|tests)\//,
+  /^(?:AGENTS\.md|README(?:\.[a-z0-9-]+)?\.md|index\.html|package(?:-lock)?\.json)$/i,
+  /^[a-z0-9._-]+\.(?:cjs|cmd|cts|css|html|js|json|md|mjs|mts|ps1|sh|toml|ts|tsx|txt|ya?ml)$/i,
+  /^(?:eslint|playwright|postcss|prettier|tailwind|tsconfig|vite|vitest)(?:\.[a-z0-9-]+)*\.(?:[cm]?[jt]s|json)$/i
+];
+
+const UNTRACKED_STAGE_BLOCKLIST = [
+  /^\.lab\//,
+  /^\.tmp(?:$|\/|-)/,
+  /^\.cache(?:$|\/|-)/,
+  /^blob-report(?:$|\/)/,
+  /^coverage(?:$|\/)/,
+  /^dist(?:$|\/)/,
+  /^electron-dist(?:$|\/)/,
+  /^logs(?:$|\/)/,
+  /^node_modules(?:$|\/)/,
+  /^playwright-report(?:$|\/)/,
+  /^release(?:$|\/)/,
+  /^test-results(?:$|\/)/,
+  /(?:^|\/)\.DS_Store$/,
+  /(?:^|\/)node-compile-cache(?:$|\/)/,
+  /(?:^|\/)[^/]+\.log$/i
+];
+
 export function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, options);
@@ -105,8 +130,16 @@ async function listUntrackedFiles(cwd) {
     .filter(Boolean);
 }
 
+function isBlockedUntrackedFile(file) {
+  return UNTRACKED_STAGE_BLOCKLIST.some((pattern) => pattern.test(file));
+}
+
+function isAllowedUntrackedFile(file) {
+  return UNTRACKED_STAGE_ALLOWLIST.some((pattern) => pattern.test(file));
+}
+
 async function stageUntrackedFiles(cwd) {
-  const files = await listUntrackedFiles(cwd);
+  const files = (await listUntrackedFiles(cwd)).filter((file) => !isBlockedUntrackedFile(file) && isAllowedUntrackedFile(file));
   if (files.length === 0) {
     return;
   }

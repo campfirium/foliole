@@ -63,7 +63,7 @@ describe('git-state commitTrackedChanges', () => {
 
   it('commits non-.lab changes without tripping ignored .lab paths', async () => {
     const repoDir = await createRepo();
-    await writeFile(path.join(repoDir, '.gitignore'), '.lab/\n');
+    await writeFile(path.join(repoDir, '.gitignore'), '.lab/\n.tmp-vitest/\n');
     await writeFile(path.join(repoDir, 'tracked.txt'), 'before\n');
     await runCommand('git', ['add', '.gitignore', 'tracked.txt'], { cwd: repoDir });
     await runCommand('git', ['commit', '-m', 'seed'], { cwd: repoDir });
@@ -84,9 +84,29 @@ describe('git-state commitTrackedChanges', () => {
     expect(subject.stdout.trim()).toMatch(/^\d{6} /);
   });
 
+  it('filters blocklisted temp artifacts out of untracked auto commits', async () => {
+    const repoDir = await createRepo();
+    await writeFile(path.join(repoDir, '.gitignore'), '.lab/\n.tmp-vitest/\n');
+    await writeFile(path.join(repoDir, 'tracked.txt'), 'before\n');
+    await runCommand('git', ['add', '.gitignore', 'tracked.txt'], { cwd: repoDir });
+    await runCommand('git', ['commit', '-m', 'seed'], { cwd: repoDir });
+
+    await mkdir(path.join(repoDir, 'scripts'), { recursive: true });
+    await writeFile(path.join(repoDir, 'scripts', 'new-task.mjs'), 'export const value = 1;\n');
+    await mkdir(path.join(repoDir, '.tmp-vitest', 'node-compile-cache'), { recursive: true });
+    await writeFile(path.join(repoDir, '.tmp-vitest', 'node-compile-cache', 'cache.bin'), 'cache\n');
+
+    const message = await buildCommitMessage(repoDir, 'Add loop staging guardrails');
+    await expect(commitTrackedChanges(repoDir, message)).resolves.toBe(true);
+
+    const stagedNames = await runCommand('git', ['show', '--pretty=', '--name-only', 'HEAD'], { cwd: repoDir });
+    expect(stagedNames.stdout).toContain('scripts/new-task.mjs');
+    expect(stagedNames.stdout).not.toContain('.tmp-vitest/node-compile-cache/cache.bin');
+  });
+
   it('skips commit when only ignored .lab files changed', async () => {
     const repoDir = await createRepo();
-    await writeFile(path.join(repoDir, '.gitignore'), '.lab/\n');
+    await writeFile(path.join(repoDir, '.gitignore'), '.lab/\n.tmp-vitest/\n');
     await writeFile(path.join(repoDir, 'tracked.txt'), 'seed\n');
     await runCommand('git', ['add', '.gitignore', 'tracked.txt'], { cwd: repoDir });
     await runCommand('git', ['commit', '-m', 'seed'], { cwd: repoDir });
@@ -101,5 +121,22 @@ describe('git-state commitTrackedChanges', () => {
     expect(headMessage.stdout.trim()).toBe('seed');
     const ignoredContent = await readFile(path.join(repoDir, '.lab', 'ignored.md'), 'utf8');
     expect(ignoredContent).toBe('ignore\n');
+  });
+
+  it('skips commit when only blocklisted temp artifacts exist', async () => {
+    const repoDir = await createRepo();
+    await writeFile(path.join(repoDir, '.gitignore'), '.lab/\n.tmp-vitest/\n');
+    await writeFile(path.join(repoDir, 'tracked.txt'), 'seed\n');
+    await runCommand('git', ['add', '.gitignore', 'tracked.txt'], { cwd: repoDir });
+    await runCommand('git', ['commit', '-m', 'seed'], { cwd: repoDir });
+
+    await mkdir(path.join(repoDir, '.tmp-vitest', 'node-compile-cache'), { recursive: true });
+    await writeFile(path.join(repoDir, '.tmp-vitest', 'node-compile-cache', 'cache.bin'), 'cache\n');
+
+    const message = await buildCommitMessage(repoDir, 'Add loop staging guardrails');
+    await expect(commitTrackedChanges(repoDir, message)).resolves.toBe(false);
+
+    const headMessage = await runCommand('git', ['log', '-1', '--pretty=%s'], { cwd: repoDir });
+    expect(headMessage.stdout.trim()).toBe('seed');
   });
 });

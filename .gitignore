@@ -11,3 +11,7 @@ blob-report/
 *.tsbuildinfo
 logs/
 src-tauri/
+.tmp/
+.tmp-*/
+.tmp-vitest/
+.tmp-vitest-*/
