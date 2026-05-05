@@ -20,6 +20,7 @@ import {
   shouldHideImportedTitleHeading,
   type ImportNodeTitleStrategy
 } from './importedNodeTitle.js';
+import { normalizeImportedMarkdownHeadings } from './normalizeImportedHeadings.js';
 
 interface CreatePreparedDesktopTextImportInput {
   content: string;
@@ -65,6 +66,23 @@ function serializeHighlightSidecar(highlightSidecar: ImportSidecarHighlight[] | 
     .join('\u001d');
 }
 
+function mergeNormalizedImportedBodyContent(input: {
+  originalContent: string;
+  normalizedBodyContent: string;
+  finalContent: string;
+}) {
+  if (input.finalContent === input.originalContent) {
+    return input.normalizedBodyContent;
+  }
+
+  const bodyPrefix = `${input.originalContent}\n\n`;
+  if (input.finalContent.startsWith(bodyPrefix)) {
+    return `${input.normalizedBodyContent}\n\n${input.finalContent.slice(bodyPrefix.length)}`;
+  }
+
+  return input.finalContent;
+}
+
 export function createPreparedDesktopTextImport(
   input: CreatePreparedDesktopTextImportInput
 ): PreparedImportRecord {
@@ -77,6 +95,7 @@ export function createPreparedDesktopTextImport(
     epubDegradedContent.content,
     input.highlightPolicy ?? 'reference_only'
   );
+  const normalizedBodyContent = normalizeImportedMarkdownHeadings(highlightedContent);
   const contextResult = applyControlledImportContext({
     content: highlightedContent,
     degradedReason: appendDegradedReason(input.degradedReason, epubDegradedContent.degradedReason),
@@ -86,7 +105,13 @@ export function createPreparedDesktopTextImport(
     sourceName: input.fileName,
     sourceProfile: input.sourceProfile
   });
-  const normalizedContent = normalizeImportedContent(contextResult.content);
+  const normalizedContent = normalizeImportedContent(
+    mergeNormalizedImportedBodyContent({
+      finalContent: contextResult.content,
+      normalizedBodyContent,
+      originalContent: highlightedContent
+    })
+  );
   return {
     content: normalizedContent,
     contentFingerprint: hashFingerprint(
@@ -102,9 +127,9 @@ export function createPreparedDesktopTextImport(
       content: excerpt,
       label: highlight.label?.trim() || null
     })),
-    hideTitleHeading: shouldHideImportedTitleHeading(normalizedContent),
+    hideTitleHeading: shouldHideImportedTitleHeading(highlightedContent),
     nodeTitle: resolveImportedNodeTitle({
-      content: normalizedContent,
+      content: highlightedContent,
       sourceName: input.fileName,
       titleStrategy: input.titleStrategy ?? 'file_name'
     }),
