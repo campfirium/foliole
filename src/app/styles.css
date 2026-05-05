@@ -83,7 +83,8 @@ body {
   align-items: center;
   background: #f6f6f6;
   border-bottom: 1px solid rgba(32, 33, 36, 0.18);
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--window-titlebar-left-width, 40px) minmax(0, 1fr) var(--window-titlebar-right-width, 40px);
   flex: 0 0 auto;
   min-height: 38px;
   padding-inline: 0;
@@ -99,8 +100,17 @@ body {
   font-weight: 500;
   max-width: 48rem;
   overflow: hidden;
+  pointer-events: none;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.window-titlebar-center-slot {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  padding-inline: 12px;
 }
 
 .window-titlebar-left-zone {
@@ -197,19 +207,20 @@ body {
 
 .window-titlebar-controls {
   display: inline-flex;
-  margin-left: auto;
-  position: relative;
+  position: absolute;
+  right: 0;
+  top: 0;
   z-index: 1;
   -webkit-app-region: no-drag;
 }
 
 .window-titlebar-right-zone {
   align-self: stretch;
-  border-left: 1px solid rgba(32, 33, 36, 0.18);
   display: flex;
   flex: 1 1 auto;
   justify-content: flex-start;
   min-width: 0;
+  padding-right: calc(var(--window-titlebar-controls-width, 138px) + 12px);
   pointer-events: auto;
   -webkit-app-region: no-drag;
 }
@@ -228,25 +239,39 @@ body {
 
 .window-titlebar-right-anchor-shell {
   align-self: stretch;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1px minmax(0, 1fr);
   min-width: 0;
-  position: relative;
   pointer-events: none;
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: var(--workspace-right-sidebar-width, 320px);
+  width: 100%;
+}
+
+.window-titlebar-right-anchor-shell[data-collapsed='true'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.window-titlebar-right-divider {
+  align-self: stretch;
+  background: rgba(32, 33, 36, 0.18);
+  pointer-events: none;
+}
+
+.window-titlebar-right-content {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.window-titlebar-right-content[data-collapsed='true'] {
+  grid-template-columns: 40px;
 }
 
 .window-titlebar-right-expanded-action {
   align-items: center;
-  display: inline-flex;
-  left: 0;
+  display: flex;
+  justify-content: center;
   pointer-events: auto;
-  position: absolute;
-  top: 50%;
-  transform: translate(calc(-100% - 10px), -50%);
   -webkit-app-region: no-drag;
 }
 
@@ -254,17 +279,7 @@ body {
   align-items: center;
   display: inline-flex;
   gap: 6px;
-  padding-left: 10px;
-}
-
-.window-titlebar-collapsed-sidebar-action {
-  align-items: center;
-  display: inline-flex;
-  margin-left: 8px;
-  padding-right: 4px;
-  position: relative;
-  z-index: 1;
-  -webkit-app-region: no-drag;
+  padding-left: 16px;
 }
 
 .window-titlebar-button {

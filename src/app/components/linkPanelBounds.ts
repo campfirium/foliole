@@ -12,7 +12,7 @@ function getFallbackBounds(): LinkPanelViewportBounds {
   };
 }
 
-export function useLinkPanelViewportBounds(rootRef: RefObject<HTMLDivElement>) {
+export function useLinkPanelViewportBounds(rootRef: RefObject<HTMLDivElement | null>) {
   const [bounds, setBounds] = useState<LinkPanelViewportBounds>(() => getFallbackBounds());
 
   useLayoutEffect(() => {

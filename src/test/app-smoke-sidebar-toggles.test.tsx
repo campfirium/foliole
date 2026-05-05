@@ -29,3 +29,23 @@ it('toggles both sidebars from the titlebar buttons', () => {
   expect(screen.getByRole('button', { name: 'Review queue panel' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
 });
+
+it('keeps the workspace stable when switching right panels after collapsing the left panel', () => {
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle left panel' }));
+  expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(true);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Dev panel' }));
+  expect(screen.getByRole('button', { name: 'Dev panel' })).toHaveAttribute('aria-pressed', 'true');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle right sidebar' }));
+  expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(true);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle right sidebar' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Review queue panel' }));
+
+  expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(false);
+  expect(screen.getByRole('button', { name: 'Review queue panel' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('main', { name: 'Foliole workspace' })).toBeInTheDocument();
+});

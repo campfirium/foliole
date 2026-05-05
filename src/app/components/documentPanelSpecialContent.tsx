@@ -1,4 +1,4 @@
-import { useRef, type ComponentProps } from 'react';
+import type { ComponentProps, ReactNode, RefObject } from 'react';
 
 import { ImageClozeCardView } from '../../features/image-cloze/components/ImageClozeCardView';
 import { isLegacyImageClozeNode } from '../../features/image-cloze/model/imageCloze';
@@ -101,9 +101,20 @@ function renderLegacyImageClozeContent(
   );
 }
 
+function renderPdfOrBodyShell(contentAreaRef: RefObject<HTMLDivElement | null>, pdfCache: JSX.Element, content: ReactNode, panelStack: JSX.Element) {
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef as ComponentProps<'div'>['ref']}>
+      {pdfCache}
+      {content}
+      {panelStack}
+    </div>
+  );
+}
+
 function renderPdfOrBodyContent(args: {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  contentAreaRef: RefObject<HTMLDivElement | null>;
   isActivePdfCachedVisible: boolean;
   linkPanels: LinkPanelRecord[];
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
@@ -119,10 +130,9 @@ function renderPdfOrBodyContent(args: {
   pdfHighlightLocators: PdfHighlightLocator[];
   shouldHideEditorBodyDuringSourceLoad: boolean;
 }) {
-  const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const panelStack = (
     <LinkPanelStack
-      anchorRootRef={contentAreaRef}
+      anchorRootRef={args.contentAreaRef}
       onClose={args.onCloseExternalLink}
       onStateChange={args.onLinkPanelStateChange}
       panels={args.linkPanels}
@@ -130,39 +140,32 @@ function renderPdfOrBodyContent(args: {
   );
 
   if (!args.pdfDocumentSurface) {
-    return (
-      <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef}>
-        {args.pdfCache}
-        {args.shouldHideEditorBodyDuringSourceLoad ? renderPdfLoadingSurface() : renderDocumentBody(args.activeNodeId, args.bodyProps)}
-        {panelStack}
-      </div>
+    return renderPdfOrBodyShell(
+      args.contentAreaRef,
+      args.pdfCache,
+      args.shouldHideEditorBodyDuringSourceLoad ? renderPdfLoadingSurface() : renderDocumentBody(args.activeNodeId, args.bodyProps),
+      panelStack
     );
   }
 
   if (args.pdfDocumentSurface.state === 'ready') {
-    return (
-      <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef}>
-        {args.pdfCache}
-        {panelStack}
-      </div>
-    );
+    return renderPdfOrBodyShell(args.contentAreaRef, args.pdfCache, null, panelStack);
   }
 
-  return (
-    <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef}>
-      {args.pdfCache}
-      {!args.isActivePdfCachedVisible
-        ? renderPdfDocumentSurface(
-            args.pdfDocumentSurface,
-            { editorNodeId: args.bodyProps.editorNodeId, editorNodeViewState: args.bodyProps.editorNodeViewState },
-            args.pdfHighlightLocators,
-            args.onCreatePdfHighlight,
-            args.onPersistPdfViewState,
-            args.onOpenExternalLink
-          )
-        : null}
-      {panelStack}
-    </div>
+  return renderPdfOrBodyShell(
+    args.contentAreaRef,
+    args.pdfCache,
+    !args.isActivePdfCachedVisible
+      ? renderPdfDocumentSurface(
+          args.pdfDocumentSurface,
+          { editorNodeId: args.bodyProps.editorNodeId, editorNodeViewState: args.bodyProps.editorNodeViewState },
+          args.pdfHighlightLocators,
+          args.onCreatePdfHighlight,
+          args.onPersistPdfViewState,
+          args.onOpenExternalLink
+        )
+      : null,
+    panelStack
   );
 }
 
@@ -170,6 +173,7 @@ export function resolveDocumentPanelContentBody(args: {
   activeNode: Node | undefined;
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  contentAreaRef: RefObject<HTMLDivElement | null>;
   folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
   onChangeFolderListSortDirection: (sortDirection: FolderListSortDirection) => void;
@@ -202,6 +206,7 @@ export function resolveDocumentPanelContentBody(args: {
   return renderPdfOrBodyContent({
     activeNodeId: args.activeNodeId,
     bodyProps: args.bodyProps,
+    contentAreaRef: args.contentAreaRef,
     isActivePdfCachedVisible: args.isActivePdfCachedVisible,
     linkPanels: args.linkPanels,
     onCreatePdfHighlight: args.onCreatePdfHighlight,

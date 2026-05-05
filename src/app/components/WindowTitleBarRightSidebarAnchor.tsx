@@ -1,5 +1,5 @@
 import { FileSearch, Gauge, Highlighter, Link2, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
-import { memo, type CSSProperties } from 'react';
+import { memo } from 'react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
@@ -50,7 +50,6 @@ interface WindowTitleBarRightSidebarAnchorProps {
   isRightSidebarCollapsed: boolean;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onToggleRightSidebarVisibility: () => void;
-  rightSidebarWidth: number;
 }
 
 function renderRightSidebarPanelActions(props: Pick<WindowTitleBarRightSidebarAnchorProps, 'activeRightPanelId' | 'onSelectRightPanel'>) {
@@ -100,24 +99,17 @@ function renderRightSidebarPanelActions(props: Pick<WindowTitleBarRightSidebarAn
 export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRightSidebarAnchor(
   props: WindowTitleBarRightSidebarAnchorProps
 ) {
-  if (props.isRightSidebarCollapsed) {
-    return (
-      <div className="window-titlebar-collapsed-sidebar-action">
-        <RightSidebarToggleButton active={false} onClick={props.onToggleRightSidebarVisibility} />
-      </div>
-    );
-  }
-
+  const isCollapsed = props.isRightSidebarCollapsed;
   return (
-    <div
-      className="window-titlebar-right-anchor-shell"
-      style={{ '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px` } as CSSProperties}
-    >
-      <div className="window-titlebar-right-expanded-action">
-        <RightSidebarToggleButton active onClick={props.onToggleRightSidebarVisibility} />
-      </div>
-      <div className="window-titlebar-right-zone">
-        {renderRightSidebarPanelActions(props)}
+    <div className="window-titlebar-right-anchor-shell" data-collapsed={isCollapsed}>
+      {isCollapsed ? null : <div aria-hidden="true" className="window-titlebar-right-divider" />}
+      <div className="window-titlebar-right-content" data-collapsed={isCollapsed}>
+        <div className="window-titlebar-right-expanded-action">
+          <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />
+        </div>
+        <div className="window-titlebar-right-zone" hidden={isCollapsed}>
+          {isCollapsed ? null : renderRightSidebarPanelActions(props)}
+        </div>
       </div>
     </div>
   );

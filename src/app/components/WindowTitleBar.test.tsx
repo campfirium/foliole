@@ -54,16 +54,24 @@ beforeEach(() => {
 
 function expectExpandedRightAnchorLayout(container: HTMLElement) {
   const shell = container.querySelector('.window-titlebar-right-anchor-shell');
+  const divider = container.querySelector('.window-titlebar-right-divider');
+  const content = container.querySelector('.window-titlebar-right-content');
   const toggleAction = container.querySelector('.window-titlebar-right-expanded-action');
   const anchor = container.querySelector('.window-titlebar-right-zone');
   const panelActions = container.querySelector('.window-titlebar-right-panel-actions');
   expect(shell).not.toBeNull();
+  expect(divider).not.toBeNull();
+  expect(content).not.toBeNull();
   expect(toggleAction).not.toBeNull();
   expect(anchor).not.toBeNull();
   expect(panelActions).not.toBeNull();
-  if (!shell || !toggleAction || !anchor || !panelActions) {
+  if (!shell || !divider || !content || !toggleAction || !anchor || !panelActions) {
     throw new Error('right sidebar titlebar anchor should exist');
   }
+  expect(shell.contains(divider)).toBe(true);
+  expect(shell.contains(content)).toBe(true);
+  expect(content.contains(toggleAction)).toBe(true);
+  expect(content.contains(anchor)).toBe(true);
   expect(shell.contains(toggleAction)).toBe(true);
   expect(shell.contains(anchor)).toBe(true);
   expect(anchor.contains(panelActions)).toBe(true);
@@ -169,5 +177,20 @@ describe('WindowTitleBar right sidebar anchor', () => {
     expect(screen.getByRole('button', { name: 'Source info panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Highlights panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
+  });
+
+  it('keeps the window controls out of the titlebar grid flow', () => {
+    const { container } = renderTitleBar({ isRightSidebarCollapsed: false });
+    const controls = container.querySelector<HTMLElement>('.window-titlebar-controls');
+    const titlebar = container.querySelector<HTMLElement>('.window-titlebar');
+
+    expect(titlebar).not.toBeNull();
+    expect(controls).not.toBeNull();
+    if (!titlebar || !controls) {
+      throw new Error('titlebar and controls should exist');
+    }
+
+    expect(controls).toBeInTheDocument();
+    expect(titlebar).toContainElement(controls);
   });
 });

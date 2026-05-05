@@ -50,7 +50,6 @@ function applyReadingPositionToActiveEditor(
 export function createToggleListVisibility(args: BuildControllerLayoutPropsArgs) {
   return () => {
     if (args.ws.isListCollapsed) {
-      args.ws.setListCollapsed(false);
       args.ws.setListWidth(Math.max(220, args.runtime.lastExpandedListWidthRef.current || args.ws.listWidth || 300));
       return;
     }
@@ -62,7 +61,6 @@ export function createToggleListVisibility(args: BuildControllerLayoutPropsArgs)
 export function createToggleRightSidebarVisibility(args: BuildControllerLayoutPropsArgs) {
   return () => {
     if (args.ws.isRightSidebarCollapsed) {
-      args.ws.setRightSidebarCollapsed(false);
       args.ws.setRightSidebarWidth(
         Math.max(240, args.runtime.lastExpandedRightSidebarWidthRef.current || args.ws.rightSidebarWidth || 320)
       );

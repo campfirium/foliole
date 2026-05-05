@@ -113,7 +113,7 @@ function LinkPanelCard(props: {
 }
 
 export function LinkPanelStack(props: {
-  anchorRootRef: RefObject<HTMLDivElement>;
+  anchorRootRef: RefObject<HTMLDivElement | null>;
   onClose: (panelId: string) => void;
   onStateChange: (panelId: string, state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>) => void;
   panels: LinkPanelRecord[];

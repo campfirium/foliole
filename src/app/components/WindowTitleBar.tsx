@@ -18,7 +18,7 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
-
+const WINDOW_CONTROLS_WIDTH = 138;
 interface WindowTitleBarProps {
   activeRightPanelId: WorkspaceRightPanelId;
   centerTitle: string | null;
@@ -192,13 +192,14 @@ function WindowControlButtons({ controlsEnabled, isMaximized, onClose, onMinimiz
   );
 }
 
-function WindowCenterTitle({ title }: { title: string | null }) {
-  if (!title) {
-    return null;
-  }
+function WindowCenterTitle({ onDoubleClick, title }: { onDoubleClick: () => void; title: string | null }) {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex -translate-y-1/2 justify-center px-4">
-      <span className="window-titlebar-center-title" title={title}>{title}</span>
+    <div
+      aria-hidden="true"
+      className="window-titlebar-center-slot window-titlebar-drag-fill"
+      onDoubleClick={onDoubleClick}
+    >
+      {title ? <span className="window-titlebar-center-title" title={title}>{title}</span> : null}
     </div>
   );
 }
@@ -231,16 +232,23 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
   }, [controlsEnabled]);
 
   return (
-    <header className="window-titlebar" data-window-maximized={isMaximized} style={{ '--workspace-list-width': `${props.listWidth}px` } as CSSProperties}>
+    <header
+      className="window-titlebar"
+      data-window-maximized={isMaximized}
+      style={{
+        '--window-titlebar-left-width': `${props.isListCollapsed ? 40 : props.listWidth + 41}px`,
+        '--window-titlebar-controls-width': `${WINDOW_CONTROLS_WIDTH}px`,
+        '--window-titlebar-right-width': `${props.isRightSidebarCollapsed ? WINDOW_CONTROLS_WIDTH + 40 : props.rightSidebarWidth}px`,
+        '--workspace-list-width': `${props.listWidth}px`
+      } as CSSProperties}
+    >
       <WindowLeadingActions {...props} />
-      <WindowCenterTitle title={props.centerTitle} />
-      <div className="window-titlebar-drag-fill" onDoubleClick={handleToggleMaximize} />
+      <WindowCenterTitle onDoubleClick={handleToggleMaximize} title={props.centerTitle} />
       <WindowTitleBarRightSidebarAnchor
         activeRightPanelId={props.activeRightPanelId}
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
         onSelectRightPanel={props.onSelectRightPanel}
         onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
-        rightSidebarWidth={props.rightSidebarWidth}
       />
       <WindowControlButtons
         controlsEnabled={controlsEnabled}

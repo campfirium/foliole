@@ -113,16 +113,7 @@ function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
   if (props.isImmersiveMode) {
     return 'grid-cols-1 xl:grid-cols-1';
   }
-  if (props.isListCollapsed && props.isRightSidebarCollapsed) {
-    return 'grid-cols-1 xl:grid-cols-1';
-  }
-  if (props.isListCollapsed) {
-    return 'grid-cols-1 xl:[grid-template-columns:minmax(0,1fr)_1px_minmax(0,var(--workspace-right-sidebar-width,320px))]';
-  }
-  if (props.isRightSidebarCollapsed) {
-    return '[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)]';
-  }
-  return '[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)_1px_minmax(0,var(--workspace-right-sidebar-width,320px))]';
+  return '[grid-template-columns:minmax(0,var(--workspace-list-current-width,300px))_var(--workspace-list-splitter-width,1px)_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-current-width,300px))_var(--workspace-list-splitter-width,1px)_minmax(0,1fr)_var(--workspace-right-sidebar-splitter-width,1px)_minmax(0,var(--workspace-right-sidebar-current-width,320px))]';
 }
 
 function WorkspaceGridContent({
@@ -166,71 +157,79 @@ function WorkspaceGridContent({
 }
 
 function renderListColumns(args: {
+  isCollapsed: boolean;
   listNodesById: WorkspaceListNodesById;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   props: WorkspaceLayoutProps;
 }) {
   return [
-    <WorkspaceListArea
-      key="list"
-      activeNodeId={args.props.activeNodeId}
-      isStudyMode={args.props.isStudyMode}
-      isTrashViewOpen={args.props.isTrashViewOpen}
-      isVirtualViewOpen={args.props.isVirtualViewOpen}
-      isWorkspaceHydrated={args.props.isWorkspaceHydrated}
-      listNodesById={args.listNodesById}
-      nodeOrder={args.props.nodeOrder}
-      onOpenMoveToNode={args.props.onOpenMoveToNode}
-      onOpenNotesView={args.props.onOpenNotesView}
-      onSelectNode={args.onSelectNode}
-      onSelectTrashNode={args.props.onSelectTrashNode}
-      reviewCompletedCount={args.props.reviewCompletedCount}
-      reviewDueCount={args.props.reviewDueCount}
-      reviewQueueCount={args.props.reviewQueueCount}
-      reviewStatus={args.props.reviewStatus}
-      selectedTrashNodeId={args.props.selectedTrashNodeId}
-      trashedNodeIds={args.props.trashedNodeIds}
-    />,
-    <WorkspaceListSplitter
-      key="list-splitter"
-      isResizingList={args.props.isResizingList}
-      listWidth={args.props.listWidth}
-      onResetLayout={args.props.onResetLayout}
-      onSplitterKeyDown={args.props.onSplitterKeyDown}
-      onSplitterPointerDown={args.props.onSplitterPointerDown}
-    />
+    <div aria-hidden={args.isCollapsed} className="flex min-w-0 flex-col overflow-hidden" key="list">
+      <WorkspaceListArea
+        activeNodeId={args.props.activeNodeId}
+        isStudyMode={args.props.isStudyMode}
+        isTrashViewOpen={args.props.isTrashViewOpen}
+        isVirtualViewOpen={args.props.isVirtualViewOpen}
+        isWorkspaceHydrated={args.props.isWorkspaceHydrated}
+        listNodesById={args.listNodesById}
+        nodeOrder={args.props.nodeOrder}
+        onOpenMoveToNode={args.props.onOpenMoveToNode}
+        onOpenNotesView={args.props.onOpenNotesView}
+        onSelectNode={args.onSelectNode}
+        onSelectTrashNode={args.props.onSelectTrashNode}
+        reviewCompletedCount={args.props.reviewCompletedCount}
+        reviewDueCount={args.props.reviewDueCount}
+        reviewQueueCount={args.props.reviewQueueCount}
+        reviewStatus={args.props.reviewStatus}
+        selectedTrashNodeId={args.props.selectedTrashNodeId}
+        trashedNodeIds={args.props.trashedNodeIds}
+      />
+    </div>,
+    <div aria-hidden={args.isCollapsed} className="flex min-w-0 overflow-visible" key="list-splitter">
+      <WorkspaceListSplitter
+        isCollapsed={args.isCollapsed}
+        isResizingList={args.props.isResizingList}
+        listWidth={args.props.listWidth}
+        onResetLayout={args.props.onResetLayout}
+        onSplitterKeyDown={args.props.onSplitterKeyDown}
+        onSplitterPointerDown={args.props.onSplitterPointerDown}
+      />
+    </div>
   ];
 }
 
 function renderRightSidebarColumns(args: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
+  isCollapsed: boolean;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   props: WorkspaceLayoutProps;
 }) {
   return [
-    <WorkspaceRightSidebarSplitter
-      key="right-sidebar-splitter"
-      isResizingRightSidebar={args.props.isResizingRightSidebar}
-      onResetLayout={args.props.onResetLayout}
-      onRightSidebarSplitterKeyDown={args.props.onRightSidebarSplitterKeyDown}
-      onRightSidebarSplitterPointerDown={args.props.onRightSidebarSplitterPointerDown}
-      rightSidebarWidth={args.props.rightSidebarWidth}
-    />,
-    <WorkspaceRightSidebar
-      key="right-sidebar"
-      activePanelId={args.activeRightPanelId}
-      activeNodeId={args.documentNodeId}
-      nodeOrder={args.props.nodeOrder}
-      trashedNodeIds={args.props.trashedNodeIds}
-      nodesById={args.props.nodesById}
-      onRevealAnchorInDocument={args.props.onRevealAnchorInDocument}
-      onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
-      onSelectNode={args.onSelectNode}
-      reviewCurrentNodeId={args.props.reviewCurrentNodeId}
-      reviewQueueNodeIds={args.props.reviewPanelQueueNodeIds}
-      reviewSchedulerSettings={args.props.reviewSchedulerSettings}
-    />
+    <div aria-hidden={args.isCollapsed} className="flex min-w-0 overflow-visible" key="right-sidebar-splitter">
+      <WorkspaceRightSidebarSplitter
+        isCollapsed={args.isCollapsed}
+        isResizingRightSidebar={args.props.isResizingRightSidebar}
+        onResetLayout={args.props.onResetLayout}
+        onRightSidebarSplitterKeyDown={args.props.onRightSidebarSplitterKeyDown}
+        onRightSidebarSplitterPointerDown={args.props.onRightSidebarSplitterPointerDown}
+        rightSidebarWidth={args.props.rightSidebarWidth}
+      />
+    </div>,
+    <div aria-hidden={args.isCollapsed} className="flex min-w-0 flex-col overflow-hidden" key="right-sidebar">
+      <WorkspaceRightSidebar
+        activePanelId={args.activeRightPanelId}
+        activeNodeId={args.documentNodeId}
+        nodeOrder={args.props.nodeOrder}
+        trashedNodeIds={args.props.trashedNodeIds}
+        nodesById={args.props.nodesById}
+        onRevealAnchorInDocument={args.props.onRevealAnchorInDocument}
+        onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
+        onSelectNode={args.onSelectNode}
+        reviewCurrentNodeId={args.props.reviewCurrentNodeId}
+        reviewQueueNodeIds={args.props.reviewPanelQueueNodeIds}
+        reviewSchedulerSettings={args.props.reviewSchedulerSettings}
+      />
+    </div>
   ];
 }
 
@@ -244,11 +243,8 @@ function renderWorkspaceGridColumns(args: {
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   props: WorkspaceLayoutProps;
 }) {
-  const shouldShowList = !args.props.isImmersiveMode && !args.props.isListCollapsed;
-  const shouldShowRightSidebar = !args.props.isImmersiveMode && !args.props.isRightSidebarCollapsed;
-
   return [
-    ...(shouldShowList ? renderListColumns(args) : []),
+    ...renderListColumns({ ...args, isCollapsed: args.props.isImmersiveMode || args.props.isListCollapsed }),
     <WorkspaceDocumentArea
       key="document"
       documentNodeId={args.documentNodeId}
@@ -257,6 +253,6 @@ function renderWorkspaceGridColumns(args: {
       onShouldSuppressSelectionRestore={args.onShouldSuppressSelectionRestore}
       props={args.props}
     />,
-    ...(shouldShowRightSidebar ? renderRightSidebarColumns(args) : [])
+    ...renderRightSidebarColumns({ ...args, isCollapsed: args.props.isImmersiveMode || args.props.isRightSidebarCollapsed })
   ];
 }

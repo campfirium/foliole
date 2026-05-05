@@ -1,5 +1,5 @@
-import type { ComponentProps } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import type { ComponentProps, RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
@@ -189,6 +189,7 @@ function buildDocumentPanelContentBodyArgs(
   derived: {
     activeNode: Node | undefined;
     isActivePdfCachedVisible: boolean;
+    contentAreaRef: RefObject<HTMLDivElement | null>;
     pdfCache: JSX.Element;
     pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
     pdfHighlightLocators: PdfHighlightLocator[];
@@ -215,6 +216,7 @@ function buildDocumentPanelContentBodyArgs(
     linkPanels: props.linkPanels,
     onCloseExternalLink: props.onCloseExternalLink,
     onLinkPanelStateChange: props.onLinkPanelStateChange,
+    contentAreaRef: derived.contentAreaRef,
     pdfCache: derived.pdfCache,
     pdfDocumentSurface: derived.pdfDocumentSurface,
     pdfHighlightLocators: derived.pdfHighlightLocators,
@@ -224,6 +226,7 @@ function buildDocumentPanelContentBodyArgs(
 
 export function DocumentPanelContent(props: DocumentPanelContentProps) {
   const [isActivePdfCachedVisible, setIsActivePdfCachedVisible] = useState(false);
+  const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const {
     activeNode,
     pdfDocumentSurface,
@@ -254,6 +257,7 @@ export function DocumentPanelContent(props: DocumentPanelContentProps) {
     buildDocumentPanelContentBodyArgs(props, {
       activeNode,
       isActivePdfCachedVisible,
+      contentAreaRef,
       pdfCache,
       pdfDocumentSurface,
       pdfHighlightLocators,

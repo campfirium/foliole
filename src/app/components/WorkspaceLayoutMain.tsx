@@ -73,6 +73,10 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const { handleOpenNotesView, handleOpenVirtualView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(props);
   const workspaceGridStyle = {
     '--workspace-list-width': `${props.listWidth}px`,
+    '--workspace-list-current-width': props.isListCollapsed ? '0px' : `${props.listWidth}px`,
+    '--workspace-list-splitter-width': props.isListCollapsed ? '0px' : '1px',
+    '--workspace-right-sidebar-current-width': props.isRightSidebarCollapsed ? '0px' : `${props.rightSidebarWidth}px`,
+    '--workspace-right-sidebar-splitter-width': props.isRightSidebarCollapsed ? '0px' : '1px',
     '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px`
   } as CSSProperties;
   const documentNodeId = props.isViewingTrashNode ? props.selectedTrashNodeId : props.activeNodeId;

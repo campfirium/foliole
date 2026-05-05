@@ -177,6 +177,7 @@ describe('DocumentPanelSection secondary views', () => {
     expect(screen.getByRole('separator', { name: 'Resize document width from left' })).toBeInTheDocument();
     expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
   });
+
 });
 
 it('shows the virtual node detail shell with clear empty states', () => {
