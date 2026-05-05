@@ -16,6 +16,7 @@
         "title": "Foliole",
         "width": 1400,
         "height": 900,
+        "decorations": false,
         "resizable": true,
         "maximized": true
       }

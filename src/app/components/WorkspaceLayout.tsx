@@ -9,6 +9,7 @@ import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
+import { WindowTitleBar } from './WindowTitleBar';
 import { WorkspaceToolbar } from './WorkspaceToolbar';
 
 export interface WorkspaceEditorContextMenu {
@@ -118,6 +119,7 @@ export function WorkspaceLayout({
 
   return (
     <main aria-label="Foliole workspace" className="workspace-shell">
+      <WindowTitleBar />
       <WorkspaceToolbar
         canGoBack={canGoBack}
         canGoForward={canGoForward}

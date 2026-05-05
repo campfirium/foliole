@@ -3,5 +3,10 @@
   "identifier": "default",
   "description": "Default desktop capability set for Foliole.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize"
+  ]
 }

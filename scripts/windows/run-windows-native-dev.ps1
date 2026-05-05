@@ -17,10 +17,33 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 Set-Location -Path $env:SystemRoot
 
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class NativeWindowApi {
+  [DllImport("user32.dll")]
+  public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")]
+  public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")]
+  public static extern bool IsIconic(IntPtr hWnd);
+  [DllImport("user32.dll")]
+  public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+  [StructLayout(LayoutKind.Sequential)]
+  public struct RECT {
+    public int Left;
+    public int Top;
+    public int Right;
+    public int Bottom;
+  }
+}
+"@
+
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $logPath = Join-Path $LogDir "windows-native-dev-$timestamp.log"
 $stateFile = Join-Path $WindowsWorkDir ".windows-native-dev-state.json"
+$lockHashStateFile = Join-Path $WindowsWorkDir ".windows-native-dev-lock.sha256"
 
 function Write-Log {
   param([string]$Message)
@@ -47,7 +70,7 @@ function Invoke-Robocopy {
     "gen",
     "logs"
   )
-  $excludeFiles = @("*.log", "*.tmp", ".windows-native-dev-state.json")
+  $excludeFiles = @("*.log", "*.tmp", ".windows-native-dev-state.json", ".windows-native-dev-lock.sha256")
 
   $dirArgs = ($excludeDirs | ForEach-Object { "/XD `"$($_)`"" }) -join " "
   $fileArgs = ($excludeFiles | ForEach-Object { "/XF `"$($_)`"" }) -join " "
@@ -68,12 +91,29 @@ function Invoke-Robocopy {
 function Ensure-NpmDependencies {
   param([string]$WorkDir)
 
-  if (Test-Path (Join-Path $WorkDir "node_modules")) {
-    Write-Log "[windows-native-dev] node_modules exists, skip install."
+  $lockPath = Join-Path $WorkDir "package-lock.json"
+  $nodeModulesPath = Join-Path $WorkDir "node_modules"
+  $needsInstall = -not (Test-Path $nodeModulesPath)
+  $lockHashCurrent = ""
+
+  if (Test-Path $lockPath) {
+    $lockHashCurrent = (Get-FileHash -Path $lockPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $lockHashPrevious = ""
+    if (Test-Path $lockHashStateFile) {
+      $lockHashPrevious = (Get-Content -Path $lockHashStateFile -Raw).Trim().ToLowerInvariant()
+    }
+
+    if ($lockHashCurrent -ne $lockHashPrevious) {
+      $needsInstall = $true
+      Write-Log "[windows-native-dev] lock hash changed, dependency install required."
+    }
+  }
+
+  if (-not $needsInstall) {
+    Write-Log "[windows-native-dev] dependencies up-to-date, skip install."
     return
   }
 
-  $lockPath = Join-Path $WorkDir "package-lock.json"
   if (Test-Path $lockPath) {
     $installCommand = "cd /d `"$WorkDir`" && npm ci --no-audit --no-fund"
   } else {
@@ -83,10 +123,21 @@ function Ensure-NpmDependencies {
   Write-Log ""
   Write-Log "[windows-native-dev] step: install dependencies"
   Write-Log "[windows-native-dev] cmd: $installCommand"
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
   cmd.exe /d /c "$installCommand" 2>&1 | Tee-Object -FilePath $logPath -Append | Out-Host
-  if ($LASTEXITCODE -ne 0) {
+  $installExitCode = $LASTEXITCODE
+  $ErrorActionPreference = $previousErrorActionPreference
+
+  if ($installExitCode -ne 0) {
     Write-Log "[windows-native-dev] install failed, exit=$LASTEXITCODE"
-    exit $LASTEXITCODE
+    exit $installExitCode
+  }
+
+  if ($lockHashCurrent) {
+    $lockHashCurrent | Out-File -FilePath $lockHashStateFile -Encoding ascii -NoNewline
+  } elseif (Test-Path $lockHashStateFile) {
+    Remove-Item -Force $lockHashStateFile
   }
 }
 
@@ -207,6 +258,45 @@ function Launch-NativeDev {
   Write-Log "[windows-native-dev] launcher pid: $($cmdProc.Id)"
 }
 
+function Ensure-AppWindowForeground {
+  param([string]$WorkDir)
+
+  $maxAttempts = 60
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    $apps = @(Get-NativeAppProcesses -WorkDir $WorkDir)
+    if ($apps.Count -gt 0) {
+      $appProcess = $apps[0]
+      $managedProcess = Get-Process -Id $appProcess.ProcessId -ErrorAction SilentlyContinue
+      if ($managedProcess -and $managedProcess.MainWindowHandle -ne 0) {
+        $windowHandle = [IntPtr]$managedProcess.MainWindowHandle
+        $windowRect = New-Object NativeWindowApi+RECT
+        [void][NativeWindowApi]::GetWindowRect($windowHandle, [ref]$windowRect)
+        $windowWidth = $windowRect.Right - $windowRect.Left
+        $windowHeight = $windowRect.Bottom - $windowRect.Top
+        $isOffscreen = $windowRect.Left -le -15000 -and $windowRect.Top -le -15000
+        $needsRestore = [NativeWindowApi]::IsIconic($windowHandle) -or $isOffscreen -or $windowWidth -lt 400 -or $windowHeight -lt 300
+
+        if ($needsRestore) {
+          [void][NativeWindowApi]::ShowWindowAsync($windowHandle, 9)
+          Start-Sleep -Milliseconds 200
+          [void][NativeWindowApi]::GetWindowRect($windowHandle, [ref]$windowRect)
+          $windowWidth = $windowRect.Right - $windowRect.Left
+          $windowHeight = $windowRect.Bottom - $windowRect.Top
+        }
+
+        [void][NativeWindowApi]::SetForegroundWindow($windowHandle)
+        if ($windowWidth -ge 400 -and $windowHeight -ge 300 -and -not [NativeWindowApi]::IsIconic($windowHandle)) {
+          Write-Log "[windows-native-dev] app window restored and focused."
+          return
+        }
+      }
+    }
+    Start-Sleep -Milliseconds 300
+  }
+
+  Write-Log "[windows-native-dev] app window not ready for focus yet; continue."
+}
+
 $sourceSuffix = $SourceRepoLinuxPath.TrimStart("/").Replace("/", "\")
 $sourcePath = "\\wsl.localhost\$Distro\$sourceSuffix"
 
@@ -247,6 +337,11 @@ if (-not (Test-Path $packageJsonPath)) {
   exit 1
 }
 
+if ($Action -eq "restart") {
+  Write-Log "[windows-native-dev] step: stop existing native dev session before dependency install"
+  Stop-NativeDevSession -WorkDir $WindowsWorkDir
+}
+
 Ensure-NpmDependencies -WorkDir $WindowsWorkDir
 
 if ($Action -eq "sync") {
@@ -261,6 +356,7 @@ if ($Action -eq "apply") {
     Write-Log "[windows-native-dev] apply mode fallback: app not running, start now."
     Launch-NativeDev -WorkDir $WindowsWorkDir
   }
+  Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
 
   Show-Status -WorkDir $WindowsWorkDir
   Write-Log "[windows-native-dev] status: SYNCED"
@@ -269,8 +365,8 @@ if ($Action -eq "apply") {
 }
 
 if ($Action -eq "restart") {
-  Stop-NativeDevSession -WorkDir $WindowsWorkDir
   Launch-NativeDev -WorkDir $WindowsWorkDir
+  Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
   Show-Status -WorkDir $WindowsWorkDir
   Write-Log "[windows-native-dev] status: RESTARTED"
   Write-Log "[windows-native-dev] log file: $logPath"
@@ -279,6 +375,7 @@ if ($Action -eq "restart") {
 
 if ($Action -eq "start") {
   Launch-NativeDev -WorkDir $WindowsWorkDir
+  Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
   Show-Status -WorkDir $WindowsWorkDir
   Write-Log "[windows-native-dev] status: STARTED"
   Write-Log "[windows-native-dev] log file: $logPath"
