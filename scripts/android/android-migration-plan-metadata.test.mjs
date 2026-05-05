@@ -54,6 +54,11 @@ describe('Android migration plan metadata', () => {
       migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
     });
     expect(schema.actionKeys).toMatchObject({ errorMessage: 'errorMessage', type: 'type' });
+    expect(schema.assetKeys).toMatchObject({
+      coreStatements: 'statements',
+      migrationPlan: 'plan',
+      migrationStatementsByName: 'statementsByName'
+    });
     expect(schema.planKeys).toMatchObject({ actions: 'actions', beforeVersion: 'beforeVersion' });
     expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
     expect(schema.repairRules.syncObjectStateSequence).toMatchObject({
@@ -94,8 +99,13 @@ describe('Android migration plan metadata', () => {
     expect(installerSource).toContain('static JSONArray migrationPlan(Context context)');
     expect(rulesSource).toContain('section(context, "actionTypes")');
     expect(rulesSource).toContain('section(context, "actionKeys")');
+    expect(rulesSource).toContain('section(context, "assetKeys")');
     expect(rulesSource).toContain('section(context, "planKeys")');
     expect(rulesSource).toContain('section(context, "repairRules")');
+    expect(installerSource).toContain('FolioleCompanionMigrationRules.assetKey(context, "coreStatements")');
+    expect(installerSource).not.toContain('optJSONArray("statements")');
+    expect(installerSource).not.toContain('optJSONObject("statementsByName")');
+    expect(installerSource).not.toContain('optJSONArray("plan")');
     expect(migrationSource).toContain('FolioleCompanionSchemaInstaller.migrationPlan(context)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.actionType(context, key)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.stringValue');

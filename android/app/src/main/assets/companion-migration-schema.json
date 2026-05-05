@@ -10,6 +10,11 @@
     "installSchema": "installSchema",
     "migrateSyncObjectStateSequence": "migrateSyncObjectStateSequence"
   },
+  "assetKeys": {
+    "coreStatements": "statements",
+    "migrationPlan": "plan",
+    "migrationStatementsByName": "statementsByName"
+  },
   "defaultMessages": {
     "installSchemaErrorMessage": "Failed to install companion schema."
   },

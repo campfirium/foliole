@@ -35,6 +35,12 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_KEYS = {
   type: 'type'
 } as const;
 
+export const ANDROID_COMPANION_MIGRATION_ASSET_KEYS = {
+  coreStatements: 'statements',
+  migrationPlan: 'plan',
+  migrationStatementsByName: 'statementsByName'
+} as const;
+
 export const ANDROID_COMPANION_MIGRATION_DEFAULT_MESSAGES = {
   installSchemaErrorMessage: 'Failed to install companion schema.'
 } as const;

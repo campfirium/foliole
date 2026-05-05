@@ -26,6 +26,10 @@ final class FolioleCompanionMigrationRules {
         return section(context, "actionKeys").getString(key);
     }
 
+    static String assetKey(Context context, String key) throws Exception {
+        return section(context, "assetKeys").getString(key);
+    }
+
     static String defaultMessage(Context context, String key) throws Exception {
         return section(context, "defaultMessages").getString(key);
     }

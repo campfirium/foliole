@@ -15,9 +15,10 @@ final class FolioleCompanionSchemaInstaller {
 
     static void install(Context context, SQLiteDatabase database) throws Exception {
         JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, SCHEMA_ASSET_PATH));
-        JSONArray statements = payload.optJSONArray("statements");
+        String statementsKey = FolioleCompanionMigrationRules.assetKey(context, "coreStatements");
+        JSONArray statements = payload.optJSONArray(statementsKey);
         if (statements == null) {
-            throw new IllegalStateException("Companion schema asset is missing statements.");
+            throw new IllegalStateException("Companion schema asset is missing " + statementsKey + ".");
         }
         for (int index = 0; index < statements.length(); index += 1) {
             String statement = statements.optString(index, "").trim();
@@ -29,9 +30,10 @@ final class FolioleCompanionSchemaInstaller {
 
     static void installMigrationStatement(Context context, SQLiteDatabase database, String statementName) throws Exception {
         JSONObject payload = migrationSchema(context);
-        JSONObject statements = payload.optJSONObject("statementsByName");
+        String statementsKey = FolioleCompanionMigrationRules.assetKey(context, "migrationStatementsByName");
+        JSONObject statements = payload.optJSONObject(statementsKey);
         if (statements == null) {
-            throw new IllegalStateException("Companion migration schema asset is missing statementsByName.");
+            throw new IllegalStateException("Companion migration schema asset is missing " + statementsKey + ".");
         }
         String statement = statements.optString(statementName, "").trim();
         if (statement.isEmpty()) {
@@ -41,9 +43,10 @@ final class FolioleCompanionSchemaInstaller {
     }
 
     static JSONArray migrationPlan(Context context) throws Exception {
-        JSONArray plan = migrationSchema(context).optJSONArray("plan");
+        String planKey = FolioleCompanionMigrationRules.assetKey(context, "migrationPlan");
+        JSONArray plan = migrationSchema(context).optJSONArray(planKey);
         if (plan == null) {
-            throw new IllegalStateException("Companion migration schema asset is missing plan.");
+            throw new IllegalStateException("Companion migration schema asset is missing " + planKey + ".");
         }
         return plan;
     }
