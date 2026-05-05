@@ -172,7 +172,9 @@ it('starts inline rename on double click', () => {
 
   fireEvent.doubleClick(screen.getByRole('treeitem', { name: 'Draft topic' }));
 
-  expect(screen.getByRole('textbox', { name: 'Rename Draft topic' })).toHaveValue('Draft topic');
+  const input = screen.getByRole('textbox', { name: 'Rename Draft topic' });
+  expect(input).toHaveValue('Draft topic');
+  expect(input.className).not.toContain('ring-ring');
 });
 
 it('starts inline rename on F2', () => {

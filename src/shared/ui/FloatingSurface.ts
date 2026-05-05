@@ -6,7 +6,6 @@ const floatingOverlayBaseClassName =
   'fixed inset-0 z-50 flex items-start justify-center bg-[var(--app-floating-overlay-bg)] px-4 pt-[12vh]';
 const floatingInputBaseClassName = [
   'w-full border-b border-[var(--app-floating-divider-color)] bg-[var(--app-floating-input-bg)] px-4 py-3 text-sm text-foreground outline-none',
-  'focus-visible:ring-1 focus-visible:ring-ring',
   'placeholder:text-foreground/42'
 ].join(' ');
 const floatingListBaseClassName =

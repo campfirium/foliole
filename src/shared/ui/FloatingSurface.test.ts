@@ -12,8 +12,7 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingOverlayClassName()).toContain('bg-[var(--app-floating-overlay-bg)]');
   expect(appFloatingSurfaceClassName('panel')).toContain('bg-[var(--app-floating-surface-bg)]');
   expect(appFloatingInputClassName()).toContain('bg-[var(--app-floating-input-bg)]');
-  expect(appFloatingInputClassName()).toContain('focus-visible:ring-1');
-  expect(appFloatingInputClassName()).toContain('focus-visible:ring-ring');
+  expect(appFloatingInputClassName()).toContain('border-[var(--app-floating-divider-color)]');
   expect(appFloatingListClassName()).toContain(
     '[--app-scrollbar-thumb-color:var(--app-floating-scrollbar-thumb-color)]'
   );
