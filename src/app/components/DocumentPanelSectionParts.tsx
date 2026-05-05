@@ -20,6 +20,7 @@ interface DocumentPanelContentProps {
   isFolderListView: boolean;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  onCreatePdfHighlight: (selectionText: string) => boolean;
   onNodeContentChange: (nodeId: string, content: string) => void;
   onSelectNode: (nodeId: string) => void;
 }
@@ -104,12 +105,14 @@ function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>)
 
 function renderPdfDocumentSurface(
   pdfDocumentSurface: { sourceHint: string | null; sourceLabel: string; state: PdfDocumentSurfaceState },
-  bodyProps: ComponentProps<typeof DocumentPanelBody>
+  bodyProps: ComponentProps<typeof DocumentPanelBody>,
+  onCreatePdfHighlight: (selectionText: string) => boolean
 ) {
   if (pdfDocumentSurface.state === 'ready') {
     return (
       <PdfDocumentSurface
         nodeViewState={bodyProps.editorNodeViewState}
+        onCreateHighlightFromSelection={onCreatePdfHighlight}
         onViewStateChange={(viewState) => bodyProps.onRevealDocumentSelection(viewState.selection)}
         sourceHint={pdfDocumentSurface.sourceHint ?? ''}
         sourceLabel={pdfDocumentSurface.sourceLabel}
@@ -134,6 +137,7 @@ export function DocumentPanelContent({
   isFolderListView,
   nodeOrder,
   nodesById,
+  onCreatePdfHighlight,
   onNodeContentChange,
   onSelectNode
 }: DocumentPanelContentProps) {
@@ -165,7 +169,7 @@ export function DocumentPanelContent({
   }
 
   if (pdfDocumentSurface) {
-    return renderPdfDocumentSurface(pdfDocumentSurface, bodyProps);
+    return renderPdfDocumentSurface(pdfDocumentSurface, bodyProps, onCreatePdfHighlight);
   }
 
   return (

@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import {
   PdfDocumentErrorState,
@@ -9,6 +10,7 @@ import {
 } from './PdfDocumentViewportParts';
 
 interface PdfDocumentViewportProps {
+  onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   loadError: string | null;
   maxPage: number;
   onNextPage: () => void;
@@ -30,6 +32,7 @@ interface PdfDocumentViewportProps {
 }
 
 export function PdfDocumentViewport({
+  onContextMenu,
   loadError,
   maxPage,
   onNextPage,
@@ -62,6 +65,7 @@ export function PdfDocumentViewport({
 
   return (
     <PdfDocumentViewportContent
+      handleContextMenu={onContextMenu}
       handleScroll={handleScroll}
       maxPage={maxPage}
       onLoadError={onLoadError}

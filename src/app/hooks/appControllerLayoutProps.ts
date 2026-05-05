@@ -50,6 +50,7 @@ export interface BuildControllerLayoutPropsArgs {
   ws: {
     activeNodeId: string | null;
     createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
+    createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string) => string | null;
     createVirtualNode: () => string;
     createRootNode: (content?: string, kind?: NodeKind) => string;
     documentMaxWidth: number;
@@ -109,6 +110,12 @@ function createLayoutEditorCtx(args: BuildControllerLayoutPropsArgs) {
     onCopyImage: args.editorCtx.handleCopyImage,
     onCreateCloze: args.editorCtx.handleCreateCloze,
     onCreateHighlight: args.editorCtx.handleCreateHighlight,
+    onCreatePdfHighlight: (selectionText: string) => {
+      if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
+        return false;
+      }
+      return Boolean(args.ws.createHighlightNodeFromSelection(args.ws.activeNodeId, selectionText));
+    },
     onCutImage: args.editorCtx.handleCutImage,
     onDeleteImage: args.editorCtx.handleDeleteImage,
     onEditorContextMenu: args.editorCtx.handleEditorContextMenu,

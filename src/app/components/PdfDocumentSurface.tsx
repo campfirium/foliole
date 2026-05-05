@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
+import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
+import { normalizeContextMenuPosition } from '../contextCommands';
 
 import { PdfDocumentViewport } from './PdfDocumentViewport';
+import { resolvePdfSelectionText } from './pdfSelectionText';
 
 const PDF_PAGE_MIN = 1;
 const PDF_ZOOM_DEFAULT = 100;
@@ -25,6 +31,7 @@ function configurePdfWorker() {
 configurePdfWorker();
 
 interface PdfDocumentSurfaceProps {
+  onCreateHighlightFromSelection?: (selectionText: string) => boolean;
   sourceHint: string;
   sourceLabel: string;
   nodeViewState?: NodeViewState;
@@ -124,11 +131,75 @@ function usePdfSurfaceState(
   };
 }
 
-export function PdfDocumentSurface({ nodeViewState, onViewStateChange, sourceHint }: PdfDocumentSurfaceProps) {
+function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionText: string) => boolean) {
+  const [selectionMenuState, setSelectionMenuState] = useState<{ left: number; top: number; selectionText: string } | null>(null);
+  const surfaceRef = useRef<HTMLElement | null>(null);
+
+  const handleContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const selectionText = resolvePdfSelectionText(surfaceRef.current, window.getSelection());
+    if (!selectionText) {
+      setSelectionMenuState(null);
+      return;
+    }
+    event.preventDefault();
+    const position = normalizeContextMenuPosition(event.clientX, event.clientY);
+    setSelectionMenuState({
+      left: position.left,
+      top: position.top,
+      selectionText
+    });
+  };
+
+  const closeSelectionMenu = () => {
+    setSelectionMenuState(null);
+  };
+
+  const handleCreateHighlight = () => {
+    if (!selectionMenuState?.selectionText) {
+      closeSelectionMenu();
+      return;
+    }
+    onCreateHighlightFromSelection?.(selectionMenuState.selectionText);
+    closeSelectionMenu();
+  };
+
+  return {
+    closeSelectionMenu,
+    handleContextMenu,
+    handleCreateHighlight,
+    selectionMenuState,
+    surfaceRef
+  };
+}
+
+function PdfSelectionContextMenu({
+  onClose,
+  onCreateHighlight,
+  state
+}: {
+  onClose: () => void;
+  onCreateHighlight: () => void;
+  state: { left: number; top: number } | null;
+}) {
+  if (!state) {
+    return null;
+  }
+
+  return (
+    <AppSelectionDropdownMenu left={state.left} onClose={onClose} top={state.top}>
+      <AppSelectionDropdownMenuItem onClick={onCreateHighlight}>Highlight</AppSelectionDropdownMenuItem>
+    </AppSelectionDropdownMenu>
+  );
+}
+
+export function PdfDocumentSurface({ nodeViewState, onCreateHighlightFromSelection, onViewStateChange, sourceHint }: PdfDocumentSurfaceProps) {
   const { handlePageChange, loadError, maxPage, page, pdfSource, setLoadError, setPage, setTotalPages, setZoom, zoom } =
     usePdfSurfaceState(nodeViewState, onViewStateChange, sourceHint);
   const [pageJumpRequest, setPageJumpRequest] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
+  const { closeSelectionMenu, handleContextMenu, handleCreateHighlight, selectionMenuState, surfaceRef } = usePdfSelectionContextMenu(
+    onCreateHighlightFromSelection
+  );
 
   const handlePageInputChange = (value: number) => {
     handlePageChange(value);
@@ -142,11 +213,12 @@ export function PdfDocumentSurface({ nodeViewState, onViewStateChange, sourceHin
   };
 
   return (
-    <section aria-label="PDF reader panel" className="relative flex min-h-0 flex-1 flex-col bg-bg-canvas" data-testid="pdf-document-surface">
+    <section aria-label="PDF reader panel" className="relative flex min-h-0 flex-1 flex-col bg-bg-canvas" data-testid="pdf-document-surface" ref={surfaceRef}>
       <div className="relative flex min-h-0 flex-1 flex-col">
         <PdfDocumentViewport
           loadError={loadError}
           maxPage={maxPage}
+          onContextMenu={handleContextMenu}
           onNextPage={() => handlePageStep(1)}
           onLoadError={(message) => setLoadError(message)}
           onLoadSuccess={(numPages) => {
@@ -168,6 +240,7 @@ export function PdfDocumentSurface({ nodeViewState, onViewStateChange, sourceHin
           zoom={zoom}
         />
       </div>
+      <PdfSelectionContextMenu onClose={closeSelectionMenu} onCreateHighlight={handleCreateHighlight} state={selectionMenuState} />
     </section>
   );
 }

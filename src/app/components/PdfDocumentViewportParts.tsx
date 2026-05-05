@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { Document, Page } from 'react-pdf';
 
 import { PdfDocumentToolbar } from './PdfDocumentToolbar';
@@ -125,8 +126,8 @@ function PdfDocumentPages({ pageElementsRef, rotation, totalPages, zoom }: { pag
           className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
           data-testid="pdf-document-page"
           pageNumber={pageNumber}
-          renderAnnotationLayer={false}
-          renderTextLayer={false}
+          renderAnnotationLayer
+          renderTextLayer
           rotate={rotation}
           scale={zoom / 100}
         />
@@ -146,6 +147,7 @@ export function PdfDocumentErrorState({ loadError }: { loadError: string }) {
 }
 
 interface PdfDocumentViewportContentProps {
+  handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleScroll: () => void;
   maxPage: number;
   onLoadError: (message: string) => void;
@@ -166,6 +168,7 @@ interface PdfDocumentViewportContentProps {
 }
 
 export function PdfDocumentViewportContent({
+  handleContextMenu,
   handleScroll,
   maxPage,
   onLoadError,
@@ -187,6 +190,7 @@ export function PdfDocumentViewportContent({
   return (
     <div
       className="app-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-auto px-2 pb-5"
+      onContextMenu={handleContextMenu}
       onScroll={handleScroll}
       ref={scrollContainerRef}
     >

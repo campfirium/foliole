@@ -101,6 +101,7 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       onCopyImage={props.onCopyImage}
       onCreateCloze={props.onCreateCloze}
       onCreateHighlight={props.onCreateHighlight}
+      onCreatePdfHighlight={props.onCreatePdfHighlight}
       onCutImage={props.onCutImage}
       onDeleteImage={props.onDeleteImage}
       onEditorChange={props.onEditorChange}

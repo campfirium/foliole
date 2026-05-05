@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import '../../test/reactPdfMock';
+
 import { DocumentPanelSection } from './DocumentPanelSection';
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -81,6 +83,7 @@ function renderSectionWithProps(overrides: Partial<ComponentProps<typeof Documen
       onCopyImage={() => undefined}
       onCreateCloze={() => undefined}
       onCreateHighlight={() => undefined}
+      onCreatePdfHighlight={() => false}
       onCutImage={() => undefined}
       onDeleteImage={() => undefined}
       onEditorChange={() => undefined}

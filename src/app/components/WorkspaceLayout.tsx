@@ -103,6 +103,7 @@ export interface WorkspaceLayoutProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
+  onCreatePdfHighlight: (selectionText: string) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;

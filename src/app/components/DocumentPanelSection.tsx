@@ -38,6 +38,7 @@ interface DocumentPanelSectionProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
+  onCreatePdfHighlight: (selectionText: string) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
@@ -224,12 +225,13 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         <DocumentPanelContent
           activeNodeId={props.activeNodeId}
           bodyProps={bodyProps}
-          isFolderListView={isFolderListView}
-          nodeOrder={props.nodeOrder}
-          nodesById={props.nodesById}
-          onSelectNode={props.onSelectNode}
-          onNodeContentChange={props.onNodeContentChange}
-        />
+        isFolderListView={isFolderListView}
+        nodeOrder={props.nodeOrder}
+        nodesById={props.nodesById}
+        onCreatePdfHighlight={props.onCreatePdfHighlight}
+        onSelectNode={props.onSelectNode}
+        onNodeContentChange={props.onNodeContentChange}
+      />
       </section>
       {sourceUpdatePreview.value ? (
         <DocumentPanelSourceUpdatePanel
