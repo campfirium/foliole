@@ -1,4 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const writerQueueMock = vi.hoisted(() => ({
+  run: vi.fn(async <T>(task: () => Promise<T>) => task())
+}));
+
+vi.mock('./companionSyncWriterQueue', () => ({
+  runCompanionSyncWriterTask: writerQueueMock.run
+}));
+
 function createApplyPluginMocks() {
   return {
     applySyncObjects: vi.fn(async () => ({ applied_object_ids: ['setting:one'] })),
@@ -186,10 +195,19 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     updated_at: '2026-04-25T00:00:00.000Z'
   }])).resolves.toEqual(['setting:one']);
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual(['op-1']);
+  await expect(api.saveCompanionSyncPushAcks([{
+    clientOpId: 'client-op-1',
+    identity: { objectId: 'one', objectType: 'setting', scope: 'device' },
+    stateSeq: 4,
+    status: 'accepted'
+  }])).resolves.toEqual(['op-1']);
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(8);
 }
 
 describe('companion sync objects bridge', () => {
   beforeEach(() => {
+    writerQueueMock.run.mockClear();
+    writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => task());
     capacitorMock.isNative.mockReturnValue(true);
     capacitorMock.platform.mockReturnValue('android');
   });

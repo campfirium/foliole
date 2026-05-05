@@ -4,6 +4,7 @@ import type {
   NativeSyncReviewLogRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
@@ -62,7 +63,9 @@ export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[
   if (!isNativeAndroidCompanionRuntime()) {
     return [];
   }
-  return (await FolioleCompanionSync.applySyncObjects({ objects })).applied_object_ids;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.applySyncObjects({ objects })
+  ).applied_object_ids);
 }
 
 export {
@@ -105,7 +108,9 @@ export async function applyCompanionSyncReviewLog(reviews: NativeSyncReviewLogRe
   if (!isNativeAndroidCompanionRuntime()) {
     return [];
   }
-  return (await FolioleCompanionSync.applySyncReviewLog({ reviews })).applied_op_ids;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.applySyncReviewLog({ reviews })
+  ).applied_op_ids);
 }
 
 export async function loadCompanionPdfPageText(attachmentId: string) {
@@ -126,12 +131,14 @@ export async function saveCompanionSyncPushAcks(acks: SyncPushAck[]) {
   if (!isNativeAndroidCompanionRuntime()) {
     return [] as string[];
   }
-  return (await FolioleCompanionSync.saveSyncPushAcks({
-    acks: acks.map((ack) => ({
-      client_op_id: ack.clientOpId,
-      identity: ack.identity,
-      state_seq: ack.stateSeq,
-      status: ack.status
-    }))
-  })).saved_client_op_ids;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.saveSyncPushAcks({
+      acks: acks.map((ack) => ({
+        client_op_id: ack.clientOpId,
+        identity: ack.identity,
+        state_seq: ack.stateSeq,
+        status: ack.status
+      }))
+    })
+  ).saved_client_op_ids);
 }

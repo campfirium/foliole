@@ -4,6 +4,7 @@ import type {
 } from '../../../lib/platform/nativeStorageContract';
 import type { NativeSyncReviewLogDraft } from '../../../lib/platform/nativeSyncContract';
 
+import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
@@ -20,14 +21,16 @@ export async function saveCompanionSyncSettingRecord(args: {
   if (!isNativeAndroidCompanionRuntime()) {
     return null;
   }
-  return FolioleCompanionSync.saveSyncSettingRecord({
-    device_id: args.deviceId ?? '*',
-    form_factor: args.formFactor ?? 'phone',
-    key: args.key,
-    platform: args.platform ?? 'android',
-    scope: args.scope ?? 'device',
-    value_json: args.valueJson
-  });
+  return runCompanionSyncWriterTask(() => (
+    FolioleCompanionSync.saveSyncSettingRecord({
+      device_id: args.deviceId ?? '*',
+      form_factor: args.formFactor ?? 'phone',
+      key: args.key,
+      platform: args.platform ?? 'android',
+      scope: args.scope ?? 'device',
+      value_json: args.valueJson
+    })
+  ));
 }
 
 export async function saveCompanionSyncNodeReadingRecord(args: {
@@ -37,19 +40,21 @@ export async function saveCompanionSyncNodeReadingRecord(args: {
   if (!isNativeAndroidCompanionRuntime()) {
     return null;
   }
-  return FolioleCompanionSync.saveSyncNodeReadingRecord({
-    node_id: args.nodeId,
-    reading_json: JSON.stringify({
-      interval_duration_ms: args.reading.intervalDurationMs,
-      interval_growth_factor: args.reading.intervalGrowthFactor,
-      last_handled_at: args.reading.lastHandledAt,
-      next_at: args.reading.nextAt,
-      priority: args.reading.priority,
-      reading_position: args.reading.readingPosition,
-      repetition_count: args.reading.repetitionCount,
-      state: args.reading.state
+  return runCompanionSyncWriterTask(() => (
+    FolioleCompanionSync.saveSyncNodeReadingRecord({
+      node_id: args.nodeId,
+      reading_json: JSON.stringify({
+        interval_duration_ms: args.reading.intervalDurationMs,
+        interval_growth_factor: args.reading.intervalGrowthFactor,
+        last_handled_at: args.reading.lastHandledAt,
+        next_at: args.reading.nextAt,
+        priority: args.reading.priority,
+        reading_position: args.reading.readingPosition,
+        repetition_count: args.reading.repetitionCount,
+        state: args.reading.state
+      })
     })
-  });
+  ));
 }
 
 export async function saveCompanionSyncNodeReviewRecord(args: {
@@ -60,28 +65,32 @@ export async function saveCompanionSyncNodeReviewRecord(args: {
   if (!isNativeAndroidCompanionRuntime()) {
     return null;
   }
-  return FolioleCompanionSync.saveSyncNodeReviewRecord({
-    node_id: args.nodeId,
-    review_json: JSON.stringify({
-      difficulty: args.review.difficulty,
-      due: args.review.due,
-      elapsed_days: args.review.elapsedDays,
-      lapses: args.review.lapses,
-      last_review_at: args.review.lastReviewAt,
-      reps: args.review.reps,
-      scheduled_days: args.review.scheduledDays,
-      stability: args.review.stability,
-      state: args.review.state
-    }),
-    review_log_json: args.reviewLog ? JSON.stringify(args.reviewLog) : undefined
-  });
+  return runCompanionSyncWriterTask(() => (
+    FolioleCompanionSync.saveSyncNodeReviewRecord({
+      node_id: args.nodeId,
+      review_json: JSON.stringify({
+        difficulty: args.review.difficulty,
+        due: args.review.due,
+        elapsed_days: args.review.elapsedDays,
+        lapses: args.review.lapses,
+        last_review_at: args.review.lastReviewAt,
+        reps: args.review.reps,
+        scheduled_days: args.review.scheduledDays,
+        stability: args.review.stability,
+        state: args.review.state
+      }),
+      review_log_json: args.reviewLog ? JSON.stringify(args.reviewLog) : undefined
+    })
+  ));
 }
 
 export async function saveCompanionSyncActiveViewState(nodeId: string | null) {
   if (!isNativeAndroidCompanionRuntime()) {
     return null;
   }
-  return FolioleCompanionSync.saveSyncActiveViewState({ node_id: nodeId });
+  return runCompanionSyncWriterTask(() => (
+    FolioleCompanionSync.saveSyncActiveViewState({ node_id: nodeId })
+  ));
 }
 
 export async function saveCompanionSyncNodeViewState(args: {
@@ -91,9 +100,11 @@ export async function saveCompanionSyncNodeViewState(args: {
   if (!isNativeAndroidCompanionRuntime()) {
     return null;
   }
-  return FolioleCompanionSync.saveSyncNodeViewState({
-    node_id: args.nodeId,
-    scroll_top: Math.max(0, Math.trunc(args.scrollTop)),
-    source: 'user-scroll'
-  });
+  return runCompanionSyncWriterTask(() => (
+    FolioleCompanionSync.saveSyncNodeViewState({
+      node_id: args.nodeId,
+      scroll_top: Math.max(0, Math.trunc(args.scrollTop)),
+      source: 'user-scroll'
+    })
+  ));
 }
