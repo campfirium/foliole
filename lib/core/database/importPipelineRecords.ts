@@ -14,6 +14,12 @@ interface ImportSourceRow {
   last_content_fingerprint: string;
 }
 
+interface ExistingNodeRow {
+  [column: string]: unknown;
+  deleted_at: string | null;
+  id: string;
+}
+
 export function buildImportRecord(
   prepared: PreparedImportRecord,
   resultStatus: PersistedImportRecord['resultStatus'],
@@ -37,8 +43,12 @@ export function buildImportRecord(
   };
 }
 
-export function resolveDuplicateSemantic(existingSource: ImportSourceRow | null, contentFingerprint: string) {
-  if (!existingSource) {
+export function resolveDuplicateSemantic(
+  existingSource: ImportSourceRow | null,
+  existingNode: ExistingNodeRow | null,
+  contentFingerprint: string
+) {
+  if (!existingSource || !existingNode || existingNode.deleted_at) {
     return 'new';
   }
   return existingSource.last_content_fingerprint === contentFingerprint ? 'duplicate' : 'updated';

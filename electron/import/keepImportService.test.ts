@@ -49,7 +49,7 @@ afterEach(async () => {
   notifyManagedInboxUpdated.mockReset();
 });
 
-it('blocks keep auto recreation after the imported node is deleted', async () => {
+it('recreates a new keep-import node after the previous one was deleted', async () => {
   const sourceDir = path.join(tempRoot, 'sources');
   await fs.mkdir(sourceDir, { recursive: true });
   const filePath = path.join(sourceDir, 'entry.md');
@@ -80,8 +80,9 @@ it('blocks keep auto recreation after the imported node is deleted', async () =>
   });
   expect(preview.entries).toEqual([
     expect.objectContaining({
+      detail: 'Deleted item will be imported again as a new node.',
       source_path: 'entry.md',
-      status: 'blocked_deleted'
+      status: 'new'
     })
   ]);
 
@@ -91,7 +92,9 @@ it('blocks keep auto recreation after the imported node is deleted', async () =>
     ruleId: 'draft-import-source-101'
   });
 
-  const nodeCount = connection.sqlite.prepare(`SELECT COUNT(*) AS count FROM nodes WHERE title = 'entry'`).get() as { count: number };
+  const nodeRows = connection.sqlite
+    .prepare(`SELECT id, deleted_at FROM nodes WHERE title = 'entry' ORDER BY created_at ASC`)
+    .all() as Array<{ deleted_at: string | null; id: string }>;
   const keepItem = connection.sqlite
     .prepare(
       `SELECT last_status, last_node_id
@@ -100,10 +103,14 @@ it('blocks keep auto recreation after the imported node is deleted', async () =>
     )
     .get() as { last_node_id: string; last_status: string };
 
-  expect(nodeCount.count).toBe(1);
+  expect(nodeRows).toHaveLength(2);
+  expect(nodeRows[0]?.id).toBe(importedNode.latest_node_id);
+  expect(nodeRows[0]?.deleted_at).toBe('2026-03-25T00:10:00.000Z');
+  expect(nodeRows[1]?.id).not.toBe(importedNode.latest_node_id);
+  expect(nodeRows[1]?.deleted_at).toBeNull();
   expect(keepItem).toEqual({
-    last_node_id: importedNode.latest_node_id,
-    last_status: 'blocked_deleted'
+    last_node_id: nodeRows[1]?.id,
+    last_status: 'imported'
   });
 });
 

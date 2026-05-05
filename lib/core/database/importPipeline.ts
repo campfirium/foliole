@@ -144,14 +144,15 @@ function finalizeImportRecord(driver: DatabaseDriver, record: PersistedImportRec
 
 function buildBaseImportRecord(
   existingSource: ImportSourceRow | null,
+  existingNode: ExistingNodeRow | null,
   prepared: PreparedImportRecord
 ): { baseRecord: PersistedImportRecord; duplicateSemantic: PersistedImportRecord['duplicateSemantic'] } {
-  const duplicateSemantic = resolveDuplicateSemantic(existingSource, prepared.contentFingerprint);
+  const duplicateSemantic = resolveDuplicateSemantic(existingSource, existingNode, prepared.contentFingerprint);
   return {
     baseRecord: buildImportRecord(prepared, prepared.degradedReason ? 'degraded' : 'imported', duplicateSemantic, {
       degradedReason: prepared.degradedReason,
       failureReason: null,
-      nodeId: existingSource?.latest_node_id ?? null
+      nodeId: duplicateSemantic === 'new' ? null : existingSource?.latest_node_id ?? null
     }),
     duplicateSemantic
   };
@@ -192,7 +193,8 @@ function resolvePreparedNodeId(input: {
 
 function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord) {
   const existingSource = readExistingSource(driver, prepared.sourceFingerprint);
-  const { baseRecord, duplicateSemantic } = buildBaseImportRecord(existingSource, prepared);
+  const existingNode = existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null;
+  const { baseRecord, duplicateSemantic } = buildBaseImportRecord(existingSource, existingNode, prepared);
   if (duplicateSemantic === 'duplicate') {
     return finalizeImportRecord(driver, baseRecord);
   }
@@ -209,7 +211,7 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     baseRecord,
     driver,
     duplicateSemantic,
-    existingNode: existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null,
+    existingNode,
     prepared
   });
   persistImportedHighlightNodes({
@@ -235,11 +237,12 @@ export function recordPreparedImportFailure(
 ): PersistedImportRecord {
   return driver.transaction(() => {
     const existingSource = readExistingSource(driver, prepared.sourceFingerprint);
-    const duplicateSemantic = resolveDuplicateSemantic(existingSource, prepared.contentFingerprint);
+    const existingNode = existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null;
+    const duplicateSemantic = resolveDuplicateSemantic(existingSource, existingNode, prepared.contentFingerprint);
     const failedRecord = buildImportRecord(prepared, 'failed', duplicateSemantic, {
       degradedReason: null,
       failureReason,
-      nodeId: existingSource?.latest_node_id ?? null
+      nodeId: duplicateSemantic === 'new' ? null : existingSource?.latest_node_id ?? null
     });
     writeImportSource(driver, failedRecord);
     writeImportEvent(driver, failedRecord);

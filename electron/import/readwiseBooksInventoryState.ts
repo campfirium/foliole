@@ -85,6 +85,9 @@ function resolveGeneratedNodeId(book: ReadwiseBookInventoryItem, persistedBook?:
   if (!persistedBook?.generatedNodeId) {
     return book.generatedNodeId;
   }
+  if (!hasActiveNode(persistedBook.generatedNodeId)) {
+    return book.generatedNodeId;
+  }
   return !book.generatedNodeId || book.generatedNodeId === buildReadwiseBookPlaceholderNodeId(book.bookKey)
     ? persistedBook.generatedNodeId
     : book.generatedNodeId;

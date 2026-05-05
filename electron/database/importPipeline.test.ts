@@ -150,7 +150,7 @@ it('persists new, duplicate, updated and degraded import semantics with traceabi
     }
   ]);
   expect(nodeRow).toEqual({
-    content: '## Imported\nUpdated body',
+    content: '# Imported\nUpdated body',
     hide_title_heading: 1,
     parent_id: 'special-inbox',
     title: 'note'
@@ -189,7 +189,7 @@ it('persists explicit degraded reasons while still writing converted content', (
     }
   ]);
   expect(nodeRow).toEqual({
-    content: '## Imported\n\n[Table degraded]\nName | Value',
+    content: '# Imported\n\n[Table degraded]\nName | Value',
     hide_title_heading: 1,
     parent_id: 'special-inbox',
     title: 'note'
@@ -211,7 +211,7 @@ it('adopts markdown highlight markers into Foliole highlight anchors when config
   const { childRows, nodeRow } = readPersistedImportState(adopted.sourceFingerprint, adopted.nodeId);
 
   expect(nodeRow).toEqual({
-    content: '## Imported\nUse <highlight id="1">important</highlight id="1"> text',
+    content: '# Imported\nUse <highlight id="1">important</highlight id="1"> text',
     hide_title_heading: 1,
     parent_id: 'special-inbox',
     title: 'note'

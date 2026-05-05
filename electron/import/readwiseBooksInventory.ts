@@ -200,10 +200,10 @@ export async function scanReadwiseBooksInventory(input: {
     highlightDirectoryPath: input.highlightDirectoryPath,
     scannedAt
   } satisfies ReadwiseBooksInventory;
-  const inventory = mergePersistedReadwiseBooksInventory({
-    currentInventory: ensureReadwiseBookNodes(scannedInventory),
+  const inventory = ensureReadwiseBookNodes(mergePersistedReadwiseBooksInventory({
+    currentInventory: scannedInventory,
     restoreMissingBooks: !highlightDirectoryAvailable || !fullDocumentDirectoryAvailable
-  });
+  }));
   savePersistedReadwiseBooksInventory(inventory);
   return inventory;
 }

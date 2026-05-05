@@ -44,9 +44,12 @@ export function resolveGeneratedNodeId(bucket: ReadwiseBookSourceLookup) {
   const connection = openDatabaseConnection();
   const trackedRow = connection.sqlite
     .prepare(
-      `SELECT latest_node_id
-       FROM import_sources
-       WHERE source_fingerprint = ? AND latest_node_id IS NOT NULL`
+      `SELECT source.latest_node_id
+       FROM import_sources source
+       JOIN nodes node ON node.id = source.latest_node_id
+       WHERE source.source_fingerprint = ?
+         AND source.latest_node_id IS NOT NULL
+         AND node.deleted_at IS NULL`
     )
     .get(trackedFingerprint) as { latest_node_id: string } | undefined;
   if (trackedRow?.latest_node_id) {
@@ -63,10 +66,13 @@ export function resolveGeneratedNodeId(bucket: ReadwiseBookSourceLookup) {
   const placeholder = fallbackLocators.map(() => '?').join(', ');
   const fallbackRow = connection.sqlite
     .prepare(
-      `SELECT latest_node_id
-       FROM import_sources
-       WHERE latest_node_id IS NOT NULL AND source_locator IN (${placeholder})
-       ORDER BY last_imported_at DESC
+      `SELECT source.latest_node_id
+       FROM import_sources source
+       JOIN nodes node ON node.id = source.latest_node_id
+       WHERE source.latest_node_id IS NOT NULL
+         AND source.source_locator IN (${placeholder})
+         AND node.deleted_at IS NULL
+       ORDER BY source.last_imported_at DESC
        LIMIT 1`
     )
     .get(...fallbackLocators) as { latest_node_id: string } | undefined;

@@ -211,7 +211,7 @@ it('loads the books inventory from import manager settings', async () => {
   ]);
 });
 
-it('promotes changed books to the top and marks deleted book nodes as pending', async () => {
+it('promotes changed books to the top and gives deleted books a fresh node', async () => {
   const { fullDocumentDir, highlightDir } = await seedReadwiseBooksFixture();
   const initialInventory = await scanReadwiseBooksInventory({
     fullDocumentDirectoryPath: fullDocumentDir,
@@ -220,10 +220,11 @@ it('promotes changed books to the top and marks deleted book nodes as pending', 
   });
   const plainBook = initialInventory.books.find((book) => book.bookKey === 'plain book');
   expect(plainBook?.generatedNodeId).toBeTruthy();
+  const previousNodeId = plainBook!.generatedNodeId;
   const connection = openDatabaseConnection().sqlite;
   connection
     .prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?')
-    .run('2026-04-04T00:00:00.000Z', plainBook!.generatedNodeId);
+    .run('2026-04-04T00:00:00.000Z', previousNodeId);
 
   const reloadedInventory = await scanReadwiseBooksInventory({
     fullDocumentDirectoryPath: fullDocumentDir,
@@ -234,6 +235,8 @@ it('promotes changed books to the top and marks deleted book nodes as pending', 
   expect(reloadedInventory.books[0]).toMatchObject({
     bookKey: 'plain book',
     importStatus: 'pending',
-    nodeStatus: 'missing'
+    nodeStatus: 'generated'
   });
+  expect(reloadedInventory.books[0]?.generatedNodeId).toBeTruthy();
+  expect(reloadedInventory.books[0]?.generatedNodeId).not.toBe(previousNodeId);
 });
