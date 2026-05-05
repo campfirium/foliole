@@ -7,6 +7,7 @@ const capacitorMock = vi.hoisted(() => ({
     loadExternalDocument: vi.fn(async () => ({
       document: {
         content: 'cached external content',
+        content_status: 'missing',
         document_id: 'folder-1:doc.md',
         extension: 'md',
         file_name: 'doc.md',
@@ -21,6 +22,7 @@ const capacitorMock = vi.hoisted(() => ({
       query: 'external',
       results: [{
         content: 'cached external content',
+        content_status: 'ready',
         document_id: 'folder-1:doc.md',
         excerpt: 'cached external content',
         extension: 'md',
@@ -55,12 +57,14 @@ describe('companion external documents bridge', () => {
     const api = await import('./companionExternalDocuments');
 
     await expect(api.loadCompanionExternalDocument('folder-1:doc.md')).resolves.toMatchObject({
+      bodyStatus: 'missing',
       content: 'cached external content',
       document_id: 'folder-1:doc.md'
     });
     expect(capacitorMock.plugin.loadExternalDocument).toHaveBeenCalledWith({ document_id: 'folder-1:doc.md' });
 
     await expect(api.searchCompanionExternalDocuments('external', 5)).resolves.toEqual([expect.objectContaining({
+      bodyStatus: 'ready',
       document_id: 'folder-1:doc.md',
       excerpt: 'cached external content'
     })]);

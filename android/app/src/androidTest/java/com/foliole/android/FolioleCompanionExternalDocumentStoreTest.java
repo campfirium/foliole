@@ -53,6 +53,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
 
         assertEquals("folder-1:doc.md", document.getString("document_id"));
         assertEquals("cached external content", document.getString("content"));
+        assertEquals("ready", document.getString("content_status"));
         assertEquals("External Doc", document.getString("title"));
     }
 
@@ -69,6 +70,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
         assertEquals(1, results.length());
         assertEquals("folder-1:beta.md", results.getJSONObject(0).getString("document_id"));
         assertEquals("cached beta body", results.getJSONObject(0).getString("excerpt"));
+        assertEquals("ready", results.getJSONObject(0).getString("content_status"));
     }
 
     @Test
@@ -89,6 +91,31 @@ public class FolioleCompanionExternalDocumentStoreTest {
         JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:blob.md");
 
         assertEquals("blob text body", loaded.getJSONObject("document").getString("content"));
+        assertEquals("ready", loaded.getJSONObject("document").getString("content_status"));
+    }
+
+    @Test
+    public void marksExternalDocumentBodyMissingUntilBlobDataArrives() throws Exception {
+        database.execSQL(
+            "INSERT INTO external_documents (" +
+                "document_id, folder_id, relative_path, file_name, extension, source_size_bytes, " +
+                "source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, " +
+                "content, indexed_at, created_at, updated_at" +
+                ") VALUES ('folder-1:missing.md', 'folder-1', 'missing.md', 'missing.md', 'md', 12, " +
+                "'2026-04-26T00:00:00.000Z', 1777, 'hash', 'Missing Blob Doc', 'opening copy', 'missing-hash', " +
+                "'', '2026-04-26T01:00:00.000Z', '2026-04-26T01:00:00.000Z', '2026-04-26T01:00:00.000Z')"
+        );
+
+        JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:missing.md");
+        JSONObject document = loaded.getJSONObject("document");
+        JSONArray results = FolioleCompanionExternalDocumentStore.searchDocuments(database, "missing", 10)
+            .getJSONArray("results");
+
+        assertEquals("", document.getString("content"));
+        assertEquals("missing", document.getString("content_status"));
+        assertEquals(1, results.length());
+        assertEquals("missing", results.getJSONObject(0).getString("content_status"));
+        assertEquals("", results.getJSONObject(0).getString("excerpt"));
     }
 
     @Test

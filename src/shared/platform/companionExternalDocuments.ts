@@ -4,6 +4,7 @@ import {
 } from './companionWorkspaceSyncBridge';
 
 export interface CompanionExternalDocument {
+  bodyStatus?: 'missing' | 'ready';
   content: string;
   document_id: string;
   extension: string;
@@ -20,16 +21,38 @@ export interface CompanionExternalDocumentSearchResult extends CompanionExternal
   match_start: number;
 }
 
+type NativeExternalDocument = Omit<CompanionExternalDocument, 'bodyStatus'> & {
+  content_status?: 'missing' | 'ready';
+};
+
+type NativeExternalDocumentSearchResult = Omit<CompanionExternalDocumentSearchResult, 'bodyStatus'> & {
+  content_status?: 'missing' | 'ready';
+};
+
 export async function loadCompanionExternalDocument(documentId: string) {
   if (!isNativeAndroidCompanionRuntime()) {
     return null as CompanionExternalDocument | null;
   }
-  return (await FolioleCompanionSync.loadExternalDocument({ document_id: documentId })).document;
+  const document = (await FolioleCompanionSync.loadExternalDocument({ document_id: documentId })).document as NativeExternalDocument | null;
+  return document ? normalizeExternalDocument(document) : null;
 }
 
 export async function searchCompanionExternalDocuments(query: string, limit?: number) {
   if (!isNativeAndroidCompanionRuntime()) {
     return [] as CompanionExternalDocumentSearchResult[];
   }
-  return (await FolioleCompanionSync.searchExternalDocuments({ limit, query })).results;
+  const results = (await FolioleCompanionSync.searchExternalDocuments({ limit, query })).results as NativeExternalDocumentSearchResult[];
+  return results.map(normalizeExternalDocumentSearchResult);
+}
+
+function normalizeExternalDocument<T extends NativeExternalDocument>(document: T): CompanionExternalDocument & Omit<T, 'content_status'> {
+  const { content_status, ...rest } = document;
+  return {
+    ...rest,
+    bodyStatus: content_status === 'missing' ? 'missing' : 'ready'
+  };
+}
+
+function normalizeExternalDocumentSearchResult(document: NativeExternalDocumentSearchResult): CompanionExternalDocumentSearchResult {
+  return normalizeExternalDocument(document);
 }

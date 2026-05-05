@@ -23,7 +23,7 @@ final class FolioleCompanionExternalDocumentStore {
         }
         try (Cursor cursor = database.rawQuery(
             "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, " +
-                "COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, updated_at " +
+                "ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, updated_at " +
                 "FROM external_documents ed " +
                 "LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash " +
                 "WHERE document_id = ? AND is_present = 1 LIMIT 1",
@@ -47,7 +47,7 @@ final class FolioleCompanionExternalDocumentStore {
         }
         try (Cursor cursor = database.rawQuery(
             "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, " +
-                "COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, updated_at, " +
+                "ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, updated_at, " +
                 "instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) AS match_index " +
                 "FROM external_documents ed " +
                 "LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash " +
@@ -81,10 +81,10 @@ final class FolioleCompanionExternalDocumentStore {
 
     private static JSObject toSearchResult(Cursor cursor) {
         JSObject result = new JSObject();
-        int matchStart = Math.max(0, cursor.getInt(9) - 1);
+        int matchStart = Math.max(0, cursor.getInt(11) - 1);
         putDocumentFields(result, cursor);
         result.put("match_start", matchStart);
-        result.put("excerpt", buildExcerpt(cursor.getString(7), matchStart));
+        result.put("excerpt", buildExcerpt(resolveContent(cursor), matchStart));
         return result;
     }
 
@@ -96,8 +96,20 @@ final class FolioleCompanionExternalDocumentStore {
         target.put("extension", cursor.getString(4));
         target.put("title", cursor.getString(5));
         target.put("opening_text", cursor.getString(6));
-        target.put("content", cursor.getString(7));
-        target.put("updated_at", cursor.getString(8));
+        target.put("content", resolveContent(cursor));
+        target.put("content_status", resolveContentStatus(cursor));
+        target.put("updated_at", cursor.getString(10));
+    }
+
+    private static String resolveContent(Cursor cursor) {
+        String bodyBlobData = cursor.isNull(9) ? null : cursor.getString(9);
+        return bodyBlobData == null ? cursor.getString(7) : bodyBlobData;
+    }
+
+    private static String resolveContentStatus(Cursor cursor) {
+        String bodyBlobHash = cursor.isNull(8) ? null : cursor.getString(8);
+        boolean hasBodyBlobHash = bodyBlobHash != null && !bodyBlobHash.trim().isEmpty();
+        return hasBodyBlobHash && cursor.isNull(9) ? "missing" : "ready";
     }
 
     private static String buildExcerpt(String text, int matchStart) {

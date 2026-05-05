@@ -106,6 +106,7 @@ export interface CompanionWorkspaceSyncPlugin {
   }): Promise<{
     document: {
       content: string;
+      content_status?: 'missing' | 'ready';
       document_id: string;
       extension: string;
       file_name: string;
@@ -123,6 +124,7 @@ export interface CompanionWorkspaceSyncPlugin {
     query: string;
     results: Array<{
       content: string;
+      content_status?: 'missing' | 'ready';
       document_id: string;
       excerpt: string;
       extension: string;
