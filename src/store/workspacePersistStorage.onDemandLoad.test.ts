@@ -67,6 +67,47 @@ function createLongDocumentRuntimeInvoke(longDocument: string) {
   });
 }
 
+function createNearTermDirectionRuntimeInvoke(longDocument: string) {
+  return vi.fn().mockImplementation((command: string, payload?: { nodeId?: string }) => {
+    if (command === 'load_workspace_snapshot') {
+      throw new Error('full workspace snapshot should not be used for renderer hydrate');
+    }
+    if (command === 'load_workspace_list_snapshot') {
+      return Promise.resolve({
+        activeNodeId: 'node-1',
+        nodeOrder: ['node-1', 'node-2'],
+        nodesById: {
+          'node-1': { id: 'node-1', content: '', hasContent: true, hasReveal: false, reveal: null },
+          'node-2': { id: 'node-2', content: '', hasContent: true, hasReveal: false, reveal: null }
+        },
+        trashedNodeIds: []
+      });
+    }
+    if (command === 'load_node_document' && payload?.nodeId === 'node-2') {
+      return Promise.resolve({
+        nodeId: 'node-2',
+        content: longDocument,
+        hideTitleHeading: false,
+        reveal: null
+      });
+    }
+    if (command === 'load_reading_progress') {
+      return Promise.resolve({
+        activeNodeId: 'node-2',
+        nodeViewStateById: {
+          'node-2': {
+            scrollTop: 5_400,
+            selectionFrom: 48_000,
+            selectionTo: 48_024,
+            updatedAt: '2026-03-29T00:00:00.000Z'
+          }
+        }
+      });
+    }
+    return Promise.resolve(null);
+  });
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
   vi.mocked(getRuntimeInvoke).mockReset();
@@ -118,4 +159,36 @@ it('allows first open of a long document to load the full body from runtime hydr
   expect(nodesById?.['node-2']?.content).toBe(longDocument);
   expect(nodesById?.['node-2']?.content.length).toBeGreaterThan(100_000);
   expect(nodesById?.['node-1']?.content).toBe('');
+});
+
+it('hydrates the default near-term route with lightweight nodes, separate view state, and on-demand content only', async () => {
+  const longDocument = createLongDocument();
+  const invoke = createNearTermDirectionRuntimeInvoke(longDocument);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+  const parsed = JSON.parse(value ?? 'null') as {
+    state: {
+      activeNodeId: string | null;
+      nodeViewById: Record<string, { scrollTop: number; selection: { from: number; to: number } }>;
+      nodesById: Record<string, { content: string; hasContent: boolean; reveal: string | null }>;
+    };
+  } | null;
+
+  expect(parsed?.state.activeNodeId).toBe('node-2');
+  expect(parsed?.state.nodeViewById['node-2']).toEqual({
+    scrollTop: 5_400,
+    selection: { from: 48_000, to: 48_024 }
+  });
+  expect(parsed?.state.nodesById['node-1']).toMatchObject({
+    content: '',
+    hasContent: true,
+    reveal: null
+  });
+  expect(parsed?.state.nodesById['node-2']?.content).toBe(longDocument);
+  expect(parsed?.state.nodesById['node-2']?.content.length).toBeGreaterThan(100_000);
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
+    ['load_node_document', { nodeId: 'node-2' }]
+  ]);
+  expect(invoke.mock.calls.some(([command]) => command === 'load_workspace_snapshot')).toBe(false);
 });
