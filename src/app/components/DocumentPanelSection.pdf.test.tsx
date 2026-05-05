@@ -158,34 +158,23 @@ it('renders the pdf reading container for linked pdf nodes', () => {
 
   expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
   expect(screen.getByTestId('pdf-document-view')).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
-  expect(screen.getByTestId('pdf-document-page')).toBeInTheDocument();
-  expect(screen.getByText('sample.pdf')).toBeInTheDocument();
+  expect(screen.getByTestId('pdf-document-toolbar')).toBeInTheDocument();
   expect(screen.queryByText(/highlight/i)).not.toBeInTheDocument();
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
 });
 
-it('supports pdf page turning and zoom controls', () => {
+it('supports continuous pdf scrolling controls with page jump and zoom', () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
   renderSection();
 
-  const page = screen.getByTestId('pdf-document-page');
-  expect(page).toHaveAttribute('data-page', '1');
-  expect(page).toHaveAttribute('data-scale', '1');
-
-  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-  expect(page).toHaveAttribute('data-page', '2');
-  expect(page).toHaveAttribute('data-scale', '1');
-
   fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-  expect(page).toHaveAttribute('data-page', '2');
-  expect(page).toHaveAttribute('data-scale', '1.1');
+  expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('110%');
 
   fireEvent.change(screen.getByRole('spinbutton', { name: 'PDF page' }), {
     target: { value: '5' }
   });
-  expect(page).toHaveAttribute('data-page', '5');
-  expect(page).toHaveAttribute('data-scale', '1.1');
+  expect(screen.getByRole('spinbutton', { name: 'PDF page' })).toHaveValue(5);
 });
 
 it('shows a loading state while a pdf node source is refreshing', () => {
