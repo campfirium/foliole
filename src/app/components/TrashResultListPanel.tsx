@@ -57,7 +57,7 @@ function TrashRowsBody(props: {
   }
 
   return (
-    <div aria-label="Trash section" className="flex flex-col gap-2" role="tree">
+    <div aria-label="Trash topics" className="flex flex-col gap-2" role="tree">
       <TrashListRows
         activeNodeId={props.selectedNodeIds[0] ?? null}
         nodesById={props.nodesById}

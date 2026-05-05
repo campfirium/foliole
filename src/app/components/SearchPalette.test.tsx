@@ -190,6 +190,7 @@ it('renders search results as title context and path rows', async () => {
   expect(resultButtons[0]).toHaveTextContent('Atlas note');
   expect(resultButtons[1]).toHaveTextContent('Atlas highlight');
 });
+
 it('shows a watched source badge on the right for matching results', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(
     vi.fn().mockResolvedValue([

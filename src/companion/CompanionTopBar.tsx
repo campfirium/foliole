@@ -1,4 +1,5 @@
 import { ChevronLeft, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 type TopBarAction = {
   icon: LucideIcon;
@@ -25,6 +26,7 @@ export function CompanionTopBar(props: {
   leftAction?: TopBarAction;
   onBack?: () => void;
   rightAction?: TopBarAction;
+  rightSlot?: ReactNode;
   title?: string;
   visible: boolean;
 }) {
@@ -53,8 +55,8 @@ export function CompanionTopBar(props: {
         ) : (
           <div className="min-w-0 flex-1" />
         )}
-        <div className="flex w-10 justify-end">
-          {props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null}
+        <div className="flex min-w-10 justify-end">
+          {props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null)}
         </div>
       </div>
     </header>

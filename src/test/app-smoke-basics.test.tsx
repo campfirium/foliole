@@ -50,8 +50,8 @@ function expectReviewToolbarSummary(summary: string) {
   expect(screen.getAllByText(summary).length).toBeGreaterThan(0);
 }
 
-function getPressedTreeItem(name: string) {
-  return screen.getAllByRole('treeitem', { name }).find((item) => item.getAttribute('aria-pressed') === 'true') ?? null;
+function getSelectedTreeItem(name: string) {
+  return screen.getAllByRole('treeitem', { name }).find((item) => item.getAttribute('aria-selected') === 'true') ?? null;
 }
 
 beforeEach(() => {
@@ -210,7 +210,7 @@ it('syncs node list selection when review grading advances active node', async (
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   });
   await waitFor(() => {
-    expect(getPressedTreeItem('QA 2')).not.toBeNull();
+    expect(getSelectedTreeItem('QA 2')).not.toBeNull();
   });
 });
 

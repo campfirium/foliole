@@ -36,6 +36,10 @@ export interface CompanionFolderView {
   title: string;
 }
 
+export interface CompanionRootDirectoryView {
+  items: CompanionFolderListEntry[];
+}
+
 type CompanionReadableNode = WorkspaceSnapshot['nodesById'][string];
 
 function hasReadableContent(node: CompanionReadableNode | undefined) {
@@ -111,6 +115,10 @@ function isActiveFolderNode(node: CompanionReadableNode | undefined) {
   return Boolean(node && node.kind === 'folder');
 }
 
+function isRootFolderNode(node: CompanionReadableNode | undefined) {
+  return Boolean(node && node.kind === 'folder' && !node.parentNodeId);
+}
+
 export function resolveCompanionArticleTitle(node: CompanionReadableNode) {
   const headingTitle = extractImportedHeadingTitle(node.content);
   if (headingTitle) {
@@ -176,6 +184,32 @@ export function resolveCompanionFolderViewByNodeId(
     nodeId: folderNode.id,
     title: folderNode.title.trim() || 'Untitled'
   };
+}
+
+export function resolveCompanionRootDirectoryView(snapshot: WorkspaceSnapshot | null): CompanionRootDirectoryView {
+  if (!snapshot) {
+    return { items: [] };
+  }
+
+  return {
+    items: snapshot.nodeOrder
+      .filter((nodeId) => !snapshot.trashedNodeIds.includes(nodeId))
+      .map((nodeId) => snapshot.nodesById[nodeId])
+      .filter((node): node is CompanionReadableNode => isRootFolderNode(node))
+      .map(buildCompanionFolderListEntry)
+  };
+}
+
+export function resolveCompanionBrowseExitNodeId(snapshot: WorkspaceSnapshot | null, nodeId: string | null) {
+  if (!snapshot || !nodeId || snapshot.trashedNodeIds.includes(nodeId)) {
+    return null;
+  }
+  const node = snapshot.nodesById[nodeId];
+  const parentNodeId = node?.parentNodeId ?? null;
+  if (!parentNodeId || snapshot.trashedNodeIds.includes(parentNodeId)) {
+    return null;
+  }
+  return snapshot.nodesById[parentNodeId]?.kind === 'folder' ? parentNodeId : null;
 }
 
 export function resolveCompanionRecentArticles(snapshot: WorkspaceSnapshot | null): CompanionRecentArticle[] {

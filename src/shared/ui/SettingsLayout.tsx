@@ -190,7 +190,7 @@ export function SettingsSection({
         <div className="flex items-start justify-between gap-4 px-5">
           <div className="min-w-0">
             {title ? <h3 className="text-[0.95rem] font-semibold text-foreground">{title}</h3> : null}
-            {description ? <p className="mt-1 max-w-[760px] text-sm leading-6 text-foreground/60">{description}</p> : null}
+            {description ? <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{description}</p> : null}
           </div>
           {actions ? <div className="shrink-0">{actions}</div> : null}
         </div>

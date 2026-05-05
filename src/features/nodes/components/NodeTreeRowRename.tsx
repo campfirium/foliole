@@ -81,7 +81,7 @@ export function NodeRenameInput({
     <input
       aria-label={`Rename ${label}`}
       autoFocus
-      className="box-border h-5 min-w-0 max-w-full flex-1 rounded-sm border border-border/35 bg-[var(--app-surface-control-bg)] px-1.5 py-0 text-[13px] leading-5 text-foreground outline-none focus:border-border-strong focus:bg-[var(--app-surface-control-hover-bg)]"
+      className="box-border h-5 min-w-0 max-w-full flex-1 rounded-sm border border-border/35 bg-[var(--app-surface-control-bg)] px-1.5 py-0 text-[13px] leading-5 text-foreground focus:border-border-strong focus:bg-[var(--app-surface-control-hover-bg)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       onBlur={onSubmit}
       onChange={(event) => onChange(event.target.value)}
       onClick={(event) => event.stopPropagation()}

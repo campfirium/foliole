@@ -10,6 +10,7 @@ it('renders shared control wrappers without Radix theme context', () => {
   const { container } = render(
     <>
       <AppButton variant="primary">Save</AppButton>
+      <AppButton variant="list">Topic row</AppButton>
       <AppIconButton icon={<span aria-hidden="true">+</span>} label="Add item" />
       <AppPanel footer={<div>Footer</div>} title="Queue summary">
         <p>Panel body</p>
@@ -19,6 +20,7 @@ it('renders shared control wrappers without Radix theme context', () => {
   );
 
   expect(screen.getByRole('button', { name: 'Save' }).tagName).toBe('BUTTON');
+  expect(screen.getByRole('button', { name: 'Topic row' }).className).toContain('focus-visible:ring-ring');
   expect(screen.getByRole('button', { name: 'Add item' }).tagName).toBe('BUTTON');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).tagName).toBe('H3');
   expect(screen.getByText('Panel body')).toBeInTheDocument();

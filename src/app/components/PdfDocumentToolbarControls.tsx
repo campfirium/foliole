@@ -99,7 +99,7 @@ function PdfReadingModeControl(props: {
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label="Set PDF reading mode"
-          className="inline-flex min-h-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-2 text-xs text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus:outline-none"
+          className="inline-flex min-h-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-2 text-xs text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           type="button"
         >
           <PdfReadingModeLabel value={props.value} />

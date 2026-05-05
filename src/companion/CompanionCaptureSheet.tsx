@@ -1,48 +1,68 @@
+import { FileUp, Mic, Clipboard, type LucideIcon } from 'lucide-react';
+
 import {
   AppDialog,
   AppDialogClose,
   AppDialogContent,
-  AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle
 } from '../shared/ui';
 
+function CaptureActionRow(props: {
+  icon: LucideIcon;
+  label: string;
+}) {
+  const Icon = props.icon;
+  return (
+    <button
+      aria-disabled="true"
+      className="flex w-full items-center gap-3 border-b border-companion-divider px-1 py-4 text-left text-foreground disabled:text-companion-text-tertiary"
+      disabled
+      type="button"
+    >
+      <Icon className="h-5 w-5" />
+      <span className="text-base font-medium">{props.label}</span>
+    </button>
+  );
+}
+
 export function CompanionCaptureSheet(props: {
   onOpenChange(open: boolean): void;
   open: boolean;
 }) {
-  const options = [
-    'Text',
-    'Document',
-    'Link',
-    'File'
-  ];
-
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
       <AppDialogPortal>
         <AppDialogOverlay />
         <AppDialogContent className="bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-xl border-x-0 border-b-0 px-6 pb-6 pt-5">
           <div className="mx-auto w-full max-w-[760px]">
-            <AppDialogTitle>Add</AppDialogTitle>
-            <AppDialogDescription className="mt-2">
-              Add is not available on this device yet. Add new material on the desktop and sync again.
-            </AppDialogDescription>
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              {options.map((option) => (
-                <button
-                  className="rounded-md border border-border bg-canvas px-4 py-3 text-sm font-medium text-foreground transition hover:bg-bg-subtle"
-                  key={option}
-                  type="button"
-                >
-                  {option}
-                </button>
-              ))}
+            <div className="mb-4 flex items-center justify-between">
+              <AppDialogClose className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle">
+                Cancel
+              </AppDialogClose>
+              <AppDialogTitle>Capture</AppDialogTitle>
+              <div className="w-14" />
             </div>
-            <AppDialogClose className="mt-5 w-full rounded-md border border-border bg-canvas px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-bg-subtle">
-              Close
-            </AppDialogClose>
+            <div className="rounded-md border border-companion-divider px-4 py-4">
+              <button
+                aria-disabled="true"
+                className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-companion bg-companion-subtle text-companion-text-secondary"
+                disabled
+                type="button"
+              >
+                <Mic className="h-5 w-5" />
+              </button>
+              <textarea
+                aria-label="Capture text"
+                className="min-h-24 w-full resize-none bg-transparent text-base leading-6 text-foreground outline-none placeholder:text-companion-text-tertiary"
+                placeholder="Type or speak a new topic"
+              />
+            </div>
+            <div className="mt-5 border-t border-companion-divider">
+              <CaptureActionRow icon={Clipboard} label="Paste from Clipboard" />
+              <CaptureActionRow icon={FileUp} label="Upload File" />
+            </div>
           </div>
         </AppDialogContent>
       </AppDialogPortal>

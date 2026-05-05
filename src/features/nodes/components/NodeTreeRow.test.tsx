@@ -61,6 +61,7 @@ it('keeps selected rows in the calm list selection style', () => {
 
   const row = screen.getByRole('treeitem', { name: 'Study prompt' });
   expect(row).toHaveAttribute('aria-selected', 'true');
+  expect(row).not.toHaveAttribute('aria-pressed');
   expect(row).toHaveAttribute('data-active', 'false');
   expect(row.className).toContain('before:top-0.5');
   expect(row.className).toContain('before:bottom-0.5');

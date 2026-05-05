@@ -18,7 +18,7 @@ function getTopicListPanel() {
 }
 
 function getTrashTree() {
-  return screen.getByRole('tree', { name: 'Trash section' });
+  return screen.getByRole('tree', { name: 'Trash topics' });
 }
 
 function getTrashTreeItem(title: string) {

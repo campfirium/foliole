@@ -34,7 +34,7 @@ function PdfZoomValueButton(props: {
       aria-expanded={props.isMenuOpen}
       aria-haspopup="menu"
       aria-label="Set zoom level"
-      className="inline-flex min-h-8 min-w-14 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-2 text-xs text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus:outline-none"
+      className="inline-flex min-h-8 min-w-14 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-2 text-xs text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       onClick={() => {
         props.onToolbarInteraction();
         props.setIsMenuOpen((current) => !current);

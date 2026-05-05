@@ -1,21 +1,67 @@
-const DIRECTORY_GROUPS = [
-  { detail: 'Synced source topics and derived topics from this workspace.', title: 'Internal topics' },
-  { detail: 'Folder-shaped views will appear here after the directory model is connected.', title: 'Virtual folders' },
-  { detail: 'External documents synced to this device will be grouped here.', title: 'External documents' },
-  { detail: 'Top-level workspace topics and folders.', title: 'Root' }
-];
+import { ChevronRight } from 'lucide-react';
 
-export function CompanionDirectoryContent() {
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import {
+  resolveCompanionFolderViewByNodeId,
+  resolveCompanionRootDirectoryView,
+  type CompanionFolderListEntry
+} from '../shared/platform/companionReadableArticle';
+
+function DirectoryRow(props: {
+  item: CompanionFolderListEntry;
+  onSelectNode(nodeId: string): void;
+}) {
+  return (
+    <button
+      aria-label={`Open ${props.item.kind === 'folder' ? 'folder' : 'topic'} ${props.item.title}`}
+      className="flex min-h-14 w-full items-center justify-between gap-3 border-b border-companion-divider px-1 py-4 text-left transition-colors hover:bg-companion-subtle/60"
+      onClick={() => props.onSelectNode(props.item.nodeId)}
+      type="button"
+    >
+      <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">{props.item.title}</span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-companion-text-tertiary" />
+    </button>
+  );
+}
+
+function DirectoryList(props: {
+  emptyLabel: string;
+  items: CompanionFolderListEntry[];
+  onSelectNode(nodeId: string): void;
+}) {
+  if (props.items.length === 0) {
+    return (
+      <p className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+        {props.emptyLabel}
+      </p>
+    );
+  }
+
+  return (
+    <div className="border-t border-companion-divider">
+      {props.items.map((item) => (
+        <DirectoryRow item={item} key={item.nodeId} onSelectNode={props.onSelectNode} />
+      ))}
+    </div>
+  );
+}
+
+export function CompanionDirectoryContent(props: {
+  currentNodeId: string | null;
+  onSelectNode(nodeId: string): void;
+  snapshot: WorkspaceSnapshot | null;
+}) {
+  const folderView = resolveCompanionFolderViewByNodeId(props.snapshot, props.currentNodeId);
+  const rootView = resolveCompanionRootDirectoryView(props.snapshot);
+  const items = folderView?.items ?? rootView.items;
+
   return (
     <section className="px-1 py-4">
-      <div className="divide-y divide-companion-divider border-y border-companion-divider">
-        {DIRECTORY_GROUPS.map((group) => (
-          <div className="py-4" key={group.title}>
-            <h2 className="text-base font-medium text-foreground">{group.title}</h2>
-            <p className="mt-1 text-sm leading-6 text-companion-text-secondary">{group.detail}</p>
-          </div>
-        ))}
-      </div>
+      <DirectoryList
+        emptyLabel={folderView ? 'This folder is empty' : 'This folder is empty'}
+        items={items}
+        onSelectNode={props.onSelectNode}
+      />
     </section>
   );
 }

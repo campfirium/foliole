@@ -15,6 +15,11 @@ export function CompanionShellOverlays(props: {
   onSecondaryDestination(destinationId: CompanionSecondaryDestinationId): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
 }) {
+  const isReadableArticleImmersive = props.surface.activeAction === 'recent'
+    && Boolean(props.surface.readableArticle)
+    && Boolean(props.surface.selectedBrowseNodeId)
+    && !props.surface.browsedFolder;
+
   return (
     <>
       <CompanionBottomTabBar
@@ -23,7 +28,7 @@ export function CompanionShellOverlays(props: {
         config={props.companionTabConfig}
         onAction={props.onNavigationAction}
         onSecondaryDestination={props.onSecondaryDestination}
-        visible={props.isNavigationVisible}
+        visible={props.isNavigationVisible && !isReadableArticleImmersive}
       />
       <CompanionCaptureSheet onOpenChange={props.onCaptureSheetOpenChange} open={props.isCaptureSheetOpen} />
       <CompanionBottomReviewBar

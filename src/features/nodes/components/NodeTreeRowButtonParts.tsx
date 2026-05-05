@@ -110,7 +110,7 @@ export function renderNodeTreeRowButtonSurface(props: {
   trailingLabelContent?: ReactNode;
   showIcon: boolean;
   style: CSSProperties;
-  treeItemState: { 'aria-pressed': boolean; 'aria-selected': boolean };
+  treeItemState: { 'aria-selected': boolean };
   mutedOpacity: number;
   onToggleCollapse: (nodeId: string) => void;
 }) {

@@ -64,7 +64,6 @@ function resolveNodeRowStyle(depth: number, rowSpacing: number) {
 
 function resolveNodeTreeItemState(isSelected: boolean) {
   return {
-    'aria-pressed': isSelected,
     'aria-selected': isSelected
   };
 }

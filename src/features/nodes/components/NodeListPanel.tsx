@@ -94,7 +94,7 @@ function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeo
   return (
     <section
       aria-multiselectable="true"
-      aria-label={props.isTrashViewOpen ? 'Trash section' : undefined}
+      aria-label={props.isTrashViewOpen ? 'Trash topics' : 'Topic list'}
       className={resolveNodeTreeSectionClassName(Boolean(props.bodyAppendContent))}
       data-node-list-row-gap={String(resolveNodeListRowGap(props.rowSpacing))}
       data-node-list-row-spacing={String(props.rowSpacing)}

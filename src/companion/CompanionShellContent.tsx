@@ -1,10 +1,9 @@
-import { FolderTree, ListFilter, Plus, X } from 'lucide-react';
-import { useState } from 'react';
+import { FolderTree, ListFilter, X } from 'lucide-react';
 
-import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
-import { CompanionArticleDocument } from './CompanionArticleDocument';
+import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
 import { CompanionDirectoryContent } from './CompanionDirectoryContent';
 import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
+import { ImmersiveReadableArticle, ReadableArticleDocument } from './CompanionReadableArticleSurface';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
@@ -17,51 +16,23 @@ import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
-import { AppButton, NodeBrowseList } from '@/shared/ui';
+import { resolveCompanionBrowseExitNodeId } from '@/shared/platform/companionReadableArticle';
+import { NodeBrowseList } from '@/shared/ui';
 
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 type ReviewBreadcrumbItem = { id: string; isCurrent?: boolean; label: string; targetNodeId: string };
-type ReadableArticle = NonNullable<Surface['readableArticle']>;
 
-function ReadableArticleDocument(props: {
-  readableArticle: ReadableArticle;
-}) {
-  const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
-  const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
-
-  if (pdfAttachmentId && isViewingPdfOriginal) {
-    return (
-      <SimplePdfDocument
-        attachmentId={pdfAttachmentId}
-        onBackToText={() => setIsViewingPdfOriginal(false)}
-        title={props.readableArticle.title}
-      />
-    );
-  }
-  if (props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
-    return <CompanionArticleBodyStatusFallback bodyStatus={props.readableArticle.bodyStatus} />;
-  }
-
-  return (
-    <>
-      {pdfAttachmentId ? (
-        <div className="mb-3 flex items-center justify-between border-b border-companion-divider px-1 pb-3">
-          <span className="text-xs text-companion-text-secondary">Text version</span>
-          <AppButton onClick={() => setIsViewingPdfOriginal(true)} variant="ghost">
-            Open PDF
-          </AppButton>
-        </div>
-      ) : null}
-      <CompanionArticleDocument
-        content={props.readableArticle.content}
-        hideTitleHeading={props.readableArticle.hideTitleHeading}
-        nodeId={props.readableArticle.nodeId}
-        textAnchorDecorations={props.readableArticle.textAnchorDecorations}
-      />
-    </>
+function handleExitReadableArticle(surface: Surface, workspaceSync: WorkspaceSync) {
+  const exitNodeId = resolveCompanionBrowseExitNodeId(
+    workspaceSync.state.workspace_snapshot,
+    surface.selectedBrowseNodeId
   );
+  if (exitNodeId) {
+    surface.handleSelectBrowseNode(exitNodeId);
+    return;
+  }
+  surface.handleTabAction('recent');
 }
 
 function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync }) {
@@ -76,7 +47,13 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
     );
   }
   if (props.surface.readableArticle && props.surface.selectedBrowseNodeId) {
-    return <ReadableArticleDocument readableArticle={props.surface.readableArticle} />;
+    return (
+      <ImmersiveReadableArticle
+        onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
+        onSearch={() => props.surface.handleTabAction('search')}
+        readableArticle={props.surface.readableArticle}
+      />
+    );
   }
   return (
     <RecentArticleList
@@ -162,11 +139,11 @@ export function resolveCompanionTopBarProps(
   }
   if (surface.activeAction === 'recent') {
     if (isBrowseDirectoryOpen) {
-      return { backLabel: 'Browse', onBack: onCloseBrowseDirectory, title: 'Directory' };
+      return { backLabel: 'Browse', onBack: onCloseBrowseDirectory };
     }
     return {
       leftAction: { icon: FolderTree, label: 'Directory', onClick: onOpenBrowseDirectory },
-      rightAction: { icon: Plus, label: 'Add', onClick: onOpenAddSheet },
+      rightSlot: <CompanionBrowseTopActions onOpenCapture={onOpenAddSheet} />,
     };
   }
   if (surface.activeAction === 'search') {
@@ -203,7 +180,16 @@ export function renderCompanionShellContent(props: {
   }
   if (props.surface.activeAction === 'recent') {
     if (props.isBrowseDirectoryOpen) {
-      return <CompanionDirectoryContent />;
+      if (props.surface.readableArticle && props.surface.selectedBrowseNodeId && !props.surface.browsedFolder) {
+        return (
+          <ImmersiveReadableArticle
+            onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
+            onSearch={() => props.surface.handleTabAction('search')}
+            readableArticle={props.surface.readableArticle}
+          />
+        );
+      }
+      return <CompanionDirectoryContent currentNodeId={props.surface.selectedBrowseNodeId} onSelectNode={props.surface.handleSelectBrowseNode} snapshot={props.workspaceSync.state.workspace_snapshot} />;
     }
     return <RecentBrowseContent surface={props.surface} workspaceSync={props.workspaceSync} />;
   }

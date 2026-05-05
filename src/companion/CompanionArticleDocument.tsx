@@ -1,4 +1,4 @@
-import type { EditorTextAnchorDecoration } from '../features/editor/adapters/EditorAdapter';
+import type { EditorSelection, EditorTextAnchorDecoration, EditorViewportMode } from '../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
 
 import { cn } from '@/shared/lib/utils';
@@ -8,6 +8,8 @@ export function CompanionArticleDocument(props: {
   hideTitleHeading?: boolean;
   layout?: 'article' | 'review';
   nodeId: string;
+  readingSelection?: EditorSelection | null;
+  readingTargetViewportMode?: EditorViewportMode | null;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
 }) {
   return (
@@ -20,6 +22,8 @@ export function CompanionArticleDocument(props: {
         nodeId={props.nodeId}
         onChange={() => undefined}
         readOnly
+        readingSelection={props.readingSelection}
+        readingTargetViewportMode={props.readingTargetViewportMode}
         textAnchorDecorations={props.textAnchorDecorations}
         value={props.content}
       />

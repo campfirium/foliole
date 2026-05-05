@@ -131,6 +131,7 @@ it('places title search in the item column and keeps matches visible while searc
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
 
+  expect(within(itemColumn).getByRole('tree', { name: 'Topic list' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Sort list by Import time' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();

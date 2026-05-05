@@ -107,7 +107,7 @@ export function WorkspaceTopicTreeRows({
 
   return (
     <section
-      aria-label="Current folder item list"
+      aria-label="Topic list"
       className="flex flex-1 flex-col"
       data-node-list-row-gap={String(rowGap)}
       data-node-list-row-spacing={String(rowSpacing)}
