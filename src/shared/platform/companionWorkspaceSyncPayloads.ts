@@ -13,6 +13,7 @@ export function normalizeReadableArticlePayload(value: unknown): CompanionReadab
     return null;
   }
   return {
+    bodyStatus: raw.content_status === 'missing' ? 'missing' : 'ready',
     content: raw.content,
     hideTitleHeading: raw.hide_title_heading === true,
     nodeId: raw.node_id,

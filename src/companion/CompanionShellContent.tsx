@@ -70,6 +70,15 @@ function ReadableArticleDocument(props: {
     );
   }
 
+  if (props.readableArticle.bodyStatus === 'missing') {
+    return (
+      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+        <p>Topic content is still syncing.</p>
+        <p className="mt-3">Keep this device connected to desktop and try again shortly.</p>
+      </section>
+    );
+  }
+
   return (
     <>
       {pdfAttachmentId ? (

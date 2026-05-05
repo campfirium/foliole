@@ -35,6 +35,21 @@ function createPdfReadableSurface() {
   };
 }
 
+function createMissingBodySurface() {
+  return {
+    ...createPdfReadableSurface(),
+    readableArticle: {
+      bodyStatus: 'missing',
+      content: '',
+      hideTitleHeading: false,
+      nodeId: 'topic-1',
+      pdfAttachmentId: null,
+      textAnchorDecorations: [],
+      title: 'Synced topic'
+    }
+  };
+}
+
 describe('CompanionShellContent PDF articles', () => {
   it('keeps extracted PDF text as the primary mobile reading surface', () => {
     render(renderCompanionShellContent({
@@ -58,5 +73,22 @@ describe('CompanionShellContent PDF articles', () => {
     expect(screen.getByText('PDF original viewer')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Text' }));
     expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
+  });
+
+  it('shows a syncing state when the topic body blob is not local yet', () => {
+    render(renderCompanionShellContent({
+      hasSnapshot: true,
+      onBackToSettingsList: vi.fn(),
+      onOpenSyncSettings: vi.fn(),
+      onSelectReviewBreadcrumbItem: vi.fn(),
+      reviewBreadcrumbItems: [],
+      settingsPage: 'list',
+      surface: createMissingBodySurface() as never,
+      workspaceError: null,
+      workspaceSync: {} as never
+    }));
+
+    expect(screen.getByText('Topic content is still syncing.')).toBeInTheDocument();
+    expect(screen.getByText('Keep this device connected to desktop and try again shortly.')).toBeInTheDocument();
   });
 });

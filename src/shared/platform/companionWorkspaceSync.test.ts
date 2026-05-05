@@ -161,6 +161,7 @@ function registerReadableArticleTest() {
     const article = await loadCompanionReadableArticle();
 
     expect(article).toEqual({
+      bodyStatus: 'ready',
       content: 'Readable from local snapshot',
       hideTitleHeading: false,
       nodeId: 'node-1',

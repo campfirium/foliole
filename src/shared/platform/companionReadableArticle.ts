@@ -5,6 +5,7 @@ import { collectDocumentTextAnchorDecorations } from '../../features/editor/mode
 import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
 
 export interface CompanionReadableArticle {
+  bodyStatus?: 'missing' | 'ready';
   content: string;
   hideTitleHeading: boolean;
   nodeId: string;
@@ -58,6 +59,7 @@ function isArticleNode(snapshot: WorkspaceSnapshot, node: CompanionReadableNode 
 
 function buildReadableArticle(node: CompanionReadableNode) {
   return {
+    bodyStatus: 'ready' as const,
     content: node.content,
     hideTitleHeading: Boolean(node.hideTitleHeading),
     nodeId: node.id,

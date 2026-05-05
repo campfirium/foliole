@@ -37,6 +37,7 @@ export interface NativeCompanionSignedRequestHeaders {
 export interface NativeCompanionReadableArticlePayload {
   readable_article: {
     content: string;
+    content_status?: 'missing' | 'ready';
     node_id: string;
     title: string;
   } | null;

@@ -113,6 +113,25 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         assertEquals("Blob article body", readable.getJSONObject("readable_article").getString("content"));
     }
 
+    @Test
+    public void reportsMissingReadableArticleBodyWithoutDroppingTheTopic() throws Exception {
+        database.execSQL(
+            "UPDATE nodes SET content = '', body_blob_hash = 'blob-article-2' WHERE id = 'article-2'"
+        );
+        FolioleCompanionSyncObjectApply.applyPayload(database, record(
+            "view_state",
+            "session_resume:android:phone:remote-device:active_node",
+            "{\"active_node_id\":\"article-2\"}"
+        ));
+
+        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+
+        JSONObject article = readable.getJSONObject("readable_article");
+        assertEquals("article-2", article.getString("node_id"));
+        assertEquals("", article.getString("content"));
+        assertEquals("missing", article.getString("content_status"));
+    }
+
 
     @Test
     public void exportsStateObjectPayloadsWithSnakeCaseWireFields() throws Exception {
