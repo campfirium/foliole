@@ -2,6 +2,7 @@ import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type {
   NativeSyncObjectRecord,
+  NativeSyncObjectType,
   NativeSyncReviewLogRecord
 } from '../../lib/platform/nativeSyncContract.js';
 
@@ -87,8 +88,13 @@ function desktopBase(row: SyncObjectStateRow | undefined): SyncBaseReference | u
   return row ? { baseContentHash: row.content_hash, kind: 'content_hash' } : undefined;
 }
 
-function buildNodeReviewRecord(item: CompanionSyncPushPayload): NativeSyncObjectRecord | null {
-  if (item.identity.objectType !== 'node_review' || item.identity.scope !== 'workspace') return null;
+type StatePushObjectType = Extract<NativeSyncObjectType, 'node_reading' | 'node_review'>;
+
+function buildStateObjectRecord(
+  item: CompanionSyncPushPayload,
+  objectType: StatePushObjectType
+): NativeSyncObjectRecord | null {
+  if (item.identity.objectType !== objectType || item.identity.scope !== 'workspace') return null;
   const contentHash = readString(item.contentHash);
   const updatedAt = readString(item.updatedAt);
   if (!contentHash || !updatedAt) return null;
@@ -96,18 +102,22 @@ function buildNodeReviewRecord(item: CompanionSyncPushPayload): NativeSyncObject
     content_hash: contentHash,
     deleted_at: item.deletedAt ?? null,
     object_id: item.identity.objectId,
-    object_type: 'node_review',
+    object_type: objectType,
     payload_json: item.payloadJson,
     updated_at: updatedAt
   };
 }
 
-function applyNodeReviewPush(driver: DatabaseDriver, item: CompanionSyncPushPayload): CompanionSyncPushResult {
+function applyStateObjectPush(
+  driver: DatabaseDriver,
+  item: CompanionSyncPushPayload,
+  objectType: StatePushObjectType
+): CompanionSyncPushResult {
   return driver.transaction((transactionDriver) => {
     const current = currentState(transactionDriver, item.identity);
-    const record = buildNodeReviewRecord(item);
+    const record = buildStateObjectRecord(item, objectType);
     if (!record || item.base.kind !== 'content_hash') {
-      return { acks: [rejectAck(item, 'invalid_node_review_push')], appliedObjectIds: [], appliedReviewOpIds: [] };
+      return { acks: [rejectAck(item, `invalid_${objectType}_push`)], appliedObjectIds: [], appliedReviewOpIds: [] };
     }
     if (current?.content_hash === record.content_hash && current.deleted_at === record.deleted_at) {
       return {
@@ -155,7 +165,7 @@ function applyNodeReviewPush(driver: DatabaseDriver, item: CompanionSyncPushPayl
         stateSeq: updated?.state_seq ?? null,
         status: 'accepted'
       }],
-      appliedObjectIds: [`node_review:${record.object_id}`],
+      appliedObjectIds: [`${objectType}:${record.object_id}`],
       appliedReviewOpIds: []
     };
   });
@@ -254,8 +264,8 @@ function applyReviewLogPush(driver: DatabaseDriver, item: CompanionSyncPushPaylo
 
 function applySinglePushItem(driver: DatabaseDriver, item: CompanionSyncPushPayload): CompanionSyncPushResult {
   try {
-    if (item.identity.objectType === 'node_review') {
-      return applyNodeReviewPush(driver, item);
+    if (item.identity.objectType === 'node_reading' || item.identity.objectType === 'node_review') {
+      return applyStateObjectPush(driver, item, item.identity.objectType);
     }
     if (item.identity.objectType === 'review_log') {
       return applyReviewLogPush(driver, item);

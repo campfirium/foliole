@@ -46,13 +46,43 @@ function insertNode(nodeId: string) {
   );
 }
 
-function insertBaseReviewState(contentHash = 'desktop-base') {
+function insertBaseState(objectType: 'node_reading' | 'node_review', contentHash: string) {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('node_review', 'node-1', 1, ?, 'desktop', '2026-04-30T00:00:00.000Z', 0)`,
-    [contentHash]
+     ) VALUES (?, 'node-1', 1, ?, 'desktop', '2026-04-30T00:00:00.000Z', 0)`,
+    [objectType, contentHash]
   );
+}
+
+function insertBaseReviewState(contentHash = 'desktop-base') {
+  insertBaseState('node_review', contentHash);
+}
+
+function insertBaseReadingState(contentHash = 'desktop-reading-base') {
+  insertBaseState('node_reading', contentHash);
+}
+
+function createNodeReadingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
+  return {
+    base: { baseContentHash: 'desktop-reading-base', kind: 'content_hash' },
+    clientOpId: 'node_reading:node-1:11',
+    contentHash: 'android-reading-next',
+    deletedAt: null,
+    identity: { objectId: 'node-1', objectType: 'node_reading', scope: 'workspace' },
+    payloadJson: JSON.stringify({
+      interval_duration_ms: 120000,
+      interval_growth_factor: 1.5,
+      last_handled_at: '2026-04-30T01:00:00.000Z',
+      next_at: '2026-05-01T00:00:00.000Z',
+      priority: 3,
+      reading_position: 42,
+      repetition_count: 2,
+      state: 'active'
+    }),
+    updatedAt: '2026-04-30T01:00:00.000Z',
+    ...overrides
+  };
 }
 
 function createNodeReviewPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
@@ -115,6 +145,23 @@ describe('companion sync push apply', () => {
     )).toEqual({ content_hash: 'android-next', sync_dirty: 0 });
   });
 
+  it('accepts node_reading when base content hash matches current desktop state', () => {
+    insertBaseReadingState();
+
+    const result = applyCompanionSyncPush([createNodeReadingPush()]);
+
+    expect(result.appliedObjectIds).toEqual(['node_reading:node-1']);
+    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
+    expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; sync_dirty: number }>(
+      `SELECT content_hash, sync_dirty FROM sync_object_state
+       WHERE object_type = 'node_reading' AND object_id = 'node-1'`
+    )).toEqual({ content_hash: 'android-reading-next', sync_dirty: 0 });
+    expect(openDatabaseConnection().driver.queryOne<{ reading_position: number }>(
+      `SELECT reading_position FROM node_reading_device_state
+       WHERE node_id = 'node-1' AND device_id = '*'`
+    )).toEqual({ reading_position: 42 });
+  });
+
   it('returns conflict for node_review when desktop base has changed', () => {
     insertBaseReviewState('desktop-newer');
 
@@ -130,6 +177,33 @@ describe('companion sync push apply', () => {
       `SELECT content_hash FROM sync_object_state
        WHERE object_type = 'node_review' AND object_id = 'node-1'`
     )).toEqual({ content_hash: 'desktop-newer' });
+  });
+
+  it('returns conflict for node_reading when desktop base has changed', () => {
+    insertBaseReadingState('desktop-reading-newer');
+
+    const result = applyCompanionSyncPush([createNodeReadingPush()]);
+
+    expect(result.appliedObjectIds).toEqual([]);
+    expect(result.acks).toMatchObject([{
+      conflictReason: 'base_content_hash_mismatch',
+      stateSeq: 1,
+      status: 'conflict'
+    }]);
+    expect(openDatabaseConnection().driver.queryOne<{ content_hash: string }>(
+      `SELECT content_hash FROM sync_object_state
+       WHERE object_type = 'node_reading' AND object_id = 'node-1'`
+    )).toEqual({ content_hash: 'desktop-reading-newer' });
+  });
+
+  it('treats repeated node_reading push as already applied', () => {
+    insertBaseReadingState();
+    applyCompanionSyncPush([createNodeReadingPush()]);
+
+    const result = applyCompanionSyncPush([createNodeReadingPush()]);
+
+    expect(result.appliedObjectIds).toEqual([]);
+    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'already_applied' }]);
   });
 
   it('treats repeated node_review push as already applied', () => {

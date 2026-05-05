@@ -35,17 +35,25 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('loads node_review as state-only sync pack metadata', () => {
+it('loads reading and review state as state-only sync pack metadata', () => {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('node_review', 'node-1', 3, 'review-hash', 'desktop', '2026-04-27T00:03:00.000Z', 0)`
   );
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node_reading', 'node-1', 4, 'reading-hash', 'desktop', '2026-04-27T00:04:00.000Z', 0)`
+  );
 
-  expect(loadPackRows(0, 3)).toMatchObject({
+  expect(loadPackRows(0, 4)).toMatchObject({
     contentBlobs: [],
     externalDocuments: [],
     nodes: [],
-    stateRows: [{ object_id: 'node-1', object_type: 'node_review', state_seq: 3 }]
+    stateRows: [
+      { object_id: 'node-1', object_type: 'node_review', state_seq: 3 },
+      { object_id: 'node-1', object_type: 'node_reading', state_seq: 4 }
+    ]
   });
 });

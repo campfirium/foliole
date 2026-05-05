@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  nodeReadingSyncAdapter,
   nodeReviewSyncAdapter,
   reviewLogSyncAdapter,
   type SyncPushAck,
@@ -18,6 +19,20 @@ function createNodeReviewRow(overrides: Partial<SyncableStateObjectRow> = {}): S
     payload_json: '{"reps":2}',
     state_seq: 12,
     updated_at: '2026-04-30T01:00:00.000Z',
+    ...overrides
+  };
+}
+
+function createNodeReadingRow(overrides: Partial<SyncableStateObjectRow> = {}): SyncableStateObjectRow {
+  return {
+    base_content_hash: 'desktop-reading-base',
+    content_hash: 'android-reading-next',
+    deleted_at: null,
+    object_id: 'node-1',
+    object_type: 'node_reading',
+    payload_json: '{"state":"active","reading_position":42}',
+    state_seq: 13,
+    updated_at: '2026-04-30T01:05:00.000Z',
     ...overrides
   };
 }
@@ -66,6 +81,20 @@ describe('companion sync push protocol adapters', () => {
     });
   });
 
+  it('builds a node_reading push payload with content-hash base reference', () => {
+    const row = createNodeReadingRow();
+
+    expect(nodeReadingSyncAdapter.buildPushPayload(row)).toEqual({
+      base: { baseContentHash: 'desktop-reading-base', kind: 'content_hash' },
+      clientOpId: 'node_reading:node-1:13',
+      contentHash: 'android-reading-next',
+      deletedAt: null,
+      identity: { objectId: 'node-1', objectType: 'node_reading', scope: 'workspace' },
+      payloadJson: '{"state":"active","reading_position":42}',
+      updatedAt: '2026-04-30T01:05:00.000Z'
+    });
+  });
+
   it('blocks legacy node_review dirty rows that have no base reference', () => {
     const row = createNodeReviewRow({ base_content_hash: null });
 
@@ -82,6 +111,20 @@ describe('companion sync push protocol adapters', () => {
     expect(nodeReviewSyncAdapter.isConfirmedBy(createNodeReviewRow({ state_seq: 11 }), ack)).toBe(false);
     expect(nodeReviewSyncAdapter.isConfirmedBy(createNodeReviewRow({ state_seq: 12 }), ack)).toBe(true);
     expect(nodeReviewSyncAdapter.isConfirmedBy(createNodeReviewRow({ state_seq: 13 }), ack)).toBe(true);
+  });
+
+  it('confirms node_reading dirty only after pulled state reaches the ack state_seq', () => {
+    const row = createNodeReadingRow();
+    const ack: SyncPushAck = {
+      clientOpId: 'node_reading:node-1:13',
+      identity: nodeReadingSyncAdapter.identity(row),
+      stateSeq: 13,
+      status: 'accepted'
+    };
+
+    expect(nodeReadingSyncAdapter.isConfirmedBy(createNodeReadingRow({ state_seq: 12 }), ack)).toBe(false);
+    expect(nodeReadingSyncAdapter.isConfirmedBy(createNodeReadingRow({ state_seq: 13 }), ack)).toBe(true);
+    expect(nodeReadingSyncAdapter.isConfirmedBy(createNodeReviewRow({ state_seq: 13 }), ack)).toBe(false);
   });
 
   it('does not confirm node_review conflicts', () => {

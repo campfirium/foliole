@@ -44,16 +44,17 @@ vi.mock('./companionWorkspacePairing', () => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' }))
 }));
 
-function createLocalStateChange(): NativeSyncStateObjectRecord {
+function createLocalNodeReadingChange(overrides: Partial<NativeSyncStateObjectRecord> = {}): NativeSyncStateObjectRecord {
   return {
-    base_content_hash: null,
+    base_content_hash: 'desktop-reading-base',
     content_hash: 'local-hash',
     deleted_at: null,
     object_id: 'node-1',
     object_type: 'node_reading',
     payload_json: '{"reading_position":42}',
     state_seq: 9,
-    updated_at: '2026-04-25T00:04:00.000Z'
+    updated_at: '2026-04-25T00:04:00.000Z',
+    ...overrides
   };
 }
 
@@ -97,7 +98,7 @@ function parsePushItems(init: RequestInit | undefined) {
 describe('companion desktop sync push acknowledgements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalStateChange()]);
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => ({
       json: async () => {
         if (init?.method === 'POST' && url.includes('/companion/sync-push')) {
@@ -115,7 +116,11 @@ describe('companion desktop sync push acknowledgements', () => {
     })));
   });
 
-  it('does not push non-review state dirty through the new push endpoint', async () => {
+  it('does not push unsupported state dirty through the new push endpoint', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([{
+      ...createLocalNodeReadingChange(),
+      object_type: 'setting'
+    }]);
     const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
 
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
@@ -125,8 +130,11 @@ describe('companion desktop sync push acknowledgements', () => {
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
   });
 
-  it('pushes node_review and review_log, storing state acks and advancing accepted review log cursor', async () => {
-    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
+  it('pushes state objects and review_log, storing state acks and advancing accepted review log cursor', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([
+      createLocalNodeReadingChange(),
+      createLocalNodeReviewChange()
+    ]);
     syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
     const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
 
@@ -136,9 +144,10 @@ describe('companion desktop sync push acknowledgements', () => {
       body: expect.stringContaining('"baseContentHash":"desktop-base"'),
       method: 'POST'
     }));
-    expect(result.pushedObjectIds).toEqual(['node_review:node-1']);
+    expect(result.pushedObjectIds).toEqual(['node_reading:node-1', 'node_review:node-1']);
     expect(result.pushedReviewOpIds).toEqual(['op-1']);
     expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
+      expect.objectContaining({ clientOpId: 'node_reading:node-1:9', status: 'accepted' }),
       expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'accepted' })
     ]);
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
@@ -146,6 +155,18 @@ describe('companion desktop sync push acknowledgements', () => {
       change_id: 'op-1',
       created_at: '2026-04-25T00:05:00.000Z'
     });
+  });
+
+  it('skips legacy node_reading dirty rows that do not have a base reference', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReadingChange({
+      base_content_hash: null
+    })]);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushedObjectIds).toEqual([]);
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
   });
 
   it('skips legacy node_review dirty rows that do not have a base reference', async () => {

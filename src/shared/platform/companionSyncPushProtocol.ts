@@ -82,40 +82,49 @@ function stateClientOpId(row: NativeSyncStateObjectRecord) {
   return `${row.object_type}:${row.object_id}:${row.state_seq}`;
 }
 
-export const nodeReviewSyncAdapter: SyncableObjectAdapter<SyncableStateObjectRow, NativeSyncStateObjectRecord> = {
-  applyPullPayload(payload) {
-    return {
-      identity: stateObjectIdentity(payload),
-      status: 'applied'
-    };
-  },
-  baseReference(row) {
-    return row.base_content_hash
-      ? { baseContentHash: row.base_content_hash, kind: 'content_hash' }
-      : { kind: 'blocked', reason: 'missing_base_reference' };
-  },
-  buildPushPayload(row) {
-    return {
-      base: this.baseReference(row),
-      clientOpId: stateClientOpId(row),
-      contentHash: row.content_hash,
-      deletedAt: row.deleted_at,
-      identity: this.identity(row),
-      payloadJson: row.payload_json,
-      updatedAt: row.updated_at
-    };
-  },
-  identity(row) {
-    return stateObjectIdentity(row);
-  },
-  isConfirmedBy(payload, ack) {
-    return sameIdentity(this.identity(payload), ack.identity)
-      && ack.status !== 'conflict'
-      && ack.status !== 'rejected'
-      && typeof ack.stateSeq === 'number'
-      && payload.state_seq >= ack.stateSeq;
-  }
-};
+function createStateObjectSyncAdapter(
+  objectType: 'node_reading' | 'node_review'
+): SyncableObjectAdapter<SyncableStateObjectRow, NativeSyncStateObjectRecord> {
+  return {
+    applyPullPayload(payload) {
+      return {
+        identity: stateObjectIdentity(payload),
+        status: payload.object_type === objectType ? 'applied' : 'ignored'
+      };
+    },
+    baseReference(row) {
+      return row.base_content_hash
+        ? { baseContentHash: row.base_content_hash, kind: 'content_hash' }
+        : { kind: 'blocked', reason: 'missing_base_reference' };
+    },
+    buildPushPayload(row) {
+      return {
+        base: this.baseReference(row),
+        clientOpId: stateClientOpId(row),
+        contentHash: row.content_hash,
+        deletedAt: row.deleted_at,
+        identity: this.identity(row),
+        payloadJson: row.payload_json,
+        updatedAt: row.updated_at
+      };
+    },
+    identity(row) {
+      return stateObjectIdentity(row);
+    },
+    isConfirmedBy(payload, ack) {
+      return payload.object_type === objectType
+        && sameIdentity(this.identity(payload), ack.identity)
+        && ack.status !== 'conflict'
+        && ack.status !== 'rejected'
+        && typeof ack.stateSeq === 'number'
+        && payload.state_seq >= ack.stateSeq;
+    }
+  };
+}
+
+export const nodeReadingSyncAdapter = createStateObjectSyncAdapter('node_reading');
+
+export const nodeReviewSyncAdapter = createStateObjectSyncAdapter('node_review');
 
 function reviewLogIdentity(row: Pick<NativeSyncReviewLogRecord, 'op_id'>): SyncObjectIdentity {
   return {
@@ -153,6 +162,7 @@ export const reviewLogSyncAdapter: SyncableObjectAdapter<SyncableReviewLogRow, S
 };
 
 export const syncPushAdapters = {
+  node_reading: nodeReadingSyncAdapter,
   node_review: nodeReviewSyncAdapter,
   review_log: reviewLogSyncAdapter
 } as const;

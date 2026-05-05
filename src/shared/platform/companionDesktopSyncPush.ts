@@ -8,6 +8,7 @@ import {
   saveCompanionSyncPushAcks
 } from './companionSyncObjects';
 import {
+  nodeReadingSyncAdapter,
   nodeReviewSyncAdapter,
   reviewLogSyncAdapter,
   type SyncPushAck
@@ -35,6 +36,11 @@ function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
   };
 }
 
+const statePushAdapters = {
+  node_reading: nodeReadingSyncAdapter,
+  node_review: nodeReviewSyncAdapter
+} as const;
+
 async function collectLocalPushItems() {
   const [stateCursor, reviewCursor] = await Promise.all([
     loadCompanionSyncStatePushCursor(),
@@ -45,8 +51,8 @@ async function collectLocalPushItems() {
     loadCompanionSyncReviewLog(reviewCursor, 100)
   ]);
   const stateItems = stateChanges
-    .filter((row) => row.object_type === 'node_review')
-    .map((row) => nodeReviewSyncAdapter.buildPushPayload(row))
+    .map((row) => statePushAdapters[row.object_type as keyof typeof statePushAdapters]?.buildPushPayload(row))
+    .filter((item) => item !== undefined)
     .filter((item) => item.base.kind !== 'blocked');
   return {
     items: [...stateItems, ...reviewLog.map((row) => reviewLogSyncAdapter.buildPushPayload(row))],
