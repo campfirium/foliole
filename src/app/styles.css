@@ -79,6 +79,30 @@ body {
   text-align: left;
 }
 
+.node-tree-row {
+  align-items: center;
+  display: flex;
+  gap: var(--space-8);
+  padding-inline-start: calc(var(--space-8) + var(--node-depth, 0) * var(--space-16));
+}
+
+.node-tree-branch {
+  border-bottom: 1px dashed var(--color-border-default);
+  flex: 0 0 12px;
+  opacity: 0;
+}
+
+.node-tree-branch[data-visible='true'] {
+  opacity: 0.85;
+}
+
+.node-tree-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .panel-document-shell {
   min-height: 0;
 }

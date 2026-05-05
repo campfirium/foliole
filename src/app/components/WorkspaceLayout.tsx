@@ -7,8 +7,9 @@ import type {
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
+import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { Button, EmptyState, Panel } from '../../shared/ui';
+import { Panel } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -61,7 +62,7 @@ export function WorkspaceLayout({
   return (
     <main aria-label="Foliole workspace" className="workspace-shell">
       <div className="workspace-grid" data-resizing={isResizingList} style={workspaceGridStyle}>
-        <NodeListPanel
+        <NodeListTree
           activeNodeId={activeNodeId}
           nodeOrder={nodeOrder}
           nodesById={nodesById}
@@ -86,39 +87,6 @@ export function WorkspaceLayout({
         />
       </div>
     </main>
-  );
-}
-
-interface NodeListPanelProps {
-  activeNodeId: string | null;
-  nodeOrder: string[];
-  nodesById: Record<string, Node>;
-  onSelectNode: (nodeId: string) => void;
-}
-
-function NodeListPanel({ activeNodeId, nodeOrder, nodesById, onSelectNode }: NodeListPanelProps) {
-  return (
-    <Panel
-      ariaLabel="Node list panel"
-      as="aside"
-      bodyClassName="node-list"
-      className="panel-list"
-      scrollBody
-      title="Nodes"
-    >
-      {nodeOrder.length === 0 ? (
-        <EmptyState description="Create or import a node to start editing." title="No nodes" />
-      ) : (
-        nodeOrder.map((nodeId) => (
-          <NodeRow
-            isActive={activeNodeId === nodeId}
-            key={nodeId}
-            node={nodesById[nodeId]}
-            onSelect={onSelectNode}
-          />
-        ))
-      )}
-    </Panel>
   );
 }
 
@@ -233,28 +201,5 @@ function DocumentWidthHandle({ ariaLabel, onPointerDown, onResetLayout, side }: 
         tabIndex={0}
       />
     </div>
-  );
-}
-
-interface NodeRowProps {
-  isActive: boolean;
-  node: Node | undefined;
-  onSelect: (nodeId: string) => void;
-}
-
-function NodeRow({ isActive, node, onSelect }: NodeRowProps) {
-  if (!node) {
-    return null;
-  }
-  return (
-    <Button
-      active={isActive}
-      aria-pressed={isActive}
-      className="node-row"
-      onClick={() => onSelect(node.id)}
-      variant="list"
-    >
-      {node.title}
-    </Button>
   );
 }
