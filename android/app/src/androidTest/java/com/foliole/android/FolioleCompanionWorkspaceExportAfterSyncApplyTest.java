@@ -212,8 +212,9 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "attachment_id TEXT NOT NULL, page INTEGER NOT NULL, text TEXT NOT NULL, page_width REAL, page_height REAL, " +
             "PRIMARY KEY (attachment_id, page))");
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
-        database.execSQL("CREATE TABLE node_view_state (node_id TEXT PRIMARY KEY, scroll_top INTEGER NOT NULL DEFAULT 0, " +
-            "selection_from INTEGER, selection_to INTEGER, updated_at TEXT NOT NULL)");
+        database.execSQL("CREATE TABLE node_view_state (node_id TEXT NOT NULL, device_id TEXT NOT NULL, " +
+            "scroll_top INTEGER NOT NULL DEFAULT 0, selection_from INTEGER, selection_to INTEGER, " +
+            "updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
         database.execSQL("CREATE TABLE sync_object_state (" +
             "object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL, " +
             "current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL, " +

@@ -35,6 +35,11 @@ vi.mock('./connection.js', () => ({
   })
 }));
 
+vi.mock('./deviceIdentity.js', () => ({
+  loadDesktopDeviceId: () => 'desktop-test',
+  loadOrCreateDesktopDeviceId: () => 'desktop-test'
+}));
+
 import { loadReadingProgress, saveReadingProgress } from './readingProgress.js';
 
 beforeEach(() => {
@@ -71,7 +76,7 @@ it('saves reading progress through prepared driver statements only', () => {
   expect(transactionSpy).toHaveBeenCalledTimes(3);
   expect(prepare).toHaveBeenCalledTimes(2);
   expect(metaRun).toHaveBeenCalledWith(['active_node_id', 'node-2', '2026-03-14T00:00:00.000Z']);
-  expect(nodeRun).toHaveBeenCalledWith(['node-1', 124, 10, 18, '2026-03-14T00:00:00.000Z']);
+  expect(nodeRun).toHaveBeenCalledWith(['node-1', 'desktop-test', 124, 10, 18, '2026-03-14T00:00:00.000Z']);
 });
 
 it('loads reading progress through query helpers only', () => {
@@ -108,7 +113,8 @@ it('loads reading progress through query helpers only', () => {
        selection_from,
        selection_to,
        updated_at
-     FROM node_view_state`,
-    undefined
+     FROM node_view_state
+     WHERE device_id = ?`,
+    ['desktop-test']
   );
 });

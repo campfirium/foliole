@@ -106,12 +106,13 @@ export const workspaceMeta = sqliteTable('workspace_meta', {
 });
 
 export const nodeViewState = sqliteTable('node_view_state', {
-  nodeId: text('node_id').primaryKey(),
+  nodeId: text('node_id').notNull(),
+  deviceId: text('device_id').notNull(),
   scrollTop: integer('scroll_top').notNull().default(0),
   selectionFrom: integer('selection_from'),
   selectionTo: integer('selection_to'),
   updatedAt: text('updated_at').notNull()
-});
+}, (table) => [primaryKey({ columns: [table.nodeId, table.deviceId] })]);
 
 export const mirrorArticles = sqliteTable('mirror_articles', {
   articleId: text('article_id').primaryKey(),

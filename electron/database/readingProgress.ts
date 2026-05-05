@@ -2,6 +2,7 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadDesktopDeviceId, loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { withTransaction } from './transaction.js';
 import { writeActiveNodeViewStateSync, writeNodeViewStateSync } from './viewStateSync.js';
 
@@ -45,6 +46,7 @@ interface NodeViewStateRow extends DatabaseRow {
 const ACTIVE_NODE_META_KEY = 'active_node_id';
 
 export function saveReadingProgress(input: SaveReadingProgressInput): void {
+  const deviceId = loadOrCreateDesktopDeviceId(input.updatedAt);
   appendReadingPositionTraceRecord({
     event: 'reading-progress.db-save',
     payload: {
@@ -66,12 +68,13 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
   const upsertNodeViewStateStatement = connection.driver.prepare(
     `INSERT INTO node_view_state (
        node_id,
+       device_id,
        scroll_top,
        selection_from,
        selection_to,
        updated_at
-     ) VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(node_id) DO UPDATE SET
+     ) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(node_id, device_id) DO UPDATE SET
        scroll_top = excluded.scroll_top,
        selection_from = excluded.selection_from,
        selection_to = excluded.selection_to,
@@ -87,6 +90,7 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
     for (const state of input.nodeViewStates) {
       upsertNodeViewStateStatement.run([
         state.nodeId,
+        deviceId,
         state.scrollTop,
         state.selectionFrom,
         state.selectionTo,
@@ -99,19 +103,22 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
 
 export function loadReadingProgress(): ReadingProgressSnapshot {
   const connection = openDatabaseConnection();
+  const deviceId = loadDesktopDeviceId();
   const activeNodeRow = connection.driver.queryOne<MetaRow>(
     'SELECT value FROM workspace_meta WHERE key = ?',
     [ACTIVE_NODE_META_KEY]
   );
-  const nodeRows = connection.driver.queryAll<NodeViewStateRow>(
+  const nodeRows = deviceId ? connection.driver.queryAll<NodeViewStateRow>(
     `SELECT
        node_id,
        scroll_top,
        selection_from,
        selection_to,
        updated_at
-     FROM node_view_state`
-  );
+     FROM node_view_state
+     WHERE device_id = ?`,
+    [deviceId]
+  ) : [];
 
   const nodeViewStateById: Record<string, NodeViewStateSnapshot> = {};
   for (const row of nodeRows) {

@@ -282,6 +282,8 @@ it('applies mobile view state payloads', () => {
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ value: string }>("SELECT value FROM workspace_meta WHERE key = 'active_node_id'"))
     .toEqual({ value: 'node-1' });
-  expect(driver.queryOne<{ scroll_top: number }>('SELECT scroll_top FROM node_view_state WHERE node_id = ?', ['node-1']))
-    .toEqual({ scroll_top: 128 });
+  expect(driver.queryOne<{ device_id: string; scroll_top: number }>(
+    'SELECT device_id, scroll_top FROM node_view_state WHERE node_id = ?',
+    ['node-1']
+  )).toEqual({ device_id: 'android-test', scroll_top: 128 });
 });

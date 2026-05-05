@@ -83,6 +83,9 @@ it('persists and loads active node and per-node view state from sqlite', () => {
       }
     }
   });
+  expect(openDatabaseConnection().sqlite
+    .prepare('SELECT device_id FROM node_view_state WHERE node_id = ?')
+    .get('node-1')).toEqual({ device_id: 'desktop-test' });
 });
 
 

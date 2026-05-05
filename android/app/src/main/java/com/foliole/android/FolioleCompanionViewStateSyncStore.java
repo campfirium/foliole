@@ -49,7 +49,7 @@ final class FolioleCompanionViewStateSyncStore {
         String contentHash = contentHash(deviceId, "node:" + nodeId, payload);
         database.beginTransaction();
         try {
-            upsertNodeViewState(database, nodeId, payload.optInt("scroll_top", 0), now);
+            upsertNodeViewState(database, nodeId, deviceId, payload.optInt("scroll_top", 0), now);
             writeSyncRows(database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
@@ -60,16 +60,19 @@ final class FolioleCompanionViewStateSyncStore {
 
     static void applyPayload(SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         String key = objectIdKey(objectId);
+        String deviceId = objectIdDeviceId(objectId);
         if (!record.isNull("deleted_at")) {
             if (key.equals("active_node")) database.delete("workspace_meta", "key = ?", new String[] { "active_node_id" });
-            if (key.startsWith("node:")) database.delete("node_view_state", "node_id = ?", new String[] { key.substring(5) });
+            if (key.startsWith("node:")) {
+                database.delete("node_view_state", "node_id = ? AND device_id = ?", new String[] { key.substring(5), deviceId });
+            }
             return;
         }
         JSONObject payload = payload(record);
         if (key.equals("active_node")) {
             upsertActiveNode(database, nullIfEmpty(payload.optString("active_node_id", "")), record.optString("updated_at"));
         } else if (key.startsWith("node:")) {
-            upsertNodeViewState(database, key.substring(5), payload.optInt("scroll_top", 0), record.optString("updated_at"));
+            upsertNodeViewState(database, key.substring(5), deviceId, payload.optInt("scroll_top", 0), record.optString("updated_at"));
         }
     }
 
@@ -81,13 +84,13 @@ final class FolioleCompanionViewStateSyncStore {
                 if (cursor.moveToFirst()) payload.put("active_node_id", nullIfEmpty(cursor.getString(0)));
             }
         } else if (key.startsWith("node:")) {
-            copyNodeViewState(database, key.substring(5), payload);
+            copyNodeViewState(database, key.substring(5), objectIdDeviceId(objectId), payload);
         }
         return payload.toString();
     }
 
-    private static void copyNodeViewState(SQLiteDatabase database, String nodeId, JSONObject payload) throws Exception {
-        try (Cursor cursor = database.query("node_view_state", null, "node_id = ?", new String[] { nodeId }, null, null, null, "1")) {
+    private static void copyNodeViewState(SQLiteDatabase database, String nodeId, String deviceId, JSONObject payload) throws Exception {
+        try (Cursor cursor = database.query("node_view_state", null, "node_id = ? AND device_id = ?", new String[] { nodeId, deviceId }, null, null, null, "1")) {
             if (!cursor.moveToFirst()) return;
             payload.put("node_id", nodeId);
             payload.put("scroll_top", cursor.getInt(cursor.getColumnIndexOrThrow("scroll_top")));
@@ -108,9 +111,10 @@ final class FolioleCompanionViewStateSyncStore {
         database.insertWithOnConflict("workspace_meta", null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
-    private static void upsertNodeViewState(SQLiteDatabase database, String nodeId, int scrollTop, String now) {
+    private static void upsertNodeViewState(SQLiteDatabase database, String nodeId, String deviceId, int scrollTop, String now) {
         ContentValues values = new ContentValues();
         values.put("node_id", nodeId);
+        values.put("device_id", deviceId);
         values.put("scroll_top", Math.max(0, scrollTop));
         values.putNull("selection_from");
         values.putNull("selection_to");
@@ -125,6 +129,11 @@ final class FolioleCompanionViewStateSyncStore {
     private static String objectIdKey(String objectId) {
         String[] parts = objectId.split(":", 5);
         return parts.length == 5 ? parts[4] : objectId;
+    }
+
+    private static String objectIdDeviceId(String objectId) {
+        String[] parts = objectId.split(":", 5);
+        return parts.length == 5 ? parts[3] : "*";
     }
 
     private static JSONObject payload(JSONObject record) throws Exception {

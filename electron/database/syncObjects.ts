@@ -115,7 +115,9 @@ const PAYLOAD_SQL_BY_TYPE: Partial<Record<JsonSyncObjectType, string>> = {
 };
 
 function readViewStatePayloadJson(objectId: string) {
-  const key = objectId.split(':').slice(4).join(':');
+  const parts = objectId.split(':');
+  const deviceId = parts[3];
+  const key = parts.slice(4).join(':');
   const driver = openDatabaseConnection().driver;
   if (key === 'active_node') {
     return driver.queryOne<{ payload_json: string | null }>(
@@ -132,8 +134,8 @@ function readViewStatePayloadJson(objectId: string) {
          'selection_to', selection_to,
          'updated_at', updated_at
        ) AS payload_json
-       FROM node_view_state WHERE node_id = ?`,
-      [key.slice(5)]
+       FROM node_view_state WHERE node_id = ? AND device_id = ?`,
+      [key.slice(5), deviceId]
     )?.payload_json ?? null;
   }
   return null;

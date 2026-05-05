@@ -200,10 +200,14 @@ function applyAttachment(driver: DatabaseDriver, record: NativeSyncObjectRecord)
 
 function applyViewState(driver: DatabaseDriver, record: NativeSyncObjectRecord) {
   const payload = asObject(record);
-  const key = record.object_id.split(':').slice(4).join(':');
+  const objectIdParts = record.object_id.split(':');
+  const deviceId = text(payload.device_id) ?? objectIdParts[3] ?? '*';
+  const key = objectIdParts.slice(4).join(':');
   if (record.deleted_at) {
     if (key === 'active_node') driver.execute("DELETE FROM workspace_meta WHERE key = 'active_node_id'");
-    if (key.startsWith('node:')) driver.execute('DELETE FROM node_view_state WHERE node_id = ?', [key.slice(5)]);
+    if (key.startsWith('node:')) {
+      driver.execute('DELETE FROM node_view_state WHERE node_id = ? AND device_id = ?', [key.slice(5), deviceId]);
+    }
     return;
   }
   if (key === 'active_node') {
@@ -216,11 +220,11 @@ function applyViewState(driver: DatabaseDriver, record: NativeSyncObjectRecord) 
   }
   if (key.startsWith('node:')) {
     driver.execute(
-      `INSERT INTO node_view_state (node_id, scroll_top, selection_from, selection_to, updated_at)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(node_id) DO UPDATE SET scroll_top = excluded.scroll_top,
+      `INSERT INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(node_id, device_id) DO UPDATE SET scroll_top = excluded.scroll_top,
          selection_from = excluded.selection_from, selection_to = excluded.selection_to, updated_at = excluded.updated_at`,
-      [key.slice(5), integer(payload.scroll_top),
+      [key.slice(5), deviceId, integer(payload.scroll_top),
         numberOrNull(payload.selection_from), numberOrNull(payload.selection_to),
         record.updated_at]
     );

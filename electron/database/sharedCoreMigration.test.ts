@@ -48,7 +48,7 @@ it('initializes a fresh database with the current schema', () => {
        `SELECT name
        FROM sqlite_master
        WHERE type = 'table' AND name IN (
-         'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_sync_conflicts', 'node_sync_versions', 'nodes', 'node_reading', 'node_review', 'review_log', 'setting_records', 'settings', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
+         'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_sync_conflicts', 'node_sync_versions', 'node_view_state', 'nodes', 'node_reading', 'node_review', 'review_log', 'setting_records', 'settings', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
        )
        ORDER BY name ASC`
     )
@@ -63,6 +63,7 @@ it('initializes a fresh database with the current schema', () => {
     { name: 'node_review' },
     { name: 'node_sync_conflicts' },
     { name: 'node_sync_versions' },
+    { name: 'node_view_state' },
     { name: 'nodes' },
     { name: 'review_log' },
     { name: 'setting_records' },
@@ -136,6 +137,46 @@ it('applies content blob migrations to existing v28 databases', () => {
     .prepare('SELECT COUNT(*) AS count FROM content_blob_data')
     .get() as { count: number };
   expect(blobDataCount.count).toBe(2);
+});
+
+it('migrates node view state to device-scoped rows', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.exec(`
+    CREATE TABLE settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO settings (key, value, updated_at)
+    VALUES ('desktop_device_id', '"desktop-test"', '2026-04-27T00:00:00.000Z');
+
+    CREATE TABLE node_view_state (
+      node_id TEXT PRIMARY KEY,
+      scroll_top INTEGER NOT NULL DEFAULT 0,
+      selection_from INTEGER,
+      selection_to INTEGER,
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO node_view_state (node_id, scroll_top, selection_from, selection_to, updated_at)
+    VALUES ('node-1', 42, 4, 8, '2026-04-27T00:01:00.000Z');
+  `);
+  connection.sqlite.pragma('user_version = 30');
+
+  initializeDatabaseConnection(connection);
+
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  const columns = connection.sqlite.prepare('PRAGMA table_info(node_view_state)').all() as Array<{ name: string }>;
+  expect(columns.map((column) => column.name)).toEqual([
+    'node_id',
+    'device_id',
+    'scroll_top',
+    'selection_from',
+    'selection_to',
+    'updated_at'
+  ]);
+  expect(connection.sqlite
+    .prepare('SELECT node_id, device_id, scroll_top FROM node_view_state')
+    .get()).toEqual({ device_id: 'desktop-test', node_id: 'node-1', scroll_top: 42 });
 });
 
 it('rejects legacy development databases and requires a fresh schema reset', () => {

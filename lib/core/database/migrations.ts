@@ -6,7 +6,7 @@ import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
 import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 30;
+export const DATABASE_SCHEMA_VERSION = 31;
 
 const CREATE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -110,11 +110,13 @@ const CREATE_SCHEMA_STATEMENTS = [
     updated_at TEXT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS node_view_state (
-    node_id TEXT PRIMARY KEY,
+    node_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
     scroll_top INTEGER NOT NULL DEFAULT 0,
     selection_from INTEGER,
     selection_to INTEGER,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (node_id, device_id)
   )`,
   `CREATE TABLE IF NOT EXISTS mirror_articles (
     article_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,

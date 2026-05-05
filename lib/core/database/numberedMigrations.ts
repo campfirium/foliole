@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 
@@ -58,6 +58,12 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         contentColumn: 'content',
         tableName: 'external_documents'
       });
+    }
+  },
+  {
+    version: 31,
+    migrate: (sqlite) => {
+      migrateNodeViewStateDeviceScope(sqlite);
     }
   }
 ];
@@ -133,6 +139,60 @@ function sha256Hex(text: string) {
 
 function byteLength(text: string) {
   return Buffer.byteLength(text, 'utf8');
+}
+
+function parseDeviceId(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return typeof parsed === 'string' && parsed.trim() ? parsed.trim() : null;
+  } catch {
+    return value.trim() || null;
+  }
+}
+
+function ensureDesktopDeviceId(sqlite: DatabaseMigrationTarget) {
+  const existing = tableExists(sqlite, 'settings')
+    ? sqlite.prepare('SELECT value FROM settings WHERE key = ?').all('desktop_device_id')[0] as { value?: string } | undefined
+    : undefined;
+  const existingDeviceId = parseDeviceId(existing?.value);
+  if (existingDeviceId) return existingDeviceId;
+
+  const deviceId = `desktop-${randomUUID()}`;
+  if (tableExists(sqlite, 'settings')) {
+    sqlite.prepare(
+      `INSERT INTO settings (key, value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+    ).run('desktop_device_id', JSON.stringify(deviceId), new Date().toISOString());
+  }
+  return deviceId;
+}
+
+function migrateNodeViewStateDeviceScope(sqlite: DatabaseMigrationTarget) {
+  if (!tableExists(sqlite, 'node_view_state')) return;
+  const columns = sqlite.prepare('PRAGMA table_info(node_view_state)').all() as Array<{ name: string }>;
+  if (columns.some((column) => column.name === 'device_id')) return;
+
+  const deviceId = ensureDesktopDeviceId(sqlite);
+  sqlite.exec(`CREATE TABLE node_view_state_next (
+    node_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    scroll_top INTEGER NOT NULL DEFAULT 0,
+    selection_from INTEGER,
+    selection_to INTEGER,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (node_id, device_id)
+  )`);
+  sqlite.prepare(
+    `INSERT INTO node_view_state_next (
+       node_id, device_id, scroll_top, selection_from, selection_to, updated_at
+     )
+     SELECT node_id, ?, scroll_top, selection_from, selection_to, updated_at
+     FROM node_view_state`
+  ).run(deviceId);
+  sqlite.exec('DROP TABLE node_view_state');
+  sqlite.exec('ALTER TABLE node_view_state_next RENAME TO node_view_state');
 }
 
 function backfillTextBodyBlobOwners(sqlite: DatabaseMigrationTarget) {
