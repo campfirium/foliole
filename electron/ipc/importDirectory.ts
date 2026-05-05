@@ -3,6 +3,7 @@ import { dialog, type BrowserWindow } from 'electron';
 import { MANAGED_INBOX_APP_SETTING_KEY } from '../../lib/platform/managedInbox.js';
 import type { NativeDirectoryImportArgs, NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
 import { runDirectoryImportBatch } from '../import/directoryImportBatch.js';
+import { logDirectoryImportCompleted, logDirectoryImportFailed } from '../import/importRunLogger.js';
 
 import {
   discoverDirectoryImportSources,
@@ -54,32 +55,46 @@ export async function runDirectoryImport(
   args?: NativeDirectoryImportArgs
 ): Promise<NativeDirectoryImportResult | null> {
   const sourceAdapter = resolveDirectoryImportSourceAdapter(args?.source_adapter);
-  const consumePolicy = resolveDirectoryImportConsumePolicy(sourceAdapter, args?.consume_policy);
-  const rootPath = await selectImportDirectoryPath(window, args);
-  if (!rootPath) {
-    return null;
-  }
+  try {
+    const consumePolicy = resolveDirectoryImportConsumePolicy(sourceAdapter, args?.consume_policy);
+    const rootPath = await selectImportDirectoryPath(window, args);
+    if (!rootPath) {
+      return null;
+    }
 
-  const highlightPolicy = resolveImportHighlightPolicy(args);
-  const sources = await discoverDirectoryImportSources(
-    rootPath,
-    sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: ['markdown', 'text'] } : undefined
-  );
-  return runDirectoryImportBatch({
-    consumePolicy,
-    highlightPolicy,
-    rootPath,
-    sourceAdapter,
-    sources
-  });
+    const highlightPolicy = resolveImportHighlightPolicy(args);
+    const sources = await discoverDirectoryImportSources(
+      rootPath,
+      sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: ['markdown', 'text'] } : undefined
+    );
+    const result = await runDirectoryImportBatch({
+      consumePolicy,
+      highlightPolicy,
+      rootPath,
+      sourceAdapter,
+      sources
+    });
+    await logDirectoryImportCompleted(result);
+    return result;
+  } catch (error) {
+    await logDirectoryImportFailed(sourceAdapter, error);
+    throw error;
+  }
 }
 
 export async function runManagedInboxImport(rootPath: string) {
-  return runDirectoryImportBatch({
-    consumePolicy: 'clear',
-    highlightPolicy: 'reference_only',
-    rootPath,
-    sourceAdapter: 'foliole_managed_inbox_folder',
-    sources: await discoverDirectoryImportSources(rootPath, { supportedKinds: ['markdown', 'text'] })
-  });
+  try {
+    const result = await runDirectoryImportBatch({
+      consumePolicy: 'clear',
+      highlightPolicy: 'reference_only',
+      rootPath,
+      sourceAdapter: 'foliole_managed_inbox_folder',
+      sources: await discoverDirectoryImportSources(rootPath, { supportedKinds: ['markdown', 'text'] })
+    });
+    await logDirectoryImportCompleted(result);
+    return result;
+  } catch (error) {
+    await logDirectoryImportFailed('foliole_managed_inbox_folder', error);
+    throw error;
+  }
 }

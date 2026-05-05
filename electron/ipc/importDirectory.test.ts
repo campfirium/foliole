@@ -16,6 +16,10 @@ const { resolveAppPaths } = vi.hoisted(() => ({
 const { loadAppSettingsState } = vi.hoisted(() => ({
   loadAppSettingsState: vi.fn()
 }));
+const { logDirectoryImportCompleted, logDirectoryImportFailed } = vi.hoisted(() => ({
+  logDirectoryImportCompleted: vi.fn(),
+  logDirectoryImportFailed: vi.fn()
+}));
 const { trashItem } = vi.hoisted(() => ({
   trashItem: vi.fn(async (filePath: string) => {
     await fs.rm(filePath, { force: true });
@@ -27,6 +31,10 @@ vi.mock('../database/importPipeline.js', () => ({
   runPreparedImport
 }));
 
+vi.mock('../import/importRunLogger.js', () => ({
+  logDirectoryImportCompleted,
+  logDirectoryImportFailed
+}));
 vi.mock('./paths.js', () => ({ resolveAppPaths }));
 vi.mock('./storage.js', () => ({ loadAppSettingsState }));
 vi.mock('electron', () => ({
@@ -36,49 +44,14 @@ vi.mock('electron', () => ({
 }));
 
 import { runDirectoryImport } from './importDirectory.js';
+import { createPersistedRecord, createTempRoot } from './importDirectory.test-support.js';
 
 const tempRoots: string[] = [];
 
-function createPersistedRecord(
-  prepared: {
-    contentFingerprint: string;
-    degradedReason: string | null;
-    importedAt: string;
-    provider: 'desktop_text_file';
-    sourceFingerprint: string;
-    sourceKind: 'epub' | 'html' | 'markdown' | 'text';
-    sourceLocator: string;
-    sourceName: string;
-  },
-  overrides?: Partial<{ failureReason: string | null; nodeId: string | null; resultStatus: 'degraded' | 'failed' | 'imported' }>
-) {
-  return {
-    contentFingerprint: prepared.contentFingerprint,
-    degradedReason: overrides?.resultStatus === 'failed' ? null : prepared.degradedReason,
-    duplicateSemantic: 'new' as const,
-    failureReason: overrides?.failureReason ?? null,
-    importId: `import-${prepared.sourceName}`,
-    importedAt: prepared.importedAt,
-    nodeId: overrides?.nodeId ?? `node-${prepared.sourceName}`,
-    provider: prepared.provider,
-    resultStatus: overrides?.resultStatus ?? (prepared.degradedReason ? 'degraded' : 'imported'),
-    sourceFingerprint: prepared.sourceFingerprint,
-    sourceKind: prepared.sourceKind,
-    sourceLocator: prepared.sourceLocator,
-    sourceName: prepared.sourceName
-  };
-}
-
-async function createTempRoot(prefix: string) {
-  const parentDir = path.join(process.cwd(), '.tmp-tests');
-  await fs.mkdir(parentDir, { recursive: true });
-  const root = await fs.mkdtemp(path.join(parentDir, `${prefix}-`));
-  tempRoots.push(root);
-  return root;
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
+  logDirectoryImportCompleted.mockResolvedValue(undefined);
+  logDirectoryImportFailed.mockResolvedValue(undefined);
   resolveAppPaths.mockReturnValue({
     app_cache_dir: '/tmp/cache',
     app_config_dir: '/tmp/config',
@@ -96,8 +69,8 @@ afterEach(async () => {
   await Promise.all(tempRoots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })));
 });
 
-it('imports markdown and HTML directories through the shared normalization and persistence pipeline', async () => {
-  const root = await createTempRoot('import-directory-generic');
+async function createGenericImportRoot() {
+  const root = await createTempRoot('import-directory-generic', tempRoots);
   await fs.writeFile(path.join(root, 'a-note.md'), 'Use ==important== text', 'utf8');
   await fs.mkdir(path.join(root, 'b-web'), { recursive: true });
   await fs.writeFile(
@@ -105,9 +78,10 @@ it('imports markdown and HTML directories through the shared normalization and p
     '<table><tr><th>Name</th><th>Value</th></tr><tr><td>Alpha</td><td>Beta</td></tr></table>',
     'utf8'
   );
+  return root;
+}
 
-  const result = await runDirectoryImport(undefined, { directory_path: root, highlight_policy: 'adopt' });
-
+function expectGenericImportResult(result: Awaited<ReturnType<typeof runDirectoryImport>>, root: string) {
   expect(result).toEqual({
     archive_root_path: null,
     consume_policy: 'keep',
@@ -132,6 +106,9 @@ it('imports markdown and HTML directories through the shared normalization and p
     root_path: root,
     source_adapter: 'external_directory'
   });
+}
+
+function expectGenericPreparedImports() {
   expect(runPreparedImport).toHaveBeenCalledTimes(2);
   expect(runPreparedImport.mock.calls).toEqual(
     expect.arrayContaining([
@@ -153,11 +130,26 @@ it('imports markdown and HTML directories through the shared normalization and p
       ]
     ])
   );
+}
+
+it('imports markdown and HTML directories through the shared normalization and persistence pipeline', async () => {
+  const root = await createGenericImportRoot();
+
+  const result = await runDirectoryImport(undefined, { directory_path: root, highlight_policy: 'adopt' });
+
+  expectGenericImportResult(result, root);
+  expectGenericPreparedImports();
   expect(recordPreparedImportFailure).not.toHaveBeenCalled();
+  expect(logDirectoryImportCompleted).toHaveBeenCalledWith(
+    expect.objectContaining({
+      discovered_count: 2,
+      source_adapter: 'external_directory'
+    })
+  );
 });
 
 it('classifies vault markdown as obsidian imports and skips the .obsidian control directory', async () => {
-  const root = await createTempRoot('import-directory-obsidian');
+  const root = await createTempRoot('import-directory-obsidian', tempRoots);
   await fs.mkdir(path.join(root, '.obsidian'), { recursive: true });
   await fs.writeFile(path.join(root, '.obsidian', 'ignored.md'), '# hidden', 'utf8');
   await fs.mkdir(path.join(root, 'Daily'), { recursive: true });
@@ -190,10 +182,16 @@ it('classifies vault markdown as obsidian imports and skips the .obsidian contro
       sourceName: path.join('Daily', 'note.md')
     })
   );
+  expect(logDirectoryImportCompleted).toHaveBeenCalledWith(
+    expect.objectContaining({
+      discovered_count: 1,
+      source_adapter: 'external_directory'
+    })
+  );
 });
 
 it('resolves the managed inbox folder from runtime settings and trashes only imported sources', async () => {
-  const appDataDir = await createTempRoot('managed-inbox-runtime');
+  const appDataDir = await createTempRoot('managed-inbox-runtime', tempRoots);
   const managedRoot = path.join(appDataDir, 'custom-inbox');
   const failedPath = path.join(managedRoot, 'failed.md');
   const importedPath = path.join(managedRoot, 'clips', 'note.txt');
@@ -245,4 +243,10 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
   await expect(fs.readFile(failedPath, 'utf8')).resolves.toBe('# Failed managed note');
   expect(trashItem).toHaveBeenCalledWith(importedPath);
   expect(recordPreparedImportFailure).toHaveBeenCalledTimes(1);
+  expect(logDirectoryImportCompleted).toHaveBeenCalledWith(
+    expect.objectContaining({
+      failed_count: 1,
+      source_adapter: 'foliole_managed_inbox_folder'
+    })
+  );
 });
