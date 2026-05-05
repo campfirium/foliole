@@ -127,6 +127,24 @@ public class FolioleCompanionSyncPackApplyTest {
     }
 
     @Test
+    public void doesNotOverwriteDirtyNodeReviewWithoutConfirmedPushAck() throws Exception {
+        createIncomingStateOnlyPack("node_review", "node-1", 7, "desktop-review-hash");
+        mainDatabase.execSQL("INSERT INTO sync_object_state (" +
+            "object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, base_content_hash) " +
+            "VALUES ('node_review', 'node-1', 4, 'local-review-hash', 'android-local', '2026-04-27T00:04:00.000Z', 1, 'base-hash')");
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test", 4);
+
+        assertEquals(0, result.getInt("applied_object_count"));
+        assertEquals(1, selectInt(
+            "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node_review' AND object_id = 'node-1'"
+        ));
+        assertEquals("local-review-hash", selectString(
+            "SELECT content_hash FROM sync_object_state WHERE object_type = 'node_review' AND object_id = 'node-1'"
+        ));
+    }
+
+    @Test
     public void appliesGenericSettingPayloadRowsFromIncomingPack() throws Exception {
         createIncomingPack();
         appendIncomingSettingRows();
