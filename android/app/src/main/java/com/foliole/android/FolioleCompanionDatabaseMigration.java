@@ -4,6 +4,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 final class FolioleCompanionDatabaseMigration {
 
     private FolioleCompanionDatabaseMigration() {}
@@ -78,49 +81,37 @@ final class FolioleCompanionDatabaseMigration {
     }
 
     private static void copyLegacySyncObjectStateRows(Context context, SQLiteDatabase database) {
-        try (Cursor cursor = database.query(
-            "sync_object_state",
-            new String[] {
-                "object_type",
-                "object_id",
-                "current_version_id",
-                "content_hash",
-                "last_modified_by_device_id",
-                "updated_at",
-                "deleted_at",
-                "sync_dirty"
-            },
-            null,
-            null,
-            null,
-            null,
-            "updated_at ASC, object_type ASC, object_id ASC"
-        )) {
-            int stateSeq = 1;
-            while (cursor.moveToNext()) {
-                insertLegacySyncObjectStateRow(context, database, cursor, stateSeq);
-                stateSeq += 1;
+        try {
+            JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "migrationLegacySyncObjectStateRows").getJSONArray("rows");
+            for (int index = 0; index < rows.length(); index += 1) {
+                insertLegacySyncObjectStateRow(context, database, rows.getJSONObject(index), index + 1);
             }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Failed to load legacy sync object state rows.", exception);
         }
     }
 
-    private static void insertLegacySyncObjectStateRow(Context context, SQLiteDatabase database, Cursor cursor, int stateSeq) {
+    private static void insertLegacySyncObjectStateRow(Context context, SQLiteDatabase database, JSONObject row, int stateSeq) {
         try {
             FolioleCompanionNamedMutationStore.execute(context, database, "migrationSyncObjectStateNextInsert", new Object[] {
-                cursor.getString(0),
-                cursor.getString(1),
+                row.getString("object_type"),
+                row.getString("object_id"),
                 stateSeq,
-                cursor.isNull(2) ? null : cursor.getString(2),
-                cursor.getString(3),
-                cursor.getString(4),
-                cursor.getString(5),
-                cursor.isNull(6) ? null : cursor.getString(6),
-                cursor.getInt(7),
+                nullableString(row, "current_version_id"),
+                row.getString("content_hash"),
+                row.getString("last_modified_by_device_id"),
+                row.getString("updated_at"),
+                nullableString(row, "deleted_at"),
+                row.getInt("sync_dirty"),
                 null
             });
         } catch (Exception exception) {
             throw new IllegalStateException("Failed to copy legacy sync object state row.", exception);
         }
+    }
+
+    private static String nullableString(JSONObject row, String key) {
+        return row.isNull(key) ? null : row.optString(key, null);
     }
 
     private static void addSyncBaseContentHashIfMissing(Context context, SQLiteDatabase database) {
