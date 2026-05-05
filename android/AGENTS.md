@@ -10,6 +10,7 @@
 - Android 是正式宿主，不是临时试验目录；相关规则必须按宿主标准执行。
 - Android 宿主优先通过 `Capacitor` 承载 companion Web 产物；禁止把共享业务逻辑直接写进 `android/**`。
 - `android/` 只承载原生宿主工程、Gradle、Manifest、资源、平台权限与平台插件集成。
+- Android Java / Capacitor 插件属于平台 adapter，只实现权限、生命周期、文件、SQLite 执行、bridge 落地与宿主 API 接入；不得承载上层流程或业务决策。
 - Android 宿主只消费 `dist/companion` 构建产物；禁止把 Android 原生目录当作第二套业务前端目录。
 - 若某能力既影响 Android 又可能影响未来 iPhone，优先先落到共享 bridge / contract 或 `src/companion/**`，再由 Android 宿主接入。
 - 除原生权限、生命周期、intent、插件接缝与设备集成这类宿主特有能力外，Android 相关需求默认都应先复用或抽取 `src/shared/**` / `src/features/**` / 共享 contract；不得因为入口发生在 Android 就把节点列表、跳转逻辑、浏览语义、状态切换等非原生专属能力落到 Android / companion 私有实现。

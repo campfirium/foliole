@@ -273,6 +273,14 @@ if [[ -f "scripts/check-repository-root-boundary.mjs" ]]; then
     node scripts/check-repository-root-boundary.mjs
 fi
 
+if [[ -f "scripts/check-layer-dependency-boundary.mjs" ]]; then
+  run_quality_gate_command \
+    "quality-gate-fast" \
+    "layer-dependency-boundary" \
+    "layer dependency boundary" \
+    node scripts/check-layer-dependency-boundary.mjs
+fi
+
 if [[ "${level}" == "full" ]]; then
   exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
 fi

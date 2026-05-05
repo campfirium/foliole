@@ -16,6 +16,7 @@
     "appearance:colors:check": "node --experimental-strip-types scripts/generate-appearance-colors.ts --check",
     "deps:scan": "knip --dependencies --reporter compact",
     "deps:hardening:check": "bash scripts/npm-hardening-check.sh",
+    "check:layer-boundary": "node scripts/check-layer-dependency-boundary.mjs",
     "copy:guard": "node scripts/check-ui-copy-guard.mjs",
     "copy:guard:strict": "node scripts/check-ui-copy-guard.mjs --strict",
     "lint:desktop": "eslint src/app src/features src/shared/ui src/shared/platform electron scripts/windows vite.config.ts playwright.desktop.config.ts",

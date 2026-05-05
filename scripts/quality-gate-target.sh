@@ -38,6 +38,16 @@ run_repository_root_boundary_check_if_present() {
   fi
 }
 
+run_layer_dependency_boundary_check_if_present() {
+  if [[ -f "scripts/check-layer-dependency-boundary.mjs" ]]; then
+    run_quality_gate_command \
+      "${prefix}" \
+      "layer-dependency-boundary" \
+      "layer dependency boundary" \
+      node scripts/check-layer-dependency-boundary.mjs
+  fi
+}
+
 run_gate_steps() {
   local step
   for step in "$@"; do
@@ -152,6 +162,8 @@ run_copy_guard_if_present() {
 if quality_gate_should_print_step; then
   echo "[${prefix}] detected package manager: ${pm}"
 fi
+
+run_layer_dependency_boundary_check_if_present
 
 case "${target}" in
   desktop)

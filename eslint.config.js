@@ -70,5 +70,50 @@ export default [
         }
       ]
     }
+  },
+  {
+    files: ['src/{app,features,store}/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.*', '**/*.spec.*'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            'better-sqlite3',
+            'child_process',
+            'electron',
+            'fs',
+            'node:child_process',
+            'node:fs',
+            'node:path',
+            'path'
+          ],
+          patterns: ['child_process/*', 'electron/*', 'fs/*', 'node:child_process/*', 'node:fs/*', 'node:path/*', 'path/*']
+        }
+      ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'globalThis',
+          property: 'electron',
+          message: 'Use an existing shared platform bridge or adapter instead.'
+        },
+        {
+          object: 'globalThis',
+          property: 'electronAPI',
+          message: 'Use an existing shared platform bridge or adapter instead.'
+        },
+        {
+          object: 'window',
+          property: 'electron',
+          message: 'Use an existing shared platform bridge or adapter instead.'
+        },
+        {
+          object: 'window',
+          property: 'electronAPI',
+          message: 'Use an existing shared platform bridge or adapter instead.'
+        }
+      ]
+    }
   }
 ];

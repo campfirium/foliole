@@ -10,6 +10,7 @@
 - 默认在 `dev` 主干连续小步迭代；不创建 feature branch / worktree，除非用户明确要求。
 - 单次只做一个 30-90 分钟内可运行、可验证、可回退的最小任务；禁止混入无关重构。
 - 共享目标是“共享核心 + 薄宿主适配”，不是为每个平台复制一套业务逻辑。
+- 写任何产品代码时，默认先面向能力建模，而不是面向底层工具调用建模；上层面向稳定能力接口，平台层只做最必要 adapter。
 - 所有正式图标入口、正式菜单入口默认都必须有对应命令；设计与实现时必须从“图标 / 菜单 / 命令同源且命名一致”出发，禁止先做孤立入口、后补命令。详见 `.lab/specs/_product/methodology.md`。
 
 ## AGENTS Routing
@@ -65,6 +66,7 @@
 - 禁止把平台分支判断散落到 `src/features/**`、`src/store/**` 或编辑器业务逻辑中；平台差异优先放到 `src/shared/platform/**` 或对应宿主目录。
 - 若新增平台能力，先补 stable bridge / contract，再接宿主实现；禁止先把宿主 API 直接漏进业务层。
 - 不要求在 Android 开工前预先把“所有桌面能力”一次性抽到共享层；正确顺序是按当前任务所需能力做最小共享化，先证明共享抽象被 desktop 消费，再接入其他宿主，避免空抽象和大搬运。
+- UI / feature / store 层不得新增直接底层依赖；跨层能力调用必须经过 `src/shared/platform/**`、`lib/core/**` 或既有 bridge / service / adapter 模块。修 bug 和小改动不强制新建中间层，但不得新增直接底层依赖。
 
 ## Quality Gates And Validation
 
