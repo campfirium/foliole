@@ -9,6 +9,28 @@ if [[ ! -f "package.json" ]]; then
   exit 1
 fi
 
+cleanup_pids=()
+register_cleanup_pid() {
+  cleanup_pids+=("$1")
+}
+
+cleanup_quality_gate_processes() {
+  trap - EXIT INT TERM
+
+  local pid
+  for pid in "${cleanup_pids[@]:-}"; do
+    if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
+      kill "${pid}" 2>/dev/null || true
+    fi
+  done
+
+  if [[ -n "${QUALITY_GATE_ACTIVE_PGID:-}" ]]; then
+    terminate_process_group "${QUALITY_GATE_ACTIVE_PGID}"
+  fi
+}
+
+trap cleanup_quality_gate_processes EXIT INT TERM
+
 pm="$(resolve_package_manager)"
 
 if quality_gate_should_print_step; then
@@ -23,10 +45,18 @@ if quality_gate_should_print_step; then
   echo "[quality-gate-fast] running: lint + typecheck (parallel)"
 fi
 
-(run_quality_gate_script "quality-gate-fast" "${pm}" "lint" >"${lint_log}" 2>&1) &
+(
+  trap 'if [[ -n "${QUALITY_GATE_ACTIVE_PGID:-}" ]]; then terminate_process_group "${QUALITY_GATE_ACTIVE_PGID}"; fi' EXIT INT TERM
+  run_quality_gate_script "quality-gate-fast" "${pm}" "lint" >"${lint_log}" 2>&1
+) &
 lint_pid=$!
-(run_quality_gate_script "quality-gate-fast" "${pm}" "typecheck" >"${typecheck_log}" 2>&1) &
+register_cleanup_pid "${lint_pid}"
+(
+  trap 'if [[ -n "${QUALITY_GATE_ACTIVE_PGID:-}" ]]; then terminate_process_group "${QUALITY_GATE_ACTIVE_PGID}"; fi' EXIT INT TERM
+  run_quality_gate_script "quality-gate-fast" "${pm}" "typecheck" >"${typecheck_log}" 2>&1
+) &
 typecheck_pid=$!
+register_cleanup_pid "${typecheck_pid}"
 
 lint_ok=0
 typecheck_ok=0
@@ -45,6 +75,7 @@ if [[ "${typecheck_ok}" -ne 0 ]]; then
 fi
 
 rm -f "${lint_log}" "${typecheck_log}"
+cleanup_pids=()
 
 if [[ "${lint_ok}" -ne 0 || "${typecheck_ok}" -ne 0 ]]; then
   exit 1
@@ -111,10 +142,12 @@ else
 
     # Pass test files as positional filters to vitest
     mapfile -t test_array <<< "${test_files}"
-    npx vitest run --pool=threads --maxWorkers=10 "${test_array[@]}"
-
-    if quality_gate_should_print_step; then
-      echo "[quality-gate-fast] passed: test (related)"
+    if ! run_quality_gate_command \
+      "quality-gate-fast" \
+      "test" \
+      "test (related)" \
+      npx vitest run --pool=threads --maxWorkers=10 "${test_array[@]}"; then
+      exit 1
     fi
   fi
 fi
