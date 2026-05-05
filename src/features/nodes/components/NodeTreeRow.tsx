@@ -1,5 +1,6 @@
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 
+import { cn } from '../../../lib/utils';
 import { Button } from '../../../shared/ui';
 
 interface NodeTreeRowProps {
@@ -32,14 +33,14 @@ export function NodeTreeRow({
       active={isSelected}
       aria-current={isActive ? 'page' : undefined}
       aria-pressed={isSelected}
-      className="node-row node-tree-row"
+      className="gap-2 pl-[calc(0.5rem+var(--node-depth,0)*1rem)]"
       onContextMenu={onContextMenu ? (event) => onContextMenu(nodeId, event) : undefined}
       onClick={(event) => onSelect(nodeId, event)}
       style={style}
       variant="list"
     >
-      <span aria-hidden="true" className="node-tree-branch" data-visible={showBranch} />
-      <span className="node-tree-title">{label}</span>
+      <span aria-hidden="true" className={cn('h-px w-3 flex-none border-b border-dashed border-stone-300 opacity-0', showBranch && 'opacity-85')} />
+      <span className="min-w-0 truncate">{label}</span>
     </Button>
   );
 }

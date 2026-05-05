@@ -19,28 +19,32 @@ export function ReviewModeToolbar({
   onStartStudyMode
 }: ReviewModeToolbarProps) {
   return (
-    <section aria-label="Review mode toolbar" className="workspace-toolbar workspace-review-toolbar" data-mode={isStudyMode ? 'study' : 'edit'}>
+    <section
+      aria-label="Review mode toolbar"
+      className="flex min-h-[56px] flex-none items-center rounded-xl border border-amber-900/15 bg-gradient-to-r from-[#f8f2e8] to-[#f3e9d8] px-4 py-3 shadow-[0_8px_18px_-16px_rgba(120,79,35,0.6)]"
+      data-mode={isStudyMode ? 'study' : 'edit'}
+    >
       {!isStudyMode ? (
-        <div className="review-mode-toolbar-actions">
+        <div className="inline-flex items-center justify-start gap-2">
           <Button aria-label="Study" disabled={!canStartStudyMode} onClick={onStartStudyMode} size="sm" variant="primary">
             Study
           </Button>
         </div>
       ) : (
-        <div className="review-mode-toolbar-actions">
+        <div className="inline-flex w-full items-center justify-center gap-2">
           <Button aria-label="Show Answer" onClick={onRevealAnswer} size="sm" variant="primary">
             Show Answer
           </Button>
-          <Button aria-label="Grade 1" className="review-grade-button" disabled={!isAnswerRevealed} onClick={() => onGrade(1)} size="sm" variant="ghost">
+          <Button aria-label="Grade 1" className="min-w-24" disabled={!isAnswerRevealed} onClick={() => onGrade(1)} size="sm" variant="ghost">
             1
           </Button>
-          <Button aria-label="Grade 2" className="review-grade-button" disabled={!isAnswerRevealed} onClick={() => onGrade(2)} size="sm" variant="ghost">
+          <Button aria-label="Grade 2" className="min-w-24" disabled={!isAnswerRevealed} onClick={() => onGrade(2)} size="sm" variant="ghost">
             2
           </Button>
-          <Button aria-label="Grade 3" className="review-grade-button" disabled={!isAnswerRevealed} onClick={() => onGrade(3)} size="sm" variant="ghost">
+          <Button aria-label="Grade 3" className="min-w-24" disabled={!isAnswerRevealed} onClick={() => onGrade(3)} size="sm" variant="ghost">
             3
           </Button>
-          <Button aria-label="Grade 4" className="review-grade-button" disabled={!isAnswerRevealed} onClick={() => onGrade(4)} size="sm" variant="ghost">
+          <Button aria-label="Grade 4" className="min-w-24" disabled={!isAnswerRevealed} onClick={() => onGrade(4)} size="sm" variant="ghost">
             4
           </Button>
         </div>

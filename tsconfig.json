@@ -12,6 +12,10 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "types": ["vitest/globals", "vite/client"]
   },
   "include": ["src", "vite.config.ts", "eslint.config.js"]

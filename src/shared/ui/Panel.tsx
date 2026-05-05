@@ -1,5 +1,8 @@
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from 'react';
 
+import { CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+
 type PanelElement = 'section' | 'aside' | 'div';
 
 interface PanelProps<T extends PanelElement = 'section'> {
@@ -13,10 +16,6 @@ interface PanelProps<T extends PanelElement = 'section'> {
   bodyClassName?: string;
   ariaLabel?: string;
   scrollBody?: boolean;
-}
-
-function joinClassNames(...classNames: Array<string | undefined | false>) {
-  return classNames.filter(Boolean).join(' ');
 }
 
 export function Panel<T extends PanelElement = 'section'>({
@@ -38,17 +37,18 @@ export function Panel<T extends PanelElement = 'section'>({
   return (
     <Component
       aria-label={ariaLabel}
-      className={joinClassNames('ui-panel', className)}
+      className={cn(
+        'flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-bg-panel to-bg-subtle text-foreground shadow-[0_1px_0_rgba(255,255,255,0.8),0_18px_32px_-24px_rgba(88,63,33,0.45)]',
+        className
+      )}
       {...rest}
     >
-      <header className="ui-panel-header" onClick={onHeaderClick}>
-        {useHeading ? <h2 className="ui-panel-title">{title}</h2> : <div className="ui-panel-title">{title}</div>}
+      <CardHeader className={cn(onHeaderClick && 'cursor-pointer transition-colors hover:bg-amber-100/40')} onClick={onHeaderClick}>
+        {useHeading ? <CardTitle className="flex-1">{title}</CardTitle> : <div className="min-w-0 flex-1">{title}</div>}
         {actions}
-      </header>
-      <div className={joinClassNames('ui-panel-body', scrollBody && 'ui-panel-body-scroll', bodyClassName)}>
-        {children}
-      </div>
-      {footer ? <footer className="ui-panel-footer">{footer}</footer> : null}
+      </CardHeader>
+      <CardContent className={cn('min-h-0 flex-1', scrollBody && 'overflow-auto', bodyClassName)}>{children}</CardContent>
+      {footer ? <CardFooter>{footer}</CardFooter> : null}
     </Component>
   );
 }

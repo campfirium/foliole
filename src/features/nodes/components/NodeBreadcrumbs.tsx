@@ -17,7 +17,7 @@ export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeB
   }
 
   return (
-    <nav aria-label="Node breadcrumbs" className="node-breadcrumbs">
+    <nav aria-label="Node breadcrumbs" className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
 
@@ -25,7 +25,7 @@ export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeB
           return (
             <button
               aria-label="Expand breadcrumb path"
-              className="node-breadcrumbs-segment node-breadcrumbs-button node-breadcrumbs-ellipsis"
+              className="inline-block max-w-none border-0 bg-transparent p-0 text-xs font-medium leading-none text-slate-500"
               key={item.id}
               onClick={() => setIsExpanded(true)}
               type="button"
@@ -36,17 +36,17 @@ export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeB
         }
 
         return (
-          <span className="node-breadcrumbs-item" key={item.id}>
+          <span className="inline" key={item.id}>
             <button
               aria-current={isLast ? 'page' : undefined}
-              className="node-breadcrumbs-segment node-breadcrumbs-button"
+              className="inline-block max-w-[18ch] overflow-hidden border-0 bg-transparent p-0 text-left align-bottom text-xs font-medium leading-none text-slate-500 text-ellipsis hover:text-foreground aria-[current=page]:max-w-[24ch] aria-[current=page]:cursor-default aria-[current=page]:text-foreground"
               onClick={() => onSelectNode(item.id)}
               type="button"
             >
               {item.title}
             </button>
             {!isLast ? (
-              <span aria-hidden="true" className="node-breadcrumbs-separator">
+              <span aria-hidden="true" className="px-1 text-xs font-medium leading-none text-slate-500">
                 {' / '}
               </span>
             ) : null}

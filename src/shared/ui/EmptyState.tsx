@@ -5,9 +5,9 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description }: EmptyStateProps) {
   return (
-    <div className="ui-empty" role="status">
-      <p className="ui-empty-title">{title}</p>
-      <p className="ui-empty-description">{description}</p>
+    <div className="flex min-h-[120px] flex-col items-center justify-center gap-2 text-center text-sm text-slate-500" role="status">
+      <p className="m-0 text-sm font-semibold text-foreground">{title}</p>
+      <p className="m-0 text-[13px]">{description}</p>
     </div>
   );
 }

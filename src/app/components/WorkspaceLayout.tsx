@@ -4,6 +4,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+import { cn } from '../../lib/utils';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -118,7 +119,7 @@ export function WorkspaceLayout({
   const documentNodeId = isViewingTrashNode ? selectedTrashNodeId : activeNodeId;
 
   return (
-    <main aria-label="Foliole workspace" className="workspace-shell">
+    <main aria-label="Foliole workspace" className="flex h-dvh flex-col overflow-hidden p-0">
       <WindowTitleBar />
       <WorkspaceToolbar
         canGoBack={canGoBack}
@@ -128,7 +129,11 @@ export function WorkspaceLayout({
         onGoForward={onGoForward}
         onGoParent={onGoParent}
       />
-      <div className="workspace-grid" data-resizing={isResizingList} style={workspaceGridStyle}>
+      <div
+        className="grid min-h-0 flex-1 gap-2 overflow-hidden px-3 pb-3 pt-2 max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
+        data-resizing={isResizingList}
+        style={{ ...workspaceGridStyle, gridTemplateColumns: 'minmax(0, var(--workspace-list-width, 300px)) 4px minmax(0, 1fr)' }}
+      >
         <NodeListTree
           activeNodeId={activeNodeId}
           isTrashViewOpen={isTrashViewOpen}
@@ -141,12 +146,13 @@ export function WorkspaceLayout({
           selectedTrashNodeId={selectedTrashNodeId}
         />
         <ListSplitter
+          isResizingList={isResizingList}
           listWidth={listWidth}
           onResetLayout={onResetLayout}
           onSplitterKeyDown={onSplitterKeyDown}
           onSplitterPointerDown={onSplitterPointerDown}
         />
-        <section aria-label="Document and review area" className="workspace-right-column">
+        <section aria-label="Document and review area" className="flex min-h-0 flex-col gap-2">
           <DocumentPanelSection
             activeNodeId={documentNodeId}
             contextMenu={contextMenu}
@@ -183,24 +189,38 @@ export function WorkspaceLayout({
 }
 
 interface ListSplitterProps {
+  isResizingList: boolean;
   listWidth: number;
   onResetLayout: () => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }
 
-function ListSplitter({ listWidth, onResetLayout, onSplitterKeyDown, onSplitterPointerDown }: ListSplitterProps) {
+function ListSplitter({
+  isResizingList,
+  listWidth,
+  onResetLayout,
+  onSplitterKeyDown,
+  onSplitterPointerDown
+}: ListSplitterProps) {
   return (
     <div
       aria-label="Resize node list"
       aria-orientation="vertical"
       aria-valuenow={Math.round(listWidth)}
-      className="workspace-splitter"
+      className="group relative self-stretch rounded-full max-[1080px]:hidden"
       onDoubleClick={onResetLayout}
       onKeyDown={onSplitterKeyDown}
       onPointerDown={onSplitterPointerDown}
       role="separator"
       tabIndex={0}
-    />
+    >
+      <span
+        className={cn(
+          'pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 border-l border-dashed border-slate-300 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
+          isResizingList && 'w-1 border-l-2 border-solid border-accent-strong opacity-100'
+        )}
+      />
+    </div>
   );
 }

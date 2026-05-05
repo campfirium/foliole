@@ -200,23 +200,23 @@ export function NodeListTree({
       <Panel
         ariaLabel="Node list panel"
         actions={
-          <div className="node-list-header-actions">
+          <div className="inline-flex gap-2">
             <Button aria-label="New" onClick={handleCreateRootNode} size="sm" variant="subtle">
               New
             </Button>
           </div>
         }
         as="aside"
-        bodyClassName="node-list"
-        className="panel-list"
+        bodyClassName="flex min-h-0 flex-1 flex-col gap-0 px-4 py-0"
+        className="min-h-0"
         onHeaderClick={onOpenNotesView}
         scrollBody
         title={
-          <h2 className="node-list-title-heading">
+          <h2 className="m-0">
             <button
               aria-label="Nodes"
               aria-pressed={!isTrashViewOpen}
-              className="notes-title-button"
+              className="min-h-7 w-full border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-[0.08em] text-stone-500 hover:text-foreground aria-[pressed=true]:text-foreground"
               onClick={handleNotesHeaderClick}
               type="button"
             >
@@ -225,7 +225,11 @@ export function NodeListTree({
           </h2>
         }
       >
-        <section aria-hidden={isTrashViewOpen} className="node-list-notes" data-collapsed={isTrashViewOpen}>
+        <section
+          aria-hidden={isTrashViewOpen}
+          className="flex max-h-[120dvh] flex-1 flex-col gap-2 overflow-hidden pt-2 transition-all duration-200 data-[collapsed=true]:pointer-events-none data-[collapsed=true]:max-h-0 data-[collapsed=true]:translate-y-[-4px] data-[collapsed=true]:pt-0 data-[collapsed=true]:opacity-0"
+          data-collapsed={isTrashViewOpen}
+        >
           {noteRows.length === 0 ? (
             <EmptyState description="Create or import a node to start editing." title="No nodes" />
           ) : (

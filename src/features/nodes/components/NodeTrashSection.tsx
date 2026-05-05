@@ -39,12 +39,16 @@ export function NodeTrashSection({
   };
 
   return (
-    <section aria-label="Trash section" className="trash-inline-section" data-open={isOpen}>
-      <header className="trash-inline-header" onClick={handleToggleTrash}>
+    <section aria-label="Trash section" className="-mx-4 mt-auto flex flex-none flex-col data-[open=true]:mt-0" data-open={isOpen}>
+      <header
+        className="flex min-h-[52px] cursor-pointer items-center justify-between border-y border-dashed border-border px-4 py-3 transition-colors hover:bg-amber-100/40 data-[open=false]:border-b-0"
+        data-open={isOpen}
+        onClick={handleToggleTrash}
+      >
         <button
           aria-label="Trash"
           aria-pressed={isOpen}
-          className="trash-inline-toggle"
+          className="min-h-7 border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-[0.08em] text-stone-500 hover:text-foreground aria-[pressed=true]:text-foreground"
           onClick={handleToggleTrashButton}
           type="button"
         >
@@ -56,7 +60,11 @@ export function NodeTrashSection({
           </Button>
         ) : null}
       </header>
-      <div aria-hidden={!isOpen} className="trash-inline-content">
+      <div
+        aria-hidden={!isOpen}
+        className="pointer-events-none flex max-h-0 flex-col gap-2 overflow-hidden px-4 pt-0 opacity-0 transition-all duration-200 data-[open=true]:pointer-events-auto data-[open=true]:max-h-[52dvh] data-[open=true]:pt-2 data-[open=true]:opacity-100"
+        data-open={isOpen}
+      >
         {rows.length === 0 ? (
           <EmptyState description="Deleted nodes will appear here." title="Trash is empty" />
         ) : (

@@ -1,3 +1,5 @@
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 interface NodeListContextMenuProps {
   isTrashMenu: boolean;
   left: number;
@@ -18,30 +20,31 @@ export function NodeListContextMenu({
   top
 }: NodeListContextMenuProps) {
   return (
-    <>
-      <div aria-hidden="true" className="editor-context-menu-scrim" onPointerDown={onClose} />
-      <div
-        aria-label="Node commands"
-        className="editor-context-menu"
+    <DropdownMenu onOpenChange={(open) => (open ? undefined : onClose())} open>
+      <DropdownMenuTrigger asChild>
+        <button
+          aria-hidden="true"
+          className="pointer-events-none fixed h-0 w-0 opacity-0"
+          style={{ left: `${left}px`, top: `${top}px` }}
+          type="button"
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        onCloseAutoFocus={(event) => event.preventDefault()}
         onContextMenu={(event) => event.preventDefault()}
-        role="menu"
-        style={{ left: `${left}px`, top: `${top}px` }}
+        sideOffset={0}
+        style={{ left: `${left}px`, position: 'fixed', top: `${top}px` }}
       >
         {isTrashMenu ? (
           <>
-            <button className="editor-context-menu-item" onClick={onRestoreNode} role="menuitem" type="button">
-              Restore
-            </button>
-            <button className="editor-context-menu-item" onClick={onDeleteNodePermanently} role="menuitem" type="button">
-              Delete Permanently
-            </button>
+            <DropdownMenuItem onSelect={onRestoreNode}>Restore</DropdownMenuItem>
+            <DropdownMenuItem onSelect={onDeleteNodePermanently}>Delete Permanently</DropdownMenuItem>
           </>
         ) : (
-          <button className="editor-context-menu-item" onClick={onDeleteNode} role="menuitem" type="button">
-            Delete Node
-          </button>
+          <DropdownMenuItem onSelect={onDeleteNode}>Delete Node</DropdownMenuItem>
         )}
-      </div>
-    </>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

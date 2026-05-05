@@ -4,6 +4,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { cn } from '../../lib/utils';
 import { Panel } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
@@ -66,29 +67,29 @@ export function DocumentPanelSection({
   const hasAnswerSection = activeNode?.reveal !== null && showAnswerSection;
 
   return (
-    <section aria-label="Document area" className="panel-document-shell">
+    <section aria-label="Document area" className="min-h-0">
       <Panel
         ariaLabel="Document panel"
         actions={
-          <div className="document-header-breadcrumbs">
+          <div className="min-w-0 flex-1 overflow-hidden pl-2">
             <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
           </div>
         }
-        bodyClassName="editor-body"
-        className="panel-editor"
+        bodyClassName="flex min-h-0 flex-1 p-4 max-[1080px]:p-2"
+        className="h-full min-h-0"
         style={documentLayoutStyle}
         title="Content"
       >
-        <div className="document-width-shell" data-resizing={isDocumentResizing}>
+        <div className="flex h-full min-h-0 w-full gap-2" data-resizing={isDocumentResizing}>
           <DocumentWidthHandle
             ariaLabel="Resize document width from left"
             onPointerDown={(event) => onStartDocumentResize('left', event)}
             onResetLayout={onResetLayout}
             side="left"
           />
-          <div className="document-width-frame">
-            <div className="document-content-stack" data-has-reveal={hasAnswerSection}>
-              <div className="document-editor-context-zone" onContextMenu={onEditorContextMenu}>
+          <div className="mx-auto flex h-full min-h-0 w-full [width:min(100%,var(--document-max-width))]">
+            <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+              <div className="min-h-0 w-full flex-1" onContextMenu={onEditorContextMenu}>
                 <MarkdownEditor
                   ariaLabel="Prompt editor"
                   className="prompt-editor-host"
@@ -101,10 +102,10 @@ export function DocumentPanelSection({
                 />
               </div>
               {hasAnswerSection ? (
-                <section aria-label="Cloze answer section" className="cloze-answer-zone">
+                <section aria-label="Cloze answer section" className="flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden border-t border-border pt-3">
                   <MarkdownEditor
                     ariaLabel="Answer editor"
-                    className="answer-editor-host"
+                    className="answer-editor-host min-h-0"
                     debugId="answer-editor"
                     nodeId={editorNodeId}
                     onChange={onAnswerChange}
@@ -127,8 +128,8 @@ export function DocumentPanelSection({
           canRunCommands={contextMenu.canRunCommands}
           left={contextMenu.left}
           onClose={onCloseContextMenu}
-          onCreateHighlight={onCreateHighlight}
           onCreateCloze={onCreateCloze}
+          onCreateHighlight={onCreateHighlight}
           top={contextMenu.top}
         />
       ) : null}
@@ -145,11 +146,14 @@ interface DocumentWidthHandleProps {
 
 function DocumentWidthHandle({ ariaLabel, onPointerDown, onResetLayout, side }: DocumentWidthHandleProps) {
   return (
-    <div className="document-width-handle" data-side={side}>
+    <div className="relative min-w-0 flex-1 max-[1080px]:hidden" data-side={side}>
       <div
         aria-label={ariaLabel}
         aria-orientation="vertical"
-        className="document-width-grip"
+        className={cn(
+          'absolute top-0 h-full w-2.5 cursor-col-resize before:absolute before:h-full before:border-l before:border-dashed before:border-transparent before:transition-colors hover:before:border-slate-300 focus-visible:before:border-slate-300',
+          side === 'left' ? 'right-0 before:right-0' : 'left-0 before:left-0'
+        )}
         onDoubleClick={onResetLayout}
         onMouseDown={onPointerDown}
         onPointerDown={onPointerDown}

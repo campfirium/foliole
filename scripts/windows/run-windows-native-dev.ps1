@@ -9,7 +9,7 @@ param(
   [string]$WindowsWorkDir,
   [Parameter(Mandatory = $true)]
   [string]$LogDir,
-  [int]$BootReadyTimeoutSec = 25,
+  [int]$BootReadyTimeoutSec = 60,
   [ValidateSet("start", "sync", "restart", "stop", "status", "apply")]
   [string]$Action = "apply"
 )
@@ -416,6 +416,24 @@ function Wait-ForFrontendReady {
   return $false
 }
 
+function Wait-FrontendReadyWithSingleRetry {
+  param(
+    [string]$WorkDir,
+    [string]$BootSession,
+    [int]$TimeoutSeconds
+  )
+
+  if (Wait-ForFrontendReady -WorkDir $WorkDir -BootSession $BootSession -TimeoutSeconds $TimeoutSeconds) {
+    return $true
+  }
+
+  Write-Log "[windows-native-dev] frontend not ready, retrying launch once."
+  Stop-NativeDevSession -WorkDir $WorkDir
+  $retryBootSession = Launch-NativeDev -WorkDir $WorkDir
+  Ensure-AppWindowForeground -WorkDir $WorkDir
+  return (Wait-ForFrontendReady -WorkDir $WorkDir -BootSession $retryBootSession -TimeoutSeconds $TimeoutSeconds)
+}
+
 function Ensure-AppWindowForeground {
   param([string]$WorkDir)
 
@@ -513,7 +531,7 @@ if ($Action -eq "apply") {
   if (-not (Is-NativeDevRunning -WorkDir $WindowsWorkDir)) {
     Write-Log "[windows-native-dev] apply mode fallback: app not running, start now."
     $applyBootSession = Launch-NativeDev -WorkDir $WindowsWorkDir
-    if (-not (Wait-ForFrontendReady -WorkDir $WindowsWorkDir -BootSession $applyBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
+    if (-not (Wait-FrontendReadyWithSingleRetry -WorkDir $WindowsWorkDir -BootSession $applyBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
       Write-Log "[windows-native-dev] status: BOOT_TIMEOUT"
       Write-Log "[windows-native-dev] log file: $logPath"
       exit 11
@@ -530,7 +548,7 @@ if ($Action -eq "apply") {
 if ($Action -eq "restart") {
   $restartBootSession = Launch-NativeDev -WorkDir $WindowsWorkDir
   Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
-  if (-not (Wait-ForFrontendReady -WorkDir $WindowsWorkDir -BootSession $restartBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
+  if (-not (Wait-FrontendReadyWithSingleRetry -WorkDir $WindowsWorkDir -BootSession $restartBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
     Show-Status -WorkDir $WindowsWorkDir
     Write-Log "[windows-native-dev] status: BOOT_TIMEOUT"
     Write-Log "[windows-native-dev] log file: $logPath"
@@ -545,7 +563,7 @@ if ($Action -eq "restart") {
 if ($Action -eq "start") {
   $startBootSession = Launch-NativeDev -WorkDir $WindowsWorkDir
   Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
-  if (-not (Wait-ForFrontendReady -WorkDir $WindowsWorkDir -BootSession $startBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
+  if (-not (Wait-FrontendReadyWithSingleRetry -WorkDir $WindowsWorkDir -BootSession $startBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
     Show-Status -WorkDir $WindowsWorkDir
     Write-Log "[windows-native-dev] status: BOOT_TIMEOUT"
     Write-Log "[windows-native-dev] log file: $logPath"

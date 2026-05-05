@@ -1,23 +1,17 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
+import { Button as ShadcnButton } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
 interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   icon: ReactNode;
   label: string;
 }
 
-function joinClassNames(...classNames: Array<string | undefined | false>) {
-  return classNames.filter(Boolean).join(' ');
-}
-
 export function IconButton({ icon, label, className, type = 'button', ...rest }: IconButtonProps) {
   return (
-    <button
-      aria-label={label}
-      className={joinClassNames('ui-icon-button', className)}
-      type={type}
-      {...rest}
-    >
+    <ShadcnButton aria-label={label} className={cn('size-8', className)} size="icon" type={type} variant="ghost" {...rest}>
       {icon}
-    </button>
+    </ShadcnButton>
   );
 }

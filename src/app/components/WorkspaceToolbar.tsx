@@ -18,11 +18,32 @@ export function WorkspaceToolbar({
   onGoParent
 }: WorkspaceToolbarProps) {
   return (
-    <section aria-label="Workspace toolbar" className="workspace-toolbar">
-      <div className="workspace-toolbar-group">
-        <IconButton disabled={!canGoBack} icon="←" label="Go back" onClick={onGoBack} />
-        <IconButton disabled={!canGoForward} icon="→" label="Go forward" onClick={onGoForward} />
-        <IconButton disabled={!canGoParent} icon="↑" label="Go to parent node" onClick={onGoParent} />
+    <section
+      aria-label="Workspace toolbar"
+      className="flex min-h-[40px] flex-none items-center border-b border-amber-900/15 bg-gradient-to-r from-[#f7f1e6] to-[#f1e7d6] px-3"
+    >
+      <div className="inline-flex gap-1">
+        <IconButton
+          className="size-7 rounded-md border border-transparent text-stone-600 hover:border-amber-900/20 hover:bg-amber-100/60 hover:text-stone-900"
+          disabled={!canGoBack}
+          icon="←"
+          label="Go back"
+          onClick={onGoBack}
+        />
+        <IconButton
+          className="size-7 rounded-md border border-transparent text-stone-600 hover:border-amber-900/20 hover:bg-amber-100/60 hover:text-stone-900"
+          disabled={!canGoForward}
+          icon="→"
+          label="Go forward"
+          onClick={onGoForward}
+        />
+        <IconButton
+          className="size-7 rounded-md border border-transparent text-stone-600 hover:border-amber-900/20 hover:bg-amber-100/60 hover:text-stone-900"
+          disabled={!canGoParent}
+          icon="↑"
+          label="Go to parent node"
+          onClick={onGoParent}
+        />
       </div>
     </section>
   );

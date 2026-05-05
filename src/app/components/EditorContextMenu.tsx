@@ -1,3 +1,5 @@
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 export interface EditorContextMenuProps {
   canRunCommands: boolean;
   left: number;
@@ -16,34 +18,29 @@ export function EditorContextMenu({
   onCreateCloze
 }: EditorContextMenuProps) {
   return (
-    <>
-      <div aria-hidden="true" className="editor-context-menu-scrim" onPointerDown={onClose} />
-      <div
-        aria-label="Editor commands"
-        className="editor-context-menu"
+    <DropdownMenu onOpenChange={(open) => (open ? undefined : onClose())} open>
+      <DropdownMenuTrigger asChild>
+        <button
+          aria-hidden="true"
+          className="pointer-events-none fixed h-0 w-0 opacity-0"
+          style={{ left: `${left}px`, top: `${top}px` }}
+          type="button"
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        onCloseAutoFocus={(event) => event.preventDefault()}
         onContextMenu={(event) => event.preventDefault()}
-        role="menu"
-        style={{ left: `${left}px`, top: `${top}px` }}
+        sideOffset={0}
+        style={{ left: `${left}px`, position: 'fixed', top: `${top}px` }}
       >
-        <button
-          className="editor-context-menu-item"
-          disabled={!canRunCommands}
-          onClick={onCreateHighlight}
-          role="menuitem"
-          type="button"
-        >
+        <DropdownMenuItem disabled={!canRunCommands} onSelect={onCreateHighlight}>
           Highlight
-        </button>
-        <button
-          className="editor-context-menu-item"
-          disabled={!canRunCommands}
-          onClick={onCreateCloze}
-          role="menuitem"
-          type="button"
-        >
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={!canRunCommands} onSelect={onCreateCloze}>
           Cloze
-        </button>
-      </div>
-    </>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
