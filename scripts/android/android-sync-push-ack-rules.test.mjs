@@ -90,6 +90,18 @@ const SYNC_STATE_PLUGIN_ACTIONS = path.join(
   'android',
   'FolioleCompanionSyncStatePluginActions.java'
 );
+const SYNC_DATA_PLUGIN_ACTIONS = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionSyncDataPluginActions.java'
+);
 
 describe('Android sync push ack protocol rules', () => {
   it('loads push ack protocol rules from generated definitions', async () => {
@@ -182,5 +194,24 @@ describe('Android sync push ack protocol rules', () => {
     expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(databaseHelper.hostContext(), "syncMetaCursors", key)');
     expect(source).not.toContain('SYNC_REVIEW_LOG_CURSOR_KEY');
     expect(source).not.toContain('"sync_review_log_cursor"');
+  });
+
+  it('loads sync plugin request keys from generated definitions', async () => {
+    const source = [
+      await readFile(SYNC_STATE_PLUGIN_ACTIONS, 'utf8'),
+      await readFile(SYNC_DATA_PLUGIN_ACTIONS, 'utf8')
+    ].join('\n');
+
+    expect(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS.syncPluginRequestKeys).toMatchObject({
+      acks: 'acks',
+      cursor: 'cursor',
+      objectIds: 'object_ids',
+      objectTypes: 'object_types'
+    });
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(databaseHelper.hostContext(), "syncPluginRequestKeys", key)');
+    expect(source).not.toContain('optJSONArray("acks"');
+    expect(source).not.toContain('optJSONArray("object_ids"');
+    expect(source).not.toContain('optJSONObject("cursor"');
+    expect(source).not.toContain('getInt("cursor"');
   });
 });

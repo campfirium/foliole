@@ -15,7 +15,7 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "state"),
-            readNullableIntCursor(call)
+            readNullableIntCursor(databaseHelper, call)
         );
     }
 
@@ -28,7 +28,7 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "pack"),
-            readNullableIntCursor(call)
+            readNullableIntCursor(databaseHelper, call)
         );
     }
 
@@ -41,7 +41,7 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "statePush"),
-            readNullableIntCursor(call)
+            readNullableIntCursor(databaseHelper, call)
         );
     }
 
@@ -54,7 +54,7 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "nodeVersion"),
-            call.getData().optJSONObject("cursor")
+            call.getData().optJSONObject(requestKey(databaseHelper, "cursor"))
         );
     }
 
@@ -67,7 +67,7 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "nodeVersionPush"),
-            call.getData().optJSONObject("cursor")
+            call.getData().optJSONObject(requestKey(databaseHelper, "cursor"))
         );
     }
 
@@ -80,7 +80,7 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "reviewLog"),
-            call.getData().optJSONObject("cursor")
+            call.getData().optJSONObject(requestKey(databaseHelper, "cursor"))
         );
     }
 
@@ -93,12 +93,12 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "reviewLogPush"),
-            call.getData().optJSONObject("cursor")
+            call.getData().optJSONObject(requestKey(databaseHelper, "cursor"))
         );
     }
 
     static JSObject saveSyncPushAcks(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncPushAcks(call.getData().optJSONArray("acks"));
+        return databaseHelper.saveSyncPushAcks(call.getData().optJSONArray(requestKey(databaseHelper, "acks")));
     }
 
     static JSObject saveSyncSettingRecord(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
@@ -121,13 +121,18 @@ final class FolioleCompanionSyncStatePluginActions {
         return databaseHelper.saveSyncNodeViewState(call.getData());
     }
 
-    private static Integer readNullableIntCursor(PluginCall call) throws Exception {
-        return call.getData().has("cursor") && !call.getData().isNull("cursor")
-            ? call.getData().getInt("cursor")
+    private static Integer readNullableIntCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        String key = requestKey(databaseHelper, "cursor");
+        return call.getData().has(key) && !call.getData().isNull(key)
+            ? call.getData().getInt(key)
             : null;
     }
 
     private static String cursorKey(FolioleCompanionDatabaseHelper databaseHelper, String key) throws Exception {
         return FolioleCompanionSyncProtocolDefinitions.stringValue(databaseHelper.hostContext(), "syncMetaCursors", key);
+    }
+
+    private static String requestKey(FolioleCompanionDatabaseHelper databaseHelper, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(databaseHelper.hostContext(), "syncPluginRequestKeys", key);
     }
 }

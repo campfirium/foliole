@@ -148,6 +148,13 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
     occurredAt: 'occurred_at',
     status: 'status'
   },
+  syncPluginRequestKeys: {
+    acks: 'acks',
+    cursor: 'cursor',
+    limit: 'limit',
+    objectIds: 'object_ids',
+    objectTypes: 'object_types'
+  },
   syncMetaCursors: {
     nodeVersion: 'sync_node_version_cursor',
     nodeVersionPush: 'sync_node_version_push_cursor',
