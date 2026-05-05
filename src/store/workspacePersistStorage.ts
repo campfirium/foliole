@@ -5,9 +5,17 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLogging';
 
-import { mergePendingNodeSyncIntoSnapshot, replayPendingNodeSync } from './workspacePendingNodeSync';
+import {
+  listPendingNodeSyncNodeIds,
+  mergePendingNodeSyncIntoSnapshot,
+  replayPendingNodeSync
+} from './workspacePendingNodeSync';
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
-import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
+import {
+  isNodeDocumentLoaded,
+  mergeWorkspaceNodeDocument,
+  trimWorkspaceNodesForRendererBoundary
+} from './workspaceRendererBoundary';
 
 function getLocalFallbackStorage(): Storage | null {
   if (typeof window === 'undefined') {
@@ -77,6 +85,26 @@ async function hydrateActiveNodeDocument(name: string, snapshot: Record<string, 
   };
 }
 
+type RuntimeWorkspaceSnapshotLike = {
+  activeNodeId: string | null;
+  nodesById: Record<string, unknown>;
+};
+
+function trimRuntimeWorkspaceSnapshot(snapshot: RuntimeWorkspaceSnapshotLike | null) {
+  if (!snapshot) {
+    return null;
+  }
+
+  return {
+    ...snapshot,
+    nodesById: trimWorkspaceNodesForRendererBoundary(
+      snapshot.activeNodeId,
+      snapshot.nodesById as Record<string, Node>,
+      new Set(listPendingNodeSyncNodeIds())
+    )
+  };
+}
+
 async function loadRuntimeWorkspaceState(name: string) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -87,7 +115,9 @@ async function loadRuntimeWorkspaceState(name: string) {
     runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceListSnapshot),
     loadReadingProgressForHydrate(name)
   ]);
-  const mergedSnapshot = mergeWorkspaceSnapshotWithReadingProgress(mergePendingNodeSyncIntoSnapshot(snapshot), readingProgress);
+  const mergedSnapshot = trimRuntimeWorkspaceSnapshot(
+    mergeWorkspaceSnapshotWithReadingProgress(mergePendingNodeSyncIntoSnapshot(snapshot), readingProgress)
+  );
   if (!mergedSnapshot) {
     return null;
   }
