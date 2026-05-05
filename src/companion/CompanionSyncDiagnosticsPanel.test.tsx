@@ -29,6 +29,8 @@ const diagnosticResult = {
       missing_attachment_resource_count: 2,
       missing_content_blob_bytes: 5242880,
       missing_content_blob_count: 5,
+      missing_due_review_attachment_resource_count: 1,
+      missing_due_review_body_count: 2,
       missing_external_document_body_count: 1,
       missing_topic_body_count: 4
     },
@@ -158,6 +160,8 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
     expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Attachment bytes still caching').length).toBeGreaterThan(0);
+    expect(screen.getByText('Due review bodies')).toBeInTheDocument();
+    expect(screen.getByText('Due review attachments')).toBeInTheDocument();
     expect(screen.getAllByText('5.0 MB').length).toBeGreaterThan(0);
     expect(screen.getAllByText('3.0 MB').length).toBeGreaterThan(0);
     expect(screen.getByText('Desktop confirmations waiting')).toBeInTheDocument();

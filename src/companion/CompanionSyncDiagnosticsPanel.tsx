@@ -103,8 +103,10 @@ function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       {isAndroid ? <MetricRow label="Body bytes still caching" value={formatBytes(snapshot.content.missing_content_blob_bytes ?? 0)} /> : null}
       {isAndroid ? <MetricRow label="Topic bodies" value={formatNumber(snapshot.content.missing_topic_body_count ?? 0)} /> : null}
       {isAndroid ? <MetricRow label="External document bodies" value={formatNumber(snapshot.content.missing_external_document_body_count ?? 0)} /> : null}
+      {isAndroid ? <MetricRow label="Due review bodies" value={formatNumber(snapshot.content.missing_due_review_body_count ?? 0)} /> : null}
       <MetricRow label="Attachments still caching" value={formatNumber(snapshot.content.missing_attachment_resource_count ?? 0)} />
       {isAndroid ? <MetricRow label="Attachment bytes still caching" value={formatBytes(snapshot.content.missing_attachment_resource_bytes ?? 0)} /> : null}
+      {isAndroid ? <MetricRow label="Due review attachments" value={formatNumber(snapshot.content.missing_due_review_attachment_resource_count ?? 0)} /> : null}
     </div>
   );
 }

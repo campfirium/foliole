@@ -112,6 +112,15 @@ final class FolioleCompanionSyncDiagnostics {
                 "WHERE ed.is_present = 1 AND ed.body_blob_hash IS NOT NULL " +
                 "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
         ));
+        content.put("missing_due_review_body_count", count(database,
+            "SELECT COUNT(DISTINCT n.body_blob_hash) FROM nodes n " +
+                "JOIN node_review nr ON nr.node_id = n.id " +
+                "JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
+                "WHERE n.deleted_at IS NULL AND n.body_blob_hash IS NOT NULL " +
+                "AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') " +
+                "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
+        ));
         content.put("missing_attachment_resource_count", count(database,
             "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
                 "AND TRIM(content_hash) != '' AND availability <> 'cached'"
@@ -119,6 +128,15 @@ final class FolioleCompanionSyncDiagnostics {
         content.put("missing_attachment_resource_bytes", count(database,
             "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
                 "AND TRIM(content_hash) != '' AND availability <> 'cached'"
+        ));
+        content.put("missing_due_review_attachment_resource_count", count(database,
+            "SELECT COUNT(DISTINCT b.attachment_id) FROM attachment_blobs b " +
+                "JOIN node_attachments na ON na.attachment_id = b.attachment_id " +
+                "JOIN nodes n ON n.id = na.node_id " +
+                "JOIN node_review nr ON nr.node_id = n.id " +
+                "WHERE n.deleted_at IS NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') " +
+                "AND b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
+                "AND b.availability <> 'cached'"
         ));
         content.put("active_topic", loadActiveTopic(database));
         content.put("recent_topics", loadRecentTopics(database));
