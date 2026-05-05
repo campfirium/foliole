@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type UIEvent as ReactUIEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 
@@ -45,9 +45,23 @@ function useCompanionShellScrollHandler(
   }, [floatingBar, surface]);
 }
 
+function useResetCompanionSubsurfaces(args: {
+  activeAction: CompanionTabAction;
+  setIsBrowseDirectoryOpen(open: boolean): void;
+  setIsOnlyReviewOpen(open: boolean): void;
+}) {
+  const { activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen } = args;
+  useEffect(() => {
+    if (activeAction !== 'recent') setIsBrowseDirectoryOpen(false);
+    if (activeAction !== 'review') setIsOnlyReviewOpen(false);
+  }, [activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen]);
+}
+
 function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const floatingBar = useFloatingBarVisibility('companion-bottom-tabs');
+  const [isBrowseDirectoryOpen, setIsBrowseDirectoryOpen] = useState(false);
   const [isCaptureSheetOpen, setIsCaptureSheetOpen] = useState(false);
+  const [isOnlyReviewOpen, setIsOnlyReviewOpen] = useState(false);
   const workspaceSync = useCompanionWorkspaceSync(bootstrapState);
   const surface = useCompanionArticleSurface(workspaceSync, floatingBar);
   const { setSettingsPage, settingsPage } = useCompanionSyncSettingsPage({
@@ -68,16 +82,21 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const topBarProps = resolveCompanionTopBarProps(
     surface,
     settingsPage,
+    isBrowseDirectoryOpen,
+    isOnlyReviewOpen,
+    () => setIsBrowseDirectoryOpen(true),
+    () => setIsBrowseDirectoryOpen(false),
+    () => setIsCaptureSheetOpen(true),
+    () => setIsOnlyReviewOpen(true),
+    () => setIsOnlyReviewOpen(false),
+    () => surface.handleTabAction('recent'),
     () => setSettingsPage('list'),
     () => setSettingsPage('sync')
   );
   const handleNavigationAction = (action: CompanionTabAction) => {
-    if (action === 'capture') {
-      setIsCaptureSheetOpen(true);
-      return;
-    }
     surface.handleTabAction(action);
   };
+  useResetCompanionSubsurfaces({ activeAction: surface.activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen });
 
   return {
     floatingBar,
@@ -85,7 +104,9 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
     handleContentTap,
     handleNavigationAction,
     isBottomBarDisabled,
+    isBrowseDirectoryOpen,
     isCaptureSheetOpen,
+    isOnlyReviewOpen,
     isNavigationVisible,
     isReviewTaskActive,
     reviewBreadcrumbItems,
@@ -114,12 +135,14 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
           onTouchStart={model.floatingBar.handleTouchStart}
         >
           <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pb-24 pt-4 sm:px-7">
-            <CompanionTopBar {...model.topBarProps} visible={!model.isReviewTaskActive} />
+            <CompanionTopBar {...model.topBarProps} visible />
             <CompanionSyncInlineStatus workspaceSync={model.workspaceSync} />
             {renderCompanionShellContent(
               {
                 hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
                 onBackToSettingsList: () => model.setSettingsPage('list'),
+                isBrowseDirectoryOpen: model.isBrowseDirectoryOpen,
+                isOnlyReviewOpen: model.isOnlyReviewOpen,
                 onOpenSyncSettingsPage: model.setSettingsPage,
                 onOpenSyncSettings: () => model.setSettingsPage('sync'),
                 onSelectReviewBreadcrumbItem: model.surface.handleSelectBrowseNode,

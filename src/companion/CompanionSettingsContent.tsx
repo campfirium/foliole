@@ -28,7 +28,11 @@ export function CompanionSettingsList(props: { onOpenSync(): void }) {
   return (
     <section className="px-1 py-4">
       <div>
-        <SettingsListItem detail="Connect another device and bring your content here." onClick={props.onOpenSync} title="Device sync" />
+        <SettingsListItem detail="Connect another device and bring your content here." onClick={props.onOpenSync} title="Sync" />
+        <SettingsListItem detail="Device information will appear here." onClick={() => undefined} title="Device" />
+        <SettingsListItem detail="Local storage details will appear here." onClick={() => undefined} title="Storage" />
+        <SettingsListItem detail="Display preferences will appear here." onClick={() => undefined} title="Appearance" />
+        <SettingsListItem detail="Diagnostics and development details will appear here." onClick={() => undefined} title="Debug" />
       </div>
     </section>
   );

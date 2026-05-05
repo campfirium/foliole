@@ -1,9 +1,31 @@
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, type LucideIcon } from 'lucide-react';
+
+type TopBarAction = {
+  icon: LucideIcon;
+  label: string;
+  onClick(): void;
+};
+
+function TopBarIconButton(props: TopBarAction) {
+  const Icon = props.icon;
+  return (
+    <button
+      aria-label={props.label}
+      className="inline-flex h-10 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-bg-subtle/60 hover:text-foreground"
+      onClick={props.onClick}
+      type="button"
+    >
+      <Icon className="h-5 w-5" />
+    </button>
+  );
+}
 
 export function CompanionTopBar(props: {
   backLabel?: string;
+  leftAction?: TopBarAction;
   onBack?: () => void;
-  title: string;
+  rightAction?: TopBarAction;
+  title?: string;
   visible: boolean;
 }) {
   if (!props.visible) {
@@ -22,7 +44,19 @@ export function CompanionTopBar(props: {
           {props.backLabel ?? 'Back'}
         </button>
       ) : null}
-      <h1 className="text-2xl font-semibold leading-tight text-foreground">{props.title}</h1>
+      <div className="flex min-h-10 items-center justify-between gap-3">
+        <div className="flex w-10 justify-start">
+          {props.leftAction ? <TopBarIconButton {...props.leftAction} /> : null}
+        </div>
+        {props.title ? (
+          <h1 className="min-w-0 flex-1 truncate text-center text-2xl font-semibold leading-tight text-foreground">{props.title}</h1>
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
+        <div className="flex w-10 justify-end">
+          {props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null}
+        </div>
+      </div>
     </header>
   );
 }

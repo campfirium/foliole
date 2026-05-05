@@ -1,7 +1,7 @@
-import { Clock3, MoreHorizontal, Plus, Search, SquareStack } from 'lucide-react';
+import { BookOpenText, GraduationCap, Search, Settings } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-export type CompanionTabAction = 'review' | 'recent' | 'search' | 'capture' | 'more';
+export type CompanionTabAction = 'review' | 'recent' | 'search' | 'more';
 export type BottomBarGrade = 1 | 2 | 3 | 4;
 
 const COMPANION_TABS: Array<{
@@ -9,11 +9,10 @@ const COMPANION_TABS: Array<{
   icon: ComponentType<{ className?: string }>;
   label: string;
 }> = [
-  { action: 'review', icon: SquareStack, label: 'Review' },
-  { action: 'recent', icon: Clock3, label: 'Recent' },
+  { action: 'recent', icon: BookOpenText, label: 'Browse' },
+  { action: 'review', icon: GraduationCap, label: 'Learn' },
   { action: 'search', icon: Search, label: 'Search' },
-  { action: 'capture', icon: Plus, label: 'Capture' },
-  { action: 'more', icon: MoreHorizontal, label: 'More' }
+  { action: 'more', icon: Settings, label: 'Settings' }
 ];
 
 function TabButton(props: {

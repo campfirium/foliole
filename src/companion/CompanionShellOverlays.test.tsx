@@ -48,6 +48,6 @@ describe('CompanionShellOverlays', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Review' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Learn' })).toBeInTheDocument();
   });
 });

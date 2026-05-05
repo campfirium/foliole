@@ -1,8 +1,14 @@
+import { FolderTree, ListFilter, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 
+import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionArticleDocument } from './CompanionArticleDocument';
+import { CompanionDirectoryContent } from './CompanionDirectoryContent';
+import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
+import { CompanionReviewFallback } from './CompanionReviewFallback';
+import { CompanionSearchContent } from './CompanionSearchContent';
 import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSettingsContent';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -16,82 +22,6 @@ type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 type ReviewBreadcrumbItem = { id: string; isCurrent?: boolean; label: string; targetNodeId: string };
 type ReadableArticle = NonNullable<Surface['readableArticle']>;
-
-function formatDueLabel(timestamp: string | null) {
-  return timestamp ? new Date(timestamp).toLocaleString() : null;
-}
-
-function ReviewFallback(props: {
-  error: string | null;
-  hasSnapshot: boolean;
-  reviewSession: Surface['reviewSession'];
-}) {
-  const nextFsrsLabel = formatDueLabel(props.reviewSession.nextFsrsDueAt);
-  const nextReadingLabel = formatDueLabel(props.reviewSession.nextReadingDueAt);
-  const hasScheduledReviews = props.reviewSession.scheduledFsrsCount > 0 || props.reviewSession.scheduledReadingCount > 0;
-
-  return (
-    <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-      {props.hasSnapshot ? (
-        <>
-          <p>{hasScheduledReviews ? 'No review items are due right now.' : 'No review items have been scheduled on this device yet.'}</p>
-          {nextReadingLabel ? <p className="mt-3">Next reading topic: {nextReadingLabel}</p> : null}
-          {nextFsrsLabel ? <p className="mt-2">Next FSRS card: {nextFsrsLabel}</p> : null}
-          <p className="mt-3">
-            {hasScheduledReviews
-              ? `Synced review state: ${props.reviewSession.scheduledReadingCount} reading topics, ${props.reviewSession.scheduledFsrsCount} FSRS cards.`
-              : 'Pull a newer snapshot when you want this device to refresh upcoming review work.'}
-          </p>
-        </>
-      ) : (
-        <>
-          <p>No topics have been synced to this device yet.</p>
-          <p className="mt-3">
-            Connect this device with desktop and keep both devices on the same network.
-          </p>
-        </>
-      )}
-      {props.error ? <span className="mt-4 block text-error">{props.error}</span> : null}
-    </section>
-  );
-}
-
-function ReadableArticleBodyStatusFallback(props: {
-  bodyStatus: ReadableArticle['bodyStatus'];
-}) {
-  if (props.bodyStatus === 'missing') {
-    return (
-      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-        <p>Topic content is still syncing.</p>
-        <p className="mt-3">Keep this device connected to desktop and try again shortly.</p>
-      </section>
-    );
-  }
-  if (props.bodyStatus === 'fetching') {
-    return (
-      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-        <p>Topic content is downloading.</p>
-        <p className="mt-3">Keep this device connected to desktop.</p>
-      </section>
-    );
-  }
-  if (props.bodyStatus === 'failed') {
-    return (
-      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-        <p>Topic content could not be synced.</p>
-        <p className="mt-3">Reconnect this device to desktop to retry.</p>
-      </section>
-    );
-  }
-  if (props.bodyStatus === 'empty') {
-    return (
-      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-        <p>This topic is empty.</p>
-      </section>
-    );
-  }
-  return null;
-}
 
 function ReadableArticleDocument(props: {
   readableArticle: ReadableArticle;
@@ -109,7 +39,7 @@ function ReadableArticleDocument(props: {
     );
   }
   if (props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
-    return <ReadableArticleBodyStatusFallback bodyStatus={props.readableArticle.bodyStatus} />;
+    return <CompanionArticleBodyStatusFallback bodyStatus={props.readableArticle.bodyStatus} />;
   }
 
   return (
@@ -163,7 +93,7 @@ function ReviewContent(props: {
   surface: Surface;
 }) {
   if (!props.surface.reviewSession.currentCard) {
-    return <ReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} reviewSession={props.surface.reviewSession} />;
+    return <CompanionReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} reviewSession={props.surface.reviewSession} />;
   }
 
   return (
@@ -190,12 +120,20 @@ function ReadableArticleOrFallback(props: {
   if (props.surface.readableArticle) {
     return <ReadableArticleDocument readableArticle={props.surface.readableArticle} />;
   }
-  return <ReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} reviewSession={props.surface.reviewSession} />;
+  return <CompanionReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} reviewSession={props.surface.reviewSession} />;
 }
 
 export function resolveCompanionTopBarProps(
   surface: Surface,
   settingsPage: CompanionSettingsPage,
+  isBrowseDirectoryOpen: boolean,
+  isOnlyReviewOpen: boolean,
+  onOpenBrowseDirectory: () => void,
+  onCloseBrowseDirectory: () => void,
+  onOpenAddSheet: () => void,
+  onOpenOnlyReview: () => void,
+  onCloseOnlyReview: () => void,
+  onExitReview: () => void,
   onBackToSettingsList: () => void,
   onBackToSyncSettings: () => void
 ) {
@@ -215,22 +153,33 @@ export function resolveCompanionTopBarProps(
     if (settingsPage === 'syncHandoff') {
       return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Handoff reminders' };
     }
-    return { title: 'Settings' };
+    return {};
   }
   if (surface.activeAction === 'recent') {
-    return { title: 'Recent' };
+    if (isBrowseDirectoryOpen) {
+      return { backLabel: 'Browse', onBack: onCloseBrowseDirectory, title: 'Directory' };
+    }
+    return {
+      leftAction: { icon: FolderTree, label: 'Directory', onClick: onOpenBrowseDirectory },
+      rightAction: { icon: Plus, label: 'Add', onClick: onOpenAddSheet },
+    };
   }
   if (surface.activeAction === 'search') {
-    return { title: 'Search' };
+    return {};
   }
-  if (surface.activeAction === 'capture') {
-    return { title: 'Capture' };
+  if (isOnlyReviewOpen) {
+    return { backLabel: 'Learn', onBack: onCloseOnlyReview, title: 'Only Review' };
   }
-  return { title: 'Review' };
+  return {
+    leftAction: { icon: X, label: 'Exit', onClick: onExitReview },
+    rightAction: { icon: ListFilter, label: 'Only Review', onClick: onOpenOnlyReview },
+  };
 }
 
 export function renderCompanionShellContent(props: {
   hasSnapshot: boolean;
+  isBrowseDirectoryOpen: boolean;
+  isOnlyReviewOpen: boolean;
   onBackToSettingsList: () => void;
   onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   onOpenSyncSettings: () => void;
@@ -255,9 +204,15 @@ export function renderCompanionShellContent(props: {
     );
   }
   if (props.surface.activeAction === 'recent') {
+    if (props.isBrowseDirectoryOpen) {
+      return <CompanionDirectoryContent />;
+    }
     return <RecentBrowseContent surface={props.surface} workspaceSync={props.workspaceSync} />;
   }
   if (props.surface.activeAction === 'review') {
+    if (props.isOnlyReviewOpen) {
+      return <CompanionOnlyReviewContent />;
+    }
     return (
       <ReviewContent
         error={props.workspaceError}
@@ -267,6 +222,9 @@ export function renderCompanionShellContent(props: {
         surface={props.surface}
       />
     );
+  }
+  if (props.surface.activeAction === 'search') {
+    return <CompanionSearchContent />;
   }
   return <ReadableArticleOrFallback error={props.workspaceError} hasSnapshot={props.hasSnapshot} surface={props.surface} />;
 }

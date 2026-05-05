@@ -239,14 +239,18 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
   });
 
-  it('opens settings from the more action before entering sync details', async () => {
+  it('opens settings from the settings action before entering sync details', async () => {
     await renderShellWithSurface({
       ...createReviewEmptySurface(),
       activeAction: 'more'
     });
 
-    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Connect another device/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Device information/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Local storage/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Display preferences/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Diagnostics/ })).toBeInTheDocument();
     expect(screen.queryByText('Connected')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Connect another device/ }));
@@ -257,8 +261,9 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getByText('Connection')).toBeInTheDocument();
     expect(screen.getByText('No activity')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute('aria-current', 'page');
+    const settingsButtons = screen.getAllByRole('button', { name: 'Settings' });
+    expect(settingsButtons).toHaveLength(2);
+    expect(settingsButtons.some((button) => button.getAttribute('aria-current') === 'page')).toBe(true);
   });
 
 });
