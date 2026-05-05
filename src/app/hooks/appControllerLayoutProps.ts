@@ -1,6 +1,6 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { isInboxNode } from '../../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, isInboxNode } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
@@ -45,6 +45,7 @@ export interface BuildControllerLayoutPropsArgs {
   trash: ReturnType<typeof useTrashView>;
   ws: {
     activeNodeId: string | null;
+    createChildNode: (parentNodeId: string, content?: string) => string;
     createRootNode: (content?: string) => string;
     documentMaxWidth: number;
     exitReviewSession: () => void;
@@ -217,7 +218,7 @@ function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) {
       args.ws.updateNodeContent(args.ws.activeNodeId, content);
       return;
     }
-    args.ws.createRootNode(content);
+    args.ws.createChildNode(INBOX_NODE_ID, content);
   };
 }
 

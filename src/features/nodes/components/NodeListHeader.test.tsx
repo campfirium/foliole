@@ -8,7 +8,7 @@ it('renders node list actions inside the shared toolbar group', () => {
     <NodeListHeader
       isTrashViewOpen={false}
       onCollapseAll={vi.fn()}
-      onCreateRootNode={vi.fn()}
+      onCreateGlobalNode={vi.fn()}
       onEmptyTrash={vi.fn()}
       onExpandAll={vi.fn()}
       onOpenNotesView={vi.fn()}

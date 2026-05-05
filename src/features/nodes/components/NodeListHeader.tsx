@@ -5,7 +5,7 @@ import { AppButton, AppIconButton, AppToolbar, ToolbarActionGroup } from '../../
 interface NodeListHeaderProps {
   isTrashViewOpen: boolean;
   onOpenNotesView: () => void;
-  onCreateRootNode: (event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onCreateGlobalNode: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onEmptyTrash: () => void;
   onCollapseAll: () => void;
   onExpandAll: () => void;
@@ -15,7 +15,7 @@ interface NodeListHeaderProps {
 export function NodeListHeader({
   isTrashViewOpen,
   onOpenNotesView,
-  onCreateRootNode,
+  onCreateGlobalNode,
   onEmptyTrash,
   onCollapseAll,
   onExpandAll,
@@ -30,7 +30,7 @@ export function NodeListHeader({
       <ToolbarActionGroup ariaLabel={isTrashViewOpen ? 'Trash actions' : 'Node list actions'}>
         {isTrashViewOpen ? (
           <>
-            <button aria-label="New" className="sr-only" onClick={onCreateRootNode} type="button">
+            <button aria-label="New" className="sr-only" onClick={onCreateGlobalNode} type="button">
               New
             </button>
             <AppButton
@@ -62,7 +62,7 @@ export function NodeListHeader({
               className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
               icon={<NewNoteIcon />}
               label="New"
-              onClick={onCreateRootNode}
+              onClick={onCreateGlobalNode}
             />
           </>
         )}

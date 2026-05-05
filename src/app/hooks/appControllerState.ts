@@ -17,6 +17,7 @@ import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 export function useWorkspaceSelectors() {
   return {
     activeNodeId: useWorkspaceStore((state) => state.activeNodeId),
+    createChildNode: useWorkspaceStore((state) => state.createChildNode),
     createHighlightNodeFromSelection: useWorkspaceStore((state) => state.createHighlightNodeFromSelection),
     createQANodeFromSelection: useWorkspaceStore((state) => state.createQANodeFromSelection),
     createRootNode: useWorkspaceStore((state) => state.createRootNode),

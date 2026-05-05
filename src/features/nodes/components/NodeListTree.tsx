@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { onWindowKeydown } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
 import { buildNodeTree } from '../model/nodeTree';
+import { INBOX_NODE_ID } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { useCollapsedNodeState } from './NodeListCollapseState';
@@ -156,7 +157,7 @@ function useNodeListTreeModel({
     collapsedState,
     contextMenu: controllers.contextMenu,
     createChildNode: workspace.createChildNode,
-    createRootNode: workspace.createRootNode,
+    createGlobalNode: (content = '') => workspace.createChildNode(INBOX_NODE_ID, content),
     deleteNodes: workspace.deleteNodes,
     deleteNodesPermanently: workspace.deleteNodesPermanently,
     dismissNode: workspace.dismissNode,
@@ -206,7 +207,7 @@ export function NodeListTree({
       collapse={model.collapse}
       contextMenu={model.contextMenu}
       createChildNode={model.createChildNode}
-      createRootNode={model.createRootNode}
+      createGlobalNode={model.createGlobalNode}
       deleteStatusLabel={deleteFeedback.deleteStatusLabel}
       deleteNodes={deleteFeedback.runDeleteNodes}
       deleteNodesPermanently={deleteFeedback.runDeleteNodesPermanently}

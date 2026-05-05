@@ -90,20 +90,34 @@ it('creates a child node from the inbox menu', () => {
   expect(inboxChildren).toHaveLength(1);
 });
 
-it('creates a root node from the blank node-list area menu', () => {
+it('creates an inbox child from the blank node-list area menu', () => {
   render(<App />);
-  const initialRootCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
-    (node) => node && node.id !== INBOX_NODE_ID && node.parentNodeId === null
+  const initialInboxCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node?.parentNodeId === INBOX_NODE_ID
   ).length;
 
   const tree = within(getNodeListPanel()).getByRole('tree');
   fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'New Node' }));
 
-  const rootNodes = Object.values(useWorkspaceStore.getState().nodesById).filter(
-    (node) => node && node.id !== INBOX_NODE_ID && node.parentNodeId === null
+  const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node?.parentNodeId === INBOX_NODE_ID
   );
-  expect(rootNodes).toHaveLength(initialRootCount + 1);
+  expect(inboxChildren).toHaveLength(initialInboxCount + 1);
+});
+
+it('creates an inbox child from the global new button', () => {
+  render(<App />);
+  const initialInboxCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node?.parentNodeId === INBOX_NODE_ID
+  ).length;
+
+  fireEvent.click(screen.getByRole('button', { name: 'New' }));
+
+  const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node?.parentNodeId === INBOX_NODE_ID
+  );
+  expect(inboxChildren).toHaveLength(initialInboxCount + 1);
 });
 
 it('opens the move dialog from the node menu', async () => {

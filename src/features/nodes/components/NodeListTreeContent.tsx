@@ -22,7 +22,7 @@ interface NodeListPanelProps {
   activeRows: NodeTreeRow[];
   collapse: NodeListCollapseController;
   contextMenu: NodeListContextMenuController;
-  createRootNode: (content?: string) => string;
+  createGlobalNode: (content?: string) => string;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
   isTrashViewOpen: boolean;
@@ -80,7 +80,7 @@ function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeo
       role="tree"
       style={{ gap: `${resolveNodeListRowGap(props.rowSpacing)}px` }}
       onContextMenu={handleBlankAreaContextMenu}
-      onDoubleClick={(event) => event.target === event.currentTarget && props.createRootNode('')}
+      onDoubleClick={(event) => event.target === event.currentTarget && props.createGlobalNode('')}
       onDragOver={(event) => event.target === event.currentTarget && drag.onDragOverRoot(event)}
       onDrop={(event) => event.target === event.currentTarget && drag.onDropRoot(event)}
     >
@@ -118,7 +118,7 @@ function NodeListPanel(props: NodeListPanelProps) {
       <NodeListHeader
         isTrashViewOpen={props.isTrashViewOpen}
         onCollapseAll={props.collapse.collapseAllNotes}
-        onCreateRootNode={(event) => (event.stopPropagation(), props.createRootNode(''))}
+        onCreateGlobalNode={(event) => (event.stopPropagation(), props.createGlobalNode(''))}
         onEmptyTrash={() => (props.deleteNodesPermanently(props.trashRowIds), props.contextMenu.closeContextMenu())}
         onExpandAll={props.collapse.expandAllNotes}
         onOpenNotesView={props.onOpenNotesView}
@@ -150,7 +150,7 @@ interface NodeListTreeContentProps {
   collapse: NodeListCollapseController;
   contextMenu: NodeListContextMenuController;
   createChildNode: (parentNodeId: string, content?: string) => string;
-  createRootNode: (content?: string) => string;
+  createGlobalNode: (content?: string) => string;
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
@@ -184,7 +184,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         activeRows={props.activeRows}
         collapse={props.collapse}
         contextMenu={props.contextMenu}
-        createRootNode={props.createRootNode}
+        createGlobalNode={props.createGlobalNode}
         deleteNodesPermanently={props.deleteNodesPermanently}
         deleteStatusLabel={props.deleteStatusLabel}
         isTrashViewOpen={props.isTrashViewOpen}

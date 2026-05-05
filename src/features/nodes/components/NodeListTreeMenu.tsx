@@ -10,7 +10,7 @@ import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 interface NodeListTreeMenuProps {
   contextMenu: NodeListContextMenuController;
   createChildNode: (parentNodeId: string, content?: string) => string;
-  createRootNode: (content?: string) => string;
+  createGlobalNode: (content?: string) => string;
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   dismissNode: (nodeId: string, now?: string) => boolean;
@@ -49,7 +49,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
 function createCreateNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: string | null, isRootMenu: boolean) {
   return () => {
     if (isRootMenu || !primaryTargetId) {
-      props.createRootNode('');
+      props.createGlobalNode('');
       props.contextMenu.closeContextMenu();
       return;
     }
