@@ -29,6 +29,7 @@
 - `capacitor.config.ts` 的 `webDir` 必须继续指向 `dist/companion`；若需要调整，必须连同 companion 构建与宿主同步链路一起说明。
 - Android 原生壳新增配置、权限或插件接入时，必须同步检查 `scripts/android/**` 现有工作流是否需要更新。
 - 除非用户明确要求，不得把 Android 特有实现回写成全仓默认路径。
+- Android / companion 侧凡会写入移动端 SQLite 的同步、复习、资源落库、cursor、配对或 workspace sync metadata 路径，必须经共享的 companion sync writer queue 串行化；已处在同一个 writer task 内部的内部 cursor 保存不得再次嵌套排队，避免自锁。
 
 ## Validation
 
