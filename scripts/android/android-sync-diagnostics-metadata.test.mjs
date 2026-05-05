@@ -16,6 +16,15 @@ const SYNC_PROTOCOL_DEFINITIONS = path.join(
   'assets',
   'companion-sync-protocol-definitions.json'
 );
+const QUERY_DEFINITIONS = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'assets',
+  'companion-query-definitions.json'
+);
 const javaSource = (name) =>
   readFile(path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', name), 'utf8');
 
@@ -45,7 +54,8 @@ describe('Android sync diagnostics metadata', () => {
       javaSource('FolioleCompanionSyncMetaStore.java'),
       javaSource('FolioleCompanionSyncDiagnostics.java'),
       javaSource('FolioleCompanionSyncDiagnosticState.java'),
-      javaSource('FolioleCompanionSyncDiagnosticVerdicts.java')
+      javaSource('FolioleCompanionSyncDiagnosticVerdicts.java'),
+      javaSource('FolioleCompanionSyncDiagnosticQueryRules.java')
     ]);
     const combined = sources.join('\n');
 
@@ -53,11 +63,24 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", "events")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fullSyncCompletedMessage")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdict(context, key)');
+    expect(combined).toContain('optJSONObject("diagnosticRead")');
     expect(combined).not.toContain('"workspace_sync_endpoint_url"');
     expect(combined).not.toContain('"workspace_sync_events"');
     expect(combined).not.toContain('"sync_pack_cursor"');
     expect(combined).not.toContain('"android_endpoint_missing"');
     expect(combined).not.toContain('"Android sync state is readable."');
     expect(combined).not.toContain('"Sync fully completed."');
+  });
+
+  it('generates Android diagnostic query routing metadata', async () => {
+    const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
+
+    expect(definitions.diagnosticRead).toMatchObject({
+      activeTopic: { queryName: 'diagnosticActiveTopic', resultKey: 'topics' },
+      dirtyObjects: { queryName: 'diagnosticDirtyObjects', resultKey: 'objects' },
+      metaValue: { queryName: 'companionMetaValue' },
+      stateMetrics: { queryName: 'diagnosticSyncStateMetrics' },
+      storageMetrics: { queryName: 'diagnosticStorageMetrics' }
+    });
   });
 });

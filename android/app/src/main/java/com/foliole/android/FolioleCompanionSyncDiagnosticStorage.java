@@ -9,6 +9,10 @@ final class FolioleCompanionSyncDiagnosticStorage {
     private FolioleCompanionSyncDiagnosticStorage() {}
 
     static JSObject load(Context context, SQLiteDatabase database) throws Exception {
-        return FolioleCompanionNamedQueryStore.loadLongMetrics(context, database, "diagnosticStorageMetrics");
+        return FolioleCompanionNamedQueryStore.loadLongMetrics(
+            context,
+            database,
+            FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "storageMetrics")
+        );
     }
 }

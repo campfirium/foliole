@@ -11,6 +11,7 @@ import {
   ANDROID_COMPANION_MIGRATION_REPAIR_RULES,
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS
 } from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
+import { ANDROID_COMPANION_DIAGNOSTIC_READ_RULES } from '../../lib/core/database/androidCompanionDiagnosticQueryDefinitions.ts';
 import {
   ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
   ANDROID_COMPANION_MUTATION_DEFINITIONS
@@ -64,6 +65,7 @@ await fs.writeFile(
   queryOutputPath,
   `${JSON.stringify({
     queries: ANDROID_COMPANION_QUERY_DEFINITIONS,
+    diagnosticRead: ANDROID_COMPANION_DIAGNOSTIC_READ_RULES,
     missingResourceRead: ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES,
     syncConflictRead: ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES,
     syncObjectRead: ANDROID_COMPANION_SYNC_OBJECT_READ_RULES,

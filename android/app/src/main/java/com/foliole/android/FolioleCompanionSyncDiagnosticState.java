@@ -12,7 +12,11 @@ final class FolioleCompanionSyncDiagnosticState {
     private FolioleCompanionSyncDiagnosticState() {}
 
     static JSObject load(Context context, SQLiteDatabase database) throws Exception {
-        JSObject state = FolioleCompanionNamedQueryStore.loadLongMetrics(context, database, "diagnosticSyncStateMetrics");
+        JSObject state = FolioleCompanionNamedQueryStore.loadLongMetrics(
+            context,
+            database,
+            FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "stateMetrics")
+        );
         int cursor = loadNumberMetaValue(
             context,
             database,
@@ -22,15 +26,20 @@ final class FolioleCompanionSyncDiagnosticState {
         state.remove("max_state_seq");
         state.put("pack_cursor", cursor <= 0 ? JSONObject.NULL : cursor);
         state.put("max_state_seq", maxStateSeq <= 0 ? JSONObject.NULL : maxStateSeq);
-        state.put("dirty_objects", loadRows(context, database, "diagnosticDirtyObjects", "objects"));
-        state.put("pending_acks", loadRows(context, database, "diagnosticPendingAcks", "acks"));
-        state.put("push_issues", loadRows(context, database, "diagnosticPushIssues", "acks"));
-        state.put("state_counts", loadRows(context, database, "diagnosticSyncStateCounts", "counts"));
+        state.put("dirty_objects", loadRows(context, database, "dirtyObjects"));
+        state.put("pending_acks", loadRows(context, database, "pendingAcks"));
+        state.put("push_issues", loadRows(context, database, "pushIssues"));
+        state.put("state_counts", loadRows(context, database, "stateCounts"));
         return state;
     }
 
-    private static JSArray loadRows(Context context, SQLiteDatabase database, String queryName, String resultKey) throws Exception {
-        return FolioleCompanionNamedQueryStore.loadRows(context, database, queryName, resultKey);
+    private static JSArray loadRows(Context context, SQLiteDatabase database, String key) throws Exception {
+        return FolioleCompanionNamedQueryStore.loadRows(
+            context,
+            database,
+            FolioleCompanionSyncDiagnosticQueryRules.queryName(context, key),
+            FolioleCompanionSyncDiagnosticQueryRules.resultKey(context, key)
+        );
     }
 
     private static int loadNumberMetaValue(Context context, SQLiteDatabase database, String key) throws Exception {

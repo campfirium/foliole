@@ -14,7 +14,11 @@ final class FolioleCompanionSyncDiagnosticContent {
     static JSObject load(Context context, SQLiteDatabase database) throws Exception {
         JSObject content = new JSObject();
         copyBodySummary(content, FolioleCompanionContentBlobStore.summarizeMissingBodies(context, database));
-        copyBodyDetail(content, FolioleCompanionNamedQueryStore.loadLongMetrics(context, database, "diagnosticContentBodyMetrics"));
+        copyBodyDetail(content, FolioleCompanionNamedQueryStore.loadLongMetrics(
+            context,
+            database,
+            FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "contentBodyMetrics")
+        ));
         copyAttachmentSummary(content, FolioleCompanionAttachmentResourceStore.summarizeMissingResources(context, database));
         content.put("active_topic", loadActiveTopic(context, database));
         content.put("recent_topics", loadRecentTopics(context, database));
@@ -53,11 +57,22 @@ final class FolioleCompanionSyncDiagnosticContent {
     }
 
     private static JSObject loadActiveTopic(Context context, SQLiteDatabase database) throws Exception {
-        JSONObject topic = FolioleCompanionNamedQueryStore.loadFirstRow(context, database, "diagnosticActiveTopic", "topics", null);
+        JSONObject topic = FolioleCompanionNamedQueryStore.loadFirstRow(
+            context,
+            database,
+            FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "activeTopic"),
+            FolioleCompanionSyncDiagnosticQueryRules.resultKey(context, "activeTopic"),
+            null
+        );
         return topic == null ? null : JSObject.fromJSONObject(topic);
     }
 
     private static JSArray loadRecentTopics(Context context, SQLiteDatabase database) throws Exception {
-        return FolioleCompanionNamedQueryStore.loadRows(context, database, "diagnosticRecentTopics", "topics");
+        return FolioleCompanionNamedQueryStore.loadRows(
+            context,
+            database,
+            FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "recentTopics"),
+            FolioleCompanionSyncDiagnosticQueryRules.resultKey(context, "recentTopics")
+        );
     }
 }

@@ -186,3 +186,16 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
     ]
   }
 };
+
+export const ANDROID_COMPANION_DIAGNOSTIC_READ_RULES = {
+  activeTopic: { queryName: 'diagnosticActiveTopic', resultKey: 'topics' },
+  contentBodyMetrics: { queryName: 'diagnosticContentBodyMetrics' },
+  dirtyObjects: { queryName: 'diagnosticDirtyObjects', resultKey: 'objects' },
+  metaValue: { queryName: 'companionMetaValue' },
+  pendingAcks: { queryName: 'diagnosticPendingAcks', resultKey: 'acks' },
+  pushIssues: { queryName: 'diagnosticPushIssues', resultKey: 'acks' },
+  recentTopics: { queryName: 'diagnosticRecentTopics', resultKey: 'topics' },
+  stateCounts: { queryName: 'diagnosticSyncStateCounts', resultKey: 'counts' },
+  stateMetrics: { queryName: 'diagnosticSyncStateMetrics' },
+  storageMetrics: { queryName: 'diagnosticStorageMetrics' }
+} as const;
