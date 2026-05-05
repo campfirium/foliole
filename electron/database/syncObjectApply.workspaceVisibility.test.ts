@@ -22,7 +22,7 @@ import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContra
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { loadReadingProgress } from './readingProgress.js';
-import { applySyncObjects } from './syncObjectApply.js';
+import { applySyncObjectsAsync } from './syncObjectApply.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 let tempRoot = '';
@@ -95,10 +95,10 @@ function androidStateRecords(): NativeSyncObjectRecord[] {
   }];
 }
 
-it('makes Android-applied reading, review, and view state visible to desktop snapshots', () => {
+it('makes Android-applied reading, review, and view state visible to desktop snapshots', async () => {
   insertNode('node-1');
 
-  expect(applySyncObjects(androidStateRecords())).toEqual([
+  await expect(applySyncObjectsAsync(androidStateRecords())).resolves.toEqual([
     'node_reading:node-1',
     'node_review:node-1',
     'view_state:session_resume:android:phone:android-test:active_node',

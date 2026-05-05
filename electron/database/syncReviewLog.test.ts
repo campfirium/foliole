@@ -24,7 +24,7 @@ import type {
 } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncObjects } from './syncObjectApply.js';
+import { applySyncObjectsAsync } from './syncObjectApply.js';
 import { applySyncReviewLog, loadSyncReviewLogSince } from './syncReviewLog.js';
 
 let tempRoot = '';
@@ -125,9 +125,9 @@ it('loads review log records after the reviewed_at/op_id cursor', () => {
     ]);
 });
 
-it('applies mobile review state and review log without duplicating op ids', () => {
+it('applies mobile review state and review log without duplicating op ids', async () => {
   insertReviewLog('seed-op', '2026-04-24T00:00:00.000Z');
-  applySyncObjects([{
+  await applySyncObjectsAsync([{
     content_hash: 'hash-review-mobile',
     deleted_at: null,
     object_id: 'node-1',
@@ -180,10 +180,10 @@ it('can acknowledge already applied review log ops for push cursor delivery', ()
     .toEqual(['mobile-op-1']);
 });
 
-it('applies mobile learning state and review event as clean desktop facts', () => {
+it('applies mobile learning state and review event as clean desktop facts', async () => {
   insertReviewLog('seed-op', '2026-04-24T00:00:00.000Z');
 
-  expect(applySyncObjects(createMobileLearningStateRecords())).toEqual(['node_reading:node-1', 'node_review:node-1']);
+  await expect(applySyncObjectsAsync(createMobileLearningStateRecords())).resolves.toEqual(['node_reading:node-1', 'node_review:node-1']);
   expect(applySyncReviewLog([createMobileReviewLog('mobile-op-2')])).toEqual(['mobile-op-2']);
 
   const driver = openDatabaseConnection().driver;

@@ -224,9 +224,11 @@ async function applyViewStateObject(port: DbPort, record: SyncPackSyncObjectReco
   } else if (key.startsWith('node:')) {
     await port.run(
       `INSERT INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at) ` +
-      `VALUES (?, ?, ?, NULL, NULL, ?, ?) ON CONFLICT(node_id, device_id) DO UPDATE SET scroll_top = excluded.scroll_top, ` +
+      `VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id, device_id) DO UPDATE SET scroll_top = excluded.scroll_top, ` +
       `selection_from = excluded.selection_from, selection_to = excluded.selection_to, source = excluded.source, updated_at = excluded.updated_at`,
-      [key.slice(5), deviceId, Math.max(0, integer(payload.scroll_top)), Object.hasOwn(payload, 'source') ? 'sync-apply' : 'user-scroll', record.updated_at]
+      [key.slice(5), deviceId, Math.max(0, integer(payload.scroll_top)),
+        numberOrNull(payload.selection_from), numberOrNull(payload.selection_to),
+        Object.hasOwn(payload, 'source') ? 'sync-apply' : 'user-scroll', record.updated_at]
     );
   }
 }

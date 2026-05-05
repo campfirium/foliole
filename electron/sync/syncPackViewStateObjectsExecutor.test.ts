@@ -23,7 +23,7 @@ it('applies active node and node view state payload records', async () => {
   expect(runs[0]?.sql).toContain('INSERT INTO workspace_meta');
   expect(runs[0]?.params).toEqual(['node-1', '2026-05-04T07:00:00.000Z']);
   expect(runs[1]?.sql).toContain('INSERT INTO node_view_state');
-  expect(runs[1]?.params).toEqual(['node-1', 'device-1', 256, 'sync-apply', '2026-05-04T07:00:00.000Z']);
+  expect(runs[1]?.params).toEqual(['node-1', 'device-1', 256, null, null, 'sync-apply', '2026-05-04T07:00:00.000Z']);
 });
 
 it('deletes view state payload rows for tombstones', async () => {
