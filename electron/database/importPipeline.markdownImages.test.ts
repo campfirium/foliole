@@ -77,6 +77,15 @@ async function createMarkdownImportFixture(rootDir: string) {
   };
 }
 
+function expectAttachmentSyncRows(count: number) {
+  expect(openDatabaseConnection().sqlite
+    .prepare("SELECT COUNT(DISTINCT object_id) AS count FROM sync_change_log WHERE object_type = 'attachment'")
+    .get()).toEqual({ count });
+  expect(openDatabaseConnection().sqlite
+    .prepare('SELECT COUNT(*) AS count FROM attachment_blobs')
+    .get()).toEqual({ count });
+}
+
 it('routes local markdown images into attachments, leaves remote links unchanged, and degrades missing files visibly', async () => {
   const sourceRoot = await fs.mkdtemp(path.join(tempRoot, 'markdown-images-'));
   const { sourceMarkdownPath } = await createMarkdownImportFixture(sourceRoot);
@@ -122,6 +131,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   expect(new Set(attachments.map((entry) => entry.attachment.originalName))).toEqual(
     new Set(['absolute.jpg', 'chart.webp', 'cover.png', 'Mood Board (Final).png', 'Pasted image 2026-03-30 100000.png'])
   );
+  expectAttachmentSyncRows(5);
 
   await fs.rm(sourceRoot, { recursive: true, force: true });
 

@@ -33,7 +33,7 @@ export function CompanionSettingsList(props: { onOpenSync(): void }) {
     <section className="px-1 py-4">
       <h1 className="text-2xl font-semibold leading-tight text-foreground">Settings</h1>
       <div className="mt-5">
-        <SettingsListItem detail="Pair devices and check sync status." onClick={props.onOpenSync} title="Sync" />
+        <SettingsListItem detail="Connect another device and bring your content here." onClick={props.onOpenSync} title="Device sync" />
       </div>
     </section>
   );

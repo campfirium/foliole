@@ -73,10 +73,10 @@ export function CompanionSyncStatusDetails(props: {
   return (
     <>
       <div>
-        <SyncInfoRow label="Status" value={isSyncing ? 'Syncing' : 'Paired'} />
+        <SyncInfoRow label="Status" value={isSyncing ? 'Syncing' : 'Connected'} />
         <SyncInfoRow label="Last sync" value={formatSyncTimestamp(props.lastSyncedAt)} />
         <SyncInfoRow label="Device" value={formatPairedDevice(props.pairingState)} />
-        <SyncInfoRow label="Desktop" value={props.endpointUrl} />
+        <SyncInfoRow label="Sync address" value={props.endpointUrl} />
       </div>
       <SyncActivityList events={props.syncEvents} />
     </>

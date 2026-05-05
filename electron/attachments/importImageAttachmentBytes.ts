@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import type { NativeImportLocalImageAttachmentResult } from '../../lib/platform/nativeStorageContract.js';
+import { upsertAttachmentBlobManifest } from '../database/attachmentBlobs.js';
 import {
   createAttachmentRecord,
   createNodeAttachmentLink,
@@ -11,6 +12,7 @@ import {
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
+import { buildAttachmentStorageFileName } from './storagePath.js';
 
 const IMAGE_ATTACHMENT_ROLE = 'image';
 
@@ -155,6 +157,19 @@ export async function importImageAttachmentBytes(
     normalizedMimeType,
     input.bytes.byteLength
   );
+
+  upsertAttachmentBlobManifest({
+    attachmentId: attachment.id,
+    contentHash: hash,
+    storageKey: buildAttachmentStorageFileName(hash, attachment.originalName ?? normalizedOriginalName),
+    sizeBytes: input.bytes.byteLength,
+    mimeType: normalizedMimeType,
+    availability: 'local',
+    sourceDeviceId: null,
+    createdAt: attachment.createdAt,
+    cachedAt: attachment.createdAt,
+    lastVerifiedAt: attachment.createdAt
+  });
 
   createNodeAttachmentLink({
     nodeId: normalizedNodeId,

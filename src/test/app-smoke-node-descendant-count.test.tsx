@@ -38,7 +38,7 @@ it('shows total descendant counts at the end of node rows', () => {
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
 
   expect(within(listPanel).getByRole('treeitem', { name: 'Root' })).toHaveTextContent('Root(3)');
   expect(within(listPanel).getByRole('treeitem', { name: 'Child 1' })).toHaveTextContent('Child 1(1)');

@@ -1,4 +1,5 @@
 import type { DatabaseDriver } from './driver.js';
+import { recordNodeReviewSyncState, recordNodeReviewTombstone } from './nodeReviewSyncState.js';
 
 interface ReviewCardSnapshot {
   due: string;
@@ -98,6 +99,20 @@ function toReviewLogParams(input: ApplyReviewGradeInput, context: ReviewMutation
   ] as const;
 }
 
+function toNodeReviewSyncPayload(input: ApplyReviewGradeInput) {
+  return {
+    due: input.cardAfter.due,
+    lastReviewAt: input.reviewedAt,
+    state: input.cardAfter.state,
+    stability: input.cardAfter.stability,
+    difficulty: input.cardAfter.difficulty,
+    elapsedDays: input.cardAfter.elapsed_days,
+    scheduledDays: input.cardAfter.scheduled_days,
+    reps: input.cardAfter.reps,
+    lapses: input.cardAfter.lapses
+  };
+}
+
 export function applyReviewGrade(
   driver: DatabaseDriver,
   input: ApplyReviewGradeInput,
@@ -111,9 +126,22 @@ export function applyReviewGrade(
   driver.transaction(() => {
     upsertNodeReviewStatement.run(toNodeReviewParams(input));
     insertReviewLogStatement.run(toReviewLogParams(input, context, opId, logId));
+    recordNodeReviewSyncState(driver, input.nodeId, toNodeReviewSyncPayload(input), {
+      deviceId: context.deviceId,
+      logId,
+      opId,
+      reviewedAt: input.reviewedAt
+    });
   });
 }
 
-export function resetNodeReviewState(driver: DatabaseDriver, nodeId: string): void {
+export function resetNodeReviewState(
+  driver: DatabaseDriver,
+  nodeId: string,
+  context?: { deletedAt: string; deviceId: string }
+): void {
   driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([nodeId]);
+  if (context) {
+    recordNodeReviewTombstone(driver, nodeId, context);
+  }
 }

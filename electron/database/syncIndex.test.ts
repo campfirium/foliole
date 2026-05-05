@@ -64,6 +64,15 @@ function insertVersionRecord(connection: ReturnType<typeof openDatabaseConnectio
   );
 }
 
+function insertSyncObjectState(connection: ReturnType<typeof openDatabaseConnection>) {
+  connection.driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES (?, ?, ?, ?, ?, ?)`,
+    ['external_document', 'folder-1:alpha.md', 'hash-external-alpha', 'desktop', '2026-04-21T12:00:00.000Z', 1]
+  );
+}
+
 describe('loadSyncIndex', () => {
   beforeEach(async () => {
     await initializeTestDatabase();
@@ -91,6 +100,7 @@ describe('loadSyncIndex', () => {
       title: 'Node 2',
       updatedAt: '2026-04-21T12:30:00.000Z'
     });
+    insertSyncObjectState(connection);
 
     expect(loadSyncIndex()).toEqual([
       {
@@ -99,6 +109,13 @@ describe('loadSyncIndex', () => {
         object_type: 'node',
         sync_version_id: 'desktop#2',
         updated_at: '2026-04-21T11:00:00.000Z'
+      },
+      {
+        content_hash: 'hash-external-alpha',
+        object_id: 'folder-1:alpha.md',
+        object_type: 'external_document',
+        sync_version_id: null,
+        updated_at: '2026-04-21T12:00:00.000Z'
       },
       {
         content_hash: null,

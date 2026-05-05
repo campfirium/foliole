@@ -53,7 +53,7 @@ it('does not show ordinary structure icons in the node list', () => {
 
   render(<NodeListTreeHarness />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   const folderRow = within(listPanel).getByRole('treeitem', { name: 'Folder A' });
 
   expect(folderRow.querySelector('[data-node-icon]')).toBeNull();

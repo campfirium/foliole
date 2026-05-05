@@ -66,13 +66,17 @@ function renderRootDropHint(isRootDropActive: boolean) {
       aria-hidden="true"
       className="rounded border border-dashed border-border-strong bg-foreground/[0.04] px-3 py-2 text-xs text-foreground/70"
     >
-      Drop to move node to root
+      Drop to move topic to root
     </div>
   );
 }
 
 function resolveNodeTreeSectionClassName(hasBodyAppendContent: boolean) {
   return hasBodyAppendContent ? 'flex flex-col' : resolveNodeTreeClassName();
+}
+
+function resolveNodeListPanelSurfaceClassName(isTrashViewOpen: boolean) {
+  return isTrashViewOpen ? 'workspace-region-main-topic' : 'workspace-region-main-folder';
 }
 
 function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeof useNodeListDragController>) {
@@ -159,7 +163,10 @@ export function NodeListPanel(props: NodeListPanelProps) {
   useNodeListPanelEffects(props, scrollContainerRef);
 
   return (
-    <aside aria-label="Node list panel" className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
+    <aside
+      aria-label="Topic list panel"
+      className={`${resolveNodeListPanelSurfaceClassName(props.isTrashViewOpen)} flex min-h-0 min-w-0 flex-1 flex-col text-foreground`}
+    >
       <NodeListHeader
         hasCollapsibleNodes={props.collapse.hasCollapsibleNotes}
         hasCollapsedNodes={props.collapse.hasCollapsedNotes}

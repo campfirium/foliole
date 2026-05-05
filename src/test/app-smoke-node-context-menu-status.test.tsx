@@ -10,7 +10,7 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 import { createNode } from './app-smoke.shared';
 
 function getNodeListPanel() {
-  return screen.getByRole('complementary', { name: 'Node list panel' });
+  return screen.getByRole('complementary', { name: 'Topic list panel' });
 }
 
 function seedTopicInInbox(args: {

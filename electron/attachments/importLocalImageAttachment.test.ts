@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { findAttachmentBlobManifestById } from '../database/attachmentBlobs.js';
 import { listAttachmentNodeLinks, listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -70,6 +71,29 @@ function hashBytes(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
+function expectAttachmentSyncChange(attachmentId: string, sizeBytes: number) {
+  expect(openDatabaseConnection().driver.queryOne<{ object_type: string }>(
+    `SELECT object_type FROM sync_change_log WHERE object_type = 'attachment' AND object_id = ?`,
+    [attachmentId]
+  )).toEqual({ object_type: 'attachment' });
+  const change = openDatabaseConnection().driver.queryOne<{ payload_json: string }>(
+    `SELECT payload_json FROM sync_change_log WHERE object_type = 'attachment' AND object_id = ?`,
+    [attachmentId]
+  );
+  expect(JSON.parse(change?.payload_json ?? '{}')).toEqual({
+    attachment_id: attachmentId,
+    blob: expect.objectContaining({
+      availability: 'local',
+      content_hash: attachmentId,
+      storage_key: `${attachmentId}.png`
+    }),
+    created_at: expect.any(String),
+    mime_type: 'image/png',
+    original_name: 'cover.png',
+    size_bytes: sizeBytes
+  });
+}
+
 it('imports a local png into the app attachment directory and links it to the node', async () => {
   seedNode('node-1');
   const sourcePath = path.join(tempRoot, 'cover.png');
@@ -107,6 +131,23 @@ it('imports a local png into the app attachment directory and links it to the no
     fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'cover.png'))
   ).resolves.toEqual(imageBytes);
   await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', hashBytes(imageBytes)))).rejects.toThrow();
+  expect(findAttachmentBlobManifestById(hashBytes(imageBytes))).toEqual({
+    attachmentId: hashBytes(imageBytes),
+    contentHash: hashBytes(imageBytes),
+    storageKey: `${hashBytes(imageBytes)}.png`,
+    sizeBytes: imageBytes.byteLength,
+    mimeType: 'image/png',
+    availability: 'local',
+    sourceDeviceId: null,
+    createdAt: expect.any(String),
+    cachedAt: expect.any(String),
+    lastVerifiedAt: expect.any(String)
+  });
+  expect(openDatabaseConnection().driver.queryOne<{ object_type: string; sync_dirty: number }>(
+    `SELECT object_type, sync_dirty FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?`,
+    [hashBytes(imageBytes)]
+  )).toEqual({ object_type: 'attachment', sync_dirty: 1 });
+  expectAttachmentSyncChange(hashBytes(imageBytes), imageBytes.byteLength);
 });
 
 it('reuses the same stored file and attachment record for repeated imports of identical content', async () => {
@@ -135,6 +176,12 @@ it('reuses the same stored file and attachment record for repeated imports of id
   });
 
   expect(countAttachments()).toBe(1);
+  expect(findAttachmentBlobManifestById((firstResult as { attachment_id: string }).attachment_id)).toMatchObject({
+    attachmentId: (firstResult as { attachment_id: string }).attachment_id,
+    contentHash: (firstResult as { attachment_id: string }).attachment_id,
+    storageKey: `${(firstResult as { attachment_id: string }).attachment_id}.png`,
+    availability: 'local'
+  });
   expect(listAttachmentNodeLinks((firstResult as { attachment_id: string }).attachment_id)).toEqual([
     { nodeId: 'node-1', attachmentId: (firstResult as { attachment_id: string }).attachment_id, role: 'image' },
     { nodeId: 'node-2', attachmentId: (firstResult as { attachment_id: string }).attachment_id, role: 'image' }

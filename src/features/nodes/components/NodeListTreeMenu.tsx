@@ -128,7 +128,7 @@ function createMergeHighlightsIntoTopicHandler(args: {
     }
     void mergeRuntimeReadwiseTopicHighlights(args.primaryTargetId).then(async (result) => {
       if (!result || result.status === 'error') {
-        window.alert('合并失败。');
+        window.alert('Merge failed.');
         return;
       }
       if (result.status === 'merged') {

@@ -29,7 +29,7 @@ function PushQueueSettingsHarness() {
 }
 
 function expectPushQueueSemanticCopy() {
-  expect(screen.getByRole('heading', { level: 4, name: 'Default node priority' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 4, name: 'Default topic priority' })).toBeInTheDocument();
   expect(screen.getByText('Dual queue mix ratio')).toBeInTheDocument();
   expect(screen.getByText('Priority strength (`priorityRatio`)')).toBeInTheDocument();
   expect(screen.getByText(/global `defaultPriority` fallback/i)).toBeInTheDocument();

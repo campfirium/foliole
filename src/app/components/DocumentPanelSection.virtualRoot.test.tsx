@@ -49,7 +49,7 @@ it('shows combined results when the Virtual root is open', () => {
     onSelectNodeInVirtualView
   });
 
-  expect(screen.getByRole('region', { name: 'Virtual node details' })).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Virtual folder details' })).toBeInTheDocument();
   expect(screen.getByText('Results')).toBeInTheDocument();
   expect(screen.getByTestId('folder-list-title-node-2')).toHaveTextContent('Reader article');
   expect(screen.queryByTestId('folder-list-title-node-3')).not.toBeInTheDocument();

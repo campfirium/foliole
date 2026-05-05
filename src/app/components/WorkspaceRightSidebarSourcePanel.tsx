@@ -35,7 +35,7 @@ function formatImportOutcome(entry: RuntimeTextImportResult) {
   if (entry.duplicateSemantic === 'updated') {
     return 'Updated existing node';
   }
-  return 'Imported as new node';
+  return 'Imported as new topic';
 }
 
 function resolveTone(entry: RuntimeTextImportResult) {
@@ -155,7 +155,7 @@ function LatestImportRunSection({ entry }: { entry: RuntimeTextImportResult }) {
 function SourceHistorySection({ entries }: { entries: RuntimeTextImportResult[] }) {
   return (
     <InspectorSection className="p-2" title="Import history">
-      <ol aria-label="Node import history" className="flex flex-col gap-1">
+      <ol aria-label="Topic import history" className="flex flex-col gap-1">
         {entries.map((entry, index) => (
           <li className="rounded-md border border-border/80 px-3 py-3" key={entry.importId}>
             <div className="flex items-start justify-between gap-3">
@@ -179,7 +179,7 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
   const details = useNodeSourceDetails(props.hasActiveNode ? props.activeNodeId : null);
 
   if (!props.activeNodeId) {
-    return <EmptySourceInfoState description="Select a node to inspect its import source and history." />;
+    return <EmptySourceInfoState description="Select a topic to inspect its import source and history." />;
   }
   if (!props.hasActiveNode) {
     return null;
@@ -188,11 +188,11 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
     return <EmptySourceInfoState description="Loading source info..." />;
   }
   if (!details.value) {
-    return <EmptySourceInfoState description="This node has no recorded import source yet." />;
+    return <EmptySourceInfoState description="This topic has no recorded import source yet." />;
   }
   const { importRuns, importSource, inheritedFromParent, keepImportItem } = details.value;
   if (!importSource && !keepImportItem && importRuns.length === 0) {
-    return <EmptySourceInfoState description="This node has no recorded import source yet." />;
+    return <EmptySourceInfoState description="This topic has no recorded import source yet." />;
   }
 
   return (
@@ -200,7 +200,7 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
       {inheritedFromParent ? (
         <InspectorSection title="Source link">
           <p className="text-sm leading-6 text-foreground/70">
-            This node is attached to an imported parent note, so the source details below come from that parent.
+            This topic is attached to an imported parent topic, so the source details below come from that parent.
           </p>
         </InspectorSection>
       ) : null}

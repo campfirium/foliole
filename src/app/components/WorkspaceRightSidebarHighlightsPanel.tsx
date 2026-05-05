@@ -171,7 +171,7 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
     return null;
   }
   if (highlights.length === 0) {
-    return <EmptyHighlightsState description="This node and its child nodes have no highlight nodes yet." />;
+    return <EmptyHighlightsState description="This topic and its derived topics have no highlights yet." />;
   }
 
   return (

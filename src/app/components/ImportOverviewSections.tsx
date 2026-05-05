@@ -76,7 +76,7 @@ function renderImportActions(input: {
       </div>
       {openNodeId ? (
         <AppButton onClick={() => input.onOpenNode(openNodeId)} variant="ghost">
-          Open node
+          Open topic
         </AppButton>
       ) : null}
     </div>
@@ -216,12 +216,12 @@ export function InboxImportsSection({
     <AppListSurface
       ariaLabel="Inbox imports list"
       className="border-0 bg-transparent"
-      emptyState={{ description: 'No imported Inbox children or recent runs yet.', title: 'Inbox imports are empty' }}
+      emptyState={{ description: 'No imported Inbox topics or recent runs yet.', title: 'Inbox imports are empty' }}
       headerSeparated={false}
       header={
         <AppListSectionHeader
           countLabel={`${itemCount} items`}
-          description="Imported nodes and recent outcomes stay together here so the latest inbox activity reads as one continuous list."
+          description="Imported topics and recent outcomes stay together here so the latest inbox activity reads as one continuous list."
           title="Inbox imports"
         />
       }

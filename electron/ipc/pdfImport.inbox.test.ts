@@ -112,6 +112,12 @@ async function expectPdfImportChain(options: {
     source_locator: buildAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
     source_name: options.sourceName
   });
+  expect(openDatabaseConnection().sqlite
+    .prepare("SELECT COUNT(*) AS count FROM attachment_blobs WHERE attachment_id = ?")
+    .get(pdfAttachment?.attachmentId)).toEqual({ count: 1 });
+  expect(openDatabaseConnection().sqlite
+    .prepare("SELECT COUNT(*) AS count FROM sync_change_log WHERE object_type = 'attachment' AND object_id = ?")
+    .get(pdfAttachment?.attachmentId)).toEqual({ count: 1 });
 }
 
 it('imports pdf dropped into the managed inbox and keeps node/import/opening chain valid', async () => {

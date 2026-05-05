@@ -1,8 +1,13 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CompanionSyncContent } from './CompanionSyncContent';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
+
+afterEach(() => {
+  window.localStorage.clear();
+  vi.useRealTimers();
+});
 
 function createWorkspaceSync() {
   return {
@@ -45,21 +50,32 @@ function createWorkspaceSync() {
 }
 
 describe('CompanionSyncContent', () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('starts desktop discovery automatically for a new unpaired device', async () => {
+  it('does not start discovery before the user asks to connect', () => {
     const workspaceSync = createWorkspaceSync();
 
     render(<CompanionSyncContent workspaceSync={workspaceSync} />);
 
-    await waitFor(() => {
-      expect(workspaceSync.checkDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
+    expect(screen.getByRole('button', { name: 'Connect another device' })).toBeInTheDocument();
+    expect(workspaceSync.checkDesktop).not.toHaveBeenCalled();
+  });
+
+
+  it('shows and persists mobile handoff reminder settings', () => {
+    const workspaceSync = createWorkspaceSync();
+
+    render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+
+    expect(screen.getByText('Handoff reminders')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Short reminder'), { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText('Daily reminder'), { target: { value: '21:00' } });
+
+    expect(JSON.parse(window.localStorage.getItem('foliole-companion-handoff-reminder-settings') ?? '{}')).toEqual({
+      fixedTime: '21:00',
+      shortDelay: '5'
     });
   });
 
-  it('keeps retrying discovery while the setup screen remains unpaired', async () => {
+  it('keeps discovery quiet after an error until the user tries again', async () => {
     vi.useFakeTimers();
     const workspaceSync = createWorkspaceSync();
     workspaceSync.checkDesktop = vi.fn(async () => {
@@ -68,21 +84,16 @@ describe('CompanionSyncContent', () => {
 
     const { rerender } = render(<CompanionSyncContent workspaceSync={workspaceSync} />);
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(250);
-    });
-    expect(workspaceSync.checkDesktop).toHaveBeenCalledTimes(1);
-
     rerender(<CompanionSyncContent workspaceSync={{ ...workspaceSync, error: 'No desktop sync device found.' }} />);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_500);
     });
-    expect(workspaceSync.checkDesktop).toHaveBeenCalledTimes(2);
+    expect(workspaceSync.checkDesktop).not.toHaveBeenCalled();
   });
+});
 
-
-
+describe('CompanionSyncContent paired flow', () => {
   it('shows sync status details for a paired device', () => {
     const workspaceSync = createWorkspaceSync();
     workspaceSync.pairingState = {
@@ -107,7 +118,7 @@ describe('CompanionSyncContent', () => {
 
     render(<CompanionSyncContent workspaceSync={workspaceSync} />);
 
-    expect(screen.getByText('Sync status')).toBeInTheDocument();
+    expect(screen.getByText('Device sync')).toBeInTheDocument();
     expect(screen.getByText('Last sync')).toBeInTheDocument();
     expect(screen.getByText('Android Emulator (Android)')).toBeInTheDocument();
     expect(screen.getByText('Sync log')).toBeInTheDocument();

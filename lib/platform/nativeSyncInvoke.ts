@@ -8,6 +8,20 @@ export function invokeLoadSyncIndex(invoke: NativeInvoke) {
   return invoke(NATIVE_COMMANDS.loadSyncIndex);
 }
 
+export function invokeLoadSyncObjects(
+  invoke: NativeInvoke,
+  args: NativeCommandArgs<typeof NATIVE_COMMANDS.loadSyncObjects>
+) {
+  return invoke(NATIVE_COMMANDS.loadSyncObjects, args);
+}
+
+export function invokeApplySyncObjects(
+  invoke: NativeInvoke,
+  args: NativeCommandArgs<typeof NATIVE_COMMANDS.applySyncObjects>
+) {
+  return invoke(NATIVE_COMMANDS.applySyncObjects, args);
+}
+
 export function invokeLoadSyncNodes(
   invoke: NativeInvoke,
   args: NativeCommandArgs<typeof NATIVE_COMMANDS.loadSyncNodes>

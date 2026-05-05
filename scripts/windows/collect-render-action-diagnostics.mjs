@@ -194,7 +194,7 @@ async function captureDomMutationAction(page, action, settleMs) {
     async ({ actionName, waitMs }) => {
       const selectors = {
         documentPanel: '[aria-label="Document area"]',
-        nodeListTree: '[aria-label="Node list panel"]',
+        nodeListTree: '[aria-label="Topic list panel"]',
         rightSidebar: '[aria-label="Inspector"]',
         workspaceGrid: '#root'
       };

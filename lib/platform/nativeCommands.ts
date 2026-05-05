@@ -65,6 +65,8 @@ export const NATIVE_COMMANDS = {
   rejectCompanionPairRequest: 'reject_companion_pair_request',
   loadSyncIndex: 'load_sync_index',
   loadSyncNodes: 'load_sync_nodes',
+  loadSyncObjects: 'load_sync_objects',
+  applySyncObjects: 'apply_sync_objects',
   loadSyncNodeConflicts: 'load_sync_node_conflicts',
   applySyncNodes: 'apply_sync_nodes',
   recordSyncNodeConflicts: 'record_sync_node_conflicts',

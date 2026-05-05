@@ -11,16 +11,16 @@ export function NodeListRowSpacingSection() {
   const [rowSpacing, setRowSpacing] = useState(() => getNodeListRowSpacing());
 
   return (
-    <SettingsSection ariaLabel="Node list row spacing settings section" title="Node list">
+    <SettingsSection ariaLabel="Topic list row spacing settings section" title="Topic list">
       <SettingsRow
-        description={`Set node list row spacing in pixels. The default is ${DEFAULT_NODE_LIST_ROW_SPACING}px.`}
+        description={`Set topic list row spacing in pixels. The default is ${DEFAULT_NODE_LIST_ROW_SPACING}px.`}
         title="Row spacing"
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <label className="inline-flex items-center gap-2">
-            <span className="sr-only">Node list row spacing</span>
+            <span className="sr-only">Topic list row spacing</span>
             <input
-              aria-label="Node list row spacing"
+              aria-label="Topic list row spacing"
               className={settingsFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
               min={0}
               onChange={(event) => {

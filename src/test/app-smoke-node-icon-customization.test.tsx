@@ -81,7 +81,7 @@ it('keeps navigation trees icon-free even when icon settings exist', () => {
 
   render(<NodeListTreeHarness />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   expect(within(listPanel).getByRole('treeitem', { name: 'Reading 1' }).querySelector('[data-node-icon]')).toBeNull();
   expect(within(listPanel).getByRole('treeitem', { name: 'QA Node' }).querySelector('[data-node-icon]')).toBeNull();
 });

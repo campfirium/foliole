@@ -1,14 +1,26 @@
 import type { ReadwiseImportScope, ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type { NativeReadwiseDetectionResult } from '../../../lib/platform/nativeReadwiseContract';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppInput, AppStatusBadge } from '../../shared/ui';
+import {
+  AppButton,
+  AppDialog,
+  AppDialogContent,
+  AppDialogOverlay,
+  AppDialogPortal,
+  AppDialogTitle,
+  AppStatusBadge,
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME,
+  SETTINGS_SELECT_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  SettingsRow,
+  settingsFieldClassName
+} from '../../shared/ui';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
-import { formatReadwiseSourceLabel, importSourceSelectClassName } from './importSourceWorkspaceModel';
+import { formatReadwiseSourceLabel } from './importSourceWorkspaceModel';
 import { FolderButton, resolveFolderPathHint, resolveFolderPathLabel } from './ImportSourceWorkspaceTableParts';
 import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
 
-const readwiseFormRowClassName =
-  'grid gap-3 rounded-lg border border-border bg-bg-panel px-3 py-3 md:grid-cols-[minmax(0,1fr)_340px] md:justify-between md:items-start';
 
 export function getArticlesSource(sources: DraftImportSource[]) {
   return sources.find((source) => source.kind === 'articles') ?? null;
@@ -19,14 +31,14 @@ function ReadwiseFolderMatrix(props: {
   sources: Array<{ id: string; label: string; highlightPath: string; primaryPath: string }>;
 }) {
   return (
-    <div className="hidden gap-2 md:grid" style={{ gridTemplateColumns: `96px repeat(${props.sources.length}, minmax(0, 1fr))` }}>
+    <div className="hidden gap-2 md:grid" style={{ gridTemplateColumns: `84px repeat(${props.sources.length}, minmax(0, 1fr))` }}>
       <div aria-hidden="true" />
       {props.sources.map((source) => (
         <div className="px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45" key={source.id}>
           {source.label}
         </div>
       ))}
-      <div className="px-1 text-xs font-semibold text-foreground/65">Content</div>
+      <div className="flex h-10 items-center px-1 text-sm font-medium text-foreground/62">Content</div>
       {props.sources.map((source) => (
         <FolderButton
           key={`${source.id}-content`}
@@ -36,7 +48,7 @@ function ReadwiseFolderMatrix(props: {
           tooltip={resolveFolderPathHint(source.primaryPath)}
         />
       ))}
-      <div className="px-1 text-xs font-semibold text-foreground/65">Highlights</div>
+      <div className="flex h-10 items-center px-1 text-sm font-medium text-foreground/62">Highlights</div>
       {props.sources.map((source) => (
         <FolderButton
           key={`${source.id}-highlights`}
@@ -99,27 +111,36 @@ export function ReadwiseDirectorySection(props: {
   }));
 
   return (
-    <section className="space-y-3">
-      <label className={readwiseFormRowClassName}>
-        <div>
-          <span className="block text-sm font-semibold text-foreground">Readwise root folder</span>
-          <span className="mt-1 block text-sm text-foreground/65">Choose the root once. The four category folders will be filled in automatically, and you can still adjust them below.</span>
-        </div>
-        <div className="w-full md:w-[340px]">
+    <>
+      <SettingsRow
+        description="Choose the root once. The four category folders will be filled in automatically, and you can still adjust them below."
+        title="Readwise root folder"
+      >
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <FolderButton
+            className={SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME}
             label="Readwise root folder"
             onClick={props.onChooseRootFolder}
-            path={resolveFolderPathLabel(props.readwiseRootPath, 'Choose folder')}
+            path={resolveFolderPathLabel(props.readwiseRootPath, 'Choose')}
             tooltip={resolveFolderPathHint(props.readwiseRootPath)}
           />
+        </SettingsControlSlot>
+      </SettingsRow>
+      <div className="relative px-5 py-5 before:absolute before:left-5 before:right-5 before:top-0 before:border-t before:border-settings-divider/55" data-settings-row>
+        <div className="mb-4">
+          <h4 className="text-[0.95rem] font-normal text-foreground">Category folders</h4>
+          <p className="mt-0.5 text-sm text-foreground/65">Generated from the root folder and still adjustable per category.</p>
         </div>
-      </label>
-      <div className="rounded-lg border border-border bg-bg-elevated px-3 py-3">
         <ReadwiseFolderMatrix onChooseFolder={props.onChooseFolder} sources={sourceColumns} />
         <ReadwiseFolderStack onChooseFolder={props.onChooseFolder} sources={sourceColumns} />
       </div>
-    </section>
+    </>
   );
+}
+
+
+function getReadwiseTextInputWidth(value: string) {
+  return `${Math.max(12, Math.min(34, value.length + 2))}ch`;
 }
 
 export function ReadwiseParserFields(props: {
@@ -147,20 +168,22 @@ export function ReadwiseParserFields(props: {
   ];
 
   return (
-    <section className="space-y-3">
+    <>
       <ReadwiseImportScopeField importScope={props.config.importScope} onChange={(value) => props.onChange('importScope', value)} />
       {fields.map((entry) => (
-        <label className={readwiseFormRowClassName} key={entry.field}>
-          <div>
-            <span className="block text-sm font-semibold text-foreground">{entry.label}</span>
-            <span className="mt-1 block text-sm text-foreground/65">{entry.description}</span>
-          </div>
-          <div className="w-full md:w-[340px]">
-            <AppInput onChange={(event) => props.onChange(entry.field, event.target.value)} value={props.config[entry.field]} />
-          </div>
-        </label>
+        <SettingsRow description={entry.description} key={entry.field} title={entry.label}>
+          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+            <input
+              aria-label={entry.label}
+              className={settingsFieldClassName('max-w-full')}
+              onChange={(event) => props.onChange(entry.field, event.target.value)}
+              style={{ width: getReadwiseTextInputWidth(String(props.config[entry.field])) }}
+              value={props.config[entry.field]}
+            />
+          </SettingsControlSlot>
+        </SettingsRow>
       ))}
-    </section>
+    </>
   );
 }
 
@@ -182,28 +205,20 @@ function ReadwiseImportScopeField(props: {
   ];
 
   return (
-    <label className={readwiseFormRowClassName}>
-      <div>
-        <span className="block text-sm font-semibold text-foreground">Import scope</span>
-        <span className="mt-1 block text-sm text-foreground/65">
-          {importScopeOptions.find((option) => option.value === props.importScope)?.description}
-        </span>
-      </div>
-      <div className="w-full md:w-[340px]">
-        <select
-          aria-label="Readwise import scope"
-          className={importSourceSelectClassName}
-          onChange={(event) => props.onChange(event.target.value as ReadwiseImportScope)}
-          value={props.importScope}
-        >
+    <SettingsRow
+      description={importScopeOptions.find((option) => option.value === props.importScope)?.description}
+      title="Import scope"
+    >
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <select aria-label="Readwise import scope" className={settingsFieldClassName(`w-auto ${SETTINGS_SELECT_WIDTH_CLASS_NAME}`)} onChange={(event) => props.onChange(event.target.value as ReadwiseImportScope)} value={props.importScope}>
           {importScopeOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
-      </div>
-    </label>
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }
 

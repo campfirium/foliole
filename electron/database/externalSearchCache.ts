@@ -2,7 +2,12 @@ import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitl
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type { NativeExternalSearchBrowseEntry, NativeExternalSearchPreview } from '../../lib/platform/nativeStorageContract.js';
 
-import { closeExternalSearchCacheDatabase, openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
+import {
+  markExternalDocumentsMissing,
+  replaceExternalDocumentsForFolder,
+  upsertExternalDocuments
+} from './externalDocuments.js';
+import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import {
   applyFolderDocumentChanges,
   loadScannedDocument,
@@ -18,12 +23,12 @@ import { loadExternalSearchFolders, updateExternalSearchFolderIndexState } from 
 import { resolveExternalPreviewSourceContent, rewriteExternalPreviewContent } from './externalSearchPreviewContent.js';
 
 type SqliteDatabase = import('better-sqlite3').Database;
-interface CachedFolderDocumentRow { absolute_path: string; is_present: number; modified_ms: number; size_bytes: number }
+interface CachedFolderDocumentRow { absolute_path: string; is_present: number; modified_ms: number; relative_path: string; size_bytes: number }
 
 function readCachedFolderDocuments(db: SqliteDatabase, folderId: string) {
   return db
     .prepare(
-      `SELECT absolute_path, modified_ms, size_bytes, is_present
+      `SELECT absolute_path, modified_ms, relative_path, size_bytes, is_present
        FROM external_search_documents
        WHERE folder_id = ?`
     )
@@ -43,21 +48,27 @@ async function syncExternalSearchFolder(db: SqliteDatabase, folder: ReturnType<t
     const existing = existingByAbsolutePath.get(entry.absolutePath);
     return !existing || existing.is_present !== 1 || existing.modified_ms !== entry.modifiedMs || existing.size_bytes !== entry.sizeBytes;
   });
-  const deletedAbsolutePaths = existingRows
-    .filter((row) => !seenAbsolutePaths.has(row.absolute_path))
-    .map((row) => row.absolute_path);
+  const deletedRows = existingRows.filter((row) => !seenAbsolutePaths.has(row.absolute_path));
+  const deletedAbsolutePaths = deletedRows.map((row) => row.absolute_path);
   const documentsToUpsert: ScannedDocument[] = [];
   for (const entry of entriesToUpsert) {
     documentsToUpsert.push(await loadScannedDocument(entry));
   }
+  const indexedAt = applyFolderDocumentChanges({
+    db,
+    deletedAbsolutePaths,
+    documentsToUpsert,
+    folder
+  });
+  upsertExternalDocuments(folder, documentsToUpsert, indexedAt);
+  markExternalDocumentsMissing(
+    deletedRows.map((row) => ({ relativePath: row.relative_path })),
+    folder.id,
+    indexedAt
+  );
   return {
     documentCount: scannedEntries.length,
-    indexedAt: applyFolderDocumentChanges({
-      db,
-      deletedAbsolutePaths,
-      documentsToUpsert,
-      folder
-    })
+    indexedAt
   };
 }
 
@@ -76,6 +87,7 @@ export async function rebuildExternalSearchIndexes(folderId?: string) {
       const documents: ScannedDocument[] = [];
       await scanFolder(folder, folder.folder_path, folder.folder_path, defaultExcludedNames, documents);
       const indexedAt = replaceFolderDocuments(openExternalSearchCacheDatabase(), folder, documents);
+      replaceExternalDocumentsForFolder(folder, documents, indexedAt);
       updateExternalSearchFolderIndexState({
         documentCount: documents.length,
         folderId: folder.id,
@@ -258,4 +270,3 @@ export function pruneExternalSearchCache(validFolderIds: string[]) {
   })();
 }
 
-export { closeExternalSearchCacheDatabase };

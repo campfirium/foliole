@@ -24,13 +24,13 @@ it('stores node list row spacing and removes the override when reset to default'
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  fireEvent.change(screen.getByLabelText('Node list row spacing'), { target: { value: '8' } });
+  fireEvent.change(screen.getByLabelText('Topic list row spacing'), { target: { value: '8' } });
 
   await waitFor(() => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeListRowSpacing)).toBe('8');
   });
 
-  fireEvent.change(screen.getByLabelText('Node list row spacing'), { target: { value: '6' } });
+  fireEvent.change(screen.getByLabelText('Topic list row spacing'), { target: { value: '6' } });
 
   await waitFor(() => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeListRowSpacing)).toBeNull();

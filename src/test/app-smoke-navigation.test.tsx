@@ -33,7 +33,7 @@ it('supports ctrl/cmd multi-select and shift range select in node list', () => {
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   const node1Button = within(listPanel).getByRole('treeitem', { name: 'Welcome to Foliole' });
   const node2Button = within(listPanel).getByRole('treeitem', { name: 'Node 2' });
   const node3Button = within(listPanel).getByRole('treeitem', { name: 'Node 3' });
@@ -69,7 +69,7 @@ it('supports tree keyboard navigation for node list', () => {
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   const rootButton = within(listPanel).getByRole('treeitem', { name: /Root/i });
   const siblingButton = within(listPanel).getByRole('treeitem', { name: /Sibling/i });
   fireEvent.keyDown(rootButton, { key: 'End' });
@@ -106,7 +106,7 @@ it('moves selected nodes as one drag group and preserves selection order', () =>
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   const node2Button = within(listPanel).getByRole('treeitem', { name: 'Root 2' });
   const node3Button = within(listPanel).getByRole('treeitem', { name: 'Root 3' });
   const node4Button = within(listPanel).getByRole('treeitem', { name: 'Folder' });
@@ -205,7 +205,7 @@ it('supports toolbar parent and navigation history actions', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Go to parent node' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Go to parent' }));
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   });

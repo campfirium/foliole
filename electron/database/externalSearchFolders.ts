@@ -1,7 +1,11 @@
+import { randomUUID } from 'node:crypto';
+
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 
 interface ExternalSearchFolderRow extends DatabaseRow {
   attachment_mode: string;
@@ -86,7 +90,8 @@ function normalizeFolders(folders: SaveFolderInput[]) {
 function upsertExternalSearchFolders(
   normalizedFolders: ReturnType<typeof normalizeFolders>,
   now: string,
-  existingById: Map<string, ExternalSearchFolderRow>
+  existingById: Map<string, ExternalSearchFolderRow>,
+  deviceId: string
 ) {
   const driver = openDatabaseConnection().driver;
   normalizedFolders.forEach((folder) => {
@@ -116,23 +121,89 @@ function upsertExternalSearchFolders(
         now
       ]
     );
+    recordExternalFolderSync({
+      contentHash: computeSyncContentHash('external_folder', {
+        attachmentMode: folder.attachmentMode,
+        attachmentRootPath: folder.attachmentRootPath,
+        excludedDirs: folder.excludedDirs,
+        folderPath: folder.folderPath,
+        id: folder.id
+      }),
+      deviceId,
+      folderId: folder.id,
+      payloadJson: JSON.stringify({
+        attachment_mode: folder.attachmentMode,
+        attachment_root_path: folder.attachmentRootPath,
+        excluded_dirs_json: JSON.stringify(folder.excludedDirs),
+        folder_path: folder.folderPath,
+        id: folder.id
+      }),
+      updatedAt: now
+    });
   });
+}
+
+function recordExternalFolderSync(args: {
+  contentHash: string;
+  deletedAt?: string | null;
+  deviceId: string;
+  folderId: string;
+  payloadJson: string;
+  updatedAt: string;
+}) {
+  const driver = openDatabaseConnection().driver;
+  upsertSyncObjectState(driver, {
+    objectType: 'external_folder',
+    objectId: args.folderId,
+    contentHash: args.contentHash,
+    deletedAt: args.deletedAt ?? null,
+    lastModifiedByDeviceId: args.deviceId,
+    updatedAt: args.updatedAt,
+    syncDirty: true
+  });
+  appendSyncChangeLog(driver, {
+    changeId: randomUUID(),
+    objectType: 'external_folder',
+    objectId: args.folderId,
+    changeType: args.deletedAt ? 'delete' : 'upsert',
+    deviceId: args.deviceId,
+    contentHash: args.contentHash,
+    payloadJson: args.payloadJson,
+    createdAt: args.updatedAt,
+    appliedAt: args.updatedAt
+  });
+}
+
+function tombstoneRemovedExternalFolders(rows: ExternalSearchFolderRow[], keptIds: Set<string>, now: string, deviceId: string) {
+  for (const row of rows) {
+    if (keptIds.has(row.id)) continue;
+    recordExternalFolderSync({
+      contentHash: computeSyncContentHash('external_folder', { deletedAt: now, folderId: row.id }),
+      deletedAt: now,
+      deviceId,
+      folderId: row.id,
+      payloadJson: JSON.stringify({ id: row.id }),
+      updatedAt: now
+    });
+  }
 }
 
 export function saveExternalSearchFolders(folders: SaveFolderInput[]) {
   const driver = openDatabaseConnection().driver;
   const now = new Date().toISOString();
   const normalizedFolders = normalizeFolders(folders);
+  const deviceId = loadOrCreateDesktopDeviceId(now);
 
   driver.transaction(() => {
     const existingRows = readRows();
     const existingById = new Map(existingRows.map((row) => [row.id, row]));
+    tombstoneRemovedExternalFolders(existingRows, new Set(normalizedFolders.map((folder) => folder.id)), now, deviceId);
     driver.execute(
       `DELETE FROM external_search_folders
        WHERE id NOT IN (${normalizedFolders.map(() => '?').join(', ') || "''"})`,
       normalizedFolders.map((folder) => folder.id)
     );
-    upsertExternalSearchFolders(normalizedFolders, now, existingById);
+    upsertExternalSearchFolders(normalizedFolders, now, existingById, deviceId);
     if (!normalizedFolders.length) driver.execute('DELETE FROM external_search_folders');
   });
   return loadExternalSearchFolders();

@@ -58,9 +58,9 @@ it('filters node titles while keeping the matched path visible', () => {
 
   render(<NodeListTreeSearchHarness />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Search node titles' }), {
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), {
     target: { value: 'hook' }
   });
 
@@ -69,7 +69,7 @@ it('filters node titles while keeping the matched path visible', () => {
   expect(within(listPanel).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
   expect(within(listPanel).queryByRole('treeitem', { name: 'Vue Notes' })).toBeNull();
 
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Search node titles' }), {
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), {
     target: { value: '' }
   });
 
@@ -86,7 +86,7 @@ it('toggles between collapsing and expanding all node groups from the toolbar bu
 
   render(<NodeListTreeSearchHarness />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
 
   expect(within(listPanel).getByRole('button', { name: 'Collapse all' })).toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
@@ -157,7 +157,7 @@ it('searches trashed rows from the trash header', () => {
   );
 
   fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Search node titles' }), {
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), {
     target: { value: 'beta' }
   });
 

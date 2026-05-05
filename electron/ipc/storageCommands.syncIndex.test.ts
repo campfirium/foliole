@@ -8,8 +8,14 @@ const { loadSyncIndex } = vi.hoisted(() => ({
 const { loadSyncNodes } = vi.hoisted(() => ({
   loadSyncNodes: vi.fn()
 }));
+const { loadSyncObjects } = vi.hoisted(() => ({
+  loadSyncObjects: vi.fn()
+}));
 const { applySyncNodes } = vi.hoisted(() => ({
   applySyncNodes: vi.fn()
+}));
+const { applySyncObjects } = vi.hoisted(() => ({
+  applySyncObjects: vi.fn()
 }));
 const { recordSyncNodeConflicts } = vi.hoisted(() => ({
   recordSyncNodeConflicts: vi.fn()
@@ -21,7 +27,9 @@ const { loadSyncNodeConflicts } = vi.hoisted(() => ({
 vi.mock('../database/syncIndex.js', () => ({ loadSyncIndex }));
 vi.mock('../database/syncConflictReads.js', () => ({ loadSyncNodeConflicts }));
 vi.mock('../database/syncNodes.js', () => ({ loadSyncNodes }));
+vi.mock('../database/syncObjects.js', () => ({ loadSyncObjects }));
 vi.mock('../database/syncApply.js', () => ({ applySyncNodes }));
+vi.mock('../database/syncObjectApply.js', () => ({ applySyncObjects }));
 vi.mock('../database/syncConflicts.js', () => ({ recordSyncNodeConflicts }));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
@@ -153,6 +161,24 @@ it('returns requested sync node records through storage commands', async () => {
   expect(loadSyncNodes).toHaveBeenCalledWith(['node-2']);
 });
 
+it('returns requested generic sync object records through storage commands', async () => {
+  const payload = [{
+    content_hash: 'hash-setting',
+    deleted_at: null,
+    object_id: 'user_space:windows:desktop:*:app_settings',
+    object_type: 'setting' as const,
+    payload_json: '{"key":"app_settings"}',
+    updated_at: '2026-04-21T16:20:00.000Z'
+  }];
+  loadSyncObjects.mockReturnValue(payload);
+
+  await expect(handleStorageCommand('load_sync_objects', {
+    objectIds: ['user_space:windows:desktop:*:app_settings'],
+    objectTypes: ['setting']
+  })).resolves.toEqual(payload);
+  expect(loadSyncObjects).toHaveBeenCalledWith(['user_space:windows:desktop:*:app_settings'], ['setting']);
+});
+
 it('applies sync node payloads through storage commands', async () => {
   const payload = createSyncNodePayload();
   applySyncNodes.mockReturnValue(['node-2']);
@@ -160,6 +186,24 @@ it('applies sync node payloads through storage commands', async () => {
     nodes: payload
   })).resolves.toEqual(['node-2']);
   expect(applySyncNodes).toHaveBeenCalledWith(payload);
+});
+
+
+it('applies generic sync object payloads through storage commands', async () => {
+  const payload = [{
+    content_hash: 'hash-setting',
+    deleted_at: null,
+    object_id: 'user_space:windows:desktop:*:app_settings',
+    object_type: 'setting' as const,
+    payload_json: '{"key":"app_settings"}',
+    updated_at: '2026-04-21T16:20:00.000Z'
+  }];
+  applySyncObjects.mockReturnValue(['setting:user_space:windows:desktop:*:app_settings']);
+
+  await expect(handleStorageCommand('apply_sync_objects', {
+    objects: payload
+  })).resolves.toEqual(['setting:user_space:windows:desktop:*:app_settings']);
+  expect(applySyncObjects).toHaveBeenCalledWith(payload);
 });
 
 it('records sync node conflict payloads through storage commands', async () => {

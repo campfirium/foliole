@@ -19,7 +19,7 @@ it('shows create menu labels as Folder, Topic, and Item', () => {
   }));
   render(<App />);
 
-  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const nodePanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   const tree = within(nodePanel).getByRole('tree');
   fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
 
@@ -39,7 +39,7 @@ it('shows neutral context labels instead of node wording', () => {
   }));
   render(<App />);
 
-  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const nodePanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Article node' }), {
     clientX: 56,
     clientY: 64

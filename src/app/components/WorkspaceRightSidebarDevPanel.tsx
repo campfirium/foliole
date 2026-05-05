@@ -130,7 +130,7 @@ function ReadingProfileSection({ reading }: { reading: NodeReadingProfile | null
 }
 
 function EmptyDevPanelState() {
-  return <InspectorSection description="Select a node to inspect its development data." title="Dev panel" />;
+  return <InspectorSection description="Select a topic to inspect its development data." title="Dev panel" />;
 }
 
 function resolveDevPanelData(
@@ -196,7 +196,7 @@ function DevPanelContent({ data }: { data: DevPanelResolvedData }) {
 
       <ReadingProfileSection reading={node.reading} />
 
-      <InspectorSection contentClassName="grid grid-cols-[minmax(88px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]" title="Node">
+      <InspectorSection contentClassName="grid grid-cols-[minmax(88px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]" title="Topic">
         <dl className="contents">
           <DevInfoRow label="Parent" value={node.parentNodeId ?? 'Root'} mono={node.parentNodeId !== null} />
           <DevInfoRow label="Created" value={formatDateTime(node.createdAt)} />

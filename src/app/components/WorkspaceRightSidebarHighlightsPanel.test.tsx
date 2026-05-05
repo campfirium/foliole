@@ -108,7 +108,7 @@ it('shows an empty state when no locator-backed highlight nodes exist', () => {
     />
   );
 
-  expect(screen.getByText('This node and its child nodes have no highlight nodes yet.')).toBeInTheDocument();
+  expect(screen.getByText('This topic and its derived topics have no highlights yet.')).toBeInTheDocument();
 });
 
 it('includes locator-backed highlights from nested descendants in tree order', () => {
@@ -222,7 +222,7 @@ it('excludes cloze child nodes from the sidebar list', () => {
     />
   );
 
-  expect(screen.getByText('This node and its child nodes have no highlight nodes yet.')).toBeInTheDocument();
+  expect(screen.getByText('This topic and its derived topics have no highlights yet.')).toBeInTheDocument();
 });
 
 it('excludes the active node itself when it is a highlight node', () => {
@@ -247,5 +247,5 @@ it('excludes the active node itself when it is a highlight node', () => {
     />
   );
 
-  expect(screen.getByText('This node and its child nodes have no highlight nodes yet.')).toBeInTheDocument();
+  expect(screen.getByText('This topic and its derived topics have no highlights yet.')).toBeInTheDocument();
 });

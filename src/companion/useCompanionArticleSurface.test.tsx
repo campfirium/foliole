@@ -1,9 +1,18 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
+
+const syncObjectMock = vi.hoisted(() => ({
+  saveCompanionSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
+  saveCompanionSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'article-1' })),
+  saveCompanionSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'item-1' })),
+  saveCompanionSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' }))
+}));
+
+vi.mock('../shared/platform/companionSyncObjects', () => syncObjectMock);
 
 function createSnapshot(): WorkspaceSnapshot {
   return {
@@ -151,14 +160,50 @@ function createFloatingBar() {
   };
 }
 
+async function expectReadingReviewActionPersists() {
+  const snapshot = createSnapshot();
+  snapshot.nodesById['article-1'] = {
+    ...snapshot.nodesById['article-1'],
+    reading: {
+      intervalDurationMs: 60000,
+      intervalGrowthFactor: 1.5,
+      lastHandledAt: '2026-04-22T07:00:00.000Z',
+      nextAt: '2026-04-22T08:00:00.000Z',
+      priority: 1,
+      readingPosition: 0,
+      repetitionCount: 1,
+      state: 'active'
+    }
+  };
+  const workspaceSync = createWorkspaceSync(snapshot);
+  const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+
+  await act(async () => {
+    await result.current.handleCompleteReviewItem();
+  });
+
+  expect(workspaceSync.replaceSnapshot).toHaveBeenCalledWith(expect.any(Object), 'article-1');
+  expect(syncObjectMock.saveCompanionSyncNodeReadingRecord).toHaveBeenCalledWith(expect.objectContaining({
+    nodeId: 'article-1'
+  }));
+}
+
 describe('useCompanionArticleSurface', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    syncObjectMock.saveCompanionSyncActiveViewState.mockClear();
+    syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
+    syncObjectMock.saveCompanionSyncNodeReviewRecord.mockClear();
+    syncObjectMock.saveCompanionSyncNodeViewState.mockClear();
+  });
+
   it('opens the connection page first when the phone has no desktop content yet', () => {
     const { result } = renderHook(() => useCompanionArticleSurface(createUnpairedWorkspaceSync(), createFloatingBar()));
 
     expect(result.current.activeAction).toBe('more');
   });
 
-  it('opens sync setup from the initial prompt without dismissing future prompts', async () => {
+  it('opens sync setup from the initial prompt and records acceptance', async () => {
     const workspaceSync = createUnpairedWorkspaceSync();
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
 
@@ -166,7 +211,7 @@ describe('useCompanionArticleSurface', () => {
       await result.current.handleStartSyncOnboarding();
     });
 
-    expect(workspaceSync.saveSyncOnboardingStatus).not.toHaveBeenCalled();
+    expect(workspaceSync.saveSyncOnboardingStatus).toHaveBeenCalledWith('accepted');
     expect(result.current.activeAction).toBe('more');
   });
 
@@ -193,6 +238,25 @@ describe('useCompanionArticleSurface browsing', () => {
     expect(result.current.activeAction).toBe('recent');
     expect(result.current.readableArticle?.nodeId).toBe('article-2');
     expect(result.current.selectedBrowseNodeId).toBe('article-2');
+    expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('article-2');
+  });
+
+  it('persists companion scroll view state after scroll settles', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(), createFloatingBar()));
+
+    act(() => {
+      result.current.handleSelectRecentArticle('article-2');
+    });
+    act(() => {
+      result.current.handleViewScroll(128);
+      vi.advanceTimersByTime(800);
+    });
+
+    expect(syncObjectMock.saveCompanionSyncNodeViewState).toHaveBeenCalledWith({
+      nodeId: 'article-2',
+      scrollTop: 128
+    });
   });
 
   it('opens folder breadcrumbs as folder browse surfaces', () => {
@@ -207,28 +271,5 @@ describe('useCompanionArticleSurface browsing', () => {
     expect(result.current.readableArticle).toBeNull();
   });
 
-  it('persists reading review actions as single-node companion updates', async () => {
-    const snapshot = createSnapshot();
-    snapshot.nodesById['article-1'] = {
-      ...snapshot.nodesById['article-1'],
-      reading: {
-        intervalDurationMs: 60000,
-        intervalGrowthFactor: 1.5,
-        lastHandledAt: '2026-04-22T07:00:00.000Z',
-        nextAt: '2026-04-22T08:00:00.000Z',
-        priority: 1,
-        readingPosition: 0,
-        repetitionCount: 1,
-        state: 'active'
-      }
-    };
-    const workspaceSync = createWorkspaceSync(snapshot);
-    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
-
-    await act(async () => {
-      await result.current.handleCompleteReviewItem();
-    });
-
-    expect(workspaceSync.replaceSnapshot).toHaveBeenCalledWith(expect.any(Object), 'article-1');
-  });
+  it('persists reading review actions as single-node companion updates', expectReadingReviewActionPersists);
 });

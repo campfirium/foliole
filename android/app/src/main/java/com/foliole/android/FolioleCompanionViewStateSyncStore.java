@@ -1,0 +1,180 @@
+package com.foliole.android;
+
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+
+import com.getcapacitor.JSObject;
+
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Instant;
+import java.util.UUID;
+
+final class FolioleCompanionViewStateSyncStore {
+
+    private static final String FORM_FACTOR = "phone";
+    private static final String PLATFORM = "android";
+    private static final String SCOPE = "session_resume";
+
+    private FolioleCompanionViewStateSyncStore() {}
+
+    static JSObject saveActiveNode(SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
+        String nodeId = nullIfEmpty(input.optString("node_id", ""));
+        JSONObject payload = new JSONObject();
+        payload.put("activeNodeId", nodeId == null ? JSONObject.NULL : nodeId);
+        String now = Instant.now().toString();
+        String objectId = objectId(deviceId, "active_node");
+        String contentHash = contentHash(deviceId, "active_node", payload);
+        database.beginTransaction();
+        try {
+            upsertActiveNode(database, nodeId, now);
+            writeSyncRows(database, objectId, deviceId, contentHash, payload, now);
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+        return result(objectId, contentHash);
+    }
+
+    static JSObject saveNodeViewState(SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
+        String nodeId = input.optString("node_id");
+        JSONObject payload = new JSONObject();
+        payload.put("nodeId", nodeId);
+        payload.put("scrollTop", Math.max(0, input.optInt("scroll_top", 0)));
+        payload.put("selectionFrom", JSONObject.NULL);
+        payload.put("selectionTo", JSONObject.NULL);
+        String now = Instant.now().toString();
+        String objectId = objectId(deviceId, "node:" + nodeId);
+        String contentHash = contentHash(deviceId, "node:" + nodeId, payload);
+        database.beginTransaction();
+        try {
+            upsertNodeViewState(database, nodeId, payload.optInt("scrollTop", 0), now);
+            writeSyncRows(database, objectId, deviceId, contentHash, payload, now);
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+        return result(objectId, contentHash);
+    }
+
+    static void applyPayload(SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
+        String key = objectIdKey(objectId);
+        if (!record.isNull("deleted_at")) {
+            if (key.equals("active_node")) database.delete("workspace_meta", "key = ?", new String[] { "active_node_id" });
+            if (key.startsWith("node:")) database.delete("node_view_state", "node_id = ?", new String[] { key.substring(5) });
+            return;
+        }
+        JSONObject payload = payload(record);
+        if (key.equals("active_node")) {
+            upsertActiveNode(database, nullIfEmpty(payload.optString("activeNodeId", payload.optString("active_node_id", ""))), record.optString("updated_at"));
+        } else if (key.startsWith("node:")) {
+            upsertNodeViewState(database, key.substring(5), payload.optInt("scrollTop", payload.optInt("scroll_top", 0)), record.optString("updated_at"));
+        }
+    }
+
+    static String readPayloadJson(SQLiteDatabase database, String objectId) throws Exception {
+        String key = objectIdKey(objectId);
+        JSONObject payload = new JSONObject();
+        if (key.equals("active_node")) {
+            try (Cursor cursor = database.query("workspace_meta", new String[] { "value", "updated_at" }, "key = ?", new String[] { "active_node_id" }, null, null, null, "1")) {
+                if (cursor.moveToFirst()) payload.put("activeNodeId", nullIfEmpty(cursor.getString(0)));
+            }
+        } else if (key.startsWith("node:")) {
+            copyNodeViewState(database, key.substring(5), payload);
+        }
+        return payload.toString();
+    }
+
+    private static void copyNodeViewState(SQLiteDatabase database, String nodeId, JSONObject payload) throws Exception {
+        try (Cursor cursor = database.query("node_view_state", null, "node_id = ?", new String[] { nodeId }, null, null, null, "1")) {
+            if (!cursor.moveToFirst()) return;
+            payload.put("nodeId", nodeId);
+            payload.put("scrollTop", cursor.getInt(cursor.getColumnIndexOrThrow("scroll_top")));
+            payload.put("selectionFrom", JSONObject.NULL);
+            payload.put("selectionTo", JSONObject.NULL);
+        }
+    }
+
+    private static void writeSyncRows(SQLiteDatabase database, String objectId, String deviceId, String contentHash, JSONObject payload, String now) {
+        ContentValues state = new ContentValues();
+        state.put("object_type", "view_state");
+        state.put("object_id", objectId);
+        state.put("content_hash", contentHash);
+        state.put("last_modified_by_device_id", deviceId);
+        state.put("updated_at", now);
+        state.put("sync_dirty", 1);
+        database.insertWithOnConflict("sync_object_state", null, state, SQLiteDatabase.CONFLICT_REPLACE);
+
+        ContentValues change = new ContentValues();
+        change.put("change_id", UUID.randomUUID().toString());
+        change.put("object_type", "view_state");
+        change.put("object_id", objectId);
+        change.put("change_type", "upsert");
+        change.put("device_id", deviceId);
+        change.put("content_hash", contentHash);
+        change.put("payload_json", payload.toString());
+        change.put("created_at", now);
+        change.put("applied_at", now);
+        database.insertOrThrow("sync_change_log", null, change);
+    }
+
+    private static void upsertActiveNode(SQLiteDatabase database, String nodeId, String now) {
+        ContentValues values = new ContentValues();
+        values.put("key", "active_node_id");
+        values.put("value", nodeId == null ? "" : nodeId);
+        values.put("updated_at", now);
+        database.insertWithOnConflict("workspace_meta", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    private static void upsertNodeViewState(SQLiteDatabase database, String nodeId, int scrollTop, String now) {
+        ContentValues values = new ContentValues();
+        values.put("node_id", nodeId);
+        values.put("scroll_top", Math.max(0, scrollTop));
+        values.putNull("selection_from");
+        values.putNull("selection_to");
+        values.put("updated_at", now);
+        database.insertWithOnConflict("node_view_state", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    private static String objectId(String deviceId, String key) {
+        return SCOPE + ":" + PLATFORM + ":" + FORM_FACTOR + ":" + deviceId + ":" + key;
+    }
+
+    private static String objectIdKey(String objectId) {
+        String[] parts = objectId.split(":", 5);
+        return parts.length == 5 ? parts[4] : objectId;
+    }
+
+    private static JSONObject payload(JSONObject record) throws Exception {
+        String payloadJson = record.optString("payload_json", "{}");
+        return payloadJson.trim().isEmpty() ? new JSONObject() : new JSONObject(payloadJson);
+    }
+
+    private static String contentHash(String deviceId, String key, JSONObject payload) throws Exception {
+        JSONObject canonical = new JSONObject();
+        canonical.put("deviceId", deviceId);
+        canonical.put("formFactor", FORM_FACTOR);
+        canonical.put("key", key);
+        canonical.put("platform", PLATFORM);
+        canonical.put("scope", SCOPE);
+        canonical.put("payload", payload);
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(canonical.toString().getBytes(StandardCharsets.UTF_8));
+        StringBuilder builder = new StringBuilder();
+        for (byte value : digest) builder.append(String.format("%02x", value));
+        return builder.toString();
+    }
+
+    private static JSObject result(String objectId, String contentHash) {
+        JSObject result = new JSObject();
+        result.put("object_id", objectId);
+        result.put("content_hash", contentHash);
+        return result;
+    }
+
+    private static String nullIfEmpty(String value) {
+        return value == null || value.trim().isEmpty() ? null : value;
+    }
+}

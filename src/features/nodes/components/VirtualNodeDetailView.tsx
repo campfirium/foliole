@@ -78,7 +78,7 @@ export function VirtualNodeDetailView({ node, nodesById, onSelectNode, onSelectN
   const resultNodes = useMemo(() => getVirtualNodeResultNodes(node.id, nodesById, node.virtualFilter), [node.id, node.virtualFilter, nodesById]);
 
   return (
-    <section aria-label="Virtual node details" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4 max-[1080px]:px-2 max-[1080px]:py-2">
+    <section aria-label="Virtual folder details" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4 max-[1080px]:px-2 max-[1080px]:py-2">
       <div className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col gap-4">
         <VirtualNodeFilterCard
           draftFilter={draftFilter}

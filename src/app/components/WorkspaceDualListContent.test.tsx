@@ -160,18 +160,18 @@ it('keeps the dual-column layout when opening trash search', () => {
     trashedNodeIds: ['item-a']
   });
 
-  expect(screen.getAllByRole('complementary', { name: 'Node list panel' })).toHaveLength(2);
+  expect(screen.getAllByRole('complementary', { name: 'Topic list panel' })).toHaveLength(2);
 
   fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Search node titles' }), {
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), {
     target: { value: 'alpha' }
   });
 
-  expect(screen.getByRole('searchbox', { name: 'Search node titles' })).toBeInTheDocument();
-  expect(screen.getAllByRole('complementary', { name: 'Node list panel' })).toHaveLength(2);
+  expect(screen.getByRole('searchbox', { name: 'Search topic titles' })).toBeInTheDocument();
+  expect(screen.getAllByRole('complementary', { name: 'Topic list panel' })).toHaveLength(2);
   fireEvent.click(screen.getByRole('button', { name: 'Close title search' }));
-  expect(screen.queryByRole('searchbox', { name: 'Search node titles' })).toBeNull();
-  expect(screen.getAllByRole('complementary', { name: 'Node list panel' })).toHaveLength(2);
+  expect(screen.queryByRole('searchbox', { name: 'Search topic titles' })).toBeNull();
+  expect(screen.getAllByRole('complementary', { name: 'Topic list panel' })).toHaveLength(2);
 });
 
 it('renders external folders in the left section and only documents in the right list', () => {

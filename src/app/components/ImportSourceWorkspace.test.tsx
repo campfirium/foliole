@@ -192,7 +192,7 @@ it('filters inbox items from the shared import search field', async () => {
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search all imports' }), { target: { value: 'missing' } });
 
   expect(screen.queryByText('Book A')).not.toBeInTheDocument();
-  expect(screen.getByText('No imported Inbox children or recent runs yet.')).toBeInTheDocument();
+  expect(screen.getByText('No imported Inbox topics or recent runs yet.')).toBeInTheDocument();
 });
 
 it('sorts the combined imports data by title when requested', () => {

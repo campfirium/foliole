@@ -252,17 +252,18 @@ describe('CompanionShell review surfaces', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
-    expect(screen.queryByText('Paired')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Connect another device/ })).toBeInTheDocument();
+    expect(screen.queryByText('Connected')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Sync/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Connect another device/ }));
 
-    expect(screen.getByRole('heading', { name: 'Sync' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Device sync' })).toBeInTheDocument();
     expect(screen.getByText('Last sync')).toBeInTheDocument();
     expect(screen.getByText('Sync log')).toBeInTheDocument();
     expect(screen.getByText('Android companion (Android)')).toBeInTheDocument();
     expect(screen.getByText('No sync records yet.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sync now' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Device sync' })).toBeInTheDocument();
   });
 });

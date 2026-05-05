@@ -147,7 +147,7 @@ beforeEach(() => {
 it('routes an active virtual node into the right content column', () => {
   const { onSelectNodeInVirtualView } = renderVirtualContentColumn();
 
-  expect(screen.getAllByRole('complementary', { name: 'Node list panel' })).toHaveLength(1);
+  expect(screen.getAllByRole('complementary', { name: 'Topic list panel' })).toHaveLength(1);
   expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
   expect(screen.getAllByRole('treeitem', { selected: true })).toHaveLength(1);
   expect(screen.getByRole('treeitem', { name: 'Saved Search' })).toHaveAttribute('aria-selected', 'true');

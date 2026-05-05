@@ -22,9 +22,9 @@ it('renders node list actions inside the shared toolbar group', () => {
     />
   );
 
-  expect(screen.getByLabelText('Node list actions')).toBeInTheDocument();
+  expect(screen.getByLabelText('Topic list actions')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
-  expect(screen.getByRole('searchbox', { name: 'Search node titles' })).toBeInTheDocument();
+  expect(screen.getByRole('searchbox', { name: 'Search topic titles' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Create folder' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Collapse all' })).toBeInTheDocument();
 

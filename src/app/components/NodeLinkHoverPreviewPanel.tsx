@@ -33,24 +33,24 @@ function PreviewBody({ preview }: { preview: ResolvedNodeLinkPreview }) {
   if (preview.status === 'missing') {
     return (
       <AppEmptyState
-        description="No matching node is available for this internal link."
-        title="Linked node not found"
+        description="No matching topic is available for this internal link."
+        title="Linked topic not found"
       />
     );
   }
   if (preview.status === 'loading') {
     return (
       <AppEmptyState
-        description="Loading the linked node content for hover preview."
-        title="Loading linked node"
+        description="Loading the linked topic content for hover preview."
+        title="Loading linked topic"
       />
     );
   }
   if (!preview.content.trim()) {
     return (
       <AppEmptyState
-        description="This linked node is empty."
-        title="Empty linked node"
+        description="This linked topic is empty."
+        title="Empty linked topic"
       />
     );
   }
@@ -73,14 +73,14 @@ export function NodeLinkHoverPreviewPanel(props: NodeLinkHoverPreviewPanelProps)
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-40">
       <section
-        aria-label="Linked node preview"
+        aria-label="Linked topic preview"
         className={appFloatingSurfaceClassName('panel', 'absolute flex flex-col overflow-hidden')}
         style={panelStyle}
       >
         <header className="border-b border-border bg-bg-panel px-4 py-3">
           <div className="truncate text-sm font-semibold text-foreground">{props.preview.title}</div>
           {props.preview.targetNodeId ? (
-            <div className="mt-1 text-xs text-foreground/60">Previewing linked node content</div>
+            <div className="mt-1 text-xs text-foreground/60">Previewing linked topic content</div>
           ) : null}
         </header>
         <div className="min-h-0 flex-1 bg-canvas">

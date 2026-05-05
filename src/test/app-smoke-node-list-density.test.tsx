@@ -7,11 +7,11 @@ import { App } from '../app/App';
 import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
 
 function getNodeListTree() {
-  return within(screen.getByRole('complementary', { name: 'Node list panel' })).getByRole('tree');
+  return within(screen.getByRole('complementary', { name: 'Topic list panel' })).getByRole('tree');
 }
 
 function getTreeItem(name: string) {
-  return within(screen.getByRole('complementary', { name: 'Node list panel' })).getByRole('treeitem', { name });
+  return within(screen.getByRole('complementary', { name: 'Topic list panel' })).getByRole('treeitem', { name });
 }
 
 beforeEach(() => {

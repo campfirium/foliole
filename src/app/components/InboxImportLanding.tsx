@@ -115,7 +115,7 @@ export function InboxImportLanding({
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
       <ImportCatalogLayout
         countLabel={state.countLabel}
-        emptyState={{ description: 'No imported Inbox children or recent runs yet.', title: 'Inbox imports are empty' }}
+        emptyState={{ description: 'No imported Inbox topics or recent runs yet.', title: 'Inbox imports are empty' }}
         hasItems={state.visibleItems.length > 0}
         onChangeQuery={state.setQuery}
         onChangeSortDirection={state.setSortDirection}
@@ -136,7 +136,7 @@ export function InboxImportLanding({
           )
         )}
       </ImportCatalogLayout>
-      <p className="sr-only">{state.totalLinkedNodes} linked nodes · {state.recentRunCount} recent runs</p>
+      <p className="sr-only">{state.totalLinkedNodes} linked topics · {state.recentRunCount} recent runs</p>
     </div>
   );
 }

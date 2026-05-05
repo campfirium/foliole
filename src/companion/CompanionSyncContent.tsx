@@ -1,44 +1,17 @@
 import { useEffect } from 'react';
 
 import { CompanionSyncPanel } from './CompanionSyncPanel';
+import { useCompanionHandoffReminderScheduler } from './useCompanionHandoffReminderScheduler';
+import { useCompanionHandoffReminderSettings } from './useCompanionHandoffReminderSettings';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-const DEFAULT_DISCOVERY_ENDPOINT = 'http://10.0.2.2:38641';
-const INITIAL_DISCOVERY_DELAY_MS = 250;
-const RETRY_DISCOVERY_DELAY_MS = 2_500;
 const PAIRING_APPROVAL_POLL_MS = 1_500;
 
 export function CompanionSyncContent(props: { workspaceSync: ReturnType<typeof useCompanionWorkspaceSync> }) {
   const { workspaceSync } = props;
-  const discoveryEndpoint = workspaceSync.state.endpoint_url ?? DEFAULT_DISCOVERY_ENDPOINT;
   const desktopDiscoveries = workspaceSync.desktopDiscoveries ?? [];
-
-  useEffect(() => {
-    if (
-      workspaceSync.pairingState.is_paired ||
-      desktopDiscoveries.length > 0 ||
-      workspaceSync.pendingPairRequest ||
-      workspaceSync.pairingStatus !== 'idle'
-    ) {
-      return;
-    }
-
-    const retryDelay = workspaceSync.error ? RETRY_DISCOVERY_DELAY_MS : INITIAL_DISCOVERY_DELAY_MS;
-    const retryId = window.setTimeout(() => {
-      void workspaceSync.checkDesktop(discoveryEndpoint).catch(() => undefined);
-    }, retryDelay);
-
-    return () => window.clearTimeout(retryId);
-  }, [
-    discoveryEndpoint,
-    desktopDiscoveries.length,
-    workspaceSync.error,
-    workspaceSync.pairingState.is_paired,
-    workspaceSync.pairingStatus,
-    workspaceSync.pendingPairRequest,
-    workspaceSync.checkDesktop
-  ]);
-
+  const handoffReminders = useCompanionHandoffReminderSettings();
+  useCompanionHandoffReminderScheduler({ settings: handoffReminders.settings, workspaceSync });
 
   useEffect(() => {
     if (!workspaceSync.pendingPairRequest || workspaceSync.pairingStatus !== 'awaiting-approval') {
@@ -74,10 +47,12 @@ export function CompanionSyncContent(props: { workspaceSync: ReturnType<typeof u
       desktopDiscovery={workspaceSync.desktopDiscovery}
       endpointUrl={workspaceSync.state.endpoint_url}
       error={workspaceSync.error}
+      handoffReminderSettings={handoffReminders.settings}
       lastSyncedAt={workspaceSync.state.last_synced_at}
       rememberedTargets={workspaceSync.state.remembered_targets}
       syncEvents={workspaceSync.state.sync_events}
       onCancelPairing={workspaceSync.cancelPairing}
+      onChangeHandoffReminderSettings={handoffReminders.updateSettings}
       onCheckDesktop={workspaceSync.checkDesktop}
       onClearError={workspaceSync.clearError}
       onCompletePairing={workspaceSync.completePairing}

@@ -1,3 +1,16 @@
+export type NativeSyncObjectType =
+  | 'attachment'
+  | 'external_document'
+  | 'external_folder'
+  | 'import_run'
+  | 'import_source'
+  | 'node'
+  | 'node_reading'
+  | 'node_review'
+  | 'pdf_page_text'
+  | 'setting'
+  | 'view_state';
+
 export interface NativeSyncPeer {
   last_seen_version_cursor: string | null;
   last_synced_at: string | null;
@@ -9,9 +22,34 @@ export interface NativeSyncPeer {
 export interface NativeSyncIndexEntry {
   content_hash: string | null;
   object_id: string;
-  object_type: 'node';
+  object_type: NativeSyncObjectType;
   sync_version_id: string | null;
   updated_at: string;
+}
+
+export interface NativeSyncObjectRecord {
+  content_hash: string;
+  deleted_at: string | null;
+  object_id: string;
+  object_type: Exclude<NativeSyncObjectType, 'node'>;
+  payload_json: string | null;
+  updated_at: string;
+}
+
+export interface NativeSyncChangeCursor {
+  change_id: string;
+  created_at: string;
+}
+
+export interface NativeSyncChangeRecord {
+  change_id: string;
+  object_type: Exclude<NativeSyncObjectType, 'node'>;
+  object_id: string;
+  change_type: 'delete' | 'link' | 'touch' | 'unlink' | 'upsert';
+  device_id: string;
+  content_hash: string;
+  payload_json: string;
+  created_at: string;
 }
 
 export interface NativeSyncNodeAttachmentRef {

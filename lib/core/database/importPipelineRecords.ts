@@ -7,11 +7,20 @@ import type {
 } from '../import/contract.js';
 
 import type { DatabaseDriver } from './driver.js';
+import { loadOrCreateDatabaseDeviceId } from './syncDeviceIdentity.js';
+import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 interface ImportSourceRow {
   [column: string]: unknown;
+  first_imported_at?: string;
   latest_node_id: string | null;
   last_content_fingerprint: string;
+  last_imported_at?: string;
+  provider?: string;
+  source_fingerprint?: string;
+  source_kind?: string;
+  source_locator?: string;
+  source_name?: string;
 }
 
 interface ExistingNodeRow {
@@ -79,6 +88,64 @@ export function writeImportSource(driver: DatabaseDriver, record: PersistedImpor
       record.nodeId
     ]
   );
+  recordImportSourceSync(driver, record.sourceFingerprint, record.importedAt);
+}
+
+function toImportSourcePayload(row: ImportSourceRow) {
+  return {
+    firstImportedAt: row.first_imported_at ?? '',
+    lastContentFingerprint: row.last_content_fingerprint,
+    lastImportedAt: row.last_imported_at ?? '',
+    latestNodeId: row.latest_node_id,
+    provider: row.provider ?? '',
+    sourceFingerprint: row.source_fingerprint ?? '',
+    sourceKind: row.source_kind ?? '',
+    sourceLocator: row.source_locator ?? '',
+    sourceName: row.source_name ?? ''
+  };
+}
+
+export function recordImportSourceSync(driver: DatabaseDriver, sourceFingerprint: string, updatedAt: string) {
+  const row = driver.queryOne<ImportSourceRow>(
+    `SELECT
+       source_fingerprint,
+       provider,
+       source_kind,
+       source_name,
+       source_locator,
+       first_imported_at,
+       last_imported_at,
+       last_content_fingerprint,
+       latest_node_id
+     FROM import_sources
+     WHERE source_fingerprint = ?`,
+    [sourceFingerprint]
+  );
+  if (!row) {
+    return;
+  }
+  const payload = toImportSourcePayload(row);
+  const contentHash = computeSyncContentHash('import_source', payload);
+  const deviceId = loadOrCreateDatabaseDeviceId(driver, updatedAt);
+  upsertSyncObjectState(driver, {
+    objectType: 'import_source',
+    objectId: sourceFingerprint,
+    contentHash,
+    lastModifiedByDeviceId: deviceId,
+    updatedAt,
+    syncDirty: true
+  });
+  appendSyncChangeLog(driver, {
+    changeId: randomUUID(),
+    objectType: 'import_source',
+    objectId: sourceFingerprint,
+    changeType: 'upsert',
+    deviceId,
+    contentHash,
+    payloadJson: JSON.stringify(payload),
+    createdAt: updatedAt,
+    appliedAt: updatedAt
+  });
 }
 
 export function writeImportEvent(driver: DatabaseDriver, record: PersistedImportRecord) {

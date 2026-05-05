@@ -39,7 +39,7 @@ export default {
         'companion-accent-soft': 'rgba(47, 125, 107, 0.12)',
         'companion-text-secondary': '#6b7280',
         'companion-text-tertiary': '#9ca3af',
-        divider: 'rgb(var(--color-divider) / <alpha-value>)',
+        divider: 'color-mix(in oklab, var(--app-divider-subtle) calc(<alpha-value> * 100%), transparent)',
         'panel-outline': 'rgb(var(--color-foreground) / 0.14)',
         'settings-shell': 'var(--app-settings-shell-bg)',
         'settings-sidebar': 'var(--app-settings-sidebar-bg)',

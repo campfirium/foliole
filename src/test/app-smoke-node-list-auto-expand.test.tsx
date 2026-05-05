@@ -89,7 +89,7 @@ it('keeps derived branches collapsed by default while still showing the active p
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder A' })).toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();
@@ -106,7 +106,7 @@ it('keeps manual collapse and does not auto-expand another derived branch after 
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   fireEvent.click(within(listPanel).getByRole('button', { name: 'Collapse Article A' }));
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A2' })).not.toBeInTheDocument();

@@ -87,7 +87,7 @@ function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>)
     return (
       <div data-testid="pdf-document-state-failed">
         <AppEmptyState
-          description="The PDF node was found, but the linked file could not be prepared. Re-import or reconnect the source."
+          description="The PDF topic was found, but the linked file could not be prepared. Re-import or reconnect the source."
           title="PDF reader failed"
         />
       </div>
@@ -95,7 +95,7 @@ function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>)
   }
   return (
     <div data-testid="pdf-document-state-empty">
-      <AppEmptyState description="This PDF node uses the reader, but no file is linked yet." title="PDF file not linked yet" />
+      <AppEmptyState description="This PDF topic uses the reader, but no file is linked yet." title="PDF file not linked yet" />
     </div>
   );
 }

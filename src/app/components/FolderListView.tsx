@@ -59,7 +59,7 @@ function getDirectChildNodes(folderNodeId: string, nodeOrder: string[], nodesByI
 }
 
 const DEFAULT_EMPTY_STATE = {
-  description: 'Direct children will appear here after you add notes, folders, or items to this folder.',
+  description: 'Topics and folders will appear here after you add them to this folder.',
   title: 'This folder is empty'
 } as const;
 

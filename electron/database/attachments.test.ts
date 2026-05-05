@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { findAttachmentBlobManifestById } from './attachmentBlobs.js';
 import {
   createAttachmentRecord,
   createNodeAttachmentLink,
@@ -139,6 +140,18 @@ it('creates an attachment record and returns it through node-based lookup', () =
       role: 'image'
     }
   ]);
+});
+
+it('stores attachment blob manifests separately from attachment records', () => {
+  createAttachmentRecord({
+    id: 'hash-blob',
+    originalName: 'diagram.png',
+    mimeType: 'image/png',
+    sizeBytes: 2048,
+    createdAt: '2026-03-20T00:00:00.000Z'
+  });
+
+  expect(findAttachmentBlobManifestById('hash-blob')).toBeNull();
 });
 
 it('supports reusing the same attachment across multiple nodes and keeps the attachment after unlink', () => {

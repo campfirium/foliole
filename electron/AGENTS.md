@@ -30,6 +30,10 @@
 - bridge payload、IPC 参数与返回值的结构变更，必须同步补测试；不得只改 happy path。
 - 数据库存储、备份、恢复、同步与设备身份相关改动，默认按永久态处理，不得只修页面即时表现。
 
+## Desktop Startup Troubleshooting
+
+- 客户端启动问题，优先排查日志，没有日志则完善日志功能。
+
 ## Validation
 
 - 桌面相关改动默认先执行与本次改动直接相关的最小验证，并在汇报前执行 `npm run windows:preview`；只有当改动触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared` 或 `npm run quality:full`。

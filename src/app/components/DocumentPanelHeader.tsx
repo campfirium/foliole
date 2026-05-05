@@ -55,8 +55,8 @@ function NavigationButtons({ canGoBack, canGoForward, canGoParent, onGoBack, onG
     <div className="flex shrink-0 items-center gap-1">
       <AppIconButton className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground" disabled={!canGoBack} icon={<ArrowLeftIcon />} label="Go back" onClick={onGoBack} />
       <AppIconButton className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground" disabled={!canGoForward} icon={<ArrowRightIcon />} label="Go forward" onClick={onGoForward} />
-      <button aria-label="Go to parent node" className="sr-only" disabled={!canGoParent} onClick={onGoParent} type="button">
-        Go to parent node
+      <button aria-label="Go to parent" className="sr-only" disabled={!canGoParent} onClick={onGoParent} type="button">
+        Go to parent
       </button>
     </div>
   );

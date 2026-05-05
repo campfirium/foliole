@@ -68,7 +68,7 @@ export function NodeTrashSection({
         data-open={isOpen}
       >
         {rows.length === 0 ? (
-          <AppEmptyState description="Deleted nodes will appear here." title="Trash is empty" />
+          <AppEmptyState description="Deleted topics will appear here." title="Trash is empty" />
         ) : (
           rows.map((row) => (
             <NodeTreeRow

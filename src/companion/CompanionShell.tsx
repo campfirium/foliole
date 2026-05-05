@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 
@@ -7,10 +7,11 @@ import { TopFloatingBar } from './CompanionFloatingBars';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
-import { CompanionShellOverlays } from './CompanionShellOverlays';
 import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSettingsContent';
+import { CompanionShellOverlays } from './CompanionShellOverlays';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { useCompanionSyncSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
@@ -75,7 +76,7 @@ function renderMainContent(
 ) {
   if (surface.activeAction === 'more') {
     return settingsPage === 'sync' ? (
-      <CompanionSettingsDetail onBack={onBackToSettingsList} page="sync" title="Sync">
+      <CompanionSettingsDetail onBack={onBackToSettingsList} page="sync" title="Device sync">
         <CompanionSyncContent workspaceSync={workspaceSync} />
       </CompanionSettingsDetail>
     ) : (
@@ -164,7 +165,6 @@ function renderReadableArticleOrFallback(
   }
   return renderReviewFallback(hasSnapshot, workspaceError, surface.reviewSession);
 }
-
 function useImmersiveReviewToolbar(
   floatingBar: ReturnType<typeof useFloatingBarVisibility>,
   isImmersiveReview: boolean,
@@ -199,11 +199,24 @@ function useImmersiveReviewToolbar(
   };
 }
 
+function useCompanionShellScrollHandler(
+  floatingBar: ReturnType<typeof useFloatingBarVisibility>,
+  surface: ReturnType<typeof useCompanionArticleSurface>
+) {
+  return useCallback((event: ReactUIEvent<HTMLElement>) => {
+    floatingBar.handleContainerScroll(event);
+    surface.handleViewScroll(event.currentTarget.scrollTop);
+  }, [floatingBar, surface]);
+}
+
 export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrapState }) {
   const floatingBar = useFloatingBarVisibility('companion-top-bar');
   const workspaceSync = useCompanionWorkspaceSync(props.bootstrapState);
   const surface = useCompanionArticleSurface(workspaceSync, floatingBar);
-  const [settingsPage, setSettingsPage] = useState<'list' | 'sync'>('list');
+  const { setSettingsPage, settingsPage } = useCompanionSyncSettingsPage({
+    activeAction: surface.activeAction,
+    syncOnboardingStatus: workspaceSync.state.sync_onboarding_status
+  });
   const isBottomBarDisabled = surface.isSubmittingGrade || surface.isSubmittingReadingAction;
   const isImmersiveReview = surface.activeAction === 'review' && Boolean(surface.reviewSession.currentCard);
   const reviewBreadcrumbItems = useReviewBreadcrumbItems(
@@ -215,12 +228,7 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
     isImmersiveReview,
     surface.reviewSession.currentCard?.nodeId
   );
-
-  useEffect(() => {
-    if (surface.activeAction !== 'more') {
-      setSettingsPage('list');
-    }
-  }, [surface.activeAction]);
+  const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);
 
   return (
     <>
@@ -229,7 +237,7 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
           className="h-dvh overflow-y-auto"
           data-testid="companion-scroll-container"
           onClick={handleContentTap}
-          onScroll={floatingBar.handleContainerScroll}
+          onScroll={handleContainerScroll}
           onTouchEnd={floatingBar.handleTouchEnd}
           onTouchMove={floatingBar.handleTouchMove}
           onTouchStart={floatingBar.handleTouchStart}

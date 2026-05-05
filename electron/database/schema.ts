@@ -1,4 +1,5 @@
 export {
+  attachmentBlobs,
   attachments,
   importRuns,
   importSources,
@@ -13,7 +14,12 @@ export {
   nodeViewState,
   pdfPageText,
   reviewLog,
+  settingRecords,
   settings,
+  syncChangeLog,
+  syncObjectState,
   syncPeers,
   workspaceMeta
 } from '../../lib/core/database/schema.js';
+
+export { externalDocuments } from '../../lib/core/database/externalDocumentSchema.js';

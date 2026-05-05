@@ -97,11 +97,13 @@ function renderNodeListRow(
 export function NodeListRows(props: NodeListRowsProps) {
   if (props.rows.length === 0) {
     return props.isTrashViewOpen ? (
-      <AppEmptyState description="Deleted nodes will appear here." title="Trash is empty" />
+      <div className="flex min-h-full items-center justify-center px-3 py-6">
+        <AppEmptyState description="Deleted topics will appear here." title="Trash is empty" />
+      </div>
     ) : props.isVirtualViewOpen ? (
       <AppEmptyState description="Create a virtual folder to save a reusable filtered view." title="No virtual folders" />
     ) : (
-      <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
+      <AppEmptyState description="Create or import a topic to start editing." title="No topics" />
     );
   }
 
@@ -125,6 +127,7 @@ export function NodeListRows(props: NodeListRowsProps) {
         onKeyDown={onRowKeyDown}
         onSelect={props.onSelect}
         rows={props.rows}
+        rowSpacing={props.rowSpacing}
         selectedNodeIds={props.selectedNodeIds}
       />
     );

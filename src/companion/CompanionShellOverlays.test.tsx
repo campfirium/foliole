@@ -32,8 +32,8 @@ describe('CompanionShellOverlays sync onboarding', () => {
       />
     );
 
-    expect(screen.getByText('Sync from another device?')).toBeInTheDocument();
-    expect(screen.getByText('Sync from another device')).toBeInTheDocument();
+    expect(screen.getByText('Bring your content to this device?')).toBeInTheDocument();
+    expect(screen.getByText('Bring content from another device')).toBeInTheDocument();
   });
 
   it('keeps onboarding dismissed when the user opted out', () => {
@@ -46,6 +46,6 @@ describe('CompanionShellOverlays sync onboarding', () => {
       />
     );
 
-    expect(screen.queryByText('Sync from another device?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bring your content to this device?')).not.toBeInTheDocument();
   });
 });

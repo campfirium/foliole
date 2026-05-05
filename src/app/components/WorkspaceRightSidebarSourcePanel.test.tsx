@@ -120,8 +120,8 @@ async function expectLoadedNodeSourcePanel() {
   expect(screen.getAllByText('Imported with issues')).toHaveLength(2);
   expect(screen.getByText('/Users/me/Readwise/Full Document Contents/Articles/imported-note.md')).toBeInTheDocument();
   expect(screen.getByText('Readwise articles')).toBeInTheDocument();
-  expect(screen.getByRole('list', { name: 'Node import history' })).toBeInTheDocument();
-  expect(screen.getByText('Imported as new node')).toBeInTheDocument();
+  expect(screen.getByRole('list', { name: 'Topic import history' })).toBeInTheDocument();
+  expect(screen.getByText('Imported as new topic')).toBeInTheDocument();
 }
 
 describe('WorkspaceRightSidebarSourcePanel', () => {
@@ -140,7 +140,7 @@ describe('WorkspaceRightSidebarSourcePanel', () => {
     renderSourcePanel();
 
     await waitFor(() => {
-      expect(screen.getByText('This node has no recorded import source yet.')).toBeInTheDocument();
+      expect(screen.getByText('This topic has no recorded import source yet.')).toBeInTheDocument();
     });
   });
 
@@ -154,8 +154,8 @@ describe('WorkspaceRightSidebarSourcePanel', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('This node is attached to an imported parent note, so the source details below come from that parent.')).toBeInTheDocument();
+      expect(screen.getByText('This topic is attached to an imported parent topic, so the source details below come from that parent.')).toBeInTheDocument();
     });
-    expect(screen.queryByRole('button', { name: 'Open parent note' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open parent topic' })).not.toBeInTheDocument();
   });
 });

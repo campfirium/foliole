@@ -73,7 +73,7 @@ function DesiredRetentionField({
   return (
     <label className="flex min-w-0 flex-col gap-1 text-sm text-foreground">
       <span className="font-medium">Desired retention</span>
-      <select aria-label="Node desired retention" className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onDesiredRetentionChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.desiredRetention == null ? 'inherit' : node.desiredRetention.toFixed(2)}>
+      <select aria-label="Review desired retention" className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onDesiredRetentionChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.desiredRetention == null ? 'inherit' : node.desiredRetention.toFixed(2)}>
         <option value="inherit">Inherit resolved value</option>
         {DESIRED_RETENTION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -100,7 +100,7 @@ function PriorityField({
   return (
     <label className="flex min-w-0 flex-col gap-1 text-sm text-foreground">
       <span className="font-medium">Priority</span>
-      <select aria-label="Node queue priority" className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onPriorityChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.priority == null ? 'inherit' : String(node.priority)}>
+      <select aria-label="Review queue priority" className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onPriorityChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.priority == null ? 'inherit' : String(node.priority)}>
         <option value="inherit">Inherit resolved value</option>
         {PRIORITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>

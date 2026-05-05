@@ -102,10 +102,10 @@ it('keeps Inbox focused on a single continuous imports list', () => {
   expect(screen.getByRole('searchbox', { name: 'Search inbox imports' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Sort imports by Date saved' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Books inventory' })).not.toBeInTheDocument();
-  expect(screen.getByText('No imported Inbox children or recent runs yet.')).toBeInTheDocument();
+  expect(screen.getByText('No imported Inbox topics or recent runs yet.')).toBeInTheDocument();
 });
 
-it('shows recent inbox items and lets the user open linked nodes from both lists', () => {
+it('shows recent inbox items and lets the user open linked topics from both lists', () => {
   const onSelectNode = vi.fn();
   useFormalImportMock.mockReturnValue({
     isAvailable: true,
@@ -127,7 +127,7 @@ it('shows recent inbox items and lets the user open linked nodes from both lists
 
   render(<InboxImportLanding nodesById={LINKED_NODES} onSelectNode={onSelectNode} />);
 
-  expect(screen.getByText('1 linked nodes · 3 recent runs')).toBeInTheDocument();
+  expect(screen.getByText(/linked topics/)).toHaveTextContent('1 linked topics · 3 recent runs');
   expect(screen.getByText('4')).toBeInTheDocument();
   expect(screen.getAllByText('Essay node')).toHaveLength(3);
   expect(screen.getAllByText('markdown · /imports/essay.md')).toHaveLength(2);
@@ -136,8 +136,8 @@ it('shows recent inbox items and lets the user open linked nodes from both lists
   expect(screen.getByText('Could not parse metadata')).toBeInTheDocument();
   expect(screen.getByText('Failed failure.pdf')).toBeInTheDocument();
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Open node' })[0]);
-  fireEvent.click(screen.getAllByRole('button', { name: 'Open node' })[1]);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Open topic' })[0]);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Open topic' })[1]);
 
   expect(onSelectNode).toHaveBeenCalledTimes(2);
   expect(onSelectNode).toHaveBeenCalledWith('node-1');
@@ -166,7 +166,7 @@ it('filters inbox imports through the shared search field', () => {
 
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search inbox imports' }), { target: { value: 'failure' } });
 
-  expect(screen.getByText('0 linked nodes · 1 recent runs')).toBeInTheDocument();
+  expect(screen.getByText(/linked topics/)).toHaveTextContent('0 linked topics · 1 recent runs');
   expect(screen.queryByText('Essay node')).not.toBeInTheDocument();
   expect(screen.getByText('Failed failure.pdf')).toBeInTheDocument();
 });

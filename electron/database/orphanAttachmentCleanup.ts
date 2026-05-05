@@ -6,7 +6,9 @@ import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { resolveAttachmentStoragePathCandidates } from '../attachments/storagePath.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
+import { recordAttachmentDeleted } from './attachmentBlobs.js';
 import { openDatabaseConnection } from './connection.js';
+import { deletePdfPageTextRowsForAttachment } from './pdfPageTextRows.js';
 
 interface NodeContentRow extends DatabaseRow {
   content: string;
@@ -167,7 +169,10 @@ function deleteAttachmentRows(driver: DatabaseDriver, attachmentIds: string[]) {
   }
   const deleteNodeAttachmentLinks = driver.prepare('DELETE FROM node_attachments WHERE attachment_id = ?');
   const deleteAttachments = driver.prepare('DELETE FROM attachments WHERE id = ?');
+  const deletedAt = new Date().toISOString();
   for (const attachmentId of attachmentIds) {
+    deletePdfPageTextRowsForAttachment(attachmentId, deletedAt);
+    recordAttachmentDeleted(driver, attachmentId, deletedAt);
     deleteNodeAttachmentLinks.run([attachmentId]);
     deleteAttachments.run([attachmentId]);
   }

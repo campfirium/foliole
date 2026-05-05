@@ -33,7 +33,7 @@ describe('DocumentPanelSection internal link hover preview', () => {
       });
     });
 
-    expect(screen.getByLabelText('Linked node preview')).toBeInTheDocument();
+    expect(screen.getByLabelText('Linked topic preview')).toBeInTheDocument();
     expect(screen.getByText('Linked note')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('Body preview text.'))).toBeInTheDocument();
 
@@ -41,6 +41,6 @@ describe('DocumentPanelSection internal link hover preview', () => {
       bodyProps.onPreviewNodeLink?.(null);
     });
 
-    expect(screen.queryByLabelText('Linked node preview')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Linked topic preview')).not.toBeInTheDocument();
   });
 });

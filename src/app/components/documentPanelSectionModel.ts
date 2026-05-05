@@ -20,6 +20,15 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
   }
 
   if (!props.activeNodeId) {
+    if (props.isTrashViewOpen) {
+      return {
+        emptyState: {
+          title: 'This folder is empty',
+          description: 'Topics and folders will appear here after you add them to this folder.'
+        }
+      };
+    }
+
     return {
       emptyState: {
         title: 'No document selected',

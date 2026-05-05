@@ -64,3 +64,56 @@ it('overwrites existing key with upsert and keeps a single row', () => {
     .get('app_settings') as { count: number };
   expect(row.count).toBe(1);
 });
+
+
+it('mirrors syncable settings into setting records and sync object state', () => {
+  saveJsonSetting('desktop_device_id', 'desktop-test', '2026-03-06T00:00:00.000Z');
+  saveJsonSetting('app_settings', { theme: 'dark' }, '2026-03-06T00:01:00.000Z');
+  saveJsonSetting('watch_import_cursor_state', { cursor: 'local' }, '2026-03-06T00:02:00.000Z');
+
+  const connection = openDatabaseConnection();
+  const settingRecord = connection.sqlite
+    .prepare(
+      `SELECT key, scope, platform, form_factor, device_id, value_json
+       FROM setting_records WHERE key = ?`
+    )
+    .get('app_settings') as Record<string, unknown>;
+  const syncState = connection.sqlite
+    .prepare(
+      `SELECT object_type, object_id, last_modified_by_device_id, sync_dirty
+       FROM sync_object_state WHERE object_type = 'setting' AND object_id = ?`
+    )
+    .get('user_space:windows:desktop:*:app_settings') as Record<string, unknown>;
+  const localOnlyCount = connection.sqlite
+    .prepare('SELECT COUNT(*) AS count FROM setting_records WHERE key = ?')
+    .get('watch_import_cursor_state') as { count: number };
+  const change = connection.sqlite
+    .prepare(
+      `SELECT change_type, payload_json
+       FROM sync_change_log
+       WHERE object_type = 'setting' AND object_id = ?`
+    )
+    .get('user_space:windows:desktop:*:app_settings') as Record<string, unknown>;
+
+  expect(settingRecord).toMatchObject({
+    device_id: '*',
+    form_factor: 'desktop',
+    key: 'app_settings',
+    platform: 'windows',
+    scope: 'user_space',
+    value_json: '{"theme":"dark"}'
+  });
+  expect(syncState).toMatchObject({
+    last_modified_by_device_id: 'desktop-test',
+    object_id: 'user_space:windows:desktop:*:app_settings',
+    object_type: 'setting',
+    sync_dirty: 1
+  });
+  expect(change.change_type).toBe('upsert');
+  expect(JSON.parse(String(change.payload_json))).toMatchObject({
+    key: 'app_settings',
+    scope: 'user_space',
+    value_json: '{"theme":"dark"}'
+  });
+  expect(localOnlyCount.count).toBe(0);
+});

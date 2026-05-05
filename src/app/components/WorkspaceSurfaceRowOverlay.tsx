@@ -6,7 +6,8 @@ import {
   getWorkspaceSurfacePalette
 } from '../../features/settings/model/appearanceSettings';
 
-type WorkspaceSurfaceRow = 'titlebar' | 'footer';
+type WorkspaceSurfaceRow = 'titlebar' | 'main' | 'footer';
+type WorkspaceSurfaceOverlayRow = Exclude<WorkspaceSurfaceRow, 'main'>;
 
 const WORKSPACE_SURFACE_ROW_TEMPLATE = [
   'var(--workspace-rail-width)',
@@ -37,12 +38,24 @@ function getSurfaceColor(row: WorkspaceSurfaceRow, column: (typeof WORKSPACE_SUR
   return `var(--workspace-region-${row}-${column}-bg)`;
 }
 
-export function WorkspaceSurfaceRowOverlay({ row }: { row: WorkspaceSurfaceRow }) {
+export function getWorkspaceSurfaceDividerColor(
+  row: WorkspaceSurfaceRow,
+  column: (typeof WORKSPACE_SURFACE_COLUMNS)[number]
+) {
+  const surface = getSurfaceColor(row, column);
+  return `color-mix(in oklab, ${surface} var(--workspace-divider-subtle-surface-weight), var(--workspace-divider-mix-target))`;
+}
+
+export function WorkspaceSurfaceRowOverlay({ row }: { row: WorkspaceSurfaceOverlayRow }) {
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-0 grid overflow-hidden"
-      style={{ gridTemplateColumns: row === 'titlebar' ? TITLEBAR_SURFACE_ROW_TEMPLATE : WORKSPACE_SURFACE_ROW_TEMPLATE }}
+      style={{
+        gridTemplateColumns: row === 'titlebar'
+          ? TITLEBAR_SURFACE_ROW_TEMPLATE
+          : WORKSPACE_SURFACE_ROW_TEMPLATE
+      }}
     >
       {WORKSPACE_SURFACE_COLUMNS.map((column) => (
         <div
@@ -54,12 +67,22 @@ export function WorkspaceSurfaceRowOverlay({ row }: { row: WorkspaceSurfaceRow }
   );
 }
 
-function WorkspaceSurfaceRowDivider({ className, left }: { className?: string; left: string }) {
+function WorkspaceSurfaceRowDivider({
+  className,
+  column,
+  left,
+  row
+}: {
+  className?: string;
+  column: (typeof WORKSPACE_SURFACE_COLUMNS)[number];
+  left: string;
+  row: WorkspaceSurfaceOverlayRow;
+}) {
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none absolute inset-y-0 z-[2] w-px -translate-x-1/2 bg-divider ${className ?? ''}`}
-      style={{ left }}
+      className={`pointer-events-none absolute inset-y-0 z-[2] w-px -translate-x-1/2 ${className ?? ''}`}
+      style={{ backgroundColor: getWorkspaceSurfaceDividerColor(row, column), left }}
     />
   );
 }
@@ -86,10 +109,32 @@ export function WorkspaceTitlebarDividers({
 
   return (
     <>
-      <WorkspaceSurfaceRowDivider left={WORKSPACE_RAIL_DIVIDER_LEFT} />
-      {isListCollapsed || !hasFolderTopicDivider ? null : <WorkspaceSurfaceRowDivider left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT} />}
-      {isListCollapsed ? null : <WorkspaceSurfaceRowDivider left={WORKSPACE_LIST_DIVIDER_LEFT} />}
-      {isRightSidebarCollapsed ? null : <WorkspaceSurfaceRowDivider left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT} />}
+      <WorkspaceSurfaceRowDivider
+        column="rail"
+        left={WORKSPACE_RAIL_DIVIDER_LEFT}
+        row="titlebar"
+      />
+      {isListCollapsed || !hasFolderTopicDivider ? null : (
+        <WorkspaceSurfaceRowDivider
+          column="folder"
+          left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT}
+          row="titlebar"
+        />
+      )}
+      {isListCollapsed ? null : (
+        <WorkspaceSurfaceRowDivider
+          column="topic"
+          left={WORKSPACE_LIST_DIVIDER_LEFT}
+          row="titlebar"
+        />
+      )}
+      {isRightSidebarCollapsed ? null : (
+        <WorkspaceSurfaceRowDivider
+          column="sidebar"
+          left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT}
+          row="titlebar"
+        />
+      )}
     </>
   );
 }
@@ -99,5 +144,12 @@ export function WorkspaceFooterRowDividers() {
   if (!hasFolderTopicDivider) {
     return null;
   }
-  return <WorkspaceSurfaceRowDivider className="max-[1080px]:hidden" left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT} />;
+  return (
+    <WorkspaceSurfaceRowDivider
+      className="max-[1080px]:hidden"
+      column="folder"
+      left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT}
+      row="footer"
+    />
+  );
 }

@@ -189,7 +189,7 @@ it('shows the virtual node detail shell with clear empty states', () => {
     }
   });
 
-  expect(screen.getByRole('region', { name: 'Virtual node details' })).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Virtual folder details' })).toBeInTheDocument();
   expect(screen.getByText('Saved filter')).toBeInTheDocument();
   expect(screen.getByText('Saved value: none')).toBeInTheDocument();
   expect(screen.getByText('No saved filter yet')).toBeInTheDocument();

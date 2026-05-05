@@ -93,12 +93,12 @@ export function WorkspaceTopToolbar({
   onToggleListVisibility
 }: WorkspaceTopToolbarProps) {
   return (
-    <AppToolbar aria-label="Workspace top toolbar" className="min-h-[40px] border-b border-divider bg-bg-subtle px-3">
+    <AppToolbar aria-label="Workspace top toolbar" className="workspace-toolbar-surface min-h-[40px] border-b border-divider bg-bg-subtle px-3">
       <ToolbarActionGroup ariaLabel="Workspace primary navigation actions">
         <AppIconButton
           className={toolbarButtonClassName}
           icon={<PanelLeft aria-hidden="true" size={16} strokeWidth={1.75} />}
-          label="Toggle node list"
+          label="Toggle topic list"
           onClick={onToggleListVisibility}
         />
         <AppIconButton

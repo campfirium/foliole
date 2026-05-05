@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -10,6 +10,7 @@ interface ReviewActionBarProps {
   reviewInputMode?: 'editing' | 'hotkeys';
   reviewItemKind?: 'fsrs' | 'reading';
   secondary?: ReactNode;
+  style?: CSSProperties;
 }
 
 export function ReviewActionBar({
@@ -19,7 +20,8 @@ export function ReviewActionBar({
   primary,
   reviewInputMode,
   reviewItemKind,
-  secondary
+  secondary,
+  style
 }: ReviewActionBarProps) {
   return (
     <div
@@ -29,6 +31,7 @@ export function ReviewActionBar({
       data-review-input-mode={reviewInputMode}
       data-review-item-kind={reviewItemKind}
       role="group"
+      style={style}
     >
       <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
         <div className="min-w-0 truncate text-[13px] font-medium text-muted-foreground">{secondary}</div>

@@ -25,7 +25,7 @@ import {
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
-import { applyReviewGrade } from './reviewMutations.js';
+import { applyReviewGrade, resetNodeReviewState } from './reviewMutations.js';
 
 let tempRoot = '';
 const NODE_ID = 'node-qa-1';
@@ -105,6 +105,37 @@ function selectReviewLogRow() {
     .get(NODE_ID) as Record<string, unknown>;
 }
 
+function selectSyncObjectState() {
+  const connection = openDatabaseConnection();
+  return connection.sqlite
+    .prepare(
+      `SELECT object_type, object_id, last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+       FROM sync_object_state WHERE object_type = 'node_review' AND object_id = ?`
+    )
+    .get(NODE_ID) as Record<string, unknown> | undefined;
+}
+
+function selectReviewChangeLogRow() {
+  const connection = openDatabaseConnection();
+  return connection.sqlite
+    .prepare(
+      `SELECT object_type, object_id, change_type, device_id, created_at, applied_at, payload_json
+       FROM sync_change_log WHERE object_type = 'node_review' AND object_id = ? LIMIT 1`
+    )
+    .get(NODE_ID) as Record<string, unknown> | undefined;
+}
+
+function selectReviewChangeLogRows() {
+  const connection = openDatabaseConnection();
+  return connection.sqlite
+    .prepare(
+      `SELECT change_type, object_id, payload_json
+       FROM sync_change_log WHERE object_type = 'node_review' AND object_id = ?
+       ORDER BY rowid ASC`
+    )
+    .all(NODE_ID) as Array<Record<string, unknown>>;
+}
+
 it('writes node_review and review_log in one grading mutation', () => {
   seedQaNode();
   applyReviewGrade(GRADE_INPUT);
@@ -131,5 +162,55 @@ it('writes node_review and review_log in one grading mutation', () => {
     due_after: '2026-03-10T00:00:00.000Z',
     stability_before: 0,
     stability_after: 2.5
+  });
+});
+
+it('writes sync state and append-only change log for review grading', () => {
+  seedQaNode();
+  applyReviewGrade(GRADE_INPUT);
+
+  const state = selectSyncObjectState();
+  const change = selectReviewChangeLogRow();
+
+  expect(state).toMatchObject({
+    object_type: 'node_review',
+    object_id: NODE_ID,
+    updated_at: '2026-03-06T00:00:00.000Z',
+    deleted_at: null,
+    sync_dirty: 1
+  });
+  expect(String(state?.last_modified_by_device_id)).toMatch(/^desktop-/);
+  expect(change).toMatchObject({
+    object_type: 'node_review',
+    object_id: NODE_ID,
+    change_type: 'upsert',
+    created_at: '2026-03-06T00:00:00.000Z',
+    applied_at: '2026-03-06T00:00:00.000Z'
+  });
+  expect(String(change?.device_id)).toMatch(/^desktop-/);
+  expect(JSON.parse(String(change?.payload_json))).toMatchObject({
+    nodeId: NODE_ID,
+    review: { due: '2026-03-10T00:00:00.000Z', reps: 1 }
+  });
+});
+
+it('tombstones review sync state when review state is reset', () => {
+  seedQaNode();
+  applyReviewGrade(GRADE_INPUT);
+  resetNodeReviewState(NODE_ID);
+
+  const state = selectSyncObjectState();
+
+  expect(selectReviewRow()).toBeUndefined();
+  expect(state).toMatchObject({
+    object_type: 'node_review',
+    object_id: NODE_ID,
+    sync_dirty: 1
+  });
+  expect(typeof state?.deleted_at).toBe('string');
+  expect(selectReviewChangeLogRows().at(-1)).toMatchObject({
+    change_type: 'delete',
+    object_id: NODE_ID,
+    payload_json: JSON.stringify({ nodeId: NODE_ID })
   });
 });

@@ -31,6 +31,7 @@ interface NodeTreeRowProps {
   showIcon?: boolean;
   isSelected: boolean;
   hasChildren: boolean;
+  dragDisabledLabel?: string | null;
   isDragDisabled?: boolean;
   isDropTarget?: boolean;
   dropIntent?: 'before' | 'after' | 'child' | null;
@@ -98,6 +99,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
   return (
     <NodeTreeRowFrame
       dropIntent={props.dropIntent ?? null}
+      dragDisabledLabel={props.dragDisabledLabel}
       isDragDisabled={props.isDragDisabled ?? false}
       isDropTarget={props.isDropTarget ?? false}
       nodeId={props.nodeId}
@@ -139,6 +141,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
   return (
     previous.descendantCount === next.descendantCount &&
     previous.depth === next.depth &&
+    previous.dragDisabledLabel === next.dragDisabledLabel &&
     previous.dropIntent === next.dropIntent &&
     previous.hasChildren === next.hasChildren &&
     previous.isActive === next.isActive &&

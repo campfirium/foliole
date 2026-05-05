@@ -1,5 +1,5 @@
 import { isReadwiseReaderConfigReady, type ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
-import { AppButton, AppStatusBadge, SettingsSection } from '../../shared/ui';
+import { AppButton, AppStatusBadge, SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/ui';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { inspectReadwiseReaderSetup } from './readwiseReaderConfigBridge';
@@ -45,20 +45,20 @@ function ReadwiseSetupSection(props: {
         description="Put the actual Readwise Reader setup here instead of hiding it behind a second click."
         title="Readwise Reader setup"
       >
-        <div className="space-y-5">
-          <ReadwiseDirectorySection
-            onChooseFolder={props.draft.chooseFolder}
-            onChooseRootFolder={props.draft.chooseRootFolder}
-            readwiseRootPath={props.draft.draftRootPath}
-            sources={props.draft.draftSources}
-          />
-          <ReadwiseParserFields config={props.draft.draftConfig} onChange={props.draft.updateConfig} />
-          <div className="flex justify-end">
+        <ReadwiseDirectorySection
+          onChooseFolder={props.draft.chooseFolder}
+          onChooseRootFolder={props.draft.chooseRootFolder}
+          readwiseRootPath={props.draft.draftRootPath}
+          sources={props.draft.draftSources}
+        />
+        <ReadwiseParserFields config={props.draft.draftConfig} onChange={props.draft.updateConfig} />
+        <SettingsRow description="Preview parsed samples before enabling this setup." title="Preview setup">
+          <SettingsControlSlot>
             <AppButton disabled={props.draft.isPreviewing || !props.canPreview} onClick={() => void props.draft.runPreview()} variant="primary">
-              {props.draft.isPreviewing ? 'Previewing...' : 'Preview setup'}
+              {props.draft.isPreviewing ? 'Previewing...' : 'Preview'}
             </AppButton>
-          </div>
-        </div>
+          </SettingsControlSlot>
+        </SettingsRow>
       </SettingsSection>
     </div>
   );

@@ -83,6 +83,7 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
   return {
     activeNodeId: 'node-1',
     isWorkspaceHydrated: true,
+    isTrashViewOpen: false,
     canGoBack: true,
     canGoForward: true,
     canGoParent: false,

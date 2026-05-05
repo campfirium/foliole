@@ -16,10 +16,16 @@ function createProps() {
     desktopDiscovery: null,
     endpointUrl: 'http://10.0.2.2:38641',
     error: null,
+    handoffReminderSettings: {
+      fixedTime: null,
+      shortDelay: 'off' as const
+    },
     lastSyncedAt: null,
     rememberedTargets: [],
+    syncEvents: [],
     onCancelPairing: vi.fn(),
     onCheckDesktop: vi.fn(async () => undefined),
+    onChangeHandoffReminderSettings: vi.fn(),
     onClearError: vi.fn(),
     onCompletePairing: vi.fn(async () => undefined),
     onPull: vi.fn(async () => undefined),
@@ -46,13 +52,13 @@ describe('CompanionSyncPanel', () => {
     render(<CompanionSyncPanel {...props} />);
 
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
-    expect(screen.getByText('No device found')).toBeInTheDocument();
-    expect(screen.getByText(/Turn on Sync on desktop/i)).toBeInTheDocument();
+    expect(screen.getByText('Bring content from another device')).toBeInTheDocument();
+    expect(screen.getByText(/device that already has your content/i)).toBeInTheDocument();
     expect(screen.queryByDisplayValue('http://10.0.2.2:38641')).not.toBeInTheDocument();
     expect(screen.queryByText('This device')).not.toBeInTheDocument();
     expect(screen.queryByText('Sync now')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Connect another device' }));
 
     await waitFor(() => {
       expect(props.onCheckDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
@@ -65,11 +71,13 @@ describe('CompanionSyncPanel pairing states', () => {
   it('shows a searching state while automatic discovery is running', () => {
     render(<CompanionSyncPanel {...createProps()} pairingStatus="checking-desktop" />);
 
-    expect(screen.getByText('Looking for desktop')).toBeInTheDocument();
-    expect(screen.getByText(/desktop with Sync turned on/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+    expect(screen.getByText('Looking for another device')).toBeInTheDocument();
+    expect(screen.getByText(/another device with Device sync turned on/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
   });
+});
 
+describe('CompanionSyncPanel discovery list', () => {
   it('shows a compact found device row and routes pair action', async () => {
     const props = {
       ...createProps(),
@@ -95,13 +103,15 @@ describe('CompanionSyncPanel pairing states', () => {
     expect(screen.getByText('(Windows)')).toBeInTheDocument();
     expect(screen.getByText('192.168.1.8:38641')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pair with this device' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Pair' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
     await waitFor(() => {
       expect(props.onRequestPairing).toHaveBeenCalledWith('http://192.168.1.8:38641');
     });
   });
+});
 
+describe('CompanionSyncPanel multiple discovery list', () => {
   it('lists multiple discovered desktops and pairs the selected row', async () => {
     const props = {
       ...createProps(),
@@ -132,15 +142,16 @@ describe('CompanionSyncPanel pairing states', () => {
     expect(screen.getByText('Found 2 devices')).toBeInTheDocument();
     expect(screen.getByText('V')).toBeInTheDocument();
     expect(screen.getByText('Studio')).toBeInTheDocument();
-    const pairButtons = screen.getAllByRole('button', { name: 'Pair' });
+    const pairButtons = screen.getAllByRole('button', { name: 'Connect' });
     fireEvent.click(pairButtons[1]);
 
     await waitFor(() => {
       expect(props.onRequestPairing).toHaveBeenCalledWith('http://192.168.1.12:38641');
     });
   });
+});
 
-
+describe('CompanionSyncPanel approval states', () => {
   it('can leave the desktop approval wait state and return to discovered devices', () => {
     const props = {
       ...createProps(),
@@ -190,7 +201,9 @@ describe('CompanionSyncPanel pairing states', () => {
       expect(props.onPull).toHaveBeenCalledWith('http://192.168.1.8:38641');
     });
   });
+});
 
+describe('CompanionSyncPanel connected state', () => {
   it('shows a paired state without setup controls', () => {
     const props = {
       ...createProps(),
@@ -205,7 +218,7 @@ describe('CompanionSyncPanel pairing states', () => {
 
     render(<CompanionSyncPanel {...props} />);
 
-    expect(screen.getByText('Paired')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
   });
 });

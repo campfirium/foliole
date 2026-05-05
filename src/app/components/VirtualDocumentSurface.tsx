@@ -31,7 +31,7 @@ function VirtualRootAggregateView({
   );
 
   return (
-    <section aria-label="Virtual node details" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4 max-[1080px]:px-2 max-[1080px]:py-2">
+    <section aria-label="Virtual folder details" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4 max-[1080px]:px-2 max-[1080px]:py-2">
       <div className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-1 flex-col gap-4">
         <div className="px-1 pb-1">
           <h2 className="text-sm font-semibold text-foreground">Results</h2>
@@ -41,8 +41,8 @@ function VirtualRootAggregateView({
         </div>
         <FolderListView
           emptyState={{
-            description: 'Create and save a virtual folder below to add items into this combined view.',
-            title: 'No items in Virtual yet'
+            description: 'Create and save a virtual folder below to add topics into this combined view.',
+            title: 'No topics in Virtual yet'
           }}
           itemLayout="virtual-result"
           nodes={resultNodes}

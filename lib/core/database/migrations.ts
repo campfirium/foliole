@@ -1,7 +1,9 @@
+import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
 import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
+import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 24;
+export const DATABASE_SCHEMA_VERSION = 26;
 
 const CREATE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -179,6 +181,7 @@ const CREATE_SCHEMA_STATEMENTS = [
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`,
+  ...SYNC_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS pdf_page_text (
     attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
     page INTEGER NOT NULL,
@@ -199,7 +202,8 @@ const CREATE_SCHEMA_STATEMENTS = [
     last_error TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
-  )`
+  )`,
+  ...EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS
 ];
 
 const LEGACY_REBUILD_REQUIRED_MESSAGE =

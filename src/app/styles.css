@@ -17,7 +17,6 @@
   --color-muted-foreground: 95 99 104;
   --color-border: 188 189 187;
   --color-border-strong: 124 126 123;
-  --color-divider: 203 205 209;
   --color-settings-divider: 226 228 231;
   --color-accent: 95 99 104;
   --color-accent-strong: 60 64 67;
@@ -29,7 +28,13 @@
   --color-text-primary: rgb(var(--color-foreground));
   --color-text-secondary: rgb(var(--color-muted-foreground));
   --color-bg-muted: rgb(var(--color-muted));
-  --window-titlebar-border-color: rgb(var(--color-divider));
+  --workspace-divider-mix-target: black;
+  --workspace-divider-subtle-surface-weight: 92%;
+  --workspace-divider-strong-surface-weight: 86%;
+  --app-surface: rgb(var(--color-bg-panel));
+  --app-divider-subtle: color-mix(in oklab, var(--app-surface) var(--workspace-divider-subtle-surface-weight), var(--workspace-divider-mix-target));
+  --app-divider-strong: color-mix(in oklab, var(--app-surface) var(--workspace-divider-strong-surface-weight), var(--workspace-divider-mix-target));
+  --window-titlebar-border-color: color-mix(in oklab, var(--workspace-region-titlebar-document-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-divider-mix-target));
   --window-titlebar-title-color: rgb(var(--color-foreground) / 0.52);
   --window-titlebar-action-color: rgb(var(--color-foreground) / 0.62);
   --window-titlebar-action-hover-bg: rgb(var(--color-foreground) / 0.08);
@@ -129,7 +134,6 @@
   --color-muted-foreground: 166 164 156;
   --color-border: 78 80 75;
   --color-border-strong: 122 124 116;
-  --color-divider: 68 71 75;
   --color-settings-divider: 96 99 104;
   --color-accent: 178 183 174;
   --color-accent-strong: 220 224 216;
@@ -138,6 +142,9 @@
   --color-muted: 38 40 37;
   --color-card: 35 37 34;
   --color-popover: 42 45 41;
+  --workspace-divider-mix-target: white;
+  --workspace-divider-subtle-surface-weight: 92%;
+  --workspace-divider-strong-surface-weight: 88%;
   --app-control-border-color: rgb(var(--color-foreground) / 0.34);
   --app-control-border-hover-color: rgb(var(--color-foreground) / 0.5);
   --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.06);
@@ -234,26 +241,35 @@ body {
 
 .workspace-region-main-rail {
   background: var(--workspace-region-main-rail-bg);
+  --app-surface: var(--workspace-region-main-rail-bg);
   --app-scrollbar-thumb-color: var(--workspace-region-main-rail-scrollbar-thumb-color);
 }
 
 .workspace-region-main-folder {
   background: var(--workspace-region-main-folder-bg);
+  --app-surface: var(--workspace-region-main-folder-bg);
   --app-scrollbar-thumb-color: var(--workspace-region-main-folder-scrollbar-thumb-color);
 }
 
 .workspace-region-main-topic {
   background: var(--workspace-region-main-topic-bg);
+  --app-surface: var(--workspace-region-main-topic-bg);
   --app-scrollbar-thumb-color: var(--workspace-region-main-topic-scrollbar-thumb-color);
 }
 
 .workspace-region-main-document {
   background: var(--workspace-region-main-document-bg);
+  --app-surface: var(--workspace-region-main-document-bg);
   --app-scrollbar-thumb-color: var(--workspace-region-main-document-scrollbar-thumb-color);
+}
+
+.workspace-toolbar-surface {
+  --app-surface: rgb(var(--color-bg-subtle));
 }
 
 .workspace-region-main-sidebar {
   background: var(--workspace-region-main-sidebar-bg);
+  --app-surface: var(--workspace-region-main-sidebar-bg);
   --app-inspector-section-bg: var(--workspace-region-main-sidebar-panel-bg);
   --app-inspector-section-elevated-bg: var(--workspace-region-main-sidebar-panel-elevated-bg);
   --app-scrollbar-thumb-color: var(--workspace-region-main-sidebar-scrollbar-thumb-color);
@@ -435,7 +451,7 @@ body {
 
 .window-titlebar-right-divider {
   align-self: stretch;
-  background: rgb(var(--color-divider));
+  background: color-mix(in oklab, var(--workspace-region-titlebar-sidebar-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-divider-mix-target));
   pointer-events: none;
 }
 

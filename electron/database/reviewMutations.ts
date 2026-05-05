@@ -21,5 +21,9 @@ export function applyReviewGrade(input: ApplyReviewGradeInput): void {
 }
 
 export function resetNodeReviewState(nodeId: string): void {
-  resetNodeReviewStateViaDriver(openDatabaseConnection().driver, nodeId);
+  const deletedAt = new Date().toISOString();
+  resetNodeReviewStateViaDriver(openDatabaseConnection().driver, nodeId, {
+    deletedAt,
+    deviceId: loadOrCreateDesktopDeviceId(deletedAt)
+  });
 }

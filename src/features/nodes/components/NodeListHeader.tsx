@@ -1,9 +1,8 @@
-import { ChevronsDownUp, ChevronsUpDown, FolderPlus } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, FolderPlus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import {
-  AppButton,
   AppIconButton,
   AppToolbar,
   ToolbarActionGroup
@@ -64,16 +63,13 @@ function renderTrashActions(onEmptyTrash: () => void, trashCount: number) {
       <button aria-label="Create" className="sr-only" type="button">
         Create
       </button>
-      <AppButton
-        aria-label="Empty"
-        className="text-foreground/70 hover:text-foreground"
+      <AppIconButton
+        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
         disabled={trashCount === 0}
+        icon={<Trash2 size={16} strokeWidth={1.9} />}
+        label="Empty trash"
         onClick={onEmptyTrash}
-        size="sm"
-        variant="subtle"
-      >
-        Empty
-      </AppButton>
+      />
     </>
   );
 }
@@ -109,12 +105,12 @@ function renderNodeListHeaderShell(args: {
       as="header"
       className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 overflow-hidden px-4"
     >
-      <h2 className="sr-only">Nodes</h2>
+      <h2 className="sr-only">Topics</h2>
       <button className="sr-only" onClick={args.onOpenNotesView} type="button">
-        Nodes
+        Topics
       </button>
       {args.showTitleSearch && !args.isVirtualViewOpen ? renderSearchLauncher(args.onOpenSearch) : <span aria-hidden="true" className="size-8" />}
-      <ToolbarActionGroup ariaLabel={args.isTrashViewOpen ? 'Trash actions' : args.isVirtualViewOpen ? 'Virtual folder actions' : 'Node list actions'}>
+      <ToolbarActionGroup ariaLabel={args.isTrashViewOpen ? 'Trash actions' : args.isVirtualViewOpen ? 'Virtual folder actions' : 'Topic list actions'}>
         {args.isTrashViewOpen
           ? renderTrashActions(args.onEmptyTrash, args.trashCount)
           : args.isVirtualViewOpen

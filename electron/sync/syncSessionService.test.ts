@@ -4,7 +4,8 @@ import { runSyncPullSession } from '../../lib/core/sync/syncSessionService.js';
 import type { NativeInvoke } from '../../lib/platform/nativeContract.js';
 import type {
   NativeSyncIndexEntry,
-  NativeSyncNodeRecord
+  NativeSyncNodeRecord,
+  NativeSyncObjectRecord
 } from '../../lib/platform/nativeSyncContract.js';
 
 function createLocalIndexEntry(
@@ -85,6 +86,10 @@ function createSessionLocalInvoke() {
       const nodes = (args?.nodes as Array<{ object_id: string }>);
       return nodes.map((node) => node.object_id);
     }
+    if (command === 'apply_sync_objects') {
+      const objects = (args?.objects as Array<{ object_id: string; object_type: string }>);
+      return objects.map((object) => `${object.object_type}:${object.object_id}`);
+    }
     if (command === 'record_sync_node_conflicts') {
       return ['phone#8'];
     }
@@ -145,12 +150,36 @@ function createSessionRemoteNodes() {
   ];
 }
 
+function createSessionRemoteObjects(): NativeSyncObjectRecord[] {
+  return [{
+    content_hash: 'hash-setting-2',
+    deleted_at: null,
+    object_id: 'user_space:windows:desktop:*:app_settings',
+    object_type: 'setting',
+    payload_json: '{"key":"app_settings"}',
+    updated_at: '2026-04-21T18:00:00.000Z'
+  }];
+}
+
 function createSessionRemoteSource() {
   return {
-    loadSyncIndex: vi.fn(async () => createSessionRemoteIndex()),
+    loadSyncIndex: vi.fn(async () => [
+      ...createSessionRemoteIndex(),
+      createLocalIndexEntry({
+        object_id: 'user_space:windows:desktop:*:app_settings',
+        object_type: 'setting',
+        content_hash: 'hash-setting-2',
+        updated_at: '2026-04-21T18:00:00.000Z'
+      })
+    ]),
     loadSyncNodes: vi.fn(async (objectIds: string[]) => {
       expect(objectIds).toEqual(['node-1', 'node-2', 'node-3', 'node-4']);
       return createSessionRemoteNodes();
+    }),
+    loadSyncObjects: vi.fn(async (objectIds: string[], objectTypes?: string[]) => {
+      expect(objectIds).toEqual(['user_space:windows:desktop:*:app_settings']);
+      expect(objectTypes).toEqual(['setting']);
+      return createSessionRemoteObjects();
     })
   };
 }
@@ -179,7 +208,8 @@ function createInSyncRemoteSource() {
         content_hash: 'hash-1'
       })
     ]),
-    loadSyncNodes: vi.fn()
+    loadSyncNodes: vi.fn(),
+    loadSyncObjects: vi.fn()
   };
 }
 
@@ -195,6 +225,8 @@ describe('runSyncPullSession', () => {
     expect(result.execution.appliedObjectIds).toEqual(['node-1', 'node-3', 'node-4']);
     expect(result.execution.alignedEquivalentObjectIds).toEqual(['node-2']);
     expect(result.execution.recordedConflictVersionIds).toEqual([]);
+    expect(result.requestedRemoteSyncObjects).toEqual(createSessionRemoteObjects());
+    expect(result.appliedRemoteObjectIds).toEqual(['setting:user_space:windows:desktop:*:app_settings']);
   });
 
   it('skips remote node fetch and execution when indexes are already in sync', async () => {
@@ -209,5 +241,6 @@ describe('runSyncPullSession', () => {
     expect(result.execution.alignedEquivalentObjectIds).toEqual([]);
     expect(result.execution.recordedConflictVersionIds).toEqual([]);
     expect(remoteSource.loadSyncNodes).not.toHaveBeenCalled();
+    expect(remoteSource.loadSyncObjects).not.toHaveBeenCalled();
   });
 });

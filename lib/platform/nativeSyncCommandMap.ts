@@ -4,6 +4,7 @@ import type {
   NativeSyncIndexEntry,
   NativeSyncNodeConflictRecord,
   NativeSyncNodeRecord,
+  NativeSyncObjectRecord,
   NativeSyncPeer
 } from './nativeSyncContract.js';
 
@@ -15,6 +16,14 @@ export type NativeSyncCommandMap = {
   [NATIVE_COMMANDS.loadSyncNodes]: {
     args: { objectIds: string[] };
     result: NativeSyncNodeRecord[];
+  };
+  [NATIVE_COMMANDS.loadSyncObjects]: {
+    args: { objectIds: string[]; objectTypes?: string[] };
+    result: NativeSyncObjectRecord[];
+  };
+  [NATIVE_COMMANDS.applySyncObjects]: {
+    args: { objects: NativeSyncObjectRecord[] };
+    result: string[];
   };
   [NATIVE_COMMANDS.loadSyncNodeConflicts]: {
     args: { objectIds?: string[] } | undefined;

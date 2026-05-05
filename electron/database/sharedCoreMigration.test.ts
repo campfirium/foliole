@@ -43,20 +43,25 @@ it('initializes a fresh database with the current schema', () => {
        `SELECT name
        FROM sqlite_master
        WHERE type = 'table' AND name IN (
-         'node_sync_conflicts', 'node_sync_versions', 'nodes', 'node_reading', 'node_review', 'review_log', 'settings', 'sync_peers', 'workspace_meta'
+         'attachment_blobs', 'external_documents', 'node_sync_conflicts', 'node_sync_versions', 'nodes', 'node_reading', 'node_review', 'review_log', 'setting_records', 'settings', 'sync_change_log', 'sync_object_state', 'sync_peers', 'workspace_meta'
        )
        ORDER BY name ASC`
     )
     .all() as Array<{ name: string }>;
 
   expect(tables).toEqual([
+    { name: 'attachment_blobs' },
+    { name: 'external_documents' },
     { name: 'node_reading' },
     { name: 'node_review' },
     { name: 'node_sync_conflicts' },
     { name: 'node_sync_versions' },
     { name: 'nodes' },
     { name: 'review_log' },
+    { name: 'setting_records' },
     { name: 'settings' },
+    { name: 'sync_change_log' },
+    { name: 'sync_object_state' },
     { name: 'sync_peers' },
     { name: 'workspace_meta' }
   ]);

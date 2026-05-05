@@ -62,7 +62,7 @@ it('keeps the previous node document warm after switching once', async () => {
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Node 2' }));
 
   await waitFor(() => {

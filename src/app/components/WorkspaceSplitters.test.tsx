@@ -33,7 +33,7 @@ it('uses the shared divider tone for the right item-column boundary', () => {
     />
   );
 
-  const separator = screen.getByRole('separator', { name: 'Resize node list' });
+  const separator = screen.getByRole('separator', { name: 'Resize topic list' });
   expect(separator).toBeInTheDocument();
   expect(separator).toHaveClass('bg-transparent');
   expect(container.querySelector('span')).toHaveClass('cursor-col-resize');

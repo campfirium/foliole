@@ -10,6 +10,12 @@ import type {
   NativeCompanionSignedRequestHeaders,
   NativeCompanionWorkspaceSyncState
 } from '../../../lib/platform/nativeCompanionSyncContract';
+import type {
+  NativeSyncChangeCursor,
+  NativeSyncChangeRecord,
+  NativeSyncIndexEntry,
+  NativeSyncObjectRecord
+} from '../../../lib/platform/nativeSyncContract';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
 export const PAIR_ENDPOINT_PATH = '/companion/pair';
@@ -22,6 +28,18 @@ export interface CompanionDiscoveryCandidatesPayload {
 }
 
 export interface CompanionWorkspaceSyncPlugin {
+  applySyncObjects(args: { objects: NativeSyncObjectRecord[] }): Promise<{ applied_object_ids: string[] }>;
+  loadSyncChanges(args: {
+    cursor: NativeSyncChangeCursor | null;
+    limit?: number;
+  }): Promise<{ changes: NativeSyncChangeRecord[] }>;
+  loadSyncChangeCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  loadSyncIndex(): Promise<{ entries: NativeSyncIndexEntry[] }>;
+  loadSyncObjects(args: {
+    object_ids: string[];
+    object_types?: Array<NativeSyncObjectRecord['object_type']>;
+  }): Promise<{ objects: NativeSyncObjectRecord[] }>;
+  loadSyncPushCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   loadPairingState(): Promise<NativeCompanionPairingState>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
   loadDirtyNodes(): Promise<NativeCompanionDirtyNodePayload>;
@@ -35,6 +53,31 @@ export interface CompanionWorkspaceSyncPlugin {
     status: 'completed' | 'failed' | 'skipped' | 'started';
   }): Promise<NativeCompanionWorkspaceSyncState>;
   saveSyncOnboardingStatus(args: { status: NativeCompanionWorkspaceSyncState['sync_onboarding_status'] }): Promise<NativeCompanionWorkspaceSyncState>;
+  saveSyncChangeCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  saveSyncPushCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  saveSyncSettingRecord(args: {
+    device_id?: string;
+    form_factor?: string;
+    key: string;
+    platform?: string;
+    scope?: string;
+    value_json: string;
+  }): Promise<{ content_hash: string; object_id: string }>;
+  saveSyncNodeReadingRecord(args: {
+    node_id: string;
+    reading_json: string;
+  }): Promise<{ content_hash: string; object_id: string }>;
+  saveSyncNodeReviewRecord(args: {
+    node_id: string;
+    review_json: string;
+  }): Promise<{ content_hash: string; object_id: string }>;
+  saveSyncActiveViewState(args: {
+    node_id: string | null;
+  }): Promise<{ content_hash: string; object_id: string }>;
+  saveSyncNodeViewState(args: {
+    node_id: string;
+    scroll_top: number;
+  }): Promise<{ content_hash: string; object_id: string }>;
   savePairingCredentials(args: {
     device_id: string;
     device_kind: string;

@@ -6,6 +6,9 @@ import {
   DISCOVERY_ENDPOINT_PATH,
   PAIR_ENDPOINT_PATH,
   PAIR_REQUESTS_ENDPOINT_PATH,
+  SYNC_CHANGES_PATH,
+  SYNC_INDEX_PATH,
+  SYNC_OBJECTS_PATH,
   WORKSPACE_SNAPSHOT_PATH,
   WORKSPACE_VERSION_PATH
 } from './companionLanRequestHandler.js';
@@ -107,6 +110,9 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
         DISCOVERY_ENDPOINT_PATH,
         PAIR_REQUESTS_ENDPOINT_PATH,
         PAIR_ENDPOINT_PATH,
+        SYNC_CHANGES_PATH,
+        SYNC_INDEX_PATH,
+        SYNC_OBJECTS_PATH,
         WORKSPACE_VERSION_PATH,
         WORKSPACE_SNAPSHOT_PATH
       ],

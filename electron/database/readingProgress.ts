@@ -3,6 +3,7 @@ import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js'
 
 import { openDatabaseConnection } from './connection.js';
 import { withTransaction } from './transaction.js';
+import { writeActiveNodeViewStateSync, writeNodeViewStateSync } from './viewStateSync.js';
 
 export interface NodeViewStateInput {
   nodeId: string;
@@ -79,6 +80,10 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
 
   withTransaction(connection.driver, () => {
     upsertMetaStatement.run([ACTIVE_NODE_META_KEY, input.activeNodeId ?? '', input.updatedAt]);
+    writeActiveNodeViewStateSync(connection, {
+      activeNodeId: input.activeNodeId,
+      updatedAt: input.updatedAt
+    });
     for (const state of input.nodeViewStates) {
       upsertNodeViewStateStatement.run([
         state.nodeId,
@@ -87,6 +92,7 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
         state.selectionTo,
         input.updatedAt
       ]);
+      writeNodeViewStateSync(connection, { ...state, updatedAt: input.updatedAt });
     }
   });
 }

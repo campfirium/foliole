@@ -3,11 +3,11 @@ import fs from 'node:fs';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import { syncPdfSearchIndexForAttachmentIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { savePdfPageTextRows } from './pdfPageTextRows.js';
 
 const PDF_MIME_TYPE = 'application/pdf';
 const PDF_INDEX_VERSION = 1;
@@ -153,26 +153,6 @@ async function extractPdfPageText(attachmentId: string) {
   } finally {
     await document.destroy();
   }
-}
-
-function savePdfPageTextRows(attachmentId: string, pages: Array<{ page: number; text: string; pageHeight: number | null; pageWidth: number | null }>) {
-  const connection = openDatabaseConnection();
-  const runInTransaction = connection.sqlite.transaction(() => {
-    connection.driver.execute('DELETE FROM pdf_page_text WHERE attachment_id = ?', [attachmentId]);
-    for (const page of pages) {
-      connection.driver.execute(
-        `INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(attachment_id, page) DO UPDATE SET
-           text = excluded.text,
-           page_width = excluded.page_width,
-           page_height = excluded.page_height`,
-        [attachmentId, page.page, page.text, page.pageWidth, page.pageHeight]
-      );
-    }
-  });
-  runInTransaction();
-  syncPdfSearchIndexForAttachmentIds(connection.driver, [attachmentId]);
 }
 
 function updatePdfNodeOpeningTexts(attachmentId: string, pages: Array<{ page: number; text: string }>) {

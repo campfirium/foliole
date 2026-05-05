@@ -15,6 +15,7 @@ import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 export interface DocumentPanelSectionProps {
   activeNodeId: string | null;
   isWorkspaceHydrated?: boolean;
+  isTrashViewOpen?: boolean;
   editableNodeId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;

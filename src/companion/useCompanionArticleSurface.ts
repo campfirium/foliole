@@ -8,7 +8,10 @@ import {
   gradeCompanionReviewCard,
   resolveCompanionReviewSession
 } from './companionReviewSession';
+import { persistCompanionReviewSyncObject } from './companionReviewSyncPersistence';
+import { useCompanionSyncOnboardingActions } from './companionSyncOnboardingActions';
 import { useCompanionBrowseState } from './useCompanionBrowseState';
+import { useCompanionViewStateSync } from './useCompanionViewStateSync';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
@@ -41,6 +44,11 @@ function useCompanionReviewGradeAction(
         throw new Error('The current review card is no longer available.');
       }
       await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
+      await persistCompanionReviewSyncObject({
+        itemKind: 'fsrs',
+        nodeId: reviewSession.currentCard.nodeId,
+        snapshot: result.snapshot
+      });
       floatingBar.revealBar();
     } catch (error) {
       setReviewError(error instanceof Error ? error.message : 'Failed to apply the review grade.');
@@ -84,6 +92,11 @@ function useCompanionReadingReviewActions(
         throw new Error('The current reading item is no longer available.');
       }
       await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
+      await persistCompanionReviewSyncObject({
+        itemKind: 'reading',
+        nodeId: reviewSession.currentCard.nodeId,
+        snapshot: result.snapshot
+      });
       floatingBar.revealBar();
     } catch (error) {
       setReadingError(error instanceof Error ? error.message : 'Failed to update the reading review item.');
@@ -159,21 +172,6 @@ function useCompanionActionState(args: {
   return { handleSelectBrowseNode, handleSelectRecentArticle, handleTopBarAction };
 }
 
-function useCompanionSyncOnboardingActions(args: {
-  setActiveAction: (action: TopBarAction) => void;
-  workspaceSync: CompanionWorkspaceSyncApi;
-}) {
-  async function handleDismissSyncOnboarding() {
-    await args.workspaceSync.saveSyncOnboardingStatus('dismissed');
-  }
-
-  async function handleStartSyncOnboarding() {
-    args.setActiveAction('more');
-  }
-
-  return { handleDismissSyncOnboarding, handleStartSyncOnboarding };
-}
-
 function useCompanionInteractionState(
   floatingBar: FloatingBarVisibilityApi,
   reviewSession: ReturnType<typeof resolveCompanionReviewSession>,
@@ -207,7 +205,10 @@ function useCompanionInteractionState(
     setReviewError,
     setSelectedBrowseNodeId
   });
-  const syncOnboardingActions = useCompanionSyncOnboardingActions({ setActiveAction, workspaceSync });
+  const syncOnboardingActions = useCompanionSyncOnboardingActions({
+    saveSyncOnboardingStatus: workspaceSync.saveSyncOnboardingStatus,
+    setActiveAction
+  });
 
   useEffect(() => {
     setIsAnswerRevealed(false);
@@ -240,6 +241,12 @@ export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSync
     return workspaceSync.state.workspace_snapshot ? 'review' : 'more';
   });
   const browseState = useCompanionBrowseState(workspaceSync);
+  const handleViewScroll = useCompanionViewStateSync({
+    activeAction,
+    readableArticleNodeId: browseState.readableArticle?.nodeId ?? null,
+    reviewNodeId: browseState.reviewSession.currentCard?.nodeId ?? null,
+    selectedBrowseNodeId: browseState.selectedBrowseNodeId
+  });
   const interactionState = useCompanionInteractionState(
     floatingBar,
     browseState.reviewSession,
@@ -262,6 +269,7 @@ export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSync
     recentArticles: browseState.recentArticles,
     reviewSession: browseState.reviewSession,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId,
+    handleViewScroll,
     ...interactionState
   };
 }

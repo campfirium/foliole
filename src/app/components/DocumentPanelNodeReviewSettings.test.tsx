@@ -37,8 +37,8 @@ it('renders node review settings inside the shared inspector section', () => {
   expect(screen.getByRole('heading', { level: 3, name: 'Review scheduling' })).toBeInTheDocument();
   expect(screen.getByText(/memory target/i)).toBeInTheDocument();
 
-  fireEvent.change(screen.getByLabelText('Node desired retention'), { target: { value: '0.85' } });
-  fireEvent.change(screen.getByLabelText('Node queue priority'), { target: { value: '3' } });
+  fireEvent.change(screen.getByLabelText('Review desired retention'), { target: { value: '0.85' } });
+  fireEvent.change(screen.getByLabelText('Review queue priority'), { target: { value: '3' } });
 
   expect(onDesiredRetentionChange).toHaveBeenCalledWith('node-1', 0.85);
   expect(onPriorityChange).toHaveBeenCalledWith('node-1', 3);

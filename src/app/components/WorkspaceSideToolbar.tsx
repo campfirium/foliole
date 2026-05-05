@@ -2,6 +2,8 @@ import { ClipboardPaste, FileUp, Folders, Route, Settings } from 'lucide-react';
 
 import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
+import { getWorkspaceSurfaceDividerColor } from './WorkspaceSurfaceRowOverlay';
+
 interface WorkspaceSideToolbarProps {
   canStartStudyMode: boolean;
   isImportManagementOpen: boolean;
@@ -153,8 +155,9 @@ export function WorkspaceSideToolbar({
           {isStudyMode ? (
             <div
               aria-hidden="true"
-              className="w-full shrink-0 border-t border-border"
+              className="w-full shrink-0 border-t"
               data-testid="workspace-study-divider"
+              style={{ borderTopColor: getWorkspaceSurfaceDividerColor('main', 'rail') }}
             />
           ) : null}
           <div className="flex h-[var(--workspace-bottom-toolbar-height)] w-full shrink-0 items-center justify-center">
@@ -190,8 +193,11 @@ export function WorkspaceStudyDockTrigger({
 
   return (
     <div
-      className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center border-t border-border"
-      style={{ backgroundColor: 'var(--workspace-region-footer-rail-bg)' }}
+      className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center border-t"
+      style={{
+        backgroundColor: 'var(--workspace-region-footer-rail-bg)',
+        borderTopColor: getWorkspaceSurfaceDividerColor('footer', 'rail')
+      }}
     >
       <StudyAction
         canStartStudyMode={canStartStudyMode}

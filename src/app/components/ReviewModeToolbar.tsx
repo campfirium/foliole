@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { ReviewActionBar } from '../../shared/ui';
@@ -21,6 +21,7 @@ interface ReviewModeToolbarProps {
   onDismissReviewItem: () => boolean;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
+  style?: CSSProperties;
 }
 
 function ReviewCompleteBar({ onExitReviewMode }: { onExitReviewMode: () => void }) {
@@ -95,7 +96,8 @@ export function ReviewModeToolbar({
   onDeferReviewItem,
   onDismissReviewItem,
   onRevealAnswer,
-  onExitReviewMode
+  onExitReviewMode,
+  style
 }: ReviewModeToolbarProps) {
   const { errorMessage, isSubmitting, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
 
@@ -130,6 +132,7 @@ export function ReviewModeToolbar({
       reviewInputMode={isReviewEditing ? 'editing' : 'hotkeys'}
       reviewItemKind={isCurrentItemGradable ? 'fsrs' : 'reading'}
       secondary={showSummary ? <ReviewSessionSummary reviewCompletedCount={reviewCompletedCount} reviewQueueCount={reviewQueueCount} /> : null}
+      style={style}
     />
   );
 }

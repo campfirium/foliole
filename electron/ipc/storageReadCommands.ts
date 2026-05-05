@@ -5,6 +5,7 @@ import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutati
 import { loadSyncNodeConflicts } from '../database/syncConflictReads.js';
 import { loadSyncIndex } from '../database/syncIndex.js';
 import { loadSyncNodes } from '../database/syncNodes.js';
+import { loadSyncObjects } from '../database/syncObjects.js';
 import { loadWorkspaceListSnapshot } from '../database/workspaceListSnapshot.js';
 import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
@@ -27,6 +28,12 @@ export function handleWorkspaceReadCommand(command: string, args: Record<string,
   }
   if (command === NATIVE_COMMANDS.loadSyncNodes) {
     return loadSyncNodes(asStringArray(args.objectIds, 'objectIds'));
+  }
+  if (command === NATIVE_COMMANDS.loadSyncObjects) {
+    return loadSyncObjects(
+      asStringArray(args.objectIds, 'objectIds'),
+      Array.isArray(args.objectTypes) ? asStringArray(args.objectTypes, 'objectTypes') : undefined
+    );
   }
   if (command === NATIVE_COMMANDS.loadSyncNodeConflicts) {
     return loadSyncNodeConflicts(Array.isArray(args.objectIds) ? asStringArray(args.objectIds, 'objectIds') : undefined);

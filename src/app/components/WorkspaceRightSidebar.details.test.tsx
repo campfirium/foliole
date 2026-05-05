@@ -147,7 +147,7 @@ it('shows inherited source info without a parent-jump action', async () => {
   );
 
   expect(await screen.findByText(/source details below come from that parent/i)).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Open parent note' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Open parent topic' })).not.toBeInTheDocument();
   expect(onSelectNode).not.toHaveBeenCalled();
 });
 
@@ -195,7 +195,7 @@ it('does not list cloze nodes in the highlights panel', () => {
     />
   );
 
-  expect(screen.getByText('This node and its child nodes have no highlight nodes yet.')).toBeInTheDocument();
+  expect(screen.getByText('This topic and its derived topics have no highlights yet.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Alpha \[\.\.\.\] Gamma/i })).not.toBeInTheDocument();
   expect(onSelectNode).not.toHaveBeenCalled();
   expect(onRevealAnchorInDocument).not.toHaveBeenCalled();

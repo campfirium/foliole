@@ -102,7 +102,7 @@ it('shows folders in the left tree and topics in the adjacent topic tree', () =>
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   expect(within(listPanel).getByRole('treeitem', { name: 'Projects' })).toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Research' })).toBeInTheDocument();
   expect(within(listPanel).queryByRole('treeitem', { name: 'Overview' })).not.toBeInTheDocument();
@@ -139,7 +139,7 @@ it('keeps the dual tree visible when inbox is selected', () => {
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   expect(within(listPanel).getByRole('treeitem', { name: 'Inbox' })).toBeInTheDocument();
 
   const currentFolderPanel = screen.getByRole('complementary', { name: 'Current folder contents' });
@@ -152,7 +152,7 @@ it('keeps the dual tree visible while switching between inbox, folder, and topic
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
 
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Inbox topic' })).toBeInTheDocument();
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Inbox child' })).toBeInTheDocument();

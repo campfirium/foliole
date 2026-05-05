@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, RotateCcw } from 'lucide-react';
 
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -9,10 +9,12 @@ import {
   SettingsSection,
   settingsColorSwatchClassName,
   settingsFieldClassName,
+  settingsResetButtonClassName,
   settingsValueBoxClassName
 } from '../../../../shared/ui';
 import type { EditorMouseGestureId } from '../../../editor/model/editorMouseGestures';
 import {
+  DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS,
   EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS,
   type EditorMouseGestureActionSetting
 } from '../../../editor/model/editorMouseGestureSettings';
@@ -139,6 +141,15 @@ function MouseGestureTrailSection(props: {
     >
       <SettingsRow description="Main panel gesture trail color." title="Line color">
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <button
+            aria-label="Reset mouse gesture trail color"
+            className={settingsResetButtonClassName('disabled:cursor-default disabled:opacity-45')}
+            disabled={settings.trailColor === DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailColor}
+            onClick={() => props.onTrailColorChange(DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS.trailColor)}
+            type="button"
+          >
+            <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
+          </button>
           <label className="relative h-9 w-9 shrink-0">
             <span
               aria-hidden="true"

@@ -65,7 +65,7 @@ beforeEach(() => {
 it('opens the clicked row and toggles its branch when children exist', () => {
   render(<NodeListTreeHarness />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
   const articleRow = within(listPanel).getByRole('treeitem', { name: 'Article A' });
 
   expect(within(listPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();

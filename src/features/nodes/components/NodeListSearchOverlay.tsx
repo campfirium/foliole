@@ -47,7 +47,7 @@ export function NodeListSearchOverlay(props: {
       <SearchTitlesIcon />
       <AppInput
         ref={inputRef}
-        aria-label="Search node titles"
+        aria-label="Search topic titles"
         className="h-8 min-w-0 border-0 bg-transparent px-0 text-[14px] focus-visible:ring-0"
         onChange={(event) => props.onChangeSearchQuery(event.currentTarget.value)}
         onKeyDown={(event) => {

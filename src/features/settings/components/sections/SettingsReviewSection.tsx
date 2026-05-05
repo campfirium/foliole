@@ -135,8 +135,8 @@ function PushQueueRows(props: Pick<
   return (
     <>
       <ReviewSettingRow
-        title="Default node priority"
-        description="Set the global `defaultPriority` fallback used when a node and its ancestors leave `priority` unset."
+        title="Default topic priority"
+        description="Set the global `defaultPriority` fallback used when a topic and its ancestors leave `priority` unset."
         control={<DefaultPriorityControl onChange={props.onDefaultPriorityChange} value={props.defaultPriority} />}
       />
       <ReviewSettingRow

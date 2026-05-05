@@ -23,7 +23,7 @@ function Harness() {
       >
         Start resize
       </button>
-      <div aria-label="Resize node list" onPointerDown={handleSplitterPointerDown} role="separator" />
+      <div aria-label="Resize topic list" onPointerDown={handleSplitterPointerDown} role="separator" />
     </>
   );
 }

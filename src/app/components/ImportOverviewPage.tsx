@@ -33,7 +33,7 @@ export function ImportOverviewPage({
         />
         {state.totalVisibleCount === 0 ? (
           <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
-            <AppEmptyState description="No imported Inbox children or recent runs yet." title="Imports are empty" />
+            <AppEmptyState description="No imported Inbox topics or recent runs yet." title="Imports are empty" />
           </div>
         ) : (
           <ImportOverviewContent

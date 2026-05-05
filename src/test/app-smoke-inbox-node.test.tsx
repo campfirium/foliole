@@ -7,7 +7,7 @@ import { App } from '../app/App';
 import type { ElectronAPI } from '../shared/platform/electronApi';
 
 async function getNodeListPanel() {
-  return (await screen.findAllByRole('complementary', { name: 'Node list panel' }))[0];
+  return (await screen.findAllByRole('complementary', { name: 'Topic list panel' }))[0];
 }
 
 function createImportedWorkspaceSnapshot(title = 'Imported note') {

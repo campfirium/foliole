@@ -13,19 +13,24 @@ export interface SyncIndexDiffResult {
   pushCandidates: NativeSyncIndexEntry[];
 }
 
-function compareObjectId(left: { object_id: string }, right: { object_id: string }) {
-  return left.object_id.localeCompare(right.object_id);
+function toEntryKey(entry: Pick<NativeSyncIndexEntry, 'object_id' | 'object_type'>) {
+  return `${entry.object_type}:${entry.object_id}`;
 }
 
-function buildIndexByObjectId(entries: NativeSyncIndexEntry[], label: 'local' | 'remote') {
-  const byObjectId = new Map<string, NativeSyncIndexEntry>();
+function compareEntryKey(left: NativeSyncIndexEntry, right: NativeSyncIndexEntry) {
+  return toEntryKey(left).localeCompare(toEntryKey(right));
+}
+
+function buildIndexByEntryKey(entries: NativeSyncIndexEntry[], label: 'local' | 'remote') {
+  const byEntryKey = new Map<string, NativeSyncIndexEntry>();
   for (const entry of entries) {
-    if (byObjectId.has(entry.object_id)) {
-      throw new Error(`duplicate ${label} sync index entry for object_id ${entry.object_id}`);
+    const key = toEntryKey(entry);
+    if (byEntryKey.has(key)) {
+      throw new Error(`duplicate ${label} sync index entry for ${key}`);
     }
-    byObjectId.set(entry.object_id, entry);
+    byEntryKey.set(key, entry);
   }
-  return byObjectId;
+  return byEntryKey;
 }
 
 function isEquivalentIndexEntry(local: NativeSyncIndexEntry, remote: NativeSyncIndexEntry) {
@@ -39,17 +44,17 @@ function resolveInspectionReason(local: NativeSyncIndexEntry, remote: NativeSync
 }
 
 export function diffSyncIndex(localEntries: NativeSyncIndexEntry[], remoteEntries: NativeSyncIndexEntry[]): SyncIndexDiffResult {
-  const localByObjectId = buildIndexByObjectId(localEntries, 'local');
-  const remoteByObjectId = buildIndexByObjectId(remoteEntries, 'remote');
-  const objectIds = [...new Set([...localByObjectId.keys(), ...remoteByObjectId.keys()])].sort();
+  const localByEntryKey = buildIndexByEntryKey(localEntries, 'local');
+  const remoteByEntryKey = buildIndexByEntryKey(remoteEntries, 'remote');
+  const entryKeys = [...new Set([...localByEntryKey.keys(), ...remoteByEntryKey.keys()])].sort();
   const inSync: NativeSyncIndexEntry[] = [];
   const inspectCandidates: SyncIndexInspectionCandidate[] = [];
   const pullCandidates: NativeSyncIndexEntry[] = [];
   const pushCandidates: NativeSyncIndexEntry[] = [];
 
-  for (const objectId of objectIds) {
-    const local = localByObjectId.get(objectId);
-    const remote = remoteByObjectId.get(objectId);
+  for (const entryKey of entryKeys) {
+    const local = localByEntryKey.get(entryKey);
+    const remote = remoteByEntryKey.get(entryKey);
     if (local && !remote) {
       pushCandidates.push(local);
       continue;
@@ -72,10 +77,10 @@ export function diffSyncIndex(localEntries: NativeSyncIndexEntry[], remoteEntrie
     });
   }
 
-  inSync.sort(compareObjectId);
-  inspectCandidates.sort((left, right) => compareObjectId(left.local, right.local));
-  pullCandidates.sort(compareObjectId);
-  pushCandidates.sort(compareObjectId);
+  inSync.sort(compareEntryKey);
+  inspectCandidates.sort((left, right) => compareEntryKey(left.local, right.local));
+  pullCandidates.sort(compareEntryKey);
+  pushCandidates.sort(compareEntryKey);
 
   return {
     inSync,

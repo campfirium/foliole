@@ -24,7 +24,7 @@ export function WorkspaceToolbar({
   return (
     <AppToolbar
       aria-label="Workspace toolbar"
-      className="relative flex min-h-[44px] flex-none items-center border-b border-divider bg-bg-subtle px-3"
+      className="workspace-toolbar-surface relative flex min-h-[44px] flex-none items-center border-b border-divider bg-bg-subtle px-3"
     >
       <ToolbarActionGroup ariaLabel="Navigation toolbar actions" className="gap-1">
         <AppIconButton
@@ -45,7 +45,7 @@ export function WorkspaceToolbar({
           className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
           disabled={!canGoParent}
           icon="↑"
-          label="Go to parent node"
+          label="Go to parent"
           onClick={onGoParent}
         />
       </ToolbarActionGroup>

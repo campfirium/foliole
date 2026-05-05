@@ -195,50 +195,90 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
 
   expect(transactionSpy).toHaveBeenCalledTimes(1);
   expect(prepareSpy).toHaveBeenCalledTimes(8);
+  expect(driver.queryOne).toHaveBeenCalledWith('SELECT node_id FROM node_reading WHERE node_id = ?', ['node-1']);
   expect(driver.queryAll).toHaveBeenCalledWith(expect.stringContaining('WITH RECURSIVE node_descendants'), ['node-1']);
   expectNodeSnapshotPersistence(runs);
   expectNodeSnapshotSearchSync(runs);
 });
 
-it('writes review mutation via driver contract with injected context', () => {
+function mockReviewStatements() {
   const upsertReviewRun = vi.fn();
   const insertLogRun = vi.fn();
-
   prepareSpy.mockImplementation((sql) => ({
     sql,
     run: sql.includes('INSERT INTO node_review') ? upsertReviewRun : insertLogRun,
     get: vi.fn(),
     all: vi.fn()
   }));
+  return { insertLogRun, upsertReviewRun };
+}
+
+const expectedReviewParams = [
+  'node-1',
+  '2026-03-18T00:00:00.000Z',
+  '2026-03-14T00:00:00.000Z',
+  1,
+  2.5,
+  3.1,
+  1,
+  4,
+  1,
+  0
+] as const;
+
+const expectedReviewLogParams = [
+  'log-1',
+  'op-1',
+  'desktop-local',
+  'node-1',
+  3,
+  'ts-fsrs@4',
+  '2026-03-14T00:00:00.000Z',
+  '2026-03-14T00:00:00.000Z',
+  0,
+  0,
+  '2026-03-18T00:00:00.000Z',
+  2.5,
+  3.1
+] as const;
+
+function expectReviewPersistence(runs: ReturnType<typeof mockReviewStatements>) {
+  expect(runs.upsertReviewRun).toHaveBeenCalledWith(expectedReviewParams);
+  expect(runs.insertLogRun).toHaveBeenCalledWith(expectedReviewLogParams);
+}
+
+function expectReviewSyncWrites() {
+  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_object_state'), [
+    'node_review',
+    'node-1',
+    null,
+    expect.any(String),
+    'desktop-local',
+    '2026-03-14T00:00:00.000Z',
+    null,
+    1
+  ]);
+  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_change_log'), [
+    'op-1',
+    'node_review',
+    'node-1',
+    'upsert',
+    'desktop-local',
+    null,
+    null,
+    expect.any(String),
+    expect.any(String),
+    '2026-03-14T00:00:00.000Z',
+    '2026-03-14T00:00:00.000Z'
+  ]);
+}
+
+it('writes review mutation via driver contract with injected context', () => {
+  const runs = mockReviewStatements();
 
   applyReviewGrade(driver, reviewMutationInput, reviewMutationContext);
 
   expect(transactionSpy).toHaveBeenCalledTimes(1);
-  expect(upsertReviewRun).toHaveBeenCalledWith([
-    'node-1',
-    '2026-03-18T00:00:00.000Z',
-    '2026-03-14T00:00:00.000Z',
-    1,
-    2.5,
-    3.1,
-    1,
-    4,
-    1,
-    0
-  ]);
-  expect(insertLogRun).toHaveBeenCalledWith([
-    'log-1',
-    'op-1',
-    'desktop-local',
-    'node-1',
-    3,
-    'ts-fsrs@4',
-    '2026-03-14T00:00:00.000Z',
-    '2026-03-14T00:00:00.000Z',
-    0,
-    0,
-    '2026-03-18T00:00:00.000Z',
-    2.5,
-    3.1
-  ]);
+  expectReviewPersistence(runs);
+  expectReviewSyncWrites();
 });

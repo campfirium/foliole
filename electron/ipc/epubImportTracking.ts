@@ -1,3 +1,4 @@
+import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
@@ -12,6 +13,7 @@ export function ensureTrackedImportTarget(record: PreparedImportRecord, targetNo
       targetNodeId,
       record.sourceFingerprint
     ]);
+    recordImportSourceSync(connection.driver, record.sourceFingerprint, record.importedAt);
     return;
   }
 
@@ -32,4 +34,5 @@ export function ensureTrackedImportTarget(record: PreparedImportRecord, targetNo
       targetNodeId
     ]
   );
+  recordImportSourceSync(connection.driver, record.sourceFingerprint, record.importedAt);
 }

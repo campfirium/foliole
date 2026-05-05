@@ -3,7 +3,7 @@ import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
-import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
+import type { DatabaseDriver } from './driver.js';
 import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
   createUpdateNodeAnchorLinkStatement,
@@ -11,6 +11,7 @@ import {
   createUpsertNodeReadingStatement,
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
+import { writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
 import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
@@ -124,28 +125,6 @@ function resolveStoredOpeningText(input: Pick<UpsertNodeSnapshotInput, 'content'
   return resolveNodeOpeningText(input.content, input.title);
 }
 
-function writeNodeReadingSnapshot(
-  input: UpsertNodeSnapshotInput,
-  runUpsert: (params?: DatabaseBindParams) => void,
-  runDelete: (params?: DatabaseBindParams) => void
-) {
-  if (!input.reading) {
-    runDelete([input.nodeId]);
-    return;
-  }
-  runUpsert([
-    input.nodeId,
-    input.reading.intervalDurationMs,
-    input.reading.intervalGrowthFactor,
-    input.reading.lastHandledAt,
-    input.reading.nextAt,
-    input.reading.priority,
-    input.reading.readingPosition,
-    input.reading.repetitionCount,
-    input.reading.state
-  ]);
-}
-
 export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnapshotInput): void {
   const upsertNodeStatement = createUpsertNodeStatement(driver);
   const upsertNodeOrderStatement = createUpsertNodeOrderStatement(driver);
@@ -177,7 +156,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
     if (typeof input.position === 'number') {
       upsertNodeOrderStatement.run([input.nodeId, input.position]);
     }
-    writeNodeReadingSnapshot(input, upsertNodeReadingStatement.run, deleteNodeReadingStatement.run);
+    writeNodeReadingSnapshotWithSync(driver, input, upsertNodeReadingStatement.run, deleteNodeReadingStatement.run);
     bumpUntitledSequenceByParent(driver, {
       parentNodeId: input.parentNodeId,
       title: input.title,

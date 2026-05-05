@@ -18,7 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection, resolveDatabasePath } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
 import {
   loadExternalSearchBrowseEntries,
   rebuildExternalSearchIndexes,
@@ -48,6 +48,25 @@ afterEach(async () => {
 
 function openCacheDb() {
   return new BetterSqlite3(path.join(path.dirname(resolveDatabasePath()), 'external-search-cache.db'));
+}
+
+
+function readMainExternalDocuments() {
+  return openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT document_id, folder_id, relative_path, file_name, is_present, content
+       FROM external_documents ORDER BY relative_path ASC`
+    )
+    .all() as Array<Record<string, unknown>>;
+}
+
+function readExternalDocumentSyncRows() {
+  return openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT object_type, object_id, sync_dirty, deleted_at
+       FROM sync_object_state WHERE object_type = 'external_document' ORDER BY object_id ASC`
+    )
+    .all() as Array<Record<string, unknown>>;
 }
 
 async function writeTextFile(filePath: string, content: string, modifiedAt: string) {
@@ -113,6 +132,50 @@ it('refreshes external search indexes incrementally for added, changed, and dele
   expect(searchExternalDocuments('beta')).toHaveLength(0);
   expect(readDocumentRow(betaPath)?.is_present).toBe(0);
   expect(readDocumentRow(steadyPath)?.indexed_at).toBe(steadyIndexedBefore);
+});
+
+
+it('mirrors indexed external documents into the main sync tables', async () => {
+  const libraryRoot = path.join(tempRoot, 'library-sync');
+  const firstPath = path.join(libraryRoot, 'alpha.md');
+  const secondPath = path.join(libraryRoot, 'beta.txt');
+
+  await writeTextFile(firstPath, '# Alpha\nMain cache copy', '2026-04-21T04:00:00.000Z');
+  await writeTextFile(secondPath, 'beta body', '2026-04-21T04:01:00.000Z');
+  saveExternalSearchFolders([
+    {
+      attachment_mode: 'document_relative_first_then_fixed_root',
+      attachment_root_path: null,
+      excluded_dirs: [],
+      folder_path: libraryRoot,
+      id: 'folder-sync'
+    }
+  ]);
+
+  await refreshExternalSearchIndexes();
+  await fs.rm(secondPath);
+  await refreshExternalSearchIndexes();
+
+  expect(readMainExternalDocuments()).toEqual([
+    expect.objectContaining({
+      document_id: 'folder-sync:alpha.md',
+      file_name: 'alpha.md',
+      folder_id: 'folder-sync',
+      is_present: 1,
+      relative_path: 'alpha.md'
+    }),
+    expect.objectContaining({
+      document_id: 'folder-sync:beta.txt',
+      file_name: 'beta.txt',
+      folder_id: 'folder-sync',
+      is_present: 0,
+      relative_path: 'beta.txt'
+    })
+  ]);
+  expect(readExternalDocumentSyncRows()).toEqual([
+    expect.objectContaining({ object_id: 'folder-sync:alpha.md', sync_dirty: 1 }),
+    expect.objectContaining({ object_id: 'folder-sync:beta.txt', sync_dirty: 1 })
+  ]);
 });
 
 it('keeps manual rebuild as a full rewrite path', async () => {

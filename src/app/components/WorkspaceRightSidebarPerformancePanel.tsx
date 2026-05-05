@@ -114,7 +114,7 @@ export function WorkspaceRightSidebarPerformancePanel(props: WorkspaceRightSideb
           <InfoRow label="Main process" value={formatBytes(memorySnapshot.mainProcessRssBytes)} />
           <InfoRow label="Renderer" value={formatBytes(memorySnapshot.rendererHeapBytes)} />
           <InfoRow label="Text buffer" value={formatBytes(loadedNodeStats.textPrefetchBytes, '0.0 MB')} />
-          <InfoRow label="Loaded nodes" value={formatCount(loadedNodeStats.loadedNodeCount)} />
+          <InfoRow label="Loaded topics" value={formatCount(loadedNodeStats.loadedNodeCount)} />
         </dl>
       </InspectorSection>
       <CacheSection
@@ -145,9 +145,9 @@ function CacheSection({
     >
       <dl className="contents">
         <InfoRow label="Known total" value={formatCount(cacheTotalEntries)} />
-        <InfoRow label="Node blocks" value={formatCount(loadedNodeCount)} />
-        <InfoRow label="Node hits" value={formatCount(diagnostics.nodeDocumentCache.hits)} />
-        <InfoRow label="Node misses" value={formatCount(diagnostics.nodeDocumentCache.misses)} />
+        <InfoRow label="Topic blocks" value={formatCount(loadedNodeCount)} />
+        <InfoRow label="Topic hits" value={formatCount(diagnostics.nodeDocumentCache.hits)} />
+        <InfoRow label="Topic misses" value={formatCount(diagnostics.nodeDocumentCache.misses)} />
         <InfoRow label="Source details" value={formatCount(diagnostics.sourceDetailsCache.entries)} />
         <InfoRow label="Source hits" value={formatCount(diagnostics.sourceDetailsCache.hits)} />
         <InfoRow label="Source misses" value={formatCount(diagnostics.sourceDetailsCache.misses)} />

@@ -72,7 +72,7 @@ export function TopFloatingBar(props: {
         <IconButton active={props.activeAction === 'capture'} ariaLabel="Capture" onClick={() => props.onAction('capture')}>
           <CaptureIcon className="h-5 w-5" />
         </IconButton>
-        <IconButton active={props.activeAction === 'more'} ariaLabel="Settings" onClick={() => props.onAction('more')}>
+        <IconButton active={props.activeAction === 'more'} ariaLabel="Device sync" onClick={() => props.onAction('more')}>
           <MoreIcon className="h-5 w-5" />
         </IconButton>
       </div>

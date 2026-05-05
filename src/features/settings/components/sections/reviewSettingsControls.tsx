@@ -3,10 +3,10 @@ import {
   SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
   SETTINGS_SELECT_WIDTH_CLASS_NAME,
-  SETTINGS_VALUE_WIDTH_CLASS_NAME,
   SettingsControlSlot,
-  settingsControlValueClassName,
-  settingsFieldClassName
+  settingsFieldClassName,
+  settingsSwitchClassName,
+  settingsSwitchKnobClassName
 } from '../../../../shared/ui';
 
 export function ReviewToggleControl(props: {
@@ -16,16 +16,16 @@ export function ReviewToggleControl(props: {
 }) {
   return (
     <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-      <span className="sr-only">{props.ariaLabel}</span>
-      <select
+      <button
+        aria-checked={props.value}
         aria-label={props.ariaLabel}
-        className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
-        onChange={(event) => props.onChange(event.target.value === 'on')}
-        value={props.value ? 'on' : 'off'}
+        className={settingsSwitchClassName(props.value)}
+        onClick={() => props.onChange(!props.value)}
+        role="switch"
+        type="button"
       >
-        <option value="off">Off</option>
-        <option value="on">On</option>
-      </select>
+        <span className={settingsSwitchKnobClassName(props.value)} />
+      </button>
     </SettingsControlSlot>
   );
 }
@@ -58,9 +58,9 @@ export function DefaultPriorityControl(props: {
 }) {
   return (
     <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-      <span className="sr-only">Default node priority</span>
+      <span className="sr-only">Default topic priority</span>
       <select
-        aria-label="Default node priority"
+        aria-label="Default topic priority"
         className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
         onChange={(event) => props.onChange(Number(event.target.value))}
         value={String(props.value)}
@@ -86,7 +86,6 @@ export function QueueMixRatioControl(props: {
       <ReviewNumberInput ariaLabel="Reading queue mix ratio" min={1} onChange={props.onReadingChange} step={1} value={props.reading} />
       <span className="text-[0.86rem] text-foreground/65">:</span>
       <ReviewNumberInput ariaLabel="FSRS queue mix ratio" min={1} onChange={props.onFsrsChange} step={1} value={props.fsrs} />
-      <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{`${props.reading}:${props.fsrs}`}</span>
     </SettingsControlSlot>
   );
 }

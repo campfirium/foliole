@@ -24,7 +24,7 @@ function PairAction(props: {
       onClick={props.onClick}
       type="button"
     >
-      Pair
+      Connect
     </button>
   );
 }

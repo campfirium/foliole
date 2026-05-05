@@ -60,7 +60,7 @@ beforeEach(() => {
 
 it('renders note list and single document panel', () => {
   render(<App />);
-  expect(screen.getByRole('heading', { name: 'Nodes' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Topics' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Content' })).toBeInTheDocument();
   expect(screen.getByRole('region', { name: 'Workspace side toolbar' })).toBeInTheDocument();
   expect(screen.getByRole('navigation', { name: 'Node breadcrumbs' })).toBeInTheDocument();

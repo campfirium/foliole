@@ -55,6 +55,7 @@ export function buildDocumentSectionProps(
   return {
     activeNodeId: documentNodeId,
     isWorkspaceHydrated: props.isWorkspaceHydrated,
+    isTrashViewOpen: props.isTrashViewOpen,
     canGoBack: props.canGoBack,
     canGoForward: props.canGoForward,
     canGoParent: props.canGoParent,

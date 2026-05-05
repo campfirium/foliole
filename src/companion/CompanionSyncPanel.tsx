@@ -1,6 +1,8 @@
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 
+import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
+import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
 import { CompanionSyncDeviceList } from './CompanionSyncDeviceList';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
@@ -11,11 +13,13 @@ type CompanionSyncPanelProps = {
   desktopDiscovery: CompanionDesktopDiscovery | null;
   endpointUrl: string | null;
   error: string | null;
+  handoffReminderSettings: CompanionHandoffReminderSettings;
   lastSyncedAt: string | null;
   rememberedTargets: string[];
   syncEvents: NativeCompanionSyncEvent[];
   onCancelPairing(): void;
   onCheckDesktop(endpointUrl: string): Promise<unknown>;
+  onChangeHandoffReminderSettings(settings: CompanionHandoffReminderSettings): void;
   onClearError(): void;
   onCompletePairing(): Promise<unknown>;
   onPull(endpointUrl: string): Promise<unknown>;
@@ -80,8 +84,8 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'p
   const isSyncing = props.status === 'syncing';
   return (
     <SyncStatusCard
-      detail={isSyncing ? 'Sync is running now.' : 'This device is paired and ready to sync.'}
-      title="Sync status"
+      detail={isSyncing ? 'Sync is running now.' : 'This device is connected and ready to sync.'}
+      title="Device sync"
     >
       <CompanionSyncStatusDetails
         endpointUrl={props.endpointUrl}
@@ -106,8 +110,8 @@ function AwaitingApprovalState(props: {
 }) {
   return (
     <SyncStatusCard
-      detail="Approve this device on desktop. Then come back here to continue."
-      title="Waiting for desktop approval"
+      detail="Approve this device on the device that already has your content. Then come back here to continue."
+      title="Waiting for approval"
     >
       <div className="space-y-3">
         <PrimaryAction disabled={props.disabled} onClick={props.onComplete}>
@@ -129,8 +133,8 @@ function AwaitingApprovalState(props: {
 function SearchingDiscoveryState() {
   return (
     <SyncStatusCard
-      detail="Looking for a desktop with Sync turned on. Keep both devices on the same Wi-Fi."
-      title="Looking for desktop"
+      detail="Looking for another device with Device sync turned on. Keep both devices on the same Wi-Fi."
+      title="Looking for another device"
     />
   );
 }
@@ -141,13 +145,13 @@ function EmptyDiscoveryState(props: {
 }) {
   return (
     <div className="text-center">
-      <h2 className="text-xl font-semibold leading-tight text-foreground">No device found</h2>
+      <h2 className="text-xl font-semibold leading-tight text-foreground">Bring content from another device</h2>
       <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-accent">
-        Turn on Sync on desktop and keep both devices on the same Wi-Fi.
+        First open Device sync on the device that already has your content, then allow this device to connect.
       </p>
       <div className="mt-6">
         <PrimaryAction disabled={props.disabled} onClick={props.onTryAgain}>
-          {props.disabled ? 'Trying...' : 'Try again'}
+          {props.disabled ? 'Looking...' : 'Connect another device'}
         </PrimaryAction>
       </div>
     </div>
@@ -205,6 +209,10 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
           <EmptyDiscoveryState disabled={isBusy} onTryAgain={() => void handleTryAgain()} />
         )}
         {props.error ? <p className="text-sm text-red-700">{props.error}</p> : null}
+        <CompanionHandoffReminderSettingsPanel
+          settings={props.handoffReminderSettings}
+          onChange={props.onChangeHandoffReminderSettings}
+        />
       </div>
     </section>
   );

@@ -21,7 +21,7 @@ export function WorkspaceListSplitter({
 }: WorkspaceListSplitterProps) {
   return (
     <div
-      aria-label="Resize node list"
+      aria-label="Resize topic list"
       aria-orientation="vertical"
       aria-valuenow={Math.round(listWidth)}
       className={cn('group relative z-10 self-stretch bg-transparent max-[1080px]:hidden', isCollapsed && 'pointer-events-none opacity-0')}
