@@ -40,7 +40,7 @@ function toNativeTextImportResult(record: PersistedImportRecord): NativeTextImpo
 
 function getImportFileDialogOptions() {
   return {
-    filters: [{ name: 'Markdown / HTML / Text / EPUB', extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub'] }],
+    filters: [{ name: 'Markdown / HTML / Text / EPUB / PDF', extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub', 'pdf'] }],
     properties: ['openFile', 'multiSelections']
   } satisfies OpenDialogOptions;
 }

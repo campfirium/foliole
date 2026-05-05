@@ -192,7 +192,7 @@ it('routes EPUB previews and imports through the dedicated extractor', async () 
 
   expect(showOpenDialog).toHaveBeenCalledWith(
     expect.objectContaining({
-      filters: [{ extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub'], name: 'Markdown / HTML / Text / EPUB' }],
+      filters: [{ extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub', 'pdf'], name: 'Markdown / HTML / Text / EPUB / PDF' }],
       properties: ['openFile', 'multiSelections']
     })
   );
@@ -206,6 +206,7 @@ it('routes EPUB previews and imports through the dedicated extractor', async () 
   expect(readFile).not.toHaveBeenCalled();
   expect(runPreparedImport).not.toHaveBeenCalled();
 });
+
 
 it('imports every selected file and returns the last import result', async () => {
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/first.md', '/tmp/second.md'] });

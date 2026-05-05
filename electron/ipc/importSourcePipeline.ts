@@ -41,6 +41,7 @@ export interface DirectoryImportSourceDescriptor extends ImportSourceDescriptor 
 const HTML_EXTENSIONS = new Set(['.htm', '.html']);
 const MARKDOWN_EXTENSIONS = new Set(['.md', '.markdown']);
 const EPUB_EXTENSIONS = new Set(['.epub']);
+const PDF_EXTENSIONS = new Set(['.pdf']);
 const TEXT_EXTENSIONS = new Set(['.txt']);
 const SKIPPED_DIRECTORY_NAMES = new Set(['.git', '.obsidian', 'node_modules']);
 
@@ -75,6 +76,9 @@ export function resolveImportKind(filePath: string): ImportSourceKind {
   if (EPUB_EXTENSIONS.has(extension)) {
     return 'epub';
   }
+  if (PDF_EXTENSIONS.has(extension)) {
+    return 'pdf';
+  }
   if (HTML_EXTENSIONS.has(extension)) {
     return 'html';
   }
@@ -102,6 +106,12 @@ export function toImportPayload(content: string, kind: ImportSourceKind, sourceN
     return {
       content: buildRetainedDegradedImportContent({ reason, sourceKind: kind, sourceName }),
       degradedReason: reason
+    };
+  }
+  if (kind === 'pdf') {
+    return {
+      content: [`# ${path.parse(sourceName).name}`, '', 'Linked PDF source ready for the reader surface.'].join('\n'),
+      degradedReason: null
     };
   }
   if (kind !== 'html') {
@@ -161,7 +171,7 @@ export async function loadPreparedImportRecord(
   }
 ) {
   const payload =
-    source.kind === 'epub'
+    source.kind === 'epub' || source.kind === 'pdf'
       ? toImportPayload('', source.kind, source.sourceName)
       : toImportPayload(await fs.readFile(source.filePath, 'utf8'), source.kind, source.sourceName);
   return buildPreparedImportRecord(source, {

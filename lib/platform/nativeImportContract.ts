@@ -51,7 +51,7 @@ export interface NativeImportedTextFile {
   file_name: string;
   file_path: string;
   content: string;
-  kind: 'epub' | 'html' | 'markdown' | 'text';
+  kind: 'epub' | 'html' | 'markdown' | 'pdf' | 'text';
 }
 
 export interface NativeTextImportResult {
@@ -59,7 +59,7 @@ export interface NativeTextImportResult {
   provider: 'desktop_text_file';
   source_name: string;
   source_locator: string;
-  source_kind: 'epub' | 'html' | 'markdown' | 'text';
+  source_kind: 'epub' | 'html' | 'markdown' | 'pdf' | 'text';
   source_fingerprint: string;
   content_fingerprint: string;
   duplicate_semantic: 'new' | 'updated' | 'duplicate';

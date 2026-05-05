@@ -8,6 +8,10 @@ it('recognizes epub files as importable long-form sources', () => {
   expect(resolveImportKind('/tmp/book.epub')).toBe('epub');
 });
 
+it('recognizes pdf files as importable long-form sources', () => {
+  expect(resolveImportKind('/tmp/paper.pdf')).toBe('pdf');
+});
+
 it('keeps the source body intact, returns matched highlights, and appends only unmatched sidecar highlights', () => {
   const prepared = buildPreparedImportRecord(
     {

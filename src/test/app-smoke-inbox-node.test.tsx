@@ -10,7 +10,7 @@ function getNodeListPanel() {
   return screen.getByRole('complementary', { name: 'Node list panel' });
 }
 
-function createImportedWorkspaceSnapshot() {
+function createImportedWorkspaceSnapshot(title = 'Imported note') {
   return {
     activeNodeId: 'special-inbox',
     nodeOrder: ['special-inbox', 'node-imported'],
@@ -37,7 +37,7 @@ function createImportedWorkspaceSnapshot() {
         id: 'node-imported',
         parentNodeId: 'special-inbox',
         kind: 'topic',
-        title: 'Imported note',
+        title,
         isTitleManual: true,
         hideTitleHeading: false,
         content: '',
@@ -55,7 +55,7 @@ function createImportedWorkspaceSnapshot() {
   };
 }
 
-function createSuccessfulImportResult() {
+function createSuccessfulImportResult(overrides?: Partial<Record<string, unknown>>) {
   return {
     content_fingerprint: 'content-success',
     degraded_reason: null,
@@ -69,20 +69,25 @@ function createSuccessfulImportResult() {
     source_fingerprint: 'source-fingerprint-2',
     source_kind: 'markdown',
     source_locator: '/tmp/imported-note.md',
-    source_name: 'imported-note.md'
+    source_name: 'imported-note.md',
+    ...overrides
   };
 }
 
-function createSuccessfulImportOverview() {
+function createSuccessfulImportOverview(result = createSuccessfulImportResult()) {
   return {
     latest_failure: null,
-    latest_result: createSuccessfulImportResult(),
+    latest_result: result,
     recent_runs: []
   };
 }
 
-function createImportedNodeRuntimeInvoke(): ElectronAPI['invoke'] {
-  const workspaceSnapshot = createImportedWorkspaceSnapshot();
+function createImportedNodeRuntimeInvoke(options?: {
+  importedNodeTitle?: string;
+  importResult?: ReturnType<typeof createSuccessfulImportResult>;
+}): ElectronAPI['invoke'] {
+  const importResult = options?.importResult ?? createSuccessfulImportResult();
+  const workspaceSnapshot = createImportedWorkspaceSnapshot(options?.importedNodeTitle);
   return vi.fn(async (...args: [string, Record<string, unknown>?]) => {
     const [command, payload] = args;
     if (command === 'load_workspace_list_snapshot') {
@@ -104,10 +109,10 @@ function createImportedNodeRuntimeInvoke(): ElectronAPI['invoke'] {
       };
     }
     if (command === 'run_text_file_import') {
-      return createSuccessfulImportResult();
+      return importResult;
     }
     if (command === 'load_import_overview') {
-      return createSuccessfulImportOverview();
+      return createSuccessfulImportOverview(importResult);
     }
     return null;
   });
@@ -231,6 +236,33 @@ it('shows a newly imported inbox child immediately after import without restarti
 
   await waitFor(() => {
     expect(within(getNodeListPanel()).getByRole('treeitem', { name: 'Imported note' })).toBeInTheDocument();
+  });
+});
+
+it('shows the imported PDF node in Inbox after manual import', async () => {
+  const invoke = createImportedNodeRuntimeInvoke({
+    importedNodeTitle: 'Imported PDF',
+    importResult: createSuccessfulImportResult({
+      node_id: 'node-imported',
+      source_kind: 'pdf',
+      source_locator: '/tmp/imported-paper.pdf',
+      source_name: 'imported-paper.pdf'
+    })
+  });
+
+  window.electronAPI = {
+    invoke,
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
+
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+
+  await waitFor(() => {
+    expect(within(getNodeListPanel()).getByRole('treeitem', { name: 'Imported PDF' })).toBeInTheDocument();
   });
 });
 

@@ -2,7 +2,7 @@ export interface RuntimeImportedTextFile {
   fileName: string;
   filePath: string;
   content: string;
-  kind: 'epub' | 'html' | 'markdown' | 'text';
+  kind: 'epub' | 'html' | 'markdown' | 'pdf' | 'text';
 }
 
 export interface RuntimeTextImportResult {
@@ -16,7 +16,7 @@ export interface RuntimeTextImportResult {
   provider: 'desktop_text_file';
   resultStatus: 'imported' | 'degraded' | 'failed';
   sourceFingerprint: string;
-  sourceKind: 'epub' | 'html' | 'markdown' | 'text';
+  sourceKind: 'epub' | 'html' | 'markdown' | 'pdf' | 'text';
   sourceLocator: string;
   sourceName: string;
 }
@@ -44,7 +44,7 @@ export interface RuntimeImportOverview {
 }
 
 function isImportKind(value: unknown): value is RuntimeImportedTextFile['kind'] {
-  return value === 'epub' || value === 'html' || value === 'markdown' || value === 'text';
+  return value === 'epub' || value === 'html' || value === 'markdown' || value === 'pdf' || value === 'text';
 }
 
 function isImportSemantic(value: unknown): value is RuntimeTextImportResult['duplicateSemantic'] {

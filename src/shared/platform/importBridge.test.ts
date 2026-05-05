@@ -208,6 +208,7 @@ it('accepts html import payloads from the runtime bridge', async () => {
     sourceName: 'note.html'
   });
 });
+
 it('forwards highlight policy configuration to the runtime import bridge', async () => {
   const invoke = vi.fn().mockResolvedValue({
     content_fingerprint: 'content-fingerprint',

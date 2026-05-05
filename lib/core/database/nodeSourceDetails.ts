@@ -23,7 +23,7 @@ interface ImportRunRow extends DatabaseRow {
   provider: 'desktop_text_file';
   result_status: 'degraded' | 'failed' | 'imported';
   source_fingerprint: string;
-  source_kind: 'epub' | 'html' | 'markdown' | 'text';
+  source_kind: 'epub' | 'html' | 'markdown' | 'pdf' | 'text';
   source_locator: string;
   source_name: string;
 }

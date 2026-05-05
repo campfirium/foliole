@@ -2,7 +2,7 @@ export const IMPORT_PROVIDER_DESKTOP_TEXT_FILE = 'desktop_text_file';
 
 export type ImportProvider = typeof IMPORT_PROVIDER_DESKTOP_TEXT_FILE;
 
-export type ImportSourceKind = 'epub' | 'html' | 'markdown' | 'text';
+export type ImportSourceKind = 'epub' | 'html' | 'markdown' | 'pdf' | 'text';
 
 export type ImportHighlightPolicy = 'adopt' | 'reference_only';
 
