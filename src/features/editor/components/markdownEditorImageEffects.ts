@@ -5,9 +5,24 @@ interface UseFitBlockImageHeightArgs {
   hostRef: MutableRefObject<HTMLDivElement | null>;
   hasMarkdownImages: boolean;
   nodeId: string | null;
-  onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number } | null) => void;
+  onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   rootRef: MutableRefObject<HTMLDivElement | null>;
   value: string;
+}
+
+function measureNonImageHeight(content: HTMLElement) {
+  const contentStyle = getComputedStyle(content);
+  const paddingTop = Number.parseFloat(contentStyle.paddingTop) || 0;
+  const paddingBottom = Number.parseFloat(contentStyle.paddingBottom) || 0;
+  const directChildren = Array.from(content.children) as HTMLElement[];
+
+  return directChildren.reduce((sum, child) => {
+    const imageElement = child.querySelector('.cm-md-image-element-block') as HTMLElement | null;
+    if (imageElement) {
+      return sum + Math.max(0, child.getBoundingClientRect().height - imageElement.getBoundingClientRect().height);
+    }
+    return sum + child.getBoundingClientRect().height;
+  }, paddingTop + paddingBottom);
 }
 
 function useImageHeightReporter(args: UseFitBlockImageHeightArgs) {
@@ -26,17 +41,17 @@ function useImageHeightReporter(args: UseFitBlockImageHeightArgs) {
     const host = hostRef.current;
     let frameId = 0;
     const updateHeight = () => {
+      const content = element.querySelector('.cm-content') as HTMLElement | null;
       const scroller = element.querySelector('.cm-scroller') as HTMLElement | null;
       const imageElements = Array.from(element.querySelectorAll('.cm-md-image-element-block')) as HTMLElement[];
-      if (!scroller || imageElements.length === 0) {
+      if (!content || !scroller || imageElements.length === 0) {
         setImageMaxHeight(undefined);
         onFitBlockImageMetricsChange?.(null);
         return;
       }
-      const totalImageHeight = imageElements.reduce((sum, image) => sum + image.getBoundingClientRect().height, 0);
-      const nonImageHeight = Math.max(0, scroller.scrollHeight - totalImageHeight);
+      const nonImageHeight = measureNonImageHeight(content);
       const nextHeight = Math.max(120, Math.floor((scroller.clientHeight - nonImageHeight - 8) / imageElements.length));
-      onFitBlockImageMetricsChange?.({ imageCount: imageElements.length, nonImageHeight });
+      onFitBlockImageMetricsChange?.({ imageCount: imageElements.length, nonImageHeight, viewportHeight: scroller.clientHeight });
       setImageMaxHeight((current) => {
         const nextValue = `${nextHeight}px`;
         return current === nextValue ? current : nextValue;
@@ -122,5 +137,5 @@ function useImageLoadStateReporter(args: UseImageLoadStateArgs) {
 export function useMarkdownEditorImageEffects(args: UseFitBlockImageHeightArgs & UseImageLoadStateArgs) {
   const imageMaxHeight = useImageHeightReporter(args);
   useImageLoadStateReporter(args);
-  return imageMaxHeight;
+  return { imageMaxHeight };
 }

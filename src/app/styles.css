@@ -319,11 +319,32 @@ body {
 .markdown-editor-host .cm-scroller {
   font-size: var(--content-panel-font-size, 1.0625rem);
   line-height: 1.76;
+  scrollbar-color: var(--app-scrollbar-thumb-color) transparent;
+  scrollbar-width: thin;
+}
+
+.markdown-editor-host .cm-scroller::-webkit-scrollbar {
+  width: var(--app-scrollbar-size);
+  height: var(--app-scrollbar-size);
+}
+
+.markdown-editor-host .cm-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.markdown-editor-host .cm-scroller::-webkit-scrollbar-thumb {
+  border: var(--app-scrollbar-thumb-inset) solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: var(--app-scrollbar-thumb-color);
+}
+
+.markdown-editor-host.scrollbar-hidden .cm-scroller {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.markdown-editor-host .cm-scroller::-webkit-scrollbar {
+.markdown-editor-host.scrollbar-hidden .cm-scroller::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
@@ -359,7 +380,11 @@ body {
 
 .cm-md-image-element {
   display: block;
-  max-width: min(100%, 760px);
+  height: auto;
+  max-height: var(--editor-image-max-height, none);
+  max-width: 100%;
+  object-fit: contain;
+  width: auto;
 }
 
 .cm-md-image-cloze-regions {
@@ -493,27 +518,6 @@ body {
   height: 0;
 }
 
-.editor-scrollbar-track {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: var(--app-scrollbar-size);
-  z-index: 2;
-}
-
-.editor-scrollbar-thumb {
-  position: absolute;
-  left: var(--app-scrollbar-thumb-inset);
-  width: calc(var(--app-scrollbar-size) - (var(--app-scrollbar-thumb-inset) * 2));
-  border-radius: 999px;
-  background-color: var(--app-scrollbar-thumb-color);
-  cursor: grab;
-}
-
-.editor-scrollbar-thumb:active {
-  cursor: grabbing;
-}
 
 .pdf-document-surface .textLayer :is(span, br)::selection {
   background: var(--app-selection-surface-color);

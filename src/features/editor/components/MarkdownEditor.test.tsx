@@ -91,6 +91,15 @@ function renderWithMouseGestureProvider(ui: React.ReactElement) {
   });
 }
 
+function mockResizeObserverFactory() {
+  mockResizeObserver();
+  return {
+    disconnect: vi.fn(),
+    observe: vi.fn(),
+    unobserve: vi.fn()
+  };
+}
+
 function resetMocks() {
   beforeEach(() => {
     mockCtor.mockClear();
@@ -112,17 +121,7 @@ describe('MarkdownEditor rendering', () => {
 
   beforeEach(() => {
     mockResizeObserver.mockClear();
-    vi.stubGlobal(
-      'ResizeObserver',
-      vi.fn().mockImplementation(() => {
-        mockResizeObserver();
-        return {
-          disconnect: vi.fn(),
-          observe: vi.fn(),
-          unobserve: vi.fn()
-        };
-      })
-    );
+    vi.stubGlobal('ResizeObserver', vi.fn().mockImplementation(mockResizeObserverFactory));
   });
 
   it('does not recreate editor adapter when value changes', () => {
@@ -146,7 +145,7 @@ describe('MarkdownEditor rendering', () => {
       <MarkdownEditor contentPaddingBottom="min(68dvh, 36rem)" nodeId="node-1" onChange={vi.fn()} value="a" />
     );
 
-    expect(container.firstChild).toHaveStyle('--editor-content-padding-bottom: min(68dvh, 36rem)');
+    expect(container.querySelector('.markdown-editor-host')).toHaveStyle('--editor-content-padding-bottom: min(68dvh, 36rem)');
   });
 
   it('marks the editor host when viewport-based image fitting is enabled', () => {

@@ -24,7 +24,7 @@ export interface MarkdownEditorProps {
   nodeViewState?: EditorViewState;
   onChange: (value: string) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
-  onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number } | null) => void;
+  onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
   readOnly?: boolean;

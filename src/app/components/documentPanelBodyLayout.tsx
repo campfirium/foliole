@@ -15,6 +15,7 @@ import { DocumentOutlineLayer } from './DocumentOutlineLayer';
 export interface BlockImageMetrics {
   imageCount: number;
   nonImageHeight: number;
+  viewportHeight: number;
 }
 
 export interface DocumentPanelBodyLayoutProps {
@@ -100,14 +101,10 @@ function AnswerSection(props: DocumentPanelBodyLayoutProps) {
     <section
       aria-label="Cloze answer section"
       className={cn(
-        'relative flex min-h-0 overflow-hidden pt-3',
+        'relative flex min-h-0 overflow-hidden',
         props.answerSectionMode === 'balanced' ? 'flex-1' : 'flex-[0_0_calc(30dvh+60px)]'
       )}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-0 h-px -translate-x-1/2 bg-border [width:min(100%,var(--document-max-width))]"
-      />
       <MarkdownEditor
         ariaLabel="Answer editor"
         blockImageMaxHeightOverride={props.sharedBlockImageMaxHeight}
@@ -182,13 +179,27 @@ function renderDocumentOutline(props: DocumentPanelBodyLayoutProps) {
   );
 }
 
+function DocumentSectionDivider(props: Pick<DocumentPanelBodyLayoutProps, 'documentMaxWidth'>) {
+  void props.documentMaxWidth;
+  return (
+    <div aria-hidden="true" className="relative h-3 shrink-0">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-px -translate-x-1/2 -translate-y-1/2 bg-border [width:min(100%,var(--document-max-width))]" />
+    </div>
+  );
+}
+
 export function renderDocumentPanelBodyLayout(props: DocumentPanelBodyLayoutProps) {
   return (
     <div className="relative flex h-full min-h-0 w-full" data-resizing={props.isDocumentResizing}>
       {renderDocumentOutline(props)}
       <div className="document-panel-editor-stack flex h-full min-h-0 w-full flex-1 flex-col">
         {renderDocumentBodyContent(props)}
-        {props.hasAnswerSection && !props.emptyState ? <AnswerSection {...props} /> : null}
+        {props.hasAnswerSection && !props.emptyState ? (
+          <>
+            <DocumentSectionDivider documentMaxWidth={props.documentMaxWidth} />
+            <AnswerSection {...props} />
+          </>
+        ) : null}
       </div>
       {props.showDocumentResizeHandles === false ? null : (
         <>
@@ -227,6 +238,17 @@ export function computeSharedBlockImageMaxHeight({
     return undefined;
   }
 
+  const sectionHeights = [promptMetrics, answerMetrics]
+    .filter((metrics): metrics is BlockImageMetrics => Boolean(metrics && metrics.imageCount > 0))
+    .map((metrics) => Math.floor((metrics.viewportHeight - metrics.nonImageHeight - 8) / metrics.imageCount))
+    .filter((height) => Number.isFinite(height));
+
+  if (sectionHeights.length > 0) {
+    return Math.max(120, Math.min(...sectionHeights));
+  }
+
+  const totalViewportHeight = (promptMetrics?.viewportHeight ?? 0) + (answerMetrics?.viewportHeight ?? 0);
+  const heightBudget = totalViewportHeight > 0 ? totalViewportHeight : availableHeight;
   const totalNonImageHeight = (promptMetrics?.nonImageHeight ?? 0) + (answerMetrics?.nonImageHeight ?? 0);
-  return Math.max(120, Math.floor((availableHeight - totalNonImageHeight - 16) / totalImageCount));
+  return Math.max(120, Math.floor((heightBudget - totalNonImageHeight - 16) / totalImageCount));
 }

@@ -18,6 +18,7 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-widgetBuffer': { width: '0px' },
   '.cm-line': { padding: 0 },
+  '.cm-line:has(.cm-md-image-widget-block)': { fontSize: '0', lineHeight: '0', minHeight: '0' },
   '.cm-line.cm-line-h1': { fontSize: 'var(--content-panel-h1-font-size, 1.5rem)', fontWeight: '700', letterSpacing: '-0.01em', paddingBottom: '0.25rem', paddingTop: '0.75rem' },
   '.cm-line.cm-line-h2': { fontSize: 'var(--content-panel-h2-font-size, 1.25rem)', fontWeight: '700', paddingBottom: '0.2rem', paddingTop: '0.65rem' },
   '.cm-line.cm-line-h3': { fontSize: 'var(--content-panel-h3-font-size, 1.08rem)', fontWeight: '650', paddingTop: '0.5rem' },
@@ -90,7 +91,13 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-prefix-widget': { color: 'var(--color-text-secondary)', display: 'inline-block', whiteSpace: 'pre' },
   '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list': { color: '#a0a5ad', fontWeight: '500', opacity: '0.95' },
   '.cm-md-image-widget': { maxWidth: '100%' },
-  '.cm-md-image-widget-block': { display: 'block', marginBottom: '0.24rem', marginTop: '0.24rem' },
+  '.cm-md-image-widget-block': {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '0.24rem',
+    marginTop: '0.24rem',
+    width: '100%'
+  },
   '.cm-md-image-widget-inline': { display: 'inline-block', height: '1lh', lineHeight: '1', margin: '0 0.18rem', maxWidth: '100%', overflow: 'hidden', verticalAlign: 'text-bottom' },
   '.cm-md-image-element': {
     border: '1px solid color-mix(in srgb, var(--color-border-strong) 36%, transparent)',
@@ -98,9 +105,12 @@ export const liveMarkdownTheme = EditorView.theme({
     boxSizing: 'border-box',
     display: 'block',
     height: 'auto',
+    maxHeight: 'var(--editor-image-max-height, none)',
     maxWidth: 'var(--editor-image-max-width, 100%)',
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    objectFit: 'contain',
     width: 'auto',
-    objectFit: 'contain'
   },
   '.cm-md-image-element-block': { height: 'auto' },
   '.cm-md-image-element-inline': { height: '100%', margin: 0, maxHeight: '1lh', verticalAlign: 'bottom' },

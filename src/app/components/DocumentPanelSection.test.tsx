@@ -8,6 +8,22 @@ import {
   renderSectionWithProps
 } from './DocumentPanelSection.testSupport';
 
+function expectDocumentBodyLayout(args: {
+  editorContentPaddingBottom: string | undefined;
+  fitBlockImagesToViewport: boolean;
+}) {
+  expect(
+    documentPanelBodyMock.mock.calls.some(([props]) =>
+      props &&
+      typeof props === 'object' &&
+      'editorContentPaddingBottom' in props &&
+      'fitBlockImagesToViewport' in props &&
+      (props as { editorContentPaddingBottom?: string }).editorContentPaddingBottom === args.editorContentPaddingBottom &&
+      (props as { fitBlockImagesToViewport?: boolean }).fitBlockImagesToViewport === args.fitBlockImagesToViewport
+    )
+  ).toBe(true);
+}
+
 describe('DocumentPanelSection basic views', () => {
   it('hides the source update action when no source update is available', () => {
     renderSection();
@@ -29,16 +45,10 @@ describe('DocumentPanelSection basic views', () => {
       }
     });
 
-    expect(
-      documentPanelBodyMock.mock.calls.some(([props]) =>
-        props &&
-        typeof props === 'object' &&
-        'editorContentPaddingBottom' in props &&
-        'fitBlockImagesToViewport' in props &&
-        (props as { editorContentPaddingBottom?: string }).editorContentPaddingBottom === 'min(68dvh, 36rem)' &&
-        (props as { fitBlockImagesToViewport?: boolean }).fitBlockImagesToViewport === false
-      )
-    ).toBe(true);
+    expectDocumentBodyLayout({
+      editorContentPaddingBottom: 'min(68dvh, 36rem)',
+      fitBlockImagesToViewport: false
+    });
   });
 
   it('does not add the extra document tail for item nodes', () => {
@@ -49,16 +59,10 @@ describe('DocumentPanelSection basic views', () => {
       }
     });
 
-    expect(
-      documentPanelBodyMock.mock.calls.some(([props]) =>
-        props &&
-        typeof props === 'object' &&
-        'editorContentPaddingBottom' in props &&
-        'fitBlockImagesToViewport' in props &&
-        (props as { editorContentPaddingBottom?: string }).editorContentPaddingBottom === undefined &&
-        (props as { fitBlockImagesToViewport?: boolean }).fitBlockImagesToViewport === false
-      )
-    ).toBe(true);
+    expectDocumentBodyLayout({
+      editorContentPaddingBottom: undefined,
+      fitBlockImagesToViewport: false
+    });
   });
 
   it('shows the folder list shell for ordinary folder nodes', () => {

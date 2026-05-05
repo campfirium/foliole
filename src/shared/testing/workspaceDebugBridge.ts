@@ -4,6 +4,7 @@ import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/work
 interface DebugNodeSeed {
   content: string;
   id: string;
+  kind?: 'folder' | 'item' | 'topic';
   parentNodeId?: string | null;
   reveal?: string | null;
   title: string;
@@ -74,6 +75,7 @@ export function installWorkspaceDebugBridge() {
             hasContent: node.content.trim().length > 0,
             hasReveal: node.reveal != null,
             id: node.id,
+            kind: node.kind ?? initial.nodesById['node-1'].kind,
             parentNodeId: node.parentNodeId ?? null,
             reveal: node.reveal ?? null,
             title: node.title,

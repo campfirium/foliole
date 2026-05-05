@@ -3,7 +3,6 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
-  type PointerEvent as ReactPointerEvent,
   type MutableRefObject
 } from 'react';
 
@@ -16,7 +15,7 @@ import type { EditorAdapter } from '../adapters/EditorAdapter';
 import { GestureTrailOverlay, buildGestureTrailPath } from './markdownEditorGestureTrail';
 import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
 import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
-import { useEditorScrollbarMetrics, useScrollbarState, useThumbPointerHandlers, useTrackPointerHandler } from './markdownEditorScrollbar';
+import { useEditorScrollbarMetrics } from './markdownEditorScrollbar';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
 
@@ -78,11 +77,7 @@ function MarkdownEditorSurface(args: {
   hostRef: MutableRefObject<HTMLDivElement | null>;
   mouseGesture: ReturnType<typeof useEditorMouseGesture>;
   onContextMenu: MarkdownEditorProps['onContextMenu'];
-  onTrackPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   rootRef: MutableRefObject<HTMLDivElement | null>;
-  scrollbar: ReturnType<typeof useScrollbarState>;
-  thumbHandlers: ReturnType<typeof useThumbPointerHandlers>;
-  thumbStyle: CSSProperties;
 }) {
   return (
     <div
@@ -90,27 +85,19 @@ function MarkdownEditorSurface(args: {
       onContextMenu={(event) => args.mouseGesture.handleContextMenu(event, args.onContextMenu)}
       onMouseDownCapture={args.mouseGesture.handleMouseDownCapture}
       ref={args.rootRef}
-      style={args.editorStyle}
     >
       <div
         aria-label={args.ariaLabel}
-        className={args.className ? `markdown-editor-host ${args.className}` : 'markdown-editor-host'}
+        className={
+          args.className
+            ? `markdown-editor-host${args.hideScrollbar ? ' scrollbar-hidden' : ''} ${args.className}`
+            : `markdown-editor-host${args.hideScrollbar ? ' scrollbar-hidden' : ''}`
+        }
         data-fit-block-images={args.fitBlockImagesToViewport ? 'true' : 'false'}
         ref={args.hostRef}
+        style={args.editorStyle}
       />
       <GestureTrailOverlay path={args.gestureTrailPath} trail={args.mouseGesture.trail} />
-      {args.scrollbar.showScrollbar && !args.hideScrollbar ? (
-        <div aria-hidden="true" className="editor-scrollbar-track" onPointerDown={args.onTrackPointerDown}>
-          <div
-            className="editor-scrollbar-thumb"
-            onPointerCancel={args.thumbHandlers.onThumbPointerRelease}
-            onPointerDown={args.thumbHandlers.onThumbPointerDown}
-            onPointerMove={args.thumbHandlers.onThumbPointerMove}
-            onPointerUp={args.thumbHandlers.onThumbPointerRelease}
-            style={args.thumbStyle}
-          />
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -130,17 +117,12 @@ function useMarkdownEditorSurfaceModel(args: {
   syncScrollMetrics: () => void;
   value: string;
 }) {
-  const { scrollMetrics } = useEditorScrollbarMetrics(args.adapterRef);
-  const scrollbar = useScrollbarState(scrollMetrics);
-  const thumbStyle = useMemo(() => scrollbar.thumbStyle, [scrollbar.thumbStyle]);
-  const onTrackPointerDown = useTrackPointerHandler(args.adapterRef, args.hostRef, scrollbar, args.syncScrollMetrics);
-  const thumbHandlers = useThumbPointerHandlers(args.adapterRef, scrollMetrics, scrollbar, args.syncScrollMetrics);
   const mouseGesture = useEditorMouseGesture(args.adapterRef, args.hostRef, args.bindings, args.settings);
   const hasMarkdownImages = useMemo(
     () => args.value.includes('![') && args.value.includes('](') && collectMarkdownImageReferences(args.value).length > 0,
     [args.value]
   );
-  const imageMaxHeight = useMarkdownEditorImageEffects({
+  const { imageMaxHeight } = useMarkdownEditorImageEffects({
     fitBlockImagesToViewport: args.fitBlockImagesToViewport,
     hostRef: args.hostRef,
     hasMarkdownImages,
@@ -157,7 +139,7 @@ function useMarkdownEditorSurfaceModel(args: {
   } as CSSProperties;
   const gestureTrailPath = useMemo(() => buildGestureTrailPath(mouseGesture.trail?.points ?? []), [mouseGesture.trail?.points]);
 
-  return { editorStyle, gestureTrailPath, mouseGesture, onTrackPointerDown, scrollbar, thumbHandlers, thumbStyle };
+  return { editorStyle, gestureTrailPath, mouseGesture };
 }
 
 export function MarkdownEditor({
@@ -212,11 +194,7 @@ export function MarkdownEditor({
       hostRef={hostRef}
       mouseGesture={surface.mouseGesture}
       onContextMenu={onContextMenu}
-      onTrackPointerDown={surface.onTrackPointerDown}
       rootRef={rootRef}
-      scrollbar={surface.scrollbar}
-      thumbHandlers={surface.thumbHandlers}
-      thumbStyle={surface.thumbStyle}
     />
   );
 }
