@@ -29,14 +29,17 @@ function useEditorAdapter(
   initialValue: string,
   hiddenTextAnchorKeys: readonly string[] | undefined,
   hideTitleHeading: boolean,
+  onOpenNodeLink: ((title: string) => void) | undefined,
   readOnly: boolean | undefined
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const initialValueRef = useRef(initialValue);
   const onChangeRef = useRef(onChange);
+  const onOpenNodeLinkRef = useRef(onOpenNodeLink);
   const onReadyRef = useRef(onReady);
 
   onChangeRef.current = onChange;
+  onOpenNodeLinkRef.current = onOpenNodeLink;
   onReadyRef.current = onReady;
 
   useLayoutEffect(() => {
@@ -50,6 +53,7 @@ function useEditorAdapter(
       hideTitleHeading,
       initialContent: initialValueRef.current,
       onChange: (nextValue) => onChangeRef.current(nextValue),
+      onOpenNodeLink: (title) => onOpenNodeLinkRef.current?.(title),
       readOnly
     });
 
@@ -89,7 +93,7 @@ function MarkdownEditorSurface(args: {
 }) {
   return (
     <div
-      className="relative h-full w-full"
+      className="relative h-full w-full overflow-hidden"
       onContextMenu={(event) => args.mouseGesture.handleContextMenu(event, args.onContextMenu)}
       onMouseDownCapture={args.mouseGesture.handleMouseDownCapture}
       ref={args.rootRef}
@@ -162,6 +166,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.value,
     props.hiddenTextAnchorKeys,
     props.hideTitleHeading ?? false,
+    props.onOpenNodeLink,
     props.readOnly
   );
   const syncScrollMetrics = useEditorScrollbarMetrics(adapterRef).syncScrollMetrics;
@@ -195,61 +200,21 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
   return { closePreview, hostRef, previewImage, rootRef, surface };
 }
 
-export function MarkdownEditor({
-  ariaLabel,
-  blockImageMaxHeightOverride,
-  className,
-  contentPaddingBottom,
-  fitBlockImagesToViewport = false,
-  hiddenTextAnchorKeys,
-  debugId,
-  hideTitleHeading = false,
-  hideScrollbar = false,
-  lineDiffDecorations,
-  nodeId,
-  nodeViewState,
-  readOnly,
-  value,
-  onChange,
-  onImageLoadStateChange,
-  onContextMenu,
-  onFitBlockImageMetricsChange,
-  onReady
-}: MarkdownEditorProps) {
-  const { closePreview, hostRef, previewImage, rootRef, surface } = useMarkdownEditorModel({
-    ariaLabel,
-    blockImageMaxHeightOverride,
-    className,
-    contentPaddingBottom,
-    debugId,
-    fitBlockImagesToViewport,
-    hiddenTextAnchorKeys,
-    hideScrollbar,
-    hideTitleHeading,
-    lineDiffDecorations,
-    nodeId,
-    nodeViewState,
-    onChange,
-    onContextMenu,
-    onFitBlockImageMetricsChange,
-    onImageLoadStateChange,
-    onReady,
-    readOnly,
-    value
-  });
+export function MarkdownEditor(props: MarkdownEditorProps) {
+  const { closePreview, hostRef, previewImage, rootRef, surface } = useMarkdownEditorModel(props);
 
   return (
     <>
       <MarkdownEditorSurface
-        ariaLabel={ariaLabel}
-        className={className}
+        ariaLabel={props.ariaLabel}
+        className={props.className}
         editorStyle={surface.editorStyle}
-        fitBlockImagesToViewport={fitBlockImagesToViewport}
+        fitBlockImagesToViewport={props.fitBlockImagesToViewport ?? false}
         gestureTrailPath={surface.gestureTrailPath}
-        hideScrollbar={hideScrollbar}
+        hideScrollbar={props.hideScrollbar ?? false}
         hostRef={hostRef}
         mouseGesture={surface.mouseGesture}
-        onContextMenu={onContextMenu}
+        onContextMenu={props.onContextMenu}
         rootRef={rootRef}
       />
       <MarkdownImagePreviewDialog image={previewImage} onOpenChange={(open) => !open && closePreview()} />

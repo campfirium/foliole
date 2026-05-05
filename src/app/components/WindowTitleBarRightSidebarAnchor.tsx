@@ -1,4 +1,4 @@
-import { FileSearch, Gauge, Highlighter, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
+import { FileSearch, Gauge, Highlighter, Link2, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -53,13 +53,51 @@ interface WindowTitleBarRightSidebarAnchorProps {
   rightSidebarWidth: number;
 }
 
-export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSidebarAnchorProps) {
-  const isReviewQueuePanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'review-queue';
-  const isSourceInfoPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'source-info';
-  const isHighlightsPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'highlights';
-  const isPerformancePanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'performance';
-  const isDevPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'dev';
+function renderRightSidebarPanelActions(props: Pick<WindowTitleBarRightSidebarAnchorProps, 'activeRightPanelId' | 'onSelectRightPanel'>) {
+  const isActive = (panelId: WorkspaceRightPanelId) => props.activeRightPanelId === panelId;
+  return (
+    <div className="window-titlebar-right-panel-actions">
+      <RightSidebarPanelButton
+        active={isActive('review-queue')}
+        ariaLabel="Review queue panel"
+        icon={<ListOrdered aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
+        onClick={() => props.onSelectRightPanel('review-queue')}
+      />
+      <RightSidebarPanelButton
+        active={isActive('source-info')}
+        ariaLabel="Source info panel"
+        icon={<FileSearch aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
+        onClick={() => props.onSelectRightPanel('source-info')}
+      />
+      <RightSidebarPanelButton
+        active={isActive('highlights')}
+        ariaLabel="Highlights panel"
+        icon={<Highlighter aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
+        onClick={() => props.onSelectRightPanel('highlights')}
+      />
+      <RightSidebarPanelButton
+        active={isActive('backlinks')}
+        ariaLabel="Backlinks panel"
+        icon={<Link2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
+        onClick={() => props.onSelectRightPanel('backlinks')}
+      />
+      <RightSidebarPanelButton
+        active={isActive('performance')}
+        ariaLabel="Performance panel"
+        icon={<Gauge aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
+        onClick={() => props.onSelectRightPanel('performance')}
+      />
+      <RightSidebarPanelButton
+        active={isActive('dev')}
+        ariaLabel="Dev panel"
+        icon={<SlidersHorizontal aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
+        onClick={() => props.onSelectRightPanel('dev')}
+      />
+    </div>
+  );
+}
 
+export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSidebarAnchorProps) {
   if (props.isRightSidebarCollapsed) {
     return (
       <div className="window-titlebar-collapsed-sidebar-action">
@@ -77,38 +115,7 @@ export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSideb
         <RightSidebarToggleButton active onClick={props.onToggleRightSidebarVisibility} />
       </div>
       <div className="window-titlebar-right-zone">
-        <div className="window-titlebar-right-panel-actions">
-          <RightSidebarPanelButton
-            active={isReviewQueuePanelActive}
-            ariaLabel="Review queue panel"
-            icon={<ListOrdered aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-            onClick={() => props.onSelectRightPanel('review-queue')}
-          />
-          <RightSidebarPanelButton
-            active={isSourceInfoPanelActive}
-            ariaLabel="Source info panel"
-            icon={<FileSearch aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-            onClick={() => props.onSelectRightPanel('source-info')}
-          />
-          <RightSidebarPanelButton
-            active={isHighlightsPanelActive}
-            ariaLabel="Highlights panel"
-            icon={<Highlighter aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-            onClick={() => props.onSelectRightPanel('highlights')}
-          />
-          <RightSidebarPanelButton
-            active={isPerformancePanelActive}
-            ariaLabel="Performance panel"
-            icon={<Gauge aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-            onClick={() => props.onSelectRightPanel('performance')}
-          />
-          <RightSidebarPanelButton
-            active={isDevPanelActive}
-            ariaLabel="Dev panel"
-            icon={<SlidersHorizontal aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-            onClick={() => props.onSelectRightPanel('dev')}
-          />
-        </div>
+        {renderRightSidebarPanelActions(props)}
       </div>
     </div>
   );

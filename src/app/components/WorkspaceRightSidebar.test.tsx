@@ -117,3 +117,38 @@ it('reveals pdf locator without re-opening when parent document is already activ
   );
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 });
+
+it('renders backlinks in the dedicated inspector panel and opens the linked note', () => {
+  const onSelectNode = vi.fn();
+
+  render(
+    <WorkspaceRightSidebar
+      activeNodeId="target"
+      activePanelId="backlinks"
+      nodeOrder={['target', 'source']}
+      nodesById={{
+        source: createNode({
+          id: 'source',
+          title: 'Source note',
+          content: 'Before\nSee [[Target note]] for details.\nAfter'
+        }),
+        target: createNode({
+          id: 'target',
+          title: 'Target note',
+          content: 'Current node'
+        })
+      }}
+      onRevealAnchorInDocument={vi.fn()}
+      onSelectNode={onSelectNode}
+      reviewCurrentNodeId={null}
+      reviewQueueNodeIds={[]}
+      reviewSchedulerSettings={{} as never}
+      trashedNodeIds={[]}
+    />
+  );
+
+  expect(screen.getByRole('heading', { level: 3, name: 'Backlinks' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /source note/i }));
+
+  expect(onSelectNode).toHaveBeenCalledWith('source');
+});

@@ -2,17 +2,17 @@ import { Compartment, EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import { bypassAnchorStructureGuard } from './anchorStructureGuard';
-import {
-  createCodeMirrorEditorExtensions,
-  createLiveMarkdownEffect
-} from './codeMirrorEditorAdapterConfig';
+import { createCodeMirrorEditorExtensions } from './codeMirrorEditorAdapterConfig';
 import {
   RemoteImageLocalizationController,
+  dispatchLiveMarkdownReconfigure,
   type CodeMirrorEditorAdapterOptions
 } from './codeMirrorEditorAdapterSupport';
 import {
   alignSelectionInViewport,
+  readEditorScrollMetrics,
   reconfigureDecorationCompartment,
+  resolveDocumentPositionAtViewportY,
   subscribeToEditorScroll
 } from './codeMirrorEditorAdapterView';
 import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
@@ -92,17 +92,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.remoteImageLocalization.destroy();
     this.view.destroy();
   }
-
   focus() { this.view.focus(); }
-
   getContent() { return this.view.state.doc.toString(); }
-
-  getDocumentPositionAtViewportY(clientY: number) {
-    const contentRect = this.view.contentDOM.getBoundingClientRect();
-    const x = contentRect.left + Math.min(Math.max(contentRect.width * 0.52, 160), contentRect.width - 24);
-    return this.view.posAtCoords({ x, y: clientY }, false);
-  }
-
+  getDocumentPositionAtViewportY(clientY: number) { return resolveDocumentPositionAtViewportY(this.view, clientY); }
   revealPosition(position: number) {
     const anchor = this.clampPosition(position);
     this.view.dispatch({
@@ -117,7 +109,6 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     if (currentContent === content) {
       return;
     }
-
     this.isApplyingExternalContent = true;
     try {
       this.view.dispatch({
@@ -133,7 +124,6 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.hideTitleHeading = hideTitleHeading;
     this.reconfigureLiveMarkdown();
   }
-
   setNodeId(nodeId: string | null) {
     this.nodeId = nodeId;
     this.reconfigureLiveMarkdown();
@@ -144,7 +134,6 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.imageClozePresentationVersion += 1;
     this.reconfigureLiveMarkdown();
   }
-
   setHiddenTextAnchorKeys(hiddenTextAnchorKeys: readonly string[]) {
     if (
       this.hiddenTextAnchorKeys.length === hiddenTextAnchorKeys.length &&
@@ -155,20 +144,15 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.hiddenTextAnchorKeys = [...hiddenTextAnchorKeys];
     this.reconfigureLiveMarkdown();
   }
-
   getSelection(): EditorSelection {
     const { from, to } = this.view.state.selection.main;
     return { from, to };
   }
 
-  getSelectionRanges(): EditorSelection[] {
-    return toEditorSelectionRanges(this.view.state.selection);
-  }
-
+  getSelectionRanges(): EditorSelection[] { return toEditorSelectionRanges(this.view.state.selection); }
   setSelection(selection: EditorSelection) {
     this.setSelectionRanges([selection]);
   }
-
   setSelectionRanges(selections: EditorSelection[]) {
     this.view.dispatch({
       selection: createCodeMirrorSelection(selections, (position) => this.clampPosition(position)),
@@ -204,7 +188,6 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   getScrollTop() {
     return this.view.scrollDOM.scrollTop;
   }
-
   getLineBlockHeight(lineNumber: number) {
     if (lineNumber < 1 || lineNumber > this.view.state.doc.lines) {
       return 0;
@@ -221,12 +204,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   getScrollMetrics(): EditorScrollMetrics {
-    const scroller = this.view.scrollDOM;
-    return {
-      clientHeight: scroller.clientHeight,
-      scrollHeight: scroller.scrollHeight,
-      scrollTop: scroller.scrollTop
-    };
+    return readEditorScrollMetrics(this.view);
   }
 
   replaceSelection(content: string) {
@@ -268,19 +246,16 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     };
   }
 
-  onScroll(listener: () => void) {
-    return subscribeToEditorScroll(this.view, listener);
-  }
+  onScroll(listener: () => void) { return subscribeToEditorScroll(this.view, listener); }
   private reconfigureLiveMarkdown() {
-    this.view.dispatch({
-      effects: createLiveMarkdownEffect({
-        compartment: this.liveMarkdownCompartment,
-        hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
-        hideTitleHeading: this.hideTitleHeading,
-        imageClozePresentationVersion: this.imageClozePresentationVersion,
-        nodeId: this.nodeId,
-        onOpenNodeLink: this.onOpenNodeLink
-      })
+    dispatchLiveMarkdownReconfigure({
+      compartment: this.liveMarkdownCompartment,
+      hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
+      hideTitleHeading: this.hideTitleHeading,
+      imageClozePresentationVersion: this.imageClozePresentationVersion,
+      nodeId: this.nodeId,
+      onOpenNodeLink: this.onOpenNodeLink,
+      view: this.view
     });
   }
 }

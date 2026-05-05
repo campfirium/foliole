@@ -5,9 +5,13 @@ const spies = vi.hoisted(() => ({
   buildFrontmatterDecorationState: vi.fn()
 }));
 
+const { openExternalUrl } = vi.hoisted(() => ({
+  openExternalUrl: vi.fn()
+}));
+
 vi.mock('../../../shared/platform/bridge', () => ({
   getRuntimeInvoke: vi.fn(() => null),
-  openExternalUrl: vi.fn()
+  openExternalUrl
 }));
 
 vi.mock('./liveMarkdownAnchors', async () => {
@@ -113,6 +117,22 @@ describe('liveMarkdown imported content rendering', () => {
 
     expect(highlightTexts.some((text) => text.includes('你提到的一些 GTD 元素你没用过'))).toBe(true);
     expect(highlightTexts.some((text) => text.includes('每周回顾'))).toBe(true);
+
+    adapter.destroy();
+  });
+
+  it('opens matching workspace nodes when a wiki link is clicked', () => {
+    const host = createHost();
+    const onOpenNodeLink = vi.fn();
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: 'See [[Alpha topic]] next.', onOpenNodeLink });
+
+    const link = host.querySelector('[data-md-link-node-title="Alpha topic"]');
+    expect(link).not.toBeNull();
+
+    link?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(onOpenNodeLink).toHaveBeenCalledWith('Alpha topic');
+    expect(openExternalUrl).not.toHaveBeenCalled();
 
     adapter.destroy();
   });

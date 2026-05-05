@@ -10,6 +10,7 @@ const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
   'review-queue',
   'source-info',
   'highlights',
+  'backlinks',
   'performance',
   'dev'
 ];

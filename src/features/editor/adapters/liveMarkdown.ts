@@ -12,7 +12,12 @@ import { handleInternalClipboardPaste } from './htmlPaste';
 import { getCursorLineNumber } from './liveMarkdownAnchors';
 import { codeFenceLineNumbersField, resolveCodeBlockStateBeforeLine } from './liveMarkdownCodeBlocks';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
-import { addImageDecorations, addInlineCodeDecorations, addInlineLinkDecorations } from './liveMarkdownInlineDecorations';
+import {
+  addImageDecorations,
+  addInlineCodeDecorations,
+  addInlineLinkDecorations,
+  addWikiLinkDecorations
+} from './liveMarkdownInlineDecorations';
 import { collectPreviewLineMatchState, collectSourceLineMatchState } from './liveMarkdownLineMatches';
 import {
   addCodeFenceDecoration,
@@ -48,17 +53,23 @@ const hiddenTextAnchorKeysFacet = Facet.define<readonly string[], readonly strin
   combine: (values) => values[0] ?? []
 });
 
+const openNodeLinkFacet = Facet.define<((title: string) => void) | null, ((title: string) => void) | null>({
+  combine: (values) => values[0] ?? null
+});
+
 export function createLiveMarkdown(
   hideTitleHeading = false,
   nodeId: string | null = null,
   imageClozePresentationVersion = 0,
-  hiddenTextAnchorKeys: readonly string[] = []
+  hiddenTextAnchorKeys: readonly string[] = [],
+  onOpenNodeLink: ((title: string) => void) | null = null
 ) {
   return [
     hideTitleHeadingFacet.of(hideTitleHeading),
     activeNodeIdFacet.of(nodeId),
     imageClozePresentationVersionFacet.of(imageClozePresentationVersion),
     hiddenTextAnchorKeysFacet.of(hiddenTextAnchorKeys),
+    openNodeLinkFacet.of(onOpenNodeLink),
     liveMarkdownTheme,
     codeFenceLineNumbersField,
     markdownStaticPlugin,
@@ -85,7 +96,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     const lineClass = createLineClass(line.text, inCodeBlock);
     const isCursorLine = cursorLineNumber !== null && lineNumber === cursorLineNumber;
     const showSyntaxOnLine = showMarkdownSyntax && isCursorLine;
-    const { clozePlaceholderRanges, footnoteMatches, footnoteRanges, imageMatches, inlineCodeMatches, inlineLinkMatches, preservedRanges } =
+    const { clozePlaceholderRanges, footnoteMatches, footnoteRanges, imageMatches, inlineCodeMatches, inlineLinkMatches, preservedRanges, wikiLinkMatches } =
       collectPreviewLineMatchState(line.from, line.text, inCodeBlock);
 
     if (lineClass) {
@@ -104,6 +115,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     addFootnoteDecorations(ranges, footnoteMatches);
     addInlineCodeDecorations(ranges, inlineCodeMatches, showSyntaxOnLine);
     addInlineLinkDecorations(ranges, inlineLinkMatches, showSyntaxOnLine);
+    addWikiLinkDecorations(ranges, wikiLinkMatches, showSyntaxOnLine);
     addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, showSyntaxOnLine, preservedRanges.concat(footnoteRanges));
     addStrongTextDecorations(ranges, line.from, line.text, inCodeBlock);
     addSemanticMarkDecorations(ranges, line.from, line.text, inCodeBlock);
@@ -122,7 +134,7 @@ function buildSourceModeLineDecorations(view: EditorView): DecorationSet {
 
   for (let lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
-    const { clozePlaceholderRanges, footnoteMatches, footnoteRanges, inlineCodeMatches, inlineLinkMatches, preservedRanges } =
+    const { clozePlaceholderRanges, footnoteMatches, footnoteRanges, inlineCodeMatches, inlineLinkMatches, preservedRanges, wikiLinkMatches } =
       collectSourceLineMatchState(line.from, line.text, inCodeBlock);
 
     addPrefixDecoration(ranges, line.from, line.text, true);
@@ -130,6 +142,7 @@ function buildSourceModeLineDecorations(view: EditorView): DecorationSet {
     addFootnoteDecorations(ranges, footnoteMatches);
     addInlineCodeSyntaxDecorations(ranges, inlineCodeMatches);
     addInlineLinkDecorations(ranges, inlineLinkMatches, true);
+    addWikiLinkDecorations(ranges, wikiLinkMatches, true);
     addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, true, preservedRanges.concat(footnoteRanges));
     addClozePlaceholderDecorations(ranges, clozePlaceholderRanges);
 
@@ -185,12 +198,24 @@ const markdownInteractionHandlers = EditorView.domEventHandlers({
     if (!(element instanceof HTMLElement)) return false;
 
     const linkElement = element.closest('[data-md-link-url]');
-    if (!(linkElement instanceof HTMLElement)) return false;
-    const href = linkElement.dataset.mdLinkUrl;
-    if (!href) return false;
+    if (linkElement instanceof HTMLElement) {
+      const href = linkElement.dataset.mdLinkUrl;
+      if (!href) return false;
+      event.preventDefault();
+      void openExternalUrl(href);
+      return true;
+    }
+
+    const wikiLinkElement = element.closest('[data-md-link-node-title]');
+    if (!(wikiLinkElement instanceof HTMLElement)) return false;
+    const title = wikiLinkElement.dataset.mdLinkNodeTitle;
+    const editorHost = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    const editorView = editorHost ? EditorView.findFromDOM(editorHost) : null;
+    const onOpenNodeLink = editorView?.state.facet(openNodeLinkFacet) ?? null;
+    if (!title || !onOpenNodeLink) return false;
 
     event.preventDefault();
-    void openExternalUrl(href);
+    onOpenNodeLink(title);
     return true;
   },
   copy(event, view) {

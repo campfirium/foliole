@@ -42,6 +42,27 @@ export function createEmptyDecorationsEffect(compartment: Compartment) {
   return compartment.reconfigure(EditorView.decorations.of(Decoration.none));
 }
 
+export function dispatchLiveMarkdownReconfigure(args: {
+  compartment: Compartment;
+  hiddenTextAnchorKeys: readonly string[];
+  hideTitleHeading: boolean;
+  imageClozePresentationVersion: number;
+  nodeId: string | null;
+  onOpenNodeLink: ((title: string) => void) | null;
+  view: EditorView;
+}) {
+  args.view.dispatch({
+    effects: createLiveMarkdownReconfigureEffect({
+      compartment: args.compartment,
+      hiddenTextAnchorKeys: args.hiddenTextAnchorKeys,
+      hideTitleHeading: args.hideTitleHeading,
+      imageClozePresentationVersion: args.imageClozePresentationVersion,
+      nodeId: args.nodeId,
+      onOpenNodeLink: args.onOpenNodeLink
+    })
+  });
+}
+
 export class RemoteImageLocalizationController {
   private localizationRunId = 0;
   private localizationTimer: ReturnType<typeof setTimeout> | null = null;

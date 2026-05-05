@@ -1,5 +1,11 @@
 import { collectFootnoteMatches } from './liveMarkdownFootnotes';
-import { collectImageMatches, collectInlineCodeMatches, collectInlineLinkMatches, type RangeBounds } from './liveMarkdownInlineDecorations';
+import {
+  collectImageMatches,
+  collectInlineCodeMatches,
+  collectInlineLinkMatches,
+  collectWikiLinkDecorations,
+  type RangeBounds
+} from './liveMarkdownInlineDecorations';
 import { collectClozePlaceholderRanges } from './liveMarkdownTextMarks';
 
 interface MarkdownLineMatchState {
@@ -8,6 +14,7 @@ interface MarkdownLineMatchState {
   imageMatches: ReturnType<typeof collectImageMatches>;
   inlineCodeMatches: ReturnType<typeof collectInlineCodeMatches>;
   inlineLinkMatches: ReturnType<typeof collectInlineLinkMatches>;
+  wikiLinkMatches: ReturnType<typeof collectWikiLinkDecorations>;
   preservedRanges: RangeBounds[];
   footnoteMatches: ReturnType<typeof collectFootnoteMatches>;
 }
@@ -22,7 +29,8 @@ export function collectPreviewLineMatchState(lineFrom: number, lineText: string,
   const footnoteMatches = inCodeBlock ? [] : collectFootnoteMatches(lineFrom, lineText, preservedRanges);
   const footnoteRanges = footnoteMatches.map((match) => ({ from: match.from, to: match.to }));
   const inlineLinkMatches = inCodeBlock ? [] : collectInlineLinkMatches(lineFrom, lineText, preservedRanges.concat(footnoteRanges));
-  return { clozePlaceholderRanges, footnoteRanges, imageMatches, inlineCodeMatches, inlineLinkMatches, preservedRanges, footnoteMatches };
+  const wikiLinkMatches = inCodeBlock ? [] : collectWikiLinkDecorations(lineFrom, lineText, preservedRanges.concat(footnoteRanges));
+  return { clozePlaceholderRanges, footnoteRanges, imageMatches, inlineCodeMatches, inlineLinkMatches, wikiLinkMatches, preservedRanges, footnoteMatches };
 }
 
 export function collectSourceLineMatchState(lineFrom: number, lineText: string, inCodeBlock: boolean): MarkdownLineMatchState {
@@ -32,14 +40,15 @@ export function collectSourceLineMatchState(lineFrom: number, lineText: string, 
   const footnoteMatches = inCodeBlock ? [] : collectFootnoteMatches(lineFrom, lineText, preservedRanges);
   const footnoteRanges = footnoteMatches.map((match) => ({ from: match.from, to: match.to }));
   const inlineLinkMatches = inCodeBlock ? [] : collectInlineLinkMatches(lineFrom, lineText, preservedRanges.concat(footnoteRanges));
+  const wikiLinkMatches = inCodeBlock ? [] : collectWikiLinkDecorations(lineFrom, lineText, preservedRanges.concat(footnoteRanges));
   return {
     clozePlaceholderRanges,
     footnoteRanges,
     imageMatches: [],
     inlineCodeMatches,
     inlineLinkMatches,
+    wikiLinkMatches,
     preservedRanges,
     footnoteMatches
   };
 }
-

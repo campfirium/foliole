@@ -92,14 +92,16 @@ function resetMocks() {
   });
 }
 
-describe('MarkdownEditor rendering', () => {
+function setupRenderingSuite() {
   resetMocks();
 
   beforeEach(() => {
     mockResizeObserver.mockClear();
     vi.stubGlobal('ResizeObserver', vi.fn().mockImplementation(mockResizeObserverFactory));
   });
+}
 
+function registerRenderingLifecycleTests() {
   it('does not recreate editor adapter when value changes', () => {
     const onChange = vi.fn();
     const view = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={onChange} value="a" />);
@@ -116,6 +118,36 @@ describe('MarkdownEditor rendering', () => {
     expect(mockDestroy).toHaveBeenCalledTimes(1);
   });
 
+  it('updates title-heading visibility without recreating editor adapter', () => {
+    const onChange = vi.fn();
+    const view = renderWithMouseGestureProvider(<MarkdownEditor hideTitleHeading={false} nodeId="node-1" onChange={onChange} value="a" />);
+
+    expect(mockCtor).toHaveBeenCalledTimes(1);
+
+    view.rerender(<MarkdownEditor hideTitleHeading={true} nodeId="node-1" onChange={onChange} value="a" />);
+
+    expect(mockCtor).toHaveBeenCalledTimes(1);
+    expect(mockSetHideTitleHeading).toHaveBeenCalledWith(true);
+  });
+
+  it('does not recreate editor adapter when the node-link callback changes identity', () => {
+    const onChange = vi.fn();
+    const view = renderWithMouseGestureProvider(
+      <MarkdownEditor nodeId="node-1" onChange={onChange} onOpenNodeLink={() => undefined} value="a" />
+    );
+
+    expect(mockCtor).toHaveBeenCalledTimes(1);
+
+    view.rerender(
+      <MarkdownEditor nodeId="node-1" onChange={onChange} onOpenNodeLink={() => undefined} value="a" />
+    );
+
+    expect(mockCtor).toHaveBeenCalledTimes(1);
+    expect(mockDestroy).not.toHaveBeenCalled();
+  });
+}
+
+function registerRenderingSurfaceTests() {
   it('applies custom bottom padding when requested', () => {
     const { container } = renderWithMouseGestureProvider(
       <MarkdownEditor contentPaddingBottom="min(68dvh, 36rem)" nodeId="node-1" onChange={vi.fn()} value="a" />
@@ -142,18 +174,12 @@ describe('MarkdownEditor rendering', () => {
 
     expect(mockResizeObserver).toHaveBeenCalledTimes(1);
   });
+}
 
-  it('updates title-heading visibility without recreating editor adapter', () => {
-    const onChange = vi.fn();
-    const view = renderWithMouseGestureProvider(<MarkdownEditor hideTitleHeading={false} nodeId="node-1" onChange={onChange} value="a" />);
-
-    expect(mockCtor).toHaveBeenCalledTimes(1);
-
-    view.rerender(<MarkdownEditor hideTitleHeading={true} nodeId="node-1" onChange={onChange} value="a" />);
-
-    expect(mockCtor).toHaveBeenCalledTimes(1);
-    expect(mockSetHideTitleHeading).toHaveBeenCalledWith(true);
-  });
+describe('MarkdownEditor rendering', () => {
+  setupRenderingSuite();
+  registerRenderingLifecycleTests();
+  registerRenderingSurfaceTests();
 });
 
 describe('MarkdownEditor image preview', () => {

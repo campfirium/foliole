@@ -3,6 +3,7 @@ import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+import { WorkspaceRightSidebarBacklinksPanel } from './WorkspaceRightSidebarBacklinksPanel';
 import { WorkspaceRightSidebarDevPanel } from './WorkspaceRightSidebarDevPanel';
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
 import { WorkspaceRightSidebarPerformancePanel } from './WorkspaceRightSidebarPerformancePanel';
@@ -22,6 +23,9 @@ function getPanelTitle(panelId: WorkspaceRightPanelId) {
   }
   if (panelId === 'highlights') {
     return 'Highlights';
+  }
+  if (panelId === 'backlinks') {
+    return 'Backlinks';
   }
   return 'Review queue';
 }
@@ -59,6 +63,17 @@ function renderPanel(
   }
   if (props.activePanelId === 'highlights') {
     return renderHighlightsPanel(props);
+  }
+  if (props.activePanelId === 'backlinks') {
+    return (
+      <WorkspaceRightSidebarBacklinksPanel
+        activeNodeId={props.activeNodeId}
+        nodeOrder={props.nodeOrder}
+        nodesById={props.nodesById}
+        onSelectNode={props.onSelectNode}
+        trashedNodeIds={props.trashedNodeIds}
+      />
+    );
   }
   return (
     <WorkspaceRightSidebarReviewQueuePanel

@@ -44,6 +44,7 @@ export interface DocumentPanelBodyLayoutProps {
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onOpenNodeLink?: (title: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onPromptImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onPromptImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
@@ -128,6 +129,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         onContextMenu={props.onEditorContextMenu}
         onFitBlockImageMetricsChange={props.onPromptImageMetricsChange}
         onImageLoadStateChange={props.onPromptImageLoadStateChange}
+        onOpenNodeLink={props.onOpenNodeLink}
         onReady={props.onEditorReady}
         readOnly={props.readOnly}
         value={props.editorContent}

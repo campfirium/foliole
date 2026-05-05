@@ -5,6 +5,7 @@ import { collectImageMatches, createMarkdownImageWidgetDom, type MarkdownImageMa
 import { addMark, addReplace } from './liveMarkdownPrimitives';
 
 const INLINE_LINK_PATTERN = /(?<!!)\[([^\]\n]*)\]\(([^)\n]*)\)/g;
+const WIKI_LINK_PATTERN = /(?<!!)\[\[([^\]\n]+)\]\]/g;
 
 export interface RangeBounds {
   from: number;
@@ -21,6 +22,13 @@ export interface InlineLinkMatch extends RangeBounds {
   labelTo: number;
   hiddenRanges: RangeBounds[];
   href: string;
+}
+
+export interface WikiLinkMatch extends RangeBounds {
+  hiddenRanges: RangeBounds[];
+  labelFrom: number;
+  labelTo: number;
+  title: string;
 }
 
 class MarkdownImageWidget extends WidgetType {
@@ -191,6 +199,56 @@ export function addInlineLinkDecorations(
   for (const linkMatch of linkMatches) {
     addMark(ranges, linkMatch.labelFrom, linkMatch.labelTo, 'cm-md-link-text', {
       'data-md-link-url': linkMatch.href
+    });
+
+    for (const hiddenRange of linkMatch.hiddenRanges) {
+      if (showSyntax) addMark(ranges, hiddenRange.from, hiddenRange.to, 'cm-md-syntax-visible');
+      else addReplace(ranges, hiddenRange.from, hiddenRange.to);
+    }
+  }
+}
+
+export function collectWikiLinkDecorations(
+  from: number,
+  text: string,
+  preservedRanges: ReadonlyArray<RangeBounds>
+): WikiLinkMatch[] {
+  const matches: WikiLinkMatch[] = [];
+  let match = WIKI_LINK_PATTERN.exec(text);
+  while (match) {
+    const start = from + match.index;
+    const title = (match[1] ?? '').trim();
+    const linkTo = start + (match[0]?.length ?? 0);
+    const labelFrom = start + 2;
+    const labelTo = linkTo - 2;
+
+    if (title && !isWithinRanges(start, linkTo, preservedRanges)) {
+      matches.push({
+        from: start,
+        to: linkTo,
+        hiddenRanges: [
+          { from: start, to: start + 2 },
+          { from: linkTo - 2, to: linkTo }
+        ],
+        labelFrom,
+        labelTo,
+        title
+      });
+    }
+    match = WIKI_LINK_PATTERN.exec(text);
+  }
+  WIKI_LINK_PATTERN.lastIndex = 0;
+  return matches;
+}
+
+export function addWikiLinkDecorations(
+  ranges: Range<Decoration>[],
+  linkMatches: ReadonlyArray<WikiLinkMatch>,
+  showSyntax: boolean
+) {
+  for (const linkMatch of linkMatches) {
+    addMark(ranges, linkMatch.labelFrom, linkMatch.labelTo, 'cm-md-link-text', {
+      'data-md-link-node-title': linkMatch.title
     });
 
     for (const hiddenRange of linkMatch.hiddenRanges) {

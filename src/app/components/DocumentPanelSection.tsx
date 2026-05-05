@@ -1,12 +1,11 @@
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorSearchDecorations, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import { createInlineAnchorKey } from '../../features/editor/adapters/liveMarkdownAnchors';
+import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, type ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import {
   markDocumentPanelBound,
   markNodeBodyPainted,
@@ -17,9 +16,15 @@ import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
+import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
 import { getDocumentPanelView } from './documentPanelSectionModel';
 import { DocumentPanelSectionOverlays } from './DocumentPanelSectionOverlays';
 import { DocumentPanelSectionShell } from './DocumentPanelSectionShell';
+import {
+  buildResolvedDocumentPanelProps,
+  collectHiddenTextAnchorKeys,
+  useDocumentPanelInteractions
+} from './documentPanelSectionSupport';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
 import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
@@ -76,30 +81,6 @@ export interface DocumentPanelSectionProps {
   nodesById: Record<string, Node>;
 }
 
-function collectHiddenTextAnchorKeys(args: {
-  activeNodeId: string | null;
-  nodesById: Record<string, Node>;
-  trashedNodeIds: string[];
-}) {
-  if (!args.activeNodeId) {
-    return [];
-  }
-  const hiddenKeys = new Set<string>();
-  for (const trashedNodeId of args.trashedNodeIds) {
-    const node = args.nodesById[trashedNodeId];
-    if (
-      !node ||
-      node.parentNodeId !== args.activeNodeId ||
-      !node.anchorLink ||
-      node.anchorLink.locator
-    ) {
-      continue;
-    }
-    hiddenKeys.add(createInlineAnchorKey(node.anchorLink));
-  }
-  return [...hiddenKeys];
-}
-
 function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
@@ -125,8 +106,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     isSourceUpdatePanelOpen,
     sourceUpdatePreview
   } = useDocumentPanelSourceUpdateState(props);
-  const emptyContent = loadingLabel ? <LoadingDocumentPanelContent loadingLabel={loadingLabel} /> : undefined;
-
+  const emptyContent = loadingLabel ? <DocumentPanelLoadingContent loadingLabel={loadingLabel} /> : undefined;
   useDocumentPanelPerformanceMarkers(props, Boolean(bodyProps.emptyState), isEditorDocumentLoaded);
 
   useDocumentPanelImageClozePresentation({
@@ -177,62 +157,32 @@ function useDocumentPanelPerformanceMarkers(
   }, [isEditorDocumentLoaded, isEmptyState, props.editorContent, props.editorNodeId]);
 }
 
-function LoadingDocumentPanelContent({ loadingLabel }: { loadingLabel: string }) {
-  return (
-    <div className="flex min-h-0 flex-1 items-center justify-center">
-      <div
-        aria-label={loadingLabel}
-        className="h-7 w-7 animate-spin rounded-full border-2 border-border border-t-foreground/55"
-      />
-    </div>
-  );
-}
-
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
   const model = useDocumentPanelSectionModel(props);
-  const editorAdapterRef = useRef<EditorAdapter | null>(null);
-  const resolvedProps = {
-    ...props,
-    isPriorityQuickSetActive: props.isPriorityQuickSetActive ?? false,
-    onNodePriorityChange: props.onNodePriorityChange ?? (() => undefined),
-    priorityQuickSetShortcutLabel: props.priorityQuickSetShortcutLabel ?? '',
-    reviewSchedulerSettings: props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS
-  };
-
-  function handleEditorReady(adapter: EditorAdapter | null) {
-    editorAdapterRef.current = adapter;
-    props.onEditorReady(adapter);
-  }
-
-  function handlePreviewDocumentSelection(selection: EditorSelection) {
-    editorAdapterRef.current?.restoreSelection(selection);
-  }
-
-  function handlePreviewTopicSearchDecorations(searchDecorations: EditorSearchDecorations | null) {
-    editorAdapterRef.current?.setSearchDecorations(searchDecorations);
-  }
-
+  const interactions = useDocumentPanelInteractions(props);
+  const resolvedProps = buildResolvedDocumentPanelProps(props);
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={model.documentLayoutStyle}>
       <DocumentPanelSectionShell
         bodyProps={{
           ...model.bodyProps,
-          onEditorReady: handleEditorReady,
+          onEditorReady: interactions.handleEditorReady,
           hiddenTextAnchorKeys: model.hiddenTextAnchorKeys,
-          emptyContent: model.emptyContent
+          emptyContent: model.emptyContent,
+          onOpenNodeLink: interactions.handleOpenNodeLink
         }}
         isFolderListView={model.isFolderListView}
         isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}
         onToggleSourceUpdatePanel={() =>
           model.handleSourceUpdatePanelOpenChange(!model.isSourceUpdatePanelOpen)
         }
-        onPreviewTopicSearchDecorations={handlePreviewTopicSearchDecorations}
+        onPreviewTopicSearchDecorations={interactions.handlePreviewTopicSearchDecorations}
         props={{
           ...resolvedProps,
-          onEditorReady: handleEditorReady
+          onEditorReady: interactions.handleEditorReady
         }}
-        onPreviewDocumentSelection={handlePreviewDocumentSelection}
+        onPreviewDocumentSelection={interactions.handlePreviewDocumentSelection}
         showSourceUpdateAction={Boolean(model.sourceUpdatePreview)}
       />
       <DocumentPanelSectionOverlays

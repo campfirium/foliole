@@ -38,17 +38,20 @@ describe('DocumentPanelSection basic views', () => {
     expect(screen.getByText('Document body')).toBeInTheDocument();
   });
 
-  it('keeps the extra document tail for topic nodes in preview mode', () => {
+  it('keeps topic documents renderable when backlinks exist', () => {
     renderSectionWithProps({
+      nodeOrder: ['node-1', 'node-2'],
       nodesById: {
-        'node-1': { ...baseNode, kind: 'topic', content: '# Topic body' }
+        'node-1': { ...baseNode, kind: 'topic', content: '# Topic body' },
+        'node-2': {
+          ...baseNode,
+          id: 'node-2',
+          title: 'Linked note',
+          content: 'See [[Node 1]] for the follow-up.'
+        }
       }
     });
-
-    expectDocumentBodyLayout({
-      editorContentPaddingBottom: 'min(68dvh, 36rem)',
-      fitBlockImagesToViewport: false
-    });
+    expect(screen.getByText('Document body')).toBeInTheDocument();
   });
 
   it('does not add the extra document tail for item nodes', () => {

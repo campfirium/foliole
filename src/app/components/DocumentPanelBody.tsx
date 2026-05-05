@@ -39,6 +39,7 @@ interface DocumentPanelBodyProps {
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onOpenNodeLink?: (title: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onPromptImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
   onPromptImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
