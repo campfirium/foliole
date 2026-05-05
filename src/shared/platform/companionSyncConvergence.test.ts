@@ -94,6 +94,29 @@ describe('buildSyncConvergenceReport', () => {
     ]));
   });
 
+  it('blocks skipped passes that ended with push conflicts or rejections', () => {
+    const report = buildSyncConvergenceReport(result({
+      android: {
+        ...result().android!,
+        events: [{
+          endpoint_url: 'http://10.0.2.2:38641',
+          message: 'Sync pass finished; 2 device change(s) need review before they can be sent.',
+          occurred_at: '2026-05-01T00:03:00.000Z',
+          status: 'skipped'
+        }]
+      }
+    }));
+
+    expect(report.status).toBe('blocked');
+    expect(report.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'push_conflict_or_rejection_waiting',
+        detail: 'Sync pass finished; 2 device change(s) need review before they can be sent.',
+        severity: 'error'
+      })
+    ]));
+  });
+
   it('blocks completed events that still have structure or resource backlog', () => {
     const report = buildSyncConvergenceReport(result({
       android: {

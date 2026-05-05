@@ -61,6 +61,7 @@ export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult)
     return { checks, status: deriveStatus(checks) };
   }
   checks.push(...buildLocalStateChecks(result));
+  checks.push(...buildEventStateChecks(result));
   checks.push(...buildStructureChecks(result));
   checks.push(...buildResourceChecks(result));
   checks.push(...buildCompletedEventChecks(result));
@@ -112,6 +113,18 @@ function buildStructureChecks(result: CombinedSyncDiagnosticResult) {
   return lag > 0
     ? [check('structure_lag_exists', 'info', 'Desktop structure changes are still available', `${lag} desktop state change(s) have not reached Android.`)]
     : [];
+}
+
+function buildEventStateChecks(result: CombinedSyncDiagnosticResult) {
+  const latest = latestEvent(result.android?.events ?? []);
+  if (latest?.status !== 'skipped') return [];
+  if (!latest.message.includes('need review before they can be sent')) return [];
+  return [check(
+    'push_conflict_or_rejection_waiting',
+    'error',
+    'Device changes need review before sending',
+    latest.message
+  )];
 }
 
 function buildResourceChecks(result: CombinedSyncDiagnosticResult) {
