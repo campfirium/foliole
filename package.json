@@ -1,6 +1,9 @@
 {
   "name": "foliole",
   "version": "0.1.0",
+  "description": "Desktop knowledge workspace for local reading and review.",
+  "author": "Foliole",
+  "license": "Apache-2.0",
   "private": true,
   "packageManager": "npm@11.12.0",
   "type": "module",
@@ -106,7 +109,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.27",
     "electron": "41.2.1",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "26.8.1",
     "eslint": "^9.21.0",
     "eslint-plugin-import": "^2.31.0",
     "globals": "^15.15.0",

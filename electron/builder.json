@@ -1,21 +1,31 @@
 {
   "appId": "com.foliole.desktop",
   "productName": "Foliole",
+  "copyright": "Copyright (c) 2026 Foliole",
   "directories": {
     "output": "release"
   },
+  "asar": true,
+  "asarUnpack": [
+    "**/node_modules/better-sqlite3/**"
+  ],
+  "npmRebuild": true,
+  "nativeRebuilder": "sequential",
   "files": [
     "dist/**/*",
     "electron-dist/**/*",
     "package.json"
   ],
   "win": {
-    "target": ["nsis"]
+    "target": ["nsis"],
+    "requestedExecutionLevel": "asInvoker"
   },
   "linux": {
-    "target": ["AppImage"]
+    "target": ["AppImage"],
+    "category": "Education"
   },
   "mac": {
-    "target": ["dmg"]
+    "target": ["dmg"],
+    "category": "public.app-category.education"
   }
 }
