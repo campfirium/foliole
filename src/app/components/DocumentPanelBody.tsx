@@ -66,7 +66,11 @@ function DocumentWidthHandle({ ariaLabel, onPointerDown, onResetLayout, side }: 
 
 function AnswerSection({ editorAppearanceKey, editorNodeId, onAnswerChange, reveal }: AnswerSectionProps) {
   return (
-    <section aria-label="Cloze answer section" className="flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden border-t border-border pt-3">
+    <section aria-label="Cloze answer section" className="relative flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden pt-3">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-0 h-px -translate-x-1/2 bg-border [width:min(100%,var(--document-max-width))]"
+      />
       <MarkdownEditor
         ariaLabel="Answer editor"
         className="answer-editor-host min-h-0"

@@ -15,6 +15,35 @@ interface WorkspaceContentProps {
   props: WorkspaceLayoutProps;
 }
 
+function ListStudyStatusBar({ isStudyMode, reviewDueCount }: { isStudyMode: boolean; reviewDueCount: number }) {
+  if (!isStudyMode) {
+    return null;
+  }
+  return (
+    <div className="flex h-[56px] flex-none items-center border-t border-border bg-bg-panel px-3">
+      <p className="truncate text-xs font-medium text-foreground/70">Reviewing · {Math.max(reviewDueCount, 0)} due</p>
+    </div>
+  );
+}
+
+function WorkspaceListArea({ props }: { props: WorkspaceLayoutProps }) {
+  return (
+    <div className="flex min-h-0 flex-col overflow-hidden bg-bg-panel text-foreground">
+      <NodeListTree
+        activeNodeId={props.activeNodeId}
+        isTrashViewOpen={props.isTrashViewOpen}
+        nodeOrder={props.nodeOrder}
+        nodesById={props.nodesById}
+        onOpenNotesView={props.onOpenNotesView}
+        onSelectNode={props.onSelectNode}
+        onSelectTrashNode={props.onSelectTrashNode}
+        selectedTrashNodeId={props.selectedTrashNodeId}
+      />
+      <ListStudyStatusBar isStudyMode={props.isStudyMode} reviewDueCount={props.reviewDueCount} />
+    </div>
+  );
+}
+
 function WorkspaceDocumentArea({ documentNodeId, props }: WorkspaceContentProps) {
   return (
     <section aria-label="Document and review area" className="flex min-h-0 flex-1 flex-col gap-0">
@@ -49,12 +78,10 @@ function WorkspaceDocumentArea({ documentNodeId, props }: WorkspaceContentProps)
         showAnswerSection={props.showAnswerSection}
       />
       <ReviewModeToolbar
-        canStartStudyMode={props.canStartStudyMode}
         isAnswerRevealed={props.isAnswerRevealed}
         isStudyMode={props.isStudyMode}
         onGrade={props.onGradeReview}
         onRevealAnswer={props.onRevealAnswer}
-        onStartStudyMode={props.onStartStudyMode}
       />
     </section>
   );
@@ -79,16 +106,7 @@ function WorkspaceGrid({ documentNodeId, props }: WorkspaceContentProps) {
           data-resizing={props.isResizingList}
           style={{ gridTemplateColumns: 'minmax(0, var(--workspace-list-width, 300px)) 1px minmax(0, 1fr)' }}
         >
-          <NodeListTree
-            activeNodeId={props.activeNodeId}
-            isTrashViewOpen={props.isTrashViewOpen}
-            nodeOrder={props.nodeOrder}
-            nodesById={props.nodesById}
-            onOpenNotesView={props.onOpenNotesView}
-            onSelectNode={props.onSelectNode}
-            onSelectTrashNode={props.onSelectTrashNode}
-            selectedTrashNodeId={props.selectedTrashNodeId}
-          />
+          <WorkspaceListArea props={props} />
           <WorkspaceListSplitter
             isResizingList={props.isResizingList}
             listWidth={props.listWidth}

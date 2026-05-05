@@ -63,9 +63,10 @@ it('runs study flow as Study -> Show Answer -> Grade buttons enabled', () => {
   expect(screen.getByRole('button', { name: 'Study' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Grade 1' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Again' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
-  expect(screen.getByRole('button', { name: 'Grade 1' })).toBeEnabled();
+  expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Again' })).toBeInTheDocument();
   expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument();
 });
 

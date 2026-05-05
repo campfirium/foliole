@@ -205,7 +205,7 @@ export function NodeListTree({ activeNodeId, isTrashViewOpen, nodeOrder, nodesBy
   };
   return (
     <>
-      <aside aria-label="Node list panel" className="flex min-h-0 flex-col bg-bg-panel text-foreground">
+      <aside aria-label="Node list panel" className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground">
         <NodeListHeader isTrashViewOpen={isTrashViewOpen} onCreateRootNode={(event) => (event.stopPropagation(), createRootNode(''))} onEmptyTrash={() => (state.trashRowIds.forEach((id) => deleteNodePermanently(id)), closeContextMenu())} onOpenNotesView={onOpenNotesView} trashCount={state.trashRows.length} />
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-2">
           <section aria-label={isTrashViewOpen ? 'Trash section' : undefined} className="flex flex-1 flex-col gap-2">
