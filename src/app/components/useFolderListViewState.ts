@@ -65,12 +65,14 @@ export function useFolderListViewState(
   );
   const filteredNodes = useMemo(() => filterFolderListNodes(childNodes, searchQuery), [childNodes, searchQuery]);
   const itemCount = childNodes.length;
-  const itemCountLabel = searchQuery.trim() ? `${filteredNodes.length} / ${itemCount}` : formatItemCount(itemCount);
+  const itemCountLabel = formatItemCount(itemCount);
+  const searchResultLabel = searchQuery.trim() ? `${filteredNodes.length} / ${itemCount}` : null;
 
   return {
     filteredNodes,
     itemCountLabel,
     searchQuery,
+    searchResultLabel,
     sortDirection,
     sortKey,
     setSearchQuery: (nextSearchQuery: string) => {

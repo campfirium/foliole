@@ -228,6 +228,7 @@ export function FolderListView(props: FolderListViewProps) {
           onResetLayout={props.onResetLayout}
           onStartDocumentResize={props.onStartDocumentResize}
           searchQuery={state.searchQuery}
+          searchResultLabel={state.searchResultLabel}
           sortDirection={state.sortDirection}
           sortKey={state.sortKey}
         />

@@ -256,7 +256,8 @@ describe('FolderListView interactions', () => {
 
     expect(screen.queryByRole('button', { name: 'Open Alpha note' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open Beta note' })).toBeInTheDocument();
-    expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1 / 2');
+    expect(screen.getByTestId('folder-list-count')).toHaveTextContent('2');
+    expect(screen.getByLabelText('Folder search results 1 / 2')).toBeInTheDocument();
   });
 
   it('shows the real path on a second line for virtual results and splits title/path actions', () => {
