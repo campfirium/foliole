@@ -25,8 +25,7 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         int maxResources = FolioleCompanionMissingResourceQueryRules.attachmentLimit(context, limit);
         for (int index = 0; index < rows.length() && resources.length() < maxResources; index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            JSONObject rowKeys = rowKeys(context);
-            if (!isMissingResource(context, row.getString(rowKeys.getString("availability")), nullableString(row, rowKeys.getString("storageKey")))) continue;
+            if (!isMissingResource(context, row.getString(rowKey(context, "availability")), nullableString(row, rowKey(context, "storageKey")))) continue;
             resources.put(toResource(context, row));
         }
         JSObject result = new JSObject();
@@ -44,15 +43,14 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         );
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            JSONObject rowKeys = rowKeys(context);
-            if (!isMissingResource(context, row.getString(rowKeys.getString("availability")), nullableString(row, rowKeys.getString("storageKey")))) continue;
+            if (!isMissingResource(context, row.getString(rowKey(context, "availability")), nullableString(row, rowKey(context, "storageKey")))) continue;
             summary.add(
                 context,
-                row.getString(rowKeys.getString("availability")),
-                row.getLong(rowKeys.getString("sizeBytes")),
-                row.getString(rowKeys.getString("mimeType")),
-                row.getLong(rowKeys.getString("dueReview")) > 0,
-                row.getLong(rowKeys.getString("activeTopic")) > 0
+                row.getString(rowKey(context, "availability")),
+                row.getLong(rowKey(context, "sizeBytes")),
+                row.getString(rowKey(context, "mimeType")),
+                row.getLong(rowKey(context, "dueReview")) > 0,
+                row.getLong(rowKey(context, "activeTopic")) > 0
             );
         }
         return summary.toJson(context);
@@ -77,21 +75,19 @@ final class FolioleCompanionAttachmentResourceMissingStore {
             return result;
         }
         JSONObject row = rows.getJSONObject(0);
-        JSONObject rowKeys = rowKeys(context);
         result.put(
             FolioleCompanionMissingResourceQueryRules.attachmentEmptyResultKey(context),
-            isMissingResource(context, row.getString(rowKeys.getString("availability")), nullableString(row, rowKeys.getString("storageKey"))) ? toResource(context, row) : null
+            isMissingResource(context, row.getString(rowKey(context, "availability")), nullableString(row, rowKey(context, "storageKey"))) ? toResource(context, row) : null
         );
         return result;
     }
 
     private static JSObject toResource(Context context, JSONObject row) throws Exception {
-        JSONObject rowKeys = rowKeys(context);
         JSObject resource = new JSObject();
         JSONArray resourceFields = FolioleCompanionMissingResourceQueryRules.attachmentArray(context, "resourceFields");
         for (int index = 0; index < resourceFields.length(); index += 1) {
             JSONObject field = resourceFields.getJSONObject(index);
-            String rowKey = rowKeys.getString(fieldRowKey(context, field));
+            String rowKey = rowKey(context, fieldRowKey(context, field));
             String type = fieldTypeKey(context, field);
             resource.put(
                 fieldOutputKey(context, field),
@@ -142,11 +138,10 @@ final class FolioleCompanionAttachmentResourceMissingStore {
                 failedCount++;
                 failedBytes += sizeBytes;
             }
-            JSONObject categories = FolioleCompanionMissingResourceQueryRules.attachmentObject(context, "mimeCategories");
-            if (mimeType.startsWith(categories.getString("imagePrefix"))) {
+            if (mimeType.startsWith(FolioleCompanionMissingResourceQueryRules.attachmentMimeCategory(context, "imagePrefix"))) {
                 imageCount++;
                 imageBytes += sizeBytes;
-            } else if (mimeType.equals(categories.getString("pdfMimeType"))) {
+            } else if (mimeType.equals(FolioleCompanionMissingResourceQueryRules.attachmentMimeCategory(context, "pdfMimeType"))) {
                 pdfCount++;
                 pdfBytes += sizeBytes;
             } else {
@@ -158,26 +153,25 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         }
 
         JSObject toJson(Context context) throws Exception {
-            JSONObject keys = FolioleCompanionMissingResourceQueryRules.attachmentObject(context, "summaryKeys");
             JSObject summary = new JSObject();
-            summary.put(keys.getString("count"), count);
-            summary.put(keys.getString("bytes"), bytes);
-            summary.put(keys.getString("failedCount"), failedCount);
-            summary.put(keys.getString("failedBytes"), failedBytes);
-            summary.put(keys.getString("imageCount"), imageCount);
-            summary.put(keys.getString("imageBytes"), imageBytes);
-            summary.put(keys.getString("pdfCount"), pdfCount);
-            summary.put(keys.getString("pdfBytes"), pdfBytes);
-            summary.put(keys.getString("otherCount"), otherCount);
-            summary.put(keys.getString("otherBytes"), otherBytes);
-            summary.put(keys.getString("activeTopicCount"), activeTopicCount);
-            summary.put(keys.getString("dueReviewCount"), dueReviewCount);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "count"), count);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "bytes"), bytes);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "failedCount"), failedCount);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "failedBytes"), failedBytes);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "imageCount"), imageCount);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "imageBytes"), imageBytes);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "pdfCount"), pdfCount);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "pdfBytes"), pdfBytes);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "otherCount"), otherCount);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "otherBytes"), otherBytes);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "activeTopicCount"), activeTopicCount);
+            summary.put(FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "dueReviewCount"), dueReviewCount);
             return summary;
         }
     }
 
-    private static JSONObject rowKeys(Context context) throws Exception {
-        return FolioleCompanionMissingResourceQueryRules.attachmentObject(context, "rowKeys");
+    private static String rowKey(Context context, String key) throws Exception {
+        return FolioleCompanionMissingResourceQueryRules.attachmentRowKey(context, key);
     }
 
     private static String fieldOutputKey(Context context, JSONObject field) throws Exception {

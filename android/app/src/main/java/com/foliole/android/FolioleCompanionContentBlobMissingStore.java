@@ -41,23 +41,29 @@ final class FolioleCompanionContentBlobMissingStore {
             FolioleCompanionMissingResourceQueryRules.contentSummaryQueryName(context),
             FolioleCompanionMissingResourceQueryRules.contentResultKey(context)
         );
-        JSONObject rowKeys = FolioleCompanionMissingResourceQueryRules.contentObject(context, "rowKeys");
         for (int index = 0; index < blobs.length(); index += 1) {
             JSONObject blob = blobs.getJSONObject(index);
             count++;
-            long sizeBytes = blob.getLong(rowKeys.getString("sizeBytes"));
+            long sizeBytes = blob.getLong(rowKey(context, "sizeBytes"));
             bytes += sizeBytes;
-            if (FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "failed").equals(blob.getString(rowKeys.getString("availability")))) {
+            if (FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "failed").equals(blob.getString(rowKey(context, "availability")))) {
                 failedCount++;
                 failedBytes += sizeBytes;
             }
         }
-        JSONObject keys = FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys");
         JSObject summary = new JSObject();
-        summary.put(keys.getString("count"), count);
-        summary.put(keys.getString("bytes"), bytes);
-        summary.put(keys.getString("failedCount"), failedCount);
-        summary.put(keys.getString("failedBytes"), failedBytes);
+        summary.put(summaryKey(context, "count"), count);
+        summary.put(summaryKey(context, "bytes"), bytes);
+        summary.put(summaryKey(context, "failedCount"), failedCount);
+        summary.put(summaryKey(context, "failedBytes"), failedBytes);
         return summary;
+    }
+
+    private static String rowKey(Context context, String key) throws Exception {
+        return FolioleCompanionMissingResourceQueryRules.contentRowKey(context, key);
+    }
+
+    private static String summaryKey(Context context, String key) throws Exception {
+        return FolioleCompanionMissingResourceQueryRules.contentSummaryKey(context, key);
     }
 }

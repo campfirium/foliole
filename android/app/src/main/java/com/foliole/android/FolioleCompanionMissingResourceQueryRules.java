@@ -40,6 +40,18 @@ final class FolioleCompanionMissingResourceQueryRules {
         return group(context, "attachmentResources").getJSONArray(key);
     }
 
+    static String attachmentMimeCategory(Context context, String key) throws Exception {
+        return attachmentObject(context, "mimeCategories").getString(key);
+    }
+
+    static String attachmentRowKey(Context context, String key) throws Exception {
+        return attachmentObject(context, "rowKeys").getString(key);
+    }
+
+    static String attachmentSummaryKey(Context context, String key) throws Exception {
+        return attachmentObject(context, "summaryKeys").getString(key);
+    }
+
     static String contentHashesQueryName(Context context) throws Exception {
         return stringValue(context, "contentBlobs", "hashesQueryName");
     }
@@ -66,6 +78,14 @@ final class FolioleCompanionMissingResourceQueryRules {
 
     static JSONObject contentObject(Context context, String key) throws Exception {
         return group(context, "contentBlobs").getJSONObject(key);
+    }
+
+    static String contentRowKey(Context context, String key) throws Exception {
+        return contentObject(context, "rowKeys").getString(key);
+    }
+
+    static String contentSummaryKey(Context context, String key) throws Exception {
+        return contentObject(context, "summaryKeys").getString(key);
     }
 
     private static String stringValue(Context context, String groupName, String key) throws Exception {
