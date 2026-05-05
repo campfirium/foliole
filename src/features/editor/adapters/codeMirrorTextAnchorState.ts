@@ -45,9 +45,9 @@ function mapTextAnchorDecorationThroughChanges(
   changes: ChangeDesc
 ): EditorTextAnchorDecoration {
   return {
-    from: changes.mapPos(decoration.from, 1),
+    from: changes.mapPos(decoration.from, -1),
     kind: decoration.kind,
-    to: changes.mapPos(decoration.to, -1)
+    to: changes.mapPos(decoration.to, 1)
   };
 }
 

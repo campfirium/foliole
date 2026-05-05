@@ -3,6 +3,7 @@ import type {
   NativeDirectoryImportArgs, NativeDirectoryImportResult, NativeNodeSourceDetails, NativeKeepImportPreviewArgs,
   NativeKeepImportPreviewResult, NativeImportedTextFile, NativeTextImportArgs, NativeTextImportResult
 } from './nativeImportContract.js';
+import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type {
   NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
@@ -251,15 +252,8 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
 export type NativeCommandName = keyof NativeCommandMap;
 export type NativeCommandArgs<T extends NativeCommandName> = NativeCommandMap[T]['args'];
 export type NativeCommandResult<T extends NativeCommandName> = NativeCommandMap[T]['result'];
-type NativeInvokeTuple<T extends NativeCommandName> = NativeCommandArgs<T> extends undefined
-  ? []
-  : [args: NativeCommandArgs<T>];
-export type NativeInvokeRequest<T extends NativeCommandName = NativeCommandName> = T extends NativeCommandName
-  ? NativeCommandArgs<T> extends undefined
-    ? { command: T; args?: undefined }
-    : { command: T; args: NativeCommandArgs<T> }
-  : never;
+export type NativeInvokeRequest<T extends NativeCommandName = NativeCommandName> = import('./nativeInvokeTypes.js').NativeInvokeRequest<NativeCommandMap, T>;
 export interface NativeInvoke {
-  <T extends NativeCommandName>(command: T, ...args: NativeInvokeTuple<T>): Promise<NativeCommandResult<T>>;
+  <T extends NativeCommandName>(command: T, ...args: NativeInvokeTuple<NativeCommandMap, T>): Promise<NativeCommandResult<T>>;
   (command: string, args?: Record<string, unknown>): Promise<unknown>;
 }

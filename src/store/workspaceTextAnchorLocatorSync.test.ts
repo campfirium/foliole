@@ -125,7 +125,6 @@ function expectUpdatedClozeNode(node: Node) {
 function runDirectChildSyncCase() {
   const child = createHighlightChildNode();
   const sibling = createHighlightChildNode({ id: 'child-2', parentNodeId: 'other-parent' });
-
   const result = syncTextAnchorLocatorsForParentContent({
     nextContent: 'Start Alpha Beta Gamma',
     nodesById: {
@@ -144,11 +143,7 @@ function runDirectChildSyncCase() {
       anchorLink: {
         id: 'hl-1',
         kind: 'highlight',
-        locator: remapTextAnchorLocator('Start Alpha Beta Gamma', {
-          from: 6,
-          originalText: 'Beta',
-          to: 10
-        }, 'Alpha Beta Gamma')
+        locator: remapTextAnchorLocator('Start Alpha Beta Gamma', { from: 6, originalText: 'Beta', to: 10 }, 'Alpha Beta Gamma')
       }
     })
   ]);
@@ -156,11 +151,9 @@ function runDirectChildSyncCase() {
 }
 
 function runHighlightRefreshCase() {
-  const child = createHighlightChildNode({ title: 'Beta' });
-
   const result = syncTextAnchorLocatorsForParentContent({
     nextContent: 'Alpha Better Gamma',
-    nodesById: { 'child-1': child },
+    nodesById: { 'child-1': createHighlightChildNode({ title: 'Beta' }) },
     parentNodeId: 'parent-1',
     previousContent: 'Alpha Beta Gamma',
     timestamp: '2026-04-14T01:00:00.000Z'
@@ -174,22 +167,16 @@ function runHighlightRefreshCase() {
       anchorLink: {
         id: 'hl-1',
         kind: 'highlight',
-        locator: {
-          from: 6,
-          originalText: 'Better',
-          to: 12
-        }
+        locator: { from: 6, originalText: 'Better', to: 12 }
       }
     })
   ]);
 }
 
 function runClozeRefreshCase() {
-  const clozeChild = createClozeChildNode();
-
   const result = syncTextAnchorLocatorsForParentContent({
     nextContent: 'Alpha Better Gamma',
-    nodesById: { 'child-cloze': clozeChild },
+    nodesById: { 'child-cloze': createClozeChildNode() },
     parentNodeId: 'parent-1',
     previousContent: 'Alpha Beta Gamma',
     timestamp: '2026-04-14T01:00:00.000Z'
@@ -200,11 +187,9 @@ function runClozeRefreshCase() {
 }
 
 function runDeletedAnchorTextCase() {
-  const child = createHighlightChildNode({ title: 'Beta' });
-
   const result = syncTextAnchorLocatorsForParentContent({
     nextContent: 'Alpha  Gamma',
-    nodesById: { 'child-1': child },
+    nodesById: { 'child-1': createHighlightChildNode({ title: 'Beta' }) },
     parentNodeId: 'parent-1',
     previousContent: 'Alpha Beta Gamma',
     timestamp: '2026-04-14T01:00:00.000Z'
@@ -218,11 +203,7 @@ function runDeletedAnchorTextCase() {
       anchorLink: {
         id: 'hl-1',
         kind: 'highlight',
-        locator: {
-          from: 6,
-          originalText: 'Beta',
-          to: 6
-        }
+        locator: { from: 6, originalText: 'Beta', to: 6 }
       }
     })
   ]);
@@ -230,11 +211,9 @@ function runDeletedAnchorTextCase() {
 }
 
 function runMultiRangeClozeRefreshCase() {
-  const clozeChild = createMultiRangeClozeChildNode();
-
   const result = syncTextAnchorLocatorsForParentContent({
     nextContent: 'Alphaa Beta Gamma Delta',
-    nodesById: { 'child-cloze-multi': clozeChild },
+    nodesById: { 'child-cloze-multi': createMultiRangeClozeChildNode() },
     parentNodeId: 'parent-1',
     previousContent: 'Alpha Beta Gamma Delta',
     timestamp: '2026-04-14T01:00:00.000Z'
@@ -251,16 +230,8 @@ function runMultiRangeClozeRefreshCase() {
         kind: 'cloze',
         locator: {
           ranges: [
-            {
-              from: 0,
-              originalText: 'Alphaa',
-              to: 6
-            },
-            {
-              from: 12,
-              originalText: 'Gamma',
-              to: 17
-            }
+            { from: 0, originalText: 'Alpha', to: 5 },
+            { from: 12, originalText: 'Gamma', to: 17 }
           ]
         }
       }

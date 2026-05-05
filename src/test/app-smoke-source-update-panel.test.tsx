@@ -1,11 +1,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
-import './app-smoke.shared';
+import './reactPdfMock';
 
-import { App } from '../app/App';
 import { useWorkspaceStore } from '../store/workspaceStore';
+
 import { useNodeSourceUpdatePreviewMock } from './app-smoke.shared';
+
+const { App } = await import('../app/App');
 
 it('writes split panel edits back to the active document content', () => {
   useNodeSourceUpdatePreviewMock.mockReturnValue({

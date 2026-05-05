@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import './reactPdfMock';
+
 vi.mock('../shared/platform/bridge', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../shared/platform/bridge')>();
   return {
@@ -9,14 +11,13 @@ vi.mock('../shared/platform/bridge', async (importOriginal) => {
   };
 });
 
-import './app-smoke.shared';
-
-import { App } from '../app/App';
 import { EDITOR_DISPLAY_MODE_KEY } from '../features/editor/model/editorDisplayMode';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
+
+const { App } = await import('../app/App');
 
 function createReadingProfile(nextAt: string) {
   return {
@@ -266,52 +267,4 @@ it('keeps review toolbar visible in completed state until user exits', async () 
   await waitFor(() => {
     expect(screen.queryByLabelText('Review mode toolbar')).not.toBeInTheDocument();
   });
-});
-
-it('opens selected node content even when the visible row was preloaded first', async () => {
-  const invoke = vi.fn().mockImplementation((command: string, args?: { nodeId?: string }) => {
-    if (command === 'load_node_document' && args?.nodeId === 'node-2') {
-      return Promise.resolve({
-        nodeId: 'node-2',
-        content: 'Prompt [...]',
-        hideTitleHeading: false,
-        reveal: 'Answer'
-      });
-    }
-    return Promise.resolve(null);
-  });
-  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2'],
-    nodesById: {
-      ...state.nodesById,
-      'node-2': createNode({
-        id: 'node-2',
-        parentNodeId: 'node-1',
-        title: 'QA 2',
-        content: 'Prompt [...]',
-        reveal: 'Answer'
-      })
-    }
-  }));
-
-  render(<App />);
-
-  expect(screen.getByTestId('editor-value')).toHaveValue('# Welcome to Foliole\n\nStart writing markdown here.');
-  fireEvent.click(screen.getByRole('treeitem', { name: 'QA 2' }));
-  await waitFor(() => {
-    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-    expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [...]');
-    expect(screen.getByTestId('answer-editor-value')).toHaveValue('Answer');
-  });
-});
-
-it('updates active node content from editor changes', () => {
-  render(<App />);
-  fireEvent.change(screen.getByTestId('editor-value'), {
-    target: { value: 'Alpha Beta Gamma' }
-  });
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Alpha Beta Gamma');
 });

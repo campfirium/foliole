@@ -50,9 +50,8 @@ it('opens debug nodes through the prepared open path', async () => {
   expect(openWorkspaceNodeWithPreparedDocument).toHaveBeenCalledWith(seedNodeId);
 });
 
-it('reads active node id and saved node view state through the debug bridge', async () => {
-  installWorkspaceDebugBridge();
-  const debugApi = (window as Window & {
+function getDebugApi() {
+  return (window as Window & {
     __folioleWorkspaceDebug?: {
       createTextClozeChild: (args: {
         anchorId: string;
@@ -78,6 +77,12 @@ it('reads active node id and saved node view state through the debug bridge', as
         trashed: boolean;
       } | null;
       getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } } | null;
+      importClipboardImageAttachment: (args: {
+        bytesBase64: string;
+        mimeType: string;
+        nodeId: string;
+        originalName?: string;
+      }) => Promise<string | null>;
       restoreNode: (nodeId: string) => Promise<boolean>;
       seedNodes: (nodes: Array<{
         content: string;
@@ -88,16 +93,9 @@ it('reads active node id and saved node view state through the debug bridge', as
       updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
     };
   }).__folioleWorkspaceDebug;
+}
 
-  await debugApi?.seedNodes([
-    {
-      content: 'Seed body',
-      id: 'debug-node-1',
-      kind: 'topic',
-      title: 'Debug Node 1'
-    }
-  ]);
-
+function setNodeViewState() {
   useWorkspaceStore.setState((state) => ({
     ...state,
     activeNodeId: 'debug-node-1',
@@ -109,6 +107,24 @@ it('reads active node id and saved node view state through the debug bridge', as
       }
     }
   }));
+}
+
+async function seedSingleDebugNode() {
+  await getDebugApi()?.seedNodes([
+    {
+      content: 'Seed body',
+      id: 'debug-node-1',
+      kind: 'topic',
+      title: 'Debug Node 1'
+    }
+  ]);
+}
+
+it('reads active node id and saved node view state through the debug bridge', async () => {
+  installWorkspaceDebugBridge();
+  await seedSingleDebugNode();
+  setNodeViewState();
+  const debugApi = getDebugApi();
 
   expect(debugApi?.getActiveNodeId()).toBe('debug-node-1');
   expect(debugApi?.getNodeViewState('debug-node-1')).toEqual({
@@ -155,22 +171,7 @@ it('persists seeded debug nodes and imports debug attachments through the native
   getRuntimeInvoke.mockReturnValue(runtimeInvoke);
 
   installWorkspaceDebugBridge();
-  const debugApi = (window as Window & {
-    __folioleWorkspaceDebug?: {
-      importClipboardImageAttachment: (args: {
-        bytesBase64: string;
-        mimeType: string;
-        nodeId: string;
-        originalName?: string;
-      }) => Promise<string | null>;
-      seedNodes: (nodes: Array<{
-        content: string;
-        id: string;
-        kind?: 'folder' | 'item' | 'topic';
-        title: string;
-      }>) => Promise<void>;
-    };
-  }).__folioleWorkspaceDebug;
+  const debugApi = getDebugApi();
 
   await debugApi?.seedNodes([
     {

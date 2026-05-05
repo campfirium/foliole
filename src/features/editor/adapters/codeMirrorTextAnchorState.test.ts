@@ -37,13 +37,27 @@ function dispatchPrefixInsert(view: EditorView) {
   });
 }
 
-describe('codeMirrorTextAnchorState', () => {
-  it('maps highlight decorations through document changes before store sync catches up', () => {
-    const view = createEditorView('Alpha Beta', [
-      { from: 6, kind: 'highlight', to: 10 }
-    ]);
+function dispatchInsert(view: EditorView, from: number, insert: string) {
+  view.dispatch({
+    changes: {
+      from,
+      insert
+    }
+  });
+}
 
-    try {
+function withHighlightView(doc: string, run: (view: EditorView) => void) {
+  const view = createEditorView(doc, [{ from: 6, kind: 'highlight', to: 10 }]);
+  try {
+    run(view);
+  } finally {
+    view.destroy();
+  }
+}
+
+function registerChangeMappingTest() {
+  it('maps highlight decorations through document changes before store sync catches up', () => {
+    withHighlightView('Alpha Beta', (view) => {
       const initialHighlightElement = getHighlightElement(view);
       expect(initialHighlightElement?.textContent).toBe('Beta');
 
@@ -60,11 +74,11 @@ describe('codeMirrorTextAnchorState', () => {
 
       expect(getHighlightedText(view)).toBe('Beta');
       expect(getHighlightElement(view)).toBe(mappedHighlightElement);
-    } finally {
-      view.destroy();
-    }
+    });
   });
+}
 
+function registerOutOfRangeNormalizationTest() {
   it('normalizes out-of-range highlight positions before mapping document changes', () => {
     const view = createEditorView('Short text', [
       { from: 148, kind: 'highlight', to: 160 }
@@ -76,4 +90,42 @@ describe('codeMirrorTextAnchorState', () => {
       view.destroy();
     }
   });
+}
+
+function registerBoundaryInsertionTests() {
+  it('keeps text inserted before a highlight outside the highlight', () => {
+    withHighlightView('Alpha Beta', (view) => {
+      dispatchInsert(view, 6, 'New ');
+
+      const highlightElement = getHighlightElement(view);
+      expect(highlightElement?.textContent).toBe('Beta');
+      expect(view.state.doc.toString()).toBe('Alpha New Beta');
+    });
+  });
+
+  it('keeps text inserted after a highlight outside the highlight', () => {
+    withHighlightView('Alpha Beta.', (view) => {
+      dispatchInsert(view, 10, ' plus');
+
+      const highlightElement = getHighlightElement(view);
+      expect(highlightElement?.textContent).toBe('Beta');
+      expect(view.state.doc.toString()).toBe('Alpha Beta plus.');
+    });
+  });
+
+  it('keeps text inserted inside a highlight within the highlight', () => {
+    withHighlightView('Alpha Beta', (view) => {
+      dispatchInsert(view, 8, 'X');
+
+      const highlightElement = getHighlightElement(view);
+      expect(highlightElement?.textContent).toBe('BeXta');
+      expect(view.state.doc.toString()).toBe('Alpha BeXta');
+    });
+  });
+}
+
+describe('codeMirrorTextAnchorState', () => {
+  registerChangeMappingTest();
+  registerOutOfRangeNormalizationTest();
+  registerBoundaryInsertionTests();
 });

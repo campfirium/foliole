@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 
-describe('parseStoredAnchorLink', () => {
+function registerTextLocatorTest() {
   it('keeps text locators when payload contains editor range anchors', () => {
     const value = JSON.stringify({
       id: 'text-1',
@@ -24,7 +24,9 @@ describe('parseStoredAnchorLink', () => {
       }
     });
   });
+}
 
+function registerPdfLocatorTest() {
   it('keeps locator rects when payload contains normalized highlight areas', () => {
     const value = JSON.stringify({
       id: 'pdf-1',
@@ -48,7 +50,9 @@ describe('parseStoredAnchorLink', () => {
       }
     });
   });
+}
 
+function registerMalformedLocatorTest() {
   it('drops malformed text locators instead of trusting partial payloads', () => {
     const value = JSON.stringify({
       id: 'text-2',
@@ -64,7 +68,9 @@ describe('parseStoredAnchorLink', () => {
       kind: 'cloze'
     });
   });
+}
 
+function registerGroupedLocatorTest() {
   it('keeps grouped text locators when payload contains multi-range cloze anchors', () => {
     const value = JSON.stringify({
       id: 'text-multi-1',
@@ -104,4 +110,11 @@ describe('parseStoredAnchorLink', () => {
       }
     });
   });
+}
+
+describe('parseStoredAnchorLink', () => {
+  registerTextLocatorTest();
+  registerPdfLocatorTest();
+  registerMalformedLocatorTest();
+  registerGroupedLocatorTest();
 });

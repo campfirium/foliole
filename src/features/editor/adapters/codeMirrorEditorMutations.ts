@@ -2,11 +2,11 @@ import { type Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import { reconfigureDecorationCompartment } from './codeMirrorEditorAdapterView';
+import { updateTextAnchorDecorations } from './codeMirrorTextAnchorState';
 import type { EditorSearchDecorations } from './EditorAdapter';
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
 import { buildEditorDiffDecorations, type EditorDiffDecorations } from './lineDiffDecorations';
 import { buildEditorSearchDecorations } from './searchDecorations';
-import { updateTextAnchorDecorations } from './codeMirrorTextAnchorState';
 
 export function applyExternalEditorContent(args: {
   content: string;

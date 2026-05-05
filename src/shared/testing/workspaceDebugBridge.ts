@@ -132,48 +132,73 @@ async function persistSeedNodes(nodes: DebugNodeSeed[]) {
   await runtimeInvoke(NATIVE_COMMANDS.replaceNodeOrder, { nodeIds: nodes.map((node) => node.id) });
 }
 
-export function installWorkspaceDebugBridge() {
-  if (!isWorkspaceDebugEnabled() || typeof window === 'undefined') {
-    return;
+function getExistingNodeState(nodeId: string) {
+  const state = useWorkspaceStore.getState();
+  if (!state.nodesById[nodeId]) {
+    return null;
   }
+  return state;
+}
 
-  const targetWindow = window as WorkspaceDebugWindow;
-  if (targetWindow.__folioleWorkspaceDebug) {
-    return;
-  }
+function createClipboardImportHandler(): WorkspaceDebugApi['importClipboardImageAttachment'] {
+  return async ({ bytesBase64, mimeType, nodeId, originalName }) => {
+    const runtimeInvoke = getRuntimeInvoke();
+    if (!runtimeInvoke) {
+      return null;
+    }
+    const result = await runtimeInvoke(NATIVE_COMMANDS.importClipboardImageAttachment, {
+      bytesBase64,
+      mimeType,
+      nodeId,
+      originalName: originalName ?? 'debug-image.png'
+    });
+    return result && typeof result === 'object' && 'attachment_id' in result && typeof result.attachment_id === 'string'
+      ? result.attachment_id
+      : null;
+  };
+}
 
-  targetWindow.__folioleWorkspaceDebug = {
+function createNodeMutationDebugApi(): Pick<
+  WorkspaceDebugApi,
+  'createTextClozeChild' | 'createTextHighlightChild' | 'deleteNode' | 'deleteNodePermanently' | 'restoreNode' | 'updateNodeContent'
+> {
+  return {
     createTextClozeChild: async ({ anchorId, anchorLink, answer, parentNodeId, prompt }) =>
-      useWorkspaceStore.getState().createQANodeFromSelection(
-        parentNodeId,
-        prompt,
-        answer,
-        anchorId,
-        anchorLink ?? undefined
-      ),
+      useWorkspaceStore.getState().createQANodeFromSelection(parentNodeId, prompt, answer, anchorId, anchorLink ?? undefined),
     createTextHighlightChild: async ({ anchorId, anchorLink, parentNodeId, text }) =>
-      useWorkspaceStore.getState().createHighlightNodeFromSelection(
-        parentNodeId,
-        text,
-        anchorId,
-        anchorLink ?? undefined
-      ),
+      useWorkspaceStore.getState().createHighlightNodeFromSelection(parentNodeId, text, anchorId, anchorLink ?? undefined),
     deleteNode: async (nodeId) => {
-      const state = useWorkspaceStore.getState();
-      if (!state.nodesById[nodeId]) {
-        return false;
-      }
+      const state = getExistingNodeState(nodeId);
+      if (!state) return false;
       state.deleteNode(nodeId);
       return true;
     },
     deleteNodePermanently: async (nodeId) => {
-      const state = useWorkspaceStore.getState();
-      if (!state.nodesById[nodeId]) {
-        return false;
-      }
+      const state = getExistingNodeState(nodeId);
+      if (!state) return false;
       state.deleteNodePermanently(nodeId);
       return true;
     },
+    restoreNode: async (nodeId) => {
+      const state = getExistingNodeState(nodeId);
+      if (!state) return false;
+      state.restoreNode(nodeId);
+      return true;
+    },
+    updateNodeContent: async (nodeId, content) => {
+      const state = getExistingNodeState(nodeId);
+      if (!state) return false;
+      state.updateNodeContent(nodeId, content);
+      return true;
+    }
+  };
+}
+
+function createNodeReadDebugApi(): Pick<
+  WorkspaceDebugApi,
+  'getActiveNodeId' | 'getNode' | 'getNodeViewState' | 'listNodes' | 'openNode'
+> {
+  return {
     getActiveNodeId: () => useWorkspaceStore.getState().activeNodeId,
     getNode: (nodeId) => {
       const state = useWorkspaceStore.getState();
@@ -191,29 +216,13 @@ export function installWorkspaceDebugBridge() {
         trashed: state.trashedNodeIds.includes(nodeId)
       };
     },
-    importClipboardImageAttachment: async ({ bytesBase64, mimeType, nodeId, originalName }) => {
-      const runtimeInvoke = getRuntimeInvoke();
-      if (!runtimeInvoke) {
-        return null;
-      }
-      const result = await runtimeInvoke(NATIVE_COMMANDS.importClipboardImageAttachment, {
-        bytesBase64,
-        mimeType,
-        nodeId,
-        originalName: originalName ?? 'debug-image.png'
-      });
-      return result && typeof result === 'object' && 'attachment_id' in result && typeof result.attachment_id === 'string'
-        ? result.attachment_id
-        : null;
-    },
     getNodeViewState: (nodeId) => useWorkspaceStore.getState().nodeViewById[nodeId] ?? null,
-    listNodes: () =>
-      useWorkspaceStore
-        .getState()
-        .nodeOrder.map((nodeId) => ({ id: nodeId, title: useWorkspaceStore.getState().nodesById[nodeId]?.title ?? nodeId })),
-    openNode: async (nodeId) => {
+    listNodes: () => {
       const state = useWorkspaceStore.getState();
-      if (!state.nodesById[nodeId]) {
+      return state.nodeOrder.map((nodeId) => ({ id: nodeId, title: state.nodesById[nodeId]?.title ?? nodeId }));
+    },
+    openNode: async (nodeId) => {
+      if (!getExistingNodeState(nodeId)) {
         return false;
       }
       try {
@@ -222,36 +231,46 @@ export function installWorkspaceDebugBridge() {
       } catch {
         return false;
       }
-    },
-    restoreNode: async (nodeId) => {
-      const state = useWorkspaceStore.getState();
-      if (!state.nodesById[nodeId]) {
-        return false;
-      }
-      state.restoreNode(nodeId);
-      return true;
-    },
+    }
+  };
+}
+
+function createSeedNodeDebugApi(): Pick<WorkspaceDebugApi, 'seedNodes'> {
+  return {
     seedNodes: async (nodes) => {
       const initial = createInitialWorkspaceState(new Date('2026-04-08T00:00:00.000Z'));
       const seededNodesById = buildSeededNodes(nodes, '2026-04-08T00:00:00.000Z', initial.nodesById['node-1']);
-      const firstNodeId = nodes[0]?.id ?? null;
       useWorkspaceStore.setState({
         ...initial,
-        activeNodeId: firstNodeId,
+        activeNodeId: nodes[0]?.id ?? null,
         isHydrated: true,
         nodeOrder: nodes.map((node) => node.id),
         nodesById: seededNodesById,
         trashedNodeIds: []
       });
       await persistSeedNodes(nodes);
-    },
-    updateNodeContent: async (nodeId, content) => {
-      const state = useWorkspaceStore.getState();
-      if (!state.nodesById[nodeId]) {
-        return false;
-      }
-      state.updateNodeContent(nodeId, content);
-      return true;
     }
   };
+}
+
+function createWorkspaceDebugApi(): WorkspaceDebugApi {
+  return {
+    ...createNodeMutationDebugApi(),
+    ...createNodeReadDebugApi(),
+    importClipboardImageAttachment: createClipboardImportHandler(),
+    ...createSeedNodeDebugApi()
+  };
+}
+
+export function installWorkspaceDebugBridge() {
+  if (!isWorkspaceDebugEnabled() || typeof window === 'undefined') {
+    return;
+  }
+
+  const targetWindow = window as WorkspaceDebugWindow;
+  if (targetWindow.__folioleWorkspaceDebug) {
+    return;
+  }
+
+  targetWindow.__folioleWorkspaceDebug = createWorkspaceDebugApi();
 }

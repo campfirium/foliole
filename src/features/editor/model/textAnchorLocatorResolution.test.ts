@@ -43,7 +43,7 @@ describe('textAnchorLocatorResolution selection', () => {
   });
 });
 
-describe('textAnchorLocatorResolution remap with edit context', () => {
+function registerBasicEditContextRemapTests() {
   it('keeps locator positions when there is no previous content context and the stored text still matches', () => {
     expect(
       remapTextAnchorLocator('Start Alpha Beta Gamma', {
@@ -85,7 +85,51 @@ describe('textAnchorLocatorResolution remap with edit context', () => {
       to: 6
     });
   });
-});
+}
+
+function registerBoundaryEditContextRemapTests() {
+  it('keeps text inserted at the anchor start boundary outside the anchor', () => {
+    expect(
+      remapTextAnchorLocator('Alpha New Beta Gamma', {
+        from: 6,
+        originalText: 'Beta',
+        to: 10
+      }, 'Alpha Beta Gamma')
+    ).toEqual({
+      from: 10,
+      originalText: 'Beta',
+      to: 14
+    });
+  });
+
+  it('keeps text inserted at the anchor end boundary outside the anchor', () => {
+    expect(
+      remapTextAnchorLocator('Alpha Beta New Gamma', {
+        from: 6,
+        originalText: 'Beta',
+        to: 10
+      }, 'Alpha Beta Gamma')
+    ).toEqual({
+      from: 6,
+      originalText: 'Beta',
+      to: 10
+    });
+  });
+
+  it('keeps text inserted inside the anchor within the anchor', () => {
+    expect(
+      remapTextAnchorLocator('Alpha BeXta Gamma', {
+        from: 6,
+        originalText: 'Beta',
+        to: 10
+      }, 'Alpha Beta Gamma')
+    ).toEqual({
+      from: 6,
+      originalText: 'BeXta',
+      to: 11
+    });
+  });
+}
 
 describe('textAnchorLocatorResolution remap without edit context', () => {
   it('repositions locators by exact text when there is one unique match and no edit context', () => {
@@ -115,4 +159,9 @@ describe('textAnchorLocatorResolution remap without edit context', () => {
       to: 4
     });
   });
+});
+
+describe('textAnchorLocatorResolution remap with edit context', () => {
+  registerBasicEditContextRemapTests();
+  registerBoundaryEditContextRemapTests();
 });

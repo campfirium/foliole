@@ -74,6 +74,7 @@ function mapPositionThroughContentChange(args: {
   previousChangeTo: number;
   side: 'left' | 'right';
 }) {
+  const isPureInsertion = args.previousChangeFrom === args.previousChangeTo && args.nextChangeFrom !== args.nextChangeTo;
   if (args.position < args.previousChangeFrom) {
     return args.position;
   }
@@ -81,9 +82,15 @@ function mapPositionThroughContentChange(args: {
     return args.position + (args.nextChangeTo - args.previousChangeTo) - (args.nextChangeFrom - args.previousChangeFrom);
   }
   if (args.position === args.previousChangeFrom) {
+    if (isPureInsertion) {
+      return args.side === 'right' ? args.nextChangeFrom : args.nextChangeTo;
+    }
     return args.side === 'right' ? args.nextChangeTo : args.nextChangeFrom;
   }
   if (args.position === args.previousChangeTo) {
+    if (isPureInsertion) {
+      return args.side === 'left' ? args.nextChangeTo : args.nextChangeFrom;
+    }
     return args.side === 'left' ? args.nextChangeFrom : args.nextChangeTo;
   }
   return args.side === 'left' ? args.nextChangeFrom : args.nextChangeTo;

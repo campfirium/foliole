@@ -1,6 +1,6 @@
+import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { createLineClass } from '../../features/editor/model/markdownLineSyntax';
-import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
 
 function buildLineRanges(content: string) {
   const lines: Array<{ blank: boolean; end: number; start: number; text: string }> = [];
