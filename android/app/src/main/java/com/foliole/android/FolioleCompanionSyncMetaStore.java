@@ -24,12 +24,12 @@ final class FolioleCompanionSyncMetaStore {
         String lastSyncedAt = FolioleCompanionMetaRecords.loadValue(context, database, syncMetaKey(context, "lastSyncedAt"));
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         JSObject workspaceSnapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(context, database, deviceId);
-        result.put("endpoint_url", endpointUrl);
-        result.put("last_synced_at", lastSyncedAt);
-        result.put("remembered_targets", new JSONArray(loadRememberedTargets(context, database)));
-        result.put("sync_events", new JSONArray(loadSyncEvents(context, database)));
-        result.put("sync_onboarding_status", loadSyncOnboardingStatus(context, database, lastSyncedAt, workspaceSnapshot));
-        result.put("workspace_snapshot", workspaceSnapshot);
+        result.put(syncMetaOutputKey(context, "endpointUrl"), endpointUrl);
+        result.put(syncMetaOutputKey(context, "lastSyncedAt"), lastSyncedAt);
+        result.put(syncMetaOutputKey(context, "rememberedTargets"), new JSONArray(loadRememberedTargets(context, database)));
+        result.put(syncMetaOutputKey(context, "syncEvents"), new JSONArray(loadSyncEvents(context, database)));
+        result.put(syncMetaOutputKey(context, "syncOnboardingStatus"), loadSyncOnboardingStatus(context, database, lastSyncedAt, workspaceSnapshot));
+        result.put(syncMetaOutputKey(context, "workspaceSnapshot"), workspaceSnapshot);
         return result;
     }
 
@@ -100,11 +100,11 @@ final class FolioleCompanionSyncMetaStore {
         String normalizedStatus = normalizeSyncEventStatus(context, status);
         String normalizedOccurredAt = occurredAt == null || occurredAt.trim().isEmpty() ? Instant.now().toString() : occurredAt.trim();
         JSONObject event = new JSONObject();
-        event.put("id", UUID.randomUUID().toString());
-        event.put("endpoint_url", endpointUrl == null || endpointUrl.trim().isEmpty() ? JSONObject.NULL : endpointUrl.trim());
-        event.put("status", normalizedStatus);
-        event.put("message", message == null || message.trim().isEmpty() ? normalizedStatus : message.trim());
-        event.put("occurred_at", normalizedOccurredAt);
+        event.put(syncEventRecordKey(context, "id"), UUID.randomUUID().toString());
+        event.put(syncEventRecordKey(context, "endpointUrl"), endpointUrl == null || endpointUrl.trim().isEmpty() ? JSONObject.NULL : endpointUrl.trim());
+        event.put(syncEventRecordKey(context, "status"), normalizedStatus);
+        event.put(syncEventRecordKey(context, "message"), message == null || message.trim().isEmpty() ? normalizedStatus : message.trim());
+        event.put(syncEventRecordKey(context, "occurredAt"), normalizedOccurredAt);
         nextEvents.put(event);
         for (int index = 0; index < events.size() && index < 19; index += 1) {
             nextEvents.put(events.get(index));
@@ -112,7 +112,7 @@ final class FolioleCompanionSyncMetaStore {
         FolioleCompanionMetaRecords.saveValue(context, database, syncMetaKey(context, "events"), nextEvents.toString(), Instant.now().toString());
         if (
             syncEventSkippedStatus(context).equals(normalizedStatus) ||
-            (syncEventCompletedStatus(context).equals(normalizedStatus) && syncEventFullCompletedMessage(context).equals(event.optString("message")))
+            (syncEventCompletedStatus(context).equals(normalizedStatus) && syncEventFullCompletedMessage(context).equals(event.optString(syncEventRecordKey(context, "message"))))
         ) {
             FolioleCompanionMetaRecords.saveValue(context, database, syncMetaKey(context, "lastSyncedAt"), normalizedOccurredAt, normalizedOccurredAt);
         }
@@ -226,5 +226,13 @@ final class FolioleCompanionSyncMetaStore {
 
     private static String syncMetaKey(Context context, String key) throws Exception {
         return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", key);
+    }
+
+    private static String syncMetaOutputKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaOutputKeys", key);
+    }
+
+    private static String syncEventRecordKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEventRecordKeys", key);
     }
 }

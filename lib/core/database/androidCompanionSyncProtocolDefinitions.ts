@@ -93,6 +93,21 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
     onboardingStatus: 'workspace_sync_onboarding_status',
     rememberedTargets: 'workspace_sync_remembered_targets'
   },
+  syncMetaOutputKeys: {
+    endpointUrl: 'endpoint_url',
+    lastSyncedAt: 'last_synced_at',
+    rememberedTargets: 'remembered_targets',
+    syncEvents: 'sync_events',
+    syncOnboardingStatus: 'sync_onboarding_status',
+    workspaceSnapshot: 'workspace_snapshot'
+  },
+  syncEventRecordKeys: {
+    endpointUrl: 'endpoint_url',
+    id: 'id',
+    message: 'message',
+    occurredAt: 'occurred_at',
+    status: 'status'
+  },
   syncMetaCursors: {
     nodeVersion: 'sync_node_version_cursor',
     nodeVersionPush: 'sync_node_version_push_cursor',

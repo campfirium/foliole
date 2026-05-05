@@ -39,6 +39,16 @@ describe('Android sync diagnostics metadata', () => {
       onboardingStatus: 'workspace_sync_onboarding_status',
       rememberedTargets: 'workspace_sync_remembered_targets'
     });
+    expect(definitions.syncMetaOutputKeys).toMatchObject({
+      endpointUrl: 'endpoint_url',
+      syncEvents: 'sync_events',
+      workspaceSnapshot: 'workspace_snapshot'
+    });
+    expect(definitions.syncEventRecordKeys).toMatchObject({
+      endpointUrl: 'endpoint_url',
+      occurredAt: 'occurred_at',
+      status: 'status'
+    });
     expect(definitions.syncEvents.fullSyncCompletedMessage).toBe('Sync fully completed.');
     expect(definitions.syncDiagnostics.host).toBe('android');
     expect(definitions.syncDiagnostics.verdicts.endpointMissing).toEqual({
@@ -62,6 +72,8 @@ describe('Android sync diagnostics metadata', () => {
 
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", "endpointUrl")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", "events")');
+    expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaOutputKeys", key)');
+    expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEventRecordKeys", key)');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fullSyncCompletedMessage")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdict(context, key)');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys")');
@@ -69,6 +81,9 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('optJSONObject("diagnosticRead")');
     expect(combined).not.toContain('"workspace_sync_endpoint_url"');
     expect(combined).not.toContain('"workspace_sync_events"');
+    expect(combined).not.toContain('result.put("endpoint_url"');
+    expect(combined).not.toContain('result.put("sync_events"');
+    expect(combined).not.toContain('event.put("occurred_at"');
     expect(combined).not.toContain('"sync_pack_cursor"');
     expect(combined).not.toContain('"android_endpoint_missing"');
     expect(combined).not.toContain('"Android sync state is readable."');
