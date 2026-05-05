@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorAdapter } from '../adapters/EditorAdapter';
 
@@ -14,6 +15,7 @@ interface EditorViewState {
 interface MarkdownEditorProps {
   ariaLabel?: string;
   className?: string;
+  debugId?: string;
   nodeId: string | null;
   nodeViewState?: EditorViewState;
   value: string;
@@ -21,7 +23,16 @@ interface MarkdownEditorProps {
   onReady?: (adapter: EditorAdapter | null) => void;
 }
 
-export function MarkdownEditor({ ariaLabel, className, nodeId, nodeViewState, value, onChange, onReady }: MarkdownEditorProps) {
+export function MarkdownEditor({
+  ariaLabel,
+  className,
+  debugId,
+  nodeId,
+  nodeViewState,
+  value,
+  onChange,
+  onReady
+}: MarkdownEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const onChangeRef = useRef(onChange);
@@ -42,13 +53,19 @@ export function MarkdownEditor({ ariaLabel, className, nodeId, nodeViewState, va
     });
 
     adapterRef.current = adapter;
+    if (debugId) {
+      registerDebugEditorAdapter(debugId, adapter);
+    }
     onReadyRef.current?.(adapter);
     return () => {
       onReadyRef.current?.(null);
+      if (debugId) {
+        clearDebugEditorAdapter(debugId);
+      }
       adapter.destroy();
       adapterRef.current = null;
     };
-  }, []);
+  }, [debugId]);
 
   useEffect(() => {
     adapterRef.current?.setContent(value);

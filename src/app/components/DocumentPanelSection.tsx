@@ -90,6 +90,7 @@ export function DocumentPanelSection({
                 <MarkdownEditor
                   ariaLabel="Prompt editor"
                   className="prompt-editor-host"
+                  debugId="prompt-editor"
                   nodeId={editorNodeId}
                   nodeViewState={editorNodeViewState}
                   onChange={onEditorChange}
@@ -102,6 +103,7 @@ export function DocumentPanelSection({
                   <MarkdownEditor
                     ariaLabel="Answer editor"
                     className="answer-editor-host"
+                    debugId="answer-editor"
                     nodeId={editorNodeId}
                     onChange={onAnswerChange}
                     value={reveal}

@@ -137,6 +137,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   replaceSelection(content: string) {
     const { from, to } = this.view.state.selection.main;
     this.view.dispatch({
+      annotations: bypassAnchorStructureGuard.of(true),
       changes: { from, to, insert: content },
       selection: { anchor: from + content.length }
     });
