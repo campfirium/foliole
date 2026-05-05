@@ -24,6 +24,10 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     'INSERT OR REPLACE INTO node_review (' +
     'node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses' +
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  syncSettingRecordUpsert:
+    'INSERT OR REPLACE INTO setting_records (' +
+    'key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at' +
+    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
   syncStateExisting:
     'SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1',
   syncStateNextSeq: 'SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state',

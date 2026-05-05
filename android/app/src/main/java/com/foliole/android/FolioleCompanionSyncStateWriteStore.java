@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSObject;
@@ -34,7 +33,7 @@ final class FolioleCompanionSyncStateWriteStore {
 
         database.beginTransaction();
         try {
-            upsertSettingRecord(database, key, scope, platform, formFactor, deviceId, valueJson, contentHash, now);
+            upsertSettingRecord(context, database, key, scope, platform, formFactor, deviceId, valueJson, contentHash, now);
             upsertObjectState(context, database, objectId, contentHash, modifiedByDeviceId, now);
             database.setTransactionSuccessful();
         } finally {
@@ -96,6 +95,7 @@ final class FolioleCompanionSyncStateWriteStore {
     }
 
     private static void upsertSettingRecord(
+        Context context,
         SQLiteDatabase database,
         String key,
         String scope,
@@ -105,17 +105,17 @@ final class FolioleCompanionSyncStateWriteStore {
         String valueJson,
         String contentHash,
         String now
-    ) {
-        ContentValues values = new ContentValues();
-        values.put("key", key);
-        values.put("scope", scope);
-        values.put("platform", platform);
-        values.put("form_factor", formFactor);
-        values.put("device_id", deviceId);
-        values.put("value_json", valueJson);
-        values.put("content_hash", contentHash);
-        values.put("updated_at", now);
-        database.insertWithOnConflict("setting_records", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    ) throws Exception {
+        FolioleCompanionNamedMutationStore.execute(context, database, "syncSettingRecordUpsert", new Object[] {
+            key,
+            scope,
+            platform,
+            formFactor,
+            deviceId,
+            valueJson,
+            contentHash,
+            now
+        });
     }
 
     private static void upsertObjectState(Context context, SQLiteDatabase database, String objectId, String contentHash, String deviceId, String now) throws Exception {
