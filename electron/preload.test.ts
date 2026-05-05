@@ -12,6 +12,20 @@ function executePreload(env: Record<string, string | undefined> = {}) {
   const ipcInvoke = vi.fn();
   const ipcOn = vi.fn();
   const ipcRemoveListener = vi.fn();
+  const sandboxRequire = vi.fn((specifier: string) => {
+    if (specifier === 'electron') {
+      return {
+        contextBridge: { exposeInMainWorld },
+        ipcRenderer: {
+          invoke: ipcInvoke,
+          on: ipcOn,
+          removeListener: ipcRemoveListener
+        }
+      };
+    }
+
+    throw new Error(`unsupported require: ${specifier}`);
+  });
 
   const sandbox = {
     __dirname: path.dirname(PRELOAD_PATH),
@@ -19,19 +33,7 @@ function executePreload(env: Record<string, string | undefined> = {}) {
     exports: {},
     module: { exports: {} },
     process: { env },
-    require: (specifier: string) => {
-      if (specifier === 'electron') {
-        return {
-          contextBridge: { exposeInMainWorld },
-          ipcRenderer: {
-            invoke: ipcInvoke,
-            on: ipcOn,
-            removeListener: ipcRemoveListener
-          }
-        };
-      }
-      throw new Error(`unsupported require: ${specifier}`);
-    }
+    require: sandboxRequire
   };
 
   vm.runInNewContext(source, sandbox, { filename: PRELOAD_PATH });
@@ -40,7 +42,8 @@ function executePreload(env: Record<string, string | undefined> = {}) {
     exposeInMainWorld,
     ipcInvoke,
     ipcOn,
-    ipcRemoveListener
+    ipcRemoveListener,
+    sandboxRequire
   };
 }
 
@@ -57,6 +60,21 @@ describe('electron preload', () => {
         onWindowResized: expect.any(Function)
       })
     );
+  });
+
+  it('exposes a working bridge without touching unsupported preload require helpers', () => {
+    const { exposeInMainWorld, ipcInvoke, sandboxRequire } = executePreload();
+
+    const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+    electronApi.invoke('boot:ping', { probe: true });
+
+    expect(sandboxRequire).toHaveBeenCalledTimes(1);
+    expect(sandboxRequire).toHaveBeenCalledWith('electron');
+    expect(sandboxRequire).not.toHaveProperty('resolve');
+    expect(ipcInvoke).toHaveBeenCalledWith('foliole:invoke', {
+      command: 'boot:ping',
+      args: { probe: true }
+    });
   });
 
   it('keeps debug metadata when desktop debug probe is enabled', () => {

@@ -32,6 +32,7 @@ import {
   resolveRendererTargetUrl
 } from './runtimeIdentity.js';
 import { resolveRendererIndexPath } from './runtimePaths.js';
+import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -46,21 +47,6 @@ const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({
 
 console.info('[electron-main] app identity configured', configuredIdentity);
 console.info('[electron-main] runtime diagnostics', formatRuntimeDiagnosticsSnapshot(runtimeDiagnostics));
-
-function appendRendererStateLog(label: string, snapshot: unknown) {
-  const logDir = path.join(process.cwd(), 'logs', 'windows');
-  const logPath = path.join(logDir, 'renderer-state.ndjson');
-  fs.mkdirSync(logDir, { recursive: true });
-  fs.appendFileSync(
-    logPath,
-    `${JSON.stringify({ label, snapshot, timestamp: new Date().toISOString() })}\n`,
-    'utf8'
-  );
-}
-
-function appendRuntimeEventLog(label: string, payload: Record<string, unknown> = {}) {
-  appendRendererStateLog(`event:${label}`, payload);
-}
 
 function resolveRendererUrl() {
   return process.env.ELECTRON_RENDERER_URL ?? null;
@@ -161,44 +147,6 @@ function installRuntimeDiagnostics() {
   });
 }
 
-function logRendererStateSnapshot(window: ElectronBrowserWindow, label: string) {
-  void window.webContents
-    .executeJavaScript(
-      `(() => {
-        const titlebarButtons = Array.from(document.querySelectorAll('.window-titlebar-button')).map((button) => ({
-          ariaLabel: button.getAttribute('aria-label'),
-          disabled: button.disabled
-        }));
-        const backupButton = document.querySelector('button.settings-action-button');
-        return {
-          backupButton: backupButton ? {
-            disabled: backupButton.disabled,
-            text: backupButton.textContent?.trim() ?? ''
-          } : null,
-          bodyTextSample: document.body?.innerText?.slice(0, 200) ?? '',
-          bridgeAvailable: typeof window.electronAPI !== 'undefined',
-          debugProbeAvailable: typeof window.__FOLIOLE_DESKTOP_DEBUG_PROBE__ !== 'undefined',
-          href: window.location.href,
-          nativeInvokeReady: typeof window.electronAPI?.invoke === 'function',
-          readyState: document.readyState,
-          rootPresent: Boolean(document.getElementById('root')),
-          titlebarButtons
-        };
-      })()`,
-      true
-    )
-    .then((snapshot) => {
-      console.info(`[electron-main] renderer state snapshot:${label}`, snapshot);
-      appendRendererStateLog(label, snapshot);
-    })
-    .catch((error) => {
-      console.error(`[electron-main] renderer state snapshot failed:${label}`, error);
-      appendRendererStateLog(label, {
-        error: error instanceof Error ? error.message : String(error)
-      });
-    });
-}
-
 function bindWindowIpc(window: ElectronBrowserWindow) {
   ipcMain.handle(IPC_WINDOW_MINIMIZE_CHANNEL, () => {
     window.minimize();
@@ -236,79 +184,7 @@ async function createMainWindow() {
   bindWindowIpc(window);
   bindWindowStatePersistence(window);
   bindMenuToWindow(window);
-  window.once('ready-to-show', () => {
-    if (!window.isDestroyed()) {
-      appendRuntimeEventLog('ready-to-show');
-      window.show();
-    }
-  });
-  window.webContents.on('did-start-navigation', (_, url, isInPlace, isMainFrame) => {
-    if (!isMainFrame) {
-      return;
-    }
-    appendRuntimeEventLog('did-start-navigation', { isInPlace, url });
-    globalThis.setTimeout(() => {
-      if (!window.isDestroyed()) {
-        logRendererStateSnapshot(window, 'after-navigation-2000ms');
-      }
-    }, 2000);
-  });
-  window.webContents.on('dom-ready', () => {
-    appendRuntimeEventLog('dom-ready', {
-      url: window.webContents.getURL()
-    });
-    logRendererStateSnapshot(window, 'dom-ready');
-  });
-  window.webContents.on('did-stop-loading', () => {
-    appendRuntimeEventLog('did-stop-loading', {
-      url: window.webContents.getURL()
-    });
-  });
-  window.webContents.on(
-    'did-fail-load',
-    (_, errorCode, errorDescription, validatedURL, isMainFrame) => {
-      if (!isMainFrame) {
-        return;
-      }
-      appendRuntimeEventLog('did-fail-load', {
-        errorCode,
-        errorDescription,
-        validatedURL
-      });
-      console.error('[electron-main] did-fail-load', {
-        errorCode,
-        errorDescription,
-        validatedURL
-      });
-    }
-  );
-  window.webContents.on('did-finish-load', () => {
-    appendRuntimeEventLog('did-finish-load', {
-      url: window.webContents.getURL()
-    });
-    void window.webContents
-      .executeJavaScript(
-        `(() => ({
-          bridgeAvailable: typeof window.electronAPI !== 'undefined',
-          debugProbeAvailable: typeof window.__FOLIOLE_DESKTOP_DEBUG_PROBE__ !== 'undefined',
-          href: window.location.href,
-          readyState: document.readyState
-        }))()`,
-        true
-      )
-      .then((snapshot) => {
-        console.info('[electron-main] renderer bridge snapshot', snapshot);
-      })
-      .catch((error) => {
-        console.error('[electron-main] renderer bridge snapshot failed', error);
-      });
-    logRendererStateSnapshot(window, 'did-finish-load');
-    globalThis.setTimeout(() => {
-      if (!window.isDestroyed()) {
-        logRendererStateSnapshot(window, 'after-1000ms');
-      }
-    }, 1000);
-  });
+  bindWindowRuntimeDiagnostics(window);
   await loadRenderer(window);
   console.info(
     '[electron-main] active runtime diagnostics',
