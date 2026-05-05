@@ -161,7 +161,7 @@ it('allows first open of a long document to load the full body from runtime hydr
   expect(nodesById?.['node-1']?.content).toBe('');
 });
 
-it('hydrates the default near-term route with lightweight nodes, separate view state, and on-demand content only', async () => {
+it('keeps the initial workspace hydrate on the fixed route: lightweight list, separate view state, and active-document-only loading', async () => {
   const longDocument = createLongDocument();
   const invoke = createNearTermDirectionRuntimeInvoke(longDocument);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
@@ -187,8 +187,11 @@ it('hydrates the default near-term route with lightweight nodes, separate view s
   });
   expect(parsed?.state.nodesById['node-2']?.content).toBe(longDocument);
   expect(parsed?.state.nodesById['node-2']?.content.length).toBeGreaterThan(100_000);
+  expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot');
+  expect(invoke).toHaveBeenCalledWith('load_reading_progress');
   expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
     ['load_node_document', { nodeId: 'node-2' }]
   ]);
+  expect(invoke.mock.calls.some(([command, payload]) => command === 'load_node_document' && payload?.nodeId === 'node-1')).toBe(false);
   expect(invoke.mock.calls.some(([command]) => command === 'load_workspace_snapshot')).toBe(false);
 });
