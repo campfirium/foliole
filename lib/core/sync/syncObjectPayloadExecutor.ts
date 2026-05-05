@@ -195,9 +195,14 @@ async function applyAttachmentObject(port: DbPort, record: SyncPackSyncObjectRec
     `size_bytes = excluded.size_bytes, mime_type = excluded.mime_type, availability = excluded.availability, ` +
     `source_device_id = excluded.source_device_id, cached_at = excluded.cached_at, last_verified_at = excluded.last_verified_at`,
     [record.object_id, text(blob.content_hash), text(blob.storage_key), numberOrNull(blob.size_bytes), text(blob.mime_type),
-      text(blob.availability) ?? 'missing', text(blob.source_device_id), text(blob.created_at) ?? record.updated_at,
+      normalizeAttachmentAvailability(blob), text(blob.source_device_id), text(blob.created_at) ?? record.updated_at,
       text(blob.cached_at), text(blob.last_verified_at)]
   );
+}
+
+function normalizeAttachmentAvailability(blob: JsonObject) {
+  const availability = text(blob.availability) ?? 'remote_known';
+  return availability === 'local' ? 'remote_known' : availability;
 }
 
 async function applyViewStateObject(port: DbPort, record: SyncPackSyncObjectRecord) {
