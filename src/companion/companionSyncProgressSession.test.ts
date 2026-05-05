@@ -52,10 +52,21 @@ function testResetsWhenWorkloadGrows() {
   )).toBe(next);
 }
 
+function testDoesNotMergeRemainingBacklogIntoActiveSession() {
+  const next = { completed: 0, mode: 'remaining' as const, phase: 'content' as const, total: 552 };
+
+  expect(mergeCompanionSyncProgressSession(
+    { completed: 64, phase: 'content', total: 616 },
+    next
+  )).toBe(next);
+}
+
 describe('mergeCompanionSyncProgressSession', () => {
   it('keeps the body progress baseline across resource passes', testKeepsBodySessionBaselineAcrossPasses);
 
   it('resets the progress session when the resource phase changes', testResetsWhenPhaseChanges);
 
   it('resets the progress session when the known workload grows', testResetsWhenWorkloadGrows);
+
+  it('does not merge remaining backlog into an active progress session', testDoesNotMergeRemainingBacklogIntoActiveSession);
 });

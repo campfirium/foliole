@@ -26,6 +26,8 @@ export function mergeCompanionSyncProgressSession(
 ): CompanionDesktopSyncProgress | null {
   if (!previous || !next) return next;
   if (previous.phase !== next.phase) return next;
+  if (previous.mode !== next.mode) return next;
+  if (next.mode === 'remaining') return next;
   if (previous.total === null || next.total === null || previous.total < next.total) return next;
   return {
     ...next,
