@@ -45,6 +45,7 @@ function saveNode(nodeId: string, parentNodeId: string | null, content: string, 
   upsertNodeSnapshot({
     nodeId,
     parentNodeId,
+    kind: extra.kind ?? (extra.anchorLink?.kind === 'cloze' || extra.reveal !== null ? 'item' : 'topic'),
     title: extra.title ?? nodeId,
     isTitleManual: true,
     hideTitleHeading: false,

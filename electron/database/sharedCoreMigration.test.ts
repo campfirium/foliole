@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { NODE_KIND_MIGRATION_CANDIDATES_META_KEY } from '../../lib/core/nodes/nodeKind.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 
@@ -125,4 +126,58 @@ it('migrates legacy attachment ids to content hashes and rewrites node reference
   expect(
     (connection.sqlite.prepare(`PRAGMA table_info(attachments)`).all() as Array<{ name: string }>).map((column) => column.name)
   ).not.toContain('hash');
+});
+
+it('backfills node kind for legacy rows and records ambiguous empty leaf candidates', () => {
+  const connection = openDatabaseConnection();
+
+  connection.sqlite.exec(`
+    CREATE TABLE nodes (
+      id TEXT PRIMARY KEY,
+      parent_id TEXT,
+      title TEXT NOT NULL,
+      is_title_manual INTEGER NOT NULL DEFAULT 0,
+      content TEXT NOT NULL DEFAULT '',
+      reveal TEXT,
+      anchor_link TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      deleted_at TEXT
+    );
+    CREATE TABLE workspace_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  const insertNode = connection.sqlite.prepare(
+    `INSERT INTO nodes (id, parent_id, title, is_title_manual, content, reveal, anchor_link, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  insertNode.run('special-inbox', null, 'Inbox', 1, '', null, null, '2026-03-29T00:00:00.000Z', '2026-03-29T00:00:00.000Z', null);
+  insertNode.run('node-folder', null, 'Folder shell', 1, '', null, null, '2026-03-29T00:00:00.000Z', '2026-03-29T00:00:00.000Z', null);
+  insertNode.run('node-topic', 'node-folder', 'Topic body', 1, 'Body', null, null, '2026-03-29T00:00:00.000Z', '2026-03-29T00:00:00.000Z', null);
+  insertNode.run('node-item', null, 'QA', 1, 'Prompt', 'Answer', null, '2026-03-29T00:00:00.000Z', '2026-03-29T00:00:00.000Z', null);
+  insertNode.run('node-ambiguous', null, 'Blank draft', 1, '', null, null, '2026-03-29T00:00:00.000Z', '2026-03-29T00:00:00.000Z', null);
+  connection.sqlite.pragma('user_version = 12');
+
+  initializeDatabaseConnection(connection);
+
+  expect(connection.sqlite.prepare(`SELECT id, kind FROM nodes ORDER BY id ASC`).all()).toEqual([
+    { id: 'node-ambiguous', kind: 'topic' },
+    { id: 'node-folder', kind: 'folder' },
+    { id: 'node-item', kind: 'item' },
+    { id: 'node-topic', kind: 'topic' },
+    { id: 'special-inbox', kind: 'folder' }
+  ]);
+
+  const reportRow = connection.sqlite
+    .prepare('SELECT value FROM workspace_meta WHERE key = ?')
+    .get(NODE_KIND_MIGRATION_CANDIDATES_META_KEY) as { value: string };
+  const report = JSON.parse(reportRow.value) as { candidates: Array<{ nodeId: string; fallbackKind: string }> };
+
+  expect(report.candidates).toEqual([
+    expect.objectContaining({ nodeId: 'node-ambiguous', fallbackKind: 'topic' })
+  ]);
 });

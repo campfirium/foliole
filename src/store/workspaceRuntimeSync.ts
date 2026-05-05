@@ -31,6 +31,7 @@ function toNodeSnapshotPayload(node: Node, position?: number): NativeNodeSnapsho
   return {
     nodeId: node.id,
     parentNodeId: node.parentNodeId,
+    kind: node.kind,
     priority: node.priority ?? null,
     desiredRetention: node.desiredRetention ?? null,
     title: node.title,

@@ -30,6 +30,7 @@ export function createQaNode(id: string, due: string): Node {
   return {
     id,
     parentNodeId: null,
+    kind: 'item',
     title: id,
     content: `${id}-content`,
     reveal: `${id}-answer`,
@@ -43,6 +44,7 @@ export function createClozeReviewNode(id: string, due: string): Node {
   return {
     id,
     parentNodeId: null,
+    kind: 'item',
     title: id,
     content: `${id}-content`,
     anchorLink: {
@@ -73,6 +75,7 @@ export function createReadingNode(id: string, nextAt: string): Node {
   return {
     id,
     parentNodeId: null,
+    kind: 'topic',
     title: id,
     content: `${id}-content`,
     reveal: null,

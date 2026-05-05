@@ -1,3 +1,5 @@
+import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
+
 export interface NodeReviewProfile {
   due: string;
   lastReviewAt: string | null;
@@ -31,6 +33,7 @@ export type NodeSpecialKind = 'inbox';
 export interface Node {
   id: string;
   parentNodeId: string | null;
+  kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
   specialKind?: NodeSpecialKind;

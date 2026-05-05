@@ -93,6 +93,7 @@ export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 
   return {
     id: partial.id,
     parentNodeId: partial.parentNodeId ?? null,
+    kind: partial.kind ?? (partial.specialKind === 'inbox' ? 'folder' : partial.reveal !== null ? 'item' : 'topic'),
     priority: partial.priority ?? null,
     desiredRetention: partial.desiredRetention ?? null,
     specialKind: partial.specialKind,

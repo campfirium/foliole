@@ -25,6 +25,7 @@ function createNodeFixture(): Node {
   return {
     id: 'node-1',
     parentNodeId: null,
+    kind: 'topic',
     priority: 0,
     desiredRetention: 0.81,
     title: 'Seed',
@@ -97,6 +98,7 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
   expect(invoke).toHaveBeenCalledWith(command, {
     nodeId: 'node-1',
     parentNodeId: null,
+    kind: 'topic',
     priority: 0,
     desiredRetention: 0.81,
     title: 'Seed',

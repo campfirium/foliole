@@ -9,6 +9,7 @@ function createNode(id: string, overrides: Partial<Node>): Node {
   return {
     id,
     parentNodeId: null,
+    kind: 'topic',
     priority: null,
     desiredRetention: null,
     title: id,

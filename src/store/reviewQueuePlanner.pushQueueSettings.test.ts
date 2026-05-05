@@ -9,6 +9,7 @@ function createFsrsNode(id: string, overrides: Partial<Node> = {}): Node {
   return {
     id,
     parentNodeId: null,
+    kind: 'item',
     title: id,
     content: id,
     reveal: `${id}-answer`,
@@ -33,6 +34,7 @@ function createReadingNode(id: string): Node {
   return {
     id,
     parentNodeId: null,
+    kind: 'topic',
     title: id,
     content: `${id}-content`,
     reveal: null,

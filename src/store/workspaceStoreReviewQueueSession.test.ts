@@ -31,6 +31,7 @@ function createReviewNode(id: string, due: string, overrides: Partial<NodeReview
   return {
     id,
     parentNodeId: null,
+    kind: 'item',
     title: id,
     content: id,
     reveal: `${id}-answer`,
@@ -58,6 +59,7 @@ function createReadingNode(id: string, timestamp: string, reading: NodeReadingPr
   return {
     id,
     parentNodeId: null,
+    kind: 'topic',
     title: id,
     content: `${id}-content`,
     reveal: null,
@@ -71,6 +73,7 @@ function createReadingNode(id: string, timestamp: string, reading: NodeReadingPr
 const priorityParentNode: Node = {
   id: 'priority-parent',
   parentNodeId: null,
+  kind: 'folder',
   priority: 0,
   title: 'priority-parent',
   content: '   ',

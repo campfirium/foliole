@@ -13,6 +13,7 @@ export function createInboxNode(timestamp: string): Node {
   return {
     id: INBOX_NODE_ID,
     parentNodeId: null,
+    kind: 'folder',
     specialKind: 'inbox',
     title: 'Inbox',
     isTitleManual: true,
@@ -36,6 +37,7 @@ export function ensureInboxNodeInSnapshot<T extends WorkspaceNodeSnapshot>(snaps
     ...existingInboxNode,
     id: INBOX_NODE_ID,
     parentNodeId: null,
+    kind: 'folder',
     specialKind: 'inbox',
     title: 'Inbox',
     isTitleManual: true,

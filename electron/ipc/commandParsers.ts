@@ -1,3 +1,5 @@
+import { isNodeKind } from '../../lib/core/nodes/nodeKind.js';
+
 export function asString(value: unknown, field: string): string {
   if (typeof value !== 'string') {
     throw new Error(`invalid argument: ${field}`);
@@ -94,6 +96,13 @@ function asReadingState(value: unknown, field: string): ReadingProfilePayload['s
   throw new Error(`invalid argument: ${field}`);
 }
 
+function asNodeKind(value: unknown, field: string) {
+  if (!isNodeKind(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value;
+}
+
 function asReadingProfile(value: unknown, field: string): ReadingProfilePayload | null {
   if (value === null || value === undefined) {
     return null;
@@ -119,6 +128,7 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
   return {
     nodeId: asString(args.nodeId, 'nodeId'),
     parentNodeId: asNullableString(args.parentNodeId, 'parentNodeId'),
+    kind: asNodeKind(args.kind, 'kind'),
     priority: asNullableInteger(args.priority, 'priority'),
     desiredRetention: asNullableFiniteNumber(args.desiredRetention, 'desiredRetention'),
     title: asString(args.title, 'title'),

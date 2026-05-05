@@ -8,6 +8,7 @@ function createNode(overrides: Partial<Node> = {}): Node {
   return {
     id: 'node-1',
     parentNodeId: null,
+    kind: 'topic',
     title: 'Node',
     content: 'Body',
     reveal: null,

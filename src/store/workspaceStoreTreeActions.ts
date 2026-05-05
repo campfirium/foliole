@@ -149,6 +149,7 @@ function buildCreatedChildState(
   const nextNode = {
     id: nodeId,
     parentNodeId,
+    kind: 'topic' as const,
     title: untitledState.title,
     content,
     anchorLink: null,

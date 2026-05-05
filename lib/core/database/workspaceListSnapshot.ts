@@ -1,9 +1,12 @@
+import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
+
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 interface WorkspaceNodeRow extends DatabaseRow {
   id: string;
   parent_id: string | null;
+  kind: string | null;
   priority: number | null;
   desired_retention: number | null;
   title: string;
@@ -56,6 +59,10 @@ function parseAnchorLink(value: string | null) {
   }
 }
 
+function parseNodeKind(value: string | null): NodeKind {
+  return isNodeKind(value) ? value : 'topic';
+}
+
 function toReadingProfile(row: WorkspaceNodeRow) {
   if (typeof row.reading_last_handled_at !== 'string' || typeof row.reading_next_at !== 'string') {
     return null;
@@ -97,6 +104,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
     `SELECT
        n.id,
        n.parent_id,
+       n.kind,
        n.priority,
        n.desired_retention,
        n.title,
@@ -147,6 +155,7 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
     nodesById[row.id] = {
       id: row.id,
       parentNodeId: row.parent_id,
+      kind: parseNodeKind(row.kind),
       priority: row.priority,
       desiredRetention: row.desired_retention,
       title: row.title,

@@ -62,6 +62,7 @@ function toPendingWorkspaceNode(
   return {
     id: pendingNode.nodeId,
     parentNodeId: pendingNode.parentNodeId,
+    kind: pendingNode.kind,
     priority: pendingNode.priority ?? null,
     desiredRetention: pendingNode.desiredRetention ?? null,
     title: pendingNode.title,

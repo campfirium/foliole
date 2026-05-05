@@ -61,6 +61,7 @@ it('restores the application sqlite state from an online backup snapshot', async
       'node-1': {
         id: 'node-1',
         parentNodeId: null,
+        kind: 'topic',
         title: 'node-1',
         isTitleManual: true,
         hideTitleHeading: false,
@@ -133,6 +134,7 @@ function createRestoredNodeSnapshot(nodeId: string, content: string, reveal: str
   return {
     id: nodeId,
     parentNodeId: null,
+    kind: reveal === null ? 'topic' : 'item',
     title: nodeId,
     isTitleManual: true,
     hideTitleHeading: false,
@@ -209,6 +211,7 @@ function seedNode(nodeId: string, content: string, position = 0, reveal: string 
   upsertNodeSnapshot({
     nodeId,
     parentNodeId: null,
+    kind: reveal === null ? 'topic' : 'item',
     title: nodeId,
     isTitleManual: true,
     content,

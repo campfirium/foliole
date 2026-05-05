@@ -6,6 +6,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
 
 const BASE_NODE: Node = {
+  kind: 'topic',
   content:
     '# Note\n\nBefore <highlight id="1">first marked text</highlight id="1"> after.\n\n<highlight id="2">Second marked text</highlight id="2">',
   createdAt: '2026-03-24T08:00:00.000Z',

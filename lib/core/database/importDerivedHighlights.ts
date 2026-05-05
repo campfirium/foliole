@@ -30,9 +30,9 @@ export function insertImportedHighlightNodes(input: {
 
   const insertNode = input.driver.prepare(
     `INSERT INTO nodes (
-       id, parent_id, priority, desired_retention, title, is_title_manual,
+       id, parent_id, kind, priority, desired_retention, title, is_title_manual,
        content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, NULL, NULL, ?, 0, ?, NULL, ?, ?, ?, NULL)`
+     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 0, ?, NULL, ?, ?, ?, NULL)`
   );
   const insertOrder = input.driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
 

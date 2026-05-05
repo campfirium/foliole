@@ -1,3 +1,4 @@
+import type { NodeKind } from '../core/nodes/nodeKind.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
 
 import type { NativeSchedulerCard } from './nativeContract.js';
@@ -33,6 +34,7 @@ export interface NativeWorkspaceReadingProfile {
 export interface NativeWorkspaceNodeSnapshot {
   id: string;
   parentNodeId: string | null;
+  kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
   title: string;
@@ -59,6 +61,7 @@ export interface NativeWorkspaceSnapshot {
 export interface NativeWorkspaceNodeDocument {
   content: string;
   hideTitleHeading: boolean;
+  kind: NodeKind;
   nodeId: string;
   reveal: string | null;
 }
@@ -126,6 +129,7 @@ export interface NativeReviewSchedulerSettings {
 export interface NativeNodeSnapshotArgs {
   nodeId: string;
   parentNodeId: string | null;
+  kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
   title: string;

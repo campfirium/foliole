@@ -16,6 +16,7 @@ vi.mock('../../shared/platform/nodeSourceBridge', () => ({
 }));
 
 const BASE_NODE: Node = {
+  kind: 'topic',
   content: 'Node body',
   createdAt: '2026-03-24T08:00:00.000Z',
   id: 'node-1',

@@ -23,6 +23,7 @@ export function createSeedNode(timestamp: string): Node {
   return {
     id: 'node-1',
     parentNodeId: null,
+    kind: 'topic',
     title: deriveNodeTitleFromContent(seedContent),
     content: seedContent,
     reveal: null,

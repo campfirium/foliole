@@ -39,6 +39,7 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
 
 const baseNode = {
   id: 'node-1',
+  kind: 'topic' as const,
   title: 'Node 1',
   parentNodeId: null,
   content: '',

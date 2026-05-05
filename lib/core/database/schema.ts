@@ -3,6 +3,7 @@ import { integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite
 export const nodes = sqliteTable('nodes', {
   id: text('id').primaryKey(),
   parentId: text('parent_id'),
+  kind: text('kind').notNull().default('topic'),
   priority: integer('priority'),
   desiredRetention: real('desired_retention'),
   title: text('title').notNull(),

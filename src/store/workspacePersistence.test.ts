@@ -64,6 +64,7 @@ function seedPendingInactiveNodeRendererState() {
   stagePendingNodeSync({
     nodeId: 'node-1',
     parentNodeId: null,
+    kind: 'item',
     priority: null,
     desiredRetention: null,
     title: 'Node 1',

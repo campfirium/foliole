@@ -16,9 +16,9 @@ function createRuntimeInvoke() {
         activeNodeId: 'node-2',
         nodeOrder: ['node-1', 'node-2', 'node-3'],
         nodesById: {
-          'node-1': { id: 'node-1', content: '', hasContent: true, hasReveal: false, reveal: null },
-          'node-2': { id: 'node-2', content: '', hasContent: true, hasReveal: true, reveal: null },
-          'node-3': { id: 'node-3', content: '', hasContent: true, hasReveal: true, reveal: null }
+          'node-1': { id: 'node-1', kind: 'topic', content: '', hasContent: true, hasReveal: false, reveal: null },
+          'node-2': { id: 'node-2', kind: 'item', content: '', hasContent: true, hasReveal: true, reveal: null },
+          'node-3': { id: 'node-3', kind: 'topic', content: '', hasContent: true, hasReveal: true, reveal: null }
         },
         trashedNodeIds: []
       });
@@ -29,6 +29,7 @@ function createRuntimeInvoke() {
       }
       return Promise.resolve({
         nodeId: 'node-2',
+        kind: 'item',
         content: 'Loaded node 2 body',
         hideTitleHeading: false,
         reveal: 'Loaded node 2 answer'
@@ -49,8 +50,8 @@ function createLongDocumentRuntimeInvoke(longDocument: string) {
         activeNodeId: 'node-2',
         nodeOrder: ['node-1', 'node-2'],
         nodesById: {
-          'node-1': { id: 'node-1', content: '', hasContent: true, hasReveal: false, reveal: null },
-          'node-2': { id: 'node-2', content: '', hasContent: true, hasReveal: false, reveal: null }
+          'node-1': { id: 'node-1', kind: 'topic', content: '', hasContent: true, hasReveal: false, reveal: null },
+          'node-2': { id: 'node-2', kind: 'topic', content: '', hasContent: true, hasReveal: false, reveal: null }
         },
         trashedNodeIds: []
       });
@@ -58,6 +59,7 @@ function createLongDocumentRuntimeInvoke(longDocument: string) {
     if (command === 'load_node_document' && payload?.nodeId === 'node-2') {
       return Promise.resolve({
         nodeId: 'node-2',
+        kind: 'topic',
         content: longDocument,
         hideTitleHeading: false,
         reveal: null
@@ -77,8 +79,8 @@ function createNearTermDirectionRuntimeInvoke(longDocument: string) {
         activeNodeId: 'node-1',
         nodeOrder: ['node-1', 'node-2'],
         nodesById: {
-          'node-1': { id: 'node-1', content: '', hasContent: true, hasReveal: false, reveal: null },
-          'node-2': { id: 'node-2', content: '', hasContent: true, hasReveal: false, reveal: null }
+          'node-1': { id: 'node-1', kind: 'topic', content: '', hasContent: true, hasReveal: false, reveal: null },
+          'node-2': { id: 'node-2', kind: 'topic', content: '', hasContent: true, hasReveal: false, reveal: null }
         },
         trashedNodeIds: []
       });
@@ -86,6 +88,7 @@ function createNearTermDirectionRuntimeInvoke(longDocument: string) {
     if (command === 'load_node_document' && payload?.nodeId === 'node-2') {
       return Promise.resolve({
         nodeId: 'node-2',
+        kind: 'topic',
         content: longDocument,
         hideTitleHeading: false,
         reveal: null
@@ -125,6 +128,7 @@ it('loads only the active node document from runtime hydrate', async () => {
   expect(loadDocumentCalls).toEqual([['load_node_document', { nodeId: 'node-2' }]]);
   expect(nodesById?.['node-1']).toEqual({
     id: 'node-1',
+    kind: 'topic',
     content: '',
     hasContent: true,
     hasReveal: false,
@@ -132,6 +136,7 @@ it('loads only the active node document from runtime hydrate', async () => {
   });
   expect(nodesById?.['node-2']).toEqual({
     id: 'node-2',
+    kind: 'item',
     content: 'Loaded node 2 body',
     hasContent: true,
     hasReveal: true,
@@ -140,6 +145,7 @@ it('loads only the active node document from runtime hydrate', async () => {
   });
   expect(nodesById?.['node-3']).toEqual({
     id: 'node-3',
+    kind: 'topic',
     content: '',
     hasContent: true,
     hasReveal: true,

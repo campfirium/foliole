@@ -9,6 +9,7 @@ function createNode(id: string, title: string, content: string): Node {
   return {
     id,
     parentNodeId: null,
+    kind: 'topic',
     title,
     content,
     reveal: null,

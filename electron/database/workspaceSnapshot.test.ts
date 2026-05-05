@@ -39,6 +39,7 @@ function seedNode(nodeId: string, position: number) {
   upsertNodeSnapshot({
     nodeId,
     parentNodeId: null,
+    kind: 'topic',
     title: `title:${nodeId}`,
     isTitleManual: true,
     content: `content:${nodeId}`,
@@ -76,6 +77,7 @@ it('loads persisted reading profiles from sqlite snapshot', () => {
   upsertNodeSnapshot({
     nodeId: 'node-reading',
     parentNodeId: null,
+    kind: 'topic',
     title: 'Reading node',
     isTitleManual: true,
     content: 'content:reading',
@@ -115,6 +117,7 @@ it('loads persisted Untitled sequence state from sqlite snapshot', () => {
   upsertNodeSnapshot({
     nodeId: 'node-untitled',
     parentNodeId: null,
+    kind: 'topic',
     title: 'Untitled 6',
     isTitleManual: false,
     content: '',

@@ -16,6 +16,7 @@
     "workspace:migrate": "node scripts/migrate-workspace-data.mjs",
     "sqlite:backup": "node --experimental-strip-types scripts/sqlite-maintenance.ts backup",
     "sqlite:restore": "node --experimental-strip-types scripts/sqlite-maintenance.ts restore",
+    "sqlite:node-kind-report": "node --experimental-strip-types scripts/node-kind-report.ts",
     "agent:codex": "bash scripts/codex/run-task.sh",
     "agent:codex:dry-run": "bash scripts/codex/run-task.sh --dry-run",
     "agent:loop": "bash scripts/codex/run-loop.sh",

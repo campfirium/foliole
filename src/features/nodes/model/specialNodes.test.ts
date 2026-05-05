@@ -7,6 +7,7 @@ function createNode(id: string, title: string): Node {
   return {
     id,
     parentNodeId: null,
+    kind: 'topic',
     title,
     content: title,
     reveal: null,

@@ -45,6 +45,7 @@ function seedMirrorArticleFixture(articleContent: string) {
   upsertNodeSnapshot({
     nodeId: 'node-article',
     parentNodeId: null,
+    kind: 'topic',
     title: 'Mirror Demo',
     isTitleManual: true,
     hideTitleHeading: false,
@@ -58,6 +59,7 @@ function seedMirrorArticleFixture(articleContent: string) {
   upsertNodeSnapshot({
     nodeId: 'node-highlight',
     parentNodeId: 'node-article',
+    kind: 'topic',
     title: 'bright text',
     isTitleManual: true,
     content: 'bright text',
@@ -70,6 +72,7 @@ function seedMirrorArticleFixture(articleContent: string) {
   upsertNodeSnapshot({
     nodeId: 'node-cloze-plain',
     parentNodeId: 'node-article',
+    kind: 'item',
     title: 'Study [...] today.',
     isTitleManual: true,
     content: 'Keep bright text here.\n\nStudy [...] today.\n\nEdited guess later.',
@@ -82,6 +85,7 @@ function seedMirrorArticleFixture(articleContent: string) {
   upsertNodeSnapshot({
     nodeId: 'node-cloze-extra',
     parentNodeId: 'node-article',
+    kind: 'item',
     title: 'Edited [...] later.',
     isTitleManual: true,
     content: 'Custom prompt [...] only',

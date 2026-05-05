@@ -66,6 +66,7 @@ const expectedWorkspaceListSnapshot = {
     'node-1': {
       id: 'node-1',
       parentNodeId: null,
+      kind: 'topic',
       priority: null,
       desiredRetention: null,
       title: 'Node 1',

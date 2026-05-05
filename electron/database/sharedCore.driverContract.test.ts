@@ -107,6 +107,7 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
   upsertNodeSnapshot(driver, {
     nodeId: 'node-1',
     parentNodeId: null,
+    kind: 'item',
     title: 'Node 1',
     isTitleManual: true,
     content: '# Node 1',
@@ -132,6 +133,7 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
   expect(upsertNodeRun).toHaveBeenCalledWith([
     'node-1',
     null,
+    'item',
     null,
     null,
     'Node 1',
@@ -236,6 +238,7 @@ it('loads workspace snapshot through query helpers only', () => {
       'node-1': {
         id: 'node-1',
         parentNodeId: null,
+        kind: 'topic',
         title: 'Node 1',
         isTitleManual: true,
         hideTitleHeading: false,

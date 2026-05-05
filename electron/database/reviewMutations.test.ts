@@ -73,6 +73,7 @@ function seedQaNode() {
   upsertNodeSnapshot({
     nodeId: NODE_ID,
     parentNodeId: null,
+    kind: 'item',
     title: 'QA 1',
     isTitleManual: true,
     content: 'Q',

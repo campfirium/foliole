@@ -26,9 +26,9 @@ function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
   }
   driver.execute(
     `INSERT INTO nodes (
-       id, parent_id, priority, desired_retention, title, is_title_manual, hide_title_heading,
+       id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
        content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, NULL, NULL, NULL, 'Inbox', 1, 0, '', NULL, NULL, ?, ?, NULL)`,
+     ) VALUES (?, NULL, 'folder', NULL, NULL, 'Inbox', 1, 0, '', NULL, NULL, ?, ?, NULL)`,
     [INBOX_NODE_ID, importedAt, importedAt]
   );
 }
@@ -45,9 +45,9 @@ export function writeNewNode(input: {
   const nodeId = `node-${randomUUID()}`;
   input.driver.execute(
     `INSERT INTO nodes (
-     id, parent_id, priority, desired_retention, title, is_title_manual, hide_title_heading,
+     id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
      content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, NULL, NULL, ?, 1, ?, ?, NULL, NULL, ?, ?, NULL)`,
+     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, ?, ?, NULL, NULL, ?, ?, NULL)`,
     [nodeId, INBOX_NODE_ID, input.title, input.hideTitleHeading ? 1 : 0, input.content, input.importedAt, input.importedAt]
   );
   input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [nodeId, input.nextInboxTopPosition]);
@@ -66,7 +66,7 @@ export function updateExistingNode(input: {
 }) {
   input.driver.execute(
     `UPDATE nodes
-     SET title = ?, is_title_manual = 1, hide_title_heading = ?, content = ?, updated_at = ?, deleted_at = NULL
+     SET kind = 'topic', title = ?, is_title_manual = 1, hide_title_heading = ?, content = ?, updated_at = ?, deleted_at = NULL
      WHERE id = ?`,
     [input.title, input.hideTitleHeading ? 1 : 0, input.content, input.importedAt, input.existingNode.id]
   );

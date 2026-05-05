@@ -1,4 +1,5 @@
-import { buildAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
+import { migrateAttachmentIdsToHashes } from './attachmentIdMigration.js';
+import { migrateNodeKinds } from './nodeKindMigration.js';
 
 export interface DatabaseMigrationTarget {
   exec(sql: string): void;
@@ -14,7 +15,7 @@ export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget 
   sqlite: TSqlite;
 }
 
-export const DATABASE_SCHEMA_VERSION = 12;
+export const DATABASE_SCHEMA_VERSION = 13;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -171,61 +172,9 @@ const CREATE_TABLE_STATEMENTS_V10 = [
   'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)'
 ];
 
-const CREATE_TABLE_STATEMENTS_V12 = [
-  'CREATE TABLE IF NOT EXISTS mirror_articles (article_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE, relative_path TEXT NOT NULL, mirrored_at TEXT NOT NULL)'
-];
-function migrateAttachmentIdsToHashes(sqlite: DatabaseMigrationTarget) {
-  const attachmentColumns = sqlite
-    .prepare('PRAGMA table_info(attachments)')
-    .all() as Array<{ name: string }>;
+const CREATE_TABLE_STATEMENTS_V12 = ['CREATE TABLE IF NOT EXISTS mirror_articles (article_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE, relative_path TEXT NOT NULL, mirrored_at TEXT NOT NULL)'];
 
-  if (!attachmentColumns.some((column) => column.name === 'hash')) {
-    return;
-  }
-
-  sqlite.exec('ALTER TABLE attachments RENAME TO attachments_legacy');
-  sqlite.exec('ALTER TABLE node_attachments RENAME TO node_attachments_legacy');
-  sqlite.exec(`CREATE TABLE attachments (
-    id TEXT PRIMARY KEY,
-    original_name TEXT,
-    mime_type TEXT,
-    size_bytes INTEGER,
-    created_at TEXT NOT NULL
-  )`);
-  sqlite.exec(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    SELECT hash, original_name, mime_type, size_bytes, created_at
-    FROM attachments_legacy`);
-  sqlite.exec(`CREATE TABLE node_attachments (
-    node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-    attachment_id TEXT NOT NULL REFERENCES attachments(id),
-    role TEXT NOT NULL,
-    PRIMARY KEY (node_id, attachment_id, role)
-  )`);
-  sqlite.exec(`INSERT INTO node_attachments (node_id, attachment_id, role)
-    SELECT legacy.node_id, attachments_legacy.hash, legacy.role
-    FROM node_attachments_legacy legacy
-    INNER JOIN attachments_legacy ON attachments_legacy.id = legacy.attachment_id`);
-  sqlite.exec('CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)');
-
-  const legacyAttachments = sqlite
-    .prepare('SELECT id, hash, original_name FROM attachments_legacy')
-    .all() as Array<{ hash: string; id: string; original_name: string | null }>;
-
-  const updateNodeContent = sqlite.prepare(
-    `UPDATE nodes
-     SET content = REPLACE(content, ?, ?)
-     WHERE content LIKE ?`
-  );
-
-  for (const attachment of legacyAttachments) {
-    const oldReference = `attachment://${attachment.id}`;
-    const newReference = buildAssetMarkdownUrl(attachment.hash, attachment.original_name);
-    updateNodeContent.run(oldReference, newReference, `%${oldReference}%`);
-  }
-
-  sqlite.exec('DROP TABLE node_attachments_legacy');
-  sqlite.exec('DROP TABLE attachments_legacy');
-}
+const CREATE_TABLE_STATEMENTS_V13 = ['ALTER TABLE nodes ADD COLUMN kind TEXT NOT NULL DEFAULT \'topic\''];
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -243,7 +192,9 @@ const MIGRATION_STEPS = [
   { statements: CREATE_TABLE_STATEMENTS_V8, version: 8 },
   { statements: CREATE_TABLE_STATEMENTS_V9, version: 9 },
   { statements: CREATE_TABLE_STATEMENTS_V10, version: 10 },
-  { migrate: migrateAttachmentIdsToHashes, version: 11 }, { statements: CREATE_TABLE_STATEMENTS_V12, version: 12 }
+  { migrate: migrateAttachmentIdsToHashes, version: 11 },
+  { statements: CREATE_TABLE_STATEMENTS_V12, version: 12 },
+  { migrate: migrateNodeKinds, statements: CREATE_TABLE_STATEMENTS_V13, version: 13 }
 ];
 function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
   if (currentVersion >= step.version) {
@@ -253,12 +204,13 @@ function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: num
     for (const statement of step.statements) {
       sqlite.exec(statement);
     }
-  } else {
-    const migrate = step.migrate;
-    if (!migrate) {
-      throw new Error(`missing migration handler for schema version ${step.version}`);
-    }
+  }
+  const migrate = step.migrate;
+  if (migrate) {
     migrate(sqlite);
+  }
+  if (!Array.isArray(step.statements) && !migrate) {
+    throw new Error(`missing migration handler for schema version ${step.version}`);
   }
   setUserVersion(sqlite, step.version);
 }

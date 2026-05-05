@@ -1,3 +1,4 @@
+import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { hasNodeContent, hasNodeReveal } from '../features/nodes/model/nodeTypes';
 
@@ -9,6 +10,7 @@ interface WorkspaceRendererBoundaryStateLike {
 export interface WorkspaceNodeDocument {
   content: string;
   hideTitleHeading: boolean;
+  kind: NodeKind;
   reveal: string | null;
 }
 
@@ -46,6 +48,7 @@ export function mergeWorkspaceNodeDocument(node: Node, document: WorkspaceNodeDo
     content: document.content,
     hasContent: document.content.trim().length > 0,
     hideTitleHeading: document.hideTitleHeading,
+    kind: document.kind,
     reveal: document.reveal,
     hasReveal: document.reveal !== null
   };

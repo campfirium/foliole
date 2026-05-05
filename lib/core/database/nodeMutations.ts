@@ -1,3 +1,5 @@
+import type { NodeKind } from '../nodes/nodeKind.js';
+
 import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
@@ -20,6 +22,7 @@ interface NodeReadingPayload {
 export interface UpsertNodeSnapshotInput {
   nodeId: string;
   parentNodeId: string | null;
+  kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
   title: string;
@@ -55,11 +58,12 @@ function toAnchorLinkValue(anchorLink: NodeAnchorLinkPayload | null): string | n
 function createUpsertNodeStatement(driver: DatabaseDriver) {
   return driver.prepare(
     `INSERT INTO nodes (
-       id, parent_id, priority, desired_retention, title, is_title_manual, hide_title_heading,
+       id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
        content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
+       kind = excluded.kind,
        priority = excluded.priority,
        desired_retention = excluded.desired_retention,
        title = excluded.title,
@@ -131,6 +135,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
     upsertNodeStatement.run([
       input.nodeId,
       input.parentNodeId,
+      input.kind,
       input.priority ?? null,
       input.desiredRetention ?? null,
       input.title,

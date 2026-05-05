@@ -1,4 +1,10 @@
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+vi.mock('../shared/platform/bridge', () => ({
+  getRuntimeInvoke: vi.fn()
+}));
+
+import { getRuntimeInvoke } from '../shared/platform/bridge';
 
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
@@ -33,6 +39,8 @@ function createLoadedNodes() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  vi.restoreAllMocks();
+  vi.mocked(getRuntimeInvoke).mockReset();
   resetWorkspaceStore();
 });
 
@@ -60,7 +68,9 @@ it('trims inactive node documents from direct store patches', () => {
   });
 });
 
-it('keeps pending unsynced node documents while switching active nodes', async () => {
+it('trims inactive node documents on active switch before hydrate replay restores them', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(() => new Promise(() => undefined)));
+
   useWorkspaceStore.setState({
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
@@ -70,7 +80,7 @@ it('keeps pending unsynced node documents while switching active nodes', async (
         ...createLoadedNodes()['node-1'],
         content: '',
         reveal: null,
-        hasReveal: true
+        hasReveal: false
       }
     },
     trashedNodeIds: []
@@ -83,7 +93,7 @@ it('keeps pending unsynced node documents while switching active nodes', async (
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-1');
   expect(state.nodesById['node-1']).toMatchObject({
-    content: 'Locally edited body',
+    content: '',
     hasContent: true
   });
   expect(state.nodesById['node-2']).toMatchObject({

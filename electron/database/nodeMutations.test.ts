@@ -44,6 +44,7 @@ function seedNode(nodeId: string, parentNodeId: string | null, position: number)
   upsertNodeSnapshot({
     nodeId,
     parentNodeId,
+    kind: nodeId === 'node-child' ? 'item' : 'topic',
     title: nodeId,
     isTitleManual: true,
     content: `# ${nodeId}`,
@@ -94,6 +95,7 @@ function seedDismissedReadingNode(nodeId: string, parentNodeId: string | null, p
   upsertNodeSnapshot({
     nodeId,
     parentNodeId,
+    kind: 'item',
     title: nodeId,
     isTitleManual: true,
     content: `# ${nodeId}`,

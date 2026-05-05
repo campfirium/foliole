@@ -7,6 +7,7 @@ it('keeps the list-layer projection lightweight', () => {
   const heavyNode: Node = {
     id: 'node-1',
     parentNodeId: null,
+    kind: 'item',
     title: 'Atlas',
     content: 'Long body '.repeat(500),
     reveal: 'Answer '.repeat(200),

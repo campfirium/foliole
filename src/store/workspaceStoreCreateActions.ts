@@ -20,6 +20,8 @@ interface RuntimeSyncHandlers {
   syncNodeOrder: (nodeOrder: string[]) => void;
 }
 
+type WorkspaceNode = WorkspaceState['nodesById'][string];
+
 function createQANodeRecord(args: {
   anchorId?: string;
   answerContent: string;
@@ -28,10 +30,11 @@ function createQANodeRecord(args: {
   promptContent: string;
   timestamp: string;
   title: string;
-}) {
+}): WorkspaceNode {
   return {
     id: args.nodeId,
     parentNodeId: args.parentNodeId,
+    kind: 'item',
     title: args.title,
     hasContent: args.promptContent.length > 0,
     content: args.promptContent,
@@ -54,6 +57,7 @@ export function createRootNodeAction(
     let createdNode = {
       id: nodeId,
       parentNodeId: null,
+      kind: 'topic' as const,
       title: deriveNodeTitleFromContent(content),
       hasContent: content.trim().length > 0,
       content,
@@ -111,8 +115,7 @@ export function createHighlightFromSelectionAction(
       return null;
     }
 
-    const childNodeId = `node-${crypto.randomUUID()}`;
-    const timestamp = new Date().toISOString();
+    const childNodeId = `node-${crypto.randomUUID()}`, timestamp = new Date().toISOString();
     let createdNode: WorkspaceState['nodesById'][string] | null = null;
     let nextNodeOrder: string[] | null = null;
 
@@ -129,6 +132,7 @@ export function createHighlightFromSelectionAction(
       createdNode = {
         id: childNodeId,
         parentNodeId,
+        kind: 'topic',
         title: untitledState.title,
         hasContent: normalizedContent.length > 0,
         content: normalizedContent,
@@ -190,7 +194,7 @@ export function createQAFromSelectionAction(
         parentNodeId,
         state
       );
-      createdNode = createQANodeRecord({
+      const nextNode = createQANodeRecord({
         anchorId,
         answerContent: normalizedAnswer,
         nodeId: childNodeId,
@@ -199,10 +203,11 @@ export function createQAFromSelectionAction(
         timestamp,
         title: untitledState.title
       });
+      createdNode = nextNode;
       nextNodeOrder = [...state.nodeOrder, childNodeId];
       const nextNodesById = {
         ...state.nodesById,
-        [childNodeId]: createdNode
+        [childNodeId]: nextNode
       };
       return {
         nodeOrder: nextNodeOrder,

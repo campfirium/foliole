@@ -15,6 +15,7 @@ it('renders node review settings inside the shared inspector section', () => {
       editableNodeId="node-1"
       nodesById={{
         'node-1': {
+          kind: 'topic',
           content: 'Body',
           createdAt: '2026-01-01T00:00:00.000Z',
           desiredRetention: null,

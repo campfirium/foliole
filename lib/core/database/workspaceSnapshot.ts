@@ -1,3 +1,5 @@
+import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
+
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
@@ -32,6 +34,7 @@ interface WorkspaceReadingProfile {
 interface WorkspaceNodeSnapshot {
   id: string;
   parentNodeId: string | null;
+  kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
   title: string;
@@ -57,6 +60,7 @@ export interface WorkspaceSnapshot {
 interface WorkspaceNodeRow extends DatabaseRow {
   id: string;
   parent_id: string | null;
+  kind: string | null;
   priority: number | null;
   desired_retention: number | null;
   title: string;
@@ -109,6 +113,10 @@ function parseAnchorLink(value: string | null): WorkspaceAnchorLink | null {
   }
 }
 
+function parseNodeKind(value: string | null): NodeKind {
+  return isNodeKind(value) ? value : 'topic';
+}
+
 function toReadingProfile(row: WorkspaceNodeRow): WorkspaceReadingProfile | null {
   if (typeof row.reading_last_handled_at !== 'string' || typeof row.reading_next_at !== 'string') {
     return null;
@@ -150,6 +158,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
     `SELECT
        n.id,
        n.parent_id,
+       n.kind,
        n.priority,
        n.desired_retention,
        n.title,
@@ -196,6 +205,7 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
     const node: WorkspaceNodeSnapshot = {
       id: row.id,
       parentNodeId: row.parent_id,
+      kind: parseNodeKind(row.kind),
       title: row.title,
       isTitleManual: row.is_title_manual === 1,
       hideTitleHeading: row.hide_title_heading === 1,
