@@ -106,6 +106,7 @@ export function resetImportData(): NativeResetImportDataResult {
   const deleteImportSources = connection.sqlite.prepare('DELETE FROM import_sources');
   const deleteKeepImportItems = connection.sqlite.prepare('DELETE FROM keep_import_items');
   const deleteNodeViewState = connection.sqlite.prepare('DELETE FROM node_view_state WHERE node_id = ?');
+  const deleteNodeReadingDeviceState = connection.sqlite.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
   const clearActiveNodeStatement = connection.sqlite.prepare('DELETE FROM workspace_meta WHERE key = ?');
 
   connection.sqlite.transaction(() => {
@@ -115,6 +116,7 @@ export function resetImportData(): NativeResetImportDataResult {
 
     for (const nodeId of deletedNodeIds) {
       deleteNodeViewState.run(nodeId);
+      deleteNodeReadingDeviceState.run(nodeId);
     }
 
     if (clearActiveNode) {

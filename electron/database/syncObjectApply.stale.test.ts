@@ -43,9 +43,14 @@ function insertNewerReadingState() {
     ['node-1', 'node-1', '2026-04-21T10:00:00.000Z', '2026-04-21T10:00:00.000Z']
   );
   driver.execute(
-    `INSERT INTO node_reading (node_id, reading_position, last_handled_at, next_at)
-     VALUES (?, ?, ?, ?)`,
-    ['node-1', 20, '2026-04-21T18:00:00.000Z', '2026-04-22T18:00:00.000Z']
+    `INSERT INTO node_reading (node_id, last_handled_at, next_at)
+     VALUES (?, ?, ?)`,
+    ['node-1', '2026-04-21T18:00:00.000Z', '2026-04-22T18:00:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO node_reading_device_state (node_id, device_id, reading_position, updated_at)
+     VALUES (?, '*', ?, ?)`,
+    ['node-1', 20, '2026-04-21T18:00:00.000Z']
   );
   driver.execute(
     `INSERT INTO sync_object_state (
@@ -72,7 +77,10 @@ it('does not let stale remote records overwrite newer local object state', () =>
   }])).toEqual([]);
 
   const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne<{ reading_position: number }>('SELECT reading_position FROM node_reading WHERE node_id = ?', ['node-1']))
+  expect(driver.queryOne<{ reading_position: number }>(
+    'SELECT reading_position FROM node_reading_device_state WHERE node_id = ? AND device_id = ?',
+    ['node-1', '*']
+  ))
     .toEqual({ reading_position: 20 });
   expect(driver.queryOne<{ content_hash: string; sync_dirty: number }>(
     `SELECT content_hash, sync_dirty FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = 'node-1'`

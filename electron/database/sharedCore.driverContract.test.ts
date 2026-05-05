@@ -107,6 +107,7 @@ function createStatementRuns() {
     insertPdfSearchRun: vi.fn(),
     upsertNodeRun: vi.fn(),
     upsertOrderRun: vi.fn(),
+    upsertReadingDeviceRun: vi.fn(),
     upsertReadingRun: vi.fn()
   };
 }
@@ -114,8 +115,10 @@ function createStatementRuns() {
 function resolveNodeSnapshotRunSpy(sql: string, runs: ReturnType<typeof createStatementRuns>) {
   if (sql.includes('INSERT INTO nodes')) return runs.upsertNodeRun;
   if (sql.includes('INSERT INTO node_order')) return runs.upsertOrderRun;
+  if (sql.includes('INSERT INTO node_reading_device_state')) return runs.upsertReadingDeviceRun;
   if (sql.includes('INSERT INTO node_reading')) return runs.upsertReadingRun;
   if (sql === 'DELETE FROM node_reading WHERE node_id = ?') return runs.deleteReadingRun;
+  if (sql === 'DELETE FROM node_reading_device_state WHERE node_id = ?') return runs.deleteReadingRun;
   if (sql === 'DELETE FROM node_search WHERE node_id = ?') return runs.deleteNodeSearchRun;
   if (sql.includes('INSERT INTO node_search')) return runs.insertNodeSearchRun;
   if (sql === 'DELETE FROM pdf_search WHERE node_id = ?') return runs.deletePdfSearchRun;
@@ -164,9 +167,9 @@ function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRu
     '2026-03-14T00:00:00.000Z',
     0,
     0,
-    0,
     'dismissed'
   ]);
+  expect(runs.upsertReadingDeviceRun).not.toHaveBeenCalled();
   expect(runs.deleteReadingRun).not.toHaveBeenCalled();
 }
 
@@ -180,7 +183,9 @@ function expectNodeSnapshotSearchSync(runs: ReturnType<typeof createStatementRun
       expect.stringContaining('INSERT INTO nodes'),
       expect.stringContaining('INSERT INTO node_order'),
       expect.stringContaining('INSERT INTO node_reading'),
+      expect.stringContaining('INSERT INTO node_reading_device_state'),
       'DELETE FROM node_reading WHERE node_id = ?',
+      'DELETE FROM node_reading_device_state WHERE node_id = ?',
       'DELETE FROM node_search WHERE node_id = ?',
       expect.stringContaining('INSERT INTO node_search'),
       'DELETE FROM pdf_search WHERE node_id = ?',
@@ -195,7 +200,7 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
   upsertNodeSnapshot(driver, nodeSnapshotInput);
 
   expect(transactionSpy).toHaveBeenCalledTimes(1);
-  expect(prepareSpy).toHaveBeenCalledTimes(8);
+  expect(prepareSpy).toHaveBeenCalledTimes(10);
   expect(driver.queryOne).toHaveBeenCalledWith('SELECT node_id FROM node_reading WHERE node_id = ?', ['node-1']);
   expect(driver.queryAll).toHaveBeenCalledWith(expect.stringContaining('WITH RECURSIVE node_descendants'), ['node-1']);
   expectNodeSnapshotPersistence(runs);

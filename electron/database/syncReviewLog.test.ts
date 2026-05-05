@@ -188,8 +188,8 @@ it('applies mobile learning state and review event as clean desktop facts', () =
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ reading_position: number }>(
-    'SELECT reading_position FROM node_reading WHERE node_id = ?',
-    ['node-1']
+    'SELECT reading_position FROM node_reading_device_state WHERE node_id = ? AND device_id = ?',
+    ['node-1', '*']
   )).toEqual({ reading_position: 512 });
   expect(driver.queryOne<{ last_review_at: string; reps: number }>(
     'SELECT last_review_at, reps FROM node_review WHERE node_id = ?',

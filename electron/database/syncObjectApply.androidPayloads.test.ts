@@ -75,9 +75,12 @@ it('accepts Android-exported numeric strings when applying learning objects', ()
   expect(openDatabaseConnection().driver.queryOne<{
     interval_duration_ms: number;
     interval_growth_factor: number;
-    reading_position: number;
-  }>('SELECT interval_duration_ms, interval_growth_factor, reading_position FROM node_reading WHERE node_id = ?', ['node-1']))
-    .toEqual({ interval_duration_ms: 2500, interval_growth_factor: 1.75, reading_position: 42 });
+  }>('SELECT interval_duration_ms, interval_growth_factor FROM node_reading WHERE node_id = ?', ['node-1']))
+    .toEqual({ interval_duration_ms: 2500, interval_growth_factor: 1.75 });
+  expect(openDatabaseConnection().driver.queryOne<{ reading_position: number }>(
+    'SELECT reading_position FROM node_reading_device_state WHERE node_id = ? AND device_id = ?',
+    ['node-1', '*']
+  )).toEqual({ reading_position: 42 });
 });
 
 it('accepts Android-exported numeric strings when applying pdf page text', () => {

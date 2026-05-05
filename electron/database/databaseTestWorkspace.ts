@@ -7,6 +7,7 @@ export function resetSeededWorkspace() {
     DELETE FROM review_log;
     DELETE FROM node_sync_versions;
     DELETE FROM node_reading;
+    DELETE FROM node_reading_device_state;
     DELETE FROM node_review;
     DELETE FROM node_order;
     DELETE FROM workspace_meta;

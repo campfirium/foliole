@@ -9,6 +9,7 @@ import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from '
 import {
   createUpdateNodeAnchorLinkStatement,
   createUpsertNodeOrderStatement,
+  createUpsertNodeReadingDeviceStateStatement,
   createUpsertNodeReadingStatement,
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
@@ -130,7 +131,9 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
   const upsertNodeStatement = createUpsertNodeStatement(driver);
   const upsertNodeOrderStatement = createUpsertNodeOrderStatement(driver);
   const upsertNodeReadingStatement = createUpsertNodeReadingStatement(driver);
+  const upsertNodeReadingDeviceStateStatement = createUpsertNodeReadingDeviceStateStatement(driver);
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
+  const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
 
   driver.transaction(() => {
     ensureSpecialRootNodesForInput(driver, input);
@@ -159,7 +162,12 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
     if (typeof input.position === 'number') {
       upsertNodeOrderStatement.run([input.nodeId, input.position]);
     }
-    writeNodeReadingSnapshotWithSync(driver, input, upsertNodeReadingStatement.run, deleteNodeReadingStatement.run);
+    writeNodeReadingSnapshotWithSync(driver, input, {
+      deleteDeviceState: deleteNodeReadingDeviceStateStatement.run,
+      deleteReading: deleteNodeReadingStatement.run,
+      upsertDeviceState: upsertNodeReadingDeviceStateStatement.run,
+      upsertReading: upsertNodeReadingStatement.run
+    });
     bumpUntitledSequenceByParent(driver, {
       parentNodeId: input.parentNodeId,
       title: input.title,
@@ -223,6 +231,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   const deleteReviewLogStatement = driver.prepare('DELETE FROM review_log WHERE node_id = ?');
   const deleteNodeReviewStatement = driver.prepare('DELETE FROM node_review WHERE node_id = ?');
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
+  const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
   const deleteNodeOrderStatement = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   const clearOrderStatement = driver.prepare('DELETE FROM node_order');
@@ -233,6 +242,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
       deleteReviewLogStatement.run([nodeId]);
       deleteNodeReviewStatement.run([nodeId]);
       deleteNodeReadingStatement.run([nodeId]);
+      deleteNodeReadingDeviceStateStatement.run([nodeId]);
       deleteNodeOrderStatement.run([nodeId]);
     }
     for (const nodeId of [...input.nodeIds].reverse()) {

@@ -108,25 +108,37 @@ function applyImportSource(driver: DatabaseDriver, record: NativeSyncObjectRecor
 function applyNodeReading(driver: DatabaseDriver, record: NativeSyncObjectRecord) {
   if (record.deleted_at) {
     driver.execute('DELETE FROM node_reading WHERE node_id = ?', [record.object_id]);
+    driver.execute('DELETE FROM node_reading_device_state WHERE node_id = ?', [record.object_id]);
     return;
   }
   const payload = asObject(record);
   driver.execute(
     `INSERT INTO node_reading (
        node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at,
-       priority, reading_position, repetition_count, state
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       priority, repetition_count, state
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(node_id) DO UPDATE SET
        interval_duration_ms = excluded.interval_duration_ms, interval_growth_factor = excluded.interval_growth_factor,
        last_handled_at = excluded.last_handled_at, next_at = excluded.next_at, priority = excluded.priority,
-       reading_position = excluded.reading_position, repetition_count = excluded.repetition_count, state = excluded.state`,
+       repetition_count = excluded.repetition_count, state = excluded.state`,
     [record.object_id, integer(payload.interval_duration_ms), numberOrNull(payload.interval_growth_factor) ?? 1,
       text(payload.last_handled_at) ?? record.updated_at,
       text(payload.next_at) ?? record.updated_at,
-      numberOrNull(payload.priority) ?? 0, integer(payload.reading_position),
+      numberOrNull(payload.priority) ?? 0,
       integer(payload.repetition_count),
       text(payload.state) ?? 'active']
   );
+  if ('reading_position' in payload) {
+    const deviceId = text(payload.device_id) ?? '*';
+    driver.execute(
+      `INSERT INTO node_reading_device_state (node_id, device_id, reading_position, updated_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(node_id, device_id) DO UPDATE SET
+         reading_position = excluded.reading_position,
+         updated_at = excluded.updated_at`,
+      [record.object_id, deviceId, integer(payload.reading_position), record.updated_at]
+    );
+  }
 }
 
 function applyNodeReview(driver: DatabaseDriver, record: NativeSyncObjectRecord) {

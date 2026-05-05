@@ -50,7 +50,11 @@ final class FolioleCompanionSyncStateWriteStore {
         JSONObject payload = new JSONObject(input.optString("reading_json", "{}"));
         String now = Instant.now().toString();
         payload.put("node_id", nodeId);
-        String contentHash = FolioleCompanionSyncContentHash.hash(payload);
+        payload.put("device_id", modifiedByDeviceId);
+        JSONObject hashPayload = new JSONObject(payload.toString());
+        hashPayload.remove("device_id");
+        hashPayload.remove("reading_position");
+        String contentHash = FolioleCompanionSyncContentHash.hash(hashPayload);
         database.beginTransaction();
         try {
             FolioleCompanionLearningSyncPayload.applyReading(database, nodeId, buildRecord("node_reading", nodeId, payload, contentHash, now));

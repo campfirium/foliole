@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
 import {
   buildOrderedNodeIds,
   buildWorkspaceSnapshotNode,
@@ -68,6 +69,7 @@ interface NodeAttachmentSnapshotRow extends DatabaseRow {
 const ACTIVE_NODE_META_KEY = 'active_node_id';
 
 function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
+  const deviceId = loadDatabaseDeviceId(driver) ?? '*';
   return driver.queryAll<WorkspaceNodeRow>(
     `SELECT
        n.id,
@@ -92,7 +94,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        rd.last_handled_at AS reading_last_handled_at,
        rd.next_at AS reading_next_at,
        rd.priority AS reading_priority,
-       rd.reading_position AS reading_position,
+       rds.reading_position AS reading_position,
        rd.repetition_count AS reading_repetition_count,
        rd.state AS reading_state,
        nr.due AS review_due,
@@ -106,7 +108,9 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        nr.lapses AS review_lapses
      FROM nodes n
      LEFT JOIN node_reading rd ON rd.node_id = n.id
+     LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ?
      LEFT JOIN node_review nr ON nr.node_id = n.id`
+    , [deviceId]
   );
 }
 

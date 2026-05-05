@@ -39,7 +39,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         FolioleCompanionSyncObjectApply.applyPayload(database, record(
             "node_reading",
             "article-1",
-            "{\"next_at\":\"2026-04-25T10:00:00.000Z\",\"last_handled_at\":\"2026-04-25T09:00:00.000Z\",\"state\":\"active\",\"reading_position\":32}"
+            "{\"next_at\":\"2026-04-25T10:00:00.000Z\",\"last_handled_at\":\"2026-04-25T09:00:00.000Z\",\"state\":\"active\",\"device_id\":\"remote-device\",\"reading_position\":32}"
         ));
         FolioleCompanionSyncObjectApply.applyPayload(database, record(
             "node_review",
@@ -52,7 +52,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "{\"active_node_id\":\"article-2\"}"
         ));
 
-        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database);
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, "remote-device");
         JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
 
         assertNotNull(snapshot);
@@ -108,7 +108,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "{\"active_node_id\":\"article-2\"}"
         ));
 
-        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database);
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, "android-test");
         JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
 
         assertEquals("Blob article body", snapshot.getJSONObject("nodesById")
@@ -142,7 +142,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             .put(record(
                 "node_reading",
                 "article-1",
-                "{\"next_at\":\"2026-04-25T10:00:00.000Z\",\"last_handled_at\":\"2026-04-25T09:00:00.000Z\",\"state\":\"active\",\"reading_position\":32,\"interval_duration_ms\":1200,\"interval_growth_factor\":1.2,\"priority\":0.5,\"repetition_count\":2}"
+                "{\"next_at\":\"2026-04-25T10:00:00.000Z\",\"last_handled_at\":\"2026-04-25T09:00:00.000Z\",\"state\":\"active\",\"device_id\":\"remote-device\",\"reading_position\":32,\"interval_duration_ms\":1200,\"interval_growth_factor\":1.2,\"priority\":0.5,\"repetition_count\":2}"
             ))
             .put(record(
                 "node_review",
@@ -173,7 +173,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         JSONArray objects = loaded.getJSONArray("objects");
         String payloads = objects.toString();
         assertEquals(4, objects.length());
-        assertEquals(true, payloads.contains("reading_position"));
+        assertEquals(false, payloads.contains("reading_position"));
         assertEquals(true, payloads.contains("last_review_at"));
         assertEquals(true, payloads.contains("active_node_id"));
         assertEquals(true, payloads.contains("scroll_top"));
@@ -197,8 +197,9 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "scheduled_days INTEGER NOT NULL DEFAULT 0, reps INTEGER NOT NULL DEFAULT 0, lapses INTEGER NOT NULL DEFAULT 0)");
         database.execSQL("CREATE TABLE node_reading (node_id TEXT PRIMARY KEY, interval_duration_ms INTEGER NOT NULL DEFAULT 0, " +
             "interval_growth_factor REAL NOT NULL DEFAULT 1, last_handled_at TEXT NOT NULL, next_at TEXT NOT NULL, " +
-            "priority REAL NOT NULL DEFAULT 0, reading_position INTEGER NOT NULL DEFAULT 0, " +
-            "repetition_count INTEGER NOT NULL DEFAULT 0, state TEXT NOT NULL DEFAULT 'active')");
+            "priority REAL NOT NULL DEFAULT 0, repetition_count INTEGER NOT NULL DEFAULT 0, state TEXT NOT NULL DEFAULT 'active')");
+        database.execSQL("CREATE TABLE node_reading_device_state (node_id TEXT NOT NULL, device_id TEXT NOT NULL, " +
+            "reading_position INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
         database.execSQL("CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL)");
         database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
         database.execSQL("CREATE TABLE attachments (" +

@@ -17,7 +17,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
 
     private FolioleCompanionWorkspaceSnapshotExporter() {}
 
-    static JSObject loadWorkspaceSnapshot(SQLiteDatabase database) throws JSONException {
+    static JSObject loadWorkspaceSnapshot(SQLiteDatabase database, String deviceId) throws JSONException {
         JSONArray orderedNodeIds = loadOrderedNodeIds(database);
         if (orderedNodeIds.length() == 0) {
             return null;
@@ -36,16 +36,17 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
                 "n.hide_title_heading, " + contentExpression + ", n.opening_text, n.virtual_filter, n.reveal, n.anchor_link, " +
                 "n.image_regions, n.created_at, n.updated_at, n.deleted_at, " +
                 "rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority, " +
-                "rd.reading_position, rd.repetition_count, rd.state, " +
+                "rds.reading_position, rd.repetition_count, rd.state, " +
                 "nr.due, nr.last_review_at, nr.state, nr.stability, nr.difficulty, nr.elapsed_days, " +
                 "nr.scheduled_days, nr.reps, nr.lapses " +
             "FROM nodes n " +
             contentBlobJoin +
             "LEFT JOIN node_reading rd ON rd.node_id = n.id " +
+            "LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? " +
             "LEFT JOIN node_review nr ON nr.node_id = n.id " +
             "ORDER BY CASE WHEN EXISTS (SELECT 1 FROM node_order no WHERE no.node_id = n.id) THEN 0 ELSE 1 END, " +
                 "(SELECT no.position FROM node_order no WHERE no.node_id = n.id), n.created_at ASC",
-            null
+            new String[] { deviceId }
         )) {
             while (cursor.moveToNext()) {
                 String nodeId = cursor.getString(0);

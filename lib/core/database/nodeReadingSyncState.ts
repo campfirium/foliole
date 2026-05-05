@@ -41,7 +41,6 @@ function toNodeReadingPayload(nodeId: string, reading: NodeReadingSyncPayload) {
     next_at: reading.nextAt,
     node_id: nodeId,
     priority: reading.priority,
-    reading_position: reading.readingPosition,
     repetition_count: reading.repetitionCount,
     state: reading.state
   };
@@ -86,30 +85,40 @@ function recordNodeReadingUpsert(
 export function writeNodeReadingSnapshotWithSync(
   driver: DatabaseDriver,
   input: WriteNodeReadingSyncInput,
-  runUpsert: (params?: DatabaseBindParams) => void,
-  runDelete: (params?: DatabaseBindParams) => void
+  statements: {
+    deleteDeviceState: (params?: DatabaseBindParams) => void;
+    deleteReading: (params?: DatabaseBindParams) => void;
+    upsertDeviceState: (params?: DatabaseBindParams) => void;
+    upsertReading: (params?: DatabaseBindParams) => void;
+  }
 ) {
   const existed = hasExistingNodeReading(driver, input.nodeId);
   if (!input.reading) {
-    runDelete([input.nodeId]);
+    statements.deleteReading([input.nodeId]);
+    statements.deleteDeviceState([input.nodeId]);
     if (existed && input.deviceId) {
       recordNodeReadingTombstone(driver, { ...input, deviceId: input.deviceId });
     }
     return;
   }
 
-  runUpsert([
+  statements.upsertReading([
     input.nodeId,
     input.reading.intervalDurationMs,
     input.reading.intervalGrowthFactor,
     input.reading.lastHandledAt,
     input.reading.nextAt,
     input.reading.priority,
-    input.reading.readingPosition,
     input.reading.repetitionCount,
     input.reading.state
   ]);
   if (input.deviceId) {
+    statements.upsertDeviceState([
+      input.nodeId,
+      input.deviceId,
+      input.reading.readingPosition,
+      input.updatedAt
+    ]);
     recordNodeReadingUpsert(driver, { ...input, deviceId: input.deviceId, reading: input.reading });
   }
 }

@@ -12,6 +12,7 @@ final class FolioleCompanionLearningSyncPayload {
     static void applyReading(SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         if (!record.isNull("deleted_at")) {
             database.delete("node_reading", "node_id = ?", new String[] { objectId });
+            database.delete("node_reading_device_state", "node_id = ?", new String[] { objectId });
             return;
         }
         JSONObject payload = payload(record);
@@ -22,10 +23,22 @@ final class FolioleCompanionLearningSyncPayload {
         values.put("last_handled_at", payload.optString("last_handled_at", record.optString("updated_at")));
         values.put("next_at", payload.optString("next_at", record.optString("updated_at")));
         values.put("priority", payload.optDouble("priority", 0));
-        values.put("reading_position", payload.optLong("reading_position", 0));
         values.put("repetition_count", payload.optInt("repetition_count", 0));
         values.put("state", payload.optString("state", "active"));
         database.insertWithOnConflict("node_reading", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+        if (payload.has("reading_position")) {
+            ContentValues deviceValues = new ContentValues();
+            deviceValues.put("node_id", objectId);
+            deviceValues.put("device_id", payload.optString("device_id", "*"));
+            deviceValues.put("reading_position", payload.optLong("reading_position", 0));
+            deviceValues.put("updated_at", record.optString("updated_at"));
+            database.insertWithOnConflict(
+                "node_reading_device_state",
+                null,
+                deviceValues,
+                SQLiteDatabase.CONFLICT_REPLACE
+            );
+        }
     }
 
     static void applyReview(SQLiteDatabase database, String objectId, JSONObject record) throws Exception {

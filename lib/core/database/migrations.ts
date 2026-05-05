@@ -6,7 +6,7 @@ import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
 import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 31;
+export const DATABASE_SCHEMA_VERSION = 32;
 
 const CREATE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -81,9 +81,15 @@ const CREATE_SCHEMA_STATEMENTS = [
     last_handled_at TEXT NOT NULL,
     next_at TEXT NOT NULL,
     priority REAL NOT NULL DEFAULT 0,
-    reading_position INTEGER NOT NULL DEFAULT 0,
     repetition_count INTEGER NOT NULL DEFAULT 0,
     state TEXT NOT NULL DEFAULT 'active'
+  )`,
+  `CREATE TABLE IF NOT EXISTS node_reading_device_state (
+    node_id TEXT NOT NULL REFERENCES nodes(id),
+    device_id TEXT NOT NULL,
+    reading_position INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (node_id, device_id)
   )`,
   `CREATE TABLE IF NOT EXISTS review_log (
     id TEXT PRIMARY KEY,

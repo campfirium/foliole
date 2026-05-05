@@ -15,8 +15,7 @@ function parseSettingValue(value: string | null | undefined) {
 }
 
 export function loadOrCreateDatabaseDeviceId(driver: DatabaseDriver, now: string) {
-  const existing = driver.queryOne<{ value: string }>('SELECT value FROM settings WHERE key = ?', [DESKTOP_DEVICE_ID_KEY]);
-  const existingDeviceId = parseSettingValue(existing?.value);
+  const existingDeviceId = loadDatabaseDeviceId(driver);
   if (existingDeviceId) {
     return existingDeviceId;
   }
@@ -28,4 +27,13 @@ export function loadOrCreateDatabaseDeviceId(driver: DatabaseDriver, now: string
     [DESKTOP_DEVICE_ID_KEY, JSON.stringify(deviceId), now]
   );
   return deviceId;
+}
+
+export function loadDatabaseDeviceId(driver: DatabaseDriver) {
+  const existing = driver.queryOne<{ value: string }>('SELECT value FROM settings WHERE key = ?', [DESKTOP_DEVICE_ID_KEY]);
+  const existingDeviceId = parseSettingValue(existing?.value);
+  if (existingDeviceId) {
+    return existingDeviceId;
+  }
+  return null;
 }

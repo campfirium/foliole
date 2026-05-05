@@ -42,17 +42,26 @@ export function createUpsertNodeReadingStatement(driver: DatabaseDriver) {
   return driver.prepare(
     `INSERT INTO node_reading (
        node_id, interval_duration_ms, interval_growth_factor, last_handled_at,
-       next_at, priority, reading_position, repetition_count, state
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       next_at, priority, repetition_count, state
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(node_id) DO UPDATE SET
        interval_duration_ms = excluded.interval_duration_ms,
        interval_growth_factor = excluded.interval_growth_factor,
        last_handled_at = excluded.last_handled_at,
        next_at = excluded.next_at,
        priority = excluded.priority,
-       reading_position = excluded.reading_position,
        repetition_count = excluded.repetition_count,
        state = excluded.state`
+  );
+}
+
+export function createUpsertNodeReadingDeviceStateStatement(driver: DatabaseDriver) {
+  return driver.prepare(
+    `INSERT INTO node_reading_device_state (node_id, device_id, reading_position, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(node_id, device_id) DO UPDATE SET
+       reading_position = excluded.reading_position,
+       updated_at = excluded.updated_at`
   );
 }
 

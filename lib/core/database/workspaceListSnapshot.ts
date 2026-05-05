@@ -4,6 +4,7 @@ import { parseVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { parseStoredImageRegions } from './imageRegionCodec.js';
+import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
 import { applyResolvedOpenings, buildPdfOpeningById } from './workspaceListSnapshotOpening.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
@@ -100,6 +101,7 @@ function toReviewProfile(row: WorkspaceNodeRow) {
 }
 
 function queryWorkspaceRows(driver: DatabaseDriver) {
+  const deviceId = loadDatabaseDeviceId(driver) ?? '*';
   return driver.queryAll<WorkspaceNodeRow>(
     `SELECT
        n.id,
@@ -124,7 +126,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        rd.last_handled_at AS reading_last_handled_at,
        rd.next_at AS reading_next_at,
        rd.priority AS reading_priority,
-       rd.reading_position AS reading_position,
+       rds.reading_position AS reading_position,
        rd.repetition_count AS reading_repetition_count,
        rd.state AS reading_state,
        nr.due AS review_due,
@@ -138,7 +140,9 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        nr.lapses AS review_lapses
      FROM nodes n
      LEFT JOIN node_reading rd ON rd.node_id = n.id
+     LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ?
      LEFT JOIN node_review nr ON nr.node_id = n.id`
+    , [deviceId]
   );
 }
 

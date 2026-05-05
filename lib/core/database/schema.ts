@@ -73,10 +73,16 @@ export const nodeReading = sqliteTable('node_reading', {
   lastHandledAt: text('last_handled_at').notNull(),
   nextAt: text('next_at').notNull(),
   priority: real('priority').notNull().default(0),
-  readingPosition: integer('reading_position').notNull().default(0),
   repetitionCount: integer('repetition_count').notNull().default(0),
   state: text('state').notNull().default('active')
 });
+
+export const nodeReadingDeviceState = sqliteTable('node_reading_device_state', {
+  nodeId: text('node_id').notNull(),
+  deviceId: text('device_id').notNull(),
+  readingPosition: integer('reading_position').notNull().default(0),
+  updatedAt: text('updated_at').notNull()
+}, (table) => [primaryKey({ columns: [table.nodeId, table.deviceId] })]);
 
 export const reviewLog = sqliteTable('review_log', {
   id: text('id').primaryKey(),

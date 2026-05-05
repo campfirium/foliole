@@ -52,9 +52,15 @@ const statements = [
     last_handled_at TEXT NOT NULL,
     next_at TEXT NOT NULL,
     priority REAL NOT NULL DEFAULT 0,
-    reading_position INTEGER NOT NULL DEFAULT 0,
     repetition_count INTEGER NOT NULL DEFAULT 0,
     state TEXT NOT NULL DEFAULT 'active'
+  )`,
+  `CREATE TABLE IF NOT EXISTS node_reading_device_state (
+    node_id TEXT NOT NULL REFERENCES nodes(id),
+    device_id TEXT NOT NULL,
+    reading_position INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (node_id, device_id)
   )`,
   `CREATE TABLE IF NOT EXISTS review_log (
     id TEXT PRIMARY KEY,
@@ -101,11 +107,13 @@ const statements = [
     updated_at TEXT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS node_view_state (
-    node_id TEXT PRIMARY KEY REFERENCES nodes(id),
+    node_id TEXT NOT NULL REFERENCES nodes(id),
+    device_id TEXT NOT NULL,
     scroll_top INTEGER NOT NULL DEFAULT 0,
     selection_from INTEGER,
     selection_to INTEGER,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (node_id, device_id)
   )`,
   `CREATE TABLE IF NOT EXISTS attachments (
     id TEXT PRIMARY KEY,

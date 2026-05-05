@@ -133,7 +133,8 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         JSObject result = new JSObject();
         String endpointUrl = loadMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
         String lastSyncedAt = loadMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY);
-        JSObject workspaceSnapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database);
+        String deviceId = loadOrCreateDeviceId(database, Instant.now().toString());
+        JSObject workspaceSnapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, deviceId);
 
         result.put("endpoint_url", endpointUrl);
         result.put("last_synced_at", lastSyncedAt);

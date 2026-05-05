@@ -74,7 +74,6 @@ const PAYLOAD_SQL_BY_TYPE: Partial<Record<JsonSyncObjectType, string>> = {
     'last_handled_at', last_handled_at,
     'next_at', next_at,
     'priority', priority,
-    'reading_position', reading_position,
     'repetition_count', repetition_count,
     'state', state
   ) AS payload_json

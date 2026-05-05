@@ -87,7 +87,10 @@ it('applies generic sync object payloads and marks them clean', () => {
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ value_json: string }>('SELECT value_json FROM setting_records WHERE key = ?', ['app_settings']))
     .toEqual({ value_json: '{"theme":"dark"}' });
-  expect(driver.queryOne<{ reading_position: number }>('SELECT reading_position FROM node_reading WHERE node_id = ?', ['node-1']))
+  expect(driver.queryOne<{ reading_position: number }>(
+    'SELECT reading_position FROM node_reading_device_state WHERE node_id = ? AND device_id = ?',
+    ['node-1', '*']
+  ))
     .toEqual({ reading_position: 7 });
   expect(driver.queryOne<{ sync_dirty: number }>(
     `SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = 'node-1'`
