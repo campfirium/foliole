@@ -28,6 +28,8 @@ const HOST_BRIDGE_CONTRACT_READER = path.join(
 );
 const HOST_API_CONSUMERS = [
   'FolioleCompanionBootstrapState.java',
+  'FolioleCompanionContentBlobBatchStore.java',
+  'FolioleCompanionContentBlobMultipartBatch.java',
   'FolioleCompanionDesktopHttpClient.java',
   'FolioleCompanionNetworkPluginActions.java',
   'FolioleCompanionNsdDiscovery.java',
@@ -49,6 +51,9 @@ describe('Android host bridge contract metadata', () => {
       serviceType: '_foliole-sync._tcp.',
       timeoutMs: 1500
     });
+    expect(definitions.hostApi.contentBlobBatch.responseHeaderKeys).toMatchObject({
+      blobHash: 'x-blob-hash'
+    });
     expect(definitions.hostApi.workspaceSync.requestKeys).toMatchObject({
       endpointUrl: 'endpoint_url',
       message: 'message',
@@ -65,6 +70,7 @@ describe('Android host bridge contract metadata', () => {
     expect(bridgeSource).toContain('hostApiString(Context context, String groupName, String objectName, String key)');
     expect(hostBridgeSource).toContain('workspaceSyncRequestKey(context, "endpointUrl")');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.bootstrapBootedAtOutputKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.contentBlobBatchBlobHashResponseHeaderKey(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkUrlRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context)');
@@ -82,6 +88,7 @@ describe('Android host bridge contract metadata', () => {
     expect(combinedSource).not.toContain('"http://"');
     expect(combinedSource).not.toContain('":38641"');
     expect(combinedSource).not.toContain('"_foliole-sync._tcp."');
+    expect(combinedSource).not.toContain('"x-blob-hash"');
     expect(combinedSource).not.toContain('DISCOVERY_TIMEOUT_MS');
   });
 });

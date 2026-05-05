@@ -35,6 +35,7 @@ final class FolioleCompanionContentBlobBatchStore {
             FolioleCompanionContentBlobMultipartBatch.parse(
                 response.body,
                 response.contentType,
+                FolioleCompanionHostBridgeContractDefinitions.contentBlobBatchBlobHashResponseHeaderKey(context),
                 FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)
             );
         long parseElapsedMs = elapsedMs(parseStartedAt);

@@ -12,7 +12,7 @@ final class FolioleCompanionContentBlobMultipartBatch {
 
     private FolioleCompanionContentBlobMultipartBatch() {}
 
-    static List<Blob> parse(byte[] response, String contentType, String hashField) {
+    static List<Blob> parse(byte[] response, String contentType, String blobHashHeader, String hashField) {
         String boundary = requireBoundary(contentType);
         byte[] boundaryBytes = ("--" + boundary).getBytes(StandardCharsets.UTF_8);
         byte[] closingBoundaryBytes = ("--" + boundary + "--").getBytes(StandardCharsets.UTF_8);
@@ -39,7 +39,7 @@ final class FolioleCompanionContentBlobMultipartBatch {
             System.arraycopy(response, cursor, data, 0, contentLength);
             cursor += contentLength;
             cursor = requireCrLf(response, cursor);
-            blobs.add(new Blob(requireHash(headers.get("x-blob-hash"), hashField), data));
+            blobs.add(new Blob(requireHash(headers.get(blobHashHeader), hashField), data));
         }
         throw new IllegalStateException("Desktop content body batch response is truncated.");
     }

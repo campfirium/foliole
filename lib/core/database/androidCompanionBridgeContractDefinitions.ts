@@ -11,6 +11,11 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       },
       runtimeKind: 'android-capacitor'
     },
+    contentBlobBatch: {
+      responseHeaderKeys: {
+        blobHash: 'x-blob-hash'
+      }
+    },
     network: {
       discoveryDefaults: {
         emulatorHost: '10.0.2.2',
