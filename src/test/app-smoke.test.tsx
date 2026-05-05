@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
 import { App } from '../app/App';
@@ -111,5 +111,25 @@ describe('App', () => {
     expect(createdNode).not.toBeNull();
     expect(createdNode?.content).toBe('Alpha [[...]] Gamma');
     expect(createdNode?.reveal).toBe('Beta');
+  });
+
+  it('shows save feedback while editing', () => {
+    vi.useFakeTimers();
+    try {
+      render(<App />);
+
+      expect(screen.getByText('Not saved yet.')).toBeInTheDocument();
+      fireEvent.change(screen.getByTestId('editor-value'), {
+        target: { value: 'New content' }
+      });
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.getByText('Saved.')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
@@ -14,15 +14,37 @@ export function App() {
   const createQANodeFromSelection = useWorkspaceStore((state) => state.createQANodeFromSelection);
   const editorAdapterRef = useRef<EditorAdapter | null>(null);
   const [reviewMessage, setReviewMessage] = useState('Review area placeholder');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const saveTimerRef = useRef<number | null>(null);
 
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const editorContent = activeNode?.content ?? '';
 
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleEditorChange = (content: string) => {
     if (!activeNode) {
+      setSaveStatus('error');
       return;
     }
-    updateNodeContent(activeNode.id, content);
+    try {
+      setSaveStatus('saving');
+      updateNodeContent(activeNode.id, content);
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+      saveTimerRef.current = window.setTimeout(() => {
+        setSaveStatus('saved');
+      }, 180);
+    } catch {
+      setSaveStatus('error');
+    }
   };
 
   const handleCreateQANode = () => {
@@ -102,11 +124,25 @@ export function App() {
           </header>
           <div className="panel-body">
             <p>{reviewMessage}</p>
+            <p className="save-status">{getSaveStatusLabel(saveStatus)}</p>
           </div>
         </section>
       </section>
     </main>
   );
+}
+
+function getSaveStatusLabel(status: 'idle' | 'saving' | 'saved' | 'error') {
+  if (status === 'saving') {
+    return 'Saving...';
+  }
+  if (status === 'saved') {
+    return 'Saved.';
+  }
+  if (status === 'error') {
+    return 'Save failed.';
+  }
+  return 'Not saved yet.';
 }
 
 interface NodeRowProps {
