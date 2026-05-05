@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import type { EditorSearchDecorations } from '../../features/editor/adapters/EditorAdapter';
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -10,21 +11,85 @@ import {
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import { DocumentPanelContent } from './DocumentPanelSectionParts';
+import { DocumentTopicSearchToolbar } from './DocumentTopicSearchToolbar';
 import { FolderListSortControls } from './FolderListSortControls';
 
 interface DocumentPanelShellProps {
   bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
+  onPreviewDocumentSelection: DocumentPanelSectionProps['onRevealDocumentSelection'];
+  onPreviewTopicSearchDecorations: (searchDecorations: EditorSearchDecorations | null) => void;
   onToggleSourceUpdatePanel: () => void;
   props: DocumentPanelSectionProps;
   showSourceUpdateAction: boolean;
+}
+
+function renderDocumentSearchToolbar(
+  props: DocumentPanelSectionProps,
+  onPreviewDocumentSelection: DocumentPanelSectionProps['onRevealDocumentSelection'],
+  onPreviewTopicSearchDecorations: (searchDecorations: EditorSearchDecorations | null) => void
+) {
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
+  return (
+    <DocumentTopicSearchToolbar
+      activeNode={activeNode}
+      activeNodeId={props.activeNodeId}
+      editorContent={props.editorContent}
+      onRevealDocumentSelection={onPreviewDocumentSelection}
+      onUpdateSearchDecorations={onPreviewTopicSearchDecorations}
+    />
+  );
+}
+
+function renderDocumentPanelHeader(args: {
+  folderListSortDirection: FolderListSortDirection;
+  folderListSortKey: FolderListSortKey;
+  isFolderListView: boolean;
+  isSourceUpdatePanelOpen: boolean;
+  onChangeSortDirection: (value: FolderListSortDirection) => void;
+  onChangeSortKey: (value: FolderListSortKey) => void;
+  onToggleSourceUpdatePanel: () => void;
+  props: DocumentPanelSectionProps;
+  showSourceUpdateAction: boolean;
+}) {
+  if (args.isFolderListView) {
+    return null;
+  }
+
+  return (
+    <DocumentPanelHeader
+      activeNodeId={args.props.activeNodeId}
+      canGoBack={args.props.canGoBack}
+      canGoForward={args.props.canGoForward}
+      canGoParent={args.props.canGoParent}
+      folderListToolbar={
+        <FolderListSortControls
+          onChangeSortDirection={args.onChangeSortDirection}
+          onChangeSortKey={args.onChangeSortKey}
+          sortDirection={args.folderListSortDirection}
+          sortKey={args.folderListSortKey}
+        />
+      }
+      isFolderListView={args.isFolderListView}
+      isSourceUpdatePanelOpen={args.isSourceUpdatePanelOpen}
+      nodesById={args.props.nodesById}
+      onGoBack={args.props.onGoBack}
+      onGoForward={args.props.onGoForward}
+      onGoParent={args.props.onGoParent}
+      onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
+      onToggleSourceUpdatePanel={args.onToggleSourceUpdatePanel}
+      showSourceUpdateAction={args.showSourceUpdateAction}
+    />
+  );
 }
 
 export function DocumentPanelSectionShell({
   bodyProps,
   isFolderListView,
   isSourceUpdatePanelOpen,
+  onPreviewDocumentSelection,
+  onPreviewTopicSearchDecorations,
   onToggleSourceUpdatePanel,
   props,
   showSourceUpdateAction
@@ -33,34 +98,20 @@ export function DocumentPanelSectionShell({
   const [folderListSortDirection, setFolderListSortDirection] = useState<FolderListSortDirection>(
     DEFAULT_FOLDER_LIST_SORT_DIRECTION
   );
-
   return (
     <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
-      {isFolderListView ? null : (
-        <DocumentPanelHeader
-          activeNodeId={props.activeNodeId}
-          canGoBack={props.canGoBack}
-          canGoForward={props.canGoForward}
-          canGoParent={props.canGoParent}
-          folderListToolbar={
-            <FolderListSortControls
-              onChangeSortDirection={setFolderListSortDirection}
-              onChangeSortKey={setFolderListSortKey}
-              sortDirection={folderListSortDirection}
-              sortKey={folderListSortKey}
-            />
-          }
-          isFolderListView={isFolderListView}
-          isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
-          nodesById={props.nodesById}
-          onGoBack={props.onGoBack}
-          onGoForward={props.onGoForward}
-          onGoParent={props.onGoParent}
-          onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
-          onToggleSourceUpdatePanel={onToggleSourceUpdatePanel}
-          showSourceUpdateAction={showSourceUpdateAction}
-        />
-      )}
+      {renderDocumentPanelHeader({
+        folderListSortDirection,
+        folderListSortKey,
+        isFolderListView,
+        isSourceUpdatePanelOpen,
+        onChangeSortDirection: setFolderListSortDirection,
+        onChangeSortKey: setFolderListSortKey,
+        onToggleSourceUpdatePanel,
+        props,
+        showSourceUpdateAction
+      })}
+      {renderDocumentSearchToolbar(props, onPreviewDocumentSelection, onPreviewTopicSearchDecorations)}
       <DocumentPanelContent
         activeNodeId={props.activeNodeId}
         bodyProps={bodyProps}

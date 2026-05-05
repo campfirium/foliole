@@ -51,6 +51,7 @@ function createEditorAdapter(overrides: Record<string, unknown> = {}) {
     revealSelection: vi.fn(),
     setContent: vi.fn(),
     setDiffDecorations: vi.fn(),
+    setSearchDecorations: vi.fn(),
     setScrollTop: vi.fn(),
     setSelection: vi.fn(),
     setSelectionRanges: vi.fn(),

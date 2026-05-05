@@ -19,6 +19,7 @@ import type { AppSearchState } from './appSearchState';
 import { buildControllerSearchState } from './appSearchState';
 import { countDueReviewNodes } from './layoutPropsBuilder';
 import {
+  DOCUMENT_SHORTCUT_COMMAND_IDS,
   REVIEW_SHORTCUT_COMMAND_IDS,
   useCommandShortcutState
 } from './reviewHotkeysState';
@@ -181,7 +182,7 @@ export function useAppController(): AppControllerResult {
   const controller = useWorkspaceControllerState(ws, isWorkspaceHydrated);
   const formalImport = useFormalImport();
   const { exitStudyMode, isStudyMode, startStudyMode } = controller.study;
-  const hotkeys = useCommandShortcutState(REVIEW_SHORTCUT_COMMAND_IDS);
+  const hotkeys = useCommandShortcutState([...REVIEW_SHORTCUT_COMMAND_IDS, ...DOCUMENT_SHORTCUT_COMMAND_IDS]);
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
   const currentReviewNode = ws.reviewSession.currentNodeId ? ws.nodesById[ws.reviewSession.currentNodeId] : undefined;
   const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';

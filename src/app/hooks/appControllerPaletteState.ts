@@ -5,6 +5,7 @@ import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorE
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
 import { restartMainWindowApp, toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { buildPaletteState } from './appControllerHelpers';
@@ -90,6 +91,7 @@ function createPaletteRunnerArgs(args: {
     exitReviewSession: args.ws.exitReviewSession,
     exitStudyMode: args.study.exitStudyMode,
     exportCurrentArticle: createExportCurrentArticleCommand(args),
+    findInTopic: requestDocumentTopicSearchOpen,
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
     goBack: args.nav.handleGoBack,
     goForward: args.nav.handleGoForward,

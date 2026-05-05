@@ -3,6 +3,11 @@ export interface EditorSelection {
   to: number;
 }
 
+export interface EditorSearchDecorations {
+  activeIndex: number;
+  matches: EditorSelection[];
+}
+
 export interface EditorScrollMetrics {
   clientHeight: number;
   scrollHeight: number;
@@ -32,6 +37,7 @@ export interface EditorAdapter {
   replaceSelection(content: string): void;
   setHiddenTextAnchorKeys?(hiddenTextAnchorKeys: readonly string[]): void;
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;
+  setSearchDecorations(searchDecorations: EditorSearchDecorations | null): void;
   onContentChange(listener: (content: string) => void): () => void;
   onScroll(listener: () => void): () => void;
 }

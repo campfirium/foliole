@@ -8,6 +8,7 @@ const mockMarkNodePositionReady = vi.fn();
 const mockDestroy = vi.fn();
 const mockSetContent = vi.fn();
 const mockSetDiffDecorations = vi.fn();
+const mockSetSearchDecorations = vi.fn();
 const mockSetHideTitleHeading = vi.fn();
 const mockSetSelection = vi.fn();
 const mockRevealSelection = vi.fn();
@@ -41,6 +42,9 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     }
     setDiffDecorations(diffDecorations: unknown) {
       mockSetDiffDecorations(diffDecorations);
+    }
+    setSearchDecorations(searchDecorations: unknown) {
+      mockSetSearchDecorations(searchDecorations);
     }
     setHideTitleHeading(value: boolean) {
       mockSetHideTitleHeading(value);
@@ -93,6 +97,7 @@ beforeEach(() => {
   mockDestroy.mockClear();
   mockSetContent.mockClear();
   mockSetDiffDecorations.mockClear();
+  mockSetSearchDecorations.mockClear();
   mockSetHideTitleHeading.mockClear();
   mockSetSelection.mockClear();
   mockRevealSelection.mockClear();

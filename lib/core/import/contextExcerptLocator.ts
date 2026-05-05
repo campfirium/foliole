@@ -1,4 +1,12 @@
 import {
+  collectOrderedBoundaryFragments,
+  collectOrderedMatchCandidates,
+  findNearestParagraphIndex,
+  resolveBestNearbyRange,
+  type AnchoredFragmentCandidate,
+  type RepeatedFragmentCandidate
+} from './contextExcerptFragmentSearch.js';
+import {
   createContextExcerptQuoteLocator,
   normalizeLineEndings,
   normalizeQuoteText,
@@ -125,81 +133,17 @@ function tryExactMatch(locator: ContextExcerptLocator, quote: string, quoteLocat
   return toTrimmedMatch(locator.paragraphs[looseIndexes[0]], quote, quoteLocator.normalizedQuote, quoteLocator.exactMatcher);
 }
 
-interface RepeatedFragmentCandidate {
-  fragment: string;
-  indexes: number[];
-}
-
-interface AnchoredFragmentCandidate {
-  fragment: string;
-  index: number;
-}
-
-function collectOrderedBoundaryFragments(quote: string) {
-  const unique = new Set<string>();
-  const ordered: string[] = [];
-  const splitter = /[\s。！？!?；;：:，,、•✔❌]+/u;
-  for (const part of normalizeLineEndings(quote).split(splitter)) {
-    const fragment = normalizeQuoteText(part);
-    if (fragment.length < 4 || unique.has(fragment)) {
-      continue;
-    }
-    unique.add(fragment);
-    ordered.push(fragment);
-  }
-  return ordered;
-}
-
-function findNearestParagraphIndex(
-  paragraphs: string[],
-  fragment: string,
-  anchorIndex: number,
-  direction: 'backward' | 'forward'
-) {
-  const indexes = findParagraphIndexesContainingFragment(paragraphs, fragment);
-  if (indexes.length === 0) {
-    return null;
-  }
-  const eligible = indexes.filter((index) => (direction === 'backward' ? index <= anchorIndex : index >= anchorIndex));
-  const pool = eligible.length > 0 ? eligible : indexes;
-  return pool.reduce((best, current) => {
-    if (best === null) {
-      return current;
-    }
-    const bestDistance = Math.abs(best - anchorIndex);
-    const currentDistance = Math.abs(current - anchorIndex);
-    if (currentDistance !== bestDistance) {
-      return currentDistance < bestDistance ? current : best;
-    }
-    if (direction === 'backward') {
-      return current > best ? current : best;
-    }
-    return current < best ? current : best;
-  }, null as number | null);
-}
-
 function tryOrderedFragmentMatch(
   locator: ContextExcerptLocator,
-  quote: string,
   quoteLocator: ContextExcerptQuoteLocator,
   budget: MatchBudget
 ) {
-  const repeatedCandidates: RepeatedFragmentCandidate[] = [];
-  let anchoredCandidate: AnchoredFragmentCandidate | null = null;
-  for (const fragment of quoteLocator.orderedFragments) {
-    if (!consumeAttempt(budget)) {
-      break;
-    }
-    const indexes = findParagraphIndexesContainingFragment(locator.normalizedParagraphs, fragment);
-    if (indexes.length === 1) {
-      anchoredCandidate = { fragment, index: indexes[0] };
-      break;
-    }
-    if (indexes.length > 1 && indexes.length <= 12) {
-      repeatedCandidates.push({ fragment, indexes });
-    }
-  }
-  return { anchoredCandidate, repeatedCandidates };
+  return collectOrderedMatchCandidates({
+    budget,
+    consumeAttempt,
+    findParagraphIndexesContainingFragment: (fragment) => findParagraphIndexesContainingFragment(locator.normalizedParagraphs, fragment),
+    orderedFragments: quoteLocator.orderedFragments
+  });
 }
 
 function tryAnchoredRangeMatch(
@@ -212,7 +156,7 @@ function tryAnchoredRangeMatch(
     return null;
   }
 
-  const boundaryFragments = collectOrderedBoundaryFragments(quote);
+  const boundaryFragments = collectOrderedBoundaryFragments(normalizeLineEndings(quote));
   const firstBoundary = boundaryFragments[0] ?? anchoredCandidate.fragment;
   const lastBoundary = boundaryFragments.at(-1) ?? anchoredCandidate.fragment;
   if (!firstBoundary || !lastBoundary) {
@@ -224,8 +168,16 @@ function tryAnchoredRangeMatch(
     );
   }
 
-  const startIndex = findNearestParagraphIndex(locator.normalizedParagraphs, firstBoundary, anchoredCandidate.index, 'backward');
-  const endIndex = findNearestParagraphIndex(locator.normalizedParagraphs, lastBoundary, anchoredCandidate.index, 'forward');
+  const startIndex = findNearestParagraphIndex(
+    findParagraphIndexesContainingFragment(locator.normalizedParagraphs, firstBoundary),
+    anchoredCandidate.index,
+    'backward'
+  );
+  const endIndex = findNearestParagraphIndex(
+    findParagraphIndexesContainingFragment(locator.normalizedParagraphs, lastBoundary),
+    anchoredCandidate.index,
+    'forward'
+  );
   if (startIndex === null || endIndex === null) {
     return toTrimmedMatch(
       locator.paragraphs[anchoredCandidate.index],
@@ -247,52 +199,6 @@ function tryAnchoredRangeMatch(
   );
 }
 
-function resolveBestNearbyRange(candidates: RepeatedFragmentCandidate[], budget: MatchBudget) {
-  let bestRange: { anchorFragment: string; end: number; start: number } | null = null;
-  for (let leftIndex = 0; leftIndex < candidates.length; leftIndex += 1) {
-    const left = candidates[leftIndex];
-    for (let rightIndex = leftIndex + 1; rightIndex < candidates.length; rightIndex += 1) {
-      if (!consumeAttempt(budget)) {
-        return bestRange;
-      }
-      const right = candidates[rightIndex];
-      const matches: Array<{ start: number; end: number }> = [];
-      for (const start of left.indexes) {
-        for (const end of right.indexes) {
-          if (Math.abs(end - start) > 1) {
-            continue;
-          }
-          matches.push({ start: Math.min(start, end), end: Math.max(start, end) });
-          if (matches.length > 1) {
-            break;
-          }
-        }
-        if (matches.length > 1) {
-          break;
-        }
-      }
-      if (matches.length !== 1) {
-        continue;
-      }
-      const candidate = {
-        anchorFragment: left.fragment,
-        end: matches[0].end,
-        start: matches[0].start
-      };
-      if (!bestRange) {
-        bestRange = candidate;
-        continue;
-      }
-      const bestSpan = bestRange.end - bestRange.start;
-      const candidateSpan = candidate.end - candidate.start;
-      if (candidateSpan < bestSpan || (candidateSpan === bestSpan && candidate.start < bestRange.start)) {
-        bestRange = candidate;
-      }
-    }
-  }
-  return bestRange;
-}
-
 function tryNearbyRangeMatch(
   locator: ContextExcerptLocator,
   quote: string,
@@ -303,7 +209,7 @@ function tryNearbyRangeMatch(
   if (repeatedCandidates.length < 2 || budget.stopped) {
     return null;
   }
-  const bestRange = resolveBestNearbyRange(repeatedCandidates, budget);
+  const bestRange = resolveBestNearbyRange(repeatedCandidates, budget, consumeAttempt);
   if (!bestRange) {
     return null;
   }
@@ -334,7 +240,7 @@ export function findContextExcerptInLocatorByQuoteLocator(
     return exactMatch;
   }
   const budget = createMatchBudget();
-  const orderedMatch = tryOrderedFragmentMatch(locator, quote, quoteLocator, budget);
+  const orderedMatch = tryOrderedFragmentMatch(locator, quoteLocator, budget);
   const anchoredMatch = tryAnchoredRangeMatch(locator, quote, quoteLocator, orderedMatch.anchoredCandidate);
   if (anchoredMatch) {
     return anchoredMatch;

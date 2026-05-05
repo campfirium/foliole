@@ -49,14 +49,18 @@ function createHost() {
   return host;
 }
 
-describe('liveMarkdown incremental static decorations', () => {
-  afterEach(() => {
-    document.body.innerHTML = '';
-    setMarkdownSyntaxVisibility('hidden');
-    spies.addAnchorTagDecorations.mockClear();
-    spies.buildFrontmatterDecorationState.mockClear();
-  });
+function createAdapter(content: string) {
+  return new CodeMirrorEditorAdapter(createHost(), { initialContent: content });
+}
 
+afterEach(() => {
+  document.body.innerHTML = '';
+  setMarkdownSyntaxVisibility('hidden');
+  spies.addAnchorTagDecorations.mockClear();
+  spies.buildFrontmatterDecorationState.mockClear();
+});
+
+describe('liveMarkdown anchor decorations', () => {
   it('keeps anchor decorations mapped without rescanning on plain text edits', () => {
     const content = '<highlight id="1">hello</highlight id="1"> world';
     const host = createHost();
@@ -75,8 +79,7 @@ describe('liveMarkdown incremental static decorations', () => {
 
   it('rescans anchor decorations when an anchor tag itself changes', () => {
     const content = '<highlight id="1">hello</highlight id="1"> world';
-    const host = createHost();
-    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: content });
+    const adapter = createAdapter(content);
 
     spies.addAnchorTagDecorations.mockClear();
     const from = content.indexOf('highlight');
@@ -86,7 +89,9 @@ describe('liveMarkdown incremental static decorations', () => {
 
     adapter.destroy();
   });
+});
 
+describe('liveMarkdown imported content rendering', () => {
   it('renders imported multi-line table highlights in preview mode', () => {
     const content = [
       '# GTD 项目管理方法',
@@ -111,7 +116,9 @@ describe('liveMarkdown incremental static decorations', () => {
 
     adapter.destroy();
   });
+});
 
+describe('liveMarkdown frontmatter updates', () => {
   it('skips frontmatter rebuilds when edits stay below the inspected header region', () => {
     const content = ['---', 'author: Jane', '---', '', '# Title', '', 'Paragraph'].join('\n');
     const host = createHost();

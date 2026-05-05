@@ -1,21 +1,28 @@
 import { Compartment, EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
-import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
-
 import { bypassAnchorStructureGuard } from './anchorStructureGuard';
 import {
   createCodeMirrorEditorExtensions,
   createLiveMarkdownEffect
 } from './codeMirrorEditorAdapterConfig';
 import {
-  createEmptyDecorationsEffect,
   RemoteImageLocalizationController,
   type CodeMirrorEditorAdapterOptions
 } from './codeMirrorEditorAdapterSupport';
+import {
+  alignSelectionInViewport,
+  reconfigureDecorationCompartment
+} from './codeMirrorEditorAdapterView';
 import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
-import type { EditorAdapter, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
+import type {
+  EditorAdapter,
+  EditorScrollMetrics,
+  EditorSearchDecorations,
+  EditorSelection
+} from './EditorAdapter';
 import { buildEditorDiffDecorations } from './lineDiffDecorations';
+import { buildEditorSearchDecorations } from './searchDecorations';
 
 export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
@@ -25,6 +32,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private liveMarkdownCompartment = new Compartment();
   private nodeId: string | null = null;
   private onChange?: (content: string) => void;
+  private searchDecorationsCompartment = new Compartment();
   private remoteImageLocalization = new RemoteImageLocalizationController({
     applyLocalizedContent: (localized) => {
       this.setContent(localized);
@@ -58,7 +66,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
             this.onChange(content);
             this.remoteImageLocalization.schedule();
           },
-          options
+          options,
+          searchDecorationsCompartment: this.searchDecorationsCompartment
         })
       })
     });
@@ -89,7 +98,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       effects: EditorView.scrollIntoView(anchor, { y: 'center' })
     });
     this.view.focus();
-    this.alignSelectionInViewport(anchor);
+    alignSelectionInViewport(this.view, anchor);
   }
 
   setContent(content: string) {
@@ -164,7 +173,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       scrollIntoView: true
     });
     this.view.focus();
-    this.alignSelectionInViewport(anchor);
+    alignSelectionInViewport(this.view, anchor);
   }
 
   restoreSelection(selection: EditorSelection) {
@@ -179,26 +188,6 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private clampPosition(position: number) {
     const max = this.view.state.doc.length;
     return Math.max(0, Math.min(position, max));
-  }
-
-  private alignSelectionInViewport(position: number) {
-    requestAnimationFrame(() => {
-      const scroller = this.view.scrollDOM;
-      const cursorRect = this.view.coordsAtPos(position) ?? this.view.coordsAtPos(position, -1);
-      if (!cursorRect) {
-        return;
-      }
-
-      const viewportRect = scroller.getBoundingClientRect();
-      const nextScrollTop = alignScrollTopToViewportRatio({
-        currentScrollTop: scroller.scrollTop,
-        cursorViewportTop: cursorRect.top,
-        scrollHeight: scroller.scrollHeight,
-        viewportHeight: scroller.clientHeight,
-        viewportTop: viewportRect.top
-      });
-      scroller.scrollTop = nextScrollTop;
-    });
   }
 
   getScrollTop() {
@@ -245,16 +234,21 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null) {
-    try {
-      this.view.dispatch({
-        effects: this.diffDecorationsCompartment.reconfigure(EditorView.decorations.of(buildEditorDiffDecorations(this.view, diffDecorations)))
-      });
-    } catch (error) {
-      console.error('[editor] failed to apply diff decorations, falling back to plain view', error);
-      this.view.dispatch({
-        effects: createEmptyDecorationsEffect(this.diffDecorationsCompartment)
-      });
-    }
+    reconfigureDecorationCompartment({
+      buildDecorations: () => EditorView.decorations.of(buildEditorDiffDecorations(this.view, diffDecorations)),
+      compartment: this.diffDecorationsCompartment,
+      fallbackLabel: '[editor] failed to apply diff decorations, falling back to plain view',
+      view: this.view
+    });
+  }
+
+  setSearchDecorations(searchDecorations: EditorSearchDecorations | null) {
+    reconfigureDecorationCompartment({
+      buildDecorations: () => EditorView.decorations.of(buildEditorSearchDecorations(this.view, searchDecorations)),
+      compartment: this.searchDecorationsCompartment,
+      fallbackLabel: '[editor] failed to apply search decorations, falling back to plain view',
+      view: this.view
+    });
   }
 
   onContentChange(listener: (content: string) => void) {

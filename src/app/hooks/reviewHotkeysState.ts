@@ -25,6 +25,8 @@ export const REVIEW_SHORTCUT_COMMAND_IDS = [
   APP_COMMAND_IDS.readingReviewDismiss
 ] as const;
 
+export const DOCUMENT_SHORTCUT_COMMAND_IDS = [APP_COMMAND_IDS.findInTopic] as const;
+
 export function isReviewShortcutCommand(commandId: string) {
   return REVIEW_SHORTCUT_COMMAND_IDS.includes(commandId as (typeof REVIEW_SHORTCUT_COMMAND_IDS)[number]);
 }

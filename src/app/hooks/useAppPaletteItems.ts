@@ -6,10 +6,7 @@ import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 
 import { buildAppPaletteItems } from './appCommands';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
-import {
-  isReviewShortcutCommand,
-  useCommandShortcutState
-} from './reviewHotkeysState';
+import { useCommandShortcutState } from './reviewHotkeysState';
 
 function canNodeBeMoveTarget(args: {
   activeNodeId: string;
@@ -98,6 +95,7 @@ export function useAppPaletteItems(args: {
         canGoToNode: hasNavigableNodes,
         canMoveToNode,
         canGoParent: args.nav.canGoParent,
+        canFindInCurrentTopic: canMergeHighlightsIntoTopic(args),
         canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
         canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
         canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,
@@ -107,7 +105,7 @@ export function useAppPaletteItems(args: {
         isReviewMode: args.isStudyMode
       }).map((item) => ({
         ...item,
-        shortcuts: isReviewShortcutCommand(item.id) ? args.hotkeys.shortcutMap[item.id] : item.shortcuts
+        shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts
       })),
     [args, canMoveToNode, hasNavigableNodes]
   );

@@ -10,6 +10,7 @@ interface PaletteCommandRunnerArgs {
   createTopic: () => void;
   createVirtualNode: () => void;
   exportCurrentArticle: () => Promise<boolean>;
+  findInTopic: () => void;
   mergeHighlightsIntoTopic: () => Promise<boolean>;
   exitReviewSession: () => void;
   exitStudyMode: () => void;
@@ -59,6 +60,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     exportCurrentArticle: () => {
       void args.exportCurrentArticle();
     },
+    findInTopic: args.findInTopic,
     mergeHighlightsIntoTopic: () => {
       void args.mergeHighlightsIntoTopic();
     },

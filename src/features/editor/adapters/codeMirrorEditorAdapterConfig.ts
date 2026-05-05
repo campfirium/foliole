@@ -20,6 +20,7 @@ export function createCodeMirrorEditorExtensions(args: {
   nodeId: string | null;
   onDocChanged: (content: string) => void;
   options: CodeMirrorEditorAdapterOptions;
+  searchDecorationsCompartment: import('@codemirror/state').Compartment;
 }): Extension[] {
   return [
     markdown(),
@@ -34,6 +35,7 @@ export function createCodeMirrorEditorExtensions(args: {
     highlightActiveLine(),
     markdownInputAssist,
     args.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
+    args.searchDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.liveMarkdownCompartment.of(
       createLiveMarkdown(
         args.hideTitleHeading,

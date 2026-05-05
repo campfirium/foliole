@@ -16,6 +16,7 @@ const mockGetScrollMetrics = vi.fn(() => ({ clientHeight: 0, scrollHeight: 0, sc
 const mockGetContent = vi.fn(() => '');
 const mockSetContent = vi.fn();
 const mockSetDiffDecorations = vi.fn();
+const mockSetSearchDecorations = vi.fn();
 const mockSetHideTitleHeading = vi.fn();
 const mockSetNodeId = vi.fn();
 const mockRefreshImageClozePresentation = vi.fn();
@@ -24,65 +25,38 @@ const mockSetScrollTop = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
 const mockCtor = vi.fn();
 
-vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
-  CodeMirrorEditorAdapter: class {
+function createMockCodeMirrorEditorAdapterClass() {
+  return class {
     constructor(host: HTMLElement, options: { initialContent: string; onChange?: (content: string) => void }) {
       mockCtor(host, options);
     }
-    destroy() {
-      mockDestroy();
-    }
+    destroy() { mockDestroy(); }
     focus() {}
-    getContent() {
-      return mockGetContent();
-    }
-    getDocumentPositionAtViewportY() {
-      return 0;
-    }
-    getLineBlockHeight() {
-      return 24;
-    }
-    setContent(content: string) {
-      mockSetContent(content);
-    }
-    setDiffDecorations(diffDecorations: unknown) {
-      mockSetDiffDecorations(diffDecorations);
-    }
-    setHideTitleHeading(value: boolean) {
-      mockSetHideTitleHeading(value);
-    }
-    setNodeId(nodeId: string | null) {
-      mockSetNodeId(nodeId);
-    }
-    refreshImageClozePresentation() {
-      mockRefreshImageClozePresentation();
-    }
-    getSelection() {
-      return { from: 0, to: 0 };
-    }
-    setSelection(selection: { from: number; to: number }) {
-      mockSetSelection(selection);
-    }
+    getContent() { return mockGetContent(); }
+    getDocumentPositionAtViewportY() { return 0; }
+    getLineBlockHeight() { return 24; }
+    setContent(content: string) { mockSetContent(content); }
+    setDiffDecorations(diffDecorations: unknown) { mockSetDiffDecorations(diffDecorations); }
+    setSearchDecorations(searchDecorations: unknown) { mockSetSearchDecorations(searchDecorations); }
+    setHideTitleHeading(value: boolean) { mockSetHideTitleHeading(value); }
+    setNodeId(nodeId: string | null) { mockSetNodeId(nodeId); }
+    refreshImageClozePresentation() { mockRefreshImageClozePresentation(); }
+    getSelection() { return { from: 0, to: 0 }; }
+    setSelection(selection: { from: number; to: number }) { mockSetSelection(selection); }
     restoreSelection() {}
     revealSelection() {}
-    getScrollTop() {
-      return 0;
-    }
-    setScrollTop(scrollTop: number) {
-      mockSetScrollTop(scrollTop);
-    }
-    getScrollMetrics() {
-      return mockGetScrollMetrics();
-    }
+    getScrollTop() { return 0; }
+    setScrollTop(scrollTop: number) { mockSetScrollTop(scrollTop); }
+    getScrollMetrics() { return mockGetScrollMetrics(); }
     replaceSelection() {}
     replaceRange() {}
-    onContentChange() {
-      return () => undefined;
-    }
-    onScroll() {
-      return mockOnScroll();
-    }
-  }
+    onContentChange() { return () => undefined; }
+    onScroll() { return mockOnScroll(); }
+  };
+}
+
+vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
+  CodeMirrorEditorAdapter: createMockCodeMirrorEditorAdapterClass()
 }));
 
 import { MarkdownEditor } from './MarkdownEditor';
@@ -121,6 +95,7 @@ beforeEach(() => {
   mockGetContent.mockClear();
   mockSetContent.mockClear();
   mockSetDiffDecorations.mockClear();
+  mockSetSearchDecorations.mockClear();
   mockSetHideTitleHeading.mockClear();
   mockSetNodeId.mockClear();
   mockRefreshImageClozePresentation.mockClear();

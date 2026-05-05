@@ -12,6 +12,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     createTopic: () => undefined,
     createVirtualNode: () => undefined,
     exportCurrentArticle: () => undefined,
+    findInTopic: () => undefined,
     mergeHighlightsIntoTopic: () => undefined,
     goBack: () => undefined,
     goForward: () => undefined,
@@ -60,6 +61,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canGoToNode: true,
     canMoveToNode: true,
     canGoParent: true,
+    canFindInCurrentTopic: true,
     canRevealAnswer: true,
     canToggleReviewMode: true,
     canGradeReview: true,
@@ -84,6 +86,7 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.goToNode)).toBe(true);
   expect(items.find((item) => item.id === APP_COMMAND_IDS.goToNode)?.title).toBe('Go to…');
   expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.findInTopic)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
@@ -160,6 +163,14 @@ describe('runAppCommand basics', () => {
     expectCommandRuns(APP_COMMAND_IDS.mergeHighlightsIntoTopic, { mergeHighlightsIntoTopic });
 
     expect(mergeHighlightsIntoTopic).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs find in topic through the shared command handler', () => {
+    const findInTopic = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.findInTopic, { findInTopic });
+
+    expect(findInTopic).toHaveBeenCalledTimes(1);
   });
 });
 

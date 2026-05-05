@@ -65,6 +65,7 @@ export const mockEditorAdapter: EditorAdapter = {
     mockEditorState.selectionTo = nextCursor;
   },
   setDiffDecorations: () => undefined,
+  setSearchDecorations: () => undefined,
   onContentChange: () => () => undefined,
   onScroll: () => () => undefined
 };

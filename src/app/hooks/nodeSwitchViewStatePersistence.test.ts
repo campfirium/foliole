@@ -57,19 +57,46 @@ function createArgs() {
   };
 }
 
-describe('node switch view-state persistence entrypoints', () => {
+function openNodeSearchResult(args: ReturnType<typeof createArgs>) {
+  buildControllerSearchState(args).onOpenResult({
+    excerpt: 'Beta',
+    id: 'node-2',
+    kind: 'node',
+    nodeMatch: null,
+    pdfMatch: null,
+    title: 'Beta',
+    updatedAt: '2026-03-06T10:00:00.000Z'
+  });
+}
+
+function openBodyMatchResult(args: ReturnType<typeof createArgs>) {
+  buildControllerSearchState(args).onOpenResult({
+    excerpt: '...Beta...',
+    id: 'node-2',
+    kind: 'node',
+    nodeMatch: { from: 4, query: 'beta', to: 8 },
+    pdfMatch: null,
+    title: 'Beta',
+    updatedAt: '2026-03-06T10:00:00.000Z'
+  });
+}
+
+function openPdfResult(args: ReturnType<typeof createArgs>) {
+  buildControllerSearchState(args).onOpenResult({
+    excerpt: '...keyword bridge...',
+    id: 'node-2',
+    kind: 'pdf',
+    nodeMatch: null,
+    pdfMatch: { attachmentId: 'att-1', matchStart: 12, page: 3, pageTextLength: 30, query: 'keyword' },
+    title: 'Beta PDF',
+    updatedAt: '2026-03-06T10:00:00.000Z'
+  });
+}
+
+describe('node search view-state persistence', () => {
   it('routes search node opening through the shared navigation handler', () => {
     const args = createArgs();
-
-    buildControllerSearchState(args).onOpenResult({
-      excerpt: 'Beta',
-      id: 'node-2',
-      kind: 'node',
-      nodeMatch: null,
-      pdfMatch: null,
-      title: 'Beta',
-      updatedAt: '2026-03-06T10:00:00.000Z'
-    });
+    openNodeSearchResult(args);
 
     expect(args.trash.closeTrashView).toHaveBeenCalledTimes(1);
     expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
@@ -80,20 +107,7 @@ describe('node switch view-state persistence entrypoints', () => {
 
   it('stores body match selection before opening a searched node result', () => {
     const args = createArgs();
-
-    buildControllerSearchState(args).onOpenResult({
-      excerpt: '...Beta...',
-      id: 'node-2',
-      kind: 'node',
-      nodeMatch: {
-        from: 4,
-        query: 'beta',
-        to: 8
-      },
-      pdfMatch: null,
-      title: 'Beta',
-      updatedAt: '2026-03-06T10:00:00.000Z'
-    });
+    openBodyMatchResult(args);
 
     expect(args.ws.setNodeViewState).toHaveBeenCalledWith('node-2', {
       scrollTop: 0,
@@ -101,10 +115,11 @@ describe('node switch view-state persistence entrypoints', () => {
     });
     expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
   });
+});
 
+describe('node switch entrypoints', () => {
   it('routes go-to-node opening through the shared navigation handler', () => {
     const args = createArgs();
-
     buildControllerGoToNodeState(args).onOpenNode('node-2');
 
     expect(args.runtime.recordRecentNode).toHaveBeenCalledWith('node-2');
@@ -116,22 +131,7 @@ describe('node switch view-state persistence entrypoints', () => {
 
   it('routes pdf search result through node open + match targeting', () => {
     const args = createArgs();
-
-    buildControllerSearchState(args).onOpenResult({
-      excerpt: '...keyword bridge...',
-      id: 'node-2',
-      kind: 'pdf',
-      nodeMatch: null,
-      pdfMatch: {
-        attachmentId: 'att-1',
-        matchStart: 12,
-        page: 3,
-        pageTextLength: 30,
-        query: 'keyword'
-      },
-      title: 'Beta PDF',
-      updatedAt: '2026-03-06T10:00:00.000Z'
-    });
+    openPdfResult(args);
 
     expect(args.trash.closeTrashView).toHaveBeenCalledTimes(1);
     expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');

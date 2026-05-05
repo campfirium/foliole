@@ -9,29 +9,30 @@ import { getRuntimeInvoke } from '../../shared/platform/bridge';
 
 import { SearchPalette } from './SearchPalette';
 
-it('loads search results from runtime without renderer content mirrors', async () => {
-  const invoke = vi.fn().mockImplementation((command: string) => {
-    if (command === 'search_workspace') {
-      return Promise.resolve([
-        {
-          id: 'node-2',
-          title: 'Atlas note',
-          excerpt: '...launch checklist...',
-          kind: 'node',
-          nodeMatch: {
-            from: 12,
-            query: 'launch',
-            to: 18
-          },
-          pdfMatch: null,
-          updatedAt: '2026-03-30T00:00:00.000Z'
-        }
-      ]);
+function createSearchInvoke() {
+  return vi.fn().mockImplementation((command: string) => {
+    if (command !== 'search_workspace') {
+      return Promise.resolve(null);
     }
-    return Promise.resolve(null);
+    return Promise.resolve([
+      {
+        id: 'node-2',
+        title: 'Atlas note',
+        excerpt: '...launch checklist...',
+        kind: 'node',
+        nodeMatch: {
+          from: 12,
+          query: 'launch',
+          to: 18
+        },
+        pdfMatch: null,
+        updatedAt: '2026-03-30T00:00:00.000Z'
+      }
+    ]);
   });
-  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+}
 
+function renderSearchPalette() {
   render(
     <SearchPalette
       isOpen
@@ -63,6 +64,12 @@ it('loads search results from runtime without renderer content mirrors', async (
       trashedNodeIds={[]}
     />
   );
+}
+
+it('loads search results from runtime without renderer content mirrors', async () => {
+  const invoke = createSearchInvoke();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  renderSearchPalette();
 
   fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), {
     target: { value: 'launch' }

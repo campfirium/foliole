@@ -11,6 +11,7 @@ export const APP_COMMAND_IDS = {
   goForward: 'navigation.goForward',
   goToNode: 'navigation.goToNode',
   moveToNode: 'navigation.moveToNode',
+  findInTopic: 'document.findInTopic',
   mergeHighlightsIntoTopic: 'workspace.mergeHighlightsIntoTopic',
   goParent: 'navigation.goParent',
   toggleEditorDisplayMode: 'editor.toggleDisplayMode',

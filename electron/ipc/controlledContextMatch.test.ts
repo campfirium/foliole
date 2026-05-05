@@ -138,8 +138,8 @@ it('trims a matched sentence down to the exact quote instead of keeping the full
   expect(findContextExcerpt(content, 'This is the highlighted sentence.')).toBe('This is the highlighted sentence.');
 });
 
-it('keeps the full multi-paragraph quote instead of collapsing to the middle paragraph', () => {
-  const content = [
+function createMultiParagraphQuoteContent() {
+  return [
     '# Article',
     '',
     '##### ✅ 他的方法是 *可用的*，但并不 *可靠*',
@@ -160,7 +160,9 @@ it('keeps the full multi-paragraph quote instead of collapsing to the middle par
     '',
     '>  总结：他这是 **偏向“记事本式 GTD”的玩法**，对系统结构依赖极小，但对自律要求极高。'
   ].join('\n');
+}
 
+function expectLeadingMultiParagraphQuote(content: string) {
   expect(
     findContextExcerpt(
       content,
@@ -187,7 +189,9 @@ it('keeps the full multi-paragraph quote instead of collapsing to the middle par
       '> * 把「今日任务视图」当成下一步清单使用'
     ].join('\n')
   );
+}
 
+function expectTrailingMultiParagraphQuote(content: string) {
   expect(
     findContextExcerpt(
       content,
@@ -212,6 +216,12 @@ it('keeps the full multi-paragraph quote instead of collapsing to the middle par
       '>  总结：他这是 **偏向“记事本式 GTD”的玩法**，对系统结构依赖极小，但对自律要求极高。'
     ].join('\n')
   );
+}
+
+it('keeps the full multi-paragraph quote instead of collapsing to the middle paragraph', () => {
+  const content = createMultiParagraphQuoteContent();
+  expectLeadingMultiParagraphQuote(content);
+  expectTrailingMultiParagraphQuote(content);
 });
 
 it('does not fall back to character-window reduction for space-less chinese quotes', () => {

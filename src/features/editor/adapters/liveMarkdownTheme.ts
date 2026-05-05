@@ -136,6 +136,15 @@ export const liveMarkdownTheme = EditorView.theme({
     padding: '0 0.45em',
     verticalAlign: 'text-bottom'
   },
+  '.cm-topic-search-match': {
+    backgroundColor: 'color-mix(in srgb, var(--app-highlight-surface-color) 68%, transparent)',
+    borderRadius: '0.25rem'
+  },
+  '.cm-topic-search-match-active': {
+    backgroundColor: 'color-mix(in srgb, var(--app-selection-surface-color) 78%, var(--app-highlight-surface-color))',
+    borderRadius: '0.25rem',
+    boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--app-accent-color) 30%, transparent)'
+  },
   '.cm-activeLine': { backgroundColor: 'transparent' },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
     backgroundColor: SHARED_SELECTION_SURFACE_COLOR

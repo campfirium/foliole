@@ -1,8 +1,8 @@
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { useEffect, useLayoutEffect, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSearchDecorations, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { createInlineAnchorKey } from '../../features/editor/adapters/liveMarkdownAnchors';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
@@ -186,12 +186,27 @@ function LoadingDocumentPanelContent({ loadingLabel }: { loadingLabel: string })
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
   const model = useDocumentPanelSectionModel(props);
+  const editorAdapterRef = useRef<EditorAdapter | null>(null);
+
+  function handleEditorReady(adapter: EditorAdapter | null) {
+    editorAdapterRef.current = adapter;
+    props.onEditorReady(adapter);
+  }
+
+  function handlePreviewDocumentSelection(selection: EditorSelection) {
+    editorAdapterRef.current?.restoreSelection(selection);
+  }
+
+  function handlePreviewTopicSearchDecorations(searchDecorations: EditorSearchDecorations | null) {
+    editorAdapterRef.current?.setSearchDecorations(searchDecorations);
+  }
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={model.documentLayoutStyle}>
       <DocumentPanelSectionShell
         bodyProps={{
           ...model.bodyProps,
+          onEditorReady: handleEditorReady,
           hiddenTextAnchorKeys: model.hiddenTextAnchorKeys,
           emptyContent: model.emptyContent
         }}
@@ -200,7 +215,12 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         onToggleSourceUpdatePanel={() =>
           model.handleSourceUpdatePanelOpenChange(!model.isSourceUpdatePanelOpen)
         }
-        props={props}
+        onPreviewTopicSearchDecorations={handlePreviewTopicSearchDecorations}
+        props={{
+          ...props,
+          onEditorReady: handleEditorReady
+        }}
+        onPreviewDocumentSelection={handlePreviewDocumentSelection}
         showSourceUpdateAction={Boolean(model.sourceUpdatePreview)}
       />
       <DocumentPanelSectionOverlays
