@@ -71,6 +71,41 @@ function renderDebouncedHarness(
   render(<DebouncedHarness />);
 }
 
+function RuntimeRestoreHarness(props: {
+  listeners: Set<() => void>;
+  readingPositionSyncState: { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
+  setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
+}) {
+  const editorRef = {
+    current: {
+      getScrollTop: () => 0,
+      getSelection: () => ({ from: 0, to: 0 }),
+      onScroll: (listener: () => void) => {
+        props.listeners.add(listener);
+        return () => {
+          props.listeners.delete(listener);
+        };
+      }
+    }
+  } as { current: EditorAdapter | null };
+  useReadingProgressSync({
+    activeNodeId: 'node-2',
+    editorRef,
+    getReadingPositionSyncState: () => props.readingPositionSyncState,
+    isImmersiveMode: false,
+    isViewingTrashNode: false,
+    isWorkspaceHydrated: true,
+    nodeViewById: {
+      'node-2': {
+        scrollTop: 5400,
+        selection: { from: 48000, to: 48000 }
+      }
+    },
+    setNodeViewState: props.setNodeViewState
+  });
+  return null;
+}
+
 function registerRuntimeDebouncePersistenceTests() {
   it('persists reading progress shortly after scrolling stops', () => {
     const listeners = new Set<() => void>();
@@ -159,6 +194,44 @@ function registerRestoreGuardDebounceTest() {
   });
 }
 
+function registerPollutedPendingRuntimeFlushTest() {
+  it('does not flush polluted pending progress after the restore lock appears', () => {
+    const listeners = new Set<() => void>();
+    const setNodeViewState = vi.fn();
+    const view = render(
+      <RuntimeRestoreHarness
+        listeners={listeners}
+        readingPositionSyncState={null}
+        setNodeViewState={setNodeViewState}
+      />
+    );
+    vi.clearAllMocks();
+    act(() => {
+      for (const listener of listeners) {
+        listener();
+      }
+    });
+
+    view.rerender(
+      <RuntimeRestoreHarness
+        listeners={listeners}
+        readingPositionSyncState={{
+          reason: 'editor-restore-pending',
+          startedAt: Date.now(),
+          targetSelection: { from: 48000, to: 48000 }
+        }}
+        setNodeViewState={setNodeViewState}
+      />
+    );
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(syncReadingProgressToRuntime).not.toHaveBeenCalled();
+    expect(setNodeViewState).not.toHaveBeenCalled();
+  });
+}
+
 function registerVisiblePositionPreferenceTests() {
   it('persists the runtime reading position while immersive mode is active', () => {
     runRuntimeReadingPositionPersistenceTest();
@@ -197,5 +270,6 @@ describe('useReadingProgressSync scroll debounce', () => {
   });
   registerRuntimeDebouncePersistenceTests();
   registerRestoreGuardDebounceTest();
+  registerPollutedPendingRuntimeFlushTest();
   registerVisiblePositionPreferenceTests();
 });

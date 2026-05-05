@@ -28,33 +28,58 @@ export function usePendingRestoreKey(args: {
       args.readingTargetViewportMode
     );
     const nodeChanged = args.previousNodeIdRef.current !== args.nodeId;
-    const readingSelectionChanged =
-      Boolean(args.readingSelection) &&
-      args.previousReadingSelectionRef.current !== args.readingSelection;
-    const readingRequestChanged =
-      Boolean(args.readingSelection) &&
-      (args.pendingRestoreSelectionKeyRef.current !== nextPendingRestoreSelectionKey ||
-        args.lastRestoredSelectionKeyRef.current !== nextPendingRestoreSelectionKey ||
-        readingSelectionChanged);
-    if (!nodeChanged && !readingRequestChanged) {
+    const shouldStartRestore = shouldStartPendingRestore({
+      lastRestoredSelectionKey: args.lastRestoredSelectionKeyRef.current,
+      nextPendingRestoreSelectionKey,
+      pendingRestoreSelectionKey: args.pendingRestoreSelectionKeyRef.current,
+      previousReadingSelection: args.previousReadingSelectionRef.current,
+      readingSelection: args.readingSelection
+    });
+    const shouldClearPendingRestore = !nextPendingRestoreSelectionKey && args.pendingRestoreSelectionKeyRef.current !== null;
+    if (!nodeChanged && !shouldStartRestore && !shouldClearPendingRestore) {
       args.previousReadingSelectionRef.current = args.readingSelection;
       return;
     }
     args.previousNodeIdRef.current = args.nodeId;
     args.previousReadingSelectionRef.current = args.readingSelection;
-    args.lastRestoredSelectionKeyRef.current = null;
+    if (nodeChanged || shouldStartRestore) {
+      args.lastRestoredSelectionKeyRef.current = null;
+    }
     args.pendingRestoreSelectionKeyRef.current = nextPendingRestoreSelectionKey;
-    if (nextPendingRestoreSelectionKey) {
-      const selectionSource = args.readingSelection ?? args.nodeViewState?.selection;
-      const restoreSelection = selectionSource
-        ? normalizeRestoreSelection(selectionSource) ?? { from: 0, to: 0 }
-        : { from: 0, to: 0 };
-      args.beginApplyingReadingPosition?.(
-        restoreSelection,
-        'editor-restore-pending'
-      );
+    if (shouldStartRestore) {
+      args.beginApplyingReadingPosition?.(resolvePendingRestoreSelection(args), 'editor-restore-pending');
     }
   }, [args]);
+}
+
+function shouldStartPendingRestore(args: {
+  lastRestoredSelectionKey: string | null;
+  nextPendingRestoreSelectionKey: string | null;
+  pendingRestoreSelectionKey: string | null;
+  previousReadingSelection: EditorViewState['selection'] | null | undefined;
+  readingSelection: EditorViewState['selection'] | null | undefined;
+}) {
+  if (!args.nextPendingRestoreSelectionKey) {
+    return false;
+  }
+  if (
+    args.pendingRestoreSelectionKey !== args.nextPendingRestoreSelectionKey &&
+    args.lastRestoredSelectionKey !== args.nextPendingRestoreSelectionKey
+  ) {
+    return true;
+  }
+  return Boolean(args.readingSelection) && args.previousReadingSelection !== args.readingSelection;
+}
+
+function resolvePendingRestoreSelection(args: {
+  nodeViewState: EditorViewState | undefined;
+  readingSelection: EditorViewState['selection'] | null | undefined;
+}) {
+  const selectionSource = args.readingSelection ?? args.nodeViewState?.selection;
+  if (!selectionSource) {
+    return { from: 0, to: 0 };
+  }
+  return normalizeRestoreSelection(selectionSource) ?? { from: 0, to: 0 };
 }
 
 export function useRestoreCompletionCleanup(args: {

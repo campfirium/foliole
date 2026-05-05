@@ -34,6 +34,13 @@ export function flushReadingProgressToRuntime(args: {
   lastSyncedSignatureRef: MutableRefObject<string | null>;
   persistence: ReadingProgressPersistenceArgs;
 }) {
+  if (args.persistence.getReadingPositionSyncState?.()) {
+    pushDebugTrace('reading-progress.flush-runtime-skipped', {
+      activeNodeId: args.activeNodeIdOverride ?? null,
+      reason: 'restore-applying'
+    });
+    return;
+  }
   const resolved = args.persistence.resolveCapturedReadingProgress(
     args.activeNodeIdOverride,
     args.captureNodeIdOverride
@@ -53,13 +60,6 @@ export function flushReadingProgressToRuntime(args: {
     nodeViewStateCount: Object.keys(resolved.mergedNodeViewById).length,
     reason: args.captureNodeIdOverride === null ? 'node-switch' : 'periodic'
   });
-  if (args.captureNodeIdOverride === null && args.persistence.getReadingPositionSyncState?.()) {
-    pushDebugTrace('reading-progress.flush-runtime-skipped', {
-      activeNodeId: resolved.resolvedActiveNodeId,
-      reason: 'node-switch-during-restore'
-    });
-    return;
-  }
   const signature = createReadingProgressSignature(
     resolved.resolvedActiveNodeId,
     resolved.mergedNodeViewById

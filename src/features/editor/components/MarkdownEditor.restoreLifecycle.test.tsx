@@ -175,6 +175,32 @@ it('does not restart the same restore request when typing before the first resto
   expect(mockRestoreSelection).toHaveBeenCalledTimes(1);
 });
 
+it('starts a passive restore when saved node view state arrives after the node id', () => {
+  const longDocument = createLongDocument();
+  const onBeginApplyingReadingPosition = vi.fn();
+  const view = renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      onBeginApplyingReadingPosition={onBeginApplyingReadingPosition}
+      onChange={vi.fn()}
+      value={longDocument}
+    />
+  );
+
+  expect(onBeginApplyingReadingPosition).not.toHaveBeenCalled();
+
+  view.rerender(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+      onBeginApplyingReadingPosition={onBeginApplyingReadingPosition}
+      value={longDocument}
+    />
+  );
+
+  expect(onBeginApplyingReadingPosition).toHaveBeenCalledWith({ from: 48_000, to: 48_000 }, 'editor-restore-pending');
+});
+
 it('accepts a near-matching restored scroll position as settled without waiting for timeout', () => {
   vi.useFakeTimers();
   const requestAnimationFrameSpy = vi
