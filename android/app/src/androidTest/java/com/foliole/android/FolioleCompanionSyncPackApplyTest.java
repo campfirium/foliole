@@ -61,6 +61,26 @@ public class FolioleCompanionSyncPackApplyTest {
         ));
     }
 
+    @Test
+    public void skipsRowsOlderThanLocalSyncState() throws Exception {
+        createIncomingPack();
+        mainDatabase.execSQL("INSERT INTO nodes (" +
+            "id, kind, title, content, created_at, updated_at) VALUES (" +
+            "'node-1', 'topic', 'Local Node', 'local body', " +
+            "'2026-04-27T00:00:00.000Z', '2026-04-28T00:00:00.000Z')");
+        mainDatabase.execSQL("INSERT INTO sync_object_state (" +
+            "object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty) " +
+            "VALUES ('node', 'node-1', 1, 'local-hash', 'android-local', '2026-04-28T00:00:00.000Z', 1)");
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(0, result.getInt("applied_object_count"));
+        assertEquals("local body", selectString("SELECT content FROM nodes WHERE id = 'node-1'"));
+        assertEquals("local-hash", selectString(
+            "SELECT content_hash FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'"
+        ));
+    }
+
     private void createMainSchema() {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +

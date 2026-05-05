@@ -77,7 +77,8 @@ final class FolioleCompanionSyncPackApply {
                 "id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
                 "content, created_at, updated_at, deleted_at) " +
                 "SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
-                "content, created_at, updated_at, deleted_at FROM inc.nodes"
+                "content, created_at, updated_at, deleted_at FROM inc.nodes " +
+                "WHERE id IN (SELECT object_id FROM " + applyableStateRowsSql("node") + ")"
         );
     }
 
@@ -89,15 +90,16 @@ final class FolioleCompanionSyncPackApply {
                 "content, indexed_at, is_present, missing_at, created_at, updated_at) " +
                 "SELECT document_id, folder_id, relative_path, file_name, extension, source_size_bytes, " +
                 "source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, " +
-                "content, indexed_at, is_present, missing_at, created_at, updated_at FROM inc.external_documents"
+                "content, indexed_at, is_present, missing_at, created_at, updated_at FROM inc.external_documents " +
+                "WHERE document_id IN (SELECT object_id FROM " + applyableStateRowsSql("external_document") + ")"
         );
     }
 
     private static int upsertStateRows(SQLiteDatabase database, String deviceId) {
         int count = 0;
         try (Cursor cursor = database.rawQuery(
-            "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM inc.sync_object_state " +
-                "ORDER BY state_seq ASC",
+            "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM " +
+                applyableStateRowsSql(null) + " ORDER BY state_seq ASC",
             null
         )) {
             while (cursor.moveToNext()) {
@@ -116,6 +118,15 @@ final class FolioleCompanionSyncPackApply {
             }
         }
         return count;
+    }
+
+    private static String applyableStateRowsSql(String objectType) {
+        String typeFilter = objectType == null ? "" : " AND incoming.object_type = '" + objectType + "'";
+        return "(SELECT incoming.object_type, incoming.object_id, incoming.state_seq, incoming.content_hash, " +
+            "incoming.updated_at, incoming.deleted_at FROM inc.sync_object_state incoming " +
+            "LEFT JOIN main.sync_object_state current ON current.object_type = incoming.object_type " +
+            "AND current.object_id = incoming.object_id WHERE " +
+            "(current.object_id IS NULL OR current.updated_at <= incoming.updated_at)" + typeFilter + ")";
     }
 
     private static int changedRows(SQLiteDatabase database) {
