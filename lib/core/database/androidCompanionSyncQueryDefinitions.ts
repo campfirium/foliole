@@ -108,5 +108,19 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
     resultKey: 'rows',
     sql: 'SELECT value FROM companion_meta WHERE key = ? LIMIT 1',
     columns: [{ key: 'value', source: 'value', type: 'nullableString' }]
+  },
+  syncStateExistingForMutation: {
+    resultKey: 'rows',
+    sql: 'SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1',
+    columns: [
+      { key: 'content_hash', source: 'content_hash', type: 'string' },
+      { key: 'base_content_hash', source: 'base_content_hash', type: 'nullableString' },
+      { key: 'sync_dirty', source: 'sync_dirty', type: 'long' }
+    ]
+  },
+  syncStateNextSeqForMutation: {
+    resultKey: 'rows',
+    sql: 'SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state',
+    columns: [{ key: 'next_state_seq', source: 'next_state_seq', type: 'long' }]
   }
 };

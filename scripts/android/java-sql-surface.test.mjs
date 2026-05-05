@@ -60,12 +60,7 @@ function isAllowedAccessLine(entry) {
     return entry.text.includes('database.rawQuery(sql, args)');
   }
   if (entry.file === 'FolioleCompanionNamedMutationStore.java') {
-    return (
-      entry.text.includes('database.compileStatement(statement(context, statementName))') ||
-      entry.text.includes('database.rawQuery(statement(context, "syncStateExisting")') ||
-      entry.text.includes('database.rawQuery(statement(context, "syncStateNextSeq")') ||
-      entry.text.includes('database.rawQuery(sql, args)')
-    );
+    return entry.text.includes('database.compileStatement(statement(context, statementName))');
   }
   return entry.file === 'FolioleCompanionSqliteRuntime.java';
 }

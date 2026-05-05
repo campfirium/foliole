@@ -1,10 +1,10 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionNamedMutationStore {
@@ -48,34 +48,23 @@ final class FolioleCompanionNamedMutationStore {
             deletedAt,
             syncDirty
         });
-        if (syncDirty == 1 && hasRows(database, statement(context, "syncPushAckTableExists"), null)) {
+        if (syncDirty == 1 && FolioleCompanionSqliteRuntime.tableExists(database, "sync_push_ack")) {
             database.execSQL(statement(context, "syncPushAckDeleteByObject"), new Object[] { objectType, objectId });
         }
     }
 
     private static ExistingState loadExistingState(Context context, SQLiteDatabase database, String objectType, String objectId) throws Exception {
-        try (Cursor cursor = database.rawQuery(statement(context, "syncStateExisting"), new String[] { objectType, objectId })) {
-            if (!cursor.moveToFirst()) {
-                return null;
-            }
-            return new ExistingState(
-                cursor.getString(0),
-                cursor.isNull(1) ? null : cursor.getString(1),
-                cursor.getInt(2)
-            );
-        }
+        JSONArray rows = FolioleCompanionNamedQueryStore
+            .loadArray(context, database, "syncStateExistingForMutation", new String[] { objectType, objectId })
+            .getJSONArray("rows");
+        if (rows.length() == 0) return null;
+        JSONObject row = rows.getJSONObject(0);
+        return new ExistingState(row.getString("content_hash"), row.isNull("base_content_hash") ? null : row.getString("base_content_hash"), row.getInt("sync_dirty"));
     }
 
     private static long nextStateSeq(Context context, SQLiteDatabase database) throws Exception {
-        try (Cursor cursor = database.rawQuery(statement(context, "syncStateNextSeq"), null)) {
-            return cursor.moveToFirst() ? cursor.getLong(0) : 1L;
-        }
-    }
-
-    private static boolean hasRows(SQLiteDatabase database, String sql, String[] args) {
-        try (Cursor cursor = database.rawQuery(sql, args)) {
-            return cursor.moveToFirst();
-        }
+        JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "syncStateNextSeqForMutation").getJSONArray("rows");
+        return rows.length() == 0 ? 1L : rows.getJSONObject(0).getLong("next_state_seq");
     }
 
     private static String statement(Context context, String name) throws Exception {

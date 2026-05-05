@@ -280,6 +280,38 @@
         }
       ]
     },
+    "syncStateExistingForMutation": {
+      "resultKey": "rows",
+      "sql": "SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1",
+      "columns": [
+        {
+          "key": "content_hash",
+          "source": "content_hash",
+          "type": "string"
+        },
+        {
+          "key": "base_content_hash",
+          "source": "base_content_hash",
+          "type": "nullableString"
+        },
+        {
+          "key": "sync_dirty",
+          "source": "sync_dirty",
+          "type": "long"
+        }
+      ]
+    },
+    "syncStateNextSeqForMutation": {
+      "resultKey": "rows",
+      "sql": "SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state",
+      "columns": [
+        {
+          "key": "next_state_seq",
+          "source": "next_state_seq",
+          "type": "long"
+        }
+      ]
+    },
     "nodeAttachments": {
       "resultKey": "attachments",
       "sql": "SELECT na.attachment_id, na.role, a.mime_type, a.original_name FROM node_attachments na LEFT JOIN attachments a ON a.id = na.attachment_id WHERE na.node_id = ? ORDER BY na.role ASC, na.attachment_id ASC",
