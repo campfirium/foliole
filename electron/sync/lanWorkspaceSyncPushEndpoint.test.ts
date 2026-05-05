@@ -11,7 +11,7 @@ const electronMock = vi.hoisted(() => ({
   userDataPath: `/tmp/foliole-sync-push-endpoint-${Math.random().toString(16).slice(2)}`
 }));
 const pushApplyMock = vi.hoisted(() => ({
-  applyCompanionSyncPush: vi.fn(() => ({
+  applyCompanionSyncPushAsync: vi.fn(async () => ({
     acks: [{
       clientOpId: 'node_review:node-1:12',
       identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
@@ -33,8 +33,8 @@ vi.mock('electron', () => ({
     isEncryptionAvailable: vi.fn(() => true)
   }
 }));
-vi.mock('../database/companionSyncPushApply.js', () => ({
-  applyCompanionSyncPush: pushApplyMock.applyCompanionSyncPush
+vi.mock('../database/companionSyncPushAsyncApply.js', () => ({
+  applyCompanionSyncPushAsync: pushApplyMock.applyCompanionSyncPushAsync
 }));
 vi.mock('./workspaceSyncAppliedEvents.js', () => ({
   notifyWorkspaceSyncApplied: syncAppliedEventsMock.notifyWorkspaceSyncApplied
@@ -80,7 +80,7 @@ async function resetTestState() {
   const { clearCompanionRequestNonceCache } = await import('./companionRequestAuth.js');
   clearCompanionPairRequests();
   clearCompanionRequestNonceCache();
-  pushApplyMock.applyCompanionSyncPush.mockClear();
+  pushApplyMock.applyCompanionSyncPushAsync.mockClear();
   syncAppliedEventsMock.notifyWorkspaceSyncApplied.mockClear();
   delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
@@ -121,7 +121,7 @@ describe('lan workspace sync push endpoint', () => {
         status: 'accepted'
       }]
     });
-    expect(pushApplyMock.applyCompanionSyncPush).toHaveBeenCalledWith(JSON.parse(buildPushBody()).items);
+    expect(pushApplyMock.applyCompanionSyncPushAsync).toHaveBeenCalledWith(JSON.parse(buildPushBody()).items);
     expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).toHaveBeenCalledWith({
       appliedNodeIds: [],
       appliedObjectIds: ['node_review:node-1'],
@@ -139,6 +139,6 @@ describe('lan workspace sync push endpoint', () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: 'invalid_sync_push_payload' });
-    expect(pushApplyMock.applyCompanionSyncPush).not.toHaveBeenCalled();
+    expect(pushApplyMock.applyCompanionSyncPushAsync).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,7 @@
 import {
-  applyCompanionSyncPush,
+  applyCompanionSyncPushAsync,
   type CompanionSyncPushPayload
-} from '../database/companionSyncPushApply.js';
+} from '../database/companionSyncPushAsyncApply.js';
 
 import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
@@ -39,9 +39,9 @@ function readPushItems(bodyText: string): CompanionSyncPushPayload[] {
   return payload.items;
 }
 
-export function handleCompanionSyncPush(bodyText: string) {
+export async function handleCompanionSyncPush(bodyText: string) {
   const items = readPushItems(bodyText);
-  const result = applyCompanionSyncPush(items);
+  const result = await applyCompanionSyncPushAsync(items);
   notifyWorkspaceSyncApplied({
     appliedNodeIds: result.appliedNodeIds,
     appliedObjectIds: result.appliedObjectIds,

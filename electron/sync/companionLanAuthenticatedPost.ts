@@ -57,7 +57,7 @@ export async function handleAuthenticatedPost(
   }
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) {
     try {
-      writeJson(request, response, 200, handleCompanionSyncPush(bodyText), 'POST, OPTIONS');
+      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText), 'POST, OPTIONS');
     } catch (error) {
       writeJson(request, response, 400, {
         error: error instanceof Error ? error.message : 'invalid_sync_push_payload'

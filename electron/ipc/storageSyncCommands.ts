@@ -1,11 +1,11 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-import { applySyncNodes } from '../database/syncApply.js';
+import { applySyncNodesAsync } from '../database/syncApply.js';
 import { recordSyncNodeConflicts } from '../database/syncConflicts.js';
 import { applySyncObjects } from '../database/syncObjectApply.js';
 
 export function handleSyncMutationCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.applySyncNodes) {
-    return applySyncNodes(Array.isArray(args.nodes) ? (args.nodes as Parameters<typeof applySyncNodes>[0]) : []);
+    return applySyncNodesAsync(Array.isArray(args.nodes) ? (args.nodes as Parameters<typeof applySyncNodesAsync>[0]) : []);
   }
   if (command === NATIVE_COMMANDS.applySyncObjects) {
     return applySyncObjects(Array.isArray(args.objects) ? (args.objects as Parameters<typeof applySyncObjects>[0]) : []);

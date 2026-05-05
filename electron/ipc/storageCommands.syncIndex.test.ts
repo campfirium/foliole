@@ -11,8 +11,8 @@ const { loadSyncNodes } = vi.hoisted(() => ({
 const { loadSyncObjects } = vi.hoisted(() => ({
   loadSyncObjects: vi.fn()
 }));
-const { applySyncNodes } = vi.hoisted(() => ({
-  applySyncNodes: vi.fn()
+const { applySyncNodesAsync } = vi.hoisted(() => ({
+  applySyncNodesAsync: vi.fn()
 }));
 const { applySyncObjects } = vi.hoisted(() => ({
   applySyncObjects: vi.fn()
@@ -28,7 +28,7 @@ vi.mock('../database/syncIndex.js', () => ({ loadSyncIndex }));
 vi.mock('../database/syncConflictReads.js', () => ({ loadSyncNodeConflicts }));
 vi.mock('../database/syncNodes.js', () => ({ loadSyncNodes }));
 vi.mock('../database/syncObjects.js', () => ({ loadSyncObjects }));
-vi.mock('../database/syncApply.js', () => ({ applySyncNodes }));
+vi.mock('../database/syncApply.js', () => ({ applySyncNodesAsync }));
 vi.mock('../database/syncObjectApply.js', () => ({ applySyncObjects }));
 vi.mock('../database/syncConflicts.js', () => ({ recordSyncNodeConflicts }));
 vi.mock('../database/nodeMutations.js', () => ({
@@ -181,11 +181,11 @@ it('returns requested generic sync object records through storage commands', asy
 
 it('applies sync node payloads through storage commands', async () => {
   const payload = createSyncNodePayload();
-  applySyncNodes.mockReturnValue(['node-2']);
+  applySyncNodesAsync.mockResolvedValue(['node-2']);
   await expect(handleStorageCommand('apply_sync_nodes', {
     nodes: payload
   })).resolves.toEqual(['node-2']);
-  expect(applySyncNodes).toHaveBeenCalledWith(payload);
+  expect(applySyncNodesAsync).toHaveBeenCalledWith(payload);
 });
 
 

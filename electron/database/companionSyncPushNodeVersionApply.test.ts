@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { applyCompanionSyncPush } from './companionSyncPushApply.js';
+import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 
 type SyncPushPayload = import('./companionSyncPushApply.js').CompanionSyncPushPayload;
@@ -104,5 +105,18 @@ describe('companion sync node version push apply', () => {
     expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; device_id: string }>(
       `SELECT content_hash, device_id FROM node_sync_versions WHERE version_id = 'android#1'`
     )).toEqual({ content_hash: 'android-node-hash', device_id: 'android-device' });
+  });
+
+  it('accepts node versions through the async companion push entry', async () => {
+    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()]);
+
+    expect(result.appliedNodeIds).toEqual(['node-highlight']);
+    expect(result.acks).toMatchObject([{
+      status: 'accepted',
+      versionId: 'android#1'
+    }]);
+    expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string }>(
+      `SELECT current_version_id FROM nodes WHERE id = 'node-highlight'`
+    )).toEqual({ current_version_id: 'android#1' });
   });
 });
