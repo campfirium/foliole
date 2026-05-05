@@ -23,10 +23,12 @@ const NODE_PATHS_CTE_SQL = `WITH RECURSIVE node_paths(node_id, path) AS (
 
 const NODE_SEARCH_INSERT_SQL = `${NODE_PATHS_CTE_SQL}
   INSERT INTO node_search (title, path, content, node_id, updated_at)
-  SELECT trim(n.title), COALESCE(paths.path, ''), n.content, n.id, n.updated_at
+  SELECT trim(n.title), COALESCE(paths.path, ''), COALESCE(CAST(cbd.data AS TEXT), n.content), n.id, n.updated_at
   FROM nodes n
   LEFT JOIN node_paths paths
     ON paths.node_id = n.id
+  LEFT JOIN content_blob_data cbd
+    ON cbd.hash = n.body_blob_hash
   WHERE n.id = ?
     AND n.deleted_at IS NULL`;
 
@@ -58,10 +60,12 @@ const PDF_SEARCH_INSERT_SQL = `${NODE_PATHS_CTE_SQL}
 
 const NODE_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
   INSERT INTO node_search (title, path, content, node_id, updated_at)
-  SELECT trim(n.title), COALESCE(paths.path, ''), n.content, n.id, n.updated_at
+  SELECT trim(n.title), COALESCE(paths.path, ''), COALESCE(CAST(cbd.data AS TEXT), n.content), n.id, n.updated_at
   FROM nodes n
   LEFT JOIN node_paths paths
     ON paths.node_id = n.id
+  LEFT JOIN content_blob_data cbd
+    ON cbd.hash = n.body_blob_hash
   WHERE n.deleted_at IS NULL`;
 
 const PDF_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}

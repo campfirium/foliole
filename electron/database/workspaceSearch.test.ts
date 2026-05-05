@@ -17,7 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import { syncNodeSearchIndexForNodeIds, syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -117,6 +118,29 @@ it('searches titles and content from sqlite without needing renderer-side conten
   });
   expect(results[1]?.excerpt).toContain('Atlas launch checklist');
   expect(results[1]?.excerpt).not.toContain('Should stay hidden from search results.');
+});
+
+it('searches node body blob data before inline content', () => {
+  const connection = openDatabaseConnection();
+  const bodyBlobHash = upsertTextBodyBlob(connection.driver, 'Bodyblob atlas marker zz', '2026-04-27T00:00:00.000Z');
+  connection.driver.execute(
+    `INSERT INTO nodes (
+       id, parent_id, kind, title, is_title_manual, hide_title_heading,
+       content, body_blob_hash, created_at, updated_at
+     ) VALUES ('node-blob-search', NULL, 'topic', 'Blob Search', 1, 0, '', ?, ?, ?)`,
+    [bodyBlobHash, '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
+  );
+  syncNodeSearchIndexForNodeIds(connection.driver, ['node-blob-search']);
+
+  expect(searchWorkspace('atlas')[0]).toMatchObject({
+    id: 'node-blob-search',
+    kind: 'node',
+    nodeMatch: { from: 9, query: 'atlas', to: 14 }
+  });
+  expect(searchWorkspace('zz')[0]).toMatchObject({
+    id: 'node-blob-search',
+    kind: 'node'
+  });
 });
 
 it('includes indexed pdf page hits in workspace search results', () => {

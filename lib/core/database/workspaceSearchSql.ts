@@ -35,18 +35,22 @@ export interface WorkspacePdfCrossPageSearchRow extends DatabaseRow {
 }
 
 export const MAX_RESULTS = 40;
-export const TITLE_FALLBACK_SQL = `SELECT id, title, content, updated_at
-  FROM nodes
-  WHERE deleted_at IS NULL
-    AND instr(lower(trim(title)), ?) > 0
-  ORDER BY updated_at DESC
+export const TITLE_FALLBACK_SQL = `SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at
+  FROM nodes n
+  LEFT JOIN content_blob_data cbd
+    ON cbd.hash = n.body_blob_hash
+  WHERE n.deleted_at IS NULL
+    AND instr(lower(trim(n.title)), ?) > 0
+  ORDER BY n.updated_at DESC
   LIMIT ?`;
-export const CONTENT_FALLBACK_SQL = `SELECT id, title, content, updated_at
-  FROM nodes
-  WHERE deleted_at IS NULL
-    AND instr(lower(trim(title)), ?) = 0
-    AND instr(lower(content), ?) > 0
-  ORDER BY updated_at DESC
+export const CONTENT_FALLBACK_SQL = `SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at
+  FROM nodes n
+  LEFT JOIN content_blob_data cbd
+    ON cbd.hash = n.body_blob_hash
+  WHERE n.deleted_at IS NULL
+    AND instr(lower(trim(n.title)), ?) = 0
+    AND instr(lower(COALESCE(CAST(cbd.data AS TEXT), n.content)), ?) > 0
+  ORDER BY n.updated_at DESC
   LIMIT ?`;
 export const NODE_FTS_SQL = `SELECT node_id AS id, title, path, content, updated_at, bm25(node_search, 8.0, 2.0, 1.0) AS rank
   FROM node_search

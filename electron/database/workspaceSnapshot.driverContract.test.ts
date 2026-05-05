@@ -92,4 +92,5 @@ it('loads workspace snapshot through query helpers only', () => {
 
   expect(queryAllSpy).toHaveBeenCalledTimes(3);
   expect(queryOneSpy).toHaveBeenCalledTimes(3);
+  expect(queryAllSpy.mock.calls[0]?.[0]).toContain('content_blob_data');
 });

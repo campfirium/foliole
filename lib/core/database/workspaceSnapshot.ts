@@ -82,7 +82,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        n.hide_title_heading,
        n.opening_text,
        n.virtual_filter,
-       n.content,
+       COALESCE(CAST(cbd.data AS TEXT), n.content) AS content,
        n.reveal,
        n.anchor_link,
        n.image_regions,
@@ -107,6 +107,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        nr.reps AS review_reps,
        nr.lapses AS review_lapses
      FROM nodes n
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      LEFT JOIN node_reading rd ON rd.node_id = n.id
      LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ?
      LEFT JOIN node_review nr ON nr.node_id = n.id`

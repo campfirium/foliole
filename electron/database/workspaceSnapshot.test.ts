@@ -17,6 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
@@ -99,6 +101,20 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
   expect(snapshot?.activeNodeId).toBe('starter-welcome');
   expect(snapshot?.nodesById['node-2']?.content).toBe('content:node-2');
   expect(snapshot?.untitledSequenceByParent).toEqual({});
+});
+
+it('loads full workspace node content from body blob data before inline content', () => {
+  const connection = openDatabaseConnection();
+  const bodyBlobHash = upsertTextBodyBlob(connection.driver, 'blob body', '2026-04-27T00:00:00.000Z');
+  connection.driver.execute(
+    `INSERT INTO nodes (
+       id, parent_id, kind, title, is_title_manual, hide_title_heading,
+       content, body_blob_hash, created_at, updated_at
+     ) VALUES ('node-blob', NULL, 'topic', 'Node Blob', 1, 0, '', ?, ?, ?)`,
+    [bodyBlobHash, '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
+  );
+
+  expect(loadWorkspaceSnapshot()?.nodesById['node-blob']?.content).toBe('blob body');
 });
 
 it('includes node attachment references in the workspace snapshot', () => {
