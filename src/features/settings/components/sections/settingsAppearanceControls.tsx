@@ -3,6 +3,9 @@ import type { RefObject } from 'react';
 import { SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
+  DEFAULT_CLOZE_COLOR_PRESET,
+  DEFAULT_HIGHLIGHT_COLOR_PRESET,
+  DEFAULT_SELECTION_COLOR_PRESET,
   INTERFACE_FONT_SIZE_MAX,
   INTERFACE_FONT_SIZE_MIN
 } from '../../model/appearanceSettings';
@@ -35,6 +38,32 @@ export function SettingsSelectRow(props: {
   );
 }
 
+function ColorSettingRow(props: {
+  colorInputAriaLabel: string;
+  colorInputRef: RefObject<HTMLInputElement>;
+  onOpenColorPicker: () => void;
+  onReset: () => void;
+  pickerButtonAriaLabel: string;
+  resetButtonAriaLabel: string;
+  title: string;
+  description: string;
+  value: string;
+  defaultValue: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <SettingsRow description={props.description} title={props.title}>
+      <SettingsControlSlot>
+        <button aria-label={props.resetButtonAriaLabel} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/65 transition-colors hover:bg-foreground/[0.06] hover:text-foreground disabled:cursor-default disabled:opacity-55" disabled={props.value === props.defaultValue} onClick={props.onReset} type="button">↺</button>
+        <button aria-label={props.pickerButtonAriaLabel} className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full" onClick={props.onOpenColorPicker} type="button">
+          <span aria-hidden="true" className="inline-flex h-[30px] w-[30px] rounded-full border border-foreground/20" style={{ backgroundColor: props.value }} />
+        </button>
+        <input aria-label={props.colorInputAriaLabel} className="pointer-events-none absolute h-0 w-0 opacity-0" onChange={(event) => props.onChange(event.target.value)} ref={props.colorInputRef} type="color" value={props.value} />
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
 export function AccentColorRow(props: {
   accentColorInputRef: RefObject<HTMLInputElement>;
   onAccentColorPresetReset: () => void;
@@ -43,15 +72,91 @@ export function AccentColorRow(props: {
   setAccentColorPreset: (value: string) => void;
 }) {
   return (
-    <SettingsRow description="Choose accent color for selected states, links, and quote rendering." title="Accent color">
-      <SettingsControlSlot>
-        <button aria-label="Reset accent color" className="inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/65 transition-colors hover:bg-foreground/[0.06] hover:text-foreground disabled:cursor-default disabled:opacity-55" disabled={props.safeAccentColor === DEFAULT_ACCENT_COLOR_PRESET} onClick={props.onAccentColorPresetReset} type="button">↺</button>
-        <button aria-label="Pick accent color" className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full" onClick={props.onOpenAccentColorPicker} type="button">
-          <span aria-hidden="true" className="inline-flex h-[30px] w-[30px] rounded-full border border-foreground/20" style={{ backgroundColor: props.safeAccentColor }} />
-        </button>
-        <input aria-label="Accent color picker" className="pointer-events-none absolute h-0 w-0 opacity-0" onChange={(event) => props.setAccentColorPreset(event.target.value)} ref={props.accentColorInputRef} type="color" value={props.safeAccentColor} />
-      </SettingsControlSlot>
-    </SettingsRow>
+    <ColorSettingRow
+      colorInputAriaLabel="Accent color picker"
+      colorInputRef={props.accentColorInputRef}
+      defaultValue={DEFAULT_ACCENT_COLOR_PRESET}
+      description="Choose accent color for selected states, links, and quote rendering."
+      onChange={props.setAccentColorPreset}
+      onOpenColorPicker={props.onOpenAccentColorPicker}
+      onReset={props.onAccentColorPresetReset}
+      pickerButtonAriaLabel="Pick accent color"
+      resetButtonAriaLabel="Reset accent color"
+      title="Accent color"
+      value={props.safeAccentColor}
+    />
+  );
+}
+
+export function HighlightColorRow(props: {
+  highlightColorInputRef: RefObject<HTMLInputElement>;
+  onHighlightColorPresetReset: () => void;
+  onOpenHighlightColorPicker: () => void;
+  safeHighlightColor: string;
+  setHighlightColorPreset: (value: string) => void;
+}) {
+  return (
+    <ColorSettingRow
+      colorInputAriaLabel="Highlight color picker"
+      colorInputRef={props.highlightColorInputRef}
+      defaultValue={DEFAULT_HIGHLIGHT_COLOR_PRESET}
+      description="Choose the color used for highlight marks in both the editor and PDF."
+      onChange={props.setHighlightColorPreset}
+      onOpenColorPicker={props.onOpenHighlightColorPicker}
+      onReset={props.onHighlightColorPresetReset}
+      pickerButtonAriaLabel="Pick highlight color"
+      resetButtonAriaLabel="Reset highlight color"
+      title="Highlight color"
+      value={props.safeHighlightColor}
+    />
+  );
+}
+
+export function SelectionColorRow(props: {
+  selectionColorInputRef: RefObject<HTMLInputElement>;
+  onSelectionColorPresetReset: () => void;
+  onOpenSelectionColorPicker: () => void;
+  safeSelectionColor: string;
+  setSelectionColorPreset: (value: string) => void;
+}) {
+  return (
+    <ColorSettingRow
+      colorInputAriaLabel="Selection color picker"
+      colorInputRef={props.selectionColorInputRef}
+      defaultValue={DEFAULT_SELECTION_COLOR_PRESET}
+      description="Choose the color used for text selection in both the editor and PDF."
+      onChange={props.setSelectionColorPreset}
+      onOpenColorPicker={props.onOpenSelectionColorPicker}
+      onReset={props.onSelectionColorPresetReset}
+      pickerButtonAriaLabel="Pick selection color"
+      resetButtonAriaLabel="Reset selection color"
+      title="Selection color"
+      value={props.safeSelectionColor}
+    />
+  );
+}
+
+export function ClozeColorRow(props: {
+  clozeColorInputRef: RefObject<HTMLInputElement>;
+  onClozeColorPresetReset: () => void;
+  onOpenClozeColorPicker: () => void;
+  safeClozeColor: string;
+  setClozeColorPreset: (value: string) => void;
+}) {
+  return (
+    <ColorSettingRow
+      colorInputAriaLabel="Cloze color picker"
+      colorInputRef={props.clozeColorInputRef}
+      defaultValue={DEFAULT_CLOZE_COLOR_PRESET}
+      description="Choose the color used for cloze marks in the editor."
+      onChange={props.setClozeColorPreset}
+      onOpenColorPicker={props.onOpenClozeColorPicker}
+      onReset={props.onClozeColorPresetReset}
+      pickerButtonAriaLabel="Pick cloze color"
+      resetButtonAriaLabel="Reset cloze color"
+      title="Cloze color"
+      value={props.safeClozeColor}
+    />
   );
 }
 

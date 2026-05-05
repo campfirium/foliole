@@ -32,3 +32,15 @@ it('closes selection-safe menu on escape', () => {
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(onClose).toHaveBeenCalledTimes(1);
 });
+
+it('uses the shared selection surface color token for hover and focus states', () => {
+  render(
+    <AppSelectionDropdownMenu left={40} onClose={() => undefined} top={56}>
+      <AppSelectionDropdownMenuItem>Highlight</AppSelectionDropdownMenuItem>
+    </AppSelectionDropdownMenu>
+  );
+
+  const item = screen.getByRole('menuitem', { name: 'Highlight' });
+  expect(item.className).toContain('focus:bg-[var(--app-selection-surface-color)]');
+  expect(item.className).toContain('hover:bg-[var(--app-selection-surface-color)]');
+});

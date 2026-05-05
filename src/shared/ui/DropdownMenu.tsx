@@ -31,7 +31,7 @@ function dropdownMenuContentClassName(className?: string) {
 
 function dropdownMenuItemClassName(className?: string) {
   return cn(
-    'relative flex min-h-9 cursor-default select-none items-center px-3 text-sm font-semibold outline-none transition-colors focus:bg-foreground/[0.05] data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+    'relative flex min-h-9 cursor-default select-none items-center px-3 text-sm font-semibold outline-none transition-colors focus:bg-[var(--app-selection-surface-color)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
     className
   );
 }
@@ -107,7 +107,7 @@ function AppSelectionDropdownMenuItem({
     <button
       className={cn(
         dropdownMenuItemClassName(className),
-        'w-full text-left hover:bg-foreground/[0.05] disabled:pointer-events-none disabled:opacity-50'
+        'w-full text-left hover:bg-[var(--app-selection-surface-color)] disabled:pointer-events-none disabled:opacity-50'
       )}
       onMouseDown={(event) => {
         preventFocusSteal(event);

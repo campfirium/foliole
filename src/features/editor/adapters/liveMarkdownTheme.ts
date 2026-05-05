@@ -1,5 +1,9 @@
 import { EditorView } from '@codemirror/view';
 
+const SHARED_SELECTION_SURFACE_COLOR = 'var(--app-selection-surface-color)';
+const SHARED_HIGHLIGHT_SURFACE_COLOR = 'var(--app-highlight-surface-color)';
+const SHARED_CLOZE_SURFACE_COLOR = 'var(--app-cloze-surface-color)';
+
 export const liveMarkdownTheme = EditorView.theme({
   '&': { backgroundColor: 'transparent', height: '100%' },
   '.cm-scroller': { color: 'var(--color-text-primary)', lineHeight: '1.72' },
@@ -73,11 +77,11 @@ export const liveMarkdownTheme = EditorView.theme({
     zIndex: '30'
   },
   '.cm-md-link-text': { color: 'var(--app-accent-color)', cursor: 'pointer', textDecoration: 'underline' },
-  '.cm-md-highlight': { backgroundColor: 'rgba(56, 189, 248, 0.28)', borderRadius: '0.25rem' },
-  '.cm-md-cloze': { backgroundColor: 'rgba(250, 204, 21, 0.32)', borderRadius: '0.25rem' },
-  '.cm-md-anchor-overlap': { backgroundColor: 'rgba(56, 189, 248, 0.32)', borderRadius: '0.25rem' },
-  '.cm-md-highlight-overlap': { backgroundColor: 'rgba(56, 189, 248, 0.2)', borderRadius: '0.25rem' },
-  '.cm-md-cloze-placeholder': { backgroundColor: 'rgba(251, 113, 133, 0.24)', borderRadius: '0.25rem' },
+  '.cm-md-highlight': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: '0.25rem' },
+  '.cm-md-cloze': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: '0.25rem' },
+  '.cm-md-anchor-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: '0.25rem' },
+  '.cm-md-highlight-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: '0.25rem' },
+  '.cm-md-cloze-placeholder': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: '0.25rem' },
   '.cm-md-anchor-tag-token': { color: 'var(--app-accent-color)', opacity: '0.9' },
   '.cm-md-anchor-tag-delimiter': { color: 'var(--app-accent-color)', opacity: '0.7' },
   '.cm-md-anchor-tag-kind': { color: 'var(--app-accent-color)', fontWeight: '700', opacity: '1' },
@@ -115,6 +119,6 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-activeLine': { backgroundColor: 'transparent' },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
-    backgroundColor: 'rgba(var(--app-accent-color-rgb), 0.26)'
+    backgroundColor: SHARED_SELECTION_SURFACE_COLOR
   }
 });

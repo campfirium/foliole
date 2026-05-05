@@ -181,13 +181,13 @@ function renderSelectionOverlay(
   return (
     renderPdfOverlayRects(
       selectionLocator,
-      'pointer-events-none absolute z-20 rounded-[3px] bg-accent/30 ring-1 ring-accent/45',
+      'pointer-events-none absolute z-20 rounded-[3px] bg-[var(--app-selection-surface-color)] ring-1 ring-[var(--app-selection-surface-color)]',
       'pdf-selection-rect'
     ) ??
     renderPdfOverlayMarker(
       selectionLocator,
       markerSize,
-      'pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/30 shadow-sm ring-1 ring-accent/60',
+      'pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-selection-surface-color)] shadow-sm ring-1 ring-[var(--app-selection-surface-color)]',
       'pdf-selection-marker'
     )
   );

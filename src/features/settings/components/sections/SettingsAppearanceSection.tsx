@@ -2,20 +2,46 @@ import { useRef } from 'react';
 
 import { SettingsRow, SettingsSection } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
-import { DEFAULT_ACCENT_COLOR_PRESET } from '../../model/appearanceSettings';
+import {
+  DEFAULT_ACCENT_COLOR_PRESET,
+  DEFAULT_CLOZE_COLOR_PRESET,
+  DEFAULT_HIGHLIGHT_COLOR_PRESET,
+  DEFAULT_SELECTION_COLOR_PRESET
+} from '../../model/appearanceSettings';
 import { useSettingsFontOptions } from '../useSettingsFontOptions';
 
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
 import { NodeListRowSpacingSection } from './NodeListRowSpacingSection';
-import { AccentColorRow, SettingsSelectRow } from './settingsAppearanceControls';
+import {
+  AccentColorRow,
+  ClozeColorRow,
+  HighlightColorRow,
+  SelectionColorRow,
+  SettingsSelectRow
+} from './settingsAppearanceControls';
 import { SettingsAppearanceFontSection } from './SettingsAppearanceFontSection';
 
 function ensureAccentHex(value: string) {
   return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_ACCENT_COLOR_PRESET;
 }
 
+function ensureHighlightHex(value: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_HIGHLIGHT_COLOR_PRESET;
+}
+
+function ensureSelectionHex(value: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_SELECTION_COLOR_PRESET;
+}
+
+function ensureClozeHex(value: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_CLOZE_COLOR_PRESET;
+}
+
 function useAppearanceSectionState() {
   const accentColorInputRef = useRef<HTMLInputElement>(null);
+  const selectionColorInputRef = useRef<HTMLInputElement>(null);
+  const highlightColorInputRef = useRef<HTMLInputElement>(null);
+  const clozeColorInputRef = useRef<HTMLInputElement>(null);
   const appearance = useAppearanceSettings();
   const fontOptions = useSettingsFontOptions({
     customInterfaceFont: appearance.customInterfaceFont,
@@ -27,38 +53,82 @@ function useAppearanceSectionState() {
   });
   return {
     accentColorInputRef,
+    selectionColorInputRef,
+    highlightColorInputRef,
+    clozeColorInputRef,
     appearance,
     baseColorOptions: [{ label: 'Light', value: 'light' }],
     fontOptions,
-    safeAccentColor: ensureAccentHex(appearance.accentColorPreset)
+    safeAccentColor: ensureAccentHex(appearance.accentColorPreset),
+    safeSelectionColor: ensureSelectionHex(appearance.selectionColorPreset),
+    safeHighlightColor: ensureHighlightHex(appearance.highlightColorPreset),
+    safeClozeColor: ensureClozeHex(appearance.clozeColorPreset)
   };
 }
 
-export function SettingsAppearanceSection() {
-  const { accentColorInputRef, appearance, baseColorOptions, fontOptions, safeAccentColor } =
-    useAppearanceSectionState();
+function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionState>) {
+  const {
+    accentColorInputRef,
+    appearance,
+    baseColorOptions,
+    clozeColorInputRef,
+    highlightColorInputRef,
+    safeAccentColor,
+    safeClozeColor,
+    safeHighlightColor,
+    safeSelectionColor,
+    selectionColorInputRef
+  } = props;
+
+  return (
+    <SettingsSection ariaLabel="Appearance color section" title="Color">
+      <SettingsSelectRow
+        description="Choose the foundation color mode for the interface."
+        label="Base color"
+        onChange={(value) => appearance.setBaseColorMode(value as typeof appearance.baseColorMode)}
+        options={baseColorOptions}
+        value={appearance.baseColorMode}
+      />
+      <AccentColorRow
+        accentColorInputRef={accentColorInputRef}
+        onAccentColorPresetReset={appearance.resetAccentColorPreset}
+        onOpenAccentColorPicker={() => accentColorInputRef.current?.click()}
+        safeAccentColor={safeAccentColor}
+        setAccentColorPreset={(value) => appearance.setAccentColorPreset(value as typeof appearance.accentColorPreset)}
+      />
+      <SelectionColorRow
+        onOpenSelectionColorPicker={() => selectionColorInputRef.current?.click()}
+        onSelectionColorPresetReset={appearance.resetSelectionColorPreset}
+        safeSelectionColor={safeSelectionColor}
+        selectionColorInputRef={selectionColorInputRef}
+        setSelectionColorPreset={(value) => appearance.setSelectionColorPreset(value as typeof appearance.selectionColorPreset)}
+      />
+      <HighlightColorRow
+        highlightColorInputRef={highlightColorInputRef}
+        onHighlightColorPresetReset={appearance.resetHighlightColorPreset}
+        onOpenHighlightColorPicker={() => highlightColorInputRef.current?.click()}
+        safeHighlightColor={safeHighlightColor}
+        setHighlightColorPreset={(value) => appearance.setHighlightColorPreset(value as typeof appearance.highlightColorPreset)}
+      />
+      <ClozeColorRow
+        clozeColorInputRef={clozeColorInputRef}
+        onClozeColorPresetReset={appearance.resetClozeColorPreset}
+        onOpenClozeColorPicker={() => clozeColorInputRef.current?.click()}
+        safeClozeColor={safeClozeColor}
+        setClozeColorPreset={(value) => appearance.setClozeColorPreset(value as typeof appearance.clozeColorPreset)}
+      />
+      <SettingsRow description="Theme package management will be added in a follow-up task." readonly title="Theme">
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-[0.82rem] text-foreground/70">Planned</span>
+      </SettingsRow>
+    </SettingsSection>
+  );
+}
+
+function AppearanceSupportingSections(props: ReturnType<typeof useAppearanceSectionState>) {
+  const { appearance, fontOptions } = props;
 
   return (
     <>
-      <SettingsSection ariaLabel="Appearance color section" title="Color">
-        <SettingsSelectRow
-          description="Choose the foundation color mode for the interface."
-          label="Base color"
-          onChange={(value) => appearance.setBaseColorMode(value as typeof appearance.baseColorMode)}
-          options={baseColorOptions}
-          value={appearance.baseColorMode}
-        />
-        <AccentColorRow
-          accentColorInputRef={accentColorInputRef}
-          onAccentColorPresetReset={appearance.resetAccentColorPreset}
-          onOpenAccentColorPicker={() => accentColorInputRef.current?.click()}
-          safeAccentColor={safeAccentColor}
-          setAccentColorPreset={(value) => appearance.setAccentColorPreset(value as typeof appearance.accentColorPreset)}
-        />
-        <SettingsRow description="Theme package management will be added in a follow-up task." readonly title="Theme">
-          <span className="rounded-full bg-secondary px-2.5 py-1 text-[0.82rem] text-foreground/70">Planned</span>
-        </SettingsRow>
-      </SettingsSection>
       <NodeIconSettingsSection />
       <NodeListRowSpacingSection />
       <SettingsAppearanceFontSection
@@ -85,6 +155,16 @@ export function SettingsAppearanceSection() {
               (appearance.setCustomUiFont(value.slice('ui-font:'.length)), appearance.setUiFontPreset('custom'))
         }
       />
+    </>
+  );
+}
+
+export function SettingsAppearanceSection() {
+  const state = useAppearanceSectionState();
+  return (
+    <>
+      <AppearanceColorSection {...state} />
+      <AppearanceSupportingSections {...state} />
     </>
   );
 }

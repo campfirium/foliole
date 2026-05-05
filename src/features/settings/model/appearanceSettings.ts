@@ -1,27 +1,58 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
+import {
+  applyAppearanceColorSettings,
+  type AccentColorPreset,
+  type ClozeColorPreset,
+  DEFAULT_ACCENT_COLOR_PRESET,
+  DEFAULT_CLOZE_COLOR_PRESET,
+  DEFAULT_HIGHLIGHT_COLOR_PRESET,
+  DEFAULT_SELECTION_COLOR_PRESET,
+  getAccentColorPreset,
+  getClozeColorPreset,
+  getHighlightColorPreset,
+  getSelectionColorPreset,
+  type HighlightColorPreset,
+  type SelectionColorPreset,
+  setAccentColorPreset,
+  setClozeColorPreset,
+  setHighlightColorPreset,
+  setSelectionColorPreset
+} from './appearanceColorSettings';
+export {
+  type AccentColorPreset,
+  type ClozeColorPreset,
+  type HighlightColorPreset,
+  type SelectionColorPreset,
+  DEFAULT_ACCENT_COLOR_PRESET,
+  DEFAULT_CLOZE_COLOR_PRESET,
+  DEFAULT_HIGHLIGHT_COLOR_PRESET,
+  DEFAULT_SELECTION_COLOR_PRESET,
+  getAccentColorPreset,
+  getClozeColorPreset,
+  getHighlightColorPreset,
+  getSelectionColorPreset,
+  setAccentColorPreset,
+  setClozeColorPreset,
+  setHighlightColorPreset,
+  setSelectionColorPreset
+};
 export const INTERFACE_FONT_OPTIONS = ['default', 'inter', 'system', 'source-sans', 'serif', 'rounded', 'custom'] as const;
 export const MONOSPACE_FONT_OPTIONS = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa', 'custom'] as const;
 export const BASE_COLOR_OPTIONS = ['light'] as const;
-
 export type InterfaceFontPreset = (typeof INTERFACE_FONT_OPTIONS)[number];
 export type MonospaceFontPreset = (typeof MONOSPACE_FONT_OPTIONS)[number];
 export type BaseColorMode = (typeof BASE_COLOR_OPTIONS)[number];
-export type AccentColorPreset = string;
-export const DEFAULT_ACCENT_COLOR_PRESET: AccentColorPreset = '#3f8f68';
-
 export const INTERFACE_FONT_SIZE_MIN = 12;
 export const INTERFACE_FONT_SIZE_MAX = 36;
 export const INTERFACE_FONT_SIZE_DEFAULT = 17;
-
 const STORAGE_KEYS = {
   uiFont: APP_SETTINGS_STORAGE_KEYS.uiFont,
   customUiFont: APP_SETTINGS_STORAGE_KEYS.customUiFont,
   interfaceFont: APP_SETTINGS_STORAGE_KEYS.interfaceFont,
   monospaceFont: APP_SETTINGS_STORAGE_KEYS.monospaceFont,
   baseColor: APP_SETTINGS_STORAGE_KEYS.baseColor,
-  accentColor: APP_SETTINGS_STORAGE_KEYS.accentColor,
   interfaceFontSize: APP_SETTINGS_STORAGE_KEYS.interfaceFontSize,
   customInterfaceFont: APP_SETTINGS_STORAGE_KEYS.customInterfaceFont,
   customMonospaceFont: APP_SETTINGS_STORAGE_KEYS.customMonospaceFont
@@ -82,20 +113,6 @@ function quoteFontFamilyName(value: string) {
 
 function toPx(value: number) {
   return `${Math.round(value * 100) / 100}px`;
-}
-
-function normalizeAccentColor(value: string): string {
-  const trimmed = value.trim();
-  const match = /^#([0-9a-fA-F]{6})$/.exec(trimmed);
-  return match ? `#${match[1].toLowerCase()}` : DEFAULT_ACCENT_COLOR_PRESET;
-}
-
-function toAccentColorRgb(value: string): string {
-  const normalized = normalizeAccentColor(value);
-  const red = Number.parseInt(normalized.slice(1, 3), 16);
-  const green = Number.parseInt(normalized.slice(3, 5), 16);
-  const blue = Number.parseInt(normalized.slice(5, 7), 16);
-  return `${red} ${green} ${blue}`;
 }
 
 function applyEditorTypographyScale(root: HTMLElement, baseFontSize: number) {
@@ -169,15 +186,6 @@ export function setBaseColorMode(value: BaseColorMode) {
   setWhitelistedLocalStorageItem(STORAGE_KEYS.baseColor, value);
 }
 
-export function getAccentColorPreset(): AccentColorPreset {
-  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.accentColor);
-  return raw ? normalizeAccentColor(raw) : DEFAULT_ACCENT_COLOR_PRESET;
-}
-
-export function setAccentColorPreset(value: AccentColorPreset) {
-  setWhitelistedLocalStorageItem(STORAGE_KEYS.accentColor, normalizeAccentColor(value));
-}
-
 export function getInterfaceFontSize() {
   const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFontSize);
   const parsed = Number(raw);
@@ -191,6 +199,9 @@ export function setInterfaceFontSize(value: number) {
 interface ApplyAppearanceSettingsInput {
   baseColor: BaseColorMode;
   accentColor: AccentColorPreset;
+  selectionColor: SelectionColorPreset;
+  highlightColor: HighlightColorPreset;
+  clozeColor: ClozeColorPreset;
   uiFont: InterfaceFontPreset;
   customUiFont: string;
   interfaceFont: InterfaceFontPreset;
@@ -221,6 +232,9 @@ function resolveMonospaceFontFamily(monospaceFont: MonospaceFontPreset, customMo
 export function applyAppearanceSettings({
   baseColor,
   accentColor,
+  selectionColor,
+  highlightColor,
+  clozeColor,
   uiFont,
   customUiFont,
   interfaceFont,
@@ -236,11 +250,14 @@ export function applyAppearanceSettings({
   const uiFontValue = resolveInterfaceFontFamily(uiFont, customUiFont);
   const interfaceFontValue = resolveInterfaceFontFamily(interfaceFont, customInterfaceFont);
   const monospaceFontValue = resolveMonospaceFontFamily(monospaceFont, customMonospaceFont);
-  const normalizedAccentColor = normalizeAccentColor(accentColor);
   const root = document.documentElement;
   root.dataset.baseColor = baseColor;
-  root.style.setProperty('--app-accent-color', normalizedAccentColor);
-  root.style.setProperty('--app-accent-color-rgb', toAccentColorRgb(normalizedAccentColor));
+  applyAppearanceColorSettings(root, {
+    accentColor,
+    clozeColor,
+    highlightColor,
+    selectionColor
+  });
   root.style.setProperty('--app-interface-font-family', uiFontValue);
   root.style.setProperty('--content-panel-font-family', interfaceFontValue);
   root.style.setProperty('--content-panel-mono-font-family', monospaceFontValue);

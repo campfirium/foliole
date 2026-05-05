@@ -5,7 +5,10 @@ import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntax
 import type {
   AccentColorPreset,
   BaseColorMode,
+  ClozeColorPreset,
+  HighlightColorPreset,
   InterfaceFontPreset,
+  SelectionColorPreset,
   MonospaceFontPreset
 } from '../model/appearanceSettings';
 
@@ -18,16 +21,25 @@ export interface AppearanceSettingsContextValue {
   customUiFont: string;
   editorAppearanceKey: string;
   editorDisplayMode: EditorDisplayMode;
+  clozeColorPreset: ClozeColorPreset;
+  selectionColorPreset: SelectionColorPreset;
+  highlightColorPreset: HighlightColorPreset;
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
   uiFontPreset: InterfaceFontPreset;
   resetAccentColorPreset: () => void;
+  resetClozeColorPreset: () => void;
+  resetSelectionColorPreset: () => void;
+  resetHighlightColorPreset: () => void;
   resetInterfaceFontSize: () => void;
   setAccentColorPreset: (value: AccentColorPreset) => void;
   setAutoLocalizeRemoteImages: (value: boolean) => void;
   setBaseColorMode: (value: BaseColorMode) => void;
+  setClozeColorPreset: (value: ClozeColorPreset) => void;
+  setHighlightColorPreset: (value: HighlightColorPreset) => void;
+  setSelectionColorPreset: (value: SelectionColorPreset) => void;
   setCustomInterfaceFont: (value: string) => void;
   setCustomMonospaceFont: (value: string) => void;
   setCustomUiFont: (value: string) => void;

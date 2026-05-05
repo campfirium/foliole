@@ -2,7 +2,17 @@ import { beforeEach, expect, it } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 
-import { getCustomInterfaceFont, getCustomMonospaceFont, getCustomUiFont, setCustomInterfaceFont, setCustomMonospaceFont, setCustomUiFont } from './appearanceSettings';
+import {
+  getClozeColorPreset,
+  getCustomInterfaceFont,
+  getCustomMonospaceFont,
+  getCustomUiFont,
+  getHighlightColorPreset,
+  getSelectionColorPreset,
+  setCustomInterfaceFont,
+  setCustomMonospaceFont,
+  setCustomUiFont
+} from './appearanceSettings';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -27,4 +37,14 @@ it('stores normalized font names for new custom selections', () => {
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.customUiFont)).toBe('UD Digi Kyokasho N');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.customInterfaceFont)).toBe('Microsoft YaHei UI');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.customMonospaceFont)).toBe('Consolas');
+});
+
+it('maps legacy green highlight default to the current text-color default', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.highlightColor, '#3f8f68');
+  expect(getHighlightColorPreset()).toBe('#38bdf8');
+});
+
+it('falls back to dedicated defaults for selection and cloze colors', () => {
+  expect(getSelectionColorPreset()).toBe('#3876ff');
+  expect(getClozeColorPreset()).toBe('#facc15');
 });
