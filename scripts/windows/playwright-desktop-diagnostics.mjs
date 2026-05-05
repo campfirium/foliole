@@ -1,6 +1,8 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { classifyBridgeBreakpoint } from './playwright-desktop-bridge-breakpoint.mjs';
+
 const MAX_BOOT_EVENTS = 20;
 const MAX_MAIN_PROCESS_LOGS = 120;
 const MAX_RENDERER_CONSOLE_MESSAGES = 80;
@@ -202,10 +204,17 @@ export async function collectDesktopFailureDiagnostics({
     readRendererRuntimeState(windowPage)
   ]);
   const mainProcessLogs = mainProcessCollector.snapshot();
+  const bridgeBreakpoint = classifyBridgeBreakpoint({
+    boot,
+    bridgeAvailable: debugProbe?.bridgeAvailable ?? null,
+    mainProcessPid: mainProcessLogs.pid,
+    rendererRuntime
+  });
 
   return {
     boot,
     bridgeAvailable: debugProbe?.bridgeAvailable ?? null,
+    bridgeBreakpoint,
     collectedAt: new Date().toISOString(),
     currentRuntime: {
       appReady: rendererRuntime?.appReady ?? null,

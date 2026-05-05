@@ -86,6 +86,12 @@ describe('playwright desktop diagnostics', () => {
         windowPage
       });
 
+      expect(diagnostics.bridgeBreakpoint).toEqual({
+        kind: 'preload_not_executed',
+        mainProcessPid: 4821,
+        readyMarkerPid: 4821,
+        visibleWindow: true
+      });
       expect(diagnostics.currentRuntime).toEqual({
         appReady: true,
         bridgeAvailable: false,
@@ -108,6 +114,57 @@ describe('playwright desktop diagnostics', () => {
         timestamp: '2026-03-14T00:00:00.000Z'
       });
       expect(diagnostics.boot.bootEvents).toEqual([{ stage: 'boot_start' }, { stage: 'app_ready' }]);
+
+      rendererConsoleCollector.dispose();
+      mainProcessCollector.dispose();
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('distinguishes a visible window with no bridge from a renderer startup failure when an older single-instance window holds the lock', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'desktop-diagnostics-test-'));
+    try {
+      await mkdir(path.join(tempRoot, 'logs', 'windows'), { recursive: true });
+      await writeFile(
+        path.join(tempRoot, '.windows-native-boot-ready.json'),
+        JSON.stringify({ pid: 9911, stage: 'app_ready', timestamp: '2026-03-14T00:00:00.000Z' }),
+        'utf8'
+      );
+
+      const windowPage = new MockPage(null, {
+        appReady: true,
+        readyState: 'complete',
+        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+      });
+      const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
+      const mainProcessCollector = createMainProcessLogCollector({
+        pid: 4821,
+        stderr: new EventEmitter(),
+        stdout: new EventEmitter()
+      });
+
+      const diagnostics = await collectDesktopFailureDiagnostics({
+        appRoot: tempRoot,
+        mainProcessCollector,
+        rendererConsoleCollector,
+        windowPage
+      });
+
+      expect(diagnostics.bridgeAvailable).toBe(null);
+      expect(diagnostics.currentRuntime).toEqual({
+        appReady: true,
+        bridgeAvailable: null,
+        pid: 4821,
+        preloadPath: null,
+        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+      });
+      expect(diagnostics.bridgeBreakpoint).toEqual({
+        kind: 'single_instance_old_window_lock',
+        mainProcessPid: 4821,
+        readyMarkerPid: 9911,
+        visibleWindow: true
+      });
 
       rendererConsoleCollector.dispose();
       mainProcessCollector.dispose();
