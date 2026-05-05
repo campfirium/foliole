@@ -101,6 +101,10 @@ function syncCheckedPrefix(result: CompanionSyncPassInput) {
     : 'Sync checked';
 }
 
+function resourceBacklogVerb(result: CompanionSyncPassInput) {
+  return syncCheckedPrefix(result) === 'Sync made progress' ? 'still downloading' : 'left to download';
+}
+
 function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
   const remainingBodies = result.remainingContentBlobCount;
   const remainingAttachments = result.remainingAttachmentResourceCount;
@@ -114,11 +118,11 @@ function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
     suffixes.push('topic list confirmation is still pending');
   }
   if (isKnownBacklog(remainingBodies) && isKnownBacklog(remainingAttachments)) {
-    suffixes.push(`${bodyLabel} and ${attachmentLabel} still downloading`);
+    suffixes.push(`${bodyLabel} and ${attachmentLabel} ${resourceBacklogVerb(result)}`);
   } else if (isKnownBacklog(remainingBodies)) {
-    suffixes.push(`${bodyLabel} still downloading`);
+    suffixes.push(`${bodyLabel} ${resourceBacklogVerb(result)}`);
   } else if (isKnownBacklog(remainingAttachments)) {
-    suffixes.push(`${attachmentLabel} still downloading`);
+    suffixes.push(`${attachmentLabel} ${resourceBacklogVerb(result)}`);
   }
   return suffixes.length === 0 ? prefix : joinBacklogSuffix(prefix, `${suffixes.join(', and ')}.`);
 }

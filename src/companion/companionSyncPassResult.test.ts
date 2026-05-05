@@ -54,7 +54,7 @@ describe('describeCompanionSyncPassResult', () => {
       remainingContentBlobBytes: 5242880,
       remainingContentBlobCount: 5
     }))).toEqual({
-      message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still downloading.',
+      message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) left to download.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -93,7 +93,7 @@ describe('describeCompanionSyncPassResult errors', () => {
       contentBlobError: 'Topic body batch could not download any requested body.',
       remainingContentBlobCount: 5
     }))).toEqual({
-      message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body; 5 topic bodies still downloading.',
+      message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body; 5 topic bodies left to download.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -104,7 +104,7 @@ describe('describeCompanionSyncPassResult errors', () => {
       attachmentResourceError: 'Attachment file batch could not download any requested file.',
       remainingAttachmentResourceCount: 2
     }))).toEqual({
-      message: 'Sync checked; attachment files could not download in this pass: Attachment file batch could not download any requested file; 2 attachment files still downloading.',
+      message: 'Sync checked; attachment files could not download in this pass: Attachment file batch could not download any requested file; 2 attachment files left to download.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -138,7 +138,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Sync checked; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push; 3 topic bodies still downloading.',
+      message: 'Sync checked; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push; 3 topic bodies left to download.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -150,7 +150,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
       remainingAttachmentResourceCount: 0,
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Sync checked; 1 device change needs review before sending; 3 topic bodies still downloading.',
+      message: 'Sync checked; 1 device change needs review before sending; 3 topic bodies left to download.',
       outcome: 'skipped',
       status: 'skipped'
     });
