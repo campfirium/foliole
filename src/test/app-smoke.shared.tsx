@@ -93,12 +93,14 @@ export const mockEditorAdapter: EditorAdapter = {
 vi.mock('../features/editor/components/MarkdownEditor', () => ({
   MarkdownEditor: ({
     ariaLabel,
+    nodeViewState,
     value,
     onChange,
     onImageLoadStateChange,
     onReady
   }: {
     ariaLabel?: string;
+    nodeViewState?: { selection: { from: number; to: number } };
     value: string;
     onChange: (value: string) => void;
     onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
@@ -110,6 +112,12 @@ vi.mock('../features/editor/components/MarkdownEditor', () => ({
       onReady?.(mockEditorAdapter);
       return () => onReady?.(null);
     }, [onImageLoadStateChange, onReady]);
+    useEffect(() => {
+      if (!nodeViewState) {
+        return;
+      }
+      mockEditorAdapter.restoreSelection(nodeViewState.selection);
+    }, [nodeViewState]);
     return (
       <textarea
         aria-label={ariaLabel ?? 'Mock editor'}

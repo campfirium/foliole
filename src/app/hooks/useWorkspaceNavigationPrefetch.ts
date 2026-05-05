@@ -28,29 +28,31 @@ export interface PreparedNavigationDependencies {
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null;
   nodesById: Record<string, Node>;
   openNode: (nodeId: string) => NodeNavigationResult | null;
-  saveActiveNodeView: () => void;
+  saveActiveNodeView: (nodeIdOverride?: string | null) => void;
   applyNavigationResult: (result: NodeNavigationResult | null) => void;
 }
 
 function useNavigationAction(
   action: () => NodeNavigationResult | null,
-  beforeNavigate: () => void,
+  saveActiveNodeView: (nodeIdOverride?: string | null) => void,
   finalize: (result: NodeNavigationResult | null) => void,
   resolveTargetNodeId: () => string | null,
   markRequested: (nodeId: string) => void,
   ensureNodeReady: (nodeId: string) => Promise<void>
 ) {
   return useCallback(() => {
+    const sourceNodeId = useWorkspaceStore.getState().activeNodeId;
     const targetNodeId = resolveTargetNodeId();
     if (targetNodeId) {
       markRequested(targetNodeId);
     }
-    beforeNavigate();
-    finalize(action());
+    const result = action();
+    saveActiveNodeView(sourceNodeId);
+    finalize(result);
     if (targetNodeId) {
       void ensureNodeReady(targetNodeId);
     }
-  }, [action, beforeNavigate, ensureNodeReady, finalize, markRequested, resolveTargetNodeId]);
+  }, [action, ensureNodeReady, finalize, markRequested, resolveTargetNodeId, saveActiveNodeView]);
 }
 
 function useSelectNodeAction(

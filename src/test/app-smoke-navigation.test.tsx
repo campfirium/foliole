@@ -177,6 +177,12 @@ it('renders breadcrumbs in document header and jumps to ancestor node', () => {
   expect(within(nav).getByRole('button', { name: 'Parent' })).toBeInTheDocument();
   fireEvent.click(within(nav).getByRole('button', { name: 'Parent' }));
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  return waitFor(() => {
+    expect(useWorkspaceStore.getState().nodeViewById['node-2']?.selection).toEqual({
+      from: parentContent.indexOf('Needle'),
+      to: parentContent.indexOf('Needle') + 'Needle'.length
+    });
+  });
 });
 
 it('supports toolbar parent and navigation history actions', () => {
@@ -207,10 +213,17 @@ it('supports toolbar parent and navigation history actions', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Go to parent node' }));
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-  fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
-  fireEvent.click(screen.getByRole('button', { name: 'Go forward' }));
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  return waitFor(() => {
+    expect(useWorkspaceStore.getState().nodeViewById['node-2']?.selection).toEqual({
+      from: parentContent.indexOf('Needle'),
+      to: parentContent.indexOf('Needle') + 'Needle'.length
+    });
+  }).then(() => {
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
+    fireEvent.click(screen.getByRole('button', { name: 'Go forward' }));
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  });
 });
 
 it('reveals document highlights from the right sidebar list', () => {

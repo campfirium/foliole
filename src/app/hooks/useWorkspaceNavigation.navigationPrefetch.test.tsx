@@ -70,7 +70,9 @@ function createNavigationPrefetchHookHarness(args: {
       activeNodeParentId:
         args.activeNodeId && args.nodesById ? args.nodesById[args.activeNodeId]?.parentNodeId ?? null : null,
       backStackSize: (args.backStack ?? []).length,
+      beginAnchorNavigationRestore: vi.fn(),
       closeContextMenu: vi.fn(),
+      completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
       forwardStackSize: (args.forwardStack ?? []).length,
       goBack: args.actionName === 'go-back' ? action : vi.fn(() => null),
@@ -110,8 +112,8 @@ async function expectPreparedNavigationResult(args: {
 
   expect(callOrder).toEqual([
     'selection-requested',
-    'save-view',
     args.actionName,
+    'save-view',
     'load-started',
     'load-resolved',
     'load-merged'

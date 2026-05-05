@@ -165,6 +165,14 @@ function writeDevRestartDeliveryMarker(args: {
   }
 }
 
+function applyRuntimeHeadForRelaunch(intent: RestartIntent) {
+  const nextHead = typeof intent.head === 'string' ? intent.head.trim() : '';
+  if (nextHead.length === 0) {
+    return;
+  }
+  process.env.FOLIOLE_RUNTIME_HEAD = nextHead;
+}
+
 async function consumeDevRestartIntent(args: {
   app: RestartIntentApp;
   content: string;
@@ -207,6 +215,7 @@ async function consumeDevRestartIntent(args: {
     requestedBy: intent.requestedBy
   });
   writeDevRestartDeliveryMarker({ fileSystem: args.fileSystem, intent, intentPath: args.intentPath, logger: args.logger });
+  applyRuntimeHeadForRelaunch(intent);
   const windows = args.getWindows();
   await flushReadingProgressForWindows(windows as never[]);
   for (const window of windows) {

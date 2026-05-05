@@ -100,3 +100,135 @@ it('keeps the previous document warm when opening another node through navigatio
   expect(state.nodesById['node-1']).toMatchObject({ content: 'First node body', reveal: null });
   expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-1']);
 });
+
+it('keeps stored from/to when navigating to a parent whose document is not loaded yet', () => {
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+
+  useWorkspaceStore.setState({
+    activeNodeId: 'node-3',
+    nodeOrder: ['node-1', 'node-2', 'node-3'],
+    nodesById: {
+      'node-1': {
+        ...seedNode,
+        id: 'node-1',
+        title: 'Root',
+        content: 'Root body',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false,
+        review: null
+      },
+      'node-2': {
+        ...seedNode,
+        id: 'node-2',
+        parentNodeId: 'node-1',
+        title: 'Parent',
+        content: '',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false,
+        review: null
+      },
+      'node-3': {
+        ...seedNode,
+        id: 'node-3',
+        parentNodeId: 'node-2',
+        title: 'Child',
+        content: 'Child body',
+        hasContent: true,
+        anchorLink: {
+          id: 'hl-1',
+          kind: 'highlight',
+          locator: {
+            from: 9,
+            originalText: 'Needle',
+            to: 15
+          }
+        },
+        reveal: null,
+        hasReveal: false,
+        review: null
+      }
+    },
+    trashedNodeIds: []
+  });
+
+  useWorkspaceStore.getState().goToParent();
+
+  const state = useWorkspaceStore.getState();
+  expect(state.activeNodeId).toBe('node-2');
+  expect(state.nodeViewById['node-2']).toEqual({
+    scrollTop: 0,
+    selection: { from: 9, to: 9 },
+    updatedAt: null
+  });
+});
+
+it('drops the parent stored scroll position when returning with a highlight anchor', () => {
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+
+  useWorkspaceStore.setState({
+    activeNodeId: 'node-3',
+    nodeOrder: ['node-1', 'node-2', 'node-3'],
+    nodeViewById: {
+      'node-2': {
+        scrollTop: 3210,
+        selection: { from: 1, to: 1 },
+        updatedAt: '2026-02-25T00:00:00.000Z'
+      }
+    },
+    nodesById: {
+      'node-1': {
+        ...seedNode,
+        id: 'node-1',
+        title: 'Root',
+        content: 'Root body',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false,
+        review: null
+      },
+      'node-2': {
+        ...seedNode,
+        id: 'node-2',
+        parentNodeId: 'node-1',
+        title: 'Parent',
+        content: 'Parent body',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false,
+        review: null
+      },
+      'node-3': {
+        ...seedNode,
+        id: 'node-3',
+        parentNodeId: 'node-2',
+        title: 'Child',
+        content: 'Child body',
+        hasContent: true,
+        anchorLink: {
+          id: 'hl-1',
+          kind: 'highlight',
+          locator: {
+            from: 9,
+            originalText: 'Needle',
+            to: 15
+          }
+        },
+        reveal: null,
+        hasReveal: false,
+        review: null
+      }
+    },
+    trashedNodeIds: []
+  });
+
+  useWorkspaceStore.getState().goToParent();
+
+  const state = useWorkspaceStore.getState();
+  expect(state.nodeViewById['node-2']).toEqual({
+    scrollTop: 0,
+    selection: { from: 9, to: 9 },
+    updatedAt: '2026-02-25T00:00:00.000Z'
+  });
+});

@@ -24,10 +24,10 @@ function renderTextLocatorNavigationHook(args: {
   activeNodeId: string;
   jumpToAncestorNode?: ReturnType<typeof vi.fn>;
   openNode?: ReturnType<typeof vi.fn>;
-  revealSelection?: ReturnType<typeof vi.fn>;
+  revealPosition?: ReturnType<typeof vi.fn>;
   saveActiveNodeView?: ReturnType<typeof vi.fn>;
 }) {
-  const revealSelection = args.revealSelection ?? vi.fn();
+  const revealPosition = args.revealPosition ?? vi.fn();
   const saveActiveNodeView = args.saveActiveNodeView ?? vi.fn();
   const jumpToAncestorNode = args.jumpToAncestorNode ?? vi.fn(() => null);
   const openNode = args.openNode ?? vi.fn(() => null);
@@ -39,8 +39,15 @@ function renderTextLocatorNavigationHook(args: {
         activeNodeId,
         activeNodeParentId: null,
         backStackSize: 0,
+        beginAnchorNavigationRestore: vi.fn(),
         closeContextMenu: vi.fn(),
-        editorRef: { current: { revealSelection } as unknown as EditorAdapter },
+        completeAnchorNavigationRestore: vi.fn(),
+        editorRef: {
+          current: {
+            isPositionNearViewportRatio: () => true,
+            revealPosition
+          } as unknown as EditorAdapter
+        },
         forwardStackSize: 0,
         goBack: vi.fn(() => null),
         goForward: vi.fn(() => null),
@@ -53,7 +60,7 @@ function renderTextLocatorNavigationHook(args: {
     { initialProps: { activeNodeContent: args.activeNodeContent, activeNodeId: args.activeNodeId } }
   );
 
-  return { ...view, openNode, revealSelection, saveActiveNodeView };
+  return { ...view, openNode, revealPosition, saveActiveNodeView };
 }
 
 async function runRevealTextLocatorBreadcrumbCase() {
@@ -66,7 +73,7 @@ async function runRevealTextLocatorBreadcrumbCase() {
     nodeId: 'node-1'
   }));
 
-  const { result, rerender, revealSelection } = renderTextLocatorNavigationHook({
+  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
     activeNodeContent: 'Alpha Beta Gamma',
     activeNodeId: 'text-hl-child',
     jumpToAncestorNode
@@ -77,7 +84,7 @@ async function runRevealTextLocatorBreadcrumbCase() {
     rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
   });
 
-  expect(revealSelection).toHaveBeenCalledWith({ from: 6, to: 10 });
+  expect(revealPosition).toHaveBeenCalledWith(6);
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 }
 
@@ -87,7 +94,7 @@ async function runRevealTextLocatorDirectSelectionCase() {
     nodeId: 'node-1'
   }));
 
-  const { result, rerender, revealSelection } = renderTextLocatorNavigationHook({
+  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
     activeNodeContent: 'Other node',
     activeNodeId: 'node-2',
     openNode
@@ -103,7 +110,7 @@ async function runRevealTextLocatorDirectSelectionCase() {
   });
 
   expect(openNode).toHaveBeenCalledWith('node-1');
-  expect(revealSelection).toHaveBeenCalledWith({ from: 6, to: 10 });
+  expect(revealPosition).toHaveBeenCalledWith(6);
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 }
 
@@ -113,7 +120,7 @@ async function runPendingTextLocatorUntilContentAvailableCase() {
     nodeId: 'node-1'
   }));
 
-  const { result, rerender, revealSelection } = renderTextLocatorNavigationHook({
+  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
     activeNodeContent: null,
     activeNodeId: 'node-2',
     openNode
@@ -128,13 +135,13 @@ async function runPendingTextLocatorUntilContentAvailableCase() {
     rerender({ activeNodeContent: null, activeNodeId: 'node-1' });
   });
 
-  expect(revealSelection).not.toHaveBeenCalled();
+  expect(revealPosition).not.toHaveBeenCalled();
 
   await act(async () => {
     rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
   });
 
-  expect(revealSelection).toHaveBeenCalledWith({ from: 6, to: 10 });
+  expect(revealPosition).toHaveBeenCalledWith(6);
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 }
 
@@ -156,7 +163,7 @@ async function runRestoreSuppressionLifetimeCase() {
       nodeId: 'node-1'
     }));
 
-    const { result, rerender, revealSelection } = renderTextLocatorNavigationHook({
+    const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
       activeNodeContent: 'Alpha Beta Gamma',
       activeNodeId: 'text-hl-child',
       jumpToAncestorNode
@@ -167,7 +174,7 @@ async function runRestoreSuppressionLifetimeCase() {
       rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
     });
 
-    expect(revealSelection).toHaveBeenCalledWith({ from: 6, to: 10 });
+    expect(revealPosition).toHaveBeenCalledWith(6);
     expect(result.current.shouldSuppressSelectionRestore()).toBe(true);
 
     await act(async () => {
@@ -175,6 +182,73 @@ async function runRestoreSuppressionLifetimeCase() {
     });
 
     expect(result.current.shouldSuppressSelectionRestore()).toBe(false);
+  } finally {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+    vi.useRealTimers();
+  }
+}
+
+async function runRevealAfterEditorReadyCase() {
+  vi.useFakeTimers();
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+  globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) =>
+    window.setTimeout(() => callback(performance.now()), 16)) as typeof requestAnimationFrame;
+  globalThis.cancelAnimationFrame = ((handle: number) => window.clearTimeout(handle)) as typeof cancelAnimationFrame;
+
+  try {
+    const jumpToAncestorNode = vi.fn(() => ({
+      focusAnchor: {
+        id: 'text-hl-late-editor-1',
+        kind: 'highlight' as const,
+        locator: { from: 6, originalText: 'Beta', to: 10 }
+      },
+      nodeId: 'node-1'
+    }));
+    const revealPosition = vi.fn();
+    const editorRef: { current: EditorAdapter | null } = { current: null };
+
+    const view = renderHook(
+      ({ activeNodeContent, activeNodeId }) =>
+        useWorkspaceNavigation({
+          activeNodeContent,
+          activeNodeId,
+          activeNodeParentId: null,
+          backStackSize: 0,
+          beginAnchorNavigationRestore: vi.fn(),
+          closeContextMenu: vi.fn(),
+          completeAnchorNavigationRestore: vi.fn(),
+          editorRef,
+          forwardStackSize: 0,
+          goBack: vi.fn(() => null),
+          goForward: vi.fn(() => null),
+          goToParent: vi.fn(() => null),
+          jumpToAncestorNode,
+          nodesById: navigationTestNodes,
+          openNode: vi.fn(() => null),
+          saveActiveNodeView: vi.fn()
+        }),
+      { initialProps: { activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'text-hl-child' } }
+    );
+
+    await act(async () => {
+      await view.result.current.handleSelectBreadcrumbNode('node-1');
+      view.rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
+    });
+
+    expect(revealPosition).not.toHaveBeenCalled();
+
+    editorRef.current = {
+      isPositionNearViewportRatio: () => true,
+      revealPosition
+    } as unknown as EditorAdapter;
+
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+
+    expect(revealPosition).toHaveBeenCalledWith(6);
   } finally {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
@@ -197,7 +271,9 @@ describe('useWorkspaceNavigation text locator', () => {
 
   it('keeps restore suppression active until the anchor reveal settles', runRestoreSuppressionLifetimeCase);
 
-  it('re-matches a text locator when the current plain-text content still contains a unique match', runUnresolvedLocatorCase);
+  it('retries pending text locator reveal after the target editor becomes ready', runRevealAfterEditorReadyCase);
+
+  it('keeps using stored text locator offsets even when the current plain-text content no longer matches', runUnresolvedLocatorCase);
   it('reveals unresolved zero-width text locators at their stored position', runUnresolvedZeroWidthLocatorCase);
 });
 
@@ -212,7 +288,7 @@ async function runUnresolvedLocatorCase() {
     nodeId: 'node-1'
   }));
 
-  const { result, rerender, revealSelection } = renderTextLocatorNavigationHook({
+  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
     activeNodeContent: content,
     activeNodeId: 'text-hl-child',
     jumpToAncestorNode
@@ -226,7 +302,7 @@ async function runUnresolvedLocatorCase() {
     });
   });
 
-  expect(revealSelection).toHaveBeenCalledWith({ from: 0, to: 4 });
+  expect(revealPosition).toHaveBeenCalledWith(0);
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 }
 
@@ -241,7 +317,7 @@ async function runUnresolvedZeroWidthLocatorCase() {
     nodeId: 'node-1'
   }));
 
-  const { result, rerender, revealSelection } = renderTextLocatorNavigationHook({
+  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
     activeNodeContent: content,
     activeNodeId: 'text-hl-child',
     jumpToAncestorNode
@@ -255,6 +331,6 @@ async function runUnresolvedZeroWidthLocatorCase() {
     });
   });
 
-  expect(revealSelection).toHaveBeenCalledWith({ from: 6, to: 6 });
+  expect(revealPosition).toHaveBeenCalledWith(6);
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 }

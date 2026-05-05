@@ -29,7 +29,7 @@ describe('textAnchorLocatorResolution selection', () => {
     });
   });
 
-  it('clamps locators that extend past the current content length', () => {
+  it('keeps locators even when the current content is shorter', () => {
     expect(
       resolveTextAnchorLocatorSelection('Beta', {
         from: 6,
@@ -37,8 +37,8 @@ describe('textAnchorLocatorResolution selection', () => {
         to: 10
       })
     ).toEqual({
-      from: 4,
-      to: 4
+      from: 6,
+      to: 10
     });
   });
 });
@@ -132,7 +132,7 @@ function registerBoundaryEditContextRemapTests() {
 }
 
 describe('textAnchorLocatorResolution remap without edit context', () => {
-  it('repositions locators by exact text when there is one unique match and no edit context', () => {
+  it('keeps stored locator offsets when there is no edit context', () => {
     expect(
       remapTextAnchorLocator('Start Alpha Beta Gamma', {
         from: 6,
@@ -140,13 +140,13 @@ describe('textAnchorLocatorResolution remap without edit context', () => {
         to: 10
       })
     ).toEqual({
-      from: 12,
+      from: 6,
       originalText: 'Beta',
-      to: 16
+      to: 10
     });
   });
 
-  it('falls back to a zero-width locator when there is no edit context and the text is gone', () => {
+  it('keeps stored locator offsets when there is no edit context and the content is shorter', () => {
     expect(
       remapTextAnchorLocator('Beta', {
         from: 6,
@@ -154,9 +154,9 @@ describe('textAnchorLocatorResolution remap without edit context', () => {
         to: 10
       })
     ).toEqual({
-      from: 0,
+      from: 6,
       originalText: 'Beta',
-      to: 4
+      to: 10
     });
   });
 });

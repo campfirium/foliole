@@ -1,7 +1,8 @@
+import { getTextAnchorLocators, isPdfAnchorLocator } from '../features/nodes/model/nodeTypes';
 import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
 
 import { pushNavigationHistory, resolveAncestorAnchorLink, type NodeNavigationResult } from './workspaceNavigation';
-import type { WorkspaceState } from './workspaceStore';
+import type { NodeViewState, WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (
   partial:
@@ -44,12 +45,53 @@ function isReviewSessionSelectionSynced(state: WorkspaceState, nodeId: string) {
 function buildNavigationNodeState(
   state: WorkspaceState,
   nodeId: string,
-  navigation: WorkspaceState['navigation']
+  navigation: WorkspaceState['navigation'],
+  nodeViewById: WorkspaceState['nodeViewById'] = state.nodeViewById
 ) {
   return {
     activeNodeId: nodeId,
     navigation,
+    nodeViewById,
     reviewSession: syncReviewSessionSelection(state, nodeId)
+  };
+}
+
+function resolveAnchorSelectionViewState(
+  state: WorkspaceState,
+  nodeId: string,
+  focusAnchor: NodeNavigationResult['focusAnchor']
+): NodeViewState | null {
+  if (!focusAnchor || isPdfAnchorLocator(focusAnchor.locator)) {
+    return null;
+  }
+
+  const firstLocator = getTextAnchorLocators(focusAnchor.locator)[0];
+  if (!firstLocator) {
+    return null;
+  }
+
+  const from = Math.max(0, firstLocator.from);
+  const existingViewState = state.nodeViewById[nodeId];
+
+  return {
+    scrollTop: 0,
+    selection: { from, to: from },
+    updatedAt: existingViewState?.updatedAt ?? null
+  };
+}
+
+function applyFocusAnchorViewState(
+  state: WorkspaceState,
+  nodeId: string,
+  focusAnchor: NodeNavigationResult['focusAnchor']
+) {
+  const nextViewState = resolveAnchorSelectionViewState(state, nodeId, focusAnchor);
+  if (!nextViewState) {
+    return state.nodeViewById;
+  }
+  return {
+    ...state.nodeViewById,
+    [nodeId]: nextViewState
   };
 }
 
@@ -135,10 +177,11 @@ function createGoToParentAction(set: WorkspaceSet) {
       }
       markNodeSelectionApplied(parentNodeId, state.nodesById);
       nextResult = { focusAnchor: currentNode.anchorLink ?? null, nodeId: parentNodeId };
+      const nextNodeViewById = applyFocusAnchorViewState(state, parentNodeId, nextResult.focusAnchor);
       return buildNavigationNodeState(state, parentNodeId, {
         backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
         forwardStack: []
-      });
+      }, nextNodeViewById);
     });
     return nextResult;
   };
@@ -158,10 +201,11 @@ function createJumpToAncestorAction(set: WorkspaceSet) {
       }
       markNodeSelectionApplied(ancestorNodeId, state.nodesById);
       nextResult = { focusAnchor: ancestorTarget.focusAnchor, nodeId: ancestorNodeId };
+      const nextNodeViewById = applyFocusAnchorViewState(state, ancestorNodeId, nextResult.focusAnchor);
       return buildNavigationNodeState(state, ancestorNodeId, {
         backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
         forwardStack: []
-      });
+      }, nextNodeViewById);
     });
     return nextResult;
   };

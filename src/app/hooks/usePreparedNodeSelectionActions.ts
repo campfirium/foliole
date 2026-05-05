@@ -67,7 +67,7 @@ export function useBreadcrumbSelectionAction(
   nodesById: Record<string, Node>,
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null,
   openNode: (nodeId: string) => NodeNavigationResult | null,
-  saveActiveNodeView: () => void,
+  saveActiveNodeView: (nodeIdOverride?: string | null) => void,
   finalizeNavigation: (result: NodeNavigationResult | null) => void,
   markSelectionRequested: (nodeId: string) => void,
   ensureNodeReady: (nodeId: string) => Promise<void>,
@@ -91,8 +91,9 @@ export function useBreadcrumbSelectionAction(
       }
 
       markSelectionRequested(nodeId);
-      saveActiveNodeView();
-      finalizeNavigation(jumpToAncestorNode(nodeId) ?? openNode(nodeId));
+      const result = jumpToAncestorNode(nodeId) ?? openNode(nodeId);
+      saveActiveNodeView(activeNodeId);
+      finalizeNavigation(result);
       void ensureNodeReady(nodeId);
     },
     [

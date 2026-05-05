@@ -12,14 +12,22 @@ const READING_PROGRESS_DEBOUNCE_MS = 400;
 interface ReadingProgressEffectsOptions {
   activeNodeId: string | null;
   flushReadingProgress: () => void;
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
   isWorkspaceHydrated: boolean;
   lifecycleFlush: () => void;
   syncActiveNodeReadingProgress: (activeNodeIdOverride?: string | null) => void;
 }
 
+function isReadingPositionRestoreActive(
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null
+) {
+  return Boolean(getReadingPositionSyncState?.());
+}
+
 function useReadingProgressEffects({
   activeNodeId,
   flushReadingProgress,
+  getReadingPositionSyncState,
   isWorkspaceHydrated,
   lifecycleFlush,
   syncActiveNodeReadingProgress
@@ -29,10 +37,13 @@ function useReadingProgressEffects({
       return;
     }
     const timer = window.setInterval(() => {
+      if (isReadingPositionRestoreActive(getReadingPositionSyncState)) {
+        return;
+      }
       flushReadingProgress();
     }, READING_PROGRESS_SYNC_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [flushReadingProgress, isWorkspaceHydrated]);
+  }, [flushReadingProgress, getReadingPositionSyncState, isWorkspaceHydrated]);
 
   useEffect(() => {
     if (!isWorkspaceHydrated) {
@@ -75,6 +86,7 @@ export function useReadingProgressLifecycle(args: {
   activeNodeId: string | null;
   flushReadingProgress: (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) => void;
   flushReadingProgressImmediately: () => Promise<boolean>;
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
   isWorkspaceHydrated: boolean;
 }) {
   const lifecycleFlush = useMemo(
@@ -87,6 +99,7 @@ export function useReadingProgressLifecycle(args: {
   useReadingProgressEffects({
     activeNodeId: args.activeNodeId,
     flushReadingProgress: () => args.flushReadingProgress(),
+    getReadingPositionSyncState: args.getReadingPositionSyncState,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     lifecycleFlush,
     syncActiveNodeReadingProgress: (activeNodeIdOverride) =>
@@ -98,6 +111,7 @@ export function useImmediateReadingProgressCapture(args: {
   activeNodeId: string | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
   getReadingPositionSelection?: () => { from: number; to: number } | null;
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
@@ -109,6 +123,9 @@ export function useImmediateReadingProgressCapture(args: {
     }
 
     const unsubscribe = args.editorRef.current.onScroll(() => {
+      if (isReadingPositionRestoreActive(args.getReadingPositionSyncState)) {
+        return;
+      }
       const captured = captureEditorNodeViewState(
         args.activeNodeId,
         args.getReadingPositionSelection,
@@ -131,6 +148,7 @@ export function useImmediateReadingProgressCapture(args: {
     args.activeNodeId,
     args.editorRef,
     args.getReadingPositionSelection,
+    args.getReadingPositionSyncState,
     args.isViewingTrashNode,
     args.isWorkspaceHydrated,
     args.nodeViewById,
@@ -141,6 +159,7 @@ export function useImmediateReadingProgressCapture(args: {
 export function useDebouncedReadingProgressPersistence(args: {
   activeNodeId: string | null;
   flushReadingProgress: () => void;
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   editorRef: MutableRefObject<EditorAdapter | null>;
@@ -152,6 +171,13 @@ export function useDebouncedReadingProgressPersistence(args: {
 
     let timeoutId: number | null = null;
     const unsubscribe = args.editorRef.current.onScroll(() => {
+      if (isReadingPositionRestoreActive(args.getReadingPositionSyncState)) {
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        return;
+      }
       if (timeoutId !== null) {
         window.clearTimeout(timeoutId);
       }
@@ -174,5 +200,5 @@ export function useDebouncedReadingProgressPersistence(args: {
       }
       unsubscribe();
     };
-  }, [args.activeNodeId, args.editorRef, args.flushReadingProgress, args.isViewingTrashNode, args.isWorkspaceHydrated]);
+  }, [args.activeNodeId, args.editorRef, args.flushReadingProgress, args.getReadingPositionSyncState, args.isViewingTrashNode, args.isWorkspaceHydrated]);
 }

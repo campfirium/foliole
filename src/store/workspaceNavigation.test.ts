@@ -26,7 +26,7 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'parentNodeId'>
 }
 
 describe('resolveAncestorAnchorLink', () => {
-  it('returns nearest locator anchor between active node and ancestor', () => {
+  it('returns the active node anchor when the target is an ancestor', () => {
     const nodesById: Record<string, Node> = {
       pdf: createNode({ id: 'pdf', parentNodeId: null }),
       chapter: createNode({ id: 'chapter', parentNodeId: 'pdf' }),
@@ -39,25 +39,24 @@ describe('resolveAncestorAnchorLink', () => {
     };
 
     expect(resolveAncestorAnchorLink('note', 'pdf', nodesById)).toEqual({
-      focusAnchor: { id: 'hl-1', kind: 'highlight', locator: { page: 7, x: 0.2, y: 0.6 } },
+      focusAnchor: null,
       isAncestor: true
     });
   });
 
-  it('returns nearest cloze locator anchor between active node and ancestor', () => {
+  it('keeps the active node locator when the active node already has one', () => {
     const nodesById: Record<string, Node> = {
       root: createNode({ id: 'root', parentNodeId: null }),
       article: createNode({ id: 'article', parentNodeId: 'root' }),
-      cloze: createNode({
+      child: createNode({
         anchorLink: {
           id: 'cloze-1',
           kind: 'cloze',
           locator: { from: 6, originalText: 'Beta', to: 10 }
         },
-        id: 'cloze',
+        id: 'child',
         parentNodeId: 'article'
-      }),
-      child: createNode({ id: 'child', parentNodeId: 'cloze' })
+      })
     };
 
     expect(resolveAncestorAnchorLink('child', 'root', nodesById)).toEqual({

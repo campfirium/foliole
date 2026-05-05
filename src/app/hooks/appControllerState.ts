@@ -107,15 +107,51 @@ function useSaveActiveNodeView(
   runtime: ReturnType<typeof useAppRuntime>,
   ws: ReturnType<typeof useWorkspaceSelectors>
 ) {
-  return useCallback(() => {
-    if (runtime.isViewingTrashNode || !ws.activeNodeId || !runtime.editorRef.current) {
+  return useCallback((nodeIdOverride?: string | null) => {
+    const nodeId = nodeIdOverride ?? ws.activeNodeId;
+    if (runtime.isViewingTrashNode || !nodeId || !runtime.editorRef.current) {
       return;
     }
-    ws.setNodeViewState(ws.activeNodeId, {
+    ws.setNodeViewState(nodeId, {
       scrollTop: runtime.editorRef.current.getScrollTop(),
       selection: runtime.editorRef.current.getSelection()
     });
   }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
+}
+
+function useAnchorNavigationReadingPosition(runtime: ReturnType<typeof useAppRuntime>) {
+  const beginAnchorNavigationRestore = useCallback(
+    (nodeId: string, selection: { from: number; to: number }) => {
+      runtime.readingPositionSyncRef.current = {
+        nodeId,
+        state: {
+          reason: 'anchor-navigation',
+          startedAt: Date.now(),
+          targetSelection: selection
+        }
+      };
+    },
+    [runtime.readingPositionSyncRef]
+  );
+
+  const completeAnchorNavigationRestore = useCallback(
+    (nodeId: string, _reason: string) => {
+      const current = runtime.readingPositionSyncRef.current;
+      if (current.nodeId !== nodeId || current.state?.reason !== 'anchor-navigation') {
+        return;
+      }
+      runtime.readingPositionSyncRef.current = {
+        nodeId,
+        state: null
+      };
+    },
+    [runtime.readingPositionSyncRef]
+  );
+
+  return {
+    beginAnchorNavigationRestore,
+    completeAnchorNavigationRestore
+  };
 }
 
 export function useWorkspaceControllerState(
@@ -135,8 +171,9 @@ export function useWorkspaceControllerState(
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
+  const anchorNavigationReadingPosition = useAnchorNavigationReadingPosition(runtime);
   const saveActiveNodeView = useSaveActiveNodeView(runtime, ws);
-  const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, closeContextMenu: () => undefined, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, nodesById: ws.nodesById, openNode: ws.openNode, saveActiveNodeView });
+  const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, beginAnchorNavigationRestore: anchorNavigationReadingPosition.beginAnchorNavigationRestore, closeContextMenu: () => undefined, completeAnchorNavigationRestore: anchorNavigationReadingPosition.completeAnchorNavigationRestore, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, nodesById: ws.nodesById, openNode: ws.openNode, saveActiveNodeView });
   const editorCtx = useEditorContextCommands({
     activeNode,
     activeNodeId: ws.activeNodeId,

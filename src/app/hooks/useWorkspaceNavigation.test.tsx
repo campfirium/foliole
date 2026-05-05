@@ -64,7 +64,9 @@ async function runPdfBreadcrumbJumpTest() {
         activeNodeId,
         activeNodeParentId: null,
         backStackSize: 0,
+        beginAnchorNavigationRestore: vi.fn(),
         closeContextMenu: vi.fn(),
+        completeAnchorNavigationRestore: vi.fn(),
         editorRef: { current: null },
         forwardStackSize: 0,
         goBack: vi.fn(() => null),
@@ -106,7 +108,9 @@ async function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
         activeNodeId,
         activeNodeParentId: null,
         backStackSize: 0,
+        beginAnchorNavigationRestore: vi.fn(),
         closeContextMenu: vi.fn(),
+        completeAnchorNavigationRestore: vi.fn(),
         editorRef: { current: editorAdapter },
         forwardStackSize: 0,
         goBack: vi.fn(() => null),
@@ -129,6 +133,48 @@ async function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
   expect(revealSelection).not.toHaveBeenCalled();
 }
 
+async function runBreadcrumbSelectionOrderTest() {
+  const callOrder: string[] = [];
+  const saveActiveNodeView = vi.fn(() => {
+    callOrder.push('save-view');
+  });
+  const jumpToAncestorNode = vi.fn(() => {
+    callOrder.push('jump-node');
+    return { focusAnchor: null, nodeId: 'node-1' };
+  });
+  markNodeSelectionRequested.mockImplementation(() => {
+    callOrder.push('selection-requested');
+  });
+
+  const { result } = renderHook(() =>
+    useWorkspaceNavigation({
+      activeNodeContent: 'Child body',
+      activeNodeId: 'node-2',
+      activeNodeParentId: 'node-1',
+      backStackSize: 0,
+      beginAnchorNavigationRestore: vi.fn(),
+      closeContextMenu: vi.fn(),
+      completeAnchorNavigationRestore: vi.fn(),
+      editorRef: { current: null },
+      forwardStackSize: 0,
+      goBack: vi.fn(() => null),
+      goForward: vi.fn(() => null),
+      goToParent: vi.fn(() => null),
+      jumpToAncestorNode,
+      nodesById: navigationTestNodes,
+      openNode: vi.fn(() => null),
+      saveActiveNodeView
+    })
+  );
+
+  await act(async () => {
+    await result.current.handleSelectBreadcrumbNode('node-1');
+  });
+
+  expect(callOrder).toEqual(['selection-requested', 'jump-node', 'save-view']);
+  expect(saveActiveNodeView).toHaveBeenCalledWith('node-2');
+}
+
 
 async function runSavePositionBeforeNodeSelectionTest() {
   const callOrder: string[] = [];
@@ -149,7 +195,9 @@ async function runSavePositionBeforeNodeSelectionTest() {
       activeNodeId: 'node-1',
       activeNodeParentId: null,
       backStackSize: 0,
+      beginAnchorNavigationRestore: vi.fn(),
       closeContextMenu: vi.fn(),
+      completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
       forwardStackSize: 0,
       goBack: vi.fn(() => null),
@@ -186,7 +234,9 @@ function createPrefetchHookHarness(callOrder: string[]) {
       activeNodeId: 'node-1',
       activeNodeParentId: null,
       backStackSize: 0,
+      beginAnchorNavigationRestore: vi.fn(),
       closeContextMenu: vi.fn(),
+      completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
       forwardStackSize: 0,
       goBack: vi.fn(() => null),
@@ -247,6 +297,10 @@ describe('useWorkspaceNavigation', () => {
 
   it('still requests a pdf anchor jump when editor ref still exists', async () => {
     await runPdfBreadcrumbJumpTestWhenEditorRefExists();
+  });
+
+  it('updates the breadcrumb target before saving the current node view', async () => {
+    await runBreadcrumbSelectionOrderTest();
   });
 
   it('saves the current reading position before selecting another node', async () => {

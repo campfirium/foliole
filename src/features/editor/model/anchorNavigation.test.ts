@@ -77,6 +77,23 @@ function expectUnresolvedZeroWidthTextLocatorFallsBackToStoredPosition() {
   });
 }
 
+function expectStoredTextLocatorSelectionWhenContentNotLoadedYet() {
+  expect(
+    findAnchorSelection('', {
+      id: 'anchor-7',
+      kind: 'highlight',
+      locator: {
+        from: 9,
+        originalText: 'Needle',
+        to: 15
+      }
+    })
+  ).toEqual({
+    from: 9,
+    to: 15
+  });
+}
+
 describe('anchorNavigation', () => {
   it('uses text locator directly against plain markdown content', () => {
     expectDirectTextLocatorSelection();
@@ -96,5 +113,9 @@ describe('anchorNavigation', () => {
 
   it('falls back to the stored zero-width position when an unresolved text locator has no matching text anymore', () => {
     expectUnresolvedZeroWidthTextLocatorFallsBackToStoredPosition();
+  });
+
+  it('keeps using stored from/to before the parent document content is loaded', () => {
+    expectStoredTextLocatorSelectionWhenContentNotLoadedYet();
   });
 });

@@ -232,12 +232,14 @@ export function useReadingProgressSync({
     activeNodeId,
     flushReadingProgress,
     flushReadingProgressImmediately,
+    getReadingPositionSyncState,
     isWorkspaceHydrated
   });
   useImmediateReadingProgressCapture({
     activeNodeId,
     editorRef,
     getReadingPositionSelection,
+    getReadingPositionSyncState,
     isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById,
@@ -247,6 +249,7 @@ export function useReadingProgressSync({
     activeNodeId,
     editorRef,
     flushReadingProgress: () => flushReadingProgress(),
+    getReadingPositionSyncState,
     isViewingTrashNode,
     isWorkspaceHydrated
   });

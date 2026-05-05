@@ -149,6 +149,51 @@ function registerScrollPersistenceTests() {
     });
   });
 
+  it('does not update the in-memory reading position while anchor navigation restore is applying', () => {
+    const setNodeViewState = vi.fn();
+    const scrollListeners = new Set<() => void>();
+
+    function ImmediateCaptureHarness() {
+      const ref = {
+        current: {
+          getScrollTop: () => 5400,
+          getSelection: () => ({ from: 48000, to: 48024 }),
+          onScroll: (listener: () => void) => {
+            scrollListeners.add(listener);
+            return () => {
+              scrollListeners.delete(listener);
+            };
+          }
+        }
+      } as { current: EditorAdapter | null };
+      useReadingProgressSync({
+        activeNodeId: 'node-2',
+        editorRef: ref,
+        getReadingPositionSelection: () => ({ from: 48000, to: 48024 }),
+        getReadingPositionSyncState: () => ({
+          reason: 'anchor-navigation',
+          startedAt: Date.now(),
+          targetSelection: { from: 48000, to: 48024 }
+        }),
+        isViewingTrashNode: false,
+        isWorkspaceHydrated: true,
+        nodeViewById: {},
+        setNodeViewState
+      });
+      return null;
+    }
+
+    render(<ImmediateCaptureHarness />);
+
+    act(() => {
+      for (const listener of scrollListeners) {
+        listener();
+      }
+    });
+
+    expect(setNodeViewState).not.toHaveBeenCalled();
+  });
+
   it('persists reading progress shortly after scrolling stops', () => {
     const listeners = new Set<() => void>();
     renderDebouncedHarness(listeners);
@@ -177,6 +222,52 @@ function registerScrollPersistenceTests() {
       ],
       updatedAt: expect.any(String)
     });
+  });
+
+  it('does not persist scroll debounce while anchor navigation restore is applying', () => {
+    const listeners = new Set<() => void>();
+
+    function DebouncedHarness() {
+      const editorRef = {
+        current: {
+          getScrollTop: () => 5400,
+          getSelection: () => ({ from: 48000, to: 48024 }),
+          onScroll: (listener: () => void) => {
+            listeners.add(listener);
+            return () => {
+              listeners.delete(listener);
+            };
+          }
+        }
+      } as { current: EditorAdapter | null };
+      useReadingProgressSync({
+        activeNodeId: 'node-2',
+        editorRef,
+        getReadingPositionSelection: () => ({ from: 48000, to: 48024 }),
+        getReadingPositionSyncState: () => ({
+          reason: 'anchor-navigation',
+          startedAt: Date.now(),
+          targetSelection: { from: 48000, to: 48024 }
+        }),
+        isViewingTrashNode: false,
+        isWorkspaceHydrated: true,
+        nodeViewById: {},
+        setNodeViewState: vi.fn()
+      });
+      return null;
+    }
+
+    render(<DebouncedHarness />);
+    vi.clearAllMocks();
+
+    act(() => {
+      for (const listener of listeners) {
+        listener();
+      }
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(syncReadingProgressToRuntime).not.toHaveBeenCalled();
   });
 
   it('persists the runtime reading position instead of the raw editor selection', () => {

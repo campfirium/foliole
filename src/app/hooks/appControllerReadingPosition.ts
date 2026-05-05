@@ -5,6 +5,20 @@ import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps'
 
 export function createReadingPositionHandlers(args: BuildControllerLayoutPropsArgs) {
   return {
+    beginAnchorNavigationRestore: (nodeId: string, selection: EditorSelection) => {
+      args.runtime.readingPositionSyncRef.current = {
+        nodeId,
+        state: {
+          reason: 'anchor-navigation',
+          startedAt: Date.now(),
+          targetSelection: selection
+        }
+      };
+      pushDebugTrace('runtime.anchor-navigation.applying-begin', {
+        nodeId,
+        selection
+      });
+    },
     beginApplyingReadingPosition: (selection: EditorSelection, reason: string) => {
       args.runtime.readingPositionSyncRef.current = {
         nodeId: args.ws.activeNodeId,
@@ -18,6 +32,21 @@ export function createReadingPositionHandlers(args: BuildControllerLayoutPropsAr
         activeNodeId: args.ws.activeNodeId,
         reason,
         selection
+      });
+    },
+    completeAnchorNavigationRestore: (nodeId: string, reason: string) => {
+      const current = args.runtime.readingPositionSyncRef.current;
+      if (current.nodeId !== nodeId || current.state?.reason !== 'anchor-navigation') {
+        return;
+      }
+      args.runtime.readingPositionSyncRef.current = {
+        nodeId,
+        state: null
+      };
+      pushDebugTrace('runtime.anchor-navigation.applying-complete', {
+        nodeId,
+        reason,
+        selection: current.state?.targetSelection ?? null
       });
     },
     completeApplyingReadingPosition: (reason: string) => {

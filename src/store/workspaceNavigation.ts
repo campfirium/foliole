@@ -50,27 +50,20 @@ export function resolveAncestorAnchorLink(
   ancestorNodeId: string,
   nodesById: Record<string, Node>
 ): AncestorNavigationTarget {
+  const activeNode = nodesById[activeNodeId];
+  if (!activeNode) {
+    return { focusAnchor: null, isAncestor: false };
+  }
+
   let cursorId: string | null = activeNodeId;
-  let nearestAnchor: NodeAnchorLink | null = null;
-  let nearestLocatorAnchor: NodeAnchorLink | null = null;
   while (cursorId !== null) {
     const cursor: Node | undefined = nodesById[cursorId];
     if (!cursor) {
       return { focusAnchor: null, isAncestor: false };
     }
-    if (!nearestAnchor && cursor.anchorLink) {
-      nearestAnchor = cursor.anchorLink;
-    }
-    if (
-      !nearestLocatorAnchor &&
-      (cursor.anchorLink?.kind === 'highlight' || cursor.anchorLink?.kind === 'cloze') &&
-      cursor.anchorLink.locator
-    ) {
-      nearestLocatorAnchor = cursor.anchorLink;
-    }
     if (cursor.parentNodeId === ancestorNodeId) {
       return {
-        focusAnchor: nearestLocatorAnchor ?? nearestAnchor ?? null,
+        focusAnchor: activeNode.anchorLink ?? null,
         isAncestor: true
       };
     }

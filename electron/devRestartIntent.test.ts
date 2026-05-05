@@ -201,8 +201,15 @@ function expectFirstIntentConsumption(harness: ReturnType<typeof createWatcherHa
 }
 
 describe('installDevRestartIntentWatcher', () => {
+  const originalRuntimeHead = process.env.FOLIOLE_RUNTIME_HEAD;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    if (originalRuntimeHead === undefined) {
+      delete process.env.FOLIOLE_RUNTIME_HEAD;
+      return;
+    }
+    process.env.FOLIOLE_RUNTIME_HEAD = originalRuntimeHead;
   });
 
   it('consumes one dev restart intent exactly once, then relaunches', async () => {
@@ -220,6 +227,7 @@ describe('installDevRestartIntentWatcher', () => {
     await Promise.resolve();
 
     expectFirstIntentConsumption(harness);
+    expect(process.env.FOLIOLE_RUNTIME_HEAD).toBe('abc123');
 
     harness.watcher?.close();
     expect(harness.unwatchPath()).toBe(harness.intentPath);
