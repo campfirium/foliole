@@ -3,10 +3,11 @@ import { getWhitelistedLocalStorageItem } from '../../../shared/platform/storage
 
 import type { InterfaceFontPreset, MonospaceFontPreset } from './appearanceSettings';
 
-export type SettingsCategoryId = 'about' | 'editor' | 'mouse-gestures' | 'appearance' | 'import' | 'review' | 'hotkeys';
+export type SettingsCategoryId = 'about' | 'backups' | 'editor' | 'mouse-gestures' | 'appearance' | 'import' | 'review' | 'hotkeys';
 
 export const SETTINGS_CATEGORIES: Array<{ id: SettingsCategoryId; label: string }> = [
   { id: 'about', label: 'About' },
+  { id: 'backups', label: 'Backups' },
   { id: 'editor', label: 'Editor' },
   { id: 'mouse-gestures', label: 'Mouse gestures' },
   { id: 'appearance', label: 'Appearance' },

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { AppInput, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
@@ -49,7 +51,15 @@ function NumberRuleRow(props: {
   return (
     <SettingsRow description={props.description} title={props.title}>
       <SettingsControlSlot className="max-w-[160px]">
-        <AppInput disabled={props.disabled} min="0" onChange={(event) => props.onChange(event.target.value)} type="number" value={props.value} />
+        <AppInput
+          className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          disabled={props.disabled}
+          inputMode="numeric"
+          min="0"
+          onChange={(event) => props.onChange(event.target.value)}
+          type="number"
+          value={props.value}
+        />
       </SettingsControlSlot>
     </SettingsRow>
   );
@@ -59,7 +69,6 @@ export function BackupPathRow(props: {
   backupPath: string;
   errorMessage: string;
   isDesktopRuntime: boolean;
-  isSaving: boolean;
   onChangePath: () => void;
   onRestoreDefault: () => void;
 }) {
@@ -70,8 +79,8 @@ export function BackupPathRow(props: {
           <span className="break-all">{props.backupPath || 'Loading…'}</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className={SETTINGS_BUTTON_CLASS_NAME} disabled={!props.isDesktopRuntime || props.isSaving} onClick={props.onChangePath} type="button">Change location</button>
-          <button className={SETTINGS_BUTTON_CLASS_NAME} disabled={!props.isDesktopRuntime || props.isSaving} onClick={props.onRestoreDefault} type="button">Restore default</button>
+          <button className={SETTINGS_BUTTON_CLASS_NAME} disabled={!props.isDesktopRuntime} onClick={props.onChangePath} type="button">Change location</button>
+          <button className={SETTINGS_BUTTON_CLASS_NAME} disabled={!props.isDesktopRuntime} onClick={props.onRestoreDefault} type="button">Restore default</button>
         </div>
         {props.errorMessage ? <p className="text-sm text-red-700">{props.errorMessage}</p> : null}
       </SettingsControlSlot>
@@ -82,29 +91,27 @@ export function BackupPathRow(props: {
 export function BackupRulesSection(props: {
   draft: DatabaseBackupSettings;
   isDesktopRuntime: boolean;
-  isSaving: boolean;
   onChangeField: (field: keyof DatabaseBackupSettings, value: string) => void;
-  onSave: () => void;
-  saveMessage: string;
 }) {
   return (
     <SettingsSection ariaLabel="Backup settings section" description="Auto backups rotate by time window. Manual backups and safety snapshots keep a fixed recent count. Total size limit removes the oldest backup first when space runs over the limit." title="Backup rules">
-      <NumberRuleRow description="Keep 1 auto backup per hour within this window." disabled={!props.isDesktopRuntime || props.isSaving} onChange={(value) => props.onChangeField('auto_hourly_hours', value)} title="Hourly window (hours)" value={String(props.draft.auto_hourly_hours)} />
-      <NumberRuleRow description="Keep 1 auto backup per day within this window." disabled={!props.isDesktopRuntime || props.isSaving} onChange={(value) => props.onChangeField('auto_daily_days', value)} title="Daily window (days)" value={String(props.draft.auto_daily_days)} />
-      <NumberRuleRow description="Keep 1 auto backup per week within this window." disabled={!props.isDesktopRuntime || props.isSaving} onChange={(value) => props.onChangeField('auto_weekly_weeks', value)} title="Weekly window (weeks)" value={String(props.draft.auto_weekly_weeks)} />
-      <NumberRuleRow description="Keep 1 auto backup per month within this window. Set to 0 to turn monthly backups off." disabled={!props.isDesktopRuntime || props.isSaving} onChange={(value) => props.onChangeField('auto_monthly_months', value)} title="Monthly window (months)" value={String(props.draft.auto_monthly_months)} />
-      <NumberRuleRow description="Manual backups keep the newest entries only." disabled={!props.isDesktopRuntime || props.isSaving} onChange={(value) => props.onChangeField('manual_max_count', value)} title="Manual backups kept" value={String(props.draft.manual_max_count)} />
-      <NumberRuleRow description="Safety snapshots are created before restore and upgrade." disabled={!props.isDesktopRuntime || props.isSaving} onChange={(value) => props.onChangeField('snapshot_max_count', value)} title="Safety snapshots kept" value={String(props.draft.snapshot_max_count)} />
+      <NumberRuleRow description="Keep 1 auto backup per hour within this window." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_hourly_hours', value)} title="Hourly window (hours)" value={String(props.draft.auto_hourly_hours)} />
+      <NumberRuleRow description="Keep 1 auto backup per day within this window." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_daily_days', value)} title="Daily window (days)" value={String(props.draft.auto_daily_days)} />
+      <NumberRuleRow description="Keep 1 auto backup per week within this window." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_weekly_weeks', value)} title="Weekly window (weeks)" value={String(props.draft.auto_weekly_weeks)} />
+      <NumberRuleRow description="Keep 1 auto backup per month within this window. Set to 0 to turn monthly backups off." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_monthly_months', value)} title="Monthly window (months)" value={String(props.draft.auto_monthly_months)} />
+      <NumberRuleRow description="Manual backups keep the newest entries only." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('manual_max_count', value)} title="Manual backups kept" value={String(props.draft.manual_max_count)} />
+      <NumberRuleRow description="Safety snapshots are created before restore and upgrade." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('snapshot_max_count', value)} title="Safety snapshots kept" value={String(props.draft.snapshot_max_count)} />
       <SettingsRow description="When backups grow past this size, the oldest backup is deleted first." title="Total backup size limit (GB)">
         <SettingsControlSlot className="max-w-[160px]">
-          <AppInput disabled={!props.isDesktopRuntime || props.isSaving} min="0" onChange={(event) => props.onChangeField('total_size_limit_bytes', event.target.value)} type="number" value={toGigabytes(props.draft.total_size_limit_bytes)} />
-        </SettingsControlSlot>
-      </SettingsRow>
-      <SettingsRow description={props.saveMessage || 'Save after changing backup path or retention rules.'} title="Save backup settings">
-        <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
-          <button className={ACTION_BUTTON_CLASS_NAME} disabled={!props.isDesktopRuntime || props.isSaving} onClick={props.onSave} type="button">
-            {props.isSaving ? 'Saving…' : 'Save settings'}
-          </button>
+          <AppInput
+            className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            disabled={!props.isDesktopRuntime}
+            inputMode="decimal"
+            min="0"
+            onChange={(event) => props.onChangeField('total_size_limit_bytes', event.target.value)}
+            type="number"
+            value={toGigabytes(props.draft.total_size_limit_bytes)}
+          />
         </SettingsControlSlot>
       </SettingsRow>
     </SettingsSection>
@@ -121,9 +128,13 @@ export function BackupListSection(props: {
   createBackup: () => void;
   restoreBackup: (entry: DatabaseBackupEntry) => void;
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const visibleBackups = isExpanded ? props.backups : props.backups.slice(0, 3);
+  const hiddenBackupCount = Math.max(0, props.backups.length - visibleBackups.length);
+
   return (
-    <SettingsSection ariaLabel="Backup list section" title="Backup list">
-      <SettingsRow description={props.statusMessage || 'Create a manual backup any time. You can restore from any listed backup or safety snapshot.'} title="Manual backup">
+    <SettingsSection ariaLabel="Backup list section" title="Backups">
+      <SettingsRow description={props.statusMessage || 'Create a manual backup any time. You can restore from any listed backup or safety snapshot.'} title="Create backup">
         <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
           <button className={ACTION_BUTTON_CLASS_NAME} disabled={!props.isBackupActionsAvailable || props.isCreatingBackup || props.restoringPath.length > 0} onClick={props.createBackup} type="button">
             {props.isCreatingBackup ? 'Creating…' : 'Create backup'}
@@ -133,7 +144,7 @@ export function BackupListSection(props: {
       {!props.isBackupActionsAvailable ? <SettingsRow description="Backup management is available in the desktop app." readonly title="Desktop runtime required" /> : null}
       {props.isBackupActionsAvailable && props.isLoadingBackups ? <SettingsRow description="Scanning the backup folder." readonly title="Loading backups" /> : null}
       {props.isBackupActionsAvailable && !props.isLoadingBackups && props.backups.length === 0 ? <SettingsRow description="No backups yet." readonly title="Empty backup list" /> : null}
-      {props.backups.map((entry) => (
+      {visibleBackups.map((entry) => (
         <SettingsRow description={formatBackupMeta(entry)} key={entry.filePath} title={entry.fileName}>
           <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
             <button className={ACTION_BUTTON_CLASS_NAME} disabled={props.isCreatingBackup || props.restoringPath.length > 0} onClick={() => props.restoreBackup(entry)} type="button">
@@ -142,6 +153,18 @@ export function BackupListSection(props: {
           </SettingsControlSlot>
         </SettingsRow>
       ))}
+      {props.isBackupActionsAvailable && !props.isLoadingBackups && props.backups.length > 3 ? (
+        <SettingsRow
+          description={isExpanded ? 'Show the newest three backups only.' : `${hiddenBackupCount} more backups are hidden.`}
+          title={isExpanded ? 'Collapse backup list' : 'More backups'}
+        >
+          <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
+            <button className={SETTINGS_BUTTON_CLASS_NAME} onClick={() => setIsExpanded((value) => !value)} type="button">
+              {isExpanded ? 'Show fewer' : `Show ${props.backups.length - 3} more`}
+            </button>
+          </SettingsControlSlot>
+        </SettingsRow>
+      ) : null}
     </SettingsSection>
   );
 }

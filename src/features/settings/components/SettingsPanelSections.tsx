@@ -4,6 +4,7 @@ import { SETTINGS_CATEGORIES, type SettingsCategoryId } from '../model/settingsP
 import { HotkeySettingsSection } from './HotkeySettingsSection';
 import { SettingsAboutSection } from './sections/SettingsAboutSection';
 import { SettingsAppearanceSection } from './sections/SettingsAppearanceSection';
+import { SettingsBackupsSection } from './sections/SettingsBackupsSection';
 import { SettingsEditorSection } from './sections/SettingsEditorSection';
 import { SettingsImportSection } from './sections/SettingsImportSection';
 import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSection';
@@ -101,6 +102,9 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
   }
   if (props.activeCategory === 'review') {
     return <ReviewSettingsContent />;
+  }
+  if (props.activeCategory === 'backups') {
+    return <SettingsBackupsSection />;
   }
   if (props.activeCategory === 'about') {
     return <SettingsAboutSection />;

@@ -32,6 +32,7 @@ import {
 } from '../../model/databaseBackupSettings';
 
 import { SettingsAboutSection } from './SettingsAboutSection';
+import { SettingsBackupsSection } from './SettingsBackupsSection';
 
 const defaultSettings = {
   auto_daily_days: 7,
@@ -91,8 +92,16 @@ beforeEach(() => {
   });
 });
 
-it('shows backup settings and backup list', async () => {
+it('shows only application info in the about section', () => {
   render(<SettingsAboutSection />);
+
+  expect(screen.getByText('Foliole desktop')).toBeInTheDocument();
+  expect(screen.queryByText('/app/Backups')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Create backup' })).not.toBeInTheDocument();
+});
+
+it('shows backup settings and backup list in the backups section', async () => {
+  render(<SettingsBackupsSection />);
 
   await waitFor(() => {
     expect(screen.getByDisplayValue('24')).toBeInTheDocument();
@@ -103,13 +112,12 @@ it('shows backup settings and backup list', async () => {
   expect(screen.getByText(/Auto backup · daily/)).toBeInTheDocument();
 });
 
-it('saves edited backup settings', async () => {
-  render(<SettingsAboutSection />);
+it('auto-saves edited backup settings without a save button', async () => {
+  render(<SettingsBackupsSection />);
 
   await screen.findByDisplayValue('24');
   fireEvent.change(screen.getByDisplayValue('24'), { target: { value: '12' } });
   fireEvent.change(screen.getByDisplayValue('2'), { target: { value: '3' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
 
   await waitFor(() => {
     expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(
@@ -119,27 +127,65 @@ it('saves edited backup settings', async () => {
       })
     );
   });
-  expect(screen.getByText('Backup settings saved.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Save settings' })).not.toBeInTheDocument();
 });
 
-it('changes backup location through folder picker', async () => {
+it('changes backup location through folder picker and saves immediately', async () => {
   vi.mocked(selectRuntimeImportDirectory).mockResolvedValue('/new/Backups');
 
-  render(<SettingsAboutSection />);
+  render(<SettingsBackupsSection />);
 
   await screen.findByDisplayValue('24');
   fireEvent.click(screen.getByRole('button', { name: 'Change location' }));
 
   await waitFor(() => {
-    expect(screen.getByText('Backup location updated. Save settings to apply it.')).toBeInTheDocument();
-  });
-
-  fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
-  await waitFor(() => {
     expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(
       expect.objectContaining({ backup_dir: '/new/Backups' })
     );
   });
+});
+
+it('shows only three backups by default and expands the rest on demand', async () => {
+  vi.mocked(listDatabaseBackups).mockResolvedValue([
+    {
+      autoFrequency: null,
+      fileName: 'manual-2026-04-02_11-00-00-000.db',
+      filePath: '/app/Backups/manual-2026-04-02_11-00-00-000.db',
+      kind: 'manual' as const,
+      snapshotReason: null,
+      sizeBytes: 5 * 1024 * 1024,
+      updatedAt: '2026-04-02T11:00:00.000Z'
+    },
+    {
+      autoFrequency: null,
+      fileName: 'manual-2026-04-02_10-00-00-000.db',
+      filePath: '/app/Backups/manual-2026-04-02_10-00-00-000.db',
+      kind: 'manual' as const,
+      snapshotReason: null,
+      sizeBytes: 5 * 1024 * 1024,
+      updatedAt: '2026-04-02T10:00:00.000Z'
+    },
+    {
+      autoFrequency: null,
+      fileName: 'manual-2026-04-02_09-00-00-000.db',
+      filePath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
+      kind: 'manual' as const,
+      snapshotReason: null,
+      sizeBytes: 5 * 1024 * 1024,
+      updatedAt: '2026-04-02T09:00:00.000Z'
+    },
+    ...defaultBackups
+  ]);
+
+  render(<SettingsBackupsSection />);
+
+  await screen.findByRole('button', { name: 'Show 1 more' });
+  expect(screen.queryByText('auto-daily-2026-04-02_08-00-00-000.db')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Show 1 more' }));
+
+  expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Show fewer' })).toBeInTheDocument();
 });
 
 it('creates a manual backup and refreshes the list', async () => {
@@ -157,7 +203,7 @@ it('creates a manual backup and refreshes the list', async () => {
       }
     ]);
 
-  render(<SettingsAboutSection />);
+  render(<SettingsBackupsSection />);
 
   await screen.findByRole('button', { name: 'Create backup' });
   fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
@@ -169,7 +215,7 @@ it('creates a manual backup and refreshes the list', async () => {
 });
 
 it('restores from a listed backup', async () => {
-  render(<SettingsAboutSection />);
+  render(<SettingsBackupsSection />);
 
   const restoreButton = await screen.findByRole('button', { name: 'Restore' });
   fireEvent.click(restoreButton);
