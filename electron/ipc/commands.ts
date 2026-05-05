@@ -7,6 +7,7 @@ import {
   softDeleteNodes,
   upsertNodeSnapshot
 } from '../database/nodeMutations.js';
+import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
 import { applyReviewGrade } from '../database/reviewMutations.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
@@ -55,6 +56,14 @@ function asNullableNumber(value: unknown, field: string): number | null {
   return value;
 }
 
+function asTimestamp(value: unknown, field: string): string {
+  const timestamp = asString(value, field);
+  if (!timestamp.trim()) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return timestamp;
+}
+
 interface AnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze';
@@ -97,6 +106,33 @@ function asStringArray(value: unknown, field: string): string[] {
     throw new Error(`invalid argument: ${field}`);
   }
   return value;
+}
+
+interface NodeViewStatePayload {
+  nodeId: string;
+  scrollTop: number;
+  selectionFrom: number | null;
+  selectionTo: number | null;
+}
+
+function parseNodeViewStatePayload(value: unknown, field: string): NodeViewStatePayload {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  const payload = value as Record<string, unknown>;
+  return {
+    nodeId: asString(payload.nodeId, `${field}.nodeId`),
+    scrollTop: asNullableNumber(payload.scrollTop, `${field}.scrollTop`) ?? 0,
+    selectionFrom: asNullableNumber(payload.selectionFrom, `${field}.selectionFrom`),
+    selectionTo: asNullableNumber(payload.selectionTo, `${field}.selectionTo`)
+  };
+}
+
+function parseNodeViewStatePayloadArray(value: unknown, field: string): NodeViewStatePayload[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value.map((item, index) => parseNodeViewStatePayload(item, `${field}[${index}]`));
 }
 
 interface InvokeContext {
@@ -153,6 +189,17 @@ async function handleStorageCommand(command: string, args: Record<string, unknow
       throw new Error('invalid argument: settings');
     }
     await saveAppSettingsState(settings as Record<string, unknown>);
+    return null;
+  }
+  if (command === 'load_reading_progress') {
+    return loadReadingProgress();
+  }
+  if (command === 'save_reading_progress') {
+    saveReadingProgress({
+      activeNodeId: asNullableString(args.activeNodeId, 'activeNodeId'),
+      nodeViewStates: parseNodeViewStatePayloadArray(args.nodeViewStates, 'nodeViewStates'),
+      updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
+    });
     return null;
   }
   if (command === 'update_node_content') {

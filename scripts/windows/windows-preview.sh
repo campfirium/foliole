@@ -9,6 +9,8 @@ WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
 WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS:-${WINDOWS_PREVIEW_TIMEOUT_SECONDS}}"
 WINDOWS_PREVIEW_TIMEOUT_START_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_START_SECONDS:-180}"
 WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS:-180}"
+WINDOWS_PREVIEW_TIMEOUT_STOP_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STOP_SECONDS:-60}"
+WINDOWS_PREVIEW_ELECTRON_RESTART_MODE="${WINDOWS_PREVIEW_ELECTRON_RESTART_MODE:-full}"
 
 cd "${REPO_ROOT}"
 
@@ -27,6 +29,9 @@ run_windows_client_action() {
   fi
   if [ "${action}" = "restart" ]; then
     timeout_seconds="${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}"
+  fi
+  if [ "${action}" = "stop" ]; then
+    timeout_seconds="${WINDOWS_PREVIEW_TIMEOUT_STOP_SECONDS}"
   fi
 
   output_file="$(mktemp)"
@@ -52,6 +57,14 @@ run_windows_client_action() {
       return 0
     fi
     if [ "${action}" = "status" ] && echo "${current_output}" | grep -qE 'status:\s*(RUNNING|STOPPED)'; then
+      kill "${action_pid}" 2>/dev/null || true
+      sleep 1
+      kill -9 "${action_pid}" 2>/dev/null || true
+      printf '%s' "${current_output}"
+      rm -f "${output_file}"
+      return 0
+    fi
+    if [ "${action}" = "stop" ] && echo "${current_output}" | grep -qE 'status:\s*STOPPED'; then
       kill "${action_pid}" 2>/dev/null || true
       sleep 1
       kill -9 "${action_pid}" 2>/dev/null || true
@@ -148,10 +161,47 @@ fi
 
 if echo "${changed_files}" | grep -qE '^electron/'; then
   echo "[windows-preview] step 2/2: electron changes detected; evaluating client state"
+  if [ "${WINDOWS_PREVIEW_ELECTRON_RESTART_MODE}" = "runtime-only" ]; then
+    echo "[windows-preview] restart mode: runtime-only"
+  else
+    echo "[windows-preview] restart mode: full"
+  fi
   set +e
   restart_status_output="$(run_windows_client_action status)"
   restart_status_exit=$?
   set -e
+  if [ "${WINDOWS_PREVIEW_ELECTRON_RESTART_MODE}" != "runtime-only" ]; then
+    if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*RUNNING'; then
+      echo "[windows-preview] windows client: RUNNING; full restarting (stop -> start)"
+      set +e
+      stop_output="$(run_windows_client_action stop)"
+      stop_exit=$?
+      set -e
+      if [ "${stop_exit}" -ne 0 ] || ! echo "${stop_output}" | grep -qE 'status:\s*STOPPED'; then
+        echo "[windows-preview] windows client: stop failed during full restart"
+        if [ -n "${stop_output}" ]; then
+          echo "${stop_output}"
+        fi
+        exit 1
+      fi
+    fi
+    if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*STOPPED'; then
+      echo "[windows-preview] windows client: STOPPED; starting"
+    fi
+    set +e
+    full_start_output="$(run_windows_client_action start)"
+    full_start_exit=$?
+    set -e
+    if [ "${full_start_exit}" -eq 0 ] && echo "${full_start_output}" | grep -qE 'status:\s*(RUNNING|STARTED)'; then
+      echo "[windows-preview] status: RESTARTED"
+      exit 0
+    fi
+    echo "[windows-preview] windows client: full restart start phase failed"
+    if [ -n "${full_start_output}" ]; then
+      echo "${full_start_output}"
+    fi
+    exit 1
+  fi
   if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*RUNNING'; then
     echo "[windows-preview] windows client: RUNNING; restarting"
     set +e

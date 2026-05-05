@@ -8,6 +8,7 @@ import {
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime,
+  syncReadingProgressToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime,
   syncReviewGradeToRuntime
@@ -176,6 +177,40 @@ describe('workspaceRuntimeSync trash mutations', () => {
     expect(invoke).toHaveBeenCalledWith('delete_nodes_permanently', {
       nodeIds: ['node-3'],
       nodeOrder: ['node-1', 'node-2']
+    });
+    expectNoWorkspacePersist(invoke);
+  });
+});
+
+describe('workspaceRuntimeSync reading progress', () => {
+  it('syncs reading progress through save_reading_progress command', () => {
+    const invoke = vi.fn().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    syncReadingProgressToRuntime({
+      activeNodeId: 'node-2',
+      nodeViewStates: [
+        {
+          nodeId: 'node-2',
+          scrollTop: 120,
+          selectionFrom: 4,
+          selectionTo: 8
+        }
+      ],
+      updatedAt: '2026-03-06T00:00:00.000Z'
+    });
+
+    expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
+      activeNodeId: 'node-2',
+      nodeViewStates: [
+        {
+          nodeId: 'node-2',
+          scrollTop: 120,
+          selectionFrom: 4,
+          selectionTo: 8
+        }
+      ],
+      updatedAt: '2026-03-06T00:00:00.000Z'
     });
     expectNoWorkspacePersist(invoke);
   });

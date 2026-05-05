@@ -203,6 +203,7 @@ it('handles app settings storage commands', async () => {
   ).resolves.toBeNull();
 });
 
+
 it('handles app path and fsrs commands', async () => {
   await expect(handleInvokeRequest({ command: 'resolve_app_paths' })).resolves.toEqual({
     app_data_dir: '/data',

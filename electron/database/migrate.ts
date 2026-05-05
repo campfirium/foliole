@@ -1,9 +1,9 @@
 import type { SqliteDatabase } from './connection.js';
 import { openDatabaseConnection } from './connection.js';
 
-const DATABASE_SCHEMA_VERSION = 1;
+const DATABASE_SCHEMA_VERSION = 2;
 
-const CREATE_TABLE_STATEMENTS = [
+const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
     id TEXT PRIMARY KEY,
     parent_id TEXT REFERENCES nodes(id),
@@ -62,6 +62,21 @@ const CREATE_TABLE_STATEMENTS = [
   )`
 ];
 
+const CREATE_TABLE_STATEMENTS_V2 = [
+  `CREATE TABLE IF NOT EXISTS workspace_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS node_view_state (
+    node_id TEXT PRIMARY KEY,
+    scroll_top INTEGER NOT NULL DEFAULT 0,
+    selection_from INTEGER,
+    selection_to INTEGER,
+    updated_at TEXT NOT NULL
+  )`
+];
+
 function readUserVersion(sqlite: SqliteDatabase): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -74,13 +89,21 @@ function setUserVersion(sqlite: SqliteDatabase, version: number) {
 export function runDatabaseMigrations(sqlite: SqliteDatabase) {
   const applyInTransaction = sqlite.transaction(() => {
     const currentVersion = readUserVersion(sqlite);
-    if (currentVersion >= DATABASE_SCHEMA_VERSION) {
-      return;
+    if (currentVersion < 1) {
+      for (const statement of CREATE_TABLE_STATEMENTS_V1) {
+        sqlite.exec(statement);
+      }
+      setUserVersion(sqlite, 1);
     }
-    for (const statement of CREATE_TABLE_STATEMENTS) {
-      sqlite.exec(statement);
+    if (currentVersion < 2) {
+      for (const statement of CREATE_TABLE_STATEMENTS_V2) {
+        sqlite.exec(statement);
+      }
+      setUserVersion(sqlite, 2);
     }
-    setUserVersion(sqlite, DATABASE_SCHEMA_VERSION);
+    if (currentVersion > DATABASE_SCHEMA_VERSION) {
+      throw new Error(`database schema version ${currentVersion} is newer than supported`);
+    }
   });
   applyInTransaction();
 }

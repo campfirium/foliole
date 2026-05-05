@@ -47,6 +47,20 @@ export const nodeOrder = sqliteTable('node_order', {
   position: integer('position').notNull()
 });
 
+export const workspaceMeta = sqliteTable('workspace_meta', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: text('updated_at').notNull()
+});
+
+export const nodeViewState = sqliteTable('node_view_state', {
+  nodeId: text('node_id').primaryKey(),
+  scrollTop: integer('scroll_top').notNull().default(0),
+  selectionFrom: integer('selection_from'),
+  selectionTo: integer('selection_to'),
+  updatedAt: text('updated_at').notNull()
+});
+
 export const attachments = sqliteTable('attachments', {
   id: text('id').primaryKey(),
   hash: text('hash').notNull().unique(),

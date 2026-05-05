@@ -35,6 +35,19 @@ interface DeleteNodesPermanentlyRuntimePayload {
   nodeOrder: string[];
 }
 
+interface ReadingProgressNodeViewState {
+  nodeId: string;
+  scrollTop: number;
+  selectionFrom: number;
+  selectionTo: number;
+}
+
+interface ReadingProgressRuntimePayload {
+  activeNodeId: string | null;
+  nodeViewStates: ReadingProgressNodeViewState[];
+  updatedAt: string;
+}
+
 function toNodeSnapshotPayload(node: Node, position?: number) {
   return {
     nodeId: node.id,
@@ -104,4 +117,12 @@ export function syncDeleteNodesPermanentlyToRuntime(payload: DeleteNodesPermanen
     return;
   }
   void runtimeInvoke('delete_nodes_permanently', payload as unknown as Record<string, unknown>).catch(() => undefined);
+}
+
+export function syncReadingProgressToRuntime(payload: ReadingProgressRuntimePayload) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  void runtimeInvoke('save_reading_progress', payload as unknown as Record<string, unknown>).catch(() => undefined);
 }

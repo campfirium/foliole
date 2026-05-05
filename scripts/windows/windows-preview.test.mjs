@@ -57,7 +57,7 @@ async function createMockScripts(root, clientBody) {
 }
 
 describe('windows-preview script', () => {
-  it('restarts directly when electron files changed', async () => {
+  it('full restarts with stop then start when electron files changed', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
       const { syncScript, clientScript, actionLog } = await createMockScripts(
@@ -67,8 +67,12 @@ describe('windows-preview script', () => {
           '  echo "[windows-restart-client] status: RUNNING"',
           '  exit 0',
           'fi',
-          'if [ "${WINDOWS_CLIENT_ACTION}" = "restart" ]; then',
-          '  echo "[windows-restart-client] status: RESTARTED"',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "stop" ]; then',
+          '  echo "[windows-restart-client] status: STOPPED"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "start" ]; then',
+          '  echo "[windows-restart-client] status: STARTED"',
           '  exit 0',
           'fi',
           'exit 1'
@@ -84,9 +88,14 @@ describe('windows-preview script', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('step 2/2: electron changes detected; evaluating client state');
-      expect(result.stdout).toContain('windows client: RUNNING; restarting');
+      expect(result.stdout).toContain('restart mode: full');
+      expect(result.stdout).toContain('windows client: RUNNING; full restarting (stop -> start)');
       expect(result.stdout).toContain('status: RESTARTED');
-      await expect(readFile(actionLog, 'utf8')).resolves.toContain('restart');
+      const actions = (await readFile(actionLog, 'utf8'))
+        .split('\n')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+      expect(actions).toEqual(['status', 'stop', 'start']);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -127,7 +136,7 @@ describe('windows-preview script', () => {
     }
   });
 
-  it('aborts on restart timeout to avoid launching duplicate clients', async () => {
+  it('aborts on restart timeout in runtime-only mode to avoid launching duplicate clients', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
       const { syncScript, clientScript, actionLog } = await createMockScripts(
@@ -155,6 +164,7 @@ describe('windows-preview script', () => {
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
+        WINDOWS_PREVIEW_ELECTRON_RESTART_MODE: 'runtime-only',
         WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '1'
       });
 
@@ -171,7 +181,7 @@ describe('windows-preview script', () => {
     }
   });
 
-  it('aborts when restart reports failure and does not fall back to start', async () => {
+  it('aborts when restart reports failure and does not fall back to start in runtime-only mode', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
       const { syncScript, clientScript, actionLog } = await createMockScripts(
@@ -197,7 +207,8 @@ describe('windows-preview script', () => {
         ACTION_LOG: actionLog,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
-        WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts'
+        WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
+        WINDOWS_PREVIEW_ELECTRON_RESTART_MODE: 'runtime-only'
       });
 
       expect(result.code).toBe(1);

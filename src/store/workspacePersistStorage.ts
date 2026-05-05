@@ -2,6 +2,8 @@ import type { StateStorage } from 'zustand/middleware';
 
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 
+import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
+
 function getLocalFallbackStorage(): Storage | null {
   if (typeof window === 'undefined') {
     return null;
@@ -21,8 +23,11 @@ export const workspacePersistStorage: StateStorage = {
     const runtimeInvoke = getRuntimeInvoke();
     if (runtimeInvoke) {
       try {
-        const snapshot = await runtimeInvoke('load_workspace_snapshot');
-        return toPersistedStatePayload(snapshot);
+        const [snapshot, readingProgress] = await Promise.all([
+          runtimeInvoke('load_workspace_snapshot'),
+          runtimeInvoke('load_reading_progress').catch(() => null)
+        ]);
+        return toPersistedStatePayload(mergeWorkspaceSnapshotWithReadingProgress(snapshot, readingProgress));
       } catch {
         return null;
       }
