@@ -25,13 +25,14 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
-import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 
 import { runManagedInboxImport } from './importDirectory.js';
 import { loadPreparedImportRecord, resolveSingleFileImportSource } from './importSourcePipeline.js';
+import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
 
 let tempRoot = '';
 
@@ -72,12 +73,12 @@ function readImportRun(importId: string) {
 }
 
 function readPdfOpenDetails(nodeId: string) {
-  const details = loadNodeSourceDetails(nodeId);
-  return details?.importSource
+  const details = toNativeNodeSourceDetails(nodeId);
+  return details?.import_source
     ? {
-        source_kind: details.importSource.source_kind,
-        source_locator: details.importSource.source_locator,
-        source_name: details.importSource.source_name
+        source_kind: details.import_source.source_kind,
+        source_locator: details.import_source.source_locator,
+        source_name: details.import_source.source_name
       }
     : null;
 }
@@ -100,12 +101,49 @@ it('imports pdf dropped into the managed inbox as a new inbox child', async () =
     expect.objectContaining({ result_status: 'imported', source_kind: 'pdf', source_name: 'dropped.pdf' })
   );
   expect(readImportedNode(importedEntry?.node_id as string)).toEqual({ parent_id: 'special-inbox', title: 'dropped' });
+  const pdfAttachment = listNodeAttachments(importedEntry?.node_id as string)[0];
+  expect(pdfAttachment).toEqual(
+    expect.objectContaining({
+      role: 'reference',
+      attachment: expect.objectContaining({ mimeType: 'application/pdf', originalName: 'dropped.pdf' })
+    })
+  );
   expect(readPdfOpenDetails(importedEntry?.node_id as string)).toEqual({
     source_kind: 'pdf',
-    source_locator: filePath,
+    source_locator: expect.stringContaining(path.join('Assets', `${pdfAttachment?.attachmentId}.pdf`)),
     source_name: 'dropped.pdf'
   });
   await expect(fs.stat(filePath)).rejects.toThrow();
+  await expect(fs.stat(readPdfOpenDetails(importedEntry?.node_id as string)?.source_locator as string)).resolves.toBeTruthy();
+});
+
+it('reopens the same pdf from attachments after the original file is removed and the app restarts', async () => {
+  const filePath = await writePdf(path.join('manual-import', 'restart-proof.pdf'));
+
+  const imported = runPreparedImport(
+    await loadPreparedImportRecord(resolveSingleFileImportSource(filePath), {
+      highlightPolicy: 'reference_only',
+      importedAt: '2026-04-01T12:24:00.000Z',
+      sourceTrackingMode: 'untracked',
+      titleStrategy: 'file_name'
+    })
+  );
+
+  const pdfAttachment = listNodeAttachments(imported.nodeId as string)[0];
+  const linkedBeforeRestart = readPdfOpenDetails(imported.nodeId as string);
+  expect(linkedBeforeRestart).toEqual({
+    source_kind: 'pdf',
+    source_locator: expect.stringContaining(path.join('Assets', `${pdfAttachment?.attachmentId}.pdf`)),
+    source_name: 'restart-proof.pdf'
+  });
+
+  await fs.rm(filePath, { force: true });
+  closeDatabaseConnection();
+  initializeDatabase();
+
+  const linkedAfterRestart = readPdfOpenDetails(imported.nodeId as string);
+  expect(linkedAfterRestart).toEqual(linkedBeforeRestart);
+  await expect(fs.stat(linkedAfterRestart?.source_locator as string)).resolves.toBeTruthy();
 });
 
 it('keeps manual pdf import and managed inbox import consistent for the same path', async () => {
@@ -134,7 +172,9 @@ it('keeps manual pdf import and managed inbox import consistent for the same pat
 
   expect(manualNode).toEqual(inboxNode);
   expect(manualRun).toEqual(inboxRun);
-  expect(manualOpenDetails).toEqual(inboxOpenDetails);
+  expect(manualOpenDetails?.source_kind).toBe(inboxOpenDetails?.source_kind);
+  expect(manualOpenDetails?.source_name).toBe(inboxOpenDetails?.source_name);
+  expect(path.basename(manualOpenDetails?.source_locator as string)).toBe(path.basename(inboxOpenDetails?.source_locator as string));
   expect(manualRun).toEqual({
     degraded_reason: null,
     result_status: 'imported',

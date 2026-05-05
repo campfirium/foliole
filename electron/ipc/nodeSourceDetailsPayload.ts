@@ -1,8 +1,13 @@
 import path from 'node:path';
 
 import { formatReadwiseSourceLabel } from '../../lib/core/import/importManagerSettings.js';
+import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+import { listNodeAttachments } from '../database/attachments.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
+
+const PDF_ATTACHMENT_ROLE = 'reference';
+const PDF_MIME_TYPE = 'application/pdf';
 
 function resolveSourceFilePath(primaryPath: string | null, sourcePath: string) {
   if (path.isAbsolute(sourcePath)) {
@@ -32,10 +37,28 @@ function toNativeImportRunRow(record: NonNullable<ReturnType<typeof loadNodeSour
   };
 }
 
-function toNativeImportSource(record: NonNullable<ReturnType<typeof loadNodeSourceDetails>>['importSource']) {
+function resolvePdfSourceLocator(sourceNodeId: string) {
+  const attachment = listNodeAttachments(sourceNodeId).find(
+    (entry) => entry.role === PDF_ATTACHMENT_ROLE && entry.attachment.mimeType === PDF_MIME_TYPE
+  );
+  if (!attachment) {
+    return '';
+  }
+
+  const resolved = resolveAttachmentFile(attachment.attachmentId);
+  return resolved.status === 'ready' ? resolved.filePath : '';
+}
+
+function toNativeImportSource(
+  record: NonNullable<ReturnType<typeof loadNodeSourceDetails>>['importSource'],
+  sourceNodeId: string
+) {
   if (!record) {
     return null;
   }
+
+  const sourceLocator = record.source_kind.toLowerCase() === 'pdf' ? resolvePdfSourceLocator(sourceNodeId) : record.source_locator;
+
   return {
     first_imported_at: record.first_imported_at,
     last_content_fingerprint: record.last_content_fingerprint,
@@ -44,7 +67,7 @@ function toNativeImportSource(record: NonNullable<ReturnType<typeof loadNodeSour
     provider: record.provider,
     source_fingerprint: record.source_fingerprint,
     source_kind: record.source_kind,
-    source_locator: record.source_locator,
+    source_locator: sourceLocator,
     source_name: record.source_name
   };
 }
@@ -85,7 +108,7 @@ export function toNativeNodeSourceDetails(nodeId: string) {
   }
   return {
     import_runs: details.importRuns.map((record) => toNativeImportRunRow(record)),
-    import_source: toNativeImportSource(details.importSource),
+    import_source: toNativeImportSource(details.importSource, details.sourceNodeId),
     inherited_from_parent: details.inheritedFromParent,
     keep_import_item: toNativeKeepImportItem(details.keepImportItem),
     source_node_id: details.sourceNodeId

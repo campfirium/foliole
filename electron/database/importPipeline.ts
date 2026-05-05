@@ -9,7 +9,13 @@ import {
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
-import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordById } from '../database/attachments.js';
+import {
+  createAttachmentRecord,
+  createNodeAttachmentLink,
+  deleteNodeAttachmentLink,
+  findAttachmentRecordById,
+  listNodeAttachments
+} from '../database/attachments.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { rewriteInlineImageReferences } from './inlineImageReferences.js';
@@ -17,6 +23,8 @@ import { rewriteInlineImageReferences } from './inlineImageReferences.js';
 export type { PersistedImportRecord, PreparedImportRecord };
 
 const IMAGE_ATTACHMENT_ROLE = 'image';
+const PDF_ATTACHMENT_ROLE = 'reference';
+const PDF_MIME_TYPE = 'application/pdf';
 
 const SUPPORTED_IMAGE_MIME_TYPES = new Map([
   ['.gif', 'image/gif'],
@@ -120,6 +128,41 @@ function importLocalImageAttachment(nodeId: string, sourcePath: string) {
   }
 }
 
+function replaceNodePdfAttachmentLink(nodeId: string, attachmentId: string) {
+  for (const entry of listNodeAttachments(nodeId)) {
+    if (
+      entry.role === PDF_ATTACHMENT_ROLE &&
+      entry.attachment.mimeType === PDF_MIME_TYPE &&
+      entry.attachmentId !== attachmentId
+    ) {
+      deleteNodeAttachmentLink({
+        nodeId,
+        attachmentId: entry.attachmentId,
+        role: entry.role
+      });
+    }
+  }
+
+  createNodeAttachmentLink({ attachmentId, nodeId, role: PDF_ATTACHMENT_ROLE });
+}
+
+function importPdfSourceAttachment(nodeId: string, sourcePath: string) {
+  if (!sourcePath.trim() || !fs.existsSync(sourcePath)) {
+    return null;
+  }
+
+  const sourceBytes = fs.readFileSync(sourcePath);
+  const hash = createContentHash(sourceBytes);
+  const existingAttachment = findAttachmentRecordById(hash);
+  persistAttachmentFile(
+    resolveAttachmentStoragePath(hash, undefined, existingAttachment?.originalName ?? path.basename(sourcePath)),
+    sourceBytes
+  );
+  const attachment = createAttachmentRecordIfNeeded(hash, sourcePath, PDF_MIME_TYPE, sourceBytes.byteLength);
+  replaceNodePdfAttachmentLink(nodeId, attachment.id);
+  return attachment.id;
+}
+
 function appendDegradedReason(currentReason: string | null, nextReason: string | null) {
   if (!nextReason) {
     return currentReason;
@@ -195,7 +238,13 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
 }
 
 export function runPreparedImport(input: PreparedImportRecord) {
-  return rewriteMarkdownLocalImages(runPreparedImportViaDriver(openDatabaseConnection().driver, input), input);
+  const record = rewriteMarkdownLocalImages(runPreparedImportViaDriver(openDatabaseConnection().driver, input), input);
+  if (input.sourceKind !== 'pdf' || !record.nodeId || record.resultStatus === 'failed') {
+    return record;
+  }
+
+  importPdfSourceAttachment(record.nodeId, input.sourceLocator);
+  return record;
 }
 
 export function recordPreparedImportFailure(input: PreparedImportRecord, failureReason: string) {
