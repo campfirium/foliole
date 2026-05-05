@@ -75,7 +75,7 @@ export function expectPushQueueValues(values: {
 }) {
   expect(screen.getByLabelText('Reading queue mix ratio')).toHaveValue(values.reading);
   expect(screen.getByLabelText('FSRS queue mix ratio')).toHaveValue(values.fsrs);
-  expect(screen.getByLabelText('Priority weight ratio')).toHaveValue(values.priorityRatio);
+  expect(screen.getByLabelText('Priority strength (P1 relative to P9)')).toHaveValue(values.priorityRatio);
   expect(screen.getByLabelText('Reading initial interval days')).toHaveValue(values.readingInitialIntervalDays);
   expect(screen.getByLabelText('Reading growth factor min')).toHaveValue(values.readingGrowthMin);
   expect(screen.getByLabelText('Reading growth factor max')).toHaveValue(values.readingGrowthMax);
@@ -91,7 +91,7 @@ export function changePushQueueValues(values: {
 }) {
   fireEvent.change(screen.getByLabelText('Reading queue mix ratio'), { target: { value: values.reading } });
   fireEvent.change(screen.getByLabelText('FSRS queue mix ratio'), { target: { value: values.fsrs } });
-  fireEvent.change(screen.getByLabelText('Priority weight ratio'), { target: { value: values.priorityRatio } });
+  fireEvent.change(screen.getByLabelText('Priority strength (P1 relative to P9)'), { target: { value: values.priorityRatio } });
   fireEvent.change(screen.getByLabelText('Reading initial interval days'), { target: { value: values.readingInitialIntervalDays } });
   fireEvent.change(screen.getByLabelText('Reading growth factor min'), { target: { value: values.readingGrowthMin } });
   fireEvent.change(screen.getByLabelText('Reading growth factor max'), { target: { value: values.readingGrowthMax } });

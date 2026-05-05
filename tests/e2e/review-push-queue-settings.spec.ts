@@ -89,10 +89,13 @@ test('review settings keep push queue defaults and saved values across reopen', 
 
   const readingMixInput = page.getByLabel('Reading queue mix ratio');
   const fsrsMixInput = page.getByLabel('FSRS queue mix ratio');
-  const priorityRatioInput = page.getByLabel('Priority weight ratio');
+  const priorityRatioInput = page.getByLabel('Priority strength (P1 relative to P9)');
   const readingInitialIntervalInput = page.getByLabel('Reading initial interval days');
   const readingGrowthMinInput = page.getByLabel('Reading growth factor min');
   const readingGrowthMaxInput = page.getByLabel('Reading growth factor max');
+
+  await expect(page.getByText('Dual queue mix ratio')).toBeVisible();
+  await expect(page.getByText('Priority strength (`priorityRatio`)')).toBeVisible();
 
   await expect(readingMixInput).toHaveValue('1');
   await expect(fsrsMixInput).toHaveValue('5');
@@ -130,7 +133,7 @@ test('review settings keep push queue defaults and saved values across reopen', 
 
   await expect(page.getByLabel('Reading queue mix ratio')).toHaveValue('2');
   await expect(page.getByLabel('FSRS queue mix ratio')).toHaveValue('4');
-  await expect(page.getByLabel('Priority weight ratio')).toHaveValue('7');
+  await expect(page.getByLabel('Priority strength (P1 relative to P9)')).toHaveValue('7');
   await expect(page.getByLabel('Reading initial interval days')).toHaveValue('2');
   await expect(page.getByLabel('Reading growth factor min')).toHaveValue('1.12');
   await expect(page.getByLabel('Reading growth factor max')).toHaveValue('1.44');

@@ -201,23 +201,23 @@ function PushQueueRows(props: Pick<
   return (
     <>
       <ReviewSettingRow
-        title="Queue mix ratio"
-        description="Alternate reading and FSRS queues using reading:fsrs counts. A 1:5 ratio means one reading card is mixed after five FSRS cards."
+        title="Dual queue mix ratio"
+        description="Set `queueMixRatio` as reading:fsrs counts. The default `1:5` means one reading card is mixed after five FSRS cards."
         control={<QueueMixRatioControl fsrs={props.queueMixRatioFsrs} onFsrsChange={props.onQueueMixRatioFsrsChange} onReadingChange={props.onQueueMixRatioReadingChange} reading={props.queueMixRatioReading} />}
       />
       <ReviewSettingRow
-        title="Priority weight ratio"
-        description="Set `priorityRatio` directly as the weight multiple of P1 relative to P9 during roulette selection."
-        control={<ReviewNumberInputControl ariaLabel="Priority weight ratio" min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} />}
+        title="Priority strength (`priorityRatio`)"
+        description="Set `priorityRatio` directly as the weight multiple of P1 relative to P9 during roulette selection. The default `5` means P1 is weighted 5× P9."
+        control={<ReviewNumberInputControl ariaLabel="Priority strength (P1 relative to P9)" min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} />}
       />
       <ReviewSettingRow
         title="Reading initial interval"
-        description="Choose how many days a reading card waits after its first handling before it re-enters the reading queue."
+        description="Set `readingInitialIntervalMs`, the delay after a reading card is first handled before it can re-enter the reading queue."
         control={<ReviewNumberInputControl ariaLabel="Reading initial interval days" min={0.01} onChange={props.onReadingInitialIntervalDaysChange} step={0.25} value={readingInitialIntervalDays} />}
       />
       <ReviewSettingRow
         title="Reading growth factor range"
-        description="Map reading priority to interval growth. The minimum applies to P1 and the maximum applies to P9."
+        description="Set `readingIntervalGrowthFactorRange` for reading scheduling. The minimum applies to P1 and the maximum applies to P9."
         control={<ReadingGrowthFactorRangeControl maxValue={props.readingIntervalGrowthFactorMax} minValue={props.readingIntervalGrowthFactorMin} onMaxChange={props.onReadingIntervalGrowthFactorMaxChange} onMinChange={props.onReadingIntervalGrowthFactorMinChange} />}
       />
     </>

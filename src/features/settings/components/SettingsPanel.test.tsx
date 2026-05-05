@@ -14,6 +14,30 @@ import {
   openReviewSettings
 } from './SettingsPanel.testUtils';
 
+function createPushQueueChangeHandlers() {
+  return {
+    onPriorityRatioChange: vi.fn(),
+    onQueueMixRatioReadingChange: vi.fn(),
+    onQueueMixRatioFsrsChange: vi.fn(),
+    onReadingInitialIntervalDaysChange: vi.fn(),
+    onReadingIntervalGrowthFactorMinChange: vi.fn(),
+    onReadingIntervalGrowthFactorMaxChange: vi.fn()
+  };
+}
+
+function renderSettingsPanelWithPushQueueHandlers(
+  handlers: ReturnType<typeof createPushQueueChangeHandlers>
+) {
+  return render(<SettingsPanel {...createProps()} {...handlers} />);
+}
+
+function expectPushQueueSemanticCopy() {
+  expect(screen.getByText('Dual queue mix ratio')).toBeInTheDocument();
+  expect(screen.getByText('Priority strength (`priorityRatio`)')).toBeInTheDocument();
+  expect(screen.getByText(/weight multiple of P1 relative to P9/i)).toBeInTheDocument();
+  expect(screen.getByText(/default `1:5` means one reading card is mixed after five FSRS cards/i)).toBeInTheDocument();
+}
+
 vi.mock('../model/systemFonts', () => ({
   listAvailableSystemFonts: vi.fn()
 }));
@@ -105,27 +129,13 @@ it('updates remaining review scheduler controls from review settings section', a
 });
 
 it('keeps push queue defaults, saved values, and reopened review fields in sync', async () => {
-  const onPriorityRatioChange = vi.fn();
-  const onQueueMixRatioReadingChange = vi.fn();
-  const onQueueMixRatioFsrsChange = vi.fn();
-  const onReadingInitialIntervalDaysChange = vi.fn();
-  const onReadingIntervalGrowthFactorMinChange = vi.fn();
-  const onReadingIntervalGrowthFactorMaxChange = vi.fn();
+  const handlers = createPushQueueChangeHandlers();
   const savedProps = createSavedPushQueueProps();
 
-  const view = render(
-    <SettingsPanel
-      {...createProps()}
-      onPriorityRatioChange={onPriorityRatioChange}
-      onQueueMixRatioReadingChange={onQueueMixRatioReadingChange}
-      onQueueMixRatioFsrsChange={onQueueMixRatioFsrsChange}
-      onReadingInitialIntervalDaysChange={onReadingInitialIntervalDaysChange}
-      onReadingIntervalGrowthFactorMinChange={onReadingIntervalGrowthFactorMinChange}
-      onReadingIntervalGrowthFactorMaxChange={onReadingIntervalGrowthFactorMaxChange}
-    />
-  );
+  const view = renderSettingsPanelWithPushQueueHandlers(handlers);
 
   openReviewSettings();
+  expectPushQueueSemanticCopy();
   expectPushQueueValues({
     reading: 1,
     fsrs: 5,
@@ -145,12 +155,7 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
 
   await waitFor(() => {
     expectPushQueueChangeCallbacks({
-      onQueueMixRatioReadingChange,
-      onQueueMixRatioFsrsChange,
-      onPriorityRatioChange,
-      onReadingInitialIntervalDaysChange,
-      onReadingIntervalGrowthFactorMinChange,
-      onReadingIntervalGrowthFactorMaxChange
+      ...handlers
     });
   });
 
