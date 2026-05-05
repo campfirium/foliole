@@ -10,11 +10,11 @@ import { getElectronAPI } from './electronApi';
 import {
   toRuntimeReadwiseBooksInventory,
   type RuntimeReadwiseBooksInventory
-} from './readwiseBooksBridgePayloads';
+} from './readwiseBooksRuntimePayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
-export type { RuntimeReadwiseBookInventoryItem, RuntimeReadwiseBooksInventory } from './readwiseBooksBridgePayloads';
+export type { RuntimeReadwiseBookInventoryItem, RuntimeReadwiseBooksInventory } from './readwiseBooksRuntimePayloads';
 
 export interface RuntimeReadwiseBookEpubProgressEvent {
   detail: string;
