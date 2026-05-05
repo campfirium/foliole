@@ -21,7 +21,10 @@ final class FolioleCompanionContentBlobBatchStore {
         long startedAt = System.nanoTime();
         long httpStartedAt = System.nanoTime();
         FolioleCompanionDesktopHttpClient.BinaryResponse response = FolioleCompanionDesktopHttpClient.requestBinary(
-            FolioleCompanionContentBlobBatchText.requireText(url, "url"),
+            FolioleCompanionContentBlobBatchText.requireText(
+                url,
+                FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)
+            ),
             "POST",
             headers,
             body
@@ -29,7 +32,11 @@ final class FolioleCompanionContentBlobBatchStore {
         long httpElapsedMs = elapsedMs(httpStartedAt);
         long parseStartedAt = System.nanoTime();
         List<FolioleCompanionContentBlobMultipartBatch.Blob> blobs =
-            FolioleCompanionContentBlobMultipartBatch.parse(response.body, response.contentType);
+            FolioleCompanionContentBlobMultipartBatch.parse(
+                response.body,
+                response.contentType,
+                FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)
+            );
         long parseElapsedMs = elapsedMs(parseStartedAt);
         JSArray syncedHashes = new JSArray();
         List<CachedBlob> cachedBlobs = new ArrayList<>();
@@ -37,7 +44,7 @@ final class FolioleCompanionContentBlobBatchStore {
         Map<String, FolioleCompanionContentBlobBatchManifestStore.Manifest> manifests =
             FolioleCompanionContentBlobBatchManifestStore.load(context, database, blobs);
         for (FolioleCompanionContentBlobMultipartBatch.Blob blob : blobs) {
-            addBatchBlob(blob, manifests, cachedBlobs, syncedHashes);
+            addBatchBlob(context, blob, manifests, cachedBlobs, syncedHashes);
         }
         storeCachedBlobs(context, database, cachedBlobs);
         long databaseElapsedMs = elapsedMs(databaseStartedAt);
@@ -52,12 +59,13 @@ final class FolioleCompanionContentBlobBatchStore {
     }
 
     private static void addBatchBlob(
+        Context context,
         FolioleCompanionContentBlobMultipartBatch.Blob blob,
         Map<String, FolioleCompanionContentBlobBatchManifestStore.Manifest> manifests,
         List<CachedBlob> cachedBlobs,
         JSArray syncedHashes
     ) throws Exception {
-        String hash = FolioleCompanionContentBlobBatchManifestStore.requireHash(blob.hash);
+        String hash = FolioleCompanionContentBlobBatchManifestStore.requireHash(context, blob.hash);
         FolioleCompanionContentBlobBatchManifestStore.Manifest manifest = manifests.get(hash);
         if (manifest == null) {
             throw new IllegalStateException("Content blob manifest is missing.");

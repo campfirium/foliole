@@ -26,7 +26,7 @@ final class FolioleCompanionContentBlobBatchManifestStore {
         String[] hashes = new String[blobs.size()];
         StringBuilder placeholders = new StringBuilder();
         for (int index = 0; index < blobs.size(); index += 1) {
-            hashes[index] = requireHash(blobs.get(index).hash);
+            hashes[index] = requireHash(context, blobs.get(index).hash);
             if (index > 0) placeholders.append(", ");
             placeholders.append("?");
         }
@@ -52,10 +52,12 @@ final class FolioleCompanionContentBlobBatchManifestStore {
         return manifests;
     }
 
-    static String requireHash(String value) {
-        String hash = FolioleCompanionContentBlobBatchText.requireText(value, "hash").toLowerCase();
+    static String requireHash(Context context, String value) throws Exception {
+        String hash = FolioleCompanionContentBlobBatchText
+            .requireText(value, FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context))
+            .toLowerCase();
         if (!hash.matches("[a-f0-9]{64}")) {
-            throw new IllegalArgumentException("hash is invalid.");
+            throw new IllegalArgumentException(FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context) + " is invalid.");
         }
         return hash;
     }

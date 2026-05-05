@@ -22,7 +22,7 @@ final class FolioleCompanionContentBlobStore {
     }
 
     static JSObject syncBlob(Context context, SQLiteDatabase database, String hash, String url, JSONObject headers) throws Exception {
-        String normalizedHash = requireHash(hash);
+        String normalizedHash = requireHash(context, hash);
         if (hasCachedBlobData(context, database, normalizedHash)) {
             return markCached(context, database, normalizedHash);
         }
@@ -32,7 +32,10 @@ final class FolioleCompanionContentBlobStore {
             if (!"none".equals(manifest.compression)) {
                 throw new IllegalStateException("Unsupported content blob compression.");
             }
-            byte[] bytes = FolioleCompanionDesktopHttpClient.requestBytes(requireText(url, "url"), headers);
+            byte[] bytes = FolioleCompanionDesktopHttpClient.requestBytes(
+                requireText(url, FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
+                headers
+            );
             String actualHash = sha256(bytes);
             if (!normalizedHash.equals(actualHash) || !manifest.matches(bytes.length, actualHash)) {
                 throw new IllegalStateException("Content blob hash mismatch.");
@@ -148,10 +151,10 @@ final class FolioleCompanionContentBlobStore {
         return FolioleCompanionResourceMutationRules.contentBlobString(context, key);
     }
 
-    private static String requireHash(String value) {
-        String hash = requireText(value, "hash").toLowerCase();
+    private static String requireHash(Context context, String value) throws Exception {
+        String hash = requireText(value, FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)).toLowerCase();
         if (!hash.matches("[a-f0-9]{64}")) {
-            throw new IllegalArgumentException("hash is invalid.");
+            throw new IllegalArgumentException(FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context) + " is invalid.");
         }
         return hash;
     }

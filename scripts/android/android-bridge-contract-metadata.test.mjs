@@ -34,6 +34,13 @@ const PAIRING_STORE = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingStore.java'
 );
+const RESOURCE_STORE_SOURCES = [
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceMissingStore.java',
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobBatchStore.java',
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobBatchManifestStore.java',
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobMultipartBatch.java',
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobStore.java'
+].map((sourcePath) => path.join(REPO_ROOT, sourcePath));
 
 describe('Android bridge contract metadata', () => {
   it('generates resource plugin request contract keys', async () => {
@@ -101,6 +108,19 @@ describe('Android bridge contract metadata', () => {
     expect(source).not.toContain('optJSONObject("headers"');
     expect(source).not.toContain('optJSONArray("resources"');
     expect(source).not.toContain('getInt("limit"');
+  });
+
+  it('keeps resource store validation labels wired to bridge contract keys', async () => {
+    const combinedSource = (await Promise.all(RESOURCE_STORE_SOURCES.map((sourcePath) => readFile(sourcePath, 'utf8'))))
+      .join('\n');
+
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)');
+    expect(combinedSource).not.toContain('requireText(attachmentId, "attachment_id"');
+    expect(combinedSource).not.toContain('requireText(url, "url"');
+    expect(combinedSource).not.toContain('requireText(value, "hash"');
+    expect(combinedSource).not.toContain('IllegalArgumentException("hash is invalid."');
   });
 
   it('keeps pairing Java wired to generated bridge contract keys', async () => {
