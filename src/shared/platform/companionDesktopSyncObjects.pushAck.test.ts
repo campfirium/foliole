@@ -100,7 +100,7 @@ function createLocalViewStateChange(): NativeSyncStateObjectRecord {
   };
 }
 
-function createLocalReviewLog(): NativeSyncReviewLogRecord {
+function createLocalReviewLog(overrides: Partial<NativeSyncReviewLogRecord> = {}): NativeSyncReviewLogRecord {
   return {
     device_id: 'android-test-device',
     difficulty_after: 3,
@@ -114,7 +114,8 @@ function createLocalReviewLog(): NativeSyncReviewLogRecord {
     reviewed_at: '2026-04-25T00:05:00.000Z',
     scheduler_version: 'ts-fsrs@4',
     stability_after: 4,
-    stability_before: 3
+    stability_before: 3,
+    ...overrides
   };
 }
 
@@ -215,6 +216,26 @@ describe('companion desktop sync push acknowledgements', () => {
       change_id: 'op-1',
       created_at: '2026-04-25T00:05:00.000Z'
     });
+  });
+
+  it('does not advance the review log cursor past earlier unconfirmed ops', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
+    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([
+      createLocalReviewLog({ op_id: 'op-1', reviewed_at: '2026-04-25T00:05:00.000Z' }),
+      createLocalReviewLog({ id: 'review-op-2', op_id: 'op-2', reviewed_at: '2026-04-25T00:06:00.000Z' })
+    ]);
+    syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
+      applied_blob_count: 0,
+      applied_object_count: 1,
+      applied_review_op_ids: ['op-2'],
+      to_state_seq: 10
+    });
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.appliedReviewOpIds).toEqual(['op-2']);
+    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
   });
 
   it('surfaces push failures while still applying the structure pack', async () => {
