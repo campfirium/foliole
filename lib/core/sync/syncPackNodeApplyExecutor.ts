@@ -13,7 +13,10 @@ import {
 import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocumentsExecutor.js';
 import { clearConfirmedSyncPushAcksWithDbPort } from './syncPackPushAcksExecutor.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
-import { applySyncPackSettingObjectsWithDbPort } from './syncPackSyncObjectsExecutor.js';
+import {
+  applySyncPackMetadataObjectsWithDbPort,
+  applySyncPackSettingObjectsWithDbPort
+} from './syncPackSyncObjectsExecutor.js';
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
@@ -42,9 +45,10 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     await applySyncPackNodesWithDbPort(port, options);
     await applySyncPackExternalDocumentsWithDbPort(port, options);
     await applySyncPackSettingObjectsWithDbPort(port, options);
+    await applySyncPackMetadataObjectsWithDbPort(port, options);
     appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
       ...options,
-      objectTypes: ['node', 'external_document', 'setting']
+      objectTypes: ['node', 'external_document', 'setting', 'import_source', 'external_folder']
     });
   }
   await clearConfirmedSyncPushAcksWithDbPort(port, {

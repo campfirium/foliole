@@ -2,6 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import {
+  applySyncPackMetadataObjectsWithDbPort,
   applySyncPackSettingObjectsWithDbPort,
   isConsumableSyncPackSyncObject,
   loadSyncPackSyncObjectsWithDbPort
@@ -79,6 +80,43 @@ it('applies setting payload records from sync objects', async () => {
     ],
     sql: expect.stringContaining('INSERT INTO setting_records')
   }]);
+});
+
+it('applies import source and external folder payload records', async () => {
+  const runs: Array<{ params: unknown[]; sql: string }> = [];
+  const port = {
+    query: vi.fn(async () => [
+      {
+        content_hash: 'hash-source',
+        deleted_at: null,
+        object_id: 'source-1',
+        object_type: 'import_source',
+        payload_json: JSON.stringify({ provider: 'readwise', source_name: 'Library' }),
+        updated_at: '2026-05-04T02:00:00.000Z'
+      },
+      {
+        content_hash: 'hash-folder',
+        deleted_at: null,
+        object_id: 'folder-1',
+        object_type: 'external_folder',
+        payload_json: JSON.stringify({ folder_path: '/library', document_count: 3 }),
+        updated_at: '2026-05-04T02:01:00.000Z'
+      }
+    ]),
+    run: vi.fn(async (sql: string, params: unknown[] = []) => {
+      runs.push({ params, sql });
+      return { changes: 1, lastInsertRowId: null };
+    })
+  } as unknown as DbPort;
+
+  await expect(applySyncPackMetadataObjectsWithDbPort(port, {
+    deviceId: 'device-1',
+    incomingAlias: 'incoming'
+  })).resolves.toBe(2);
+  expect(runs[0]?.sql).toContain('INSERT INTO import_sources');
+  expect(runs[0]?.params.slice(0, 4)).toEqual(['source-1', 'readwise', 'unknown', 'Library']);
+  expect(runs[1]?.sql).toContain('INSERT INTO external_search_folders');
+  expect(runs[1]?.params.slice(0, 3)).toEqual(['folder-1', '/library', 'document_relative_first_then_fixed_root']);
 });
 
 function syncObjectRow(objectType: string, objectId: string) {
