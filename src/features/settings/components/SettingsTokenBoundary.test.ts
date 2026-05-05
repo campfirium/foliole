@@ -14,6 +14,7 @@ const SETTINGS_FILES = [
   'src/features/settings/components/sections/NodeListRowSpacingSection.tsx',
   'src/features/settings/components/sections/SettingsAppearanceSection.tsx',
   'src/features/settings/components/sections/SettingsExternalSearchSection.tsx',
+  'src/features/settings/components/sections/SettingsExternalSearchSectionParts.tsx',
   'src/features/settings/components/sections/WorkspaceSurfaceAutomaticPaletteCard.tsx',
   'src/features/settings/components/sections/WorkspaceSurfaceAutomaticSeedPopover.tsx',
   'src/features/settings/components/sections/WorkspaceSurfaceColorEditorFields.tsx',

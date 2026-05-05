@@ -41,6 +41,14 @@ export { ToolbarActionGroup } from './ToolbarActionGroup';
 export { AppTooltip, AppTooltipContent, AppTooltipPortal, AppTooltipProvider, AppTooltipTrigger } from './Tooltip';
 export { appFloatingSurfaceClassName } from './FloatingSurface';
 export {
+  SETTINGS_ACTION_TABLE_EXTERNAL_LIBRARY_COLUMNS_CLASS_NAME,
+  SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME,
+  settingsActionTableAddButtonClassName,
+  settingsActionTableClassName,
+  settingsActionTableHeaderClassName,
+  settingsActionTableRowClassName
+} from './SettingsActionTable';
+export {
   SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_BUTTON_WIDTH_CLASS_NAME,
@@ -56,12 +64,7 @@ export {
   SETTINGS_SELECT_WIDTH_CLASS_NAME,
   SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME,
   SETTINGS_ACTION_ROW_CLASS_NAME,
-  SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME,
   SETTINGS_HOTKEY_LIST_COLUMNS_CLASS_NAME,
-  settingsActionTableAddButtonClassName,
-  settingsActionTableClassName,
-  settingsActionTableHeaderClassName,
-  settingsActionTableRowClassName,
   settingsHotkeyChipClassName,
   settingsHotkeyChipClearClassName,
   settingsHotkeyRowClassName,

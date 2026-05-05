@@ -35,35 +35,9 @@ export const SETTINGS_PATH_RESET_BUTTON_CLASS_NAME = 'size-9 rounded-sm';
 export const SETTINGS_ACTION_ROW_CLASS_NAME = 'grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-4 max-[1080px]:grid-cols-1';
 export const SETTINGS_SELECT_WIDTH_CLASS_NAME = 'w-auto max-w-[260px]';
 export const SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME = 'xl:grid-cols-[minmax(0,1fr)_300px]';
-export const SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME = '[grid-template-columns:minmax(160px,0.9fr)_minmax(140px,0.75fr)_minmax(108px,0.48fr)_minmax(104px,0.45fr)_minmax(96px,0.42fr)_36px]';
 export const SETTINGS_HOTKEY_LIST_COLUMNS_CLASS_NAME = 'grid-cols-[minmax(0,1fr)_auto]';
 
 export type SettingsHotkeyChipState = 'assigned' | 'empty' | 'recording';
-
-export function settingsActionTableClassName(className?: string) {
-  return cn('w-full min-w-0 overflow-hidden rounded-md bg-settings-group', className);
-}
-
-export function settingsActionTableHeaderClassName(columnsClassName: string, className?: string) {
-  return cn(
-    'grid gap-3 border-b border-settings-divider px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/45',
-    columnsClassName,
-    className
-  );
-}
-
-export function settingsActionTableRowClassName(columnsClassName: string, className?: string) {
-  return cn('grid items-center gap-3 px-4 py-2.5', columnsClassName, className);
-}
-
-export function settingsActionTableAddButtonClassName(className?: string) {
-  return cn(
-    'col-span-full flex h-9 items-center justify-center gap-2 rounded-md border border-dashed border-settings-control-border bg-transparent text-sm text-foreground/60 transition-colors',
-    'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
-    className
-  );
-}
-
 
 export function settingsHotkeySearchPanelClassName(className?: string) {
   return cn('border-b border-settings-divider/55 px-5 py-4', className);
@@ -74,7 +48,7 @@ export function settingsHotkeySearchHeaderClassName(className?: string) {
 }
 
 export function settingsHotkeySearchFieldClassName(className?: string) {
-  return settingsFieldClassName('h-9 w-full pl-9 pr-10', className);
+  return settingsFieldClassName(cn('h-9 w-full pl-9 pr-10', className));
 }
 
 export function settingsHotkeyChipClassName(state: SettingsHotkeyChipState, className?: string) {

@@ -9,23 +9,24 @@ interface StatusBadgeProps {
 
 function toneClass(tone: StatusTone) {
   if (tone === 'info') {
-    return 'border-border-strong bg-foreground/[0.05] text-foreground/80';
+    return 'text-foreground/65';
   }
   if (tone === 'success') {
-    return 'border-emerald-300 bg-emerald-100/70 text-emerald-500';
+    return 'text-emerald-700';
   }
   if (tone === 'warning') {
-    return 'border-amber-300 bg-amber-100/70 text-amber-600';
+    return 'text-amber-700';
   }
   if (tone === 'error') {
-    return 'border-rose-300 bg-rose-100/70 text-rose-500';
+    return 'text-rose-700';
   }
-  return 'border-border bg-secondary/60 text-foreground/70';
+  return 'text-foreground/60';
 }
 
 export function AppStatusBadge({ label, tone = 'neutral' }: StatusBadgeProps) {
   return (
-    <span className={cn('inline-flex min-h-6 items-center border px-2 text-xs font-semibold leading-none', toneClass(tone))}>
+    <span className={cn('inline-flex min-h-6 items-center gap-1.5 text-sm font-medium leading-none', toneClass(tone))}>
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current opacity-80" />
       {label}
     </span>
   );
