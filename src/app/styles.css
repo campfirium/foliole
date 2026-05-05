@@ -125,7 +125,57 @@ body {
 }
 
 .panel-editor .ui-panel-header {
+  align-items: center;
+  gap: var(--space-8);
   padding-inline: calc((100% - min(100%, var(--document-max-width))) / 2 + var(--space-16));
+}
+
+.node-breadcrumbs {
+  align-items: center;
+  display: inline-flex;
+  flex: 1;
+  gap: var(--space-6);
+  justify-content: flex-end;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.node-breadcrumbs-segment {
+  color: var(--color-text-secondary);
+  flex: 0 1 auto;
+  font-size: var(--font-size-12);
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-breadcrumbs-segment::after {
+  color: var(--color-text-secondary);
+  content: '/';
+  margin-inline: var(--space-6);
+}
+
+.node-breadcrumbs-segment:last-child::after {
+  content: '';
+  margin: 0;
+}
+
+.node-breadcrumbs-button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.node-breadcrumbs-button[aria-current='page'] {
+  color: var(--color-text-primary);
+  cursor: default;
+  font-weight: 700;
+}
+
+.node-breadcrumbs-button:hover:not([aria-current='page']) {
+  color: var(--color-text-primary);
 }
 
 .editor-body {

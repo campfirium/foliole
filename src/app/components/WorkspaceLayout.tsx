@@ -7,6 +7,7 @@ import type {
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
+import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { Panel } from '../../shared/ui';
@@ -75,6 +76,7 @@ export function WorkspaceLayout({
           onSplitterPointerDown={onSplitterPointerDown}
         />
         <DocumentPanelSection
+          activeNodeId={activeNodeId}
           documentMaxWidth={documentMaxWidth}
           editorContent={editorContent}
           editorNodeId={editorNodeId}
@@ -83,7 +85,9 @@ export function WorkspaceLayout({
           onEditorChange={onEditorChange}
           onEditorReady={onEditorReady}
           onResetLayout={onResetLayout}
+          onSelectNode={onSelectNode}
           onStartDocumentResize={onStartDocumentResize}
+          nodesById={nodesById}
         />
       </div>
     </main>
@@ -114,6 +118,7 @@ function ListSplitter({ listWidth, onResetLayout, onSplitterKeyDown, onSplitterP
 }
 
 interface DocumentPanelSectionProps {
+  activeNodeId: string | null;
   documentMaxWidth: number;
   editorContent: string;
   editorNodeId: string | null;
@@ -122,13 +127,16 @@ interface DocumentPanelSectionProps {
   onEditorChange: (content: string) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onResetLayout: () => void;
+  onSelectNode: (nodeId: string) => void;
   onStartDocumentResize: (
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
+  nodesById: Record<string, Node>;
 }
 
 function DocumentPanelSection({
+  activeNodeId,
   documentMaxWidth,
   editorContent,
   editorNodeId,
@@ -137,7 +145,9 @@ function DocumentPanelSection({
   onEditorChange,
   onEditorReady,
   onResetLayout,
-  onStartDocumentResize
+  onSelectNode,
+  onStartDocumentResize,
+  nodesById
 }: DocumentPanelSectionProps) {
   const documentLayoutStyle = {
     '--document-max-width': `${documentMaxWidth}px`
@@ -147,6 +157,7 @@ function DocumentPanelSection({
     <section aria-label="Document area" className="panel-document-shell">
       <Panel
         ariaLabel="Document panel"
+        actions={<NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />}
         bodyClassName="editor-body"
         className="panel-editor"
         style={documentLayoutStyle}

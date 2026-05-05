@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
 
 import { App } from '../app/App';
@@ -98,6 +98,48 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'QA 2' }));
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
     expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [[...]]');
+  });
+
+  it('renders breadcrumbs in document header and supports ancestor jump', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const parentNode: Node = {
+      id: 'node-2',
+      parentNodeId: 'node-1',
+      title: 'Parent',
+      content: '# Parent',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    const childNode: Node = {
+      id: 'node-3',
+      parentNodeId: 'node-2',
+      title: 'Child',
+      content: '# Child',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-3',
+      nodeOrder: ['node-1', 'node-2', 'node-3'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': parentNode,
+        'node-3': childNode
+      }
+    }));
+
+    render(<App />);
+
+    const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
+    expect(nav).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Parent' })).toBeInTheDocument();
+    fireEvent.click(within(nav).getByRole('button', { name: 'Parent' }));
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   });
 
   it('updates active node content from editor changes', () => {
