@@ -1,14 +1,14 @@
 import { collectNodeAncestorIds, type NodeTreeRow } from './nodeTree';
-import type { Node } from './nodeTypes';
+import type { WorkspaceListNodesById } from './workspaceListNode';
 
 interface DefaultCollapsedNodeIdsInput {
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   rows: NodeTreeRow[];
 }
 
 interface AutoExpandedNodeIdsInput {
   activeNodeId: string | null;
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   parentById: Record<string, string | null>;
   rows: NodeTreeRow[];
 }
@@ -52,7 +52,7 @@ export function collectAutoExpandedNodeIds({
 function hasDerivedChildren(
   nodeId: string,
   rows: NodeTreeRow[],
-  nodesById: Record<string, Node>
+  nodesById: WorkspaceListNodesById
 ) {
   return rows.some((row) => {
     if (row.node.parentNodeId !== nodeId) {
@@ -65,7 +65,7 @@ function hasDerivedChildren(
 function hasNonDerivedChildren(
   nodeId: string,
   rows: NodeTreeRow[],
-  nodesById: Record<string, Node>
+  nodesById: WorkspaceListNodesById
 ) {
   return rows.some((row) => {
     if (row.node.parentNodeId !== nodeId) {

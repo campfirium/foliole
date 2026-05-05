@@ -5,7 +5,7 @@ import {
   buildDefaultCollapsedNodeIds,
   collectAutoExpandedNodeIds
 } from '../model/nodeTreeAutoCollapse';
-import type { Node } from '../model/nodeTypes';
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 export interface CollapsedNodeState {
   collapsedNoteNodeIds: ReadonlySet<string>;
@@ -18,7 +18,7 @@ export interface CollapsedNodeState {
 
 interface UseCollapsedNodeStateInput {
   activeNodeId: string | null;
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   noteParentById: Record<string, string | null>;
   noteRowsAll: NodeTreeRow[];
   trashRowsAll: NodeTreeRow[];
@@ -146,7 +146,7 @@ function useNoteManualCollapseState(noteCollapsibleNodeIds: ReadonlySet<string>)
 
 function useAutoExpandActiveNodePath(
   activeNodeId: string | null,
-  nodesById: Record<string, Node>,
+  nodesById: WorkspaceListNodesById,
   noteParentById: Record<string, string | null>,
   noteRowsAll: NodeTreeRow[],
   setManualCollapsedNoteNodeIdList: Dispatch<SetStateAction<string[]>>,

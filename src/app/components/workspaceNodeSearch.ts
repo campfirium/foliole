@@ -1,5 +1,5 @@
 import { buildNodeBreadcrumbs } from '../../features/nodes/model/nodeBreadcrumbs';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 
 export interface WorkspaceNodeSearchResult {
   id: string;
@@ -18,7 +18,7 @@ function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-function buildNodePathLabel(node: Node, nodesById: Record<string, Node>) {
+function buildNodePathLabel(node: WorkspaceListNode, nodesById: Record<string, WorkspaceListNode>) {
   const breadcrumbItems = buildNodeBreadcrumbs(node.parentNodeId, nodesById);
   if (!breadcrumbItems.length) {
     return 'Top level';
@@ -26,7 +26,7 @@ function buildNodePathLabel(node: Node, nodesById: Record<string, Node>) {
   return breadcrumbItems.map((item) => item.title.trim() || 'Untitled').join(' / ');
 }
 
-function buildNodeKeywords(node: Node) {
+function buildNodeKeywords(node: WorkspaceListNode) {
   return node.specialKind === 'inbox' ? ['inbox'] : [];
 }
 
@@ -76,14 +76,14 @@ function resolveQueryScore(input: {
 
 export function buildNodeSearchResults(
   nodeOrder: string[],
-  nodesById: Record<string, Node | undefined>,
+  nodesById: Record<string, WorkspaceListNode | undefined>,
   recentNodeIds: string[],
   trashedNodeIds: string[],
   query: string
 ): WorkspaceNodeSearchResult[] {
   const normalizedQuery = query.trim().toLowerCase();
   const availableNodesById = Object.fromEntries(
-    Object.entries(nodesById).filter((entry): entry is [string, Node] => Boolean(entry[1]))
+    Object.entries(nodesById).filter((entry): entry is [string, WorkspaceListNode] => Boolean(entry[1]))
   );
   const trashedNodeSet = new Set(trashedNodeIds);
   const recentIndexById = new Map(recentNodeIds.map((nodeId, index) => [nodeId, index]));

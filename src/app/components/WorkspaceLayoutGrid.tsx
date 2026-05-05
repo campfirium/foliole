@@ -1,4 +1,7 @@
+import { useMemo } from 'react';
+
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
+import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
@@ -58,13 +61,15 @@ function ListStudyStatusBar({
   );
 }
 function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: string) => void; props: WorkspaceLayoutProps }) {
+  const listNodesById = useMemo(() => toWorkspaceListNodesById(props.nodesById), [props.nodesById]);
+
   return (
     <div className="flex min-h-0 flex-col overflow-hidden bg-bg-panel text-foreground">
       <NodeListTree
         activeNodeId={props.activeNodeId}
         isTrashViewOpen={props.isTrashViewOpen}
         nodeOrder={props.nodeOrder}
-        nodesById={props.nodesById}
+        nodesById={listNodesById}
         onOpenMoveToNode={props.onOpenMoveToNode}
         onOpenNotesView={props.onOpenNotesView}
         onSelectNode={onSelectNode}

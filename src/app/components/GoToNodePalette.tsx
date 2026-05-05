@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react';
 
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { buildNodeSearchResults } from './workspaceNodeSearch';
@@ -11,7 +11,7 @@ interface GoToNodePaletteProps {
   isOpen: boolean;
   inputLabel?: string;
   nodeOrder: string[];
-  nodesById: Record<string, Node | undefined>;
+  nodesById: Record<string, WorkspaceListNode | undefined>;
   onClose: () => void;
   onOpenNode?: (nodeId: string) => void;
   onSelectNode?: (nodeId: string) => void;

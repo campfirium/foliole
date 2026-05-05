@@ -2,10 +2,12 @@ import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent
 
 import { AppEmptyState } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
-import { isFsrsReviewItemNode } from '../../review/model/reviewItemKind';
 import type { NodeTreeRow } from '../model/nodeTree';
-import type { Node } from '../model/nodeTypes';
 import { isInboxNode } from '../model/specialNodes';
+import {
+  isFsrsWorkspaceListNode,
+  type WorkspaceListNodesById
+} from '../model/workspaceListNode';
 
 import { getDismissedFadeOpacity, shouldFadeDismissedWholeRow } from './nodeIconAppearanceSettings';
 import type { useNodeListDragController } from './NodeListTreeDrag';
@@ -19,7 +21,7 @@ interface NodeListRowsProps {
   collapsedNodeIds: ReadonlySet<string>;
   drag: ReturnType<typeof useNodeListDragController>;
   isTrashViewOpen: boolean;
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onRename: (nodeId: string, title: string) => void;
@@ -39,7 +41,7 @@ function renderNodeListRow(
   const node = props.nodesById[row.node.id];
   const isInbox = isInboxNode(node);
   const isDerivedNode = Boolean(node?.anchorLink);
-  const isReviewCard = isFsrsReviewItemNode(node);
+  const isReviewCard = isFsrsWorkspaceListNode(node);
   const nodeIconState = resolveNodeTreeRowIconState({
     isDismissed: node?.reading?.state === 'dismissed',
     hasEnteredSchedule: isReviewCard

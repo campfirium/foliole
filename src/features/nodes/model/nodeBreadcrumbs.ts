@@ -1,4 +1,4 @@
-import type { Node } from './nodeTypes';
+import type { WorkspaceListNode, WorkspaceListNodesById } from './workspaceListNode';
 
 export interface NodeBreadcrumbItem {
   id: string;
@@ -8,12 +8,15 @@ export interface NodeBreadcrumbItem {
 
 const DEFAULT_BREADCRUMB_MAX_ITEMS = 3;
 
-function collectNodePath(nodeId: string | null, nodesById: Record<string, Node>): Node[] {
+function collectNodePath(
+  nodeId: string | null,
+  nodesById: WorkspaceListNodesById
+): WorkspaceListNode[] {
   if (!nodeId) {
     return [];
   }
 
-  const path: Node[] = [];
+  const path: WorkspaceListNode[] = [];
   const visited = new Set<string>();
   let cursorId: string | null = nodeId;
 
@@ -23,7 +26,7 @@ function collectNodePath(nodeId: string | null, nodesById: Record<string, Node>)
     }
     visited.add(cursorId);
 
-    const cursor: Node | undefined = nodesById[cursorId];
+    const cursor: WorkspaceListNode | undefined = nodesById[cursorId];
     if (!cursor) {
       break;
     }
@@ -45,7 +48,7 @@ function createEllipsisItem(): NodeBreadcrumbItem {
 
 export function buildNodeBreadcrumbs(
   nodeId: string | null,
-  nodesById: Record<string, Node>,
+  nodesById: WorkspaceListNodesById,
   maxItems = DEFAULT_BREADCRUMB_MAX_ITEMS
 ): NodeBreadcrumbItem[] {
   const path = collectNodePath(nodeId, nodesById);

@@ -6,15 +6,15 @@ import {
   buildVisibleNodeTreeRows,
   collectNodeAncestorIds
 } from './nodeTree';
-import type { Node } from './nodeTypes';
+import type { WorkspaceListNode } from './workspaceListNode';
 
-function createNode(id: string, title: string, parentNodeId: string | null): Node {
+function createNode(id: string, title: string, parentNodeId: string | null): WorkspaceListNode {
   return {
     id,
     parentNodeId,
     title,
-    content: title,
-    reveal: null,
+    hasContent: true,
+    hasReveal: false,
     review: null,
     createdAt: '2026-02-25T00:00:00.000Z',
     updatedAt: '2026-02-25T00:00:00.000Z'
@@ -24,7 +24,7 @@ function createNode(id: string, title: string, parentNodeId: string | null): Nod
 describe('buildNodeTreeRows', () => {
   it('returns depth-first rows following node order', () => {
     const nodeOrder = ['root-1', 'child-1', 'child-2', 'root-2'];
-    const nodesById: Record<string, Node> = {
+    const nodesById: Record<string, WorkspaceListNode> = {
       'root-1': createNode('root-1', 'Root 1', null),
       'child-1': createNode('child-1', 'Child 1', 'root-1'),
       'child-2': createNode('child-2', 'Child 2', 'root-1'),
@@ -45,7 +45,7 @@ describe('buildNodeTreeRows', () => {
 
   it('counts all descendants for each row', () => {
     const nodeOrder = ['root', 'child-1', 'grandchild-1', 'child-2'];
-    const nodesById: Record<string, Node> = {
+    const nodesById: Record<string, WorkspaceListNode> = {
       root: createNode('root', 'Root', null),
       'child-1': createNode('child-1', 'Child 1', 'root'),
       'grandchild-1': createNode('grandchild-1', 'Grandchild 1', 'child-1'),
@@ -62,7 +62,7 @@ describe('buildNodeTreeRows', () => {
 
   it('treats missing parent references as root nodes', () => {
     const nodeOrder = ['orphan', 'root'];
-    const nodesById: Record<string, Node> = {
+    const nodesById: Record<string, WorkspaceListNode> = {
       orphan: createNode('orphan', 'Orphan', 'missing'),
       root: createNode('root', 'Root', null)
     };
@@ -76,7 +76,7 @@ describe('buildNodeTreeRows', () => {
 describe('buildVisibleNodeTreeRows', () => {
   it('hides descendant rows for collapsed nodes', () => {
     const nodeOrder = ['root', 'child-1', 'grandchild-1', 'child-2'];
-    const nodesById: Record<string, Node> = {
+    const nodesById: Record<string, WorkspaceListNode> = {
       root: createNode('root', 'Root', null),
       'child-1': createNode('child-1', 'Child 1', 'root'),
       'grandchild-1': createNode('grandchild-1', 'Grandchild 1', 'child-1'),
@@ -91,7 +91,7 @@ describe('buildVisibleNodeTreeRows', () => {
 
   it('keeps siblings visible when collapsing one branch', () => {
     const nodeOrder = ['root', 'child-1', 'grandchild-1', 'child-2'];
-    const nodesById: Record<string, Node> = {
+    const nodesById: Record<string, WorkspaceListNode> = {
       root: createNode('root', 'Root', null),
       'child-1': createNode('child-1', 'Child 1', 'root'),
       'grandchild-1': createNode('grandchild-1', 'Grandchild 1', 'child-1'),
@@ -108,7 +108,7 @@ describe('buildVisibleNodeTreeRows', () => {
 describe('collectNodeAncestorIds', () => {
   it('returns parent chain from nearest parent to root', () => {
     const nodeOrder = ['root', 'child', 'grandchild'];
-    const nodesById: Record<string, Node> = {
+    const nodesById: Record<string, WorkspaceListNode> = {
       root: createNode('root', 'Root', null),
       child: createNode('child', 'Child', 'root'),
       grandchild: createNode('grandchild', 'Grandchild', 'child')

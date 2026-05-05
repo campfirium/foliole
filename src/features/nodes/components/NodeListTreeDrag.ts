@@ -1,6 +1,6 @@
 import { useMemo, useState, type DragEvent as ReactDragEvent } from 'react';
 
-import type { Node } from '../model/nodeTypes';
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 const DROP_INTENT_EDGE_RATIO = 0.25;
 
@@ -10,7 +10,7 @@ type MoveIntent = DropIntent | 'root';
 interface UseNodeListDragControllerInput {
   isTrashViewOpen: boolean;
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean;
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   noteRowIds: string[];
   selectedNodeIds: string[];
 }
@@ -73,7 +73,7 @@ function resolveDropIntent(event: ReactDragEvent<HTMLElement>): DropIntent {
 function isInvalidDropTarget(
   targetNodeId: string,
   sourceNodeIds: string[],
-  nodesById: Record<string, Node>
+  nodesById: WorkspaceListNodesById
 ) {
   const sourceSet = new Set(sourceNodeIds);
   if (sourceSet.has(targetNodeId)) {
@@ -131,7 +131,7 @@ function createRootDropHandler(
 
 function createNodeDragOverHandler(
   isTrashViewOpen: boolean,
-  nodesById: Record<string, Node>,
+  nodesById: WorkspaceListNodesById,
   sourceNodeIds: string[],
   setState: (updater: (prev: DragState) => DragState) => void
 ) {
@@ -159,7 +159,7 @@ function createNodeDragOverHandler(
 
 function createDragStartHandler(
   isTrashViewOpen: boolean,
-  nodesById: Record<string, Node>,
+  nodesById: WorkspaceListNodesById,
   noteRowIds: string[],
   selectedNodeIds: string[],
   setState: (next: DragState) => void

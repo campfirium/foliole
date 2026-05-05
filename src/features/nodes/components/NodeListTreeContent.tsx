@@ -2,7 +2,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
-import type { Node } from '../model/nodeTypes';
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { NodeListHeader } from './NodeListHeader';
 import { resolveNodeListRowGap } from './nodeListRowSpacingSettings';
@@ -31,7 +31,7 @@ interface NodeListPanelProps {
     targetNodeId: string | null,
     intent: 'before' | 'after' | 'child' | 'root'
   ) => boolean;
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   noteRowIds: string[];
   onOpenNotesView: () => void;
   onRenameNode: (nodeId: string, title: string) => void;
@@ -161,7 +161,7 @@ interface NodeListTreeContentProps {
     targetNodeId: string | null,
     intent: 'before' | 'after' | 'child' | 'root'
   ) => boolean;
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onOpenMoveToNode: () => void;

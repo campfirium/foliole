@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { onWindowKeydown } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
 import { buildNodeTree } from '../model/nodeTree';
-import type { Node } from '../model/nodeTypes';
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { useCollapsedNodeState } from './NodeListCollapseState';
 import { getNodeListRowSpacing } from './nodeListRowSpacingSettings';
@@ -16,7 +16,7 @@ interface NodeListTreeProps {
   activeNodeId: string | null;
   isTrashViewOpen: boolean;
   nodeOrder: string[];
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onOpenNotesView: () => void;
   onSelectNode: (nodeId: string) => void;
@@ -52,7 +52,7 @@ function useNodeWorkspaceActions() {
 
 function useNodeListTreeData(
   nodeOrder: string[],
-  nodesById: Record<string, Node>,
+  nodesById: WorkspaceListNodesById,
   trashedNodeIds: string[]
 ): NodeListTreeData {
   const visibleNodeOrder = useMemo(

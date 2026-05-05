@@ -1,13 +1,13 @@
 import { useState } from 'react';
 
 import { buildNodeBreadcrumbs } from '../model/nodeBreadcrumbs';
-import type { Node } from '../model/nodeTypes';
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { AppBreadcrumb } from '@/shared/ui';
 
 interface NodeBreadcrumbsProps {
   activeNodeId: string | null;
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   onSelectNode: (nodeId: string) => void;
 }
 

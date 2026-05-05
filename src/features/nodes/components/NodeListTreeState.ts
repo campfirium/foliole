@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTree, buildVisibleNodeTreeRows, type NodeTreeRow } from '../model/nodeTree';
-import type { Node } from '../model/nodeTypes';
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 export interface NodeSelectModifiers {
   ctrlKey?: boolean;
@@ -38,7 +38,7 @@ export function collectRangeNodeIds(nodeIds: string[], anchorNodeId: string, tar
 export function useNodeListState(
   activeNodeId: string | null,
   nodeOrder: string[],
-  nodesById: Record<string, Node>,
+  nodesById: WorkspaceListNodesById,
   selectedTrashNodeId: string | null,
   collapsedNoteNodeIds: ReadonlySet<string>,
   collapsedTrashNodeIds: ReadonlySet<string>
@@ -89,7 +89,7 @@ export function useNodeListState(
 
 function useNodeListSelection(
   activeNodeId: string | null,
-  nodesById: Record<string, Node>,
+  nodesById: WorkspaceListNodesById,
   selectedTrashNodeId: string | null,
   trashedNodeIds: string[]
 ) {

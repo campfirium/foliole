@@ -1,10 +1,12 @@
+import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+
 import { buildGoToNodeState } from './appControllerHelpers';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 
 export interface AppGoToNodeState {
   isOpen: boolean;
   nodeOrder: string[];
-  nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById'];
+  nodesById: WorkspaceListNodesById;
   onClose: () => void;
   onOpenNode: (nodeId: string) => void;
   recentNodeIds: string[];

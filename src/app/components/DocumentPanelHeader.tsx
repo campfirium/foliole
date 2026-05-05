@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
+
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import {
   AppDropdownMenu,
@@ -86,6 +89,7 @@ export function DocumentPanelHeader({
   showSourceUpdateAction
 }: DocumentPanelHeaderProps) {
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
+  const listNodesById = useMemo(() => toWorkspaceListNodesById(nodesById), [nodesById]);
 
   return (
     <AppToolbar as="header" className="min-h-[40px] gap-2 px-3">
@@ -102,7 +106,7 @@ export function DocumentPanelHeader({
       </ToolbarActionGroup>
       <div className="min-w-0 flex-1">
         <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
-          <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
+          <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={listNodesById} onSelectNode={onSelectNode} />
         </div>
       </div>
       <ToolbarActionGroup ariaLabel="Document editor actions">

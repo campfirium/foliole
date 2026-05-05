@@ -1,5 +1,5 @@
-import type { Node } from '../model/nodeTypes';
 import { isInboxNode } from '../model/specialNodes';
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
 import { hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
@@ -14,7 +14,7 @@ interface NodeListTreeMenuProps {
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   dismissNode: (nodeId: string, now?: string) => boolean;
-  nodesById: Record<string, Node>;
+  nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   restoreNode: (nodeId: string) => void;

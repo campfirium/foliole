@@ -1,10 +1,10 @@
-import type { Node } from './nodeTypes';
+import type { WorkspaceListNode, WorkspaceListNodesById } from './workspaceListNode';
 
 export interface NodeTreeRow {
   descendantCount: number;
   depth: number;
   hasChildren: boolean;
-  node: Node;
+  node: WorkspaceListNode;
 }
 
 export interface NodeTreeModel {
@@ -12,7 +12,7 @@ export interface NodeTreeModel {
   rows: NodeTreeRow[];
 }
 
-function buildNodeRelationships(nodeOrder: string[], nodesById: Record<string, Node>) {
+function buildNodeRelationships(nodeOrder: string[], nodesById: WorkspaceListNodesById) {
   const knownIds = new Set(nodeOrder.filter((nodeId) => Boolean(nodesById[nodeId])));
   const childrenByParent = new Map<string | null, string[]>();
   const parentById: Record<string, string | null> = {};
@@ -61,7 +61,7 @@ function createDescendantCounter(childrenByParent: Map<string | null, string[]>)
 
 function createTreeRow(
   depth: number,
-  node: Node,
+  node: WorkspaceListNode,
   childrenByParent: Map<string | null, string[]>,
   countDescendants: (nodeId: string) => number
 ): NodeTreeRow {
@@ -73,7 +73,10 @@ function createTreeRow(
   };
 }
 
-export function buildNodeTree(nodeOrder: string[], nodesById: Record<string, Node>): NodeTreeModel {
+export function buildNodeTree(
+  nodeOrder: string[],
+  nodesById: WorkspaceListNodesById
+): NodeTreeModel {
   const { childrenByParent, parentById } = buildNodeRelationships(nodeOrder, nodesById);
   const rows: NodeTreeRow[] = [];
   const visited = new Set<string>();
@@ -117,7 +120,7 @@ export function buildNodeTree(nodeOrder: string[], nodesById: Record<string, Nod
 
 export function buildNodeTreeRows(
   nodeOrder: string[],
-  nodesById: Record<string, Node>
+  nodesById: WorkspaceListNodesById
 ): NodeTreeRow[] {
   return buildNodeTree(nodeOrder, nodesById).rows;
 }
