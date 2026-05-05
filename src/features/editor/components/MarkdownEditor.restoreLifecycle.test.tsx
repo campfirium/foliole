@@ -120,14 +120,7 @@ it('releases the previous restore lock when switching to another document after 
   await waitFor(() => {
     expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 51_200, to: 51_200 });
   });
-  expect(onBeginApplyingReadingPosition).toHaveBeenCalledWith(
-    { from: 48_000, to: 48_000 },
-    'editor-restore-selection'
-  );
-  expect(onBeginApplyingReadingPosition).toHaveBeenCalledWith(
-    { from: 51_200, to: 51_200 },
-    'editor-restore-selection'
-  );
+  expect(onBeginApplyingReadingPosition).not.toHaveBeenCalled();
 });
 
 it('applies the saved scroll position before an unmount while restore is pending', () => {

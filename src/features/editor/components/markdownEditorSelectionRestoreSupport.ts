@@ -10,6 +10,8 @@ import {
   createEditorRestoreTargetKey
 } from '../model/editorRestoreStateMachine';
 
+import { shouldNotifyReadingPositionApply } from './markdownEditorRestoreNotify';
+import { canRetryScrollOnlyRestore } from './markdownEditorRestoreRetry';
 import {
   beginRestoreSelection,
   scheduleRestoreSelectionCompletion
@@ -68,6 +70,7 @@ export function handleSelectionRestore(args: {
         : args.nodeViewState?.scrollTop,
     selectionKey: args.restoreTarget.selectionKey,
     selection: args.restoreTarget.selection,
+    shouldNotifyApplying: args.restoreTarget.shouldNotifyApplying,
     targetViewportMode: args.restoreTarget.targetViewportMode,
     targetViewportRatio: args.restoreTarget.targetViewportRatio,
     valueLength: args.valueLength
@@ -157,6 +160,7 @@ export function resolveRestoreTarget(args: {
     adapter: args.adapter,
     nodeId: args.nodeId,
     selection,
+    shouldNotifyApplying: shouldNotifyReadingPositionApply(args),
     targetViewportMode: args.readingTargetViewportMode,
     selectionKey,
     targetViewportRatio: args.readingTargetViewportRatio
@@ -211,12 +215,15 @@ function restoreEditorSelection(args: {
   restoreScrollTop: number | undefined;
   selectionKey: string;
   selection: NonNullable<EditorViewState['selection']> | null;
+  shouldNotifyApplying: boolean;
   targetViewportMode: EditorViewportMode | null | undefined;
   targetViewportRatio: number | null | undefined;
   valueLength: number;
 }) {
   markNodePositionRequested(args.nodeId);
-  args.beginApplyingReadingPosition?.(args.selection ?? { from: 0, to: 0 }, 'editor-restore-selection');
+  if (args.shouldNotifyApplying) {
+    args.beginApplyingReadingPosition?.(args.selection ?? { from: 0, to: 0 }, 'editor-restore-selection');
+  }
   pushDebugTrace('editor.restore-selection', {
     nodeId: args.nodeId,
     selection: args.selection,
@@ -246,18 +253,4 @@ function restoreEditorSelection(args: {
     valueLength: args.valueLength
   });
   scheduleRestoreSelectionCompletion(args);
-}
-
-function canRetryScrollOnlyRestore(
-  selection: EditorViewState['selection'],
-  restoreScrollTop: number | undefined,
-  activeRestoreValueLength: number,
-  valueLength: number
-) {
-  return (
-    (!selection || (selection.from === 0 && selection.to === 0)) &&
-    typeof restoreScrollTop === 'number' &&
-    restoreScrollTop > 0 &&
-    valueLength > activeRestoreValueLength
-  );
 }

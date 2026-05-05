@@ -98,6 +98,7 @@ export function beginRestoreSelection(args: {
     return;
   }
   args.adapter.restoreSelection(args.selection);
+  args.adapter.setSelection(args.selection);
   applyRestoreScrollTop(args.adapter, args.restoreScrollTop);
 }
 

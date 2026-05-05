@@ -30,6 +30,7 @@ export function usePendingRestoreKey(args: {
     const nodeChanged = args.previousNodeIdRef.current !== args.nodeId;
     const shouldStartRestore = shouldStartPendingRestore({
       lastRestoredSelectionKey: args.lastRestoredSelectionKeyRef.current,
+      nodeChanged,
       nextPendingRestoreSelectionKey,
       pendingRestoreSelectionKey: args.pendingRestoreSelectionKeyRef.current,
       previousReadingSelection: args.previousReadingSelectionRef.current,
@@ -46,7 +47,7 @@ export function usePendingRestoreKey(args: {
       args.lastRestoredSelectionKeyRef.current = null;
     }
     args.pendingRestoreSelectionKeyRef.current = nextPendingRestoreSelectionKey;
-    if (shouldStartRestore) {
+    if (shouldStartRestore && !nodeChanged) {
       args.beginApplyingReadingPosition?.(resolvePendingRestoreSelection(args), 'editor-restore-pending');
     }
   }, [args]);
@@ -54,6 +55,7 @@ export function usePendingRestoreKey(args: {
 
 function shouldStartPendingRestore(args: {
   lastRestoredSelectionKey: string | null;
+  nodeChanged: boolean;
   nextPendingRestoreSelectionKey: string | null;
   pendingRestoreSelectionKey: string | null;
   previousReadingSelection: EditorViewState['selection'] | null | undefined;
@@ -62,13 +64,19 @@ function shouldStartPendingRestore(args: {
   if (!args.nextPendingRestoreSelectionKey) {
     return false;
   }
+  if (args.nodeChanged) {
+    return true;
+  }
+  if (args.readingSelection && args.previousReadingSelection !== args.readingSelection) {
+    return true;
+  }
   if (
     args.pendingRestoreSelectionKey !== args.nextPendingRestoreSelectionKey &&
     args.lastRestoredSelectionKey !== args.nextPendingRestoreSelectionKey
   ) {
-    return true;
+    return !args.lastRestoredSelectionKey;
   }
-  return Boolean(args.readingSelection) && args.previousReadingSelection !== args.readingSelection;
+  return false;
 }
 
 function resolvePendingRestoreSelection(args: {
