@@ -12,8 +12,10 @@ export interface PdfSystemState {
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
   pdfSource: string;
+  positionY: number;
   rotation: number;
   totalPages: number | null;
+  zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }
 
@@ -24,8 +26,9 @@ export interface PdfSystemExternalApi {
   reportLoadSuccess: (numPages: number) => void;
   requestPageChange: (value: number) => void;
   rotateClockwise: () => void;
+  setFitWidth: () => void;
   setZoom: (value: number) => void;
-  setVisiblePage: (page: number) => void;
+  setVisibleLocation: (page: number, positionY: number) => void;
   stepPage: (direction: -1 | 1) => void;
   zoomIn: () => void;
   zoomOut: () => void;

@@ -13,6 +13,7 @@ interface PdfDocumentToolbarProps {
   onRotateClockwise: () => void;
   onSearchFocusChange: (focused: boolean) => void;
   onSearchQueryChange: (value: string) => void;
+  onSetFitWidth: () => void;
   onSetZoom: (value: number) => void;
   onToolbarActiveChange: (active: boolean) => void;
   onToolbarInteraction: () => void;
@@ -22,6 +23,7 @@ interface PdfDocumentToolbarProps {
   searchIndexingHint: string | null;
   searchQuery: string;
   searchStatus: PdfSearchStatus;
+  zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }
 
@@ -54,10 +56,12 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
       >
         <PdfZoomControls
           onRotateClockwise={props.onRotateClockwise}
+          onSetFitWidth={props.onSetFitWidth}
           onSetZoom={props.onSetZoom}
           onToolbarInteraction={props.onToolbarInteraction}
           onZoomIn={props.onZoomIn}
           onZoomOut={props.onZoomOut}
+          zoomMode={props.zoomMode}
           zoom={props.zoom}
         />
         <ToolbarDivider />

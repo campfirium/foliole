@@ -29,18 +29,25 @@ vi.mock('react-pdf', async () => {
       pageNumber,
       rotate,
       scale,
+      width,
+      onLoadSuccess,
       onGetTextSuccess
     }: {
+      onLoadSuccess?: (page: { getViewport: (input: { scale: number }) => { width: number } }) => void;
       onGetTextSuccess?: (payload: { items: Array<{ str: string }> }) => void;
       pageNumber: number;
       rotate?: number;
-      scale: number;
+      scale?: number;
+      width?: number;
     }) => {
       React.useEffect(() => {
+        onLoadSuccess?.({
+          getViewport: ({ scale: nextScale }: { scale: number }) => ({ width: 800 * nextScale })
+        });
         onGetTextSuccess?.({ items: [{ str: `keyword match on page ${pageNumber}` }] });
-      }, [onGetTextSuccess, pageNumber]);
+      }, [onGetTextSuccess, onLoadSuccess, pageNumber]);
       return (
-        <div data-page={pageNumber} data-rotate={rotate ?? 0} data-scale={scale} data-testid="pdf-document-page">
+        <div data-page={pageNumber} data-rotate={rotate ?? 0} data-scale={scale ?? 1} data-width={width ?? ''} data-testid="pdf-document-page">
           <div className="textLayer">
             <span role="presentation">{`keyword match on page ${pageNumber}`}</span>
           </div>

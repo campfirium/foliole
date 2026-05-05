@@ -126,8 +126,25 @@ it('writes pdf page and zoom through onPersistPdfViewState callback', async () =
 
   await waitFor(() =>
     expect(onPersistPdfViewState).toHaveBeenCalledWith({
-      scrollTop: 1,
+      scrollTop: 0,
       selection: { from: 1, to: 110 }
+    })
+  );
+});
+
+it('keeps fit width as the default persisted zoom mode for a new pdf', async () => {
+  const onPersistPdfViewState = vi.fn();
+
+  render(<DocumentPanelSection {...defaultProps} onPersistPdfViewState={onPersistPdfViewState} />);
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'PDF page' }), {
+    target: { value: '2' }
+  });
+
+  await waitFor(() =>
+    expect(onPersistPdfViewState).toHaveBeenCalledWith({
+      scrollTop: 0,
+      selection: { from: 2, to: 0 }
     })
   );
 });

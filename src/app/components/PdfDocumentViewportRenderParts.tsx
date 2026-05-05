@@ -19,6 +19,7 @@ interface PdfViewportToolbarProps {
   onSearchFocusChange: (focused: boolean) => void;
   onSearchQueryChange: (value: string) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
+  onSetFitWidth: () => void;
   onSetZoom: (value: number) => void;
   onToolbarActiveChange: (active: boolean) => void;
   onToolbarInteraction: () => void;
@@ -28,6 +29,7 @@ interface PdfViewportToolbarProps {
   searchIndexingHint: string | null;
   searchQuery: string;
   searchStatus: PdfSearchStatus;
+  zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }
 
@@ -46,6 +48,7 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
       onSearchFocusChange={props.onSearchFocusChange}
       searchIndexingHint={props.searchIndexingHint}
       onSearchQueryChange={props.onSearchQueryChange}
+      onSetFitWidth={props.onSetFitWidth}
       onSetZoom={props.onSetZoom}
       onToolbarActiveChange={props.onToolbarActiveChange}
       onToolbarInteraction={props.onToolbarInteraction}
@@ -54,12 +57,14 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
       page={props.page}
       searchQuery={props.searchQuery}
       searchStatus={props.searchStatus}
+      zoomMode={props.zoomMode}
       zoom={props.zoom}
     />
   );
 }
 
 interface PdfViewportDocumentProps {
+  fitWidthTargetWidth: number | null;
   highlightLocators: Array<{
     id: string;
     page: number;
@@ -69,6 +74,7 @@ interface PdfViewportDocumentProps {
   }>;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
+  onPageLoadSuccess: (pageNumber: number, baseWidth: number) => void;
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
@@ -77,6 +83,7 @@ interface PdfViewportDocumentProps {
   rotation: number;
   searchHighlights: PdfSearchVisualHighlight[];
   totalPages: number | null;
+  zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }
 
@@ -99,11 +106,14 @@ export function PdfViewportDocument(props: PdfViewportDocumentProps) {
         highlightLocators={props.highlightLocators}
         onTextContentLoad={props.onTextContentLoad}
         onTextLayerRender={props.onTextLayerRender}
+        onPageLoadSuccess={props.onPageLoadSuccess}
         pageElementsRef={props.pageElementsRef}
         pdfSelectionLocator={props.pdfSelectionLocator}
+        fitWidthTargetWidth={props.fitWidthTargetWidth}
         rotation={props.rotation}
         searchHighlights={props.searchHighlights}
         totalPages={props.totalPages}
+        zoomMode={props.zoomMode}
         zoom={props.zoom}
       />
     </Document>
@@ -114,13 +124,17 @@ function PdfDocumentPages({
   highlightLocators,
   onTextContentLoad,
   onTextLayerRender,
+  onPageLoadSuccess,
   pageElementsRef,
   pdfSelectionLocator,
+  fitWidthTargetWidth,
   rotation,
   searchHighlights,
   totalPages,
+  zoomMode,
   zoom
 }: {
+  fitWidthTargetWidth: number | null;
   highlightLocators: Array<{
     id: string;
     page: number;
@@ -130,11 +144,13 @@ function PdfDocumentPages({
   }>;
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
+  onPageLoadSuccess: (pageNumber: number, baseWidth: number) => void;
   pageElementsRef: PdfPageElementsRef;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   rotation: number;
   searchHighlights: PdfSearchVisualHighlight[];
   totalPages: number | null;
+  zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }) {
   if (!totalPages) {
@@ -144,13 +160,16 @@ function PdfDocumentPages({
     const pageNumber = index + PDF_PAGE_MIN;
     return renderPdfPage({
       highlightLocators,
+      onPageLoadSuccess,
       onTextContentLoad,
       onTextLayerRender,
       pageElementsRef,
       pageNumber,
       pdfSelectionLocator,
+      fitWidthTargetWidth,
       rotation,
       searchHighlights,
+      zoomMode,
       zoom
     });
   });

@@ -5,18 +5,23 @@ vi.mock('react-pdf', async () => {
   const React = await import('react');
   return {
     Page: ({
+      onLoadSuccess,
       onGetTextSuccess,
       onRenderTextLayerSuccess,
       pageNumber
     }: {
+      onLoadSuccess?: (page: { getViewport: (input: { scale: number }) => { width: number } }) => void;
       onGetTextSuccess?: (payload: { items: Array<{ str: string }> }) => void;
       onRenderTextLayerSuccess?: () => void;
       pageNumber: number;
     }) => {
       React.useEffect(() => {
+        onLoadSuccess?.({
+          getViewport: ({ scale }: { scale: number }) => ({ width: 800 * scale })
+        });
         onGetTextSuccess?.({ items: [{ str: `mock text ${pageNumber}` }] });
         onRenderTextLayerSuccess?.();
-      }, [onGetTextSuccess, onRenderTextLayerSuccess, pageNumber]);
+      }, [onGetTextSuccess, onLoadSuccess, onRenderTextLayerSuccess, pageNumber]);
 
       return (
         <div data-testid="pdf-document-page">
@@ -70,13 +75,16 @@ function renderPdfSearchPage(searchHighlights = [] as Array<typeof firstSearchMa
     ...render(
       renderPdfPage({
         highlightLocators: [],
+        onPageLoadSuccess: vi.fn(),
         onTextContentLoad,
         onTextLayerRender,
         pageElementsRef,
         pageNumber: 1,
         pdfSelectionLocator: undefined,
+        fitWidthTargetWidth: null,
         rotation: 0,
         searchHighlights,
+        zoomMode: 'custom',
         zoom: 100
       })
     ),
@@ -108,13 +116,16 @@ it('keeps the same search highlight nodes while the active match changes', () =>
   rerender(
     renderPdfPage({
       highlightLocators: [],
+      onPageLoadSuccess: vi.fn(),
       onTextContentLoad: vi.fn(),
       onTextLayerRender: vi.fn(),
       pageElementsRef,
       pageNumber: 1,
       pdfSelectionLocator: undefined,
+      fitWidthTargetWidth: null,
       rotation: 0,
       searchHighlights: [{ ...firstSearchMatch, isActive: false }, { ...secondSearchMatch, isActive: true }],
+      zoomMode: 'custom',
       zoom: 100
     })
   );
@@ -129,13 +140,16 @@ it('does not rerender the pdf page canvas when only the active search match chan
   const { rerender } = render(
     renderPdfPage({
       highlightLocators: [],
+      onPageLoadSuccess: vi.fn(),
       onTextContentLoad,
       onTextLayerRender,
       pageElementsRef,
       pageNumber: 1,
       pdfSelectionLocator: undefined,
+      fitWidthTargetWidth: null,
       rotation: 0,
       searchHighlights: [firstSearchMatch, secondSearchMatch],
+      zoomMode: 'custom',
       zoom: 100
     })
   );
@@ -147,13 +161,16 @@ it('does not rerender the pdf page canvas when only the active search match chan
   rerender(
     renderPdfPage({
       highlightLocators: [],
+      onPageLoadSuccess: vi.fn(),
       onTextContentLoad,
       onTextLayerRender,
       pageElementsRef,
       pageNumber: 1,
       pdfSelectionLocator: undefined,
+      fitWidthTargetWidth: null,
       rotation: 0,
       searchHighlights: [{ ...firstSearchMatch, isActive: false }, { ...secondSearchMatch, isActive: true }],
+      zoomMode: 'custom',
       zoom: 100
     })
   );
@@ -165,13 +182,16 @@ it('renders the second-half highlight of a cross-page match on the next page', (
   const { container } = render(
     renderPdfPage({
       highlightLocators: [],
+      onPageLoadSuccess: vi.fn(),
       onTextContentLoad: vi.fn(),
       onTextLayerRender: vi.fn(),
       pageElementsRef,
       pageNumber: 2,
       pdfSelectionLocator: undefined,
+      fitWidthTargetWidth: null,
       rotation: 0,
       searchHighlights: [crossPageSearchMatch],
+      zoomMode: 'custom',
       zoom: 100
     })
   );

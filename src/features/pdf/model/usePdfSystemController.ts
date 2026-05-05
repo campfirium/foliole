@@ -5,66 +5,18 @@ import type { NodeViewState } from '../../../store/workspaceStore';
 import type { NodeAnchorLink } from '../../nodes/model/nodeTypes';
 
 import type { PdfJumpRequest, PdfSystemController } from './pdfSystemApi';
+import { createInitialPageJumpRequest, resolveInitialPdfViewState, usePdfSourceReset, usePersistedPdfViewStateSync } from './pdfSystemControllerState';
 import {
   clampInteger,
   createJumpRequest,
   PDF_PAGE_MIN,
   PDF_ZOOM_MAX,
   PDF_ZOOM_MIN,
+  PDF_ZOOM_MODE_CUSTOM,
+  PDF_ZOOM_MODE_FIT_WIDTH,
   PDF_ZOOM_STEP,
-  resolveInitialPage,
-  resolveInitialZoom,
   resolvePdfSource
 } from './pdfSystemStateUtils';
-
-function useSourceReset(
-  resolvedSource: string,
-  setLoadError: (value: string | null) => void,
-  setPageJumpRequest: Dispatch<SetStateAction<PdfJumpRequest | null>>,
-  setPdfSource: (value: string) => void,
-  setTotalPages: (value: number | null) => void
-) {
-  const lastResolvedSourceRef = useRef(resolvedSource);
-  useEffect(() => {
-    if (resolvedSource === lastResolvedSourceRef.current) {
-      return;
-    }
-    lastResolvedSourceRef.current = resolvedSource;
-    setLoadError(null);
-    setTotalPages(null);
-    setPageJumpRequest(null);
-    setPdfSource(resolvedSource);
-  }, [resolvedSource, setLoadError, setPageJumpRequest, setPdfSource, setTotalPages]);
-}
-
-function useViewStateSync(page: number, zoom: number, onPersistViewState: (viewState: NodeViewState) => void) {
-  const onPersistViewStateRef = useRef(onPersistViewState);
-  const lastSyncedViewRef = useRef<{ page: number; zoom: number } | null>(null);
-  const didMountRef = useRef(false);
-
-  useEffect(() => {
-    onPersistViewStateRef.current = onPersistViewState;
-  }, [onPersistViewState]);
-
-  useEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      lastSyncedViewRef.current = { page, zoom };
-      return;
-    }
-    if (lastSyncedViewRef.current && lastSyncedViewRef.current.page === page && lastSyncedViewRef.current.zoom === zoom) {
-      return;
-    }
-    lastSyncedViewRef.current = { page, zoom };
-    onPersistViewStateRef.current({
-      scrollTop: page,
-      selection: {
-        from: page,
-        to: zoom
-      }
-    });
-  }, [page, zoom]);
-}
 
 function usePdfSystemActions(
   page: number,
@@ -72,10 +24,12 @@ function usePdfSystemActions(
   setLoadError: Dispatch<SetStateAction<string | null>>,
   setPage: Dispatch<SetStateAction<number>>,
   setPageJumpRequest: Dispatch<SetStateAction<PdfJumpRequest | null>>,
+  setPositionY: Dispatch<SetStateAction<number>>,
   setPdfSource: Dispatch<SetStateAction<string>>,
   setRotation: Dispatch<SetStateAction<number>>,
   setTotalPages: Dispatch<SetStateAction<number | null>>,
-  setZoom: Dispatch<SetStateAction<number>>
+  setZoom: Dispatch<SetStateAction<number>>,
+  setZoomMode: Dispatch<SetStateAction<'custom' | 'fit-width'>>
 ) {
   const jumpRequestIdRef = useRef(1);
 
@@ -88,12 +42,14 @@ function usePdfSystemActions(
         setLoadError,
         setPage,
         setPageJumpRequest,
+        setPositionY,
         setPdfSource,
         setRotation,
         setTotalPages,
-        setZoom
+        setZoom,
+        setZoomMode
       }),
-    [maxPage, page, setLoadError, setPage, setPageJumpRequest, setPdfSource, setRotation, setTotalPages, setZoom]
+    [maxPage, page, setLoadError, setPage, setPageJumpRequest, setPositionY, setPdfSource, setRotation, setTotalPages, setZoom, setZoomMode]
   );
 }
 
@@ -104,10 +60,12 @@ function createPdfSystemActions(args: {
   setLoadError: Dispatch<SetStateAction<string | null>>;
   setPage: Dispatch<SetStateAction<number>>;
   setPageJumpRequest: Dispatch<SetStateAction<PdfJumpRequest | null>>;
+  setPositionY: Dispatch<SetStateAction<number>>;
   setPdfSource: Dispatch<SetStateAction<string>>;
   setRotation: Dispatch<SetStateAction<number>>;
   setTotalPages: Dispatch<SetStateAction<number | null>>;
   setZoom: Dispatch<SetStateAction<number>>;
+  setZoomMode: Dispatch<SetStateAction<'custom' | 'fit-width'>>;
 }) {
   const queuePageJump = (jumpPage: number, positionY?: number) => {
     args.setPageJumpRequest(createJumpRequest(args.jumpRequestIdRef, jumpPage, positionY));
@@ -117,20 +75,24 @@ function createPdfSystemActions(args: {
     requestAnchorJump: (locator: NonNullable<NodeAnchorLink['locator']>) => {
       const nextPage = clampInteger(locator.page, PDF_PAGE_MIN, args.maxPage);
       args.setPage(nextPage);
+      args.setPositionY(Math.max(0, Math.min(1, locator.y ?? 0)));
       queuePageJump(nextPage, locator.y);
     },
     requestPageChange: (value: number) => {
       const nextPage = clampInteger(value, PDF_PAGE_MIN, args.maxPage);
       args.setPage(nextPage);
+      args.setPositionY(0);
       queuePageJump(nextPage);
     },
-    setVisiblePage: (visiblePage: number) => {
+    setVisibleLocation: (visiblePage: number, positionY: number) => {
       const nextPage = clampInteger(visiblePage, PDF_PAGE_MIN, args.maxPage);
       args.setPage(nextPage);
+      args.setPositionY(Math.max(0, Math.min(1, positionY)));
     },
     stepPage: (direction: -1 | 1) => {
       const nextPage = clampInteger(args.page + direction, PDF_PAGE_MIN, args.maxPage);
       args.setPage(nextPage);
+      args.setPositionY(0);
       queuePageJump(nextPage);
     }
   };
@@ -144,6 +106,7 @@ function createPdfCoreActions(args: {
   setRotation: Dispatch<SetStateAction<number>>;
   setTotalPages: Dispatch<SetStateAction<number | null>>;
   setZoom: Dispatch<SetStateAction<number>>;
+  setZoomMode: Dispatch<SetStateAction<'custom' | 'fit-width'>>;
 }) {
   return {
     clearPageJumpRequest: (requestId: number) => {
@@ -159,49 +122,75 @@ function createPdfCoreActions(args: {
     rotateClockwise: () => {
       args.setRotation((current) => (current + 90) % 360);
     },
+    setFitWidth: () => {
+      args.setZoomMode(PDF_ZOOM_MODE_FIT_WIDTH);
+    },
     setZoom: (value: number) => {
+      args.setZoomMode(PDF_ZOOM_MODE_CUSTOM);
       args.setZoom(clampInteger(value, PDF_ZOOM_MIN, PDF_ZOOM_MAX));
     },
     zoomIn: () => {
+      args.setZoomMode(PDF_ZOOM_MODE_CUSTOM);
       args.setZoom((current) => Math.min(PDF_ZOOM_MAX, current + PDF_ZOOM_STEP));
     },
     zoomOut: () => {
+      args.setZoomMode(PDF_ZOOM_MODE_CUSTOM);
       args.setZoom((current) => Math.max(PDF_ZOOM_MIN, current - PDF_ZOOM_STEP));
     }
   };
 }
 
-function usePdfCoreState(
-  nodeViewState: NodeViewState | undefined,
-  onPersistViewState: (viewState: NodeViewState) => void,
-  sourceHint: string
-): {
+type PdfCoreStateResult = {
   loadError: string | null;
   maxPage: number;
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
   pdfSource: string;
+  positionY: number;
   rotation: number;
   setLoadError: Dispatch<SetStateAction<string | null>>;
   setPage: Dispatch<SetStateAction<number>>;
   setPageJumpRequest: Dispatch<SetStateAction<PdfJumpRequest | null>>;
+  setPositionY: Dispatch<SetStateAction<number>>;
   setPdfSource: Dispatch<SetStateAction<string>>;
   setRotation: Dispatch<SetStateAction<number>>;
   setTotalPages: Dispatch<SetStateAction<number | null>>;
   setZoom: Dispatch<SetStateAction<number>>;
+  setZoomMode: Dispatch<SetStateAction<'custom' | 'fit-width'>>;
   totalPages: number | null;
+  zoomMode: 'custom' | 'fit-width';
   zoom: number;
-} {
+};
+
+function usePdfCoreState(
+  nodeViewState: NodeViewState | undefined,
+  onPersistViewState: (viewState: NodeViewState) => void,
+  sourceHint: string
+): PdfCoreStateResult {
   const resolvedSource = useMemo(() => resolvePdfSource(sourceHint), [sourceHint]);
-  const [page, setPage] = useState(() => resolveInitialPage(nodeViewState));
-  const [zoom, setZoom] = useState(() => resolveInitialZoom(nodeViewState));
+  const initialViewState = resolveInitialPdfViewState(nodeViewState);
+  const [page, setPage] = useState(() => initialViewState.page);
+  const [positionY, setPositionY] = useState(() => initialViewState.positionY);
+  const [zoomMode, setZoomMode] = useState<'custom' | 'fit-width'>(() => initialViewState.zoomMode);
+  const [zoom, setZoom] = useState(() => initialViewState.zoom);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
   const [pdfSource, setPdfSource] = useState(() => resolvedSource);
-  const [pageJumpRequest, setPageJumpRequest] = useState<PdfJumpRequest | null>(null);
-  useSourceReset(resolvedSource, setLoadError, setPageJumpRequest, setPdfSource, setTotalPages);
-  useViewStateSync(page, zoom, onPersistViewState);
+  const [pageJumpRequest, setPageJumpRequest] = useState<PdfJumpRequest | null>(() => createInitialPageJumpRequest(initialViewState));
+  usePdfSourceReset({
+    initialViewState,
+    resolvedSource,
+    setLoadError,
+    setPage,
+    setPageJumpRequest,
+    setPositionY,
+    setPdfSource,
+    setTotalPages,
+    setZoom,
+    setZoomMode
+  });
+  usePersistedPdfViewStateSync({ customZoom: zoom, page, positionY, zoomMode, onPersistViewState });
 
   useEffect(() => {
     if (!totalPages) {
@@ -217,15 +206,19 @@ function usePdfCoreState(
     page,
     pageJumpRequest,
     pdfSource,
+    positionY,
     rotation,
     setLoadError,
     setPage,
     setPageJumpRequest,
+    setPositionY,
     setPdfSource,
     setRotation,
     setTotalPages,
     setZoom,
+    setZoomMode,
     totalPages,
+    zoomMode,
     zoom
   };
 }
@@ -242,10 +235,12 @@ export function usePdfSystemController(
     coreState.setLoadError,
     coreState.setPage,
     coreState.setPageJumpRequest,
+    coreState.setPositionY,
     coreState.setPdfSource,
     coreState.setRotation,
     coreState.setTotalPages,
-    coreState.setZoom
+    coreState.setZoom,
+    coreState.setZoomMode
   );
 
   return {
@@ -256,8 +251,10 @@ export function usePdfSystemController(
       page: coreState.page,
       pageJumpRequest: coreState.pageJumpRequest,
       pdfSource: coreState.pdfSource,
+      positionY: coreState.positionY,
       rotation: coreState.rotation,
       totalPages: coreState.totalPages,
+      zoomMode: coreState.zoomMode,
       zoom: coreState.zoom
     }
   };

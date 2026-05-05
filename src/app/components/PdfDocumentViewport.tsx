@@ -25,6 +25,7 @@ interface PdfDocumentViewportProps {
   onSearchRequest: (direction: 'next' | 'previous') => void;
   onSearchRequestHandled: (requestId: number) => void;
   onSearchTargetHandled: (targetId: number) => void;
+  onSetFitWidth: () => void;
   onSetZoom: (value: number) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -39,8 +40,9 @@ interface PdfDocumentViewportProps {
   searchTarget: PdfSearchTarget | null;
   searchStatus: PdfSearchStatus;
   clearPageJumpRequest: (requestId: number) => void;
-  setVisiblePage: (page: number) => void;
+  setVisibleLocation: (page: number, positionY: number) => void;
   totalPages: number | null;
+  zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }
 
@@ -59,7 +61,7 @@ function renderPdfViewportContent(args: {
   searchHighlights: PdfSearchVisualHighlight[];
   searchRevision: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
-} & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>) {
+} & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisibleLocation'>) {
   return <PdfDocumentViewportContent {...resolveViewportContentProps(args)} />;
 }
 
@@ -79,7 +81,7 @@ function resolveViewportContentProps(
     searchHighlights: PdfSearchVisualHighlight[];
     searchRevision: number;
     scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
-  } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>
+  } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisibleLocation'>
 ) {
   return {
     handleContextMenu: args.onContextMenu,
@@ -107,6 +109,7 @@ function resolveViewportContentProps(
     searchStatus: args.searchStatus,
     searchTarget: args.searchTarget,
     totalPages: args.totalPages,
+    zoomMode: args.zoomMode,
     zoom: args.zoom
   };
 }
@@ -127,6 +130,7 @@ function resolveViewportActionProps(args: {
   onSearchRequestHandled: (requestId: number) => void;
   onSearchStatusChange: (status: PdfSearchStatus) => void;
   onSearchTargetHandled: (targetId: number) => void;
+  onSetFitWidth: () => void;
   onSetZoom: (value: number) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -147,6 +151,7 @@ function resolveViewportActionProps(args: {
     onSearchRequestHandled: args.onSearchRequestHandled,
     onSearchStatusChange: args.onSearchStatusChange,
     onSearchTargetHandled: args.onSearchTargetHandled,
+    onSetFitWidth: args.onSetFitWidth,
     onSetZoom: args.onSetZoom,
     onZoomIn: args.onZoomIn,
     onZoomOut: args.onZoomOut
@@ -164,7 +169,7 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
       searchQuery: props.searchQuery,
       searchRequest: props.searchRequest,
       searchTarget: props.searchTarget,
-      setVisiblePage: props.setVisiblePage,
+      setVisibleLocation: props.setVisibleLocation,
       totalPages: props.totalPages,
       zoom: props.zoom
     });
@@ -215,7 +220,7 @@ function PdfDocumentViewportReady(
     onSearchFocusChange: (focused: boolean) => void;
     onToolbarActiveChange: (active: boolean) => void;
     onToolbarInteraction: () => void;
-  } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>
+  } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisibleLocation'>
 ) {
   return renderPdfViewportContent(props);
 }

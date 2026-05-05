@@ -59,11 +59,18 @@ function resolveVisiblePage(container: HTMLDivElement, pageElementsRef: PdfPageE
   return visiblePage;
 }
 
+function resolveVisiblePositionY(container: HTMLDivElement, pageElement: HTMLDivElement | null) {
+  if (!pageElement) {
+    return 0;
+  }
+  const anchor = container.scrollTop + container.clientHeight * 0.35;
+  return Math.max(0, Math.min(1, (anchor - pageElement.offsetTop) / Math.max(pageElement.clientHeight, 1)));
+}
+
 export function useVisiblePageSync(
-  page: number,
   pageElementsRef: PdfPageElementsRef,
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
-  setVisiblePage: (page: number) => void,
+  setVisibleLocation: (page: number, positionY: number) => void,
   totalPages: number | null
 ) {
   return () => {
@@ -72,9 +79,7 @@ export function useVisiblePageSync(
       return;
     }
     const visiblePage = resolveVisiblePage(container, pageElementsRef, totalPages);
-    if (visiblePage !== page) {
-      setVisiblePage(visiblePage);
-    }
+    setVisibleLocation(visiblePage, resolveVisiblePositionY(container, pageElementsRef.current[visiblePage]));
   };
 }
 
@@ -147,6 +152,7 @@ interface PdfDocumentViewportContentProps {
   onSearchRequestHandled: (requestId: number) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
   onSearchTargetHandled: (targetId: number) => void;
+  onSetFitWidth: () => void;
   onSetZoom: (value: number) => void;
   onToolbarActiveChange: (active: boolean) => void;
   onToolbarInteraction: () => void;
@@ -167,6 +173,7 @@ interface PdfDocumentViewportContentProps {
   searchTarget: PdfSearchTarget | null;
   searchStatus: PdfSearchStatus;
   totalPages: number | null;
+  zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }
 
@@ -241,6 +248,7 @@ function resolveViewportContentBodyProps(
     onSearchFocusChange: props.onSearchFocusChange,
     onSearchQueryChange: props.onSearchQueryChange,
     onSearchRequest: props.onSearchRequest,
+    onSetFitWidth: props.onSetFitWidth,
     onSetZoom: props.onSetZoom,
     onToolbarActiveChange: props.onToolbarActiveChange,
     onTextLayerRender: props.onTextLayerRender,
@@ -258,6 +266,7 @@ function resolveViewportContentBodyProps(
     searchQuery: props.searchQuery,
     searchStatus: props.searchStatus,
     totalPages: props.totalPages,
+    zoomMode: props.zoomMode,
     zoom: props.zoom
   };
 }

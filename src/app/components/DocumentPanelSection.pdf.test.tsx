@@ -175,22 +175,37 @@ it('supports pdf controls with zoom, page navigation, and rotation', () => {
 
   renderSection();
 
+  expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('100%');
+
   fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
   expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('110%');
 
-  fireEvent.change(screen.getByRole('spinbutton', { name: 'PDF page' }), {
+  fireEvent.change(screen.getByRole('textbox', { name: 'PDF page' }), {
     target: { value: '5' }
   });
-  expect(screen.getByRole('spinbutton', { name: 'PDF page' })).toHaveValue(5);
+  expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('5');
 
   fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
-  expect(screen.getByRole('spinbutton', { name: 'PDF page' })).toHaveValue(4);
+  expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('4');
 
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-  expect(screen.getByRole('spinbutton', { name: 'PDF page' })).toHaveValue(5);
+  expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('5');
 
   fireEvent.click(screen.getByRole('button', { name: 'Rotate page clockwise' }));
   expect(screen.getAllByTestId('pdf-document-page')[0]).toHaveAttribute('data-rotate', '90');
+});
+
+it('lets the reader return to fit width with the toolbar button', () => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
+
+  renderSection();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Set zoom level' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: '100%' }));
+  expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('100%');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Fit width' }));
+  expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('100%');
 });
 it('supports in-view pdf search navigation and empty-state feedback', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
@@ -214,7 +229,7 @@ it('supports in-view pdf search navigation and empty-state feedback', async () =
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'));
   fireEvent.click(clearSearchButton);
   await waitFor(() => {
-    expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('Search');
+    expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('');
     expect(searchInput).toHaveValue('');
     expect(previousMatchButton).toBeDisabled();
     expect(nextMatchButton).toBeDisabled();

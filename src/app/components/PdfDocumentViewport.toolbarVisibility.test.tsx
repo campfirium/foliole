@@ -67,6 +67,66 @@ function useToolbarReplayScroll(page: number, zoom: number, shouldReplayToolbarS
   }, [page, zoom]);
 }
 
+function createToolbarReplayAction(shouldReplayToolbarScrollRef: MutableRefObject<boolean>, action?: () => void) {
+  return () => {
+    shouldReplayToolbarScrollRef.current = true;
+    action?.();
+  };
+}
+
+function buildToolbarHarnessProps(input: {
+  page: number;
+  searchQuery: string;
+  searchStatus: { current: number; hasQuery: boolean; total: number };
+  setPage: (value: number | ((current: number) => number)) => void;
+  setSearchQuery: (value: string) => void;
+  setSearchStatus: (value: { current: number; hasQuery: boolean; total: number }) => void;
+  setZoom: (value: number | ((current: number) => number)) => void;
+  shouldReplayToolbarScrollRef: MutableRefObject<boolean>;
+  zoom: number;
+}) {
+  return {
+    clearPageJumpRequest: () => undefined,
+    highlightLocators: [],
+    loadError: null,
+    maxPage: 3,
+    onClearSearch: () => undefined,
+    onContextMenu: () => undefined,
+    onLoadError: () => undefined,
+    onLoadSuccess: () => undefined,
+    onNextPage: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setPage((current) => current + 1)),
+    onPageChange: input.setPage,
+    onPreviousPage: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setPage((current) => Math.max(1, current - 1))),
+    onRotateClockwise: () => undefined,
+    onSearchQueryChange: input.setSearchQuery,
+    onSearchRequest: () => undefined,
+    onSearchRequestHandled: () => undefined,
+    onSearchStatusChange: input.setSearchStatus,
+    onSearchTargetHandled: () => undefined,
+    onSetFitWidth: createToolbarReplayAction(input.shouldReplayToolbarScrollRef),
+    onSetZoom: (value: number) => {
+      input.shouldReplayToolbarScrollRef.current = true;
+      input.setZoom(value);
+    },
+    onZoomIn: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setZoom((current) => current + 10)),
+    onZoomOut: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setZoom((current) => current - 10)),
+    page: input.page,
+    pageJumpRequest: null,
+    pdfSelectionLocator: undefined,
+    pdfSource: '/tmp/sample.pdf',
+    rotation: 0,
+    searchIndexingHint: null,
+    searchQuery: input.searchQuery,
+    searchRequest: null,
+    searchTarget: null,
+    searchStatus: input.searchStatus,
+    setVisibleLocation: () => undefined,
+    totalPages: 3,
+    zoomMode: 'fit-width' as const,
+    zoom: input.zoom
+  };
+}
+
 function ToolbarVisibilityHarness() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchStatus, setSearchStatus] = useState({ current: 0, hasQuery: false, total: 0 });
@@ -75,59 +135,19 @@ function ToolbarVisibilityHarness() {
   const shouldReplayToolbarScrollRef = useRef(false);
 
   useToolbarReplayScroll(page, zoom, shouldReplayToolbarScrollRef);
+  const viewportProps = buildToolbarHarnessProps({
+    page,
+    searchQuery,
+    searchStatus,
+    setPage,
+    setSearchQuery,
+    setSearchStatus,
+    setZoom,
+    shouldReplayToolbarScrollRef,
+    zoom
+  });
 
-  return (
-    <PdfDocumentViewport
-      clearPageJumpRequest={() => undefined}
-      highlightLocators={[]}
-      loadError={null}
-      maxPage={3}
-      onClearSearch={() => undefined}
-      onContextMenu={() => undefined}
-      onLoadError={() => undefined}
-      onLoadSuccess={() => undefined}
-      onNextPage={() => {
-        shouldReplayToolbarScrollRef.current = true;
-        setPage((current) => current + 1);
-      }}
-      onPageChange={setPage}
-      onPreviousPage={() => {
-        shouldReplayToolbarScrollRef.current = true;
-        setPage((current) => Math.max(1, current - 1));
-      }}
-      onRotateClockwise={() => undefined}
-      onSearchQueryChange={setSearchQuery}
-      onSearchRequest={() => undefined}
-      onSearchRequestHandled={() => undefined}
-      onSearchStatusChange={setSearchStatus}
-      onSearchTargetHandled={() => undefined}
-      onSetZoom={(value) => {
-        shouldReplayToolbarScrollRef.current = true;
-        setZoom(value);
-      }}
-      onZoomIn={() => {
-        shouldReplayToolbarScrollRef.current = true;
-        setZoom((current) => current + 10);
-      }}
-      onZoomOut={() => {
-        shouldReplayToolbarScrollRef.current = true;
-        setZoom((current) => current - 10);
-      }}
-      page={page}
-      pageJumpRequest={null}
-      pdfSelectionLocator={undefined}
-      pdfSource="/tmp/sample.pdf"
-      rotation={0}
-      searchIndexingHint={null}
-      searchQuery={searchQuery}
-      searchRequest={null}
-      searchTarget={null}
-      searchStatus={searchStatus}
-      setVisiblePage={() => undefined}
-      totalPages={3}
-      zoom={zoom}
-    />
-  );
+  return <PdfDocumentViewport {...viewportProps} />;
 }
 
 function setScrollTopAndScroll(container: HTMLElement, scrollTop: number) {

@@ -74,6 +74,7 @@ function PdfDocumentViewportSearchActivationHarness() {
       onSearchRequestHandled={() => undefined}
       onSearchStatusChange={setSearchStatus}
       onSearchTargetHandled={() => undefined}
+      onSetFitWidth={() => undefined}
       onSetZoom={() => undefined}
       onZoomIn={() => undefined}
       onZoomOut={() => undefined}
@@ -87,8 +88,9 @@ function PdfDocumentViewportSearchActivationHarness() {
       searchRequest={null}
       searchTarget={null}
       searchStatus={searchStatus}
-      setVisiblePage={() => undefined}
+      setVisibleLocation={() => undefined}
       totalPages={1}
+      zoomMode="fit-width"
       zoom={100}
     />
   );

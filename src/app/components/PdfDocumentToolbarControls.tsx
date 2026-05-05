@@ -1,12 +1,10 @@
-import { ArrowDownToLine, ArrowUpToLine, RotateCwSquare, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowDownToLine, ArrowUpToLine, Search, X } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 
 import { AppIconButton, AppInput } from '../../shared/ui';
 
 import type { PdfSearchStatus } from './PdfDocumentSearch';
-
-const PDF_ZOOM_OPTIONS = [100, 125, 150, 175, 200];
+import { PdfZoomControls as PdfZoomControlsInner } from './PdfDocumentZoomControls';
 
 interface SearchControlsProps {
   onClearSearch: () => void;
@@ -31,10 +29,12 @@ interface PageControlsProps {
 
 interface ZoomControlsProps {
   onRotateClockwise: () => void;
+  onSetFitWidth: () => void;
   onSetZoom: (value: number) => void;
   onToolbarInteraction: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }
 
@@ -75,104 +75,8 @@ function resolveSearchStatusLabel(status: PdfSearchStatus, indexingHint: string 
   return `${status.current} / ${status.total}`;
 }
 
-export function PdfZoomControls({ onRotateClockwise, onSetZoom, onToolbarInteraction, onZoomIn, onZoomOut, zoom }: ZoomControlsProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!isMenuOpen) {
-      return;
-    }
-    const handlePointerDown = (event: PointerEvent) => {
-      if (menuRef.current?.contains(event.target as Node)) {
-        return;
-      }
-      setIsMenuOpen(false);
-    };
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [isMenuOpen]);
-
-  return (
-    <div className="relative flex items-center gap-1" ref={menuRef}>
-      <AppIconButton className="size-8" icon={<ZoomOut aria-hidden="true" size={15} strokeWidth={2.1} />} label="Zoom out" onClick={createToolbarAction(onZoomOut, onToolbarInteraction)} />
-      <PdfZoomValueButton isMenuOpen={isMenuOpen} onToolbarInteraction={onToolbarInteraction} setIsMenuOpen={setIsMenuOpen} zoom={zoom} />
-      <PdfZoomMenu isMenuOpen={isMenuOpen} onSetZoom={onSetZoom} onToolbarInteraction={onToolbarInteraction} setIsMenuOpen={setIsMenuOpen} />
-      <AppIconButton className="size-8" icon={<ZoomIn aria-hidden="true" size={15} strokeWidth={2.1} />} label="Zoom in" onClick={createToolbarAction(onZoomIn, onToolbarInteraction)} />
-      <div className="h-5 w-px bg-border/40" />
-      <AppIconButton
-        className="size-8"
-        icon={<RotateCwSquare aria-hidden="true" size={15} strokeWidth={2.1} />}
-        label="Rotate page clockwise"
-        onClick={createToolbarAction(onRotateClockwise, onToolbarInteraction)}
-      />
-    </div>
-  );
-}
-
-function PdfZoomValueButton({
-  isMenuOpen,
-  onToolbarInteraction,
-  setIsMenuOpen,
-  zoom
-}: {
-  isMenuOpen: boolean;
-  onToolbarInteraction: () => void;
-  setIsMenuOpen: (value: boolean | ((current: boolean) => boolean)) => void;
-  zoom: number;
-}) {
-  return (
-    <button
-      aria-expanded={isMenuOpen}
-      aria-haspopup="menu"
-      aria-label="Set zoom level"
-      className="inline-flex min-h-8 min-w-14 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-2 text-xs text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus:outline-none"
-      onClick={() => {
-        onToolbarInteraction();
-        setIsMenuOpen((current) => !current);
-      }}
-      type="button"
-    >
-      <span aria-live="polite" data-testid="pdf-zoom-value">
-        {zoom}%
-      </span>
-    </button>
-  );
-}
-
-function PdfZoomMenu({
-  isMenuOpen,
-  onSetZoom,
-  onToolbarInteraction,
-  setIsMenuOpen
-}: {
-  isMenuOpen: boolean;
-  onSetZoom: (value: number) => void;
-  onToolbarInteraction: () => void;
-  setIsMenuOpen: (value: boolean) => void;
-}) {
-  if (!isMenuOpen) {
-    return null;
-  }
-  return (
-    <div className="absolute left-1/2 top-full z-30 mt-2 flex min-w-20 -translate-x-1/2 flex-col rounded-xl border border-border bg-bg-elevated p-1 shadow-sm" role="menu">
-      {PDF_ZOOM_OPTIONS.map((option) => (
-        <button
-          className="min-h-8 rounded-lg px-3 text-left text-xs text-foreground/80 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
-          key={option}
-          onClick={() => {
-            onToolbarInteraction();
-            onSetZoom(option);
-            setIsMenuOpen(false);
-          }}
-          role="menuitem"
-          type="button"
-        >
-          {option}%
-        </button>
-      ))}
-    </div>
-  );
+export function PdfZoomControls({ onRotateClockwise, onSetFitWidth, onSetZoom, onToolbarInteraction, onZoomIn, onZoomOut, zoomMode, zoom }: ZoomControlsProps) {
+  return <PdfZoomControlsInner onRotateClockwise={onRotateClockwise} onSetFitWidth={onSetFitWidth} onSetZoom={onSetZoom} onToolbarInteraction={onToolbarInteraction} onZoomIn={onZoomIn} onZoomOut={onZoomOut} zoom={zoom} zoomMode={zoomMode} />;
 }
 
 function PdfPageButtons({ canGoNext, canGoPrevious, onNextPage, onPreviousPage, onToolbarInteraction }: {

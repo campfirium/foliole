@@ -104,7 +104,7 @@ export function usePdfViewportRuntime(args: {
   searchQuery: string;
   searchRequest: PdfSearchRequest | null;
   searchTarget: PdfSearchTarget | null;
-  setVisiblePage: (page: number) => void;
+  setVisibleLocation: (page: number, positionY: number) => void;
   totalPages: number | null;
   zoom: number;
 }) {
@@ -122,7 +122,7 @@ export function usePdfViewportRuntime(args: {
       totalPages: args.totalPages
     });
   }, [args.searchQuery, args.searchRequest, args.searchTarget, args.totalPages, runtime.pageElementsRef, runtime.setSearchRevision, runtime.textLayerSignatureByPageRef]);
-  const handleScroll = useVisiblePageSync(args.page, runtime.pageElementsRef, runtime.scrollContainerRef, args.setVisiblePage, args.totalPages);
+  const handleScroll = useVisiblePageSync(runtime.pageElementsRef, runtime.scrollContainerRef, args.setVisibleLocation, args.totalPages);
   return {
     ...runtime,
     handleScroll,
