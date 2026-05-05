@@ -134,12 +134,13 @@ describe('useForegroundAutoSync', () => {
     expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
   });
 
-  it('stops retrying after a backlog sync pass finishes without failure', async () => {
+  it('continues after a backlog sync pass until convergence completes', async () => {
     vi.useFakeTimers();
     vi.spyOn(Date, 'now').mockReturnValue(1_000);
     const tryForegroundAutoSync = vi.fn()
       .mockResolvedValueOnce('failed')
-      .mockResolvedValueOnce('skipped');
+      .mockResolvedValueOnce('skipped')
+      .mockResolvedValueOnce('completed');
     await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
 
     await act(async () => {
@@ -152,6 +153,6 @@ describe('useForegroundAutoSync', () => {
       await vi.advanceTimersByTimeAsync(5_000);
     });
 
-    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(3);
   });
 });

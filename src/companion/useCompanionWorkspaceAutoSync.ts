@@ -89,7 +89,7 @@ function createForegroundSyncRunner(args: {
       state
     })
       .then((outcome) => {
-        if (outcome !== 'failed') {
+        if (outcome === 'completed') {
           args.retryAttemptRef.current = 0;
           clearRetryTimer(args.retryTimerRef);
         } else {
