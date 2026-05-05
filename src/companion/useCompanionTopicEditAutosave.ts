@@ -17,6 +17,7 @@ function formatSaveError(error: unknown) {
 function useAutosaveRefs(args: UseCompanionTopicEditAutosaveArgs) {
   const draftRef = useRef(args.initialContent);
   const lastSavedRef = useRef(args.initialContent);
+  const savingContentRef = useRef<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSaveContentRef = useRef(args.onSaveContent);
   const canEditRef = useRef(args.canEdit);
@@ -24,7 +25,7 @@ function useAutosaveRefs(args: UseCompanionTopicEditAutosaveArgs) {
   onSaveContentRef.current = args.onSaveContent;
   canEditRef.current = args.canEdit;
 
-  return { canEditRef, draftRef, lastSavedRef, onSaveContentRef, saveTimerRef };
+  return { canEditRef, draftRef, lastSavedRef, onSaveContentRef, saveTimerRef, savingContentRef };
 }
 
 function useAutosaveCallbacks(args: {
@@ -42,17 +43,26 @@ function useAutosaveCallbacks(args: {
   }, [refs.saveTimerRef]);
 
   const saveContent = useCallback(async (content: string) => {
-    if (!refs.canEditRef.current || content === refs.lastSavedRef.current) {
+    if (
+      !refs.canEditRef.current
+      || content === refs.lastSavedRef.current
+      || content === refs.savingContentRef.current
+    ) {
       return;
     }
+    refs.savingContentRef.current = content;
     try {
       await refs.onSaveContentRef.current?.(content);
       refs.lastSavedRef.current = content;
       setError(null);
     } catch (saveError) {
       setError(formatSaveError(saveError));
+    } finally {
+      if (refs.savingContentRef.current === content) {
+        refs.savingContentRef.current = null;
+      }
     }
-  }, [refs.canEditRef, refs.lastSavedRef, refs.onSaveContentRef, setError]);
+  }, [refs.canEditRef, refs.lastSavedRef, refs.onSaveContentRef, refs.savingContentRef, setError]);
 
   const flushPendingSave = useCallback(async () => {
     clearTimer();

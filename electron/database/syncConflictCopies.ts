@@ -1,24 +1,22 @@
-import { createHash } from 'node:crypto';
-
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
-import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
-import { upsertNodeSyncState } from './nodeSyncStateRows.js';
-import { loadConflictCopyMapping, saveConflictCopyMapping } from './syncConflictCopyMappings.js';
+import {
+  conflictCopyBranchKey,
+  conflictCopyNodeId
+} from './syncConflictCopyIdentity.js';
+import { upsertConflictCopyProjection } from './syncConflictCopyProjection.js';
+import {
+  loadConflictCopyBranchMapping,
+  loadConflictCopyMapping,
+  saveConflictCopyBranchMapping,
+  saveConflictCopyMapping
+} from './syncConflictCopyMappings.js';
 import { recordRemoteNodeConflict } from './syncNodeConflictRecords.js';
 
-const INBOX_NODE_ID = 'special-inbox';
-
-function hashId(value: string) {
-  return createHash('sha256').update(value).digest('hex').slice(0, 32);
-}
-
-export function conflictCopyNodeId(versionId: string) {
-  return `conflict-copy-${hashId(versionId)}`;
+interface ConflictCopyResult {
+  copyNodeId: string | null;
+  shouldRecordConflict: boolean;
 }
 
 export function recordNodeConflictAndCreateCopy(args: {
@@ -29,187 +27,80 @@ export function recordNodeConflictAndCreateCopy(args: {
   if (!args.record.version_id) {
     return null;
   }
-  recordRemoteNodeConflict(args.driver, args.record, args.timestamp);
-  return createNodeConflictCopy(args);
-}
-
-function readInboxTopPosition(driver: DatabaseDriver) {
-  const row = driver.queryOne<{ position: number | null }>(
-    `SELECT MIN(o.position) AS position
-     FROM nodes n
-     JOIN node_order o ON o.node_id = n.id
-     WHERE n.parent_id = ?`,
-    [INBOX_NODE_ID]
-  );
-  if (typeof row?.position === 'number') {
-    return row.position - 1;
+  const result = createNodeConflictCopy(args);
+  if (result.shouldRecordConflict) {
+    recordRemoteNodeConflict(args.driver, args.record, args.timestamp);
   }
-  const maxRow = driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
-  return typeof maxRow?.position === 'number' ? maxRow.position + 1 : 0;
+  return result.copyNodeId;
 }
 
-function ensureInboxNode(driver: DatabaseDriver, now: string) {
-  if (driver.queryOne('SELECT id FROM nodes WHERE id = ?', [INBOX_NODE_ID])) {
-    return;
+function isStaleBranchHead(record: NativeSyncNodeRecord, mappedCreatedAt: string | null, mappedVersionId: string | null) {
+  if (!mappedCreatedAt) {
+    return false;
   }
-  driver.execute(
-    `INSERT INTO nodes (
-       id, parent_id, kind, title, is_title_manual, hide_title_heading, content, created_at, updated_at
-     ) VALUES (?, NULL, 'folder', 'Inbox', 1, 0, '', ?, ?)`,
-    [INBOX_NODE_ID, now, now]
-  );
-}
-
-function conflictCopyTitle(record: NativeSyncNodeRecord) {
-  const title = record.snapshot.title?.trim() || 'Untitled';
-  return `${title} (conflict copy - ${conflictCopySourceLabel(record.device_id)})`;
-}
-
-function conflictCopySourceLabel(deviceId: string | null | undefined) {
-  const source = deviceId?.trim().toLowerCase() ?? '';
-  if (source.startsWith('android') || source === 'phone') {
-    return 'Android';
+  const createdAt = record.version_created_at ?? record.updated_at ?? '';
+  const createdAtCompare = createdAt.localeCompare(mappedCreatedAt);
+  if (createdAtCompare !== 0) {
+    return createdAtCompare < 0;
   }
-  if (source.startsWith('desktop') || source === 'windows') {
-    return 'Desktop';
-  }
-  return 'Remote';
-}
-
-function buildConflictCopySnapshot(args: {
-  bodyBlobHash: string;
-  content: string;
-  copyNodeId: string;
-  openingText: string | null;
-  record: NativeSyncNodeRecord;
-  timestamp: string;
-  title: string;
-}) {
-  return {
-    anchor_link: null,
-    attachments: [],
-    body_blob_hash: args.bodyBlobHash,
-    content: args.content,
-    created_at: args.timestamp,
-    deleted_at: null,
-    desired_retention: null,
-    hide_title_heading: args.record.snapshot.hide_title_heading ?? false,
-    id: args.copyNodeId,
-    image_regions: null,
-    is_title_manual: true,
-    kind: 'topic',
-    opening_text: args.openingText,
-    parent_id: INBOX_NODE_ID,
-    position: null,
-    priority: null,
-    reveal: null,
-    title: args.title,
-    updated_at: args.timestamp,
-    virtual_filter: null
-  };
+  return (record.version_id ?? '').localeCompare(mappedVersionId ?? '') <= 0;
 }
 
 export function createNodeConflictCopy(args: {
   driver: DatabaseDriver;
   record: NativeSyncNodeRecord;
   timestamp: string;
-}) {
+}): ConflictCopyResult {
   if (!args.record.version_id) {
-    return null;
+    return { copyNodeId: null, shouldRecordConflict: false };
   }
   const conflictVersionId = args.record.version_id;
   const mappedCopyNodeId = loadConflictCopyMapping(args.driver, conflictVersionId);
   if (mappedCopyNodeId) {
-    return args.driver.queryOne('SELECT id FROM nodes WHERE id = ?', [mappedCopyNodeId]) ? mappedCopyNodeId : null;
+    return {
+      copyNodeId: args.driver.queryOne('SELECT id FROM nodes WHERE id = ?', [mappedCopyNodeId]) ? mappedCopyNodeId : null,
+      shouldRecordConflict: false
+    };
   }
-  const copyNodeId = conflictCopyNodeId(conflictVersionId);
-  if (args.driver.queryOne('SELECT id FROM nodes WHERE id = ?', [copyNodeId])) {
-    saveConflictCopyMapping(args.driver, conflictVersionId, copyNodeId, args.timestamp);
-    return copyNodeId;
+  const branchKey = conflictCopyBranchKey(args.record);
+  const mappedBranchCopyNodeId = loadConflictCopyBranchMapping(
+    args.driver,
+    branchKey.objectId,
+    branchKey.sourceDeviceId
+  );
+  if (
+    mappedBranchCopyNodeId &&
+    !args.driver.queryOne('SELECT id FROM nodes WHERE id = ?', [mappedBranchCopyNodeId.copyNodeId])
+  ) {
+    saveConflictCopyMapping(args.driver, conflictVersionId, mappedBranchCopyNodeId.copyNodeId, args.timestamp);
+    return { copyNodeId: null, shouldRecordConflict: false };
   }
-
-  const content = args.record.snapshot.content ?? '';
-  const title = conflictCopyTitle(args.record);
-  const openingText = resolveNodeOpeningText(content, args.record.snapshot.title ?? '');
-  const bodyBlobHash = upsertTextBodyBlob(args.driver, content, args.timestamp);
-  const deviceId = loadOrCreateDesktopDeviceId(args.timestamp);
-  const versionId = `${deviceId}#${copyNodeId}`;
-  const snapshot = buildConflictCopySnapshot({
-    bodyBlobHash,
-    content,
+  if (
+    mappedBranchCopyNodeId &&
+    isStaleBranchHead(args.record, mappedBranchCopyNodeId.sourceVersionCreatedAt, mappedBranchCopyNodeId.sourceVersionId)
+  ) {
+    saveConflictCopyMapping(args.driver, conflictVersionId, mappedBranchCopyNodeId.copyNodeId, args.timestamp);
+    return { copyNodeId: mappedBranchCopyNodeId.copyNodeId, shouldRecordConflict: false };
+  }
+  const copyNodeId = mappedBranchCopyNodeId?.copyNodeId ?? conflictCopyNodeId(args.record);
+  const existing = args.driver.queryOne('SELECT id FROM nodes WHERE id = ?', [copyNodeId]);
+  upsertConflictCopyProjection({
     copyNodeId,
-    openingText,
+    driver: args.driver,
+    placeAtTop: !existing,
     record: args.record,
-    timestamp: args.timestamp,
-    title
+    sourceVersionId: conflictVersionId,
+    timestamp: args.timestamp
   });
-  const contentHash = computeNodeSyncHash({
-    anchorLink: null,
-    attachments: [],
-    content,
-    createdAt: args.timestamp,
-    deletedAt: null,
-    desiredRetention: null,
-    hideTitleHeading: snapshot.hide_title_heading,
-    id: copyNodeId,
-    imageRegions: null,
-    isTitleManual: true,
-    kind: 'topic',
-    openingText,
-    parentId: INBOX_NODE_ID,
-    position: null,
-    priority: null,
-    reveal: null,
-    title,
-    updatedAt: args.timestamp,
-    virtualFilter: null
-  });
-  ensureInboxNode(args.driver, args.timestamp);
-  args.driver.execute(
-    `INSERT INTO nodes (
-       id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
-       current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, ?, 1, ?, ?, NULL)`,
-    [
-      copyNodeId,
-      INBOX_NODE_ID,
-      title,
-      args.record.snapshot.hide_title_heading ? 1 : 0,
-      content,
-      bodyBlobHash,
-      openingText,
-      deviceId,
-      args.timestamp,
-      args.timestamp
-    ]
+  saveConflictCopyBranchMapping(
+    args.driver,
+    branchKey.objectId,
+    branchKey.sourceDeviceId,
+    copyNodeId,
+    args.timestamp,
+    conflictVersionId,
+    args.record.version_created_at ?? args.record.updated_at ?? null
   );
-  args.driver.execute(
-    `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
-     ) VALUES (?, ?, NULL, ?, ?, ?, ?)`,
-    [versionId, copyNodeId, deviceId, args.timestamp, contentHash, JSON.stringify(snapshot)]
-  );
-  args.driver.execute(
-    `UPDATE nodes
-     SET current_version_id = ?, sync_dirty = 0
-     WHERE id = ?`,
-    [versionId, copyNodeId]
-  );
-  args.driver.execute(
-    `INSERT INTO node_order (node_id, position)
-     VALUES (?, ?)
-     ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`,
-    [copyNodeId, readInboxTopPosition(args.driver)]
-  );
-  upsertNodeSyncState({
-    contentHash,
-    currentVersionId: versionId,
-    deletedAt: null,
-    deviceId,
-    nodeId: copyNodeId,
-    updatedAt: args.timestamp
-  });
   saveConflictCopyMapping(args.driver, conflictVersionId, copyNodeId, args.timestamp);
-  return copyNodeId;
+  return { copyNodeId, shouldRecordConflict: true };
 }

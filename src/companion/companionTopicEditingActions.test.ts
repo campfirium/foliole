@@ -74,17 +74,18 @@ describe('companion topic editing actions persistence', () => {
     ]);
   });
 
-  it('writes a node version even when the content matches the current snapshot', async () => {
+  it('does not write a node version when the content matches the current snapshot', async () => {
     const { persistCompanionTopicContent } = await import('./companionTopicEditingActions');
 
-    await persistCompanionTopicContent({
+    const result = await persistCompanionTopicContent({
       content: 'Original body',
       deviceId: 'android-device',
       nodeId: 'topic-1',
       snapshot: createSnapshot()
     });
 
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledTimes(1);
+    expect(result?.snapshot.nodesById['topic-1']?.currentVersionId).toBe('desktop#topic-v1');
+    expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
   });
 
   it('rejects synced topic edits that do not have a base version id', async () => {

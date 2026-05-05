@@ -22,7 +22,8 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncNodes } from './syncApply.js';
-import { conflictCopyNodeId } from './syncConflictCopies.js';
+import { conflictCopyNodeId } from './syncConflictCopyIdentity.js';
+import { loadSyncNodeVersionsSince } from './syncNodes.js';
 
 let tempRoot = '';
 
@@ -84,7 +85,7 @@ afterEach(async () => {
 
 it('creates one inbox conflict copy for divergent remote node versions', () => {
   const record = remoteConflictRecord();
-  const copyNodeId = conflictCopyNodeId('phone#1');
+  const copyNodeId = conflictCopyNodeId(record);
 
   expect(applySyncNodes([record])).toEqual([]);
   expect(applySyncNodes([record])).toEqual([]);
@@ -117,6 +118,7 @@ it('creates one inbox conflict copy for divergent remote node versions', () => {
     object_id: copyNodeId,
     parent_version_id: null
   });
+  expect(loadSyncNodeVersionsSince(null).map((node) => node.object_id)).not.toContain(copyNodeId);
 
   connection.sqlite.prepare('DELETE FROM node_order WHERE node_id = ?').run(copyNodeId);
   connection.sqlite.prepare('DELETE FROM sync_object_state WHERE object_type = ? AND object_id = ?').run('node', copyNodeId);
@@ -125,4 +127,66 @@ it('creates one inbox conflict copy for divergent remote node versions', () => {
   expect(applySyncNodes([record])).toEqual([]);
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM nodes WHERE id = ?').get(copyNodeId))
     .toEqual({ count: 0 });
+});
+
+it('does not stack conflict copy title suffixes from synced copies', () => {
+  const record = remoteConflictRecord();
+  record.version_id = 'phone#2';
+  record.snapshot.title = 'Remote Node (conflict copy - Android) (conflict copy - Android)';
+  const copyNodeId = conflictCopyNodeId(record);
+
+  expect(applySyncNodes([record])).toEqual([]);
+
+  expect(
+    openDatabaseConnection().sqlite.prepare('SELECT title FROM nodes WHERE id = ?').get(copyNodeId)
+  ).toEqual({
+    title: 'Remote Node (conflict copy - Android)'
+  });
+});
+
+it('updates the same conflict copy to the latest source branch head', () => {
+  const first = remoteConflictRecord();
+  const latest = remoteConflictRecord();
+  latest.version_id = 'phone#2';
+  latest.parent_version_id = 'phone#1';
+  latest.ancestor_version_ids = ['phone#1', 'desktop#0'];
+  latest.content_hash = 'hash-phone-2';
+  latest.version_created_at = '2026-04-21T12:00:00.000Z';
+  latest.updated_at = '2026-04-21T12:00:00.000Z';
+  latest.snapshot.content = 'remote body latest';
+  latest.snapshot.updated_at = '2026-04-21T12:00:00.000Z';
+  const copyNodeId = conflictCopyNodeId(first);
+
+  expect(applySyncNodes([first, latest])).toEqual([]);
+  expect(applySyncNodes([first])).toEqual([]);
+
+  const connection = openDatabaseConnection();
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM nodes WHERE id LIKE ?').get('conflict-copy-%'))
+    .toEqual({ count: 1 });
+  expect(connection.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get(copyNodeId)).toEqual({
+    content: 'remote body latest'
+  });
+  expect(
+    connection.sqlite
+      .prepare('SELECT COUNT(*) AS count FROM node_sync_conflicts WHERE object_id = ? AND device_id = ?')
+      .get('node-1', 'phone')
+  ).toEqual({ count: 1 });
+});
+
+it('ignores incoming conflict copy nodes instead of creating nested copies', () => {
+  const record = remoteConflictRecord();
+  const copyNodeId = conflictCopyNodeId(record);
+  record.object_id = copyNodeId;
+  record.snapshot.id = copyNodeId;
+  record.version_id = 'phone#copy-1';
+  record.parent_version_id = null;
+  record.ancestor_version_ids = [];
+  record.snapshot.title = 'Remote Node (conflict copy - Android)';
+
+  expect(applySyncNodes([record])).toEqual([]);
+
+  const connection = openDatabaseConnection();
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM nodes WHERE id LIKE ?').get('conflict-copy-%'))
+    .toEqual({ count: 0 });
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_conflicts').get()).toEqual({ count: 0 });
 });

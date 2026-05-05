@@ -32,6 +32,12 @@ export async function persistCompanionTopicContent(args: PersistCompanionTopicCo
   if (!node?.currentVersionId) {
     throw new Error('Topic edit requires a synced base version.');
   }
+  if (args.content === node.content) {
+    return {
+      nodeId: node.id,
+      snapshot: args.snapshot
+    };
+  }
   const updatedNode: WorkspaceNodeSnapshot = {
     ...node!,
     bodyBlobHash: null,

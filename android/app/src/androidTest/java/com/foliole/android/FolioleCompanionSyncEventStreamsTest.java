@@ -85,9 +85,62 @@ public class FolioleCompanionSyncEventStreamsTest {
         assertEquals("remote body", selectString("nodes", "content", "id = '" + copyNodeId + "'"));
         assertEquals(1, countRows("node_order", "node_id = '" + copyNodeId + "' AND position = 0"));
         assertEquals(1, countRows("node_sync_versions", "object_id = '" + copyNodeId + "' AND device_id = 'android-test'"));
+        assertEquals(0, FolioleCompanionSyncNodeVersionStore.loadNodeVersions(database, null, 10, "android-test").getJSONArray("nodes").length());
         database.delete("nodes", "id = ?", new String[] { copyNodeId });
         FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
         assertEquals(0, countRows("nodes", "id = '" + copyNodeId + "'"));
+    }
+
+    @Test
+    public void doesNotStackConflictCopyTitleSuffixes() throws Exception {
+        JSONObject snapshot = nodeSnapshot("remote body")
+            .put("title", "Remote Node (conflict copy - Android) (conflict copy - Android)");
+        JSONArray nodes = new JSONArray().put(new JSONObject()
+            .put("version_id", "phone#2")
+            .put("object_id", "node-1")
+            .put("object_type", "node")
+            .put("parent_version_id", "desktop#1")
+            .put("device_id", "phone")
+            .put("version_created_at", "2026-04-26T01:00:00.000Z")
+            .put("updated_at", "2026-04-26T01:00:00.000Z")
+            .put("content_hash", "hash-phone-2")
+            .put("snapshot", snapshot)
+            .put("ancestor_version_ids", new JSONArray().put("desktop#1")));
+
+        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
+
+        String copyNodeId = selectString("nodes", "id", "id LIKE 'conflict-copy-%'");
+        assertEquals("Remote Node (conflict copy - Android)", selectString("nodes", "title", "id = '" + copyNodeId + "'"));
+    }
+
+    @Test
+    public void updatesOneConflictCopyToLatestSourceBranchHead() throws Exception {
+        JSONObject first = remoteNodeRecord("phone#1", "desktop#1", "remote body", "2026-04-26T01:00:00.000Z");
+        JSONObject latest = remoteNodeRecord("phone#2", "phone#1", "remote body latest", "2026-04-26T02:00:00.000Z")
+            .put("ancestor_version_ids", new JSONArray().put("phone#1").put("desktop#1"));
+        JSONArray nodes = new JSONArray().put(first).put(latest);
+
+        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
+        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, new JSONArray().put(first), "android-test");
+
+        String copyNodeId = selectString("nodes", "id", "id LIKE 'conflict-copy-%'");
+        assertEquals(1, countRows("nodes", "id LIKE 'conflict-copy-%'"));
+        assertEquals("remote body latest", selectString("nodes", "content", "id = '" + copyNodeId + "'"));
+        assertEquals(1, countRows("node_sync_conflicts", "object_id = 'node-1' AND device_id = 'phone'"));
+    }
+
+    @Test
+    public void ignoresIncomingConflictCopyNodes() throws Exception {
+        JSONObject record = remoteNodeRecord("phone#copy-1", null, "remote body", "2026-04-26T01:00:00.000Z");
+        record.put("object_id", "conflict-copy-source");
+        record.getJSONObject("snapshot")
+            .put("id", "conflict-copy-source")
+            .put("title", "Remote Node (conflict copy - Android)");
+
+        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, new JSONArray().put(record), "android-test");
+
+        assertEquals(0, countRows("nodes", "id LIKE 'conflict-copy-%'"));
+        assertEquals(0, countRows("node_sync_conflicts", "1 = 1"));
     }
 
     private void createTables() {
@@ -145,6 +198,25 @@ public class FolioleCompanionSyncEventStreamsTest {
             .put("body_blob_hash", "blob-remote")
             .put("created_at", "2026-04-26T00:00:00.000Z")
             .put("updated_at", "2026-04-26T01:00:00.000Z");
+    }
+
+    private static JSONObject remoteNodeRecord(
+        String versionId,
+        String parentVersionId,
+        String content,
+        String createdAt
+    ) throws Exception {
+        return new JSONObject()
+            .put("version_id", versionId)
+            .put("object_id", "node-1")
+            .put("object_type", "node")
+            .put("parent_version_id", parentVersionId == null ? JSONObject.NULL : parentVersionId)
+            .put("device_id", "phone")
+            .put("version_created_at", createdAt)
+            .put("updated_at", createdAt)
+            .put("content_hash", "hash-" + versionId)
+            .put("snapshot", nodeSnapshot(content).put("updated_at", createdAt))
+            .put("ancestor_version_ids", new JSONArray().put("desktop#1"));
     }
 
     private static JSONObject review(String opId, String deviceId) throws Exception {

@@ -61,6 +61,31 @@ describe('useCompanionTopicEditAutosave scheduling', () => {
 });
 
 describe('useCompanionTopicEditAutosave flushing', () => {
+  it('does not start a second save for content already being saved', async () => {
+    const onSaveContent = vi.fn(() => new Promise<void>((resolve) => {
+      setTimeout(resolve, 10);
+    }));
+    const { result } = renderHook(() => useCompanionTopicEditAutosave({
+      canEdit: true,
+      initialContent: 'Original',
+      nodeId: 'topic-1',
+      onSaveContent
+    }));
+
+    act(() => {
+      result.current.handleChange('Draft');
+    });
+    await act(async () => {
+      const firstFlush = result.current.flushPendingSave();
+      const secondFlush = result.current.flushPendingSave();
+      expect(onSaveContent).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(10);
+      await Promise.all([firstFlush, secondFlush]);
+    });
+
+    expect(onSaveContent).toHaveBeenCalledTimes(1);
+  });
+
   it('flushes pending changes on demand and reports save failures', async () => {
     const onSaveContent = vi.fn(async () => {
       throw new Error('Native write failed.');

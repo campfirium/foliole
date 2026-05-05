@@ -20,6 +20,7 @@ final class FolioleCompanionSyncNodeVersionStore {
         JSArray nodes = new JSArray();
         String sql = "SELECT version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json " +
             "FROM node_sync_versions WHERE device_id = ? " + whereAfterCursor(cursor) +
+            " AND object_id NOT LIKE 'conflict-copy-%' " +
             " ORDER BY created_at ASC, version_id ASC LIMIT ?";
         String[] args = cursor == null
             ? new String[] { deviceId, String.valueOf(normalizeLimit(limit)) }
@@ -56,8 +57,9 @@ final class FolioleCompanionSyncNodeVersionStore {
         database.beginTransaction();
         try {
             String now = Instant.now().toString();
-            for (int index = 0; index < nodes.length(); index += 1) {
-                JSONObject record = nodes.optJSONObject(index);
+            JSONArray branchHeads = FolioleCompanionSyncNodeRecordBatch.latestBranchHeads(nodes);
+            for (int index = 0; index < branchHeads.length(); index += 1) {
+                JSONObject record = branchHeads.optJSONObject(index);
                 if (record == null) {
                     continue;
                 }
@@ -65,7 +67,13 @@ final class FolioleCompanionSyncNodeVersionStore {
                 if (snapshot == null) {
                     continue;
                 }
-                String localVersionId = loadLocalVersionId(database, record.optString("object_id"));
+                if (
+                    FolioleCompanionSyncConflictCopyIdentity.isConflictCopyNodeId(record.optString("object_id")) ||
+                    FolioleCompanionSyncConflictCopyIdentity.isConflictCopyNodeId(snapshot.optString("id"))
+                ) {
+                    continue;
+                }
+                String localVersionId = FolioleCompanionSyncNodeVersionApplySupport.loadLocalVersionId(database, record.optString("object_id"));
                 if (localVersionId == null) {
                     upsertNode(database, record, snapshot);
                     upsertVersion(database, record, snapshot);
@@ -73,9 +81,11 @@ final class FolioleCompanionSyncNodeVersionStore {
                     continue;
                 }
                 upsertVersion(database, record, snapshot);
-                if (!isFastForward(record, localVersionId)) {
-                    recordConflict(database, record, snapshot);
-                    FolioleCompanionSyncConflictCopies.create(database, record, snapshot, deviceId, now);
+                if (!FolioleCompanionSyncNodeVersionApplySupport.isFastForward(record, localVersionId)) {
+                    String copyNodeId = FolioleCompanionSyncConflictCopies.create(database, record, snapshot, deviceId, now);
+                    if (copyNodeId != null) {
+                        FolioleCompanionSyncNodeVersionApplySupport.recordConflict(database, record, snapshot);
+                    }
                     continue;
                 }
                 if (localVersionId.equals(record.optString("version_id", ""))) {
@@ -91,62 +101,6 @@ final class FolioleCompanionSyncNodeVersionStore {
         JSObject result = new JSObject();
         result.put("applied_node_ids", appliedNodeIds);
         return result;
-    }
-
-    private static String loadLocalVersionId(SQLiteDatabase database, String nodeId) {
-        try (Cursor cursor = database.query(
-            "nodes",
-            new String[] { "current_version_id" },
-            "id = ?",
-            new String[] { nodeId },
-            null,
-            null,
-            null,
-            "1"
-        )) {
-            if (!cursor.moveToFirst()) {
-                return null;
-            }
-            return cursor.isNull(0) ? "" : cursor.getString(0);
-        }
-    }
-
-    private static boolean isFastForward(JSONObject record, String localVersionId) {
-        if (localVersionId.isEmpty()) {
-            return true;
-        }
-        if (localVersionId.equals(record.optString("version_id", ""))) {
-            return true;
-        }
-        if (localVersionId.equals(record.optString("parent_version_id", ""))) {
-            return true;
-        }
-        JSONArray ancestors = record.optJSONArray("ancestor_version_ids");
-        if (ancestors == null) {
-            return false;
-        }
-        for (int index = 0; index < ancestors.length(); index += 1) {
-            if (localVersionId.equals(ancestors.optString(index))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static void recordConflict(SQLiteDatabase database, JSONObject record, JSONObject snapshot) {
-        String versionId = record.optString("version_id", "");
-        if (versionId.trim().isEmpty()) {
-            return;
-        }
-        ContentValues values = new ContentValues();
-        values.put("conflict_version_id", versionId);
-        values.put("object_id", record.optString("object_id", snapshot.optString("id")));
-        putNullableString(values, "parent_version_id", record.optString("parent_version_id", null));
-        putNullableString(values, "device_id", record.optString("device_id", null));
-        putNullableString(values, "content_hash", record.optString("content_hash", null));
-        values.put("snapshot_json", snapshot.toString());
-        values.put("detected_at", Instant.now().toString());
-        database.insertWithOnConflict("node_sync_conflicts", null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     private static void upsertNode(SQLiteDatabase database, JSONObject record, JSONObject snapshot) {

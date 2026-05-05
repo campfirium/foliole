@@ -4,7 +4,9 @@ import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/work
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { isConflictCopyNodeId } from './syncConflictCopyIdentity.js';
 import { recordNodeConflictAndCreateCopy } from './syncConflictCopies.js';
+import { latestBranchHeadRecords } from './syncNodeRecordBatch.js';
 
 interface ApplySyncNodesOptions {
   includeAlreadyApplied?: boolean;
@@ -169,7 +171,7 @@ export function applySyncNodes(records: NativeSyncNodeRecord[], options: ApplySy
     return [];
   }
   const connection = openDatabaseConnection();
-  const ordered = orderNodesForApply(records);
+  const ordered = orderNodesForApply(latestBranchHeadRecords(records));
   const appliedIds: string[] = [];
   const conflictCopyIds: string[] = [];
 
@@ -177,6 +179,9 @@ export function applySyncNodes(records: NativeSyncNodeRecord[], options: ApplySy
     const timestamp = new Date().toISOString();
     for (const record of ordered) {
       const localNode = loadLocalNodeVersion(connection.driver, record.object_id);
+      if (isConflictCopyNodeId(record.object_id) || isConflictCopyNodeId(record.snapshot.id)) {
+        continue;
+      }
       if (!localNode) {
         upsertRemoteNode(connection.driver, record);
         upsertRemoteVersion(connection.driver, record);

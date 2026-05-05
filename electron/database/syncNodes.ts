@@ -2,6 +2,7 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { isConflictCopyNodeId } from './syncConflictCopyIdentity.js';
 
 interface SyncNodeRow extends DatabaseRow {
   anchor_link: string | null;
@@ -183,6 +184,7 @@ export function loadSyncNodeVersionsSince(cursor: { createdAt: string; versionId
      INNER JOIN node_sync_versions v
        ON v.object_id = n.id
      WHERE ${cursor ? '(v.created_at > ? OR (v.created_at = ? AND v.version_id > ?))' : '1 = 1'}
+       AND n.id NOT LIKE 'conflict-copy-%'
      ORDER BY v.created_at ASC, v.version_id ASC
      LIMIT ?`,
     cursor
@@ -190,5 +192,5 @@ export function loadSyncNodeVersionsSince(cursor: { createdAt: string; versionId
       : [Math.max(1, Math.min(1000, Math.trunc(limit)))]
   );
 
-  return rows.map((row) => toNativeSyncNodeRecord(row));
+  return rows.filter((row) => !isConflictCopyNodeId(row.id)).map((row) => toNativeSyncNodeRecord(row));
 }
