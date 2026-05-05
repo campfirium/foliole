@@ -123,23 +123,21 @@ final class FolioleCompanionReadableArticleQuery {
     }
 
     private static JSObject buildArticle(Context context, SQLiteDatabase database, JSONObject row) throws Exception {
-        JSONObject rowKeys = objectRule(context, "rowKeys");
-        JSONObject outputKeys = objectRule(context, "outputKeys");
-        String nodeId = row.getString(rowKeys.getString("id"));
-        String title = normalizeTitle(context, nullableString(row, rowKeys.getString("title")));
-        String inlineContent = nullableString(row, rowKeys.getString("content"));
-        String bodyBlobHash = nullableString(row, rowKeys.getString("bodyBlobHash"));
-        String bodyBlobData = nullableString(row, rowKeys.getString("bodyBlobData"));
-        String availability = nullableString(row, rowKeys.getString("availability"));
+        String nodeId = row.getString(rowKey(context, "id"));
+        String title = normalizeTitle(context, nullableString(row, rowKey(context, "title")));
+        String inlineContent = nullableString(row, rowKey(context, "content"));
+        String bodyBlobHash = nullableString(row, rowKey(context, "bodyBlobHash"));
+        String bodyBlobData = nullableString(row, rowKey(context, "bodyBlobData"));
+        String availability = nullableString(row, rowKey(context, "availability"));
         String content = resolveContent(inlineContent, bodyBlobData);
         String pdfAttachmentId = loadReferencePdfAttachmentId(context, database, nodeId);
         JSObject article = new JSObject();
-        article.put(outputKeys.getString("nodeId"), nodeId);
-        article.put(outputKeys.getString("title"), title);
-        article.put(outputKeys.getString("bodyBlobHash"), bodyBlobHash);
-        article.put(outputKeys.getString("content"), resolveArticleContent(context, database, title, content, pdfAttachmentId));
-        article.put(outputKeys.getString("contentStatus"), resolveContentStatus(context, inlineContent, bodyBlobHash, bodyBlobData, availability));
-        article.put(outputKeys.getString("pdfAttachmentId"), pdfAttachmentId);
+        article.put(outputKey(context, "nodeId"), nodeId);
+        article.put(outputKey(context, "title"), title);
+        article.put(outputKey(context, "bodyBlobHash"), bodyBlobHash);
+        article.put(outputKey(context, "content"), resolveArticleContent(context, database, title, content, pdfAttachmentId));
+        article.put(outputKey(context, "contentStatus"), resolveContentStatus(context, inlineContent, bodyBlobHash, bodyBlobData, availability));
+        article.put(outputKey(context, "pdfAttachmentId"), pdfAttachmentId);
         return article;
     }
 
@@ -161,7 +159,11 @@ final class FolioleCompanionReadableArticleQuery {
         return FolioleCompanionContentReadQueryRules.readableArticleString(context, key);
     }
 
-    private static JSONObject objectRule(Context context, String key) throws Exception {
-        return FolioleCompanionContentReadQueryRules.readableArticleObject(context, key);
+    private static String outputKey(Context context, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.readableArticleOutputKey(context, key);
+    }
+
+    private static String rowKey(Context context, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.readableArticleRowKey(context, key);
     }
 }

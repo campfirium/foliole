@@ -33,7 +33,7 @@ final class FolioleCompanionPdfPageTextStore {
         JSObject result = new JSObject();
         JSArray results = new JSArray();
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
-        result.put(outputKeys(context).getString("query"), query);
+        result.put(outputKey(context, "query"), query);
         result.put(stringRule(context, "searchResultKey"), results);
         if (normalizedQuery.isEmpty()) {
             return result;
@@ -67,9 +67,8 @@ final class FolioleCompanionPdfPageTextStore {
         result.put(stringRule(context, "textKey"), text);
         result.put(stringRule(context, "pageWidthKey"), row.opt(stringRule(context, "pageWidthKey")));
         result.put(stringRule(context, "pageHeightKey"), row.opt(stringRule(context, "pageHeightKey")));
-        JSONObject outputKeys = outputKeys(context);
-        result.put(outputKeys.getString("matchStart"), matchStart);
-        result.put(outputKeys.getString("excerpt"), buildExcerpt(context, text, matchStart));
+        result.put(outputKey(context, "matchStart"), matchStart);
+        result.put(outputKey(context, "excerpt"), buildExcerpt(context, text, matchStart));
         return result;
     }
 
@@ -91,8 +90,8 @@ final class FolioleCompanionPdfPageTextStore {
         return FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key);
     }
 
-    private static JSONObject outputKeys(Context context) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.pdfPageTextObject(context, "outputKeys");
+    private static String outputKey(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.pdfPageTextOutputKey(context, key);
     }
 
 }

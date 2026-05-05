@@ -137,7 +137,7 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentResolveResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentSyncResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextObject(context, "outputKeys")');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextOutputKey(context, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "resourceRead", groupName)');
     expect(rulesSource).toContain('getJSONObject(key)');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestByHash"');
@@ -166,7 +166,8 @@ describe('Android resource read query rules', () => {
   it('keeps readable article Java shape wired to generated content rules', async () => {
     const source = await readFile(READABLE_ARTICLE_QUERY, 'utf8');
 
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleObject(context, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleOutputKey(context, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowKey(context, key)');
     expect(source).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, "textKey")');
     expect(source).not.toContain('article.put("node_id"');
     expect(source).not.toContain('article.put("content_status"');
@@ -177,8 +178,9 @@ describe('Android resource read query rules', () => {
   it('keeps external document Java shape wired to generated content rules', async () => {
     const source = await readFile(EXTERNAL_DOCUMENT_STORE, 'utf8');
 
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentObject(context, key)');
     expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentArray(context, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentOutputKey(context, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowKey(context, key)');
     expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
     expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
     expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');

@@ -20,6 +20,14 @@ final class FolioleCompanionContentReadQueryRules {
         return group(context, "externalDocuments").getJSONObject(key);
     }
 
+    static String externalDocumentOutputKey(Context context, String key) throws Exception {
+        return externalDocumentObject(context, "outputKeys").getString(key);
+    }
+
+    static String externalDocumentRowKey(Context context, String key) throws Exception {
+        return externalDocumentObject(context, "rowKeys").getString(key);
+    }
+
     static JSONArray externalDocumentArray(Context context, String key) throws Exception {
         return group(context, "externalDocuments").getJSONArray(key);
     }
@@ -30,6 +38,14 @@ final class FolioleCompanionContentReadQueryRules {
 
     static JSONObject readableArticleObject(Context context, String key) throws Exception {
         return group(context, "readableArticle").getJSONObject(key);
+    }
+
+    static String readableArticleOutputKey(Context context, String key) throws Exception {
+        return readableArticleObject(context, "outputKeys").getString(key);
+    }
+
+    static String readableArticleRowKey(Context context, String key) throws Exception {
+        return readableArticleObject(context, "rowKeys").getString(key);
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
