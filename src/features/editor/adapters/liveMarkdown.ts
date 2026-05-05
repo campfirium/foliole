@@ -94,7 +94,9 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     }
     if (!inCodeBlock) addImageDecorations(ranges, imageMatches, isCursorLine);
 
-    addPrefixDecoration(ranges, line.from, line.text, showSyntaxOnLine);
+    if (!inCodeBlock || isCodeFenceLine) {
+      addPrefixDecoration(ranges, line.from, line.text, showSyntaxOnLine);
+    }
     addCodeFenceDecoration(ranges, line.from, line.text, showSyntaxOnLine);
     addInlineCodeDecorations(ranges, inlineCodeMatches, showSyntaxOnLine);
     addInlineLinkDecorations(ranges, inlineLinkMatches, showSyntaxOnLine);
