@@ -1,7 +1,27 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 import { buildGoToNodeState } from './appControllerHelpers';
-import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import type { useWorkspaceSelectors } from './appControllerState';
+
+interface GoToNodeStateArgs {
+  nav: {
+    handleSelectNode: (nodeId: string) => void;
+  };
+  runtime: {
+    isGoToNodePaletteOpen: boolean;
+    recentNodeIds: string[];
+    recordRecentNode: (nodeId: string) => void;
+    setIsGoToNodePaletteOpen: (open: boolean) => void;
+  };
+  trash: {
+    closeTrashView: () => void;
+  };
+  ws: {
+    nodeOrder: string[];
+    nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById'];
+    trashedNodeIds: string[];
+  };
+}
 
 export interface AppGoToNodeState {
   isOpen: boolean;
@@ -13,11 +33,7 @@ export interface AppGoToNodeState {
   trashedNodeIds: string[];
 }
 
-export function buildControllerGoToNodeState(args: {
-  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
-  trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}): AppGoToNodeState {
+export function buildControllerGoToNodeState(args: GoToNodeStateArgs): AppGoToNodeState {
   return buildGoToNodeState(
     args.runtime.isGoToNodePaletteOpen,
     args.ws.nodeOrder,
@@ -28,7 +44,7 @@ export function buildControllerGoToNodeState(args: {
     (nodeId) => {
       args.runtime.recordRecentNode(nodeId);
       args.trash.closeTrashView();
-      args.ws.openNode(nodeId);
+      args.nav.handleSelectNode(nodeId);
       args.runtime.setIsGoToNodePaletteOpen(false);
     }
   );

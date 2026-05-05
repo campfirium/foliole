@@ -254,9 +254,9 @@ export function useAppController(): AppControllerResult {
     trash: controller.trash,
     ws
   });
-  const goToNodeState = buildControllerGoToNodeState({ runtime: controller.runtime, trash: controller.trash, ws });
+  const goToNodeState = buildControllerGoToNodeState({ nav: controller.nav, runtime: controller.runtime, trash: controller.trash, ws });
   const moveToNodeState = buildControllerMoveToNodeState({ runtime: controller.runtime, ws });
-  const searchState = buildControllerSearchState({ runtime: controller.runtime, trash: controller.trash, ws });
+  const searchState = buildControllerSearchState({ nav: controller.nav, runtime: controller.runtime, trash: controller.trash, ws });
 
   useNativeCommandMenu(paletteState.items, paletteState.onRunCommand);
 

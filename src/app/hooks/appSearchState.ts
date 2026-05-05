@@ -1,7 +1,25 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 import { buildSearchState, toSearchNodesById } from './appControllerHelpers';
-import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import type { useWorkspaceSelectors } from './appControllerState';
+
+interface SearchStateArgs {
+  nav: {
+    handleSelectNode: (nodeId: string) => void;
+  };
+  runtime: {
+    isSearchPaletteOpen: boolean;
+    setIsSearchPaletteOpen: (open: boolean) => void;
+  };
+  trash: {
+    closeTrashView: () => void;
+  };
+  ws: {
+    nodeOrder: string[];
+    nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById'];
+    trashedNodeIds: string[];
+  };
+}
 
 export interface AppSearchState {
   isOpen: boolean;
@@ -12,11 +30,7 @@ export interface AppSearchState {
   trashedNodeIds: string[];
 }
 
-export function buildControllerSearchState(args: {
-  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
-  trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}): AppSearchState {
+export function buildControllerSearchState(args: SearchStateArgs): AppSearchState {
   return buildSearchState(
     args.runtime.isSearchPaletteOpen,
     args.ws.nodeOrder,
@@ -25,7 +39,7 @@ export function buildControllerSearchState(args: {
     () => args.runtime.setIsSearchPaletteOpen(false),
     (nodeId) => {
       args.trash.closeTrashView();
-      args.ws.openNode(nodeId);
+      args.nav.handleSelectNode(nodeId);
       args.runtime.setIsSearchPaletteOpen(false);
     }
   );
