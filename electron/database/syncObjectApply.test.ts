@@ -21,7 +21,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncObjects, applySyncObjectsAsync } from './syncObjectApply.js';
+import { applySyncObjectsAsync } from './syncObjectApply.js';
 
 let tempRoot = '';
 
@@ -45,7 +45,7 @@ function insertNode(nodeId: string) {
   );
 }
 
-it('applies generic sync object payloads and marks them clean', () => {
+it('applies generic sync object payloads and marks them clean', async () => {
   insertNode('node-1');
   const records: NativeSyncObjectRecord[] = [{
     content_hash: 'hash-setting',
@@ -79,7 +79,7 @@ it('applies generic sync object payloads and marks them clean', () => {
     updated_at: '2026-04-21T16:21:00.000Z'
   }];
 
-  expect(applySyncObjects(records)).toEqual([
+  await expect(applySyncObjectsAsync(records)).resolves.toEqual([
     'setting:user_space:windows:desktop:*:app_settings',
     'node_reading:node-1'
   ]);
@@ -121,7 +121,7 @@ it('applies generic sync object payloads through the shared async executor', asy
   )).toEqual({ value_json: '{"mode":"async"}' });
 });
 
-it('applies import source and external folder payloads', () => {
+it('applies import source and external folder payloads', async () => {
   const records: NativeSyncObjectRecord[] = [{
     content_hash: 'hash-import-source',
     deleted_at: null,
@@ -150,7 +150,7 @@ it('applies import source and external folder payloads', () => {
     updated_at: '2026-04-21T16:00:00.000Z'
   }];
 
-  expect(applySyncObjects(records)).toEqual(['import_source:source-1', 'external_folder:folder-1']);
+  await expect(applySyncObjectsAsync(records)).resolves.toEqual(['import_source:source-1', 'external_folder:folder-1']);
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ source_name: string }>('SELECT source_name FROM import_sources WHERE source_fingerprint = ?', ['source-1']))
@@ -159,7 +159,7 @@ it('applies import source and external folder payloads', () => {
     .toEqual({ folder_path: '/docs' });
 });
 
-it('applies attachment metadata and blob manifests', () => {
+it('applies attachment metadata and blob manifests', async () => {
   const records: NativeSyncObjectRecord[] = [{
     content_hash: 'hash-attachment',
     deleted_at: null,
@@ -184,7 +184,7 @@ it('applies attachment metadata and blob manifests', () => {
     updated_at: '2026-04-21T16:00:00.000Z'
   }];
 
-  expect(applySyncObjects(records)).toEqual(['attachment:att-1']);
+  await expect(applySyncObjectsAsync(records)).resolves.toEqual(['attachment:att-1']);
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ original_name: string }>('SELECT original_name FROM attachments WHERE id = ?', ['att-1']))
@@ -205,7 +205,7 @@ it('applies attachment metadata and blob manifests', () => {
   });
 });
 
-it('applies tombstones to payload table and sync object state', () => {
+it('applies tombstones to payload table and sync object state', async () => {
   insertNode('node-1');
   const driver = openDatabaseConnection().driver;
   driver.execute(
@@ -213,7 +213,7 @@ it('applies tombstones to payload table and sync object state', () => {
     ['node-1', '2026-04-21T10:00:00.000Z', '2026-04-22T10:00:00.000Z']
   );
 
-  applySyncObjects([{
+  await applySyncObjectsAsync([{
     content_hash: 'hash-reading-delete',
     deleted_at: '2026-04-21T17:00:00.000Z',
     object_id: 'node-1',
@@ -228,7 +228,7 @@ it('applies tombstones to payload table and sync object state', () => {
   )).toEqual({ deleted_at: '2026-04-21T17:00:00.000Z' });
 });
 
-it('clears derived PDF text when applying an attachment tombstone', () => {
+it('clears derived PDF text when applying an attachment tombstone', async () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
@@ -241,7 +241,7 @@ it('clears derived PDF text when applying an attachment tombstone', () => {
     ['pdf-1', 1, 'Page one', 800, 1200]
   );
 
-  applySyncObjects([{
+  await applySyncObjectsAsync([{
     content_hash: 'hash-pdf-delete',
     deleted_at: '2026-04-21T17:00:00.000Z',
     object_id: 'pdf-1',
