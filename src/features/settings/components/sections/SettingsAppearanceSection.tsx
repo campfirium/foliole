@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 
-import { SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { SettingsSection } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
@@ -20,6 +20,7 @@ import {
   SettingsSelectRow
 } from './settingsAppearanceControls';
 import { SettingsAppearanceFontSection } from './SettingsAppearanceFontSection';
+import { WorkspaceSurfaceColorSection } from './WorkspaceSurfaceColorSection';
 
 function ensureAccentHex(value: string) {
   return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_ACCENT_COLOR_PRESET;
@@ -117,9 +118,6 @@ function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionSta
         safeClozeColor={safeClozeColor}
         setClozeColorPreset={(value) => appearance.setClozeColorPreset(value as typeof appearance.clozeColorPreset)}
       />
-      <SettingsRow description="Theme package management will be added in a follow-up task." readonly title="Theme">
-        <span className="rounded-full bg-secondary px-2.5 py-1 text-[0.82rem] text-foreground/70">Planned</span>
-      </SettingsRow>
     </SettingsSection>
   );
 }
@@ -129,6 +127,7 @@ function AppearanceSupportingSections(props: ReturnType<typeof useAppearanceSect
 
   return (
     <>
+      <WorkspaceSurfaceColorSection />
       <NodeIconSettingsSection />
       <NodeListRowSpacingSection />
       <SettingsAppearanceFontSection

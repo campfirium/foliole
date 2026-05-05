@@ -9,7 +9,9 @@ import type {
   HighlightColorPreset,
   InterfaceFontPreset,
   SelectionColorPreset,
-  MonospaceFontPreset
+  MonospaceFontPreset,
+  WorkspaceSurfaceAssignments,
+  WorkspaceSurfacePalette
 } from '../model/appearanceSettings';
 
 export interface AppearanceSettingsContextValue {
@@ -29,11 +31,14 @@ export interface AppearanceSettingsContextValue {
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
   uiFontPreset: InterfaceFontPreset;
+  workspaceSurfaceAssignments: WorkspaceSurfaceAssignments;
+  workspaceSurfacePalette: WorkspaceSurfacePalette;
   resetAccentColorPreset: () => void;
   resetClozeColorPreset: () => void;
   resetSelectionColorPreset: () => void;
   resetHighlightColorPreset: () => void;
   resetInterfaceFontSize: () => void;
+  resetWorkspaceSurfaceSettings: () => void;
   setAccentColorPreset: (value: AccentColorPreset) => void;
   setAutoLocalizeRemoteImages: (value: boolean) => void;
   setBaseColorMode: (value: BaseColorMode) => void;
@@ -48,6 +53,8 @@ export interface AppearanceSettingsContextValue {
   setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => void;
   setMonospaceFontPreset: (value: MonospaceFontPreset) => void;
   setUiFontPreset: (value: InterfaceFontPreset) => void;
+  setWorkspaceSurfaceAssignments: (value: WorkspaceSurfaceAssignments) => void;
+  setWorkspaceSurfacePalette: (value: WorkspaceSurfacePalette) => void;
   toggleEditorDisplayMode: () => void;
 }
 

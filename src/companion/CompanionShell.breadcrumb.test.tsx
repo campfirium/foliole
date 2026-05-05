@@ -70,7 +70,13 @@ function createBreadcrumbSnapshot(): WorkspaceSnapshot {
         kind: 'topic',
         parentNodeId: 'topic-1',
         reading: {
+          intervalDurationMs: 0,
+          intervalGrowthFactor: 1,
+          lastHandledAt: '2026-04-22T08:00:00.000Z',
           nextAt: '2026-04-22T08:00:00.000Z',
+          priority: 0,
+          readingPosition: 0,
+          repetitionCount: 0,
           state: 'active'
         },
         title: 'Inner review topic'

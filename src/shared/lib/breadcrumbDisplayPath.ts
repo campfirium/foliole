@@ -29,7 +29,7 @@ function collectPath(
       break;
     }
     visited.add(cursorId);
-    const node = nodesById[cursorId];
+    const node: BreadcrumbDisplayPathNode | undefined = nodesById[cursorId];
     if (!node) {
       break;
     }

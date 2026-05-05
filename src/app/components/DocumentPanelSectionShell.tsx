@@ -202,7 +202,7 @@ export function DocumentPanelSectionShell({
   );
 
   return (
-    <section aria-label="Document panel" className="relative flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
+    <section aria-label="Document panel" className="workspace-region-main-document relative flex h-full min-h-0 flex-1 flex-col text-foreground">
       {renderDocumentPanelChrome({
         backlinks,
         folderListSortDirection,

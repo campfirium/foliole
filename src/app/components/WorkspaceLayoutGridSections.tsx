@@ -89,7 +89,7 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
   const shouldShowEmptyState = shouldShowWorkspaceEmptyState({ isTrashViewOpen, isVirtualViewOpen, isExternalViewOpen, isWorkspaceHydrated, nodeOrder, trashedNodeIds });
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg-panel text-foreground">
+    <div className="workspace-region-main-folder flex min-h-0 flex-1 flex-col overflow-hidden text-foreground">
       {renderWorkspaceListBody({
         activeNodeId,
         activeVirtualNodeId,

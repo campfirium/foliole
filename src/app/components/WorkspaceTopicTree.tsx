@@ -120,7 +120,7 @@ function renderWorkspaceTopicTreeBody(args: {
 }) {
   return (
     <div
-      className="app-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-bg-panel px-2 pb-2 pt-2"
+      className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 pt-2"
       onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => {
         const target = event.target as HTMLElement | null;
         if (target?.closest('[role="treeitem"]')) {
@@ -232,7 +232,7 @@ export function WorkspaceTopicTree({
   });
 
   return (
-    <aside aria-label="Current folder contents" className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground">
+    <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
       <WorkspaceTopicTreeHeader
         hasCollapsibleNodes={collapsibleNodeIds.length > 0}
         hasCollapsedNodes={hasCollapsedNodes}

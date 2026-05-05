@@ -20,6 +20,17 @@ import {
   setHighlightColorPreset,
   setSelectionColorPreset
 } from './appearanceColorSettings';
+import {
+  applyWorkspaceSurfaceSettings,
+  DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS,
+  DEFAULT_WORKSPACE_SURFACE_PALETTE,
+  getWorkspaceSurfaceAssignments,
+  getWorkspaceSurfacePalette,
+  setWorkspaceSurfaceAssignments,
+  setWorkspaceSurfacePalette,
+  type WorkspaceSurfaceAssignments,
+  type WorkspaceSurfacePalette
+} from './workspaceSurfaceSettings';
 export {
   type AccentColorPreset,
   type ClozeColorPreset,
@@ -36,7 +47,15 @@ export {
   setAccentColorPreset,
   setClozeColorPreset,
   setHighlightColorPreset,
-  setSelectionColorPreset
+  setSelectionColorPreset,
+  type WorkspaceSurfaceAssignments,
+  type WorkspaceSurfacePalette,
+  DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS,
+  DEFAULT_WORKSPACE_SURFACE_PALETTE,
+  getWorkspaceSurfaceAssignments,
+  getWorkspaceSurfacePalette,
+  setWorkspaceSurfaceAssignments,
+  setWorkspaceSurfacePalette
 };
 export const INTERFACE_FONT_OPTIONS = ['default', 'inter', 'system', 'source-sans', 'serif', 'rounded', 'custom'] as const;
 export const MONOSPACE_FONT_OPTIONS = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa', 'custom'] as const;
@@ -209,6 +228,8 @@ interface ApplyAppearanceSettingsInput {
   monospaceFont: MonospaceFontPreset;
   customInterfaceFont: string;
   customMonospaceFont: string;
+  workspaceSurfaceAssignments: WorkspaceSurfaceAssignments;
+  workspaceSurfacePalette: WorkspaceSurfacePalette;
 }
 
 function resolveInterfaceFontFamily(interfaceFont: InterfaceFontPreset, customInterfaceFont: string) {
@@ -241,7 +262,9 @@ export function applyAppearanceSettings({
   interfaceFontSize,
   monospaceFont,
   customInterfaceFont,
-  customMonospaceFont
+  customMonospaceFont,
+  workspaceSurfaceAssignments,
+  workspaceSurfacePalette
 }: ApplyAppearanceSettingsInput) {
   if (typeof document === 'undefined') {
     return;
@@ -257,6 +280,10 @@ export function applyAppearanceSettings({
     clozeColor,
     highlightColor,
     selectionColor
+  });
+  applyWorkspaceSurfaceSettings(root, {
+    assignments: workspaceSurfaceAssignments,
+    palette: workspaceSurfacePalette
   });
   root.style.setProperty('--app-interface-font-family', uiFontValue);
   root.style.setProperty('--content-panel-font-family', interfaceFontValue);

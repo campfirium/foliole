@@ -125,7 +125,7 @@ function ExternalFolderListSurface(args: {
   selection: Extract<ExternalLibrarySelection, { kind: 'folder' | 'directory' }>;
 }) {
   return (
-    <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col bg-canvas">
+    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
       <FolderListView
         documentMaxWidth={args.documentMaxWidth}
         emptyState={{
@@ -159,7 +159,7 @@ function ExternalEmptySurface(args: {
   selection: Exclude<ExternalLibrarySelection, { kind: 'document' }>;
 }) {
   return (
-    <section aria-label="Document area" className="flex min-h-0 flex-1 items-center justify-center bg-canvas px-6">
+    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
       <AppEmptyState
         description={resolveExternalSurfaceDescription(args.selection, args.selectedFolder, args.error)}
         title={resolveExternalSurfaceTitle(args.selection, args.selectedFolder)}
@@ -212,7 +212,7 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
 
   if (!preview) {
     return (
-      <section aria-label="Document area" className="flex min-h-0 flex-1 items-center justify-center bg-canvas px-6">
+      <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 items-center justify-center px-6">
         <AppEmptyState
           description={resolveExternalSurfaceDescription(props.selection, selectedFolder, error)}
           title={resolveExternalSurfaceTitle(props.selection, selectedFolder)}

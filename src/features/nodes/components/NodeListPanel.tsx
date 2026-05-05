@@ -159,7 +159,7 @@ export function NodeListPanel(props: NodeListPanelProps) {
   useNodeListPanelEffects(props, scrollContainerRef);
 
   return (
-    <aside aria-label="Node list panel" className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground">
+    <aside aria-label="Node list panel" className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
       <NodeListHeader
         hasCollapsibleNodes={props.collapse.hasCollapsibleNotes}
         hasCollapsedNodes={props.collapse.hasCollapsedNotes}

@@ -19,7 +19,7 @@ export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
   props: WorkspaceLayoutProps;
 }) {
   return (
-    <div className="h-full bg-bg-panel max-[1080px]:hidden">
+    <div className="workspace-region-main-rail h-full max-[1080px]:hidden">
       <WorkspaceSideToolbar
         canStartStudyMode={props.canStartStudyMode}
         isImportManagementOpen={isImportManagementOpen}

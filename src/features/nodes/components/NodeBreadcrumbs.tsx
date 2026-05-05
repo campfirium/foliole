@@ -1,5 +1,5 @@
-import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 import { buildBreadcrumbDisplayPath } from '../../../shared/lib/breadcrumbDisplayPath';
+import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { AppBreadcrumb } from '@/shared/ui';
 

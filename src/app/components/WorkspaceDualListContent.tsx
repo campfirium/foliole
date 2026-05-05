@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import type { CSSProperties } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -203,19 +204,29 @@ function renderExternalContentColumn(props: WorkspaceDualListContentProps) {
   );
 }
 
+function useWorkspaceFolderWidthCssVar(width: number) {
+  useEffect(() => {
+    document.documentElement.style.setProperty('--workspace-folder-column-width', `${width}px`);
+  }, [width]);
+}
+
 export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   const dualListState = useWorkspaceDualListState(props);
   const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
   const topicRootId = dualListState.activeFolderColumnId ?? dualListState.activeFolderId ?? null;
+  useWorkspaceFolderWidthCssVar(folderListResize.width);
 
   if (!topicRootId && !props.isVirtualViewOpen && !props.isExternalViewOpen) {
     return renderSingleListFallback(props);
   }
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden bg-bg-panel">
+    <div
+      className="flex min-h-0 flex-1 overflow-hidden"
+      style={{ '--workspace-folder-column-width': `${folderListResize.width}px` } as CSSProperties}
+    >
       <div
-        className="flex min-h-0 min-w-0 overflow-hidden bg-bg-panel"
+        className="workspace-region-main-folder flex min-h-0 min-w-0 overflow-hidden"
         style={{ flex: `0 0 ${folderListResize.width}px` }}
       >
         <WorkspaceFolderColumn
@@ -249,7 +260,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         onPointerDown={folderListResize.handlePointerDown}
         width={folderListResize.width}
       />
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-canvas">
+      <div className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {props.isVirtualViewOpen
           ? renderVirtualContentColumn(props)
           : props.isExternalViewOpen

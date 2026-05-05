@@ -6,7 +6,7 @@ export function WorkspaceListLoadingState() {
     <aside
       aria-busy="true"
       aria-label="Loading workspace list"
-      className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground"
+      className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col text-foreground"
     >
       <NodeListHeader
         hasCollapsibleNodes={false}
@@ -36,7 +36,7 @@ export function WorkspaceListLoadingState() {
 
 export function WorkspaceListEmptyState() {
   return (
-    <aside aria-label="Node list panel" className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground">
+    <aside aria-label="Node list panel" className="workspace-region-main-folder flex min-h-0 flex-1 flex-col text-foreground">
       <div className="flex min-h-[40px] items-center justify-end gap-2 px-3">
         <div className="h-8 w-8 rounded-sm bg-foreground/[0.05]" />
       </div>

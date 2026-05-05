@@ -96,7 +96,7 @@ export function PdfDocumentSurfaceLayout(props: PdfDocumentSurfaceLayoutProps) {
   return (
     <section
       aria-label="PDF reader panel"
-      className="pdf-document-surface relative flex min-h-0 flex-1 flex-col bg-bg-canvas"
+      className="pdf-document-surface workspace-region-main-document relative flex min-h-0 flex-1 flex-col"
       data-testid="pdf-document-surface"
       onClickCapture={props.handleExternalLinkClick}
       ref={props.surfaceRef}

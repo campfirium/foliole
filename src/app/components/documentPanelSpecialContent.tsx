@@ -18,9 +18,9 @@ import { VirtualDocumentSurface } from './VirtualDocumentSurface';
 
 function renderPdfLoadingSurface() {
   return (
-    <section aria-label="PDF reader panel" className="flex min-h-0 flex-1 flex-col bg-bg-canvas" data-testid="pdf-document-loading-shell">
+    <section aria-label="PDF reader panel" className="workspace-region-main-document flex min-h-0 flex-1 flex-col" data-testid="pdf-document-loading-shell">
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-bg-canvas">
+        <div className="workspace-region-main-document pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
           <div aria-hidden="true" className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-foreground/65" />
         </div>
       </div>

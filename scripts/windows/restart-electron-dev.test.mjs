@@ -69,4 +69,12 @@ describe('restart-electron-dev script', () => {
     expect(script).toContain('taskkill timeout pid=');
     expect(script).toContain('process still running after forced stop pid=');
   });
+
+  it('keeps stale-process cleanup scoped to the Electron dev loop', async () => {
+    const script = await readFile(SCRIPT_PATH, 'utf8');
+
+    expect(script).not.toContain('foliole-tauri-core');
+    expect(script).not.toContain("^cargo(?:\\.exe)?$");
+    expect(script).not.toContain('.*tauri');
+  });
 });

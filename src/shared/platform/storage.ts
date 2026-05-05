@@ -16,6 +16,8 @@ const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.selectionColor,
   APP_SETTINGS_STORAGE_KEYS.highlightColor,
   APP_SETTINGS_STORAGE_KEYS.clozeColor,
+  APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette,
+  APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments,
   APP_SETTINGS_STORAGE_KEYS.interfaceFontSize,
   APP_SETTINGS_STORAGE_KEYS.customInterfaceFont,
   APP_SETTINGS_STORAGE_KEYS.customMonospaceFont,

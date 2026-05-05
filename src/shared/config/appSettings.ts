@@ -14,6 +14,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   selectionColor: 'foliole-selection-color',
   highlightColor: 'foliole-highlight-color',
   clozeColor: 'foliole-cloze-color',
+  workspaceSurfacePalette: 'foliole-workspace-surface-palette',
+  workspaceSurfaceAssignments: 'foliole-workspace-surface-assignments',
   interfaceFontSize: 'foliole-interface-font-size',
   customInterfaceFont: 'foliole-custom-interface-font-family',
   customMonospaceFont: 'foliole-custom-monospace-font-family',

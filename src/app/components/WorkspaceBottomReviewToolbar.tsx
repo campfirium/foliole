@@ -6,14 +6,14 @@ import { WorkspaceStudyDockTrigger } from './WorkspaceSideToolbar';
 function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayoutProps }) {
   return (
     <div
-      className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-hidden bg-bg-subtle ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
+      className={`workspace-bottom-region-grid grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
     >
-      <div className="flex min-w-0 items-center border-t border-border px-4 text-sm font-medium text-foreground/70 max-[1080px]:hidden">
+      <div className="flex min-w-0 items-center border-t border-border bg-transparent px-4 text-sm font-medium text-foreground/70 max-[1080px]:hidden">
         {Math.max(props.reviewQueueCount, 0)} left · {Math.max(props.reviewCompletedCount, 0)} done
       </div>
       <div aria-hidden="true" className="bg-border max-[1080px]:hidden" />
       <ReviewModeToolbar
-        className="h-full border-t border-border bg-bg-subtle px-6"
+        className="h-full border-t border-border bg-transparent px-6"
         showSummary={false}
         isAnswerRevealed={props.isAnswerRevealed}
         isCurrentItemGradable={props.isCurrentReviewItemGradable}
@@ -32,7 +32,7 @@ function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayout
       {props.isImmersiveMode ? null : (
         <>
           <div aria-hidden="true" className="hidden bg-border xl:block" />
-          <div aria-hidden="true" className="hidden border-t border-border bg-bg-subtle xl:block" />
+          <div aria-hidden="true" className="hidden border-t border-border bg-transparent xl:block" />
         </>
       )}
     </div>

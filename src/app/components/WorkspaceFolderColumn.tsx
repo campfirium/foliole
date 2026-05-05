@@ -101,7 +101,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
 
 export function WorkspaceFolderColumn(props: WorkspaceFolderColumnProps) {
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-bg-panel">
+    <div className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">{renderRegularSection(props)}</div>
     </div>
   );

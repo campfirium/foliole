@@ -706,10 +706,7 @@ function Stop-StaleFolioleDevProcesses {
   Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npm-cli\.js"\s+run\s+electron:dev')
   Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npx-cli\.js"\s+electron\s+electron-dist[\\/]+electron[\\/]+main\.js')
   Stop-MatchingProcesses -NamePattern '^electron(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*electron-dist[\\/]+main\.js')
-  Stop-MatchingProcesses -NamePattern '^foliole-tauri-core(?:\.exe)?$' -CommandPattern ''
-  Stop-MatchingProcesses -NamePattern '^cargo(?:\.exe)?$' -CommandPattern $escapedWorkDir
   Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*vite(?:\.js)?')
-  Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*tauri')
 }
 
 function Resolve-NpmCommand {

@@ -16,7 +16,7 @@ export function ExternalLibraryPreviewSurface(args: {
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
 
   return (
-    <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col bg-canvas">
+    <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
       <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
         <div className="min-w-0">
           <div className="truncate text-base font-semibold text-foreground">{args.preview.fileName}</div>

@@ -37,6 +37,23 @@
   --workspace-top-toolbar-height: 40px;
   --workspace-bottom-toolbar-height: 56px;
   --workspace-toolbar-inline-padding: 16px;
+  --workspace-folder-column-width: 200px;
+  --workspace-topic-column-width: 100px;
+  --workspace-region-titlebar-rail-bg: #fcfcfc;
+  --workspace-region-titlebar-folder-bg: #fcfcfc;
+  --workspace-region-titlebar-topic-bg: #fcfcfc;
+  --workspace-region-titlebar-document-bg: #fcfcfc;
+  --workspace-region-titlebar-sidebar-bg: #fcfcfc;
+  --workspace-region-main-rail-bg: #f6f6f6;
+  --workspace-region-main-folder-bg: #f6f6f6;
+  --workspace-region-main-topic-bg: #f6f6f6;
+  --workspace-region-main-document-bg: #ffffff;
+  --workspace-region-main-sidebar-bg: #f6f6f6;
+  --workspace-region-footer-rail-bg: #fcfcfc;
+  --workspace-region-footer-folder-bg: #fcfcfc;
+  --workspace-region-footer-topic-bg: #fcfcfc;
+  --workspace-region-footer-document-bg: #fcfcfc;
+  --workspace-region-footer-sidebar-bg: #fcfcfc;
 }
 
 html,
@@ -85,7 +102,20 @@ body {
 
 .window-titlebar {
   align-items: center;
-  background: #fcfcfc;
+  background:
+    linear-gradient(
+      to right,
+      var(--workspace-region-titlebar-rail-bg) 0,
+      var(--workspace-region-titlebar-rail-bg) var(--workspace-rail-width),
+      var(--workspace-region-titlebar-folder-bg) var(--workspace-rail-width),
+      var(--workspace-region-titlebar-folder-bg) calc(var(--workspace-rail-width) + var(--workspace-folder-column-width)),
+      var(--workspace-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-folder-column-width)),
+      var(--workspace-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
+      var(--workspace-region-titlebar-document-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
+      var(--workspace-region-titlebar-document-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      var(--workspace-region-titlebar-sidebar-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      var(--workspace-region-titlebar-sidebar-bg) 100%
+    );
   border-bottom: 1px solid rgba(32, 33, 36, 0.18);
   display: grid;
   grid-template-columns: var(--window-titlebar-left-width, 40px) minmax(0, 1fr) var(--window-titlebar-right-width, 40px);
@@ -95,6 +125,43 @@ body {
   position: relative;
   user-select: none;
   -webkit-app-region: drag;
+}
+
+.workspace-region-main-rail {
+  background: var(--workspace-region-main-rail-bg);
+}
+
+.workspace-region-main-folder {
+  background: var(--workspace-region-main-folder-bg);
+}
+
+.workspace-region-main-topic {
+  background: var(--workspace-region-main-topic-bg);
+}
+
+.workspace-region-main-document {
+  background: var(--workspace-region-main-document-bg);
+}
+
+.workspace-region-main-sidebar {
+  background: var(--workspace-region-main-sidebar-bg);
+}
+
+.workspace-bottom-region-grid {
+  background:
+    linear-gradient(
+      to right,
+      var(--workspace-region-footer-rail-bg) 0,
+      var(--workspace-region-footer-rail-bg) var(--workspace-rail-width),
+      var(--workspace-region-footer-folder-bg) var(--workspace-rail-width),
+      var(--workspace-region-footer-folder-bg) calc(var(--workspace-rail-width) + var(--workspace-folder-column-width)),
+      var(--workspace-region-footer-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-folder-column-width)),
+      var(--workspace-region-footer-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
+      var(--workspace-region-footer-document-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
+      var(--workspace-region-footer-document-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      var(--workspace-region-footer-sidebar-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      var(--workspace-region-footer-sidebar-bg) 100%
+    );
 }
 
 .window-titlebar-center-title {

@@ -136,7 +136,7 @@ export function WorkspaceSideToolbar({
   return (
     <AppToolbar
       aria-label="Workspace side toolbar"
-      className="flex h-full w-[var(--workspace-rail-width)] flex-col border-r border-border bg-background"
+      className="workspace-region-main-rail flex h-full w-[var(--workspace-rail-width)] flex-col border-r border-border"
     >
       <div className="flex min-h-0 flex-1 flex-col items-center">
         <ImportActions
@@ -189,7 +189,10 @@ export function WorkspaceStudyDockTrigger({
       : 'Start review (no due cards)';
 
   return (
-    <div className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center border-r border-t border-border bg-bg-subtle">
+    <div
+      className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center border-r border-t border-border"
+      style={{ backgroundColor: 'var(--workspace-region-footer-rail-bg)' }}
+    >
       <StudyAction
         canStartStudyMode={canStartStudyMode}
         isStudyMode={isStudyMode}
