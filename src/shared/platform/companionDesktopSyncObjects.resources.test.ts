@@ -113,6 +113,44 @@ async function testPullsBodiesBeforeAttachments() {
     .toBeLessThan(syncBridgeMock.loadCompanionMissingAttachmentResources.mock.invocationCallOrder[0]);
 }
 
+async function testContinuesContentBatchAfterSingleBodyFailure() {
+  const failedHash = 'c'.repeat(64);
+  const cachedHash = 'd'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([
+      { hash: failedHash, size_bytes: 1024 },
+      { hash: cachedHash, size_bytes: 2048 }
+    ])
+    .mockResolvedValueOnce([]);
+  syncBridgeMock.syncCompanionContentBlob.mockImplementation(async ({ hash }: { hash: string }) => {
+    if (hash === failedHash) {
+      throw new Error('Desktop returned 404.');
+    }
+    return { availability: 'cached', hash };
+  });
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [cachedHash], status: 'ok' }), { status: 200 }));
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(result.contentBlobError).toBeNull();
+  expect(result.syncedContentBlobHashes).toEqual([cachedHash]);
+  expect(fetchMock).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/content-blob/ack', expect.any(Object));
+}
+
+async function testFailsContentStageWhenWholeBodyBatchFails() {
+  const failedHash = 'f'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValueOnce([{ hash: failedHash, size_bytes: 1024 }]);
+  syncBridgeMock.syncCompanionContentBlob.mockRejectedValue(new Error('Desktop returned 404.'));
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(result.contentBlobError).toBe('Topic body batch could not cache any requested body.');
+  expect(result.syncedContentBlobHashes).toEqual([]);
+}
+
 async function testRefreshesStructureBeforeContentBatch() {
   const hashes = Array.from({ length: 32 }, (_, index) => `${String(index % 10)}`.repeat(64));
   syncBridgeMock.loadCompanionMissingContentBlobs
@@ -163,6 +201,10 @@ describe('companion desktop sync resources', () => {
   it('reports attachment resource breakdown in sync progress', testReportsAttachmentBreakdown);
 
   it('pulls topic bodies before attachment resources', testPullsBodiesBeforeAttachments);
+
+  it('continues a content body batch after one body fails', testContinuesContentBatchAfterSingleBodyFailure);
+
+  it('fails the content body stage when a whole batch cannot cache anything', testFailsContentStageWhenWholeBodyBatchFails);
 
   it('refreshes structure before running bounded content blob batches', testRefreshesStructureBeforeContentBatch);
 

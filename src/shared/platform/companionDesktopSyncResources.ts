@@ -78,13 +78,17 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
     const blobs = await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
     if (blobs.length === 0) break;
     const hashes = blobs.map((blob) => blob.hash);
-    const syncedBatchHashes = await pullContentBlobBatch(endpoint, hashes);
+    const batch = await pullContentBlobBatch(endpoint, hashes);
+    const syncedBatchHashes = batch.syncedContentBlobHashes;
     syncedContentBlobHashes.push(...syncedBatchHashes);
     const syncedHashSet = new Set(syncedBatchHashes);
     syncedBytes += blobs
       .filter((blob) => syncedHashSet.has(blob.hash))
       .reduce((sum, blob) => sum + Math.max(0, blob.size_bytes ?? 0), 0);
     onProgress?.({ completed: syncedContentBlobHashes.length, completedBytes: syncedBytes, contentBreakdown, phase: 'content', total, totalBytes });
+    if (syncedBatchHashes.length === 0 && batch.failedContentBlobCount > 0) {
+      throw new Error('Topic body batch could not cache any requested body.');
+    }
     if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedBatchHashes.length === 0) break;
   }
   return { syncedContentBlobHashes };
@@ -118,12 +122,20 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
 
 async function pullContentBlobBatch(endpoint: string, hashes: string[]) {
   const syncedContentBlobHashes: string[] = [];
+  let failedContentBlobCount = 0;
   for (let index = 0; index < hashes.length; index += CONTENT_BLOB_CONCURRENT_FETCH_LIMIT) {
     const chunk = hashes.slice(index, index + CONTENT_BLOB_CONCURRENT_FETCH_LIMIT);
-    const syncedChunkHashes = await Promise.all(chunk.map((hash) => pullContentBlob(endpoint, hash)));
+    const syncedChunkHashes = await Promise.all(chunk.map(async (hash) => {
+      try {
+        return await pullContentBlob(endpoint, hash);
+      } catch {
+        failedContentBlobCount += 1;
+        return null;
+      }
+    }));
     syncedContentBlobHashes.push(...syncedChunkHashes.filter((hash): hash is string => Boolean(hash)));
   }
-  return syncedContentBlobHashes;
+  return { failedContentBlobCount, syncedContentBlobHashes };
 }
 
 async function pullContentBlob(endpoint: string, hash: string) {
