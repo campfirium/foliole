@@ -2185,6 +2185,11 @@
     }
   },
   "runtimeQueries": {
+    "groupKeys": {
+      "companionMeta": "companionMeta",
+      "existingState": "existingState",
+      "nextStateSeq": "nextStateSeq"
+    },
     "companionMeta": {
       "queryName": "companionMetaValue"
     },

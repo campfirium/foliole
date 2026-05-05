@@ -196,6 +196,11 @@ export const ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES = {
 } as const;
 
 export const ANDROID_COMPANION_RUNTIME_QUERY_RULES = {
+  groupKeys: {
+    companionMeta: 'companionMeta',
+    existingState: 'existingState',
+    nextStateSeq: 'nextStateSeq'
+  },
   companionMeta: {
     queryName: 'companionMetaValue'
   },

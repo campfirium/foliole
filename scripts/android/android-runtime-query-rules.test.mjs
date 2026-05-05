@@ -19,6 +19,11 @@ describe('Android runtime query rules', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.runtimeQueries).toEqual(ANDROID_COMPANION_RUNTIME_QUERY_RULES);
+    expect(definitions.runtimeQueries.groupKeys).toEqual({
+      companionMeta: 'companionMeta',
+      existingState: 'existingState',
+      nextStateSeq: 'nextStateSeq'
+    });
     expect(definitions.runtimeQueries).toMatchObject({
       companionMeta: { queryName: 'companionMetaValue' },
       nextStateSeq: { nextStateSeqKey: 'next_state_seq', queryName: 'syncStateNextSeqForMutation' }
@@ -30,7 +35,8 @@ describe('Android runtime query rules', () => {
     const rulesSource = await readFile(RUNTIME_RULES, 'utf8');
 
     expect(combinedSource).toContain('FolioleCompanionRuntimeQueryRules.stringValue(context, groupName, key)');
-    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "runtimeQueries")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "runtimeQueries", groupName)');
+    expect(rulesSource).not.toContain('optJSONObject(groupName)');
     expect(combinedSource).not.toContain('"companionMetaValue"');
     expect(combinedSource).not.toContain('"syncStateNextSeqForMutation"');
     expect(combinedSource).not.toContain('"next_state_seq"');
