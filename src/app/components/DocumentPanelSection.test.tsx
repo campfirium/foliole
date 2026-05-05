@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,7 +20,7 @@ const { documentSourceUpdatePanelMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('./DocumentSourceUpdatePanel', () => ({
-  DocumentSourceUpdatePanel: (props: { open: boolean; onCurrentContentChange: (content: string) => void }) => {
+  DocumentSourceUpdatePanel: (props: { open: boolean; onCurrentContentChange: (content: string) => void; onOpenChange: (open: boolean) => void }) => {
     documentSourceUpdatePanelMock(props);
     return props.open ? <div data-testid="document-source-update-panel">Source update panel</div> : null;
   }
@@ -101,7 +101,24 @@ beforeEach(() => {
   });
 });
 
-describe('DocumentPanelSection', () => {
+function mockSourceUpdatePreview() {
+  useNodeSourceUpdatePreview.mockReturnValue({
+    isLoading: false,
+    value: {
+      checkedAt: '2026-03-28T04:00:00.000Z',
+      currentContent: 'Current content',
+      sourceNodeId: 'node-1',
+      updatedContent: 'Updated content'
+    }
+  } as never);
+}
+
+function openSourceUpdatePanel() {
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle source update panel' }));
+  return documentSourceUpdatePanelMock.mock.calls.at(-1)?.[0];
+}
+
+function registerDocumentPanelSectionTests() {
   it('hides the source update action when no source update is available', () => {
     renderSection();
 
@@ -110,37 +127,21 @@ describe('DocumentPanelSection', () => {
   });
 
   it('opens the source update panel from the header action', () => {
-    useNodeSourceUpdatePreview.mockReturnValue({
-      isLoading: false,
-      value: {
-        checkedAt: '2026-03-28T04:00:00.000Z',
-        currentContent: 'Current content',
-        sourceNodeId: 'node-1',
-        updatedContent: 'Updated content'
-      }
-    } as never);
+    mockSourceUpdatePreview();
 
     renderSection();
 
     expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
     expect(screen.queryByTestId('document-source-update-panel')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle source update panel' }));
+    openSourceUpdatePanel();
 
     expect(screen.getByTestId('document-source-update-panel')).toBeInTheDocument();
     expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
   });
 
   it('places the source update action before the more-options menu in the header', () => {
-    useNodeSourceUpdatePreview.mockReturnValue({
-      isLoading: false,
-      value: {
-        checkedAt: '2026-03-28T04:00:00.000Z',
-        currentContent: 'Current content',
-        sourceNodeId: 'node-1',
-        updatedContent: 'Updated content'
-      }
-    } as never);
+    mockSourceUpdatePreview();
 
     renderSection();
 
@@ -150,24 +151,38 @@ describe('DocumentPanelSection', () => {
     expect(splitButton.compareDocumentPosition(moreButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('routes source update panel edits to the concrete editor node id', () => {
+  it('writes source update panel edits back when the panel closes', () => {
     const onNodeContentChange = vi.fn();
-    useNodeSourceUpdatePreview.mockReturnValue({
-      isLoading: false,
-      value: {
-        checkedAt: '2026-03-28T04:00:00.000Z',
-        currentContent: 'Current content',
-        sourceNodeId: 'node-1',
-        updatedContent: 'Updated content'
-      }
-    } as never);
+    mockSourceUpdatePreview();
 
     renderSectionWithProps({ onNodeContentChange });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle source update panel' }));
-    const panelProps = documentSourceUpdatePanelMock.mock.calls.at(-1)?.[0];
-    panelProps?.onCurrentContentChange('Updated from split panel');
+    const panelProps = openSourceUpdatePanel();
+    act(() => {
+      panelProps?.onCurrentContentChange('Updated from split panel');
+    });
+    act(() => {
+      panelProps?.onOpenChange(false);
+    });
 
     expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'Updated from split panel');
   });
+
+  it('does not write back unchanged source update panel content on close', () => {
+    const onNodeContentChange = vi.fn();
+    mockSourceUpdatePreview();
+
+    renderSectionWithProps({ editorContent: 'Current content', onNodeContentChange });
+
+    const panelProps = openSourceUpdatePanel();
+    act(() => {
+      panelProps?.onOpenChange(false);
+    });
+
+    expect(onNodeContentChange).not.toHaveBeenCalled();
+  });
+}
+
+describe('DocumentPanelSection', () => {
+  registerDocumentPanelSectionTests();
 });

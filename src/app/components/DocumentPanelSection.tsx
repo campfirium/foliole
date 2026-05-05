@@ -1,5 +1,5 @@
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -109,21 +109,82 @@ function getDocumentPanelBodyProps(
   };
 }
 
-export function DocumentPanelSection(props: DocumentPanelSectionProps) {
-  const { editorDisplayMode } = useAppearanceSettings();
+function useSourceUpdatePanelState(props: DocumentPanelSectionProps) {
   const [isSourceUpdatePanelOpen, setIsSourceUpdatePanelOpen] = useState(false);
-  const splitPanelEditorRef = useRef<EditorAdapter | null>(null);
-  const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props, editorDisplayMode);
-  const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
-  const bodyProps = getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal);
+  const [sourceUpdateDraftContent, setSourceUpdateDraftContent] = useState<string | null>(null);
+  const sourceUpdateDraftRef = useRef<string | null>(null);
   const sourceUpdatePreview = useNodeSourceUpdatePreview(props.activeNodeId);
+
+  const flushSourceUpdateDraft = useCallback(() => {
+    const draft = sourceUpdateDraftRef.current;
+    if (draft === null || draft === props.editorContent) {
+      return;
+    }
+    if (!props.editorNodeId) {
+      props.onEditorChange(draft);
+      return;
+    }
+    props.onNodeContentChange(props.editorNodeId, draft);
+  }, [props.editorContent, props.editorNodeId, props.onEditorChange, props.onNodeContentChange]);
+
+  const handleSourceUpdatePanelOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        const nextDraft = sourceUpdateDraftRef.current ?? props.editorContent;
+        sourceUpdateDraftRef.current = nextDraft;
+        setSourceUpdateDraftContent(nextDraft);
+        setIsSourceUpdatePanelOpen(true);
+        return;
+      }
+
+      flushSourceUpdateDraft();
+      sourceUpdateDraftRef.current = null;
+      setSourceUpdateDraftContent(null);
+      setIsSourceUpdatePanelOpen(false);
+    },
+    [flushSourceUpdateDraft, props.editorContent]
+  );
 
   useEffect(() => {
     if (!sourceUpdatePreview.value && !sourceUpdatePreview.isLoading) {
-      setIsSourceUpdatePanelOpen(false);
+      handleSourceUpdatePanelOpenChange(false);
     }
-  }, [sourceUpdatePreview.isLoading, sourceUpdatePreview.value]);
-  useSplitPanelContentSync(isSourceUpdatePanelOpen, props.editorContent, props.editorNodeId, props.onNodeContentChange, splitPanelEditorRef);
+  }, [handleSourceUpdatePanelOpenChange, sourceUpdatePreview.isLoading, sourceUpdatePreview.value]);
+
+  useEffect(() => {
+    if (!isSourceUpdatePanelOpen) {
+      sourceUpdateDraftRef.current = null;
+      setSourceUpdateDraftContent(null);
+      return;
+    }
+    sourceUpdateDraftRef.current = props.editorContent;
+    setSourceUpdateDraftContent(props.editorContent);
+  }, [isSourceUpdatePanelOpen, props.editorNodeId]);
+
+  return {
+    currentSourceUpdateContent: sourceUpdateDraftContent ?? props.editorContent,
+    handleSourceUpdateDraftChange: (content: string) => {
+      sourceUpdateDraftRef.current = content;
+      setSourceUpdateDraftContent(content);
+    },
+    handleSourceUpdatePanelOpenChange,
+    isSourceUpdatePanelOpen,
+    sourceUpdatePreview
+  };
+}
+
+export function DocumentPanelSection(props: DocumentPanelSectionProps) {
+  const { editorDisplayMode } = useAppearanceSettings();
+  const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props, editorDisplayMode);
+  const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
+  const bodyProps = getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal);
+  const {
+    currentSourceUpdateContent,
+    handleSourceUpdateDraftChange,
+    handleSourceUpdatePanelOpenChange,
+    isSourceUpdatePanelOpen,
+    sourceUpdatePreview
+  } = useSourceUpdatePanelState(props);
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
@@ -139,12 +200,19 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onGoForward={props.onGoForward}
           onGoParent={props.onGoParent}
           onSelectNode={props.onSelectNode}
-          onToggleSourceUpdatePanel={() => setIsSourceUpdatePanelOpen((current) => !current)}
+          onToggleSourceUpdatePanel={() => handleSourceUpdatePanelOpenChange(!isSourceUpdatePanelOpen)}
           showSourceUpdateAction={Boolean(sourceUpdatePreview.value)}
         />
         <DocumentPanelBody {...bodyProps} />
       </section>
-      {renderSourceUpdatePanel(props, isSourceUpdatePanelOpen, splitPanelEditorRef, setIsSourceUpdatePanelOpen, sourceUpdatePreview.value)}
+      {renderSourceUpdatePanel(
+        props,
+        currentSourceUpdateContent,
+        isSourceUpdatePanelOpen,
+        handleSourceUpdatePanelOpenChange,
+        handleSourceUpdateDraftChange,
+        sourceUpdatePreview.value
+      )}
       {props.contextMenu ? (
         <EditorContextMenu
           canRunCommands={props.contextMenu.canRunCommands}
@@ -159,37 +227,12 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   );
 }
 
-function useSplitPanelContentSync(
-  isSourceUpdatePanelOpen: boolean,
-  editorContent: string,
-  editorNodeId: string | null,
-  onNodeContentChange: (nodeId: string, content: string) => void,
-  splitPanelEditorRef: { current: EditorAdapter | null }
-) {
-  useEffect(() => {
-    if (!isSourceUpdatePanelOpen || !editorNodeId) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      const content = splitPanelEditorRef.current?.getContent();
-      if (typeof content !== 'string' || content === editorContent) {
-        return;
-      }
-      onNodeContentChange(editorNodeId, content);
-    }, 180);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [editorContent, editorNodeId, isSourceUpdatePanelOpen, onNodeContentChange, splitPanelEditorRef]);
-}
-
 function renderSourceUpdatePanel(
   props: DocumentPanelSectionProps,
+  currentSourceUpdateContent: string,
   isSourceUpdatePanelOpen: boolean,
-  splitPanelEditorRef: { current: EditorAdapter | null },
-  setIsSourceUpdatePanelOpen: (open: boolean) => void,
+  onSourceUpdatePanelOpenChange: (open: boolean) => void,
+  onSourceUpdateDraftChange: (content: string) => void,
   sourceUpdatePreview: ReturnType<typeof useNodeSourceUpdatePreview>['value']
 ) {
   if (!sourceUpdatePreview) {
@@ -198,21 +241,12 @@ function renderSourceUpdatePanel(
 
   return (
     <DocumentSourceUpdatePanel
-      currentContent={props.editorContent}
+      currentContent={currentSourceUpdateContent}
       currentNodeId={props.editorNodeId}
       documentMaxWidth={props.documentMaxWidth}
       editorAppearanceKey={props.editorAppearanceKey}
-      onCurrentContentChange={(content) => {
-        if (!props.editorNodeId) {
-          props.onEditorChange(content);
-          return;
-        }
-        props.onNodeContentChange(props.editorNodeId, content);
-      }}
-      onCurrentEditorReady={(adapter) => {
-        splitPanelEditorRef.current = adapter;
-      }}
-      onOpenChange={setIsSourceUpdatePanelOpen}
+      onCurrentContentChange={onSourceUpdateDraftChange}
+      onOpenChange={onSourceUpdatePanelOpenChange}
       open={isSourceUpdatePanelOpen}
       updatedContent={sourceUpdatePreview.updatedContent}
     />
