@@ -49,6 +49,8 @@ export function SettingsImportManagementContent(props: {
   sources: DraftImportSource[];
   titleStrategy: ImportNodeTitleStrategy;
 }) {
+  const lastSource = props.sources.at(-1);
+
   return (
     <div className="space-y-6">
       <TitleStrategySection onChange={props.onChangeTitleStrategy} titleStrategy={props.titleStrategy} />
@@ -57,14 +59,14 @@ export function SettingsImportManagementContent(props: {
         description="Restore and adjust the long-running import folders directly here."
         title="Source folders"
       >
-        <div className="overflow-auto">
+        <div className="min-w-0 overflow-hidden">
           <ImportSourceTable
+            onAddSource={() => lastSource ? props.onCopySource(lastSource.id) : undefined}
             onChange={props.onChange}
             onChangeAction={props.onChangeAction}
             onChooseHighlightFolder={props.onChooseHighlightFolder}
             onChoosePrimaryFolder={props.onChoosePrimaryFolder}
             onDisableKeepImport={props.onDisableKeepImport}
-            onCopySource={props.onCopySource}
             onDeleteSource={props.onDeleteSource}
             onPreviewKeepImport={props.onPreviewKeepImport}
             sources={props.sources}

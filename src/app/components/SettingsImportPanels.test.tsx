@@ -26,10 +26,12 @@ it('shows the restored import management table directly in settings', () => {
   );
 
   expect(screen.getByText('Source folders')).toBeInTheDocument();
-  expect(screen.getAllByText('Original folder').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('Highlight folder').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('Handling').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('Keep import').length).toBeGreaterThan(0);
+  expect(screen.getByRole('table', { name: 'Import source folders' })).toBeInTheDocument();
+  expect(screen.getByText('Original')).toBeInTheDocument();
+  expect(screen.getByText('Highlight')).toBeInTheDocument();
+  expect(screen.getByText('Handling')).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: /Original folder/ }).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole('button', { name: /Preview/ }).length).toBeGreaterThan(0);
 });
 
 it('shows the restored Readwise Reader setup directly in settings', () => {

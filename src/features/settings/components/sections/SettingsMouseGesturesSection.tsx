@@ -7,7 +7,7 @@ import {
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
-  settingsColorFieldClassName,
+  settingsColorSwatchClassName,
   settingsFieldClassName,
   settingsValueBoxClassName
 } from '../../../../shared/ui';
@@ -59,14 +59,13 @@ function NumberField(props: {
   min: number;
   onChange: (value: number) => void;
   step: number;
-  suffix?: string;
   value: number;
 }) {
   return (
-    <div className="inline-flex items-center gap-2">
+    <div className="inline-flex items-center">
       <input
         aria-label={props.ariaLabel}
-        className={settingsFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
+        className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} text-right tabular-nums`)}
         max={props.max}
         min={props.min}
         onChange={(event) => props.onChange(Number(event.target.value))}
@@ -74,7 +73,6 @@ function NumberField(props: {
         type="number"
         value={props.value}
       />
-      {props.suffix ? <span className="text-sm text-foreground/60">{props.suffix}</span> : null}
     </div>
   );
 }
@@ -83,7 +81,6 @@ function MouseGestureAreaSection() {
   return (
     <SettingsSection
       ariaLabel="Mouse gesture area section"
-      description="Mouse gestures are currently available only inside the main document panel."
       title="Area"
     >
       <SettingsRow description="More areas can be added later without changing the gesture model." readonly title="Active area">
@@ -104,7 +101,6 @@ function MouseGestureBindingsSection(props: {
   return (
     <SettingsSection
       ariaLabel="Mouse gesture bindings section"
-      description="Pick an action for each gesture. One-stroke and two-stroke gestures share the same list."
       title="Bindings"
     >
       {GESTURE_ROWS.map((gesture) => (
@@ -139,29 +135,36 @@ function MouseGestureTrailSection(props: {
   return (
     <SettingsSection
       ariaLabel="Mouse gesture trail section"
-      description="These values control the line you see while drawing a gesture."
       title="Trail"
     >
       <SettingsRow description="Main panel gesture trail color." title="Line color">
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <input
-            aria-label="Mouse gesture trail color"
-            className={settingsColorFieldClassName()}
-            onChange={(event) => props.onTrailColorChange(event.target.value)}
-            type="color"
-            value={settings.trailColor}
-          />
+          <label className="relative h-9 w-9 shrink-0">
+            <span
+              aria-hidden="true"
+              className={settingsColorSwatchClassName('pointer-events-none absolute inset-0')}
+              style={{ backgroundColor: settings.trailColor }}
+            />
+            <input
+              aria-label="Mouse gesture trail color"
+              className="absolute inset-0 cursor-pointer opacity-0"
+              onChange={(event) => props.onTrailColorChange(event.target.value)}
+              type="color"
+              value={settings.trailColor}
+            />
+          </label>
           <input
             aria-label="Mouse gesture trail color hex"
-            className={settingsFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
+            className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} text-right tabular-nums`)}
             onChange={(event) => props.onTrailColorChange(event.target.value)}
-            value={settings.trailColor}
+            spellCheck={false}
+            value={settings.trailColor.toUpperCase()}
           />
         </SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow description="Visible stroke width for the gesture trail." title="Line width">
+      <SettingsRow description="Visible stroke width for the gesture trail." title="Line width (px)">
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <NumberField ariaLabel="Mouse gesture trail line width" max={12} min={1} onChange={props.onTrailLineWidthChange} step={0.25} suffix="px" value={settings.trailLineWidth} />
+          <NumberField ariaLabel="Mouse gesture trail line width" max={12} min={1} onChange={props.onTrailLineWidthChange} step={0.25} value={settings.trailLineWidth} />
         </SettingsControlSlot>
       </SettingsRow>
       <SettingsRow description="Opacity of the gesture trail line." title="Opacity">
@@ -181,17 +184,16 @@ function MouseGestureThresholdsSection(props: {
   return (
     <SettingsSection
       ariaLabel="Mouse gesture thresholds section"
-      description="Tweak how much movement is needed before a stroke is counted."
       title="Thresholds"
     >
-      <SettingsRow description="Minimum movement before a direction is accepted." title="Direction threshold">
+      <SettingsRow description="Minimum movement before a direction is accepted." title="Direction threshold (px)">
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <NumberField ariaLabel="Mouse gesture direction threshold" max={48} min={8} onChange={props.onSegmentThresholdChange} step={1} suffix="px" value={settings.segmentThresholdPx} />
+          <NumberField ariaLabel="Mouse gesture direction threshold" max={48} min={8} onChange={props.onSegmentThresholdChange} step={1} value={settings.segmentThresholdPx} />
         </SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow description="Minimum distance between points in the visible trail." title="Trail point spacing">
+      <SettingsRow description="Minimum distance between points in the visible trail." title="Trail point spacing (px)">
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <NumberField ariaLabel="Mouse gesture trail point threshold" max={24} min={2} onChange={props.onTrailPointThresholdChange} step={1} suffix="px" value={settings.trailPointThresholdPx} />
+          <NumberField ariaLabel="Mouse gesture trail point threshold" max={24} min={2} onChange={props.onTrailPointThresholdChange} step={1} value={settings.trailPointThresholdPx} />
         </SettingsControlSlot>
       </SettingsRow>
     </SettingsSection>

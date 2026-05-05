@@ -103,6 +103,7 @@
 - 自动任务模式默认不追加预览，只执行任务所需的最小验证；除非用户在当次明确要求，才额外执行预览。
 - 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
 - 执行 `android:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `OPENED` / `FAILED` 与失败阶段或失败原因；不得只汇报“已验证”。
+- 最终汇报默认言简意赅，只说用户关心的结果、必要状态与下一步；禁止套用固定“改动 / 验证”模板，禁止逐条罗列文件路径、函数名、测试命令或实现细节，除非用户明确要求追踪细节，或存在失败、风险、未完成项必须说明。
 - `build` 仅在用户明确要求执行构建、或当前任务已触及依赖 / 构建根链路且必须验证构建结果时执行；对应入口为 `scripts/quality-gate.sh` 或交付脚本。
 
 ## Decision Escalation And Official Sources

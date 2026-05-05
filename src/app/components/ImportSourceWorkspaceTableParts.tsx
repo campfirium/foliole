@@ -1,7 +1,8 @@
-import { Copy, FolderOpen, X } from 'lucide-react';
+import { FolderOpen, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { importActionOptions } from '../../../lib/core/import/importSourceActions';
+import { cn } from '../../shared/lib/utils';
 import { AppButton } from '../../shared/ui';
 
 import {
@@ -118,25 +119,30 @@ export function FolderButton({
   path,
   tooltip,
   disabled = false,
-  onClick
+  onClick,
+  className
 }: {
   label: string;
   path: string;
   tooltip?: string;
   disabled?: boolean;
   onClick: () => void;
+  className?: string;
 }) {
   return (
     <AppButton
       aria-label={label}
-      className="h-10 w-full justify-between rounded-md border border-border bg-bg-elevated px-3 text-left text-sm text-foreground/75 disabled:border-border/60 disabled:bg-bg-panel disabled:text-foreground/40"
+      className={cn(
+        'h-10 w-full min-w-0 justify-between rounded-md border border-settings-control-border bg-settings-control px-3 text-left text-sm text-foreground/75 disabled:border-settings-control-border disabled:bg-settings-switch-off disabled:text-foreground/40',
+        className
+      )}
       disabled={disabled}
       onClick={onClick}
       title={disabled ? undefined : tooltip}
       variant="ghost"
     >
-      <span className="truncate">{path}</span>
-      <FolderOpen aria-hidden="true" size={14} strokeWidth={1.8} />
+      <span className="min-w-0 truncate">{path}</span>
+      <FolderOpen aria-hidden="true" className="shrink-0 text-settings-icon" size={13} strokeWidth={1.8} />
     </AppButton>
   );
 }
@@ -181,13 +187,11 @@ export function ImportSourceControlGrid({
 
 export function KeepActionCell({
   source,
-  onCopy,
   onDelete,
   onDisable,
   onPreview
 }: {
   source: DraftImportSource;
-  onCopy?: (sourceId: string) => void;
   onDelete?: (sourceId: string) => void;
   onDisable?: (sourceId: string) => void;
   onPreview: (sourceId: string) => void;
@@ -213,14 +217,9 @@ export function KeepActionCell({
         )}
       </div>
       <div className="flex items-center gap-1">
-        {onCopy ? (
-          <AppButton aria-label={`Copy ${source.id}`} className="size-8 px-0" onClick={() => onCopy(source.id)} variant="ghost">
-            <Copy aria-hidden="true" size={14} strokeWidth={1.8} />
-          </AppButton>
-        ) : null}
         {onDelete ? (
-          <AppButton aria-label={`Delete ${source.id}`} className="size-8 px-0" onClick={() => onDelete(source.id)} variant="ghost">
-            <X aria-hidden="true" size={14} strokeWidth={1.8} />
+          <AppButton aria-label={`Delete ${source.id}`} className="size-9 px-0 text-settings-icon hover:text-settings-icon-hover" onClick={() => onDelete(source.id)} variant="ghost">
+            <Trash2 aria-hidden="true" size={15} strokeWidth={1.8} />
           </AppButton>
         ) : null}
       </div>
