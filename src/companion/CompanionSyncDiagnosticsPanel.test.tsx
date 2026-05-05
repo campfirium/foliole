@@ -32,6 +32,8 @@ const diagnosticResult = {
       missing_due_review_attachment_resource_count: 1,
       missing_due_review_body_count: 2,
       missing_external_document_body_count: 1,
+      missing_nested_topic_body_count: 3,
+      missing_top_level_topic_body_count: 1,
       missing_topic_body_count: 4
     },
     events: [{
@@ -161,6 +163,8 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Attachment bytes still caching').length).toBeGreaterThan(0);
     expect(screen.getByText('Due review bodies')).toBeInTheDocument();
+    expect(screen.getByText('Top-level topic bodies')).toBeInTheDocument();
+    expect(screen.getByText('Nested topic bodies')).toBeInTheDocument();
     expect(screen.getByText('Due review attachments')).toBeInTheDocument();
     expect(screen.getAllByText('5.0 MB').length).toBeGreaterThan(0);
     expect(screen.getAllByText('3.0 MB').length).toBeGreaterThan(0);

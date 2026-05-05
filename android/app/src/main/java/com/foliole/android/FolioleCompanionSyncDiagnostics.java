@@ -105,6 +105,20 @@ final class FolioleCompanionSyncDiagnostics {
                 "WHERE n.deleted_at IS NULL AND n.body_blob_hash IS NOT NULL " +
                 "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
         ));
+        content.put("missing_top_level_topic_body_count", count(database,
+            "SELECT COUNT(DISTINCT n.body_blob_hash) FROM nodes n " +
+                "JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
+                "WHERE n.deleted_at IS NULL AND n.parent_id IS NULL AND n.body_blob_hash IS NOT NULL " +
+                "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
+        ));
+        content.put("missing_nested_topic_body_count", count(database,
+            "SELECT COUNT(DISTINCT n.body_blob_hash) FROM nodes n " +
+                "JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
+                "WHERE n.deleted_at IS NULL AND n.parent_id IS NOT NULL AND n.body_blob_hash IS NOT NULL " +
+                "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
+        ));
         content.put("missing_external_document_body_count", count(database,
             "SELECT COUNT(DISTINCT ed.body_blob_hash) FROM external_documents ed " +
                 "JOIN content_blobs cb ON cb.hash = ed.body_blob_hash " +

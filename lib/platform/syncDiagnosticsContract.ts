@@ -76,6 +76,8 @@ export interface SyncDiagnosticContent {
   missing_content_blob_count: number;
   missing_content_blob_bytes?: number;
   missing_external_document_body_count?: number;
+  missing_nested_topic_body_count?: number;
+  missing_top_level_topic_body_count?: number;
   missing_topic_body_count?: number;
   recent_topics?: Array<{
     body_blob_hash: string | null;
