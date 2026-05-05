@@ -19,7 +19,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         if (orderedNodeIds.length() == 0) {
             return null;
         }
-        boolean canReadBodyBlobData = FolioleCompanionSqliteRuntime.tableExists(database, "content_blob_data");
+        boolean canReadBodyBlobData = FolioleCompanionSqliteRuntime.tableExists(database, contentBlobRule(context, "dataTableName"));
         String contentExpression = canReadBodyBlobData ? "COALESCE(CAST(cbd.data AS TEXT), n.content)" : "n.content";
         String contentBlobJoin = canReadBodyBlobData
             ? "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash "
@@ -161,6 +161,10 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
 
     private static String snapshotRule(Context context, String key) throws Exception {
         return FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key);
+    }
+
+    private static String contentBlobRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobString(context, key);
     }
 
 }

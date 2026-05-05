@@ -28,7 +28,7 @@ final class FolioleCompanionAppDataStore {
             } finally {
                 database.endTransaction();
             }
-            deleteRecursively(new File(context.getFilesDir(), "attachments"));
+            deleteRecursively(new File(context.getFilesDir(), FolioleCompanionResourceReadQueryRules.attachmentString(context, "directoryName")));
             return FolioleCompanionSyncMetaStore.loadWorkspaceSyncState(context, database);
         }
     }

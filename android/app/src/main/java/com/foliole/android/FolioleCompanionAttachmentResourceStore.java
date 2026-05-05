@@ -116,7 +116,11 @@ final class FolioleCompanionAttachmentResourceStore {
     }
 
     private static File attachmentFile(Context context, String storageKey) {
-        return new File(new File(context.getFilesDir(), "attachments"), storageKey);
+        try {
+            return new File(new File(context.getFilesDir(), resourceRule(context, "directoryName")), storageKey);
+        } catch (Exception error) {
+            throw new IllegalStateException("Companion query definitions asset is missing attachment resource storage rules.", error);
+        }
     }
 
     private static String resourceRule(Context context, String key) throws Exception {

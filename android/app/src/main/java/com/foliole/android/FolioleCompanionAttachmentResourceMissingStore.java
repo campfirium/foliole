@@ -95,9 +95,9 @@ final class FolioleCompanionAttachmentResourceMissingStore {
             !hasAttachmentFile(context, storageKey);
     }
 
-    private static boolean hasAttachmentFile(Context context, String storageKey) {
+    private static boolean hasAttachmentFile(Context context, String storageKey) throws Exception {
         if (storageKey == null || storageKey.trim().isEmpty()) return false;
-        File file = new File(new File(context.getFilesDir(), "attachments"), storageKey.trim());
+        File file = new File(new File(context.getFilesDir(), FolioleCompanionResourceReadQueryRules.attachmentString(context, "directoryName")), storageKey.trim());
         return file.exists() && file.isFile();
     }
 

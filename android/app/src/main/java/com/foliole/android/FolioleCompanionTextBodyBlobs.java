@@ -12,8 +12,8 @@ final class FolioleCompanionTextBodyBlobs {
 
     static String upsert(Context context, SQLiteDatabase database, String content, String now) throws Exception {
         if (
-            !FolioleCompanionSqliteRuntime.tableExists(database, "content_blobs") ||
-            !FolioleCompanionSqliteRuntime.tableExists(database, "content_blob_data")
+            !FolioleCompanionSqliteRuntime.tableExists(database, resourceRule(context, "manifestTableName")) ||
+            !FolioleCompanionSqliteRuntime.tableExists(database, resourceRule(context, "dataTableName"))
         ) {
             return null;
         }
@@ -40,6 +40,10 @@ final class FolioleCompanionTextBodyBlobs {
 
     private static String mutationRule(Context context, String key) throws Exception {
         return FolioleCompanionHostSupportMutationRules.textBodyBlobString(context, key);
+    }
+
+    private static String resourceRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobString(context, key);
     }
 
     private static String sha256(byte[] bytes) throws Exception {

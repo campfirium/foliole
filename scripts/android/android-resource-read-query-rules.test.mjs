@@ -11,7 +11,12 @@ import { ANDROID_COMPANION_RESOURCE_READ_RULES } from '../../lib/core/database/a
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const CONTENT_BLOB_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobStore.java');
+const TEXT_BODY_BLOBS = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionTextBodyBlobs.java');
+const WORKSPACE_SNAPSHOT_EXPORTER = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionWorkspaceSnapshotExporter.java');
 const ATTACHMENT_RESOURCE_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceStore.java');
+const ATTACHMENT_RESOURCE_BATCH_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceBatchStore.java');
+const ATTACHMENT_RESOURCE_MISSING_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceMissingStore.java');
+const APP_DATA_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionAppDataStore.java');
 const PDF_PAGE_TEXT_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionPdfPageTextStore.java');
 const RESOURCE_RULES = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionResourceReadQueryRules.java');
 
@@ -21,11 +26,14 @@ describe('Android resource read query rules', () => {
 
     expect(definitions.resourceRead).toEqual(ANDROID_COMPANION_RESOURCE_READ_RULES);
     expect(definitions.resourceRead.contentBlobs).toMatchObject({
+      dataTableName: 'content_blob_data',
       existingQueryName: 'contentBlobDataExisting',
+      manifestTableName: 'content_blobs',
       manifestQueryName: 'contentBlobManifestByHash',
       resultKey: 'blobs'
     });
     expect(definitions.resourceRead.attachmentResources).toMatchObject({
+      directoryName: 'attachments',
       resolveQueryName: 'attachmentResourceResolve',
       resultKey: 'resources'
     });
@@ -42,7 +50,12 @@ describe('Android resource read query rules', () => {
   it('keeps resource Java stores wired to generated read rules', async () => {
     const combinedStoreSource = [
       await readFile(CONTENT_BLOB_STORE, 'utf8'),
+      await readFile(TEXT_BODY_BLOBS, 'utf8'),
+      await readFile(WORKSPACE_SNAPSHOT_EXPORTER, 'utf8'),
       await readFile(ATTACHMENT_RESOURCE_STORE, 'utf8'),
+      await readFile(ATTACHMENT_RESOURCE_BATCH_STORE, 'utf8'),
+      await readFile(ATTACHMENT_RESOURCE_MISSING_STORE, 'utf8'),
+      await readFile(APP_DATA_STORE, 'utf8'),
       await readFile(PDF_PAGE_TEXT_STORE, 'utf8')
     ].join('\n');
     const rulesSource = await readFile(RESOURCE_RULES, 'utf8');
@@ -54,6 +67,9 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).not.toContain('"contentBlobManifestByHash"');
     expect(combinedStoreSource).not.toContain('"contentBlobDataExisting"');
     expect(combinedStoreSource).not.toContain('"attachmentResourceResolve"');
+    expect(combinedStoreSource).not.toContain('"attachments"');
+    expect(combinedStoreSource).not.toContain('"content_blob_data"');
+    expect(combinedStoreSource).not.toContain('"content_blobs"');
     expect(combinedStoreSource).not.toContain('"pdfPageTextPages"');
     expect(combinedStoreSource).not.toContain('"pdfPageTextSearch"');
     expect(combinedStoreSource).not.toContain('DEFAULT_SEARCH_LIMIT');

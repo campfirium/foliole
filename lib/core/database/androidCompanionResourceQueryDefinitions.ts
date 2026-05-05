@@ -77,6 +77,7 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
     contentHashKey: 'content_hash',
     contentHashesByIdsQueryName: 'attachmentResourceContentHashesByIds',
     contentHashesReplacement: '__ATTACHMENT_ID_FILTER__',
+    directoryName: 'attachments',
     mimeTypeKey: 'mime_type',
     resolveQueryName: 'attachmentResourceResolve',
     resultKey: 'resources',
@@ -84,7 +85,9 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
   },
   contentBlobs: {
     compressionKey: 'compression',
+    dataTableName: 'content_blob_data',
     existingQueryName: 'contentBlobDataExisting',
+    manifestTableName: 'content_blobs',
     manifestQueryName: 'contentBlobManifestByHash',
     originalSha256Key: 'original_sha256',
     originalSizeBytesKey: 'original_size_bytes',

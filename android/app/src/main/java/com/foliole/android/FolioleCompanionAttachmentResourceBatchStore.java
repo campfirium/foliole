@@ -162,8 +162,8 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         );
     }
 
-    private static File attachmentFile(Context context, String storageKey) {
-        return new File(new File(context.getFilesDir(), "attachments"), storageKey);
+    private static File attachmentFile(Context context, String storageKey) throws Exception {
+        return new File(new File(context.getFilesDir(), resourceRule(context, "directoryName")), storageKey);
     }
 
     private static String requireText(String value, String field) {
