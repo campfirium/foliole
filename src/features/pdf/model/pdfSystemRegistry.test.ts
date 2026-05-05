@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { registerPdfSystem, requestPdfAnchorJump, requestPdfSearch, unregisterPdfSystem } from './pdfSystemBridge';
+import { registerPdfSystem, requestPdfAnchorJump, requestPdfSearch, unregisterPdfSystem } from './pdfSystemRegistry';
 
 const NODE_ID = 'pdf-node-1';
 

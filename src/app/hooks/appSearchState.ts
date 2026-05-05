@@ -1,5 +1,5 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { requestPdfSearch } from '../../features/pdf/model/pdfSystemBridge';
+import { requestPdfSearch } from '../../features/pdf/model/pdfSystemRegistry';
 import type { ExternalDocumentPreviewRequest } from '../components/externalDocumentPreviewState';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 

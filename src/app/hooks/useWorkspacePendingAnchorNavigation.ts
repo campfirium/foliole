@@ -4,7 +4,7 @@ import {
   isPdfAnchorLocator,
   type NodeAnchorLink
 } from '../../features/nodes/model/nodeTypes';
-import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
+import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemRegistry';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 

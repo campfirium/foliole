@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { registerPdfSystem, unregisterPdfSystem } from '../../features/pdf/model/pdfSystemBridge';
+import { registerPdfSystem, unregisterPdfSystem } from '../../features/pdf/model/pdfSystemRegistry';
 
 export function useRegisterPdfSurface(
   nodeId: string | null,
