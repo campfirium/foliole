@@ -4,6 +4,7 @@ import { AppButton } from '../../shared/ui';
 interface ReviewModeToolbarProps {
   isStudyMode: boolean;
   isAnswerRevealed: boolean;
+  isReviewEditing: boolean;
   reviewCurrentNodeId: string | null;
   onGrade: (grade: ReviewGrade) => void;
   onRevealAnswer: () => void;
@@ -13,6 +14,7 @@ interface ReviewModeToolbarProps {
 export function ReviewModeToolbar({
   isStudyMode,
   isAnswerRevealed,
+  isReviewEditing,
   reviewCurrentNodeId,
   onGrade,
   onRevealAnswer,
@@ -41,11 +43,14 @@ export function ReviewModeToolbar({
       aria-label="Review mode toolbar"
       className="flex h-[56px] w-full flex-none items-center justify-center border-t border-border bg-bg-elevated px-4"
       data-mode={isStudyMode ? 'study' : 'edit'}
+      data-review-input-mode={isReviewEditing ? 'editing' : 'hotkeys'}
     >
       {!isAnswerRevealed ? (
-        <AppButton aria-label="Show Answer" onClick={onRevealAnswer} size="sm" variant="primary">
-          Show Answer
-        </AppButton>
+        <div className="flex items-center gap-2">
+          <AppButton aria-label="Show Answer" onClick={onRevealAnswer} size="sm" variant="primary">
+            Show Answer
+          </AppButton>
+        </div>
       ) : (
         <div className="flex items-center gap-2">
           <AppButton aria-label="Again" className="min-w-20" onClick={() => onGrade(1)} size="sm" variant="ghost">

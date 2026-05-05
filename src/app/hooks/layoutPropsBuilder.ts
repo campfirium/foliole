@@ -65,6 +65,7 @@ interface BuildLayoutPropsArgs {
   isResizingList: boolean;
   isSettingsOpen: boolean;
   isStudyMode: boolean;
+  isReviewEditing: boolean;
   isTrashViewOpen: boolean;
   isViewingTrashNode: boolean;
   listWidth: number;
@@ -158,7 +159,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   return {
     activeNodeId: args.activeNodeId, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
     documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
-    canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, isStudyMode: args.isStudyMode, isSettingsOpen: args.isSettingsOpen,
+    canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, isStudyMode: args.isStudyMode, isSettingsOpen: args.isSettingsOpen, isReviewEditing: args.isReviewEditing,
     isAnswerRevealed: args.reviewSession.isAnswerRevealed, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isTrashViewOpen: args.isTrashViewOpen, isViewingTrashNode: args.isViewingTrashNode,
     showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, nodeOrder: args.nodeOrder, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange,
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode,

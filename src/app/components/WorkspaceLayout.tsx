@@ -38,6 +38,7 @@ export interface WorkspaceLayoutProps {
   isStudyMode: boolean;
   isSettingsOpen: boolean;
   isAnswerRevealed: boolean;
+  isReviewEditing: boolean;
   reviewCurrentNodeId: string | null;
   reviewQueueCount: number;
   reviewCompletedCount: number;
