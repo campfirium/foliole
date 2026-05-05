@@ -100,6 +100,7 @@
   "assetKeys": {
     "appDataClearMutations": "appDataClearMutations",
     "hostSupportMutations": "hostSupportMutations",
+    "mutationShape": "mutationShape",
     "resourceMutations": "resourceMutations",
     "runtimeMutations": "runtimeMutations",
     "statements": "statements",
@@ -126,6 +127,12 @@
     "textBodyBlobs": {
       "dataInsertMutationName": "textBodyBlobDataInsert",
       "manifestInsertMutationName": "textBodyBlobManifestInsert"
+    }
+  },
+  "mutationShape": {
+    "appDataClearMutation": {
+      "statementName": "statementName",
+      "table": "table"
     }
   },
   "resourceMutations": {

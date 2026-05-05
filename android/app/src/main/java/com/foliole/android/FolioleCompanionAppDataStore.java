@@ -37,9 +37,9 @@ final class FolioleCompanionAppDataStore {
         JSONArray mutations = FolioleCompanionGeneratedMutationRunner.appDataClearMutations(context);
         for (int index = 0; index < mutations.length(); index += 1) {
             JSONObject mutation = mutations.getJSONObject(index);
-            String table = mutation.getString("table");
+            String table = mutation.getString(clearMutationKey(context, "table"));
             if (FolioleCompanionSqliteRuntime.tableExists(database, table)) {
-                FolioleCompanionGeneratedMutationRunner.execute(context, database, mutation.getString("statementName"), null);
+                FolioleCompanionGeneratedMutationRunner.execute(context, database, mutation.getString(clearMutationKey(context, "statementName")), null);
             }
         }
     }
@@ -65,4 +65,7 @@ final class FolioleCompanionAppDataStore {
         return FolioleCompanionHostSupportMutationRules.appDataString(context, key);
     }
 
+    private static String clearMutationKey(Context context, String key) throws Exception {
+        return FolioleCompanionMutationAssetKeys.shapeKey(context, "appDataClearMutation", key);
+    }
 }

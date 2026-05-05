@@ -27,6 +27,10 @@ final class FolioleCompanionMutationAssetKeys {
         return group;
     }
 
+    static String shapeKey(Context context, String groupName, String key) throws Exception {
+        return section(context, "mutationShape").getJSONObject(groupName).getString(key);
+    }
+
     static String key(Context context, String key) throws Exception {
         JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH));
         JSONObject assetKeys = payload.optJSONObject("assetKeys");
