@@ -5,7 +5,6 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
 let mockedAppDataDir = '/tmp/foliole-keep-import-tests';
 const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
   notifyManagedInboxUpdated: vi.fn()
@@ -261,10 +260,10 @@ it('wires readwise keep import into existing highlight-derived child creation', 
     ruleId: 'draft-import-source-1',
     sourceType: 'readwise'
   });
-
   const { childRows, parentRow } = readImportedChildRows();
 
   expect(childRows).toHaveLength(2);
+  expect(parentRow.content).toContain('---\nauthor: Someone\n---');
   expect(parentRow.content).toContain('<highlight id="1">This is the highlighted sentence.</highlight id="1">');
   expect(parentRow.content).toContain('<highlight id="2">Another matching excerpt.</highlight id="2">');
   expect(childRows[0]).toEqual({
@@ -280,12 +279,10 @@ it('wires readwise keep import into existing highlight-derived child creation', 
 });
 
 it('notifies the renderer after keep imports write a new record', async () => {
-  const sourceDir = path.join(tempRoot, 'sources');
-  await fs.mkdir(sourceDir, { recursive: true });
-  await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Imported\nBody\n', 'utf8');
+  await fs.writeFile(path.join(tempRoot, 'entry.md'), '# Imported\nBody\n', 'utf8');
 
   await runKeepImportRule({
-    directoryPath: sourceDir,
+    directoryPath: tempRoot,
     highlightPolicy: 'reference_only',
     ruleId: 'draft-import-source-301'
   });

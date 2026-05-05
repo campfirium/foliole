@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 
+import { transformReadwiseFullDocument } from '../../lib/core/import/readwiseReaderParsing';
 import { probeReadwiseArticleContent } from '../../lib/core/import/readwiseReaderProbe';
 
 const ARTICLE_MARKDOWN = `# Sample Article
@@ -57,4 +58,14 @@ it('fails when the separator does not split the highlights correctly', () => {
 
   expect(result.success).toBe(false);
   expect(result.message).toContain('could not be matched');
+});
+
+it('moves metadata into Obsidian frontmatter and removes the full document heading', () => {
+  expect(transformReadwiseFullDocument(FULL_DOCUMENT_MARKDOWN)).toBe(`---
+author: Someone
+---
+
+Before the quote. This is the highlighted sentence. After the quote.
+
+Another paragraph with Another matching excerpt. End.`);
 });
