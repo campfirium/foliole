@@ -24,6 +24,14 @@ export function alignSelectionInViewport(view: EditorView, position: number) {
   });
 }
 
+export function subscribeToEditorScroll(view: EditorView, listener: () => void) {
+  const handleScroll = () => listener();
+  view.scrollDOM.addEventListener('scroll', handleScroll, { passive: true });
+  return () => {
+    view.scrollDOM.removeEventListener('scroll', handleScroll);
+  };
+}
+
 export function reconfigureDecorationCompartment(args: {
   buildDecorations: () => ReturnType<typeof EditorView.decorations.of>;
   compartment: Compartment;

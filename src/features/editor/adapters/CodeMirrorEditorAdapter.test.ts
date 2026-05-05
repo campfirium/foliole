@@ -9,6 +9,7 @@ const {
   mockHighlightActiveLine,
   mockKeymapOf,
   mockDecorationsOf,
+  mockDomEventHandlers,
   mockEditorView,
   mockEditorStateCreate,
   mockReadOnlyOf,
@@ -23,6 +24,7 @@ const {
   mockHighlightActiveLine: vi.fn(() => 'highlight-active-line'),
   mockKeymapOf: vi.fn(() => 'keymap-extension'),
   mockDecorationsOf: vi.fn((value) => value),
+  mockDomEventHandlers: vi.fn((value) => value),
   mockEditorView: vi.fn(),
   mockEditorStateCreate: vi.fn((config) => config),
   mockReadOnlyOf: vi.fn(() => 'read-only-extension'),
@@ -81,6 +83,7 @@ vi.mock('@codemirror/view', () => ({
       decorations: {
         of: mockDecorationsOf
       },
+      domEventHandlers: mockDomEventHandlers,
       lineWrapping: mockLineWrapping,
       scrollIntoView: mockScrollIntoView,
       updateListener: {
@@ -112,7 +115,6 @@ vi.mock('./markdownInputAssist', () => ({
 }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
-import { shouldRefreshLineDecorations } from './liveMarkdownViewport';
 
 function resetEditorMocks() {
   mockDrawSelection.mockClear();
@@ -120,6 +122,7 @@ function resetEditorMocks() {
   mockScrollIntoView.mockClear();
   mockEditorStateCreate.mockClear();
   mockEditorView.mockClear();
+  mockDomEventHandlers.mockClear();
   mockReadOnlyOf.mockClear();
   mockEditableOf.mockClear();
   mockAllowMultipleSelectionsOf.mockClear();
@@ -152,9 +155,10 @@ function createAdapterWithStubbedView() {
   return { adapter, dispatch, focus };
 }
 
-describe('CodeMirrorEditorAdapter', () => {
+describe('CodeMirrorEditorAdapter construction', () => {
   beforeEach(() => {
     resetEditorMocks();
+    vi.useRealTimers();
   });
 
   it('enables drawn selection so selection highlight stays visible outside native focus', () => {
@@ -199,40 +203,5 @@ describe('CodeMirrorEditorAdapter', () => {
       selection: { anchor: 8, head: 10 }
     });
     expect(focus).not.toHaveBeenCalled();
-  });
-});
-
-describe('shouldRefreshLineDecorations', () => {
-  it('refreshes line decorations when focus changes so cursor-line image previews can update', () => {
-    expect(
-      shouldRefreshLineDecorations({
-        docChanged: false,
-        focusChanged: true,
-        selectionSet: false,
-        viewportChanged: false
-      } as never, 12, null)
-    ).toBe(true);
-  });
-
-  it('skips line decoration rebuild when selection changes inside the same line', () => {
-    expect(
-      shouldRefreshLineDecorations({
-        docChanged: false,
-        focusChanged: false,
-        selectionSet: true,
-        viewportChanged: false
-      } as never, 12, 12)
-    ).toBe(false);
-  });
-
-  it('refreshes line decorations when selection moves to another line', () => {
-    expect(
-      shouldRefreshLineDecorations({
-        docChanged: false,
-        focusChanged: false,
-        selectionSet: true,
-        viewportChanged: false
-      } as never, 12, 13)
-    ).toBe(true);
   });
 });

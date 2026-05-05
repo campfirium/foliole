@@ -6,6 +6,7 @@ import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } fr
 import { anchorStructureGuard } from './anchorStructureGuard';
 import {
   type CodeMirrorEditorAdapterOptions,
+  type EditorDocumentChangeMeta,
   createLiveMarkdownReconfigureEffect
 } from './codeMirrorEditorAdapterSupport';
 import { createLiveMarkdown } from './liveMarkdown';
@@ -18,7 +19,8 @@ export function createCodeMirrorEditorExtensions(args: {
   imageClozePresentationVersion: number;
   liveMarkdownCompartment: import('@codemirror/state').Compartment;
   nodeId: string | null;
-  onDocChanged: (content: string) => void;
+  onDocChanged: (content: string, meta: EditorDocumentChangeMeta) => void;
+  onCompositionEnd: () => void;
   options: CodeMirrorEditorAdapterOptions;
   searchDecorationsCompartment: import('@codemirror/state').Compartment;
 }): Extension[] {
@@ -41,14 +43,21 @@ export function createCodeMirrorEditorExtensions(args: {
         args.hideTitleHeading,
         args.nodeId,
         args.imageClozePresentationVersion,
-        args.hiddenTextAnchorKeys
+        args.hiddenTextAnchorKeys,
+        args.options.onOpenNodeLink ?? null
       )
     ),
+    EditorView.domEventHandlers({
+      compositionend: () => {
+        args.onCompositionEnd();
+        return false;
+      }
+    }),
     EditorView.updateListener.of((update) => {
       if (!update.docChanged) {
         return;
       }
-      args.onDocChanged(update.state.doc.toString());
+      args.onDocChanged(update.state.doc.toString(), { isComposing: update.view.composing });
     })
   ];
 }
@@ -59,6 +68,7 @@ export function createLiveMarkdownEffect(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onOpenNodeLink: ((title: string) => void) | null;
 }) {
   return createLiveMarkdownReconfigureEffect(args);
 }

@@ -12,7 +12,8 @@ import {
 } from './codeMirrorEditorAdapterSupport';
 import {
   alignSelectionInViewport,
-  reconfigureDecorationCompartment
+  reconfigureDecorationCompartment,
+  subscribeToEditorScroll
 } from './codeMirrorEditorAdapterView';
 import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
 import type {
@@ -21,9 +22,9 @@ import type {
   EditorSearchDecorations,
   EditorSelection
 } from './EditorAdapter';
+import { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
 import { buildEditorDiffDecorations } from './lineDiffDecorations';
 import { buildEditorSearchDecorations } from './searchDecorations';
-
 export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
   private isApplyingExternalContent = false;
@@ -32,6 +33,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private liveMarkdownCompartment = new Compartment();
   private nodeId: string | null = null;
   private onChange?: (content: string) => void;
+  private onOpenNodeLink: ((title: string) => void) | null = null;
   private searchDecorationsCompartment = new Compartment();
   private remoteImageLocalization = new RemoteImageLocalizationController({
     applyLocalizedContent: (localized) => {
@@ -41,6 +43,17 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     getContent: () => this.getContent(),
     getNodeId: () => this.nodeId
   });
+  private externalChangeBuffer = new EditorExternalChangeBuffer({
+    getCurrentContent: () => this.getContent(),
+    isApplyingExternalContent: () => this.isApplyingExternalContent,
+    onFlush: (content) => {
+      if (!this.onChange) {
+        return;
+      }
+      this.onChange(content);
+      this.remoteImageLocalization.schedule();
+    }
+  });
   private view: EditorView;
   private hideTitleHeading = false;
 
@@ -48,6 +61,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.hideTitleHeading = options.hideTitleHeading === true;
     this.hiddenTextAnchorKeys = options.hiddenTextAnchorKeys ?? [];
     this.onChange = options.onChange;
+    this.onOpenNodeLink = options.onOpenNodeLink ?? null;
     this.view = new EditorView({
       parent: host,
       state: EditorState.create({
@@ -59,12 +73,12 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           imageClozePresentationVersion: this.imageClozePresentationVersion,
           liveMarkdownCompartment: this.liveMarkdownCompartment,
           nodeId: this.nodeId,
-          onDocChanged: (content) => {
+          onCompositionEnd: () => this.externalChangeBuffer.handleCompositionEnd(),
+          onDocChanged: (content, meta) => {
             if (!this.onChange || this.isApplyingExternalContent) {
               return;
             }
-            this.onChange(content);
-            this.remoteImageLocalization.schedule();
+            this.externalChangeBuffer.handleDocumentChange(content, meta);
           },
           options,
           searchDecorationsCompartment: this.searchDecorationsCompartment
@@ -74,17 +88,14 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   destroy() {
+    this.externalChangeBuffer.destroy();
     this.remoteImageLocalization.destroy();
     this.view.destroy();
   }
 
-  focus() {
-    this.view.focus();
-  }
+  focus() { this.view.focus(); }
 
-  getContent() {
-    return this.view.state.doc.toString();
-  }
+  getContent() { return this.view.state.doc.toString(); }
 
   getDocumentPositionAtViewportY(clientY: number) {
     const contentRect = this.view.contentDOM.getBoundingClientRect();
@@ -250,7 +261,6 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       view: this.view
     });
   }
-
   onContentChange(listener: (content: string) => void) {
     this.onChange = listener;
     return () => {
@@ -259,14 +269,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   onScroll(listener: () => void) {
-    const scroller = this.view.scrollDOM;
-    const handleScroll = () => listener();
-    scroller.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      scroller.removeEventListener('scroll', handleScroll);
-    };
+    return subscribeToEditorScroll(this.view, listener);
   }
-
   private reconfigureLiveMarkdown() {
     this.view.dispatch({
       effects: createLiveMarkdownEffect({
@@ -274,7 +278,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
         hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
         hideTitleHeading: this.hideTitleHeading,
         imageClozePresentationVersion: this.imageClozePresentationVersion,
-        nodeId: this.nodeId
+        nodeId: this.nodeId,
+        onOpenNodeLink: this.onOpenNodeLink
       })
     });
   }

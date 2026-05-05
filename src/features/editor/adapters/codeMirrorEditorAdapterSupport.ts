@@ -11,7 +11,12 @@ export interface CodeMirrorEditorAdapterOptions {
   hideTitleHeading?: boolean;
   initialContent: string;
   onChange?: (content: string) => void;
+  onOpenNodeLink?: (title: string) => void;
   readOnly?: boolean;
+}
+
+export interface EditorDocumentChangeMeta {
+  isComposing: boolean;
 }
 
 export function createLiveMarkdownReconfigureEffect(args: {
@@ -20,9 +25,16 @@ export function createLiveMarkdownReconfigureEffect(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onOpenNodeLink: ((title: string) => void) | null;
 }) {
   return args.compartment.reconfigure(
-    createLiveMarkdown(args.hideTitleHeading, args.nodeId, args.imageClozePresentationVersion, args.hiddenTextAnchorKeys)
+    createLiveMarkdown(
+      args.hideTitleHeading,
+      args.nodeId,
+      args.imageClozePresentationVersion,
+      args.hiddenTextAnchorKeys,
+      args.onOpenNodeLink
+    )
   );
 }
 
