@@ -141,8 +141,7 @@ final class FolioleCompanionViewStateSyncStore {
     }
 
     private static JSONObject payload(JSONObject record) throws Exception {
-        String payloadJson = record.optString("payload_json", "{}");
-        return payloadJson.trim().isEmpty() ? new JSONObject() : new JSONObject(payloadJson);
+        return FolioleCompanionSyncObjectApply.payload(record);
     }
 
     private static String contentHash(String deviceId, String key, JSONObject payload) throws Exception {

@@ -74,9 +74,16 @@ final class FolioleCompanionSyncObjectApply {
         return availability.equals("local") ? "remote_known" : availability;
     }
 
-    private static JSONObject payload(JSONObject record) throws Exception {
-        String payloadJson = record.optString("payload_json", "{}");
-        return payloadJson.trim().isEmpty() || payloadJson.trim().equals("null") ? new JSONObject() : new JSONObject(payloadJson);
+    static JSONObject payload(JSONObject record) throws Exception {
+        Object payloadValue = record.opt("payload_json");
+        if (payloadValue == null || payloadValue == JSONObject.NULL) {
+            return new JSONObject();
+        }
+        if (payloadValue instanceof JSONObject) {
+            return (JSONObject) payloadValue;
+        }
+        String payloadJson = payloadValue.toString().trim();
+        return payloadJson.isEmpty() || payloadJson.equals("null") ? new JSONObject() : new JSONObject(payloadJson);
     }
 
     private static void applyImportSource(SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
