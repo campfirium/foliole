@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 
 import { App } from '../app/App';
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
+import { EDITOR_DISPLAY_MODE_KEY } from '../features/editor/model/editorDisplayMode';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import {
   createInitialWorkspaceState,
@@ -100,6 +101,14 @@ describe('App', () => {
     expect(screen.getByRole('navigation', { name: 'Node breadcrumbs' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Review' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create QA Node' })).not.toBeInTheDocument();
+  });
+
+  it('shows editor display mode entrypoint inside more menu trigger', () => {
+    render(<App />);
+
+    expect(screen.getByRole('button', { name: 'More editor options' })).toHaveAttribute('aria-haspopup', 'menu');
+    expect(screen.queryByRole('button', { name: 'Switch to Source mode' })).not.toBeInTheDocument();
+    expect(localStorage.getItem(EDITOR_DISPLAY_MODE_KEY)).toBeNull();
   });
 
   it('runs study flow as Study -> Show Answer -> Grade buttons enabled', () => {

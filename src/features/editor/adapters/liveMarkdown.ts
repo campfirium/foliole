@@ -7,6 +7,7 @@ import {
   collectAnchorTextSegments,
   type AnchorTextSegment
 } from '../model/anchorTagSegments';
+import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
 const CODE_FENCE_PATTERN = /^\s*`{3,}/;
@@ -21,6 +22,7 @@ const INLINE_CLOZE_PATTERN = /\{\{(.+?)\}\}/g;
 const INLINE_CLOZE_PLACEHOLDER_PATTERN = /\[\.\.\.\]/g;
 const INLINE_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
 const INLINE_LINK_PATTERN = /(?<!!)\[([^\]\n]*)\]\(([^)\n]*)\)/g;
+const INLINE_ANCHOR_TAG_PATTERN = /<(\/?)(highlight|cloze)\s+id="([1-9]\d*)"\s*>/g;
 
 interface MarkdownImageMatch extends RangeBounds {
   alt: string;
@@ -737,6 +739,10 @@ async function openMarkdownLink(href: string) {
 }
 
 function buildLineDecorations(view: EditorView): DecorationSet {
+  if (getEditorDisplayMode() === 'source') {
+    return buildSourceModeDecorations(view);
+  }
+
   const ranges: Range<Decoration>[] = [];
   const content = view.state.doc.toString();
   addAnchorTagDecorations(ranges, content);
@@ -786,6 +792,79 @@ function buildLineDecorations(view: EditorView): DecorationSet {
   }
 
   return Decoration.set(ranges, true);
+}
+
+function buildSourceModeDecorations(view: EditorView): DecorationSet {
+  const ranges: Range<Decoration>[] = [];
+  const content = view.state.doc.toString();
+  let inCodeBlock = false;
+
+  for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
+    const line = view.state.doc.line(lineNumber);
+    const clozePlaceholderRanges = collectClozePlaceholderRanges(line.from, line.text);
+    const inlineCodeMatches = inCodeBlock ? [] : collectInlineCodeMatches(line.from, line.text);
+    const inlineCodeRanges = inlineCodeMatches.map((match) => ({ from: match.from, to: match.to }));
+    const preservedRanges = clozePlaceholderRanges.concat(inlineCodeRanges);
+    const inlineLinkMatches = inCodeBlock ? [] : collectInlineLinkMatches(line.from, line.text, preservedRanges);
+
+    addPrefixDecoration(ranges, line.from, line.text, true);
+    addCodeFenceDecoration(ranges, line.from, line.text, true);
+    addInlineCodeSyntaxDecorations(ranges, inlineCodeMatches);
+    addInlineLinkDecorations(ranges, inlineLinkMatches, true);
+    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, true, preservedRanges);
+    addClozePlaceholderDecorations(ranges, clozePlaceholderRanges);
+
+    if (CODE_FENCE_PATTERN.test(line.text)) {
+      inCodeBlock = !inCodeBlock;
+    }
+  }
+
+  let match = INLINE_ANCHOR_TAG_PATTERN.exec(content);
+  while (match) {
+    const from = match.index ?? -1;
+    const raw = match[0] ?? '';
+    const slashPart = match[1] ?? '';
+    const kindPart = match[2] ?? '';
+    const idPart = match[3] ?? '';
+
+    if (from >= 0 && raw.length > 0) {
+      const to = from + raw.length;
+      const kindFrom = from + 1 + slashPart.length;
+      const kindTo = kindFrom + kindPart.length;
+      const idPrefix = 'id="';
+      const idPrefixOffset = raw.indexOf(idPrefix);
+
+      addMark(ranges, from, to, 'cm-md-anchor-tag-token');
+      addMark(ranges, from, from + 1, 'cm-md-anchor-tag-delimiter');
+      addMark(ranges, to - 1, to, 'cm-md-anchor-tag-delimiter');
+
+      if (slashPart.length > 0) {
+        addMark(ranges, from + 1, from + 1 + slashPart.length, 'cm-md-anchor-tag-delimiter');
+      }
+      addMark(ranges, kindFrom, kindTo, 'cm-md-anchor-tag-kind');
+
+      if (idPrefixOffset >= 0) {
+        const attrFrom = from + idPrefixOffset;
+        const idFrom = attrFrom + idPrefix.length;
+        const idTo = idFrom + idPart.length;
+        addMark(ranges, attrFrom, idFrom, 'cm-md-anchor-tag-attr');
+        addMark(ranges, idFrom, idTo, 'cm-md-anchor-tag-id');
+        addMark(ranges, idTo, Math.min(idTo + 1, to), 'cm-md-anchor-tag-attr');
+      }
+    }
+
+    match = INLINE_ANCHOR_TAG_PATTERN.exec(content);
+  }
+  INLINE_ANCHOR_TAG_PATTERN.lastIndex = 0;
+
+  return Decoration.set(ranges, true);
+}
+
+function addInlineCodeSyntaxDecorations(ranges: Range<Decoration>[], codeMatches: ReadonlyArray<InlineCodeMatch>) {
+  for (const codeMatch of codeMatches) {
+    addMark(ranges, codeMatch.from, codeMatch.contentFrom, 'cm-md-syntax-visible');
+    addMark(ranges, codeMatch.contentTo, codeMatch.to, 'cm-md-syntax-visible');
+  }
 }
 
 const markdownLinePlugin = ViewPlugin.fromClass(
@@ -921,8 +1000,8 @@ const liveMarkdownTheme = EditorView.theme({
     padding: '0 !important'
   },
   '.cm-md-syntax-visible': {
-    color: 'var(--color-text-secondary)',
-    opacity: '0.58'
+    color: 'var(--app-accent-color)',
+    opacity: '0.74'
   },
   '.cm-md-strong': {
     fontWeight: '700'
@@ -958,6 +1037,28 @@ const liveMarkdownTheme = EditorView.theme({
   '.cm-md-cloze-placeholder': {
     backgroundColor: 'rgba(251, 113, 133, 0.24)',
     borderRadius: '0.25rem'
+  },
+  '.cm-md-anchor-tag-token': {
+    color: 'var(--app-accent-color)',
+    opacity: '0.9'
+  },
+  '.cm-md-anchor-tag-delimiter': {
+    color: 'var(--app-accent-color)',
+    opacity: '0.7'
+  },
+  '.cm-md-anchor-tag-kind': {
+    color: 'var(--app-accent-color)',
+    fontWeight: '700',
+    opacity: '1'
+  },
+  '.cm-md-anchor-tag-attr': {
+    color: 'var(--app-accent-color)',
+    opacity: '0.75'
+  },
+  '.cm-md-anchor-tag-id': {
+    color: 'var(--app-accent-color)',
+    fontWeight: '700',
+    opacity: '1'
   },
   '.cm-md-prefix-widget': {
     color: 'var(--color-text-secondary)',

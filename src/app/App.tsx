@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import {
+  getEditorDisplayMode,
+  setEditorDisplayMode,
+  type EditorDisplayMode
+} from '../features/editor/model/editorDisplayMode';
+import {
   getMarkdownSyntaxVisibility,
   setMarkdownSyntaxVisibility,
   type MarkdownSyntaxVisibility
@@ -93,6 +98,7 @@ export function App() {
   const [markdownSyntaxVisibility, setMarkdownSyntaxVisibilityState] = useState<MarkdownSyntaxVisibility>(() =>
     getMarkdownSyntaxVisibility()
   );
+  const [editorDisplayMode, setEditorDisplayModeState] = useState<EditorDisplayMode>(() => getEditorDisplayMode());
   const [baseColorMode, setBaseColorModeState] = useState<BaseColorMode>(() => getBaseColorMode());
   const [accentColorPreset, setAccentColorPresetState] = useState<AccentColorPreset>(() => getAccentColorPreset());
   const [uiFontPreset, setUiFontPresetState] = useState<InterfaceFontPreset>(() => getUiFontPreset());
@@ -280,6 +286,12 @@ export function App() {
   const handleMarkdownSyntaxVisibilityChange = (value: MarkdownSyntaxVisibility) => {
     setMarkdownSyntaxVisibility(value);
     setMarkdownSyntaxVisibilityState(value);
+  };
+
+  const handleToggleEditorDisplayMode = () => {
+    const nextValue: EditorDisplayMode = editorDisplayMode === 'preview' ? 'source' : 'preview';
+    setEditorDisplayMode(nextValue);
+    setEditorDisplayModeState(nextValue);
   };
 
   const handleInterfaceFontPresetChange = (value: InterfaceFontPreset) => {
@@ -472,6 +484,7 @@ export function App() {
       onInterfaceFontSizeChange={handleInterfaceFontSizeChange}
       onInterfaceFontSizeReset={handleInterfaceFontSizeReset}
       onMarkdownSyntaxVisibilityChange={handleMarkdownSyntaxVisibilityChange}
+      onToggleEditorDisplayMode={handleToggleEditorDisplayMode}
       onOpenNotesView={handleOpenNotesView}
       onOpenTrashView={handleOpenTrashView}
       onToggleListVisibility={handleToggleListVisibility}
@@ -484,6 +497,7 @@ export function App() {
       interfaceFontPreset={interfaceFontPreset}
       interfaceFontSize={interfaceFontSize}
       markdownSyntaxVisibility={markdownSyntaxVisibility}
+      editorDisplayMode={editorDisplayMode}
       monospaceFontPreset={monospaceFontPreset}
       selectedTrashNodeId={selectedTrashNodeId}
       showAnswerSection={!isStudyMode || reviewSession.isAnswerRevealed}

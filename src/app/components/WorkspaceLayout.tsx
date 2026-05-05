@@ -1,6 +1,7 @@
 import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { MarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -82,6 +83,7 @@ export interface WorkspaceLayoutProps {
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
+  onToggleEditorDisplayMode: () => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => void;
   customUiFont: string;
@@ -93,6 +95,7 @@ export interface WorkspaceLayoutProps {
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
+  editorDisplayMode: EditorDisplayMode;
   monospaceFontPreset: MonospaceFontPreset;
   selectedTrashNodeId: string | null;
 }
@@ -153,6 +156,7 @@ export function WorkspaceLayout({
   onInterfaceFontSizeChange,
   onInterfaceFontSizeReset,
   onMarkdownSyntaxVisibilityChange,
+  onToggleEditorDisplayMode,
   onRevealAnswer,
   onGradeReview,
   customUiFont,
@@ -164,6 +168,7 @@ export function WorkspaceLayout({
   interfaceFontPreset,
   interfaceFontSize,
   markdownSyntaxVisibility,
+  editorDisplayMode,
   monospaceFontPreset,
   selectedTrashNodeId
 }: WorkspaceLayoutProps) {
@@ -231,8 +236,9 @@ export function WorkspaceLayout({
                 canGoParent={canGoParent}
                 contextMenu={contextMenu}
                 documentMaxWidth={documentMaxWidth}
-                editorAppearanceKey={markdownSyntaxVisibility}
+                editorAppearanceKey={`${markdownSyntaxVisibility}-${editorDisplayMode}`}
                 editorContent={editorContent}
+                editorDisplayMode={editorDisplayMode}
                 editorNodeId={editorNodeId}
                 editorNodeViewState={editorNodeViewState}
                 isDocumentResizing={isDocumentResizing}
@@ -250,6 +256,7 @@ export function WorkspaceLayout({
                 onResetLayout={onResetLayout}
                 onSelectNode={onSelectBreadcrumbNode}
                 onStartDocumentResize={onStartDocumentResize}
+                onToggleEditorDisplayMode={onToggleEditorDisplayMode}
                 showAnswerSection={showAnswerSection}
               />
               <ReviewModeToolbar

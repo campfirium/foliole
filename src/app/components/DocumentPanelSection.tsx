@@ -2,10 +2,11 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as Reac
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
+import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { cn } from '../../lib/utils';
-import { AppIconButton } from '../../shared/ui';
+import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger, AppIconButton } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -20,6 +21,7 @@ interface DocumentPanelSectionProps {
   contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
   editorContent: string;
+  editorDisplayMode: EditorDisplayMode;
   editorAppearanceKey: string;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -37,6 +39,7 @@ interface DocumentPanelSectionProps {
   onGoParent: () => void;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
+  onToggleEditorDisplayMode: () => void;
   onStartDocumentResize: (
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
@@ -52,6 +55,7 @@ export function DocumentPanelSection({
   contextMenu,
   documentMaxWidth,
   editorContent,
+  editorDisplayMode,
   editorAppearanceKey,
   editorNodeId,
   editorNodeViewState,
@@ -69,6 +73,7 @@ export function DocumentPanelSection({
   onGoParent,
   onResetLayout,
   onSelectNode,
+  onToggleEditorDisplayMode,
   onStartDocumentResize,
   nodesById
 }: DocumentPanelSectionProps) {
@@ -84,7 +89,7 @@ export function DocumentPanelSection({
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
       <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
-        <header className="flex min-h-[40px] items-center px-3">
+        <header className="flex min-h-[40px] items-center gap-2 px-3">
           <h2 className="sr-only">Content</h2>
           <div className="flex shrink-0 items-center gap-1">
             <AppIconButton
@@ -109,6 +114,24 @@ export function DocumentPanelSection({
             <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
               <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
             </div>
+          </div>
+          <div className="shrink-0">
+            <AppDropdownMenu>
+              <AppDropdownMenuTrigger asChild>
+                <button
+                  aria-label="More editor options"
+                  className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+                  type="button"
+                >
+                  <MoreOptionsIcon />
+                </button>
+              </AppDropdownMenuTrigger>
+              <AppDropdownMenuContent align="end" sideOffset={6}>
+                <AppDropdownMenuItem onSelect={onToggleEditorDisplayMode}>
+                  {editorDisplayMode === 'preview' ? 'Switch to Source mode' : 'Switch to Live Preview mode'}
+                </AppDropdownMenuItem>
+              </AppDropdownMenuContent>
+            </AppDropdownMenu>
           </div>
         </header>
 
@@ -172,6 +195,16 @@ export function DocumentPanelSection({
         />
       ) : null}
     </section>
+  );
+}
+
+function MoreOptionsIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <circle cx="4" cy="8" r="1.1" fill="currentColor" />
+      <circle cx="8" cy="8" r="1.1" fill="currentColor" />
+      <circle cx="12" cy="8" r="1.1" fill="currentColor" />
+    </svg>
   );
 }
 
