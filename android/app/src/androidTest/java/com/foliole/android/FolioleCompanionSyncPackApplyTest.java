@@ -136,11 +136,33 @@ public class FolioleCompanionSyncPackApplyTest {
             "client_op_id, object_type, object_id, state_seq, status, acked_at) VALUES (" +
             "'node_reading:node-1:5', 'node_reading', 'node-1', 8, 'accepted', '2026-04-27T00:05:00.000Z')");
 
-        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test", 5);
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test", 4);
 
         assertEquals(1, result.getInt("applied_object_count"));
         assertEquals(0, selectInt(
             "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = 'node-1'"
+        ));
+        assertEquals(0, countRows("sync_push_ack"));
+    }
+
+    @Test
+    public void clearsDirtySettingAfterPackConfirmsAcceptedPushAck() throws Exception {
+        createIncomingStateOnlyPack("setting", "device:android:phone:*:app_settings", 9, "setting-hash");
+        mainDatabase.execSQL("INSERT INTO sync_object_state (" +
+            "object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, base_content_hash) " +
+            "VALUES ('setting', 'device:android:phone:*:app_settings', 6, 'setting-hash', " +
+            "'android-local', '2026-04-27T00:04:00.000Z', 1, 'base-hash')");
+        mainDatabase.execSQL("INSERT INTO sync_push_ack (" +
+            "client_op_id, object_type, object_id, state_seq, status, acked_at) VALUES (" +
+            "'setting:device:android:phone:*:app_settings:6', 'setting', 'device:android:phone:*:app_settings', " +
+            "9, 'accepted', '2026-04-27T00:05:00.000Z')");
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test", 4);
+
+        assertEquals(1, result.getInt("applied_object_count"));
+        assertEquals(0, selectInt(
+            "SELECT sync_dirty FROM sync_object_state " +
+            "WHERE object_type = 'setting' AND object_id = 'device:android:phone:*:app_settings'"
         ));
         assertEquals(0, countRows("sync_push_ack"));
     }
