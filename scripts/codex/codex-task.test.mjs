@@ -10,8 +10,8 @@ describe('codex-task helpers', () => {
       '',
       '## 待办',
       '',
-      '- [ ] first task',
-      '- [ ] second task',
+      '- [ ] [auto] first task',
+      '- [ ] [gate] second task',
       '',
       '## 待验证',
       '- [ ] later task'
