@@ -1,7 +1,10 @@
 import {
+  DATABASE_SCHEMA_VERSION,
   initializeDatabaseConnection,
   isLegacyDatabaseRebuildRequiredError
 } from '../../lib/core/database/migrations.js';
+import { readUserVersion } from '../../lib/core/database/databaseUserVersion.js';
+import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
 import {
@@ -10,6 +13,7 @@ import {
   recoverCorruptedDatabase,
   verifyDatabaseIntegrity
 } from './integrity.js';
+import { createInternalDatabaseSnapshot } from './internalSnapshots.js';
 import { seedInitialWorkspace } from './workspaceBootstrap.js';
 
 export { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
@@ -32,6 +36,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
       verifyDatabaseIntegrity(connection.sqlite);
       reportStage?.('database_integrity_check_complete');
       reportStage?.('database_schema_init_start');
+      createPreMigrationSnapshotIfNeeded(connection);
       const initializedConnection = initializeDatabaseConnection(connection);
       reportStage?.('database_schema_init_complete');
       seedInitialWorkspace(initializedConnection);
@@ -73,6 +78,18 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     seedInitialWorkspace(initializedConnection);
     return initializedConnection;
   }
+}
+
+function createPreMigrationSnapshotIfNeeded(connection: ReturnType<typeof openDatabaseConnection>) {
+  const currentVersion = readUserVersion(connection.sqlite);
+  if (currentVersion < NUMBERED_MIGRATION_BASE_VERSION || currentVersion >= DATABASE_SCHEMA_VERSION) {
+    return;
+  }
+  createInternalDatabaseSnapshot({
+    reason: 'pre-migration',
+    sourceDatabase: connection.sqlite,
+    sourcePath: connection.dbPath
+  });
 }
 
 function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: DatabaseInitStageReporter) {

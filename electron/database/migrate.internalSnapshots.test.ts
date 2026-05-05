@@ -23,7 +23,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection, resolveDatabasePath } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
 import { resolveInternalDatabaseSnapshotDirectory } from './internalSnapshots.js';
 import { initializeDatabase } from './migrate.js';
 
@@ -53,6 +53,23 @@ it('rebuilds a legacy development database without keeping the old database', as
 
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(databasePath);
   await expect(fs.readdir(snapshotDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+it('creates a managed safety snapshot before numbered schema migrations', async () => {
+  initializeDatabase();
+  const databasePath = resolveDatabasePath();
+  closeDatabaseConnection();
+
+  const sqlite = new BetterSqlite3(databasePath);
+  sqlite.pragma('user_version = 31');
+  sqlite.close();
+
+  initializeDatabase();
+
+  const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(databasePath);
+  const snapshotNames = await fs.readdir(snapshotDirectory);
+  expect(snapshotNames.some((name) => name.startsWith('pre-migration-') && name.endsWith('.db'))).toBe(true);
+  expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(32);
 });
 
 function createVersionTwelveDatabase(databasePath: string) {
