@@ -99,6 +99,7 @@ public class FolioleCompanionReadableArticleBlobSyncTest {
             "cached_at TEXT, last_verified_at TEXT)");
         database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
+        database.execSQL("CREATE TABLE node_review (node_id TEXT PRIMARY KEY, due TEXT NOT NULL)");
         database.execSQL("CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL)");
         database.execSQL("CREATE TABLE attachments (id TEXT PRIMARY KEY, mime_type TEXT NOT NULL)");
         database.execSQL("CREATE TABLE node_attachments (node_id TEXT, attachment_id TEXT, role TEXT)");
