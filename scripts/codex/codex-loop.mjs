@@ -1,3 +1,5 @@
+import { appendFile, mkdir } from 'node:fs/promises';
+import path from 'node:path';
 import process from 'node:process';
 
 import { runCodexTask } from './codex-task.mjs';
@@ -5,6 +7,10 @@ import { buildCommitMessage, commitTrackedChanges, readGitStatus, runCommand } f
 import { REPO_ROOT, completePauseTask, isGateEntry, readTodoEntry } from './todo-ledger.mjs';
 
 const REPAIR_ATTEMPT_LIMIT = 2;
+const TASK_CONVERSATION_LIMIT = 3;
+const SAME_SIGNATURE_LIMIT = 2;
+const EXIT_UNRECOVERABLE_FAILURE = 50;
+const LOG_DIR = path.join(REPO_ROOT, 'logs', 'codex');
 
 function parseArgs(argv) {
   const options = {
@@ -50,6 +56,21 @@ async function runQualityGate() {
   });
 }
 
+function normalizeFailureMessage(error) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+export function buildFailureSignature(error) {
+  const firstLine = normalizeFailureMessage(error)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)[0];
+  return (firstLine ?? 'unknown failure').slice(0, 200);
+}
+
 export function buildRepairTask(task, reason) {
   const normalizedTask = task || 'reconcile current workspace';
   return [
@@ -58,6 +79,22 @@ export function buildRepairTask(task, reason) {
     'Fix quality-gate failures and keep the task boundary unchanged.',
     `Failure context: ${reason}`
   ].join(' ');
+}
+
+function buildNextRoundTask(task, reason) {
+  const normalizedTask = task || 'reconcile current workspace';
+  return [
+    `Continue repairing task: ${normalizedTask}.`,
+    'The previous conversation exhausted its repair budget.',
+    'Work only from the current uncommitted workspace and keep the same task boundary.',
+    `Failure context: ${reason}`
+  ].join(' ');
+}
+
+async function appendLoopFailureRecord(record) {
+  await mkdir(LOG_DIR, { recursive: true });
+  const outputPath = path.join(LOG_DIR, 'loop-failures.ndjson');
+  await appendFile(outputPath, `${JSON.stringify(record)}\n`, 'utf8');
 }
 
 async function stabilizeWorkspace(task, options, dependencies, reason) {
@@ -78,7 +115,7 @@ async function stabilizeWorkspace(task, options, dependencies, reason) {
       await dependencies.runCodexTaskFn({
         fullAuto: true,
         model: options.model,
-        task: buildRepairTask(task, error instanceof Error ? error.message : String(error))
+        task: buildRepairTask(task, normalizeFailureMessage(error))
       });
     }
   }
@@ -106,6 +143,33 @@ async function recoverFailedTask(task, options, dependencies, error) {
   }
 
   return committed;
+}
+
+async function recordLoopFailure(task, round, error, dependencies) {
+  const failureSignature = buildFailureSignature(error);
+  await dependencies.appendLoopFailureRecordFn({
+    at: new Date().toISOString(),
+    failureSignature,
+    round,
+    task
+  });
+  dependencies.stdout.write(
+    `[codex-loop] recorded failed round ${round}/${TASK_CONVERSATION_LIMIT}: ${failureSignature}\n`
+  );
+  return failureSignature;
+}
+
+async function executeTaskRound(taskEntry, round, options, dependencies, priorSignature) {
+  const task =
+    round === 1
+      ? taskEntry.task
+      : buildNextRoundTask(taskEntry.task, priorSignature ?? `previous round failed for task: ${taskEntry.task}`);
+  await dependencies.runCodexTaskFn({ fullAuto: true, model: options.model, task });
+  await stabilizeWorkspace(taskEntry.task, options, dependencies, `quality gate after task: ${taskEntry.task}`);
+  return dependencies.commitTrackedChangesFn(
+    REPO_ROOT,
+    await dependencies.buildCommitMessageFn(taskEntry.task)
+  );
 }
 
 export async function reconcileDirtyWorkspace(task, options, dependencies) {
@@ -143,6 +207,7 @@ async function resolveGate(options, dependencies) {
 
 async function runLoop(options, overrides = {}) {
   const dependencies = {
+    appendLoopFailureRecordFn: appendLoopFailureRecord,
     buildCommitMessageFn: (task) => buildCommitMessage(REPO_ROOT, task),
     commitTrackedChangesFn: commitTrackedChanges,
     completePauseTaskFn: completePauseTask,
@@ -172,18 +237,35 @@ async function runLoop(options, overrides = {}) {
       return 0;
     }
 
-    dependencies.stdout.write(`[codex-loop] iteration ${iteration}: ${taskEntry.task}\n`);
-    let committed;
-    try {
-      await dependencies.runCodexTaskFn({ fullAuto: true, model: options.model, task: taskEntry.task });
-      await stabilizeWorkspace(taskEntry.task, options, dependencies, `quality gate after task: ${taskEntry.task}`);
-      committed = await dependencies.commitTrackedChangesFn(
-        REPO_ROOT,
-        await dependencies.buildCommitMessageFn(taskEntry.task)
+    let committed = false;
+    let lastSignature = '';
+    let repeatedSignatureCount = 0;
+
+    for (let round = 1; round <= TASK_CONVERSATION_LIMIT; round += 1) {
+      dependencies.stdout.write(
+        `[codex-loop] iteration ${iteration}, round ${round}/${TASK_CONVERSATION_LIMIT}: ${taskEntry.task}\n`
       );
-    } catch (error) {
-      committed = await recoverFailedTask(taskEntry.task, options, dependencies, error);
+      try {
+        committed = await executeTaskRound(taskEntry, round, options, dependencies, lastSignature);
+        break;
+      } catch (error) {
+        try {
+          committed = await recoverFailedTask(taskEntry.task, options, dependencies, error);
+          break;
+        } catch (recoveryError) {
+          const signature = await recordLoopFailure(taskEntry.task, round, recoveryError, dependencies);
+          repeatedSignatureCount = signature === lastSignature ? repeatedSignatureCount + 1 : 1;
+          lastSignature = signature;
+          if (repeatedSignatureCount >= SAME_SIGNATURE_LIMIT || round === TASK_CONVERSATION_LIMIT) {
+            throw recoveryError;
+          }
+          dependencies.stdout.write(
+            `[codex-loop] reopening task in a fresh round after failure: ${signature}\n`
+          );
+        }
+      }
     }
+
     const nextTaskEntry = await dependencies.readTodoEntryFn();
 
     if (!committed && nextTaskEntry?.task === taskEntry.task) {
@@ -199,7 +281,10 @@ async function runLoop(options, overrides = {}) {
 
 const isMainModule = process.argv[1]?.endsWith('codex-loop.mjs');
 if (isMainModule) {
-  const exitCode = await runLoop(parseArgs(process.argv.slice(2)));
+  const exitCode = await runLoop(parseArgs(process.argv.slice(2))).catch((error) => {
+    process.stderr.write(`[codex-loop] stopped: ${normalizeFailureMessage(error)}\n`);
+    return EXIT_UNRECOVERABLE_FAILURE;
+  });
   process.exit(exitCode);
 }
 

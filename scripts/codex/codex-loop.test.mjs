@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildRepairTask, reconcileDirtyWorkspace, runLoop } from './codex-loop.mjs';
+import { buildFailureSignature, buildRepairTask, reconcileDirtyWorkspace, runLoop } from './codex-loop.mjs';
 import { parseArgs } from './codex-loop.mjs';
 
 describe('codex-loop helpers', () => {
@@ -12,6 +12,10 @@ describe('codex-loop helpers', () => {
   it('builds a repair task prompt from failure context', () => {
     expect(buildRepairTask('fix scheduler split', 'lint failed')).toContain('Failure context: lint failed');
     expect(buildRepairTask('fix scheduler split', 'lint failed')).toContain('fix scheduler split');
+  });
+
+  it('uses the first non-empty line as the failure signature', () => {
+    expect(buildFailureSignature(new Error('lint failed\nstack line'))).toBe('lint failed');
   });
 
   it('reconciles a dirty workspace before the main loop continues', async () => {
@@ -119,5 +123,107 @@ describe('codex-loop helpers', () => {
     expect(exitCode).toBe(20);
     expect(runCodexTaskFn).not.toHaveBeenCalled();
     expect(writes.join('')).toContain('waiting-for-gate: windows acceptance');
+  });
+
+  it('reopens the same task in a fresh round after repair budget exhaustion', async () => {
+    const writes = [];
+    const appendLoopFailureRecordFn = vi.fn().mockResolvedValue(undefined);
+    const runCodexTaskFn = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined);
+    const runQualityGateFn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('lint failed'))
+      .mockRejectedValueOnce(new Error('lint failed'))
+      .mockRejectedValueOnce(new Error('lint failed'))
+      .mockRejectedValueOnce(new Error('lint failed'))
+      .mockRejectedValueOnce(new Error('lint failed'))
+      .mockRejectedValueOnce(new Error('lint failed'))
+      .mockRejectedValueOnce(new Error('typecheck failed'))
+      .mockResolvedValue(undefined);
+
+    const exitCode = await runLoop(
+      { completeGate: false, dryRun: false, maxIterations: 2, model: '' },
+      {
+        appendLoopFailureRecordFn,
+        buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
+        commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+        readGitStatusFn: vi
+          .fn()
+          .mockResolvedValueOnce('')
+          .mockResolvedValueOnce(' M scripts/codex/codex-loop.mjs')
+          .mockResolvedValueOnce(' M scripts/codex/codex-loop.mjs'),
+        readTodoEntryFn: vi
+          .fn()
+          .mockResolvedValueOnce({
+            raw: '[auto] fix loop failure semantics',
+            task: 'fix loop failure semantics',
+            mode: 'auto'
+          })
+          .mockResolvedValueOnce({
+            raw: '[auto] fix loop failure semantics',
+            task: 'fix loop failure semantics',
+            mode: 'auto'
+          })
+          .mockResolvedValueOnce(null),
+        isGateEntryFn: (entry) => entry?.mode === 'gate',
+        runCodexTaskFn,
+        runQualityGateFn,
+        stdout: { write: (value) => writes.push(value) }
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(appendLoopFailureRecordFn).toHaveBeenCalledTimes(1);
+    expect(runCodexTaskFn).toHaveBeenCalledTimes(7);
+    expect(writes.join('')).toContain('recorded failed round 1/3: lint failed');
+    expect(writes.join('')).toContain('reopening task in a fresh round after failure: lint failed');
+    expect(writes.join('')).toContain('iteration 1, round 2/3: fix loop failure semantics');
+  });
+
+  it('stops after repeated identical failure signatures across rounds', async () => {
+    const writes = [];
+    const appendLoopFailureRecordFn = vi.fn().mockResolvedValue(undefined);
+    const runCodexTaskFn = vi.fn().mockResolvedValue(undefined);
+    const runQualityGateFn = vi.fn().mockRejectedValue(new Error('lint failed'));
+
+    await expect(
+      runLoop(
+        { completeGate: false, dryRun: false, maxIterations: 1, model: '' },
+        {
+          appendLoopFailureRecordFn,
+          buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
+          commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+          readGitStatusFn: vi
+            .fn()
+            .mockResolvedValueOnce('')
+            .mockResolvedValueOnce(' M scripts/codex/codex-loop.mjs')
+            .mockResolvedValueOnce(' M scripts/codex/codex-loop.mjs'),
+          readTodoEntryFn: vi
+            .fn()
+            .mockResolvedValueOnce({
+              raw: '[auto] fix loop failure semantics',
+              task: 'fix loop failure semantics',
+              mode: 'auto'
+            })
+            .mockResolvedValueOnce({
+              raw: '[auto] fix loop failure semantics',
+              task: 'fix loop failure semantics',
+              mode: 'auto'
+            }),
+          isGateEntryFn: (entry) => entry?.mode === 'gate',
+          runCodexTaskFn,
+          runQualityGateFn,
+          stdout: { write: (value) => writes.push(value) }
+        }
+      )
+    ).rejects.toThrow('lint failed');
+
+    expect(appendLoopFailureRecordFn).toHaveBeenCalledTimes(2);
+    expect(writes.join('')).toContain('recorded failed round 2/3: lint failed');
   });
 });
