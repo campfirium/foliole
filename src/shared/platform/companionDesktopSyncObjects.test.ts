@@ -33,8 +33,13 @@ const capacitorMock = vi.hoisted(() => ({
   }
 }));
 
+const diagnosticsMock = vi.hoisted(() => ({
+  loadLocalSyncDiagnostics: vi.fn(async () => null)
+}));
+
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companionDesktopAttachmentResources', () => attachmentResourceMock);
+vi.mock('./companionSyncDiagnostics', () => diagnosticsMock);
 vi.mock('./companionWorkspacePairing', () => pairingMock);
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -105,6 +110,56 @@ async function testPullsMissingAttachmentResourcesAfterStructurePack() {
   expect(result.syncedAttachmentIds).toEqual(['att-1']);
   expect(onProgress).toHaveBeenCalledWith({ completed: 0, completedBytes: 0, phase: 'attachment', total: null, totalBytes: null });
   expect(onProgress).toHaveBeenCalledWith({ completed: 1, completedBytes: 2048, phase: 'attachment', total: null, totalBytes: null });
+}
+
+async function testReportsAttachmentResourceBreakdownInProgress() {
+  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+    { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
+  ]);
+  diagnosticsMock.loadLocalSyncDiagnostics
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce({
+      content: {
+        missing_attachment_resource_bytes: 8192,
+        missing_attachment_resource_count: 4,
+        missing_content_blob_bytes: 0,
+        missing_content_blob_count: 0,
+        missing_due_review_attachment_resource_count: 2,
+        missing_image_attachment_resource_bytes: 2048,
+        missing_image_attachment_resource_count: 1,
+        missing_other_attachment_resource_bytes: 4096,
+        missing_other_attachment_resource_count: 2,
+        missing_pdf_attachment_resource_bytes: 2048,
+        missing_pdf_attachment_resource_count: 1
+      },
+      sync_state: {
+        local_dirty_count: 0,
+        pending_ack_count: 0,
+        push_issue_count: 0
+      }
+    })
+    .mockResolvedValueOnce(null);
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const onProgress = vi.fn();
+  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
+
+  expect(onProgress).toHaveBeenCalledWith({
+    attachmentBreakdown: {
+      dueReviewAttachments: 2,
+      imageAttachments: 1,
+      imageBytes: 2048,
+      otherAttachments: 2,
+      otherBytes: 4096,
+      pdfAttachments: 1,
+      pdfBytes: 2048
+    },
+    completed: 0,
+    completedBytes: 0,
+    phase: 'attachment',
+    total: 4,
+    totalBytes: 8192
+  });
 }
 
 async function testContinuesAttachmentCachingAcrossBoundedBatches() {
@@ -320,6 +375,7 @@ describe('companion desktop sync objects', () => {
     syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValue([]);
     syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);
     syncBridgeMock.saveCompanionSyncPackCursor.mockImplementation(async (cursor: number | null) => cursor);
+    diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue(null);
     syncBridgeMock.syncCompanionContentBlob.mockImplementation(async ({ hash }: { hash: string }) => ({
       availability: 'cached',
       hash
@@ -337,6 +393,8 @@ describe('companion desktop sync objects', () => {
   it('pulls the structure pack and missing content blobs from desktop', testPullsStructurePackAndContentBlobs);
 
   it('pulls missing attachment resources from desktop after structure sync', testPullsMissingAttachmentResourcesAfterStructurePack);
+
+  it('reports attachment resource breakdown in sync progress', testReportsAttachmentResourceBreakdownInProgress);
 
   it('continues attachment resource caching across bounded batches', testContinuesAttachmentCachingAcrossBoundedBatches);
 
