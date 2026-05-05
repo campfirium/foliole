@@ -36,7 +36,7 @@ final class FolioleCompanionSyncObjectStore {
             syncObjectQueryReplacements(ids.size(), types.size()),
             syncObjectQueryArgs(ids, types)
         );
-        appendPayloads(database, result.getJSONArray("objects"));
+        appendPayloads(context, database, result.getJSONArray("objects"));
         return result;
     }
 
@@ -45,15 +45,16 @@ final class FolioleCompanionSyncObjectStore {
             String.valueOf(Math.max(0, cursor)),
             String.valueOf(normalizeLimit(limit))
         });
-        appendPayloads(database, result.getJSONArray("objects"));
+        appendPayloads(context, database, result.getJSONArray("objects"));
         return result;
     }
 
-    private static void appendPayloads(SQLiteDatabase database, JSONArray objects) throws Exception {
+    private static void appendPayloads(Context context, SQLiteDatabase database, JSONArray objects) throws Exception {
         for (int index = 0; index < objects.length(); index += 1) {
             JSONObject object = objects.getJSONObject(index);
             object.put("payload_json", object.isNull("deleted_at") ?
                 FolioleCompanionSyncObjectPayloadReader.readPayloadJson(
+                    context,
                     database,
                     object.getString("object_type"),
                     object.getString("object_id")

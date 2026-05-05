@@ -47,6 +47,17 @@ final class FolioleCompanionNamedQueryStore {
         return result;
     }
 
+    static String loadString(Context context, SQLiteDatabase database, String queryName, String[] args) throws Exception {
+        JSONObject query = loadQuery(context, queryName);
+        String sql = replaceTokens(query.getString("sql"), null);
+        try (Cursor cursor = database.rawQuery(sql, args)) {
+            if (!cursor.moveToFirst() || cursor.isNull(0)) {
+                return null;
+            }
+            return cursor.getString(0);
+        }
+    }
+
     private static String replaceTokens(String sql, Map<String, String> replacements) {
         if (replacements == null) {
             return sql;

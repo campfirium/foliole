@@ -2,7 +2,6 @@ package com.foliole.android;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSObject;
@@ -76,30 +75,6 @@ final class FolioleCompanionViewStateSyncStore {
         } else if (key.startsWith("node:")) {
             String source = payload.has("source") ? "sync-apply" : "user-scroll";
             upsertNodeViewState(database, key.substring(5), deviceId, payload.optInt("scroll_top", 0), source, record.optString("updated_at"));
-        }
-    }
-
-    static String readPayloadJson(SQLiteDatabase database, String objectId) throws Exception {
-        String key = objectIdKey(objectId);
-        JSONObject payload = new JSONObject();
-        if (key.equals("active_node")) {
-            try (Cursor cursor = database.query("workspace_meta", new String[] { "value", "updated_at" }, "key = ?", new String[] { "active_node_id" }, null, null, null, "1")) {
-                if (cursor.moveToFirst()) payload.put("active_node_id", nullIfEmpty(cursor.getString(0)));
-            }
-        } else if (key.startsWith("node:")) {
-            copyNodeViewState(database, key.substring(5), objectIdDeviceId(objectId), payload);
-        }
-        return payload.toString();
-    }
-
-    private static void copyNodeViewState(SQLiteDatabase database, String nodeId, String deviceId, JSONObject payload) throws Exception {
-        try (Cursor cursor = database.query("node_view_state", null, "node_id = ? AND device_id = ?", new String[] { nodeId, deviceId }, null, null, null, "1")) {
-            if (!cursor.moveToFirst()) return;
-            payload.put("node_id", nodeId);
-            payload.put("scroll_top", cursor.getInt(cursor.getColumnIndexOrThrow("scroll_top")));
-            payload.put("selection_from", JSONObject.NULL);
-            payload.put("selection_to", JSONObject.NULL);
-            payload.put("source", cursor.getString(cursor.getColumnIndexOrThrow("source")));
         }
     }
 
