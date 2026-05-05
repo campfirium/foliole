@@ -9,13 +9,9 @@ import { createClipboardExportFromView, FOLIOLE_CLIPBOARD_MIME } from './clipboa
 import { handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
 import { handleClipboardImagePaste } from './htmlPaste';
 import { handleInternalClipboardPaste } from './htmlPaste';
-import {
-  addAnchorTagDecorations,
-  getCursorLineNumber
-} from './liveMarkdownAnchors';
+import { getCursorLineNumber } from './liveMarkdownAnchors';
 import { codeFenceLineNumbersField, resolveCodeBlockStateBeforeLine } from './liveMarkdownCodeBlocks';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
-import { addFrontmatterDecorations } from './liveMarkdownFrontmatter';
 import { addImageDecorations, addInlineCodeDecorations, addInlineLinkDecorations } from './liveMarkdownInlineDecorations';
 import { collectPreviewLineMatchState, collectSourceLineMatchState } from './liveMarkdownLineMatches';
 import {
@@ -25,7 +21,7 @@ import {
   CODE_FENCE_PATTERN,
   createLineClass
 } from './liveMarkdownPrimitives';
-import { addSourceModeAnchorDecorations } from './liveMarkdownSourceAnchors';
+import { markdownStaticPlugin } from './liveMarkdownStaticDecorations';
 import {
   addClozePlaceholderDecorations,
   addInlineCodeSyntaxDecorations,
@@ -136,40 +132,6 @@ function buildSourceModeLineDecorations(view: EditorView): DecorationSet {
 
   return Decoration.set(ranges, true);
 }
-
-function buildStaticDecorations(view: EditorView): DecorationSet {
-  return getEditorDisplayMode() === 'source' ? buildSourceModeStaticDecorations(view) : buildPreviewStaticDecorations(view);
-}
-
-function buildPreviewStaticDecorations(view: EditorView): DecorationSet {
-  const ranges: Range<Decoration>[] = [];
-  const content = view.state.doc.toString();
-  addAnchorTagDecorations(ranges, content);
-  addFrontmatterDecorations(ranges, view);
-  return Decoration.set(ranges, true);
-}
-
-function buildSourceModeStaticDecorations(view: EditorView): DecorationSet {
-  const ranges: Range<Decoration>[] = [];
-  const content = view.state.doc.toString();
-  addSourceModeAnchorDecorations(ranges, content);
-  return Decoration.set(ranges, true);
-}
-
-const markdownStaticPlugin = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-    constructor(view: EditorView) {
-      this.decorations = buildStaticDecorations(view);
-    }
-    update(update: ViewUpdate) {
-      if (update.docChanged) {
-        this.decorations = buildStaticDecorations(update.view);
-      }
-    }
-  },
-  { decorations: (value) => value.decorations }
-);
 
 const markdownLinePlugin = ViewPlugin.fromClass(
   class {
