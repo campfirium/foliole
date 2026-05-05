@@ -1,0 +1,19 @@
+{
+  "id": "rdoc_article_highlights_001",
+  "category": "article",
+  "title": "The Long-Term Value of Notes",
+  "author": "Dana Example",
+  "site_name": "Research Weekly",
+  "source_url": "https://example.com/value-of-notes",
+  "highlights": [
+    {
+      "id": "rh_article_001",
+      "text": "A note becomes valuable when it can be found again in a future context.",
+      "note": "Good import target",
+      "location": 128,
+      "location_type": "offset",
+      "highlighted_at": "2026-03-02T10:11:12.000Z"
+    }
+  ],
+  "updated_at": "2026-03-02T10:12:13.000Z"
+}
