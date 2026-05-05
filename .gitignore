@@ -1,14 +1,4 @@
-.lab/*
-!.lab/specs/
-!.lab/specs/**
-!.lab/agent/
-.lab/agent/*
-!.lab/agent/README.md
-!.lab/agent/workflow.md
-!.lab/planning/
-!.lab/planning/**
-!.lab/incidents/
-!.lab/incidents/**
+.lab/
 ref/
 node_modules/
 dist/
