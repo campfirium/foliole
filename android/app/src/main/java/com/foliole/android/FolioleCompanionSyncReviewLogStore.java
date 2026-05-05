@@ -17,8 +17,8 @@ final class FolioleCompanionSyncReviewLogStore {
         return FolioleCompanionNamedQueryStore.loadArray(
             context,
             database,
-            "syncReviewLog",
-            cursorArgs(cursor, deviceId, limit)
+            FolioleCompanionSyncStreamQueryRules.reviewLogQueryName(context),
+            FolioleCompanionSyncStreamQueryRules.cursorArgs(context, "reviewLog", cursor, deviceId, limit)
         );
     }
 
@@ -68,22 +68,4 @@ final class FolioleCompanionSyncReviewLogStore {
         });
     }
 
-    private static String[] cursorArgs(JSONObject cursor, String deviceId, int limit) {
-        if (cursor == null || cursor.optString("created_at").isEmpty() || cursor.optString("change_id").isEmpty()) {
-            return new String[] { deviceId, "", "", "", "", "", String.valueOf(normalizeLimit(limit)) };
-        }
-        return new String[] {
-            deviceId,
-            cursor.optString("created_at"),
-            cursor.optString("change_id"),
-            cursor.optString("created_at"),
-            cursor.optString("created_at"),
-            cursor.optString("change_id"),
-            String.valueOf(normalizeLimit(limit))
-        };
-    }
-
-    private static int normalizeLimit(int limit) {
-        return Math.max(1, Math.min(1000, limit <= 0 ? 500 : limit));
-    }
 }

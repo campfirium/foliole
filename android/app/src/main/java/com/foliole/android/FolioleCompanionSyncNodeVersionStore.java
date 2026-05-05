@@ -16,43 +16,31 @@ final class FolioleCompanionSyncNodeVersionStore {
         JSObject result = FolioleCompanionNamedQueryStore.loadArray(
             context,
             database,
-            "syncNodeVersions",
-            cursorArgs(cursor, deviceId, limit)
+            FolioleCompanionSyncStreamQueryRules.nodeVersionsQueryName(context),
+            FolioleCompanionSyncStreamQueryRules.cursorArgs(context, "nodeVersions", cursor, deviceId, limit)
         );
-        appendAncestorVersionIds(context, database, result.getJSONArray("nodes"));
+        appendAncestorVersionIds(context, database, result.getJSONArray(FolioleCompanionSyncStreamQueryRules.nodeVersionsResultKey(context)));
         return result;
     }
 
     private static void appendAncestorVersionIds(Context context, SQLiteDatabase database, JSONArray nodes) throws Exception {
         for (int index = 0; index < nodes.length(); index += 1) {
             JSONObject node = nodes.getJSONObject(index);
-            node.put("ancestor_version_ids", listAncestorVersionIds(context, database, node.getString("version_id")));
+            node.put(
+                FolioleCompanionSyncStreamQueryRules.nodeVersionAncestorIdsKey(context),
+                listAncestorVersionIds(context, database, node.getString(FolioleCompanionSyncStreamQueryRules.nodeVersionIdKey(context)))
+            );
         }
-    }
-
-    private static String[] cursorArgs(JSONObject cursor, String deviceId, int limit) {
-        if (cursor == null || cursor.optString("created_at").isEmpty() || cursor.optString("change_id").isEmpty()) {
-            return new String[] { deviceId, "", "", "", "", "", String.valueOf(normalizeLimit(limit)) };
-        }
-        return new String[] {
-            deviceId,
-            cursor.optString("created_at"),
-            cursor.optString("change_id"),
-            cursor.optString("created_at"),
-            cursor.optString("created_at"),
-            cursor.optString("change_id"),
-            String.valueOf(normalizeLimit(limit))
-        };
     }
 
     private static JSONArray listAncestorVersionIds(Context context, SQLiteDatabase database, String versionId) throws Exception {
         JSONArray ancestors = new JSONArray();
         String cursorVersionId = versionId;
-        for (int depth = 0; depth < 1000; depth += 1) {
+        for (int depth = 0; depth < FolioleCompanionSyncStreamQueryRules.nodeVersionAncestorDepthLimit(context); depth += 1) {
             String parentVersionId = FolioleCompanionNamedQueryStore.loadString(
                 context,
                 database,
-                "syncNodeVersionParent",
+                FolioleCompanionSyncStreamQueryRules.nodeVersionParentQueryName(context),
                 new String[] { cursorVersionId }
             );
             if (parentVersionId == null || parentVersionId.trim().isEmpty()) {
@@ -62,9 +50,5 @@ final class FolioleCompanionSyncNodeVersionStore {
             cursorVersionId = parentVersionId;
         }
         return ancestors;
-    }
-
-    private static int normalizeLimit(int limit) {
-        return Math.max(1, Math.min(1000, limit <= 0 ? 500 : limit));
     }
 }

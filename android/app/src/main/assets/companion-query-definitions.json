@@ -1664,6 +1664,31 @@
       "resultKey": "objects"
     }
   },
+  "syncStreamRead": {
+    "nodeVersions": {
+      "ancestorDepthLimit": 1000,
+      "ancestorVersionIdsKey": "ancestor_version_ids",
+      "cursorChangeIdKey": "change_id",
+      "cursorCreatedAtKey": "created_at",
+      "defaultLimit": 500,
+      "emptyCursorValue": "",
+      "maxLimit": 1000,
+      "minLimit": 1,
+      "parentQueryName": "syncNodeVersionParent",
+      "queryName": "syncNodeVersions",
+      "resultKey": "nodes",
+      "versionIdKey": "version_id"
+    },
+    "reviewLog": {
+      "cursorChangeIdKey": "change_id",
+      "cursorCreatedAtKey": "created_at",
+      "defaultLimit": 500,
+      "emptyCursorValue": "",
+      "maxLimit": 1000,
+      "minLimit": 1,
+      "queryName": "syncReviewLog"
+    }
+  },
   "syncPayloadRouting": {
     "defaultDeviceId": "*",
     "objectIdDelimiter": ":",

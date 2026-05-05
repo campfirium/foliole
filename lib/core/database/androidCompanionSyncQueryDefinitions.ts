@@ -150,3 +150,29 @@ export const ANDROID_COMPANION_SYNC_OBJECT_READ_RULES = {
     resultKey: 'objects'
   }
 };
+
+export const ANDROID_COMPANION_SYNC_STREAM_READ_RULES = {
+  nodeVersions: {
+    ancestorDepthLimit: 1000,
+    ancestorVersionIdsKey: 'ancestor_version_ids',
+    cursorChangeIdKey: 'change_id',
+    cursorCreatedAtKey: 'created_at',
+    defaultLimit: 500,
+    emptyCursorValue: '',
+    maxLimit: 1000,
+    minLimit: 1,
+    parentQueryName: 'syncNodeVersionParent',
+    queryName: 'syncNodeVersions',
+    resultKey: 'nodes',
+    versionIdKey: 'version_id'
+  },
+  reviewLog: {
+    cursorChangeIdKey: 'change_id',
+    cursorCreatedAtKey: 'created_at',
+    defaultLimit: 500,
+    emptyCursorValue: '',
+    maxLimit: 1000,
+    minLimit: 1,
+    queryName: 'syncReviewLog'
+  }
+};

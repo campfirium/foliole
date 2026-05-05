@@ -211,11 +211,11 @@ describe('FolioleCompanionSyncObjectStore', () => {
     const queryDefinitions = await readFile(COMPANION_QUERY_DEFINITIONS, 'utf8');
     const loadBody = source.slice(
       source.indexOf('static JSObject loadNodeVersions'),
-      source.indexOf('private static int normalizeLimit')
+      source.indexOf('private static JSONArray listAncestorVersionIds')
     );
 
     expect(loadBody).toContain('FolioleCompanionNamedQueryStore.loadArray');
-    expect(loadBody).toContain('listAncestorVersionIds(context, database, node.getString("version_id"))');
+    expect(loadBody).toContain('FolioleCompanionSyncStreamQueryRules.nodeVersionIdKey(context)');
     expect(source).toContain('private static JSONArray listAncestorVersionIds');
     expect(queryDefinitions).toContain('"syncNodeVersionParent"');
     expect(queryDefinitions).toContain('parent_version_id');
