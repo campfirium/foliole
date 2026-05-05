@@ -33,6 +33,7 @@ function useNodeWorkspaceActions() {
     createRootNode: useWorkspaceStore((state) => state.createRootNode),
     deleteNode: useWorkspaceStore((state) => state.deleteNode),
     deleteNodePermanently: useWorkspaceStore((state) => state.deleteNodePermanently),
+    dismissNode: useWorkspaceStore((state) => state.dismissNode),
     moveNodes: useWorkspaceStore((state) => state.moveNodes),
     relearnNode: useWorkspaceStore((state) => state.relearnNode),
     reviewSession: useWorkspaceStore((state) => state.reviewSession),
@@ -92,9 +93,10 @@ function useNodeListTreeModel({
     createRootNode: workspace.createRootNode,
     deleteNode: workspace.deleteNode,
     deleteNodePermanently: workspace.deleteNodePermanently,
+    dismissNode: workspace.dismissNode,
     handleSelectNode,
     moveNodes: workspace.moveNodes,
-    relearnNode: workspace.relearnNode,
+    returnNode: workspace.relearnNode,
     reviewSession: workspace.reviewSession,
     restoreNode: workspace.restoreNode,
     updateNodeTitle: workspace.updateNodeTitle,
@@ -138,13 +140,14 @@ export function NodeListTree({
       createRootNode={model.createRootNode}
       deleteNode={model.deleteNode}
       deleteNodePermanently={model.deleteNodePermanently}
+      dismissNode={model.dismissNode}
       isTrashViewOpen={isTrashViewOpen}
       moveNodes={model.moveNodes}
       nodesById={nodesById}
       onOpenNotesView={onOpenNotesView}
       onSelect={model.handleSelectNode}
       reviewSession={runtimeState.reviewSession}
-      relearnNode={model.relearnNode}
+      returnNode={model.returnNode}
       updateNodeTitle={model.updateNodeTitle}
       restoreNode={model.restoreNode}
       selectedNodeIds={state.selectedNodeIds}

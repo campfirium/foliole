@@ -1,5 +1,6 @@
 import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import {
   syncDeleteNodesPermanentlyToRuntime,
@@ -38,6 +39,7 @@ type WorkspaceNodeActions = Pick<
   | 'createRootNode'
   | 'deleteNode'
   | 'deleteNodePermanently'
+  | 'dismissNode'
   | 'moveNode'
   | 'moveNodes'
   | 'restoreNode'
@@ -157,6 +159,40 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
   };
 }
 
+function createDismissNodeAction(set: WorkspaceSet): WorkspaceNodeActions['dismissNode'] {
+  return (nodeId, now = new Date().toISOString()) => {
+    let dismissed = false;
+    set((state) => {
+      const node = state.nodesById[nodeId];
+      if (!node || node.content.trim().length === 0 || isFsrsReviewItemNode(node) || node.reading?.state === 'dismissed') {
+        return state;
+      }
+      dismissed = true;
+      const defaultPriority = getCurrentReviewSchedulerSettings().pushQueue.defaultPriority;
+      return {
+        nodesById: {
+          ...state.nodesById,
+          [nodeId]: {
+            ...node,
+            reading: {
+              intervalDurationMs: node.reading?.intervalDurationMs ?? 0,
+              intervalGrowthFactor: node.reading?.intervalGrowthFactor ?? 1,
+              lastHandledAt: node.reading?.lastHandledAt ?? now,
+              nextAt: node.reading?.nextAt ?? now,
+              priority: node.reading?.priority ?? defaultPriority,
+              readingPosition: node.reading?.readingPosition ?? 0,
+              repetitionCount: node.reading?.repetitionCount ?? 0,
+              state: 'dismissed'
+            },
+            updatedAt: now
+          }
+        }
+      };
+    });
+    return dismissed;
+  };
+}
+
 function createRelearnNodeAction(set: WorkspaceSet): WorkspaceNodeActions['relearnNode'] {
   return (nodeId, now = new Date().toISOString()) => {
     let relearned = false;
@@ -197,10 +233,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     syncRestoreNodes: syncRestoreNodesToRuntime,
     syncDeleteNodesPermanently: syncDeleteNodesPermanentlyToRuntime
   });
-  const runtimeHandlers = {
-    syncNodeContent: syncNodeContentToRuntime,
-    syncNodeOrder: syncNodeOrderToRuntime
-  };
+  const runtimeHandlers = { syncNodeContent: syncNodeContentToRuntime, syncNodeOrder: syncNodeOrderToRuntime };
   const syncMovedNodes = (nodes: WorkspaceState['nodesById'][string][]) => {
     for (const node of nodes) {
       syncNodeContentToRuntime(node);
@@ -212,6 +245,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateNodeTitle: createUpdateNodeTitleAction(set),
     updateNodeContent: createUpdateNodeContentAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
+    dismissNode: createDismissNodeAction(set),
     relearnNode: createRelearnNodeAction(set),
     updateNodePriority: createUpdateNodePriorityAction(set),
     updateNodeDesiredRetention: createUpdateNodeDesiredRetentionAction(set),

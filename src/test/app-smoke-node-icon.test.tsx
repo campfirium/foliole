@@ -137,7 +137,7 @@ it('maps node list icons to pending, scheduled, and dismissed states', () => {
   expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-kind', 'review');
   expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-pattern', 'normal');
   expect(getTreeItemIcon(listPanel, 'Dismissed Reading')).toHaveAttribute('data-node-icon-state', 'dismissed');
-  expect(getTreeItemIcon(listPanel, 'Dismissed Reading')).toHaveAttribute('data-node-icon-pattern', 'faded');
+  expect(getTreeItemIcon(listPanel, 'Dismissed Reading')).toHaveAttribute('data-node-icon-pattern', 'normal');
   expect(dismissedReadingRow).toHaveAttribute('data-node-visibility', 'muted');
   expect(dismissedReadingRow.className).toContain('opacity-35');
 });

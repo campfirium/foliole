@@ -8,9 +8,11 @@ interface NodeListContextMenuProps {
   onCreateNode: () => void;
   onDeleteNode: () => void;
   onDeleteNodePermanently: () => void;
-  onRelearnNode?: () => void;
+  onDismissNode?: () => void;
+  onReturnNode?: () => void;
   onRestoreNode: () => void;
-  showRelearnAction?: boolean;
+  showDismissAction?: boolean;
+  showReturnAction?: boolean;
   top: number;
 }
 
@@ -22,9 +24,11 @@ export function NodeListContextMenu({
   onCreateNode,
   onDeleteNode,
   onDeleteNodePermanently,
-  onRelearnNode,
+  onDismissNode,
+  onReturnNode,
   onRestoreNode,
-  showRelearnAction = false,
+  showDismissAction = false,
+  showReturnAction = false,
   top
 }: NodeListContextMenuProps) {
   return (
@@ -54,8 +58,11 @@ export function NodeListContextMenu({
             {onCreateChildNode ? (
               <AppDropdownMenuItem onSelect={onCreateChildNode}>New Child Node</AppDropdownMenuItem>
             ) : null}
-            {showRelearnAction && onRelearnNode ? (
-              <AppDropdownMenuItem onSelect={onRelearnNode}>Relearn</AppDropdownMenuItem>
+            {showReturnAction && onReturnNode ? (
+              <AppDropdownMenuItem onSelect={onReturnNode}>Relearn</AppDropdownMenuItem>
+            ) : null}
+            {showDismissAction && onDismissNode ? (
+              <AppDropdownMenuItem onSelect={onDismissNode}>Dismiss</AppDropdownMenuItem>
             ) : null}
             <AppDropdownMenuItem onSelect={onDeleteNode}>Delete Node</AppDropdownMenuItem>
           </>

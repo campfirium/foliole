@@ -41,6 +41,7 @@ function createWorkspaceFixture(): WorkspaceState {
     updateNodeReveal: () => undefined,
     updateNodePriority: () => undefined,
     updateNodeDesiredRetention: () => undefined,
+    dismissNode: () => false,
     relearnNode: () => false,
     startReviewSession: () => false,
     revealReviewAnswer: () => undefined,
@@ -216,6 +217,21 @@ describe('createWorkspaceNodeActions create sync', () => {
     );
   });
 
+});
+
+describe('createWorkspaceNodeActions dismiss', () => {
+  it('marks pending reading nodes as dismissed from the node menu', () => {
+    const harness = createSetStateHarness(createWorkspaceFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    const dismissed = actions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
+
+    expect(dismissed).toBe(true);
+    expect(harness.getState().nodesById['node-1']?.reading).toMatchObject({
+      state: 'dismissed',
+      repetitionCount: 0
+    });
+  });
 });
 
 describe('createWorkspaceNodeActions create qa sync', () => {

@@ -3,7 +3,7 @@ import type { NodeTreeRow } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
-import { hasRelearnTargets } from './nodeListContextMenuReview';
+import { hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
 import { NodeListHeader } from './NodeListHeader';
 import { useNodeListDragController } from './NodeListTreeDrag';
 import type {
@@ -110,12 +110,13 @@ interface NodeListTreeContentProps {
   createRootNode: (content?: string) => string;
   deleteNode: (nodeId: string) => void;
   deleteNodePermanently: (nodeId: string) => void;
+  dismissNode: (nodeId: string, now?: string) => boolean;
   isTrashViewOpen: boolean;
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: 'before' | 'after' | 'child' | 'root') => boolean; nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   reviewSession: ReviewSessionState;
-  relearnNode: (nodeId: string, now?: string) => boolean;
+  returnNode: (nodeId: string, now?: string) => boolean;
   updateNodeTitle: (nodeId: string, title: string) => void;
   restoreNode: (nodeId: string) => void;
   selectedNodeIds: string[];
@@ -123,7 +124,7 @@ interface NodeListTreeContentProps {
   state: NodeListState;
 }
 
-function confirmRelearnNodeReset(targetCount: number) {
+function confirmReturnNodeReset(targetCount: number) {
   return window.confirm(
     targetCount > 1
       ? 'Reset review state and requeue the selected nodes?'
@@ -131,23 +132,76 @@ function confirmRelearnNodeReset(targetCount: number) {
   );
 }
 
-function createRelearnNodeAction(
+function createReturnNodeAction(
   contextTargets: string[],
-  relearnNode: (nodeId: string, now?: string) => boolean,
+  returnNode: (nodeId: string, now?: string) => boolean,
   closeContextMenu: () => void
 ) {
   return () => {
-    if (!confirmRelearnNodeReset(contextTargets.length)) {
+    if (!confirmReturnNodeReset(contextTargets.length)) {
       closeContextMenu();
       return;
     }
-    contextTargets.forEach((id) => relearnNode(id));
+    contextTargets.forEach((id) => returnNode(id));
     closeContextMenu();
   };
 }
 
-export function NodeListTreeContent(props: NodeListTreeContentProps) {
+function createDismissNodeAction(
+  contextTargets: string[],
+  dismissNode: (nodeId: string, now?: string) => boolean,
+  closeContextMenu: () => void
+) {
+  return () => {
+    contextTargets.forEach((id) => dismissNode(id));
+    closeContextMenu();
+  };
+}
+
+function NodeListTreeMenu(props: NodeListTreeContentProps) {
+  if (!props.contextMenu.menuPosition) {
+    return null;
+  }
+
   const contextTargets = props.contextMenu.getContextTargets();
+  const isNotesMenu = props.contextMenu.contextMenuMode === 'notes';
+
+  return (
+    <NodeListContextMenu
+      isTrashMenu={props.contextMenu.contextMenuMode === 'trash'}
+      left={props.contextMenu.menuPosition.left}
+      onClose={props.contextMenu.closeContextMenu}
+      onCreateChildNode={() => (
+        isNotesMenu &&
+        contextTargets[0] &&
+        props.createChildNode(contextTargets[0], ''),
+        props.contextMenu.closeContextMenu()
+      )}
+      onCreateNode={() => (props.createRootNode(''), props.contextMenu.closeContextMenu())}
+      onDeleteNode={() => (
+        contextTargets
+          .sort((a, b) => props.state.noteRowIds.indexOf(a) - props.state.noteRowIds.indexOf(b))
+          .forEach((id) => props.deleteNode(id)),
+        props.contextMenu.closeContextMenu()
+      )}
+      onDeleteNodePermanently={() => (
+        contextTargets.forEach((id) => props.deleteNodePermanently(id)),
+        props.contextMenu.closeContextMenu()
+      )}
+      onDismissNode={createDismissNodeAction(contextTargets, props.dismissNode, props.contextMenu.closeContextMenu)}
+      onRestoreNode={() => (
+        contextTargets.forEach((id) => props.restoreNode(id)),
+        props.contextMenu.closeContextMenu()
+      )}
+      onReturnNode={createReturnNodeAction(contextTargets, props.returnNode, props.contextMenu.closeContextMenu)}
+      showDismissAction={isNotesMenu && hasDismissTargets(contextTargets, props.nodesById)}
+      showReturnAction={isNotesMenu && hasReturnTargets(contextTargets, props.nodesById)}
+      top={props.contextMenu.menuPosition.top}
+    />
+  );
+}
+
+export function NodeListTreeContent(props: NodeListTreeContentProps) {
   return (
     <>
       <NodeListPanel
@@ -171,37 +225,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         trashRowIds={props.state.trashRowIds}
         trashRowsLength={props.state.trashRows.length}
       />
-      {props.contextMenu.menuPosition ? (
-        <NodeListContextMenu
-          isTrashMenu={props.contextMenu.contextMenuMode === 'trash'}
-          left={props.contextMenu.menuPosition.left}
-          onClose={props.contextMenu.closeContextMenu}
-          onCreateChildNode={() => (
-            props.contextMenu.contextMenuMode === 'notes' &&
-            contextTargets[0] &&
-            props.createChildNode(contextTargets[0], ''),
-            props.contextMenu.closeContextMenu()
-          )}
-          onCreateNode={() => (props.createRootNode(''), props.contextMenu.closeContextMenu())}
-          onDeleteNode={() => (
-            contextTargets
-              .sort((a, b) => props.state.noteRowIds.indexOf(a) - props.state.noteRowIds.indexOf(b))
-              .forEach((id) => props.deleteNode(id)),
-            props.contextMenu.closeContextMenu()
-          )}
-          onDeleteNodePermanently={() => (
-            contextTargets.forEach((id) => props.deleteNodePermanently(id)),
-            props.contextMenu.closeContextMenu()
-          )}
-          onRelearnNode={createRelearnNodeAction(contextTargets, props.relearnNode, props.contextMenu.closeContextMenu)}
-          onRestoreNode={() => (
-            contextTargets.forEach((id) => props.restoreNode(id)),
-            props.contextMenu.closeContextMenu()
-          )}
-          showRelearnAction={props.contextMenu.contextMenuMode === 'notes' && hasRelearnTargets(contextTargets, props.nodesById)}
-          top={props.contextMenu.menuPosition.top}
-        />
-      ) : null}
+      <NodeListTreeMenu {...props} />
     </>
   );
 }

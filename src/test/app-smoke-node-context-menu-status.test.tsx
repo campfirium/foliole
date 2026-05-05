@@ -1,0 +1,80 @@
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
+
+import './app-smoke.shared';
+
+import { App } from '../app/App';
+import { useWorkspaceStore } from '../store/workspaceStore';
+
+import { createNode } from './app-smoke.shared';
+
+function getNodeListPanel() {
+  return screen.getByRole('complementary', { name: 'Node list panel' });
+}
+
+function openNodeMenu(name: string) {
+  const panel = getNodeListPanel();
+  fireEvent.contextMenu(within(panel).getByRole('treeitem', { name }), { clientX: 56, clientY: 64 });
+  return panel;
+}
+
+it('dismisses pending reading nodes from the node menu and updates the icon state', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-pending',
+    nodeOrder: ['node-pending'],
+    nodesById: {
+      ...state.nodesById,
+      'node-pending': createNode({ id: 'node-pending', title: 'Pending note', content: '# Pending note' })
+    }
+  }));
+
+  render(<App />);
+
+  const panel = openNodeMenu('Pending note');
+  expect(screen.queryByRole('menuitem', { name: 'Relearn' })).toBeNull();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Dismiss' }));
+
+  expect(useWorkspaceStore.getState().nodesById['node-pending']?.reading?.state).toBe('dismissed');
+  expect(within(panel).getByRole('treeitem', { name: 'Pending note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
+    'data-node-icon-state',
+    'dismissed'
+  );
+});
+
+it('returns dismissed reading nodes to pending from the node menu', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-dismissed',
+    nodeOrder: ['node-dismissed'],
+    nodesById: {
+      ...state.nodesById,
+      'node-dismissed': createNode({
+        id: 'node-dismissed',
+        title: 'Dismissed note',
+        content: '# Dismissed note',
+        reading: {
+          intervalDurationMs: 24 * 60 * 60 * 1000,
+          intervalGrowthFactor: 1.3,
+          lastHandledAt: '2026-03-16T00:00:00.000Z',
+          nextAt: '2026-03-17T00:00:00.000Z',
+          priority: 5,
+          readingPosition: 0,
+          repetitionCount: 1,
+          state: 'dismissed'
+        }
+      })
+    }
+  }));
+
+  render(<App />);
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+  const panel = openNodeMenu('Dismissed note');
+  expect(screen.queryByRole('menuitem', { name: 'Dismiss' })).toBeNull();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
+
+  expect(useWorkspaceStore.getState().nodesById['node-dismissed']?.reading).toBeNull();
+  expect(within(panel).getByRole('treeitem', { name: 'Dismissed note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
+    'data-node-icon-state',
+    'pending'
+  );
+});
