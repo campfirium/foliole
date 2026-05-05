@@ -1,0 +1,170 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  createSyncObjectsResult,
+  createSyncState,
+  resetCompanionWorkspaceSyncFlowMocks,
+  syncObjectsMock,
+  syncPlatformMock
+} from './companionWorkspaceSyncFlow.testHarness';
+
+async function testRecordsBacklogBytes() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    remainingAttachmentResourceBytes: 3145728,
+    remainingAttachmentResourceCount: 2,
+    remainingContentBlobBytes: 5242880,
+    remainingContentBlobCount: 5
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('backlog');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still downloading.',
+    status: 'skipped'
+  }));
+}
+
+async function testRecordsDownloadedResourcesForPass() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    remainingContentBlobBytes: 5242880,
+    remainingContentBlobCount: 5,
+    syncedContentBlobBytes: 1048576,
+    syncedContentBlobHashes: ['hash-1']
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('backlog');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync; 5 topic bodies (5.0 MB) still downloading.',
+    status: 'skipped'
+  }));
+}
+
+async function testKeepsResourceErrorsOnBacklogPath() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    contentBlobError: 'Topic body batch could not download any requested body.',
+    remainingContentBlobCount: 5
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setSyncProgress = vi.fn();
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress,
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('backlog');
+  expect(setSyncProgress).not.toHaveBeenCalledWith(null);
+  expect(setSyncProgress).toHaveBeenCalledWith({
+    completed: 0,
+    completedBytes: 0,
+    contentBreakdown: undefined,
+    phase: 'content',
+    total: 5,
+    totalBytes: null
+  });
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body; 5 topic bodies still downloading.',
+    status: 'skipped'
+  }));
+}
+
+async function testKeepsProgressVisibleWhenBacklogRemains() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    remainingAttachmentResourceCount: 2,
+    remainingContentBreakdown: {
+      activeTopicBodies: 1,
+      dueReviewBodies: 2,
+      externalDocumentBodies: 1,
+      nestedTopicBodies: 3,
+      topLevelTopicBodies: 1,
+      topicBodies: 4
+    },
+    remainingContentBlobCount: 5
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setSyncProgress = vi.fn();
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress,
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(setSyncProgress).not.toHaveBeenCalledWith(null);
+  expect(setSyncProgress).toHaveBeenCalledWith({
+    completed: 0,
+    completedBytes: 0,
+    contentBreakdown: {
+      activeTopicBodies: 1,
+      dueReviewBodies: 2,
+      externalDocumentBodies: 1,
+      nestedTopicBodies: 3,
+      topLevelTopicBodies: 1,
+      topicBodies: 4
+    },
+    phase: 'content',
+    total: 5,
+    totalBytes: null
+  });
+}
+
+async function testClearsProgressWhenBacklogIsDone() {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setSyncProgress = vi.fn();
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress,
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(setSyncProgress).toHaveBeenCalledWith(null);
+}
+
+describe('tryForegroundAutoSync resource progress', () => {
+  beforeEach(resetCompanionWorkspaceSyncFlowMocks);
+
+  it('records remaining cache bytes when a pass leaves body or attachment backlog', testRecordsBacklogBytes);
+
+  it('records downloaded resources when a pass makes progress', testRecordsDownloadedResourcesForPass);
+
+  it('keeps resource errors on the quick backlog retry path', testKeepsResourceErrorsOnBacklogPath);
+
+  it('keeps sync progress visible when a pass leaves resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
+
+  it('clears sync progress when the resource backlog is done', testClearsProgressWhenBacklogIsDone);
+});

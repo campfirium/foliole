@@ -2,9 +2,13 @@ import type { CompanionDesktopSyncProgress } from '../shared/platform/companionD
 
 import type { CompanionSyncPassInput } from './companionSyncPassResult';
 
+function hasRemainingResourceBacklog(result: CompanionSyncPassInput) {
+  return result.remainingAttachmentResourceCount !== 0 || result.remainingContentBlobCount !== 0;
+}
+
 export function shouldClearCompanionSyncProgress(result: CompanionSyncPassInput) {
   if (result.attachmentResourceError || result.contentBlobError) {
-    return true;
+    return !hasRemainingResourceBacklog(result);
   }
   const structureDone = result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0;
   return result.remainingAttachmentResourceCount === 0 && result.remainingContentBlobCount === 0 && structureDone;

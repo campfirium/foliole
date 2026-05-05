@@ -116,11 +116,27 @@ function createPassResult(message: string, status: CompanionSyncPassResult['stat
   return { message, outcome: status, status };
 }
 
+function hasRemainingResourceBacklog(result: CompanionSyncPassInput) {
+  return result.remainingContentBlobCount !== 0 || result.remainingAttachmentResourceCount !== 0;
+}
+
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {
   if (result.attachmentResourceError) {
+    if (hasRemainingResourceBacklog(result)) {
+      return createPassResult(
+        appendBacklogSuffix(`Sync checked; attachment files could not download in this pass: ${result.attachmentResourceError}`, result),
+        'skipped'
+      );
+    }
     return createPassResult(`Attachment download failed: ${result.attachmentResourceError}`, 'failed');
   }
   if (result.contentBlobError) {
+    if (hasRemainingResourceBacklog(result)) {
+      return createPassResult(
+        appendBacklogSuffix(`Sync checked; topic bodies could not download in this pass: ${result.contentBlobError}`, result),
+        'skipped'
+      );
+    }
     return createPassResult(`Topic body download failed: ${result.contentBlobError}`, 'failed');
   }
   if (result.pushError) {

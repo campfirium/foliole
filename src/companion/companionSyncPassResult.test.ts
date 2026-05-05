@@ -72,6 +72,38 @@ describe('describeCompanionSyncPassResult', () => {
     });
   });
 
+  it('keeps a body download error on the backlog retry path when bodies remain', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      contentBlobError: 'Topic body batch could not download any requested body.',
+      remainingContentBlobCount: 5
+    }))).toEqual({
+      message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body; 5 topic bodies still downloading.',
+      outcome: 'skipped',
+      status: 'skipped'
+    });
+  });
+
+  it('keeps an attachment download error on the backlog retry path when attachments remain', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      attachmentResourceError: 'Attachment file batch could not download any requested file.',
+      remainingAttachmentResourceCount: 2
+    }))).toEqual({
+      message: 'Sync checked; attachment files could not download in this pass: Attachment file batch could not download any requested file; 2 attachment files still downloading.',
+      outcome: 'skipped',
+      status: 'skipped'
+    });
+  });
+
+  it('marks a body download error failed when no body backlog remains', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      contentBlobError: 'Topic body batch could not download any requested body.'
+    }))).toEqual({
+      message: 'Topic body download failed: Topic body batch could not download any requested body.',
+      outcome: 'failed',
+      status: 'failed'
+    });
+  });
+
   it('keeps local dirty and pending ack work out of completed events', () => {
     expect(describeCompanionSyncPassResult(passInput({
       localDirtyCount: 1,
