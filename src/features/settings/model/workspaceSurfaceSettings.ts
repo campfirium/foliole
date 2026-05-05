@@ -8,6 +8,7 @@ import {
   workspaceSurfaceColorFromHsl,
   workspaceSurfaceColorToHsl
 } from './workspaceSurfaceColor';
+import { deriveDocumentTokenSurfaceColor } from './workspaceSurfaceDocumentTokens';
 import { deriveScrollbarThumbColor } from './workspaceSurfaceScrollbars';
 
 export const WORKSPACE_SURFACE_REGION_IDS = [
@@ -227,6 +228,17 @@ export function applyWorkspaceSurfaceSettings(
     );
   });
   const sidebarColor = palette[assignments['main-sidebar']] ?? palette[0];
+  const documentColor = palette[assignments['main-document']] ?? palette[0];
+  const documentTokenColor = deriveDocumentTokenSurfaceColor(documentColor, sidebarColor);
+  root.style.setProperty('--workspace-region-main-document-token-bg', documentTokenColor);
+  root.style.setProperty(
+    '--workspace-region-main-document-token-divider-mix-target',
+    deriveDividerMixTarget(documentTokenColor)
+  );
+  root.style.setProperty(
+    '--workspace-region-main-document-scrollbar-thumb-color',
+    deriveScrollbarThumbColor('main-document', documentTokenColor, palette, assignments)
+  );
   root.style.setProperty(
     '--workspace-region-main-sidebar-panel-bg',
     derivePanelSurfaceColor(sidebarColor, LIGHT_SIDEBAR_PANEL_LIGHTNESS_OFFSET, DARK_SIDEBAR_PANEL_LIGHTNESS_OFFSET)

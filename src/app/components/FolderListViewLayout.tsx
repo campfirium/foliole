@@ -33,7 +33,7 @@ function FolderListHeader({
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-border/10 pb-3">
+    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--workspace-region-main-document-content-divider)] pb-3">
       {showCountAndTitle ? <FolderListHeaderSummary folderTitle={folderTitle} itemCountLabel={itemCountLabel} /> : null}
       <div className="w-[248px] max-w-full max-[900px]:w-full max-[900px]:basis-full">
         <FolderListSearchBox
@@ -175,7 +175,7 @@ function FolderListBody({
   }
 
   return (
-    <ul aria-label="Folder contents" className="flex flex-col divide-y divide-border/10 border-b border-border/10">
+    <ul aria-label="Folder contents" className="flex flex-col divide-y divide-[var(--workspace-region-main-document-content-divider)] border-b border-[var(--workspace-region-main-document-content-divider)]">
       {filteredNodes.map((node) => onRenderItem(node))}
     </ul>
   );

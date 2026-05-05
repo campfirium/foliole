@@ -19,7 +19,7 @@ export function ImportCatalogHeader(props: {
   title: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-border/10 pb-3">
+    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--workspace-region-main-document-content-divider)] pb-3">
       <div className="flex min-w-0 items-baseline gap-2">
         <h2 className="truncate text-base font-semibold text-foreground">{props.title}</h2>
         <p className="shrink-0 text-sm font-medium text-foreground/58">{props.countLabel}</p>
@@ -101,7 +101,7 @@ export function ImportCatalogLayout(props: {
           />
         </div>
       ) : props.hasItems ? (
-        <div className="flex flex-col divide-y divide-border/10 border-b border-border/10">{props.children}</div>
+        <div className="flex flex-col divide-y divide-[var(--workspace-region-main-document-content-divider)] border-b border-[var(--workspace-region-main-document-content-divider)]">{props.children}</div>
       ) : (
         <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
           <AppEmptyState description={props.emptyState.description} title={props.emptyState.title} />

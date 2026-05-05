@@ -34,6 +34,9 @@
   --workspace-divider-mix-target: black;
   --workspace-divider-subtle-surface-weight: 92%;
   --workspace-divider-strong-surface-weight: 86%;
+  --workspace-document-content-divider-surface-weight: 91%;
+  --workspace-region-main-document-token-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-sidebar-bg) 12%);
+  --workspace-region-main-document-token-divider-mix-target: var(--workspace-region-main-sidebar-divider-mix-target, var(--workspace-divider-mix-target));
   --app-surface: rgb(var(--color-bg-panel));
   --app-divider-mix-target: var(--workspace-divider-mix-target);
   --app-divider-subtle: color-mix(in oklab, var(--app-surface) var(--workspace-divider-subtle-surface-weight), var(--app-divider-mix-target));
@@ -47,16 +50,16 @@
   --app-control-border-color: rgb(var(--color-foreground) / 0.22);
   --app-control-border-hover-color: rgb(var(--color-foreground) / 0.36);
   --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.04);
-  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 92%, var(--workspace-region-main-topic-bg) 8%);
-  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 84%, var(--workspace-region-main-topic-bg) 16%);
+  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 78%, var(--workspace-region-main-document-token-bg) 22%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 68%, var(--workspace-region-main-document-token-bg) 32%);
   --app-floating-overlay-bg: rgb(var(--color-foreground) / 0.2);
-  --app-floating-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 86%, var(--workspace-region-main-topic-bg) 14%);
-  --app-floating-input-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 92%, var(--workspace-region-main-topic-bg) 8%);
-  --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-floating-muted-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 22%, var(--workspace-region-main-document-bg) 78%);
-  --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 24%, var(--workspace-region-main-document-bg) 76%);
-  --app-floating-item-active-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 38%, var(--workspace-region-main-document-bg) 62%);
+  --app-floating-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 76%, var(--workspace-region-main-document-token-bg) 24%);
+  --app-floating-input-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 84%, var(--workspace-region-main-document-token-bg) 16%);
+  --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
+  --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
+  --app-floating-muted-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 32%, var(--workspace-region-main-document-bg) 68%);
+  --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 34%, var(--workspace-region-main-document-bg) 66%);
+  --app-floating-item-active-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 48%, var(--workspace-region-main-document-bg) 52%);
   --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 86%, var(--workspace-region-main-topic-scrollbar-thumb-color) 14%);
   --app-accent-color: #3f8f68;
   --app-accent-color-rgb: 63 143 104;
@@ -190,6 +193,11 @@
   );
   --workspace-region-main-sidebar-panel-bg: #fbfbfb;
   --workspace-region-main-sidebar-panel-elevated-bg: #ffffff;
+  --workspace-region-main-document-content-divider: color-mix(
+    in oklab,
+    var(--workspace-region-main-document-token-bg) var(--workspace-document-content-divider-surface-weight),
+    var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target))
+  );
 }
 
 @media (max-width: 1080px) {
@@ -223,6 +231,7 @@
   --workspace-divider-mix-target: white;
   --workspace-divider-subtle-surface-weight: 90%;
   --workspace-divider-strong-surface-weight: 86%;
+  --workspace-document-content-divider-surface-weight: 89%;
   --app-control-border-color: rgb(var(--color-foreground) / 0.34);
   --app-control-border-hover-color: rgb(var(--color-foreground) / 0.5);
   --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.06);
@@ -237,16 +246,16 @@
   --app-diff-added-spacer-color: rgb(var(--app-accent-color-rgb) / 0.14);
   --app-diff-removed-surface-color: rgb(var(--color-error) / 0.18);
   --app-diff-removed-spacer-color: rgb(var(--color-error) / 0.14);
-  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-topic-bg) 12%);
-  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 78%, var(--workspace-region-main-topic-bg) 22%);
+  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 72%, var(--workspace-region-main-document-token-bg) 28%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 62%, var(--workspace-region-main-document-token-bg) 38%);
   --app-floating-overlay-bg: rgb(var(--color-background) / 0.7);
-  --app-floating-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 78%, var(--workspace-region-main-topic-bg) 22%);
-  --app-floating-input-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 84%, var(--workspace-region-main-topic-bg) 16%);
-  --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-floating-muted-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 34%, var(--workspace-region-main-document-bg) 66%);
-  --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 34%, var(--workspace-region-main-document-bg) 66%);
-  --app-floating-item-active-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 48%, var(--workspace-region-main-document-bg) 52%);
+  --app-floating-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 68%, var(--workspace-region-main-document-token-bg) 32%);
+  --app-floating-input-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 76%, var(--workspace-region-main-document-token-bg) 24%);
+  --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
+  --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
+  --app-floating-muted-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 38%, var(--workspace-region-main-document-bg) 62%);
+  --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 40%, var(--workspace-region-main-document-bg) 60%);
+  --app-floating-item-active-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 52%, var(--workspace-region-main-document-bg) 48%);
   --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 78%, var(--workspace-region-main-topic-scrollbar-thumb-color) 22%);
   --app-settings-shell-bg: var(--workspace-region-main-document-bg);
   --app-settings-sidebar-bg: var(--workspace-region-main-topic-bg);
@@ -405,10 +414,10 @@ b {
 
 .workspace-region-main-document {
   background: var(--workspace-region-main-document-bg);
-  --app-surface: var(--workspace-region-main-document-bg);
-  --app-divider-mix-target: var(--workspace-region-main-document-divider-mix-target, var(--workspace-divider-mix-target));
-  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 94%, var(--workspace-region-main-topic-bg) 6%);
-  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-topic-bg) 12%);
+  --app-surface: var(--workspace-region-main-document-token-bg);
+  --app-divider-mix-target: var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target));
+  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 78%, var(--workspace-region-main-document-token-bg) 22%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 68%, var(--workspace-region-main-document-token-bg) 32%);
   --app-scrollbar-thumb-color: var(--workspace-region-main-document-scrollbar-thumb-color);
   --app-scrollbar-thumb-hover-color: var(--workspace-region-main-document-scrollbar-thumb-hover-color);
 }
