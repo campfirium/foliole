@@ -17,7 +17,7 @@ final class FolioleCompanionSyncDiagnostics {
     static JSObject diagnose(Context context, SQLiteDatabase database, String databasePath) throws Exception {
         String collectedAt = Instant.now().toString();
         JSObject storage = FolioleCompanionSyncDiagnosticStorage.load(database);
-        JSObject syncState = FolioleCompanionSyncDiagnosticState.load(database);
+        JSObject syncState = FolioleCompanionSyncDiagnosticState.load(context, database);
         JSObject connection = loadConnection(context, database);
         JSObject result = new JSObject();
         result.put("collected_at", collectedAt);
@@ -27,7 +27,7 @@ final class FolioleCompanionSyncDiagnostics {
         result.put("storage", storage);
         result.put("sync_state", syncState);
         JSObject content = FolioleCompanionSyncDiagnosticContent.load(context, database);
-        JSArray events = loadEvents(database);
+        JSArray events = loadEvents(context, database);
         result.put("content", content);
         result.put("events", events);
         result.put("verdicts", FolioleCompanionSyncDiagnosticVerdicts.build(connection, storage, syncState, content, events));
@@ -46,7 +46,7 @@ final class FolioleCompanionSyncDiagnostics {
 
     private static JSObject loadConnection(Context context, SQLiteDatabase database) throws Exception {
         JSObject pairing = FolioleCompanionPairingStore.loadPairingState(context);
-        String endpointUrl = FolioleCompanionSyncDiagnosticMeta.load(database, "workspace_sync_endpoint_url");
+        String endpointUrl = FolioleCompanionSyncDiagnosticMeta.load(context, database, "workspace_sync_endpoint_url");
         JSObject connection = new JSObject();
         connection.put("endpoint_url", endpointUrl == null ? JSONObject.NULL : endpointUrl);
         connection.put("last_error", JSONObject.NULL);
@@ -54,8 +54,8 @@ final class FolioleCompanionSyncDiagnostics {
         return connection;
     }
 
-    private static JSArray loadEvents(SQLiteDatabase database) throws Exception {
-        String stored = FolioleCompanionSyncDiagnosticMeta.load(database, "workspace_sync_events");
+    private static JSArray loadEvents(Context context, SQLiteDatabase database) throws Exception {
+        String stored = FolioleCompanionSyncDiagnosticMeta.load(context, database, "workspace_sync_events");
         if (stored == null) {
             return new JSArray();
         }

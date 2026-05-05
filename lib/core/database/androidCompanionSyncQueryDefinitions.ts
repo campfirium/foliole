@@ -103,5 +103,10 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   },
   syncNodeVersionParent: {
     sql: 'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ? LIMIT 1'
+  },
+  companionMetaValue: {
+    resultKey: 'rows',
+    sql: 'SELECT value FROM companion_meta WHERE key = ? LIMIT 1',
+    columns: [{ key: 'value', source: 'value', type: 'nullableString' }]
   }
 };

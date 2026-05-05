@@ -269,6 +269,17 @@
     "syncNodeVersionParent": {
       "sql": "SELECT parent_version_id FROM node_sync_versions WHERE version_id = ? LIMIT 1"
     },
+    "companionMetaValue": {
+      "resultKey": "rows",
+      "sql": "SELECT value FROM companion_meta WHERE key = ? LIMIT 1",
+      "columns": [
+        {
+          "key": "value",
+          "source": "value",
+          "type": "nullableString"
+        }
+      ]
+    },
     "nodeAttachments": {
       "resultKey": "attachments",
       "sql": "SELECT na.attachment_id, na.role, a.mime_type, a.original_name FROM node_attachments na LEFT JOIN attachments a ON a.id = na.attachment_id WHERE na.node_id = ? ORDER BY na.role ASC, na.attachment_id ASC",

@@ -1,5 +1,6 @@
 package com.foliole.android;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -11,9 +12,9 @@ import org.json.JSONObject;
 final class FolioleCompanionSyncDiagnosticState {
     private FolioleCompanionSyncDiagnosticState() {}
 
-    static JSObject load(SQLiteDatabase database) throws Exception {
+    static JSObject load(Context context, SQLiteDatabase database) throws Exception {
         JSObject state = new JSObject();
-        int cursor = loadNumberMetaValue(database, "sync_pack_cursor");
+        int cursor = loadNumberMetaValue(context, database, "sync_pack_cursor");
         long maxStateSeq = count(database, "SELECT COALESCE(MAX(state_seq), 0) FROM sync_object_state");
         state.put("pack_cursor", cursor <= 0 ? JSONObject.NULL : cursor);
         state.put("max_state_seq", maxStateSeq <= 0 ? JSONObject.NULL : maxStateSeq);
@@ -125,8 +126,8 @@ final class FolioleCompanionSyncDiagnosticState {
         }
     }
 
-    private static int loadNumberMetaValue(SQLiteDatabase database, String key) {
-        String stored = FolioleCompanionSyncDiagnosticMeta.load(database, key);
+    private static int loadNumberMetaValue(Context context, SQLiteDatabase database, String key) throws Exception {
+        String stored = FolioleCompanionSyncDiagnosticMeta.load(context, database, key);
         return stored == null ? 0 : Math.max(0, Integer.parseInt(stored));
     }
 }
