@@ -15,6 +15,7 @@ const RUNTIME_COMMAND_BOUNDARY_FILES = new Set([
   'src/app/components/importSourceWorkspaceSettings.ts',
   'src/app/components/readwiseReaderConfigBridge.ts',
   'src/app/hooks/appRestartPersistence.ts',
+  'src/app/hooks/useFormalImport.ts',
   'src/app/hooks/useAppRuntime.ts',
   'src/app/hooks/usePreparedNodeSelectionActions.ts',
   'src/app/hooks/useReadingProgressSyncPersistence.ts',

@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from 'react';
 import { create } from 'zustand';
 
-import { getRuntimeInvoke, onManagedInboxUpdated } from '../../shared/platform/bridge';
+import { onManagedInboxUpdated } from '../../shared/platform/bridge';
+import { hasAppRuntimeCommandRepository } from '../../shared/platform/appRuntimeCommandRepository';
 import {
   loadRuntimeImportOverview,
   runRuntimeClipboardImport,
@@ -268,7 +269,7 @@ export function useFormalImport() {
   const isImporting = useFormalImportState((state) => state.isImporting);
   const overview = useFormalImportState((state) => state.overview);
   const status = useFormalImportState((state) => state.status);
-  const isAvailable = Boolean(getRuntimeInvoke());
+  const isAvailable = hasAppRuntimeCommandRepository();
   const actions = useFormalImportActions();
 
   useFormalImportBootstrap(isAvailable, hasLoadedOverview);
