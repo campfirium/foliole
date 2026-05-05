@@ -1,21 +1,25 @@
 import { RangeSetBuilder } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
+const CODE_FENCE_PATTERN = /^\s*`{3,}/;
+const PREFIX_PATTERN = /^\s*(#{1,6}\s+|[-*+]\s+|\d+\.\s+|>\s?)/;
+const INLINE_TOKEN_PATTERN = /(\*\*|__|~~|`+|!\[|\[|\]\(|\]|\(|\))/g;
+
 function createLineClass(text: string, inCodeBlock: boolean) {
-  if (/^\s*`{3,}/.test(text)) {
+  if (CODE_FENCE_PATTERN.test(text)) {
     return 'cm-line-code-fence';
   }
   if (inCodeBlock) {
     return 'cm-line-code';
   }
-  if (/^#{1}\s+/.test(text)) {
-    return 'cm-line-h1';
+  if (/^#{3}\s+/.test(text)) {
+    return 'cm-line-h3';
   }
   if (/^#{2}\s+/.test(text)) {
     return 'cm-line-h2';
   }
-  if (/^#{3}\s+/.test(text)) {
-    return 'cm-line-h3';
+  if (/^#{1}\s+/.test(text)) {
+    return 'cm-line-h1';
   }
   if (/^\s*>\s?/.test(text)) {
     return 'cm-line-quote';
@@ -26,29 +30,72 @@ function createLineClass(text: string, inCodeBlock: boolean) {
   return null;
 }
 
-function addPrefixDecoration(builder: RangeSetBuilder<Decoration>, from: number, text: string) {
-  const prefixMatch = text.match(/^\s*(#{1,6}\s+|[-*+]\s+|\d+\.\s+|>\s?)/);
+function addMark(builder: RangeSetBuilder<Decoration>, from: number, to: number, className: string) {
+  if (to <= from) {
+    return;
+  }
+  builder.add(
+    from,
+    to,
+    Decoration.mark({
+      class: className
+    })
+  );
+}
+
+function addPrefixDecoration(
+  builder: RangeSetBuilder<Decoration>,
+  from: number,
+  text: string,
+  isCursorLine: boolean
+) {
+  const prefixMatch = text.match(PREFIX_PATTERN);
   if (!prefixMatch) {
     return;
   }
 
   const prefixLength = prefixMatch[0].length;
-  builder.add(
-    from,
-    from + prefixLength,
-    Decoration.mark({
-      class: 'cm-md-prefix'
-    })
-  );
+  const className = isCursorLine ? 'cm-md-prefix cm-md-prefix-visible' : 'cm-md-prefix';
+  addMark(builder, from, from + prefixLength, className);
+}
+
+function addInlineTokenDecorations(
+  builder: RangeSetBuilder<Decoration>,
+  from: number,
+  text: string,
+  inCodeBlock: boolean,
+  isCursorLine: boolean
+) {
+  if (inCodeBlock) {
+    return;
+  }
+
+  const className = isCursorLine ? 'cm-md-token cm-md-token-visible' : 'cm-md-token';
+  let tokenMatch = INLINE_TOKEN_PATTERN.exec(text);
+
+  while (tokenMatch) {
+    const tokenFrom = from + tokenMatch.index;
+    addMark(builder, tokenFrom, tokenFrom + tokenMatch[0].length, className);
+    tokenMatch = INLINE_TOKEN_PATTERN.exec(text);
+  }
+
+  INLINE_TOKEN_PATTERN.lastIndex = 0;
+}
+
+function getCursorLineNumber(view: EditorView) {
+  const cursor = view.state.selection.main.head;
+  return view.state.doc.lineAt(cursor).number;
 }
 
 function buildLineDecorations(view: EditorView): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
+  const cursorLineNumber = getCursorLineNumber(view);
   let inCodeBlock = false;
 
   for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
     const lineClass = createLineClass(line.text, inCodeBlock);
+    const isCursorLine = lineNumber === cursorLineNumber;
 
     if (lineClass) {
       builder.add(
@@ -62,9 +109,10 @@ function buildLineDecorations(view: EditorView): DecorationSet {
       );
     }
 
-    addPrefixDecoration(builder, line.from, line.text);
+    addPrefixDecoration(builder, line.from, line.text, isCursorLine);
+    addInlineTokenDecorations(builder, line.from, line.text, inCodeBlock, isCursorLine);
 
-    if (/^\s*`{3,}/.test(line.text)) {
+    if (CODE_FENCE_PATTERN.test(line.text)) {
       inCodeBlock = !inCodeBlock;
     }
   }
@@ -81,7 +129,7 @@ const markdownLinePlugin = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged) {
+      if (update.docChanged || update.viewportChanged || update.selectionSet) {
         this.decorations = buildLineDecorations(update.view);
       }
     }
@@ -144,7 +192,19 @@ const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-md-prefix': {
     color: 'var(--color-text-secondary)',
-    opacity: '0.68'
+    opacity: 0,
+    transition: 'opacity 0.12s ease'
+  },
+  '.cm-md-prefix-visible': {
+    opacity: '0.66'
+  },
+  '.cm-md-token': {
+    color: 'var(--color-text-secondary)',
+    opacity: 0,
+    transition: 'opacity 0.12s ease'
+  },
+  '.cm-md-token-visible': {
+    opacity: '0.52'
   },
   '.cm-activeLine': {
     backgroundColor: 'rgba(125, 211, 252, 0.1)'
