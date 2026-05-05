@@ -1,3 +1,4 @@
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -110,6 +111,8 @@ function recordRemoteNodeConflict(driver: DatabaseDriver, record: NativeSyncNode
 
 function upsertRemoteNode(driver: DatabaseDriver, record: NativeSyncNodeRecord) {
   const { snapshot } = record;
+  const content = snapshot.content ?? '';
+  const bodyBlobHash = snapshot.body_blob_hash ?? upsertTextBodyBlob(driver, content, snapshot.updated_at);
   driver.execute(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
@@ -147,8 +150,8 @@ function upsertRemoteNode(driver: DatabaseDriver, record: NativeSyncNodeRecord) 
       snapshot.title,
       snapshot.is_title_manual ? 1 : 0,
       snapshot.hide_title_heading ? 1 : 0,
-      snapshot.content ?? '',
-      snapshot.body_blob_hash ?? null,
+      content,
+      bodyBlobHash,
       snapshot.opening_text,
       snapshot.virtual_filter,
       snapshot.reveal,

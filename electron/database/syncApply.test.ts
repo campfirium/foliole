@@ -109,10 +109,11 @@ it('applies remote sync nodes into state, version table, and attachment links', 
   const connection = openDatabaseConnection();
   expect(
     connection.sqlite.prepare(
-      `SELECT current_version_id, last_modified_by_device_id, sync_dirty, title, content, position
+      `SELECT current_version_id, last_modified_by_device_id, sync_dirty, title, content, body_blob_hash, position
        FROM nodes WHERE id = ?`
     ).get('node-1')
   ).toEqual({
+    body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
     content: 'remote body',
     current_version_id: 'phone#1',
     last_modified_by_device_id: 'phone',
@@ -120,6 +121,16 @@ it('applies remote sync nodes into state, version table, and attachment links', 
     sync_dirty: 0,
     title: 'Remote Node'
   });
+  expect(
+    Buffer.from(
+      (connection.sqlite.prepare(
+        `SELECT cbd.data
+         FROM nodes n
+         INNER JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+         WHERE n.id = ?`
+      ).get('node-1') as { data: Uint8Array }).data
+    ).toString('utf8')
+  ).toBe('remote body');
   expect(
     connection.sqlite.prepare(
       `SELECT version_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
