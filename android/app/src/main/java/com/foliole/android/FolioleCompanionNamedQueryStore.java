@@ -10,6 +10,8 @@ import com.getcapacitor.JSObject;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.Map;
+
 final class FolioleCompanionNamedQueryStore {
     private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
 
@@ -20,9 +22,19 @@ final class FolioleCompanionNamedQueryStore {
     }
 
     static JSObject loadArray(Context context, SQLiteDatabase database, String queryName, String[] args) throws Exception {
+        return loadArray(context, database, queryName, null, args);
+    }
+
+    static JSObject loadArray(
+        Context context,
+        SQLiteDatabase database,
+        String queryName,
+        Map<String, String> replacements,
+        String[] args
+    ) throws Exception {
         JSONObject query = loadQuery(context, queryName);
         String resultKey = query.getString("resultKey");
-        String sql = query.getString("sql");
+        String sql = replaceTokens(query.getString("sql"), replacements);
         JSONArray columns = query.getJSONArray("columns");
         JSArray rows = new JSArray();
         try (Cursor cursor = database.rawQuery(sql, args)) {
@@ -33,6 +45,17 @@ final class FolioleCompanionNamedQueryStore {
         JSObject result = new JSObject();
         result.put(resultKey, rows);
         return result;
+    }
+
+    private static String replaceTokens(String sql, Map<String, String> replacements) {
+        if (replacements == null) {
+            return sql;
+        }
+        String replaced = sql;
+        for (Map.Entry<String, String> entry : replacements.entrySet()) {
+            replaced = replaced.replace(entry.getKey(), entry.getValue());
+        }
+        return replaced;
     }
 
     private static JSONObject loadQuery(Context context, String queryName) throws Exception {

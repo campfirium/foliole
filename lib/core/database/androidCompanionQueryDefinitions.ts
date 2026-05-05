@@ -29,6 +29,20 @@ export const ANDROID_COMPANION_QUERY_DEFINITIONS = {
       { key: 'base_content_hash', source: 'base_content_hash', type: 'nullableString' }
     ]
   },
+  syncObjects: {
+    resultKey: 'objects',
+    sql:
+      'SELECT object_type, object_id, content_hash, updated_at, deleted_at ' +
+      "FROM sync_object_state WHERE object_type <> 'node' AND object_id IN (:objectIds):objectTypeFilter " +
+      'ORDER BY updated_at ASC, object_type ASC, object_id ASC',
+    columns: [
+      { key: 'object_type', source: 'object_type', type: 'string' },
+      { key: 'object_id', source: 'object_id', type: 'string' },
+      { key: 'content_hash', source: 'content_hash', type: 'string' },
+      { key: 'updated_at', source: 'updated_at', type: 'string' },
+      { key: 'deleted_at', source: 'deleted_at', type: 'nullableString' }
+    ]
+  },
   nodeConflicts: {
     resultKey: 'conflicts',
     sql:

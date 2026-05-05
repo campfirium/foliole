@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.getcapacitor.JSObject;
 
@@ -143,6 +144,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
 
         FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, records, "remote-device");
         JSObject loaded = FolioleCompanionSyncObjectStore.loadSyncObjects(
+            InstrumentationRegistry.getInstrumentation().getTargetContext(),
             database,
             new JSONArray()
                 .put("article-1")
