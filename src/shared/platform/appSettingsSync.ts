@@ -1,4 +1,4 @@
-import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from './appSettingsState';
+import { loadRuntimeAppSettingsState } from './appSettingsState';
 import { getLocalStorageWhitelist } from './storage';
 
 function getBrowserLocalStorage() {
@@ -52,13 +52,10 @@ function writeWhitelistedLocalSettings(settings: Record<string, string>) {
 }
 
 export async function syncAppSettingsWithRuntime() {
-  const localSnapshot = readWhitelistedLocalSettings();
   const runtimeSnapshot = await loadRuntimeAppSettingsState();
   if (!runtimeSnapshot) {
     return;
   }
 
-  const merged = { ...localSnapshot, ...normalizeSettingsPayload(runtimeSnapshot) };
-  writeWhitelistedLocalSettings(merged);
-  await saveRuntimeAppSettingsState(merged);
+  writeWhitelistedLocalSettings(normalizeSettingsPayload(runtimeSnapshot));
 }

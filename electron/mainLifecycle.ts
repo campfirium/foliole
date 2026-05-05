@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeTheme } from 'electron';
+import { app, BrowserWindow } from 'electron';
 
 import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js';
 import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
@@ -22,12 +22,10 @@ import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, focusWindow, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
-import { setRuntimeStartupTokensCss } from './runtimeStartupTokens.js';
 import { runStartupTask } from './startupTasks.js';
-import { loadStartupSkeletonAppearance } from './startupSkeletonLayout.js';
-import { presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
 import { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler, stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
+import { presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
 
 const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
 
@@ -35,11 +33,7 @@ interface MainLifecycleArgs {
   activateMainWindow: (window: BrowserWindow) => Promise<void>;
   createMainWindow: (startupAppearance?: { backgroundColor: string } | null) => Promise<BrowserWindow>;
   installInvokeHandler: () => void;
-  loadMainWindow: (
-    window: BrowserWindow,
-    startupView?: StartupRendererView | null,
-    options?: { deferMainScript?: boolean }
-  ) => Promise<void>;
+  loadMainWindow: (window: BrowserWindow, startupView?: StartupRendererView | null) => Promise<void>;
   runtimeMode: RuntimeMode;
 }
 
@@ -179,6 +173,19 @@ function installAppProcessDiagnostics() {
   app.on('web-contents-created', (_, contents) => bindEmbeddedLinkPanelContents(contents));
 }
 
+function installActivateLifecycle(args: MainLifecycleArgs) {
+  app.on('activate', async () => {
+    notifyExternalSearchUserActivity();
+    if (BrowserWindow.getAllWindows().length !== 0) {
+      return;
+    }
+    const window = await args.createMainWindow();
+    await args.loadMainWindow(window);
+    await presentInitialRendererWindow(window);
+    await args.activateMainWindow(window);
+  });
+}
+
 export function installMainLifecycle(args: MainLifecycleArgs) {
   installSingleInstanceGate(args.runtimeMode);
   installBeforeQuitLifecycle();
@@ -190,13 +197,10 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     installAppProcessDiagnostics();
     args.installInvokeHandler();
     await appendBootEvent('app_when_ready');
-    const startupAppearance = loadStartupSkeletonAppearance();
-    setRuntimeStartupTokensCss(startupAppearance.css, startupAppearance.themeSource);
-    nativeTheme.themeSource = startupAppearance.themeSource;
-    const mainWindow = await args.createMainWindow({ backgroundColor: startupAppearance.backgroundColor });
+    const mainWindow = await args.createMainWindow();
     startDevScreenshotServer({ getWindow: () => mainWindow });
     try {
-      await args.loadMainWindow(mainWindow, null, { deferMainScript: true });
+      await args.loadMainWindow(mainWindow);
       await appendBootEvent('main_window_shell_ready');
       await presentInitialRendererWindow(mainWindow);
     } catch (error) {
@@ -233,18 +237,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
         window: mainWindow
       });
     }
-    app.on('activate', async () => {
-      notifyExternalSearchUserActivity();
-      if (BrowserWindow.getAllWindows().length === 0) {
-        const nextStartupAppearance = loadStartupSkeletonAppearance();
-        setRuntimeStartupTokensCss(nextStartupAppearance.css, nextStartupAppearance.themeSource);
-        nativeTheme.themeSource = nextStartupAppearance.themeSource;
-        const window = await args.createMainWindow({ backgroundColor: nextStartupAppearance.backgroundColor });
-        await args.loadMainWindow(window, null, { deferMainScript: true });
-        await presentInitialRendererWindow(window);
-        await args.activateMainWindow(window);
-      }
-    });
+    installActivateLifecycle(args);
   });
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

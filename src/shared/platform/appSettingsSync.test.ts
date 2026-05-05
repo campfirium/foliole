@@ -19,39 +19,31 @@ beforeEach(() => {
   window.electronAPI = undefined;
 });
 
-it('hydrates local settings from runtime snapshot and persists merged state back', async () => {
+it('hydrates local settings from runtime snapshot without writing during startup', async () => {
   const invoke = vi
     .fn()
     .mockResolvedValueOnce({
       [APP_SETTINGS_STORAGE_KEYS.uiFont]: 'inter',
       [APP_SETTINGS_STORAGE_KEYS.interfaceFontSize]: '19'
-    })
-    .mockResolvedValueOnce(null);
+    });
   window.electronAPI = createMockElectronApi(invoke);
 
   await syncAppSettingsWithRuntime();
 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.uiFont)).toBe('inter');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize)).toBe('19');
-  expect(invoke).toHaveBeenNthCalledWith(1, 'load_app_settings_state');
-  expect(invoke).toHaveBeenNthCalledWith(2, 'save_app_settings_state', {
-    settings: {
-      [APP_SETTINGS_STORAGE_KEYS.uiFont]: 'inter',
-      [APP_SETTINGS_STORAGE_KEYS.interfaceFontSize]: '19'
-    }
-  });
+  expect(invoke).toHaveBeenCalledOnce();
+  expect(invoke).toHaveBeenCalledWith('load_app_settings_state');
 });
 
-it('migrates existing local values into runtime when runtime snapshot is empty', async () => {
+it('does not migrate existing local values during startup sync', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.uiFont, 'source-sans');
-  const invoke = vi.fn().mockResolvedValueOnce({}).mockResolvedValueOnce(null);
+  const invoke = vi.fn().mockResolvedValueOnce({});
   window.electronAPI = createMockElectronApi(invoke);
 
   await syncAppSettingsWithRuntime();
 
-  expect(invoke).toHaveBeenNthCalledWith(2, 'save_app_settings_state', {
-    settings: {
-      [APP_SETTINGS_STORAGE_KEYS.uiFont]: 'source-sans'
-    }
-  });
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.uiFont)).toBe('source-sans');
+  expect(invoke).toHaveBeenCalledOnce();
+  expect(invoke).toHaveBeenCalledWith('load_app_settings_state');
 });

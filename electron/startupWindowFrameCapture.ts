@@ -45,7 +45,8 @@ async function captureStartupWindowFrame(window: BrowserWindow, captureDir: stri
         readyState: document.readyState,
         rootChildCount: root?.childElementCount ?? null,
         startupDocumentBg: readBg('.startup-shell__document'),
-        startupListBg: readBg('.startup-shell__list'),
+        startupFolderBg: readBg('.startup-shell__folder'),
+        startupTopicBg: readBg('.startup-shell__topic'),
         workspaceDocumentBg: readBg('.workspace-region-main-document'),
         workspaceSidebarBg: readBg('.workspace-region-main-sidebar')
       };

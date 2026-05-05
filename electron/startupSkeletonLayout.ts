@@ -33,6 +33,32 @@ const DEFAULT_DARK_RGB = {
   foreground: '232 230 223',
   panel: '37 40 36'
 };
+const WORKSPACE_SURFACE_REGION_IDS = [
+  'titlebar-rail',
+  'titlebar-folder',
+  'titlebar-topic',
+  'titlebar-document',
+  'titlebar-sidebar',
+  'main-rail',
+  'main-folder',
+  'main-topic',
+  'main-document',
+  'main-sidebar'
+] as const;
+const DEFAULT_LIGHT_WORKSPACE_SURFACE_PALETTE = ['#ffffff', '#fcfcfc', '#f6f6f6', '#f5f5f3', '#ececea'];
+const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE = ['#1f211f', '#252824', '#2b2f2a', '#171817', '#30362f'];
+const DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS = {
+  'titlebar-rail': 1,
+  'titlebar-folder': 1,
+  'titlebar-topic': 1,
+  'titlebar-document': 1,
+  'titlebar-sidebar': 1,
+  'main-rail': 2,
+  'main-folder': 2,
+  'main-topic': 2,
+  'main-document': 0,
+  'main-sidebar': 2
+} as const;
 
 export interface StartupSkeletonLayout {
   isListCollapsed: boolean;
@@ -77,8 +103,7 @@ function readNumberSetting(
   return Math.min(maxValue, Math.max(minValue, Math.round(value)));
 }
 
-export function loadStartupSkeletonLayout(): StartupSkeletonLayout {
-  const settings = readAppSettingsRecord();
+export function createStartupSkeletonLayoutFromSettings(settings: Record<string, unknown>): StartupSkeletonLayout {
   const mode = settings[APP_SETTINGS_STORAGE_KEYS.baseColor] === 'dark' ? 'dark' : 'light';
   return {
     isListCollapsed: readBooleanSetting(settings, APP_SETTINGS_STORAGE_KEYS.listCollapsed),
@@ -94,6 +119,65 @@ export function loadStartupSkeletonLayout(): StartupSkeletonLayout {
   };
 }
 
+function readJsonStringSetting(settings: Record<string, unknown>, key: string) {
+  const raw = settings[key];
+  if (typeof raw !== 'string' || !raw.trim()) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function normalizePalette(input: unknown, mode: 'dark' | 'light') {
+  const fallback = mode === 'dark' ? DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE : DEFAULT_LIGHT_WORKSPACE_SURFACE_PALETTE;
+  if (!Array.isArray(input)) {
+    return fallback;
+  }
+  const normalized = input.filter((value): value is string => typeof value === 'string' && value.trim().startsWith('#'));
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function normalizeAssignments(input: unknown, paletteLength: number) {
+  const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  return Object.fromEntries(
+    WORKSPACE_SURFACE_REGION_IDS.map((regionId) => {
+      const raw = record[regionId];
+      const fallback = DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS[regionId];
+      const value = typeof raw === 'number' && Number.isFinite(raw) ? raw : fallback;
+      return [regionId, Math.min(Math.max(Math.round(value), 0), Math.max(0, paletteLength - 1))];
+    })
+  ) as Record<(typeof WORKSPACE_SURFACE_REGION_IDS)[number], number>;
+}
+
+function readWorkspaceSurfaces(settings: Record<string, unknown>, mode: 'dark' | 'light') {
+  const paletteKey =
+    mode === 'dark' ? APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePaletteDark : APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette;
+  const assignmentsKey =
+    mode === 'dark'
+      ? APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignmentsDark
+      : APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments;
+  const palette = normalizePalette(readJsonStringSetting(settings, paletteKey), mode);
+  const assignments = normalizeAssignments(readJsonStringSetting(settings, assignmentsKey), palette.length);
+  return Object.fromEntries(
+    WORKSPACE_SURFACE_REGION_IDS.map((regionId) => [regionId, palette[assignments[regionId]] ?? palette[0]])
+  ) as Record<(typeof WORKSPACE_SURFACE_REGION_IDS)[number], string>;
+}
+
+function deriveDividerMixTarget(color: string) {
+  const match = color.trim().match(/^#([0-9a-f]{6})$/i);
+  if (!match) {
+    return 'black';
+  }
+  const value = match[1];
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+  return (red * 299 + green * 587 + blue * 114) / 1000 >= 128 ? 'black' : 'white';
+}
+
 function cssVar(name: string, value: string | number | null) {
   if (value === null) {
     return '';
@@ -101,29 +185,28 @@ function cssVar(name: string, value: string | number | null) {
   return `--${name}: ${typeof value === 'number' ? `${value}px` : value};`;
 }
 
-export function createStartupSkeletonCss(layout: StartupSkeletonLayout) {
+export function createStartupSkeletonCss(layout: StartupSkeletonLayout, settings = readAppSettingsRecord()) {
   const surfaces = layout.mode === 'dark' ? DEFAULT_DARK_SURFACES : DEFAULT_LIGHT_SURFACES;
   const rgb = layout.mode === 'dark' ? DEFAULT_DARK_RGB : DEFAULT_LIGHT_RGB;
+  const workspaceSurfaces = readWorkspaceSurfaces(settings, layout.mode);
   return [
     cssVar('color-canvas', rgb.canvas),
     cssVar('color-background', rgb.background),
     cssVar('color-bg-panel', rgb.panel),
     cssVar('color-foreground', rgb.foreground),
-    cssVar('workspace-region-titlebar-rail-bg', surfaces.titlebar),
-    cssVar('workspace-region-titlebar-folder-bg', surfaces.titlebar),
-    cssVar('workspace-region-titlebar-topic-bg', surfaces.titlebar),
-    cssVar('workspace-region-titlebar-document-bg', surfaces.titlebar),
-    cssVar('workspace-region-titlebar-sidebar-bg', surfaces.titlebar),
-    cssVar('workspace-region-main-rail-bg', surfaces.list),
-    cssVar('workspace-region-main-folder-bg', surfaces.list),
-    cssVar('workspace-region-main-topic-bg', surfaces.list),
-    cssVar('workspace-region-main-document-bg', surfaces.document),
-    cssVar('workspace-region-main-sidebar-bg', surfaces.sidebar),
-    cssVar('startup-document-bg', surfaces.document),
+    ...WORKSPACE_SURFACE_REGION_IDS.flatMap((regionId) => [
+      cssVar(`workspace-region-${regionId}-bg`, workspaceSurfaces[regionId]),
+      cssVar(`workspace-region-${regionId}-divider-mix-target`, deriveDividerMixTarget(workspaceSurfaces[regionId])),
+      cssVar(`startup-region-${regionId}-bg`, workspaceSurfaces[regionId]),
+      cssVar(`startup-region-${regionId}-divider-mix-target`, deriveDividerMixTarget(workspaceSurfaces[regionId]))
+    ]),
+    cssVar('workspace-divider-mix-target', layout.mode === 'dark' ? 'white' : 'black'),
+    cssVar('workspace-divider-subtle-surface-weight', layout.mode === 'dark' ? '90%' : '92%'),
+    cssVar('startup-document-bg', workspaceSurfaces['main-document'] ?? surfaces.document),
     cssVar('startup-divider', surfaces.divider),
-    cssVar('startup-list-bg', surfaces.list),
-    cssVar('startup-sidebar-bg', surfaces.sidebar),
-    cssVar('startup-titlebar-bg', surfaces.titlebar),
+    cssVar('startup-list-bg', workspaceSurfaces['main-folder'] ?? surfaces.list),
+    cssVar('startup-sidebar-bg', workspaceSurfaces['main-sidebar'] ?? surfaces.sidebar),
+    cssVar('startup-titlebar-bg', workspaceSurfaces['titlebar-document'] ?? surfaces.titlebar),
     cssVar('startup-list-width', layout.listWidth),
     cssVar('startup-right-sidebar-width', layout.rightSidebarWidth),
     layout.isListCollapsed ? '--startup-list-current-width: 0px;' : '',
@@ -131,19 +214,14 @@ export function createStartupSkeletonCss(layout: StartupSkeletonLayout) {
   ].filter(Boolean).join('');
 }
 
-export function loadStartupSkeletonCss() {
-  return createStartupSkeletonCss(loadStartupSkeletonLayout());
-}
-
-export function createStartupSkeletonAppearance(layout: StartupSkeletonLayout): StartupSkeletonAppearance {
-  const surfaces = layout.mode === 'dark' ? DEFAULT_DARK_SURFACES : DEFAULT_LIGHT_SURFACES;
+export function createStartupSkeletonAppearance(
+  layout: StartupSkeletonLayout,
+  settings = readAppSettingsRecord()
+): StartupSkeletonAppearance {
+  const workspaceSurfaces = readWorkspaceSurfaces(settings, layout.mode);
   return {
-    backgroundColor: surfaces.document,
-    css: createStartupSkeletonCss(layout),
+    backgroundColor: workspaceSurfaces['main-document'],
+    css: createStartupSkeletonCss(layout, settings),
     themeSource: layout.mode
   };
-}
-
-export function loadStartupSkeletonAppearance() {
-  return createStartupSkeletonAppearance(loadStartupSkeletonLayout());
 }

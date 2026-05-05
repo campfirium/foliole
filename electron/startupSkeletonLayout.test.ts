@@ -16,17 +16,17 @@ afterEach(() => {
   vi.resetModules();
 });
 
-it('loads startup skeleton layout from existing app settings', async () => {
-  mocks.loadJsonSetting.mockReturnValue({
+it('creates startup skeleton layout from app settings', async () => {
+  const settings = {
     [APP_SETTINGS_STORAGE_KEYS.listCollapsed]: 'true',
     [APP_SETTINGS_STORAGE_KEYS.listWidth]: '512.4',
     [APP_SETTINGS_STORAGE_KEYS.rightSidebarCollapsed]: 'false',
     [APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth]: '336'
-  });
+  };
 
-  const { loadStartupSkeletonLayout } = await import('./startupSkeletonLayout.js');
+  const { createStartupSkeletonLayoutFromSettings } = await import('./startupSkeletonLayout.js');
 
-  expect(loadStartupSkeletonLayout()).toEqual({
+  expect(createStartupSkeletonLayoutFromSettings(settings)).toEqual({
     isListCollapsed: true,
     isRightSidebarCollapsed: false,
     listWidth: 512,
@@ -35,33 +35,38 @@ it('loads startup skeleton layout from existing app settings', async () => {
   });
 });
 
-it('creates injected startup css from existing app settings', async () => {
-  mocks.loadJsonSetting.mockReturnValue({
+it('creates injected startup css from app settings', async () => {
+  const settings = {
     [APP_SETTINGS_STORAGE_KEYS.baseColor]: 'dark',
     [APP_SETTINGS_STORAGE_KEYS.listCollapsed]: 'true',
     [APP_SETTINGS_STORAGE_KEYS.listWidth]: '512',
     [APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth]: '336'
-  });
+  };
 
-  const { loadStartupSkeletonCss } = await import('./startupSkeletonLayout.js');
+  const { createStartupSkeletonCss, createStartupSkeletonLayoutFromSettings } = await import('./startupSkeletonLayout.js');
+  const css = createStartupSkeletonCss(createStartupSkeletonLayoutFromSettings(settings), settings);
 
-  expect(loadStartupSkeletonCss()).toContain('--startup-list-width: 512px;');
-  expect(loadStartupSkeletonCss()).toContain('--startup-list-current-width: 0px;');
-  expect(loadStartupSkeletonCss()).toContain('--startup-document-bg: #1f211f;');
+  expect(css).toContain('--startup-list-width: 512px;');
+  expect(css).toContain('--startup-list-current-width: 0px;');
+  expect(css).toContain('--startup-document-bg: #1f211f;');
 });
 
-it('falls back to default skeleton widths when app settings cannot be read', async () => {
-  mocks.loadJsonSetting.mockImplementation(() => {
-    throw new Error('settings table unavailable');
-  });
+it('falls back to default skeleton widths when app settings are missing', async () => {
+  const { createStartupSkeletonLayoutFromSettings } = await import('./startupSkeletonLayout.js');
 
-  const { loadStartupSkeletonLayout } = await import('./startupSkeletonLayout.js');
-
-  expect(loadStartupSkeletonLayout()).toEqual({
+  expect(createStartupSkeletonLayoutFromSettings({})).toEqual({
     isListCollapsed: false,
     isRightSidebarCollapsed: false,
     listWidth: null,
     mode: 'light',
     rightSidebarWidth: null
   });
+});
+
+it('keeps missing layout settings on the renderer default workspace widths', async () => {
+  const { createStartupSkeletonCss, createStartupSkeletonLayoutFromSettings } = await import('./startupSkeletonLayout.js');
+  const css = createStartupSkeletonCss(createStartupSkeletonLayoutFromSettings({}), {});
+
+  expect(css).not.toContain('--startup-list-width:');
+  expect(css).not.toContain('--startup-right-sidebar-width:');
 });

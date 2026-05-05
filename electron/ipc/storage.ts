@@ -1,6 +1,17 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { app } from 'electron';
+
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import { writePrebuiltRendererHtmlForSettings } from '../runtimeRendererHtml.js';
 
 const APP_SETTINGS_KEY = 'app_settings';
+const currentRuntimeDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+
+function resolveRendererUrl() {
+  return process.env.ELECTRON_RENDERER_URL ?? null;
+}
 
 function normalizeAppSettingsPayload(payload: unknown): Record<string, string> {
   if (!payload || typeof payload !== 'object') {
@@ -25,8 +36,14 @@ export async function loadAppSettingsState(): Promise<Record<string, string>> {
 }
 
 export async function saveAppSettingsState(settings: Record<string, unknown>): Promise<void> {
-  saveJsonSetting(APP_SETTINGS_KEY, {
+  const nextSettings = {
     ...normalizeAppSettingsPayload(loadJsonSetting(APP_SETTINGS_KEY)),
     ...normalizeAppSettingsPayload(settings)
-  });
+  };
+  saveJsonSetting(APP_SETTINGS_KEY, nextSettings);
+  try {
+    writePrebuiltRendererHtmlForSettings(currentRuntimeDir, nextSettings, resolveRendererUrl(), app.getPath('userData'));
+  } catch (error) {
+    console.warn('[electron-main] failed to prebuild startup renderer html', error);
+  }
 }

@@ -18,6 +18,12 @@ vi.mock('./paths.js', () => ({
   })
 }));
 
+vi.mock('electron', () => ({
+  app: {
+    getPath: () => mockedAppDataDir
+  }
+}));
+
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 

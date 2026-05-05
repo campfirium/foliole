@@ -12,26 +12,16 @@ const mocks = vi.hoisted(() => ({
   },
   initializeDatabase: vi.fn(),
   installAppMenu: vi.fn(),
-  loadStartupSkeletonAppearance: vi.fn(() => ({
-    backgroundColor: '#1f211f',
-    css: '--startup-list-width:512px;',
-    themeSource: 'dark'
-  })),
-  nativeTheme: {
-    themeSource: 'system'
-  },
   presentInitialRendererWindow: vi.fn(),
   registerAttachmentProtocol: vi.fn(),
-  resolveAppPaths: vi.fn(() => ({ app_log_dir: '/logs' })),
-  setRuntimeStartupTokensCss: vi.fn()
+  resolveAppPaths: vi.fn(() => ({ app_log_dir: '/logs' }))
 }));
 
 vi.mock('electron', () => ({
   BrowserWindow: {
     getAllWindows: vi.fn(() => [])
   },
-  app: mocks.app,
-  nativeTheme: mocks.nativeTheme
+  app: mocks.app
 }));
 vi.mock('./attachments/attachmentProtocol.js', () => ({ registerAttachmentProtocol: mocks.registerAttachmentProtocol }));
 vi.mock('./database/backupRestore.js', () => ({ reconcileAutomaticDatabaseBackups: vi.fn() }));
@@ -63,14 +53,10 @@ vi.mock('./runtimeMainSupport.js', () => ({
   focusWindow: vi.fn(),
   installMainRuntimeDiagnostics: vi.fn()
 }));
-vi.mock('./runtimeStartupTokens.js', () => ({
-  setRuntimeStartupTokensCss: mocks.setRuntimeStartupTokensCss
-}));
 vi.mock('./windowRuntimeDiagnostics.js', () => ({
   applyStartupWindowPresentation: vi.fn(),
   presentInitialRendererWindow: mocks.presentInitialRendererWindow
 }));
-vi.mock('./startupSkeletonLayout.js', () => ({ loadStartupSkeletonAppearance: mocks.loadStartupSkeletonAppearance }));
 vi.mock('./startupTasks.js', () => ({ runStartupTask: vi.fn() }));
 vi.mock('./sync/desktopCompanionSyncPreference.js', () => ({ isDesktopCompanionSyncEnabled: vi.fn(() => false) }));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
@@ -82,18 +68,11 @@ vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
 afterEach(() => {
   vi.clearAllMocks();
   mocks.initializeDatabase.mockReset();
-  mocks.loadStartupSkeletonAppearance.mockReturnValue({
-    backgroundColor: '#1f211f',
-    css: '--startup-list-width:512px;',
-    themeSource: 'dark'
-  });
-  mocks.nativeTheme.themeSource = 'system';
   mocks.presentInitialRendererWindow.mockClear();
-  mocks.setRuntimeStartupTokensCss.mockClear();
   vi.resetModules();
 });
 
-it('loads the themed workspace shell before runtime services and activates React after services are ready', async () => {
+it('loads the static workspace shell before runtime services and activates React after services are ready', async () => {
   const window = {
     isDestroyed: vi.fn(() => false)
   };
@@ -116,15 +95,10 @@ it('loads the themed workspace shell before runtime services and activates React
   });
 
   expect(installInvokeHandler).toHaveBeenCalledTimes(1);
-  expect(mocks.loadStartupSkeletonAppearance).toHaveBeenCalledTimes(1);
-  expect(mocks.setRuntimeStartupTokensCss).toHaveBeenCalledWith('--startup-list-width:512px;', 'dark');
-  expect(mocks.nativeTheme.themeSource).toBe('dark');
   expect(mocks.initializeDatabase).toHaveBeenCalledTimes(1);
-  expect(createMainWindow).toHaveBeenCalledWith({
-    backgroundColor: '#1f211f'
-  });
+  expect(createMainWindow).toHaveBeenCalledWith();
   expect(createMainWindow).toHaveBeenCalledTimes(1);
-  expect(loadMainWindow).toHaveBeenCalledWith(window, null, { deferMainScript: true });
+  expect(loadMainWindow).toHaveBeenCalledWith(window);
   expect(loadMainWindow.mock.invocationCallOrder[0]).toBeLessThan(mocks.initializeDatabase.mock.invocationCallOrder[0]);
   expect(loadMainWindow.mock.invocationCallOrder[0]).toBeLessThan(activateMainWindow.mock.invocationCallOrder[0]);
   expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(window);
@@ -165,10 +139,8 @@ it('keeps the startup window alive and loads the startup error surface when data
   });
 
   expect(installInvokeHandler).toHaveBeenCalledTimes(1);
-  expect(createMainWindow).toHaveBeenCalledWith({
-    backgroundColor: '#1f211f'
-  });
-  expect(loadMainWindow).toHaveBeenNthCalledWith(1, window, null, { deferMainScript: true });
+  expect(createMainWindow).toHaveBeenCalledWith();
+  expect(loadMainWindow).toHaveBeenNthCalledWith(1, window);
   expect(loadMainWindow).toHaveBeenNthCalledWith(2, window, {
     errorSummary: 'migration exploded',
     kind: 'startup-error',
@@ -213,7 +185,7 @@ it('shows a startup error surface when the workspace renderer cannot load', asyn
     expect(loadMainWindow).toHaveBeenCalledTimes(2);
   });
 
-  expect(loadMainWindow).toHaveBeenNthCalledWith(1, window, null, { deferMainScript: true });
+  expect(loadMainWindow).toHaveBeenNthCalledWith(1, window);
   expect(loadMainWindow).toHaveBeenNthCalledWith(2, window, {
     errorSummary: 'ERR_CONNECTION_REFUSED',
     kind: 'startup-error',

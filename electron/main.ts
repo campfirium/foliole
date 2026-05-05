@@ -103,16 +103,13 @@ function bindWindowIpc(window: ElectronBrowserWindow) {
 
 async function loadRendererIntoWindow(
   window: ElectronBrowserWindow,
-  startupView?: StartupRendererView | null,
-  options?: { deferMainScript?: boolean }
+  startupView?: StartupRendererView | null
 ) {
   await appendBootEvent('renderer_load_start', {
-    deferMainScript: options?.deferMainScript === true,
     startupView: startupView?.kind ?? 'workspace'
   });
-  await loadMainWindowRenderer({ options, runtimeDiagnostics, runtimeDir: __dirname, startupView, window });
+  await loadMainWindowRenderer({ runtimeDiagnostics, runtimeDir: __dirname, startupView, window });
   await appendBootEvent('renderer_load_complete', {
-    deferMainScript: options?.deferMainScript === true,
     startupView: startupView?.kind ?? 'workspace',
     url: window.webContents.getURL()
   });
