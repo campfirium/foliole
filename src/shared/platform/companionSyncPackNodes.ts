@@ -24,6 +24,7 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
       incomingAlias: INCOMING_PACK_ALIAS
     }).then((result) => ({
       ...result,
+      appliedPackBlobCount: result.appliedBlobCount,
       appliedPackObjectCount: result.appliedObjectCount
     }));
   } finally {

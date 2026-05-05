@@ -5,6 +5,7 @@ import {
   buildSyncPackNodeUpsertSql,
   type SyncPackNodeApplyOptions
 } from './syncPackApplyStatements.js';
+import { applySyncPackContentBlobsWithDbPort } from './syncPackContentBlobsExecutor.js';
 import {
   assertContiguousSyncPackCursor,
   readSyncPackCursorWithDbPort
@@ -33,7 +34,9 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   const cursor = await readSyncPackCursorWithDbPort(port, options.incomingAlias);
   const shouldApply = assertContiguousSyncPackCursor(cursor, options.currentCursor);
   let appliedObjectCount = 0;
+  let appliedBlobCount = 0;
   if (shouldApply) {
+    appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
     await applySyncPackNodesWithDbPort(port, options);
     appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, options);
   }
@@ -43,6 +46,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   });
   return {
     applied: shouldApply,
+    appliedBlobCount,
     appliedObjectCount,
     fromStateSeq: cursor.fromStateSeq,
     toStateSeq: cursor.toStateSeq

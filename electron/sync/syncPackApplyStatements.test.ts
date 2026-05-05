@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 
 import {
   buildSyncPackApplyableRowsSql,
+  buildSyncPackContentBlobUpsertSql,
   buildSyncPackNodeAttachmentDeleteSql,
   buildSyncPackNodeAttachmentInsertSql,
   buildSyncPackNodeUpsertSql
@@ -17,6 +18,15 @@ it('builds the applyable row filter used by sync pack apply', () => {
   expect(buildSyncPackApplyableRowsSql({ objectType: 'node' })).toContain(
     "AND incoming.object_type = 'node'"
   );
+});
+
+it('builds content blob metadata upsert for referenced body blobs', () => {
+  const sql = buildSyncPackContentBlobUpsertSql({ incomingAlias: 'incoming' });
+
+  expect(sql).toContain('INSERT OR REPLACE INTO main.content_blobs');
+  expect(sql).toContain('FROM incoming.content_blobs incoming');
+  expect(sql).toContain('SELECT body_blob_hash FROM incoming.nodes');
+  expect(sql).toContain('UNION SELECT body_blob_hash FROM incoming.external_documents');
 });
 
 it('builds node and attachment pack apply statements against an incoming alias', () => {
