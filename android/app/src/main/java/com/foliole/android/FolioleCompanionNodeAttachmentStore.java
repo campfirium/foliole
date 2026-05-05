@@ -20,11 +20,11 @@ final class FolioleCompanionNodeAttachmentStore {
             );
             for (int index = 0; index < rows.length(); index += 1) {
                 JSONObject row = rows.getJSONObject(index);
-                JSONObject snapshot = new JSONObject(row.getString(backfillSnapshotRule(context, "snapshotJsonKey")));
+                JSONObject snapshot = new JSONObject(backfillSnapshotRowString(context, row, "snapshotJsonKey"));
                 replaceNodeAttachments(
                     context,
                     database,
-                    row.getString(backfillSnapshotRule(context, "idKey")),
+                    backfillSnapshotRowString(context, row, "idKey"),
                     snapshot.optJSONArray(backfillSnapshotRule(context, "attachmentsKey"))
                 );
             }
@@ -63,6 +63,10 @@ final class FolioleCompanionNodeAttachmentStore {
 
     private static String backfillSnapshotRule(Context context, String key) throws Exception {
         return FolioleCompanionNodeAttachmentQueryRules.backfillSnapshotString(context, key);
+    }
+
+    private static String backfillSnapshotRowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionNodeAttachmentQueryRules.backfillSnapshotRowString(context, row, key);
     }
 
     private static String nodeAttachmentRule(Context context, String key) throws Exception {

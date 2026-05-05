@@ -11,6 +11,10 @@ final class FolioleCompanionNodeAttachmentQueryRules {
         return group(context, "backfillSnapshots").getString(key);
     }
 
+    static String backfillSnapshotRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(backfillSnapshotString(context, key));
+    }
+
     static String nodeAttachmentString(Context context, String key) throws Exception {
         return group(context, "nodeAttachments").getString(key);
     }

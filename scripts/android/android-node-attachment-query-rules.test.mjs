@@ -42,12 +42,14 @@ describe('Android node attachment read query rules', () => {
     const rulesSource = await readFile(NODE_ATTACHMENT_RULES, 'utf8');
 
     expect(storeSource).toContain('FolioleCompanionNodeAttachmentQueryRules.backfillSnapshotString(context, key)');
+    expect(storeSource).toContain('FolioleCompanionNodeAttachmentQueryRules.backfillSnapshotRowString(context, row, key)');
     expect(storeSource).toContain('FolioleCompanionNodeAttachmentQueryRules.nodeAttachmentString(context, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "nodeAttachmentRead", groupName)');
     expect(storeSource).not.toContain('"nodeAttachmentBackfillSnapshots"');
     expect(storeSource).not.toContain('"nodeAttachments"');
     expect(storeSource).not.toContain('"snapshots"');
     expect(storeSource).not.toContain('"snapshot_json"');
+    expect(storeSource).not.toContain('row.getString(backfillSnapshotRule(context');
     expect(storeSource).not.toContain('optJSONArray("attachments"');
     expect(storeSource).not.toContain('optString("attachment_id"');
     expect(storeSource).not.toContain('optString("role"');
