@@ -1,6 +1,7 @@
 import { Pipette } from 'lucide-react';
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
 
+import { settingsButtonClassName, settingsColorSwatchClassName } from '../../../../shared/ui';
 import { formatWorkspaceSurfaceColorCss, formatWorkspaceSurfaceColorHex, parseWorkspaceSurfaceColor, type WorkspaceSurfaceColorValue, workspaceSurfaceColorFromHsv, workspaceSurfaceColorToHsv } from '../../model/workspaceSurfaceColor';
 
 function clampPercent(value: number) {
@@ -78,10 +79,10 @@ function WorkspaceSurfaceColorSliderSection(props: {
   return (
     <div className="space-y-3 p-3">
       <div className="flex items-center gap-3">
-        <button aria-label="Open native workspace surface color picker" className="flex h-10 w-10 items-center justify-center rounded-md text-foreground/78" onClick={() => props.nativeInputRef.current?.click()} type="button">
+        <button aria-label="Open native workspace surface color picker" className={settingsButtonClassName('size-10 px-0 text-foreground/78')} onClick={() => props.nativeInputRef.current?.click()} type="button">
           <Pipette className="h-5 w-5" strokeWidth={2.1} />
         </button>
-        <div className="h-12 w-12 rounded-full border border-border/60" style={{ backgroundColor: formatWorkspaceSurfaceColorCss(props.color) }} />
+        <div className={settingsColorSwatchClassName('size-12 rounded-full')} style={{ backgroundColor: formatWorkspaceSurfaceColorCss(props.color) }} />
         <div
           aria-label="Workspace surface hue slider"
           className="relative h-6 flex-1 rounded-md"
@@ -117,7 +118,7 @@ export function WorkspaceSurfaceColorPickerPanel(props: {
   const nativeInputRef = useRef<HTMLInputElement | null>(null);
 
   return (
-    <div className="overflow-hidden rounded-lg bg-bg-elevated">
+    <div className="overflow-hidden rounded-lg bg-settings-control">
       <WorkspaceSurfaceColorArea color={props.color} onColorChange={props.onColorChange} />
       <WorkspaceSurfaceColorSliderSection color={props.color} nativeInputRef={nativeInputRef} onAlphaChange={props.onAlphaChange} onColorChange={props.onColorChange} />
       <input

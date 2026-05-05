@@ -2,7 +2,7 @@ import { FolderOpen } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { AppButton } from './Button';
-import { settingsButtonClassName } from './SettingsLayout';
+import { SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME, settingsButtonClassName } from './SettingsLayout';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -87,13 +87,13 @@ export function ObjectConfigPathButton({
   return (
     <AppButton
       aria-label={label}
-      className={settingsButtonClassName('w-full justify-between text-left')}
+      className={settingsButtonClassName(`${SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME} justify-between text-left`)}
       disabled={disabled}
       onClick={onClick}
       title={disabled ? undefined : pathTooltip(path)}
       variant="ghost"
     >
-      <span className="truncate">{compactPathLabel(path, emptyLabel)}</span>
+      <span className="min-w-0 truncate">{compactPathLabel(path, emptyLabel)}</span>
       <FolderOpen aria-hidden="true" size={14} strokeWidth={1.8} />
     </AppButton>
   );

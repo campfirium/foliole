@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { createPortal } from 'react-dom';
 
-import { appFloatingSurfaceClassName } from '../../../../shared/ui';
+import { appFloatingSurfaceClassName, settingsColorSwatchClassName, settingsPaletteButtonClassName, settingsUtilityIconButtonClassName } from '../../../../shared/ui';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -23,7 +23,7 @@ function PaletteStrip(props: { palette: string[] }) {
       {props.palette.map((color, index) => (
         <span
           aria-hidden="true"
-          className="block h-7 w-7 rounded-sm border border-border/40"
+          className={settingsColorSwatchClassName('size-7')}
           key={`${color}-${index}`}
           style={{ backgroundColor: color }}
         />
@@ -47,10 +47,7 @@ function FavoritePaletteCard(props: {
     <div className="group flex items-center gap-1">
       <button
         aria-label={`Apply favorite theme ${props.index + 1}`}
-        className={cn(
-          'rounded-sm p-1 transition-colors hover:bg-foreground/[0.03]',
-          isSamePalette(props.palette, props.currentPalette) && 'bg-foreground/[0.05]'
-        )}
+        className={settingsPaletteButtonClassName(isSamePalette(props.palette, props.currentPalette))}
         onClick={() => props.onApplyFavorite(props.palette)}
         type="button"
       >
@@ -58,7 +55,7 @@ function FavoritePaletteCard(props: {
       </button>
       <button
         aria-label={`Remove favorite theme ${props.index + 1}`}
-        className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-foreground/38 opacity-0 transition-colors hover:bg-foreground/[0.03] hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className={settingsUtilityIconButtonClassName(false, 'size-7 rounded-sm px-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100')}
         onClick={(event) => {
           event.stopPropagation();
           props.onRemoveFavorite(props.palette);

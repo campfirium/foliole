@@ -1,4 +1,11 @@
-import { SettingsSection } from '../../../../shared/ui';
+import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsSwitchClassName,
+  settingsSwitchKnobClassName
+} from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
@@ -63,6 +70,27 @@ function useAppearanceSectionState() {
   };
 }
 
+function AppearanceColorModeSection(props: ReturnType<typeof useAppearanceSectionState>) {
+  const { appearance } = props;
+
+  return (
+    <SettingsSection ariaLabel="Appearance color mode section" title="Color mode">
+      <SettingsSelectRow
+        ariaLabel="Mode"
+        description="Choose whether Foliole stays light, stays dark, or follows the system appearance."
+        label="Base color mode"
+        onChange={(value) => appearance.setBaseColorMode(value as typeof appearance.baseColorMode)}
+        options={[
+          { label: 'Light', value: 'light' },
+          { label: 'Dark', value: 'dark' },
+          { label: 'Follow system', value: 'system' }
+        ]}
+        value={appearance.baseColorMode}
+      />
+    </SettingsSection>
+  );
+}
+
 function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionState>) {
   const {
     appearance,
@@ -78,17 +106,6 @@ function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionSta
 
   return (
     <SettingsSection ariaLabel="Appearance color section" title="Color">
-      <SettingsSelectRow
-        description="Choose whether Foliole stays light, stays dark, or follows the system appearance."
-        label="Base color mode"
-        onChange={(value) => appearance.setBaseColorMode(value as typeof appearance.baseColorMode)}
-        options={[
-          { label: 'Light', value: 'light' },
-          { label: 'Dark', value: 'dark' },
-          { label: 'Follow system', value: 'system' }
-        ]}
-        value={appearance.baseColorMode}
-      />
       <FontColorRow
         defaultFontColor={defaultFontColor}
         onFontColorPresetReset={appearance.resetFontColorPreset}
@@ -126,35 +143,26 @@ function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionSta
         ]}
         value={appearance.pdfReadingMode}
       />
-      <label className="flex min-h-[78px] items-start justify-between gap-5 py-5 max-[1080px]:flex-col max-[1080px]:items-start" data-settings-row>
-        <span className="min-w-0 flex-1">
-          <span className="text-[0.95rem] font-semibold text-foreground">Dim images in dark mode</span>
-          <span className="mt-0.5 block text-sm text-foreground/65">Apply a gentle dimming filter to regular document images when the app is in dark mode.</span>
-        </span>
-        <span className="inline-flex max-w-full flex-[0_0_360px] items-center justify-end gap-3 max-[1080px]:w-full max-[1080px]:flex-auto">
+      <SettingsRow
+        description="Apply a gentle dimming filter to regular document images when the app is in dark mode."
+        title="Dim images in dark mode"
+      >
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <button
             aria-checked={appearance.dimImagesInDarkMode}
             aria-label="Dim images in dark mode"
-            className={`relative inline-flex h-10 w-[72px] shrink-0 items-center rounded-full border transition-colors ${
-              appearance.dimImagesInDarkMode
-                ? 'border-border-strong bg-foreground/[0.12]'
-                : 'border-border bg-bg-elevated'
-            }`}
+            className={settingsSwitchClassName(appearance.dimImagesInDarkMode)}
             onClick={() => appearance.setDimImagesInDarkMode(!appearance.dimImagesInDarkMode)}
             role="switch"
             type="button"
           >
             <span
               aria-hidden="true"
-              className={`absolute h-8 w-8 rounded-full transition-transform ${
-                appearance.dimImagesInDarkMode
-                  ? 'translate-x-[34px] bg-foreground'
-                  : 'translate-x-[4px] bg-bg-panel'
-              }`}
+              className={settingsSwitchKnobClassName(appearance.dimImagesInDarkMode)}
             />
           </button>
-        </span>
-      </label>
+        </SettingsControlSlot>
+      </SettingsRow>
     </SettingsSection>
   );
 }
@@ -197,6 +205,7 @@ export function SettingsAppearanceSection(props: { onEnterPreview: () => void })
   const state = useAppearanceSectionState();
   return (
     <>
+      <AppearanceColorModeSection {...state} />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <AppearanceColorSection {...state} />
       <AppearanceSupportingSections {...state} />

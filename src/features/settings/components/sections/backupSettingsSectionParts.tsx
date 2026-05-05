@@ -2,16 +2,16 @@ import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 
 import {
-  AppInput,
   ObjectConfigPathButton,
-  SETTINGS_BUTTON_WIDTH_CLASS_NAME,
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_INPUT_WIDTH_CLASS_NAME,
   SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
   settingsButtonClassName,
-  settingsIconButtonClassName
+  settingsFieldClassName,
+  settingsResetButtonClassName
 } from '../../../../shared/ui';
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
@@ -22,7 +22,7 @@ const BACKUP_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   hour12: false
 });
 
-export const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_BUTTON_WIDTH_CLASS_NAME);
+export const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName();
 
 const SETTINGS_BUTTON_CLASS_NAME = settingsButtonClassName();
 
@@ -62,8 +62,8 @@ function NumberRuleRow(props: {
   return (
     <SettingsRow description={props.description} title={props.title}>
       <SettingsControlSlot className={SETTINGS_INPUT_WIDTH_CLASS_NAME}>
-        <AppInput
-          className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        <input
+          className={settingsFieldClassName('[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none')}
           disabled={props.disabled}
           inputMode="numeric"
           min="0"
@@ -88,7 +88,7 @@ export function BackupPathRow(props: {
       <SettingsControlSlot className={`${SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME} items-start gap-2 max-[1080px]:flex-auto`}>
         <button
           aria-label="Restore default"
-          className={settingsIconButtonClassName('size-10 border-transparent bg-transparent text-foreground/68 hover:bg-settings-control hover:text-foreground')}
+          className={settingsResetButtonClassName()}
           disabled={!props.isDesktopRuntime}
           onClick={props.onRestoreDefault}
           title="Restore default"
@@ -124,8 +124,8 @@ export function BackupRulesSection(props: {
       <NumberRuleRow description="Safety snapshots are created before restore and upgrade." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('snapshot_max_count', value)} title="Safety snapshots kept" value={String(props.draft.snapshot_max_count)} />
       <SettingsRow description="When backups grow past this size, the oldest backup is deleted first." title="Total backup size limit (GB)">
         <SettingsControlSlot className={SETTINGS_INPUT_WIDTH_CLASS_NAME}>
-          <AppInput
-            className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          <input
+            className={settingsFieldClassName('[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none')}
             disabled={!props.isDesktopRuntime}
             inputMode="decimal"
             min="0"
@@ -156,7 +156,7 @@ export function BackupListSection(props: {
   return (
     <SettingsSection ariaLabel="Backup list section" title="Backups">
       <SettingsRow description={props.statusMessage || undefined} title="Create backup">
-        <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <button className={ACTION_BUTTON_CLASS_NAME} disabled={!props.isBackupActionsAvailable || props.isCreatingBackup || props.restoringPath.length > 0} onClick={props.createBackup} type="button">
             {props.isCreatingBackup ? 'Creating…' : 'Create backup'}
           </button>
@@ -167,7 +167,7 @@ export function BackupListSection(props: {
       {props.isBackupActionsAvailable && !props.isLoadingBackups && props.backups.length === 0 ? <SettingsRow description="No backups yet." readonly title="Empty backup list" /> : null}
       {visibleBackups.map((entry) => (
         <SettingsRow description={formatBackupMeta(entry)} key={entry.filePath} title={entry.fileName}>
-          <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
+          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
             <button className={ACTION_BUTTON_CLASS_NAME} disabled={props.isCreatingBackup || props.restoringPath.length > 0} onClick={() => props.restoreBackup(entry)} type="button">
               {props.restoringPath === entry.filePath ? 'Restoring…' : 'Restore'}
             </button>
@@ -178,9 +178,9 @@ export function BackupListSection(props: {
         <SettingsRow
           title={isExpanded ? 'Collapse backup list' : 'More backups'}
         >
-          <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
+          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
             <button className={SETTINGS_BUTTON_CLASS_NAME} onClick={() => setIsExpanded((value) => !value)} type="button">
-              {isExpanded ? 'Show fewer' : `Show ${props.backups.length - 3} more`}
+              {isExpanded ? 'Show fewer' : `Show ${hiddenBackupCount} more`}
             </button>
           </SettingsControlSlot>
         </SettingsRow>

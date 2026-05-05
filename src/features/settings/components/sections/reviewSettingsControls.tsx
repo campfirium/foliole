@@ -1,4 +1,13 @@
-import { SettingsControlSlot, settingsFieldClassName } from '../../../../shared/ui';
+import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
+  SETTINGS_SELECT_WIDTH_CLASS_NAME,
+  SETTINGS_VALUE_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  settingsControlValueClassName,
+  settingsFieldClassName
+} from '../../../../shared/ui';
 
 export function ReviewToggleControl(props: {
   ariaLabel: string;
@@ -6,11 +15,11 @@ export function ReviewToggleControl(props: {
   onChange: (value: boolean) => void;
 }) {
   return (
-    <SettingsControlSlot>
+    <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
       <span className="sr-only">{props.ariaLabel}</span>
       <select
         aria-label={props.ariaLabel}
-        className={settingsFieldClassName()}
+        className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
         onChange={(event) => props.onChange(event.target.value === 'on')}
         value={props.value ? 'on' : 'off'}
       >
@@ -32,7 +41,7 @@ export function ReviewNumberInput(props: {
   return (
     <input
       aria-label={props.ariaLabel}
-      className={settingsFieldClassName()}
+      className={settingsFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
       max={props.max}
       min={props.min}
       onChange={(event) => props.onChange(Number(event.target.value))}
@@ -48,11 +57,11 @@ export function DefaultPriorityControl(props: {
   onChange: (value: number) => void;
 }) {
   return (
-    <SettingsControlSlot>
+    <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
       <span className="sr-only">Default node priority</span>
       <select
         aria-label="Default node priority"
-        className={settingsFieldClassName()}
+        className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
         onChange={(event) => props.onChange(Number(event.target.value))}
         value={String(props.value)}
       >
@@ -73,11 +82,11 @@ export function QueueMixRatioControl(props: {
   onFsrsChange: (value: number) => void;
 }) {
   return (
-    <SettingsControlSlot className="justify-end">
+    <SettingsControlSlot className={SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
       <ReviewNumberInput ariaLabel="Reading queue mix ratio" min={1} onChange={props.onReadingChange} step={1} value={props.reading} />
       <span className="text-[0.86rem] text-foreground/65">:</span>
       <ReviewNumberInput ariaLabel="FSRS queue mix ratio" min={1} onChange={props.onFsrsChange} step={1} value={props.fsrs} />
-      <span className="min-w-[38px] text-right text-[0.86rem] text-foreground/65">{`${props.reading}:${props.fsrs}`}</span>
+      <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{`${props.reading}:${props.fsrs}`}</span>
     </SettingsControlSlot>
   );
 }
@@ -89,7 +98,7 @@ export function ReadingGrowthFactorRangeControl(props: {
   onMaxChange: (value: number) => void;
 }) {
   return (
-    <SettingsControlSlot className="justify-end">
+    <SettingsControlSlot className={SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
       <ReviewNumberInput ariaLabel="Reading growth factor min" min={1} onChange={props.onMinChange} step={0.01} value={props.minValue} />
       <span className="text-[0.86rem] text-foreground/65">to</span>
       <ReviewNumberInput ariaLabel="Reading growth factor max" min={1} onChange={props.onMaxChange} step={0.01} value={props.maxValue} />

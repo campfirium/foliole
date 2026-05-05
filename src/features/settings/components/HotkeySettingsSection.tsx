@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
   settingsButtonClassName,
   settingsFieldClassName,
-  settingsIconButtonClassName
+  settingsResetButtonClassName
 } from '../../../shared/ui';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 
-const HOTKEY_INPUT_CLASS_NAME = settingsFieldClassName('w-40 max-[1080px]:w-full');
+const HOTKEY_INPUT_CLASS_NAME = settingsFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME);
 const HOTKEY_TEXT_BUTTON_CLASS_NAME = settingsButtonClassName();
-const HOTKEY_RESET_BUTTON_CLASS_NAME = settingsIconButtonClassName('text-foreground/65');
+const HOTKEY_RESET_BUTTON_CLASS_NAME = settingsResetButtonClassName();
 
 interface HotkeySettingsSectionProps {
   items: HotkeySettingItem[];
@@ -107,13 +109,13 @@ function useHotkeySectionModel(items: HotkeySettingItem[], onUpdate: HotkeySetti
 function conflictDisplay(item: HotkeySettingItem) {
   if (item.conflictSeverity === 'error') {
     return {
-      badgeClass: 'rounded-full bg-red-100 px-[7px] py-[3px] text-[0.76rem] text-red-800',
+      badgeClass: 'rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800',
       badgeText: 'Blocked'
     };
   }
   if (item.conflictSeverity === 'warning') {
     return {
-      badgeClass: 'rounded-full bg-amber-100 px-[7px] py-[3px] text-[0.76rem] text-amber-800',
+      badgeClass: 'rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800',
       badgeText: 'Warning'
     };
   }
@@ -149,7 +151,7 @@ function HotkeyInput(props: {
   };
 
   return (
-    <label className="flex min-w-[160px] flex-1 flex-col gap-1 max-[1080px]:min-w-0">
+    <label className="flex flex-col gap-1">
       <span className="sr-only">{props.ariaLabel}</span>
       <input
         aria-label={props.ariaLabel}
@@ -178,7 +180,7 @@ function HotkeyRow({ primaryDraft, secondaryDraft, item, primaryMessage, seconda
   return (
     <div role="listitem">
       <SettingsRow description={rowDescription} title={item.title}>
-        <SettingsControlSlot className="flex-[0_0_320px] flex-wrap justify-end gap-2 max-[1080px]:justify-start">
+        <SettingsControlSlot className={`${SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME} flex-wrap gap-2`}>
           <HotkeyInput
             ariaLabel={`Primary shortcut for ${item.title}`}
             commandId={item.commandId}
@@ -202,7 +204,7 @@ function HotkeyRow({ primaryDraft, secondaryDraft, item, primaryMessage, seconda
           <button className={HOTKEY_RESET_BUTTON_CLASS_NAME} onClick={() => onReset(item.commandId)} type="button">
             ↺
           </button>
-          {item.isCustomized ? <span className="rounded-full bg-secondary px-[7px] py-[3px] text-[0.76rem] text-foreground/75">Custom</span> : null}
+          {item.isCustomized ? <span className="rounded-full bg-settings-control-active px-2 py-0.5 text-xs text-foreground/75">Custom</span> : null}
           {badgeClass ? <span className={badgeClass}>{badgeText}</span> : null}
         </SettingsControlSlot>
       </SettingsRow>

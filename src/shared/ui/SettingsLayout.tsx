@@ -19,23 +19,55 @@ interface SettingsRowProps {
   title: string;
 }
 
-export const SETTINGS_BUTTON_WIDTH_CLASS_NAME = 'min-w-[136px]';
+export const SETTINGS_BUTTON_WIDTH_CLASS_NAME = '';
 export const SETTINGS_INPUT_WIDTH_CLASS_NAME = 'flex-[0_0_160px] max-w-full';
-export const SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME = 'flex-[0_0_320px] max-w-full';
+export const SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME = 'flex-[0_0_auto] max-w-full';
+export const SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME = SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME;
+export const SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME = 'w-20';
+export const SETTINGS_RANGE_WIDTH_CLASS_NAME = 'w-36';
+export const SETTINGS_VALUE_WIDTH_CLASS_NAME = 'min-w-10';
+export const SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME = SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME;
+export const SETTINGS_PATH_VALUE_WIDTH_CLASS_NAME = 'max-w-80';
+export const SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME = 'max-w-44';
+export const SETTINGS_SELECT_WIDTH_CLASS_NAME = 'w-auto max-w-[260px]';
 
 export function settingsFieldClassName(className?: string) {
   return cn(
-    'h-9 w-full min-w-0 rounded-md border border-border bg-settings-control px-3 text-sm text-foreground',
-    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong',
+    'h-9 w-full min-w-0 rounded-md border border-settings-control-border bg-settings-control px-3 text-sm text-foreground transition-colors',
+    'hover:border-settings-control-border-hover hover:bg-settings-control-hover',
+    'focus-visible:border-settings-control-border-hover focus-visible:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    'disabled:cursor-not-allowed disabled:opacity-50',
     className
   );
 }
 
 export function settingsButtonClassName(className?: string) {
   return cn(
-    'inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-border bg-settings-control px-3 text-sm text-foreground/88 transition-colors',
-    'hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    'inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-settings-control-border bg-settings-control px-3 text-sm text-foreground/88 transition-colors',
+    'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground',
+    'active:bg-settings-control-active focus-visible:border-settings-control-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
     'disabled:pointer-events-none disabled:opacity-50',
+    className
+  );
+}
+
+export function settingsToggleButtonClassName(active: boolean, className?: string) {
+  return settingsButtonClassName(cn(active && 'bg-settings-control-active text-foreground', className));
+}
+
+export function settingsSwitchClassName(active: boolean, className?: string) {
+  return cn(
+    'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors',
+    active ? 'bg-settings-switch-on' : 'bg-settings-switch-off',
+    'hover:brightness-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+    className
+  );
+}
+
+export function settingsSwitchKnobClassName(active: boolean, className?: string) {
+  return cn(
+    'absolute size-5 rounded-full bg-settings-switch-knob shadow-sm transition-transform',
+    active ? 'translate-x-[22px]' : 'translate-x-0.5',
     className
   );
 }
@@ -44,16 +76,55 @@ export function settingsIconButtonClassName(className?: string) {
   return settingsButtonClassName(cn('size-9 px-0', className));
 }
 
+export function settingsUtilityIconButtonClassName(active = false, className?: string) {
+  return cn(
+    'inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent bg-transparent px-0 text-sm transition-colors',
+    active ? 'text-muted-foreground/90' : 'text-muted-foreground/78',
+    '[&>svg]:pointer-events-none [&>svg]:text-current',
+    'hover:border-transparent hover:bg-transparent hover:text-muted-foreground',
+    'active:bg-transparent active:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    'disabled:pointer-events-none disabled:opacity-45',
+    className
+  );
+}
+
+export function settingsResetButtonClassName(className?: string) {
+  return settingsUtilityIconButtonClassName(false, className);
+}
+
+export function settingsColorSwatchClassName(className?: string) {
+  return cn('block size-9 rounded-sm border border-settings-control-border transition-colors', className);
+}
+
+export function settingsPaletteButtonClassName(active: boolean, className?: string) {
+  return cn(
+    'min-w-0 cursor-pointer rounded-sm border p-1 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    active
+      ? 'border-settings-control-border-hover bg-settings-control-active'
+      : 'border-settings-control-border hover:border-settings-control-border-hover hover:bg-settings-control-hover',
+    className
+  );
+}
+
+export function settingsRangeClassName(className?: string) {
+  return cn('accent-[rgb(var(--app-accent-color-rgb))]', className);
+}
+
+export function settingsControlValueClassName(className?: string) {
+  return cn('text-right text-[0.86rem] text-foreground/65', className);
+}
+
 export function settingsColorFieldClassName(className?: string) {
   return cn(
-    'h-9 w-14 rounded-md border border-border bg-settings-control p-1',
-    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong',
+    'h-9 w-14 rounded-md border border-settings-control-border bg-settings-control p-1 transition-colors',
+    'hover:border-settings-control-border-hover hover:bg-settings-control-hover',
+    'focus-visible:border-settings-control-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
     className
   );
 }
 
 export function settingsValueBoxClassName(className?: string) {
-  return cn('rounded-md bg-settings-control px-3 py-2 text-sm text-foreground/75', className);
+  return cn('rounded-md border border-transparent bg-settings-control px-3 py-2 text-sm text-foreground/75', className);
 }
 
 export function SettingsSection({
@@ -93,7 +164,7 @@ export function SettingsGroup({ children, className }: { children: ReactNode; cl
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-md bg-bg-elevated/50',
+        'overflow-hidden rounded-md bg-settings-group',
         className
       )}
     >
@@ -125,7 +196,7 @@ export function SettingsControlSlot({ children, className }: { children: ReactNo
   return (
     <div
       className={cn(
-        'inline-flex max-w-full flex-[0_0_240px] items-center justify-end gap-2 self-center max-[1080px]:w-full max-[1080px]:flex-auto max-[1080px]:justify-start',
+        'inline-flex max-w-full flex-[0_0_auto] items-center justify-end gap-2 self-center max-[1080px]:w-full max-[1080px]:flex-auto max-[1080px]:justify-start',
         className
       )}
     >

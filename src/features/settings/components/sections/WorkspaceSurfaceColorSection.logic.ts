@@ -28,7 +28,7 @@ import {
   setWorkspaceSurfaceGeneratorMode,
   type WorkspaceSurfaceGeneratorMode
 } from '../../model/workspaceSurfaceGeneratorSettings';
-import { type WorkspaceSurfaceRegionId } from '../../model/workspaceSurfaceSettings';
+import { type WorkspaceSurfaceAssignments, type WorkspaceSurfaceRegionId } from '../../model/workspaceSurfaceSettings';
 
 function clampBrushIndex(value: number, paletteLength: number) {
   return Math.min(Math.max(value, 0), Math.max(paletteLength - 1, 0));
@@ -215,6 +215,21 @@ export function addCurrentWorkspaceSurfaceFavorite(editor: ReturnType<typeof use
 
 export function removeWorkspaceSurfaceFavoriteEntry(editor: ReturnType<typeof useWorkspaceSurfaceEditor>, palette: string[]) {
   editor.setFavorites(removeWorkspaceSurfaceFavorite(palette, editor.mode));
+}
+
+export function resetWorkspaceSurfaceFreePalette(editor: ReturnType<typeof useWorkspaceSurfaceEditor>) {
+  const palette = editor.appearance.workspaceSurfacePalette.slice(0, 5);
+  const maxIndex = Math.max(palette.length - 1, 0);
+  const assignments = Object.fromEntries(
+    Object.entries(editor.appearance.workspaceSurfaceAssignments).map(([regionId, index]) => [
+      regionId,
+      Math.min(index, maxIndex)
+    ])
+  ) as WorkspaceSurfaceAssignments;
+  editor.setGeneratedMode('manual');
+  editor.appearance.setWorkspaceSurfacePalette(palette);
+  editor.appearance.setWorkspaceSurfaceAssignments(assignments);
+  editor.setActiveBrushIndex(Math.min(editor.activeBrushIndex, maxIndex));
 }
 
 export function resetWorkspaceSurfaceToDefault(editor: ReturnType<typeof useWorkspaceSurfaceEditor>) {

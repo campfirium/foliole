@@ -9,7 +9,7 @@ export const AppInput = React.forwardRef<HTMLInputElement, AppInputProps>(({ cla
     ref={ref}
     type={type}
     className={cn(
-      'flex h-10 w-full rounded-md border border-border bg-settings-control px-3 py-1 text-base text-foreground ring-offset-background placeholder:text-foreground/45 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong disabled:cursor-not-allowed disabled:opacity-45',
+      'flex h-10 w-full rounded-md border border-settings-control-border bg-settings-control px-3 py-1 text-base text-foreground transition-colors placeholder:text-foreground/45 hover:border-settings-control-border-hover hover:bg-settings-control-hover focus-visible:border-settings-control-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45',
       className
     )}
     {...props}

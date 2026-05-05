@@ -1,6 +1,15 @@
 import type { ReactNode } from 'react';
 
-import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_RANGE_WIDTH_CLASS_NAME,
+  SETTINGS_VALUE_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsControlValueClassName,
+  settingsRangeClassName
+} from '../../../../shared/ui';
 import { useReviewSchedulerSettings } from '../../context/ReviewSchedulerSettingsProvider';
 
 import {
@@ -65,10 +74,10 @@ function SchedulerCoreRows(props: Pick<
         title="Desired retention"
         description="Lower values shorten intervals. Recommended around 0.80-0.95. Review previews update after each change."
         control={
-          <SettingsControlSlot className="justify-end">
+          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
             <input
               aria-label="Desired retention"
-              className="w-[136px]"
+              className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)}
               max={0.99}
               min={0.01}
               onChange={(event) => props.onDesiredRetentionChange(Number(event.target.value))}
@@ -76,7 +85,7 @@ function SchedulerCoreRows(props: Pick<
               type="range"
               value={props.desiredRetention}
             />
-            <span className="min-w-[38px] text-right text-[0.86rem] text-foreground/65">{props.desiredRetention.toFixed(2)}</span>
+            <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{props.desiredRetention.toFixed(2)}</span>
           </SettingsControlSlot>
         }
       />
@@ -84,7 +93,7 @@ function SchedulerCoreRows(props: Pick<
         title="Maximum interval"
         description="Cap long-term intervals in days. Lower values make future review previews shorten sooner."
         control={
-          <SettingsControlSlot>
+          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
             <span className="sr-only">Maximum interval days</span>
             <ReviewNumberInput ariaLabel="Maximum interval days" min={1} onChange={props.onMaximumIntervalDaysChange} step={1} value={props.maximumIntervalDays} />
           </SettingsControlSlot>
@@ -138,12 +147,12 @@ function PushQueueRows(props: Pick<
       <ReviewSettingRow
         title="Priority strength (`priorityRatio`)"
         description="Set `priorityRatio` directly as the roulette weight multiple of P1 relative to P9. This is a weight ratio, not a percentage scale. The default `5` means P1 is weighted 5× P9."
-        control={<SettingsControlSlot><ReviewNumberInput ariaLabel="Priority strength (P1 relative to P9)" min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} /></SettingsControlSlot>}
+        control={<SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}><ReviewNumberInput ariaLabel="Priority strength (P1 relative to P9)" min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} /></SettingsControlSlot>}
       />
       <ReviewSettingRow
         title="Reading initial interval"
         description="Set `readingInitialIntervalMs`, the first delay after a reading card is handled before it can re-enter the reading queue."
-        control={<SettingsControlSlot><ReviewNumberInput ariaLabel="Reading initial interval days" min={0.01} onChange={props.onReadingInitialIntervalDaysChange} step={0.25} value={readingInitialIntervalDays} /></SettingsControlSlot>}
+        control={<SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}><ReviewNumberInput ariaLabel="Reading initial interval days" min={0.01} onChange={props.onReadingInitialIntervalDaysChange} step={0.25} value={readingInitialIntervalDays} /></SettingsControlSlot>}
       />
       <ReviewSettingRow
         title="Reading growth factor range"

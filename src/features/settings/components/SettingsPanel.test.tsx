@@ -202,6 +202,8 @@ it('updates appearance settings from the dedicated sections and persists them', 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
+  expect(screen.getByRole('switch', { name: 'Auto-localize remote images' }).className).toContain('bg-settings-switch-on');
+  expect(screen.getByLabelText('Markdown syntax visibility').className).toContain('w-auto');
   fireEvent.click(screen.getByLabelText('Auto-localize remote images'));
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   fireEvent.change(screen.getByLabelText('Accent color picker'), {

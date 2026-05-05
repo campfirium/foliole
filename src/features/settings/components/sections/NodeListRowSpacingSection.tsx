@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { SettingsControlSlot, SettingsRow, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
+import { SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
 import {
   DEFAULT_NODE_LIST_ROW_SPACING,
   getNodeListRowSpacing,
@@ -16,12 +16,12 @@ export function NodeListRowSpacingSection() {
         description={`Set node list row spacing in pixels. The default is ${DEFAULT_NODE_LIST_ROW_SPACING}px.`}
         title="Row spacing"
       >
-        <SettingsControlSlot>
-          <label className="inline-flex w-[144px] max-w-full items-center gap-2">
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <label className="inline-flex items-center gap-2">
             <span className="sr-only">Node list row spacing</span>
             <input
               aria-label="Node list row spacing"
-              className={settingsFieldClassName()}
+              className={settingsFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
               min={0}
               onChange={(event) => {
                 const nextValue = Number(event.target.value);

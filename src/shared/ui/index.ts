@@ -42,8 +42,16 @@ export { AppTooltip, AppTooltipContent, AppTooltipPortal, AppTooltipProvider, Ap
 export { appFloatingSurfaceClassName } from './FloatingSurface';
 export {
   SETTINGS_BUTTON_WIDTH_CLASS_NAME,
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_INPUT_WIDTH_CLASS_NAME,
+  SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
+  SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME,
   SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME,
+  SETTINGS_PATH_VALUE_WIDTH_CLASS_NAME,
+  SETTINGS_RANGE_WIDTH_CLASS_NAME,
+  SETTINGS_SELECT_WIDTH_CLASS_NAME,
+  SETTINGS_VALUE_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsGroup,
   SettingsRow,
@@ -51,6 +59,15 @@ export {
   settingsButtonClassName,
   settingsColorFieldClassName,
   settingsFieldClassName,
+  settingsControlValueClassName,
   settingsIconButtonClassName,
+  settingsPaletteButtonClassName,
+  settingsSwitchClassName,
+  settingsRangeClassName,
+  settingsResetButtonClassName,
+  settingsSwitchKnobClassName,
+  settingsToggleButtonClassName,
+  settingsUtilityIconButtonClassName,
+  settingsColorSwatchClassName,
   settingsValueBoxClassName
 } from './SettingsLayout';

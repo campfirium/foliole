@@ -3,15 +3,15 @@ import { RefreshCw, X } from 'lucide-react';
 import type { RuntimeExternalSearchFolder } from '../../../../shared/platform/externalSearchBridge';
 import { resolveExternalSearchStatusLabel } from '../../../../shared/platform/externalSearchStatus';
 import {
-  AppButton,
-  AppIconButton,
-  AppInput,
   AppStatusBadge,
   ObjectConfigHeader,
   ObjectConfigPathButton,
   ObjectConfigRow,
   ObjectConfigTable,
-  SettingsSection
+  SettingsSection,
+  settingsButtonClassName,
+  settingsFieldClassName,
+  settingsIconButtonClassName
 } from '../../../../shared/ui';
 
 interface SettingsExternalSearchSectionProps {
@@ -72,12 +72,12 @@ function ExternalLibraryActions(props: {
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <AppButton disabled={props.disabled} onClick={props.onAddFolder}>
+      <button className={settingsButtonClassName()} disabled={props.disabled} onClick={props.onAddFolder} type="button">
         Add folder
-      </AppButton>
-      <AppButton disabled={props.disabled || !props.hasFolders} onClick={props.onRebuildIndex} variant="ghost">
+      </button>
+      <button className={settingsButtonClassName()} disabled={props.disabled || !props.hasFolders} onClick={props.onRebuildIndex} type="button">
         Rebuild all
-      </AppButton>
+      </button>
     </div>
   );
 }
@@ -114,7 +114,8 @@ function ExternalLibraryRow(props: {
         onClick={() => void props.onChooseAttachmentRoot(props.folder.id)}
         path={props.folder.attachmentRootPath ?? ''}
       />
-      <AppInput
+      <input
+        className={settingsFieldClassName()}
         onChange={(event) =>
           props.onUpdateFolder(props.folder.id, {
             excludedDirs: event.target.value
@@ -132,18 +133,24 @@ function ExternalLibraryRow(props: {
         <p className="text-xs text-foreground/60">{statusMeta(props.folder)}</p>
       </div>
       <div className="flex items-start justify-end gap-1 pt-1">
-        <AppIconButton
+        <button
+          aria-label="Rebuild index"
+          className={settingsIconButtonClassName()}
           disabled={props.isSaving}
-          icon={<RefreshCw aria-hidden="true" size={15} strokeWidth={2} />}
-          label="Rebuild index"
           onClick={() => props.onRebuildIndex(props.folder.id)}
-        />
-        <AppIconButton
+          type="button"
+        >
+          <RefreshCw aria-hidden="true" size={15} strokeWidth={2} />
+        </button>
+        <button
+          aria-label="Remove folder"
+          className={settingsIconButtonClassName()}
           disabled={props.isSaving}
-          icon={<X aria-hidden="true" size={15} strokeWidth={2.1} />}
-          label="Remove folder"
           onClick={() => props.onRemoveFolder(props.folder.id)}
-        />
+          type="button"
+        >
+          <X aria-hidden="true" size={15} strokeWidth={2.1} />
+        </button>
       </div>
     </ObjectConfigRow>
   );

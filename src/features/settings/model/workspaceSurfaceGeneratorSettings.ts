@@ -181,7 +181,8 @@ export function addWorkspaceSurfaceFavorite(palette: string[], mode: WorkspaceSu
 }
 
 export function removeWorkspaceSurfaceFavorite(palette: string[], mode: WorkspaceSurfaceColorMode = 'light') {
-  const nextFavorites = getWorkspaceSurfaceFavorites(mode).filter((entry) => entry.join('|') !== palette.join('|'));
+  const paletteSignature = palette.map((color) => color.toLowerCase()).join('|');
+  const nextFavorites = getWorkspaceSurfaceFavorites(mode).filter((entry) => entry.map((color) => color.toLowerCase()).join('|') !== paletteSignature);
   setWorkspaceSurfaceFavorites(nextFavorites, mode);
   return nextFavorites;
 }

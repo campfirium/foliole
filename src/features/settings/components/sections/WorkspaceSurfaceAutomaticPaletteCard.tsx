@@ -1,4 +1,4 @@
-import { cn } from '@/shared/lib/utils';
+import { settingsColorSwatchClassName, settingsPaletteButtonClassName } from '@/shared/ui';
 
 function AutomaticPalettePreview(props: { palette: string[] }) {
   return (
@@ -6,7 +6,7 @@ function AutomaticPalettePreview(props: { palette: string[] }) {
       {props.palette.map((color, index) => (
         <span
           aria-hidden="true"
-          className="block h-9 w-9 rounded-sm border border-border/40"
+          className={settingsColorSwatchClassName('size-7')}
           key={`${color}-${index}`}
           style={{ backgroundColor: color }}
         />
@@ -23,12 +23,7 @@ export function WorkspaceSurfaceAutomaticPaletteCard(props: {
   return (
     <button
       aria-label="Apply automatic palette"
-      className={cn(
-        'min-w-0 rounded-sm border p-1 transition-colors',
-        props.activeMode === 'automatic'
-          ? 'border-border-strong/75 bg-foreground/[0.04]'
-          : 'border-transparent hover:border-border/45 hover:bg-foreground/[0.02]'
-      )}
+      className={settingsPaletteButtonClassName(props.activeMode === 'automatic')}
       onClick={props.onClick}
       type="button"
     >

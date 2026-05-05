@@ -1,4 +1,20 @@
-import { AppInput, SettingsControlSlot, SettingsRow, settingsFieldClassName, settingsIconButtonClassName } from '../../../../shared/ui';
+import { RotateCcw } from 'lucide-react';
+
+import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
+  SETTINGS_RANGE_WIDTH_CLASS_NAME,
+  SETTINGS_SELECT_WIDTH_CLASS_NAME,
+  SETTINGS_VALUE_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  SettingsRow,
+  settingsColorSwatchClassName,
+  settingsControlValueClassName,
+  settingsFieldClassName,
+  settingsRangeClassName,
+  settingsResetButtonClassName
+} from '../../../../shared/ui';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
   DEFAULT_CLOZE_COLOR_PRESET,
@@ -20,8 +36,8 @@ export function SettingsSelectRow(props: {
 }) {
   return (
     <SettingsRow description={props.description} title={props.label}>
-      <SettingsControlSlot>
-        <select aria-label={props.ariaLabel ?? props.label} className={settingsFieldClassName()} disabled={props.disabled} onChange={(event) => props.onChange(event.target.value)} value={props.value}>
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <select aria-label={props.ariaLabel ?? props.label} className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)} disabled={props.disabled} onChange={(event) => props.onChange(event.target.value)} value={props.value}>
           {props.options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -45,13 +61,15 @@ function ColorSettingRow(props: {
 }) {
   return (
     <SettingsRow description={props.description} title={props.title}>
-      <SettingsControlSlot>
-        <button aria-label={props.resetButtonAriaLabel} className={settingsIconButtonClassName('text-foreground/65 disabled:cursor-default disabled:opacity-55')} disabled={props.value === props.defaultValue} onClick={props.onReset} type="button">↺</button>
+      <SettingsControlSlot className={SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
+        <button aria-label={props.resetButtonAriaLabel} className={settingsResetButtonClassName('disabled:cursor-default disabled:opacity-45')} disabled={props.value === props.defaultValue} onClick={props.onReset} type="button">
+          <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
+        </button>
         <div className="inline-flex min-h-9 items-center gap-2.5">
           <label className="relative h-9 w-9 shrink-0">
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 rounded-sm border border-border/55"
+              className={settingsColorSwatchClassName('pointer-events-none absolute inset-0')}
               style={{ backgroundColor: props.value }}
             />
             <input
@@ -62,10 +80,10 @@ function ColorSettingRow(props: {
               value={props.value}
             />
           </label>
-          <label className="w-28 shrink-0 text-sm text-foreground/72">
-            <AppInput
+          <label className="shrink-0 text-sm text-foreground/72">
+            <input
               aria-label={`${props.title} hex value`}
-              className="rounded-md px-3 text-sm tabular-nums"
+              className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} tabular-nums`)}
               onChange={(event) => props.onChange(event.target.value)}
               spellCheck={false}
               value={props.value.toUpperCase()}
@@ -180,10 +198,12 @@ export function FontSizeRow(props: {
 }) {
   return (
     <SettingsRow description="Adjust main content panel font size in pixels." title="Font size">
-      <SettingsControlSlot className="justify-end">
-        <button aria-label="Reset font size" className={settingsIconButtonClassName('text-foreground/65')} onClick={props.onInterfaceFontSizeReset} type="button">↺</button>
-        <input aria-label="Interface font size" className="w-[136px]" max={INTERFACE_FONT_SIZE_MAX} min={INTERFACE_FONT_SIZE_MIN} onChange={(event) => props.onInterfaceFontSizeChange(Number(event.target.value))} step={1} type="range" value={props.interfaceFontSize} />
-        <span className="min-w-[38px] text-right text-[0.86rem] text-foreground/65">{props.interfaceFontSize}px</span>
+      <SettingsControlSlot className={SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
+        <button aria-label="Reset font size" className={settingsResetButtonClassName()} onClick={props.onInterfaceFontSizeReset} type="button">
+          <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
+        </button>
+        <input aria-label="Interface font size" className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)} max={INTERFACE_FONT_SIZE_MAX} min={INTERFACE_FONT_SIZE_MIN} onChange={(event) => props.onInterfaceFontSizeChange(Number(event.target.value))} step={1} type="range" value={props.interfaceFontSize} />
+        <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{props.interfaceFontSize}px</span>
       </SettingsControlSlot>
     </SettingsRow>
   );

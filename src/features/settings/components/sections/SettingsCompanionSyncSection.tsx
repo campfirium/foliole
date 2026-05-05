@@ -1,5 +1,12 @@
 import { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
-import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsSwitchClassName,
+  settingsSwitchKnobClassName
+} from '../../../../shared/ui';
 
 function renderSyncError(overview: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']) {
   if (overview.server_status.last_error) {
@@ -18,9 +25,7 @@ function DeviceSyncSwitch(props: {
     <button
       aria-checked={overview.sync_enabled}
       aria-label="Sync"
-      className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition-colors ${
-        overview.sync_enabled ? 'border-border-strong bg-foreground/[0.14]' : 'border-border bg-bg-elevated'
-      } disabled:opacity-50`}
+      className={settingsSwitchClassName(overview.sync_enabled)}
       disabled={disabled}
       onClick={() => void (overview.sync_enabled ? props.state.disableSync() : props.state.enableSync())}
       role="switch"
@@ -28,9 +33,7 @@ function DeviceSyncSwitch(props: {
     >
       <span
         aria-hidden="true"
-        className={`absolute h-6 w-6 rounded-full bg-bg-panel shadow-sm transition-transform ${
-          overview.sync_enabled ? 'translate-x-7' : 'translate-x-1'
-        }`}
+        className={settingsSwitchKnobClassName(overview.sync_enabled)}
       />
     </button>
   );
@@ -43,20 +46,22 @@ export function SettingsCompanionSyncSection() {
   return (
     <SettingsSection
       ariaLabel="Sync section"
+      description="Turn on desktop sync before pairing another device. Phones on the same Wi-Fi can then sync with this desktop after you approve them."
       title="Sync"
     >
       <SettingsRow
-        description={renderSyncError(overview)}
+        description={renderSyncError(overview) ?? "Turn on sync for this desktop."}
         title="Sync"
       >
-        <SettingsControlSlot className="justify-end">
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <DeviceSyncSwitch state={state} />
         </SettingsControlSlot>
       </SettingsRow>
       <SettingsRow
+        description="Approved devices that can sync with this desktop."
         title="Connected devices"
       >
-        <SettingsControlSlot className="justify-end text-sm text-foreground/65">
+        <SettingsControlSlot className={`${SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME} text-sm text-foreground/65`}>
           {state.isLoading ? 'Loading...' : overview.server_status.paired_device_count}
         </SettingsControlSlot>
       </SettingsRow>

@@ -51,11 +51,15 @@ beforeEach(() => {
 it('renders compact sync controls', async () => {
   render(<SettingsCompanionSyncSection />);
 
+  expect(screen.getByText(/Turn on desktop sync/)).toBeInTheDocument();
   expect(screen.getByText('Connected devices')).toBeInTheDocument();
+  expect(screen.getByText(/Turn on sync for this desktop/)).toBeInTheDocument();
   expect(screen.getByText('1')).toBeInTheDocument();
   expect(screen.queryByText('Pixel 9')).not.toBeInTheDocument();
   expect(screen.queryByText('Waiting devices')).not.toBeInTheDocument();
   expect(screen.queryByText('Enabled')).not.toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: 'Sync' }).className).toContain('bg-settings-switch-on');
+  expect(screen.getByRole('switch', { name: 'Sync' }).parentElement?.className).toContain('flex-[0_0_auto]');
 
   fireEvent.click(screen.getByRole('switch', { name: 'Sync' }));
 

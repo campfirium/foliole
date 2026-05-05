@@ -1,10 +1,11 @@
+import { RotateCcw } from 'lucide-react';
 import { useEffect } from 'react';
 
-import { AppButton, SettingsSection } from '../../../../shared/ui';
+import { SettingsSection, settingsButtonClassName, settingsUtilityIconButtonClassName } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 import { type WorkspaceSurfaceRegionId } from '../../model/workspaceSurfaceSettings';
 
-import { WorkspaceSurfaceColorModePanel } from './WorkspaceSurfaceColorModePanel';
+import { WorkspaceSurfaceAutomaticPanel, WorkspaceSurfaceColorModePanel, WorkspaceSurfacePreferences } from './WorkspaceSurfaceColorModePanel';
 import { WorkspaceSurfaceColorPaletteStrip } from './WorkspaceSurfaceColorPaletteStrip';
 import {
   addCurrentWorkspaceSurfaceFavorite,
@@ -13,6 +14,7 @@ import {
   createRandomWorkspaceSurfacePalettes,
   openWorkspaceSurfaceColorEditor,
   removeWorkspaceSurfaceFavoriteEntry,
+  resetWorkspaceSurfaceFreePalette,
   resetWorkspaceSurfaceToDefault,
   useWorkspaceSurfaceEditor,
   useWorkspaceSurfacePainting
@@ -66,7 +68,10 @@ function WorkspaceSurfaceSectionActions(props: {
   onEnterPreview: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2"><AppButton onClick={props.onEnterPreview} variant="primary">Preview</AppButton><AppButton onClick={() => resetWorkspaceSurfaceToDefault(props.editor)} variant="primary">Reset</AppButton></div>
+    <div className="flex items-center gap-2">
+      <button className={settingsButtonClassName()} onClick={props.onEnterPreview} type="button">Preview</button>
+      <button className={settingsButtonClassName()} onClick={() => resetWorkspaceSurfaceToDefault(props.editor)} type="button">Reset</button>
+    </div>
   );
 }
 
@@ -76,7 +81,7 @@ function WorkspaceSurfaceSectionContent(props: {
   painting: ReturnType<typeof useWorkspaceSurfacePainting>;
 }) {
   return (
-    <div className="relative" ref={props.editor.editorHostRef}>
+    <div className="relative grid gap-5 px-5 py-5 xl:grid-cols-[minmax(0,1fr)_320px]" ref={props.editor.editorHostRef}>
       <WorkspaceSurfaceGrid
         appearance={props.editor.appearance}
         isPainting={props.painting.isPainting}
@@ -87,10 +92,66 @@ function WorkspaceSurfaceSectionContent(props: {
         }}
         paintRegion={props.paintRegion}
       />
-      <WorkspaceSurfaceModes editor={props.editor} />
-      <div className="mt-3 space-y-1">
-        <h4 className="text-sm font-medium text-foreground">Free palette</h4>
-        <p className="text-xs text-foreground/58">Double-click any swatch below to fine-tune the generated set or paint the workspace manually.</p>
+      <WorkspaceSurfaceSideRail editor={props.editor} />
+      <div className="xl:col-span-2">
+        <WorkspaceSurfaceModes editor={props.editor} />
+      </div>
+      <WorkspaceSurfacePaletteEditorHost editor={props.editor} />
+    </div>
+  );
+}
+
+function WorkspaceSurfaceSideRail(props: {
+  editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
+}) {
+  return (
+    <div className="space-y-4 xl:pt-0">
+      <WorkspaceSurfacePreferences
+        onOptionsChange={(options) => {
+          props.editor.setGeneratedMode('automatic');
+          props.editor.setAutoOptions(options);
+          applyAutoModeToWorkspace(props.editor, { nextAutoOptions: options, trackHistory: true });
+        }}
+        options={props.editor.autoOptions}
+      />
+      <WorkspaceSurfaceAutomaticPanel
+        activeMode={props.editor.generatedMode}
+        autoSeedColor={props.editor.autoSeedColor}
+        onApplyAutomaticPalette={() => {
+          props.editor.setGeneratedMode('automatic');
+          applyAutoModeToWorkspace(props.editor, { trackHistory: true });
+        }}
+        onAutoSeedColorChange={(color) => {
+          props.editor.setGeneratedMode('automatic');
+          props.editor.setAutoSeedColor(color);
+          applyAutoModeToWorkspace(props.editor, { nextAutoSeedColor: color, trackHistory: true });
+        }}
+        options={props.editor.autoOptions}
+        resolvedBaseColorMode={props.editor.mode}
+      />
+      <WorkspaceSurfaceFreePalette editor={props.editor} />
+    </div>
+  );
+}
+
+function WorkspaceSurfaceFreePalette(props: {
+  editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="space-y-0.5">
+        <div className="flex items-center gap-2">
+          <h4 className="text-sm font-medium text-foreground">Free palette</h4>
+          <button
+            aria-label="Reset free palette"
+            className={settingsUtilityIconButtonClassName(false, 'size-8 rounded-sm px-0')}
+            onClick={() => resetWorkspaceSurfaceFreePalette(props.editor)}
+            type="button"
+          >
+            <RotateCcw aria-hidden="true" className="text-current" size={18} strokeWidth={1.9} />
+          </button>
+        </div>
+        <p className="text-xs text-foreground/58">Manual mode: pick a swatch, then paint the preview.</p>
       </div>
       <WorkspaceSurfaceColorPaletteStrip
         activeBrushIndex={props.editor.activeBrushIndex}
@@ -104,7 +165,6 @@ function WorkspaceSurfaceSectionContent(props: {
         onEditColor={(event, index) => openWorkspaceSurfaceColorEditor(props.editor, event, index)}
         onSelectColor={(index) => props.editor.setActiveBrushIndex(index)}
       />
-      <WorkspaceSurfacePaletteEditorHost editor={props.editor} />
     </div>
   );
 }
@@ -113,7 +173,8 @@ function WorkspaceSurfaceModes(props: {
   editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
 }) {
   const currentPalette = props.editor.appearance.workspaceSurfacePalette.slice(0, 5);
-  const isFavorited = props.editor.favorites.some((palette) => palette.join('|') === currentPalette.join('|'));
+  const currentPaletteSignature = currentPalette.map((color) => color.toLowerCase()).join('|');
+  const isFavorited = props.editor.favorites.some((palette) => palette.map((color) => color.toLowerCase()).join('|') === currentPaletteSignature);
 
   return (
     <WorkspaceSurfaceColorModePanel

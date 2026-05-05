@@ -1,7 +1,7 @@
 import { ChevronsUpDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { AppInput } from '../../../../shared/ui';
+import { SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME, settingsButtonClassName, settingsFieldClassName } from '../../../../shared/ui';
 import {
   formatWorkspaceSurfaceColorHex,
   parseWorkspaceSurfaceColor,
@@ -28,10 +28,7 @@ function ModeIconButton(props: {
   return (
     <button
       aria-label={`Switch channel mode from ${props.channelMode}`}
-      className={[
-        'inline-flex items-center justify-center rounded-sm text-foreground/72 transition-colors hover:text-foreground',
-        props.compact ? 'h-5 w-5' : 'h-9 w-8 border border-border/45'
-      ].join(' ')}
+      className={settingsButtonClassName(props.compact ? 'size-5 rounded-sm px-0' : 'h-9 w-8 rounded-sm px-0')}
       onClick={(event) => {
         event.preventDefault();
         props.setChannelMode(nextWorkspaceSurfaceChannelMode(props.channelMode));
@@ -53,9 +50,9 @@ function ChannelInput(props: {
 }) {
   return (
     <label className="space-y-1 text-sm text-foreground/72">
-      <AppInput
+      <input
         aria-label={props.ariaLabel}
-        className="h-9 rounded-sm px-2 text-center text-sm"
+        className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} rounded-sm px-2 text-center`)}
         max={props.max}
         min={0}
         onChange={(event) => props.onChange(Number(event.target.value))}
@@ -75,7 +72,7 @@ function HiddenHexInput(props: {
   onCommit: (color: WorkspaceSurfaceColorValue) => void;
 }) {
   return (
-    <AppInput
+    <input
       aria-label="Workspace surface palette hex"
       className="sr-only"
       onChange={(event) => {
@@ -125,9 +122,9 @@ function HexField(props: {
 }) {
   return (
     <label className="text-sm text-foreground/72">
-      <AppInput
+      <input
         aria-label="Workspace surface visible hex"
-        className="h-9 rounded-sm px-2 text-center text-sm"
+        className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} rounded-sm px-2 text-center`)}
         onChange={(event) => {
           const parsed = parseWorkspaceSurfaceColor(event.target.value.trim());
           if (!parsed) {
@@ -176,9 +173,9 @@ function HexModeRow(props: {
       <div className="grid grid-cols-[minmax(0,1.65fr)_minmax(0,0.6fr)_2rem] items-end gap-2">
         <HexField currentColor={props.currentColor} draft={props.draft} onCommit={props.onCommit} />
         <label className="text-sm text-foreground/72">
-          <AppInput
+          <input
             aria-label="Workspace surface opacity value"
-            className="h-9 rounded-sm px-2 text-center text-sm"
+            className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} rounded-sm px-2 text-center`)}
             max={100}
             min={0}
             onChange={(event) => applyWorkspaceSurfaceOpacity({

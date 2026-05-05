@@ -86,7 +86,7 @@ function WorkspaceSurfaceColorEditorBody(props: {
   return (
     <div
       ref={containerRef}
-      className={cn(appFloatingSurfaceClassName('popover'), 'absolute z-[95] w-[280px] rounded-md border-border/70 p-3 shadow-panel')}
+      className={cn(appFloatingSurfaceClassName('popover'), 'absolute z-[95] w-[280px] rounded-md p-3 shadow-panel')}
       data-workspace-color-editor
       style={{ left: resolvedPosition.x, top: resolvedPosition.y }}
     >

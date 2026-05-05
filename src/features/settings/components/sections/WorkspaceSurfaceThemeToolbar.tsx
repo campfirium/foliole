@@ -1,9 +1,10 @@
+import { Library, Star } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { Ref, RefObject } from 'react';
+import type { ReactNode, Ref, RefObject } from 'react';
 
 import { WorkspaceSurfaceThemeFavoritesPopover, type ThemeFavoritesPopoverPosition } from './WorkspaceSurfaceThemeFavoritesPopover';
 
-import { cn } from '@/shared/lib/utils';
+import { settingsColorSwatchClassName, settingsPaletteButtonClassName, settingsUtilityIconButtonClassName, settingsValueBoxClassName } from '@/shared/ui';
 
 function isSamePalette(left: string[], right: string[]) {
   return left.length === right.length && left.every((color, index) => color === right[index]);
@@ -15,7 +16,7 @@ function PaletteStrip(props: { palette: string[] }) {
       {props.palette.map((color, index) => (
         <span
           aria-hidden="true"
-          className="block h-7 w-7 rounded-sm border border-border/40"
+          className={settingsColorSwatchClassName('size-8')}
           key={`${color}-${index}`}
           style={{ backgroundColor: color }}
         />
@@ -24,25 +25,23 @@ function PaletteStrip(props: { palette: string[] }) {
   );
 }
 
-function ToolbarTextButton(props: {
-  active?: boolean;
+function IconToggleButton(props: {
+  active: boolean;
   ariaLabel: string;
-  label: string;
+  children: ReactNode;
   onClick: () => void;
   triggerRef?: Ref<HTMLButtonElement>;
 }) {
   return (
     <button
       aria-label={props.ariaLabel}
-      className={cn(
-        'inline-flex h-7 items-center rounded-sm px-2 text-xs font-medium text-foreground/62 transition-colors hover:bg-foreground/[0.03] hover:text-foreground',
-        props.active && 'bg-foreground/[0.05] text-foreground'
-      )}
+      aria-pressed={props.active}
+      className={settingsUtilityIconButtonClassName(props.active, 'size-8 rounded-sm px-0')}
       onClick={props.onClick}
       ref={props.triggerRef}
       type="button"
     >
-      {props.label}
+      {props.children}
     </button>
   );
 }
@@ -54,24 +53,20 @@ function ThemeHistorySlots(props: {
 }) {
   return (
     <div aria-label="Theme history" className="flex items-center gap-1.5">
-      <span className="inline-flex h-7 items-center rounded-sm px-2 text-xs font-medium text-foreground/56">History</span>
-      {Array.from({ length: 6 }, (_, index) => {
+      {Array.from({ length: 5 }, (_, index) => {
         const palette = props.history[index];
         const label = `Restore theme history ${index + 1}`;
         return palette ? (
           <button
             aria-label={label}
-            className={cn(
-              'h-7 w-7 rounded-sm border transition-colors',
-              isSamePalette(palette, props.currentPalette) ? 'border-border-strong/80 shadow-sm' : 'border-border/45 hover:border-border/75'
-            )}
+            className={settingsPaletteButtonClassName(isSamePalette(palette, props.currentPalette), 'size-8 p-0')}
             key={`${palette.join('-')}-${index}`}
             onClick={() => props.onApplyPalette(palette)}
             style={{ backgroundColor: palette[0] }}
             type="button"
           />
         ) : (
-          <span aria-hidden="true" className="block h-7 w-7 rounded-sm border border-dashed border-border/45 bg-bg-elevated/70" key={`empty-${index}`} />
+          <span aria-hidden="true" className={settingsValueBoxClassName('block size-8 rounded-sm border-dashed p-0')} key={`empty-${index}`} />
         );
       })}
     </div>
@@ -121,29 +116,39 @@ function ThemeToolbarRow(props: {
   favoritesOpen: boolean;
   history: string[][];
   isFavorited: boolean;
-  onAddFavorite: () => void;
+  onToggleFavorite: () => void;
   onApplyHistory: (palette: string[]) => void;
   onToggleFavorites: () => void;
   toolbarRef: Ref<HTMLDivElement>;
   triggerRef: Ref<HTMLButtonElement>;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2" ref={props.toolbarRef}>
-      <PaletteStrip palette={props.currentPalette} />
-      <ToolbarTextButton
-        active={props.isFavorited}
-        ariaLabel={props.isFavorited ? 'Current theme is already in favorites' : 'Add current theme to favorites'}
-        label={props.isFavorited ? 'Favorited' : 'Favorite'}
-        onClick={props.onAddFavorite}
-      />
-      <ThemeHistorySlots currentPalette={props.currentPalette} history={props.history} onApplyPalette={props.onApplyHistory} />
-      <ToolbarTextButton
-        active={props.favoritesOpen}
-        ariaLabel="Open theme collection"
-        label="Favorites"
-        onClick={props.onToggleFavorites}
-        triggerRef={props.triggerRef}
-      />
+    <div className="space-y-3" ref={props.toolbarRef}>
+      <div className="space-y-2 py-1">
+        <h4 className="text-sm font-medium text-foreground">Current theme</h4>
+        <div className="flex items-center gap-2">
+          <PaletteStrip palette={props.currentPalette} />
+          <IconToggleButton
+            active={props.isFavorited}
+            ariaLabel={props.isFavorited ? 'Remove current theme from favorites' : 'Add current theme to favorites'}
+            onClick={props.onToggleFavorite}
+          >
+            <Star aria-hidden="true" className="text-current" fill="none" size={22} strokeWidth={1.8} />
+          </IconToggleButton>
+          <IconToggleButton
+            active={props.favoritesOpen}
+            ariaLabel="Open theme collection"
+            onClick={props.onToggleFavorites}
+            triggerRef={props.triggerRef}
+          >
+            <Library aria-hidden="true" className="text-current" size={22} strokeWidth={1.8} />
+          </IconToggleButton>
+        </div>
+      </div>
+      <div className="space-y-2 border-t border-settings-divider/55 py-3">
+        <h4 className="text-sm font-medium text-foreground">History</h4>
+        <ThemeHistorySlots currentPalette={props.currentPalette} history={props.history} onApplyPalette={props.onApplyHistory} />
+      </div>
     </div>
   );
 }
@@ -168,14 +173,19 @@ export function WorkspaceSurfaceThemeToolbar(props: {
   });
 
   return (
-    <div className="space-y-1.5">
-      <h4 className="text-sm font-medium text-foreground">Current theme</h4>
+    <div>
       <ThemeToolbarRow
         currentPalette={props.currentPalette}
         favoritesOpen={favoritesOpen}
         history={props.history}
         isFavorited={props.isFavorited}
-        onAddFavorite={props.onAddFavorite}
+        onToggleFavorite={() => {
+          if (props.isFavorited) {
+            props.onRemoveFavorite(props.currentPalette);
+            return;
+          }
+          props.onAddFavorite();
+        }}
         onApplyHistory={props.onApplyHistory}
         onToggleFavorites={() => setFavoritesOpen((open) => !open)}
         toolbarRef={toolbarRef}

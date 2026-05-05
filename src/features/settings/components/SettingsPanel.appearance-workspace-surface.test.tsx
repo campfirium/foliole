@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { buildWorkspaceSurfaceAutoColumnPalette } from '../model/workspaceSurfaceAutoPalette';
@@ -7,6 +7,32 @@ import { parseWorkspaceSurfaceColor } from '../model/workspaceSurfaceColor';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
+
+const originalCanvasGetContext = HTMLCanvasElement.prototype.getContext;
+
+beforeAll(() => {
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    configurable: true,
+    value(contextId: string) {
+      if (contextId !== '2d') {
+        return null;
+      }
+      return {
+        font: '',
+        measureText(text: string) {
+          return { width: text.length * 8 };
+        }
+      };
+    }
+  });
+});
+
+afterAll(() => {
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    configurable: true,
+    value: originalCanvasGetContext
+  });
+});
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -28,6 +54,24 @@ it('persists workspace surface palette and region assignments from appearance se
     const assignments = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments) ?? '{}');
     expect(palette[5]).toBe('#c9d4e7');
     expect(assignments['main-document']).toBe(5);
+  });
+});
+
+it('resets the free palette back to five colors', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add palette color' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Palette color 6' }));
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main doc' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Reset free palette' }));
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    const assignments = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments) ?? '{}');
+    expect(palette).toHaveLength(5);
+    expect(assignments['main-document']).toBe(4);
+    expect(screen.queryByRole('button', { name: 'Palette color 6' })).not.toBeInTheDocument();
   });
 });
 
@@ -122,7 +166,7 @@ it('applies the current automatic palette when clicking the automatic preview ca
       documentPureWhite: false,
       folderTopicSharedTone: false
     }));
-    expect(screen.getByRole('button', { name: 'Apply automatic palette' }).className).toContain('border-border-strong');
+    expect(screen.getByRole('button', { name: 'Apply automatic palette' }).className).toContain('border-settings-control-border-hover');
   });
 });
 
@@ -176,7 +220,7 @@ it('restores a saved random palette from the persistent history slots', async ()
   });
 });
 
-it('adds the current theme to favorites', async () => {
+it('toggles the current theme favorite', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -192,7 +236,15 @@ it('adds the current theme to favorites', async () => {
     const favorites = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavorites) ?? '[]');
     const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
     expect(favorites[0]).toEqual(palette.slice(0, 5));
-    expect(screen.getByRole('button', { name: 'Current theme is already in favorites' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove current theme from favorites' })).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remove current theme from favorites' }));
+
+  await waitFor(() => {
+    const favorites = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavorites) ?? '[]');
+    expect(favorites).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Add current theme to favorites' })).toBeInTheDocument();
   });
 });
 
@@ -205,7 +257,7 @@ it('opens the collection panel, applies a saved theme, closes on outside click, 
   fireEvent.click(screen.getByRole('button', { name: 'Random palette 4' }));
 
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Open theme collection' })).toHaveTextContent('Favorites');
+    expect(screen.getByRole('button', { name: 'Open theme collection' })).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Open theme collection' }));
@@ -285,24 +337,26 @@ it('restores workspace surface generator preferences and active mode from storag
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 
   await waitFor(() => {
-    expect(screen.getByLabelText('Use neutral document surface')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByLabelText('Folder and topic share tone')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Use neutral document surface')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByLabelText('Folder and topic share tone')).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByLabelText('Automatic workspace seed hex')).toHaveValue('#8a962f');
   });
 });
 
-it('keeps the workspace surface preview dividers on the standard settings divider tone', async () => {
+it('keeps workspace preview lines on the settings divider without a gray fill', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 
   await waitFor(() => {
     const mainDocumentCell = screen.getByRole('button', { name: 'Main doc' });
-    const gridFrame = mainDocumentCell.parentElement?.parentElement;
+    const grid = mainDocumentCell.parentElement;
+    const gridFrame = grid?.parentElement;
     expect(gridFrame).toBeInstanceOf(HTMLDivElement);
-    expect(gridFrame).toHaveClass('border-settings-divider', 'bg-settings-divider');
-    expect(gridFrame?.getAttribute('class')).not.toContain('border-settings-divider/30');
-    expect(gridFrame?.getAttribute('class')).not.toContain('bg-settings-divider/30');
+    expect(gridFrame).toHaveClass('bg-transparent');
+    expect(gridFrame?.getAttribute('class')).not.toContain('border-settings-divider');
+    expect(grid).toHaveClass('bg-settings-divider');
+    expect(mainDocumentCell?.getAttribute('class')).not.toContain('border-settings-divider');
   });
 });
 

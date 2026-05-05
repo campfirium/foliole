@@ -12,7 +12,7 @@ import { WorkspaceSurfaceAutomaticSeedPopover } from './WorkspaceSurfaceAutomati
 import { WorkspaceSurfaceRandomPalettePanel } from './WorkspaceSurfaceRandomPalettePanel';
 import { WorkspaceSurfaceThemeToolbar } from './WorkspaceSurfaceThemeToolbar';
 
-import { cn } from '@/shared/lib/utils';
+import { settingsSwitchClassName, settingsSwitchKnobClassName } from '@/shared/ui';
 
 function InlineSwitch(props: {
   checked: boolean;
@@ -22,30 +22,21 @@ function InlineSwitch(props: {
   return (
     <button
       aria-label={props.label}
-      aria-pressed={props.checked}
-      className="inline-flex items-center gap-3 text-left"
+      aria-checked={props.checked}
+      className="inline-flex w-full items-center justify-between gap-4 text-left"
+      role="switch"
       onClick={() => props.onChange(!props.checked)}
       type="button"
     >
-      <span className="text-sm text-foreground/82">{props.label}</span>
-      <span
-        className={cn(
-          'relative h-8 w-14 rounded-full border transition-colors',
-          props.checked ? 'border-foreground/20 bg-foreground/35' : 'border-border/60 bg-foreground/[0.08]'
-        )}
-      >
-        <span
-          className={cn(
-            'absolute top-1 h-6 w-6 rounded-full bg-bg-elevated shadow-sm transition-all',
-            props.checked ? 'left-7' : 'left-1'
-          )}
-        />
+      <span className="min-w-0 flex-1 text-sm text-foreground/82">{props.label}</span>
+      <span className={settingsSwitchClassName(props.checked)} aria-hidden="true">
+        <span className={settingsSwitchKnobClassName(props.checked)} />
       </span>
     </button>
   );
 }
 
-function WorkspaceSurfacePreferences(props: {
+export function WorkspaceSurfacePreferences(props: {
   options: WorkspaceSurfaceAutoPaletteOptions;
   onOptionsChange: (options: WorkspaceSurfaceAutoPaletteOptions) => void;
 }) {
@@ -54,13 +45,12 @@ function WorkspaceSurfacePreferences(props: {
   };
 
   return (
-    <div className="space-y-2">
-      <h4 className="text-sm font-medium text-foreground">Preferences</h4>
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+    <ModeBlock title="Preferences">
+      <div className="space-y-2">
         <InlineSwitch checked={props.options.documentPureWhite} label="Use neutral document surface" onChange={(checked) => setOption('documentPureWhite', checked)} />
         <InlineSwitch checked={props.options.folderTopicSharedTone} label="Folder and topic share tone" onChange={(checked) => setOption('folderTopicSharedTone', checked)} />
       </div>
-    </div>
+    </ModeBlock>
   );
 }
 
@@ -69,14 +59,14 @@ function ModeBlock(props: {
   title: string;
 }) {
   return (
-    <div aria-label={`${props.title} mode panel`} className="space-y-2 px-1 py-1">
+    <div aria-label={`${props.title} mode panel`} className="space-y-2 py-1">
       <h4 className="text-sm font-medium text-foreground">{props.title}</h4>
       {props.children}
     </div>
   );
 }
 
-function WorkspaceSurfaceAutomaticPanel(props: {
+export function WorkspaceSurfaceAutomaticPanel(props: {
   activeMode: string | null;
   autoSeedColor: WorkspaceSurfaceColorValue;
   options: WorkspaceSurfaceAutoPaletteOptions;
@@ -88,7 +78,7 @@ function WorkspaceSurfaceAutomaticPanel(props: {
 
   return (
     <ModeBlock title="Automatic">
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2">
         <WorkspaceSurfaceAutomaticSeedPopover
           color={props.autoSeedColor}
           onChange={(color) => props.onAutoSeedColorChange(color)}
@@ -122,8 +112,13 @@ export function WorkspaceSurfaceColorModePanel(props: {
   resolvedBaseColorMode: WorkspaceSurfaceAutoPaletteMode;
 }) {
   return (
-    <div className="mt-3 space-y-4">
-      <WorkspaceSurfacePreferences onOptionsChange={props.onAutoOptionsChange} options={props.autoOptions} />
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <WorkspaceSurfaceRandomPalettePanel
+        currentPalette={props.currentPalette}
+        onApplyPalette={props.onApplyRandomPalette}
+        onRefresh={props.onRefreshRandomPalettes}
+        randomPalettes={props.randomPalettes}
+      />
       <WorkspaceSurfaceThemeToolbar
         currentPalette={props.currentPalette}
         favorites={props.favorites}
@@ -133,20 +128,6 @@ export function WorkspaceSurfaceColorModePanel(props: {
         onApplyFavorite={props.onApplyFavorite}
         onApplyHistory={props.onApplyHistory}
         onRemoveFavorite={props.onRemoveFavorite}
-      />
-      <WorkspaceSurfaceRandomPalettePanel
-        currentPalette={props.currentPalette}
-        onApplyPalette={props.onApplyRandomPalette}
-        onRefresh={props.onRefreshRandomPalettes}
-        randomPalettes={props.randomPalettes}
-      />
-      <WorkspaceSurfaceAutomaticPanel
-        activeMode={props.activeMode}
-        autoSeedColor={props.autoSeedColor}
-        onApplyAutomaticPalette={props.onApplyAutomaticPalette}
-        onAutoSeedColorChange={props.onAutoSeedColorChange}
-        options={props.autoOptions}
-        resolvedBaseColorMode={props.resolvedBaseColorMode}
       />
     </div>
   );

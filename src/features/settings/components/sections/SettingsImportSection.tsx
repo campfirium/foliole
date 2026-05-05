@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 
 import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_PATH_VALUE_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
@@ -24,11 +26,11 @@ function LibraryLocationRow(props: {
 }) {
   return (
     <SettingsRow description={props.description} title={props.title}>
-      <SettingsControlSlot className="flex-col items-stretch gap-2">
-        <div className={settingsValueBoxClassName()}>
+      <SettingsControlSlot className={`${SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME} flex-col items-end gap-2`}>
+        <div className={settingsValueBoxClassName(`${SETTINGS_PATH_VALUE_WIDTH_CLASS_NAME} text-right`)}>
           <span className="break-all">{props.path}</span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <button
             className={settingsButtonClassName()}
             disabled={!props.isDesktopRuntime || props.isPending}
@@ -72,7 +74,7 @@ function MirrorRebuildControls(props: {
           <p className="text-sm text-foreground/70">
             Daily mirror output is incremental. Startup only backfills missing article files when needed.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               className={settingsButtonClassName()}
               disabled={!props.isDesktopRuntime || props.isRebuildingMirrorOutput || props.pendingLocation !== null}
@@ -91,7 +93,7 @@ function MirrorRebuildControls(props: {
           {props.mirrorOutputRebuildError ? <p className="text-sm text-red-700">{props.mirrorOutputRebuildError}</p> : null}
         </div>
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               className={settingsButtonClassName()}
               disabled={!props.isDesktopRuntime || props.isRebuildingMirrorLinks || props.pendingLocation !== null}

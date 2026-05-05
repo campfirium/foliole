@@ -1,4 +1,4 @@
-import { AppButton, SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
+import { SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow, settingsButtonClassName, settingsValueBoxClassName } from '../../../../shared/ui';
 
 export function ReadwiseReaderSettingsRow(props: {
   configured: boolean;
@@ -9,11 +9,11 @@ export function ReadwiseReaderSettingsRow(props: {
       description="Manage the Readwise root folder, parser rules, and import switches from one place."
       title="Readwise Reader settings"
     >
-      <SettingsControlSlot className="flex-col items-stretch gap-2">
-        <div className="text-sm text-foreground/65">{props.configured ? 'Status: configured' : 'Status: needs setup'}</div>
-        <AppButton className="self-start" onClick={props.onOpen} variant="subtle">
+      <SettingsControlSlot className={`${SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME} flex-col items-end gap-2`}>
+        <div className={settingsValueBoxClassName()}>{props.configured ? 'Status: configured' : 'Status: needs setup'}</div>
+        <button className={settingsButtonClassName()} onClick={props.onOpen} type="button">
           Open Readwise Reader settings
-        </AppButton>
+        </button>
       </SettingsControlSlot>
     </SettingsRow>
   );

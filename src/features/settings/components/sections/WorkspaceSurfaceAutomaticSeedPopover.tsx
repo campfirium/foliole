@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { AppInput, appFloatingSurfaceClassName } from '../../../../shared/ui';
+import {
+  SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
+  appFloatingSurfaceClassName,
+  settingsColorSwatchClassName,
+  settingsFieldClassName,
+  settingsPaletteButtonClassName
+} from '../../../../shared/ui';
 import {
   buildWorkspaceSurfaceAutoColumnPalette,
   type WorkspaceSurfaceAutoPaletteMode,
@@ -132,12 +138,7 @@ function AutomaticSeedSwatchGrid(props: {
       {swatches.map((preset) => (
         <button
           aria-label={`Use automatic seed ${preset.label}`}
-          className={cn(
-            'h-9 w-9 rounded-sm border transition-colors',
-            props.activeSignature === preset.signature
-              ? 'border-border-strong/75 ring-1 ring-border-strong/45'
-              : 'border-border/40 hover:border-border/70'
-          )}
+          className={settingsPaletteButtonClassName(props.activeSignature === preset.signature, 'size-9')}
           key={preset.id}
           onClick={() => props.onSelect(preset.hex)}
           style={{ backgroundColor: preset.displayHex }}
@@ -174,18 +175,18 @@ export function WorkspaceSurfaceAutomaticSeedPopover(props: {
 
   return (
     <div className="relative" data-auto-seed-popover>
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2">
         <button
           aria-label="Automatic workspace seed color"
-          className="h-9 w-9 shrink-0 rounded-sm border border-border/55"
+          className={settingsColorSwatchClassName('size-8 shrink-0')}
           onClick={() => setOpen((value) => !value)}
           style={{ backgroundColor: activeDisplayHex }}
           type="button"
         />
-        <label className="w-28 shrink-0 text-sm text-foreground/72">
-          <AppInput
+        <label className="shrink-0 text-sm text-foreground/72">
+          <input
             aria-label="Automatic workspace seed hex"
-            className="h-9 rounded-md px-3 text-sm"
+            className={settingsFieldClassName('w-24')}
             onChange={(event) => applyHex(event.target.value)}
             spellCheck={false}
             value={draft}
@@ -194,7 +195,7 @@ export function WorkspaceSurfaceAutomaticSeedPopover(props: {
       </div>
       {open ? (
         <div
-          className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-[95] w-[416px] rounded-md border-border/70 p-3 shadow-panel')}
+          className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-[95] w-[416px] rounded-md p-3 shadow-panel')}
         >
           <AutomaticSeedSwatchGrid
             activeSignature={activeSignature}

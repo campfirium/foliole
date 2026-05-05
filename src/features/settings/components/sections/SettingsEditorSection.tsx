@@ -1,4 +1,13 @@
-import { SettingsControlSlot, SettingsRow, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
+import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_SELECT_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsFieldClassName,
+  settingsSwitchClassName,
+  settingsSwitchKnobClassName
+} from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 
 export function SettingsEditorSection() {
@@ -15,27 +24,31 @@ export function SettingsEditorSection() {
         description="Download remote markdown images into the app and rewrite them to local links when possible."
         title="Auto-localize remote images"
       >
-        <SettingsControlSlot>
-          <label className="inline-flex items-center gap-2 text-sm text-foreground">
-            <input
-              aria-label="Auto-localize remote images"
-              checked={autoLocalizeRemoteImages}
-              className="h-4 w-4 rounded border border-border"
-              onChange={(event) => setAutoLocalizeRemoteImages(event.target.checked)}
-              type="checkbox"
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <button
+            aria-checked={autoLocalizeRemoteImages}
+            aria-label="Auto-localize remote images"
+            className={settingsSwitchClassName(autoLocalizeRemoteImages)}
+            onClick={() => setAutoLocalizeRemoteImages(!autoLocalizeRemoteImages)}
+            role="switch"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              className={settingsSwitchKnobClassName(autoLocalizeRemoteImages)}
             />
-            <span>{autoLocalizeRemoteImages ? 'On' : 'Off'}</span>
-          </label>
+          </button>
         </SettingsControlSlot>
       </SettingsRow>
       <SettingsRow
         description="Show markdown markers on active line, or keep them hidden."
         title="Markdown syntax visibility"
       >
-        <SettingsControlSlot>
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <span className="sr-only">Markdown syntax visibility</span>
           <select
-            className={settingsFieldClassName()}
+            aria-label="Markdown syntax visibility"
+            className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
             onChange={(event) => setMarkdownSyntaxVisibility(event.target.value as typeof markdownSyntaxVisibility)}
             value={markdownSyntaxVisibility}
           >

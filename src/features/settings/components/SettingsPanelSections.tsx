@@ -68,6 +68,7 @@ export function SettingsSidebar(props: {
       as="aside"
       ariaLabel="Settings categories"
       bodyClassName="px-4 pb-5"
+      className="border-r border-settings-divider"
       headerClassName="px-9 pb-4 pt-6"
       surfaceClassName="bg-settings-sidebar"
       title="Settings"
@@ -77,10 +78,10 @@ export function SettingsSidebar(props: {
           <AppButton
             aria-current={category.id === props.activeCategory ? 'page' : undefined}
             className={cn(
-              'min-h-0 rounded-md px-5 py-[10px] text-[0.98rem]',
+              'min-h-0 cursor-pointer rounded-md px-5 py-[10px] text-[0.98rem] transition-colors',
               category.id === props.activeCategory
                 ? 'bg-settings-selected font-medium text-foreground'
-                : 'border-transparent bg-transparent text-foreground/72 hover:bg-settings-selected'
+                : 'border-transparent bg-transparent text-foreground/72 hover:bg-settings-selected hover:text-foreground active:bg-settings-control-active'
             )}
             key={category.id}
             onClick={() => props.setActiveCategory(category.id)}
