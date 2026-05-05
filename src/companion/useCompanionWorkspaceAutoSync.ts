@@ -104,8 +104,11 @@ function startForegroundSync(
       if (outcome === 'completed') {
         args.retryAttemptRef.current = 0;
         clearRetryTimer(args.retryTimerRef);
-      } else {
+      } else if (outcome === 'backlog' || outcome === 'failed') {
         scheduleRetry(args, runForegroundSyncCheck, outcome);
+      } else {
+        args.retryAttemptRef.current = 0;
+        clearRetryTimer(args.retryTimerRef);
       }
     })
     .catch(() => {

@@ -41,6 +41,82 @@ function resetAutoSyncTestModules() {
   vi.useRealTimers();
 }
 
+async function expectFailedBootstrapRetry() {
+  vi.useFakeTimers();
+  vi.spyOn(Date, 'now').mockReturnValue(1_000);
+  const tryForegroundAutoSync = vi.fn()
+    .mockResolvedValueOnce('failed')
+    .mockResolvedValueOnce('completed');
+  await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2_000);
+  });
+
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+}
+
+async function expectBacklogContinuesUntilCompleted() {
+  vi.useFakeTimers();
+  vi.spyOn(Date, 'now').mockReturnValue(1_000);
+  const tryForegroundAutoSync = vi.fn()
+    .mockResolvedValueOnce('failed')
+    .mockResolvedValueOnce('backlog')
+    .mockResolvedValueOnce('completed');
+  await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2_000);
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1_000);
+  });
+
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(3);
+}
+
+async function expectLongBacklogUsesFastCadence() {
+  vi.useFakeTimers();
+  vi.spyOn(Date, 'now').mockReturnValue(1_000);
+  const tryForegroundAutoSync = vi.fn(async () => 'backlog' as const);
+  await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  for (const delay of [1_000, 1_000, 1_000, 1_000, 1_000, 1_000]) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(delay);
+    });
+  }
+
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(7);
+}
+
+async function expectSkippedPassDoesNotRetry() {
+  vi.useFakeTimers();
+  vi.spyOn(Date, 'now').mockReturnValue(1_000);
+  const tryForegroundAutoSync = vi.fn(async () => 'skipped' as const);
+  await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+}
+
 describe('useForegroundAutoSync triggers', () => {
   beforeEach(() => {
     resetAutoSyncTestModules();
@@ -124,63 +200,11 @@ describe('useForegroundAutoSync retry cadence', () => {
     resetAutoSyncTestModules();
   });
 
-  it('retries a failed bootstrap sync with bounded delay', async () => {
-    vi.useFakeTimers();
-    vi.spyOn(Date, 'now').mockReturnValue(1_000);
-    const tryForegroundAutoSync = vi.fn()
-      .mockResolvedValueOnce('failed')
-      .mockResolvedValueOnce('completed');
-    await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
+  it('retries a failed bootstrap sync with bounded delay', expectFailedBootstrapRetry);
 
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+  it('continues quickly after a backlog sync pass until convergence completes', expectBacklogContinuesUntilCompleted);
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
-    });
+  it('keeps continuing long backlog sync passes without failure backoff', expectLongBacklogUsesFastCadence);
 
-    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
-  });
-
-  it('continues quickly after a backlog sync pass until convergence completes', async () => {
-    vi.useFakeTimers();
-    vi.spyOn(Date, 'now').mockReturnValue(1_000);
-    const tryForegroundAutoSync = vi.fn()
-      .mockResolvedValueOnce('failed')
-      .mockResolvedValueOnce('backlog')
-      .mockResolvedValueOnce('completed');
-    await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_000);
-    });
-
-    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(3);
-  });
-
-  it('keeps continuing long backlog sync passes without failure backoff', async () => {
-    vi.useFakeTimers();
-    vi.spyOn(Date, 'now').mockReturnValue(1_000);
-    const tryForegroundAutoSync = vi.fn(async () => 'backlog' as const);
-    await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-    for (const delay of [1_000, 1_000, 1_000, 1_000, 1_000, 1_000]) {
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(delay);
-      });
-    }
-
-    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(7);
-  });
+  it('does not keep retrying a skipped pass with idle visible backlog', expectSkippedPassDoesNotRetry);
 });
