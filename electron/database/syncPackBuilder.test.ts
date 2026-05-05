@@ -95,6 +95,25 @@ function insertAttachmentSyncState() {
   );
 }
 
+function insertExternalFolderSyncState() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO external_search_folders (
+       id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
+       status, document_count, indexed_at, last_error, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['folder-1', '/library', 'document_relative_first_then_fixed_root', null, '[".git"]',
+      'ready', 3, '2026-04-27T00:03:00.000Z', null,
+      '2026-04-27T00:03:00.000Z', '2026-04-27T00:03:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('external_folder', 'folder-1', 4, 'external-folder-hash',
+       'desktop', '2026-04-27T00:03:00.000Z', 1)`
+  );
+}
+
 function readPackRows(packPath: string) {
   const entries = readStoredZipEntries(packPath);
   const manifest = JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}');
@@ -223,6 +242,40 @@ it('packs attachment metadata as a generic sync object', async () => {
       object_id: 'att-1',
       object_type: 'attachment',
       payload_json: expect.stringContaining('cover.png')
+    })]
+  });
+});
+
+it('packs external folder metadata as a generic sync object', async () => {
+  insertExternalFolderSyncState();
+  const packPath = path.join(tempRoot, 'incoming-external-folder.db');
+
+  const result = await buildDesktopSyncPack({
+    outputPath: packPath,
+    packId: 'pack-external-folder-1',
+    fromStateSeq: 0
+  });
+
+  expect(result).toMatchObject({
+    objectCount: 1,
+    packId: 'pack-external-folder-1',
+    toStateSeq: 4
+  });
+  expect(readPackRows(packPath)).toMatchObject({
+    manifest: expect.objectContaining({
+      tables: [
+        { name: 'sync_object_state', row_count: 1 },
+        { name: 'sync_objects', row_count: 1 },
+        { name: 'nodes', row_count: 0 },
+        { name: 'external_documents', row_count: 0 },
+        { name: 'content_blobs', row_count: 0 }
+      ]
+    }),
+    stateRows: [{ object_id: 'folder-1', object_type: 'external_folder', state_seq: 4 }],
+    syncObjects: [expect.objectContaining({
+      object_id: 'folder-1',
+      object_type: 'external_folder',
+      payload_json: expect.stringContaining('/library')
     })]
   });
 });

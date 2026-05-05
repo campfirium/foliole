@@ -156,6 +156,20 @@ public class FolioleCompanionSyncPackApplyTest {
         ));
     }
 
+    @Test
+    public void appliesExternalFolderPayloadRowsFromIncomingPack() throws Exception {
+        createIncomingPack();
+        appendIncomingExternalFolderRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(2, result.getInt("applied_object_count"));
+        assertEquals("/library", selectString("SELECT folder_path FROM external_search_folders WHERE id = 'folder-1'"));
+        assertEquals("external-folder-hash", selectString(
+            "SELECT content_hash FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = 'folder-1'"
+        ));
+    }
+
     private void createMainSchema() {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
@@ -199,6 +213,11 @@ public class FolioleCompanionSyncPackApplyTest {
         mainDatabase.execSQL("CREATE TABLE pdf_page_text (" +
             "attachment_id TEXT NOT NULL, page INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', " +
             "page_width REAL, page_height REAL, PRIMARY KEY (attachment_id, page))");
+        mainDatabase.execSQL("CREATE TABLE external_search_folders (" +
+            "id TEXT PRIMARY KEY, folder_path TEXT NOT NULL, attachment_mode TEXT NOT NULL, " +
+            "attachment_root_path TEXT, excluded_dirs_json TEXT NOT NULL DEFAULT '[]', " +
+            "status TEXT NOT NULL DEFAULT 'idle', document_count INTEGER NOT NULL DEFAULT 0, " +
+            "indexed_at TEXT, last_error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
     }
 
     private void createIncomingPack() {
@@ -312,6 +331,27 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("INSERT INTO sync_object_state (" +
                 "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
                 "'attachment', 'att-1', 2, 'attachment-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
+    private void appendIncomingExternalFolderRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String now = "2026-04-27T00:08:00.000Z";
+            String payload = "{\"id\":\"folder-1\",\"folder_path\":\"/library\"," +
+                "\"attachment_mode\":\"document_relative_first_then_fixed_root\",\"attachment_root_path\":null," +
+                "\"excluded_dirs_json\":\"[\\\".git\\\"]\",\"status\":\"ready\",\"document_count\":3," +
+                "\"indexed_at\":\"" + now + "\",\"last_error\":null,\"created_at\":\"" + now + "\"," +
+                "\"updated_at\":\"" + now + "\"}";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":2}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("INSERT INTO sync_objects (" +
+                "object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (" +
+                "'external_folder', 'folder-1', 'external-folder-hash', '" + payload + "', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'external_folder', 'folder-1', 2, 'external-folder-hash', '" + now + "', NULL)");
         } finally {
             packDatabase.close();
         }
