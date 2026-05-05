@@ -123,6 +123,62 @@ describe('App', () => {
     expect(useWorkspaceStore.getState().nodesById['node-2']?.reveal).toBe('Updated Answer');
   });
 
+  it('supports ctrl/cmd multi-select and shift range select in node list', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const node2: Node = {
+      id: 'node-2',
+      parentNodeId: null,
+      title: 'Node 2',
+      content: '# Node 2',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    const node3: Node = {
+      id: 'node-3',
+      parentNodeId: null,
+      title: 'Node 3',
+      content: '# Node 3',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1', 'node-2', 'node-3'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': node2,
+        'node-3': node3
+      }
+    }));
+
+    render(<App />);
+
+    const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+    const node1Button = within(listPanel).getByRole('button', { name: 'Welcome to Foliole Start writing markdown here.' });
+    const node2Button = within(listPanel).getByRole('button', { name: 'Node 2' });
+    const node3Button = within(listPanel).getByRole('button', { name: 'Node 3' });
+
+    expect(node1Button).toHaveAttribute('aria-pressed', 'true');
+    expect(node2Button).toHaveAttribute('aria-pressed', 'false');
+    expect(node3Button).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(node2Button, { ctrlKey: true });
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+    expect(node1Button).toHaveAttribute('aria-pressed', 'true');
+    expect(node2Button).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(node3Button, { shiftKey: true });
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
+    expect(node1Button).toHaveAttribute('aria-pressed', 'false');
+    expect(node2Button).toHaveAttribute('aria-pressed', 'true');
+    expect(node3Button).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('renders breadcrumbs in document header and supports ancestor jump', () => {
     const timestamp = '2026-02-25T00:00:00.000Z';
     const parentNode: Node = {
@@ -400,6 +456,56 @@ describe('App', () => {
 
     const workspace = useWorkspaceStore.getState();
     expect(workspace.nodesById['node-2']).toBeUndefined();
+    expect(workspace.activeNodeId).toBe('node-1');
+  });
+
+  it('deletes all selected nodes from node-list context menu', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const node2: Node = {
+      id: 'node-2',
+      parentNodeId: null,
+      title: 'Node 2',
+      content: '# Node 2',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    const node3: Node = {
+      id: 'node-3',
+      parentNodeId: null,
+      title: 'Node 3',
+      content: '# Node 3',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1', 'node-2', 'node-3'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': node2,
+        'node-3': node3
+      }
+    }));
+
+    render(<App />);
+    const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+    const node2Button = within(nodePanel).getByRole('button', { name: 'Node 2' });
+    const node3Button = within(nodePanel).getByRole('button', { name: 'Node 3' });
+
+    fireEvent.click(node2Button);
+    fireEvent.click(node3Button, { ctrlKey: true });
+    fireEvent.contextMenu(node3Button, { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.nodesById['node-2']).toBeUndefined();
+    expect(workspace.nodesById['node-3']).toBeUndefined();
+    expect(workspace.nodeOrder).toEqual(['node-1']);
     expect(workspace.activeNodeId).toBe('node-1');
   });
 

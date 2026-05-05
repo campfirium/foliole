@@ -16,8 +16,29 @@ export function NodeListTree({ activeNodeId, nodeOrder, nodesById, onSelectNode 
   const createRootNode = useWorkspaceStore((state) => state.createRootNode);
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
   const treeRows = buildNodeTreeRows(nodeOrder, nodesById);
+  const rowNodeIds = treeRows.map((row) => row.node.id);
   const [contextNodeId, setContextNodeId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ left: number; top: number } | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>(activeNodeId ? [activeNodeId] : []);
+  const [selectionAnchorNodeId, setSelectionAnchorNodeId] = useState<string | null>(activeNodeId);
+
+  useEffect(() => {
+    setSelectedNodeIds((prev) => {
+      const next = prev.filter((id) => Boolean(nodesById[id]));
+      return next.length === prev.length ? prev : next;
+    });
+    setSelectionAnchorNodeId((prev) => (prev && nodesById[prev] ? prev : null));
+  }, [nodesById]);
+
+  useEffect(() => {
+    if (!activeNodeId) {
+      setSelectedNodeIds([]);
+      setSelectionAnchorNodeId(null);
+      return;
+    }
+    setSelectedNodeIds((prev) => (prev.includes(activeNodeId) ? prev : [activeNodeId]));
+    setSelectionAnchorNodeId((prev) => prev ?? activeNodeId);
+  }, [activeNodeId]);
 
   const closeContextMenu = () => {
     setContextNodeId(null);
@@ -49,12 +70,54 @@ export function NodeListTree({ activeNodeId, nodeOrder, nodesById, onSelectNode 
     if (!contextNodeId) {
       return;
     }
-    deleteNode(contextNodeId);
+    const targets = selectedNodeIds.includes(contextNodeId) ? selectedNodeIds : [contextNodeId];
+    const orderedTargets = [...targets].sort((a, b) => rowNodeIds.indexOf(a) - rowNodeIds.indexOf(b));
+    for (const nodeId of orderedTargets) {
+      deleteNode(nodeId);
+    }
     closeContextMenu();
   };
 
   const handleCreateRootNode = () => {
     createRootNode('');
+  };
+
+  const handleSelectNode = (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
+    const isRangeSelection = event.shiftKey;
+    const isToggleSelection = event.metaKey || event.ctrlKey;
+
+    if (isRangeSelection) {
+      const anchorNodeId = selectionAnchorNodeId ?? activeNodeId ?? nodeId;
+      const rangeNodeIds = collectRangeNodeIds(rowNodeIds, anchorNodeId, nodeId);
+      setSelectedNodeIds(rangeNodeIds);
+      onSelectNode(nodeId);
+      return;
+    }
+
+    if (isToggleSelection) {
+      const isSelected = selectedNodeIds.includes(nodeId);
+      if (isSelected && selectedNodeIds.length > 1) {
+        const nextSelectedNodeIds = selectedNodeIds.filter((id) => id !== nodeId);
+        setSelectedNodeIds(nextSelectedNodeIds);
+        if (activeNodeId === nodeId) {
+          onSelectNode(nextSelectedNodeIds[nextSelectedNodeIds.length - 1] ?? nodeId);
+        }
+        return;
+      }
+
+      if (isSelected) {
+        return;
+      }
+
+      setSelectedNodeIds([...selectedNodeIds, nodeId]);
+      setSelectionAnchorNodeId(nodeId);
+      onSelectNode(nodeId);
+      return;
+    }
+
+    setSelectedNodeIds([nodeId]);
+    setSelectionAnchorNodeId(nodeId);
+    onSelectNode(nodeId);
   };
 
   return (
@@ -79,11 +142,12 @@ export function NodeListTree({ activeNodeId, nodeOrder, nodesById, onSelectNode 
             <NodeTreeRow
               depth={row.depth}
               isActive={activeNodeId === row.node.id}
+              isSelected={selectedNodeIds.includes(row.node.id)}
               key={row.node.id}
               label={row.node.title}
               nodeId={row.node.id}
               onContextMenu={handleNodeContextMenu}
-              onSelect={onSelectNode}
+              onSelect={handleSelectNode}
               showBranch={row.depth > 0 || row.hasChildren}
             />
           ))
@@ -112,25 +176,27 @@ export function NodeListTree({ activeNodeId, nodeOrder, nodesById, onSelectNode 
 interface NodeTreeRowProps {
   depth: number;
   isActive: boolean;
+  isSelected: boolean;
   label: string;
   nodeId: string;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
-  onSelect: (nodeId: string) => void;
+  onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   showBranch: boolean;
 }
 
-function NodeTreeRow({ depth, isActive, label, nodeId, onContextMenu, onSelect, showBranch }: NodeTreeRowProps) {
+function NodeTreeRow({ depth, isActive, isSelected, label, nodeId, onContextMenu, onSelect, showBranch }: NodeTreeRowProps) {
   const style = {
     '--node-depth': depth
   } as CSSProperties;
 
   return (
     <Button
-      active={isActive}
-      aria-pressed={isActive}
+      active={isSelected}
+      aria-current={isActive ? 'page' : undefined}
+      aria-pressed={isSelected}
       className="node-row node-tree-row"
       onContextMenu={(event) => onContextMenu(nodeId, event)}
-      onClick={() => onSelect(nodeId)}
+      onClick={(event) => onSelect(nodeId, event)}
       style={style}
       variant="list"
     >
@@ -138,4 +204,15 @@ function NodeTreeRow({ depth, isActive, label, nodeId, onContextMenu, onSelect, 
       <span className="node-tree-title">{label}</span>
     </Button>
   );
+}
+
+function collectRangeNodeIds(nodeIds: string[], anchorNodeId: string, targetNodeId: string) {
+  const anchorIndex = nodeIds.indexOf(anchorNodeId);
+  const targetIndex = nodeIds.indexOf(targetNodeId);
+  if (anchorIndex < 0 || targetIndex < 0) {
+    return [targetNodeId];
+  }
+  const start = Math.min(anchorIndex, targetIndex);
+  const end = Math.max(anchorIndex, targetIndex);
+  return nodeIds.slice(start, end + 1);
 }
