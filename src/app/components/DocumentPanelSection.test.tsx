@@ -1,9 +1,14 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import {
   baseNode,
+  buildSectionProps,
+  createSectionElement,
   documentPanelBodyMock,
+  loadRuntimeNodeBacklinks,
   renderSection,
   renderSectionWithProps
 } from './DocumentPanelSection.testSupport';
@@ -24,7 +29,71 @@ function expectDocumentBodyLayout(args: {
   ).toBe(true);
 }
 
-describe('DocumentPanelSection basic views', () => {
+function renderMutableBacklinksScenario() {
+  const nodesById: Record<string, Node> = {
+    'node-1': { ...baseNode, kind: 'topic', content: '# Topic body' },
+    'node-2': {
+      ...baseNode,
+      id: 'node-2',
+      title: 'Linked note',
+      content: 'No backlink yet.'
+    }
+  };
+  const props = buildSectionProps({
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById
+  });
+  const view = render(
+    createSectionElement({
+      nodeOrder: props.nodeOrder,
+      nodesById: props.nodesById
+    })
+  );
+
+  return { nodesById, props, view };
+}
+
+function renderTopicBacklinksView() {
+  renderSectionWithProps({
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      'node-1': { ...baseNode, kind: 'topic', content: '# Topic body' },
+      'node-2': {
+        ...baseNode,
+        id: 'node-2',
+        title: 'Linked note',
+        content: 'See [[Node 1]] for the follow-up.'
+      }
+    }
+  });
+}
+
+function renderRuntimeBacklinksView() {
+  loadRuntimeNodeBacklinks.mockResolvedValue([
+    {
+      sourceNodeId: 'node-2',
+      sourceTitle: 'Linked note',
+      context: 'See [[Node 1]] for the follow-up.',
+      matchCount: 1
+    }
+  ] as never);
+
+  renderSectionWithProps({
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      'node-1': { ...baseNode, kind: 'topic', content: '# Topic body' },
+      'node-2': {
+        ...baseNode,
+        id: 'node-2',
+        title: 'Linked note',
+        content: '',
+        hasContent: true
+      }
+    }
+  });
+}
+
+describe('DocumentPanelSection primary views', () => {
   it('hides the source update action when no source update is available', () => {
     renderSection();
 
@@ -39,21 +108,42 @@ describe('DocumentPanelSection basic views', () => {
   });
 
   it('keeps topic documents renderable when backlinks exist', () => {
-    renderSectionWithProps({
-      nodeOrder: ['node-1', 'node-2'],
-      nodesById: {
-        'node-1': { ...baseNode, kind: 'topic', content: '# Topic body' },
-        'node-2': {
-          ...baseNode,
-          id: 'node-2',
-          title: 'Linked note',
-          content: 'See [[Node 1]] for the follow-up.'
-        }
-      }
-    });
+    renderTopicBacklinksView();
+
     expect(screen.getByText('Document body')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open link references (1)' })).toBeInTheDocument();
+    expectDocumentBodyLayout({
+      editorContentPaddingBottom: undefined,
+      fitBlockImagesToViewport: false
+    });
   });
 
+  it('refreshes backlinks without requiring a node switch when node content mutates in place', () => {
+    const { nodesById, props, view } = renderMutableBacklinksScenario();
+
+    expect(screen.queryByRole('button', { name: 'Open link references (1)' })).not.toBeInTheDocument();
+
+    nodesById['node-2'].content = 'See [[Node 1]] for the follow-up.';
+    view.rerender(
+      createSectionElement({
+        nodeOrder: props.nodeOrder,
+        nodesById: props.nodesById
+      })
+    );
+
+    expect(screen.getByRole('button', { name: 'Open link references (1)' })).toBeInTheDocument();
+  });
+
+  it('shows backlinks from runtime-backed data even when source documents are trimmed in memory', async () => {
+    renderRuntimeBacklinksView();
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Open link references (1)' })).toBeInTheDocument()
+    );
+  });
+});
+
+describe('DocumentPanelSection secondary views', () => {
   it('does not add the extra document tail for item nodes', () => {
     renderSectionWithProps({
       showAnswerSection: true,
@@ -66,6 +156,7 @@ describe('DocumentPanelSection basic views', () => {
       editorContentPaddingBottom: undefined,
       fitBlockImagesToViewport: false
     });
+    expect(screen.queryByRole('button', { name: /open link references/i })).not.toBeInTheDocument();
   });
 
   it('shows the folder list shell for ordinary folder nodes', () => {

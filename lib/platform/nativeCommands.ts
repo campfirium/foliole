@@ -46,6 +46,7 @@ export const NATIVE_COMMANDS = {
   windowToggleMaximize: 'window_toggle_maximize',
   loadWorkspaceListSnapshot: 'load_workspace_list_snapshot',
   loadNodeDocument: 'load_node_document',
+  loadNodeBacklinks: 'load_node_backlinks',
   searchWorkspace: 'search_workspace',
   loadWorkspaceSnapshot: 'load_workspace_snapshot',
   loadAppSettingsState: 'load_app_settings_state',

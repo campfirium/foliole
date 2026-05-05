@@ -1,3 +1,4 @@
+import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
@@ -11,10 +12,14 @@ import {
   ToolbarActionGroup
 } from '../../shared/ui';
 
+import { DocumentPanelHeaderBacklinksMenu } from './DocumentPanelHeaderBacklinksMenu';
 import { DocumentPanelHeaderCenter } from './DocumentPanelHeaderCenter';
+import { ArrowLeftIcon, ArrowRightIcon, MoreOptionsIcon, SplitPanelIcon } from './DocumentPanelHeaderIcons';
+import { DocumentPriorityControl } from './DocumentPriorityControl';
 
 interface DocumentPanelHeaderProps {
   activeNodeId: string | null;
+  backlinks: BacklinkItem[];
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
@@ -27,6 +32,7 @@ interface DocumentPanelHeaderProps {
   onGoForward: () => void;
   onGoParent: () => void;
   onNodePriorityChange: (nodeId: string, priority: number | null) => void;
+  onSelectBacklinkNode: (nodeId: string) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onToggleSourceUpdatePanel: () => void;
   priorityQuickSetShortcutLabel: string;
@@ -93,7 +99,7 @@ function renderHeaderActions(args: {
   }
 
   return (
-    <ToolbarActionGroup ariaLabel="Document editor actions">
+    <ToolbarActionGroup ariaLabel="Document editor actions" className="justify-end">
       <SourceUpdateAction
         isOpen={args.isSourceUpdatePanelOpen}
         onToggle={args.onToggleSourceUpdatePanel}
@@ -117,8 +123,63 @@ function renderHeaderActions(args: {
   );
 }
 
+function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
+  editorDisplayMode: ReturnType<typeof useAppearanceSettings>['editorDisplayMode'];
+  toggleEditorDisplayMode: () => void;
+}) {
+  return (
+    <div className="grid min-w-0 flex-1 grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2">
+      <div className="flex min-w-0 items-center">
+        {!args.isFolderListView ? (
+          <ToolbarActionGroup ariaLabel="Document navigation actions">
+            <NavigationButtons
+              canGoBack={args.canGoBack}
+              canGoForward={args.canGoForward}
+              canGoParent={args.canGoParent}
+              onGoBack={args.onGoBack}
+              onGoForward={args.onGoForward}
+              onGoParent={args.onGoParent}
+            />
+          </ToolbarActionGroup>
+        ) : null}
+      </div>
+      <DocumentPanelHeaderCenter
+        activeNodeId={args.activeNodeId}
+        isFolderListView={args.isFolderListView}
+        nodesById={args.nodesById}
+        onSelectBreadcrumbNode={args.onSelectBreadcrumbNode}
+        rightSlot={
+          <>
+            <DocumentPanelHeaderBacklinksMenu backlinks={args.backlinks} onSelectNode={args.onSelectBacklinkNode} />
+            <DocumentPriorityControl
+              activeNodeId={args.activeNodeId}
+              defaultPriority={args.reviewSchedulerSettings.pushQueue.defaultPriority}
+              editableNodeId={args.editableNodeId}
+              nodesById={args.nodesById}
+              onPriorityChange={args.onNodePriorityChange}
+              shortcutLabel={args.priorityQuickSetShortcutLabel}
+            />
+          </>
+        }
+      />
+      <div className="flex min-w-0 items-center justify-end">
+        {renderHeaderActions({
+          editorDisplayMode: args.editorDisplayMode,
+          folderListToolbar: args.folderListToolbar,
+          isFolderListView: args.isFolderListView,
+          isSourceUpdatePanelOpen: args.isSourceUpdatePanelOpen,
+          onToggleSourceUpdatePanel: args.onToggleSourceUpdatePanel,
+          showSourceUpdateAction: args.showSourceUpdateAction,
+          toggleEditorDisplayMode: args.toggleEditorDisplayMode
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function DocumentPanelHeader({
   activeNodeId,
+  backlinks,
   canGoBack,
   canGoForward,
   canGoParent,
@@ -131,6 +192,7 @@ export function DocumentPanelHeader({
   onGoForward,
   onGoParent,
   onNodePriorityChange,
+  onSelectBacklinkNode,
   onSelectBreadcrumbNode,
   onToggleSourceUpdatePanel,
   priorityQuickSetShortcutLabel,
@@ -140,100 +202,32 @@ export function DocumentPanelHeader({
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
 
   return (
-    <AppToolbar as="header" className="min-h-[40px] gap-2 px-3">
+    <AppToolbar as="header" className="min-h-[40px] px-4">
       <h2 className="sr-only">Content</h2>
-      {!isFolderListView ? (
-        <ToolbarActionGroup ariaLabel="Document navigation actions">
-          <NavigationButtons
-            canGoBack={canGoBack}
-            canGoForward={canGoForward}
-            canGoParent={canGoParent}
-            onGoBack={onGoBack}
-            onGoForward={onGoForward}
-            onGoParent={onGoParent}
-          />
-        </ToolbarActionGroup>
-      ) : null}
-      <DocumentPanelHeaderCenter
-        activeNodeId={activeNodeId}
-        defaultPriority={reviewSchedulerSettings.pushQueue.defaultPriority}
-        editableNodeId={editableNodeId}
-        isFolderListView={isFolderListView}
-        nodesById={nodesById}
-        onNodePriorityChange={onNodePriorityChange}
-        onSelectBreadcrumbNode={onSelectBreadcrumbNode}
-        priorityQuickSetShortcutLabel={priorityQuickSetShortcutLabel}
-      />
-      {renderHeaderActions({
+      {renderDocumentHeaderContent({
+        activeNodeId,
+        backlinks,
+        canGoBack,
+        canGoForward,
+        canGoParent,
+        editableNodeId,
         editorDisplayMode,
         folderListToolbar,
         isFolderListView,
         isSourceUpdatePanelOpen,
+        nodesById,
+        onGoBack,
+        onGoForward,
+        onGoParent,
+        onNodePriorityChange,
+        onSelectBacklinkNode,
+        onSelectBreadcrumbNode,
         onToggleSourceUpdatePanel,
+        priorityQuickSetShortcutLabel,
+        reviewSchedulerSettings,
         showSourceUpdateAction,
         toggleEditorDisplayMode
       })}
     </AppToolbar>
-  );
-}
-
-function MoreOptionsIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <circle cx="4" cy="8" r="1.1" fill="currentColor" />
-      <circle cx="8" cy="8" r="1.1" fill="currentColor" />
-      <circle cx="12" cy="8" r="1.1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function SplitPanelIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <rect
-        x="2.1"
-        y="2.35"
-        width="11.8"
-        height="11.3"
-        rx="1.55"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.05"
-      />
-      <path d="M8 2.9v10.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-      <path d="M2.7 5.2h10.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" opacity="0.75" />
-    </svg>
-  );
-}
-
-function ArrowLeftIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <path d="M12.4 8H4.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-      <path
-        d="M7.6 5.2 4.8 8l2.8 2.8"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-    </svg>
-  );
-}
-
-function ArrowRightIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <path d="M3.6 8h7.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-      <path
-        d="m8.4 5.2 2.8 2.8-2.8 2.8"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-    </svg>
   );
 }

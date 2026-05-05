@@ -7,6 +7,7 @@ import {
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
+import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
@@ -17,6 +18,7 @@ import { DocumentTopicSearchToolbar } from './DocumentTopicSearchToolbar';
 import { FolderListSortControls } from './FolderListSortControls';
 
 interface DocumentPanelShellProps {
+  backlinks: BacklinkItem[];
   bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
@@ -45,6 +47,7 @@ function renderDocumentSearchToolbar(
 }
 
 function renderDocumentPanelHeader(args: {
+  backlinks: BacklinkItem[];
   folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
   isFolderListView: boolean;
@@ -62,6 +65,7 @@ function renderDocumentPanelHeader(args: {
   return (
     <DocumentPanelHeader
       activeNodeId={args.props.activeNodeId}
+      backlinks={args.backlinks}
       canGoBack={args.props.canGoBack}
       canGoForward={args.props.canGoForward}
       canGoParent={args.props.canGoParent}
@@ -81,6 +85,7 @@ function renderDocumentPanelHeader(args: {
       onGoForward={args.props.onGoForward}
       onGoParent={args.props.onGoParent}
       onNodePriorityChange={args.props.onNodePriorityChange ?? (() => undefined)}
+      onSelectBacklinkNode={args.props.onSelectNode}
       onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
       onToggleSourceUpdatePanel={args.onToggleSourceUpdatePanel}
       priorityQuickSetShortcutLabel={args.props.priorityQuickSetShortcutLabel ?? ''}
@@ -91,6 +96,7 @@ function renderDocumentPanelHeader(args: {
 }
 
 export function DocumentPanelSectionShell({
+  backlinks,
   bodyProps,
   isFolderListView,
   isSourceUpdatePanelOpen,
@@ -107,6 +113,7 @@ export function DocumentPanelSectionShell({
   return (
     <section aria-label="Document panel" className="relative flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
       {renderDocumentPanelHeader({
+        backlinks,
         folderListSortDirection,
         folderListSortKey,
         isFolderListView,

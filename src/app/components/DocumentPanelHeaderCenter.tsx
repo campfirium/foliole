@@ -1,51 +1,37 @@
+import type { ReactNode } from 'react';
+
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import type { PushQueuePriority } from '../../features/review/model/unifiedPushQueueRules';
-
-import { DocumentPriorityControl } from './DocumentPriorityControl';
 
 interface DocumentPanelHeaderCenterProps {
   activeNodeId: string | null;
-  defaultPriority: PushQueuePriority;
-  editableNodeId: string | null;
   isFolderListView: boolean;
   nodesById: Record<string, Node>;
-  onNodePriorityChange: (nodeId: string, priority: number | null) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
-  priorityQuickSetShortcutLabel: string;
+  rightSlot?: ReactNode;
 }
 
 export function DocumentPanelHeaderCenter({
   activeNodeId,
-  defaultPriority,
-  editableNodeId,
   isFolderListView,
   nodesById,
-  onNodePriorityChange,
   onSelectBreadcrumbNode,
-  priorityQuickSetShortcutLabel
+  rightSlot
 }: DocumentPanelHeaderCenterProps) {
   if (isFolderListView) {
     return <div aria-hidden="true" className="min-h-9 flex-1 border-b border-border/60" />;
   }
 
   return (
-    <div className="min-w-0 flex-1">
-      <div className="mx-auto flex w-full items-center justify-between gap-3 [width:min(100%,var(--document-max-width))]">
+    <div className="min-w-0">
+      <div className="mx-auto grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 max-w-[var(--document-max-width)]">
         <NodeBreadcrumbs
           activeNodeId={activeNodeId}
           nodesById={toWorkspaceListNodesById(nodesById)}
           onSelectNode={onSelectBreadcrumbNode}
         />
-        <DocumentPriorityControl
-          activeNodeId={activeNodeId}
-          defaultPriority={defaultPriority}
-          editableNodeId={editableNodeId}
-          nodesById={nodesById}
-          onPriorityChange={onNodePriorityChange}
-          shortcutLabel={priorityQuickSetShortcutLabel}
-        />
+        {rightSlot ? <div className="flex shrink-0 items-center justify-end gap-1">{rightSlot}</div> : null}
       </div>
     </div>
   );

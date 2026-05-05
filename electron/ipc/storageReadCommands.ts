@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { loadNodeBacklinks } from '../database/nodeBacklinks.js';
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
 import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
 import { loadWorkspaceListSnapshot } from '../database/workspaceListSnapshot.js';
@@ -22,6 +23,9 @@ export function handleWorkspaceReadCommand(command: string, args: Record<string,
   }
   if (command === NATIVE_COMMANDS.loadNodeDocument) {
     return loadWorkspaceNodeDocument(asString(args.nodeId, 'nodeId'));
+  }
+  if (command === NATIVE_COMMANDS.loadNodeBacklinks) {
+    return loadNodeBacklinks(asString(args.node_id, 'node_id'));
   }
   return undefined;
 }

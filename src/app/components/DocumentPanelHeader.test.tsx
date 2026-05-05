@@ -16,6 +16,7 @@ it('shows the breadcrumb title without a kind label in the document header', () 
   render(
     <DocumentPanelHeader
       activeNodeId="node-1"
+      backlinks={[]}
       canGoBack
       canGoForward
       canGoParent={false}
@@ -41,6 +42,7 @@ it('shows the breadcrumb title without a kind label in the document header', () 
       onGoForward={vi.fn()}
       onGoParent={vi.fn()}
       onNodePriorityChange={vi.fn()}
+      onSelectBacklinkNode={vi.fn()}
       onSelectBreadcrumbNode={vi.fn()}
       onToggleSourceUpdatePanel={vi.fn()}
       priorityQuickSetShortcutLabel="Ctrl+M"
@@ -58,6 +60,7 @@ it('shows folder list sorting instead of editor actions in folder mode', () => {
   render(
     <DocumentPanelHeader
       activeNodeId="node-1"
+      backlinks={[]}
       canGoBack
       canGoForward
       canGoParent={false}
@@ -83,6 +86,7 @@ it('shows folder list sorting instead of editor actions in folder mode', () => {
       onGoForward={vi.fn()}
       onGoParent={vi.fn()}
       onNodePriorityChange={vi.fn()}
+      onSelectBacklinkNode={vi.fn()}
       onSelectBreadcrumbNode={vi.fn()}
       onToggleSourceUpdatePanel={vi.fn()}
       priorityQuickSetShortcutLabel="Ctrl+M"
@@ -95,4 +99,54 @@ it('shows folder list sorting instead of editor actions in folder mode', () => {
   expect(screen.queryByRole('button', { name: 'Inbox' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Document navigation actions')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('More editor options')).not.toBeInTheDocument();
+});
+
+it('shows a backlinks trigger with count and opens the inline backlinks menu', () => {
+  render(
+    <DocumentPanelHeader
+      activeNodeId="node-1"
+      backlinks={[
+        {
+          context: 'See follow-up note',
+          matchCount: 1,
+          sourceNodeId: 'node-2',
+          sourceTitle: 'Linked note'
+        }
+      ]}
+      canGoBack
+      canGoForward
+      canGoParent={false}
+      editableNodeId="node-1"
+      folderListToolbar={null}
+      isFolderListView={false}
+      isSourceUpdatePanelOpen={false}
+      nodesById={{
+        'node-1': {
+          id: 'node-1',
+          kind: 'topic',
+          title: 'Topic',
+          parentNodeId: null,
+          content: 'Body',
+          anchorLink: null,
+          reveal: '',
+          review: null,
+          createdAt: '',
+          updatedAt: ''
+        }
+      }}
+      onGoBack={vi.fn()}
+      onGoForward={vi.fn()}
+      onGoParent={vi.fn()}
+      onNodePriorityChange={vi.fn()}
+      onSelectBacklinkNode={vi.fn()}
+      onSelectBreadcrumbNode={vi.fn()}
+      onToggleSourceUpdatePanel={vi.fn()}
+      priorityQuickSetShortcutLabel="Ctrl+M"
+      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
+      showSourceUpdateAction={false}
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Open link references (1)' })).toBeInTheDocument();
+  expect(screen.getByText('1')).toBeInTheDocument();
 });

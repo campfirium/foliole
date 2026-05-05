@@ -99,6 +99,13 @@ export interface NativeWorkspaceNodeDocument {
   reveal: string | null;
 }
 
+export interface NativeWorkspaceBacklink {
+  source_node_id: string;
+  source_title: string;
+  context: string;
+  match_count: number;
+}
+
 export interface NativeWorkspaceSearchResult {
   excerpt: string;
   id: string;

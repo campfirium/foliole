@@ -12,6 +12,7 @@ import type {
   NativeResetImportDataResult,
   NativeMergeReadwiseTopicHighlightsResult,
   NativeReviewSchedulerSettings,
+  NativeWorkspaceBacklink,
   NativeSaveReadingProgressArgs,
   NativeWorkspaceNodeDocument,
   NativeWorkspaceSearchResult,
@@ -163,6 +164,10 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
   [NATIVE_COMMANDS.loadNodeDocument]: {
     args: { nodeId: string };
     result: NativeWorkspaceNodeDocument | null;
+  };
+  [NATIVE_COMMANDS.loadNodeBacklinks]: {
+    args: { node_id: string };
+    result: NativeWorkspaceBacklink[];
   };
   [NATIVE_COMMANDS.searchWorkspace]: {
     args: { query: string };

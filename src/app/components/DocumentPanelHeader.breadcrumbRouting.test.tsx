@@ -26,6 +26,7 @@ it('routes breadcrumb clicks to onSelectBreadcrumbNode', () => {
   render(
     <DocumentPanelHeader
       activeNodeId="node-1"
+      backlinks={[]}
       canGoBack={false}
       canGoForward={false}
       canGoParent={false}
@@ -51,6 +52,7 @@ it('routes breadcrumb clicks to onSelectBreadcrumbNode', () => {
       onGoForward={vi.fn()}
       onGoParent={vi.fn()}
       onNodePriorityChange={vi.fn()}
+      onSelectBacklinkNode={vi.fn()}
       onSelectBreadcrumbNode={onSelectBreadcrumbNode}
       onToggleSourceUpdatePanel={vi.fn()}
       priorityQuickSetShortcutLabel="Ctrl+M"

@@ -53,7 +53,6 @@ function getDocumentPanelState(
   const startupState = resolveDocumentStartupState(props, activeNode);
   const emptyState = startupState.emptyState;
   const reveal = activeNode?.reveal ?? '';
-  const shouldPadDocumentTail = editorDisplayMode === 'preview' && activeNode?.kind !== 'item';
   const shouldCheckItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection);
   const hasPromptImage = shouldCheckItemImages
     ? Boolean(activeNode?.content && hasCachedMarkdownImageReference(activeNode.content))
@@ -65,7 +64,7 @@ function getDocumentPanelState(
 
   return {
     answerSectionMode: shouldFitItemImages ? 'balanced' : 'fixed',
-    editorContentPaddingBottom: shouldPadDocumentTail ? 'min(68dvh, 36rem)' : undefined,
+    editorContentPaddingBottom: undefined,
     loadingLabel: startupState.loadingLabel,
     emptyState,
     fitBlockImagesToViewport: shouldFitItemImages,

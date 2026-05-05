@@ -1,8 +1,8 @@
-import { collectBacklinks } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { InspectorSection } from '../../shared/ui';
 
 import { NodeBacklinksList } from './NodeBacklinksList';
+import { useNodeBacklinks } from './useNodeBacklinks';
 
 interface WorkspaceRightSidebarBacklinksPanelProps {
   activeNodeId: string | null;
@@ -26,7 +26,7 @@ export function WorkspaceRightSidebarBacklinksPanel(props: WorkspaceRightSidebar
     return null;
   }
 
-  const backlinks = collectBacklinks({
+  const backlinks = useNodeBacklinks({
     targetNodeId: node.id,
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,

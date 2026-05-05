@@ -53,6 +53,15 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
   useNodeSourceUpdatePreview: sourceUpdatePreviewMocks.useNodeSourceUpdatePreview
 }));
 
+const nodeBacklinksBridgeMocks = vi.hoisted(() => ({
+  loadRuntimeNodeBacklinks: vi.fn(async () => null)
+}));
+export const loadRuntimeNodeBacklinks = nodeBacklinksBridgeMocks.loadRuntimeNodeBacklinks;
+
+vi.mock('../../shared/platform/nodeBacklinksBridge', () => ({
+  loadRuntimeNodeBacklinks: nodeBacklinksBridgeMocks.loadRuntimeNodeBacklinks
+}));
+
 export const baseNode = {
   id: 'node-1',
   kind: 'topic' as const,
@@ -70,54 +79,60 @@ export function renderSection() {
   return renderSectionWithProps({});
 }
 
+export function buildSectionProps(overrides: Partial<ComponentProps<typeof DocumentPanelSection>> = {}) {
+  return {
+    activeNodeId: 'node-1',
+    isWorkspaceHydrated: true,
+    canGoBack: true,
+    canGoForward: true,
+    canGoParent: false,
+    contextMenu: null,
+    documentMaxWidth: 760,
+    editableNodeId: 'node-1',
+    editorAppearanceKey: 'appearance-1',
+    editorContent: '# Node 1',
+    isEditorReadOnly: false,
+    editorNodeId: 'node-1',
+    editorNodeViewState: undefined,
+    isDocumentResizing: false,
+    nodeOrder: ['node-1'],
+    trashedNodeIds: [],
+    nodesById: { 'node-1': baseNode },
+    onAnswerChange: () => undefined,
+    onCloseContextMenu: () => undefined,
+    onCopyImage: () => undefined,
+    onCreateCloze: () => undefined,
+    onCreateHighlight: () => undefined,
+    onCreatePdfHighlight: () => false,
+    onCutImage: () => undefined,
+    onDeleteImage: () => undefined,
+    onEditorChange: () => undefined,
+    onNodeContentChange: () => undefined,
+    onEditorContextMenu: () => undefined,
+    onEditorReady: () => undefined,
+    onExportImage: () => undefined,
+    onGoBack: () => undefined,
+    onGoForward: () => undefined,
+    onGoParent: () => undefined,
+    onPersistPdfViewState: () => undefined,
+    onResetLayout: () => undefined,
+    onResolveDocumentPositionAtViewportY: () => null,
+    onRevealDocumentPosition: () => undefined,
+    onRevealDocumentSelection: () => undefined,
+    onSelectBreadcrumbNode: () => undefined,
+    onSelectNode: () => undefined,
+    onStartDocumentResize: () => undefined,
+    showAnswerSection: false,
+    ...overrides
+  } satisfies ComponentProps<typeof DocumentPanelSection>;
+}
+
+export function createSectionElement(overrides: Partial<ComponentProps<typeof DocumentPanelSection>> = {}) {
+  return <DocumentPanelSection {...buildSectionProps(overrides)} />;
+}
+
 export function renderSectionWithProps(overrides: Partial<ComponentProps<typeof DocumentPanelSection>>) {
-  return render(
-    <DocumentPanelSection
-      activeNodeId="node-1"
-      isWorkspaceHydrated={true}
-      canGoBack
-      canGoForward
-      canGoParent={false}
-      contextMenu={null}
-      documentMaxWidth={760}
-      editableNodeId="node-1"
-      editorAppearanceKey="appearance-1"
-      editorContent="# Node 1"
-      isEditorReadOnly={false}
-      editorNodeId="node-1"
-      editorNodeViewState={undefined}
-      isDocumentResizing={false}
-      nodeOrder={['node-1']}
-      trashedNodeIds={[]}
-      nodesById={{ 'node-1': baseNode }}
-      onAnswerChange={() => undefined}
-      onCloseContextMenu={() => undefined}
-      onCopyImage={() => undefined}
-      onCreateCloze={() => undefined}
-      onCreateHighlight={() => undefined}
-      onCreatePdfHighlight={() => false}
-      onCutImage={() => undefined}
-      onDeleteImage={() => undefined}
-      onEditorChange={() => undefined}
-      onNodeContentChange={() => undefined}
-      onEditorContextMenu={() => undefined}
-      onEditorReady={() => undefined}
-      onExportImage={() => undefined}
-      onGoBack={() => undefined}
-      onGoForward={() => undefined}
-      onGoParent={() => undefined}
-      onPersistPdfViewState={() => undefined}
-      onResetLayout={() => undefined}
-      onResolveDocumentPositionAtViewportY={() => null}
-      onRevealDocumentPosition={() => undefined}
-      onRevealDocumentSelection={() => undefined}
-      onSelectBreadcrumbNode={() => undefined}
-      onSelectNode={() => undefined}
-      onStartDocumentResize={() => undefined}
-      showAnswerSection={false}
-      {...overrides}
-    />
-  );
+  return render(createSectionElement(overrides));
 }
 
 export function mockSourceUpdatePreview() {
@@ -144,6 +159,8 @@ export function openSourceUpdatePanel() {
 beforeEach(() => {
   documentSourceUpdatePanelMock.mockReset();
   documentPanelBodyMock.mockReset();
+  loadRuntimeNodeBacklinks.mockReset();
+  loadRuntimeNodeBacklinks.mockResolvedValue(null);
   useNodeSourceUpdatePreview.mockReturnValue({
     isLoading: false,
     value: null

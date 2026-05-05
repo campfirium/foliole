@@ -22,11 +22,13 @@ import { DocumentPanelSectionOverlays } from './DocumentPanelSectionOverlays';
 import { DocumentPanelSectionShell } from './DocumentPanelSectionShell';
 import {
   buildResolvedDocumentPanelProps,
+  buildTopicBacklinks,
   collectHiddenTextAnchorKeys,
   useDocumentPanelInteractions
 } from './documentPanelSectionSupport';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
 import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
+import { useNodeBacklinks } from './useNodeBacklinks';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 export interface DocumentPanelSectionProps {
@@ -106,6 +108,12 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     isSourceUpdatePanelOpen,
     sourceUpdatePreview
   } = useDocumentPanelSourceUpdateState(props);
+  const backlinks = useNodeBacklinks({
+    targetNodeId: props.activeNodeId,
+    nodeOrder: props.nodeOrder,
+    nodesById: props.nodesById,
+    trashedNodeIds: props.trashedNodeIds
+  });
   const emptyContent = loadingLabel ? <DocumentPanelLoadingContent loadingLabel={loadingLabel} /> : undefined;
   useDocumentPanelPerformanceMarkers(props, Boolean(bodyProps.emptyState), isEditorDocumentLoaded);
 
@@ -124,6 +132,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     isFolderListView,
     isSourceUpdatePanelOpen,
     currentSourceUpdateContent,
+    backlinks,
     handleSourceUpdateDraftChange,
     handleSourceUpdatePanelOpenChange,
     sourceUpdatePreview: sourceUpdatePreview.value
@@ -162,6 +171,11 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const model = useDocumentPanelSectionModel(props);
   const interactions = useDocumentPanelInteractions(props);
   const resolvedProps = buildResolvedDocumentPanelProps(props);
+  const topicBacklinks = buildTopicBacklinks({
+    activeNodeId: props.activeNodeId,
+    backlinks: model.backlinks,
+    nodesById: props.nodesById
+  });
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={model.documentLayoutStyle}>
       <DocumentPanelSectionShell
@@ -172,6 +186,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           emptyContent: model.emptyContent,
           onOpenNodeLink: interactions.handleOpenNodeLink
         }}
+        backlinks={topicBacklinks}
         isFolderListView={model.isFolderListView}
         isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}
         onToggleSourceUpdatePanel={() =>
