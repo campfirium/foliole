@@ -424,6 +424,26 @@ body.workspace-resizing {
   padding: 6px 10px;
 }
 
+.settings-action-button {
+  background: #ffffff;
+  border: 1px solid #ccd0d6;
+  border-radius: 8px;
+  color: #1f2328;
+  cursor: pointer;
+  font: inherit;
+  min-width: 112px;
+  padding: 7px 12px;
+}
+
+.settings-action-button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.settings-status-copy {
+  color: #3f6b54;
+}
+
 .settings-slider-wrap {
   align-items: center;
   display: inline-flex;

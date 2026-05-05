@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
   createApplicationDatabaseBackup,
+  listApplicationDatabaseBackups,
   restoreApplicationDatabaseBackup
 } from '../database/backupRestore.js';
 import {
@@ -42,6 +43,9 @@ function readSettingsObject(settings: unknown) {
 }
 
 function handleSqliteMaintenanceCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.listSqliteBackups) {
+    return listApplicationDatabaseBackups();
+  }
   if (command === NATIVE_COMMANDS.backupSqliteDatabase) {
     return createApplicationDatabaseBackup({
       destinationPath: asNullableString(args.destinationPath, 'destinationPath') ?? undefined
