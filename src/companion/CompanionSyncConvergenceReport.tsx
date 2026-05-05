@@ -4,9 +4,9 @@ import type {
 } from '../shared/platform/companionSyncConvergence';
 
 function statusLabel(status: SyncConvergenceReport['status']) {
-  if (status === 'blocked') return 'Blocked';
-  if (status === 'converged') return 'Converged';
-  if (status === 'pending') return 'Pending';
+  if (status === 'blocked') return 'Needs attention';
+  if (status === 'converged') return 'Up to date';
+  if (status === 'pending') return 'Still syncing';
   return 'Unknown';
 }
 
@@ -21,7 +21,7 @@ export function CompanionSyncConvergenceReport(props: { report: SyncConvergenceR
   return (
     <section>
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-foreground">Convergence check</h3>
+        <h3 className="text-sm font-semibold text-foreground">Sync check</h3>
         <span className="text-xs font-medium text-companion-text-secondary">{statusLabel(props.report.status)}</span>
       </div>
       <div className="mt-2 border-t border-companion-divider">

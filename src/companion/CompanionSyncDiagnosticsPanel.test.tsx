@@ -133,10 +133,10 @@ function expectDiagnosticSummary() {
   expect(screen.queryByText('sync_android_not_caught_up')).not.toBeInTheDocument();
   expect(screen.getByText('Foliole will bring them in on the next sync.')).toBeInTheDocument();
   expect(screen.getByText('Sync status')).toBeInTheDocument();
-  expect(screen.getByText('Convergence check')).toBeInTheDocument();
-  expect(screen.getByText('Blocked')).toBeInTheDocument();
-  expect(screen.getByText('Latest finished sync pass is not fully converged')).toBeInTheDocument();
-  expect(screen.getByText('A finished sync pass was recorded while 1 dirty change(s), 1 pending ack(s), 1 push issue(s), 5 body blob(s), 2 attachment file(s), and 3 structure change(s) remain.')).toBeInTheDocument();
+  expect(screen.getByText('Sync check')).toBeInTheDocument();
+  expect(screen.getByText('Needs attention')).toBeInTheDocument();
+  expect(screen.getByText('Latest finished sync pass still has work left')).toBeInTheDocument();
+  expect(screen.getByText('A finished sync pass was recorded while 1 device change(s), 1 desktop confirmation(s), 1 change issue(s), 5 topic body file(s), 2 attachment file(s), and 3 topic list change(s) remain.')).toBeInTheDocument();
 }
 
 function expectStageCheckpoint() {
@@ -210,9 +210,9 @@ describe('CompanionSyncDiagnosticsPanel', () => {
         status: 'blocked',
         checks: [{
           code: 'completed_event_with_local_work',
-          detail: 'A finished sync pass was recorded while 1 dirty change(s) and 1 pending ack(s) remain.',
+          detail: 'A finished sync pass was recorded while 1 device change(s) and 1 desktop confirmation(s) remain.',
           severity: 'error',
-          title: 'Latest finished sync pass is not fully converged'
+          title: 'Latest finished sync pass still has work left'
         }]
       }
     });
@@ -238,10 +238,10 @@ describe('CompanionSyncDiagnosticsPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Run convergence check' }));
 
-    await waitFor(() => expect(screen.getByText('Convergence check')).toBeInTheDocument());
-    expect(screen.getByText('Blocked')).toBeInTheDocument();
-    expect(screen.getByText('Latest finished sync pass is not fully converged')).toBeInTheDocument();
-    expect(screen.getByText('A finished sync pass was recorded while 1 dirty change(s) and 1 pending ack(s) remain.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Sync check')).toBeInTheDocument());
+    expect(screen.getByText('Needs attention')).toBeInTheDocument();
+    expect(screen.getByText('Latest finished sync pass still has work left')).toBeInTheDocument();
+    expect(screen.getByText('A finished sync pass was recorded while 1 device change(s) and 1 desktop confirmation(s) remain.')).toBeInTheDocument();
     expect(convergenceMock.runSyncConvergenceCheck).toHaveBeenCalledWith('http://10.0.2.2:38641');
   });
 

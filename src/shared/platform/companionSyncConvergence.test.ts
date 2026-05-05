@@ -52,7 +52,7 @@ function testBlocksFinishedPassWithDirtyWork() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync pass was recorded while 1 dirty change(s), 1 pending ack(s), 0 push issue(s), 0 body blob(s), 0 attachment file(s), and 0 structure change(s) remain.',
+      detail: 'A finished sync pass was recorded while 1 device change(s), 1 desktop confirmation(s), 0 change issue(s), 0 topic body file(s), 0 attachment file(s), and 0 topic list change(s) remain.',
       severity: 'error'
     })
   ]));
@@ -72,7 +72,7 @@ function testBlocksErrorDiagnosticVerdicts() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'diagnostic_error_android_recent_sync_failed',
-      detail: 'Diagnostic verdict android_recent_sync_failed is blocking convergence.',
+      detail: 'Sync diagnostic android_recent_sync_failed needs attention.',
       severity: 'error'
     })
   ]));
@@ -110,7 +110,7 @@ function testBlocksStalePendingAck() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'pending_ack_survived_finished_pass',
-      detail: '1 accepted push ack(s) remained pending after a later sync pass finished.',
+      detail: '1 desktop confirmation(s) remained pending after a later sync pass finished.',
       severity: 'error'
     })
   ]));
@@ -166,7 +166,7 @@ function testBlocksFinishedPassWithResourceBacklog() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync pass was recorded while 0 dirty change(s), 0 pending ack(s), 0 push issue(s), 3 body blob(s), 2 attachment file(s), and 1 structure change(s) remain.',
+      detail: 'A finished sync pass was recorded while 0 device change(s), 0 desktop confirmation(s), 0 change issue(s), 3 topic body file(s), 2 attachment file(s), and 1 topic list change(s) remain.',
       severity: 'error'
     })
   ]));
@@ -185,7 +185,7 @@ function testKeepsBodyBacklogPending() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'content_backlog_exists',
-      detail: '3 body blob(s) remain to download: 2 topic, 1 external document.'
+      detail: '3 topic body file(s) remain to download: 2 topic, 1 external document.'
     })
   ]));
   expect(report.checks.map((item) => item.code)).toEqual(expect.arrayContaining([

@@ -61,9 +61,9 @@ function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
   const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
   const suffixes: string[] = [];
   if (typeof remainingStructure === 'number' && remainingStructure > 0) {
-    suffixes.push(`${remainingStructure} structure change(s) still applying`);
+    suffixes.push(`${remainingStructure} topic list change(s) still applying`);
   } else if (remainingStructure === null) {
-    suffixes.push('structure confirmation is still pending');
+    suffixes.push('topic list confirmation is still pending');
   }
   if (remainingBodies !== 0 && remainingAttachments !== 0) {
     suffixes.push(`${bodyLabel} and ${attachmentLabel} still downloading`);

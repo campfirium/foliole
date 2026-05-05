@@ -94,7 +94,7 @@ describe('describeCompanionSyncPassResult', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingStructureChangeCount: 4
     }))).toEqual({
-      message: 'Sync pass finished; 4 structure change(s) still applying.',
+      message: 'Sync pass finished; 4 topic list change(s) still applying.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -104,7 +104,7 @@ describe('describeCompanionSyncPassResult', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingStructureChangeCount: null
     }))).toEqual({
-      message: 'Sync pass finished; structure confirmation is still pending.',
+      message: 'Sync pass finished; topic list confirmation is still pending.',
       outcome: 'skipped',
       status: 'skipped'
     });

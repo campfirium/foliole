@@ -132,7 +132,7 @@ async function testRecordsStructureLagWithoutCompleting() {
 
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync pass finished; 4 structure change(s) still applying.',
+    message: 'Sync pass finished; 4 topic list change(s) still applying.',
     status: 'skipped'
   }));
 }
