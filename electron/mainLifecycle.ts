@@ -7,6 +7,7 @@ import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
+import { startDevScreenshotServer, stopDevScreenshotServer } from './devScreenshotServer.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, startExternalSearchBackgroundRefresh, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import { startKeepImportMonitor, stopKeepImportMonitor } from './import/keepImportMonitor.js';
@@ -54,6 +55,7 @@ function installBeforeQuitLifecycle() {
     stopExternalSearchBackgroundRefresh();
     stopManagedInboxMonitor();
     stopKeepImportMonitor();
+    void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));
     void stopLanWorkspaceSyncServer().catch((error) => appendMainProcessDiagnosticLog('lan_sync_stop_failed', { error }));
     if (mirrorFlushed) return;
     mirrorFlushed = true;
@@ -174,6 +176,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     args.installInvokeHandler();
     await appendBootEvent('app_when_ready');
     const mainWindow = await args.createMainWindow({ kind: 'booting' });
+    startDevScreenshotServer({ getWindow: () => mainWindow });
     try {
       await initializeRuntimeServices();
     } catch (error) {

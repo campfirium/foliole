@@ -31,6 +31,7 @@
     "desktop:test:windows": "bash scripts/windows/windows-desktop-test.sh",
     "electron:compile": "tsc -p electron/tsconfig.json",
     "electron:dev": "node scripts/electron-dev.mjs",
+    "dev:screenshot": "bash scripts/windows/dev-screenshot.sh",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
     "oneoff:workspace:migrate": "node scripts/migrate-workspace-data.mjs",
     "oneoff:workspace:backfill-opening-text": "node --experimental-strip-types scripts/backfill-node-opening-text.ts",

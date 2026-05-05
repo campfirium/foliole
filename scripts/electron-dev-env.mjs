@@ -5,7 +5,8 @@
 export function createElectronLaunchEnv(baseEnv, rendererUrl) {
   const nextEnv = {
     ...baseEnv,
-    ELECTRON_RENDERER_URL: rendererUrl
+    ELECTRON_RENDERER_URL: rendererUrl,
+    NODE_ENV: 'development'
   };
   delete nextEnv.ELECTRON_RUN_AS_NODE;
   return nextEnv;
