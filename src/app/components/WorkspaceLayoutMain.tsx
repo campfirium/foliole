@@ -16,6 +16,30 @@ import {
 import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
+function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: WorkspaceLayoutProps['nodesById']) {
+  if (!nodeId) {
+    return null;
+  }
+
+  let cursor = nodesById[nodeId];
+  if (!cursor) {
+    return null;
+  }
+  if (cursor.kind === 'folder') {
+    return cursor.title.trim() || 'Untitled';
+  }
+
+  while (cursor.parentNodeId) {
+    const parent = nodesById[cursor.parentNodeId];
+    if (!parent || parent.kind === 'folder') {
+      break;
+    }
+    cursor = parent;
+  }
+
+  return cursor.title.trim() || 'Untitled';
+}
+
 function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
   const handleOpenNotesView = useCallback(() => {
     props.onCloseImportManagement();
@@ -119,6 +143,10 @@ function renderWorkspaceTitleBar(args: {
   return (
     <WindowTitleBar
       activeRightPanelId={args.activeRightPanelId}
+      centerTitle={resolveWindowTitleBarTitle(
+        args.props.isViewingTrashNode ? args.props.selectedTrashNodeId : args.props.activeNodeId,
+        args.props.nodesById
+      )}
       isListCollapsed={args.props.isListCollapsed}
       isRightSidebarCollapsed={args.props.isRightSidebarCollapsed}
       isTrashViewOpen={args.props.isTrashViewOpen}

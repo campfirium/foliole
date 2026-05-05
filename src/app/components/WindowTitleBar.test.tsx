@@ -24,6 +24,7 @@ function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>
   return render(
     <WindowTitleBar
       activeRightPanelId="dev"
+      centerTitle={null}
       isListCollapsed={false}
       isRightSidebarCollapsed={false}
       isTrashViewOpen={false}
@@ -117,6 +118,14 @@ describe('WindowTitleBar', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Minimize' })).toBeEnabled();
     }, { timeout: 1_000 });
+  });
+
+  it('renders the current title in the center slot with a full-title tooltip', () => {
+    renderTitleBar({ centerTitle: 'YC 编写的 Vibe Coding 指南' });
+
+    const title = screen.getByText('YC 编写的 Vibe Coding 指南');
+    expect(title).toBeInTheDocument();
+    expect(title).toHaveAttribute('title', 'YC 编写的 Vibe Coding 指南');
   });
 });
 

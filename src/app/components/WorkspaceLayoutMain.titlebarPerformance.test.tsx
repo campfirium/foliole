@@ -2,6 +2,8 @@ import { render } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Node } from '../../features/nodes/model/nodeTypes';
+
 const windowTitleBarRender = vi.hoisted(() => vi.fn());
 
 vi.mock('./WindowTitleBar', async () => {
@@ -41,6 +43,22 @@ vi.mock('./useImmersiveReadingMode', () => ({
 
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
 
+function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'kind' | 'parentNodeId' | 'title'>): Node {
+  const { id, kind, parentNodeId, title, ...rest } = overrides;
+  return {
+    ...rest,
+    content: '',
+    createdAt: '2024-01-01T00:00:00.000Z',
+    id,
+    kind,
+    parentNodeId,
+    reveal: '',
+    review: null,
+    title,
+    updatedAt: '2024-01-01T00:00:00.000Z'
+  };
+}
+
 function createProps(overrides: Partial<ComponentProps<typeof WorkspaceLayoutMain>> = {}) {
   const onCloseImportManagement = vi.fn();
   const onOpenNotesView = vi.fn();
@@ -59,6 +77,9 @@ function createProps(overrides: Partial<ComponentProps<typeof WorkspaceLayoutMai
     isViewingTrashNode: false,
     isVirtualViewOpen: false,
     listWidth: 280,
+    nodesById: {
+      'node-1': createNode({ id: 'node-1', kind: 'topic', parentNodeId: null, title: 'Node 1' })
+    },
     onCloseImportManagement,
     onOpenImportManagement: vi.fn(),
     onOpenNotesView,
@@ -95,5 +116,37 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
     );
 
     expect(windowTitleBarRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards the top-level article title when a derived node is selected', () => {
+    render(
+      <WorkspaceLayoutMain
+        {...createProps({
+          activeNodeId: 'node-child',
+          nodesById: {
+            'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Inbox' }),
+            'node-root': createNode({ id: 'node-root', kind: 'topic', parentNodeId: 'folder-1', title: 'Article title' }),
+            'node-child': createNode({ id: 'node-child', kind: 'item', parentNodeId: 'node-root', title: 'Derived card' })
+          }
+        })}
+      />
+    );
+
+    expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Article title' }));
+  });
+
+  it('forwards the folder title when a folder is selected', () => {
+    render(
+      <WorkspaceLayoutMain
+        {...createProps({
+          activeNodeId: 'folder-1',
+          nodesById: {
+            'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Projects' })
+          }
+        })}
+      />
+    );
+
+    expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Projects' }));
   });
 });

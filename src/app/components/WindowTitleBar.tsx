@@ -21,6 +21,7 @@ const TITLEBAR_ICON_STROKE = 1.75;
 
 interface WindowTitleBarProps {
   activeRightPanelId: WorkspaceRightPanelId;
+  centerTitle: string | null;
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
   isTrashViewOpen: boolean;
@@ -191,6 +192,17 @@ function WindowControlButtons({ controlsEnabled, isMaximized, onClose, onMinimiz
   );
 }
 
+function WindowCenterTitle({ title }: { title: string | null }) {
+  if (!title) {
+    return null;
+  }
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex -translate-y-1/2 justify-center px-4">
+      <span className="window-titlebar-center-title" title={title}>{title}</span>
+    </div>
+  );
+}
+
 export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBarProps) {
   const { controlsEnabled, isMaximized, syncMaximizedState } = useWindowControlState();
 
@@ -221,6 +233,7 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
   return (
     <header className="window-titlebar" data-window-maximized={isMaximized} style={{ '--workspace-list-width': `${props.listWidth}px` } as CSSProperties}>
       <WindowLeadingActions {...props} />
+      <WindowCenterTitle title={props.centerTitle} />
       <div className="window-titlebar-drag-fill" onDoubleClick={handleToggleMaximize} />
       <WindowTitleBarRightSidebarAnchor
         activeRightPanelId={props.activeRightPanelId}

@@ -81,7 +81,7 @@ body {
 
 .window-titlebar {
   align-items: center;
-  background: var(--color-background, #f5f5f3);
+  background: #f6f6f6;
   border-bottom: 1px solid rgba(32, 33, 36, 0.18);
   display: flex;
   flex: 0 0 auto;
@@ -90,6 +90,17 @@ body {
   position: relative;
   user-select: none;
   -webkit-app-region: drag;
+}
+
+.window-titlebar-center-title {
+  color: rgba(32, 33, 36, 0.52);
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 48rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .window-titlebar-left-zone {
@@ -627,6 +638,16 @@ body {
 
 body.workspace-resizing {
   cursor: col-resize;
+  user-select: none;
+}
+
+body.link-panel-resizing {
+  cursor: nwse-resize;
+  user-select: none;
+}
+
+body.link-panel-dragging {
+  cursor: move;
   user-select: none;
 }
 
