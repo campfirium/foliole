@@ -224,13 +224,13 @@ function mergeCollapsedNodeIds(
   autoExpandedNodeIds: ReadonlySet<string>
 ) {
   const next = new Set(autoCollapsedNodeIds);
+  for (const nodeId of autoExpandedNodeIds) {
+    next.delete(nodeId);
+  }
   for (const nodeId of manualCollapsedNodeIdList) {
     next.add(nodeId);
   }
   for (const nodeId of manualExpandedNodeIdList) {
-    next.delete(nodeId);
-  }
-  for (const nodeId of autoExpandedNodeIds) {
     next.delete(nodeId);
   }
   return next;
