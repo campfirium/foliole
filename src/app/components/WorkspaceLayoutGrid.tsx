@@ -7,6 +7,7 @@ import { WorkspaceListSplitter } from './WorkspaceListSplitter';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
 import { WorkspaceRightSidebarSplitter } from './WorkspaceRightSidebarSplitter';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
+import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
   if (props.isListCollapsed && props.isRightSidebarCollapsed) {
@@ -154,9 +155,11 @@ function WorkspaceLeftRail({ props }: { props: WorkspaceLayoutProps }) {
 }
 
 export function WorkspaceLayoutGrid({
+  activeRightPanelId,
   documentNodeId,
   props
 }: {
+  activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
   props: WorkspaceLayoutProps;
 }) {
@@ -190,11 +193,9 @@ export function WorkspaceLayoutGrid({
           ) : null}
           {!props.isRightSidebarCollapsed ? (
             <WorkspaceRightSidebar
+              activePanelId={activeRightPanelId}
               activeNodeId={documentNodeId}
-              editorNodeId={props.editorNodeId}
               nodesById={props.nodesById}
-              onNodeDesiredRetentionChange={props.onNodeDesiredRetentionChange}
-              onNodePriorityChange={props.onNodePriorityChange}
               reviewSchedulerSettings={props.reviewSchedulerSettings}
             />
           ) : null}

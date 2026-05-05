@@ -23,12 +23,14 @@ import { WindowTitleBar } from './WindowTitleBar';
 function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>> = {}) {
   return render(
     <WindowTitleBar
+      activeRightPanelId="dev"
       isListCollapsed={false}
       isRightSidebarCollapsed={false}
       isTrashViewOpen={false}
       listWidth={320}
       onOpenNotesView={() => undefined}
       onOpenTrashView={() => undefined}
+      onSelectRightPanel={() => undefined}
       onToggleListVisibility={() => undefined}
       onToggleRightSidebarVisibility={() => undefined}
       rightSidebarWidth={320}
@@ -37,17 +39,17 @@ function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>
   );
 }
 
-describe('WindowTitleBar', () => {
-  beforeEach(() => {
-    closeMainWindow.mockClear();
-    isWindowControlsAvailable.mockReset();
-    isWindowControlsAvailable.mockReturnValue(true);
-    minimizeMainWindow.mockClear();
-    queryMainWindowMaximized.mockClear();
-    toggleMainWindowMaximize.mockClear();
-    onMainWindowResized.mockClear();
-  });
+beforeEach(() => {
+  closeMainWindow.mockClear();
+  isWindowControlsAvailable.mockReset();
+  isWindowControlsAvailable.mockReturnValue(true);
+  minimizeMainWindow.mockClear();
+  queryMainWindowMaximized.mockClear();
+  toggleMainWindowMaximize.mockClear();
+  onMainWindowResized.mockClear();
+});
 
+describe('WindowTitleBar', () => {
   it('triggers desktop window controls from titlebar buttons', () => {
     const { container } = renderTitleBar();
 
@@ -85,6 +87,7 @@ describe('WindowTitleBar', () => {
     renderTitleBar({ isRightSidebarCollapsed: true });
 
     expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
   });
 
   it('collapses left titlebar actions down to the toggle button only', () => {

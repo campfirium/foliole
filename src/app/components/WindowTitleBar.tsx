@@ -11,14 +11,19 @@ import {
   toggleMainWindowMaximize
 } from '../../shared/platform/windowControls';
 
+import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
+import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
+
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
 
 interface WindowTitleBarProps {
+  activeRightPanelId: WorkspaceRightPanelId;
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
   isTrashViewOpen: boolean;
   listWidth: number;
+  onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onToggleRightSidebarVisibility: () => void;
   onOpenNotesView: () => void;
   onOpenTrashView: () => void;
@@ -158,27 +163,6 @@ function WindowLeadingActions({
   );
 }
 
-function WindowRightSidebarAnchor({
-  isRightSidebarCollapsed,
-  onToggleRightSidebarVisibility,
-  rightSidebarWidth
-}: Pick<WindowTitleBarProps, 'isRightSidebarCollapsed' | 'onToggleRightSidebarVisibility' | 'rightSidebarWidth'>) {
-  if (isRightSidebarCollapsed) {
-    return null;
-  }
-
-  return (
-    <>
-      <div className="window-titlebar-right-anchor-shell" style={{ '--workspace-right-sidebar-width': `${rightSidebarWidth}px` } as CSSProperties}>
-        <div className="window-titlebar-right-expanded-action">
-          <SidebarToggleButton active label="Toggle right sidebar" onClick={onToggleRightSidebarVisibility} side="right" />
-        </div>
-        <div className="window-titlebar-right-zone" />
-      </div>
-    </>
-  );
-}
-
 function WindowControlButtons({ controlsEnabled, isMaximized, onClose, onMinimize, onToggleMaximize }: WindowControlButtonsProps) {
   return (
     <div className="window-titlebar-controls">
@@ -242,16 +226,13 @@ export function WindowTitleBar(props: WindowTitleBarProps) {
     <header className="window-titlebar" data-window-maximized={isMaximized} style={{ '--workspace-list-width': `${props.listWidth}px` } as CSSProperties}>
       <WindowLeadingActions {...props} />
       <div className="window-titlebar-drag-fill" onDoubleClick={handleToggleMaximize} />
-      <WindowRightSidebarAnchor
+      <WindowTitleBarRightSidebarAnchor
+        activeRightPanelId={props.activeRightPanelId}
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
+        onSelectRightPanel={props.onSelectRightPanel}
         onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
         rightSidebarWidth={props.rightSidebarWidth}
       />
-      {props.isRightSidebarCollapsed ? (
-        <div className="window-titlebar-collapsed-sidebar-action">
-          <SidebarToggleButton active={false} label="Toggle right sidebar" onClick={props.onToggleRightSidebarVisibility} side="right" />
-        </div>
-      ) : null}
       <WindowControlButtons
         controlsEnabled={controlsEnabled}
         isMaximized={isMaximized}

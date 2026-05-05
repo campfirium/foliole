@@ -1,10 +1,12 @@
 import type { CSSProperties } from 'react';
+import { useState } from 'react';
 
 import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
 
 import { WindowTitleBar } from './WindowTitleBar';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceLayoutGrid } from './WorkspaceLayoutGrid';
+import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
   if (!props.isSettingsOpen) {
@@ -67,11 +69,18 @@ function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
 }
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
+  const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>('dev');
   const workspaceGridStyle = {
     '--workspace-list-width': `${props.listWidth}px`,
     '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px`
   } as CSSProperties;
   const documentNodeId = props.isViewingTrashNode ? props.selectedTrashNodeId : props.activeNodeId;
+  const handleSelectRightPanel = (panelId: WorkspaceRightPanelId) => {
+    setActiveRightPanelId(panelId);
+    if (props.isRightSidebarCollapsed) {
+      props.onToggleRightSidebarVisibility();
+    }
+  };
 
   return (
     <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
@@ -83,18 +92,19 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         />
       ) : null}
       <WindowTitleBar
+        activeRightPanelId={activeRightPanelId}
         isListCollapsed={props.isListCollapsed}
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
         isTrashViewOpen={props.isTrashViewOpen}
         listWidth={props.listWidth}
         onOpenNotesView={props.onOpenNotesView}
         onOpenTrashView={props.onOpenTrashView}
+        onSelectRightPanel={handleSelectRightPanel}
         onToggleListVisibility={props.onToggleListVisibility}
         onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
         rightSidebarWidth={props.rightSidebarWidth}
       />
-      <section aria-label="Workspace top toolbar" className="sr-only" />
-      <WorkspaceLayoutGrid documentNodeId={documentNodeId} props={props} />
+      <WorkspaceLayoutGrid activeRightPanelId={activeRightPanelId} documentNodeId={documentNodeId} props={props} />
       <SettingsOverlay props={props} />
     </main>
   );
