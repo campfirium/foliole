@@ -2,8 +2,8 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimeExternalSearchBrowseEntry } from '../../shared/platform/externalSearchRuntimeRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
-import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WindowTitleBar } from './WindowTitleBar';
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export type WorkspaceTitleBarSource = Pick<

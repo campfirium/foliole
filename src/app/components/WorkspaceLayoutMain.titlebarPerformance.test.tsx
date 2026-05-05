@@ -4,9 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
-import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
-import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
-
 const { windowTitleBarRender, workspaceLayoutGridRender } = vi.hoisted(() => ({
   windowTitleBarRender: vi.fn(),
   workspaceLayoutGridRender: vi.fn()
@@ -59,7 +56,9 @@ vi.mock('./useImmersiveReadingMode', () => ({
   })
 }));
 
+import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
+import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 
 function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'kind' | 'parentNodeId' | 'title'>): Node {
   const { id, kind, parentNodeId, title, ...rest } = overrides;
