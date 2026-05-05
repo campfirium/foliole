@@ -811,12 +811,13 @@ function Start-ElectronShell {
 
   $proc = Start-Process `
     -FilePath "cmd.exe" `
-    -ArgumentList "/d", "/k", $command `
+    -ArgumentList "/d", "/c", $command `
     -WorkingDirectory $WorkDir `
+    -WindowStyle Hidden `
     -PassThru
 
   Save-TrackedPid -ProcessId $proc.Id
-  Write-Info "electron:dev shell launched with visible terminal"
+  Write-Info "electron:dev shell launched in hidden terminal"
   return $proc
 }
 

@@ -17,6 +17,16 @@ function Write-Info {
   Write-Host "[android-deploy] $Message"
 }
 
+function Get-InstalledVersionCode {
+  param([string]$AdbPath, [string]$Serial, [string]$PackageName)
+  $output = (& $AdbPath -s $Serial shell dumpsys package $PackageName 2>$null) -join "`n"
+  $match = [regex]::Match($output, "versionCode=(\d+)")
+  if (!$match.Success) {
+    return ""
+  }
+  return $match.Groups[1].Value
+}
+
 function Resolve-JavaHome {
   $candidates = @(
     $env:JAVA_HOME,
@@ -144,10 +154,15 @@ if (!(Test-Path -Path $adbPath)) {
 
 $nodeExe = Resolve-NodeExe
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$installCacheScript = Join-Path $repoRoot "scripts\android\windows-deploy-install-cache.ps1"
 $verifyScript = Join-Path $repoRoot "scripts\android\verify-android-launch.mjs"
+if (!(Test-Path -Path $installCacheScript)) {
+  throw "Android deploy install cache script not found: $installCacheScript"
+}
 if (!(Test-Path -Path $verifyScript)) {
   throw "Android launch verification script not found: $verifyScript"
 }
+. $installCacheScript
 
 $androidDir = Join-Path $WindowsWorkDir $AndroidHostDir
 if (!(Test-Path -Path $androidDir)) {
@@ -162,12 +177,24 @@ if ($null -eq $serial) {
 }
 
 Write-Info "device: $serial"
-Push-Location $androidDir
-try {
-  Write-Info "installing debug build"
-  Invoke-GradleWrapper -TaskName "installDebug"
-} finally {
-  Pop-Location
+$apkHash = Get-ApkHash -AndroidDir $androidDir
+$webAssetsHash = Get-WebAssetsHash -AndroidDir $androidDir
+$installedVersionCode = Get-InstalledVersionCode -AdbPath $adbPath -Serial $serial -PackageName $AppId
+if (Test-InstallCacheHit -ApkHash $apkHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir) {
+  Write-Info "install cache: HIT apk=$apkHash versionCode=$installedVersionCode"
+} else {
+  Write-Info "install cache: MISS apk=$apkHash webAssets=$webAssetsHash versionCode=$installedVersionCode"
+  Push-Location $androidDir
+  try {
+    Write-Info "installing debug build"
+    Invoke-GradleWrapper -TaskName "installDebug"
+  } finally {
+    Pop-Location
+  }
+  $apkHash = Get-ApkHash -AndroidDir $androidDir
+  $webAssetsHash = Get-WebAssetsHash -AndroidDir $androidDir
+  $installedVersionCode = Get-InstalledVersionCode -AdbPath $adbPath -Serial $serial -PackageName $AppId
+  Write-InstallCache -ApkHash $apkHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir
 }
 
 if ($DevReverseSyncPort -gt 0) {

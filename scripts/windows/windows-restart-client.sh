@@ -13,4 +13,4 @@ echo "[windows-restart-client] action=${WINDOWS_CLIENT_ACTION}"
 echo "[windows-restart-client] workdir=${WINDOWS_WORKDIR}"
 
 FOLIOLE_RUNTIME_HEAD="${FOLIOLE_RUNTIME_HEAD:-$(git rev-parse HEAD 2>/dev/null || true)}"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${PS_SCRIPT_WIN_PATH}" -Action "${WINDOWS_CLIENT_ACTION}" -WindowsWorkDir "${WINDOWS_WORKDIR}" -RuntimeHead "${FOLIOLE_RUNTIME_HEAD}"
+powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "${PS_SCRIPT_WIN_PATH}" -Action "${WINDOWS_CLIENT_ACTION}" -WindowsWorkDir "${WINDOWS_WORKDIR}" -RuntimeHead "${FOLIOLE_RUNTIME_HEAD}"

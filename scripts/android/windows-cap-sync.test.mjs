@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CAP_SYNC_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-cap-sync.sh');
+const CAP_SYNC_PS_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-cap-sync.ps1');
 
 function runCapSync(cwd, env = {}) {
   return new Promise((resolve) => {
@@ -42,6 +43,16 @@ async function writeExecutable(rootDir, relativePath, content) {
 }
 
 describe('windows-cap-sync.sh', () => {
+  it('skips web build and cap sync when the input cache is valid', async () => {
+    const script = await readFile(CAP_SYNC_PS_SCRIPT, 'utf8');
+
+    expect(script).toContain('function Get-CapSyncInputHash');
+    expect(script).toContain('android-cap-sync-cache.json');
+    expect(script).toContain('Test-CapSyncCacheHit -InputHash $inputHash');
+    expect(script).toContain('cache: HIT input=$inputHash');
+    expect(script).toContain('Write-CapSyncCache -InputHash $inputHash');
+  });
+
   it('defaults sync and PowerShell calls to the dedicated Android workspace', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-cap-sync-default-workdir-'));
     try {
@@ -78,6 +89,8 @@ describe('windows-cap-sync.sh', () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('cap-sync-target:/mnt/c/dev/foliole-android-preview');
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
+      expect(args).toContain('-WindowStyle');
+      expect(args).toContain('Hidden');
       expect(args).toContain('-WindowsWorkDir');
       expect(args).toContain('C:\\dev\\foliole-android-preview');
       expect(args).not.toContain('C:\\dev\\foliole');

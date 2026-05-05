@@ -8,6 +8,7 @@ WINDOWS_CLIENT_SCRIPT="${WINDOWS_CLIENT_SCRIPT:-scripts/windows/windows-restart-
 WINDOWS_RESTART_INTENT_SCRIPT="${WINDOWS_RESTART_INTENT_SCRIPT:-scripts/windows/write-restart-intent.mjs}"
 WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT="${WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT:-scripts/windows/write-renderer-reload-intent.mjs}"
 WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT="${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT:-scripts/windows/check-electron-dist-fresh.mjs}"
+WINDOWS_ELECTRON_DIST_SYNC_SCRIPT="${WINDOWS_ELECTRON_DIST_SYNC_SCRIPT:-scripts/windows/electron-dist-incremental-sync.mjs}"
 WINDOWS_ELECTRON_COMPILE_COMMAND="${WINDOWS_ELECTRON_COMPILE_COMMAND:-npm run electron:compile}"
 WINDOWS_RESTART_INTENT_ROOT="${WINDOWS_RESTART_INTENT_ROOT:-}"
 WINDOWS_RENDERER_RELOAD_INTENT_ROOT="${WINDOWS_RENDERER_RELOAD_INTENT_ROOT:-}"
@@ -800,7 +801,15 @@ ensure_fresh_electron_dist
 echo "[windows-preview] step 2/3: sync to windows mirror"
 changed_files="$(resolve_changed_files)"
 if has_runtime_code_changes "${changed_files}"; then
-  WINDOWS_SYNC_INCLUDE_ELECTRON_DIST=1 bash "${WINDOWS_SYNC_SCRIPT}"
+  set +e
+  WINDOWS_PREVIEW_CHANGED_FILES="${changed_files}" node "${WINDOWS_ELECTRON_DIST_SYNC_SCRIPT}"
+  electron_dist_sync_exit=$?
+  set -e
+  if [ "${electron_dist_sync_exit}" -eq 0 ]; then
+    bash "${WINDOWS_SYNC_SCRIPT}"
+  else
+    WINDOWS_SYNC_INCLUDE_ELECTRON_DIST=1 bash "${WINDOWS_SYNC_SCRIPT}"
+  fi
 else
   bash "${WINDOWS_SYNC_SCRIPT}"
 fi

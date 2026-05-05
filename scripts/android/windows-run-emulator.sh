@@ -24,4 +24,4 @@ EOF
   exit 0
 fi
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "${WINDOWS_SCRIPT_PATH}")" -AvdName "${AVD_NAME}" -Timezone "${ANDROID_EMULATOR_TIMEZONE}"
+powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "$(wslpath -w "${WINDOWS_SCRIPT_PATH}")" -AvdName "${AVD_NAME}" -Timezone "${ANDROID_EMULATOR_TIMEZONE}"

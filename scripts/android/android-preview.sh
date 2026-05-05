@@ -23,6 +23,7 @@ ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS
 ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS:-120}"
 ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS="${ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS:-60}"
 ANDROID_PREVIEW_KILL_AFTER_SECONDS="${ANDROID_PREVIEW_KILL_AFTER_SECONDS:-10}"
+ANDROID_PREVIEW_TIMINGS=""
 PREVIEW_TOTAL_STEPS=3
 
 if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
@@ -48,6 +49,7 @@ run_preview_step() {
   finished_at="$(date +%s)"
   elapsed=$((finished_at - started_at))
   echo "[android-preview] done: ${label} (${elapsed}s)"
+  ANDROID_PREVIEW_TIMINGS="${ANDROID_PREVIEW_TIMINGS}${label}=${elapsed}s "
   return "${exit_code}"
 }
 
@@ -124,6 +126,7 @@ if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
       exit 1
     fi
   fi
+  echo "[android-preview] timings: ${ANDROID_PREVIEW_TIMINGS}"
   echo "[android-preview] status: OPENED"
   exit 0
 fi
@@ -135,9 +138,11 @@ if [[ "${ANDROID_PREVIEW_OPEN_STUDIO}" != "0" ]]; then
     echo "[android-preview] status: FAILED"
     exit 1
   fi
+  echo "[android-preview] timings: ${ANDROID_PREVIEW_TIMINGS}"
   echo "[android-preview] status: OPENED"
   exit 0
 fi
 
 echo "[android-preview] step 3/${PREVIEW_TOTAL_STEPS}: preview sync complete"
+echo "[android-preview] timings: ${ANDROID_PREVIEW_TIMINGS}"
 echo "[android-preview] status: SYNCED"

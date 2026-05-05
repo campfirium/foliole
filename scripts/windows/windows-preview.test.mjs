@@ -47,6 +47,7 @@ async function createMockScripts(root, clientBody) {
   const syncScript = path.join(root, 'mock-sync.sh');
   const clientScript = path.join(root, 'mock-client.sh');
   const freshnessScript = path.join(root, 'mock-freshness.mjs');
+  const electronDistSyncScript = path.join(root, 'mock-electron-dist-sync.mjs');
   const compileScript = path.join(root, 'mock-compile.sh');
   const actionLog = path.join(root, 'actions.log');
 
@@ -72,6 +73,15 @@ async function createMockScripts(root, clientBody) {
     ].join('\n'),
     'utf8'
   );
+  await writeFile(
+    electronDistSyncScript,
+    [
+      'import { appendFileSync } from "node:fs";',
+      'appendFileSync(process.env.ACTION_LOG, "electron-dist-sync\\n");',
+      'process.stdout.write("[electron-dist-sync] status: SYNCED files=1\\n");'
+    ].join('\n'),
+    'utf8'
+  );
   await writeFile(freshnessScript, 'process.stdout.write("[check-electron-dist-fresh] status: FRESH\\n");\n', 'utf8');
   await writeFile(
     compileScript,
@@ -87,7 +97,7 @@ async function createMockScripts(root, clientBody) {
   );
   await writeFile(actionLog, '', 'utf8');
 
-  return { actionLog, clientScript, compileScript, freshnessScript, syncScript };
+  return { actionLog, clientScript, compileScript, electronDistSyncScript, freshnessScript, syncScript };
 }
 
 async function readActions(actionLog) {
@@ -291,7 +301,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'renderer-reload');
     try {
-      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING"', '  exit 0', 'fi', 'exit 1'].join('\n')
       );
@@ -299,6 +309,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       const result = await runScript({
         ACTION_LOG: actionLog,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_ELECTRON_DIST_SYNC_SCRIPT: electronDistSyncScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
@@ -327,7 +338,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
   it('chooses full restart when committed runtime changes and renderer source changes are both pending', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
-      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
@@ -366,7 +377,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'restart');
     try {
-      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
@@ -384,6 +395,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       const result = await runScript({
         ACTION_LOG: actionLog,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_ELECTRON_DIST_SYNC_SCRIPT: electronDistSyncScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
@@ -395,7 +407,8 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('reason: Class B: working tree electron changes detected');
-      expect(result.stdout).toContain('[windows-sync] include electron-dist');
+      expect(result.stdout).toContain('[electron-dist-sync] status: SYNCED files=1');
+      expect(result.stdout).not.toContain('[windows-sync] include electron-dist');
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: REQUESTED nonce=1');
       expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
@@ -408,7 +421,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         target: 'electron-dev',
         reason: 'Class B: working tree electron changes detected'
       });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['electron-dist-sync', 'status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -419,7 +432,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'restart');
     try {
-      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
@@ -437,6 +450,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       const result = await runScript({
         ACTION_LOG: actionLog,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_ELECTRON_DIST_SYNC_SCRIPT: electronDistSyncScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,

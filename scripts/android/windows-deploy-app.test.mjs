@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -11,6 +11,8 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEPLOY_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-app.sh');
+const DEPLOY_CACHE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-install-cache.ps1');
+const DEPLOY_PS_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-app.ps1');
 
 function runDeploy(cwd, env = {}) {
   return new Promise((resolve) => {
@@ -43,6 +45,20 @@ async function writeExecutable(rootDir, name, content) {
 }
 
 describe('windows-deploy-app.sh', () => {
+  it('skips installDebug when the installed APK cache is valid', async () => {
+    const script = await readFile(DEPLOY_PS_SCRIPT, 'utf8');
+    const cacheScript = await readFile(DEPLOY_CACHE_SCRIPT, 'utf8');
+
+    expect(script).toContain('. $installCacheScript');
+    expect(cacheScript).toContain('function Test-InstallCacheHit');
+    expect(cacheScript).toContain('function Get-WebAssetsHash');
+    expect(cacheScript).toContain('$cache.webAssetsHash -eq $WebAssetsHash');
+    expect(cacheScript).toContain('android-install-cache.json');
+    expect(script).toContain('install cache: HIT apk=$apkHash versionCode=$installedVersionCode');
+    expect(script).toContain('Invoke-GradleWrapper -TaskName "installDebug"');
+    expect(script).toContain('Write-InstallCache -ApkHash $apkHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
+  });
+
   it('refuses direct deploy without explicit data-risk confirmation', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-deploy-refuse-'));
     try {
@@ -61,7 +77,7 @@ describe('windows-deploy-app.sh', () => {
       await writeExecutable(
         tempRoot,
         'powershell.exe',
-        '#!/usr/bin/env bash\necho "[android-deploy] status: OPENED"\nsleep 30\n'
+        '#!/usr/bin/env bash\nprintf "%s\\n" "$@"\necho "[android-deploy] status: OPENED"\nsleep 30\n'
       );
 
       const result = await runDeploy(tempRoot, {
@@ -70,6 +86,8 @@ describe('windows-deploy-app.sh', () => {
       });
 
       expect(result.code).toBe(0);
+      expect(result.stdout).toContain('-WindowStyle');
+      expect(result.stdout).toContain('Hidden');
       expect(result.stdout).toContain('[android-deploy] status: OPENED');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

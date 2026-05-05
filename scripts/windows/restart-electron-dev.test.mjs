@@ -70,6 +70,14 @@ describe('restart-electron-dev script', () => {
     expect(script).toContain('process still running after forced stop pid=');
   });
 
+  it('launches the dev shell without a foreground terminal window', async () => {
+    const script = await readFile(SCRIPT_PATH, 'utf8');
+
+    expect(script).toContain('-ArgumentList "/d", "/c", $command');
+    expect(script).toContain('-WindowStyle Hidden');
+    expect(script).toContain('electron:dev shell launched in hidden terminal');
+  });
+
   it('keeps stale-process cleanup scoped to the Electron dev loop', async () => {
     const script = await readFile(SCRIPT_PATH, 'utf8');
 

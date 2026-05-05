@@ -24,6 +24,7 @@ fi
 
 powershell.exe \
   -NoProfile \
+  -WindowStyle Hidden \
   -ExecutionPolicy Bypass \
   -File "$(wslpath -w "${WINDOWS_SCRIPT_PATH}")" \
   -WindowsWorkDir "${ANDROID_WINDOWS_WORKDIR}" \
