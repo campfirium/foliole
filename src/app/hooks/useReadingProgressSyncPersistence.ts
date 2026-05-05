@@ -12,6 +12,7 @@ import {
   createReadingProgressSignature,
   updateCapturedNodeViewState,
   type PendingNodeViewStateMap,
+  type ReadingProgressCaptureMode,
   type ResolvedReadingProgressState
 } from './useReadingProgressSyncSupport';
 
@@ -23,13 +24,15 @@ export interface ReadingProgressPersistenceArgs {
   resolveCapturedReadingProgress: (
     activeNodeIdOverride?: string | null,
     captureNodeIdOverride?: string | null,
-    includePendingNodeViewStates?: boolean
+    includePendingNodeViewStates?: boolean,
+    captureMode?: ReadingProgressCaptureMode
   ) => ResolvedReadingProgressState | null;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }
 
 export function flushReadingProgressToRuntime(args: {
   activeNodeIdOverride?: string | null;
+  captureMode?: ReadingProgressCaptureMode;
   captureNodeIdOverride?: string | null;
   lastSyncedSignatureRef: MutableRefObject<string | null>;
   persistence: ReadingProgressPersistenceArgs;
@@ -43,7 +46,9 @@ export function flushReadingProgressToRuntime(args: {
   }
   const resolved = args.persistence.resolveCapturedReadingProgress(
     args.activeNodeIdOverride,
-    args.captureNodeIdOverride
+    args.captureNodeIdOverride,
+    true,
+    args.captureMode
   );
   if (!resolved) {
     return;

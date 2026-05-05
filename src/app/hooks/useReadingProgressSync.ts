@@ -14,6 +14,7 @@ import {
   captureEditorNodeViewState,
   mergePendingNodeViewStates,
   type PendingNodeViewStateMap,
+  type ReadingProgressCaptureMode,
   type ResolvedReadingProgressState
 } from './useReadingProgressSyncSupport';
 
@@ -59,7 +60,8 @@ function useResolvedReadingProgressState(
     (
       activeNodeIdOverride?: string | null,
       captureNodeIdOverride?: string | null,
-      includePendingNodeViewStates = true
+      includePendingNodeViewStates = true,
+      captureMode: ReadingProgressCaptureMode = 'snapshot'
     ): ResolvedReadingProgressState | null => {
       if (!latest.isWorkspaceHydratedRef.current) {
         return null;
@@ -75,7 +77,8 @@ function useResolvedReadingProgressState(
             args.getReadingPositionSelection,
             args.isImmersiveMode,
             args.isViewingTrashNode,
-            args.editorRef
+            args.editorRef,
+            captureMode
           )
         : null;
       const mergedPendingNodeViewById = includePendingNodeViewStates
@@ -110,7 +113,8 @@ function useReadingProgressFlushCallbacks(args: {
   resolveCapturedReadingProgress: (
     activeNodeIdOverride?: string | null,
     captureNodeIdOverride?: string | null,
-    includePendingNodeViewStates?: boolean
+    includePendingNodeViewStates?: boolean,
+    captureMode?: ReadingProgressCaptureMode
   ) => ResolvedReadingProgressState | null;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }) {
@@ -118,9 +122,10 @@ function useReadingProgressFlushCallbacks(args: {
   const persistence: ReadingProgressPersistenceArgs = args;
 
   const flushReadingProgress = useCallback(
-    (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) =>
+    (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null, captureMode?: ReadingProgressCaptureMode) =>
       flushReadingProgressToRuntime({
         activeNodeIdOverride,
+        captureMode,
         captureNodeIdOverride,
         lastSyncedSignatureRef,
         persistence
@@ -143,7 +148,11 @@ function useReadingProgressFlushCallbacks(args: {
 function useReadingProgressCaptureHooks(args: {
   activeNodeId: string | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
-  flushReadingProgress: (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) => void;
+  flushReadingProgress: (
+    activeNodeIdOverride?: string | null,
+    captureNodeIdOverride?: string | null,
+    captureMode?: ReadingProgressCaptureMode
+  ) => void;
   getReadingPositionSelection?: () => { from: number; to: number } | null;
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
   isImmersiveMode: boolean;
@@ -156,7 +165,7 @@ function useReadingProgressCaptureHooks(args: {
   useDebouncedReadingProgressPersistence({
     activeNodeId: args.activeNodeId,
     editorRef: args.editorRef,
-    flushReadingProgress: () => args.flushReadingProgress(),
+    flushReadingProgress: () => args.flushReadingProgress(undefined, undefined, 'user-scroll'),
     getReadingPositionSyncState: args.getReadingPositionSyncState,
     isViewingTrashNode: args.isViewingTrashNode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,

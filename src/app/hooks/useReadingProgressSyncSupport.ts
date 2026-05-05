@@ -22,6 +22,8 @@ export interface PendingNodeViewStateMap {
   [nodeId: string]: NodeViewState | undefined;
 }
 
+export type ReadingProgressCaptureMode = 'snapshot' | 'user-scroll';
+
 export function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
   return {
     scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
@@ -60,20 +62,25 @@ export function captureEditorNodeViewState(
   getReadingPositionSelection: (() => { from: number; to: number } | null) | undefined,
   isImmersiveMode: boolean,
   isViewingTrashNode: boolean,
-  editorRef: MutableRefObject<EditorAdapter | null>
+  editorRef: MutableRefObject<EditorAdapter | null>,
+  mode: ReadingProgressCaptureMode = 'snapshot'
 ): CapturedNodeViewState | null {
   if (isViewingTrashNode || !nodeId || !editorRef.current) {
     return null;
   }
+  const sharedReadingSelection = getReadingPositionSelection?.() ?? null;
   return {
     nodeId,
     viewState: normalizeNodeViewState({
       scrollTop: editorRef.current.getScrollTop(),
-      selection: resolvePersistedViewStateSelection({
-        editor: editorRef.current,
-        isImmersiveMode,
-        sharedReadingSelection: getReadingPositionSelection?.() ?? null
-      })
+      selection:
+        mode === 'user-scroll' && !isImmersiveMode
+          ? null
+          : resolvePersistedViewStateSelection({
+              editor: editorRef.current,
+              isImmersiveMode,
+              sharedReadingSelection
+            })
     })
   };
 }

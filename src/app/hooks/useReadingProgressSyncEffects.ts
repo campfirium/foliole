@@ -7,7 +7,8 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import {
   captureEditorNodeViewState,
   stagePendingNodeViewState,
-  type PendingNodeViewStateMap
+  type PendingNodeViewStateMap,
+  type ReadingProgressCaptureMode
 } from './useReadingProgressSyncSupport';
 
 const READING_PROGRESS_SYNC_INTERVAL_MS = 1500;
@@ -21,7 +22,11 @@ declare global {
 
 interface ReadingProgressEffectsOptions {
   activeNodeId: string | null;
-  flushReadingProgress: (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) => void;
+  flushReadingProgress: (
+    activeNodeIdOverride?: string | null,
+    captureNodeIdOverride?: string | null,
+    captureMode?: ReadingProgressCaptureMode
+  ) => void;
   getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
   isWorkspaceHydrated: boolean;
   lifecycleFlush: () => void;
@@ -173,7 +178,8 @@ function captureImmediateReadingProgress(args: ImmediateReadingProgressCaptureAr
     args.getReadingPositionSelection,
     args.isImmersiveMode,
     args.isViewingTrashNode,
-    args.editorRef
+    args.editorRef,
+    'user-scroll'
   );
   const staged = stagePendingNodeViewState({
     captured,

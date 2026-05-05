@@ -127,7 +127,7 @@ function registerRuntimeDebouncePersistenceTests() {
     });
     expect(setNodeViewState).toHaveBeenCalledWith('node-2', {
       scrollTop: 5400,
-      selection: { from: 48000, to: 48000 }
+      selection: null
     });
     expect(syncReadingProgressToRuntime).toHaveBeenCalledWith({
       activeNodeId: 'node-2',
@@ -135,8 +135,8 @@ function registerRuntimeDebouncePersistenceTests() {
         {
           nodeId: 'node-2',
           scrollTop: 5400,
-          selectionFrom: 48000,
-          selectionTo: 48000
+          selectionFrom: null,
+          selectionTo: null
         }
       ],
       source: 'user-scroll',
@@ -200,7 +200,7 @@ function registerVisiblePositionPreferenceTests() {
     runRuntimeReadingPositionPersistenceTest();
   });
 
-  it('prefers the current editor-visible position over a stale highlight jump in normal mode', () => {
+  it('does not move the reading selection during normal scroll persistence', () => {
     const listeners = new Set<(event: EditorScrollEvent) => void>();
     const setNodeViewState = vi.fn();
     renderVisiblePositionHarness(listeners, setNodeViewState, {
@@ -215,7 +215,7 @@ function registerVisiblePositionPreferenceTests() {
     });
     expect(syncReadingProgressToRuntime).toHaveBeenLastCalledWith({
       activeNodeId: 'node-2',
-      nodeViewStates: [{ nodeId: 'node-2', scrollTop: 5400, selectionFrom: 3, selectionTo: 3 }],
+      nodeViewStates: [{ nodeId: 'node-2', scrollTop: 5400, selectionFrom: null, selectionTo: null }],
       source: 'user-scroll',
       updatedAt: expect.any(String)
     });
