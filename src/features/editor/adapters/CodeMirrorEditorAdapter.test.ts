@@ -95,6 +95,7 @@ vi.mock('./markdownInputAssist', () => ({
 }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
+import { shouldRefreshLineDecorations } from './liveMarkdownViewport';
 
 describe('CodeMirrorEditorAdapter', () => {
   beforeEach(() => {
@@ -143,5 +144,16 @@ describe('CodeMirrorEditorAdapter', () => {
     expect(mockScrollIntoView).toHaveBeenCalledWith(8, { y: 'center' });
     expect(dispatch).toHaveBeenCalledWith({ effects: 'scroll-into-view-effect' });
     expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips line-decoration refresh when only focus changes and markdown syntax stays hidden', () => {
+    expect(
+      shouldRefreshLineDecorations({
+        docChanged: false,
+        focusChanged: true,
+        selectionSet: false,
+        viewportChanged: false
+      } as never)
+    ).toBe(false);
   });
 });

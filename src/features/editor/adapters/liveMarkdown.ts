@@ -13,7 +13,7 @@ import {
   getCursorLineNumber,
   INLINE_ANCHOR_TAG_PATTERN
 } from './liveMarkdownAnchors';
-import { addFrontmatterDecorations, isLineWithinFrontmatter, resolveFrontmatterBounds } from './liveMarkdownFrontmatter';
+import { addFrontmatterDecorations } from './liveMarkdownFrontmatter';
 import {
   addImageDecorations,
   addInlineCodeDecorations,
@@ -39,34 +39,28 @@ import {
   collectClozePlaceholderRanges
 } from './liveMarkdownTextMarks';
 import { liveMarkdownTheme } from './liveMarkdownTheme';
+import { resolveVisibleLineWindow, shouldRefreshLineDecorations } from './liveMarkdownViewport';
 
 const hideTitleHeadingFacet = Facet.define<boolean, boolean>({
   combine: (values) => values[0] ?? false
 });
 
 export function createLiveMarkdown(hideTitleHeading = false) {
-  return [hideTitleHeadingFacet.of(hideTitleHeading), liveMarkdownTheme, markdownLinePlugin, markdownInteractionHandlers];
+  return [hideTitleHeadingFacet.of(hideTitleHeading), liveMarkdownTheme, markdownStaticPlugin, markdownLinePlugin, markdownInteractionHandlers];
 }
 
 function buildLineDecorations(view: EditorView): DecorationSet {
-  if (getEditorDisplayMode() === 'source') return buildSourceModeDecorations(view);
+  if (getEditorDisplayMode() === 'source') return buildSourceModeLineDecorations(view);
 
   const ranges: Range<Decoration>[] = [];
-  const content = view.state.doc.toString();
   const hideTitleHeading = view.state.facet(hideTitleHeadingFacet);
-  addAnchorTagDecorations(ranges, content);
-  addFrontmatterDecorations(ranges, view);
-  const frontmatterBounds = resolveFrontmatterBounds(content);
-
+  const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const showMarkdownSyntax = getMarkdownSyntaxVisibility() === 'visible';
   const cursorLineNumber = getCursorLineNumber(view);
-  let inCodeBlock = false;
+  let inCodeBlock = resolveCodeBlockStateBeforeLine(view, startLineNumber);
 
-  for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
+  for (let lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
-    if (isLineWithinFrontmatter(frontmatterBounds, lineNumber)) {
-      continue;
-    }
     const isCodeFenceLine = CODE_FENCE_PATTERN.test(line.text);
     const lineClass = createLineClass(line.text, inCodeBlock);
     const isCursorLine = cursorLineNumber !== null && lineNumber === cursorLineNumber;
@@ -103,12 +97,12 @@ function buildLineDecorations(view: EditorView): DecorationSet {
   return Decoration.set(ranges, true);
 }
 
-function buildSourceModeDecorations(view: EditorView): DecorationSet {
+function buildSourceModeLineDecorations(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
-  const content = view.state.doc.toString();
-  let inCodeBlock = false;
+  const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
+  let inCodeBlock = resolveCodeBlockStateBeforeLine(view, startLineNumber);
 
-  for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
+  for (let lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
     const clozePlaceholderRanges = collectClozePlaceholderRanges(line.from, line.text);
     const inlineCodeMatches = inCodeBlock ? [] : collectInlineCodeMatches(line.from, line.text);
@@ -126,6 +120,29 @@ function buildSourceModeDecorations(view: EditorView): DecorationSet {
     if (CODE_FENCE_PATTERN.test(line.text)) inCodeBlock = !inCodeBlock;
   }
 
+  return Decoration.set(ranges, true);
+}
+
+function buildStaticDecorations(view: EditorView): DecorationSet {
+  return getEditorDisplayMode() === 'source' ? buildSourceModeStaticDecorations(view) : buildPreviewStaticDecorations(view);
+}
+
+function buildPreviewStaticDecorations(view: EditorView): DecorationSet {
+  const ranges: Range<Decoration>[] = [];
+  const content = view.state.doc.toString();
+  addAnchorTagDecorations(ranges, content);
+  addFrontmatterDecorations(ranges, view);
+  return Decoration.set(ranges, true);
+}
+
+function buildSourceModeStaticDecorations(view: EditorView): DecorationSet {
+  const ranges: Range<Decoration>[] = [];
+  const content = view.state.doc.toString();
+  addSourceModeAnchorDecorations(ranges, content);
+  return Decoration.set(ranges, true);
+}
+
+function addSourceModeAnchorDecorations(ranges: Range<Decoration>[], content: string) {
   let match = INLINE_ANCHOR_TAG_PATTERN.exec(content);
   while (match) {
     const from = match.index ?? -1;
@@ -159,8 +176,32 @@ function buildSourceModeDecorations(view: EditorView): DecorationSet {
     match = INLINE_ANCHOR_TAG_PATTERN.exec(content);
   }
   INLINE_ANCHOR_TAG_PATTERN.lastIndex = 0;
-  return Decoration.set(ranges, true);
 }
+
+function resolveCodeBlockStateBeforeLine(view: EditorView, lineNumber: number) {
+  let inCodeBlock = false;
+  for (let currentLineNumber = 1; currentLineNumber < lineNumber; currentLineNumber += 1) {
+    if (CODE_FENCE_PATTERN.test(view.state.doc.line(currentLineNumber).text)) {
+      inCodeBlock = !inCodeBlock;
+    }
+  }
+  return inCodeBlock;
+}
+
+const markdownStaticPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = buildStaticDecorations(view);
+    }
+    update(update: ViewUpdate) {
+      if (update.docChanged) {
+        this.decorations = buildStaticDecorations(update.view);
+      }
+    }
+  },
+  { decorations: (value) => value.decorations }
+);
 
 const markdownLinePlugin = ViewPlugin.fromClass(
   class {
@@ -169,7 +210,7 @@ const markdownLinePlugin = ViewPlugin.fromClass(
       this.decorations = buildLineDecorations(view);
     }
     update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet || update.focusChanged) {
+      if (shouldRefreshLineDecorations(update)) {
         this.decorations = buildLineDecorations(update.view);
       }
     }
