@@ -66,6 +66,31 @@ const SHARED_GATE_SCRIPTS = {
   'android:web:build': 'node -e "console.log(\'shared android build ok\')"'
 };
 
+const FULL_GATE_SCRIPTS = {
+  'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+  lint: 'node -e "console.log(\'full lint ok\')"',
+  'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
+  'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
+  'test:full': 'node -e "console.log(\'full test ok\')"',
+  build: 'node -e "console.log(\'full build ok\')"',
+  'electron:compile': 'node -e "console.log(\'full electron compile ok\')"',
+  'android:web:build': 'node -e "console.log(\'full android build ok\')"'
+};
+
+const RELEASE_GATE_SCRIPTS = {
+  ...FULL_GATE_SCRIPTS,
+  lint: 'node -e "console.log(\'release lint ok\')"',
+  'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
+  'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
+  'test:full': 'node -e "console.log(\'release test ok\')"',
+  build: 'node -e "console.log(\'release build ok\')"',
+  'electron:compile': 'node -e "console.log(\'release electron compile ok\')"',
+  'android:web:build': 'node -e "console.log(\'release android build ok\')"',
+  'android:sync': 'node -e "console.log(\'release android sync ok\')"',
+  'android:host:lint': 'node -e "console.log(\'release android host lint ok\')"',
+  'android:host:test': 'node -e "console.log(\'release android host test ok\')"'
+};
+
 describe('Android boundary quality gate routing', () => {
   it('runs the Android boundary check in the Android gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
@@ -101,4 +126,40 @@ describe('Android boundary quality gate routing', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   }, 15000);
+
+  it('runs the Android boundary check in the full gate', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
+    try {
+      await writePackageJson(tempRoot, FULL_GATE_SCRIPTS);
+      await writeFixtureScript(tempRoot, 'scripts/check-repository-root-boundary.mjs', 'root boundary ok');
+      await writeFixtureScript(tempRoot, 'scripts/check-workspace-settings-boundary.mjs', 'workspace boundary ok');
+
+      const result = await runTargetGate(tempRoot, 'full');
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('android boundary ok');
+      expect(result.stdout.indexOf('android boundary ok')).toBeLessThan(result.stdout.indexOf('full lint ok'));
+      expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('runs the Android boundary check in the release gate', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
+    try {
+      await writePackageJson(tempRoot, RELEASE_GATE_SCRIPTS);
+      await writeFixtureScript(tempRoot, 'scripts/check-repository-root-boundary.mjs', 'root boundary ok');
+      await writeFixtureScript(tempRoot, 'scripts/check-workspace-settings-boundary.mjs', 'workspace boundary ok');
+
+      const result = await runTargetGate(tempRoot, 'release');
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('android boundary ok');
+      expect(result.stdout.indexOf('android boundary ok')).toBeLessThan(result.stdout.indexOf('release lint ok'));
+      expect(result.stdout).toContain('[quality-gate:release] all checks passed.');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 30000);
 });
