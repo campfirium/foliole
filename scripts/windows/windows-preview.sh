@@ -297,7 +297,6 @@ run_restart_intent() {
   set -e
   if [ "${restart_exit}" -eq 0 ] && echo "${restart_output}" | grep -qE 'status:\s*REQUESTED'; then
     echo "${restart_output}"
-    echo "[windows-preview] status: RESTART_REQUESTED"
     return 0
   fi
   echo "[windows-preview] restart intent failed"

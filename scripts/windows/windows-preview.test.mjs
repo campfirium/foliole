@@ -186,7 +186,7 @@ describe('windows-preview script', () => {
       expect(result.stdout).toContain('[windows-sync] include electron-dist');
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: REQUESTED nonce=1');
-      expect(result.stdout).toContain('status: RESTART_REQUESTED');
+      expect(result.stdout).not.toContain('status: RESTART_REQUESTED');
       expect(restartIntent).toMatchObject({
         nonce: 1,
         requestedBy: 'wsl-windows-preview',
@@ -230,7 +230,7 @@ describe('windows-preview script', () => {
       expect(result.stdout).toContain('reason: Class B: runtime behind committed electron changes');
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: REQUESTED nonce=1');
-      expect(result.stdout).toContain('status: RESTART_REQUESTED');
+      expect(result.stdout).not.toContain('status: RESTART_REQUESTED');
       expect(restartIntent).toMatchObject({
         nonce: 1,
         head: 'new-head',
