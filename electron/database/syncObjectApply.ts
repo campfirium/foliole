@@ -1,7 +1,9 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { applySyncObjectsWithDbPort } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { openDatabaseConnection } from './connection.js';
 import { applySyncObjectPayload } from './syncObjectApplyPayloads.js';
 
@@ -149,6 +151,23 @@ export function applySyncObjects(records: NativeSyncObjectRecord[], options: App
       if (appliedId) {
         appliedIds.push(appliedId);
       }
+    } catch (error) {
+      warnSkippedSyncObject(record, error);
+    }
+  }
+
+  return appliedIds;
+}
+
+export async function applySyncObjectsAsync(records: NativeSyncObjectRecord[], options: ApplySyncObjectsOptions = {}) {
+  if (records.length === 0) return [];
+  const connection = openDatabaseConnection();
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-sync-object-apply' });
+  const appliedIds: string[] = [];
+
+  for (const record of records) {
+    try {
+      appliedIds.push(...await applySyncObjectsWithDbPort(port, [record], options));
     } catch (error) {
       warnSkippedSyncObject(record, error);
     }

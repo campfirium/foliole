@@ -21,7 +21,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncObjects } from './syncObjectApply.js';
+import { applySyncObjects, applySyncObjectsAsync } from './syncObjectApply.js';
 
 let tempRoot = '';
 
@@ -95,6 +95,30 @@ it('applies generic sync object payloads and marks them clean', () => {
   expect(driver.queryOne<{ sync_dirty: number }>(
     `SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = 'node-1'`
   )).toEqual({ sync_dirty: 0 });
+});
+
+it('applies generic sync object payloads through the shared async executor', async () => {
+  const record: NativeSyncObjectRecord = {
+    content_hash: 'hash-setting-async',
+    deleted_at: null,
+    object_id: 'user_space:windows:desktop:*:async_settings',
+    object_type: 'setting',
+    payload_json: JSON.stringify({
+      key: 'async_settings',
+      scope: 'user_space',
+      value_json: '{"mode":"async"}'
+    }),
+    updated_at: '2026-04-21T16:22:00.000Z'
+  };
+
+  await expect(applySyncObjectsAsync([record])).resolves.toEqual([
+    'setting:user_space:windows:desktop:*:async_settings'
+  ]);
+
+  expect(openDatabaseConnection().driver.queryOne<{ value_json: string }>(
+    'SELECT value_json FROM setting_records WHERE key = ?',
+    ['async_settings']
+  )).toEqual({ value_json: '{"mode":"async"}' });
 });
 
 it('applies import source and external folder payloads', () => {
