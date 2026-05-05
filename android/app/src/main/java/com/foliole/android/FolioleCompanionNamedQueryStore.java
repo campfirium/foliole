@@ -10,6 +10,7 @@ import com.getcapacitor.JSObject;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.Iterator;
 import java.util.Map;
 
 final class FolioleCompanionNamedQueryStore {
@@ -58,6 +59,18 @@ final class FolioleCompanionNamedQueryStore {
         }
     }
 
+    static String syncPayloadQueryName(Context context, String objectType, String objectIdKey) throws Exception {
+        JSONObject queries = loadQueries(context);
+        Iterator<String> names = queries.keys();
+        while (names.hasNext()) {
+            String queryName = names.next();
+            if (matchesSyncPayload(queries.getJSONObject(queryName), objectType, objectIdKey)) {
+                return queryName;
+            }
+        }
+        return null;
+    }
+
     private static String replaceTokens(String sql, Map<String, String> replacements) {
         if (replacements == null) {
             return sql;
@@ -70,16 +83,34 @@ final class FolioleCompanionNamedQueryStore {
     }
 
     private static JSONObject loadQuery(Context context, String queryName) throws Exception {
-        JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH));
-        JSONObject queries = payload.optJSONObject("queries");
-        if (queries == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing queries.");
-        }
+        JSONObject queries = loadQueries(context);
         JSONObject query = queries.optJSONObject(queryName);
         if (query == null) {
             throw new IllegalStateException("Companion query definitions asset is missing query: " + queryName);
         }
         return query;
+    }
+
+    private static JSONObject loadQueries(Context context) throws Exception {
+        JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH));
+        JSONObject queries = payload.optJSONObject("queries");
+        if (queries == null) {
+            throw new IllegalStateException("Companion query definitions asset is missing queries.");
+        }
+        return queries;
+    }
+
+    private static boolean matchesSyncPayload(JSONObject query, String objectType, String objectIdKey) {
+        JSONObject payload = query.optJSONObject("syncPayload");
+        if (payload == null || !objectType.equals(payload.optString("objectType"))) {
+            return false;
+        }
+        String exactKey = payload.optString("objectIdKey", "");
+        if (!exactKey.isEmpty()) {
+            return exactKey.equals(objectIdKey);
+        }
+        String prefix = payload.optString("objectIdPrefix", "");
+        return prefix.isEmpty() || objectIdKey.startsWith(prefix);
     }
 
     private static JSObject toRecord(Cursor cursor, JSONArray columns) throws Exception {
