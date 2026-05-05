@@ -26,7 +26,7 @@ function resolvePort(env: NodeJS.ProcessEnv) {
 }
 
 function resolveScreenshotPath(rootDir: string) {
-  return path.join(rootDir, '.lab', 'screenshots', 'latest.png');
+  return path.join(rootDir, '.tmp', 'screenshots', 'latest.png');
 }
 
 async function captureWindowScreenshot(window: BrowserWindow, targetPath: string) {

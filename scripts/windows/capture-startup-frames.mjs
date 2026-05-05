@@ -30,7 +30,7 @@ function copyIfExists(sourcePath, targetPath) {
 }
 
 function createCaptureContext() {
-  const outputRoot = path.resolve('.lab', 'startup-frames', new Date().toISOString().replace(/[:.]/g, '-'));
+  const outputRoot = path.resolve('.tmp', 'startup-frames', new Date().toISOString().replace(/[:.]/g, '-'));
   const runtimeStateRoot = path.join(outputRoot, 'state');
   const userDataPath = path.join(runtimeStateRoot, 'user-data');
   const sessionDataPath = path.join(runtimeStateRoot, 'session-data');

@@ -73,7 +73,7 @@ sanitize_quality_gate_log_name() {
 }
 
 resolve_quality_gate_log_root() {
-  local root_dir="${QUALITY_GATE_LOG_ROOT:-.lab/logs/quality-gate}"
+  local root_dir="${QUALITY_GATE_LOG_ROOT:-.tmp/logs/quality-gate}"
   mkdir -p "${root_dir}"
   (
     cd "${root_dir}" >/dev/null 2>&1

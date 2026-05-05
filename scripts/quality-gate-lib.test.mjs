@@ -98,6 +98,16 @@ describe('quality-gate-lib.sh', () => {
     expect(result.stdout.trim()).toBe('10');
   });
 
+  it('uses the temporary directory for default quality gate logs', async () => {
+    const result = await runBash(
+      [`source "${QUALITY_GATE_LIB}"`, 'printf "%s\\n" "$(resolve_quality_gate_log_root)"'].join('\n'),
+      REPO_ROOT
+    );
+
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe(path.join(REPO_ROOT, '.tmp', 'logs', 'quality-gate'));
+  });
+
   it('uses longer default timeouts for android host tasks', async () => {
     const result = await runBash(
       [

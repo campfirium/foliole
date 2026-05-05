@@ -3,9 +3,9 @@ set -euo pipefail
 
 PORT="${FOLIOLE_DEV_SCREENSHOT_PORT:-38642}"
 WINDOWS_MIRROR_WSL="${FOLIOLE_WINDOWS_MIRROR_WSL:-/mnt/c/dev/foliole}"
-TARGET_DIR=".lab/screenshots"
+TARGET_DIR="${FOLIOLE_DEV_SCREENSHOT_DIR:-.tmp/screenshots}"
 TARGET_FILE="$TARGET_DIR/latest.png"
-MIRROR_FILE="$WINDOWS_MIRROR_WSL/.lab/screenshots/latest.png"
+MIRROR_FILE="$WINDOWS_MIRROR_WSL/$TARGET_DIR/latest.png"
 
 if command -v powershell.exe >/dev/null 2>&1; then
   powershell.exe -NoProfile -Command "\$ErrorActionPreference = 'Stop'; Invoke-WebRequest -UseBasicParsing -Method POST -Uri 'http://127.0.0.1:$PORT/dev/screenshot' | Out-Null"

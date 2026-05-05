@@ -81,8 +81,8 @@ test('renders the markdown dialect sample in desktop preview', async ({ desktopW
     contentType: 'application/json'
   });
 
-  await mkdir('.lab/screenshots', { recursive: true });
-  await desktopWindow.screenshot({ fullPage: false, path: '.lab/screenshots/markdown-dialect-preview.png' });
+  await mkdir('.tmp/screenshots', { recursive: true });
+  await desktopWindow.screenshot({ fullPage: false, path: '.tmp/screenshots/markdown-dialect-preview.png' });
 
   expect(state.hasTableWidget).toBe(true);
   expect(state.taskCheckboxCount).toBe(2);
