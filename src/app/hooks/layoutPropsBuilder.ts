@@ -1,22 +1,7 @@
-import { setEditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
-import { setMarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import type { UnifiedPushQueueRules } from '../../features/review/model/unifiedPushQueueRules';
-import {
-  DEFAULT_ACCENT_COLOR_PRESET,
-  INTERFACE_FONT_SIZE_DEFAULT,
-  setAccentColorPreset,
-  setBaseColorMode,
-  setCustomInterfaceFont,
-  setCustomMonospaceFont,
-  setCustomUiFont,
-  setInterfaceFontPreset,
-  setInterfaceFontSize,
-  setMonospaceFontPreset,
-  setUiFontPreset
-} from '../../features/settings/model/appearanceSettings';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { buildReviewQueuePlan } from '../../store/reviewQueuePlanner';
@@ -26,31 +11,6 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { createReviewActions } from './reviewSettingsLayoutActions';
 
-interface AppearanceLayoutState {
-  accentColorPreset: WorkspaceLayoutProps['accentColorPreset'];
-  baseColorMode: WorkspaceLayoutProps['baseColorMode'];
-  customInterfaceFont: string;
-  customMonospaceFont: string;
-  customUiFont: string;
-  editorDisplayMode: WorkspaceLayoutProps['editorDisplayMode'];
-  interfaceFontPreset: WorkspaceLayoutProps['interfaceFontPreset'];
-  interfaceFontSize: number;
-  markdownSyntaxVisibility: WorkspaceLayoutProps['markdownSyntaxVisibility'];
-  monospaceFontPreset: WorkspaceLayoutProps['monospaceFontPreset'];
-  uiFontPreset: WorkspaceLayoutProps['uiFontPreset'];
-  setAccentColorPresetState: (value: WorkspaceLayoutProps['accentColorPreset']) => void;
-  setBaseColorModeState: (value: WorkspaceLayoutProps['baseColorMode']) => void;
-  setCustomInterfaceFontState: (value: string) => void;
-  setCustomMonospaceFontState: (value: string) => void;
-  setCustomUiFontState: (value: string) => void;
-  setEditorDisplayModeState: (value: WorkspaceLayoutProps['editorDisplayMode']) => void;
-  setInterfaceFontPresetState: (value: WorkspaceLayoutProps['interfaceFontPreset']) => void;
-  setInterfaceFontSizeState: (value: number) => void;
-  setMarkdownSyntaxVisibilityState: (value: WorkspaceLayoutProps['markdownSyntaxVisibility']) => void;
-  setMonospaceFontPresetState: (value: WorkspaceLayoutProps['monospaceFontPreset']) => void;
-  setUiFontPresetState: (value: WorkspaceLayoutProps['uiFontPreset']) => void;
-}
-
 interface ReviewSettingsLayoutState {
   reviewSchedulerSettings: ReviewSchedulerSettings;
   setReviewSchedulerSettingsState: (value: ReviewSchedulerSettings) => void;
@@ -58,7 +18,6 @@ interface ReviewSettingsLayoutState {
 
 interface BuildLayoutPropsArgs {
   activeNodeId: string | null;
-  appearance: AppearanceLayoutState;
   reviewSettings: ReviewSettingsLayoutState;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -161,28 +120,6 @@ function createSessionActions(args: BuildLayoutPropsArgs) {
   };
 }
 
-function createAppearanceActions(args: BuildLayoutPropsArgs) {
-  return {
-    onBaseColorModeChange: (value: WorkspaceLayoutProps['baseColorMode']) => (setBaseColorMode(value), args.appearance.setBaseColorModeState(value)),
-    onAccentColorPresetChange: (value: WorkspaceLayoutProps['accentColorPreset']) => (setAccentColorPreset(value), args.appearance.setAccentColorPresetState(value)),
-    onAccentColorPresetReset: () => (setAccentColorPreset(DEFAULT_ACCENT_COLOR_PRESET), args.appearance.setAccentColorPresetState(DEFAULT_ACCENT_COLOR_PRESET)),
-    onInterfaceFontPresetChange: (value: WorkspaceLayoutProps['interfaceFontPreset']) => (setInterfaceFontPreset(value), args.appearance.setInterfaceFontPresetState(value)),
-    onUiFontPresetChange: (value: WorkspaceLayoutProps['uiFontPreset']) => (setUiFontPreset(value), args.appearance.setUiFontPresetState(value)),
-    onCustomUiFontChange: (value: string) => (setCustomUiFont(value), args.appearance.setCustomUiFontState(value)),
-    onCustomInterfaceFontChange: (value: string) => (setCustomInterfaceFont(value), args.appearance.setCustomInterfaceFontState(value)),
-    onMonospaceFontPresetChange: (value: WorkspaceLayoutProps['monospaceFontPreset']) => (setMonospaceFontPreset(value), args.appearance.setMonospaceFontPresetState(value)),
-    onCustomMonospaceFontChange: (value: string) => (setCustomMonospaceFont(value), args.appearance.setCustomMonospaceFontState(value)),
-    onInterfaceFontSizeChange: (value: number) => (setInterfaceFontSize(value), args.appearance.setInterfaceFontSizeState(value)),
-    onInterfaceFontSizeReset: () => (setInterfaceFontSize(INTERFACE_FONT_SIZE_DEFAULT), args.appearance.setInterfaceFontSizeState(INTERFACE_FONT_SIZE_DEFAULT)),
-    onMarkdownSyntaxVisibilityChange: (value: WorkspaceLayoutProps['markdownSyntaxVisibility']) => (setMarkdownSyntaxVisibility(value), args.appearance.setMarkdownSyntaxVisibilityState(value)),
-    onToggleEditorDisplayMode: () => {
-      const next = args.appearance.editorDisplayMode === 'preview' ? 'source' : 'preview';
-      setEditorDisplayMode(next);
-      args.appearance.setEditorDisplayModeState(next);
-    }
-  };
-}
-
 function getReviewSessionSummary(reviewSession: WorkspaceState['reviewSession']) {
   const reviewQueueCount = reviewSession.queueNodeIds.length;
   const reviewCompletedCount = Math.max(reviewSession.totalNodeCount - reviewQueueCount, 0);
@@ -196,7 +133,6 @@ function getReviewSessionSummary(reviewSession: WorkspaceState['reviewSession'])
 
 export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutProps {
   const sessionActions = createSessionActions(args);
-  const appearanceActions = createAppearanceActions(args);
   const reviewActions = createReviewActions(args);
   const currentReviewNode = args.reviewSession.currentNodeId ? args.nodesById[args.reviewSession.currentNodeId] : undefined;
   const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
@@ -238,11 +174,8 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onRunImportFolder: args.onRunImportFolder,
     onStartClipboardImport: args.onStartClipboardImport,
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze,
-    onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions, ...appearanceActions, ...reviewActions,
-    onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession, customUiFont: args.appearance.customUiFont,
-    customInterfaceFont: args.appearance.customInterfaceFont, customMonospaceFont: args.appearance.customMonospaceFont, baseColorMode: args.appearance.baseColorMode,
-    accentColorPreset: args.appearance.accentColorPreset, uiFontPreset: args.appearance.uiFontPreset, interfaceFontPreset: args.appearance.interfaceFontPreset,
-    interfaceFontSize: args.appearance.interfaceFontSize, reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, markdownSyntaxVisibility: args.appearance.markdownSyntaxVisibility, editorDisplayMode: args.appearance.editorDisplayMode,
-    monospaceFontPreset: args.appearance.monospaceFontPreset, hotkeyItems: args.hotkeyItems, selectedTrashNodeId: args.selectedTrashNodeId, onHotkeyUpdate: args.onHotkeyUpdate, onHotkeyReset: () => undefined, onHotkeyResetAll: () => undefined
+    onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions, ...reviewActions,
+    onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession,
+    reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, hotkeyItems: args.hotkeyItems, selectedTrashNodeId: args.selectedTrashNodeId, onHotkeyUpdate: args.onHotkeyUpdate, onHotkeyReset: () => undefined, onHotkeyResetAll: () => undefined
   };
 }

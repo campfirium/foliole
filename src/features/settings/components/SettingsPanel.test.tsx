@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -205,6 +206,24 @@ it('updates mouse gesture settings from the dedicated section and persists them'
     expect(window.localStorage.getItem('foliole-mouse-gesture-trail-opacity')).toBe('0.6');
     expect(window.localStorage.getItem('foliole-mouse-gesture-segment-threshold')).toBe('24');
     expect(window.localStorage.getItem('foliole-mouse-gesture-trail-point-threshold')).toBe('10');
+  });
+});
+
+it('updates appearance settings from the dedicated sections and persists them', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.change(screen.getByLabelText('Accent color picker'), {
+    target: { value: '#ff5500' }
+  });
+  fireEvent.change(screen.getByLabelText('Interface font size'), {
+    target: { value: '22' }
+  });
+  fireEvent.click(screen.getByLabelText('Reset accent color'));
+
+  await waitFor(() => {
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.accentColor)).toBe('#3f8f68');
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize)).toBe('22');
   });
 });
 

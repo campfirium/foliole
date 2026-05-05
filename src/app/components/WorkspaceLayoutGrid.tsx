@@ -1,4 +1,5 @@
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
+import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
@@ -8,7 +9,6 @@ import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
 import { WorkspaceRightSidebarSplitter } from './WorkspaceRightSidebarSplitter';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
-
 function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
   if (props.isListCollapsed && props.isRightSidebarCollapsed) {
     return 'grid-cols-1 xl:grid-cols-1';
@@ -21,7 +21,6 @@ function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
   }
   return '[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)_1px_minmax(0,var(--workspace-right-sidebar-width,320px))]';
 }
-
 function getReviewStatusLabel(status: WorkspaceLayoutProps['reviewStatus']) {
   if (status === 'awaiting-answer') {
     return 'Awaiting answer';
@@ -31,7 +30,6 @@ function getReviewStatusLabel(status: WorkspaceLayoutProps['reviewStatus']) {
   }
   return 'Session complete';
 }
-
 function ListStudyStatusBar({
   isStudyMode,
   reviewDueCount,
@@ -59,7 +57,6 @@ function ListStudyStatusBar({
     </div>
   );
 }
-
 function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: string) => void; props: WorkspaceLayoutProps }) {
   return (
     <div className="flex min-h-0 flex-col overflow-hidden bg-bg-panel text-foreground">
@@ -108,6 +105,8 @@ function WorkspaceDocumentArea({ documentNodeId, props }: { documentNodeId: stri
 }
 
 function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: string | null; props: WorkspaceLayoutProps }) {
+  const { editorAppearanceKey } = useAppearanceSettings();
+
   return (
     <DocumentPanelSection
       activeNodeId={documentNodeId}
@@ -117,9 +116,8 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       contextMenu={props.contextMenu}
       documentMaxWidth={props.documentMaxWidth}
       editableNodeId={props.editorNodeId}
-      editorAppearanceKey={`${props.markdownSyntaxVisibility}-${props.editorDisplayMode}`}
+      editorAppearanceKey={editorAppearanceKey}
       editorContent={props.editorContent}
-      editorDisplayMode={props.editorDisplayMode}
       editorNodeId={props.editorNodeId}
       editorNodeViewState={props.editorNodeViewState}
       isDocumentResizing={props.isDocumentResizing}
@@ -140,7 +138,6 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       onSelectNode={props.onSelectBreadcrumbNode}
       onRevealDocumentSelection={props.onRevealDocumentSelection}
       onStartDocumentResize={props.onStartDocumentResize}
-      onToggleEditorDisplayMode={props.onToggleEditorDisplayMode}
       showAnswerSection={props.showAnswerSection}
     />
   );

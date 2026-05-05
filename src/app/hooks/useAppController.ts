@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
+import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -10,12 +11,7 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import { buildAppPaletteItems } from './appCommands';
 import { buildPaletteState, useCurrentReviewPreview } from './appControllerHelpers';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
-import {
-  useAppearanceState,
-  useNowIso,
-  useWorkspaceControllerState,
-  useWorkspaceSelectors
-} from './appControllerState';
+import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createPaletteCommandRunner } from './appPaletteCommandRunner';
 import { countDueReviewNodes } from './layoutPropsBuilder';
 import {
@@ -44,6 +40,7 @@ export interface AppControllerResult {
 }
 
 function buildControllerPaletteState(args: {
+  appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
@@ -70,7 +67,7 @@ function buildControllerPaletteState(args: {
     resetImportData: args.formalImport.resetImportData,
     isReviewMode: args.isStudyMode,
     openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
-    onToggleEditorDisplayMode: args.layoutProps.onToggleEditorDisplayMode,
+    onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode,
     onToggleListVisibility: args.layoutProps.onToggleListVisibility,
     onRestartApp: restartMainWindowApp,
     onToggleDevTools: toggleMainWindowDevTools,
@@ -160,7 +157,6 @@ function useReviewEditingState(args: {
 }
 
 function buildControllerLayoutState(args: {
-  appearance: ReturnType<typeof useAppearanceState>;
   controller: ReturnType<typeof useWorkspaceControllerState>;
   exitStudyMode: () => void;
   formalImport: ReturnType<typeof useFormalImport>;
@@ -177,7 +173,6 @@ function buildControllerLayoutState(args: {
 }) {
   return buildAppControllerLayoutProps({
     activeNode: args.controller.activeNode,
-    appearance: args.appearance,
     blockedHotkeyUpdate: args.hotkeys.updateShortcut,
     canStartStudyMode: args.controller.study.canStartStudyMode,
     documentResize: args.controller.documentResize,
@@ -206,7 +201,7 @@ function buildControllerLayoutState(args: {
 
 export function useAppController(): AppControllerResult {
   const ws = useWorkspaceSelectors();
-  const appearance = useAppearanceState();
+  const appearance = useAppearanceSettings();
   const reviewSettings = useReviewSchedulerSettingsState();
   const nowIso = useNowIso();
   const isWorkspaceHydrated = useWorkspaceHydration();
@@ -221,7 +216,6 @@ export function useAppController(): AppControllerResult {
   const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso, reviewSettings.reviewSchedulerSettings.pushQueue), [nowIso, reviewSettings.reviewSchedulerSettings.pushQueue, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
   const paletteItems = useReviewPaletteItems({ formalImportAvailable: formalImport.isAvailable && !formalImport.isImporting, hasReviewCard: Boolean(ws.reviewSession.currentNodeId), hotkeys, isCurrentReviewItemGradable, isStudyMode, nav: controller.nav, reviewSession: ws.reviewSession, study: controller.study });
   const layoutProps = buildControllerLayoutState({
-    appearance,
     controller,
     exitStudyMode,
     formalImport,
@@ -237,6 +231,7 @@ export function useAppController(): AppControllerResult {
     ws
   });
   const paletteState = buildControllerPaletteState({
+    appearance,
     formalImport,
     isStudyMode,
     layoutProps,

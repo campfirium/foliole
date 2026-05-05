@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
@@ -7,7 +7,7 @@ import { selectRuntimeImportDirectory } from '../../../shared/platform/importBri
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
-import { createProps } from './SettingsPanel.testUtils';
+import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
 vi.mock('../model/systemFonts', () => ({
   listAvailableSystemFonts: vi.fn()
@@ -54,7 +54,7 @@ beforeEach(() => {
 it('shows the default inbox path and lets the user choose a custom location', async () => {
   mockedSelectRuntimeImportDirectory.mockResolvedValue('D:\\Capture\\Inbox');
 
-  render(<SettingsPanel {...createProps()} />);
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 
@@ -73,7 +73,7 @@ it('shows the default inbox path and lets the user choose a custom location', as
 it('restores the default inbox path and clears the stored override', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.managedInboxPath, 'D:\\Capture\\Inbox');
 
-  render(<SettingsPanel {...createProps()} />);
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 

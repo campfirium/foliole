@@ -1,6 +1,6 @@
-import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
@@ -16,13 +16,11 @@ interface DocumentPanelHeaderProps {
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
-  editorDisplayMode: EditorDisplayMode;
   nodesById: Record<string, Node>;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
   onSelectNode: (nodeId: string) => void;
-  onToggleEditorDisplayMode: () => void;
 }
 
 interface NavigationButtonsProps {
@@ -51,14 +49,14 @@ export function DocumentPanelHeader({
   canGoBack,
   canGoForward,
   canGoParent,
-  editorDisplayMode,
   nodesById,
   onGoBack,
   onGoForward,
   onGoParent,
-  onSelectNode,
-  onToggleEditorDisplayMode
+  onSelectNode
 }: DocumentPanelHeaderProps) {
+  const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
+
   return (
     <AppToolbar as="header" className="min-h-[40px] gap-2 px-3">
       <h2 className="sr-only">Content</h2>
@@ -87,7 +85,7 @@ export function DocumentPanelHeader({
             />
           </AppDropdownMenuTrigger>
           <AppDropdownMenuContent align="end" sideOffset={6}>
-            <AppDropdownMenuItem onSelect={onToggleEditorDisplayMode}>
+            <AppDropdownMenuItem onSelect={toggleEditorDisplayMode}>
               {editorDisplayMode === 'preview' ? 'Switch to Source mode' : 'Switch to Live Preview mode'}
             </AppDropdownMenuItem>
           </AppDropdownMenuContent>

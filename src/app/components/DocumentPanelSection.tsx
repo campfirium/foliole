@@ -2,9 +2,9 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as Reac
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
+import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -22,7 +22,6 @@ interface DocumentPanelSectionProps {
   contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
   editorContent: string;
-  editorDisplayMode: EditorDisplayMode;
   editorAppearanceKey: string;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -43,7 +42,6 @@ interface DocumentPanelSectionProps {
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
-  onToggleEditorDisplayMode: () => void;
   onStartDocumentResize: (
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
@@ -61,13 +59,13 @@ function resolveInboxEmptyState(activeNode: Node | undefined) {
     : undefined;
 }
 
-function getDocumentPanelState(props: DocumentPanelSectionProps) {
+function getDocumentPanelState(props: DocumentPanelSectionProps, editorDisplayMode: 'preview' | 'source') {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const emptyState = resolveInboxEmptyState(activeNode);
   const reveal = activeNode?.reveal ?? '';
 
   return {
-    editorContentPaddingBottom: props.editorDisplayMode === 'preview' ? 'min(68dvh, 36rem)' : undefined,
+    editorContentPaddingBottom: editorDisplayMode === 'preview' ? 'min(68dvh, 36rem)' : undefined,
     emptyState,
     hasAnswerSection: Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && props.showAnswerSection),
     reveal
@@ -75,7 +73,8 @@ function getDocumentPanelState(props: DocumentPanelSectionProps) {
 }
 
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
-  const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props);
+  const { editorDisplayMode } = useAppearanceSettings();
+  const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props, editorDisplayMode);
   const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
 
   return (
@@ -86,13 +85,11 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           canGoBack={props.canGoBack}
           canGoForward={props.canGoForward}
           canGoParent={props.canGoParent}
-          editorDisplayMode={props.editorDisplayMode}
           nodesById={props.nodesById}
           onGoBack={props.onGoBack}
           onGoForward={props.onGoForward}
           onGoParent={props.onGoParent}
           onSelectNode={props.onSelectNode}
-          onToggleEditorDisplayMode={props.onToggleEditorDisplayMode}
         />
         <DocumentPanelBody
           documentMaxWidth={props.documentMaxWidth}

@@ -1,11 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
-import { createProps } from './SettingsPanel.testUtils';
+import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
 vi.mock('../model/systemFonts', () => ({
   listAvailableSystemFonts: vi.fn()
@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 
 it('stores node list row spacing and removes the override when reset to default', async () => {
-  render(<SettingsPanel {...createProps()} />);
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   fireEvent.change(screen.getByLabelText('Node list row spacing'), { target: { value: '8' } });

@@ -1,27 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { getEditorDisplayMode, type EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
-import {
-  getMarkdownSyntaxVisibility,
-  type MarkdownSyntaxVisibility
-} from '../../features/editor/model/markdownSyntaxSetting';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
-import {
-  applyAppearanceSettings,
-  getAccentColorPreset,
-  getBaseColorMode,
-  getCustomInterfaceFont,
-  getCustomMonospaceFont,
-  getCustomUiFont,
-  getInterfaceFontPreset,
-  getInterfaceFontSize,
-  getMonospaceFontPreset,
-  getUiFontPreset,
-  type AccentColorPreset,
-  type BaseColorMode,
-  type InterfaceFontPreset,
-  type MonospaceFontPreset
-} from '../../features/settings/model/appearanceSettings';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useAppRuntime } from './useAppRuntime';
@@ -74,30 +53,6 @@ export function useWorkspaceSelectors() {
     updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
     updateNodeReveal: useWorkspaceStore((state) => state.updateNodeReveal),
     exitReviewSession: useWorkspaceStore((state) => state.exitReviewSession)
-  };
-}
-
-export function useAppearanceState() {
-  const [markdownSyntaxVisibility, setMarkdownSyntaxVisibilityState] = useState<MarkdownSyntaxVisibility>(() => getMarkdownSyntaxVisibility());
-  const [editorDisplayMode, setEditorDisplayModeState] = useState<EditorDisplayMode>(() => getEditorDisplayMode());
-  const [baseColorMode, setBaseColorModeState] = useState<BaseColorMode>(() => getBaseColorMode());
-  const [accentColorPreset, setAccentColorPresetState] = useState<AccentColorPreset>(() => getAccentColorPreset());
-  const [uiFontPreset, setUiFontPresetState] = useState<InterfaceFontPreset>(() => getUiFontPreset());
-  const [customUiFont, setCustomUiFontState] = useState(() => getCustomUiFont());
-  const [interfaceFontPreset, setInterfaceFontPresetState] = useState<InterfaceFontPreset>(() => getInterfaceFontPreset());
-  const [customInterfaceFont, setCustomInterfaceFontState] = useState(() => getCustomInterfaceFont());
-  const [monospaceFontPreset, setMonospaceFontPresetState] = useState<MonospaceFontPreset>(() => getMonospaceFontPreset());
-  const [customMonospaceFont, setCustomMonospaceFontState] = useState(() => getCustomMonospaceFont());
-  const [interfaceFontSize, setInterfaceFontSizeState] = useState(() => getInterfaceFontSize());
-  useEffect(() => {
-    applyAppearanceSettings({ baseColor: baseColorMode, accentColor: accentColorPreset, uiFont: uiFontPreset, customUiFont, interfaceFont: interfaceFontPreset, interfaceFontSize, monospaceFont: monospaceFontPreset, customInterfaceFont, customMonospaceFont });
-  }, [accentColorPreset, baseColorMode, customInterfaceFont, customMonospaceFont, customUiFont, interfaceFontPreset, interfaceFontSize, monospaceFontPreset, uiFontPreset]);
-  return {
-    accentColorPreset, baseColorMode, customInterfaceFont, customMonospaceFont, customUiFont, editorDisplayMode,
-    interfaceFontPreset, interfaceFontSize, markdownSyntaxVisibility, monospaceFontPreset, uiFontPreset,
-    setAccentColorPresetState, setBaseColorModeState, setCustomInterfaceFontState, setCustomMonospaceFontState,
-    setCustomUiFontState, setEditorDisplayModeState, setInterfaceFontPresetState, setInterfaceFontSizeState,
-    setMarkdownSyntaxVisibilityState, setMonospaceFontPresetState, setUiFontPresetState
   };
 }
 

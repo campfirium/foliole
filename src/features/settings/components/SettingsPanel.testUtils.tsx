@@ -2,14 +2,10 @@ import { fireEvent, render, screen, type RenderOptions } from '@testing-library/
 import type { ReactElement } from 'react';
 import { vi } from 'vitest';
 
+import { AppearanceSettingsProvider } from '../context/AppearanceSettingsProvider';
 import { MouseGestureSettingsProvider } from '../context/MouseGestureSettingsProvider';
 
 const DEFAULT_SETTINGS_PANEL_PROPS = {
-  accentColorPreset: '#3f8f68' as const,
-  baseColorMode: 'light' as const,
-  customInterfaceFont: '',
-  customMonospaceFont: '',
-  customUiFont: '',
   desiredRetention: 0.9,
   maximumIntervalDays: 36500,
   enableFuzz: false,
@@ -22,17 +18,7 @@ const DEFAULT_SETTINGS_PANEL_PROPS = {
   readingIntervalGrowthFactorMin: 1.1,
   readingIntervalGrowthFactorMax: 1.5,
   hotkeyItems: [],
-  interfaceFontPreset: 'default' as const,
-  interfaceFontSize: 17,
-  markdownSyntaxVisibility: 'visible' as const,
-  monospaceFontPreset: 'default' as const,
-  onAccentColorPresetChange: () => undefined,
-  onAccentColorPresetReset: () => undefined,
-  onBaseColorModeChange: () => undefined,
   onClose: () => undefined,
-  onCustomInterfaceFontChange: () => undefined,
-  onCustomMonospaceFontChange: () => undefined,
-  onCustomUiFontChange: () => undefined,
   onDesiredRetentionChange: () => undefined,
   onDefaultPriorityChange: () => undefined,
   onMaximumIntervalDaysChange: () => undefined,
@@ -46,14 +32,7 @@ const DEFAULT_SETTINGS_PANEL_PROPS = {
   onReadingIntervalGrowthFactorMaxChange: () => undefined,
   onHotkeyReset: () => undefined,
   onHotkeyResetAll: () => undefined,
-  onHotkeyUpdate: () => ({ status: 'blocked' as const }),
-  onInterfaceFontPresetChange: () => undefined,
-  onInterfaceFontSizeChange: () => undefined,
-  onInterfaceFontSizeReset: () => undefined,
-  onMarkdownSyntaxVisibilityChange: () => undefined,
-  onMonospaceFontPresetChange: () => undefined,
-  onUiFontPresetChange: () => undefined,
-  uiFontPreset: 'default' as const
+  onHotkeyUpdate: () => ({ status: 'blocked' as const })
 };
 
 export function createDeferred<T>() {
@@ -70,7 +49,11 @@ export function createProps() {
 
 export function renderWithMouseGestureProvider(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
   return render(ui, {
-    wrapper: ({ children }) => <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>,
+    wrapper: ({ children }) => (
+      <AppearanceSettingsProvider>
+        <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+      </AppearanceSettingsProvider>
+    ),
     ...options
   });
 }

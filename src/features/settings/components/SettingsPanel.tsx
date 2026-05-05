@@ -1,15 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
-import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
-import {
-  DEFAULT_ACCENT_COLOR_PRESET,
-  type AccentColorPreset,
-  type BaseColorMode,
-  type InterfaceFontPreset,
-  type MonospaceFontPreset
-} from '../model/appearanceSettings';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 import {
   getInitialSettingsCategory,
@@ -24,17 +16,8 @@ import {
   type SettingsCategoryContentProps
 } from './SettingsPanelSections';
 import { useManagedInboxSettings } from './useManagedInboxSettings';
-import { useSettingsFontOptions } from './useSettingsFontOptions';
 
 interface SettingsPanelProps {
-  baseColorMode: BaseColorMode;
-  accentColorPreset: AccentColorPreset;
-  customUiFont: string;
-  customInterfaceFont: string;
-  customMonospaceFont: string;
-  uiFontPreset: InterfaceFontPreset;
-  interfaceFontPreset: InterfaceFontPreset;
-  interfaceFontSize: number;
   desiredRetention: number;
   maximumIntervalDays: number;
   enableFuzz: boolean;
@@ -46,20 +29,8 @@ interface SettingsPanelProps {
   readingInitialIntervalMs: number;
   readingIntervalGrowthFactorMin: number;
   readingIntervalGrowthFactorMax: number;
-  markdownSyntaxVisibility: MarkdownSyntaxVisibility;
-  monospaceFontPreset: MonospaceFontPreset;
   hotkeyItems: HotkeySettingItem[];
   onClose: () => void;
-  onBaseColorModeChange: (value: BaseColorMode) => void;
-  onAccentColorPresetChange: (value: AccentColorPreset) => void;
-  onAccentColorPresetReset: () => void;
-  onCustomUiFontChange: (value: string) => void;
-  onCustomInterfaceFontChange: (value: string) => void;
-  onCustomMonospaceFontChange: (value: string) => void;
-  onUiFontPresetChange: (value: InterfaceFontPreset) => void;
-  onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
-  onInterfaceFontSizeChange: (value: number) => void;
-  onInterfaceFontSizeReset: () => void;
   onDesiredRetentionChange: (value: number) => void;
   onDefaultPriorityChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
@@ -71,15 +42,9 @@ interface SettingsPanelProps {
   onReadingInitialIntervalDaysChange: (value: number) => void;
   onReadingIntervalGrowthFactorMinChange: (value: number) => void;
   onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
-  onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
-  onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
-}
-
-function ensureAccentHex(value: string) {
-  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_ACCENT_COLOR_PRESET;
 }
 
 export function SettingsPanel(props: SettingsPanelProps) {
@@ -87,39 +52,28 @@ export function SettingsPanel(props: SettingsPanelProps) {
 }
 
 function SettingsPanelContent(props: SettingsPanelProps) {
-  const state = useSettingsPanelViewState(props);
+  const state = useSettingsPanelViewState();
   return <SettingsPanelBody {...props} {...state} />;
 }
 
-function useSettingsPanelViewState(props: SettingsPanelProps) {
-  const accentColorInputRef = useRef<HTMLInputElement>(null);
-  const safeAccentColor = ensureAccentHex(props.accentColorPreset);
+function useSettingsPanelViewState() {
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => getInitialSettingsCategory());
-  const fontOptions = useSettingsFontOptions(props);
   const managedInboxSettings = useManagedInboxSettings();
 
   useEffect(() => setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory), [activeCategory]);
   const title = SETTINGS_CATEGORIES.find((category) => category.id === activeCategory)?.label ?? 'Settings';
 
   return {
-    accentColorInputRef,
     activeCategory,
-    safeAccentColor,
     setActiveCategory,
     title,
-    ...fontOptions,
     ...managedInboxSettings
   };
 }
 
 type SettingsPanelBodyProps = SettingsCategoryContentProps & {
   activeCategory: SettingsCategoryId;
-  accentColorInputRef: React.RefObject<HTMLInputElement>;
-  areFontOptionsReady: boolean;
-  baseColorMode: BaseColorMode;
   hotkeyItems: HotkeySettingItem[];
-  interfaceFontOptions: string[];
-  interfaceFontSize: number;
   desiredRetention: number;
   maximumIntervalDays: number;
   enableFuzz: boolean;
@@ -131,21 +85,10 @@ type SettingsPanelBodyProps = SettingsCategoryContentProps & {
   readingInitialIntervalMs: number;
   readingIntervalGrowthFactorMin: number;
   readingIntervalGrowthFactorMax: number;
-  markdownSyntaxVisibility: MarkdownSyntaxVisibility;
-  monospaceFontOptions: string[];
-  onAccentColorPresetChange: (value: AccentColorPreset) => void;
-  onAccentColorPresetReset: () => void;
-  onBaseColorModeChange: (value: BaseColorMode) => void;
   onClose: () => void;
-  onCustomInterfaceFontChange: (value: string) => void;
-  onCustomMonospaceFontChange: (value: string) => void;
-  onCustomUiFontChange: (value: string) => void;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
-  onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
-  onInterfaceFontSizeChange: (value: number) => void;
-  onInterfaceFontSizeReset: () => void;
   onDesiredRetentionChange: (value: number) => void;
   onDefaultPriorityChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
@@ -157,16 +100,8 @@ type SettingsPanelBodyProps = SettingsCategoryContentProps & {
   onReadingInitialIntervalDaysChange: (value: number) => void;
   onReadingIntervalGrowthFactorMinChange: (value: number) => void;
   onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
-  onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
-  onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
-  onUiFontPresetChange: (value: InterfaceFontPreset) => void;
-  safeAccentColor: AccentColorPreset;
-  selectedInterfaceFontValue: string;
-  selectedMonospaceFontValue: string;
-  selectedUiFontValue: string;
   setActiveCategory: (category: SettingsCategoryId) => void;
   title: string;
-  uiFontOptions: string[];
 };
 
 function SettingsPanelBody(props: SettingsPanelBodyProps) {

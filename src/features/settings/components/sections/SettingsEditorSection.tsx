@@ -1,13 +1,9 @@
 import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
-import type { MarkdownSyntaxVisibility } from '../../../editor/model/markdownSyntaxSetting';
+import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 
-export function SettingsEditorSection({
-  markdownSyntaxVisibility,
-  onMarkdownSyntaxVisibilityChange
-}: {
-  markdownSyntaxVisibility: MarkdownSyntaxVisibility;
-  onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
-}) {
+export function SettingsEditorSection() {
+  const { markdownSyntaxVisibility, setMarkdownSyntaxVisibility } = useAppearanceSettings();
+
   return (
     <SettingsSection ariaLabel="Editor settings section" title="Live markdown">
       <SettingsRow
@@ -18,7 +14,7 @@ export function SettingsEditorSection({
           <span className="sr-only">Markdown syntax visibility</span>
           <select
             className="w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
-            onChange={(event) => onMarkdownSyntaxVisibilityChange(event.target.value as MarkdownSyntaxVisibility)}
+            onChange={(event) => setMarkdownSyntaxVisibility(event.target.value as typeof markdownSyntaxVisibility)}
             value={markdownSyntaxVisibility}
           >
             <option value="hidden">Hidden</option>

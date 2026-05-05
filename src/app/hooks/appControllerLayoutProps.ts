@@ -1,17 +1,9 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
-import type {
-  AccentColorPreset,
-  BaseColorMode,
-  InterfaceFontPreset,
-  MonospaceFontPreset
-} from '../../features/settings/model/appearanceSettings';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import type { CommandPaletteItem } from '../../shared/commands/types';
-import type { MarkdownSyntaxVisibility } from '../../shared/config/appSettings';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
 
 import type { useCurrentReviewPreview } from './appControllerHelpers';
@@ -36,30 +28,6 @@ import type { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
 export interface BuildControllerLayoutPropsArgs {
   activeNode: Node | undefined;
-  appearance: {
-    accentColorPreset: AccentColorPreset;
-    baseColorMode: BaseColorMode;
-    customInterfaceFont: string;
-    customMonospaceFont: string;
-    customUiFont: string;
-    editorDisplayMode: EditorDisplayMode;
-    interfaceFontPreset: InterfaceFontPreset;
-    interfaceFontSize: number;
-    markdownSyntaxVisibility: MarkdownSyntaxVisibility;
-    monospaceFontPreset: MonospaceFontPreset;
-    uiFontPreset: InterfaceFontPreset;
-    setAccentColorPresetState: (value: AccentColorPreset) => void;
-    setBaseColorModeState: (value: BaseColorMode) => void;
-    setCustomInterfaceFontState: (value: string) => void;
-    setCustomMonospaceFontState: (value: string) => void;
-    setCustomUiFontState: (value: string) => void;
-    setEditorDisplayModeState: (value: EditorDisplayMode) => void;
-    setInterfaceFontPresetState: (value: InterfaceFontPreset) => void;
-    setInterfaceFontSizeState: (value: number) => void;
-    setMarkdownSyntaxVisibilityState: (value: MarkdownSyntaxVisibility) => void;
-    setMonospaceFontPresetState: (value: MonospaceFontPreset) => void;
-    setUiFontPresetState: (value: InterfaceFontPreset) => void;
-  };
   blockedHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   canStartStudyMode: boolean;
   documentResize: ReturnType<typeof useDocumentWidthResizer>;
@@ -136,7 +104,6 @@ export function buildAppControllerLayoutProps(args: BuildControllerLayoutPropsAr
 function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
   return {
     activeNodeId: args.ws.activeNodeId,
-    appearance: args.appearance,
     reviewSettings: args.reviewSettings,
     canGoBack: args.nav.canGoBack,
     canGoForward: args.nav.canGoForward,

@@ -2,16 +2,8 @@ import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as Reac
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
-import type { MarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
-import type {
-  AccentColorPreset,
-  BaseColorMode,
-  InterfaceFontPreset,
-  MonospaceFontPreset
-} from '../../features/settings/model/appearanceSettings';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -105,17 +97,6 @@ export interface WorkspaceLayoutProps {
   onToggleReviewSession: () => void;
   onOpenSettings: () => void;
   onCloseSettings: () => void;
-  onBaseColorModeChange: (value: BaseColorMode) => void;
-  onAccentColorPresetChange: (value: AccentColorPreset) => void;
-  onAccentColorPresetReset: () => void;
-  onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
-  onUiFontPresetChange: (value: InterfaceFontPreset) => void;
-  onCustomUiFontChange: (value: string) => void;
-  onCustomInterfaceFontChange: (value: string) => void;
-  onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
-  onCustomMonospaceFontChange: (value: string) => void;
-  onInterfaceFontSizeChange: (value: number) => void;
-  onInterfaceFontSizeReset: () => void;
   onDesiredRetentionChange: (value: number) => void;
   onDefaultPriorityChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
@@ -127,26 +108,13 @@ export interface WorkspaceLayoutProps {
   onReadingInitialIntervalDaysChange: (value: number) => void;
   onReadingIntervalGrowthFactorMinChange: (value: number) => void;
   onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
-  onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
-  onToggleEditorDisplayMode: () => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
   onDismissReviewItem: () => boolean;
   onExitReviewMode: () => void;
-  customUiFont: string;
-  customInterfaceFont: string;
-  customMonospaceFont: string;
-  baseColorMode: BaseColorMode;
-  accentColorPreset: AccentColorPreset;
-  uiFontPreset: InterfaceFontPreset;
-  interfaceFontPreset: InterfaceFontPreset;
-  interfaceFontSize: number;
   reviewSchedulerSettings: ReviewSchedulerSettings;
-  markdownSyntaxVisibility: MarkdownSyntaxVisibility;
-  editorDisplayMode: EditorDisplayMode;
-  monospaceFontPreset: MonospaceFontPreset;
   hotkeyItems: HotkeySettingItem[];
   selectedTrashNodeId: string | null;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;

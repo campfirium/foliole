@@ -1,3 +1,4 @@
+import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 
 import { CommandPalette } from './components/CommandPalette';
@@ -16,8 +17,10 @@ function AppContent() {
 
 export function App() {
   return (
-    <MouseGestureSettingsProvider>
-      <AppContent />
-    </MouseGestureSettingsProvider>
+    <AppearanceSettingsProvider>
+      <MouseGestureSettingsProvider>
+        <AppContent />
+      </MouseGestureSettingsProvider>
+    </AppearanceSettingsProvider>
   );
 }
