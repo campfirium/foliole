@@ -11,6 +11,15 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
     skippedStatus: 'skipped',
     statuses: ['started', 'completed', 'failed', 'skipped']
   },
+  syncMetaCursors: {
+    nodeVersion: 'sync_node_version_cursor',
+    nodeVersionPush: 'sync_node_version_push_cursor',
+    pack: 'sync_pack_cursor',
+    reviewLog: 'sync_review_log_cursor',
+    reviewLogPush: 'sync_review_log_push_cursor',
+    state: 'sync_state_cursor',
+    statePush: 'sync_state_push_cursor'
+  },
   syncOnboarding: {
     completedStatus: 'completed',
     fallbackStatus: 'pending',
