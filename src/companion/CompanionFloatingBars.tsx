@@ -21,12 +21,17 @@ function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
     return 'Current topic';
   }
   if (isFsrsPriorityProgress(progress)) {
-    return 'Stage 2 · FSRS priority';
+    return 'Stage 2 · Review queue';
   }
   if (progress.phase === 'attachment') {
     return 'Stage 4 · Attachments';
   }
   return 'Stage 3 · Topic bodies';
+}
+
+function formatCountLabel(count: number | undefined, singular: string, plural: string) {
+  const value = count ?? 0;
+  return `${value} ${value === 1 ? singular : plural}`;
 }
 
 function fsrsPriorityTotal(progress: CompanionDesktopSyncProgress) {
@@ -75,10 +80,10 @@ function formatContentBreakdown(progress: CompanionDesktopSyncProgress) {
   }
   const breakdown = progress.contentBreakdown;
   if (isActiveTopicProgress(progress)) {
-    return `Current topic body ${breakdown.activeTopicBodies}`;
+    return `Current topic: ${formatCountLabel(breakdown.activeTopicBodies, 'body', 'bodies')}`;
   }
   if (isFsrsPriorityProgress(progress)) {
-    return `Due review bodies ${breakdown.dueReviewBodies}`;
+    return `Review queue: ${formatCountLabel(breakdown.dueReviewBodies, 'body', 'bodies')}`;
   }
   const segments = [
     ['Top-level', breakdown.topLevelTopicBodies],
@@ -97,10 +102,10 @@ function formatAttachmentBreakdown(progress: CompanionDesktopSyncProgress) {
   }
   const breakdown = progress.attachmentBreakdown;
   if (isActiveTopicProgress(progress)) {
-    return `Current topic attachments ${breakdown.activeTopicAttachments}`;
+    return `Current topic: ${formatCountLabel(breakdown.activeTopicAttachments, 'attachment', 'attachments')}`;
   }
   if (isFsrsPriorityProgress(progress)) {
-    return `Due review attachments ${breakdown.dueReviewAttachments}`;
+    return `Review queue: ${formatCountLabel(breakdown.dueReviewAttachments, 'attachment', 'attachments')}`;
   }
   const segments = [
     ['Images', breakdown.imageAttachments],

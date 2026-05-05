@@ -51,9 +51,9 @@ function expectFsrsPriorityBodyStage() {
   });
 
   expect(screen.getByLabelText('Sync progress')).toBeInTheDocument();
-  expect(screen.getByText('Stage 2 · FSRS priority')).toBeInTheDocument();
+  expect(screen.getByText('Stage 2 · Review queue')).toBeInTheDocument();
   expect(screen.getByText('3/7')).toBeInTheDocument();
-  expect(screen.getByText('Due review bodies 7')).toBeInTheDocument();
+  expect(screen.getByText('Review queue: 7 bodies')).toBeInTheDocument();
   expect(screen.queryByText('3/616 - 1.0 MB/2.0 MB')).not.toBeInTheDocument();
 }
 
@@ -76,8 +76,8 @@ function expectActiveTopicBodyStage() {
 
   expect(screen.getByText('Current topic')).toBeInTheDocument();
   expect(screen.getByText('0/1')).toBeInTheDocument();
-  expect(screen.getByText('Current topic body 1')).toBeInTheDocument();
-  expect(screen.queryByText('Stage 2 · FSRS priority')).not.toBeInTheDocument();
+  expect(screen.getByText('Current topic: 1 body')).toBeInTheDocument();
+  expect(screen.queryByText('Stage 2 · Review queue')).not.toBeInTheDocument();
 }
 
 function expectTopicBodyStageAfterFsrsPriority() {
@@ -121,7 +121,7 @@ function expectTopicBodyStageAfterDueReviewBodiesComplete() {
 
   expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
   expect(screen.getByText('7/616 - 1.0 MB/2.0 MB')).toBeInTheDocument();
-  expect(screen.queryByText('Stage 2 · FSRS priority')).not.toBeInTheDocument();
+  expect(screen.queryByText('Stage 2 · Review queue')).not.toBeInTheDocument();
 }
 
 function expectAttachmentStage() {
@@ -166,9 +166,9 @@ function expectFsrsPriorityAttachmentStage() {
     totalBytes: 8388608
   });
 
-  expect(screen.getByText('Stage 2 · FSRS priority')).toBeInTheDocument();
+  expect(screen.getByText('Stage 2 · Review queue')).toBeInTheDocument();
   expect(screen.getByText('2/3')).toBeInTheDocument();
-  expect(screen.getByText('Due review attachments 3')).toBeInTheDocument();
+  expect(screen.getByText('Review queue: 3 attachments')).toBeInTheDocument();
 }
 
 function expectActiveTopicAttachmentStage() {
@@ -192,8 +192,8 @@ function expectActiveTopicAttachmentStage() {
 
   expect(screen.getByText('Current topic')).toBeInTheDocument();
   expect(screen.getByText('0/1')).toBeInTheDocument();
-  expect(screen.getByText('Current topic attachments 1')).toBeInTheDocument();
-  expect(screen.queryByText('Stage 2 · FSRS priority')).not.toBeInTheDocument();
+  expect(screen.getByText('Current topic: 1 attachment')).toBeInTheDocument();
+  expect(screen.queryByText('Stage 2 · Review queue')).not.toBeInTheDocument();
 }
 
 function expectAttachmentStageAfterDueReviewAttachmentsComplete() {
@@ -217,7 +217,7 @@ function expectAttachmentStageAfterDueReviewAttachmentsComplete() {
 
   expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
   expect(screen.getByText('3/12 - 2.0 MB/8.0 MB')).toBeInTheDocument();
-  expect(screen.queryByText('Stage 2 · FSRS priority')).not.toBeInTheDocument();
+  expect(screen.queryByText('Stage 2 · Review queue')).not.toBeInTheDocument();
 }
 
 describe('CompanionBottomTabBar', () => {
