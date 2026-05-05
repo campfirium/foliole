@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import { LIBRARY_ASSETS_DIRNAME } from '../../lib/platform/libraryPaths.js';
 import type { NativeAttachmentResourceResolution } from '../../lib/platform/nativeUtilityContract.js';
-import { openDatabaseConnection, resolveDatabasePath } from '../database/connection.js';
+import { openDatabaseConnection } from '../database/connection.js';
+import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
 
@@ -41,9 +41,7 @@ export function resolveAttachmentStoragePath(attachmentId: string, assetsDir = r
 }
 
 function resolveAttachmentAssetsDir() {
-  const activeDatabasePath = resolveDatabasePath();
-  const libraryHome = path.dirname(path.dirname(activeDatabasePath));
-  return path.join(libraryHome, LIBRARY_ASSETS_DIRNAME);
+  return resolveRuntimeDataPaths().assetsDir;
 }
 
 export function resolveAttachmentFile(

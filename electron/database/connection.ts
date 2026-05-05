@@ -4,6 +4,7 @@ import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { ensureLibraryPathLayout, loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -21,7 +22,7 @@ export interface DatabaseConnection {
 let cachedConnection: DatabaseConnection | null = null;
 
 function resolveConfiguredDatabasePath(): string {
-  return loadLibraryPathSettingsSync().database_path;
+  return resolveRuntimeDataPaths().databasePath;
 }
 
 export function resolveDatabasePath(): string {
@@ -33,9 +34,11 @@ export function openDatabaseConnection(): DatabaseConnection {
     return cachedConnection;
   }
 
-  const libraryPaths = loadLibraryPathSettingsSync();
-  const dbPath = libraryPaths.database_path;
-  ensureLibraryPathLayout(libraryPaths);
+  const runtimeDataPaths = resolveRuntimeDataPaths();
+  const dbPath = runtimeDataPaths.databasePath;
+  if (runtimeDataPaths.mode === 'library') {
+    ensureLibraryPathLayout(loadLibraryPathSettingsSync());
+  }
 
   const sqlite = new BetterSqlite3(dbPath);
   sqlite.pragma('journal_mode = WAL');
