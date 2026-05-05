@@ -11,7 +11,7 @@ final class FolioleCompanionDocumentSyncPayload {
 
     static void apply(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         if (!record.isNull("deleted_at")) {
-            FolioleCompanionNamedMutationStore.execute(context, database, "syncExternalDocumentMarkMissing", new Object[] {
+            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "markMissingMutationName"), new Object[] {
                 record.optString("deleted_at"),
                 record.optString("updated_at"),
                 objectId
@@ -19,7 +19,7 @@ final class FolioleCompanionDocumentSyncPayload {
             return;
         }
         JSONObject payload = payload(record);
-        FolioleCompanionNamedMutationStore.execute(context, database, "syncExternalDocumentUpsert", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "upsertMutationName"), new Object[] {
             objectId,
             payload.optString("folder_id", ""),
             payload.optString("relative_path", ""),
@@ -43,6 +43,10 @@ final class FolioleCompanionDocumentSyncPayload {
 
     private static JSONObject payload(JSONObject record) throws Exception {
         return FolioleCompanionSyncPayloadJson.payload(record);
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionSyncApplyMutationRules.string(context, "documents", key);
     }
 
     private static String nullIfEmpty(String value) {

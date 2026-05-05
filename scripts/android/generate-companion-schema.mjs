@@ -15,7 +15,8 @@ import { ANDROID_COMPANION_DIAGNOSTIC_READ_RULES } from '../../lib/core/database
 import {
   ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
   ANDROID_COMPANION_MUTATION_DEFINITIONS,
-  ANDROID_COMPANION_RESOURCE_MUTATION_RULES
+  ANDROID_COMPANION_RESOURCE_MUTATION_RULES,
+  ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES
 } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from '../../lib/core/database/androidCompanionPayloadQueryDefinitions.ts';
@@ -66,7 +67,8 @@ await fs.writeFile(
   `${JSON.stringify({
     appDataClearMutations: ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
     resourceMutations: ANDROID_COMPANION_RESOURCE_MUTATION_RULES,
-    statements: ANDROID_COMPANION_MUTATION_DEFINITIONS
+    statements: ANDROID_COMPANION_MUTATION_DEFINITIONS,
+    syncApplyMutations: ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES
   }, null, 2)}\n`,
   'utf8'
 );

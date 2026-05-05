@@ -66,13 +66,13 @@ final class FolioleCompanionViewStateSyncStore {
         String activeKey = activeNodeKey(context);
         if (!record.isNull("deleted_at")) {
             if (key.equals(activeKey)) {
-                FolioleCompanionNamedMutationStore.execute(context, database, "syncViewActiveNodeDelete", new Object[] {});
+                FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "activeNodeDeleteMutationName"), new Object[] {});
             }
             if (FolioleCompanionSyncPayloadQueryStore.isViewNodeKey(context, key)) {
                 FolioleCompanionNamedMutationStore.execute(
                     context,
                     database,
-                    "syncViewNodeStateDelete",
+                    mutationRule(context, "nodeStateDeleteMutationName"),
                     new Object[] { FolioleCompanionSyncPayloadQueryStore.viewNodeIdFromKey(context, key), deviceId }
                 );
             }
@@ -101,7 +101,7 @@ final class FolioleCompanionViewStateSyncStore {
     }
 
     private static void upsertActiveNode(Context context, SQLiteDatabase database, String nodeId, String now) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, "syncViewActiveNodeUpsert", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "activeNodeUpsertMutationName"), new Object[] {
             FolioleCompanionSyncPayloadQueryStore.viewActiveNodeWorkspaceMetaKey(context),
             nodeId == null ? "" : nodeId,
             now
@@ -109,7 +109,7 @@ final class FolioleCompanionViewStateSyncStore {
     }
 
     private static void upsertNodeViewState(Context context, SQLiteDatabase database, String nodeId, String deviceId, int scrollTop, String source, String now) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, "syncViewNodeStateUpsert", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "nodeStateUpsertMutationName"), new Object[] {
             nodeId,
             deviceId,
             Math.max(0, scrollTop),
@@ -206,6 +206,10 @@ final class FolioleCompanionViewStateSyncStore {
 
     private static String nullIfEmpty(String value) {
         return value == null || value.trim().isEmpty() ? null : value;
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionSyncApplyMutationRules.string(context, "viewState", key);
     }
 
     private static String syncObjectType(Context context) throws Exception {

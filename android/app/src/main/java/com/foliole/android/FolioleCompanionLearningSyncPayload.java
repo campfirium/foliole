@@ -10,13 +10,13 @@ final class FolioleCompanionLearningSyncPayload {
 
     static void applyReading(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         if (!record.isNull("deleted_at")) {
-            FolioleCompanionNamedMutationStore.execute(context, database, "syncNodeReadingDelete", new Object[] { objectId });
-            FolioleCompanionNamedMutationStore.execute(context, database, "syncNodeReadingDeviceStateDelete", new Object[] { objectId });
+            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "readingDeleteMutationName"), new Object[] { objectId });
+            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "readingDeviceStateDeleteMutationName"), new Object[] { objectId });
             return;
         }
         JSONObject payload = payload(record);
         String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName();
-        FolioleCompanionNamedMutationStore.execute(context, database, "syncNodeReadingUpsert", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "readingUpsertMutationName"), new Object[] {
             objectId,
             FolioleCompanionLearningPayloadRules.longValue(context, payload, queryName, "intervalDurationMsPayloadKey", "defaultIntervalDurationMs"),
             FolioleCompanionLearningPayloadRules.doubleValue(context, payload, queryName, "intervalGrowthFactorPayloadKey", "defaultIntervalGrowthFactor"),
@@ -27,7 +27,7 @@ final class FolioleCompanionLearningSyncPayload {
             FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "statePayloadKey", defaultReadingState(context))
         });
         if (FolioleCompanionLearningPayloadRules.has(context, payload, queryName, "readingPositionPayloadKey")) {
-            FolioleCompanionNamedMutationStore.execute(context, database, "syncNodeReadingDeviceStateUpsert", new Object[] {
+            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "readingDeviceStateUpsertMutationName"), new Object[] {
                 objectId,
                 FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "deviceIdPayloadKey", defaultReadingDeviceId(context)),
                 FolioleCompanionLearningPayloadRules.longValue(context, payload, queryName, "readingPositionPayloadKey", "defaultReadingPosition"),
@@ -38,12 +38,12 @@ final class FolioleCompanionLearningSyncPayload {
 
     static void applyReview(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         if (!record.isNull("deleted_at")) {
-            FolioleCompanionNamedMutationStore.execute(context, database, "syncNodeReviewDelete", new Object[] { objectId });
+            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "reviewDeleteMutationName"), new Object[] { objectId });
             return;
         }
         JSONObject payload = payload(record);
         String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReviewPayloadQueryName();
-        FolioleCompanionNamedMutationStore.execute(context, database, "syncNodeReviewUpsert", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "reviewUpsertMutationName"), new Object[] {
             objectId,
             FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "duePayloadKey", record.optString("updated_at")),
             nullIfEmpty(FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "lastReviewAtPayloadKey", "")),
@@ -75,6 +75,10 @@ final class FolioleCompanionLearningSyncPayload {
 
     private static JSONObject payload(JSONObject record) throws Exception {
         return FolioleCompanionSyncPayloadJson.payload(record);
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionSyncApplyMutationRules.string(context, "learning", key);
     }
 
     private static String nullIfEmpty(String value) {

@@ -100,7 +100,7 @@ final class FolioleCompanionSyncStateWriteStore {
         String contentHash,
         String now
     ) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, "syncSettingRecordUpsert", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, settingMutationRule(context, "upsertMutationName"), new Object[] {
             key,
             scope,
             platform,
@@ -114,6 +114,10 @@ final class FolioleCompanionSyncStateWriteStore {
 
     private static void upsertObjectState(Context context, SQLiteDatabase database, String objectId, String contentHash, String deviceId, String now) throws Exception {
         upsertTypedObjectState(context, database, syncObjectType(context, "settingRecord"), objectId, contentHash, deviceId, now);
+    }
+
+    private static String settingMutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionSyncApplyMutationRules.string(context, "settings", key);
     }
 
     private static void upsertTypedObjectState(

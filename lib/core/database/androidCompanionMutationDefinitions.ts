@@ -147,3 +147,34 @@ export const ANDROID_COMPANION_RESOURCE_MUTATION_RULES = {
     markFetchingMutationName: 'contentBlobMarkFetching'
   }
 } as const;
+
+export const ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES = {
+  documents: {
+    markMissingMutationName: 'syncExternalDocumentMarkMissing',
+    upsertMutationName: 'syncExternalDocumentUpsert'
+  },
+  learning: {
+    readingDeleteMutationName: 'syncNodeReadingDelete',
+    readingDeviceStateDeleteMutationName: 'syncNodeReadingDeviceStateDelete',
+    readingDeviceStateUpsertMutationName: 'syncNodeReadingDeviceStateUpsert',
+    readingUpsertMutationName: 'syncNodeReadingUpsert',
+    reviewDeleteMutationName: 'syncNodeReviewDelete',
+    reviewUpsertMutationName: 'syncNodeReviewUpsert'
+  },
+  pushAck: {
+    deleteIssuesMutationName: 'syncPushAckDeleteIssuesByObject',
+    upsertMutationName: 'syncPushAckUpsert'
+  },
+  reviewLog: {
+    insertMutationName: 'syncReviewLogInsert'
+  },
+  settings: {
+    upsertMutationName: 'syncSettingRecordUpsert'
+  },
+  viewState: {
+    activeNodeDeleteMutationName: 'syncViewActiveNodeDelete',
+    activeNodeUpsertMutationName: 'syncViewActiveNodeUpsert',
+    nodeStateDeleteMutationName: 'syncViewNodeStateDelete',
+    nodeStateUpsertMutationName: 'syncViewNodeStateUpsert'
+  }
+} as const;

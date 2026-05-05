@@ -41,13 +41,13 @@ final class FolioleCompanionSyncPushAckStore {
                 FolioleCompanionNamedMutationStore.execute(
                     context,
                     database,
-                    "syncPushAckDeleteIssuesByObject",
+                    mutationRule(context, "deleteIssuesMutationName"),
                     new Object[] { objectType, objectId }
                 );
                 FolioleCompanionNamedMutationStore.execute(
                     context,
                     database,
-                    "syncPushAckUpsert",
+                    mutationRule(context, "upsertMutationName"),
                     new Object[] {
                         clientOpId,
                         objectType,
@@ -66,5 +66,9 @@ final class FolioleCompanionSyncPushAckStore {
         JSObject result = new JSObject();
         result.put("saved_client_op_ids", savedClientOpIds);
         return result;
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionSyncApplyMutationRules.string(context, "pushAck", key);
     }
 }

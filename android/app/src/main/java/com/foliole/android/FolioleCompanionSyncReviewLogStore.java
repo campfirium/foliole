@@ -51,7 +51,7 @@ final class FolioleCompanionSyncReviewLogStore {
     }
 
     private static void insertReviewLog(Context context, SQLiteDatabase database, JSONObject record) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, "syncReviewLogInsert", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "insertMutationName"), new Object[] {
             record.optString("id", record.optString("op_id")),
             record.optString("op_id"),
             record.optString("device_id", ""),
@@ -66,6 +66,10 @@ final class FolioleCompanionSyncReviewLogStore {
             record.optDouble("stability_after", 0),
             record.optDouble("difficulty_after", 0)
         });
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionSyncApplyMutationRules.string(context, "reviewLog", key);
     }
 
 }

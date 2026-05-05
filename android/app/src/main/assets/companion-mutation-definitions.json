@@ -166,5 +166,35 @@
     "appDataClearNodes": "DELETE FROM nodes",
     "appDataClearWorkspaceMeta": "DELETE FROM workspace_meta",
     "syncStateUpsert": "INSERT OR REPLACE INTO sync_object_state (object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash, last_modified_by_device_id, updated_at, deleted_at, sync_dirty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  },
+  "syncApplyMutations": {
+    "documents": {
+      "markMissingMutationName": "syncExternalDocumentMarkMissing",
+      "upsertMutationName": "syncExternalDocumentUpsert"
+    },
+    "learning": {
+      "readingDeleteMutationName": "syncNodeReadingDelete",
+      "readingDeviceStateDeleteMutationName": "syncNodeReadingDeviceStateDelete",
+      "readingDeviceStateUpsertMutationName": "syncNodeReadingDeviceStateUpsert",
+      "readingUpsertMutationName": "syncNodeReadingUpsert",
+      "reviewDeleteMutationName": "syncNodeReviewDelete",
+      "reviewUpsertMutationName": "syncNodeReviewUpsert"
+    },
+    "pushAck": {
+      "deleteIssuesMutationName": "syncPushAckDeleteIssuesByObject",
+      "upsertMutationName": "syncPushAckUpsert"
+    },
+    "reviewLog": {
+      "insertMutationName": "syncReviewLogInsert"
+    },
+    "settings": {
+      "upsertMutationName": "syncSettingRecordUpsert"
+    },
+    "viewState": {
+      "activeNodeDeleteMutationName": "syncViewActiveNodeDelete",
+      "activeNodeUpsertMutationName": "syncViewActiveNodeUpsert",
+      "nodeStateDeleteMutationName": "syncViewNodeStateDelete",
+      "nodeStateUpsertMutationName": "syncViewNodeStateUpsert"
+    }
   }
 }
