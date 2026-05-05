@@ -15,13 +15,39 @@ interface WorkspaceContentProps {
   props: WorkspaceLayoutProps;
 }
 
-function ListStudyStatusBar({ isStudyMode, reviewDueCount }: { isStudyMode: boolean; reviewDueCount: number }) {
+function getReviewStatusLabel(status: WorkspaceLayoutProps['reviewStatus']) {
+  if (status === 'awaiting-answer') {
+    return 'Awaiting answer';
+  }
+  if (status === 'answer-revealed') {
+    return 'Answer revealed';
+  }
+  return 'Session complete';
+}
+
+function ListStudyStatusBar({
+  isStudyMode,
+  reviewDueCount,
+  reviewQueueCount,
+  reviewCompletedCount,
+  reviewStatus
+}: {
+  isStudyMode: boolean;
+  reviewDueCount: number;
+  reviewQueueCount: number;
+  reviewCompletedCount: number;
+  reviewStatus: WorkspaceLayoutProps['reviewStatus'];
+}) {
   if (!isStudyMode) {
     return null;
   }
   return (
     <div className="flex h-[56px] flex-none items-center border-t border-border bg-bg-panel px-3">
-      <p className="truncate text-xs font-medium text-foreground/70">Reviewing · {Math.max(reviewDueCount, 0)} due</p>
+      <p className="truncate text-xs font-medium text-foreground/70">
+        Reviewing · {Math.max(reviewQueueCount, 0)} left · {Math.max(reviewCompletedCount, 0)} done · {getReviewStatusLabel(reviewStatus)}
+        {' · '}
+        {Math.max(reviewDueCount, 0)} due now
+      </p>
     </div>
   );
 }
@@ -39,7 +65,13 @@ function WorkspaceListArea({ props }: { props: WorkspaceLayoutProps }) {
         onSelectTrashNode={props.onSelectTrashNode}
         selectedTrashNodeId={props.selectedTrashNodeId}
       />
-      <ListStudyStatusBar isStudyMode={props.isStudyMode} reviewDueCount={props.reviewDueCount} />
+      <ListStudyStatusBar
+        isStudyMode={props.isStudyMode}
+        reviewCompletedCount={props.reviewCompletedCount}
+        reviewDueCount={props.reviewDueCount}
+        reviewQueueCount={props.reviewQueueCount}
+        reviewStatus={props.reviewStatus}
+      />
     </div>
   );
 }

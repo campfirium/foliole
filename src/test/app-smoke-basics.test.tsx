@@ -62,9 +62,11 @@ it('runs study flow as Study -> Show Answer -> Grade buttons enabled', () => {
 
   expect(screen.getByRole('button', { name: 'Study' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  expect(screen.getByText(/Reviewing · 1 left · 0 done · Awaiting answer/i)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Again' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
+  expect(screen.getByText(/Reviewing · 1 left · 0 done · Answer revealed/i)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Again' })).toBeInTheDocument();
   expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument();
@@ -115,8 +117,12 @@ it('syncs node list selection when review grading advances active node', async (
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  expect(screen.getByText(/Reviewing · 2 left · 0 done · Awaiting answer/i)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
+  await waitFor(() => {
+    expect(screen.getByText(/Reviewing · 1 left · 1 done · Awaiting answer/i)).toBeInTheDocument();
+  });
 
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');

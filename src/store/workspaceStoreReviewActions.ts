@@ -21,7 +21,8 @@ function createEmptyReviewSession(): WorkspaceState['reviewSession'] {
   return {
     currentNodeId: null,
     isAnswerRevealed: false,
-    queueNodeIds: []
+    queueNodeIds: [],
+    totalNodeCount: 0
   };
 }
 
@@ -53,7 +54,8 @@ function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceReviewActio
         reviewSession: {
           currentNodeId: queueNodeIds[0] ?? null,
           isAnswerRevealed: false,
-          queueNodeIds
+          queueNodeIds,
+          totalNodeCount: queueNodeIds.length
         }
       };
     });
@@ -121,7 +123,8 @@ function createGradeReviewCardAction(
           ? {
               currentNodeId: nextNodeId,
               isAnswerRevealed: false,
-              queueNodeIds: nextQueue
+              queueNodeIds: nextQueue,
+              totalNodeCount: snapshot.reviewSession.totalNodeCount
             }
           : createEmptyReviewSession()
       };

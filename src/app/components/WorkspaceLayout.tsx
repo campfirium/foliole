@@ -39,6 +39,9 @@ export interface WorkspaceLayoutProps {
   isSettingsOpen: boolean;
   isAnswerRevealed: boolean;
   reviewCurrentNodeId: string | null;
+  reviewQueueCount: number;
+  reviewCompletedCount: number;
+  reviewStatus: 'awaiting-answer' | 'answer-revealed' | 'completed';
   isDocumentResizing: boolean;
   isResizingList: boolean;
   isTrashViewOpen: boolean;

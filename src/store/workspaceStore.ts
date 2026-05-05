@@ -68,6 +68,7 @@ export interface ReviewSessionState {
   currentNodeId: string | null;
   isAnswerRevealed: boolean;
   queueNodeIds: string[];
+  totalNodeCount: number;
 }
 
 export interface NodeViewState {
@@ -104,7 +105,8 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
     reviewSession: {
       currentNodeId: null,
       isAnswerRevealed: false,
-      queueNodeIds: []
+      queueNodeIds: [],
+      totalNodeCount: 0
     }
   };
 }
