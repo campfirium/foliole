@@ -1,4 +1,4 @@
-import { Import, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
+import { ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -29,7 +29,6 @@ interface WindowTitleBarRightSidebarAnchorProps {
 }
 
 export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSidebarAnchorProps) {
-  const isImportPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'import';
   const isReviewQueuePanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'review-queue';
   const isDevPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'dev';
 
@@ -51,16 +50,6 @@ export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSideb
       </div>
       <div className="window-titlebar-right-zone">
         <div className="window-titlebar-right-panel-actions">
-          <button
-            aria-label="Import panel"
-            aria-pressed={isImportPanelActive}
-            className="window-titlebar-leading-button"
-            data-active={isImportPanelActive}
-            onClick={() => props.onSelectRightPanel('import')}
-            type="button"
-          >
-            <Import aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-          </button>
           <button
             aria-label="Review queue panel"
             aria-pressed={isReviewQueuePanelActive}

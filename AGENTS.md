@@ -7,6 +7,7 @@
 - 默认按 Track-Based 迭代推进，以“当前主目标 + 最小可验收任务”为单位，不再以阶段号驱动执行。
 - 默认在 `dev` 主干连续小步迭代；不创建 feature branch / worktree，除非用户明确要求。
 - 单次只做一个 30-90 分钟内可运行、可验证、可回退的最小任务；禁止混入无关重构。
+- 拆分和排序任务时必须遵循 BDD + UI 先行顺序：先 UI 壳 → 再 IPC → 最后数据层。每层只做上层要求的事，禁止先做后端再补前端。详见 `.lab/specs/_product/methodology.md`。
 
 ## 文档读取顺序
 - 启动时只读 `AGENTS.md`。
@@ -14,7 +15,7 @@
 - 任务涉及 renderer UI 改动（`src/app/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增/重写 spec、整理文档结构、拆分长文档时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
-- 任务涉及执行细则时，读取 `.lab/agent/workflow.md`。
+- 任务涉及台账、继续/停车协议等执行细则时，读取 `.lab/agent/task-protocol.md`。
 - 仅在判断验证或停车策略时读取 `.lab/agent/windows-preview.flag` 与 `.lab/agent/park.flag`。
 
 ## 任务执行主规则
@@ -85,7 +86,8 @@
 - 用户要求“提交”“commit”“执行提交指令”时，必须使用 `commit-note` skill。
 
 ## 细则入口
-- agent 执行细则：`.lab/agent/workflow.md`
-- 文档结构与 spec 拆分细则：`.lab/specs/_governance/spec-organization.md`、`.lab/specs/_governance/doc-organization-expectation.md`
-- UI 规范：`.lab/specs/app/design-tokens.md`、`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`、`.lab/specs/desktop/workspace/shell-layout.md`
-- Windows Native 开发与启动排障：`.lab/specs/17-windows-native-dev-loop-v1.md`、`.lab/specs/19-webview2-startup-diagnosis-playbook-v1.md`
+- 开发方法论（BDD、UI 先行、任务拆分顺序）：`.lab/specs/_product/methodology.md`
+- agent 台账与执行协议：`.lab/agent/task-protocol.md`
+- 文档治理与准入规则：`.lab/specs/_governance/doc-update-expectation.md`、`.lab/specs/_governance/spec-organization.md`、`.lab/specs/_governance/doc-organization-expectation.md`
+- UI 规范：`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`、`.lab/specs/desktop/workspace/shell-layout.md`
+- Windows Native 开发与启动排障：`.lab/specs/desktop/electron/windows-dev-loop.md`

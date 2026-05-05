@@ -1,8 +1,8 @@
-import { Bug, FileText, Import, ListOrdered, PanelLeft, Trash2 } from 'lucide-react';
+import { Bug, FileText, ListOrdered, PanelLeft, Trash2 } from 'lucide-react';
 
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
-export type WorkspaceRightPanelId = 'review-queue' | 'import' | 'dev';
+export type WorkspaceRightPanelId = 'review-queue' | 'dev';
 
 const toolbarButtonClassName = 'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 const activeToolbarButtonClassName = `${toolbarButtonClassName} data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground`;
@@ -75,12 +75,6 @@ export function WorkspaceTopToolbar({
       </ToolbarActionGroup>
       <div className="flex-1" />
       <ToolbarActionGroup ariaLabel="Workspace inspector actions">
-        <InspectorActionButton
-          active={!isRightSidebarCollapsed && activeRightPanelId === 'import'}
-          icon={<Import aria-hidden="true" size={16} strokeWidth={1.75} />}
-          label="Import panel"
-          onClick={() => onSelectRightPanel('import')}
-        />
         <InspectorActionButton
           active={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
           icon={<ListOrdered aria-hidden="true" size={16} strokeWidth={1.75} />}
