@@ -34,8 +34,8 @@ final class FolioleCompanionSyncStateWriteStore {
             database.endTransaction();
         }
         JSObject result = new JSObject();
-        result.put("object_id", objectId);
-        result.put("content_hash", contentHash);
+        result.put(resultKey(context, "objectId"), objectId);
+        result.put(resultKey(context, "contentHash"), contentHash);
         return result;
     }
 
@@ -51,13 +51,13 @@ final class FolioleCompanionSyncStateWriteStore {
         String objectType = syncObjectType(context, "nodeReading");
         database.beginTransaction();
         try {
-            FolioleCompanionLearningSyncPayload.applyReading(context, database, nodeId, buildRecord(objectType, nodeId, payload, contentHash, now));
+            FolioleCompanionLearningSyncPayload.applyReading(context, database, nodeId, buildRecord(context, objectType, nodeId, payload, contentHash, now));
             upsertTypedObjectState(context, database, objectType, nodeId, contentHash, modifiedByDeviceId, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
         }
-        return syncSaveResult(nodeId, contentHash);
+        return syncSaveResult(context, nodeId, contentHash);
     }
 
     static JSObject saveNodeReview(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
@@ -72,7 +72,7 @@ final class FolioleCompanionSyncStateWriteStore {
         String objectType = syncObjectType(context, "nodeReview");
         database.beginTransaction();
         try {
-            FolioleCompanionLearningSyncPayload.applyReview(context, database, nodeId, buildRecord(objectType, nodeId, payload, contentHash, now));
+            FolioleCompanionLearningSyncPayload.applyReview(context, database, nodeId, buildRecord(context, objectType, nodeId, payload, contentHash, now));
             if (reviewLog != null) {
                 opId = FolioleCompanionSyncReviewLogStore.saveLocalReviewLog(context, database, nodeId, reviewLog, modifiedByDeviceId);
             }
@@ -81,9 +81,9 @@ final class FolioleCompanionSyncStateWriteStore {
         } finally {
             database.endTransaction();
         }
-        JSObject result = syncSaveResult(nodeId, contentHash);
+        JSObject result = syncSaveResult(context, nodeId, contentHash);
         if (opId != null) {
-            result.put("op_id", opId);
+            result.put(resultKey(context, "opId"), opId);
         }
         return result;
     }
@@ -133,6 +133,7 @@ final class FolioleCompanionSyncStateWriteStore {
     }
 
     private static JSONObject buildRecord(
+        Context context,
         String objectType,
         String objectId,
         JSONObject payload,
@@ -140,19 +141,27 @@ final class FolioleCompanionSyncStateWriteStore {
         String now
     ) throws Exception {
         JSONObject record = new JSONObject();
-        record.put("object_type", objectType);
-        record.put("object_id", objectId);
-        record.put("content_hash", contentHash);
-        record.put("payload_json", payload.toString());
-        record.put("updated_at", now);
+        record.put(recordKey(context, "objectType"), objectType);
+        record.put(recordKey(context, "objectId"), objectId);
+        record.put(recordKey(context, "contentHash"), contentHash);
+        record.put(recordKey(context, "payloadJson"), payload.toString());
+        record.put(recordKey(context, "updatedAt"), now);
         return record;
     }
 
-    private static JSObject syncSaveResult(String objectId, String contentHash) {
+    private static JSObject syncSaveResult(Context context, String objectId, String contentHash) throws Exception {
         JSObject result = new JSObject();
-        result.put("object_id", objectId);
-        result.put("content_hash", contentHash);
+        result.put(resultKey(context, "objectId"), objectId);
+        result.put(resultKey(context, "contentHash"), contentHash);
         return result;
+    }
+
+    private static String recordKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncWriteRules.recordKey(context, key);
+    }
+
+    private static String resultKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncWriteRules.resultKey(context, key);
     }
 
     private static String syncObjectType(Context context, String key) throws Exception {

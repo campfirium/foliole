@@ -107,6 +107,27 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
     fallbackStatus: 'pending',
     statuses: ['accepted', 'completed', 'dismissed', 'pending']
   },
+  syncWrite: {
+    recordKeys: {
+      contentHash: 'content_hash',
+      objectId: 'object_id',
+      objectType: 'object_type',
+      payloadJson: 'payload_json',
+      updatedAt: 'updated_at'
+    },
+    resultKeys: {
+      contentHash: 'content_hash',
+      objectId: 'object_id',
+      opId: 'op_id'
+    },
+    viewCanonicalKeys: {
+      deviceId: 'device_id',
+      formFactor: 'form_factor',
+      key: 'key',
+      platform: 'platform',
+      scope: 'scope'
+    }
+  },
   syncObjectTypes: {
     nodeReading: 'node_reading',
     nodeReview: 'node_review',

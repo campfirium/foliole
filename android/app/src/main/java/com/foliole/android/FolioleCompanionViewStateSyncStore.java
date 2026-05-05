@@ -31,7 +31,7 @@ final class FolioleCompanionViewStateSyncStore {
         } finally {
             database.endTransaction();
         }
-        return result(objectId, contentHash);
+        return result(context, objectId, contentHash);
     }
 
     static JSObject saveNodeViewState(Context context, SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
@@ -57,7 +57,7 @@ final class FolioleCompanionViewStateSyncStore {
         } finally {
             database.endTransaction();
         }
-        return result(objectId, contentHash);
+        return result(context, objectId, contentHash);
     }
 
     static void applyPayload(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
@@ -187,11 +187,11 @@ final class FolioleCompanionViewStateSyncStore {
 
     private static String contentHash(Context context, String deviceId, String key, JSONObject payload) throws Exception {
         JSONObject canonical = new JSONObject();
-        canonical.put("device_id", deviceId);
-        canonical.put("form_factor", formFactor(context));
-        canonical.put("key", key);
-        canonical.put("platform", platform(context));
-        canonical.put("scope", scope(context));
+        canonical.put(canonicalKey(context, "deviceId"), deviceId);
+        canonical.put(canonicalKey(context, "formFactor"), formFactor(context));
+        canonical.put(canonicalKey(context, "key"), key);
+        canonical.put(canonicalKey(context, "platform"), platform(context));
+        canonical.put(canonicalKey(context, "scope"), scope(context));
         Set<String> ignoredPayloadKeys = hashIgnoredPayloadKeys(context);
         Iterator<String> payloadKeys = payload.keys();
         while (payloadKeys.hasNext()) {
@@ -202,11 +202,19 @@ final class FolioleCompanionViewStateSyncStore {
         return FolioleCompanionSyncContentHash.hash(canonical);
     }
 
-    private static JSObject result(String objectId, String contentHash) {
+    private static JSObject result(Context context, String objectId, String contentHash) throws Exception {
         JSObject result = new JSObject();
-        result.put("object_id", objectId);
-        result.put("content_hash", contentHash);
+        result.put(resultKey(context, "objectId"), objectId);
+        result.put(resultKey(context, "contentHash"), contentHash);
         return result;
+    }
+
+    private static String canonicalKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncWriteRules.viewCanonicalKey(context, key);
+    }
+
+    private static String resultKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncWriteRules.resultKey(context, key);
     }
 
     private static String nullIfEmpty(String value) {
