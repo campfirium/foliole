@@ -253,3 +253,62 @@ it('derives image regions from existing cloze child nodes when the parent has no
     })
   );
 });
+
+it('registers every region of a grouped image cloze item when the item is focused', () => {
+  renderSectionWithProps({
+    activeNodeId: 'node-1',
+    editorNodeId: 'node-1',
+    nodesById: {
+      'node-1': {
+        ...baseNode,
+        kind: 'item',
+        content: '![Cover](asset://hash-1.png)',
+        anchorLink: {
+          id: 'region-1',
+          kind: 'cloze',
+          locator: {
+            attachmentId: 'hash-1',
+            height: 0.2,
+            width: 0.3,
+            x: 0.1,
+            y: 0.2
+          }
+        },
+        imageRegions: [
+          {
+            attachmentId: 'hash-1',
+            regions: [
+              {
+                id: 'region-1',
+                height: 0.2,
+                width: 0.3,
+                x: 0.1,
+                y: 0.2
+              },
+              {
+                id: 'region-2',
+                height: 0.12,
+                width: 0.18,
+                x: 0.42,
+                y: 0.55
+              }
+            ]
+          }
+        ],
+        reveal: 'Paris'
+      }
+    }
+  });
+
+  expect(imageClozePresentation.registerImageClozeEditorPresentation).toHaveBeenCalledWith(
+    'node-1',
+    expect.objectContaining({
+      canCreate: false,
+      hiddenRegionIds: ['region-1', 'region-2'],
+      regions: [
+        expect.objectContaining({ id: 'region-1' }),
+        expect.objectContaining({ id: 'region-2' })
+      ]
+    })
+  );
+});

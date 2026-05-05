@@ -1,7 +1,7 @@
 import { AppEmptyState } from '../../../shared/ui';
 import { MarkdownEditor } from '../../editor/components/MarkdownEditor';
 import type { Node } from '../../nodes/model/nodeTypes';
-import { getImageClozeLocator } from '../model/imageCloze';
+import { getImageClozeLocator, listImageClozePresentationRegions } from '../model/imageCloze';
 
 import { ImageClozeRegionSurface } from './ImageClozeRegionSurface';
 import { useImageClozeResource } from './useImageClozeResource';
@@ -15,6 +15,9 @@ interface ImageClozeCardViewProps {
 export function ImageClozeCardView({ node, onAnswerChange, showAnswer }: ImageClozeCardViewProps) {
   const locator = getImageClozeLocator(node.anchorLink);
   const { resourceState, resourceUrl } = useImageClozeResource(locator?.attachmentId ?? null);
+  const currentRegions = listImageClozePresentationRegions(node.imageRegions).filter(
+    (region) => region.attachmentId === locator?.attachmentId
+  );
 
   if (!locator) {
     return (
@@ -30,11 +33,11 @@ export function ImageClozeCardView({ node, onAnswerChange, showAnswer }: ImageCl
         <ImageClozePromptSection node={node} />
         {resourceState === 'ready' && resourceUrl ? (
           <ImageClozeRegionSurface
-            hiddenRegionIds={showAnswer ? [] : ['current']}
+            hiddenRegionIds={showAnswer ? [] : currentRegions.length > 0 ? currentRegions.map((region) => region.id) : ['current']}
             imageAlt={node.title || 'Image cloze'}
             imageSrc={resourceUrl}
-            outlinedRegionIds={showAnswer ? ['current'] : []}
-            regions={[{ ...locator, id: 'current' }]}
+            outlinedRegionIds={showAnswer ? (currentRegions.length > 0 ? currentRegions.map((region) => region.id) : ['current']) : []}
+            regions={currentRegions.length > 0 ? currentRegions : [{ ...locator, id: 'current' }]}
           />
         ) : (
           <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border border-border bg-bg-panel">

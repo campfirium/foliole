@@ -65,6 +65,30 @@ export function appendImageClozeRegions(
   return existingGroups;
 }
 
+export function removeImageClozeRegion(
+  currentImageRegions: NodeImageRegionGroup[] | null | undefined,
+  attachmentId: string,
+  regionId: string
+): NodeImageRegionGroup[] | null {
+  if (!currentImageRegions) {
+    return currentImageRegions ?? null;
+  }
+
+  const nextGroups = currentImageRegions
+    .map((group) => {
+      if (group.attachmentId !== attachmentId) {
+        return group;
+      }
+      return {
+        ...group,
+        regions: group.regions.filter((region) => region.id !== regionId)
+      };
+    })
+    .filter((group) => group.regions.length > 0);
+
+  return nextGroups.length > 0 ? nextGroups : null;
+}
+
 function isFiniteRatio(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
 }
@@ -116,35 +140,78 @@ export function deriveImageClozeRegionsFromChildren(args: {
 }) {
   const groupsByAttachmentId = new Map<string, NodeImageRegionGroup>();
   const trashedNodeIdSet = new Set(args.trashedNodeIds ?? []);
+  const appendGroupRegions = (attachmentId: string, regions: NodeImageRegionGroup['regions']) => {
+    const group = groupsByAttachmentId.get(attachmentId) ?? {
+      attachmentId,
+      regions: []
+    };
+    if (!groupsByAttachmentId.has(attachmentId)) {
+      groupsByAttachmentId.set(attachmentId, group);
+    }
+    const regionIds = new Set(group.regions.map((region) => region.id));
+    for (const region of regions) {
+      if (regionIds.has(region.id)) {
+        continue;
+      }
+      regionIds.add(region.id);
+      group.regions.push(region);
+    }
+  };
 
   for (const node of Object.values(args.nodesById)) {
     if (node.parentNodeId !== args.nodeId || trashedNodeIdSet.has(node.id)) {
       continue;
     }
+    for (const group of node.imageRegions ?? []) {
+      appendGroupRegions(group.attachmentId, group.regions);
+    }
     const locator = getImageClozeLocator(node.anchorLink);
     if (!locator) {
       continue;
     }
-    const group = groupsByAttachmentId.get(locator.attachmentId) ?? {
-      attachmentId: locator.attachmentId,
-      regions: []
-    };
-    if (!groupsByAttachmentId.has(locator.attachmentId)) {
-      groupsByAttachmentId.set(locator.attachmentId, group);
-    }
-    if (group.regions.some((region) => region.id === node.anchorLink?.id)) {
-      continue;
-    }
-    group.regions.push({
-      id: node.anchorLink?.id ?? `legacy-${node.id}`,
-      height: locator.height,
-      width: locator.width,
-      x: locator.x,
-      y: locator.y
-    });
+    appendGroupRegions(locator.attachmentId, [
+      {
+        id: node.anchorLink?.id ?? `legacy-${node.id}`,
+        height: locator.height,
+        width: locator.width,
+        x: locator.x,
+        y: locator.y
+      }
+    ]);
   }
 
   return [...groupsByAttachmentId.values()];
+}
+
+export function mergeImageClozeRegionGroups(
+  ...groupsList: Array<NodeImageRegionGroup[] | null | undefined>
+): NodeImageRegionGroup[] {
+  const mergedByAttachmentId = new Map<string, NodeImageRegionGroup>();
+
+  for (const groups of groupsList) {
+    if (!groups) {
+      continue;
+    }
+    for (const group of groups) {
+      const existing = mergedByAttachmentId.get(group.attachmentId) ?? {
+        attachmentId: group.attachmentId,
+        regions: []
+      };
+      if (!mergedByAttachmentId.has(group.attachmentId)) {
+        mergedByAttachmentId.set(group.attachmentId, existing);
+      }
+      const regionIds = new Set(existing.regions.map((region) => region.id));
+      for (const region of group.regions) {
+        if (regionIds.has(region.id)) {
+          continue;
+        }
+        regionIds.add(region.id);
+        existing.regions.push(region);
+      }
+    }
+  }
+
+  return [...mergedByAttachmentId.values()];
 }
 
 function keepOnlyTargetImage(content: string, imageRange: { from: number; to: number }) {

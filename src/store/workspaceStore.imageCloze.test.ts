@@ -125,7 +125,6 @@ function seedLegacyMismatchedImageClozeChild() {
 
 function expectCreatedImageClozeNodes(createdIds: string[]) {
   const firstNode = useWorkspaceStore.getState().nodesById[createdIds[0] as string];
-  const secondNode = useWorkspaceStore.getState().nodesById[createdIds[1] as string];
   const parentNode = useWorkspaceStore.getState().nodesById['node-1'];
 
   expect(firstNode?.parentNodeId).toBe('node-1');
@@ -143,7 +142,27 @@ function expectCreatedImageClozeNodes(createdIds: string[]) {
     x: 0.1,
     y: 0.2
   });
-  expect(secondNode?.reveal).toBe('![Cover](asset://hash-1.png)');
+  expect(firstNode?.imageRegions).toEqual([
+    {
+      attachmentId: 'hash-1',
+      regions: [
+        {
+          height: 0.15,
+          id: 'region-1',
+          width: 0.2,
+          x: 0.1,
+          y: 0.2
+        },
+        {
+          height: 0.12,
+          id: 'region-2',
+          width: 0.18,
+          x: 0.42,
+          y: 0.55
+        }
+      ]
+    }
+  ]);
   expect(parentNode?.imageRegions).toEqual([
     {
       attachmentId: 'hash-1',
@@ -170,7 +189,7 @@ function expectCreatedImageClozeNodes(createdIds: string[]) {
 it('creates image cloze item nodes with prompt context and reveal image content', () => {
   const createdIds = createImageClozeNodes();
 
-  expect(createdIds).toHaveLength(2);
+  expect(createdIds).toHaveLength(1);
   expectCreatedImageClozeNodes(createdIds as string[]);
 });
 
@@ -180,20 +199,7 @@ it('removes the topic image region when the linked image cloze item is deleted a
 
   useWorkspaceStore.getState().deleteNode(createdId as string);
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toEqual([
-    {
-      attachmentId: 'hash-1',
-      regions: [
-        {
-          height: 0.12,
-          id: 'region-2',
-          width: 0.18,
-          x: 0.42,
-          y: 0.55
-        }
-      ]
-    }
-  ]);
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toBeNull();
 
   useWorkspaceStore.getState().restoreNode(createdId as string);
 
@@ -201,7 +207,7 @@ it('removes the topic image region when the linked image cloze item is deleted a
 });
 
 it('soft deletes the linked image cloze item when deleting the region from the image surface', () => {
-  const [createdId] = createSingleImageClozeNode(IMAGE_CLOZE_REGIONS[0]);
+  const [createdId] = createImageClozeNodes();
   expect(createdId).toBeTruthy();
 
   useWorkspaceStore.getState().deleteImageClozeRegion('node-1', 'hash-1', 'region-1');

@@ -1,3 +1,4 @@
+import type { ImageClozeDraftRegion } from '../../image-cloze/model/imageCloze';
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 
 import { attachOverlayDragHandlers, updateDraftRectElement } from './imageClozeWidgetDraft';
@@ -10,7 +11,7 @@ import {
   showImageClozeFeedback,
   toRelativeImagePoint
 } from './imageClozeWidgetInteractionHelpers';
-import { syncSavedRegionLayerState } from './imageClozeWidgetOverlayHelpers';
+import { createImageRegionElement, syncSavedRegionLayerState } from './imageClozeWidgetOverlayHelpers';
 
 function prunePresentationRegion(
   presentation: ImageClozeEditorPresentation | null | undefined,
@@ -50,9 +51,11 @@ function createDraftActions(args: {
   host: HTMLElement;
   overlay: HTMLElement;
   presentation?: ImageClozeEditorPresentation | null;
+  regionLayer: HTMLElement;
   to: number;
 }) {
   let actionAnchorPoint: { x: number; y: number } | null = null;
+  let pendingRegions: ImageClozeDraftRegion[] = [];
   const draftActions = document.createElement('div');
   draftActions.className = 'cm-md-image-cloze-actions';
   draftActions.hidden = true;
@@ -74,13 +77,39 @@ function createDraftActions(args: {
     draftActions.style.top = '';
     updateDraftRectElement(args.draftRectElement, null);
   };
-  return { actionAnchorPoint: () => actionAnchorPoint, draftActions, dragHandlers, resetDraft };
+  const syncPendingPreview = () => {
+    args.regionLayer.querySelectorAll('[data-region-pending="true"]').forEach((element) => element.remove());
+    for (const region of pendingRegions) {
+      const preview = createImageRegionElement(region, 'outlined');
+      preview.dataset.regionPending = 'true';
+      args.regionLayer.append(preview);
+    }
+  };
+  return {
+    actionAnchorPoint: () => actionAnchorPoint,
+    addPendingRegion(region: ImageClozeDraftRegion) {
+      pendingRegions = [...pendingRegions, region];
+      syncPendingPreview();
+    },
+    consumePendingRegions() {
+      const nextRegions = [...pendingRegions];
+      pendingRegions = [];
+      syncPendingPreview();
+      return nextRegions;
+    },
+    draftActions,
+    dragHandlers,
+    hasPendingRegions: () => pendingRegions.length > 0,
+    resetDraft,
+    syncPendingPreview
+  };
 }
 function appendDraftButtons(args: {
   attachmentId: string;
   draft: ReturnType<typeof createDraftActions>;
   from: number;
   host: HTMLElement;
+  overlay: HTMLElement;
   to: number;
 }) {
   args.draft.draftActions.append(
@@ -94,7 +123,11 @@ function appendDraftButtons(args: {
         if (!draftRect) {
           return;
         }
-        dispatchImageClozeCreate(buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect, from: args.from, to: args.to }));
+        dispatchImageClozeCreate({
+          attachmentId: args.attachmentId,
+          imageRange: { from: args.from, to: args.to },
+          regions: [...args.draft.consumePendingRegions(), buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect, from: args.from, to: args.to })]
+        });
         const anchorPoint = args.draft.actionAnchorPoint();
         if (anchorPoint) {
           showImageClozeFeedback(args.host, 'Item created.', anchorPoint.x, anchorPoint.y);
@@ -109,6 +142,21 @@ function appendDraftButtons(args: {
         event.preventDefault();
         event.stopPropagation();
         args.draft.resetDraft();
+      }
+    }),
+    createImageClozeActionButton({
+      ariaLabel: 'Add image cloze region',
+      iconPath: 'M8 3.5v9 M3.5 8h9',
+      onClick: (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const draftRect = args.draft.dragHandlers.getDraftRect();
+        if (!draftRect) {
+          return;
+        }
+        args.draft.addPendingRegion(buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect, from: args.from, to: args.to }));
+        args.draft.resetDraft();
+        args.overlay.hidden = false;
       }
     })
   );
@@ -246,9 +294,10 @@ export function attachImageClozeOverlayInteractions(args: {
     host,
     overlay: args.overlay,
     presentation: args.presentation,
+    regionLayer: args.regionLayer,
     to: args.to
   });
-  appendDraftButtons({ attachmentId: args.attachmentId, draft, from: args.from, host, to: args.to });
+  appendDraftButtons({ attachmentId: args.attachmentId, draft, from: args.from, host, overlay: args.overlay, to: args.to });
   const deleteControl = createDeleteControl((event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -264,7 +313,13 @@ export function attachImageClozeOverlayInteractions(args: {
     clearHover: selection.clearHover,
     handlePointerDown: selection.handlePointerDown,
     handlePointerMove: selection.handlePointerMove,
-    handlePointerLeave() { selection.clearHover(); },
+    handlePointerLeave() {
+      selection.clearHover();
+      if (!draft.hasPendingRegions()) {
+        draft.resetDraft();
+      }
+      draft.syncPendingPreview();
+    },
     showOverlay: selection.showOverlay
   };
 }

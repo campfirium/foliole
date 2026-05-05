@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { IMAGE_CLOZE_CREATE_EVENT, IMAGE_CLOZE_DELETE_EVENT } from '../../image-cloze/model/imageClozeEvents';
+import type { ImageClozeDraftRegion } from '../../image-cloze/model/imageCloze';
 
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 
@@ -111,6 +112,40 @@ describe('image cloze widget creation', () => {
     confirmButton.click();
 
     expect(onCreate).toHaveBeenCalledTimes(1);
+    const detail = onCreate.mock.calls[0]?.[0]?.detail;
+    expect(detail?.attachmentId).toBe('hash-1');
+    expect(detail?.regions).toHaveLength(1);
+    expect(detail?.regions[0]?.id).toEqual(expect.any(String));
+    expect(detail?.regions[0]?.width).toBeCloseTo(0.2);
+    expect(detail?.regions[0]?.height).toBeCloseTo(0.25);
+    window.removeEventListener(IMAGE_CLOZE_CREATE_EVENT, onCreate);
+  });
+
+  it('keeps queued regions and submits them together after using the add button', () => {
+    const surface = createSurface();
+    const actions = surface.querySelector('.cm-md-image-cloze-actions') as HTMLElement;
+    const addButton = actions.querySelector('button[aria-label="Add image cloze region"]') as HTMLButtonElement;
+    const confirmButton = actions.querySelector('button[aria-label="Confirm image cloze"]') as HTMLButtonElement;
+    const overlay = surface.querySelector('.cm-md-image-cloze-overlay') as HTMLElement;
+    const onCreate = vi.fn();
+
+    window.addEventListener(IMAGE_CLOZE_CREATE_EVENT, onCreate);
+    startCreateDraft(surface);
+    addButton.click();
+    expect(surface.querySelectorAll('[data-region-pending="true"]')).toHaveLength(1);
+
+    overlay.dispatchEvent(createPointerLikeEvent('pointerdown', { button: 0, clientX: 80, clientY: 48, pointerId: 2 }));
+    overlay.dispatchEvent(createPointerLikeEvent('pointermove', { clientX: 140, clientY: 96, pointerId: 2 }));
+    overlay.dispatchEvent(createPointerLikeEvent('pointerup', { clientX: 140, clientY: 96, pointerId: 2 }));
+    confirmButton.click();
+
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    const detail = onCreate.mock.calls[0]?.[0]?.detail;
+    const regions = detail?.regions ?? [];
+    expect(regions).toHaveLength(2);
+    expect(regions.some((region: ImageClozeDraftRegion) => Math.abs(region.width - 0.2) < 0.001 && Math.abs(region.height - 0.25) < 0.001)).toBe(true);
+    expect(new Set(regions.map((region: ImageClozeDraftRegion) => region.id)).size).toBe(2);
+    expect(surface.querySelectorAll('[data-region-pending="true"]')).toHaveLength(0);
     window.removeEventListener(IMAGE_CLOZE_CREATE_EVENT, onCreate);
   });
 });

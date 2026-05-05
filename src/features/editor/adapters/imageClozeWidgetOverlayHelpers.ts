@@ -4,6 +4,25 @@ function toPercent(value: number) {
   return `${value * 100}%`;
 }
 
+function setRegionElementBounds(element: HTMLElement, region: { height: number; width: number; x: number; y: number }) {
+  element.style.left = toPercent(region.x);
+  element.style.top = toPercent(region.y);
+  element.style.width = toPercent(region.width);
+  element.style.height = toPercent(region.height);
+}
+
+export function createImageRegionElement(
+  region: { height: number; id: string; width: number; x: number; y: number },
+  state: 'hidden' | 'normal' | 'outlined' | 'selected'
+) {
+  const regionElement = document.createElement('div');
+  regionElement.className = 'cm-md-image-cloze-region';
+  regionElement.dataset.regionId = region.id;
+  regionElement.dataset.regionState = state;
+  setRegionElementBounds(regionElement, region);
+  return regionElement;
+}
+
 export function focusImageRegionInViewport(wrapper: HTMLElement, presentation: ImageClozeEditorPresentation | null) {
   const focusRegionId = presentation?.focusRegionId;
   if (!focusRegionId) {
@@ -37,19 +56,32 @@ export function createSavedRegionLayer(presentation: ImageClozeEditorPresentatio
   const hiddenRegionIds = new Set(presentation.hiddenRegionIds);
   const outlinedRegionIds = new Set(presentation.outlinedRegionIds);
   for (const region of presentation.regions) {
-    const regionElement = document.createElement('div');
-    regionElement.className = 'cm-md-image-cloze-region';
-    regionElement.dataset.regionId = region.id;
-    regionElement.dataset.regionState = hiddenRegionIds.has(region.id)
-      ? 'hidden'
-      : outlinedRegionIds.has(region.id)
-        ? 'outlined'
-        : 'normal';
-    regionElement.style.left = toPercent(region.x);
-    regionElement.style.top = toPercent(region.y);
-    regionElement.style.width = toPercent(region.width);
-    regionElement.style.height = toPercent(region.height);
-    layer.append(regionElement);
+    layer.append(
+      createImageRegionElement(
+        region,
+        hiddenRegionIds.has(region.id) ? 'hidden' : outlinedRegionIds.has(region.id) ? 'outlined' : 'normal'
+      )
+    );
   }
   return layer;
+}
+
+export function syncSavedRegionLayerState(
+  layer: HTMLElement,
+  presentation: ImageClozeEditorPresentation | null,
+  selectedRegionId: string | null
+) {
+  const hiddenRegionIds = new Set(presentation?.hiddenRegionIds ?? []);
+  const outlinedRegionIds = new Set(presentation?.outlinedRegionIds ?? []);
+  for (const regionElement of Array.from(layer.querySelectorAll('.cm-md-image-cloze-region'))) {
+    const regionId = (regionElement as HTMLElement).dataset.regionId ?? '';
+    (regionElement as HTMLElement).dataset.regionState =
+      selectedRegionId === regionId
+        ? 'selected'
+        : hiddenRegionIds.has(regionId)
+          ? 'hidden'
+          : outlinedRegionIds.has(regionId)
+            ? 'outlined'
+            : 'normal';
+  }
 }

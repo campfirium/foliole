@@ -4,7 +4,12 @@ import type { MutableRefObject } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../../features/image-cloze/model/imageCloze';
 import { buildImageClozeSourcePayload } from '../../features/image-cloze/model/imageCloze';
-import { IMAGE_CLOZE_CREATE_EVENT, type ImageClozeCreateEventDetail } from '../../features/image-cloze/model/imageClozeEvents';
+import {
+  IMAGE_CLOZE_CREATE_EVENT,
+  IMAGE_CLOZE_DELETE_EVENT,
+  type ImageClozeCreateEventDetail,
+  type ImageClozeDeleteEventDetail
+} from '../../features/image-cloze/model/imageClozeEvents';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import {
@@ -33,8 +38,10 @@ interface UseEditorContextCommandsParams {
     answer: string,
     anchorId: string
   ) => void;
+  deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   isTrashViewOpen: boolean;
+  nodesById: Record<string, Node>;
   updateNodeContent: (nodeId: string, content: string) => void;
 }
 
@@ -47,7 +54,9 @@ function useImageClozeEventBridge(args: {
     sourcePayload: ImageClozeSourcePayload,
     regions: ImageClozeDraftRegion[]
   ) => string[];
+  deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  nodesById: Record<string, Node>;
 }) {
   useEffect(() => {
     const handleImageClozeCreate = (event: Event) => {
@@ -64,12 +73,22 @@ function useImageClozeEventBridge(args: {
         return;
       }
 
-      args.createImageClozeNodes(args.activeNodeId, detail.attachmentId, sourcePayload, [detail.region]);
+      args.createImageClozeNodes(args.activeNodeId, detail.attachmentId, sourcePayload, detail.regions);
+    };
+
+    const handleImageClozeDelete = (event: Event) => {
+      const detail = (event as CustomEvent<ImageClozeDeleteEventDetail>).detail;
+      if (!args.activeNodeId || !detail?.attachmentId || !detail?.regionId) {
+        return;
+      }
+      args.deleteImageClozeRegion(args.activeNodeId, detail.attachmentId, detail.regionId);
     };
 
     window.addEventListener(IMAGE_CLOZE_CREATE_EVENT, handleImageClozeCreate as EventListener);
+    window.addEventListener(IMAGE_CLOZE_DELETE_EVENT, handleImageClozeDelete as EventListener);
     return () => {
       window.removeEventListener(IMAGE_CLOZE_CREATE_EVENT, handleImageClozeCreate as EventListener);
+      window.removeEventListener(IMAGE_CLOZE_DELETE_EVENT, handleImageClozeDelete as EventListener);
     };
   }, [args]);
 }
@@ -80,12 +99,14 @@ export function useEditorContextCommands({
   createHighlightNodeFromSelection,
   createImageClozeNodes = () => [],
   createQANodeFromSelection,
+  deleteImageClozeRegion,
   editorRef,
   isTrashViewOpen,
+  nodesById,
   updateNodeContent
 }: UseEditorContextCommandsParams) {
   const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
-  useImageClozeEventBridge({ activeNode, activeNodeId, createImageClozeNodes, editorRef });
+  useImageClozeEventBridge({ activeNode, activeNodeId, createImageClozeNodes, deleteImageClozeRegion, editorRef, nodesById });
   const closeContextMenu = () => setContextMenu(null);
   const handleEditorContextMenu = createHandleEditorContextMenu({
     activeNode,

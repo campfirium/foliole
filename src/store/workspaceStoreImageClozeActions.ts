@@ -42,11 +42,15 @@ function createImageClozeNode(
   parentNodeId: string,
   attachmentId: string,
   sourcePayload: ImageClozeSourcePayload,
-  region: ImageClozeDraftRegion,
+  regions: ImageClozeDraftRegion[],
   timestamp: string,
   state: WorkspaceState,
   untitledSequenceByParent: Record<string, number>
 ) {
+  const primaryRegion = regions[0];
+  if (!primaryRegion) {
+    return null;
+  }
   const nodeId = `node-${crypto.randomUUID()}`;
   const title = deriveNodeTitleForCloze(sourcePayload.promptContent, sourcePayload.revealContent);
   const untitledState = resolveCreatedNodeTitleState(title, parentNodeId, {
@@ -61,16 +65,22 @@ function createImageClozeNode(
     hasContent: sourcePayload.promptContent.trim().length > 0,
     content: sourcePayload.promptContent,
     anchorLink: {
-      id: region.id,
+      id: primaryRegion.id,
       kind: 'cloze',
       locator: {
         attachmentId,
-        height: region.height,
-        width: region.width,
-        x: region.x,
-        y: region.y
+        height: primaryRegion.height,
+        width: primaryRegion.width,
+        x: primaryRegion.x,
+        y: primaryRegion.y
       }
     },
+    imageRegions: [
+      {
+        attachmentId,
+        regions: regions.map(({ id, height, width, x, y }) => ({ id, height, width, x, y }))
+      }
+    ],
     hasReveal: true,
     reveal: sourcePayload.revealContent,
     review: createDefaultReviewProfile(timestamp),
@@ -99,27 +109,29 @@ function createImageClozeNodeBatch(args: {
   state: WorkspaceState;
   timestamp: string;
 }) {
-  const createdNodes: WorkspaceNode[] = [];
   const nextNodesById = { ...args.state.nodesById };
   let untitledSequenceByParent = args.state.untitledSequenceByParent;
-
-  for (const region of args.normalizedRegions) {
-    const nextNode = createImageClozeNode(
-      args.parentNodeId,
-      args.normalizedAttachmentId,
-      args.sourcePayload,
-      region,
-      args.timestamp,
-      args.state,
+  const nextNode = createImageClozeNode(
+    args.parentNodeId,
+    args.normalizedAttachmentId,
+    args.sourcePayload,
+    args.normalizedRegions,
+    args.timestamp,
+    args.state,
+    untitledSequenceByParent
+  );
+  if (!nextNode) {
+    return {
+      createdNodes: [],
+      nextNodesById,
       untitledSequenceByParent
-    );
-    untitledSequenceByParent = nextNode.untitledSequenceByParent;
-    createdNodes.push(nextNode.createdNode);
-    nextNodesById[nextNode.createdNode.id] = nextNode.createdNode;
+    };
   }
+  untitledSequenceByParent = nextNode.untitledSequenceByParent;
+  nextNodesById[nextNode.createdNode.id] = nextNode.createdNode;
 
   return {
-    createdNodes,
+    createdNodes: [nextNode.createdNode],
     nextNodesById,
     untitledSequenceByParent
   };

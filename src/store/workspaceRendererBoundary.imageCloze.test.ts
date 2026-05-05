@@ -50,7 +50,7 @@ it('refreshes the active-node boundary projection when only image regions change
       'node-1': {
         ...seedNode,
         id: 'node-1',
-        kind: 'topic',
+        kind: 'topic' as const,
         content: '![Cover](asset://hash-1.png)',
         hasContent: true,
         imageRegions: [

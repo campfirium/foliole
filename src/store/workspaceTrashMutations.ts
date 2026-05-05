@@ -1,4 +1,5 @@
 import { parseAnchorBlocks } from '../features/editor/model/anchorBlocks';
+import { isImageClozeLocator, removeImageClozeRegion } from '../features/image-cloze/model/imageCloze';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
@@ -28,6 +29,96 @@ function removeAnchorTagsForLink(content: string, anchor: { id: string; kind: 'h
   const inner = content.slice(matchedBlock.openTagTo, matchedBlock.closeTagFrom);
   const after = content.slice(matchedBlock.closeTagTo);
   return `${before}${inner}${after}`;
+}
+
+function removeImageRegionFromParent(parentNode: Node, deletedNode: Node, deletedAt: string) {
+  const groupedRegions = deletedNode.imageRegions?.flatMap((group) =>
+    group.regions.map((region) => ({ attachmentId: group.attachmentId, regionId: region.id }))
+  );
+  if (groupedRegions && groupedRegions.length > 0) {
+    const nextImageRegions = groupedRegions.reduce(
+      (current, region) => removeImageClozeRegion(current, region.attachmentId, region.regionId),
+      parentNode.imageRegions
+    );
+    if (nextImageRegions === parentNode.imageRegions) {
+      return parentNode;
+    }
+    return {
+      ...parentNode,
+      imageRegions: nextImageRegions,
+      updatedAt: deletedAt
+    };
+  }
+  const anchorLink = deletedNode.anchorLink;
+  if (!anchorLink || anchorLink.kind !== 'cloze' || !isImageClozeLocator(anchorLink.locator)) {
+    return parentNode;
+  }
+  const nextImageRegions = removeImageClozeRegion(parentNode.imageRegions, anchorLink.locator.attachmentId, anchorLink.id);
+  if (nextImageRegions === parentNode.imageRegions) {
+    return parentNode;
+  }
+  return {
+    ...parentNode,
+    imageRegions: nextImageRegions,
+    updatedAt: deletedAt
+  };
+}
+
+function updateDeletedAnchorParent(args: {
+  deletedAt: string;
+  deletedNode: Node;
+  deletedNodeIds: ReadonlySet<string>;
+  nextNodesById: Record<string, Node>;
+}) {
+  const anchorLink = args.deletedNode.anchorLink;
+  const parentNodeId = args.deletedNode.parentNodeId;
+  if (!anchorLink || !parentNodeId || args.deletedNodeIds.has(parentNodeId)) {
+    return null;
+  }
+  const parentNode = args.nextNodesById[parentNodeId];
+  if (!parentNode) {
+    return null;
+  }
+  const cleanedContent = removeAnchorTagsForLink(parentNode.content, anchorLink);
+  const parentWithRemovedRegion = removeImageRegionFromParent(parentNode, args.deletedNode, args.deletedAt);
+  if (cleanedContent === parentNode.content && parentWithRemovedRegion === parentNode) {
+    return null;
+  }
+  return {
+    parentNodeId,
+    updatedParentNode: {
+      ...parentWithRemovedRegion,
+      content: cleanedContent,
+      title: cleanedContent === parentNode.content ? parentWithRemovedRegion.title : deriveNodeTitleFromContent(cleanedContent),
+      updatedAt: args.deletedAt
+    }
+  };
+}
+
+function syncDeletedAnchorParents(args: {
+  deletedAt: string;
+  deletedNodeIds: ReadonlySet<string>;
+  nextNodesById: Record<string, Node>;
+  parentNodesToSync: Map<string, Node>;
+  state: WorkspaceState;
+}) {
+  for (const deletedId of args.deletedNodeIds) {
+    const deletedNode = args.state.nodesById[deletedId];
+    if (!deletedNode) {
+      continue;
+    }
+    const update = updateDeletedAnchorParent({
+      deletedAt: args.deletedAt,
+      deletedNode,
+      deletedNodeIds: args.deletedNodeIds,
+      nextNodesById: args.nextNodesById
+    });
+    if (!update) {
+      continue;
+    }
+    args.nextNodesById[update.parentNodeId] = update.updatedParentNode;
+    args.parentNodesToSync.set(update.parentNodeId, update.updatedParentNode);
+  }
 }
 
 function buildDeleteNodePatch(args: {
@@ -101,29 +192,13 @@ export function computeDeleteNodesMutation(state: WorkspaceState, nodeIds: strin
     }
   }
 
-  for (const deletedId of deletedNodeIds) {
-    const deletedNode = state.nodesById[deletedId];
-    const anchorLink = deletedNode?.anchorLink;
-    const parentNodeId = deletedNode?.parentNodeId;
-    if (!anchorLink || !parentNodeId || deletedNodeIds.has(parentNodeId)) {
-      continue;
-    }
-    const parentNode = nextNodesById[parentNodeId];
-    if (!parentNode) {
-      continue;
-    }
-    const cleanedContent = removeAnchorTagsForLink(parentNode.content, anchorLink);
-    if (cleanedContent === parentNode.content) {
-      continue;
-    }
-    nextNodesById[parentNodeId] = {
-      ...parentNode,
-      content: cleanedContent,
-      title: deriveNodeTitleFromContent(cleanedContent),
-      updatedAt: deletedAt
-    };
-    parentNodesToSync.set(parentNodeId, nextNodesById[parentNodeId]);
-  }
+  syncDeletedAnchorParents({
+    deletedAt,
+    deletedNodeIds,
+    nextNodesById,
+    parentNodesToSync,
+    state
+  });
 
   const nextTrashedNodeIds = [...new Set([...state.trashedNodeIds, ...deletedNodeIds])];
   const hiddenNodeIds = new Set(nextTrashedNodeIds);

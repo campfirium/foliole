@@ -4,7 +4,8 @@ import {
   deriveImageClozeRegionsFromChildren,
   getImageClozeLocator,
   isImageClozeNode,
-  listImageClozePresentationRegions
+  listImageClozePresentationRegions,
+  mergeImageClozeRegionGroups
 } from '../../features/image-cloze/model/imageCloze';
 import {
   getImageClozeAnswerEditorNodeId,
@@ -35,22 +36,26 @@ function registerFocusedImageClozePresentation(
   activeNode: Node,
   locator: NonNullable<ReturnType<typeof getImageClozeLocator>>
 ) {
-  const currentRegionId = activeNode.anchorLink?.id ?? 'current';
-  const currentRegion = [{ ...locator, id: currentRegionId }];
+  const currentRegions = listImageClozePresentationRegions(activeNode.imageRegions).filter(
+    (region) => region.attachmentId === locator.attachmentId
+  );
+  const fallbackRegionId = activeNode.anchorLink?.id ?? 'current';
+  const resolvedRegions = currentRegions.length > 0 ? currentRegions : [{ ...locator, id: fallbackRegionId }];
+  const currentRegionIds = resolvedRegions.map((region) => region.id);
   registerImageClozeEditorPresentation(promptNodeId, {
     canCreate: false,
     focusRegionId: null,
-    hiddenRegionIds: [currentRegionId],
+    hiddenRegionIds: currentRegionIds,
     outlinedRegionIds: [],
-    regions: currentRegion
+    regions: resolvedRegions
   });
   if (answerNodeId) {
     registerImageClozeEditorPresentation(answerNodeId, {
       canCreate: false,
-      focusRegionId: currentRegionId,
+      focusRegionId: currentRegionIds[0] ?? null,
       hiddenRegionIds: [],
-      outlinedRegionIds: [currentRegionId],
-      regions: currentRegion
+      outlinedRegionIds: currentRegionIds,
+      regions: resolvedRegions
     });
   }
   return () => {
@@ -74,12 +79,14 @@ export function useDocumentPanelImageClozePresentation(args: {
     const promptNodeId = args.editorNodeId;
     const answerNodeId = getImageClozeAnswerEditorNodeId(args.editorNodeId);
     const parentRegions = listImageClozePresentationRegions(
-      args.activeNode.imageRegions ??
+      mergeImageClozeRegionGroups(
+        args.activeNode.imageRegions,
         deriveImageClozeRegionsFromChildren({
           nodeId: args.activeNode.id,
           nodesById: args.nodesById,
           trashedNodeIds: args.trashedNodeIds
         })
+      )
     );
 
     if (!isImageClozeNode(args.activeNode)) {
