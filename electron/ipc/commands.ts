@@ -6,6 +6,7 @@ import { previewKeepImportRule } from '../import/keepImportService.js';
 import { resetReadwiseBookImport } from '../import/readwiseBookImportReset.js';
 import { loadReadwiseBookEpub, openReadwiseBookDownload } from '../import/readwiseBookManualActions.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
+import { allowWindowCloseWithoutReadingProgressFlush, flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
 
 import { bootReport } from './boot.js';
 import { asString, asStringArray } from './commandParsers.js';
@@ -52,6 +53,10 @@ async function handleWindowCommand(request: InvokeRequest, context?: InvokeConte
     return null;
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.windowRestartApp)) {
+    if (window) {
+      await flushWindowReadingProgress(window);
+      allowWindowCloseWithoutReadingProgressFlush(window);
+    }
     app.relaunch();
     app.exit(0);
     return null;

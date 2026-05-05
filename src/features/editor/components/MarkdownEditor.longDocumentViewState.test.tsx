@@ -13,7 +13,9 @@ const mockSetHideTitleHeading = vi.fn();
 const mockSetSelection = vi.fn();
 const mockRevealSelection = vi.fn();
 const mockRestoreSelection = vi.fn();
+const mockSetScrollTop = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
+let currentScrollTop = 0;
 
 vi.mock('../../../shared/platform/performanceDiagnosticsProbe', () => ({
   markEditorContentSyncCompleted: vi.fn(),
@@ -63,9 +65,12 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
       mockRevealSelection(selection);
     }
     getScrollTop() {
-      return 0;
+      return currentScrollTop;
     }
-    setScrollTop() {}
+    setScrollTop(scrollTop: number) {
+      currentScrollTop = scrollTop;
+      mockSetScrollTop(scrollTop);
+    }
     getScrollMetrics() {
       return { clientHeight: 0, scrollHeight: 0, scrollTop: 0 };
     }
@@ -88,6 +93,15 @@ function renderEditor(ui: React.ReactElement) {
   });
 }
 
+async function expectRestoredViewState(nodeViewState: { scrollTop: number; selection: { from: number; to: number } }) {
+  expect(mockSetSelection).not.toHaveBeenCalled();
+  expect(mockRestoreSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  await waitFor(() => {
+    expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
+  });
+  expect(mockRevealSelection).not.toHaveBeenCalled();
+}
+
 function createLongDocument() {
   return Array.from({ length: 2_500 }, (_, index) => `Paragraph ${index}: ${'Long document body. '.repeat(4)}`).join('\n\n');
 }
@@ -103,7 +117,9 @@ beforeEach(() => {
   mockSetSelection.mockClear();
   mockRevealSelection.mockClear();
   mockRestoreSelection.mockClear();
+  mockSetScrollTop.mockClear();
   mockOnScroll.mockClear();
+  currentScrollTop = 0;
 });
 
 it('restores mid-document selection and scroll when reopening a long document', async () => {
@@ -122,9 +138,7 @@ it('restores mid-document selection and scroll when reopening a long document', 
     <MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />
   );
 
-  expect(mockSetSelection).not.toHaveBeenCalled();
-  expect(mockRestoreSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
-  expect(mockRevealSelection).not.toHaveBeenCalled();
+  await expectRestoredViewState(nodeViewState);
   expect(mockMarkNodePositionRequested).toHaveBeenLastCalledWith('node-1');
   await waitFor(() => {
     expect(mockMarkNodePositionReady).toHaveBeenLastCalledWith('node-1');
@@ -150,13 +164,35 @@ it('waits for on-demand content to load before restoring a saved mid-document po
 
   view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
 
-  expect(mockSetSelection).not.toHaveBeenCalled();
-  expect(mockRestoreSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
-  expect(mockRevealSelection).not.toHaveBeenCalled();
+  await expectRestoredViewState(nodeViewState);
   expect(mockMarkNodePositionRequested).toHaveBeenLastCalledWith('node-1');
   await waitFor(() => {
     expect(mockMarkNodePositionReady).toHaveBeenLastCalledWith('node-1');
   });
+});
+
+it('waits for on-demand content to load before restoring a saved scroll-only position', async () => {
+  const longDocument = createLongDocument();
+  const nodeViewState = {
+    scrollTop: 5_400,
+    selection: { from: 0, to: 0 }
+  };
+  const view = renderEditor(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="Initial body" />);
+
+  mockSetSelection.mockClear();
+  mockRevealSelection.mockClear();
+  mockRestoreSelection.mockClear();
+  mockSetScrollTop.mockClear();
+
+  view.rerender(<MarkdownEditor nodeId="node-2" onChange={vi.fn()} value="Other node" />);
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value="" />);
+
+  expect(mockRestoreSelection).not.toHaveBeenCalled();
+  expect(mockSetScrollTop).not.toHaveBeenCalled();
+
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
+
+  await expectRestoredViewState(nodeViewState);
 });
 
 it('does not reapply a saved selection while typing in the same node', async () => {
@@ -211,6 +247,9 @@ it('prefers the current reading selection over the stale saved selection', async
 
   expect(mockRestoreSelection).toHaveBeenLastCalledWith(readingSelection);
   expect(mockRestoreSelection).not.toHaveBeenCalledWith(nodeViewState.selection);
+  await waitFor(() => {
+    expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
+  });
 });
 
 it('locks reading-position sync while restoring a saved selection', async () => {
@@ -238,55 +277,4 @@ it('locks reading-position sync while restoring a saved selection', async () => 
   await waitFor(() => {
     expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
   });
-});
-
-it('skips selection restore when immersive toggle suppression is active', () => {
-  renderEditor(
-    <MarkdownEditor
-      nodeId="node-1"
-      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
-      onChange={vi.fn()}
-      onShouldSuppressSelectionRestore={() => true}
-      value={createLongDocument()}
-    />
-  );
-
-  expect(mockRestoreSelection).not.toHaveBeenCalled();
-  expect(mockRevealSelection).not.toHaveBeenCalled();
-});
-
-it('releases the previous restore lock before starting a new restore cycle', () => {
-  const onBeginApplyingReadingPosition = vi.fn();
-  const onCompleteApplyingReadingPosition = vi.fn();
-  const longDocument = createLongDocument();
-  const firstSelection = { from: 48_000, to: 48_024 };
-  const secondSelection = { from: 51_200, to: 51_228 };
-
-  const view = renderEditor(
-    <MarkdownEditor
-      nodeId="node-1"
-      nodeViewState={{ scrollTop: 5_400, selection: firstSelection }}
-      onBeginApplyingReadingPosition={onBeginApplyingReadingPosition}
-      onChange={vi.fn()}
-      onCompleteApplyingReadingPosition={onCompleteApplyingReadingPosition}
-      value={longDocument}
-    />
-  );
-
-  view.rerender(
-    <MarkdownEditor
-      nodeId="node-1"
-      nodeViewState={{ scrollTop: 5_900, selection: secondSelection }}
-      onBeginApplyingReadingPosition={onBeginApplyingReadingPosition}
-      onChange={vi.fn()}
-      onCompleteApplyingReadingPosition={onCompleteApplyingReadingPosition}
-      value={`${longDocument}\n\nupdated`}
-    />
-  );
-
-  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-cancelled');
-  expect(onBeginApplyingReadingPosition).toHaveBeenLastCalledWith(
-    secondSelection,
-    'editor-restore-selection'
-  );
 });

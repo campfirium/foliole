@@ -41,7 +41,7 @@ it('writes reading-position traces into a single per-process log file', () => {
   expect(fs.readFileSync(filePath, 'utf8').trim().split('\n')).toHaveLength(2);
 });
 
-it('resets the same file when a new logger is created for the next app start', () => {
+it('keeps appending to the same file when a new logger is created for the next app start', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-reading-position-log-'));
   tempRoots.push(root);
 
@@ -60,6 +60,7 @@ it('resets the same file when a new logger is created for the next app start', (
   });
 
   const lines = fs.readFileSync(secondLogger.getFilePath(), 'utf8').trim().split('\n');
-  expect(lines).toHaveLength(1);
-  expect(lines[0]).toContain('editor.viewport.restore-selection');
+  expect(lines).toHaveLength(2);
+  expect(lines[0]).toContain('runtime.reading-position.updated');
+  expect(lines[1]).toContain('editor.viewport.restore-selection');
 });

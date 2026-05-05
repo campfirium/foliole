@@ -10,9 +10,13 @@ import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/work
 
 import { useWorkspaceActiveNodeDocument } from './useWorkspaceActiveNodeDocument';
 
-vi.mock('../../shared/platform/bridge', () => ({
-  getRuntimeInvoke: vi.fn()
-}));
+vi.mock('../../shared/platform/bridge', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../shared/platform/bridge')>();
+  return {
+    ...actual,
+    getRuntimeInvoke: vi.fn()
+  };
+});
 
 const mockSetSelection = vi.fn();
 const mockRevealSelection = vi.fn();

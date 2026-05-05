@@ -3,7 +3,7 @@ import type { useAppearanceSettings } from '../../features/settings/context/Appe
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
-import { restartMainWindowApp, toggleMainWindowDevTools } from '../../shared/platform/windowControls';
+import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
@@ -11,6 +11,7 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import { buildPaletteState } from './appControllerHelpers';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createPaletteCommandRunner } from './appPaletteCommandRunner';
+import { restartAppWithReadingProgress } from './appRestartPersistence';
 import { clearSettingsRequest, openReadwiseReaderSettings } from './settingsOverlayRequest';
 import type { useFormalImport } from './useFormalImport';
 
@@ -66,6 +67,24 @@ function createMergeHighlightsIntoTopicCommand(args: {
   };
 }
 
+function createRestartAppCommand(args: {
+  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return () =>
+    restartAppWithReadingProgress({
+      activeNodeId: args.ws.activeNodeId,
+      editorRef: args.runtime.editorRef,
+      getReadingPositionSelection: () =>
+        args.runtime.readingPositionRef.current.nodeId === args.ws.activeNodeId
+          ? args.runtime.readingPositionRef.current.selection
+          : null,
+      isViewingTrashNode: args.runtime.isViewingTrashNode,
+      nodeViewById: args.ws.nodeViewById,
+      setNodeViewState: args.ws.setNodeViewState
+    });
+}
+
 function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
@@ -103,7 +122,7 @@ function createPaletteRunnerArgs(args: {
     importSingleFile: args.formalImport.startImportFile,
     isReviewMode: args.isStudyMode,
     moveToNode: () => undefined,
-    onRestartApp: restartMainWindowApp,
+    onRestartApp: createRestartAppCommand(args),
     onToggleDevTools: toggleMainWindowDevTools,
     onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode,
     onToggleImmersiveMode: args.layoutProps.onToggleImmersiveMode,

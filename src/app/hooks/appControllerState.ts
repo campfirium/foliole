@@ -78,6 +78,45 @@ export function useNowIso(tickMs = 15_000) {
   return nowIso;
 }
 
+function useWorkspaceReadingProgressPersistence(args: {
+  activeNodeId: string | null;
+  editorRef: ReturnType<typeof useAppRuntime>['editorRef'];
+  isViewingTrashNode: boolean;
+  isWorkspaceHydrated: boolean;
+  nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'];
+  readingPositionRef: ReturnType<typeof useAppRuntime>['readingPositionRef'];
+  readingPositionSyncRef: ReturnType<typeof useAppRuntime>['readingPositionSyncRef'];
+  setNodeViewState: ReturnType<typeof useWorkspaceSelectors>['setNodeViewState'];
+}) {
+  useReadingProgressSync({
+    activeNodeId: args.activeNodeId,
+    editorRef: args.editorRef,
+    getReadingPositionSelection: () =>
+      args.readingPositionRef.current.nodeId === args.activeNodeId ? args.readingPositionRef.current.selection : null,
+    getReadingPositionSyncState: () =>
+      args.readingPositionSyncRef.current.nodeId === args.activeNodeId ? args.readingPositionSyncRef.current.state : null,
+    isViewingTrashNode: args.isViewingTrashNode,
+    isWorkspaceHydrated: args.isWorkspaceHydrated,
+    nodeViewById: args.nodeViewById,
+    setNodeViewState: args.setNodeViewState
+  });
+}
+
+function useSaveActiveNodeView(
+  runtime: ReturnType<typeof useAppRuntime>,
+  ws: ReturnType<typeof useWorkspaceSelectors>
+) {
+  return useCallback(() => {
+    if (runtime.isViewingTrashNode || !ws.activeNodeId || !runtime.editorRef.current) {
+      return;
+    }
+    ws.setNodeViewState(ws.activeNodeId, {
+      scrollTop: runtime.editorRef.current.getScrollTop(),
+      selection: runtime.editorRef.current.getSelection()
+    });
+  }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
+}
+
 export function useWorkspaceControllerState(
   ws: ReturnType<typeof useWorkspaceSelectors>,
   isWorkspaceHydrated: boolean
@@ -95,12 +134,7 @@ export function useWorkspaceControllerState(
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
-  const saveActiveNodeView = useCallback(() => {
-    if (runtime.isViewingTrashNode || !ws.activeNodeId || !runtime.editorRef.current) {
-      return;
-    }
-    ws.setNodeViewState(ws.activeNodeId, { scrollTop: runtime.editorRef.current.getScrollTop(), selection: runtime.editorRef.current.getSelection() });
-  }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
+  const saveActiveNodeView = useSaveActiveNodeView(runtime, ws);
   const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, closeContextMenu: () => undefined, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, nodesById: ws.nodesById, openNode: ws.openNode, saveActiveNodeView });
   const editorCtx = useEditorContextCommands({
     activeNode,
@@ -114,10 +148,19 @@ export function useWorkspaceControllerState(
     isTrashViewOpen: runtime.isViewingTrashNode,
     nodesById: ws.nodesById,
     onExitImmersiveMode: () => runtime.setIsImmersiveMode(false),
-    onSelectNode: (nodeId) => ws.openNode(nodeId),
+    onSelectNode: (nodeId) => nav.handleSelectNode(nodeId),
     updateNodeContent: ws.updateNodeContent
   });
-  useReadingProgressSync({ activeNodeId: ws.activeNodeId, editorRef: runtime.editorRef, isViewingTrashNode: runtime.isViewingTrashNode, isWorkspaceHydrated, nodeViewById: ws.nodeViewById, setNodeViewState: ws.setNodeViewState });
+  useWorkspaceReadingProgressPersistence({
+    activeNodeId: ws.activeNodeId,
+    editorRef: runtime.editorRef,
+    isViewingTrashNode: runtime.isViewingTrashNode,
+    isWorkspaceHydrated,
+    nodeViewById: ws.nodeViewById,
+    readingPositionRef: runtime.readingPositionRef,
+    readingPositionSyncRef: runtime.readingPositionSyncRef,
+    setNodeViewState: ws.setNodeViewState
+  });
   return {
     activeNode,
     documentResize,

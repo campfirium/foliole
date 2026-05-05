@@ -18,7 +18,9 @@ export function createReadingPositionTraceLogger(options: ReadingPositionTraceLo
   const fsModule = options.fsModule ?? fs;
   const filePath = path.join(options.appLogDir, 'reading-position.ndjson');
   fsModule.mkdirSync(options.appLogDir, { recursive: true });
-  fsModule.writeFileSync(filePath, '', 'utf8');
+  if (!fs.existsSync(filePath)) {
+    fsModule.writeFileSync(filePath, '', 'utf8');
+  }
 
   return {
     append(record: ReadingPositionTraceRecord) {

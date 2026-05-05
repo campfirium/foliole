@@ -34,6 +34,7 @@ import { bindMenuToWindow, installAppMenu } from './ipc/menu.js';
 import { loadWindowState } from './ipc/windowState.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
+import { bindWindowReadingProgressFlush } from './readingProgressWindowFlush.js';
 import { loadRenderer, logActiveRuntimeDiagnostics } from './rendererLoader.js';
 import {
   collectRuntimeDiagnosticsSnapshot,
@@ -161,6 +162,7 @@ async function createMainWindow() {
     logWindowStateLifecycleEvent('window-restore-maximize', window);
   }
   bindWindowIpc(window);
+  bindWindowReadingProgressFlush(window);
   bindWindowStatePersistence(window);
   bindMenuToWindow(window);
   bindWindowRuntimeDiagnostics(window);

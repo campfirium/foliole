@@ -1,6 +1,7 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 import { withTransaction } from './transaction.js';
 
 export interface NodeViewStateInput {
@@ -43,6 +44,16 @@ interface NodeViewStateRow extends DatabaseRow {
 const ACTIVE_NODE_META_KEY = 'active_node_id';
 
 export function saveReadingProgress(input: SaveReadingProgressInput): void {
+  appendReadingPositionTraceRecord({
+    event: 'reading-progress.db-save',
+    payload: {
+      activeNodeId: input.activeNodeId,
+      nodeIds: input.nodeViewStates.map((state) => state.nodeId),
+      scrollTops: input.nodeViewStates.map((state) => state.scrollTop),
+      updatedAt: input.updatedAt
+    },
+    timestamp: Date.now()
+  });
   const connection = openDatabaseConnection();
   const upsertMetaStatement = connection.driver.prepare(
     `INSERT INTO workspace_meta (key, value, updated_at)
@@ -106,8 +117,17 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
     };
   }
 
-  return {
+  const snapshot = {
     activeNodeId: activeNodeRow && activeNodeRow.value !== '' ? activeNodeRow.value : null,
     nodeViewStateById
   };
+  appendReadingPositionTraceRecord({
+    event: 'reading-progress.db-load',
+    payload: {
+      activeNodeId: snapshot.activeNodeId,
+      nodeViewStateCount: Object.keys(snapshot.nodeViewStateById).length
+    },
+    timestamp: Date.now()
+  });
+  return snapshot;
 }

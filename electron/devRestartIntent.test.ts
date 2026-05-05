@@ -1,13 +1,21 @@
 import path from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { saveWindowStateNow } = vi.hoisted(() => ({
   saveWindowStateNow: vi.fn()
 }));
+const { allowWindowCloseWithoutReadingProgressFlush, flushReadingProgressForWindows } = vi.hoisted(() => ({
+  allowWindowCloseWithoutReadingProgressFlush: vi.fn(),
+  flushReadingProgressForWindows: vi.fn(() => Promise.resolve())
+}));
 
 vi.mock('./ipc/windowState.js', () => ({
   saveWindowStateNow
+}));
+vi.mock('./readingProgressWindowFlush.js', () => ({
+  allowWindowCloseWithoutReadingProgressFlush,
+  flushReadingProgressForWindows
 }));
 
 import {
@@ -71,6 +79,50 @@ function createTestFileSystem(args: {
   };
 }
 
+function createHarnessWindows() {
+  return [
+    {
+      isDestroyed: () => false,
+      webContents: {
+        executeJavaScript: vi.fn(() => Promise.resolve(true)),
+        isDestroyed: () => false
+      }
+    },
+    {
+      isDestroyed: () => true,
+      webContents: {
+        executeJavaScript: vi.fn(() => Promise.resolve(true)),
+        isDestroyed: () => false
+      }
+    }
+  ];
+}
+
+function createHarnessState() {
+  let watchedPath = '';
+  let unwatchPath = '';
+  let onChange: (() => void) | null = null;
+  let intentContent: string | null = null;
+  return {
+    getIntentContent: () => intentContent,
+    onWatch(listener: () => void, path: string) {
+      watchedPath = path;
+      onChange = listener;
+    },
+    onUnwatch(path: string) {
+      unwatchPath = path;
+    },
+    setIntentContent(content: string | null) {
+      intentContent = content;
+    },
+    triggerChange() {
+      onChange?.();
+    },
+    unwatchPath: () => unwatchPath,
+    watchedPath: () => watchedPath
+  };
+}
+
 function createWatcherHarness() {
   const repoRoot = path.join('C:', 'dev', 'foliole');
   const intentPath = path.join(repoRoot, DEV_RESTART_INTENT_FILE);
@@ -80,25 +132,15 @@ function createWatcherHarness() {
   const info = vi.fn();
   const error = vi.fn();
   const writeDeliveryFile = vi.fn();
-  let watchedPath = '';
-  let unwatchPath = '';
-  let onChange: (() => void) | null = null;
-  let intentContent: string | null = null;
-  const windows = [{ isDestroyed: () => false }, { isDestroyed: () => true }];
+  const state = createHarnessState();
+  const windows = createHarnessWindows();
   const fileSystem = createTestFileSystem({
     deliveryPath,
-    getIntentContent: () => intentContent,
+    getIntentContent: state.getIntentContent,
     intentPath,
-    onUnwatch(path) {
-      unwatchPath = path;
-    },
-    onWatch(listener, path) {
-      watchedPath = path;
-      onChange = listener;
-    },
-    setIntentContent(content) {
-      intentContent = content;
-    },
+    onUnwatch: state.onUnwatch,
+    onWatch: state.onWatch,
+    setIntentContent: state.setIntentContent,
     writeDeliveryFile
   });
 
@@ -119,14 +161,10 @@ function createWatcherHarness() {
     writeDeliveryFile,
     relaunch,
     windows,
-    setIntentContent(content: string | null) {
-      intentContent = content;
-    },
-    triggerChange() {
-      onChange?.();
-    },
-    unwatchPath: () => unwatchPath,
-    watchedPath: () => watchedPath,
+    setIntentContent: state.setIntentContent,
+    triggerChange: state.triggerChange,
+    unwatchPath: state.unwatchPath,
+    watchedPath: state.watchedPath,
     watcher
   };
 }
@@ -135,6 +173,10 @@ function expectFirstIntentConsumption(harness: ReturnType<typeof createWatcherHa
   expect(harness.relaunch).toHaveBeenCalledTimes(1);
   expect(harness.exit).toHaveBeenCalledTimes(1);
   expect(harness.exit).toHaveBeenCalledWith(0);
+  expect(flushReadingProgressForWindows).toHaveBeenCalledTimes(1);
+  expect(flushReadingProgressForWindows).toHaveBeenCalledWith(harness.windows);
+  expect(allowWindowCloseWithoutReadingProgressFlush).toHaveBeenCalledTimes(1);
+  expect(allowWindowCloseWithoutReadingProgressFlush).toHaveBeenCalledWith(harness.windows[0]);
   expect(saveWindowStateNow).toHaveBeenCalledTimes(1);
   expect(saveWindowStateNow).toHaveBeenCalledWith(harness.windows[0]);
   expect(harness.info).toHaveBeenCalledWith('[electron-main] consumed dev restart intent', {
@@ -159,7 +201,11 @@ function expectFirstIntentConsumption(harness: ReturnType<typeof createWatcherHa
 }
 
 describe('installDevRestartIntentWatcher', () => {
-  it('consumes one dev restart intent exactly once, then relaunches', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('consumes one dev restart intent exactly once, then relaunches', async () => {
     const harness = createWatcherHarness();
     saveWindowStateNow.mockClear();
 
@@ -171,6 +217,7 @@ describe('installDevRestartIntentWatcher', () => {
     harness.setIntentContent(createIntentContent());
     harness.triggerChange();
     harness.triggerChange();
+    await Promise.resolve();
 
     expectFirstIntentConsumption(harness);
 
@@ -178,12 +225,13 @@ describe('installDevRestartIntentWatcher', () => {
     expect(harness.unwatchPath()).toBe(harness.intentPath);
   });
 
-  it('ignores later restart intents after relaunch was already requested', () => {
+  it('ignores later restart intents after relaunch was already requested', async () => {
     const harness = createWatcherHarness();
     saveWindowStateNow.mockClear();
 
     harness.setIntentContent(createIntentContent());
     harness.triggerChange();
+    await Promise.resolve();
 
     harness.setIntentContent(
       JSON.stringify({
@@ -197,6 +245,7 @@ describe('installDevRestartIntentWatcher', () => {
       })
     );
     harness.triggerChange();
+    await Promise.resolve();
 
     expectFirstIntentConsumption(harness);
     expect(harness.info).toHaveBeenCalledTimes(2);

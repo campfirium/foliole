@@ -2,6 +2,7 @@ import type { StateStorage } from 'zustand/middleware';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { appendReadingPositionTraceLog } from '../shared/platform/bridge';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLogging';
 
@@ -64,7 +65,21 @@ function trimPersistedWorkspaceStatePayload(value: string) {
 }
 
 async function loadReadingProgressForHydrate(name: string) {
-  return getRuntimeInvoke()?.(NATIVE_COMMANDS.loadReadingProgress).catch((error) => {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.loadReadingProgress).then((result) => {
+    appendReadingPositionTraceLog({
+      event: 'reading-progress.hydrate-load',
+      payload: {
+        activeNodeId: result?.activeNodeId ?? null,
+        nodeViewStateCount:
+          result && typeof result === 'object' && result.nodeViewStateById && typeof result.nodeViewStateById === 'object'
+            ? Object.keys(result.nodeViewStateById).length
+            : 0,
+        storageKey: name
+      },
+      timestamp: Date.now()
+    });
+    return result;
+  }).catch((error) => {
     logRuntimeWarning('reading progress load failed during workspace hydrate', {
       area: 'persistence',
       action: 'hydrate_workspace_state',
@@ -137,6 +152,17 @@ function trimRuntimeWorkspaceSnapshot(snapshot: RuntimeWorkspaceSnapshotLike | n
   };
 }
 
+function countSnapshotNodeViewStates(snapshot: unknown) {
+  if (!snapshot || typeof snapshot !== 'object' || !('nodeViewById' in snapshot)) {
+    return 0;
+  }
+  const nodeViewById = (snapshot as { nodeViewById?: unknown }).nodeViewById;
+  if (!nodeViewById || typeof nodeViewById !== 'object') {
+    return 0;
+  }
+  return Object.keys(nodeViewById as Record<string, unknown>).length;
+}
+
 async function loadRuntimeWorkspaceState(name: string) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -150,6 +176,20 @@ async function loadRuntimeWorkspaceState(name: string) {
   const mergedSnapshot = trimRuntimeWorkspaceSnapshot(
     mergeWorkspaceSnapshotWithReadingProgress(mergePendingNodeSyncIntoSnapshot(snapshot), readingProgress)
   );
+  appendReadingPositionTraceLog({
+    event: 'reading-progress.hydrate-merge',
+    payload: {
+      runtimeActiveNodeId: snapshot?.activeNodeId ?? null,
+      readingActiveNodeId:
+        readingProgress && typeof readingProgress === 'object' && 'activeNodeId' in readingProgress
+          ? (readingProgress as { activeNodeId?: string | null }).activeNodeId ?? null
+          : null,
+      mergedActiveNodeId: mergedSnapshot?.activeNodeId ?? null,
+      nodeViewStateCount: countSnapshotNodeViewStates(mergedSnapshot),
+      storageKey: name
+    },
+    timestamp: Date.now()
+  });
   if (!mergedSnapshot) {
     return null;
   }

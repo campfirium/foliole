@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { saveWindowStateNow } from './ipc/windowState.js';
+import { allowWindowCloseWithoutReadingProgressFlush, flushReadingProgressForWindows } from './readingProgressWindowFlush.js';
 
 export const DEV_RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 export const DEV_RESTART_INTENT_KIND = 'foliole.electron.dev.restart-intent.v1';
@@ -25,6 +26,10 @@ interface RestartIntentApp {
 
 interface RestartIntentWindow {
   isDestroyed?(): boolean;
+  webContents?: {
+    executeJavaScript: (code: string, userGesture?: boolean) => Promise<unknown>;
+    isDestroyed(): boolean;
+  };
 }
 
 interface RestartIntentFileSystem {
@@ -160,7 +165,7 @@ function writeDevRestartDeliveryMarker(args: {
   }
 }
 
-function consumeDevRestartIntent(args: {
+async function consumeDevRestartIntent(args: {
   app: RestartIntentApp;
   content: string;
   consumedNonce: number;
@@ -202,10 +207,13 @@ function consumeDevRestartIntent(args: {
     requestedBy: intent.requestedBy
   });
   writeDevRestartDeliveryMarker({ fileSystem: args.fileSystem, intent, intentPath: args.intentPath, logger: args.logger });
-  for (const window of args.getWindows()) {
+  const windows = args.getWindows();
+  await flushReadingProgressForWindows(windows as never[]);
+  for (const window of windows) {
     if (window.isDestroyed?.()) {
       continue;
     }
+    allowWindowCloseWithoutReadingProgressFlush(window as never);
     saveWindowStateNow(window as never);
   }
   args.app.relaunch();
@@ -231,14 +239,19 @@ export function installDevRestartIntentWatcher(options: {
   const fileSystem = options.fileSystem ?? createNodeFileSystem();
   const logger = options.logger ?? console;
   let consumedNonce = 0;
+  let restartInFlight = false;
   let relaunchRequested = false;
 
   const checkNow = () => {
+    if (restartInFlight) {
+      return;
+    }
     const content = readDevRestartIntent(fileSystem, intentPath, logger);
     if (content === null) {
       return;
     }
-    const next = consumeDevRestartIntent({
+    restartInFlight = true;
+    void consumeDevRestartIntent({
       app: options.app,
       content,
       consumedNonce,
@@ -247,9 +260,13 @@ export function installDevRestartIntentWatcher(options: {
       intentPath,
       logger,
       relaunchRequested
+    }).then((next) => {
+      consumedNonce = next.consumedNonce;
+      relaunchRequested = next.relaunchRequested;
+      restartInFlight = false;
+    }).catch(() => {
+      restartInFlight = false;
     });
-    consumedNonce = next.consumedNonce;
-    relaunchRequested = next.relaunchRequested;
   };
 
   fileSystem.watchIntentFile(intentPath, checkNow);
