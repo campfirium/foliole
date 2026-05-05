@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, type MutableRefObject } from 'react';
 
+import type { EditorViewportMode } from '../adapters/EditorAdapter';
+
 import { clearRestoreCompletionTimers } from './markdownEditorSelectionRestoreSupport';
 import { createPendingRestoreSelectionKey } from './markdownEditorSelectionRestoreTarget';
 import type { EditorViewState } from './markdownEditorTypes';
@@ -12,7 +14,7 @@ export function usePendingRestoreKey(args: {
   previousNodeIdRef: MutableRefObject<string | null>;
   previousReadingSelectionRef: MutableRefObject<EditorViewState['selection'] | null | undefined>;
   readingSelection: EditorViewState['selection'] | null | undefined;
-  readingTargetViewportMode: 'center' | null | undefined;
+  readingTargetViewportMode: EditorViewportMode | null | undefined;
 }) {
   useLayoutEffect(() => {
     const nextPendingRestoreSelectionKey = createPendingRestoreSelectionKey(

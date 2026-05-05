@@ -18,7 +18,7 @@ function createHarness() {
             reason: string;
             startedAt: number;
             targetSelection: { from: number; to: number };
-            targetViewportMode?: 'center';
+            targetViewportMode?: 'center' | 'nearest';
             targetViewportRatio?: number;
           }
     }

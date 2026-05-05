@@ -2,6 +2,7 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent }
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
@@ -28,7 +29,7 @@ export interface DocumentPanelSectionProps {
   isPriorityQuickSetActive?: boolean;
   editorNodeId: string | null;
   editorReadingSelection?: EditorSelection | null;
-  editorReadingTargetViewportMode?: 'center' | null;
+  editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
@@ -59,7 +60,7 @@ export interface DocumentPanelSectionProps {
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;
-  onRevealDocumentSelection: (selection: EditorSelection) => void;
+  onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;

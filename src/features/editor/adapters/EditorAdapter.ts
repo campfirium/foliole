@@ -3,6 +3,8 @@ export interface EditorSelection {
   to: number;
 }
 
+export type EditorViewportMode = 'center' | 'nearest';
+
 export interface EditorSearchDecorations {
   activeIndex: number;
   matches: EditorSelection[];
@@ -35,6 +37,7 @@ export interface EditorAdapter {
   getViewportRect?(): DOMRect | null;
   revealPosition(position: number): void;
   revealSelectionCentered?(selection: EditorSelection): void;
+  revealSelectionNearest?(selection: EditorSelection): void;
   revealSelectionAtViewportRatio?(selection: EditorSelection, ratio: number): void;
   setParagraphMarker?(selection: EditorSelection | null): void;
   restoreSelection(selection: EditorSelection): void;

@@ -4,6 +4,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import { cn } from '../../shared/lib/utils';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -30,6 +31,7 @@ interface DocumentPanelBodyProps {
   emptyContent?: ReactNode;
   editorNodeId: string | null;
   editorReadingSelection?: EditorSelection | null;
+  editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
@@ -53,7 +55,7 @@ interface DocumentPanelBodyProps {
   onPromptImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onSetReadingPositionSelection?: (selection: EditorSelection) => void;
   onRevealDocumentPosition: (position: number) => void;
-  onRevealDocumentSelection: (selection: EditorSelection) => void;
+  onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
   onStartDocumentResize: (

@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import { markNodePositionRequested } from '../../../shared/platform/performanceDiagnosticsProbe';
 import { pushDebugTrace } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
+import type { EditorViewportMode } from '../adapters/EditorAdapter';
 
 import {
   beginRestoreSelection,
@@ -21,7 +22,7 @@ export function handleSelectionRestore(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   readingSelection: EditorViewState['selection'] | null | undefined;
-  readingTargetViewportMode: 'center' | null | undefined;
+  readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
@@ -55,7 +56,7 @@ export function handleSelectionRestore(args: {
     restoreCompletionFrameRef: args.restoreCompletionFrameRef,
     restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
     restoreScrollTop:
-      args.restoreTarget.targetViewportMode === 'center' || typeof args.restoreTarget.targetViewportRatio === 'number'
+      args.restoreTarget.targetViewportMode != null || typeof args.restoreTarget.targetViewportRatio === 'number'
         ? undefined
         : args.nodeViewState?.scrollTop,
     selectionKey: args.restoreTarget.selectionKey,
@@ -85,7 +86,7 @@ function markSuppressedRestore(args: {
   restoreTarget: NonNullable<ReturnType<typeof resolveRestoreTarget>>;
 }) {
   if (
-    args.restoreTarget.targetViewportMode !== 'center' &&
+    args.restoreTarget.targetViewportMode == null &&
     typeof args.restoreTarget.targetViewportRatio !== 'number'
   ) {
     args.lastRestoredSelectionKeyRef.current = args.restoreTarget.selectionKey;
@@ -106,7 +107,7 @@ export function resolveRestoreTarget(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKey: string | null;
   readingSelection: EditorViewState['selection'] | null | undefined;
-  readingTargetViewportMode: 'center' | null | undefined;
+  readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   value: string;
 }) {
@@ -195,7 +196,7 @@ function restoreEditorSelection(args: {
   restoreScrollTop: number | undefined;
   selectionKey: string;
   selection: EditorViewState['selection'];
-  targetViewportMode: 'center' | null | undefined;
+  targetViewportMode: EditorViewportMode | null | undefined;
   targetViewportRatio: number | null | undefined;
   valueLength: number;
 }) {

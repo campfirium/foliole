@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
@@ -94,13 +95,13 @@ export interface WorkspaceLayoutProps {
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;
-  onRevealDocumentSelection: (selection: EditorSelection) => void;
+  onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   beginApplyingReadingPosition: (selection: EditorSelection, reason: string) => void;
   completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => void;
   getReadingPositionSelection: () => EditorSelection | null;
   getReadingPositionSyncState: () => ReadingPositionSyncState | null;
-  getReadingPositionTargetViewportMode: () => 'center' | null;
+  getReadingPositionTargetViewportMode: () => EditorViewportMode | null;
   getReadingPositionTargetViewportRatio: () => number | null;
   setReadingPositionSelection: (selection: EditorSelection) => void;
   onSelectTrashNode: (nodeId: string) => void;

@@ -29,8 +29,10 @@ function createRuntimeState() {
 function createRevealDocumentPositionArgs(args: {
   getScrollTop?: () => number;
   revealPosition?: (position: number) => void;
+  revealSelectionNearest?: ReturnType<typeof vi.fn>;
   revealSelectionAtViewportRatio?: ReturnType<typeof vi.fn>;
   revealSelection?: ReturnType<typeof vi.fn>;
+  restoreSelection?: ReturnType<typeof vi.fn>;
   setSelection?: ReturnType<typeof vi.fn>;
   setNodeViewState: ReturnType<typeof vi.fn>;
 }) {
@@ -40,8 +42,10 @@ function createRevealDocumentPositionArgs(args: {
         current: {
           getScrollTop: args.getScrollTop ?? (() => 0),
           revealPosition: args.revealPosition ?? (() => undefined),
+          revealSelectionNearest: args.revealSelectionNearest,
           revealSelectionAtViewportRatio: args.revealSelectionAtViewportRatio,
           revealSelection: args.revealSelection ?? vi.fn(),
+          restoreSelection: args.restoreSelection ?? vi.fn(),
           setSelection: args.setSelection ?? vi.fn()
         }
       },
@@ -61,66 +65,99 @@ function createRevealDocumentPositionArgs(args: {
   };
 }
 
-describe('createRevealDocumentPosition', () => {
-  it('updates the stored reading position before applying the reading anchor request', () => {
-    const revealPosition = vi.fn();
-    const setSelection = vi.fn();
-    const getScrollTop = vi.fn(() => 320);
-    const setNodeViewState = vi.fn();
-
-    const args = createRevealDocumentPositionArgs({
-      getScrollTop,
-      revealPosition,
-      setNodeViewState,
-      setSelection
-    }) as never;
-    const revealDocumentPosition = createRevealDocumentPosition(args);
-
-    revealDocumentPosition(48000);
-
-    expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
-    expect(args.runtime.readingPositionRef.current).toEqual({
-      nodeId: 'node-1',
-      selection: { from: 48000, to: 48000 }
-    });
-    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
-      scrollTop: 320,
-      selection: { from: 48000, to: 48000 }
-    });
-    expect(setSelection).toHaveBeenCalledWith({ from: 48000, to: 48000 });
-    expect(revealPosition).toHaveBeenCalledWith(48000);
+function expectNearestReadingRequest(args: {
+  runtimeArgs: ReturnType<typeof createRevealDocumentPositionArgs>;
+  restoreSelection: ReturnType<typeof vi.fn>;
+  setNodeViewState: ReturnType<typeof vi.fn>;
+}) {
+  expect(args.setNodeViewState).toHaveBeenCalledWith('node-1', {
+    scrollTop: 0,
+    selection: { from: 3, to: 125 }
   });
+  expect(args.restoreSelection).toHaveBeenCalledWith({ from: 3, to: 125 });
+  expect(args.runtimeArgs.runtime.readingPositionSyncRef.current.state).toMatchObject({
+    reason: 'reveal-selection',
+    targetSelection: { from: 3, to: 125 },
+    targetViewportMode: 'nearest'
+  });
+}
 
-  it('still stores selection when editor adapter is unavailable', () => {
-    const setNodeViewState = vi.fn();
-    const runtimeState = createRuntimeState();
+it('updates the stored reading position before applying the reading anchor request', () => {
+  const revealPosition = vi.fn();
+  const setSelection = vi.fn();
+  const getScrollTop = vi.fn(() => 320);
+  const setNodeViewState = vi.fn();
 
-    const revealDocumentSelection = createRevealDocumentSelection({
-      runtime: {
-        editorRef: {
-          current: null
-        },
-        ...runtimeState,
-        isViewingTrashNode: false
+  const args = createRevealDocumentPositionArgs({
+    getScrollTop,
+    revealPosition,
+    setNodeViewState,
+    setSelection
+  }) as never;
+  const revealDocumentPosition = createRevealDocumentPosition(args);
+
+  revealDocumentPosition(48000);
+
+  expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
+  expect(args.runtime.readingPositionRef.current).toEqual({
+    nodeId: 'node-1',
+    selection: { from: 48000, to: 48000 }
+  });
+  expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
+    scrollTop: 320,
+    selection: { from: 48000, to: 48000 }
+  });
+  expect(setSelection).toHaveBeenCalledWith({ from: 48000, to: 48000 });
+  expect(revealPosition).toHaveBeenCalledWith(48000);
+});
+
+it('still stores selection when editor adapter is unavailable', () => {
+  const setNodeViewState = vi.fn();
+  const runtimeState = createRuntimeState();
+
+  const revealDocumentSelection = createRevealDocumentSelection({
+    runtime: {
+      editorRef: {
+        current: null
       },
-      ws: {
-        activeNodeId: 'node-1',
-        nodeViewById: {
-          'node-1': {
-            scrollTop: 24,
-            selection: { from: 1, to: 1 }
-          }
-        },
-        setNodeViewState
-      }
-    } as never);
+      ...runtimeState,
+      isViewingTrashNode: false
+    },
+    ws: {
+      activeNodeId: 'node-1',
+      nodeViewById: {
+        'node-1': {
+          scrollTop: 24,
+          selection: { from: 1, to: 1 }
+        }
+      },
+      setNodeViewState
+    }
+  } as never);
 
-    revealDocumentSelection({ from: 3, to: 125 });
+  revealDocumentSelection({ from: 3, to: 125 });
 
-    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
-      scrollTop: 24,
-      selection: { from: 3, to: 125 }
-    });
+  expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
+    scrollTop: 24,
+    selection: { from: 3, to: 125 }
+  });
+});
+
+it('applies nearest selection reveal through the shared reading request path', () => {
+  const restoreSelection = vi.fn();
+  const setNodeViewState = vi.fn();
+  const runtimeArgs = createRevealDocumentPositionArgs({
+    restoreSelection,
+    setNodeViewState,
+  }) as never;
+
+  const revealDocumentSelection = createRevealDocumentSelection(runtimeArgs);
+  revealDocumentSelection({ from: 3, to: 125 }, 'nearest');
+
+  expectNearestReadingRequest({
+    runtimeArgs,
+    restoreSelection,
+    setNodeViewState
   });
 });
 

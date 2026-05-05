@@ -1,4 +1,5 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
 
 import type { ReadingPositionSyncState } from './useAppRuntime';
@@ -24,7 +25,7 @@ export function requestReadingPositionApply(args: {
   reason: string;
   runtime: ReadingPositionRuntimeLike;
   selection: EditorSelection;
-  targetViewportMode?: 'center';
+  targetViewportMode?: EditorViewportMode;
   targetViewportRatio?: number;
 }) {
   pushDebugTrace('runtime.reading-position.requested', {

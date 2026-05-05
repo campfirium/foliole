@@ -1,4 +1,4 @@
-import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
@@ -20,7 +20,7 @@ function writeNodeReadingPosition(args: BuildControllerLayoutPropsArgs, selectio
 function applyReadingPositionToActiveEditor(
   args: BuildControllerLayoutPropsArgs,
   selection: EditorSelection,
-  targetViewportMode?: 'center',
+  targetViewportMode?: EditorViewportMode,
   targetViewportRatio?: number
 ) {
   const adapter = args.runtime.editorRef.current;
@@ -30,6 +30,10 @@ function applyReadingPositionToActiveEditor(
   adapter.setSelection(selection);
   if (targetViewportMode === 'center' && adapter.revealSelectionCentered) {
     adapter.revealSelectionCentered(selection);
+    return;
+  }
+  if (targetViewportMode === 'nearest') {
+    adapter.restoreSelection(selection);
     return;
   }
   if (typeof targetViewportRatio === 'number' && adapter.revealSelectionAtViewportRatio) {
@@ -105,19 +109,20 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
 }
 
 export function createRevealDocumentSelection(args: BuildControllerLayoutPropsArgs) {
-  return (selection: EditorSelection) => {
+  return (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => {
     if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
       return;
     }
     const adapter = args.runtime.editorRef.current;
     if (adapter) {
       writeNodeReadingPosition(args, selection);
-      applyReadingPositionToActiveEditor(args, selection);
+      applyReadingPositionToActiveEditor(args, selection, targetViewportMode);
       requestReadingPositionApply({
         nodeId: args.ws.activeNodeId,
         reason: 'reveal-selection',
         runtime: args.runtime,
-        selection
+        selection,
+        targetViewportMode
       });
       return;
     }

@@ -3,7 +3,8 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import type {
   EditorAdapter,
   EditorDiffDecorations,
-  EditorTextAnchorDecoration
+  EditorTextAnchorDecoration,
+  EditorViewportMode
 } from '../adapters/EditorAdapter';
 import type { EditorSelection } from '../adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
@@ -30,7 +31,7 @@ export interface MarkdownEditorProps {
   lineDiffDecorations?: EditorDiffDecorations | null;
   nodeId: string | null;
   readingSelection?: EditorSelection | null;
-  readingTargetViewportMode?: 'center' | null;
+  readingTargetViewportMode?: EditorViewportMode | null;
   readingTargetViewportRatio?: number | null;
   nodeViewState?: EditorViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;

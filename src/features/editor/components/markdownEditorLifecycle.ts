@@ -6,7 +6,7 @@ import {
 } from '../../../shared/platform/performanceDiagnosticsProbe';
 import { IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../image-cloze/model/imageClozePresentation';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
-import type { EditorDiffDecorations } from '../adapters/EditorAdapter';
+import type { EditorDiffDecorations, EditorViewportMode } from '../adapters/EditorAdapter';
 
 import { useEditorSelectionRestore } from './markdownEditorSelectionRestore';
 import type { EditorViewState } from './markdownEditorTypes';
@@ -36,7 +36,7 @@ export function useEditorLayoutEffects(
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
   nodeId: string | null,
   readingSelection: EditorViewState['selection'] | null | undefined,
-  readingTargetViewportMode: 'center' | null | undefined,
+  readingTargetViewportMode: EditorViewportMode | null | undefined,
   readingTargetViewportRatio: number | null | undefined,
   nodeViewState: EditorViewState | undefined,
   beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined,

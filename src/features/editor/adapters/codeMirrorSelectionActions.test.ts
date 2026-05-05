@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { revealEditorSelection } from './codeMirrorSelectionActions';
+import { revealEditorSelection, revealEditorSelectionNearest } from './codeMirrorSelectionActions';
 
 function createViewHarness() {
   return {
@@ -40,5 +40,18 @@ describe('codeMirrorSelectionActions', () => {
       scrollIntoView: true,
       selection: { anchor: 8, head: 10 }
     });
+  });
+
+  it('uses nearest native scroll strategy for nearest selection reveal', () => {
+    const view = createViewHarness();
+
+    revealEditorSelectionNearest(view as never, { from: 30, to: 36 }, (position) => position);
+
+    expect(view.dispatch).toHaveBeenCalledWith({
+      effects: expect.anything(),
+      scrollIntoView: false,
+      selection: { anchor: 30, head: 36 }
+    });
+    expect(view.focus).toHaveBeenCalledTimes(1);
   });
 });

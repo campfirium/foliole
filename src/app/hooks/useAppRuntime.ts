@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
@@ -20,7 +21,7 @@ export interface ReadingPositionSyncState {
   reason: string;
   startedAt: number;
   targetSelection: EditorSelection;
-  targetViewportMode?: 'center';
+  targetViewportMode?: EditorViewportMode;
   targetViewportRatio?: number;
 }
 

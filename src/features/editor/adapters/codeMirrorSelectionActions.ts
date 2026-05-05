@@ -45,6 +45,25 @@ export function revealEditorSelectionCentered(
   view.focus();
 }
 
+export function revealEditorSelectionNearest(
+  view: CodeMirrorView,
+  selection: EditorSelection,
+  clampPosition: (position: number) => number
+) {
+  const anchor = clampPosition(selection.from);
+  const head = clampPosition(selection.to);
+  pushDebugTrace('editor.viewport.reveal-selection-nearest', {
+    scrollTop: view.scrollDOM.scrollTop,
+    selection: { from: anchor, to: head }
+  });
+  view.dispatch({
+    effects: EditorView.scrollIntoView(anchor, { y: 'nearest' }),
+    selection: { anchor, head },
+    scrollIntoView: false
+  });
+  view.focus();
+}
+
 export function restoreEditorSelection(
   view: CodeMirrorView,
   selection: EditorSelection,

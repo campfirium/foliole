@@ -4,6 +4,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
@@ -34,7 +35,7 @@ export interface DocumentPanelBodyLayoutProps {
   immersiveEditing?: boolean;
   editorNodeId: string | null;
   editorReadingSelection?: EditorSelection | null;
-  editorReadingTargetViewportMode?: 'center' | null;
+  editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
@@ -62,7 +63,7 @@ export interface DocumentPanelBodyLayoutProps {
   onAnswerImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
   onSetReadingPositionSelection?: (selection: EditorSelection) => void;
   onRevealDocumentPosition: (position: number) => void;
-  onRevealDocumentSelection: (selection: EditorSelection) => void;
+  onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
   onStartDocumentResize: (

@@ -1,3 +1,5 @@
+import type { EditorViewportMode } from '../adapters/EditorAdapter';
+
 import type { EditorViewState } from './markdownEditorTypes';
 
 export function normalizeRestoreSelection(selection: EditorViewState['selection']) {
@@ -41,7 +43,7 @@ export function createPendingRestoreSelectionKey(
   nodeId: string | null,
   readingSelection: EditorViewState['selection'] | null | undefined,
   nodeViewState: EditorViewState | undefined,
-  targetViewportMode?: 'center' | null
+  targetViewportMode?: EditorViewportMode | null
 ) {
   const selectionSource = readingSelection ?? nodeViewState?.selection;
   const selection = selectionSource ? normalizeRestoreSelection(selectionSource) : null;

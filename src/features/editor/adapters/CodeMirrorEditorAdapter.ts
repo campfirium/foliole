@@ -31,7 +31,8 @@ import { applyParagraphMarkerState } from './codeMirrorParagraphMarkerState';
 import {
   restoreEditorSelection,
   revealEditorSelection,
-  revealEditorSelectionCentered
+  revealEditorSelectionCentered,
+  revealEditorSelectionNearest
 } from './codeMirrorSelectionActions';
 import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
 import { resolvePrimaryVisiblePosition } from './codeMirrorVisiblePosition';
@@ -181,6 +182,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
   revealSelectionCentered(selection: EditorSelection) {
     revealEditorSelectionCentered(this.view, selection, (position) => this.clampPosition(position));
+  }
+  revealSelectionNearest(selection: EditorSelection) {
+    revealEditorSelectionNearest(this.view, selection, (position) => this.clampPosition(position));
   }
   revealSelectionAtViewportRatio(selection: EditorSelection, ratio: number) {
     revealEditorSelection(this.view, selection, (position) => this.clampPosition(position), ratio);

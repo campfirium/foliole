@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import { markNodePositionReady } from '../../../shared/platform/performanceDiagnosticsProbe';
 import { pushDebugTrace } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
+import type { EditorViewportMode } from '../adapters/EditorAdapter';
 
 import { applyRestoreScrollTop } from './markdownEditorSelectionRestoreScroll';
 import { shouldCollapseSelectionAfterRestore } from './markdownEditorSelectionRestoreTarget';
@@ -66,7 +67,7 @@ export function beginRestoreSelection(args: {
   restoreScrollTop: number | undefined;
   selection: EditorViewState['selection'];
   selectionKey: string;
-  targetViewportMode: 'center' | null | undefined;
+  targetViewportMode: EditorViewportMode | null | undefined;
   targetViewportRatio: number | null | undefined;
   valueLength: number;
 }) {
@@ -77,6 +78,10 @@ export function beginRestoreSelection(args: {
   if (args.targetViewportMode === 'center' && args.adapter.revealSelectionCentered) {
     args.adapter.setSelection(args.selection);
     args.adapter.revealSelectionCentered(args.selection);
+    return;
+  }
+  if (args.targetViewportMode === 'nearest') {
+    args.adapter.restoreSelection(args.selection);
     return;
   }
   if (typeof args.targetViewportRatio === 'number' && args.adapter.revealSelectionAtViewportRatio) {
@@ -102,10 +107,10 @@ export function scheduleRestoreSelectionCompletion(args: {
   restoreScrollTop: number | undefined;
   selection: EditorViewState['selection'];
   selectionKey: string;
-  targetViewportMode: 'center' | null | undefined;
+  targetViewportMode: EditorViewportMode | null | undefined;
   targetViewportRatio: number | null | undefined;
 }) {
-  if (args.targetViewportMode === 'center' || typeof args.targetViewportRatio !== 'number') {
+  if (args.targetViewportMode != null || typeof args.targetViewportRatio !== 'number') {
     scheduleNonRatioCompletion(args);
     return;
   }

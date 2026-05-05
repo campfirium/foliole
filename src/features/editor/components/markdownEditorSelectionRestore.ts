@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, type MutableRefObject } from 'react';
 
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
+import type { EditorViewportMode } from '../adapters/EditorAdapter';
 
 import {
   usePendingRestoreKey,
@@ -38,7 +39,7 @@ function useSelectionRestoreExecution(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   readingSelection: EditorViewState['selection'] | null | undefined;
-  readingTargetViewportMode: 'center' | null | undefined;
+  readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
@@ -73,7 +74,7 @@ export function useEditorSelectionRestore(
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
   nodeId: string | null,
   readingSelection: EditorViewState['selection'] | null | undefined,
-  readingTargetViewportMode: 'center' | null | undefined,
+  readingTargetViewportMode: EditorViewportMode | null | undefined,
   readingTargetViewportRatio: number | null | undefined,
   nodeViewState: EditorViewState | undefined,
   _beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined,
@@ -131,7 +132,7 @@ function useSelectionRestorePreparation(args: {
   previousNodeIdRef: MutableRefObject<string | null>;
   previousReadingSelectionRef: MutableRefObject<EditorViewState['selection'] | null | undefined>;
   readingSelection: EditorViewState['selection'] | null | undefined;
-  readingTargetViewportMode: 'center' | null | undefined;
+  readingTargetViewportMode: EditorViewportMode | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
@@ -161,7 +162,7 @@ function runSelectionRestore(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   readingSelection: EditorViewState['selection'] | null | undefined;
-  readingTargetViewportMode: 'center' | null | undefined;
+  readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
