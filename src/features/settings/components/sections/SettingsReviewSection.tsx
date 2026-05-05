@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { useReviewSchedulerSettings } from '../../context/ReviewSchedulerSettingsProvider';
 
 import {
   DefaultPriorityControl,
@@ -153,34 +154,38 @@ function PushQueueRows(props: Pick<
   );
 }
 
-export function SettingsReviewSection({
-  desiredRetention,
-  maximumIntervalDays,
-  enableFuzz,
-  enableShortTerm,
-  defaultPriority,
-  priorityRatio,
-  queueMixRatioReading,
-  queueMixRatioFsrs,
-  readingInitialIntervalMs,
-  readingIntervalGrowthFactorMin,
-  readingIntervalGrowthFactorMax,
-  onDesiredRetentionChange,
-  onMaximumIntervalDaysChange,
-  onEnableFuzzChange,
-  onEnableShortTermChange,
-  onDefaultPriorityChange,
-  onPriorityRatioChange,
-  onQueueMixRatioReadingChange,
-  onQueueMixRatioFsrsChange,
-  onReadingInitialIntervalDaysChange,
-  onReadingIntervalGrowthFactorMinChange,
-  onReadingIntervalGrowthFactorMaxChange
-}: SettingsReviewSectionProps) {
+export function SettingsReviewSection() {
+  const reviewSettings = useReviewSchedulerSettings();
+  const { reviewSchedulerSettings } = reviewSettings;
+
   return (
     <SettingsSection ariaLabel="Review settings section" title="Scheduler">
-      <SchedulerCoreRows desiredRetention={desiredRetention} enableFuzz={enableFuzz} enableShortTerm={enableShortTerm} maximumIntervalDays={maximumIntervalDays} onDesiredRetentionChange={onDesiredRetentionChange} onEnableFuzzChange={onEnableFuzzChange} onEnableShortTermChange={onEnableShortTermChange} onMaximumIntervalDaysChange={onMaximumIntervalDaysChange} />
-      <PushQueueRows defaultPriority={defaultPriority} onDefaultPriorityChange={onDefaultPriorityChange} onPriorityRatioChange={onPriorityRatioChange} onQueueMixRatioFsrsChange={onQueueMixRatioFsrsChange} onQueueMixRatioReadingChange={onQueueMixRatioReadingChange} onReadingInitialIntervalDaysChange={onReadingInitialIntervalDaysChange} onReadingIntervalGrowthFactorMaxChange={onReadingIntervalGrowthFactorMaxChange} onReadingIntervalGrowthFactorMinChange={onReadingIntervalGrowthFactorMinChange} priorityRatio={priorityRatio} queueMixRatioFsrs={queueMixRatioFsrs} queueMixRatioReading={queueMixRatioReading} readingInitialIntervalMs={readingInitialIntervalMs} readingIntervalGrowthFactorMax={readingIntervalGrowthFactorMax} readingIntervalGrowthFactorMin={readingIntervalGrowthFactorMin} />
+      <SchedulerCoreRows
+        desiredRetention={reviewSchedulerSettings.desiredRetention}
+        enableFuzz={reviewSchedulerSettings.enableFuzz}
+        enableShortTerm={reviewSchedulerSettings.enableShortTerm}
+        maximumIntervalDays={reviewSchedulerSettings.maximumIntervalDays}
+        onDesiredRetentionChange={reviewSettings.onDesiredRetentionChange}
+        onEnableFuzzChange={reviewSettings.onEnableFuzzChange}
+        onEnableShortTermChange={reviewSettings.onEnableShortTermChange}
+        onMaximumIntervalDaysChange={reviewSettings.onMaximumIntervalDaysChange}
+      />
+      <PushQueueRows
+        defaultPriority={reviewSchedulerSettings.pushQueue.defaultPriority}
+        onDefaultPriorityChange={reviewSettings.onDefaultPriorityChange}
+        onPriorityRatioChange={reviewSettings.onPriorityRatioChange}
+        onQueueMixRatioFsrsChange={reviewSettings.onQueueMixRatioFsrsChange}
+        onQueueMixRatioReadingChange={reviewSettings.onQueueMixRatioReadingChange}
+        onReadingInitialIntervalDaysChange={reviewSettings.onReadingInitialIntervalDaysChange}
+        onReadingIntervalGrowthFactorMaxChange={reviewSettings.onReadingIntervalGrowthFactorMaxChange}
+        onReadingIntervalGrowthFactorMinChange={reviewSettings.onReadingIntervalGrowthFactorMinChange}
+        priorityRatio={reviewSchedulerSettings.pushQueue.priorityRatio}
+        queueMixRatioFsrs={reviewSchedulerSettings.pushQueue.queueMixRatio.fsrs}
+        queueMixRatioReading={reviewSchedulerSettings.pushQueue.queueMixRatio.reading}
+        readingInitialIntervalMs={reviewSchedulerSettings.pushQueue.readingInitialIntervalMs}
+        readingIntervalGrowthFactorMax={reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.max}
+        readingIntervalGrowthFactorMin={reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.min}
+      />
     </SettingsSection>
   );
 }

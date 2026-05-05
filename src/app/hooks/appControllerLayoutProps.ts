@@ -2,6 +2,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
@@ -21,7 +22,6 @@ import type { useAppRuntime } from './useAppRuntime';
 import type { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import type { useEditorContextCommands } from './useEditorContextCommands';
 import type { useListResizer } from './useListResizer';
-import type { useReviewSchedulerSettingsState } from './useReviewSchedulerSettingsState';
 import type { useRightSidebarResizer } from './useRightSidebarResizer';
 import type { useTrashView } from './useTrashView';
 import type { useWorkspaceNavigation } from './useWorkspaceNavigation';
@@ -41,7 +41,7 @@ export interface BuildControllerLayoutPropsArgs {
   nowIso: string;
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
-  reviewSettings: ReturnType<typeof useReviewSchedulerSettingsState>;
+  reviewSettings: ReviewSchedulerSettingsContextValue;
   rightSidebarResize: ReturnType<typeof useRightSidebarResizer>;
   runtime: ReturnType<typeof useAppRuntime>;
   selectedTrashNode: Node | undefined;

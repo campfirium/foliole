@@ -9,16 +9,11 @@ import type { WorkspaceState } from '../../store/workspaceStore';
 import { buildReviewQueueVisibility } from '../components/reviewQueueVisibility';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
-import { createReviewActions } from './reviewSettingsLayoutActions';
-
-interface ReviewSettingsLayoutState {
-  reviewSchedulerSettings: ReviewSchedulerSettings;
-  setReviewSchedulerSettingsState: (value: ReviewSchedulerSettings) => void;
-}
-
 interface BuildLayoutPropsArgs {
   activeNodeId: string | null;
-  reviewSettings: ReviewSettingsLayoutState;
+  reviewSettings: {
+    reviewSchedulerSettings: ReviewSchedulerSettings;
+  };
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
@@ -133,7 +128,6 @@ function getReviewSessionSummary(reviewSession: WorkspaceState['reviewSession'])
 
 export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutProps {
   const sessionActions = createSessionActions(args);
-  const reviewActions = createReviewActions(args);
   const currentReviewNode = args.reviewSession.currentNodeId ? args.nodesById[args.reviewSession.currentNodeId] : undefined;
   const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
   const { reviewCompletedCount, reviewQueueCount, reviewStatus } = getReviewSessionSummary(
@@ -174,7 +168,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onRunImportFolder: args.onRunImportFolder,
     onStartClipboardImport: args.onStartClipboardImport,
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze,
-    onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions, ...reviewActions,
+    onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions,
     onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession,
     reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, hotkeyItems: args.hotkeyItems, selectedTrashNodeId: args.selectedTrashNodeId, onHotkeyUpdate: args.onHotkeyUpdate, onHotkeyReset: () => undefined, onHotkeyResetAll: () => undefined
   };

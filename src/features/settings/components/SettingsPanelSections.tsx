@@ -13,38 +13,16 @@ import { cn } from '@/shared/lib/utils';
 
 export interface SettingsCategoryContentProps {
   activeCategory: SettingsCategoryId;
-  defaultPriority: number;
-  desiredRetention: number;
-  enableFuzz: boolean;
-  enableShortTerm: boolean;
   hotkeyItems: HotkeySettingItem[];
   inboxPath: string;
   inboxPathError: string | null;
   isInboxDesktopRuntime: boolean;
   isInboxPathPending: boolean;
-  maximumIntervalDays: number;
-  onDefaultPriorityChange: (value: number) => void;
-  onDesiredRetentionChange: (value: number) => void;
-  onEnableFuzzChange: (value: boolean) => void;
-  onEnableShortTermChange: (value: boolean) => void;
   onInboxPathChangeRequest: () => void;
   onInboxPathRestoreDefault: () => void;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
-  onMaximumIntervalDaysChange: (value: number) => void;
-  onPriorityRatioChange: (value: number) => void;
-  onQueueMixRatioFsrsChange: (value: number) => void;
-  onQueueMixRatioReadingChange: (value: number) => void;
-  onReadingInitialIntervalDaysChange: (value: number) => void;
-  onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
-  onReadingIntervalGrowthFactorMinChange: (value: number) => void;
-  priorityRatio: number;
-  queueMixRatioFsrs: number;
-  queueMixRatioReading: number;
-  readingInitialIntervalMs: number;
-  readingIntervalGrowthFactorMax: number;
-  readingIntervalGrowthFactorMin: number;
 }
 
 export function SettingsSidebar(props: {
@@ -73,10 +51,8 @@ export function SettingsSidebar(props: {
   );
 }
 
-function ReviewSettingsContent(props: SettingsCategoryContentProps) {
-  return (
-    <SettingsReviewSection defaultPriority={props.defaultPriority} desiredRetention={props.desiredRetention} enableFuzz={props.enableFuzz} enableShortTerm={props.enableShortTerm} maximumIntervalDays={props.maximumIntervalDays} onDefaultPriorityChange={props.onDefaultPriorityChange} onDesiredRetentionChange={props.onDesiredRetentionChange} onEnableFuzzChange={props.onEnableFuzzChange} onEnableShortTermChange={props.onEnableShortTermChange} onMaximumIntervalDaysChange={props.onMaximumIntervalDaysChange} onPriorityRatioChange={props.onPriorityRatioChange} onQueueMixRatioFsrsChange={props.onQueueMixRatioFsrsChange} onQueueMixRatioReadingChange={props.onQueueMixRatioReadingChange} onReadingInitialIntervalDaysChange={props.onReadingInitialIntervalDaysChange} onReadingIntervalGrowthFactorMaxChange={props.onReadingIntervalGrowthFactorMaxChange} onReadingIntervalGrowthFactorMinChange={props.onReadingIntervalGrowthFactorMinChange} priorityRatio={props.priorityRatio} queueMixRatioFsrs={props.queueMixRatioFsrs} queueMixRatioReading={props.queueMixRatioReading} readingInitialIntervalMs={props.readingInitialIntervalMs} readingIntervalGrowthFactorMax={props.readingIntervalGrowthFactorMax} readingIntervalGrowthFactorMin={props.readingIntervalGrowthFactorMin} />
-  );
+function ReviewSettingsContent() {
+  return <SettingsReviewSection />;
 }
 
 export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
@@ -102,7 +78,7 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     );
   }
   if (props.activeCategory === 'review') {
-    return <ReviewSettingsContent {...props} />;
+    return <ReviewSettingsContent />;
   }
   if (props.activeCategory === 'about') {
     return <SettingsAboutSection />;

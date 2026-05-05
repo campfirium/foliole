@@ -1,5 +1,6 @@
 import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
+import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 
 import { CommandPalette } from './components/CommandPalette';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
@@ -19,7 +20,9 @@ export function App() {
   return (
     <AppearanceSettingsProvider>
       <MouseGestureSettingsProvider>
-        <AppContent />
+        <ReviewSchedulerSettingsProvider>
+          <AppContent />
+        </ReviewSchedulerSettingsProvider>
       </MouseGestureSettingsProvider>
     </AppearanceSettingsProvider>
   );

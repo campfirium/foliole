@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -23,7 +24,6 @@ import {
 import { useFormalImport } from './useFormalImport';
 import { useNativeCommandMenu } from './useNativeCommandMenu';
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
-import { useReviewSchedulerSettingsState } from './useReviewSchedulerSettingsState';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
 
 export interface AppPaletteState {
@@ -167,7 +167,7 @@ function buildControllerLayoutState(args: {
   paletteItems: CommandPaletteItem[];
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
-  reviewSettings: ReturnType<typeof useReviewSchedulerSettingsState>;
+  reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
   startStudyMode: () => void;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
@@ -202,7 +202,7 @@ function buildControllerLayoutState(args: {
 export function useAppController(): AppControllerResult {
   const ws = useWorkspaceSelectors();
   const appearance = useAppearanceSettings();
-  const reviewSettings = useReviewSchedulerSettingsState();
+  const reviewSettings = useReviewSchedulerSettings();
   const nowIso = useNowIso();
   const isWorkspaceHydrated = useWorkspaceHydration();
   const controller = useWorkspaceControllerState(ws, isWorkspaceHydrated);

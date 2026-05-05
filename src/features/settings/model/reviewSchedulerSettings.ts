@@ -155,9 +155,7 @@ export async function saveReviewSchedulerSettings(
   settings: ReviewSchedulerSettingsSavePatch
 ): Promise<ReviewSchedulerSettings> {
   const runtimeInvoke = getRuntimeInvoke();
-  const baseSettings = runtimeInvoke
-    ? await loadReviewSchedulerSettings()
-    : DEFAULT_REVIEW_SCHEDULER_SETTINGS;
+  const baseSettings = runtimeInvoke ? await loadReviewSchedulerSettings() : getCurrentReviewSchedulerSettings();
   const payload = normalizeReviewSchedulerSettings({
     ...baseSettings,
     ...settings,

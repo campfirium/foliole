@@ -97,17 +97,6 @@ export interface WorkspaceLayoutProps {
   onToggleReviewSession: () => void;
   onOpenSettings: () => void;
   onCloseSettings: () => void;
-  onDesiredRetentionChange: (value: number) => void;
-  onDefaultPriorityChange: (value: number) => void;
-  onMaximumIntervalDaysChange: (value: number) => void;
-  onEnableFuzzChange: (value: boolean) => void;
-  onEnableShortTermChange: (value: boolean) => void;
-  onPriorityRatioChange: (value: number) => void;
-  onQueueMixRatioReadingChange: (value: number) => void;
-  onQueueMixRatioFsrsChange: (value: number) => void;
-  onReadingInitialIntervalDaysChange: (value: number) => void;
-  onReadingIntervalGrowthFactorMinChange: (value: number) => void;
-  onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
   onCompleteReviewItem: () => boolean;

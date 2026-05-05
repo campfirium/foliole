@@ -4,32 +4,11 @@ import { vi } from 'vitest';
 
 import { AppearanceSettingsProvider } from '../context/AppearanceSettingsProvider';
 import { MouseGestureSettingsProvider } from '../context/MouseGestureSettingsProvider';
+import { ReviewSchedulerSettingsProvider } from '../context/ReviewSchedulerSettingsProvider';
 
 const DEFAULT_SETTINGS_PANEL_PROPS = {
-  desiredRetention: 0.9,
-  maximumIntervalDays: 36500,
-  enableFuzz: false,
-  enableShortTerm: false,
-  defaultPriority: 5,
-  priorityRatio: 5,
-  queueMixRatioReading: 1,
-  queueMixRatioFsrs: 5,
-  readingInitialIntervalMs: 24 * 60 * 60 * 1000,
-  readingIntervalGrowthFactorMin: 1.1,
-  readingIntervalGrowthFactorMax: 1.5,
   hotkeyItems: [],
   onClose: () => undefined,
-  onDesiredRetentionChange: () => undefined,
-  onDefaultPriorityChange: () => undefined,
-  onMaximumIntervalDaysChange: () => undefined,
-  onEnableFuzzChange: () => undefined,
-  onEnableShortTermChange: () => undefined,
-  onPriorityRatioChange: () => undefined,
-  onQueueMixRatioReadingChange: () => undefined,
-  onQueueMixRatioFsrsChange: () => undefined,
-  onReadingInitialIntervalDaysChange: () => undefined,
-  onReadingIntervalGrowthFactorMinChange: () => undefined,
-  onReadingIntervalGrowthFactorMaxChange: () => undefined,
   onHotkeyReset: () => undefined,
   onHotkeyResetAll: () => undefined,
   onHotkeyUpdate: () => ({ status: 'blocked' as const })
@@ -51,7 +30,9 @@ export function renderWithMouseGestureProvider(ui: ReactElement, options?: Omit<
   return render(ui, {
     wrapper: ({ children }) => (
       <AppearanceSettingsProvider>
-        <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
+        <MouseGestureSettingsProvider>
+          <ReviewSchedulerSettingsProvider>{children}</ReviewSchedulerSettingsProvider>
+        </MouseGestureSettingsProvider>
       </AppearanceSettingsProvider>
     ),
     ...options
@@ -99,16 +80,7 @@ export function changePushQueueValues(values: {
 }
 
 export function createSavedPushQueueProps() {
-  return {
-    ...createProps(),
-    defaultPriority: 4,
-    priorityRatio: 7,
-    queueMixRatioReading: 2,
-    queueMixRatioFsrs: 4,
-    readingInitialIntervalMs: 2 * 24 * 60 * 60 * 1000,
-    readingIntervalGrowthFactorMin: 1.12,
-    readingIntervalGrowthFactorMax: 1.44
-  };
+  return createProps();
 }
 
 export function expectPushQueueChangeCallbacks(callbacks: {

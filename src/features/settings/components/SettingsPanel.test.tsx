@@ -17,61 +17,13 @@ import {
 
 function PushQueueSettingsHarness() {
   const [isOpen, setIsOpen] = useState(true);
-  const [props, setProps] = useState(createProps);
 
   return (
     <>
       <button onClick={() => setIsOpen(true)} type="button">
         Reopen settings
       </button>
-      {isOpen ? (
-        <SettingsPanel
-          {...props}
-          onClose={() => setIsOpen(false)}
-          onDefaultPriorityChange={(value) =>
-            setProps((current) => ({
-              ...current,
-              defaultPriority: value
-            }))
-          }
-          onPriorityRatioChange={(value) =>
-            setProps((current) => ({
-              ...current,
-              priorityRatio: value
-            }))
-          }
-          onQueueMixRatioReadingChange={(value) =>
-            setProps((current) => ({
-              ...current,
-              queueMixRatioReading: value
-            }))
-          }
-          onQueueMixRatioFsrsChange={(value) =>
-            setProps((current) => ({
-              ...current,
-              queueMixRatioFsrs: value
-            }))
-          }
-          onReadingInitialIntervalDaysChange={(value) =>
-            setProps((current) => ({
-              ...current,
-              readingInitialIntervalMs: value * 24 * 60 * 60 * 1000
-            }))
-          }
-          onReadingIntervalGrowthFactorMinChange={(value) =>
-            setProps((current) => ({
-              ...current,
-              readingIntervalGrowthFactorMin: value
-            }))
-          }
-          onReadingIntervalGrowthFactorMaxChange={(value) =>
-            setProps((current) => ({
-              ...current,
-              readingIntervalGrowthFactorMax: value
-            }))
-          }
-        />
-      ) : null}
+      {isOpen ? <SettingsPanel {...createProps()} onClose={() => setIsOpen(false)} /> : null}
     </>
   );
 }
@@ -85,6 +37,20 @@ function expectPushQueueSemanticCopy() {
   expect(screen.getByText(/weight ratio, not a percentage scale/i)).toBeInTheDocument();
   expect(screen.getByText(/default `1:5` means one reading draw is mixed after five FSRS draws/i)).toBeInTheDocument();
   expect(screen.getByText(/minimum maps to P1, the maximum maps to P9/i)).toBeInTheDocument();
+}
+
+async function expectUpdatedPushQueueValues() {
+  await waitFor(() => {
+    expectPushQueueValues({
+      reading: 2,
+      fsrs: 4,
+      defaultPriority: 4,
+      priorityRatio: 7,
+      readingInitialIntervalDays: 2,
+      readingGrowthMin: 1.12,
+      readingGrowthMax: 1.44
+    });
+  });
 }
 
 vi.mock('../model/systemFonts', () => ({
@@ -124,14 +90,7 @@ it('keeps font selects disabled until system fonts are loaded', async () => {
 });
 
 it('updates desired retention from review settings slider', async () => {
-  const onDesiredRetentionChange = vi.fn();
-
-  renderWithMouseGestureProvider(
-    <SettingsPanel
-      {...createProps()}
-      onDesiredRetentionChange={onDesiredRetentionChange}
-    />
-  );
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   openReviewSettings();
   fireEvent.change(screen.getByLabelText('Desired retention'), {
@@ -139,24 +98,12 @@ it('updates desired retention from review settings slider', async () => {
   });
 
   await waitFor(() => {
-    expect(onDesiredRetentionChange).toHaveBeenCalledWith(0.8);
-    expect(screen.getByText('0.90')).toBeInTheDocument();
+    expect(screen.getByText('0.80')).toBeInTheDocument();
   });
 });
 
 it('updates remaining review scheduler controls from review settings section', async () => {
-  const onMaximumIntervalDaysChange = vi.fn();
-  const onEnableFuzzChange = vi.fn();
-  const onEnableShortTermChange = vi.fn();
-
-  renderWithMouseGestureProvider(
-    <SettingsPanel
-      {...createProps()}
-      onMaximumIntervalDaysChange={onMaximumIntervalDaysChange}
-      onEnableFuzzChange={onEnableFuzzChange}
-      onEnableShortTermChange={onEnableShortTermChange}
-    />
-  );
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   openReviewSettings();
   fireEvent.change(screen.getByLabelText('Maximum interval days'), {
@@ -170,9 +117,9 @@ it('updates remaining review scheduler controls from review settings section', a
   });
 
   await waitFor(() => {
-    expect(onMaximumIntervalDaysChange).toHaveBeenCalledWith(365);
-    expect(onEnableFuzzChange).toHaveBeenCalledWith(true);
-    expect(onEnableShortTermChange).toHaveBeenCalledWith(true);
+    expect(screen.getByLabelText('Maximum interval days')).toHaveValue(365);
+    expect(screen.getByLabelText('Interval fuzz')).toHaveValue('on');
+    expect(screen.getByLabelText('Short-term scheduling')).toHaveValue('on');
   });
 });
 
@@ -251,17 +198,7 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
     readingGrowthMax: '1.44'
   });
 
-  await waitFor(() => {
-    expectPushQueueValues({
-      reading: 2,
-      fsrs: 4,
-      defaultPriority: 4,
-      priorityRatio: 7,
-      readingInitialIntervalDays: 2,
-      readingGrowthMin: 1.12,
-      readingGrowthMax: 1.44
-    });
-  });
+  await expectUpdatedPushQueueValues();
 
   fireEvent.click(screen.getByLabelText('Settings'));
 
@@ -273,15 +210,5 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
 
   openReviewSettings();
 
-  await waitFor(() => {
-    expectPushQueueValues({
-      reading: 2,
-      fsrs: 4,
-      defaultPriority: 4,
-      priorityRatio: 7,
-      readingInitialIntervalDays: 2,
-      readingGrowthMin: 1.12,
-      readingGrowthMax: 1.44
-    });
-  });
+  await expectUpdatedPushQueueValues();
 });

@@ -73,6 +73,27 @@ it('loads defaults when runtime invoke is unavailable', async () => {
   expect(getCurrentReviewSchedulerSettings()).toEqual(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
 });
 
+it('preserves the current browser fallback snapshot during partial saves without runtime invoke', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+
+  await loadReviewSchedulerSettings();
+  await saveReviewSchedulerSettings({
+    desiredRetention: 0.84,
+    pushQueue: { defaultPriority: 4 }
+  });
+  await saveReviewSchedulerSettings({
+    pushQueue: { queueMixRatio: { reading: 2, fsrs: 4 } }
+  });
+
+  expect(getCurrentReviewSchedulerSettings()).toMatchObject({
+    desiredRetention: 0.84,
+    pushQueue: {
+      defaultPriority: 4,
+      queueMixRatio: { reading: 2, fsrs: 4 }
+    }
+  });
+});
+
 it('hydrates the current settings snapshot with persisted push queue rules', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(
     createInvokeSequence({
