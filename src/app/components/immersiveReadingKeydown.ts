@@ -1,30 +1,12 @@
-import type { Node } from '../../features/nodes/model/nodeTypes';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
-import { getSelectionCommandPayload } from '../contextCommands';
 
-import { isImmersiveEditableElement } from './immersiveReadingKeyboard';
+import { isImmersiveEditableElement, isImmersiveEscapeKey } from './immersiveReadingKeyboard';
 import { blurImmersiveActiveElement, clearParagraphMarker } from './immersiveReadingMarker';
 import { resolveCurrentParagraphSelection, resolveParagraphSelection } from './immersiveReadingModel';
+import { openNextReadableNode } from './immersiveReadingNodes';
+import { resolveImmersiveSelectionPayload } from './immersiveReadingSelectionPayload';
 import { revealSelectionForImmersiveBand, shouldRevealSelectionInImmersiveBand } from './immersiveReadingViewportBand';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
-
-export function getReadableNodeIds(nodeOrder: string[], nodesById: Record<string, Node>, trashedNodeIds: string[]) {
-  return nodeOrder.filter((nodeId) => {
-    if (trashedNodeIds.includes(nodeId)) {
-      return false;
-    }
-    const node = nodesById[nodeId];
-    return Boolean(node && node.kind !== 'folder');
-  });
-}
-
-function openNextReadableNode(props: WorkspaceLayoutProps, readableNodeIds: string[]) {
-  const currentIndex = props.activeNodeId ? readableNodeIds.indexOf(props.activeNodeId) : -1;
-  const nextNodeId = currentIndex >= 0 ? readableNodeIds[currentIndex + 1] : undefined;
-  if (nextNodeId) {
-    props.onSelectNode(nextNodeId);
-  }
-}
 
 function handleImmersiveExit(args: {
   isImmersiveEditing: boolean;
@@ -95,19 +77,19 @@ function selectParagraph(args: {
 }
 
 function runImmersiveSelectionAction(args: {
+  getReadingSelection: () => { from: number; to: number };
   props: WorkspaceLayoutProps;
   type: 'highlight' | 'note';
 }) {
   if (!args.props.activeNodeId) {
     return false;
   }
-  const payload = getSelectionCommandPayload(args.props.activeNodeId, args.props.editorAdapterRef.current);
+  const payload = resolveImmersiveSelectionPayload(args);
   if (!payload) {
     return false;
   }
   if (args.type === 'highlight') {
-    args.props.onCreateSelectionHighlight(payload);
-    return true;
+    return args.props.onToggleSelectionHighlight(payload) !== null;
   }
   args.props.onCreateSelectionNote(payload);
   return true;
@@ -189,14 +171,50 @@ function handleImmersiveReadingKey(args: {
     return;
   }
   if (args.event.key.toLowerCase() === 'h') {
-    if (runImmersiveSelectionAction({ props: args.props, type: 'highlight' })) {
+    if (runImmersiveSelectionAction({ getReadingSelection: args.getReadingSelection, props: args.props, type: 'highlight' })) {
       args.event.preventDefault();
     }
     return;
   }
-  if (args.event.key.toLowerCase() === 'n' && runImmersiveSelectionAction({ props: args.props, type: 'note' })) {
+  if (
+    args.event.key.toLowerCase() === 'n' &&
+    runImmersiveSelectionAction({ getReadingSelection: args.getReadingSelection, props: args.props, type: 'note' })
+  ) {
     args.event.preventDefault();
   }
+}
+
+function handleImmersiveToggleKey(args: {
+  canToggleImmersiveMode: boolean;
+  captureReadingSelectionFromViewport: () => void;
+  event: KeyboardEvent;
+  getReadingSelection: () => { from: number; to: number };
+  isImmersiveEditing: boolean;
+  props: WorkspaceLayoutProps;
+  queueReadingSelectionRestore: () => void;
+  suppressNextSelectionRestore: () => void;
+}) {
+  if (args.event.key !== 'F11' || args.event.altKey || args.event.ctrlKey || args.event.metaKey || args.event.shiftKey) {
+    return false;
+  }
+  if (!args.canToggleImmersiveMode && !args.props.isImmersiveMode) {
+    return true;
+  }
+  args.event.preventDefault();
+  pushDebugTrace('immersive.toggle.requested', {
+    isImmersiveMode: args.props.isImmersiveMode,
+    isImmersiveEditing: args.isImmersiveEditing
+  });
+  args.suppressNextSelectionRestore();
+  if (!args.props.isImmersiveMode) {
+    args.captureReadingSelectionFromViewport();
+    args.props.beginApplyingReadingPosition(args.getReadingSelection(), 'enter-immersive');
+  } else if (!args.isImmersiveEditing) {
+    args.queueReadingSelectionRestore();
+    args.props.beginApplyingReadingPosition(args.getReadingSelection(), 'exit-immersive');
+  }
+  args.props.onToggleImmersiveMode();
+  return true;
 }
 
 export function handleImmersiveKeydown(args: {
@@ -217,27 +235,14 @@ export function handleImmersiveKeydown(args: {
   if (args.event.defaultPrevented || args.event.repeat || args.event.isComposing) {
     return;
   }
-  if (args.event.key === 'F11' && !args.event.altKey && !args.event.ctrlKey && !args.event.metaKey && !args.event.shiftKey) {
-    if (!args.canToggleImmersiveMode && !args.props.isImmersiveMode) {
-      return;
-    }
-    args.event.preventDefault();
-    pushDebugTrace('immersive.toggle.requested', {
-      isImmersiveMode: args.props.isImmersiveMode,
-      isImmersiveEditing: args.isImmersiveEditing
-    });
-    args.suppressNextSelectionRestore();
-    if (!args.props.isImmersiveMode) {
-      args.captureReadingSelectionFromViewport();
-      args.props.beginApplyingReadingPosition(args.getReadingSelection(), 'enter-immersive');
-    } else if (!args.isImmersiveEditing) {
-      args.queueReadingSelectionRestore();
-      args.props.beginApplyingReadingPosition(args.getReadingSelection(), 'exit-immersive');
-    }
-    args.props.onToggleImmersiveMode();
+  if (handleImmersiveToggleKey(args)) {
     return;
   }
   if (!args.props.isImmersiveMode || args.event.altKey || args.event.ctrlKey || args.event.metaKey) {
+    return;
+  }
+  if (isImmersiveEscapeKey(args.event)) {
+    handleImmersivePrimaryKey(args);
     return;
   }
   if (isImmersiveEditableElement(args.event.target)) {

@@ -13,6 +13,7 @@ import {
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { createSelectionHandlers, runSelectionCommandFromPayload } from './editorSelectionCommandActions';
+import { createToggleSelectionHighlightFromPayloadHandler } from './selectionHighlightToggle';
 import {
   buildEditorContextCommandsResult,
   createHandleEditorContextMenu,
@@ -39,9 +40,11 @@ interface UseEditorContextCommandsParams {
     answer: string,
     anchorId: string
   ) => string | null;
+  deleteNodePermanently: (nodeId: string) => void;
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   isTrashViewOpen: boolean;
+  trashedNodeIds: string[];
   nodesById: Record<string, Node>;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
@@ -103,9 +106,11 @@ export function useEditorContextCommands({
   createHighlightNodeFromSelection,
   createImageClozeNodes = () => [],
   createQANodeFromSelection,
+  deleteNodePermanently,
   deleteImageClozeRegion,
   editorRef,
   isTrashViewOpen,
+  trashedNodeIds,
   nodesById,
   onExitImmersiveMode,
   onSelectNode,
@@ -139,11 +144,15 @@ export function useEditorContextCommands({
     runSelectionCommandFromPayloadHandler
   });
   return buildEditorCommandsResult({
+    activeNodeId,
     closeContextMenu,
     contextMenu,
+    deleteNodePermanently,
     editorRef,
     handleEditorContextMenu,
+    nodesById,
     selectionHandlers,
+    trashedNodeIds,
     syncActiveNodeContentFromEditor
   });
 }
@@ -173,11 +182,15 @@ function createPayloadSelectionRunner(
 }
 
 function buildEditorCommandsResult(args: {
+  activeNodeId: string | null;
   closeContextMenu: () => void;
   contextMenu: EditorContextMenuState | null;
+  deleteNodePermanently: (nodeId: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   handleEditorContextMenu: ReturnType<typeof createHandleEditorContextMenu>;
+  nodesById: Record<string, Node>;
   selectionHandlers: ReturnType<typeof createSelectionHandlers>;
+  trashedNodeIds: string[];
   syncActiveNodeContentFromEditor: () => void;
 }) {
   const imageHandlers = createImageCommandHandlers({
@@ -185,6 +198,15 @@ function buildEditorCommandsResult(args: {
     contextMenu: args.contextMenu,
     editorRef: args.editorRef,
     syncActiveNodeContentFromEditor: args.syncActiveNodeContentFromEditor
+  });
+  const handleToggleSelectionHighlightFromPayload = createToggleSelectionHighlightFromPayloadHandler({
+    activeNodeId: args.activeNodeId,
+    createHighlightFromPayload: args.selectionHandlers.handleCreateHighlightFromPayload,
+    deleteNodePermanently: args.deleteNodePermanently,
+    editorRef: args.editorRef,
+    nodesById: args.nodesById,
+    syncActiveNodeContentFromEditor: args.syncActiveNodeContentFromEditor,
+    trashedNodeIds: args.trashedNodeIds
   });
 
   return buildEditorContextCommandsResult({
@@ -195,6 +217,7 @@ function buildEditorCommandsResult(args: {
     handleCreateClozeFromPayload: args.selectionHandlers.handleCreateClozeFromPayload,
     handleCreateHighlight: args.selectionHandlers.handleCreateHighlight,
     handleCreateHighlightFromPayload: args.selectionHandlers.handleCreateHighlightFromPayload,
+    handleToggleSelectionHighlightFromPayload,
     handleCreateNoteFromPayload: args.selectionHandlers.handleCreateNoteFromPayload,
     handleCutImage: imageHandlers.handleCutImage,
     handleDeleteImage: imageHandlers.handleDeleteImage,

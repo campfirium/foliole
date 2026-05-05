@@ -123,6 +123,7 @@ export interface WorkspaceLayoutProps {
   onCopyImage: () => void;
   onCreateHighlight: () => void;
   onCreateSelectionHighlight: (payload: SelectionCommandPayload) => string | null;
+  onToggleSelectionHighlight: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
   onCreateSelectionNote: (payload: SelectionCommandPayload) => string | null;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCreateCloze: () => void;

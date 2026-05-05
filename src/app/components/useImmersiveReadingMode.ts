@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'rea
 
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 
-import { getReadableNodeIds, handleImmersiveKeydown } from './immersiveReadingKeydown';
+import { handleImmersiveKeydown } from './immersiveReadingKeydown';
 import {
   clearParagraphMarker,
   focusImmersiveEditor
 } from './immersiveReadingMarker';
+import { getReadableNodeIds } from './immersiveReadingNodes';
 import {
   useImmersiveEntrySelectionSync,
   useImmersiveParagraphMarkerSync,

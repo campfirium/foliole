@@ -80,6 +80,7 @@ function buildProps() {
       nodeOrder: ['node-1', 'node-2'],
       nodesById: { 'node-1': createNode('node-1'), 'node-2': createNode('node-2') },
       onCreateSelectionHighlight: vi.fn(),
+      onToggleSelectionHighlight: vi.fn(() => 'created'),
       onCreateSelectionNote: vi.fn(),
       onExitImmersiveMode: vi.fn(),
       onRevealDocumentSelection: vi.fn(),

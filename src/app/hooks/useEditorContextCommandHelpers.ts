@@ -27,6 +27,7 @@ export interface EditorContextCommandsResult {
   handleCreateClozeFromPayload: (payload: SelectionCommandPayload) => string | null;
   handleCreateHighlight: () => void;
   handleCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
+  handleToggleSelectionHighlightFromPayload: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
   handleCreateNoteFromPayload: (payload: SelectionCommandPayload) => string | null;
   handleCutImage: () => Promise<void>;
   handleDeleteImage: () => void;

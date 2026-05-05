@@ -1,5 +1,9 @@
 const NON_TEXT_INPUT_TYPES = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
 
+export function isImmersiveEscapeKey(event: KeyboardEvent) {
+  return event.key === 'Escape';
+}
+
 export function isImmersiveEditableElement(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false;

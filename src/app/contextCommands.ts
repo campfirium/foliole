@@ -38,7 +38,25 @@ export function getSelectionCommandPayload(
   }
 
   const content = adapter.getContent();
-  const selections = getNormalizedSelectionRanges(adapter, content.length);
+  return buildSelectionCommandPayload(parentNodeId, content, getNormalizedSelectionRanges(adapter, content.length));
+}
+
+export function getSelectionCommandPayloadForRanges(
+  parentNodeId: string,
+  adapter: EditorAdapter | null,
+  ranges: EditorSelection[]
+): SelectionCommandPayload | null {
+  if (!adapter) {
+    return null;
+  }
+  return buildSelectionCommandPayload(parentNodeId, adapter.getContent(), normalizeSelectionRanges(ranges, adapter.getContent().length));
+}
+
+function buildSelectionCommandPayload(
+  parentNodeId: string,
+  content: string,
+  selections: EditorSelection[]
+): SelectionCommandPayload | null {
   if (selections.length === 0) {
     return null;
   }
@@ -111,16 +129,19 @@ export function applySelectionMarkup(
 }
 
 function getNormalizedSelectionRanges(adapter: EditorAdapter, max: number) {
-  const selections = adapter
-    .getSelectionRanges()
+  return normalizeSelectionRanges(adapter.getSelectionRanges(), max);
+}
+
+function normalizeSelectionRanges(selections: EditorSelection[], max: number) {
+  const normalizedSelections = selections
     .map((selection) => ({
       from: Math.max(0, Math.min(selection.from, selection.to, max)),
       to: Math.max(0, Math.min(Math.max(selection.from, selection.to), max))
     }))
     .filter((selection) => selection.from < selection.to)
     .sort((left, right) => left.from - right.from);
-  return selections.filter((selection, index) => {
-    const previous = selections[index - 1];
+  return normalizedSelections.filter((selection, index) => {
+    const previous = normalizedSelections[index - 1];
     return !previous || previous.from !== selection.from || previous.to !== selection.to;
   });
 }

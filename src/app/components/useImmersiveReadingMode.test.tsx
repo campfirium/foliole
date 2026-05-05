@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, fireEvent, renderHook } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -81,6 +81,7 @@ function buildProps() {
   let readingSelection: EditorSelection | null = null;
   let applyingSelection: EditorSelection | null = null;
   const onCreateSelectionHighlight = vi.fn(() => 'highlight-1');
+  const onToggleSelectionHighlight = vi.fn(() => 'created' as const);
   const onCreateSelectionNote = vi.fn(() => 'note-1');
   const onRevealDocumentSelection = vi.fn((nextSelection: EditorSelection) => {
     adapter.revealSelection(nextSelection);
@@ -91,6 +92,7 @@ function buildProps() {
   return {
     adapter,
     onCreateSelectionHighlight,
+    onToggleSelectionHighlight,
     onCreateSelectionNote,
     onRevealDocumentSelection,
     onSelectNode,
@@ -103,6 +105,7 @@ function buildProps() {
       nodeOrder: ['node-1', 'node-2'],
       nodesById: { 'node-1': createNode('node-1'), 'node-2': createNode('node-2') },
       onCreateSelectionHighlight,
+      onToggleSelectionHighlight,
       onCreateSelectionNote,
       onExitImmersiveMode: vi.fn(),
       onRevealDocumentSelection,
@@ -136,8 +139,8 @@ it('moves paragraph selection with space and opens the next readable note at the
 
   expect(onSelectNode).toHaveBeenCalledWith('node-2');
 });
-it('runs highlight and note actions from the current paragraph selection', () => {
-  const { onCreateSelectionHighlight, onCreateSelectionNote, props } = buildProps();
+it('runs highlight toggle and note actions from the current paragraph selection', () => {
+  const { adapter, onToggleSelectionHighlight, onCreateSelectionNote, props } = buildProps();
   renderHook(() => useImmersiveReadingMode(props));
 
   act(() => {
@@ -146,7 +149,7 @@ it('runs highlight and note actions from the current paragraph selection', () =>
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
   });
 
-  expect(onCreateSelectionHighlight).toHaveBeenCalledWith(
+  expect(onToggleSelectionHighlight).toHaveBeenCalledWith(
     expect.objectContaining({
       parentNodeId: 'node-1',
       selectionText: 'Beta'
@@ -155,6 +158,28 @@ it('runs highlight and note actions from the current paragraph selection', () =>
   expect(onCreateSelectionNote).toHaveBeenCalledWith(
     expect.objectContaining({
       parentNodeId: 'node-1',
+      selectionText: 'Beta'
+    })
+  );
+  expect(adapter.setSelection).toHaveBeenCalledWith({ from: 7, to: 11 });
+  expect(adapter.setSelectionRanges).toHaveBeenCalledWith([{ from: 7, to: 11 }]);
+});
+
+it('selects the current paragraph before toggling highlight from a collapsed reading position', () => {
+  const { adapter, onToggleSelectionHighlight, props } = buildProps();
+  renderHook(() => useImmersiveReadingMode(props));
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    vi.mocked(adapter.setSelection).mockClear();
+    vi.mocked(adapter.setSelectionRanges).mockClear();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
+  });
+
+  expect(adapter.setSelection).toHaveBeenCalledWith({ from: 7, to: 11 });
+  expect(adapter.setSelectionRanges).toHaveBeenCalledWith([{ from: 7, to: 11 }]);
+  expect(onToggleSelectionHighlight).toHaveBeenCalledWith(
+    expect.objectContaining({
       selectionText: 'Beta'
     })
   );
@@ -215,6 +240,28 @@ it('toggles the shortcuts overlay with question mark', () => {
   });
 
   expect(result.current.isShortcutsOverlayOpen).toBe(true);
+});
+
+it('exits immersive editing when Escape comes from the editor element', () => {
+  const { props } = buildProps();
+  const { result } = renderHook(() => useImmersiveReadingMode(props));
+  const textarea = document.createElement('textarea');
+  document.body.append(textarea);
+
+  act(() => {
+    result.current.enterImmersiveEdit();
+  });
+
+  expect(result.current.isImmersiveEditing).toBe(true);
+
+  act(() => {
+    fireEvent.keyDown(textarea, { key: 'Escape' });
+  });
+
+  expect(result.current.isImmersiveEditing).toBe(false);
+  expect(props.onExitImmersiveMode).not.toHaveBeenCalled();
+
+  textarea.remove();
 });
 
 it('captures the viewport reading position and starts an applying lock when entering immersive mode', () => {

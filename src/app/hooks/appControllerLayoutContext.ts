@@ -21,6 +21,7 @@ export function createLayoutEditorCtx(args: BuildControllerLayoutPropsArgs) {
     onCreateCloze: args.editorCtx.handleCreateCloze,
     onCreateHighlight: args.editorCtx.handleCreateHighlight,
     onCreateSelectionHighlight: args.editorCtx.handleCreateHighlightFromPayload,
+    onToggleSelectionHighlight: args.editorCtx.handleToggleSelectionHighlightFromPayload,
     onCreateSelectionNote: args.editorCtx.handleCreateNoteFromPayload,
     onCreatePdfHighlight: createPdfHighlightHandler(args),
     onCutImage: args.editorCtx.handleCutImage,
