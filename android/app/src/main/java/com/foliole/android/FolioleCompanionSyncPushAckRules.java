@@ -21,18 +21,17 @@ final class FolioleCompanionSyncPushAckRules {
     private final Set<String> statuses;
 
     private FolioleCompanionSyncPushAckRules(JSONObject definitions) throws Exception {
-        JSONObject pushAck = definitions.getJSONObject("pushAck");
-        clientOpIdKeys = pushAck.getJSONArray("clientOpIdKeys");
-        confirmingStatuses = FolioleCompanionSyncProtocolDefinitions.stringSet(pushAck, "confirmingStatuses");
-        identityKey = pushAck.getString("identityKey");
-        identityObjectIdKey = pushAck.getString("identityObjectIdKey");
-        identityObjectTypeKey = pushAck.getString("identityObjectTypeKey");
-        resultSavedClientOpIdsKey = pushAck.getString("resultSavedClientOpIdsKey");
-        stateSeqKey = pushAck.getString("stateSeqKey");
-        stateSeqOptionalObjectTypes = FolioleCompanionSyncProtocolDefinitions.stringSet(pushAck, "stateSeqOptionalObjectTypes");
-        stateSeqRejectedObjectTypes = FolioleCompanionSyncProtocolDefinitions.stringSet(pushAck, "stateSeqRejectedObjectTypes");
-        statusKey = pushAck.getString("statusKey");
-        statuses = FolioleCompanionSyncProtocolDefinitions.stringSet(pushAck, "statuses");
+        clientOpIdKeys = pushAckArray(definitions, "clientOpIdKeys");
+        confirmingStatuses = pushAckSet(definitions, "confirmingStatuses");
+        identityKey = pushAckString(definitions, "identityKey");
+        identityObjectIdKey = pushAckString(definitions, "identityObjectIdKey");
+        identityObjectTypeKey = pushAckString(definitions, "identityObjectTypeKey");
+        resultSavedClientOpIdsKey = pushAckString(definitions, "resultSavedClientOpIdsKey");
+        stateSeqKey = pushAckString(definitions, "stateSeqKey");
+        stateSeqOptionalObjectTypes = pushAckSet(definitions, "stateSeqOptionalObjectTypes");
+        stateSeqRejectedObjectTypes = pushAckSet(definitions, "stateSeqRejectedObjectTypes");
+        statusKey = pushAckString(definitions, "statusKey");
+        statuses = pushAckSet(definitions, "statuses");
     }
 
     static FolioleCompanionSyncPushAckRules load(Context context) throws Exception {
@@ -91,6 +90,22 @@ final class FolioleCompanionSyncPushAckRules {
 
     private boolean hasStateSeq(JSONObject ack) {
         return ack.has(stateSeqKey) && !ack.isNull(stateSeqKey);
+    }
+
+    private static JSONArray pushAckArray(JSONObject definitions, String key) throws Exception {
+        return pushAck(definitions).getJSONArray(key);
+    }
+
+    private static Set<String> pushAckSet(JSONObject definitions, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringSet(pushAck(definitions), key);
+    }
+
+    private static String pushAckString(JSONObject definitions, String key) throws Exception {
+        return pushAck(definitions).getString(key);
+    }
+
+    private static JSONObject pushAck(JSONObject definitions) throws Exception {
+        return definitions.getJSONObject("pushAck");
     }
 
     private static boolean hasIdentity(String clientOpId, String objectId) {
