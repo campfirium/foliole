@@ -3,7 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { Button, EmptyState, Panel, StatusBadge } from '../shared/ui';
 import { useWorkspaceStore } from '../store/workspaceStore';
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 
 export function App() {
   const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
@@ -12,10 +16,11 @@ export function App() {
   const updateNodeContent = useWorkspaceStore((state) => state.updateNodeContent);
   const setActiveNode = useWorkspaceStore((state) => state.setActiveNode);
   const createQANodeFromSelection = useWorkspaceStore((state) => state.createQANodeFromSelection);
+
   const editorAdapterRef = useRef<EditorAdapter | null>(null);
-  const [reviewMessage, setReviewMessage] = useState('Review area placeholder');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveTimerRef = useRef<number | null>(null);
+  const [reviewMessage, setReviewMessage] = useState('Review area placeholder');
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const editorContent = activeNode?.content ?? '';
@@ -33,6 +38,7 @@ export function App() {
       setSaveStatus('error');
       return;
     }
+
     try {
       setSaveStatus('saving');
       updateNodeContent(activeNode.id, content);
@@ -72,6 +78,7 @@ export function App() {
       '[[...]]',
       editorSnapshot.slice(selection.to)
     ].join('');
+
     const qaNodeId = createQANodeFromSelection(activeNode.id, promptContent, selectedContent);
     if (!qaNodeId) {
       setReviewMessage('Failed to create QA node from current selection.');
@@ -81,33 +88,45 @@ export function App() {
     setReviewMessage(`QA node created: ${qaNodeId}`);
   };
 
-  return (
-    <main className="workspace" aria-label="Foliole workspace">
-      <aside className="panel panel-list" aria-label="Node list panel">
-        <header className="panel-header">
-          <h2>Nodes</h2>
-        </header>
-        <div className="panel-body">
-          {nodeOrder.map((nodeId) => (
-            <NodeRow
-              key={nodeId}
-              isActive={activeNodeId === nodeId}
-              node={nodesById[nodeId]}
-              onSelect={setActiveNode}
-            />
-          ))}
-        </div>
-      </aside>
+  const saveStatusMeta = getSaveStatusMeta(saveStatus);
 
-      <section className="right-stack" aria-label="Editor and review area">
-        <section className="panel panel-editor" aria-label="Editor panel">
-          <header className="panel-header">
-            <h2>Editor</h2>
-            <button onClick={handleCreateQANode} type="button">
-              Create QA Node
-            </button>
-          </header>
-          <div className="panel-body">
+  return (
+    <main aria-label="Foliole workspace" className="workspace-shell">
+      <div className="workspace-grid">
+        <Panel
+          ariaLabel="Node list panel"
+          as="aside"
+          bodyClassName="node-list"
+          className="panel-list"
+          scrollBody
+          title="Nodes"
+        >
+          {nodeOrder.length === 0 ? (
+            <EmptyState description="Create or import a node to start editing." title="No nodes" />
+          ) : (
+            nodeOrder.map((nodeId) => (
+              <NodeRow
+                isActive={activeNodeId === nodeId}
+                key={nodeId}
+                node={nodesById[nodeId]}
+                onSelect={setActiveNode}
+              />
+            ))
+          )}
+        </Panel>
+
+        <section aria-label="Editor and review area" className="panel-stack">
+          <Panel
+            actions={
+              <Button onClick={handleCreateQANode} size="sm" variant="primary">
+                Create QA Node
+              </Button>
+            }
+            ariaLabel="Editor panel"
+            bodyClassName="editor-body"
+            className="panel-editor"
+            title="Editor"
+          >
             <MarkdownEditor
               onChange={handleEditorChange}
               onReady={(adapter) => {
@@ -115,34 +134,31 @@ export function App() {
               }}
               value={editorContent}
             />
-          </div>
-        </section>
+          </Panel>
 
-        <section className="panel panel-review" aria-label="Review panel">
-          <header className="panel-header">
-            <h2>Review</h2>
-          </header>
-          <div className="panel-body">
-            <p>{reviewMessage}</p>
-            <p className="save-status">{getSaveStatusLabel(saveStatus)}</p>
-          </div>
+          <Panel ariaLabel="Review panel" className="panel-review" title="Review">
+            <div className="review-content">
+              <p>{reviewMessage}</p>
+              <StatusBadge label={saveStatusMeta.label} tone={saveStatusMeta.tone} />
+            </div>
+          </Panel>
         </section>
-      </section>
+      </div>
     </main>
   );
 }
 
-function getSaveStatusLabel(status: 'idle' | 'saving' | 'saved' | 'error') {
+function getSaveStatusMeta(status: SaveStatus): { label: string; tone: StatusTone } {
   if (status === 'saving') {
-    return 'Saving...';
+    return { label: 'Saving...', tone: 'info' };
   }
   if (status === 'saved') {
-    return 'Saved.';
+    return { label: 'Saved.', tone: 'success' };
   }
   if (status === 'error') {
-    return 'Save failed.';
+    return { label: 'Save failed.', tone: 'error' };
   }
-  return 'Not saved yet.';
+  return { label: 'Not saved yet.', tone: 'neutral' };
 }
 
 interface NodeRowProps {
@@ -157,13 +173,14 @@ function NodeRow({ isActive, node, onSelect }: NodeRowProps) {
   }
 
   return (
-    <button
+    <Button
+      active={isActive}
       aria-pressed={isActive}
-      className={isActive ? 'node-row node-row-active' : 'node-row'}
+      className="node-row"
       onClick={() => onSelect(node.id)}
-      type="button"
+      variant="list"
     >
       {node.title}
-    </button>
+    </Button>
   );
 }

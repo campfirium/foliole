@@ -1,124 +1,73 @@
-:root {
-  color: #111827;
-  background-color: #eef2f7;
-  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
-}
+@import '../shared/styles/tokens.css';
+@import '../shared/ui/primitives.css';
 
 * {
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
+  background: radial-gradient(circle at 20% 8%, #ffffff, var(--color-bg-canvas));
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
 }
 
-.workspace {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+.workspace-shell {
   min-height: 100dvh;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  padding: var(--layout-shell-padding);
 }
 
-.panel {
-  border: 1px solid #d0d7e2;
-  border-radius: 0.75rem;
-  background: #ffffff;
-  overflow: hidden;
+.workspace-grid {
+  display: grid;
+  gap: var(--layout-column-gap);
+  grid-template-columns: minmax(240px, var(--layout-left-width)) minmax(0, 1fr);
+  height: calc(100dvh - 2 * var(--layout-shell-padding));
 }
 
-.panel-header {
-  align-items: center;
-  border-bottom: 1px solid #e5e9f1;
-  background: #f9fbff;
+.panel-list {
+  min-height: 0;
+}
+
+.node-list {
   display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-}
-
-.panel-header h2 {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.panel-header button {
-  border: 1px solid #c5cedd;
-  border-radius: 0.5rem;
-  background: #ffffff;
-  color: #0f172a;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.35rem 0.6rem;
-}
-
-.panel-header button:hover {
-  background: #f2f5fb;
-}
-
-.panel-body {
-  padding: 1rem;
-}
-
-.panel-body p {
-  margin: 0;
-  color: #4b5563;
-  font-size: 0.95rem;
-}
-
-.save-status {
-  margin-top: 0.6rem;
-  font-size: 0.85rem;
-  color: #64748b;
-}
-
-.node-row + .node-row {
-  margin-top: 0.5rem;
+  flex-direction: column;
+  gap: var(--space-8);
 }
 
 .node-row {
-  border: 1px solid #d7dfeb;
-  border-radius: 0.5rem;
-  background: #ffffff;
-  color: #334155;
-  cursor: pointer;
-  display: block;
-  font-size: 0.9rem;
-  padding: 0.45rem 0.6rem;
+  font-size: var(--font-size-13);
   text-align: left;
-  width: 100%;
 }
 
-.node-row:hover {
-  background: #f3f7fd;
+.panel-stack {
+  display: grid;
+  gap: var(--layout-column-gap);
+  grid-template-rows: minmax(var(--layout-editor-min-height), 2fr) minmax(
+      var(--layout-review-min-height),
+      1fr
+    );
+  min-height: 0;
 }
 
-.node-row-active {
-  color: #0f172a;
-  border-color: #8ea8d8;
-  background: #eaf1fd;
-  font-weight: 600;
+.panel-editor,
+.panel-review {
+  min-height: 0;
 }
 
-.panel-editor .panel-body {
-  height: 100%;
+.editor-body {
   min-height: 0;
   padding: 0;
 }
 
-.right-stack {
-  display: grid;
-  grid-template-rows: minmax(220px, 2fr) minmax(180px, 1fr);
-  gap: 0.75rem;
-}
-
 .markdown-editor-host {
   height: 100%;
-  min-height: 220px;
+  min-height: var(--layout-editor-min-height);
 }
 
 .markdown-editor-host .cm-editor {
@@ -126,17 +75,41 @@ body {
 }
 
 .markdown-editor-host .cm-scroller {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-    'Courier New', monospace;
-  padding: 0.75rem;
+  font-size: var(--font-size-14);
 }
 
-@media (max-width: 900px) {
-  .workspace {
-    grid-template-columns: 1fr;
+.review-content {
+  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.review-content p {
+  margin: 0;
+}
+
+@media (max-width: 1080px) {
+  .workspace-shell {
+    padding: var(--space-8);
   }
 
-  .right-stack {
-    grid-template-rows: minmax(220px, auto) minmax(180px, auto);
+  .workspace-grid {
+    gap: var(--space-8);
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .panel-stack {
+    grid-template-rows: minmax(var(--layout-editor-min-height), auto) minmax(
+        var(--layout-review-min-height),
+        auto
+      );
+  }
+
+  .panel-list,
+  .panel-editor,
+  .panel-review {
+    min-height: 220px;
   }
 }

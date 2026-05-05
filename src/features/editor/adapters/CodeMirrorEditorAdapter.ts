@@ -1,9 +1,10 @@
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorState } from '@codemirror/state';
-import { EditorView, keymap } from '@codemirror/view';
+import { EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
 import type { EditorAdapter, EditorSelection } from './EditorAdapter';
+import { liveMarkdown } from './liveMarkdown';
 
 interface CodeMirrorEditorAdapterOptions {
   initialContent: string;
@@ -25,6 +26,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
+          highlightActiveLine(),
+          liveMarkdown,
           EditorView.updateListener.of((update) => {
             if (!update.docChanged || !this.onChange) {
               return;
