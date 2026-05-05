@@ -95,6 +95,7 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       editorNodeViewState={props.editorNodeViewState}
       isDocumentResizing={props.isDocumentResizing}
       nodeOrder={props.nodeOrder}
+      trashedNodeIds={props.trashedNodeIds}
       nodesById={props.nodesById}
       onAnswerChange={props.onAnswerChange}
       onCloseContextMenu={props.onCloseContextMenu}

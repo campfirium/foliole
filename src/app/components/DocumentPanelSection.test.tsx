@@ -77,6 +77,7 @@ function renderSectionWithProps(overrides: Partial<ComponentProps<typeof Documen
       editorNodeViewState={undefined}
       isDocumentResizing={false}
       nodeOrder={['node-1']}
+      trashedNodeIds={[]}
       nodesById={{ 'node-1': baseNode }}
       onAnswerChange={() => undefined}
       onCloseContextMenu={() => undefined}

@@ -21,6 +21,7 @@ interface DocumentPanelContentProps {
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
   isFolderListView: boolean;
   nodeOrder: string[];
+  trashedNodeIds: string[];
   nodesById: Record<string, Node>;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onNodeContentChange: (nodeId: string, content: string) => void;
@@ -118,6 +119,7 @@ export function DocumentPanelContent({
   bodyProps,
   isFolderListView,
   nodeOrder,
+  trashedNodeIds,
   nodesById,
   onCreatePdfHighlight,
   onNodeContentChange,
@@ -128,8 +130,8 @@ export function DocumentPanelContent({
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const shouldLoadSourceDetails = Boolean(activeNodeId && activeNode && !isVirtualNode(activeNode) && !isFolderListView);
   const sourceDetails = useNodeSourceDetails(shouldLoadSourceDetails ? activeNodeId : null);
-  const pdfDocumentSurface = resolvePdfDocumentSurface(sourceDetails.isLoading, sourceDetails.value);
-  const pdfHighlightLocators = activeNodeId ? collectPdfHighlightLocators(activeNodeId, nodeOrder, nodesById) : [];
+  const pdfDocumentSurface = resolvePdfDocumentSurface(activeNodeId, sourceDetails.isLoading, sourceDetails.value);
+  const pdfHighlightLocators = activeNodeId ? collectPdfHighlightLocators(activeNodeId, nodeOrder, nodesById, trashedNodeIds) : [];
 
   const pdfCache = (
     <PdfDocumentSurfaceCache

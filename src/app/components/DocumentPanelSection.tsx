@@ -57,6 +57,7 @@ interface DocumentPanelSectionProps {
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
   nodeOrder: string[];
+  trashedNodeIds: string[];
   nodesById: Record<string, Node>;
 }
 function resolveInboxEmptyState(activeNode: Node | undefined) {
@@ -228,6 +229,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           bodyProps={bodyProps}
           isFolderListView={isFolderListView}
           nodeOrder={props.nodeOrder}
+          trashedNodeIds={props.trashedNodeIds}
           nodesById={props.nodesById}
           onCreatePdfHighlight={props.onCreatePdfHighlight}
           onNodeContentChange={props.onNodeContentChange}

@@ -44,13 +44,18 @@ function collectOrderedSubtreeNodeIds(
 export function collectPdfHighlightLocators(
   rootNodeId: string,
   nodeOrder: string[],
-  nodesById: Record<string, Node>
+  nodesById: Record<string, Node>,
+  trashedNodeIds: string[] = []
 ): PdfHighlightLocator[] {
+  const trashedNodeIdSet = new Set(trashedNodeIds);
   const subtreeNodeIds = collectOrderedSubtreeNodeIds(rootNodeId, nodeOrder, nodesById);
   const seenLocatorIds = new Set<string>();
   const locators: PdfHighlightLocator[] = [];
 
   for (const nodeId of subtreeNodeIds) {
+    if (trashedNodeIdSet.has(nodeId)) {
+      continue;
+    }
     const node = nodesById[nodeId];
     const anchor = node?.anchorLink;
     if (!node || anchor?.kind !== 'highlight' || !anchor.id || !anchor.locator) {

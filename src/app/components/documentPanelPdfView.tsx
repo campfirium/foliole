@@ -27,10 +27,14 @@ function resolvePdfSourceHint(details: RuntimeNodeSourceDetails) {
 }
 
 export function resolvePdfDocumentSurface(
+  activeNodeId: string | null,
   isLoading: boolean,
   details: RuntimeNodeSourceDetails | null
 ): { sourceHint: string | null; state: PdfDocumentSurfaceState } | null {
   if (!isPdfSourceDetails(details) || !details || details.inheritedFromParent) {
+    return null;
+  }
+  if (activeNodeId !== details.sourceNodeId) {
     return null;
   }
 

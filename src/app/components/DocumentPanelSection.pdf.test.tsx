@@ -27,9 +27,7 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
   })
 }));
 
-const { useNodeSourceDetails } = vi.hoisted(() => ({
-  useNodeSourceDetails: vi.fn()
-}));
+const { useNodeSourceDetails } = vi.hoisted(() => ({ useNodeSourceDetails: vi.fn() }));
 
 vi.mock('./useNodeSourceDetails', () => ({
   useNodeSourceDetails
@@ -75,6 +73,7 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   editorNodeViewState: undefined,
   isDocumentResizing: false,
   nodeOrder: ['node-1'],
+  trashedNodeIds: [],
   nodesById: { 'node-1': baseNode },
   onAnswerChange: () => undefined,
   onCloseContextMenu: () => undefined,
