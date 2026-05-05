@@ -17,9 +17,15 @@ function normalizeKeepDirectoryPath(path: string) {
   return path.trim();
 }
 
+function resolveSourceHighlightPolicy(source: ImportManagerSourceDraft, sourceType: 'generic' | 'readwise'): ImportHighlightPolicy {
+  if (sourceType === 'generic' && source.highlightMode === 'merged') {
+    return 'adopt';
+  }
+  return 'reference_only';
+}
+
 function toKeepImportConfig(
   source: ImportManagerSourceDraft,
-  highlightPolicy: ImportHighlightPolicy,
   sourceType: 'generic' | 'readwise'
 ): KeepImportSourceConfig | null {
   const directoryPath = normalizeKeepDirectoryPath(source.primaryPath);
@@ -34,7 +40,7 @@ function toKeepImportConfig(
   return {
     adapterConfigId: source.id,
     directoryPath,
-    highlightPolicy,
+    highlightPolicy: resolveSourceHighlightPolicy(source, sourceType),
     sourceId: source.id,
     sourceType,
     watchPaths
@@ -44,10 +50,10 @@ function toKeepImportConfig(
 export function resolveKeepImportConfigs(settings: ImportManagerSettings): KeepImportSourceConfig[] {
   return [
     ...settings.sources
-      .map((source) => toKeepImportConfig(source, 'reference_only', 'generic'))
+      .map((source) => toKeepImportConfig(source, 'generic'))
       .filter((config): config is KeepImportSourceConfig => config !== null),
     ...settings.readwiseSources
-      .map((source) => toKeepImportConfig(source, 'reference_only', 'readwise'))
+      .map((source) => toKeepImportConfig(source, 'readwise'))
       .filter((config): config is KeepImportSourceConfig => config !== null)
   ];
 }

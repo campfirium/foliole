@@ -1,5 +1,9 @@
+import type { NativeReadwiseDetectionSample } from '../../../lib/platform/nativeReadwiseContract';
+
 export interface RuntimeKeepImportPreviewEntry {
   detail: string | null;
+  detectedHighlightCount: number;
+  highlightSamples: NativeReadwiseDetectionSample[];
   sourcePath: string;
   status: 'blocked_deleted' | 'failed' | 'new' | 'unchanged' | 'updated';
 }
@@ -18,6 +22,34 @@ export interface RuntimeKeepImportPreviewResult {
 
 function isKeepImportStatus(value: unknown): value is RuntimeKeepImportPreviewEntry['status'] {
   return value === 'new' || value === 'updated' || value === 'unchanged' || value === 'blocked_deleted' || value === 'failed';
+}
+
+function toRuntimeHighlightSamples(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((sample) => {
+      if (!sample || typeof sample !== 'object' || Array.isArray(sample)) {
+        return null;
+      }
+      const record = sample as Record<string, unknown>;
+      if (
+        typeof record.excerpt !== 'string' ||
+        typeof record.highlightText !== 'string' ||
+        typeof record.matched !== 'boolean' ||
+        typeof record.sourceName !== 'string'
+      ) {
+        return null;
+      }
+      return {
+        excerpt: record.excerpt,
+        highlightText: record.highlightText,
+        matched: record.matched,
+        sourceName: record.sourceName
+      } satisfies NativeReadwiseDetectionSample;
+    })
+    .filter((sample): sample is NativeReadwiseDetectionSample => sample !== null);
 }
 
 export function toRuntimeKeepImportPreviewResult(value: unknown): RuntimeKeepImportPreviewResult | null {
@@ -52,6 +84,8 @@ export function toRuntimeKeepImportPreviewResult(value: unknown): RuntimeKeepImp
     }
     return {
       detail: record.detail,
+      detectedHighlightCount: typeof record.detected_highlight_count === 'number' ? record.detected_highlight_count : 0,
+      highlightSamples: toRuntimeHighlightSamples(record.highlight_samples),
       sourcePath: record.source_path,
       status: record.status
     } satisfies RuntimeKeepImportPreviewEntry;

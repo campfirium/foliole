@@ -70,7 +70,7 @@ function resolveRuleConfig(ruleId: string) {
   return {
     config: {
       directoryPath: genericRule.primaryPath.trim(),
-      highlightPolicy: 'reference_only',
+      highlightPolicy: genericRule.highlightMode === 'merged' ? 'adopt' : 'reference_only',
       ruleId,
       sourceType: 'generic'
     } satisfies KeepImportRuleConfig,

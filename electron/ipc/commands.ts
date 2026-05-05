@@ -23,6 +23,14 @@ interface InvokeContext {
   sender?: WebContents;
 }
 
+function resolveNativeHighlightPolicy(value: unknown) {
+  return value === 'adopt' ? 'adopt' : 'reference_only';
+}
+
+function resolveKeepImportSourceType(value: unknown) {
+  return value === 'readwise' ? 'readwise' : 'generic';
+}
+
 function resolveTargetWindow(context?: InvokeContext) {
   if (context?.sender) {
     const window = BrowserWindow.fromWebContents(context.sender);
@@ -108,8 +116,9 @@ async function handleImportCommand(request: InvokeRequest, context?: InvokeConte
   if (isTypedRequest(request, NATIVE_COMMANDS.previewKeepImportRule)) {
     return previewKeepImportRule({
       directoryPath: asString(request.args.directory_path, 'directory_path'),
-      highlightPolicy: 'reference_only',
-      ruleId: asString(request.args.rule_id, 'rule_id')
+      highlightPolicy: resolveNativeHighlightPolicy(request.args.highlight_policy),
+      ruleId: asString(request.args.rule_id, 'rule_id'),
+      sourceType: resolveKeepImportSourceType(request.args.source_type)
     });
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.selectImportTextFile)) {

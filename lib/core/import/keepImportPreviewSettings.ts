@@ -1,5 +1,9 @@
+import type { NativeReadwiseDetectionSample } from '../../platform/nativeReadwiseContract.js';
+
 export interface KeepImportPreviewSample {
   detail: string | null;
+  detectedHighlightCount: number;
+  highlightSamples: NativeReadwiseDetectionSample[];
   sourcePath: string;
   status: 'blocked_deleted' | 'failed' | 'new' | 'unchanged' | 'updated';
 }
@@ -19,6 +23,33 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+function normalizeHighlightSamples(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((sample) => {
+      if (!isRecord(sample)) {
+        return null;
+      }
+      if (
+        typeof sample.excerpt !== 'string' ||
+        typeof sample.highlightText !== 'string' ||
+        typeof sample.matched !== 'boolean' ||
+        typeof sample.sourceName !== 'string'
+      ) {
+        return null;
+      }
+      return {
+        excerpt: sample.excerpt,
+        highlightText: sample.highlightText,
+        matched: sample.matched,
+        sourceName: sample.sourceName
+      } satisfies NativeReadwiseDetectionSample;
+    })
+    .filter((sample): sample is NativeReadwiseDetectionSample => sample !== null);
+}
+
 function normalizeKeepImportPreviewSample(value: unknown): KeepImportPreviewSample | null {
   if (!isRecord(value)) {
     return null;
@@ -36,6 +67,8 @@ function normalizeKeepImportPreviewSample(value: unknown): KeepImportPreviewSamp
   }
   return {
     detail: value.detail,
+    detectedHighlightCount: typeof value.detectedHighlightCount === 'number' ? value.detectedHighlightCount : 0,
+    highlightSamples: normalizeHighlightSamples(value.highlightSamples),
     sourcePath: value.sourcePath,
     status: value.status
   };

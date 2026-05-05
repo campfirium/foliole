@@ -160,7 +160,9 @@ export async function runRuntimeDirectoryImport(): Promise<RuntimeDirectoryImpor
 
 export async function previewRuntimeKeepImportRule(args: {
   directoryPath: string;
+  highlightPolicy?: ImportHighlightPolicy;
   ruleId: string;
+  sourceType?: 'generic' | 'readwise';
 }): Promise<RuntimeKeepImportPreviewResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -171,6 +173,8 @@ export async function previewRuntimeKeepImportRule(args: {
     const result = toRuntimeKeepImportPreviewResult(
       await runtimeInvoke(NATIVE_COMMANDS.previewKeepImportRule, {
         directory_path: args.directoryPath,
+        highlight_policy: args.highlightPolicy,
+        source_type: args.sourceType,
         rule_id: args.ruleId
       })
     );

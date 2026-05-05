@@ -36,6 +36,8 @@ function toKeepPreviewSummary(result: NonNullable<Awaited<ReturnType<typeof prev
     previewedAt: result.previewedAt,
     samples: result.entries.slice(0, 6).map((entry) => ({
       detail: entry.detail,
+      detectedHighlightCount: entry.detectedHighlightCount,
+      highlightSamples: entry.highlightSamples,
       sourcePath: entry.sourcePath,
       status: entry.status
     })),
@@ -193,7 +195,9 @@ function createKeepImportActions(settings: ImportManagerSettings, setSettings: S
       }
       const result = await previewRuntimeKeepImportRule({
         directoryPath: source.primaryPath,
-        ruleId: source.id
+        highlightPolicy: scope === 'sources' && source.highlightMode === 'merged' ? 'adopt' : 'reference_only',
+        ruleId: source.id,
+        sourceType: scope === 'readwiseSources' ? 'readwise' : 'generic'
       });
       if (!result) {
         return null;

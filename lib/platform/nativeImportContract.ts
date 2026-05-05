@@ -1,3 +1,5 @@
+import type { NativeReadwiseDetectionSample } from './nativeReadwiseContract.js';
+
 export type NativeImportHighlightPolicy = 'adopt' | 'reference_only';
 
 export type NativeDirectoryImportSourceAdapter = 'external_directory' | 'foliole_managed_inbox_folder';
@@ -18,11 +20,15 @@ export interface NativeDirectoryImportArgs extends NativeTextImportArgs {
 
 export interface NativeKeepImportPreviewArgs {
   directory_path: string;
+  highlight_policy?: NativeImportHighlightPolicy;
   rule_id: string;
+  source_type?: 'generic' | 'readwise';
 }
 
 export interface NativeKeepImportPreviewEntry {
   detail: string | null;
+  detected_highlight_count?: number;
+  highlight_samples?: NativeReadwiseDetectionSample[];
   source_path: string;
   status: 'blocked_deleted' | 'failed' | 'new' | 'unchanged' | 'updated';
 }

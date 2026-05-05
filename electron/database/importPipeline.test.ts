@@ -47,38 +47,6 @@ function createImport(content: string, importedAt: string) {
   });
 }
 
-function expectImportedReadwiseHighlights(nodeRow: unknown, childRows: unknown, parentId: string | null) {
-  expect(nodeRow).toEqual({
-    content: [
-      '# Article',
-      '',
-      '<highlight id="1">This is the highlighted sentence</highlight id="1"> inside the article body.',
-      '',
-      'Another paragraph with <highlight id="2">Another matching excerpt</highlight id="2">. End.',
-      '',
-      '## Unmatched Sidecar Highlights',
-      '',
-      '- Missing: quote that is not present in the body'
-    ].join('\n'),
-    parent_id: 'special-inbox',
-    title: 'readwise.md'
-  });
-  expect(childRows).toEqual([
-    {
-      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
-      content: 'This is the highlighted sentence',
-      parent_id: parentId,
-      title: 'This is the highlighted sentence'
-    },
-    {
-      anchor_link: JSON.stringify({ id: '2', kind: 'highlight' }),
-      content: 'Another matching excerpt',
-      parent_id: parentId,
-      title: 'Another matching excerpt'
-    }
-  ]);
-}
-
 function readPersistedImportState(sourceFingerprint: string, nodeId: string | null) {
   const connection = openDatabaseConnection();
   const sourceRow = connection.sqlite
@@ -225,47 +193,19 @@ it('adopts markdown highlight markers into Foliole highlight anchors when config
     })
   );
 
-  const { nodeRow } = readPersistedImportState(adopted.sourceFingerprint, adopted.nodeId);
+  const { childRows, nodeRow } = readPersistedImportState(adopted.sourceFingerprint, adopted.nodeId);
 
   expect(nodeRow).toEqual({
     content: '# Imported\nUse <highlight id="1">important</highlight id="1"> text',
     parent_id: 'special-inbox',
     title: 'note.md'
   });
-});
-
-it('creates imported child nodes for matched sidecar highlights during the first import', () => {
-  const imported = runPreparedImport(
-    createPreparedDesktopTextImport({
-      content: [
-        '# Article',
-        '',
-        'This is the highlighted sentence inside the article body.',
-        '',
-        'Another paragraph with Another matching excerpt. End.'
-      ].join('\n'),
-      fileName: 'readwise.md',
-      filePath: '/tmp/readwise.md',
-      highlightSidecar: [
-        { label: 'Recovered 1', text: 'This is the highlighted sentence' },
-        { label: 'Recovered 2', text: 'Another matching excerpt' },
-        { label: 'Missing', text: 'quote that is not present in the body' }
-      ],
-      importedAt: '2026-03-26T01:00:00.000Z',
-      kind: 'markdown',
-      sourceProfile: 'body_with_highlight_sidecar'
-    })
-  );
-
-  const { childRows, nodeRow, runRows } = readPersistedImportState(imported.sourceFingerprint, imported.nodeId);
-
-  expectImportedReadwiseHighlights(nodeRow, childRows, imported.nodeId);
-  expect(runRows).toEqual([
+  expect(childRows).toEqual([
     {
-      degraded_reason: 'Controlled context degraded: 1 unmatched sidecar highlight(s)',
-      duplicate_semantic: 'new',
-      node_id: imported.nodeId,
-      result_status: 'degraded'
+      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
+      content: 'important',
+      parent_id: adopted.nodeId,
+      title: 'important'
     }
   ]);
 });

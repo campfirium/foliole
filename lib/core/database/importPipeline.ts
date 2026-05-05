@@ -1,10 +1,10 @@
-import { randomUUID } from 'node:crypto';
-
 import type { PersistedImportRecord, PreparedImportRecord } from '../import/contract.js';
 
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
-import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
+import { applyImportedHighlightAnchors, collectAnchoredImportedHighlights } from './importHighlightAnchors.js';
+import { readExistingChildHighlights, replaceImportedHighlightNodes } from './importPipelineHighlightNodes.js';
+import { updateExistingNode, writeNewNode } from './importPipelineNodes.js';
 import {
   buildImportRecord,
   resolveDuplicateSemantic,
@@ -31,16 +31,6 @@ interface ExistingNodeRow {
   position: number | null;
 }
 
-interface ExistingChildHighlightRow {
-  [column: string]: unknown;
-  content: string;
-}
-
-interface ExistingInboxRow {
-  [column: string]: unknown;
-  id: string;
-}
-
 function readExistingSource(driver: DatabaseDriver, sourceFingerprint: string) {
   return (
     driver.queryOne<ImportSourceRow>(
@@ -64,15 +54,6 @@ function readExistingNode(driver: DatabaseDriver, nodeId: string) {
   );
 }
 
-function readExistingChildHighlights(driver: DatabaseDriver, parentNodeId: string) {
-  return driver.queryAll<ExistingChildHighlightRow>(
-    `SELECT content
-     FROM nodes
-     WHERE parent_id = ? AND deleted_at IS NULL`,
-    [parentNodeId]
-  );
-}
-
 function readNextNodePosition(driver: DatabaseDriver) {
   const row = driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
   return typeof row?.position === 'number' ? row.position + 1 : 0;
@@ -91,57 +72,6 @@ function readInboxTopPosition(driver: DatabaseDriver, ignoredNodeId?: string) {
   return typeof row?.position === 'number' ? row.position - 1 : readNextNodePosition(driver);
 }
 
-function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
-  const existingInbox = driver.queryOne<ExistingInboxRow>('SELECT id FROM nodes WHERE id = ?', [INBOX_NODE_ID]);
-  if (existingInbox) {
-    return;
-  }
-  driver.execute(
-    `INSERT INTO nodes (
-       id, parent_id, priority, desired_retention, title, is_title_manual,
-       content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, NULL, NULL, NULL, 'Inbox', 1, '', NULL, NULL, ?, ?, NULL)`,
-    [INBOX_NODE_ID, importedAt, importedAt]
-  );
-}
-
-function writeNewNode(driver: DatabaseDriver, record: PersistedImportRecord, content: string) {
-  ensureInboxNode(driver, record.importedAt);
-  const nodeId = `node-${randomUUID()}`;
-  const position = readInboxTopPosition(driver);
-  driver.execute(
-    `INSERT INTO nodes (
-       id, parent_id, priority, desired_retention, title, is_title_manual,
-       content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, NULL, NULL, ?, 1, ?, NULL, NULL, ?, ?, NULL)`,
-    [nodeId, INBOX_NODE_ID, record.sourceName, content, record.importedAt, record.importedAt]
-  );
-  driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [nodeId, position]);
-  return nodeId;
-}
-
-function updateExistingNode(driver: DatabaseDriver, existingNode: ExistingNodeRow, record: PersistedImportRecord, content: string) {
-  driver.execute(
-    `UPDATE nodes
-     SET title = ?, is_title_manual = 1, content = ?, updated_at = ?, deleted_at = NULL
-     WHERE id = ?`,
-    [record.sourceName, content, record.importedAt, existingNode.id]
-  );
-  if (existingNode.parent_id === INBOX_NODE_ID) {
-    const nextInboxTopPosition = readInboxTopPosition(driver, existingNode.id);
-    if (typeof existingNode.position === 'number') {
-      driver.execute('UPDATE node_order SET position = ? WHERE node_id = ?', [nextInboxTopPosition, existingNode.id]);
-    } else {
-      driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [existingNode.id, nextInboxTopPosition]);
-    }
-    return existingNode.id;
-  }
-  if (typeof existingNode.position !== 'number') {
-    driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [existingNode.id, readNextNodePosition(driver)]);
-  }
-  return existingNode.id;
-}
-
 function updateExistingReadwiseNode(
   driver: DatabaseDriver,
   existingNode: ExistingNodeRow,
@@ -153,7 +83,14 @@ function updateExistingReadwiseNode(
     existingContent: existingNode.content,
     prepared
   });
-  const nodeId = updateExistingNode(driver, existingNode, record, readwiseUpdate.content);
+  const nodeId = updateExistingNode({
+    content: readwiseUpdate.content,
+    driver,
+    existingNode,
+    nextInboxTopPosition: readInboxTopPosition(driver, existingNode.id),
+    nextNodePosition: readNextNodePosition(driver),
+    record
+  });
   if (readwiseUpdate.highlights.length > 0) {
     insertImportedHighlightNodes({
       driver,
@@ -166,60 +103,124 @@ function updateExistingReadwiseNode(
   return nodeId;
 }
 
-export function runPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord): PersistedImportRecord {
-  return driver.transaction(() => {
-    const existingSource = readExistingSource(driver, prepared.sourceFingerprint);
-    const duplicateSemantic = resolveDuplicateSemantic(existingSource, prepared.contentFingerprint);
-    const baseRecord = buildImportRecord(prepared, prepared.degradedReason ? 'degraded' : 'imported', duplicateSemantic, {
+function persistImportedHighlightNodes(input: {
+  driver: DatabaseDriver;
+  duplicateSemantic: PersistedImportRecord['duplicateSemantic'];
+  importedAt: string;
+  nodeId: string;
+  prepared: PreparedImportRecord;
+  anchoredHighlights: ReturnType<typeof collectAnchoredImportedHighlights>;
+  matchedAnchoredHighlights: ReturnType<typeof applyImportedHighlightAnchors>['highlights'];
+}) {
+  if (input.prepared.sourceProfile !== 'body_with_highlight_sidecar') {
+    replaceImportedHighlightNodes({
+      driver: input.driver,
+      highlights: input.anchoredHighlights,
+      importedAt: input.importedAt,
+      parentNodeId: input.nodeId,
+      startPosition: readNextNodePosition(input.driver)
+    });
+    return;
+  }
+  if (input.duplicateSemantic !== 'new') {
+    return;
+  }
+  insertImportedHighlightNodes({
+    driver: input.driver,
+    highlights: input.matchedAnchoredHighlights,
+    importedAt: input.importedAt,
+    parentNodeId: input.nodeId,
+    startPosition: readNextNodePosition(input.driver)
+  });
+}
+
+function finalizeImportRecord(driver: DatabaseDriver, record: PersistedImportRecord) {
+  writeImportSource(driver, record);
+  writeImportEvent(driver, record);
+  return record;
+}
+
+function buildBaseImportRecord(
+  existingSource: ImportSourceRow | null,
+  prepared: PreparedImportRecord
+): { baseRecord: PersistedImportRecord; duplicateSemantic: PersistedImportRecord['duplicateSemantic'] } {
+  const duplicateSemantic = resolveDuplicateSemantic(existingSource, prepared.contentFingerprint);
+  return {
+    baseRecord: buildImportRecord(prepared, prepared.degradedReason ? 'degraded' : 'imported', duplicateSemantic, {
       degradedReason: prepared.degradedReason,
       failureReason: null,
       nodeId: existingSource?.latest_node_id ?? null
-    });
+    }),
+    duplicateSemantic
+  };
+}
 
-    if (duplicateSemantic === 'duplicate') {
-      writeImportSource(driver, baseRecord);
-      writeImportEvent(driver, baseRecord);
-      return baseRecord;
+function resolvePreparedNodeId(input: {
+  anchoredContent: string;
+  baseRecord: PersistedImportRecord;
+  driver: DatabaseDriver;
+  duplicateSemantic: PersistedImportRecord['duplicateSemantic'];
+  existingNode: ExistingNodeRow | null;
+  prepared: PreparedImportRecord;
+}) {
+  if (input.duplicateSemantic === 'updated' && input.existingNode && !input.existingNode.deleted_at) {
+    if (input.prepared.sourceProfile === 'body_with_highlight_sidecar') {
+      return updateExistingReadwiseNode(input.driver, input.existingNode, input.prepared, input.baseRecord);
     }
-    if (prepared.content.trim().length === 0) {
-      const degradedRecord: PersistedImportRecord = {
-        ...baseRecord,
-        degradedReason: prepared.degradedReason ?? 'empty_content',
-        resultStatus: 'degraded'
-      };
-      writeImportSource(driver, degradedRecord);
-      writeImportEvent(driver, degradedRecord);
-      return degradedRecord;
-    }
-
-    const anchoredImport = applyImportedHighlightAnchors({
-      content: prepared.content,
-      highlights: prepared.matchedHighlights
+    return updateExistingNode({
+      content: input.anchoredContent,
+      driver: input.driver,
+      existingNode: input.existingNode,
+      nextInboxTopPosition: readInboxTopPosition(input.driver, input.existingNode.id),
+      nextNodePosition: readNextNodePosition(input.driver),
+      record: input.baseRecord
     });
-    const existingNode = existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null;
-    const nodeId =
-      duplicateSemantic === 'updated' &&
-      existingNode &&
-      !existingNode.deleted_at &&
-      prepared.sourceProfile === 'body_with_highlight_sidecar'
-        ? updateExistingReadwiseNode(driver, existingNode, prepared, baseRecord)
-        : duplicateSemantic === 'updated' && existingNode && !existingNode.deleted_at
-          ? updateExistingNode(driver, existingNode, baseRecord, anchoredImport.content)
-        : writeNewNode(driver, baseRecord, anchoredImport.content);
-    if (duplicateSemantic === 'new') {
-      insertImportedHighlightNodes({
-        driver,
-        highlights: anchoredImport.highlights,
-        importedAt: baseRecord.importedAt,
-        parentNodeId: nodeId,
-        startPosition: readNextNodePosition(driver)
-      });
-    }
-    const persistedRecord = { ...baseRecord, nodeId };
-    writeImportSource(driver, persistedRecord);
-    writeImportEvent(driver, persistedRecord);
-    return persistedRecord;
+  }
+  return writeNewNode({
+    content: input.anchoredContent,
+    driver: input.driver,
+    importedAt: input.baseRecord.importedAt,
+    nextInboxTopPosition: readInboxTopPosition(input.driver),
+    record: input.baseRecord
   });
+}
+
+function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord) {
+  const existingSource = readExistingSource(driver, prepared.sourceFingerprint);
+  const { baseRecord, duplicateSemantic } = buildBaseImportRecord(existingSource, prepared);
+  if (duplicateSemantic === 'duplicate') {
+    return finalizeImportRecord(driver, baseRecord);
+  }
+  if (prepared.content.trim().length === 0) {
+    return finalizeImportRecord(driver, {
+      ...baseRecord,
+      degradedReason: prepared.degradedReason ?? 'empty_content',
+      resultStatus: 'degraded'
+    });
+  }
+  const anchoredImport = applyImportedHighlightAnchors({ content: prepared.content, highlights: prepared.matchedHighlights });
+  const nodeId = resolvePreparedNodeId({
+    anchoredContent: anchoredImport.content,
+    baseRecord,
+    driver,
+    duplicateSemantic,
+    existingNode: existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null,
+    prepared
+  });
+  persistImportedHighlightNodes({
+    anchoredHighlights: collectAnchoredImportedHighlights(anchoredImport.content),
+    driver,
+    duplicateSemantic,
+    importedAt: baseRecord.importedAt,
+    matchedAnchoredHighlights: anchoredImport.highlights,
+    nodeId,
+    prepared
+  });
+  return finalizeImportRecord(driver, { ...baseRecord, nodeId });
+}
+
+export function runPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord): PersistedImportRecord {
+  return driver.transaction(() => performPreparedImport(driver, prepared));
 }
 
 export function recordPreparedImportFailure(

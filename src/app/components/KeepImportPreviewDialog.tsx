@@ -1,6 +1,8 @@
 import type { KeepImportPreviewSummary } from '../../../lib/core/import/importManagerSettings';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
+import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
+
 function formatSummary(preview: KeepImportPreviewSummary) {
   const items = [`${preview.newCount} new`, `${preview.updatedCount} updated`, `${preview.unchangedCount} unchanged`];
   if (preview.blockedCount > 0) {
@@ -14,6 +16,56 @@ function formatSummary(preview: KeepImportPreviewSummary) {
 
 function formatEntryDetail(detail: string | null) {
   return detail?.trim() || 'Ready to process when enabled.';
+}
+
+function formatHighlightSummary(count: number, sampleCount: number) {
+  if (count <= 0) {
+    return null;
+  }
+  return `${sampleCount}/${count} highlight sample${sampleCount === 1 ? '' : 's'} shown`;
+}
+
+function KeepImportPreviewEntryCard(props: { sample: KeepImportPreviewSummary['samples'][number] }) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-bg-elevated px-3 py-2">
+      <p className="truncate text-sm font-medium text-foreground">{props.sample.sourcePath}</p>
+      <p className="mt-1 text-xs text-foreground/58">{formatEntryDetail(props.sample.detail)}</p>
+      {props.sample.highlightSamples.length > 0 ? (
+        <div className="mt-3">
+          <p className="mb-2 text-xs text-foreground/58">
+            {formatHighlightSummary(props.sample.detectedHighlightCount, props.sample.highlightSamples.length)}
+          </p>
+          <ReadwisePreviewSampleList
+            hasGap={props.sample.detectedHighlightCount > props.sample.highlightSamples.length}
+            samples={props.sample.highlightSamples}
+            sourceName={props.sample.sourcePath}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function KeepImportPreviewContent(props: { preview: KeepImportPreviewSummary | null }) {
+  if (!props.preview) {
+    return <p className="text-sm text-foreground/60">No preview result available.</p>;
+  }
+
+  return (
+    <>
+      <div className="rounded-xl border border-border/70 bg-bg-elevated px-4 py-3">
+        <p className="text-sm font-medium text-foreground">{formatSummary(props.preview)}</p>
+        <p className="mt-1 text-xs text-foreground/55">
+          Found {props.preview.discoveredCount} file{props.preview.discoveredCount === 1 ? '' : 's'} in this preview.
+        </p>
+      </div>
+      <div className="mt-4 space-y-2">
+        {props.preview.samples.map((sample) => (
+          <KeepImportPreviewEntryCard key={`${sample.status}-${sample.sourcePath}`} sample={sample} />
+        ))}
+      </div>
+    </>
+  );
 }
 
 export function KeepImportPreviewDialog(props: {
@@ -37,26 +89,7 @@ export function KeepImportPreviewDialog(props: {
               <p className="mt-1 text-sm text-foreground/62">{props.sourceLabel}</p>
             </header>
             <div className="px-6 py-5">
-              {props.preview ? (
-                <>
-                  <div className="rounded-xl border border-border/70 bg-bg-elevated px-4 py-3">
-                    <p className="text-sm font-medium text-foreground">{formatSummary(props.preview)}</p>
-                    <p className="mt-1 text-xs text-foreground/55">
-                      Found {props.preview.discoveredCount} file{props.preview.discoveredCount === 1 ? '' : 's'} in this preview.
-                    </p>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {props.preview.samples.map((sample) => (
-                      <div className="rounded-lg border border-border/60 bg-bg-elevated px-3 py-2" key={`${sample.status}-${sample.sourcePath}`}>
-                        <p className="truncate text-sm font-medium text-foreground">{sample.sourcePath}</p>
-                        <p className="mt-1 text-xs text-foreground/58">{formatEntryDetail(sample.detail)}</p>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-foreground/60">No preview result available.</p>
-              )}
+              <KeepImportPreviewContent preview={props.preview} />
             </div>
             <footer className="flex items-center justify-end gap-2 border-t border-border/60 px-6 py-4">
               <AppButton onClick={() => props.onOpenChange(false)} variant="ghost">

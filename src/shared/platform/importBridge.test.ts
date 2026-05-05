@@ -231,6 +231,7 @@ it('forwards highlight policy configuration to the runtime import bridge', async
   expect(invoke).toHaveBeenCalledWith('run_text_file_import', { highlight_policy: 'adopt' });
 });
 
+
 it('returns null when the native import payload is malformed', async () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   const invoke = vi.fn().mockResolvedValue({ file_name: 'note.md' });

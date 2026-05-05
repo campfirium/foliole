@@ -9,9 +9,28 @@ vi.mock('../../shared/platform/importBridge', () => ({
     blockedCount: 1,
     discoveredCount: 3,
     entries: [
-      { detail: 'New file will be imported when enabled.', sourcePath: 'new.md', status: 'new' },
-      { detail: 'No file changes detected since the last keep scan.', sourcePath: 'same.md', status: 'unchanged' },
-      { detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.', sourcePath: 'blocked.md', status: 'blocked_deleted' }
+      {
+        detail: 'New file will be imported when enabled.',
+        detectedHighlightCount: 1,
+        highlightSamples: [
+          {
+            excerpt: 'Before important after',
+            highlightText: 'important',
+            matched: true,
+            sourceName: 'new.md'
+          }
+        ],
+        sourcePath: 'new.md',
+        status: 'new'
+      },
+      { detail: 'No file changes detected since the last keep scan.', detectedHighlightCount: 0, highlightSamples: [], sourcePath: 'same.md', status: 'unchanged' },
+      {
+        detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
+        detectedHighlightCount: 0,
+        highlightSamples: [],
+        sourcePath: 'blocked.md',
+        status: 'blocked_deleted'
+      }
     ],
     failedCount: 0,
     newCount: 1,
@@ -118,6 +137,7 @@ it('opens a preview dialog and only enables after confirmation', async () => {
   });
   expect(screen.getByText('1 new · 1 updated · 1 unchanged · 1 blocked')).toBeInTheDocument();
   expect(screen.getByText('blocked.md')).toBeInTheDocument();
+  expect(screen.getByText('important', { selector: 'mark' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
 
   await waitFor(() => {

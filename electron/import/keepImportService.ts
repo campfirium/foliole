@@ -1,4 +1,5 @@
 import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
+import { buildImportedHighlightPreview } from '../../lib/core/import/importedHighlightPreview.js';
 import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeImportContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
@@ -17,7 +18,9 @@ import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
 type KeepImportPreviewStatus = NativeKeepImportPreviewResult['entries'][number]['status'];
 
 interface KeepImportPreviewEntry {
+  detectedHighlightCount: number;
   detail: string | null;
+  highlightSamples: NativeKeepImportPreviewResult['entries'][number]['highlight_samples'];
   sourcePath: string;
   status: KeepImportPreviewStatus;
 }
@@ -71,7 +74,9 @@ async function classifySource(
   const { blocked, existingItem } = isBlockedByDeletedNode(config.ruleId, sourcePath);
   if (blocked) {
     return {
+      detectedHighlightCount: 0,
       detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
+      highlightSamples: [],
       sourcePath,
       status: 'blocked_deleted'
     };
@@ -79,23 +84,31 @@ async function classifySource(
   const primaryChanged = hasPrimarySourceChanged(existingItem, sourceSignature);
   const highlightChanged = config.sourceType === 'readwise' ? hasHighlightSourceChanged(existingItem, sourceSignature) : false;
   if (existingItem && !primaryChanged && !highlightChanged) {
-    return { detail: 'No file changes detected since the last keep scan.', sourcePath, status: 'unchanged' };
+    return { detail: 'No file changes detected since the last keep scan.', detectedHighlightCount: 0, highlightSamples: [], sourcePath, status: 'unchanged' };
   }
   try {
-    await loadPreparedKeepImportRecord(config, source, new Date().toISOString());
+    const prepared = await loadPreparedKeepImportRecord(config, source, new Date().toISOString());
+    const highlightPreview = buildImportedHighlightPreview({
+      content: prepared.content,
+      sourceName: sourcePath
+    });
     return {
+      detectedHighlightCount: highlightPreview.detectedHighlightCount,
       detail:
         !existingItem
           ? 'New file will be imported when enabled.'
           : highlightChanged && !primaryChanged
             ? 'Highlight file changed and will refresh highlight updates.'
             : 'Content file changed and will be refreshed when enabled.',
+      highlightSamples: highlightPreview.samples,
       sourcePath,
       status: existingItem ? 'updated' : 'new'
     };
   } catch (error) {
     return {
+      detectedHighlightCount: 0,
       detail: error instanceof Error ? error.message : 'Unable to read this file during preview.',
+      highlightSamples: [],
       sourcePath,
       status: 'failed'
     };
@@ -108,6 +121,8 @@ function buildPreviewResult(rootPath: string, previewedAt: string, entries: Keep
     discovered_count: entries.length,
     entries: entries.map((entry) => ({
       detail: entry.detail,
+      detected_highlight_count: entry.detectedHighlightCount,
+      highlight_samples: entry.highlightSamples,
       source_path: entry.sourcePath,
       status: entry.status
     })),

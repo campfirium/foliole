@@ -227,3 +227,54 @@ it('notifies the renderer after keep imports write a new record', async () => {
   expect(notifyManagedInboxUpdated).toHaveBeenCalledTimes(1);
   expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.stringMatching(/^import-/));
 });
+
+it('adopts inline markdown highlights for generic merged keep imports', async () => {
+  const sourceDir = path.join(tempRoot, 'merged-source');
+  await fs.mkdir(sourceDir, { recursive: true });
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), 'Before ==important== after', 'utf8');
+
+  const preview = await previewKeepImportRule({
+    directoryPath: sourceDir,
+    highlightPolicy: 'adopt',
+    ruleId: 'draft-import-source-101'
+  });
+
+  expect(preview.entries).toEqual([
+    expect.objectContaining({
+      detected_highlight_count: 1,
+      highlight_samples: [
+        expect.objectContaining({
+          highlightText: 'important',
+          matched: true,
+          sourceName: 'entry.md'
+        })
+      ],
+      source_path: 'entry.md',
+      status: 'new'
+    })
+  ]);
+
+  await runKeepImportRule({ directoryPath: sourceDir, highlightPolicy: 'adopt', ruleId: 'draft-import-source-101' });
+
+  const row = openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT id, content
+       FROM nodes
+       WHERE title = 'entry.md'
+       ORDER BY created_at DESC
+       LIMIT 1`
+    )
+    .get() as { content: string; id: string };
+  const childRows = openDatabaseConnection().sqlite
+    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+    .all(row.id) as Array<{ anchor_link: string | null; content: string; title: string }>;
+
+  expect(row.content).toContain('<highlight id="1">important</highlight id="1">');
+  expect(childRows).toEqual([
+    {
+      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
+      content: 'important',
+      title: 'important'
+    }
+  ]);
+});

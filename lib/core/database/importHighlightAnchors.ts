@@ -4,6 +4,24 @@ export interface AnchoredImportedHighlightRecord extends PreparedImportHighlight
   anchorId: string;
 }
 
+export function collectAnchoredImportedHighlights(content: string) {
+  const pattern = /<highlight id="([1-9]\d*)">([\s\S]*?)<\/highlight id="\1">/g;
+  return [...content.matchAll(pattern)]
+    .map<AnchoredImportedHighlightRecord | null>((match) => {
+      const anchorId = match[1] ?? '';
+      const highlightContent = (match[2] ?? '').replace(/<\/?(?:highlight|cloze)\s+id="[^"]+"\s*>/g, '').trim();
+      if (!anchorId || !highlightContent) {
+        return null;
+      }
+      return {
+        anchorId,
+        content: highlightContent,
+        label: null
+      };
+    })
+    .filter((highlight): highlight is AnchoredImportedHighlightRecord => highlight !== null);
+}
+
 function findNextAnchorNumericId(content: string) {
   let maxId = 0;
   for (const match of content.matchAll(/<(?:highlight|cloze)\s+id="([1-9]\d*)"\s*>/g)) {
