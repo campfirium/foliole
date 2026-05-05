@@ -7,6 +7,7 @@ import {
 } from '../../image-cloze/model/imageClozePresentation';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
+import { MARKDOWN_TABLE_PREVIEW_EVENT } from '../model/markdownTablePreview';
 
 const mockDestroy = vi.fn();
 const mockGetScrollMetrics = vi.fn(() => ({ clientHeight: 0, scrollHeight: 0, scrollTop: 0 }));
@@ -54,6 +55,56 @@ function renderWithMouseGestureProvider(ui: React.ReactElement) {
   return render(ui, {
     wrapper: ({ children }) => <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>
   });
+}
+
+const SIMPLE_TABLE_PREVIEW_DETAIL = {
+  table: {
+    active: false,
+    anchorDecorations: [],
+    columnCount: 1,
+    from: 0,
+    rows: [
+      { cells: [{ from: 2, text: 'A', to: 3 }], from: 0, kind: 'header', to: 5 },
+      { cells: [{ from: 18, text: 'Alpha', to: 23 }], from: 16, kind: 'body', to: 25 }
+    ],
+    to: 25
+  }
+};
+
+const WEIGHTED_TABLE_PREVIEW_DETAIL = {
+  table: {
+    active: false,
+    anchorDecorations: [],
+    columnCount: 3,
+    from: 0,
+    rows: [
+      {
+        cells: [
+          { from: 2, text: 'ID', to: 4 },
+          { from: 7, text: 'Description', to: 18 },
+          { from: 21, text: 'State', to: 26 }
+        ],
+        from: 0,
+        kind: 'header',
+        to: 28
+      },
+      {
+        cells: [
+          { from: 32, text: 'A', to: 33 },
+          { from: 36, text: 'A long paragraph-like table value that should receive more column width', to: 102 },
+          { from: 105, text: 'Done', to: 109 }
+        ],
+        from: 30,
+        kind: 'body',
+        to: 111
+      }
+    ],
+    to: 111
+  }
+};
+
+function dispatchTablePreview(host: HTMLDivElement | null, detail: unknown) {
+  host?.dispatchEvent(new CustomEvent(MARKDOWN_TABLE_PREVIEW_EVENT, { bubbles: true, detail }));
 }
 
 beforeEach(() => {
@@ -114,6 +165,37 @@ describe('MarkdownEditor image preview', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('MarkdownEditor table preview', () => {
+  it('opens the table preview dialog when the editor surface receives a preview request', async () => {
+    const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="| A |\n| --- |\n| Alpha |" />);
+    const host = container.querySelector('.markdown-editor-host') as HTMLDivElement | null;
+
+    act(() => {
+      dispatchTablePreview(host, SIMPLE_TABLE_PREVIEW_DETAIL);
+    });
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'A' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Alpha' })).toBeInTheDocument();
+
+    expect(screen.queryByRole('button', { name: 'Close table preview' })).not.toBeInTheDocument();
+  });
+
+  it('sizes table preview columns from their content weight', async () => {
+    const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="| ID | Description | State |" />);
+    const host = container.querySelector('.markdown-editor-host') as HTMLDivElement | null;
+
+    act(() => {
+      dispatchTablePreview(host, WEIGHTED_TABLE_PREVIEW_DETAIL);
+    });
+
+    const dialog = await screen.findByRole('dialog');
+    const widths = Array.from(dialog.querySelectorAll('col')).map((column) => Number.parseFloat((column as HTMLTableColElement).style.width));
+    expect(widths[1]).toBeGreaterThan(widths[0]);
+    expect(widths[1]).toBeGreaterThan(widths[2]);
   });
 });
 

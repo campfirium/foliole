@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 
@@ -28,6 +28,19 @@ describe('live markdown table rendering', () => {
     expect(table?.querySelectorAll('th')).toHaveLength(2);
     expect(table?.querySelectorAll('td')).toHaveLength(2);
     expect(host.querySelector('.cm-content')?.textContent).not.toContain('| --- | --- |');
+
+    adapter.destroy();
+  });
+
+  it('dispatches a table preview request from the table widget action', () => {
+    const { adapter, host } = createAdapterHost('| A | B |\n| --- | --- |\n| 1 | 2 |');
+    const previewHandler = vi.fn();
+    host.addEventListener('foliole:markdown-table-preview', previewHandler);
+
+    (host.querySelector('.cm-md-table-preview-button') as HTMLButtonElement | null)?.click();
+
+    expect(previewHandler).toHaveBeenCalledTimes(1);
+    expect(previewHandler.mock.calls[0]?.[0].detail.table.columnCount).toBe(2);
 
     adapter.destroy();
   });

@@ -1,5 +1,7 @@
 import { EditorView } from '@codemirror/view';
 
+import { liveMarkdownTableTheme } from './liveMarkdownTableTheme';
+
 const TEXT_SELECTION_BACKGROUND_COLOR = 'var(--app-text-selection-bg-color)';
 const SHARED_HIGHLIGHT_SURFACE_COLOR = 'var(--app-highlight-surface-color)';
 const SHARED_CLOZE_SURFACE_COLOR = 'var(--app-cloze-surface-color)';
@@ -136,39 +138,7 @@ export const liveMarkdownTheme = EditorView.theme({
     width: '0.22em'
   },
   '.cm-md-callout-title': { color: 'var(--app-accent-color)', fontWeight: '650' },
-  '.cm-md-table-widget': {
-    boxSizing: 'border-box',
-    marginBottom: '0.45rem',
-    marginTop: '0.45rem',
-    maxWidth: '100%',
-    overflowX: 'auto'
-  },
-  '.cm-md-table': {
-    borderBottom: '1.5px solid rgb(var(--color-border-strong) / 0.62)',
-    borderCollapse: 'separate',
-    borderSpacing: '0',
-    borderTop: '1.5px solid rgb(var(--color-border-strong) / 0.62)',
-    fontSize: '0.94em',
-    lineHeight: '1.45',
-    minWidth: '100%',
-    tableLayout: 'auto',
-    width: 'max-content'
-  },
-  '.cm-md-table-cell': {
-    border: '0',
-    borderBottom: '1px solid rgb(var(--color-border) / 0.42)',
-    maxWidth: '24rem',
-    padding: '0.38rem 0.58rem',
-    textAlign: 'left',
-    verticalAlign: 'top',
-    whiteSpace: 'normal'
-  },
-  '.cm-md-table-row-header .cm-md-table-cell': {
-    backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--color-bg-subtle)) 84%, var(--color-foreground) 6%)',
-    borderBottom: '1.5px solid rgb(var(--color-border-strong) / 0.62)',
-    fontWeight: '650'
-  },
-  '.cm-md-table-row:last-child .cm-md-table-cell': { borderBottom: '0' },
+  ...liveMarkdownTableTheme,
   '.cm-md-image-widget': { maxWidth: '100%' },
   '.cm-md-image-widget-block': {
     display: 'flex',

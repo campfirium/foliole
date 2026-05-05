@@ -15,8 +15,10 @@ import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
 import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
+import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
 import { useMarkdownImagePreview } from './useMarkdownImagePreview';
+import { useMarkdownTablePreview } from './useMarkdownTablePreview';
 
 function MarkdownEditorSurface(args: {
   ariaLabel: string | undefined;
@@ -119,6 +121,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.readOnly
   );
   const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
+  const { closePreview: closeTablePreview, previewTable } = useMarkdownTablePreview(hostRef);
   useEditorLayoutEffects(
     adapterRef,
     props.nodeId,
@@ -150,11 +153,11 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     value: props.value
   });
 
-  return { closePreview, hostRef, previewImage, rootRef, surface };
+  return { closePreview, closeTablePreview, hostRef, previewImage, previewTable, rootRef, surface };
 }
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
-  const { closePreview, hostRef, previewImage, rootRef, surface } = useMarkdownEditorModel(props);
+  const { closePreview, closeTablePreview, hostRef, previewImage, previewTable, rootRef, surface } = useMarkdownEditorModel(props);
 
   return (
     <>
@@ -174,6 +177,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         rootRef={rootRef}
       />
       <MarkdownImagePreviewDialog image={previewImage} onOpenChange={(open) => !open && closePreview()} />
+      <MarkdownTablePreviewDialog table={previewTable} onOpenChange={(open) => !open && closeTablePreview()} />
     </>
   );
 }

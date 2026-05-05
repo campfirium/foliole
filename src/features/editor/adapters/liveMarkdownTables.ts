@@ -2,6 +2,7 @@ import type { Range, Text } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
 import type { MarkdownTableCellPlan, MarkdownTablePlan } from '../model/markdownTablePlans';
+import { dispatchMarkdownTablePreviewRequest } from '../model/markdownTablePreview';
 
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
 
@@ -83,6 +84,8 @@ function createTableElement(tablePlan: MarkdownTablePlan) {
   wrapper.dataset.mdTableFrom = String(tablePlan.from);
   wrapper.dataset.mdTableTo = String(tablePlan.to);
 
+  wrapper.append(createTablePreviewButton(tablePlan));
+
   const table = document.createElement('table');
   table.className = 'cm-md-table';
   const body = document.createElement('tbody');
@@ -100,6 +103,26 @@ function createTableElement(tablePlan: MarkdownTablePlan) {
   table.append(body);
   wrapper.append(table);
   return wrapper;
+}
+
+function createTablePreviewButton(tablePlan: MarkdownTablePlan) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'cm-md-table-preview-button';
+  button.setAttribute('aria-label', 'Open table preview');
+  button.title = 'Open table preview';
+  button.innerHTML =
+    '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M14 10l7-7"/><path d="M9 21H3v-6"/><path d="M10 14l-7 7"/></svg>';
+  button.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dispatchMarkdownTablePreviewRequest(button, { table: tablePlan });
+  });
+  return button;
 }
 
 class MarkdownTableWidget extends WidgetType {
