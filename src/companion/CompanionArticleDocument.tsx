@@ -1,5 +1,6 @@
 import type { EditorSelection, EditorTextAnchorDecoration, EditorViewportMode } from '../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
+import type { EditorViewState } from '../features/editor/components/markdownEditorTypes';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -8,6 +9,7 @@ export function CompanionArticleDocument(props: {
   hideTitleHeading?: boolean;
   layout?: 'article' | 'review';
   nodeId: string;
+  nodeViewState?: EditorViewState;
   readingSelection?: EditorSelection | null;
   readingTargetViewportMode?: EditorViewportMode | null;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
@@ -20,6 +22,7 @@ export function CompanionArticleDocument(props: {
         hideTitleHeading={props.hideTitleHeading}
         hideScrollbar
         nodeId={props.nodeId}
+        nodeViewState={props.nodeViewState}
         onChange={() => undefined}
         readOnly
         readingSelection={props.readingSelection}

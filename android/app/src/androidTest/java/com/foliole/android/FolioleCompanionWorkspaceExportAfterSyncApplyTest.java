@@ -165,6 +165,27 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         assertEquals("sync-apply", loadViewStateSource("article-1", "remote-device"));
     }
 
+    @Test
+    public void exportsPersistedNodeViewStateForCurrentDevice() throws Exception {
+        database.execSQL(
+            "INSERT INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at) " +
+                "VALUES ('article-1', 'android-test', 5400, NULL, NULL, 'user-scroll', '2026-04-25T09:40:00.000Z')"
+        );
+        database.execSQL(
+            "INSERT INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at) " +
+                "VALUES ('article-2', 'other-device', 99, 1, 2, 'user-scroll', '2026-04-25T09:40:00.000Z')"
+        );
+
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, "android-test");
+        JSONObject state = snapshot.getJSONObject("persistedNodeViewById").getJSONObject("article-1");
+
+        assertEquals(5400, state.getInt("scrollTop"));
+        assertEquals(true, state.isNull("selectionFrom"));
+        assertEquals(true, state.isNull("selectionTo"));
+        assertEquals("user-scroll", state.getString("source"));
+        assertEquals(false, snapshot.getJSONObject("persistedNodeViewById").has("article-2"));
+    }
+
     private String loadViewStateSource(String nodeId, String deviceId) {
         try (Cursor cursor = database.rawQuery(
             "SELECT source FROM node_view_state WHERE node_id = ? AND device_id = ?",

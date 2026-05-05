@@ -1,3 +1,5 @@
+import type { PersistedNodeViewState } from '../../platform/persistedNodeViewState.js';
+
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
 import {
@@ -13,6 +15,7 @@ export interface WorkspaceSnapshot {
   activeNodeId: string | null;
   nodeOrder: string[];
   nodesById: Record<string, WorkspaceNodeSnapshot>;
+  persistedNodeViewById?: Record<string, PersistedNodeViewState | undefined>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
 }

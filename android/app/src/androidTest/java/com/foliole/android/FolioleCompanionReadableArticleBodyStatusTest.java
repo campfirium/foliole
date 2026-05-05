@@ -97,6 +97,9 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
             "updated_at TEXT, PRIMARY KEY (node_id, device_id))");
         database.execSQL("CREATE TABLE node_review (node_id TEXT PRIMARY KEY, due TEXT, last_review_at TEXT, state INTEGER, " +
             "stability REAL, difficulty REAL, elapsed_days INTEGER, scheduled_days INTEGER, reps INTEGER, lapses INTEGER)");
+        database.execSQL("CREATE TABLE node_view_state (node_id TEXT NOT NULL, device_id TEXT NOT NULL, " +
+            "scroll_top INTEGER NOT NULL DEFAULT 0, selection_from INTEGER, selection_to INTEGER, " +
+            "source TEXT NOT NULL DEFAULT 'user-scroll', updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
         database.execSQL("CREATE TABLE attachments (id TEXT PRIMARY KEY, original_name TEXT, mime_type TEXT, size_bytes INTEGER, " +
             "created_at TEXT, storage_key TEXT, cached_at TEXT)");
         database.execSQL("CREATE TABLE node_attachments (node_id TEXT, attachment_id TEXT, role TEXT, created_at TEXT, " +

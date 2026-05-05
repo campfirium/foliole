@@ -1,5 +1,6 @@
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 import { resolveNodeOpeningText } from '../../../lib/core/nodes/nodeOpeningPreview';
+import type { PersistedNodeViewState } from '../../../lib/platform/persistedNodeViewState';
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
@@ -9,6 +10,7 @@ export interface CompanionReadableArticle {
   content: string;
   hideTitleHeading: boolean;
   nodeId: string;
+  persistedNodeViewState: PersistedNodeViewState | null;
   pdfAttachmentId: string | null;
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   title: string;
@@ -69,12 +71,13 @@ function isArticleNode(snapshot: WorkspaceSnapshot, node: CompanionReadableNode 
   return true;
 }
 
-function buildReadableArticle(node: CompanionReadableNode) {
+function buildReadableArticle(node: CompanionReadableNode, persistedNodeViewState: PersistedNodeViewState | null) {
   return {
     bodyStatus: normalizeBodyStatus(node.bodyStatus) ?? 'ready' as const,
     content: node.content,
     hideTitleHeading: Boolean(node.hideTitleHeading),
     nodeId: node.id,
+    persistedNodeViewState,
     pdfAttachmentId: resolveReferencePdfAttachmentId(node),
     textAnchorDecorations: [],
     title: resolveCompanionArticleTitle(node)
@@ -87,7 +90,7 @@ function resolveReferencePdfAttachmentId(node: CompanionReadableNode) {
 
 function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: CompanionReadableNode) {
   return {
-    ...buildReadableArticle(node),
+    ...buildReadableArticle(node, snapshot.persistedNodeViewById?.[node.id] ?? null),
     textAnchorDecorations: collectDocumentTextAnchorDecorations({
       activeNodeId: node.id,
       nodesById: snapshot.nodesById,

@@ -76,6 +76,7 @@ describe('companionReadableArticle title and reading helpers', () => {
       content: '# First\n\nBody',
       hideTitleHeading: false,
       nodeId: 'node-1',
+      persistedNodeViewState: null,
       pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'First'
@@ -93,7 +94,36 @@ describe('companionReadableArticle title and reading helpers', () => {
 
     expect(result?.hideTitleHeading).toBe(true);
   });
+});
 
+describe('companionReadableArticle persisted view state', () => {
+  it('attaches persisted node view state to readable articles', () => {
+    const snapshot: WorkspaceSnapshot = {
+      ...createExplicitArticleSnapshot(),
+      persistedNodeViewById: {
+        'node-1': {
+          nodeId: 'node-1',
+          scrollTop: 5400,
+          selectionFrom: null,
+          selectionTo: null,
+          source: 'user-scroll',
+          updatedAt: '2026-04-30T08:00:00.000Z'
+        }
+      }
+    };
+
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')?.persistedNodeViewState).toEqual({
+      nodeId: 'node-1',
+      scrollTop: 5400,
+      selectionFrom: null,
+      selectionTo: null,
+      source: 'user-scroll',
+      updatedAt: '2026-04-30T08:00:00.000Z'
+    });
+  });
+});
+
+describe('companionReadableArticle anchors', () => {
   it('collects shared text anchor decorations for readable articles', () => {
     const snapshot: WorkspaceSnapshot = createExplicitArticleSnapshot();
     snapshot.nodeOrder = ['node-1', 'node-highlight'];

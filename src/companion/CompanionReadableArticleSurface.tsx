@@ -13,10 +13,23 @@ import {
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
+import type { EditorViewState } from '@/features/editor/components/markdownEditorTypes';
 import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
 import { AppButton } from '@/shared/ui';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
+
+function toEditorViewState(article: ReadableArticle): EditorViewState | undefined {
+  const persistedState = article.persistedNodeViewState;
+  if (!persistedState) {
+    return undefined;
+  }
+  const selection =
+    persistedState.selectionFrom === null || persistedState.selectionTo === null
+      ? null
+      : { from: persistedState.selectionFrom, to: persistedState.selectionTo };
+  return { scrollTop: persistedState.scrollTop, selection };
+}
 
 function ReadingChromeButton(props: {
   disabled?: boolean;
@@ -67,6 +80,7 @@ export function ReadableArticleDocument(props: {
         content={props.readableArticle.content}
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}
+        nodeViewState={toEditorViewState(props.readableArticle)}
         readingSelection={props.readingSelection}
         readingTargetViewportMode="center"
         textAnchorDecorations={props.readableArticle.textAnchorDecorations}
