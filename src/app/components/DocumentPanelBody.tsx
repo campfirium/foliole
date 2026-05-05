@@ -87,7 +87,7 @@ export function DocumentPanelBody({
     onPromptImageLoadStateChange: handlePromptImageLoadStateChange,
     onPromptImageMetricsChange: setPromptImageMetrics,
     promptEditorDebugId,
-    sharedBlockImageMaxHeight,
+    sharedBlockImageMaxHeight: props.fitBlockImagesToViewport ? sharedBlockImageMaxHeight : undefined,
     showDocumentOutline,
     showDocumentResizeHandles,
     ...props
