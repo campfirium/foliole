@@ -18,9 +18,15 @@ vi.mock('react-pdf', async () => {
       file?: string;
       onLoadSuccess?: (payload: { numPages: number }) => void;
     }) => {
+      const onLoadSuccessRef = React.useRef(onLoadSuccess);
+
       React.useEffect(() => {
-        onLoadSuccess?.({ numPages: 1 });
-      }, [file, onLoadSuccess]);
+        onLoadSuccessRef.current = onLoadSuccess;
+      }, [onLoadSuccess]);
+
+      React.useEffect(() => {
+        onLoadSuccessRef.current?.({ numPages: 1 });
+      }, [file]);
       return <div data-testid="pdf-document-view">{children}</div>;
     },
     Page: ({
@@ -32,11 +38,21 @@ vi.mock('react-pdf', async () => {
       onRenderSuccess?: () => void;
       onRenderTextLayerSuccess?: () => void;
     }) => {
+      const onGetTextSuccessRef = React.useRef(onGetTextSuccess);
+      const onRenderSuccessRef = React.useRef(onRenderSuccess);
+      const onRenderTextLayerSuccessRef = React.useRef(onRenderTextLayerSuccess);
+
       React.useEffect(() => {
-        onRenderSuccess?.();
-        onGetTextSuccess?.({ items: [{ str: 'keyword bridge content' }] });
-        onRenderTextLayerSuccess?.();
+        onGetTextSuccessRef.current = onGetTextSuccess;
+        onRenderSuccessRef.current = onRenderSuccess;
+        onRenderTextLayerSuccessRef.current = onRenderTextLayerSuccess;
       }, [onGetTextSuccess, onRenderSuccess, onRenderTextLayerSuccess]);
+
+      React.useEffect(() => {
+        onRenderSuccessRef.current?.();
+        onGetTextSuccessRef.current?.({ items: [{ str: 'keyword bridge content' }] });
+        onRenderTextLayerSuccessRef.current?.();
+      }, []);
       return (
         <div data-testid="pdf-document-page">
           <div className="textLayer">
