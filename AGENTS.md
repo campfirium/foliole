@@ -34,6 +34,8 @@
 2. 技术比选任务或中风险及以上改动，实施前必须先查阅官方文档与最佳实践，确认边界条件、推荐做法与已知风险。
 3. 以上两类场景的回复必须包含：`已核对来源`、`根因判断`、`修复策略`；未完成三项前不得宣称“已解决”或“可实施”。
 4. 中风险及以上至少包括：编辑器渲染链路、持久化与数据模型、跨模块状态联动、可能影响主流程验收的交互改动。
+5. 桌面启动/窗口可见但功能失效类问题，禁止先把症状归因为“renderer 未启动”或“导航卡死”；必须先同时核对 `did-start-navigation/dom-ready/did-finish-load`、`renderer-state` 快照、`boot/app_ready/bridge_ready` marker 与 `window.electronAPI` 可用性，再决定问题属于导航层、preload 层还是 bridge/native invoke 层。
+6. 若桌面页面已可见、`readyState` 已到 `interactive/complete`、`root` 已存在，但 `app_ready` / `bridge_ready` 缺失或 bridge-backed controls 灰掉，默认优先排查 preload/bridge 链路；在拿到相反证据前，不得继续把问题定性为 Vite/renderer 页面加载失败。
 
 ## 工具链基线（强制）
 1. 包管理器：按仓库锁文件检测（`pnpm`/`bun`/`yarn`/`npm`），禁止硬编码单一包管理器。
@@ -96,6 +98,9 @@
 4. 新增系统能力时，必须同时提供“平台能力接口 + 非桌面降级路径”；降级路径不得成为桌面主路径。
 5. 涉及 macOS/iOS 的能力设计必须预留 sandbox 选项：应用容器目录、用户授权目录（security-scoped/bookmark 等）与权限声明位；未预留前不得宣称“已具备全平台可迁移性”。
 6. 新功能评审必须显式标注“是否依赖 WebView 专有行为”；若依赖，则需提供替代实现或淘汰计划，不得进入主流程闭环。
+7. Electron preload 属于平台桥接层真相入口；涉及 `contextBridge` / `ipcRenderer` / `window.electronAPI` 的改动，必须先核对 Electron 官方 `sandbox` / `contextIsolation` 文档边界，再实施。
+8. 当 Electron `BrowserWindow` 开启 `sandbox: true` 时，preload 禁止依赖未被官方允许的 Node.js `require` 能力；尤其禁止为获取 `process`、路径或调试信息引入 `require('node:process')`、`require.resolve(...)` 等写法。需要运行态元数据时，优先使用 sandbox 已提供的全局对象（如 `process`、`__filename`）或由 main 显式注入。
+9. 任意 Electron preload 改动，必须新增或更新一条“sandbox 受限 require 环境下仍能成功暴露 bridge”的自动化回归测试；无此回归，不视为完成。
 
 ## 架构与代码约束
 1. 编辑器能力通过 `EditorAdapter` 抽象暴露，避免业务层散落具体编辑器 API。

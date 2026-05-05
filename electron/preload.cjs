@@ -1,7 +1,8 @@
-const process = require('node:process');
+/* global __filename, process */
+
 const { contextBridge, ipcRenderer } = require('electron');
 
-const preloadPath = require.resolve('./preload.cjs');
+const preloadPath = typeof __filename === 'string' ? __filename : null;
 
 const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';

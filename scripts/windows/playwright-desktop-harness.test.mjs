@@ -257,6 +257,14 @@ describe('playwright desktop harness', () => {
         stdoutTail: ['main ok\n']
       },
       nativeInvokeHistory: [expect.objectContaining({ command: 'resolve_app_paths', status: 'resolved' })],
+      rendererPage: {
+        pageUrl: 'file:///workspace/foliole/dist/index.html',
+        readyState: null,
+        rootPresent: false,
+        title: null,
+        url: 'file:///workspace/foliole/dist/index.html'
+      },
+      rendererPageEvents: [],
       runtimeHead: 'head-123'
     });
 
@@ -264,6 +272,78 @@ describe('playwright desktop harness', () => {
     await session.close();
 
     expect(closed).toBe(true);
+  });
+
+  it('attaches desktop diagnostics when window acquisition stalls before domcontentloaded', async () => {
+    const childProcess = {
+      pid: 4821,
+      stderr: new EventEmitter(),
+      stdout: new EventEmitter()
+    };
+    const windowPage = new EventEmitter();
+    windowPage.url = () => 'http://127.0.0.1:24600/';
+    windowPage.evaluate = async (pageFunction, appReadyFlag) => {
+      if (appReadyFlag === APP_READY_FLAG) {
+        return pageFunction(appReadyFlag);
+      }
+      throw new Error('Execution context was destroyed.');
+    };
+    windowPage.waitForLoadState = async () => {
+      throw new Error('page.waitForLoadState: Timeout 30000ms exceeded');
+    };
+
+    const electronLauncher = {
+      async launch() {
+        return {
+          async close() {},
+          process() {
+            return childProcess;
+          },
+          async firstWindow() {
+            childProcess.stdout.emit('data', Buffer.from('did-start-navigation http://127.0.0.1:24600/\n'));
+            windowPage.emit('framenavigated', {
+              parentFrame: () => null,
+              url: () => 'http://127.0.0.1:24600/'
+            });
+            return windowPage;
+          }
+        };
+      }
+    };
+
+    await expect(
+      launchDesktopSession({
+        appRoot: '/workspace/foliole',
+        electronLauncher,
+        env: { FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '30000' },
+        existsSync: () => true
+      })
+    ).rejects.toMatchObject({
+      desktopDiagnostics: {
+        boot: {
+          bootEvents: []
+        },
+        currentRuntime: {
+          appReady: false,
+          pid: 4821,
+          rendererUrl: null
+        },
+        mainProcessLogs: {
+          stdoutTail: ['did-start-navigation http://127.0.0.1:24600/\n']
+        },
+        rendererPage: {
+          error: 'Execution context was destroyed.',
+          pageUrl: 'http://127.0.0.1:24600/',
+          url: 'http://127.0.0.1:24600/'
+        },
+        rendererPageEvents: [],
+        rendererRuntime: {
+          appReady: false,
+          readyState: null,
+          rendererUrl: null
+        }
+      }
+    });
   });
 
   it('fails fast when build output is missing', async () => {

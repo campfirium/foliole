@@ -2,7 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import { collectDesktopFailureDiagnostics, createMainProcessLogCollector, createRendererConsoleCollector } from './playwright-desktop-diagnostics.mjs';
+import {
+  collectDesktopFailureDiagnostics,
+  createMainProcessLogCollector,
+  createRendererConsoleCollector,
+  createRendererPageEventCollector
+} from './playwright-desktop-diagnostics.mjs';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const WINDOWS_MIRROR_ROOT = '/mnt/c/dev/foliole';
@@ -82,6 +87,7 @@ export async function acquireStableDesktopWindow(electronApp, timeoutMs) {
 async function acquireDesktopWindowWithConsole(electronApp, timeoutMs) {
   const windowPage = await electronApp.firstWindow({ timeout: timeoutMs });
   const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
+  const rendererPageEventCollector = createRendererPageEventCollector(windowPage);
 
   try {
     await windowPage.waitForLoadState('domcontentloaded', { timeout: timeoutMs });
@@ -93,11 +99,41 @@ async function acquireDesktopWindowWithConsole(electronApp, timeoutMs) {
       undefined,
       { timeout: timeoutMs }
     );
-    return { rendererConsoleCollector, windowPage };
+    return { rendererConsoleCollector, rendererPageEventCollector, windowPage };
   } catch (error) {
-    rendererConsoleCollector.dispose();
+    error.rendererCollectors = {
+      rendererConsoleCollector,
+      rendererPageEventCollector,
+      windowPage
+    };
     throw error;
   }
+}
+
+async function enrichDesktopLaunchError({
+  appRoot,
+  error,
+  mainProcessCollector
+}) {
+  const collectors = error?.rendererCollectors;
+  if (!collectors?.windowPage) {
+    return error;
+  }
+  try {
+    error.desktopDiagnostics = await collectDesktopFailureDiagnostics({
+      appRoot,
+      mainProcessCollector,
+      rendererConsoleCollector: collectors.rendererConsoleCollector,
+      rendererPageEventCollector: collectors.rendererPageEventCollector,
+      windowPage: collectors.windowPage
+    });
+  } catch (diagnosticsError) {
+    error.desktopDiagnostics = {
+      collectedAt: new Date().toISOString(),
+      error: diagnosticsError instanceof Error ? diagnosticsError.message : String(diagnosticsError)
+    };
+  }
+  return error;
 }
 
 export async function waitForDesktopAppReady(windowPage, timeoutMs) {
@@ -144,12 +180,32 @@ export async function launchDesktopSession({
   const deadline = Date.now() + timeoutMs;
   const electronApp = await launcher.launch(launchOptions);
   const mainProcessCollector = createMainProcessLogCollector(electronApp.process());
-  const { rendererConsoleCollector, windowPage: firstWindow } = await acquireDesktopWindowWithConsole(
-    electronApp,
-    getRemainingTimeout(deadline)
-  );
-  const appReady = await waitForDesktopAppReady(firstWindow, getRemainingTimeout(deadline));
-  const snapshot = await readMainProcessSnapshot(electronApp);
+  let rendererConsoleCollector;
+  let rendererPageEventCollector;
+  let firstWindow;
+  let appReady;
+  let snapshot;
+  try {
+    ({
+      rendererConsoleCollector,
+      rendererPageEventCollector,
+      windowPage: firstWindow
+    } = await acquireDesktopWindowWithConsole(electronApp, getRemainingTimeout(deadline)));
+    appReady = await waitForDesktopAppReady(firstWindow, getRemainingTimeout(deadline));
+    snapshot = await readMainProcessSnapshot(electronApp);
+  } catch (error) {
+    await enrichDesktopLaunchError({
+      appRoot: target.appRoot,
+      error,
+      mainProcessCollector
+    });
+    mainProcessCollector.dispose();
+    const failureCollectors = error?.rendererCollectors;
+    (failureCollectors?.rendererConsoleCollector ?? rendererConsoleCollector)?.dispose?.();
+    (failureCollectors?.rendererPageEventCollector ?? rendererPageEventCollector)?.dispose?.();
+    await electronApp.close();
+    throw error;
+  }
 
   let closed = false;
 
@@ -158,6 +214,7 @@ export async function launchDesktopSession({
       collectDesktopFailureDiagnostics({
         appRoot: target.appRoot,
         mainProcessCollector,
+        rendererPageEventCollector,
         rendererConsoleCollector,
         windowPage: firstWindow
       }),
@@ -167,6 +224,7 @@ export async function launchDesktopSession({
       }
       closed = true;
       rendererConsoleCollector.dispose();
+      rendererPageEventCollector.dispose();
       mainProcessCollector.dispose();
       await electronApp.close();
     },

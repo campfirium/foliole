@@ -11,7 +11,8 @@ import { describe, expect, it } from 'vitest';
 import {
   collectDesktopFailureDiagnostics,
   createMainProcessLogCollector,
-  createRendererConsoleCollector
+  createRendererConsoleCollector,
+  createRendererPageEventCollector
 } from './playwright-desktop-diagnostics.mjs';
 
 class MockPage extends EventEmitter {
@@ -64,6 +65,7 @@ describe('playwright desktop diagnostics', () => {
         rendererUrl: 'file:///workspace/foliole/dist/index.html'
       });
       const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
+      const rendererPageEventCollector = createRendererPageEventCollector(windowPage);
       const childProcess = {
         pid: 4821,
         stderr: new EventEmitter(),
@@ -71,6 +73,16 @@ describe('playwright desktop diagnostics', () => {
       };
       const mainProcessCollector = createMainProcessLogCollector(childProcess);
 
+      windowPage.emit('framenavigated', {
+        parentFrame: () => null,
+        url: () => 'file:///workspace/foliole/dist/index.html'
+      });
+      windowPage.emit('domcontentloaded');
+      windowPage.emit('response', {
+        ok: () => true,
+        status: () => 200,
+        url: () => 'file:///workspace/foliole/dist/index.html'
+      });
       windowPage.emit('console', {
         location: () => ({ columnNumber: 0, lineNumber: 10, url: 'app://index.html' }),
         text: () => 'renderer exploded',
@@ -82,6 +94,7 @@ describe('playwright desktop diagnostics', () => {
       const diagnostics = await collectDesktopFailureDiagnostics({
         appRoot: tempRoot,
         mainProcessCollector,
+        rendererPageEventCollector,
         rendererConsoleCollector,
         windowPage
       });
@@ -106,6 +119,19 @@ describe('playwright desktop diagnostics', () => {
       expect(diagnostics.rendererConsole).toEqual([
         expect.objectContaining({ text: 'renderer exploded', type: 'error' })
       ]);
+      expect(diagnostics.rendererPage).toEqual({
+        bodyTextSample: '',
+        pageUrl: null,
+        readyState: 'complete',
+        rootPresent: false,
+        title: null,
+        url: 'file:///workspace/foliole/dist/index.html'
+      });
+      expect(diagnostics.rendererPageEvents).toEqual([
+        expect.objectContaining({ type: 'framenavigated', url: 'file:///workspace/foliole/dist/index.html' }),
+        expect.objectContaining({ type: 'domcontentloaded' }),
+        expect.objectContaining({ ok: true, status: 200, type: 'response', url: 'file:///workspace/foliole/dist/index.html' })
+      ]);
       expect(diagnostics.mainProcessLogs.stdoutTail).toEqual(['main ok\n']);
       expect(diagnostics.mainProcessLogs.stderrTail).toEqual(['main failed\n']);
       expect(diagnostics.boot.readyMarker).toEqual({
@@ -116,6 +142,7 @@ describe('playwright desktop diagnostics', () => {
       expect(diagnostics.boot.bootEvents).toEqual([{ stage: 'boot_start' }, { stage: 'app_ready' }]);
 
       rendererConsoleCollector.dispose();
+      rendererPageEventCollector.dispose();
       mainProcessCollector.dispose();
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -138,6 +165,7 @@ describe('playwright desktop diagnostics', () => {
         rendererUrl: 'file:///workspace/foliole/dist/index.html'
       });
       const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
+      const rendererPageEventCollector = createRendererPageEventCollector(windowPage);
       const mainProcessCollector = createMainProcessLogCollector({
         pid: 4821,
         stderr: new EventEmitter(),
@@ -147,6 +175,7 @@ describe('playwright desktop diagnostics', () => {
       const diagnostics = await collectDesktopFailureDiagnostics({
         appRoot: tempRoot,
         mainProcessCollector,
+        rendererPageEventCollector,
         rendererConsoleCollector,
         windowPage
       });
@@ -167,6 +196,7 @@ describe('playwright desktop diagnostics', () => {
       });
 
       rendererConsoleCollector.dispose();
+      rendererPageEventCollector.dispose();
       mainProcessCollector.dispose();
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

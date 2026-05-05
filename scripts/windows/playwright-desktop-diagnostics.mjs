@@ -6,6 +6,7 @@ import { classifyBridgeBreakpoint } from './playwright-desktop-bridge-breakpoint
 const MAX_BOOT_EVENTS = 20;
 const MAX_MAIN_PROCESS_LOGS = 120;
 const MAX_RENDERER_CONSOLE_MESSAGES = 80;
+const MAX_RENDERER_PAGE_EVENTS = 80;
 const APP_READY_FLAG = '__FOLIOLE_APP_READY_REPORTED__';
 
 function createRingBuffer(limit) {
@@ -51,6 +52,69 @@ export function createRendererConsoleCollector(windowPage, limit = MAX_RENDERER_
     dispose() {
       if (typeof windowPage.off === 'function') {
         windowPage.off('console', listener);
+      }
+    },
+    snapshot() {
+      return buffer.snapshot();
+    }
+  };
+}
+
+export function createRendererPageEventCollector(windowPage, limit = MAX_RENDERER_PAGE_EVENTS) {
+  const buffer = createRingBuffer(limit);
+  const listeners = [
+    ['domcontentloaded', () => buffer.push(toTimestampedEntry({ type: 'domcontentloaded' }))],
+    ['load', () => buffer.push(toTimestampedEntry({ type: 'load' }))],
+    ['pageerror', (error) =>
+      buffer.push(
+        toTimestampedEntry({
+          message: error instanceof Error ? error.message : String(error),
+          type: 'pageerror'
+        })
+      )],
+    ['requestfailed', (request) =>
+      buffer.push(
+        toTimestampedEntry({
+          failureText: request.failure?.()?.errorText ?? null,
+          method: request.method?.() ?? null,
+          type: 'requestfailed',
+          url: request.url?.() ?? null
+        })
+      )],
+    ['response', (response) =>
+      buffer.push(
+        toTimestampedEntry({
+          ok: response.ok?.() ?? null,
+          status: response.status?.() ?? null,
+          type: 'response',
+          url: response.url?.() ?? null
+        })
+      )],
+    ['framenavigated', (frame) => {
+      if (typeof frame?.parentFrame === 'function' && frame.parentFrame()) {
+        return;
+      }
+      buffer.push(
+        toTimestampedEntry({
+          type: 'framenavigated',
+          url: frame?.url?.() ?? null
+        })
+      );
+    }]
+  ];
+
+  for (const [eventName, listener] of listeners) {
+    if (typeof windowPage.on === 'function') {
+      windowPage.on(eventName, listener);
+    }
+  }
+
+  return {
+    dispose() {
+      for (const [eventName, listener] of listeners) {
+        if (typeof windowPage.off === 'function') {
+          windowPage.off(eventName, listener);
+        }
       }
     },
     snapshot() {
@@ -175,6 +239,37 @@ async function readRendererRuntimeState(windowPage) {
   }
 }
 
+async function readRendererPageState(windowPage) {
+  const pageUrl = typeof windowPage.url === 'function' ? windowPage.url() : null;
+  try {
+    const snapshot = await windowPage.evaluate(() => ({
+      bodyTextSample: globalThis.document?.body?.innerText?.slice(0, 200) ?? '',
+      href: globalThis.location?.href ?? null,
+      rootPresent: Boolean(globalThis.document?.getElementById?.('root')),
+      readyState: globalThis.document?.readyState ?? null,
+      title: globalThis.document?.title ?? null
+    }));
+    return {
+      bodyTextSample: snapshot?.bodyTextSample ?? '',
+      pageUrl,
+      readyState: snapshot?.readyState ?? null,
+      rootPresent: snapshot?.rootPresent ?? null,
+      title: snapshot?.title ?? null,
+      url: snapshot?.href ?? pageUrl
+    };
+  } catch (error) {
+    return {
+      bodyTextSample: '',
+      error: error instanceof Error ? error.message : String(error),
+      pageUrl,
+      readyState: null,
+      rootPresent: null,
+      title: null,
+      url: pageUrl
+    };
+  }
+}
+
 async function readBootDiagnostics(appRoot) {
   const readyMarkerPath = path.join(appRoot, '.windows-native-boot-ready.json');
   const bootEventLogPath = path.join(appRoot, 'logs', 'windows', 'native-boot-events.ndjson');
@@ -195,13 +290,15 @@ async function readBootDiagnostics(appRoot) {
 export async function collectDesktopFailureDiagnostics({
   appRoot,
   mainProcessCollector,
+  rendererPageEventCollector,
   rendererConsoleCollector,
   windowPage
 }) {
-  const [boot, debugProbe, rendererRuntime] = await Promise.all([
+  const [boot, debugProbe, rendererRuntime, rendererPage] = await Promise.all([
     readBootDiagnostics(appRoot),
     readDesktopDebugProbe(windowPage),
-    readRendererRuntimeState(windowPage)
+    readRendererRuntimeState(windowPage),
+    readRendererPageState(windowPage)
   ]);
   const mainProcessLogs = mainProcessCollector.snapshot();
   const bridgeBreakpoint = classifyBridgeBreakpoint({
@@ -227,6 +324,8 @@ export async function collectDesktopFailureDiagnostics({
     mainProcessLogs,
     nativeInvokeHistory: debugProbe?.recentInvokes ?? [],
     rendererConsole: rendererConsoleCollector.snapshot(),
+    rendererPage,
+    rendererPageEvents: rendererPageEventCollector?.snapshot?.() ?? [],
     rendererRuntime,
     runtimeHead: debugProbe?.runtimeHead ?? null
   };
