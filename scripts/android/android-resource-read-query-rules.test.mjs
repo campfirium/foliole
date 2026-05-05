@@ -138,12 +138,12 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentResolveResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentSyncResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextInt(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextOutputKey(context, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowString(context, row, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowInt(context, row, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowOptString(context, row, key, defaultValue)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowOptInt(context, row, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowValue(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextArray(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowDoubleOrDefault(context, row, field, 0)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowLong(context, row, field)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowString(context, row, field)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "resourceRead", groupName)');
     expect(rulesSource).toContain('getJSONObject(key)');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestByHash"');

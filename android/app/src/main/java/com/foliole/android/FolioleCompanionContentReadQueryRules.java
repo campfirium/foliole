@@ -49,6 +49,10 @@ final class FolioleCompanionContentReadQueryRules {
         return group(context, "readableArticle").getString(key);
     }
 
+    static JSONArray readableArticleArray(Context context, String key) throws Exception {
+        return group(context, "readableArticle").getJSONArray(key);
+    }
+
     static JSONObject readableArticleObject(Context context, String key) throws Exception {
         return group(context, "readableArticle").getJSONObject(key);
     }

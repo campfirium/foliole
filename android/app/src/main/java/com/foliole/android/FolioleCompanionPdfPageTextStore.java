@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionPdfPageTextStore {
@@ -43,7 +44,7 @@ final class FolioleCompanionPdfPageTextStore {
             database,
             stringRule(context, "searchQueryName"),
             stringRule(context, "searchResultKey"),
-            new String[] { normalizedQuery, normalizedQuery, Integer.toString(resolveLimit(context, limit)) }
+            new String[] { normalizedQuery, normalizedQuery, normalizedQuery, Integer.toString(resolveLimit(context, limit)) }
         );
         for (int index = 0; index < rows.length(); index += 1) {
             results.put(toSearchResult(context, rows.getJSONObject(index)));
@@ -60,26 +61,20 @@ final class FolioleCompanionPdfPageTextStore {
 
     private static JSObject toSearchResult(Context context, JSONObject row) throws Exception {
         JSObject result = new JSObject();
-        String text = rowOptString(context, row, "textKey", "");
-        int matchStart = Math.max(0, rowOptInt(context, row, "matchIndexKey") - 1);
-        result.put(stringRule(context, "attachmentIdKey"), rowString(context, row, "attachmentIdKey"));
-        result.put(stringRule(context, "pageKey"), rowInt(context, row, "pageKey"));
-        result.put(stringRule(context, "textKey"), text);
-        result.put(stringRule(context, "pageWidthKey"), rowValue(context, row, "pageWidthKey"));
-        result.put(stringRule(context, "pageHeightKey"), rowValue(context, row, "pageHeightKey"));
-        result.put(outputKey(context, "matchStart"), matchStart);
-        result.put(outputKey(context, "excerpt"), buildExcerpt(context, text, matchStart));
+        JSONArray fields = arrayRule(context, "searchResultFields");
+        for (int index = 0; index < fields.length(); index += 1) {
+            JSONObject field = fields.getJSONObject(index);
+            result.put(fieldOutputKey(context, field), fieldValue(context, row, field));
+        }
         return result;
     }
 
-    private static String buildExcerpt(Context context, String text, int matchStart) throws Exception {
-        int excerptRadius = intRule(context, "excerptRadius");
-        if (text == null || text.length() <= excerptRadius * 2) {
-            return text == null ? "" : text;
-        }
-        int start = Math.max(0, matchStart - excerptRadius);
-        int end = Math.min(text.length(), matchStart + excerptRadius);
-        return text.substring(start, end).trim();
+    private static Object fieldValue(Context context, JSONObject row, JSONObject field) throws Exception {
+        String type = fieldTypeKey(context, field);
+        if (fieldType(context, "string").equals(type)) return fieldRowString(context, row, field);
+        if (fieldType(context, "long").equals(type)) return fieldRowLong(context, row, field);
+        if (fieldType(context, "double").equals(type)) return fieldRowDouble(context, row, field);
+        throw new IllegalStateException("Unsupported PDF page text field type: " + type);
     }
 
     private static int intRule(Context context, String key) throws Exception {
@@ -94,24 +89,32 @@ final class FolioleCompanionPdfPageTextStore {
         return FolioleCompanionResourceReadQueryRules.pdfPageTextOutputKey(context, key);
     }
 
-    private static String rowString(Context context, JSONObject row, String key) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowString(context, row, key);
+    private static JSONArray arrayRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.pdfPageTextArray(context, key);
     }
 
-    private static int rowInt(Context context, JSONObject row, String key) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowInt(context, row, key);
+    private static String fieldOutputKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field);
     }
 
-    private static String rowOptString(Context context, JSONObject row, String key, String defaultValue) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowOptString(context, row, key, defaultValue);
+    private static double fieldRowDouble(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowDoubleOrDefault(context, row, field, 0);
     }
 
-    private static int rowOptInt(Context context, JSONObject row, String key) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowOptInt(context, row, key);
+    private static long fieldRowLong(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowLong(context, row, field);
     }
 
-    private static Object rowValue(Context context, JSONObject row, String key) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowValue(context, row, key);
+    private static String fieldRowString(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowString(context, row, field);
+    }
+
+    private static String fieldTypeKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field);
+    }
+
+    private static String fieldType(Context context, String key) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key);
     }
 
 }

@@ -26,12 +26,12 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
       results: 'results'
     },
     rowKeys: {
-      availability: 'availability',
-      bodyBlobData: 'body_blob_data',
       bodyBlobHash: 'body_blob_hash',
       content: 'content',
+      contentStatus: 'content_status',
       documentId: 'document_id',
-      matchIndex: 'match_index'
+      excerpt: 'excerpt',
+      matchStart: 'match_start'
     },
     directoryEntryFields: [
       { outputKey: 'document_id', rowKey: 'document_id', type: 'nullableString' },
@@ -51,9 +51,23 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
       { outputKey: 'extension', rowKey: 'extension', type: 'nullableString' },
       { outputKey: 'title', rowKey: 'title', type: 'nullableString' },
       { outputKey: 'opening_text', rowKey: 'opening_text', type: 'nullableString' },
-      { outputKey: 'content', rowKey: 'content', type: 'resolvedContent' },
-      { outputKey: 'content_status', rowKey: 'availability', type: 'contentStatus' },
+      { outputKey: 'content', rowKey: 'content', type: 'nullableString' },
+      { outputKey: 'content_status', rowKey: 'content_status', type: 'string' },
       { outputKey: 'updated_at', rowKey: 'updated_at', type: 'nullableString' }
+    ],
+    searchResultFields: [
+      { outputKey: 'document_id', rowKey: 'document_id', type: 'nullableString' },
+      { outputKey: 'folder_id', rowKey: 'folder_id', type: 'nullableString' },
+      { outputKey: 'relative_path', rowKey: 'relative_path', type: 'nullableString' },
+      { outputKey: 'file_name', rowKey: 'file_name', type: 'nullableString' },
+      { outputKey: 'extension', rowKey: 'extension', type: 'nullableString' },
+      { outputKey: 'title', rowKey: 'title', type: 'nullableString' },
+      { outputKey: 'opening_text', rowKey: 'opening_text', type: 'nullableString' },
+      { outputKey: 'content', rowKey: 'content', type: 'nullableString' },
+      { outputKey: 'content_status', rowKey: 'content_status', type: 'string' },
+      { outputKey: 'updated_at', rowKey: 'updated_at', type: 'nullableString' },
+      { outputKey: 'match_start', rowKey: 'match_start', type: 'long' },
+      { outputKey: 'excerpt', rowKey: 'excerpt', type: 'string' }
     ]
   },
   readableArticle: {
@@ -68,11 +82,11 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
     referencePdfAttachmentQueryName: 'readableArticleReferencePdfAttachment',
     untitledTitle: 'Untitled',
     rowKeys: {
-      availability: 'availability',
-      bodyBlobData: 'body_blob_data',
       bodyBlobHash: 'body_blob_hash',
       content: 'content',
+      contentStatus: 'content_status',
       id: 'id',
+      pdfAttachmentId: 'pdf_attachment_id',
       title: 'title'
     },
     outputKeys: {
@@ -82,6 +96,14 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
       nodeId: 'node_id',
       pdfAttachmentId: 'pdf_attachment_id',
       title: 'title'
-    }
+    },
+    articleFields: [
+      { outputKey: 'node_id', rowKey: 'id', type: 'string' },
+      { outputKey: 'title', rowKey: 'title', type: 'string' },
+      { outputKey: 'body_blob_hash', rowKey: 'body_blob_hash', type: 'nullableString' },
+      { outputKey: 'content', rowKey: 'content', type: 'nullableString' },
+      { outputKey: 'content_status', rowKey: 'content_status', type: 'string' },
+      { outputKey: 'pdf_attachment_id', rowKey: 'pdf_attachment_id', type: 'nullableString' }
+    ]
   }
 } as const;

@@ -59,6 +59,20 @@ describe('Android content read query rules', () => {
         pdfAttachmentId: 'pdf_attachment_id'
       }
     });
+    expect(definitions.contentRead.externalDocuments.searchResultFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ outputKey: 'content_status', rowKey: 'content_status', type: 'string' }),
+        expect.objectContaining({ outputKey: 'match_start', rowKey: 'match_start', type: 'long' }),
+        expect.objectContaining({ outputKey: 'excerpt', rowKey: 'excerpt', type: 'string' })
+      ])
+    );
+    expect(definitions.contentRead.readableArticle.articleFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ outputKey: 'node_id', rowKey: 'id', type: 'string' }),
+        expect.objectContaining({ outputKey: 'content_status', rowKey: 'content_status', type: 'string' }),
+        expect.objectContaining({ outputKey: 'pdf_attachment_id', rowKey: 'pdf_attachment_id', type: 'nullableString' })
+      ])
+    );
   });
 
   it('keeps content read Java stores wired to generated query rules', async () => {
@@ -77,10 +91,10 @@ describe('Android content read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleOutputKey(context, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowString(context, row, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowNullableString(context, row, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, "textKey")');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleArray(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowString(context, row, field)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "contentRead", groupName)');
+    expect(rulesSource).toContain('getJSONArray(key)');
     expect(combinedStoreSource).not.toContain('"externalDocumentById"');
     expect(combinedStoreSource).not.toContain('"readableArticleFirstNode"');
     expect(combinedStoreSource).not.toContain('"pdfPageTextPages"');
@@ -93,6 +107,8 @@ describe('Android content read query rules', () => {
     expect(combinedStoreSource).not.toContain('target.put("content_status"');
     expect(combinedStoreSource).not.toContain('article.put("node_id"');
     expect(combinedStoreSource).not.toContain('article.put("content_status"');
+    expect(combinedStoreSource).not.toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "passthroughAvailabilityStatuses")');
+    expect(combinedStoreSource).not.toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, "textKey")');
     expect(combinedStoreSource).not.toContain('row.getString("document_id"');
     expect(combinedStoreSource).not.toContain('row.getString("id"');
     expect(combinedStoreSource).not.toContain('field.getString("outputKey")');

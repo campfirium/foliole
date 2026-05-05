@@ -3,9 +3,9 @@ package com.foliole.android;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionReadableArticleQuery {
@@ -31,7 +31,7 @@ final class FolioleCompanionReadableArticleQuery {
         if (article == null) {
             return wrap(context, null);
         }
-        return wrap(context, buildArticle(context, database, article));
+        return wrap(context, buildArticle(context, article));
     }
 
     private static String loadActiveNodeId(Context context, SQLiteDatabase database) throws Exception {
@@ -50,99 +50,24 @@ final class FolioleCompanionReadableArticleQuery {
         if (article == null) {
             return null;
         }
-        return buildArticle(context, database, article);
+        return buildArticle(context, article);
     }
 
-    private static String loadReferencePdfAttachmentId(Context context, SQLiteDatabase database, String nodeId) throws Exception {
-        return FolioleCompanionGeneratedQueryRunner.loadString(
-            context,
-            database,
-            stringRule(context, "referencePdfAttachmentQueryName"),
-            new String[] { nodeId }
-        );
-    }
-
-    private static String loadPdfPageText(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
-        if (attachmentId == null || attachmentId.trim().isEmpty()) {
-            return null;
-        }
-        StringBuilder builder = new StringBuilder();
-        JSArray pages = FolioleCompanionGeneratedQueryRunner.loadRows(
-            context,
-            database,
-            stringRule(context, "pdfPagesQueryName"),
-            stringRule(context, "pdfPagesResultKey"),
-            new String[] { attachmentId.trim() }
-        );
-        for (int index = 0; index < pages.length(); index += 1) {
-            String text = pages.getJSONObject(index).optString(FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, "textKey"), null);
-            if (text == null || text.trim().isEmpty()) {
-                continue;
-            }
-            if (builder.length() > 0) {
-                builder.append("\n\n");
-            }
-            builder.append(text.trim());
-        }
-        return builder.length() == 0 ? null : builder.toString();
-    }
-
-    private static boolean isPdfPlaceholderContent(Context context, String content) throws Exception {
-        return content != null && content.contains(stringRule(context, "pdfPlaceholderText"));
-    }
-
-    private static String resolveArticleContent(Context context, SQLiteDatabase database, String title, String content, String pdfAttachmentId) throws Exception {
-        String pdfText = isPdfPlaceholderContent(context, content) ? loadPdfPageText(context, database, pdfAttachmentId) : null;
-        if (pdfText == null) {
-            return content;
-        }
-        return "# " + normalizeTitle(context, title) + "\n\n" + pdfText;
-    }
-
-    private static String resolveContentStatus(
-        Context context,
-        String inlineContent,
-        String bodyBlobHash,
-        String bodyBlobData,
-        String availability
-    ) throws Exception {
-        if (bodyBlobHash != null && !bodyBlobHash.trim().isEmpty() && bodyBlobData == null) {
-            if (FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "passthroughAvailabilityStatuses").contains(availability)) {
-                return availability;
-            }
-            return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "missing");
-        }
-        if (resolveContent(inlineContent, bodyBlobData).trim().isEmpty()) {
-            return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "empty");
-        }
-        return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready");
-    }
-
-    private static String resolveContent(String inlineContent, String bodyBlobData) {
-        return bodyBlobData == null ? inlineContent : bodyBlobData;
-    }
-
-    private static JSObject buildArticle(Context context, SQLiteDatabase database, JSONObject row) throws Exception {
-        String nodeId = rowString(context, row, "id");
-        String title = normalizeTitle(context, rowNullableString(context, row, "title"));
-        String inlineContent = rowNullableString(context, row, "content");
-        String bodyBlobHash = rowNullableString(context, row, "bodyBlobHash");
-        String bodyBlobData = rowNullableString(context, row, "bodyBlobData");
-        String availability = rowNullableString(context, row, "availability");
-        String content = resolveContent(inlineContent, bodyBlobData);
-        String pdfAttachmentId = loadReferencePdfAttachmentId(context, database, nodeId);
+    private static JSObject buildArticle(Context context, JSONObject row) throws Exception {
         JSObject article = new JSObject();
-        article.put(outputKey(context, "nodeId"), nodeId);
-        article.put(outputKey(context, "title"), title);
-        article.put(outputKey(context, "bodyBlobHash"), bodyBlobHash);
-        article.put(outputKey(context, "content"), resolveArticleContent(context, database, title, content, pdfAttachmentId));
-        article.put(outputKey(context, "contentStatus"), resolveContentStatus(context, inlineContent, bodyBlobHash, bodyBlobData, availability));
-        article.put(outputKey(context, "pdfAttachmentId"), pdfAttachmentId);
+        JSONArray fields = arrayRule(context, "articleFields");
+        for (int index = 0; index < fields.length(); index += 1) {
+            JSONObject field = fields.getJSONObject(index);
+            article.put(fieldOutputKey(context, field), fieldValue(context, row, field));
+        }
         return article;
     }
 
-    private static String normalizeTitle(Context context, String title) throws Exception {
-        return title == null || title.trim().isEmpty() ? stringRule(context, "untitledTitle") : title.trim();
+    private static Object fieldValue(Context context, JSONObject row, JSONObject field) throws Exception {
+        String type = fieldTypeKey(context, field);
+        if (fieldType(context, "string").equals(type)) return fieldRowString(context, row, field);
+        if (fieldType(context, "nullableString").equals(type)) return fieldRowNullableString(context, row, field);
+        throw new IllegalStateException("Unsupported readable article field type: " + type);
     }
 
     private static JSObject wrap(Context context, JSObject article) throws Exception {
@@ -159,11 +84,27 @@ final class FolioleCompanionReadableArticleQuery {
         return FolioleCompanionContentReadQueryRules.readableArticleOutputKey(context, key);
     }
 
-    private static String rowString(Context context, JSONObject row, String key) throws Exception {
-        return FolioleCompanionContentReadQueryRules.readableArticleRowString(context, row, key);
+    private static JSONArray arrayRule(Context context, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.readableArticleArray(context, key);
     }
 
-    private static String rowNullableString(Context context, JSONObject row, String key) throws Exception {
-        return FolioleCompanionContentReadQueryRules.readableArticleRowNullableString(context, row, key);
+    private static String fieldOutputKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field);
+    }
+
+    private static String fieldRowNullableString(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowNullableString(context, row, field);
+    }
+
+    private static String fieldRowString(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowString(context, row, field);
+    }
+
+    private static String fieldTypeKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field);
+    }
+
+    private static String fieldType(Context context, String key) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key);
     }
 }

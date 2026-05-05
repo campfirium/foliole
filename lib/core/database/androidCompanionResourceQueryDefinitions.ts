@@ -135,6 +135,15 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
     pageWidthKey: 'page_width',
     searchQueryName: 'pdfPageTextSearch',
     searchResultKey: 'results',
-    textKey: 'text'
+    textKey: 'text',
+    searchResultFields: [
+      { outputKey: 'attachment_id', rowKey: 'attachment_id', type: 'string' },
+      { outputKey: 'page', rowKey: 'page', type: 'long' },
+      { outputKey: 'text', rowKey: 'text', type: 'string' },
+      { outputKey: 'page_width', rowKey: 'page_width', type: 'double' },
+      { outputKey: 'page_height', rowKey: 'page_height', type: 'double' },
+      { outputKey: 'match_start', rowKey: 'match_start', type: 'long' },
+      { outputKey: 'excerpt', rowKey: 'excerpt', type: 'string' }
+    ]
   }
 } as const;

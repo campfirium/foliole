@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import android.content.Context;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionResourceReadQueryRules {
@@ -89,6 +90,10 @@ final class FolioleCompanionResourceReadQueryRules {
 
     static JSONObject pdfPageTextObject(Context context, String key) throws Exception {
         return group(context, "pdfPageText").getJSONObject(key);
+    }
+
+    static JSONArray pdfPageTextArray(Context context, String key) throws Exception {
+        return group(context, "pdfPageText").getJSONArray(key);
     }
 
     static String pdfPageTextOutputKey(Context context, String key) throws Exception {
