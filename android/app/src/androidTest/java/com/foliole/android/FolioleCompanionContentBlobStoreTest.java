@@ -268,6 +268,26 @@ public class FolioleCompanionContentBlobStoreTest {
     }
 
     @Test
+    public void keepsFailedActiveTopicBodyBeforeFreshBackgroundBodies() throws Exception {
+        String activeHash = sha256("failed active body");
+        String freshHash = sha256("fresh background body");
+        insertMissingBlob(activeHash);
+        insertMissingBlob(freshHash);
+        database.execSQL("UPDATE content_blobs SET availability = 'failed' WHERE hash = '" + activeHash + "'");
+        insertNodeRef("active-node", activeHash, "2026-04-20T00:00:00.000Z");
+        insertNodeRef("fresh-node", freshHash, "2026-04-30T00:00:00.000Z");
+        database.execSQL("INSERT INTO workspace_meta (key, value, updated_at) VALUES " +
+            "('active_node_id', 'active-node', '2026-04-30T00:00:00.000Z')");
+
+        assertEquals(activeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(0));
+        assertEquals(freshHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(1));
+    }
+
+    @Test
     public void returnsCachedBlobWithoutDownloadingItAgain() throws Exception {
         String body = "cached body";
         String hash = sha256(body);

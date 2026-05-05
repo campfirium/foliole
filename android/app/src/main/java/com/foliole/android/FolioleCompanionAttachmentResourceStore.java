@@ -38,7 +38,7 @@ final class FolioleCompanionAttachmentResourceStore {
             "SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0), b.availability, b.storage_key FROM attachment_blobs b " +
                 "LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id " +
                 "WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
-                "ORDER BY CASE b.availability WHEN 'failed' THEN 1 ELSE 0 END ASC, " +
+                "ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN b.availability = 'failed' THEN 2 ELSE 1 END ASC, " +
                     "COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC",
             null
         )) {

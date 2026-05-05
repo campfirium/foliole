@@ -252,6 +252,28 @@ public class FolioleCompanionAttachmentResourceStoreTest {
     }
 
     @Test
+    public void keepsFailedActiveTopicAttachmentBeforeFreshBackgroundResources() throws Exception {
+        insertAttachmentManifest("active-att", "hash-active", "2026-04-25T00:00:00.000Z");
+        insertAttachmentManifest("fresh-att", "hash-fresh", "2026-04-25T00:00:00.000Z");
+        insertNode("active-node", "2026-04-20T00:00:00.000Z");
+        insertNode("fresh-node", "2026-04-30T00:00:00.000Z");
+        insertNodeAttachment("active-node", "active-att");
+        insertNodeAttachment("fresh-node", "fresh-att");
+        database.execSQL("UPDATE attachment_blobs SET availability = 'failed' WHERE attachment_id = 'active-att'");
+        database.execSQL("INSERT INTO workspace_meta (key, value, updated_at) VALUES " +
+            "('active_node_id', 'active-node', '2026-04-30T00:00:00.000Z')");
+
+        assertEquals("active-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(0)
+            .getString("attachment_id"));
+        assertEquals("fresh-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(1)
+            .getString("attachment_id"));
+    }
+
+    @Test
     public void marksAttachmentResourceFailedWhenDownloadFails() throws Exception {
         insertAttachmentManifest("failed-att", "hash-failed", "2026-04-25T00:00:00.000Z");
 
