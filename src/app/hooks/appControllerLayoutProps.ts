@@ -97,7 +97,32 @@ export function buildAppControllerLayoutProps(args: BuildControllerLayoutPropsAr
   });
 }
 
+function createLayoutEditorCtx(args: BuildControllerLayoutPropsArgs) {
+  return {
+    onCloseContextMenu: args.editorCtx.closeContextMenu,
+    onCopyImage: args.editorCtx.handleCopyImage,
+    onCreateCloze: args.editorCtx.handleCreateCloze,
+    onCreateHighlight: args.editorCtx.handleCreateHighlight,
+    onCutImage: args.editorCtx.handleCutImage,
+    onDeleteImage: args.editorCtx.handleDeleteImage,
+    onEditorContextMenu: args.editorCtx.handleEditorContextMenu,
+    onExportImage: args.editorCtx.handleExportImage
+  };
+}
+
+function createLayoutNav(args: BuildControllerLayoutPropsArgs) {
+  return {
+    onGoBack: args.nav.handleGoBack,
+    onGoForward: args.nav.handleGoForward,
+    onGoParent: args.nav.handleGoParent,
+    onSelectBreadcrumbNode: args.nav.handleSelectBreadcrumbNode,
+    onSelectNode: args.nav.handleSelectNode
+  };
+}
+
 function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
+  const editorCtx = createLayoutEditorCtx(args);
+  const nav = createLayoutNav(args);
   return {
     activeNodeId: args.ws.activeNodeId,
     reviewSettings: args.reviewSettings,
@@ -139,19 +164,8 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     deferReviewItem: args.ws.deferReviewItem,
     dismissReviewItem: args.ws.dismissReviewItem,
     revealReviewAnswer: args.ws.revealReviewAnswer,
-    nav: {
-      onGoBack: args.nav.handleGoBack,
-      onGoForward: args.nav.handleGoForward,
-      onGoParent: args.nav.handleGoParent,
-      onSelectBreadcrumbNode: args.nav.handleSelectBreadcrumbNode,
-      onSelectNode: args.nav.handleSelectNode
-    },
-    editorCtx: {
-      onCloseContextMenu: args.editorCtx.closeContextMenu,
-      onCreateCloze: args.editorCtx.handleCreateCloze,
-      onCreateHighlight: args.editorCtx.handleCreateHighlight,
-      onEditorContextMenu: args.editorCtx.handleEditorContextMenu
-    }
+    nav,
+    editorCtx
   };
 }
 

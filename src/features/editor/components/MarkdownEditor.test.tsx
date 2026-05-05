@@ -67,6 +67,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
       return mockGetScrollMetrics();
     }
     replaceSelection() {}
+    replaceRange() {}
     onContentChange() {
       return () => undefined;
     }

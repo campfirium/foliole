@@ -25,6 +25,7 @@ export interface EditorAdapter {
   getScrollTop(): number;
   setScrollTop(scrollTop: number): void;
   getScrollMetrics(): EditorScrollMetrics;
+  replaceRange(from: number, to: number, content: string): void;
   replaceSelection(content: string): void;
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;
   onContentChange(listener: (content: string) => void): () => void;

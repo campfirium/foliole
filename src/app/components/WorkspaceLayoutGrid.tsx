@@ -8,10 +8,12 @@ import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListSplitter } from './WorkspaceListSplitter';
+import { WorkspaceListStudyStatusBar } from './WorkspaceListStudyStatusBar';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
 import { WorkspaceRightSidebarSplitter } from './WorkspaceRightSidebarSplitter';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
+
 function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
   if (props.isListCollapsed && props.isRightSidebarCollapsed) {
     return 'grid-cols-1 xl:grid-cols-1';
@@ -23,42 +25,6 @@ function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
     return '[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)]';
   }
   return '[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)_1px_minmax(0,var(--workspace-right-sidebar-width,320px))]';
-}
-function getReviewStatusLabel(status: WorkspaceLayoutProps['reviewStatus']) {
-  if (status === 'awaiting-answer') {
-    return 'Awaiting answer';
-  }
-  if (status === 'answer-revealed') {
-    return 'Answer revealed';
-  }
-  return 'Session complete';
-}
-function ListStudyStatusBar({
-  isStudyMode,
-  reviewDueCount,
-  reviewQueueCount,
-  reviewCompletedCount,
-  reviewStatus
-}: {
-  isStudyMode: boolean;
-  reviewDueCount: number;
-  reviewQueueCount: number;
-  reviewCompletedCount: number;
-  reviewStatus: WorkspaceLayoutProps['reviewStatus'];
-}) {
-  if (!isStudyMode) {
-    return null;
-  }
-
-  return (
-    <div className="flex h-[56px] flex-none items-center border-t border-border bg-bg-panel px-3">
-      <p className="truncate text-xs font-medium text-foreground/70">
-        Reviewing · {Math.max(reviewQueueCount, 0)} left · {Math.max(reviewCompletedCount, 0)} done · {getReviewStatusLabel(reviewStatus)}
-        {' · '}
-        {Math.max(reviewDueCount, 0)} due now
-      </p>
-    </div>
-  );
 }
 function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: string) => void; props: WorkspaceLayoutProps }) {
   const listNodesById = useMemo(() => toWorkspaceListNodesById(props.nodesById), [props.nodesById]);
@@ -76,7 +42,7 @@ function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: str
         onSelectTrashNode={props.onSelectTrashNode}
         selectedTrashNodeId={props.selectedTrashNodeId}
       />
-      <ListStudyStatusBar
+      <WorkspaceListStudyStatusBar
         isStudyMode={props.isStudyMode}
         reviewCompletedCount={props.reviewCompletedCount}
         reviewDueCount={props.reviewDueCount}
@@ -86,7 +52,6 @@ function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: str
     </div>
   );
 }
-
 function WorkspaceDocumentArea({ documentNodeId, props }: { documentNodeId: string | null; props: WorkspaceLayoutProps }) {
   return (
     <section aria-label="Document and review area" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
@@ -131,12 +96,16 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       nodesById={props.nodesById}
       onAnswerChange={props.onAnswerChange}
       onCloseContextMenu={props.onCloseContextMenu}
+      onCopyImage={props.onCopyImage}
       onCreateCloze={props.onCreateCloze}
       onCreateHighlight={props.onCreateHighlight}
+      onCutImage={props.onCutImage}
+      onDeleteImage={props.onDeleteImage}
       onEditorChange={props.onEditorChange}
       onNodeContentChange={props.onNodeContentChange}
       onEditorContextMenu={props.onEditorContextMenu}
       onEditorReady={props.onEditorReady}
+      onExportImage={props.onExportImage}
       onGoBack={props.onGoBack}
       onGoForward={props.onGoForward}
       onGoParent={props.onGoParent}
@@ -150,7 +119,6 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
     />
   );
 }
-
 function WorkspaceLeftRail({
   isImportManagementOpen,
   onOpenImportManagement,
@@ -181,7 +149,6 @@ function WorkspaceLeftRail({
     </div>
   );
 }
-
 export function WorkspaceLayoutGrid({
   activeRightPanelId,
   documentNodeId,

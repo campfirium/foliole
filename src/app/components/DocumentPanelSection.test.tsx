@@ -72,12 +72,16 @@ function renderSectionWithProps(overrides: Partial<ComponentProps<typeof Documen
       nodesById={{ 'node-1': baseNode }}
       onAnswerChange={() => undefined}
       onCloseContextMenu={() => undefined}
+      onCopyImage={() => undefined}
       onCreateCloze={() => undefined}
       onCreateHighlight={() => undefined}
+      onCutImage={() => undefined}
+      onDeleteImage={() => undefined}
       onEditorChange={() => undefined}
       onNodeContentChange={() => undefined}
       onEditorContextMenu={() => undefined}
       onEditorReady={() => undefined}
+      onExportImage={() => undefined}
       onGoBack={() => undefined}
       onGoForward={() => undefined}
       onGoParent={() => undefined}

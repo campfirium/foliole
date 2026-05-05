@@ -25,7 +25,14 @@ interface BuildLayoutPropsArgs {
   documentResize: { isResizingDocument: boolean; startResize: WorkspaceLayoutProps['onStartDocumentResize'] };
   editorCtx: Pick<
     WorkspaceLayoutProps,
-    'onCloseContextMenu' | 'onCreateCloze' | 'onCreateHighlight' | 'onEditorContextMenu'
+    | 'onCloseContextMenu'
+    | 'onCopyImage'
+    | 'onCreateCloze'
+    | 'onCreateHighlight'
+    | 'onCutImage'
+    | 'onDeleteImage'
+    | 'onEditorContextMenu'
+    | 'onExportImage'
   >;
   editorNodeId: string | null;
   editorNodeViewState: WorkspaceLayoutProps['editorNodeViewState'];
@@ -169,7 +176,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onRunImportFile: args.onRunImportFile,
     onRunImportFolder: args.onRunImportFolder,
     onStartClipboardImport: args.onStartClipboardImport,
-    onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze,
+    onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCopyImage: args.editorCtx.onCopyImage, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze, onCutImage: args.editorCtx.onCutImage, onDeleteImage: args.editorCtx.onDeleteImage, onExportImage: args.editorCtx.onExportImage,
     onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions,
     onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession,
     reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, selectedTrashNodeId: args.selectedTrashNodeId

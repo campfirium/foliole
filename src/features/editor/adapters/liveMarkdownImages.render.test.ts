@@ -13,6 +13,18 @@ vi.mock('../../../shared/platform/attachmentResources', () => ({
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
+async function expectInternalImageRendered(host: HTMLElement) {
+  await waitFor(() => {
+    const image = host.querySelector('.cm-md-image-element');
+    expect(image).not.toBeNull();
+    expect(image?.getAttribute('src')).toBe('file:///tmp/cover.png');
+  });
+  const widget = host.querySelector('.cm-md-image-widget');
+  expect(widget).toHaveAttribute('data-md-image-attachment-id', 'hash-1');
+  expect(widget).toHaveAttribute('data-md-image-from');
+  expect(widget).toHaveAttribute('data-md-image-to');
+}
+
 describe('live markdown image rendering', () => {
   beforeEach(() => {
     resolveRuntimeAttachmentResource.mockReset();
@@ -36,11 +48,7 @@ describe('live markdown image rendering', () => {
       initialContent: '![Cover](asset://hash-1.png)'
     });
 
-    await waitFor(() => {
-      const image = host.querySelector('.cm-md-image-element');
-      expect(image).not.toBeNull();
-      expect(image?.getAttribute('src')).toBe('file:///tmp/cover.png');
-    });
+    await expectInternalImageRendered(host);
     expect(resolveRuntimeAttachmentResource).toHaveBeenCalledWith('asset://hash-1.png');
 
     adapter.destroy();

@@ -45,6 +45,28 @@ export type NativeAttachmentResourceResolution =
       resource_url: null;
     };
 
+export type NativeCopyAttachmentImageResult =
+  | {
+      status: 'copied';
+    }
+  | {
+      status: 'not_found' | 'missing_file' | 'invalid_image';
+    };
+
+export type NativeExportAttachmentImageResult =
+  | {
+      status: 'saved';
+      path: string;
+    }
+  | {
+      status: 'cancelled';
+      path: null;
+    }
+  | {
+      status: 'not_found' | 'missing_file' | 'save_failed';
+      path: null;
+    };
+
 export interface NativeSystemFontCatalog {
   fonts: unknown[];
   monospace_fonts: unknown[];

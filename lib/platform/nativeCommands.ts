@@ -17,6 +17,8 @@ export const NATIVE_COMMANDS = {
   importClipboardImageAttachment: 'import_clipboard_image_attachment',
   importLocalImageAttachment: 'import_local_image_attachment',
   resolveAttachmentResource: 'resolve_attachment_resource',
+  copyAttachmentImageToClipboard: 'copy_attachment_image_to_clipboard',
+  exportAttachmentImage: 'export_attachment_image',
   resolveAppPaths: 'resolve_app_paths',
   loadLibraryPathSettings: 'load_library_path_settings',
   rebuildMirrorAttachmentLinks: 'rebuild_mirror_attachment_links',

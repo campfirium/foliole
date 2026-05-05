@@ -1,9 +1,10 @@
-import { ASSET_MARKDOWN_SCHEME } from '../../../../lib/platform/assetMarkdownUrl';
+import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { resolveRuntimeAttachmentResource } from '../../../shared/platform/attachmentResources';
 
 const INLINE_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\n]+)\)/g;
 
 export interface MarkdownImageMatch {
+  attachmentId: string | null;
   from: number;
   to: number;
   alt: string;
@@ -40,6 +41,10 @@ function isInternalImageSource(value: string) {
   return value.startsWith(ASSET_MARKDOWN_SCHEME);
 }
 
+function parseImageRange(value: number) {
+  return Number.isInteger(value) && value >= 0 ? String(value) : '';
+}
+
 function createImageElement(alt: string, source: string) {
   const image = document.createElement('img');
   image.alt = alt || 'Markdown image';
@@ -68,17 +73,22 @@ async function renderInternalImage(wrapper: HTMLElement, alt: string, source: st
   wrapper.replaceChildren(createImageStatusElement('unavailable'));
 }
 
-export function createMarkdownImageWidgetDom(alt: string, source: string) {
+export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch) {
   const wrapper = document.createElement('span');
   wrapper.className = 'cm-md-image-widget';
+  wrapper.dataset.mdImageAlt = imageMatch.alt;
+  wrapper.dataset.mdImageAttachmentId = imageMatch.attachmentId ?? '';
+  wrapper.dataset.mdImageFrom = parseImageRange(imageMatch.from);
+  wrapper.dataset.mdImageSource = imageMatch.source;
+  wrapper.dataset.mdImageTo = parseImageRange(imageMatch.to);
 
-  if (isRemoteImageSource(source)) {
-    wrapper.append(createImageElement(alt, source));
+  if (isRemoteImageSource(imageMatch.source)) {
+    wrapper.append(createImageElement(imageMatch.alt, imageMatch.source));
     return wrapper;
   }
 
   wrapper.append(createImageStatusElement('loading'));
-  void renderInternalImage(wrapper, alt, source);
+  void renderInternalImage(wrapper, imageMatch.alt, imageMatch.source);
   return wrapper;
 }
 
@@ -89,7 +99,13 @@ export function collectImageMatches(from: number, text: string): MarkdownImageMa
     const source = parseMarkdownImageTarget(match[2] ?? '');
     if (source && (isRemoteImageSource(source) || isInternalImageSource(source))) {
       const start = from + match.index;
-      matches.push({ from: start, to: start + match[0].length, alt: match[1] ?? '', source });
+      matches.push({
+        attachmentId: isInternalImageSource(source) ? parseAssetMarkdownUrl(source) : null,
+        from: start,
+        to: start + match[0].length,
+        alt: match[1] ?? '',
+        source
+      });
     }
     match = INLINE_IMAGE_PATTERN.exec(text);
   }

@@ -175,7 +175,7 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   if (utilityResult !== undefined) {
     return utilityResult;
   }
-  const storageResult = await handleStorageCommand(command, args);
+  const storageResult = await handleStorageCommand(command, args, resolveTargetWindow(context));
   if (storageResult !== undefined) {
     return storageResult;
   }

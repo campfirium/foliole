@@ -18,6 +18,11 @@ const { importClipboardImageAttachment } = vi.hoisted(() => ({
   importClipboardImageAttachment: vi.fn()
 }));
 
+const { copyAttachmentImageToClipboard, exportAttachmentImage } = vi.hoisted(() => ({
+  copyAttachmentImageToClipboard: vi.fn(),
+  exportAttachmentImage: vi.fn()
+}));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
@@ -76,6 +81,7 @@ vi.mock('./importTextFile.js', () => ({ runTextFileImport: vi.fn(), selectImport
 vi.mock('./fonts.js', () => ({ listSystemFonts: vi.fn() }));
 vi.mock('./readwiseReaderSetup.js', () => ({ inspectReadwiseReaderSetup: vi.fn() }));
 vi.mock('../attachments/resourceResolver.js', () => ({ resolveAttachmentResource }));
+vi.mock('../attachments/attachmentImageActions.js', () => ({ copyAttachmentImageToClipboard, exportAttachmentImage }));
 vi.mock('../attachments/importLocalImageAttachment.js', () => ({ importLocalImageAttachment }));
 vi.mock('../attachments/importClipboardImageAttachment.js', () => ({ importClipboardImageAttachment }));
 
@@ -175,4 +181,25 @@ it('routes clipboard image attachment imports through the unified runtime entry'
     nodeId: 'node-1',
     originalName: ''
   });
+});
+
+it('routes image clipboard and export actions through the unified runtime entry', async () => {
+  copyAttachmentImageToClipboard.mockReturnValue({ status: 'copied' });
+  exportAttachmentImage.mockResolvedValue({ path: '/tmp/cover.png', status: 'saved' });
+
+  await expect(
+    handleInvokeRequest({
+      command: NATIVE_COMMANDS.copyAttachmentImageToClipboard,
+      args: { attachment_id: 'hash-1' }
+    })
+  ).resolves.toEqual({ status: 'copied' });
+  await expect(
+    handleInvokeRequest({
+      command: NATIVE_COMMANDS.exportAttachmentImage,
+      args: { attachment_id: 'hash-1' }
+    })
+  ).resolves.toEqual({ path: '/tmp/cover.png', status: 'saved' });
+
+  expect(copyAttachmentImageToClipboard).toHaveBeenCalledWith('hash-1');
+  expect(exportAttachmentImage).toHaveBeenCalledWith('hash-1', null);
 });

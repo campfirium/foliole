@@ -36,6 +36,12 @@ export const mockEditorAdapter: EditorAdapter = {
   getScrollTop: () => 0,
   setScrollTop: () => undefined,
   getScrollMetrics: () => ({ clientHeight: 1, scrollHeight: 1, scrollTop: 0 }),
+  replaceRange: (from: number, to: number, content: string) => {
+    mockEditorState.content = `${mockEditorState.content.slice(0, from)}${content}${mockEditorState.content.slice(to)}`;
+    const nextCursor = from + content.length;
+    mockEditorState.selectionFrom = nextCursor;
+    mockEditorState.selectionTo = nextCursor;
+  },
   replaceSelection: (content: string) => {
     const from = Math.min(mockEditorState.selectionFrom, mockEditorState.selectionTo);
     const to = Math.max(mockEditorState.selectionFrom, mockEditorState.selectionTo);

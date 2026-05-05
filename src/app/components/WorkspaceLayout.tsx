@@ -12,7 +12,13 @@ import type { ReviewQueueVisibility } from './reviewQueueVisibility';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
 
 export interface WorkspaceEditorContextMenu {
-  canRunCommands: boolean;
+  canRunCommands?: boolean;
+  imageAttachmentId?: string;
+  imageRange?: {
+    from: number;
+    to: number;
+  };
+  kind: 'image' | 'selection';
   left: number;
   top: number;
 }
@@ -89,8 +95,12 @@ export interface WorkspaceLayoutProps {
   onGoForward: () => void;
   onGoParent: () => void;
   onCloseContextMenu: () => void;
+  onCopyImage: () => void;
   onCreateHighlight: () => void;
   onCreateCloze: () => void;
+  onCutImage: () => void;
+  onDeleteImage: () => void;
+  onExportImage: () => void;
   onStartDocumentResize: (
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>

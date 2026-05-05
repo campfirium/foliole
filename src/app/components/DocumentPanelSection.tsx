@@ -37,8 +37,12 @@ interface DocumentPanelSectionProps {
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onCloseContextMenu: () => void;
+  onCopyImage: () => void;
   onCreateHighlight: () => void;
   onCreateCloze: () => void;
+  onCutImage: () => void;
+  onDeleteImage: () => void;
+  onExportImage: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
@@ -216,10 +220,15 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
       {props.contextMenu ? (
         <EditorContextMenu
           canRunCommands={props.contextMenu.canRunCommands}
+          kind={props.contextMenu.kind}
           left={props.contextMenu.left}
           onClose={props.onCloseContextMenu}
+          onCopyImage={props.onCopyImage}
           onCreateCloze={props.onCreateCloze}
           onCreateHighlight={props.onCreateHighlight}
+          onCutImage={props.onCutImage}
+          onDeleteImage={props.onDeleteImage}
+          onExportImage={props.onExportImage}
           top={props.contextMenu.top}
         />
       ) : null}

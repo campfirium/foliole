@@ -24,21 +24,25 @@ export interface InlineLinkMatch extends RangeBounds {
 }
 
 class MarkdownImageWidget extends WidgetType {
-  readonly alt: string;
-  readonly source: string;
+  readonly imageMatch: MarkdownImageMatch;
 
-  constructor(alt: string, source: string) {
+  constructor(imageMatch: MarkdownImageMatch) {
     super();
-    this.alt = alt;
-    this.source = source;
+    this.imageMatch = imageMatch;
   }
 
   eq(other: MarkdownImageWidget) {
-    return this.alt === other.alt && this.source === other.source;
+    return (
+      this.imageMatch.alt === other.imageMatch.alt &&
+      this.imageMatch.attachmentId === other.imageMatch.attachmentId &&
+      this.imageMatch.from === other.imageMatch.from &&
+      this.imageMatch.source === other.imageMatch.source &&
+      this.imageMatch.to === other.imageMatch.to
+    );
   }
 
   toDOM() {
-    return createMarkdownImageWidgetDom(this.alt, this.source);
+    return createMarkdownImageWidgetDom(this.imageMatch);
   }
 }
 
@@ -47,7 +51,7 @@ export { collectImageMatches };
 export function addImageDecorations(ranges: Range<Decoration>[], imageMatches: ReadonlyArray<MarkdownImageMatch>) {
   for (const imageMatch of imageMatches) {
     ranges.push(
-      Decoration.replace({ widget: new MarkdownImageWidget(imageMatch.alt, imageMatch.source), inclusive: false }).range(
+      Decoration.replace({ widget: new MarkdownImageWidget(imageMatch), inclusive: false }).range(
         imageMatch.from,
         imageMatch.to
       )

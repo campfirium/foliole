@@ -163,7 +163,8 @@ function handleReadingAndReviewCommand(command: string, args: Record<string, unk
 
 export async function handleStorageCommand(
   command: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  window: Parameters<typeof handleStorageAttachmentCommand>[2] = null
 ): Promise<unknown> {
   const nodeMutationResult = handleNodeMutationCommand(command, args);
   if (nodeMutationResult !== undefined) {
@@ -182,7 +183,7 @@ export async function handleStorageCommand(
   if (command === NATIVE_COMMANDS.loadNodeDocument) {
     return loadWorkspaceNodeDocument(asString(args.nodeId, 'nodeId'));
   }
-  const attachmentResult = handleStorageAttachmentCommand(command, args);
+  const attachmentResult = handleStorageAttachmentCommand(command, args, window);
   if (attachmentResult !== undefined) {
     return attachmentResult;
   }
