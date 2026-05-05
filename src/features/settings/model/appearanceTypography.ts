@@ -34,6 +34,8 @@ const READING_LINE_HEIGHT_VALUES: Record<ReadingLineHeight, string> = {
   relaxed: '1.9'
 };
 
+const EDITOR_CODE_FONT_SCALE = 0.9;
+
 function quoteFontFamilyName(value: string) {
   return `'${value.replace(/'/g, "\\'")}'`;
 }
@@ -63,7 +65,7 @@ export function applyEditorTypographyScale(root: HTMLElement, baseFontSize: numb
   root.style.setProperty('--content-panel-h1-font-size', toPx(baseFontSize * 1.42));
   root.style.setProperty('--content-panel-h2-font-size', toPx(baseFontSize * 1.18));
   root.style.setProperty('--content-panel-h3-font-size', toPx(baseFontSize * 1.04));
-  root.style.setProperty('--content-panel-code-font-size', toPx(baseFontSize * 0.82));
+  root.style.setProperty('--content-panel-code-font-size', toPx(baseFontSize * EDITOR_CODE_FONT_SCALE));
 }
 
 export function applyReadingLineHeight(root: HTMLElement, lineHeight: ReadingLineHeight) {

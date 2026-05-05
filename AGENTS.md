@@ -22,6 +22,7 @@
 - `src/companion/**`：读取 `src/companion/AGENTS.md`
 - `ios/**`：读取 `ios/AGENTS.md`
 - `src/app/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 desktop renderer 规则
+- `src/features/editor/**`：读取 `src/features/editor/AGENTS.md`
 - `src/features/**`、`src/store/**`、`src/shared/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 shared / cross-host 规则
 - 若一次任务同时跨多个宿主或表面，必须把相关局部 `AGENTS.md` 全部读齐；冲突时按“更靠近改动目录的规则优先，跨目录共享规则回退到根规则”执行。
 - 关键平台约束必须落在根或对应目录 `AGENTS.md`，不得只放在普通项目文档里。
@@ -152,6 +153,7 @@
 
 - 代码、注释、提交信息、UI 文案、配置键名统一使用英文；对外沟通与执行汇报默认中文。
 - `.lab/specs/**` 文件名使用英文 slug，正文默认中文；其他落库文档默认中文，除非用户明确要求英文。
+- 生成文档默认写入 `.lab/atlas/0active/`，除非用户另指明。
 - 新增 spec 默认采用“主题分组 + 组内小文件”，避免继续新增超长单文档。
 - 旧 spec 不做全量回拆；仅在当前任务直接涉及且单文档维护成本已明显过高时，允许局部拆分。
 - 任务说明默认引用主题入口文档，不直接罗列大量碎文件。
