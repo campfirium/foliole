@@ -60,6 +60,7 @@ export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult)
   if (!result.android || !result.desktop) {
     return { checks, status: deriveStatus(checks) };
   }
+  checks.push(...buildDiagnosticVerdictChecks(result));
   checks.push(...buildLocalStateChecks(result));
   checks.push(...buildEventStateChecks(result));
   checks.push(...buildStructureChecks(result));
@@ -82,6 +83,21 @@ function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
     checks.push(buildPendingAckCheck(result));
   }
   return checks;
+}
+
+function buildDiagnosticVerdictChecks(result: CombinedSyncDiagnosticResult) {
+  return [
+    ...result.verdicts,
+    ...(result.android?.verdicts ?? []),
+    ...(result.desktop?.verdicts ?? [])
+  ]
+    .filter((verdict) => verdict.severity === 'error')
+    .map((verdict) => check(
+      `diagnostic_error_${verdict.code}`,
+      'error',
+      verdict.message,
+      `Diagnostic verdict ${verdict.code} is blocking convergence.`
+    ));
 }
 
 function buildPendingAckCheck(result: CombinedSyncDiagnosticResult) {

@@ -59,6 +59,26 @@ describe('buildSyncConvergenceReport', () => {
     ]));
   });
 
+  it('blocks error diagnostic verdicts', () => {
+    const report = buildSyncConvergenceReport(result({
+      verdicts: [{
+        code: 'android_recent_sync_failed',
+        evidence: { message: 'Failed to apply companion desktop sync pack.' },
+        message: 'Recent sync activity failed.',
+        severity: 'error'
+      }]
+    }));
+
+    expect(report.status).toBe('blocked');
+    expect(report.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'diagnostic_error_android_recent_sync_failed',
+        detail: 'Diagnostic verdict android_recent_sync_failed is blocking convergence.',
+        severity: 'error'
+      })
+    ]));
+  });
+
   it('blocks pending acks that survive a later finished sync pass', () => {
     const report = buildSyncConvergenceReport(result({
       android: {
