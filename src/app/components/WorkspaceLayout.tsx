@@ -97,7 +97,7 @@ export interface WorkspaceLayoutProps {
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   beginApplyingReadingPosition: (selection: EditorSelection, reason: string) => void;
-  completeApplyingReadingPosition: (reason: string) => void;
+  completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => void;
   getReadingPositionSelection: () => EditorSelection | null;
   getReadingPositionSyncState: () => ReadingPositionSyncState | null;
   getReadingPositionTargetViewportRatio: () => number | null;

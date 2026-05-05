@@ -287,5 +287,6 @@ describe('useWorkspaceControllerState reading progress wiring', () => {
         targetViewportRatio: 0.24
       }
     });
+    expect(ws.setNodeViewState).not.toHaveBeenCalled();
   });
 });

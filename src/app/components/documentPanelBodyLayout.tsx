@@ -123,7 +123,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
     );
   }
 
-  const promptEditorKey = `prompt-${props.editorAppearanceKey}-${props.editorNodeId ?? 'none'}`;
+  const promptEditorKey = `prompt-${props.editorAppearanceKey}`;
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">

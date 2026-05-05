@@ -10,19 +10,22 @@ import type { EditorViewState } from './markdownEditorTypes';
 
 const RESTORE_SELECTION_TIMEOUT_MS = 180;
 const RESTORE_SCROLL_SETTLE_TOLERANCE_PX = 8;
+const RATIO_COMPLETION_MAX_ATTEMPTS = 12;
+const RATIO_COMPLETION_TIMEOUT_MS = 300;
 
 export function finishRestoreApplying(args: {
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  completeApplyingReadingPosition: ((reason: string) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   reason: string;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
+  selection: EditorViewState['selection'];
 }) {
   args.isRestoreApplyingActiveRef.current = false;
   args.activeRestoreSelectionKeyRef.current = null;
-  args.completeApplyingReadingPosition?.(args.reason);
+  args.completeApplyingReadingPosition?.(args.reason, args.selection);
   args.restoreCompletionFrameRef.current = null;
   args.restoreCompletionFrame2Ref.current = null;
   if (args.restoreCompletionTimeoutRef.current) {
@@ -69,10 +72,10 @@ export function beginRestoreSelection(args: {
   valueLength: number;
 }) {
   args.clearRestoreCompletionTimers();
-  args.beginApplyingReadingPosition?.(args.selection, 'editor-restore-selection');
   args.isRestoreApplyingActiveRef.current = true;
   args.activeRestoreSelectionKeyRef.current = args.selectionKey;
   args.activeRestoreValueLengthRef.current = args.valueLength;
+  args.beginApplyingReadingPosition?.(args.selection, 'editor-restore-selection');
   args.setReadingPositionSelection?.(args.selection);
   if (typeof args.targetViewportRatio === 'number' && args.adapter.revealSelectionAtViewportRatio) {
     args.adapter.setSelection(args.selection);
@@ -86,7 +89,7 @@ export function beginRestoreSelection(args: {
 export function scheduleRestoreSelectionCompletion(args: {
   adapter: CodeMirrorEditorAdapter;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  completeApplyingReadingPosition: ((reason: string) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string;
@@ -97,7 +100,16 @@ export function scheduleRestoreSelectionCompletion(args: {
   restoreScrollTop: number | undefined;
   selection: EditorViewState['selection'];
   selectionKey: string;
+  targetViewportRatio: number | null | undefined;
 }) {
+  if (typeof args.targetViewportRatio !== 'number') {
+    scheduleNonRatioCompletion(args);
+    return;
+  }
+  scheduleRatioCompletion(args);
+}
+
+function scheduleNonRatioCompletion(args: Parameters<typeof scheduleRestoreSelectionCompletion>[0]) {
   if (tryCompleteRestoreSelection(args, 'editor-restore-selection-settled')) {
     return;
   }
@@ -114,6 +126,23 @@ export function scheduleRestoreSelectionCompletion(args: {
   }, RESTORE_SELECTION_TIMEOUT_MS);
 }
 
+function scheduleRatioCompletion(args: Parameters<typeof scheduleRestoreSelectionCompletion>[0]) {
+  let attemptsRemaining = RATIO_COMPLETION_MAX_ATTEMPTS;
+  const pollSettled = () => {
+    if (tryCompleteRestoreSelection(args, 'editor-restore-selection-settled')) {
+      return;
+    }
+    attemptsRemaining -= 1;
+    if (attemptsRemaining > 0) {
+      args.restoreCompletionFrameRef.current = requestAnimationFrame(pollSettled);
+    }
+  };
+  args.restoreCompletionFrameRef.current = requestAnimationFrame(pollSettled);
+  args.restoreCompletionTimeoutRef.current = window.setTimeout(() => {
+    tryCompleteRestoreSelection(args, 'editor-restore-selection-timeout');
+  }, RATIO_COMPLETION_TIMEOUT_MS);
+}
+
 function isRestoreScrollSettled(adapter: CodeMirrorEditorAdapter, restoreScrollTop: number | undefined) {
   if (typeof restoreScrollTop !== 'number' || !Number.isFinite(restoreScrollTop) || restoreScrollTop <= 0) {
     return true;
@@ -121,11 +150,25 @@ function isRestoreScrollSettled(adapter: CodeMirrorEditorAdapter, restoreScrollT
   return Math.abs(adapter.getScrollTop() - restoreScrollTop) <= RESTORE_SCROLL_SETTLE_TOLERANCE_PX;
 }
 
+function isRestoreViewportRatioSettled(
+  adapter: CodeMirrorEditorAdapter,
+  selection: EditorViewState['selection'],
+  targetViewportRatio: number | null | undefined
+) {
+  if (typeof targetViewportRatio !== 'number') {
+    return true;
+  }
+  if (typeof adapter.isPositionNearViewportRatio !== 'function') {
+    return false;
+  }
+  return adapter.isPositionNearViewportRatio(selection.from, targetViewportRatio, 0.05);
+}
+
 function tryCompleteRestoreSelection(
   args: {
     adapter: CodeMirrorEditorAdapter;
     activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-    completeApplyingReadingPosition: ((reason: string) => void) | undefined;
+    completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined;
     isRestoreApplyingActiveRef: MutableRefObject<boolean>;
     lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
     nodeId: string;
@@ -136,12 +179,17 @@ function tryCompleteRestoreSelection(
     restoreScrollTop: number | undefined;
     selection: EditorViewState['selection'];
     selectionKey: string;
+    targetViewportRatio: number | null | undefined;
   },
   reason: string
 ) {
   applyRestoreScrollTop(args.adapter, args.restoreScrollTop);
   markNodePositionReady(args.nodeId);
-  if (reason !== 'editor-restore-selection-timeout' && !isRestoreScrollSettled(args.adapter, args.restoreScrollTop)) {
+  if (
+    reason !== 'editor-restore-selection-timeout' &&
+    (!isRestoreScrollSettled(args.adapter, args.restoreScrollTop) ||
+      !isRestoreViewportRatioSettled(args.adapter, args.selection, args.targetViewportRatio))
+  ) {
     return false;
   }
   const collapsedSelection = shouldCollapseSelectionAfterRestore(args.selection);
@@ -156,7 +204,8 @@ function tryCompleteRestoreSelection(
     reason,
     restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
     restoreCompletionFrameRef: args.restoreCompletionFrameRef,
-    restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef
+    restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
+    selection: args.selection
   });
   return true;
 }

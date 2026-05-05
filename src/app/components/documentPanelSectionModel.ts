@@ -87,6 +87,7 @@ function getDocumentPanelBodyProps(
     immersiveEditing: props.isImmersiveMode && props.isImmersiveEditing,
     editorNodeId: props.editorNodeId,
     editorReadingSelection: props.editorReadingSelection,
+    editorReadingTargetViewportRatio: props.editorReadingTargetViewportRatio,
     editorNodeViewState: props.editorNodeViewState,
     onBeginApplyingReadingPosition: props.onBeginApplyingReadingPosition,
     onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,

@@ -39,7 +39,7 @@ export function useEditorLayoutEffects(
   readingTargetViewportRatio: number | null | undefined,
   nodeViewState: EditorViewState | undefined,
   beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined,
-  completeApplyingReadingPosition: ((reason: string) => void) | undefined,
+  completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined,
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined,
   shouldSuppressSelectionRestore: (() => boolean) | undefined,
   value: string,

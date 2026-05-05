@@ -15,7 +15,7 @@ export function handleSelectionRestore(args: {
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
   beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined;
-  completeApplyingReadingPosition: ((reason: string) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string | null;
@@ -99,7 +99,7 @@ export function resolveRestoreTarget(args: {
   ) {
     return null;
   }
-  const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop ?? 'auto'}:${args.readingTargetViewportRatio ?? 'default'}`;
+  const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop ?? 'auto'}`;
   if (args.pendingRestoreSelectionKey !== selectionKey) {
     return null;
   }
@@ -123,8 +123,9 @@ export function resolveRestoreTarget(args: {
 
 export function clearRestoreCompletionTimers(args: {
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  completeApplyingReadingPosition: ((reason: string) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
+  pendingSelection: EditorViewState['selection'] | null;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
@@ -148,7 +149,7 @@ export function clearRestoreCompletionTimers(args: {
   if (hadPendingCompletion && args.isRestoreApplyingActiveRef.current) {
     args.isRestoreApplyingActiveRef.current = false;
     args.activeRestoreSelectionKeyRef.current = null;
-    args.completeApplyingReadingPosition?.('editor-restore-selection-cancelled');
+    args.completeApplyingReadingPosition?.('editor-restore-selection-cancelled', args.pendingSelection ?? undefined);
   }
 }
 
@@ -157,7 +158,7 @@ function restoreEditorSelection(args: {
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
   beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined;
-  completeApplyingReadingPosition: ((reason: string) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string;
@@ -175,7 +176,8 @@ function restoreEditorSelection(args: {
   markNodePositionRequested(args.nodeId);
   pushDebugTrace('editor.restore-selection', {
     nodeId: args.nodeId,
-    selection: args.selection
+    selection: args.selection,
+    targetViewportRatio: args.targetViewportRatio ?? null
   });
   beginRestoreSelection({
     adapter: args.adapter,
@@ -187,6 +189,7 @@ function restoreEditorSelection(args: {
         activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
         completeApplyingReadingPosition: args.completeApplyingReadingPosition,
         isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
+        pendingSelection: args.selection,
         restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
         restoreCompletionFrameRef: args.restoreCompletionFrameRef,
         restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef

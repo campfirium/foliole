@@ -32,9 +32,6 @@ export function useNavigationReadingPosition(
       if (!nextViewState) {
         return false;
       }
-      if (result.focusAnchor) {
-        setNodeViewState(result.nodeId, nextViewState);
-      }
       requestReadingPositionApply({
         nodeId: result.nodeId,
         reason: result.focusAnchor ? 'anchor-navigation' : 'node-navigation',

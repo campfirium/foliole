@@ -3,20 +3,16 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 
-const mockMarkNodePositionRequested = vi.fn();
-const mockMarkNodePositionReady = vi.fn();
-const mockDestroy = vi.fn();
-const mockSetContent = vi.fn();
-const mockSetDiffDecorations = vi.fn();
-const mockSetSearchDecorations = vi.fn();
-const mockSetHideTitleHeading = vi.fn();
-const mockSetSelection = vi.fn();
-const mockRevealSelection = vi.fn();
-const mockRevealSelectionAtViewportRatio = vi.fn();
-const mockRestoreSelection = vi.fn();
-const mockSetScrollTop = vi.fn();
-const mockOnScroll = vi.fn(() => () => undefined);
-let currentScrollTop = 0;
+import { MarkdownEditor } from './MarkdownEditor';
+import {
+  mockMarkNodePositionReady,
+  mockMarkNodePositionRequested,
+  mockRestoreSelection,
+  mockRevealSelection,
+  mockSetScrollTop,
+  mockSetSelection,
+  resetLongDocumentEditorMocks
+} from './markdownEditorLongDocumentTestSupport';
 
 vi.mock('../../../shared/platform/performanceDiagnosticsProbe', () => ({
   markEditorContentSyncCompleted: vi.fn(),
@@ -25,70 +21,7 @@ vi.mock('../../../shared/platform/performanceDiagnosticsProbe', () => ({
   markNodePositionRequested: (...args: unknown[]) => mockMarkNodePositionRequested(...args)
 }));
 
-function createMockCodeMirrorEditorAdapterClass() {
-  return class {
-    destroy() {
-      mockDestroy();
-    }
-    focus() {}
-    getContent() { return ''; }
-    getDocumentPositionAtViewportY() { return 0; }
-    getLineBlockHeight() { return 24; }
-    setContent(content: string) {
-      mockSetContent(content);
-    }
-    setDiffDecorations(diffDecorations: unknown) {
-      mockSetDiffDecorations(diffDecorations);
-    }
-    setSearchDecorations(searchDecorations: unknown) {
-      mockSetSearchDecorations(searchDecorations);
-    }
-    setTextAnchorDecorations() {}
-    setHideTitleHeading(value: boolean) {
-      mockSetHideTitleHeading(value);
-    }
-    getSelection() {
-      return { from: 0, to: 0 };
-    }
-    setParagraphMarker() {}
-    setSelection(selection: { from: number; to: number }) {
-      mockSetSelection(selection);
-    }
-    restoreSelection(selection: { from: number; to: number }) {
-      mockRestoreSelection(selection);
-    }
-    revealSelection(selection: { from: number; to: number }) {
-      mockRevealSelection(selection);
-    }
-    revealSelectionAtViewportRatio(selection: { from: number; to: number }, ratio: number) {
-      mockRevealSelectionAtViewportRatio(selection, ratio);
-    }
-    getScrollTop() {
-      return currentScrollTop;
-    }
-    setScrollTop(scrollTop: number) {
-      currentScrollTop = scrollTop;
-      mockSetScrollTop(scrollTop);
-    }
-    getScrollMetrics() {
-      return { clientHeight: 0, scrollHeight: 0, scrollTop: 0 };
-    }
-    replaceRange() {}
-    replaceSelection() {}
-    onContentChange() {
-      return () => undefined;
-    }
-    onScroll() {
-      return mockOnScroll();
-    }
-  };
-}
-
-vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
-  CodeMirrorEditorAdapter: createMockCodeMirrorEditorAdapterClass()
-}));
-
-import { MarkdownEditor } from './MarkdownEditor';
+vi.mock('../adapters/CodeMirrorEditorAdapter');
 
 function renderEditor(ui: React.ReactElement) {
   return render(ui, {
@@ -120,20 +53,7 @@ function createLongDocument() {
 }
 
 beforeEach(() => {
-  mockMarkNodePositionRequested.mockClear();
-  mockMarkNodePositionReady.mockClear();
-  mockDestroy.mockClear();
-  mockSetContent.mockClear();
-  mockSetDiffDecorations.mockClear();
-  mockSetSearchDecorations.mockClear();
-  mockSetHideTitleHeading.mockClear();
-  mockSetSelection.mockClear();
-  mockRevealSelection.mockClear();
-  mockRevealSelectionAtViewportRatio.mockClear();
-  mockRestoreSelection.mockClear();
-  mockSetScrollTop.mockClear();
-  mockOnScroll.mockClear();
-  currentScrollTop = 0;
+  resetLongDocumentEditorMocks();
 });
 
 it('restores mid-document selection and scroll when reopening a long document', async () => {
@@ -258,7 +178,6 @@ it('prefers the current reading selection over the stale saved selection', async
       value={longDocument}
     />
   );
-
   expect(mockRestoreSelection).toHaveBeenLastCalledWith({
     from: readingSelection.from,
     to: readingSelection.from
@@ -268,7 +187,6 @@ it('prefers the current reading selection over the stale saved selection', async
     expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
   });
 });
-
 it('locks reading-position sync while restoring a saved selection', async () => {
   const onBeginApplyingReadingPosition = vi.fn();
   const onCompleteApplyingReadingPosition = vi.fn();
@@ -285,13 +203,12 @@ it('locks reading-position sync while restoring a saved selection', async () => 
       value={createLongDocument()}
     />
   );
-
   expect(onBeginApplyingReadingPosition).toHaveBeenCalledWith(
     { from: 48_000, to: 48_000 },
     'editor-restore-selection'
   );
   expect(onSetReadingPositionSelection).toHaveBeenCalledWith({ from: 48_000, to: 48_000 });
   await waitFor(() => {
-    expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
+    expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled', { from: 48_000, to: 48_000 });
   });
 });

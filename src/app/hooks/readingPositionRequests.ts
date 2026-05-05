@@ -1,4 +1,5 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import { pushDebugTrace } from '../../shared/testing/debugBridge';
 
 import type { ReadingPositionSyncState } from './useAppRuntime';
 
@@ -25,6 +26,12 @@ export function requestReadingPositionApply(args: {
   selection: EditorSelection;
   targetViewportRatio?: number;
 }) {
+  pushDebugTrace('runtime.reading-position.requested', {
+    nodeId: args.nodeId,
+    reason: args.reason,
+    selection: args.selection,
+    targetViewportRatio: args.targetViewportRatio ?? null
+  });
   args.runtime.readingPositionRef.current = {
     nodeId: args.nodeId,
     selection: args.selection

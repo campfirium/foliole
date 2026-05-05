@@ -111,13 +111,23 @@ it('releases the previous restore lock when switching to another document after 
     />
   );
 
-  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
+  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith(
+    'editor-restore-selection-settled',
+    { from: 48_000, to: 48_000 }
+  );
   await waitFor(() => {
-    expect(onBeginApplyingReadingPosition).toHaveBeenLastCalledWith(
-      { from: 51_200, to: 51_200 },
-      'editor-restore-selection'
-    );
+    expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 51_200, to: 51_200 });
   });
+  expect(onBeginApplyingReadingPosition).toHaveBeenNthCalledWith(
+    1,
+    { from: 48_000, to: 48_000 },
+    'editor-restore-selection'
+  );
+  expect(onBeginApplyingReadingPosition).toHaveBeenNthCalledWith(
+    2,
+    { from: 51_200, to: 51_200 },
+    'editor-restore-selection'
+  );
 });
 
 it('applies the saved scroll position before an unmount even when restore already settled', () => {
@@ -136,7 +146,10 @@ it('applies the saved scroll position before an unmount even when restore alread
   view.unmount();
 
   expect(mockSetScrollTop).toHaveBeenCalledWith(5_400);
-  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
+  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith(
+    'editor-restore-selection-settled',
+    { from: 48_000, to: 48_000 }
+  );
 });
 
 it('does not restart the same restore request when typing before the first restore settles', () => {
@@ -190,7 +203,10 @@ it('accepts a near-matching restored scroll position as settled without waiting 
       vi.runOnlyPendingTimers();
     });
 
-    expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
+    expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith(
+      'editor-restore-selection-settled',
+      { from: 48_000, to: 48_000 }
+    );
     expect(onCompleteApplyingReadingPosition).not.toHaveBeenCalledWith('editor-restore-selection-timeout');
   } finally {
     requestAnimationFrameSpy.mockRestore();

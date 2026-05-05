@@ -12,7 +12,23 @@ beforeEach(() => {
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
 });
 
-describe('codeMirrorEditorAdapterView fallback alignment', () => {
+function createMeasuredView<T extends { scrollDOM: { scrollTop: number } }>(view: T) {
+  const measuredView = {
+    ...view,
+    requestMeasure: (spec: {
+      read: (measuredView: T) => unknown;
+      write: (measure: unknown, measuredView: T) => void;
+    }) => {
+      window.setTimeout(() => {
+        const measure = spec.read(measuredView as T);
+        spec.write(measure, measuredView as T);
+      }, 0);
+    }
+  };
+  return measuredView;
+}
+
+function registerFallbackAlignmentGeometryTests() {
   it('aligns with line block positions when character coords are unavailable', () => {
     const scrollDOM = {
       clientHeight: 400,
@@ -20,11 +36,11 @@ describe('codeMirrorEditorAdapterView fallback alignment', () => {
       scrollHeight: 4000,
       scrollTop: 0
     };
-    const view = {
+    const view = createMeasuredView({
       coordsAtPos: vi.fn(() => null),
       lineBlockAt: vi.fn(() => ({ top: 1000 })),
       scrollDOM
-    } as never;
+    }) as never;
 
     alignSelectionInViewport(view, 3157, 0.15);
     vi.runAllTimers();
@@ -32,15 +48,42 @@ describe('codeMirrorEditorAdapterView fallback alignment', () => {
     expect(scrollDOM.scrollTop).toBe(940);
   });
 
+  it('defers ratio alignment until the next frame and retries against updated coordinates', () => {
+    const scrollDOM = {
+      clientHeight: 400,
+      getBoundingClientRect: () => ({ height: 400, top: 100 }),
+      scrollHeight: 4000,
+      scrollTop: 0
+    };
+    const view = createMeasuredView({
+      coordsAtPos: vi.fn(() => ({ top: scrollDOM.scrollTop === 0 ? 1200 : 200 })),
+      scrollDOM
+    }) as never;
+
+    alignSelectionInViewport(view, 3157, 0.15);
+
+    expect(scrollDOM.scrollTop).toBe(0);
+
+    vi.runOnlyPendingTimers();
+    expect(scrollDOM.scrollTop).toBe(1040);
+
+    vi.runOnlyPendingTimers();
+    vi.runOnlyPendingTimers();
+
+    expect(scrollDOM.scrollTop).toBe(1080);
+  });
+}
+
+function registerFallbackAlignmentResolutionTests() {
   it('checks anchor proximity with line block positions when character coords are unavailable', () => {
-    const view = {
+    const view = createMeasuredView({
       coordsAtPos: vi.fn(() => null),
       lineBlockAt: vi.fn(() => ({ top: 760 })),
       scrollDOM: {
         getBoundingClientRect: () => ({ height: 400, top: 100 }),
         scrollTop: 700
       }
-    } as never;
+    }) as never;
 
     expect(isPositionNearViewportRatio(view, 3157, 0.15, 0.05)).toBe(true);
   });
@@ -74,6 +117,11 @@ describe('codeMirrorEditorAdapterView fallback alignment', () => {
     expect(resolveDocumentPositionAtViewportY(view, 260)).toBe(3157);
     expect(lineBlockAtHeight).toHaveBeenCalledWith(110);
   });
+}
+
+describe('codeMirrorEditorAdapterView fallback alignment', () => {
+  registerFallbackAlignmentGeometryTests();
+  registerFallbackAlignmentResolutionTests();
 });
 
 describe('codeMirrorEditorAdapterView scroll subscription', () => {

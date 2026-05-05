@@ -30,6 +30,7 @@ interface DocumentPanelBodyProps {
   emptyContent?: ReactNode;
   editorNodeId: string | null;
   editorReadingSelection?: EditorSelection | null;
+  editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
   onCompleteApplyingReadingPosition?: (reason: string) => void;

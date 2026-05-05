@@ -70,7 +70,7 @@ beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(null);
 });
 
-async function runRestoreSuppressionCase() {
+async function runImmediateRestoreCase() {
   vi.useFakeTimers();
   const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
   const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
@@ -100,12 +100,6 @@ async function runRestoreSuppressionCase() {
     });
 
     expect(beginAnchorNavigationRestore).toHaveBeenLastCalledWith('node-1', { from: 6, to: 6 });
-    expect(result.current.shouldSuppressSelectionRestore()).toBe(false);
-
-    await act(async () => {
-      vi.advanceTimersByTime(40);
-    });
-
     expect(result.current.shouldSuppressSelectionRestore()).toBe(false);
   } finally {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
@@ -194,5 +188,5 @@ describe('useWorkspaceNavigation text locator pending flow', () => {
     expect(requestPdfAnchorJump).not.toHaveBeenCalled();
   });
 
-  it('keeps restore suppression active until the anchor reveal settles', runRestoreSuppressionCase);
+  it('does not suppress restore after a breadcrumb text-locator jump is already routed into reading-position restore', runImmediateRestoreCase);
 });

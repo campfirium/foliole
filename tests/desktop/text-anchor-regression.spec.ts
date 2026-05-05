@@ -171,6 +171,56 @@ async function collectPromptEditorAnchorViewport(desktopWindow: Page, position: 
   }, position);
 }
 
+async function collectPromptEditorTimeline(desktopWindow: Page, durationMs = 420, intervalMs = 24) {
+  return desktopWindow.evaluate(
+    async ({ durationMs: duration, intervalMs: interval }) => {
+      const debugApi = globalThis.window?.__folioleDebug;
+      const workspaceApi = globalThis.window?.__folioleWorkspaceDebug;
+      const start = performance.now();
+      const samples: Array<{
+        activeNodeId: string | null;
+        at: number;
+        scrollTop: number | null;
+        selection: { from: number; to: number } | null;
+      }> = [];
+
+      while (performance.now() - start <= duration) {
+        samples.push({
+          activeNodeId: workspaceApi?.getActiveNodeId?.() ?? null,
+          at: Math.round(performance.now() - start),
+          scrollTop: debugApi?.getEditorScrollTop?.('prompt-editor') ?? null,
+          selection: debugApi?.getEditorSelection?.('prompt-editor') ?? null
+        });
+        await new Promise((resolve) => window.setTimeout(resolve, interval));
+      }
+
+      return samples;
+    },
+    { durationMs, intervalMs }
+  );
+}
+
+async function collectFilteredDebugTraces(desktopWindow: Page) {
+  return desktopWindow.evaluate(() => {
+    const debugApi = globalThis.window?.__folioleDebug;
+    return (
+      debugApi
+        ?.getTraces?.()
+        ?.filter((entry) => {
+          const event = typeof entry?.event === 'string' ? entry.event : '';
+          return (
+            event.includes('select-node') ||
+            event.includes('reading-position') ||
+            event.includes('restore-selection') ||
+            event.includes('editor.viewport') ||
+            event.includes('align-selection')
+          );
+        })
+        .slice(-80) ?? []
+    );
+  });
+}
+
 async function collectNodeViewSelection(desktopWindow: Page, nodeTitle: string) {
   return desktopWindow.evaluate((title) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
@@ -566,6 +616,7 @@ test('really scrolls to a deep text anchor when returning to the parent from bre
   await seedLongTextAnchorWorkspace(desktopWindow);
 
   await expect(desktopWindow.getByRole('button', { name: 'BreadcrumbJumpNeedle', exact: true })).toBeVisible();
+  const timelinePromise = collectPromptEditorTimeline(desktopWindow);
   await desktopWindow.getByRole('navigation', { name: 'Node breadcrumbs' })
     .getByRole('button', { name: 'Playwright Long Anchor Parent' })
     .click();
@@ -600,6 +651,20 @@ test('really scrolls to a deep text anchor when returning to the parent from bre
   const viewportPosition = await collectPromptEditorAnchorViewport(desktopWindow, promptSelection.selection?.from ?? 0);
   await testInfo.attach('deep-breadcrumb-viewport-position', {
     body: JSON.stringify(viewportPosition, null, 2),
+    contentType: 'application/json'
+  });
+
+  const timeline = await timelinePromise;
+  console.log('deep-breadcrumb-scroll-timeline', JSON.stringify(timeline));
+  await testInfo.attach('deep-breadcrumb-scroll-timeline', {
+    body: JSON.stringify(timeline, null, 2),
+    contentType: 'application/json'
+  });
+
+  const traces = await collectFilteredDebugTraces(desktopWindow);
+  console.log('deep-breadcrumb-debug-traces', JSON.stringify(traces));
+  await testInfo.attach('deep-breadcrumb-debug-traces', {
+    body: JSON.stringify(traces, null, 2),
     contentType: 'application/json'
   });
 });
