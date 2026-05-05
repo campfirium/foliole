@@ -76,3 +76,20 @@
 1. 对内沟通与任务汇报使用中文，必要术语保留英文。
 2. 重要边界决策与异常处理结论写入 `.lab/specs/` 或 `.lab/agent/iteration-log.md`。
 3. 任务完成汇报至少包含：功能摘要、验收步骤、风险提示。
+
+## 文档最小化治理（强制）
+1. 仅保留三份活文档作为默认入口：
+- `AGENTS.md`（执行规则）
+- `.lab/agent/current-phase.md`（当前阶段）
+- `.lab/agent/handoffs/LATEST.md`（当前上下文）
+2. 其他文档默认视为归档资料，不在每次任务中全量阅读，仅按需检索。
+3. 单一主题只能有一个“真相文件”，其他文件只允许引用，不允许重复定义规则。
+4. 新增文档必须注明“替代了哪个旧文档”或“为何不能复用现有文档”。
+5. 每周至少一次文档收敛：合并重复、归档过期、删除冲突说明。
+6. Agent 默认阅读顺序固定为：`AGENTS.md` -> `current-phase.md` -> `handoffs/LATEST.md`。
+
+## 会话交接（长上下文）
+1. 当上下文过长、任务切换或结束会话时，必须产出交接文档。
+2. 交接文档存放路径：`.lab/agent/handoffs/YYYYMMDD-HHMM-<slug>.md`。
+3. 每次新增交接后，更新 `.lab/agent/handoffs/LATEST.md` 指向最新文件。
+4. 交接内容最少包含：`Goal`、`Current State`、`Key Decisions`、`Next Actions`、`Open Risks`。
