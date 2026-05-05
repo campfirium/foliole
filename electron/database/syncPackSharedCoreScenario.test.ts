@@ -39,6 +39,14 @@ afterEach(async () => {
 });
 
 it('builds a desktop pack and applies it through the shared DbPort pack surface', async () => {
+  const syncPackPath = await buildSourceSyncPack();
+  const incomingPath = extractIncomingPack(syncPackPath, path.join(tempRoot, 'incoming.db'));
+  const connection = await applyIncomingPackToTarget(incomingPath);
+
+  assertTargetRows(connection);
+});
+
+async function buildSourceSyncPack() {
   mockedAppDataDir = path.join(tempRoot, 'source-app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   insertSourceNode();
@@ -52,8 +60,10 @@ it('builds a desktop pack and applies it through the shared DbPort pack surface'
     toPeerId: 'android-target'
   });
   closeDatabaseConnection();
+  return syncPackPath;
+}
 
-  const incomingPath = extractIncomingPack(syncPackPath, path.join(tempRoot, 'incoming.db'));
+async function applyIncomingPackToTarget(incomingPath: string) {
   mockedAppDataDir = path.join(tempRoot, 'target-app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   installSyncPushAckTable();
@@ -72,10 +82,22 @@ it('builds a desktop pack and applies it through the shared DbPort pack surface'
       fromStateSeq: 0,
       toStateSeq: 1
     });
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 1,
+      deviceId: 'android-target'
+    })).resolves.toMatchObject({
+      applied: false,
+      appliedObjectCount: 0,
+      fromStateSeq: 0,
+      toStateSeq: 1
+    });
   } finally {
     await port.run('DETACH DATABASE inc');
   }
+  return connection;
+}
 
+function assertTargetRows(connection: ReturnType<typeof openDatabaseConnection>) {
   expect(connection.sqlite.prepare(
     `SELECT title, content, body_blob_hash, current_version_id, sync_dirty
      FROM nodes WHERE id = 'node-1'`
@@ -95,7 +117,7 @@ it('builds a desktop pack and applies it through the shared DbPort pack surface'
     sync_dirty: 0
   });
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM content_blobs').get()).toEqual({ count: 1 });
-});
+}
 
 function insertSourceNode() {
   const driver = openDatabaseConnection().driver;
