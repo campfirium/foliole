@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron';
 
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import { logWindowStateLifecycleEvent } from '../windowStateDiagnostics.js';
 
 const WINDOW_STATE_KEY = 'window_state';
 
@@ -10,6 +11,7 @@ export interface PersistedWindowState {
   width: number;
   height: number;
   isMaximized: boolean;
+  isFullScreen: boolean;
 }
 
 function toFiniteNumber(value: unknown): number | null {
@@ -36,7 +38,8 @@ function normalizeWindowStatePayload(payload: unknown): PersistedWindowState | n
     y: y ?? undefined,
     width,
     height,
-    isMaximized: data.isMaximized === true
+    isMaximized: data.isMaximized === true,
+    isFullScreen: data.isFullScreen === true
   };
 }
 
@@ -45,16 +48,22 @@ export async function loadWindowState(): Promise<PersistedWindowState | null> {
 }
 
 function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {
-  const bounds = window.isMaximized() ? window.getNormalBounds() : window.getBounds();
+  const bounds =
+    window.isMaximized() || window.isFullScreen() ? window.getNormalBounds() : window.getBounds();
   return {
     x: bounds.x,
     y: bounds.y,
     width: bounds.width,
     height: bounds.height,
-    isMaximized: window.isMaximized()
+    isMaximized: window.isMaximized(),
+    isFullScreen: window.isFullScreen()
   };
 }
 
 export async function saveWindowState(window: BrowserWindow): Promise<void> {
-  saveJsonSetting(WINDOW_STATE_KEY, toWindowStateFromRuntime(window));
+  const nextState = toWindowStateFromRuntime(window);
+  saveJsonSetting(WINDOW_STATE_KEY, nextState);
+  logWindowStateLifecycleEvent('save-window-state', window, {
+    persistedState: nextState
+  });
 }

@@ -49,7 +49,8 @@ it('persists and loads maximized window state', async () => {
       width: 1500,
       height: 980
     }),
-    isMaximized: () => true
+    isMaximized: () => true,
+    isFullScreen: () => false
   };
 
   await saveWindowState(window as never);
@@ -58,7 +59,37 @@ it('persists and loads maximized window state', async () => {
     y: 80,
     width: 1500,
     height: 980,
-    isMaximized: true
+    isMaximized: true,
+    isFullScreen: false
+  });
+});
+
+it('persists and loads fullscreen window state using normal bounds', async () => {
+  const window = {
+    getBounds: () => ({
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080
+    }),
+    getNormalBounds: () => ({
+      x: 160,
+      y: 90,
+      width: 1440,
+      height: 920
+    }),
+    isMaximized: () => false,
+    isFullScreen: () => true
+  };
+
+  await saveWindowState(window as never);
+  await expect(loadWindowState()).resolves.toEqual({
+    x: 160,
+    y: 90,
+    width: 1440,
+    height: 920,
+    isMaximized: false,
+    isFullScreen: true
   });
 });
 

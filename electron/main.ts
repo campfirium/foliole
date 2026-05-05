@@ -34,6 +34,7 @@ import {
 } from './runtimeIdentity.js';
 import { resolveRendererIndexPath } from './runtimePaths.js';
 import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
+import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -177,10 +178,25 @@ function bindWindowIpc(window: ElectronBrowserWindow) {
 
 async function createMainWindow() {
   const restoredWindowState = await loadWindowState();
+  logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
   const options = applyWindowStateToOptions(createWindowOptions(), restoredWindowState);
+  logWindowStateRestoreDecision('window-options-applied', restoredWindowState, {
+    options: {
+      fullscreen: options.fullscreen ?? false,
+      height: options.height,
+      width: options.width,
+      x: options.x,
+      y: options.y
+    }
+  });
   const window = new BrowserWindow(options);
-  if (restoredWindowState?.isMaximized) {
+  logWindowStateLifecycleEvent('window-created', window);
+  if (restoredWindowState?.isFullScreen) {
+    window.setFullScreen(true);
+    logWindowStateLifecycleEvent('window-restore-fullscreen', window);
+  } else if (restoredWindowState?.isMaximized) {
     window.maximize();
+    logWindowStateLifecycleEvent('window-restore-maximize', window);
   }
   bindWindowIpc(window);
   bindWindowStatePersistence(window);
