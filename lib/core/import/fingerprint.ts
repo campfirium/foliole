@@ -2,15 +2,18 @@ import { createHash } from 'node:crypto';
 
 import {
   IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
+  type ImportHighlightPolicy,
   type ImportSourceKind,
   type PreparedImportRecord
 } from './contract.js';
+import { applyImportHighlightPolicy } from './highlightPolicy.js';
 
 interface CreatePreparedDesktopTextImportInput {
   content: string;
   degradedReason?: string | null;
   fileName: string;
   filePath: string;
+  highlightPolicy?: ImportHighlightPolicy;
   importedAt: string;
   kind: ImportSourceKind;
 }
@@ -26,7 +29,9 @@ function normalizeImportedContent(content: string) {
 export function createPreparedDesktopTextImport(
   input: CreatePreparedDesktopTextImportInput
 ): PreparedImportRecord {
-  const normalizedContent = normalizeImportedContent(input.content);
+  const normalizedContent = normalizeImportedContent(
+    applyImportHighlightPolicy(input.content, input.highlightPolicy ?? 'reference_only')
+  );
   return {
     content: normalizedContent,
     contentFingerprint: hashFingerprint(

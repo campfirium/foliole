@@ -157,7 +157,7 @@ it('throws on unsupported command', async () => {
 });
 
 it('selects a Markdown or TXT file through the native import command', async () => {
-  await expect(handleInvokeRequest({ command: 'select_import_text_file' })).resolves.toEqual({
+  await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
     content: '# Imported title\nBody',
     file_name: 'inbox.md',
     file_path: '/tmp/inbox.md',
@@ -169,7 +169,7 @@ it('selects a Markdown or TXT file through the native import command', async () 
 });
 
 it('runs the unified text import pipeline through the native import command', async () => {
-  await expect(handleInvokeRequest({ command: 'run_text_file_import' })).resolves.toEqual({
+  await expect(handleInvokeRequest({ command: 'run_text_file_import', args: {} })).resolves.toEqual({
     content_fingerprint: 'content-fingerprint',
     degraded_reason: null,
     duplicate_semantic: 'new',
@@ -192,7 +192,7 @@ it('runs the unified text import pipeline through the native import command', as
 it('returns null when native import selection is cancelled', async () => {
   showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
 
-  await expect(handleInvokeRequest({ command: 'select_import_text_file' })).resolves.toBeNull();
+  await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toBeNull();
   expect(readFile).not.toHaveBeenCalled();
 });
 
@@ -200,7 +200,7 @@ it('classifies TXT imports as text through the native import command', async () 
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.txt'] });
   readFile.mockResolvedValue('Plain text body');
 
-  await expect(handleInvokeRequest({ command: 'select_import_text_file' })).resolves.toEqual({
+  await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
     content: 'Plain text body',
     file_name: 'inbox.txt',
     file_path: '/tmp/inbox.txt',
@@ -229,14 +229,14 @@ it('converts HTML files into markdown-compatible content through the native impo
     sourceName: 'inbox.html'
   });
 
-  await expect(handleInvokeRequest({ command: 'select_import_text_file' })).resolves.toEqual({
+  await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
     content: '## Imported\n\n**Bold** text',
     file_name: 'inbox.html',
     file_path: '/tmp/inbox.html',
     kind: 'html'
   });
 
-  await expect(handleInvokeRequest({ command: 'run_text_file_import' })).resolves.toEqual({
+  await expect(handleInvokeRequest({ command: 'run_text_file_import', args: {} })).resolves.toEqual({
     content_fingerprint: 'content-fingerprint',
     degraded_reason: null,
     duplicate_semantic: 'new',

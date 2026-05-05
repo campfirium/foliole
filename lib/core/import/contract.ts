@@ -4,6 +4,8 @@ export type ImportProvider = typeof IMPORT_PROVIDER_DESKTOP_TEXT_FILE;
 
 export type ImportSourceKind = 'html' | 'markdown' | 'text';
 
+export type ImportHighlightPolicy = 'adopt' | 'reference_only';
+
 export type ImportDuplicateSemantic = 'new' | 'updated' | 'duplicate';
 
 export type ImportResultStatus = 'imported' | 'degraded' | 'failed';

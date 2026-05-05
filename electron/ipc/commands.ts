@@ -81,10 +81,10 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
     return null;
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.runTextFileImport)) {
-    return runTextFileImport(resolveTargetWindow(context));
+    return runTextFileImport(resolveTargetWindow(context), request.args);
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.selectImportTextFile)) {
-    return selectImportTextFile(resolveTargetWindow(context));
+    return selectImportTextFile(resolveTargetWindow(context), request.args);
   }
 
   if (isTypedRequest(request, NATIVE_COMMANDS.resolveAppPaths)) {

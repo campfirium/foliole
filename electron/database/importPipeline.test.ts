@@ -163,3 +163,24 @@ it('persists explicit degraded reasons while still writing converted content', (
     title: 'note.html'
   });
 });
+
+it('adopts markdown highlight markers into Foliole highlight anchors when configured', () => {
+  const adopted = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: '# Imported\nUse ==important== text',
+      fileName: 'note.md',
+      filePath: '/tmp/note.md',
+      highlightPolicy: 'adopt',
+      importedAt: '2026-03-22T10:25:00.000Z',
+      kind: 'markdown'
+    })
+  );
+
+  const { nodeRow } = readPersistedImportState(adopted.sourceFingerprint, adopted.nodeId);
+
+  expect(nodeRow).toEqual({
+    content: '# Imported\nUse <highlight id="1">important</highlight id="1"> text',
+    parent_id: 'special-inbox',
+    title: 'note.md'
+  });
+});

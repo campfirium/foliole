@@ -1,3 +1,9 @@
+export type NativeImportHighlightPolicy = 'adopt' | 'reference_only';
+
+export interface NativeTextImportArgs {
+  highlight_policy?: NativeImportHighlightPolicy;
+}
+
 export interface NativeImportedTextFile {
   file_name: string;
   file_path: string;

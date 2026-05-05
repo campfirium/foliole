@@ -3,13 +3,18 @@ import path from 'node:path';
 
 import { dialog, type BrowserWindow } from 'electron';
 
-import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
+import type { ImportHighlightPolicy, PersistedImportRecord } from '../../lib/core/import/contract.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
+import { applyImportHighlightPolicy } from '../../lib/core/import/highlightPolicy.js';
 import {
   convertHtmlToMarkdownCompatible,
   formatHtmlConversionDegradedReason
 } from '../../lib/core/import/htmlToMarkdownCompatible.js';
-import type { NativeImportedTextFile, NativeTextImportResult } from '../../lib/platform/nativeContract.js';
+import type {
+  NativeImportedTextFile,
+  NativeTextImportArgs,
+  NativeTextImportResult
+} from '../../lib/platform/nativeContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 
 const IMPORTABLE_TEXT_EXTENSIONS = new Set(['.htm', '.html', '.md', '.markdown', '.txt']);
@@ -30,6 +35,10 @@ function resolveImportKind(filePath: string): NativeImportedTextFile['kind'] {
 
 function stripUtf8Bom(content: string) {
   return content.startsWith('\uFEFF') ? content.slice(1) : content;
+}
+
+function resolveImportHighlightPolicy(args?: NativeTextImportArgs): ImportHighlightPolicy {
+  return args?.highlight_policy === 'adopt' ? 'adopt' : 'reference_only';
 }
 
 function toImportPayload(content: string, kind: NativeImportedTextFile['kind']) {
@@ -79,23 +88,30 @@ async function selectImportFilePath(window?: BrowserWindow | null) {
   return selection.filePaths[0] ?? null;
 }
 
-export async function selectImportTextFile(window?: BrowserWindow | null): Promise<NativeImportedTextFile | null> {
+export async function selectImportTextFile(
+  window?: BrowserWindow | null,
+  args?: NativeTextImportArgs
+): Promise<NativeImportedTextFile | null> {
   const filePath = await selectImportFilePath(window);
   if (!filePath) {
     return null;
   }
   const kind = resolveImportKind(filePath);
   const { content } = toImportPayload(await fs.readFile(filePath, 'utf8'), kind);
+  const highlightPolicy = resolveImportHighlightPolicy(args);
 
   return {
-    content,
+    content: applyImportHighlightPolicy(content, highlightPolicy),
     file_name: path.basename(filePath),
     file_path: filePath,
     kind
   };
 }
 
-export async function runTextFileImport(window?: BrowserWindow | null): Promise<NativeTextImportResult | null> {
+export async function runTextFileImport(
+  window?: BrowserWindow | null,
+  args?: NativeTextImportArgs
+): Promise<NativeTextImportResult | null> {
   const filePath = await selectImportFilePath(window);
   if (!filePath) {
     return null;
@@ -104,19 +120,28 @@ export async function runTextFileImport(window?: BrowserWindow | null): Promise<
   const fileName = path.basename(filePath);
   const importedAt = new Date().toISOString();
   const kind = resolveImportKind(filePath);
+  const highlightPolicy = resolveImportHighlightPolicy(args);
 
   try {
     const { content, degradedReason } = toImportPayload(await fs.readFile(filePath, 'utf8'), kind);
     return toNativeTextImportResult(
       runPreparedImport(
-        createPreparedDesktopTextImport({ content, degradedReason, fileName, filePath, importedAt, kind })
+        createPreparedDesktopTextImport({
+          content,
+          degradedReason,
+          fileName,
+          filePath,
+          highlightPolicy,
+          importedAt,
+          kind
+        })
       )
     );
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
     return toNativeTextImportResult(
       recordPreparedImportFailure(
-        createPreparedDesktopTextImport({ content: '', fileName, filePath, importedAt, kind }),
+        createPreparedDesktopTextImport({ content: '', fileName, filePath, highlightPolicy, importedAt, kind }),
         failureReason
       )
     );

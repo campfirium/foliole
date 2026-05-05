@@ -1,5 +1,9 @@
 import { NATIVE_COMMANDS, isTypedNativeCommand } from './nativeCommands.js';
-import type { NativeImportedTextFile, NativeTextImportResult } from './nativeImportContract.js';
+import type {
+  NativeImportedTextFile,
+  NativeTextImportArgs,
+  NativeTextImportResult
+} from './nativeImportContract.js';
 import type {
   NativeApplyReviewGradeArgs,
   NativeRelearnNodeArgs,
@@ -18,7 +22,11 @@ export type {
   NativeSaveReadingProgressArgs,
   NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
-export type { NativeImportedTextFile, NativeTextImportResult } from './nativeImportContract.js';
+export type {
+  NativeImportedTextFile,
+  NativeTextImportArgs,
+  NativeTextImportResult
+} from './nativeImportContract.js';
 
 export interface NativeResolvedAppPaths {
   app_data_dir: string;
@@ -108,11 +116,11 @@ export type NativeCommandMap = {
     result: null;
   };
   [NATIVE_COMMANDS.runTextFileImport]: {
-    args: undefined;
+    args: NativeTextImportArgs;
     result: NativeTextImportResult | null;
   };
   [NATIVE_COMMANDS.selectImportTextFile]: {
-    args: undefined;
+    args: NativeTextImportArgs;
     result: NativeImportedTextFile | null;
   };
   [NATIVE_COMMANDS.resolveAppPaths]: {
@@ -242,27 +250,6 @@ export type NativeInvokeRequest<T extends NativeCommandName = NativeCommandName>
 export interface NativeInvoke {
   <T extends NativeCommandName>(command: T, ...args: NativeInvokeTuple<T>): Promise<NativeCommandResult<T>>;
   (command: string, args?: Record<string, unknown>): Promise<unknown>;
-}
-
-export function invokeReviewGrade(
-  invoke: NativeInvoke,
-  args: NativeReviewGradeArgs
-): Promise<NativeReviewGradeResult> {
-  return invoke(NATIVE_COMMANDS.reviewGrade, args);
-}
-
-export function invokeReviewPreview(
-  invoke: NativeInvoke,
-  args: NativeReviewPreviewArgs
-): Promise<NativeReviewPreviewResult> {
-  return invoke(NATIVE_COMMANDS.reviewPreview, args);
-}
-
-export function invokeBootReport(
-  invoke: NativeInvoke,
-  args: NativeCommandArgs<typeof NATIVE_COMMANDS.bootReport>
-): Promise<NativeCommandResult<typeof NATIVE_COMMANDS.bootReport>> {
-  return invoke(NATIVE_COMMANDS.bootReport, args);
 }
 
 export function isTypedNativeRequest<T extends NativeCommandName>(

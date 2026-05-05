@@ -131,7 +131,7 @@ it('normalizes the native import file payload', async () => {
     filePath: '/tmp/note.md',
     kind: 'markdown'
   });
-  expect(invoke).toHaveBeenCalledWith('select_import_text_file');
+  expect(invoke).toHaveBeenCalledWith('select_import_text_file', {});
 });
 
 it('normalizes the unified import result payload', async () => {
@@ -167,7 +167,7 @@ it('normalizes the unified import result payload', async () => {
     sourceLocator: '/tmp/note.md',
     sourceName: 'note.md'
   });
-  expect(invoke).toHaveBeenCalledWith('run_text_file_import');
+  expect(invoke).toHaveBeenCalledWith('run_text_file_import', {});
 });
 
 it('accepts html import payloads from the runtime bridge', async () => {
@@ -203,6 +203,29 @@ it('accepts html import payloads from the runtime bridge', async () => {
     sourceLocator: '/tmp/note.html',
     sourceName: 'note.html'
   });
+});
+
+it('forwards highlight policy configuration to the runtime import bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    content_fingerprint: 'content-fingerprint',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-1',
+    imported_at: '2026-03-22T10:00:00.000Z',
+    node_id: 'node-1',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint',
+    source_kind: 'markdown',
+    source_locator: '/tmp/note.md',
+    source_name: 'note.md'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await runRuntimeTextFileImport('adopt');
+
+  expect(invoke).toHaveBeenCalledWith('run_text_file_import', { highlight_policy: 'adopt' });
 });
 
 it('returns null when the native import payload is malformed', async () => {

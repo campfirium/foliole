@@ -1,8 +1,5 @@
-import {
-  invokeReviewGrade,
-  invokeReviewPreview,
-  type NativeInvoke
-} from '../../platform/nativeContract.js';
+import type { NativeInvoke } from '../../platform/nativeContract.js';
+import { invokeReviewGrade, invokeReviewPreview } from '../../platform/nativeInvoke.js';
 
 import {
   assertSchedulerGradeInput,

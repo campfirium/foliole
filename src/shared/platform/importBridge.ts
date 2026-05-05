@@ -9,6 +9,7 @@ export interface RuntimeImportedTextFile {
   content: string;
   kind: 'html' | 'markdown' | 'text';
 }
+export type ImportHighlightPolicy = 'adopt' | 'reference_only';
 export interface RuntimeTextImportResult {
   contentFingerprint: string;
   degradedReason: string | null;
@@ -23,6 +24,10 @@ export interface RuntimeTextImportResult {
   sourceKind: 'html' | 'markdown' | 'text';
   sourceLocator: string;
   sourceName: string;
+}
+
+function toImportArgs(highlightPolicy?: ImportHighlightPolicy) {
+  return highlightPolicy ? { highlight_policy: highlightPolicy } : {};
 }
 export interface RuntimeImportOverview {
   latestFailure: RuntimeTextImportResult | null;
@@ -124,14 +129,16 @@ function toRuntimeImportOverview(value: unknown): RuntimeImportOverview | null {
   };
 }
 
-export async function selectRuntimeImportTextFile(): Promise<RuntimeImportedTextFile | null> {
+export async function selectRuntimeImportTextFile(
+  highlightPolicy?: ImportHighlightPolicy
+): Promise<RuntimeImportedTextFile | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
 
   try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.selectImportTextFile);
+    const result = await runtimeInvoke(NATIVE_COMMANDS.selectImportTextFile, toImportArgs(highlightPolicy));
     if (result === null) {
       return null;
     }
@@ -157,14 +164,16 @@ export async function selectRuntimeImportTextFile(): Promise<RuntimeImportedText
   }
 }
 
-export async function runRuntimeTextFileImport(): Promise<RuntimeTextImportResult | null> {
+export async function runRuntimeTextFileImport(
+  highlightPolicy?: ImportHighlightPolicy
+): Promise<RuntimeTextImportResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
 
   try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.runTextFileImport);
+    const result = await runtimeInvoke(NATIVE_COMMANDS.runTextFileImport, toImportArgs(highlightPolicy));
     if (result === null) {
       return null;
     }

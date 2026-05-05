@@ -103,3 +103,29 @@ it('marks HTML file imports as degraded when conversion had to fall back', async
     })
   );
 });
+
+it('supports adopting markdown highlight markers during import', async () => {
+  readFile.mockResolvedValue('Use ==important== text');
+
+  await expect(runTextFileImport(undefined, { highlight_policy: 'adopt' })).resolves.toEqual({
+    content_fingerprint: 'content-fingerprint',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-1',
+    imported_at: '2026-03-22T12:00:00.000Z',
+    node_id: 'node-import-1',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint',
+    source_kind: 'html',
+    source_locator: '/tmp/inbox.html',
+    source_name: 'inbox.html'
+  });
+
+  expect(runPreparedImport).toHaveBeenCalledWith(
+    expect.objectContaining({
+      content: 'Use <highlight id="1">important</highlight id="1"> text'
+    })
+  );
+});
