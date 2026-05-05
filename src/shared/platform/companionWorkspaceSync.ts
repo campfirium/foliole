@@ -4,6 +4,7 @@ import type {
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
 import { resolveReadableCompanionArticle } from './companionReadableArticle';
+import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   createSignedRequestHeaders,
   discoverCompanionDesktop,
@@ -57,9 +58,11 @@ export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
       remembered_targets: appendRememberedTarget(current.remembered_targets, normalizedEndpointUrl)
     });
   }
-  return normalizeWorkspaceSyncState(
-    await FolioleCompanionSync.saveWorkspaceSyncEndpoint({ endpoint_url: normalizedEndpointUrl })
-  );
+  return runCompanionSyncWriterTask(async () => (
+    normalizeWorkspaceSyncState(
+      await FolioleCompanionSync.saveWorkspaceSyncEndpoint({ endpoint_url: normalizedEndpointUrl })
+    )
+  ));
 }
 
 export async function removeCompanionWorkspaceSyncRememberedTarget(endpointUrl: string) {
@@ -73,9 +76,11 @@ export async function removeCompanionWorkspaceSyncRememberedTarget(endpointUrl: 
       remembered_targets: nextRememberedTargets
     });
   }
-  return normalizeWorkspaceSyncState(
-    await FolioleCompanionSync.removeWorkspaceSyncRememberedTarget({ endpoint_url: normalizedEndpointUrl })
-  );
+  return runCompanionSyncWriterTask(async () => (
+    normalizeWorkspaceSyncState(
+      await FolioleCompanionSync.removeWorkspaceSyncRememberedTarget({ endpoint_url: normalizedEndpointUrl })
+    )
+  ));
 }
 
 export async function saveCompanionSyncOnboardingStatus(status: CompanionSyncOnboardingStatus) {
@@ -86,7 +91,9 @@ export async function saveCompanionSyncOnboardingStatus(status: CompanionSyncOnb
       sync_onboarding_status: status
     });
   }
-  return normalizeWorkspaceSyncState(await FolioleCompanionSync.saveSyncOnboardingStatus({ status }));
+  return runCompanionSyncWriterTask(async () => (
+    normalizeWorkspaceSyncState(await FolioleCompanionSync.saveSyncOnboardingStatus({ status }))
+  ));
 }
 
 export async function recordCompanionWorkspaceSyncEvent(args: {
@@ -105,12 +112,14 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
       status: args.status
     }));
   }
-  return normalizeWorkspaceSyncState(await FolioleCompanionSync.recordWorkspaceSyncEvent({
-    endpoint_url: args.endpointUrl,
-    message: args.message,
-    occurred_at: occurredAt,
-    status: args.status
-  }));
+  return runCompanionSyncWriterTask(async () => (
+    normalizeWorkspaceSyncState(await FolioleCompanionSync.recordWorkspaceSyncEvent({
+      endpoint_url: args.endpointUrl,
+      message: args.message,
+      occurred_at: occurredAt,
+      status: args.status
+    }))
+  ));
 }
 
 export async function loadCompanionReadableArticle(snapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
