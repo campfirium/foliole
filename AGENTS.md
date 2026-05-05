@@ -41,15 +41,16 @@
 3. Lint：`eslint` + `@typescript-eslint/parser` + `@typescript-eslint/eslint-plugin` + `eslint-plugin-import`。
 4. 格式化：`prettier`（只负责格式，不替代 lint）。
 5. 测试框架：由仓库现状决定（例如 `vitest`/`jest`），以 `package.json` 脚本为准。
-6. 提交前检查入口：`scripts/quality-gate.sh`。
+6. 提交前检查入口：`scripts/quality-gate-fast.sh`（不包含 `build`）。
 7. npm 安装稳定性：默认禁用 `audit/fund`（通过仓库 `.npmrc`），若需手动安装依赖优先使用 `npm install --no-audit --no-fund`；若安装超过 120s 无输出，视为异常并切换到 `--loglevel=verbose` 诊断。
 
 ## 质量闸（Zero Tolerance，可执行）
 1. 不允许通过“降低检查标准”来过关（例如跳过构建、跳过测试、注释掉关键校验）。
-2. 质量闸固定检查顺序：`lint` -> `typecheck` -> `test` -> `build`。
-3. 实际执行命令由 `scripts/quality-gate.sh` 按包管理器自动生成（例如 `pnpm run lint` / `yarn lint`）。
+2. 默认质量闸固定检查顺序：`lint` -> `typecheck` -> `test`（不包含 `build`）。
+3. 实际执行命令由 `scripts/quality-gate-fast.sh` 按包管理器自动生成（例如 `pnpm run lint` / `yarn lint`）。
 4. 以上任一失败即阻断，必须先修复代码本身，再继续任务流转。
-5. 在首个功能任务前，必须先完成“工程基线任务”：创建并打通上述脚本。
+5. `build` 属于发布/打包检查：仅在用户明确要求全量交付时执行（`scripts/quality-gate.sh` 或 `npm run windows:deliver:full`）。
+6. 在首个功能任务前，必须先完成“工程基线任务”：创建并打通上述脚本。
 
 ## 缺陷修复与回归测试（强制）
 1. 任意可复现缺陷（Bug）修复，必须新增至少 1 条自动化回归测试；无回归测试不视为完成。
