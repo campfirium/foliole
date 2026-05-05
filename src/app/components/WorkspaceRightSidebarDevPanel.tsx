@@ -10,8 +10,6 @@ import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { InspectorSection } from '../../shared/ui';
 
-import { WorkspaceRightSidebarReadingPositionLog } from './WorkspaceRightSidebarReadingPositionLog';
-
 interface WorkspaceRightSidebarDevPanelProps {
   activeNodeId: string | null;
   nodesById: Record<string, Node>;
@@ -169,7 +167,6 @@ function DevPanelContent({ data }: { data: DevPanelResolvedData }) {
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
-      <WorkspaceRightSidebarReadingPositionLog />
       <InspectorSection contentClassName="grid grid-cols-[minmax(88px,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[13px]" title="Scheduling">
         <dl className="contents">
           <DevInfoRow label="Priority" value={`P${priority.value} · ${getSettingSourceLabel(priority)}`} />
