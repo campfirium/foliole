@@ -3,6 +3,7 @@ import { deriveNodeTitleForCloze, deriveNodeTitleFromContent } from '../features
 import { createDefaultReviewProfile } from './workspaceSeed';
 import type { WorkspaceState } from './workspaceStore';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
+import { createChildNodeAction, createMoveNodeAction } from './workspaceStoreTreeActions';
 
 type WorkspaceSet = (
   partial:
@@ -13,11 +14,13 @@ type WorkspaceSet = (
 
 type WorkspaceNodeActions = Pick<
   WorkspaceState,
+  | 'createChildNode'
   | 'createHighlightNodeFromSelection'
   | 'createQANodeFromSelection'
   | 'createRootNode'
   | 'deleteNode'
   | 'deleteNodePermanently'
+  | 'moveNode'
   | 'restoreNode'
   | 'setNodeViewState'
   | 'updateNodeContent'
@@ -202,7 +205,9 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateNodeContent: createUpdateNodeContentAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
     createRootNode: createRootNodeAction(set),
+    createChildNode: createChildNodeAction(set),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set),
-    createQANodeFromSelection: createQAFromSelectionAction(set)
+    createQANodeFromSelection: createQAFromSelectionAction(set),
+    moveNode: createMoveNodeAction(set)
   };
 }

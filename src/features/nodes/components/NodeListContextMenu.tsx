@@ -3,7 +3,9 @@ import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdo
 interface NodeListContextMenuProps {
   isTrashMenu: boolean;
   left: number;
+  onCreateChildNode?: () => void;
   onClose: () => void;
+  onCreateNode: () => void;
   onDeleteNode: () => void;
   onDeleteNodePermanently: () => void;
   onRestoreNode: () => void;
@@ -13,7 +15,9 @@ interface NodeListContextMenuProps {
 export function NodeListContextMenu({
   isTrashMenu,
   left,
+  onCreateChildNode,
   onClose,
+  onCreateNode,
   onDeleteNode,
   onDeleteNodePermanently,
   onRestoreNode,
@@ -41,7 +45,13 @@ export function NodeListContextMenu({
             <AppDropdownMenuItem onSelect={onDeleteNodePermanently}>Delete Permanently</AppDropdownMenuItem>
           </>
         ) : (
-          <AppDropdownMenuItem onSelect={onDeleteNode}>Delete Node</AppDropdownMenuItem>
+          <>
+            <AppDropdownMenuItem onSelect={onCreateNode}>New Node</AppDropdownMenuItem>
+            {onCreateChildNode ? (
+              <AppDropdownMenuItem onSelect={onCreateChildNode}>New Child Node</AppDropdownMenuItem>
+            ) : null}
+            <AppDropdownMenuItem onSelect={onDeleteNode}>Delete Node</AppDropdownMenuItem>
+          </>
         )}
       </AppDropdownMenuContent>
     </AppDropdownMenu>

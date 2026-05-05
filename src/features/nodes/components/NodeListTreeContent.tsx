@@ -2,9 +2,11 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { AppEmptyState } from '../../../shared/ui';
 import type { NodeTreeRow } from '../model/nodeTree';
+import type { Node } from '../model/nodeTypes';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
 import { NodeListHeader } from './NodeListHeader';
+import { useNodeListDragController } from './NodeListTreeDrag';
 import type {
   NodeListCollapseController,
   NodeListContextMenuController
@@ -15,7 +17,9 @@ import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
 interface NodeListRowsProps {
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
+  drag: ReturnType<typeof useNodeListDragController>;
   isTrashViewOpen: boolean;
+  nodesById: Record<string, Node>;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onToggleCollapse: (nodeId: string) => void;
@@ -41,10 +45,17 @@ function NodeListRows(props: NodeListRowsProps) {
         (props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id
       }
       isCollapsed={props.collapsedNodeIds.has(row.node.id)}
+      isDragDisabled={props.isTrashViewOpen || Boolean(props.nodesById[row.node.id]?.anchorLink)}
+      isDropTarget={props.drag.dropTargetNodeId === row.node.id}
       isSelected={props.selectedNodeIds.includes(row.node.id)}
       key={row.node.id}
       label={row.node.title}
       nodeId={row.node.id}
+      onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
+      onDragEnter={props.drag.onDragEnterNode}
+      onDragOver={props.drag.onDragOverNode}
+      onDragStart={props.drag.onDragStartNode}
+      onDrop={props.drag.onDropOnNode}
       onContextMenu={props.onContextMenu}
       onSelect={props.onSelect}
       onToggleCollapse={props.onToggleCollapse}
@@ -61,6 +72,8 @@ interface NodeListPanelProps {
   createRootNode: (content?: string) => string;
   deleteNodePermanently: (nodeId: string) => void;
   isTrashViewOpen: boolean;
+  moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
+  nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   selectedNodeIds: string[];
@@ -70,6 +83,12 @@ interface NodeListPanelProps {
 }
 
 function NodeListPanel(props: NodeListPanelProps) {
+  const drag = useNodeListDragController({
+    isTrashViewOpen: props.isTrashViewOpen,
+    moveNode: props.moveNode,
+    nodesById: props.nodesById
+  });
+
   return (
     <aside
       aria-label="Node list panel"
@@ -91,11 +110,24 @@ function NodeListPanel(props: NodeListPanelProps) {
         <section
           aria-label={props.isTrashViewOpen ? 'Trash section' : undefined}
           className="flex flex-1 flex-col gap-2"
+          onDoubleClick={(event) => event.target === event.currentTarget && props.createRootNode('')}
+          onDragOver={(event) => event.target === event.currentTarget && drag.onDragOverRoot(event)}
+          onDrop={(event) => event.target === event.currentTarget && drag.onDropRoot(event)}
         >
+          {drag.isRootDropActive ? (
+            <div
+              aria-hidden="true"
+              className="rounded border border-dashed border-border-strong bg-foreground/[0.04] px-3 py-2 text-xs text-foreground/70"
+            >
+              Drop to move node to root
+            </div>
+          ) : null}
           <NodeListRows
             activeNodeId={props.activeNodeId}
             collapsedNodeIds={props.activeCollapsedNodeIds}
+            drag={drag}
             isTrashViewOpen={props.isTrashViewOpen}
+            nodesById={props.nodesById}
             onContextMenu={props.contextMenu.openContextMenu}
             onSelect={props.onSelect}
             onToggleCollapse={props.collapse.toggleCollapse}
@@ -115,10 +147,13 @@ interface NodeListTreeContentProps {
   activeRows: NodeTreeRow[];
   collapse: NodeListCollapseController;
   contextMenu: NodeListContextMenuController;
+  createChildNode: (parentNodeId: string, content?: string) => string;
   createRootNode: (content?: string) => string;
   deleteNode: (nodeId: string) => void;
   deleteNodePermanently: (nodeId: string) => void;
   isTrashViewOpen: boolean;
+  moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
+  nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   restoreNode: (nodeId: string) => void;
@@ -139,6 +174,8 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         createRootNode={props.createRootNode}
         deleteNodePermanently={props.deleteNodePermanently}
         isTrashViewOpen={props.isTrashViewOpen}
+        moveNode={props.moveNode}
+        nodesById={props.nodesById}
         onOpenNotesView={props.onOpenNotesView}
         onSelect={props.onSelect}
         selectedNodeIds={props.selectedNodeIds}
@@ -151,6 +188,13 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
           isTrashMenu={props.contextMenu.contextMenuMode === 'trash'}
           left={props.contextMenu.menuPosition.left}
           onClose={props.contextMenu.closeContextMenu}
+          onCreateChildNode={() => (
+            props.contextMenu.contextMenuMode === 'notes' &&
+            props.contextMenu.getContextTargets()[0] &&
+            props.createChildNode(props.contextMenu.getContextTargets()[0], ''),
+            props.contextMenu.closeContextMenu()
+          )}
+          onCreateNode={() => (props.createRootNode(''), props.contextMenu.closeContextMenu())}
           onDeleteNode={() => (
             props.contextMenu
               .getContextTargets()

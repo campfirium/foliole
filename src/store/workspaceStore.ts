@@ -41,6 +41,7 @@ export interface WorkspaceState {
   restoreNode: (nodeId: string) => void;
   deleteNodePermanently: (nodeId: string) => void;
   createRootNode: (content?: string) => string;
+  createChildNode: (parentNodeId: string, content?: string) => string;
   createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string) => string | null;
   createQANodeFromSelection: (
     parentNodeId: string,
@@ -48,6 +49,7 @@ export interface WorkspaceState {
     answerContent: string,
     anchorId?: string
   ) => string | null;
+  moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
 }
 
 interface WorkspacePersistedState {

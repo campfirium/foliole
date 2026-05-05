@@ -31,9 +31,11 @@ function useNodeListTreeModel({
   onSelectTrashNode,
   selectedTrashNodeId
 }: Omit<NodeListTreeProps, 'isTrashViewOpen' | 'onOpenNotesView'>) {
+  const createChildNode = useWorkspaceStore((state) => state.createChildNode);
   const createRootNode = useWorkspaceStore((state) => state.createRootNode);
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
   const deleteNodePermanently = useWorkspaceStore((state) => state.deleteNodePermanently);
+  const moveNode = useWorkspaceStore((state) => state.moveNode);
   const restoreNode = useWorkspaceStore((state) => state.restoreNode);
   const trashedNodeIds = useWorkspaceStore((state) => state.trashedNodeIds);
   const collapsedState = useCollapsedNodeState();
@@ -73,10 +75,12 @@ function useNodeListTreeModel({
     collapse,
     collapsedState,
     contextMenu,
+    createChildNode,
     createRootNode,
     deleteNode,
     deleteNodePermanently,
     handleSelectNode,
+    moveNode,
     restoreNode,
     state
   };
@@ -113,10 +117,13 @@ export function NodeListTree({
       activeRows={activeRows}
       collapse={model.collapse}
       contextMenu={model.contextMenu}
+      createChildNode={model.createChildNode}
       createRootNode={model.createRootNode}
       deleteNode={model.deleteNode}
       deleteNodePermanently={model.deleteNodePermanently}
       isTrashViewOpen={isTrashViewOpen}
+      moveNode={model.moveNode}
+      nodesById={nodesById}
       onOpenNotesView={onOpenNotesView}
       onSelect={model.handleSelectNode}
       restoreNode={model.restoreNode}
