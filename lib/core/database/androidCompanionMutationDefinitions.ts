@@ -50,6 +50,8 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     'stored_sha256, availability, created_at, cached_at, last_verified_at' +
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   textBodyBlobDataInsert: 'INSERT OR IGNORE INTO content_blob_data (hash, data) VALUES (?, ?)',
+  nodeAttachmentDeleteByNode: 'DELETE FROM node_attachments WHERE node_id = ?',
+  nodeAttachmentUpsert: 'INSERT OR REPLACE INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)',
   syncStateExisting:
     'SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1',
   syncStateNextSeq: 'SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state',

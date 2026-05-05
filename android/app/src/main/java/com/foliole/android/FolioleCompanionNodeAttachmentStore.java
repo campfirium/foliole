@@ -1,6 +1,6 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -14,7 +14,7 @@ final class FolioleCompanionNodeAttachmentStore {
 
     private FolioleCompanionNodeAttachmentStore() {}
 
-    static void backfillNodeAttachmentsFromVersions(SQLiteDatabase database) {
+    static void backfillNodeAttachmentsFromVersions(Context context, SQLiteDatabase database) {
         try (Cursor cursor = database.rawQuery(
             "SELECT n.id, v.snapshot_json " +
                 "FROM nodes n " +
@@ -26,15 +26,15 @@ final class FolioleCompanionNodeAttachmentStore {
         )) {
             while (cursor.moveToNext()) {
                 JSONObject snapshot = new JSONObject(cursor.getString(1));
-                replaceNodeAttachments(database, cursor.getString(0), snapshot.optJSONArray("attachments"));
+                replaceNodeAttachments(context, database, cursor.getString(0), snapshot.optJSONArray("attachments"));
             }
         } catch (Exception ignored) {
             // Best-effort compatibility repair for pre-link-schema Android databases.
         }
     }
 
-    static void replaceNodeAttachments(SQLiteDatabase database, String nodeId, JSONArray attachments) {
-        database.delete("node_attachments", "node_id = ?", new String[] { nodeId });
+    static void replaceNodeAttachments(Context context, SQLiteDatabase database, String nodeId, JSONArray attachments) throws Exception {
+        FolioleCompanionNamedMutationStore.execute(context, database, "nodeAttachmentDeleteByNode", new Object[] { nodeId });
         if (attachments == null) {
             return;
         }
@@ -48,11 +48,7 @@ final class FolioleCompanionNodeAttachmentStore {
             if (attachmentId.isEmpty() || role.isEmpty()) {
                 continue;
             }
-            ContentValues values = new ContentValues();
-            values.put("node_id", nodeId);
-            values.put("attachment_id", attachmentId);
-            values.put("role", role);
-            database.insertWithOnConflict("node_attachments", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+            FolioleCompanionNamedMutationStore.execute(context, database, "nodeAttachmentUpsert", new Object[] { nodeId, attachmentId, role });
         }
     }
 

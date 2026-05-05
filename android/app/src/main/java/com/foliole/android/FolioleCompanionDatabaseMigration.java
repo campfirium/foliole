@@ -32,7 +32,7 @@ final class FolioleCompanionDatabaseMigration {
             installSchema(context, database, "Failed to upgrade companion attachment link schema.");
         }
         if (oldVersion < 9) {
-            FolioleCompanionNodeAttachmentStore.backfillNodeAttachmentsFromVersions(database);
+            FolioleCompanionNodeAttachmentStore.backfillNodeAttachmentsFromVersions(context, database);
         }
         if (oldVersion < 10) {
             installSchema(context, database, "Failed to upgrade companion content blob schema.");

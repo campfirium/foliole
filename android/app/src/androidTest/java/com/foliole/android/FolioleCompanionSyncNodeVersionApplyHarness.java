@@ -3,6 +3,8 @@ package com.foliole.android;
 import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
 
+import androidx.test.platform.app.InstrumentationRegistry;
+
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
@@ -65,7 +67,7 @@ final class FolioleCompanionSyncNodeVersionApplyHarness {
             FolioleCompanionSyncConflictCopyIdentity.isConflictCopyNodeId(snapshot.optString("id"));
     }
 
-    private static void upsertNode(SQLiteDatabase database, JSONObject record, JSONObject snapshot) {
+    private static void upsertNode(SQLiteDatabase database, JSONObject record, JSONObject snapshot) throws Exception {
         String nodeId = snapshot.optString("id", record.optString("object_id"));
         ContentValues values = new ContentValues();
         values.put("id", nodeId);
@@ -95,7 +97,12 @@ final class FolioleCompanionSyncNodeVersionApplyHarness {
         values.put("updated_at", snapshot.optString("updated_at", record.optString("updated_at")));
         putNullableString(values, "deleted_at", snapshot.optString("deleted_at", null));
         database.insertWithOnConflict("nodes", null, values, SQLiteDatabase.CONFLICT_REPLACE);
-        FolioleCompanionNodeAttachmentStore.replaceNodeAttachments(database, nodeId, snapshot.optJSONArray("attachments"));
+        FolioleCompanionNodeAttachmentStore.replaceNodeAttachments(
+            InstrumentationRegistry.getInstrumentation().getTargetContext(),
+            database,
+            nodeId,
+            snapshot.optJSONArray("attachments")
+        );
     }
 
     private static void upsertVersion(SQLiteDatabase database, JSONObject record, JSONObject snapshot) {
