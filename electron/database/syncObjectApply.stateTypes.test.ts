@@ -21,7 +21,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncObjects } from './syncObjectApply.js';
+import { applySyncObjectsAsync } from './syncObjectApply.js';
 import { applySyncObjectPayload } from './syncObjectApplyPayloads.js';
 
 let tempRoot = '';
@@ -38,7 +38,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('does not accept node records through the generic state-object apply path', () => {
+it('does not accept node records through the generic state-object apply path', async () => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   const record = {
     content_hash: 'hash-node',
@@ -49,7 +49,7 @@ it('does not accept node records through the generic state-object apply path', (
     updated_at: '2026-04-21T16:20:00.000Z'
   } as unknown as NativeSyncObjectRecord;
 
-  expect(applySyncObjects([record])).toEqual([]);
+  await expect(applySyncObjectsAsync([record])).resolves.toEqual([]);
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne('SELECT id FROM nodes WHERE id = ?', ['node-1'])).toBeUndefined();

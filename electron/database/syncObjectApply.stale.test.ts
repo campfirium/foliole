@@ -20,7 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncObjects } from './syncObjectApply.js';
+import { applySyncObjectsAsync } from './syncObjectApply.js';
 
 let tempRoot = '';
 
@@ -60,10 +60,10 @@ function insertNewerReadingState() {
   );
 }
 
-it('does not let stale remote records overwrite newer local object state', () => {
+it('does not let stale remote records overwrite newer local object state', async () => {
   insertNewerReadingState();
 
-  expect(applySyncObjects([{
+  await expect(applySyncObjectsAsync([{
     content_hash: 'older-hash',
     deleted_at: null,
     object_id: 'node-1',
@@ -74,7 +74,7 @@ it('does not let stale remote records overwrite newer local object state', () =>
       reading_position: 7
     }),
     updated_at: '2026-04-21T16:21:00.000Z'
-  }])).toEqual([]);
+  }])).resolves.toEqual([]);
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ reading_position: number }>(
@@ -87,10 +87,10 @@ it('does not let stale remote records overwrite newer local object state', () =>
   )).toEqual({ content_hash: 'newer-hash', sync_dirty: 1 });
 });
 
-it('skips already applied remote records with the same hash and tombstone', () => {
+it('skips already applied remote records with the same hash and tombstone', async () => {
   insertNewerReadingState();
 
-  expect(applySyncObjects([{
+  await expect(applySyncObjectsAsync([{
     content_hash: 'newer-hash',
     deleted_at: null,
     object_id: 'node-1',
@@ -101,17 +101,17 @@ it('skips already applied remote records with the same hash and tombstone', () =
       reading_position: 20
     }),
     updated_at: '2026-04-21T18:00:00.000Z'
-  }])).toEqual([]);
+  }])).resolves.toEqual([]);
 
   expect(openDatabaseConnection().driver.queryOne<{ state_seq: number }>(
     `SELECT state_seq FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = 'node-1'`
   )).toEqual({ state_seq: 1 });
 });
 
-it('can acknowledge already applied records for push cursor delivery', () => {
+it('can acknowledge already applied records for push cursor delivery', async () => {
   insertNewerReadingState();
 
-  expect(applySyncObjects([{
+  await expect(applySyncObjectsAsync([{
     content_hash: 'newer-hash',
     deleted_at: null,
     object_id: 'node-1',
@@ -122,5 +122,5 @@ it('can acknowledge already applied records for push cursor delivery', () => {
       reading_position: 20
     }),
     updated_at: '2026-04-21T18:00:00.000Z'
-  }], { includeAlreadyApplied: true })).toEqual(['node_reading:node-1']);
+  }], { includeAlreadyApplied: true })).resolves.toEqual(['node_reading:node-1']);
 });
