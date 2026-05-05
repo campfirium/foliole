@@ -151,8 +151,13 @@ final class FolioleCompanionSyncPayloadQueryStore {
             JSONObject row = rows.getJSONObject(index);
             row.put(
                 routingString(context, "payloadJsonKey"),
-                row.isNull(routingString(context, "deletedAtKey"))
-                    ? loadPayload(context, database, row.getString(routingString(context, "objectTypeKey")), row.getString(routingString(context, "objectIdKey")))
+                FolioleCompanionSyncPayloadRoutingRules.rowIsNull(context, row, "deletedAtKey")
+                    ? loadPayload(
+                        context,
+                        database,
+                        FolioleCompanionSyncPayloadRoutingRules.rowString(context, row, "objectTypeKey"),
+                        FolioleCompanionSyncPayloadRoutingRules.rowString(context, row, "objectIdKey")
+                    )
                     : JSONObject.NULL
             );
         }
@@ -165,7 +170,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
         if (route == null) {
             return "{}";
         }
-        String queryName = route.getString(routingString(context, "queryNameKey"));
+        String queryName = FolioleCompanionSyncPayloadRoutingRules.routeString(context, route, "queryNameKey");
         String payload = FolioleCompanionGeneratedQueryRunner.loadString(
             context,
             database,
@@ -185,10 +190,10 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     private static String[] queryArgs(Context context, JSONObject route, String objectId, String objectIdKey, String deviceId) throws Exception {
-        String argMode = route.optString(routingString(context, "argModeKey"), routingString(context, "objectIdArgMode"));
+        String argMode = FolioleCompanionSyncPayloadRoutingRules.routeOptString(context, route, "argModeKey", "objectIdArgMode");
         if (argMode.equals(routingString(context, "noneArgMode"))) return null;
         if (argMode.equals(routingString(context, "viewStateNodeArgMode"))) {
-            String prefix = route.getString(routingString(context, "objectIdPrefixKey"));
+            String prefix = FolioleCompanionSyncPayloadRoutingRules.routeString(context, route, "objectIdPrefixKey");
             return new String[] { objectIdKey.substring(prefix.length()), deviceId };
         }
         return new String[] { objectId };
@@ -227,19 +232,11 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     private static String routingString(Context context, String key) throws Exception {
-        String value = syncPayloadRouting(context).optString(key, "");
-        if (value.isEmpty()) {
-            throw new IllegalStateException("Companion query definitions asset is missing sync payload routing value: " + key);
-        }
-        return value;
+        return FolioleCompanionSyncPayloadRoutingRules.string(context, key);
     }
 
     private static int routingInt(Context context, String key) throws Exception {
-        JSONObject routing = syncPayloadRouting(context);
-        if (!routing.has(key)) {
-            throw new IllegalStateException("Companion query definitions asset is missing sync payload routing value: " + key);
-        }
-        return routing.getInt(key);
+        return FolioleCompanionSyncPayloadRoutingRules.intValue(context, key);
     }
 
     private static Set<String> metadataSet(Context context, String queryName, String key) throws Exception {
@@ -253,10 +250,10 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     private static boolean matches(Context context, JSONObject route, String objectType, String objectIdKey) throws Exception {
-        if (!objectType.equals(route.optString(routingString(context, "objectTypeRouteKey")))) return false;
-        String exactKey = route.optString(routingString(context, "objectIdRouteKey"), "");
+        if (!objectType.equals(FolioleCompanionSyncPayloadRoutingRules.routeOptString(context, route, "objectTypeRouteKey"))) return false;
+        String exactKey = FolioleCompanionSyncPayloadRoutingRules.routeOptString(context, route, "objectIdRouteKey");
         if (!exactKey.isEmpty()) return exactKey.equals(objectIdKey);
-        String prefix = route.optString(routingString(context, "objectIdPrefixKey"), "");
+        String prefix = FolioleCompanionSyncPayloadRoutingRules.routeOptString(context, route, "objectIdPrefixKey");
         return prefix.isEmpty() || objectIdKey.startsWith(prefix);
     }
 

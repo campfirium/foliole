@@ -136,7 +136,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
       ])
     );
     expect(syncPayloadQueryStore).toContain('static JSObject loadRowsWithPayloads');
-    expect(syncPayloadQueryStore).toContain('loadPayload(context, database');
+    expect(syncPayloadQueryStore).toContain('? loadPayload(');
     expect(queryDefinitions.queries.syncPayloadAttachment.syncPayload).toEqual({
       argMode: 'object_id',
       objectType: 'attachment'

@@ -126,9 +126,11 @@ describe('Android sync payload routing metadata', () => {
     expect(payloadStore).toContain('FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "syncPayload")');
     expect(payloadStore).toContain('routingString(context, "objectIdDelimiter")');
     expect(payloadStore).toContain('routingInt(context, "objectIdPartLimit")');
-    expect(payloadStore).toContain('row.getString(routingString(context, "objectTypeKey"))');
-    expect(payloadStore).toContain('route.getString(routingString(context, "queryNameKey"))');
+    expect(payloadStore).toContain('FolioleCompanionSyncPayloadRoutingRules.rowString(context, row, "objectTypeKey")');
+    expect(payloadStore).toContain('FolioleCompanionSyncPayloadRoutingRules.routeString(context, route, "queryNameKey")');
     expect(payloadJson).toContain('FolioleCompanionSyncPayloadRoutingRules.string(context, "payloadJsonKey")');
+    expect(payloadRoutingRules).toContain('static String rowString');
+    expect(payloadRoutingRules).toContain('static String routeString');
     expect(payloadRoutingRules).toContain('FolioleCompanionQueryAssetKeys.section(context, "syncPayloadRouting")');
     expect(viewStateStore).toContain('FolioleCompanionSyncPayloadQueryStore.viewObjectId(context, deviceId, key)');
     expect(viewStateStore).toContain('FolioleCompanionSyncPayloadQueryStore.viewObjectIdKey(context, objectId)');
@@ -142,10 +144,12 @@ describe('Android sync payload routing metadata', () => {
     expect(viewStateStore).not.toContain('key.substring(nodePrefix.length())');
     expect(payloadStore).not.toContain('objectId.split(":", 5)');
     expect(payloadStore).not.toContain('row.getString("object_type")');
+    expect(payloadStore).not.toContain('row.getString(routingString(context, "objectTypeKey"))');
     expect(payloadStore).not.toContain('row.put("payload_json"');
     expect(payloadJson).not.toContain('record.opt("payload_json"');
     expect(payloadJson).not.toContain('routing.getString("payloadJsonKey")');
     expect(payloadStore).not.toContain('route.getString("queryName")');
+    expect(payloadStore).not.toContain('route.getString(routingString(context, "queryNameKey"))');
     expect(payloadStore).not.toContain('getJSONObject("syncPayload")');
     expect(payloadStore).not.toContain('getJSONArray("routes")');
     expect(payloadStore).not.toContain('Iterator<String> names = queries.keys()');
