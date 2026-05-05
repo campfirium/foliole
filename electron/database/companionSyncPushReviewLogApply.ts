@@ -3,14 +3,12 @@ import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import type { NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import type { CompanionSyncPushPayload, CompanionSyncPushResult } from './companionSyncPushApply.js';
+import type {
+  CompanionSyncPushPayload,
+  CompanionSyncPushResult,
+  SyncObjectIdentity
+} from './companionSyncPushTypes.js';
 import { openDatabaseConnection } from './connection.js';
-
-interface SyncObjectIdentity {
-  objectId: string;
-  objectType: string;
-  scope: string;
-}
 
 interface ReviewLogRow extends DatabaseRow, NativeSyncReviewLogRecord {}
 interface ReviewLogDbRow extends DbRow, NativeSyncReviewLogRecord {}

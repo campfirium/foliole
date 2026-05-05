@@ -23,7 +23,7 @@ import { applyCompanionSyncPush } from './companionSyncPushApply.js';
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 
-type SyncPushPayload = import('./companionSyncPushApply.js').CompanionSyncPushPayload;
+type SyncPushPayload = import('./companionSyncPushTypes.js').CompanionSyncPushPayload;
 
 let tempRoot = '';
 

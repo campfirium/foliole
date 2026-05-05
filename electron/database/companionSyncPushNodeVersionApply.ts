@@ -2,7 +2,7 @@ import type {
   NativeSyncNodeRecord
 } from '../../lib/platform/nativeSyncContract.js';
 
-import type { CompanionSyncPushPayload, CompanionSyncPushResult } from './companionSyncPushApply.js';
+import type { CompanionSyncPushPayload, CompanionSyncPushResult } from './companionSyncPushTypes.js';
 import { applySyncNodes, applySyncNodesAsync } from './syncApply.js';
 
 function rejectNodeVersionPush(item: CompanionSyncPushPayload, reason: string): CompanionSyncPushResult {

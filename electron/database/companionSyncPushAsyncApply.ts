@@ -1,15 +1,15 @@
-import type {
-  CompanionSyncPushPayload,
-  CompanionSyncPushResult
-} from './companionSyncPushApply.js';
 import { applyNodeVersionPushAsync } from './companionSyncPushNodeVersionApply.js';
 import { applyReviewLogPushAsync } from './companionSyncPushReviewLogApply.js';
 import {
   applyStateObjectPushAsync,
   isStateObjectPush
 } from './companionSyncPushStateObjectAsyncApply.js';
+import type {
+  CompanionSyncPushPayload,
+  CompanionSyncPushResult
+} from './companionSyncPushTypes.js';
 
-export type { CompanionSyncPushPayload } from './companionSyncPushApply.js';
+export type { CompanionSyncPushPayload } from './companionSyncPushTypes.js';
 
 function emptyPushResult(): CompanionSyncPushResult {
   return { acks: [], appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };

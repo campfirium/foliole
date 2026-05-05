@@ -7,7 +7,7 @@ import type {
   CompanionSyncPushPayload,
   CompanionSyncPushResult,
   SyncObjectIdentity
-} from './companionSyncPushApply.js';
+} from './companionSyncPushTypes.js';
 import { openDatabaseConnection } from './connection.js';
 
 const REMOTE_DEVICE_ID = 'companion-push';

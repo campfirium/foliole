@@ -26,7 +26,7 @@ import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
-type SyncPushPayload = import('./companionSyncPushApply.js').CompanionSyncPushPayload;
+type SyncPushPayload = import('./companionSyncPushTypes.js').CompanionSyncPushPayload;
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');

@@ -7,57 +7,23 @@ import type {
 
 import { applyNodeVersionPush } from './companionSyncPushNodeVersionApply.js';
 import { applyReviewLogPush } from './companionSyncPushReviewLogApply.js';
+import type {
+  CompanionSyncPushAck,
+  CompanionSyncPushPayload,
+  CompanionSyncPushResult,
+  SyncBaseReference,
+  SyncObjectIdentity
+} from './companionSyncPushTypes.js';
 import { openDatabaseConnection } from './connection.js';
 import { applySyncObjectPayload } from './syncObjectApplyPayloads.js';
 
 const REMOTE_DEVICE_ID = 'companion-push';
-
-type SyncPushStatus = 'accepted' | 'already_applied' | 'conflict' | 'rejected';
-
-type SyncBaseReference =
-  | { kind: 'blocked'; reason: 'invalid_identity' | 'missing_base_reference' }
-  | { baseContentHash: string | null; kind: 'content_hash' }
-  | { kind: 'op_id'; opId: string }
-  | { ancestorVersionIds: string[]; kind: 'node_version'; parentVersionId: string | null };
-
-export interface SyncObjectIdentity {
-  objectId: string;
-  objectType: string;
-  scope: string;
-}
-
-export interface CompanionSyncPushPayload {
-  base: SyncBaseReference;
-  clientOpId: string;
-  contentHash?: string;
-  deletedAt?: string | null;
-  identity: SyncObjectIdentity;
-  payloadJson: string | null;
-  updatedAt?: string;
-}
-
-interface CompanionSyncPushAck {
-  clientOpId: string;
-  conflictReason?: string;
-  desktopBase?: SyncBaseReference;
-  identity: SyncObjectIdentity;
-  stateSeq?: number | null;
-  status: SyncPushStatus;
-  versionId?: string | null;
-}
 
 interface SyncObjectStateRow extends DatabaseRow {
   content_hash: string;
   deleted_at: string | null;
   state_seq: number;
   updated_at: string;
-}
-
-export interface CompanionSyncPushResult {
-  acks: CompanionSyncPushAck[];
-  appliedNodeIds: string[];
-  appliedObjectIds: string[];
-  appliedReviewOpIds: string[];
 }
 
 function readString(value: unknown) {
@@ -119,7 +85,7 @@ function buildStateObjectRecord(
 function stateAck(
   item: CompanionSyncPushPayload,
   row: SyncObjectStateRow | undefined,
-  status: Extract<SyncPushStatus, 'accepted' | 'already_applied'>
+  status: 'accepted' | 'already_applied'
 ): CompanionSyncPushAck {
   return {
     clientOpId: item.clientOpId,
@@ -225,3 +191,9 @@ export function applyCompanionSyncPush(items: CompanionSyncPushPayload[]): Compa
     return result;
   }, { acks: [], appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] });
 }
+
+export type {
+  CompanionSyncPushPayload,
+  CompanionSyncPushResult,
+  SyncObjectIdentity
+} from './companionSyncPushTypes.js';
