@@ -11,7 +11,7 @@ import {
 const COMPANION_DATABASE_NAME = 'foliole-companion';
 const COMPANION_DATABASE_VERSION = 14;
 
-interface CompanionSqliteConnectionManager {
+export interface CompanionSqliteConnectionManager {
   createConnection(
     database: string,
     encrypted: boolean,
@@ -50,7 +50,7 @@ export async function applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(
   return applyCompanionSyncNodeVersionsWithSharedCore(connection, nodes);
 }
 
-async function openCompanionDatabaseConnection(manager: CompanionSqliteConnectionManager) {
+export async function openCompanionDatabaseConnection(manager: CompanionSqliteConnectionManager) {
   const existing = await manager.isConnection(COMPANION_DATABASE_NAME, false).catch(() => ({ result: false }));
   const connection = existing.result
     ? await manager.retrieveConnection(COMPANION_DATABASE_NAME, false)
