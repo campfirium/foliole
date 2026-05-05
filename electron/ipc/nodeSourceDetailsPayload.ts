@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import { formatReadwiseSourceLabel } from '../../lib/core/import/importManagerSettings.js';
-import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+import { resolveAttachmentResource } from '../attachments/resourceResolver.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
@@ -45,8 +45,8 @@ function resolvePdfSourceLocator(sourceNodeId: string) {
     return '';
   }
 
-  const resolved = resolveAttachmentFile(attachment.attachmentId);
-  return resolved.status === 'ready' ? resolved.filePath : '';
+  const resolved = resolveAttachmentResource(attachment.attachmentId);
+  return resolved.status === 'ready' ? resolved.resource_url : '';
 }
 
 function toNativeImportSource(

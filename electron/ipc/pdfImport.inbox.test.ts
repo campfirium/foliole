@@ -25,6 +25,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
@@ -108,10 +109,9 @@ async function expectPdfImportChain(options: {
   );
   expect(readPdfOpenDetails(options.nodeId)).toEqual({
     source_kind: 'pdf',
-    source_locator: expect.stringContaining(path.join('Assets', `${pdfAttachment?.attachmentId}.pdf`)),
+    source_locator: buildAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
     source_name: options.sourceName
   });
-  await expect(fs.stat(readPdfOpenDetails(options.nodeId)?.source_locator as string)).resolves.toBeTruthy();
 }
 
 it('imports pdf dropped into the managed inbox and keeps node/import/opening chain valid', async () => {
@@ -151,7 +151,7 @@ it('reopens the same pdf from attachments after the original file is removed and
   const linkedBeforeRestart = readPdfOpenDetails(imported.nodeId as string);
   expect(linkedBeforeRestart).toEqual({
     source_kind: 'pdf',
-    source_locator: expect.stringContaining(path.join('Assets', `${pdfAttachment?.attachmentId}.pdf`)),
+    source_locator: buildAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
     source_name: 'restart-proof.pdf'
   });
 
@@ -161,7 +161,6 @@ it('reopens the same pdf from attachments after the original file is removed and
 
   const linkedAfterRestart = readPdfOpenDetails(imported.nodeId as string);
   expect(linkedAfterRestart).toEqual(linkedBeforeRestart);
-  await expect(fs.stat(linkedAfterRestart?.source_locator as string)).resolves.toBeTruthy();
 });
 
 it('imports pdf through manual import and keeps node/import/opening chain valid', async () => {

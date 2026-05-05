@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -45,6 +46,18 @@ const baseNode = {
   review: null,
   createdAt: '',
   updatedAt: ''
+};
+
+const defaultImportSource = {
+  firstImportedAt: '2026-04-04T14:00:00.000Z',
+  lastContentFingerprint: 'fingerprint-1',
+  lastImportedAt: '2026-04-04T14:00:00.000Z',
+  latestNodeId: 'node-1',
+  provider: 'desktop_text_file',
+  sourceFingerprint: 'source-1',
+  sourceKind: 'pdf',
+  sourceLocator: '/tmp/sample.pdf',
+  sourceName: 'sample.pdf'
 };
 
 const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
@@ -100,20 +113,7 @@ function createPdfSourceDetails(overrides?: {
     isLoading: overrides?.isLoading ?? false,
     value: {
       importRuns: [],
-      importSource:
-        overrides?.importSource === undefined
-          ? {
-              firstImportedAt: '2026-04-04T14:00:00.000Z',
-              lastContentFingerprint: 'fingerprint-1',
-              lastImportedAt: '2026-04-04T14:00:00.000Z',
-              latestNodeId: 'node-1',
-              provider: 'desktop_text_file',
-              sourceFingerprint: 'source-1',
-              sourceKind: 'pdf',
-              sourceLocator: '/tmp/sample.pdf',
-              sourceName: 'sample.pdf'
-            }
-          : overrides.importSource,
+      importSource: overrides?.importSource === undefined ? defaultImportSource : overrides.importSource,
       inheritedFromParent: false,
       keepImportItem: overrides?.keepImportItem ?? null,
       sourceNodeId: 'node-1'
@@ -134,12 +134,7 @@ it('keeps the existing document body for non-pdf nodes', () => {
     value: {
       importRuns: [],
       importSource: {
-        firstImportedAt: '2026-04-04T14:00:00.000Z',
-        lastContentFingerprint: 'fingerprint-1',
-        lastImportedAt: '2026-04-04T14:00:00.000Z',
-        latestNodeId: 'node-1',
-        provider: 'desktop_text_file',
-        sourceFingerprint: 'source-1',
+        ...defaultImportSource,
         sourceKind: 'markdown',
         sourceLocator: '/tmp/sample.md',
         sourceName: 'sample.md'
@@ -162,7 +157,8 @@ it('renders the pdf reading container for linked pdf nodes', () => {
   renderSection();
 
   expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
-  expect(screen.getByTestId('pdf-document-iframe')).toBeInTheDocument();
+  expect(screen.getByTestId('pdf-document-view')).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
+  expect(screen.getByTestId('pdf-document-page')).toBeInTheDocument();
   expect(screen.getByText('sample.pdf')).toBeInTheDocument();
   expect(screen.queryByText(/highlight/i)).not.toBeInTheDocument();
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
@@ -173,19 +169,23 @@ it('supports pdf page turning and zoom controls', () => {
 
   renderSection();
 
-  const iframe = screen.getByTestId('pdf-document-iframe');
-  expect(iframe).toHaveAttribute('src', 'file:///tmp/sample.pdf#page=1&zoom=100');
+  const page = screen.getByTestId('pdf-document-page');
+  expect(page).toHaveAttribute('data-page', '1');
+  expect(page).toHaveAttribute('data-scale', '1');
 
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-  expect(iframe).toHaveAttribute('src', 'file:///tmp/sample.pdf#page=2&zoom=100');
+  expect(page).toHaveAttribute('data-page', '2');
+  expect(page).toHaveAttribute('data-scale', '1');
 
   fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-  expect(iframe).toHaveAttribute('src', 'file:///tmp/sample.pdf#page=2&zoom=110');
+  expect(page).toHaveAttribute('data-page', '2');
+  expect(page).toHaveAttribute('data-scale', '1.1');
 
   fireEvent.change(screen.getByRole('spinbutton', { name: 'PDF page' }), {
     target: { value: '5' }
   });
-  expect(iframe).toHaveAttribute('src', 'file:///tmp/sample.pdf#page=5&zoom=110');
+  expect(page).toHaveAttribute('data-page', '5');
+  expect(page).toHaveAttribute('data-scale', '1.1');
 });
 
 it('shows a loading state while a pdf node source is refreshing', () => {
@@ -197,9 +197,11 @@ it('shows a loading state while a pdf node source is refreshing', () => {
   expect(screen.getByText('Loading PDF reader')).toBeInTheDocument();
 });
 
-it('shows a failed state when the linked pdf source is marked failed', () => {
-  useNodeSourceDetails.mockReturnValue(
-    createPdfSourceDetails({
+it.each([
+  {
+    expectedTestId: 'pdf-document-state-failed',
+    expectedTitle: 'PDF reader failed',
+    sourceDetails: createPdfSourceDetails({
       keepImportItem: {
         firstSeenAt: '2026-04-04T14:00:00.000Z',
         hasSourceUpdate: false,
@@ -217,34 +219,25 @@ it('shows a failed state when the linked pdf source is marked failed', () => {
         sourceSizeBytes: 1024,
         sourceType: 'generic'
       }
-    }) as never
-  );
-
-  renderSection();
-
-  expect(screen.getByTestId('pdf-document-state-failed')).toBeInTheDocument();
-  expect(screen.getByText('PDF reader failed')).toBeInTheDocument();
-});
-
-it('shows an empty state when a pdf node has no linked file yet', () => {
-  useNodeSourceDetails.mockReturnValue(
-    createPdfSourceDetails({
+    })
+  },
+  {
+    expectedTestId: 'pdf-document-state-empty',
+    expectedTitle: 'PDF file not linked yet',
+    sourceDetails: createPdfSourceDetails({
       importSource: {
-        firstImportedAt: '2026-04-04T14:00:00.000Z',
-        lastContentFingerprint: 'fingerprint-1',
-        lastImportedAt: '2026-04-04T14:00:00.000Z',
-        latestNodeId: 'node-1',
-        provider: 'desktop_text_file',
-        sourceFingerprint: 'source-1',
+        ...defaultImportSource,
         sourceKind: 'pdf',
         sourceLocator: '',
         sourceName: 'sample.pdf'
       }
-    }) as never
-  );
+    })
+  }
+])('renders the expected non-ready pdf state: $expectedTestId', ({ expectedTestId, expectedTitle, sourceDetails }) => {
+  useNodeSourceDetails.mockReturnValue(sourceDetails as never);
 
   renderSection();
 
-  expect(screen.getByTestId('pdf-document-state-empty')).toBeInTheDocument();
-  expect(screen.getByText('PDF file not linked yet')).toBeInTheDocument();
+  expect(screen.getByTestId(expectedTestId)).toBeInTheDocument();
+  expect(screen.getByText(expectedTitle)).toBeInTheDocument();
 });
