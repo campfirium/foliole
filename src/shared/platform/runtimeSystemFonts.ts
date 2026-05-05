@@ -1,10 +1,10 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { toRuntimeSystemFontCatalog, type RuntimeSystemFontCatalog } from './bridgePayloads';
+import { toRuntimeSystemFontCatalog, type RuntimeSystemFontCatalog } from './runtimeEnvironmentPayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
-export type { RuntimeSystemFontCatalog } from './bridgePayloads';
+export type { RuntimeSystemFontCatalog } from './runtimeEnvironmentPayloads';
 
 export async function listRuntimeSystemFonts(): Promise<RuntimeSystemFontCatalog | null> {
   const runtimeInvoke = getRuntimeInvoke();

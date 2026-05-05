@@ -1,10 +1,10 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { toRuntimeAppPaths, type RuntimeAppPaths } from './bridgePayloads';
+import { toRuntimeAppPaths, type RuntimeAppPaths } from './runtimeEnvironmentPayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeEvent, logRuntimeWarning } from './runtimeLogging';
 
-export type { RuntimeAppPaths } from './bridgePayloads';
+export type { RuntimeAppPaths } from './runtimeEnvironmentPayloads';
 
 export async function resolveRuntimeAppPaths(): Promise<RuntimeAppPaths | null> {
   const runtimeInvoke = getRuntimeInvoke();
