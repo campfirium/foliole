@@ -271,5 +271,6 @@ it('renders the outline panel from active topic headings', () => {
 
   expect(screen.getByText('Outline')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /detail/i })).toHaveAttribute('aria-current', 'location');
+  expect(screen.getByRole('button', { name: /detail/i })).toHaveClass('font-normal');
   expect(onRevealDocumentPosition).toHaveBeenCalledWith(activeNode.content.indexOf('First section'));
 });

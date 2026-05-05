@@ -27,15 +27,15 @@ function renderLevelGuides(level: number) {
 
 function getOutlineItemTone(level: number, isActive: boolean) {
   if (isActive) {
-    return 'text-foreground font-semibold';
+    return 'text-foreground';
   }
   if (level === 1) {
-    return 'text-foreground/86 font-semibold';
+    return 'text-foreground/86';
   }
   if (level === 2) {
-    return 'text-foreground/74 font-medium';
+    return 'text-foreground/74';
   }
-  return 'text-foreground/64 font-normal';
+  return 'text-foreground/64';
 }
 
 function getAccentTone(level: number, isActive: boolean) {
@@ -58,6 +58,7 @@ export function WorkspaceRightSidebarOutlinePanel({
 }: WorkspaceRightSidebarOutlinePanelProps) {
   const outlineItems = useMemo(() => (mayHaveOutline(content) ? resolveDisplayItems(content) : []), [content]);
   const activeIndex = useMemo(() => resolveActiveIndex(outlineItems, activePosition), [activePosition, outlineItems]);
+  const hasNestedLevels = useMemo(() => outlineItems.some((item) => item.level > 1), [outlineItems]);
 
   if (outlineItems.length === 0) {
     return (
@@ -73,24 +74,26 @@ export function WorkspaceRightSidebarOutlinePanel({
       <ol className="relative m-0 list-none space-y-0.5 p-0">
         {outlineItems.map((item, index) => (
           <li className="relative" key={`${item.from}-${item.text}`}>
-            {renderLevelGuides(item.level)}
+            {hasNestedLevels ? renderLevelGuides(item.level) : null}
             <button
               aria-current={index === activeIndex ? 'location' : undefined}
               className={cn(
-                'group relative flex min-h-8 w-full items-center rounded-md py-1.5 pr-2 text-left text-sm leading-snug transition-colors',
+                'group relative flex min-h-8 w-full items-center rounded-md py-1.5 pr-2 text-left text-sm font-normal leading-snug transition-colors',
                 'hover:bg-foreground/[0.055] hover:text-foreground focus-visible:bg-foreground/[0.07] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
                 index === activeIndex ? 'bg-[rgb(var(--app-accent-color-rgb)/0.22)] shadow-[inset_0_0_0_1px_rgb(var(--app-accent-color-rgb)/0.08)]' : '',
                 getOutlineItemTone(item.level, index === activeIndex)
               )}
               onClick={() => onRevealPosition(item.from)}
-              style={{ paddingLeft: `${1.3 + (item.level - 1) * 1.35}rem` }}
+              style={{ paddingLeft: hasNestedLevels ? `${1.3 + (item.level - 1) * 1.35}rem` : '0.75rem' }}
               type="button"
             >
-              <span
-                aria-hidden="true"
-                className={cn('absolute top-2 h-[calc(100%-1rem)] w-1 rounded-full transition-opacity', getAccentTone(item.level, index === activeIndex))}
-                style={{ left: `${0.5 + (item.level - 1) * 1.35}rem` }}
-              />
+              {hasNestedLevels ? (
+                <span
+                  aria-hidden="true"
+                  className={cn('absolute top-2 h-[calc(100%-1rem)] w-1 rounded-full transition-opacity', getAccentTone(item.level, index === activeIndex))}
+                  style={{ left: `${0.5 + (item.level - 1) * 1.35}rem` }}
+                />
+              ) : null}
               <span className="line-clamp-2">{item.text}</span>
             </button>
           </li>
