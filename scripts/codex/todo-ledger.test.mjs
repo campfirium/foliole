@@ -86,9 +86,10 @@ describe('todo-ledger helpers', () => {
     expect(isPauseTask('继续收口 platform bridge')).toBe(false);
   });
 
-  it('flags pending entries without an explicit execution mode', () => {
+  it('accepts unchecked checkbox entries without an explicit execution mode', () => {
     const markdown = ['# Pending TODO', '', '- [ ] first task'].join('\n');
-    expect(validateTodoEntries(markdown, 'pending')).toEqual(['line 3: pending entry must start with [auto] or [gate]']);
+    expect(validateTodoEntries(markdown, 'pending')).toEqual([]);
+    expect(parseFirstTodoTask(markdown)).toBe('first task');
   });
 
   it('flags task entries that omit the unchecked checkbox marker', () => {
@@ -97,10 +98,15 @@ describe('todo-ledger helpers', () => {
     expect(normalizeTodoMarkdown(markdown)).toBe(['# Pending TODO', '', '- [ ] [auto] first task'].join('\n'));
   });
 
-  it('flags extra bracket prefixes after the execution mode', () => {
+  it('accepts plain bullet entries by normalizing them to auto tasks', () => {
+    const markdown = ['# Pending TODO', '', '- first task'].join('\n');
+    expect(validateTodoEntries(markdown)).toEqual([]);
+    expect(normalizeTodoMarkdown(markdown)).toBe(['# Pending TODO', '', '- [ ] [auto] first task'].join('\n'));
+  });
+
+  it('preserves extra bracket prefixes inside task text', () => {
     const markdown = ['# Pending TODO', '', '- [ ] [auto] [infra] first task'].join('\n');
-    expect(validateTodoEntries(markdown)).toEqual([
-      'line 3: category tags must use plain text like "infra:" instead of extra [label] prefixes'
-    ]);
+    expect(validateTodoEntries(markdown)).toEqual([]);
+    expect(parseFirstTodoTask(markdown)).toBe('[infra] first task');
   });
 });

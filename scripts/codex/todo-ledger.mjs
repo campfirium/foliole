@@ -15,32 +15,61 @@ const DEFAULT_PAUSE_PATTERNS = [
   /^验收 Phase \d+ 退出标志/
 ];
 const TASK_MODE_PREFIX = /^\[(auto|gate)\]\s*/i;
-const BRACKET_PREFIX = /^\[[^\]]+\]\s*/;
 const CANONICAL_TASK_PATTERN = /^- \[ \] (.+)$/;
 const LEGACY_TASK_PATTERN = /^- \[(auto|gate)\]\s+(.+)$/i;
+const UNMODED_CHECKBOX_PATTERN = /^- \[ \]\s+(.+)$/;
+const SIMPLE_BULLET_PATTERN = /^-\s+(.+)$/;
 
 function inferTaskMode(task, patterns = DEFAULT_PAUSE_PATTERNS) {
   return isPauseTask(task, patterns) ? 'gate' : 'auto';
 }
 
-export function normalizeTodoLine(line) {
+export function normalizeTodoLine(line, patterns = DEFAULT_PAUSE_PATTERNS) {
+  if (CANONICAL_TASK_PATTERN.test(line)) {
+    return line;
+  }
   const legacyMatch = line.match(LEGACY_TASK_PATTERN);
   if (!legacyMatch) {
+    const unmodedCheckboxMatch = line.match(UNMODED_CHECKBOX_PATTERN);
+    if (unmodedCheckboxMatch) {
+      const task = unmodedCheckboxMatch[1].trim();
+      if (!task) {
+        return line;
+      }
+      if (TASK_MODE_PREFIX.test(task)) {
+        return `- [ ] ${task}`;
+      }
+      return `- [ ] [${inferTaskMode(task, patterns)}] ${task}`;
+    }
+    const simpleBulletMatch = line.match(SIMPLE_BULLET_PATTERN);
+    if (simpleBulletMatch) {
+      const task = simpleBulletMatch[1].trim();
+      if (!task) {
+        return line;
+      }
+      if (/^\[[xX ]\]\s*/.test(task)) {
+        return line;
+      }
+      if (TASK_MODE_PREFIX.test(task)) {
+        return `- [ ] ${task}`;
+      }
+      return `- [ ] [${inferTaskMode(task, patterns)}] ${task}`;
+    }
     return line;
   }
   const [, mode, task] = legacyMatch;
   return `- [ ] [${mode.toLowerCase()}] ${task.trim()}`;
 }
 
-export function normalizeTodoMarkdown(markdown) {
+export function normalizeTodoMarkdown(markdown, patterns = DEFAULT_PAUSE_PATTERNS) {
   return markdown
     .split('\n')
-    .map((line) => normalizeTodoLine(line))
+    .map((line) => normalizeTodoLine(line, patterns))
     .join('\n');
 }
 
 function parsePendingTask(line, patterns = DEFAULT_PAUSE_PATTERNS) {
-  const match = normalizeTodoLine(line.trim()).match(CANONICAL_TASK_PATTERN);
+  const match = normalizeTodoLine(line.trim(), patterns).match(CANONICAL_TASK_PATTERN);
   if (!match) {
     return null;
   }
@@ -74,17 +103,9 @@ export function validateTodoEntries(markdown, fileLabel = 'todo') {
       return;
     }
     const body = match[1].trim();
-    if (!TASK_MODE_PREFIX.test(body)) {
-      issues.push(`line ${index + 1}: ${fileLabel} entry must start with [auto] or [gate]`);
-      return;
-    }
     const taskText = body.replace(TASK_MODE_PREFIX, '').trim();
     if (!taskText) {
       issues.push(`line ${index + 1}: ${fileLabel} task text is empty`);
-      return;
-    }
-    if (BRACKET_PREFIX.test(taskText)) {
-      issues.push(`line ${index + 1}: category tags must use plain text like "infra:" instead of extra [label] prefixes`);
     }
   });
 
