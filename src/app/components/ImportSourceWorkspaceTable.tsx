@@ -7,6 +7,7 @@ import {
 import {
   ColumnHeader,
   FolderButton,
+  HandlingCell,
   KeepActionCell,
   resolveFolderPathHint,
   resolveFolderPathLabel,
@@ -18,6 +19,7 @@ function SourceRow({
   onChange,
   onChoosePrimaryFolder,
   onChooseHighlightFolder,
+  onChangeAction,
   onDisableKeepImport,
   onCopySource,
   onDeleteSource,
@@ -27,6 +29,7 @@ function SourceRow({
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
+  onChangeAction: (sourceId: string, value: string) => void;
   onDisableKeepImport: (sourceId: string) => void;
   onCopySource: (sourceId: string) => void;
   onDeleteSource: (sourceId: string) => void;
@@ -56,6 +59,7 @@ function SourceRow({
         <option value="merged">{formatHighlightModeLabel('merged')}</option>
         <option value="split">{formatHighlightModeLabel('split')}</option>
       </select>
+      <HandlingCell onChangeAction={onChangeAction} source={source} />
       <KeepActionCell onCopy={onCopySource} onDelete={onDeleteSource} onDisable={onDisableKeepImport} onPreview={onPreviewKeepImport} source={source} />
     </div>
   );
@@ -66,6 +70,7 @@ export function ImportSourceTable({
   onChange,
   onChoosePrimaryFolder,
   onChooseHighlightFolder,
+  onChangeAction,
   onDisableKeepImport,
   onCopySource,
   onDeleteSource,
@@ -75,6 +80,7 @@ export function ImportSourceTable({
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
+  onChangeAction: (sourceId: string, value: string) => void;
   onDisableKeepImport: (sourceId: string) => void;
   onCopySource: (sourceId: string) => void;
   onDeleteSource: (sourceId: string) => void;
@@ -86,6 +92,7 @@ export function ImportSourceTable({
         <ColumnHeader title="Original" />
         <ColumnHeader title="Highlight" />
         <ColumnHeader title="Mode" />
+        <ColumnHeader title="Handling" />
         <ColumnHeader title="" />
       </div>
       <div className="mt-2 flex flex-col">
@@ -93,6 +100,7 @@ export function ImportSourceTable({
           <SourceRow
             key={source.id}
             onChange={onChange}
+            onChangeAction={onChangeAction}
             onChooseHighlightFolder={onChooseHighlightFolder}
             onChoosePrimaryFolder={onChoosePrimaryFolder}
             onDisableKeepImport={onDisableKeepImport}

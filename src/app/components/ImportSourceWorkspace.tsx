@@ -20,6 +20,7 @@ type ImportSourceWorkspaceContentProps = {
   keepPreviewDialog: KeepPreviewDialogState | null;
   keepDisableDialog: KeepDisableDialogState | null;
   onChange: ReturnType<typeof useImportSourceWorkspaceState>['handleChangeSource'];
+  onChangeAction: ReturnType<typeof useImportSourceWorkspaceState>['handleChangeAction'];
   onChooseFolder: ReturnType<typeof useImportSourceWorkspaceState>['handleChooseFolder'];
   onConfirmKeepDisable: () => void;
   onConfirmKeepPreview: () => void;
@@ -47,6 +48,7 @@ function ImportSourceWorkspacePanel(props: ImportSourceWorkspaceContentProps) {
   return (
     <ImportSourceWorkspaceDetails
       onChange={props.onChange}
+      onChangeAction={props.onChangeAction}
       onChooseHighlightFolder={(sourceId) => void props.onChooseFolder(sourceId, 'highlightPath')}
       onChoosePrimaryFolder={(sourceId) => void props.onChooseFolder(sourceId, 'primaryPath')}
       onDisableKeepImport={props.onDisableKeepImport}
@@ -112,6 +114,7 @@ function createImportSourceWorkspaceViewModel(
     keepDisableDialog: dialogState.keepDisableDialog,
     keepPreviewDialog: dialogState.keepPreviewDialog,
     onChange: base.handleChangeSource,
+    onChangeAction: base.handleChangeAction,
     onChooseFolder: base.handleChooseFolder,
     onConfirmKeepDisable: dialogState.handleConfirmKeepDisable,
     onConfirmKeepPreview: dialogState.handleConfirmKeepPreview,

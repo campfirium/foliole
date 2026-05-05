@@ -1,11 +1,12 @@
 import { Copy, FolderOpen, X } from 'lucide-react';
 
+import { importActionOptions } from '../../../lib/core/import/importSourceActions';
 import { AppButton } from '../../shared/ui';
 
-import { type DraftImportSource } from './importSourceWorkspaceModel';
+import { formatSourceActionLabel, importSourceSelectClassName, type DraftImportSource } from './importSourceWorkspaceModel';
 
 export const rowGridClassName =
-  'grid grid-cols-[minmax(118px,0.9fr)_minmax(118px,0.9fr)_92px_minmax(180px,0.72fr)] gap-2';
+  'grid grid-cols-[minmax(118px,0.9fr)_minmax(118px,0.9fr)_92px_110px_minmax(180px,0.72fr)] gap-2';
 
 function compactPathLabel(path: string, emptyLabel: string) {
   if (path.trim().length === 0) {
@@ -24,6 +25,30 @@ export function ColumnHeader({ title }: { title: string }) {
     <div className="flex items-center gap-1 px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45">
       <span>{title}</span>
     </div>
+  );
+}
+
+export function HandlingCell({
+  source,
+  onChangeAction
+}: {
+  source: DraftImportSource;
+  onChangeAction: (sourceId: string, value: string) => void;
+}) {
+  return (
+    <select
+      aria-label={`Handling ${source.id}`}
+      className={importSourceSelectClassName}
+      onChange={(event) => onChangeAction(source.id, event.target.value)}
+      title={source.actionMode === 'move' && source.archivePath.trim() ? source.archivePath : undefined}
+      value={source.actionMode}
+    >
+      {importActionOptions.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.value === 'move' ? formatSourceActionLabel(source.actionMode) : option.label}
+        </option>
+      ))}
+    </select>
   );
 }
 

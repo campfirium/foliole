@@ -70,6 +70,8 @@ const IMPORT_MANAGER_SETTINGS_INPUT = {
   ],
   sources: [
     {
+      actionMode: 'move',
+      archivePath: '/tmp/archive-a',
       id: 'draft-import-source-101',
       primaryPath: '/tmp/source-a',
       highlightPath: '/tmp/highlight-a',
@@ -78,6 +80,8 @@ const IMPORT_MANAGER_SETTINGS_INPUT = {
       keepState: 'draft'
     },
     {
+      actionMode: 'delete',
+      archivePath: '',
       id: 'draft-import-source-105',
       primaryPath: '/tmp/source-b',
       highlightPath: '',
@@ -122,10 +126,13 @@ function expectNormalizedSavedSettings() {
     ],
     sources: [
       {
+        actionMode: 'move',
+        archivePath: '/tmp/archive-a',
         id: 'draft-import-source-101',
         keepState: 'draft'
       },
       {
+        actionMode: 'delete',
         id: 'draft-import-source-105',
         highlightMode: 'merged',
         highlightPath: '',
@@ -172,10 +179,13 @@ function expectReloadedSettingsAfterRestart() {
     ],
     sources: [
       {
+        actionMode: 'move',
+        archivePath: '/tmp/archive-a',
         id: 'draft-import-source-101',
         primaryPath: '/tmp/source-a'
       },
       {
+        actionMode: 'delete',
         id: 'draft-import-source-105',
         keepState: 'enabled'
       }

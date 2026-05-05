@@ -71,14 +71,14 @@ beforeEach(() => {
   window.electronAPI = createMockElectronApi();
 });
 
-it('shows keep-focused controls and removes trigger handling controls', async () => {
+it('shows the generic handling selector without restoring trigger controls', async () => {
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
   expect(screen.getByRole('heading', { name: 'Import management' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Readwise Reader for Obsidian settings' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open Readwise Reader settings' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Trigger draft-import-source-1')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('Handling draft-import-source-1')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Handling draft-import-source-101')).toBeInTheDocument();
   expect(screen.queryByLabelText('Every draft-import-source-1')).not.toBeInTheDocument();
   expect(screen.queryByText('Enable')).not.toBeInTheDocument();
   expect(screen.queryByText('Status')).not.toBeInTheDocument();
@@ -182,6 +182,38 @@ it('persists import manager settings after the panel remounts', async () => {
   expect(await screen.findByLabelText('Original folder draft-import-source-101')).toHaveTextContent('chosen-folder');
   expect(screen.getByRole('switch', { name: 'Keep import enabled draft-import-source-101' })).toHaveAttribute('aria-checked', 'true');
   expect(screen.getByLabelText('Original folder draft-import-source-103')).toBeInTheDocument();
+});
+
+it('stores the move destination for a generic source and restores it after remount', async () => {
+  const { unmount } = render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.change(screen.getByLabelText('Handling draft-import-source-101'), { target: { value: 'move' } });
+
+  await waitFor(() => {
+    expect(window.electronAPI?.invoke).toHaveBeenLastCalledWith(
+      'save_import_manager_settings',
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          sources: expect.arrayContaining([
+            expect.objectContaining({
+              actionMode: 'move',
+              archivePath: '/tmp/chosen-folder',
+              id: 'draft-import-source-101'
+            })
+          ])
+        })
+      })
+    );
+  });
+
+  expect(screen.getByLabelText('Handling draft-import-source-101')).toHaveValue('move');
+  expect(screen.getByLabelText('Handling draft-import-source-101')).toHaveAttribute('title', '/tmp/chosen-folder');
+
+  unmount();
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  expect(await screen.findByLabelText('Handling draft-import-source-101')).toHaveValue('move');
+  expect(screen.getByLabelText('Handling draft-import-source-101')).toHaveAttribute('title', '/tmp/chosen-folder');
 });
 
 it('asks for confirmation before turning an enabled keep import off', async () => {

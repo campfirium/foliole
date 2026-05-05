@@ -15,6 +15,7 @@ type ImportSourceWorkspaceDetailsProps = {
   onOpenChange: (open: boolean) => void;
   onOpenReadwiseConfig: () => void;
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
+  onChangeAction: (sourceId: string, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
   onDisableKeepImport: (sourceId: string, scope: 'sources') => void;
@@ -50,6 +51,7 @@ function ImportSourceWorkspaceBody(props: Omit<ImportSourceWorkspaceDetailsProps
       <div className="overflow-auto">
         <ImportSourceTable
           onChange={props.onChange}
+          onChangeAction={props.onChangeAction}
           onChooseHighlightFolder={props.onChooseHighlightFolder}
           onChoosePrimaryFolder={props.onChoosePrimaryFolder}
           onDisableKeepImport={(sourceId) => props.onDisableKeepImport(sourceId, 'sources')}
@@ -71,6 +73,7 @@ export function ImportSourceWorkspaceDetails({
   onOpenChange,
   onOpenReadwiseConfig,
   onChange,
+  onChangeAction,
   onChoosePrimaryFolder,
   onChooseHighlightFolder,
   onDisableKeepImport,
@@ -90,6 +93,7 @@ export function ImportSourceWorkspaceDetails({
             <ImportSourceWorkspaceHeader onClose={() => onOpenChange(false)} />
             <ImportSourceWorkspaceBody
               onChange={onChange}
+              onChangeAction={onChangeAction}
               onChooseHighlightFolder={onChooseHighlightFolder}
               onChoosePrimaryFolder={onChoosePrimaryFolder}
               onDisableKeepImport={onDisableKeepImport}

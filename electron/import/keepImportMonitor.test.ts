@@ -25,6 +25,8 @@ it('watches both readwise full document and highlight folders', async () => {
       readwiseRootPath: '/tmp/readwise',
       readwiseSources: [
         {
+          actionMode: 'keep',
+          archivePath: '',
           highlightMode: 'split',
           highlightPath: '/tmp/readwise/Articles',
           id: 'draft-import-source-1',
