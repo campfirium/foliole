@@ -65,6 +65,7 @@ export interface AppearanceSettingsContextValue {
   setUiFontPreset: (value: InterfaceFontPreset) => void;
   setWorkspaceSurfaceAssignments: (value: WorkspaceSurfaceAssignments) => void;
   setWorkspaceSurfacePalette: (value: WorkspaceSurfacePalette) => void;
+  toggleBaseColorMode: () => void;
   toggleEditorDisplayMode: () => void;
 }
 

@@ -179,6 +179,7 @@ type AppearanceActions = Pick<
   | 'setUiFontPreset'
   | 'setWorkspaceSurfaceAssignments'
   | 'setWorkspaceSurfacePalette'
+  | 'toggleBaseColorMode'
   | 'toggleEditorDisplayMode'
 >;
 
@@ -232,6 +233,11 @@ function createGeneralAppearanceActions(state: AppearanceState) {
     setMonospaceFontPreset: (value: MonospaceFontPreset) => (setMonospaceFontPreset(value), state.setMonospaceFontPresetState(value)),
     setPdfReadingMode: (value: PdfReadingMode) => (setPdfReadingMode(value), state.setPdfReadingModeState(value)),
     setUiFontPreset: (value: InterfaceFontPreset) => (setUiFontPreset(value), state.setUiFontPresetState(value)),
+    toggleBaseColorMode: () => {
+      const next = state.resolvedBaseColorModeState === 'dark' ? 'light' : 'dark';
+      setBaseColorMode(next);
+      state.setBaseColorModeState(next);
+    },
     toggleEditorDisplayMode: () => {
       const next = state.editorDisplayModeState === 'preview' ? 'source' : 'preview';
       state.setEditorDisplayModeState(next);

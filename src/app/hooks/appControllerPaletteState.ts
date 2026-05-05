@@ -125,6 +125,7 @@ function createPaletteRunnerArgs(args: {
     isReviewMode: args.isStudyMode,
     moveToNode: () => undefined,
     onRestartApp: createRestartAppCommand(args),
+    onToggleBaseColorMode: args.appearance.toggleBaseColorMode,
     onToggleDevTools: toggleMainWindowDevTools,
     onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode,
     onToggleImmersiveMode: args.layoutProps.onToggleImmersiveMode,

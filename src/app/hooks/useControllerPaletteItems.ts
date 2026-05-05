@@ -1,9 +1,12 @@
+import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+
 import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { useCommandShortcutState } from './reviewHotkeysState';
 import { useAppPaletteItems } from './useAppPaletteItems';
 import { useFormalImport } from './useFormalImport';
 
 export function useControllerPaletteItems(args: {
+  appearance: ReturnType<typeof useAppearanceSettings>;
   controller: ReturnType<typeof useWorkspaceControllerState>;
   formalImport: ReturnType<typeof useFormalImport>;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
@@ -17,6 +20,7 @@ export function useControllerPaletteItems(args: {
     hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
     hotkeys: args.hotkeys,
     isImmersiveMode: args.controller.runtime.isImmersiveMode,
+    resolvedBaseColorMode: args.appearance.resolvedBaseColorMode,
     isViewingTrashNode: args.controller.runtime.isViewingTrashNode,
     isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,
     isStudyMode: args.isStudyMode,

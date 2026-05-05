@@ -66,6 +66,7 @@ function useControllerPriorityQuickSet(args: {
 }
 
 function useDerivedControllerState(args: {
+  appearance: ReturnType<typeof useAppearanceSettings>;
   controller: ReturnType<typeof useWorkspaceControllerState>;
   exitStudyMode: () => void;
   formalImport: ReturnType<typeof useFormalImport>;
@@ -146,6 +147,22 @@ function useReviewEditingState(args: {
   });
 }
 
+function buildAppControllerResult(args: {
+  auxiliaryState: ReturnType<typeof useControllerAuxiliaryState>;
+  controller: ReturnType<typeof useWorkspaceControllerState>;
+  layoutProps: WorkspaceLayoutProps;
+}): AppControllerResult {
+  return {
+    hotkeySettings: args.auxiliaryState.hotkeySettings,
+    goToNodeState: args.auxiliaryState.goToNodeState,
+    moveToNodeState: args.auxiliaryState.moveToNodeState,
+    layoutProps: args.layoutProps,
+    onOpenCompanionSyncSettings: () => openCompanionSyncSettings(args.controller.runtime),
+    paletteState: args.auxiliaryState.paletteState,
+    searchState: args.auxiliaryState.searchState
+  };
+}
+
 function buildControllerLayoutState(args: {
   controller: ReturnType<typeof useWorkspaceControllerState>;
   exitStudyMode: () => void;
@@ -214,6 +231,7 @@ export function useAppController(args: {
     ws
   });
   const { layoutProps, paletteItems } = useDerivedControllerState({
+    appearance,
     controller,
     exitStudyMode,
     formalImport,
@@ -241,13 +259,5 @@ export function useAppController(args: {
     ws
   });
 
-  return {
-    hotkeySettings: auxiliaryState.hotkeySettings,
-    goToNodeState: auxiliaryState.goToNodeState,
-    moveToNodeState: auxiliaryState.moveToNodeState,
-    layoutProps,
-    onOpenCompanionSyncSettings: () => openCompanionSyncSettings(controller.runtime),
-    paletteState: auxiliaryState.paletteState,
-    searchState: auxiliaryState.searchState
-  };
+  return buildAppControllerResult({ auxiliaryState, controller, layoutProps });
 }

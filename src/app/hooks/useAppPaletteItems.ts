@@ -74,6 +74,7 @@ export function useAppPaletteItems(args: {
   hasReviewCard: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isImmersiveMode: boolean;
+  resolvedBaseColorMode: 'dark' | 'light';
   isViewingTrashNode: boolean;
   isCurrentReviewItemGradable: boolean;
   isStudyMode: boolean;
@@ -111,6 +112,7 @@ export function useAppPaletteItems(args: {
         canGoParent: args.nav.canGoParent,
         canFindInCurrentTopic: canMergeHighlightsIntoTopic(args),
         canToggleImmersiveMode: canToggleImmersiveMode(args),
+        resolvedBaseColorMode: args.resolvedBaseColorMode,
         canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
         canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
         canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,

@@ -30,6 +30,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openSettings: () => undefined,
     openTrash: () => undefined,
     restartApp: () => undefined,
+    toggleBaseColorMode: () => undefined,
     revealReviewAnswer: () => undefined,
     startClipboardImport: () => undefined,
     toggleReviewMode: () => undefined,
@@ -73,6 +74,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canCompleteReadingReview: true,
     canDismissReadingReview: true,
     isImmersiveMode: false,
+    resolvedBaseColorMode: 'light' as const,
     isReviewMode
   };
 }
@@ -98,6 +100,7 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openImportManagement)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openReadwiseReaderSettings)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe(true);
@@ -113,6 +116,17 @@ describe('buildAppPaletteItems', () => {
     const items = buildAppPaletteItems(createPaletteOptions(true));
     const reviewModeItem = items.find((item) => item.id === APP_COMMAND_IDS.startStudyMode);
     expect(reviewModeItem?.title).toBe('Exit Review Mode');
+  });
+
+  it('shows the next light or dark mode action from the resolved mode', () => {
+    const darkItems = buildAppPaletteItems({
+      ...createPaletteOptions(false),
+      resolvedBaseColorMode: 'dark'
+    });
+    const lightItems = buildAppPaletteItems(createPaletteOptions(false));
+
+    expect(darkItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Switch to Light Mode');
+    expect(lightItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Switch to Dark Mode');
   });
 });
 
@@ -227,6 +241,14 @@ describe('runAppCommand more actions', () => {
     expectCommandRuns(APP_COMMAND_IDS.openReadwiseReaderSettings, { openReadwiseReaderSettings });
 
     expect(openReadwiseReaderSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs light and dark mode toggle through the shared command handler', () => {
+    const toggleBaseColorMode = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.toggleBaseColorMode, { toggleBaseColorMode });
+
+    expect(toggleBaseColorMode).toHaveBeenCalledTimes(1);
   });
 
   it('lets reset import data cancel without reporting success', () => {

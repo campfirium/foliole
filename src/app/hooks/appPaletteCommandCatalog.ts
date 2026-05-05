@@ -15,6 +15,7 @@ export interface BuildAppPaletteItemsOptions {
   canGoParent: boolean;
   canFindInCurrentTopic: boolean;
   canToggleImmersiveMode: boolean;
+  resolvedBaseColorMode: 'dark' | 'light';
   canSetNodePriority: boolean;
   canRevealAnswer: boolean;
   canToggleReviewMode: boolean;
@@ -75,6 +76,12 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     section: 'Settings',
     keywords: ['settings', 'readwise', 'reader', 'import', 'library']
   },
+  {
+    id: APP_COMMAND_IDS.toggleBaseColorMode,
+    title: 'Toggle Light/Dark Mode',
+    section: 'Settings',
+    keywords: ['appearance', 'theme', 'dark', 'light', 'color', 'mode']
+  },
   { id: APP_COMMAND_IDS.closeSettings, title: 'Close Settings', section: 'Settings' },
   { id: APP_COMMAND_IDS.goBack, title: 'Go Back', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goForward, title: 'Go Forward', section: 'Navigation' },
@@ -106,6 +113,9 @@ function resolveCommandTitle(id: string, isReviewMode: boolean, title: string) {
 function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, title: string) {
   if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
     return options.isImmersiveMode ? 'Exit Immersive Reading' : 'Enter Immersive Reading';
+  }
+  if (id === APP_COMMAND_IDS.toggleBaseColorMode) {
+    return options.resolvedBaseColorMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
   }
   return resolveCommandTitle(id, options.isReviewMode, title);
 }

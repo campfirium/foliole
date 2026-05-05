@@ -33,6 +33,7 @@ interface PaletteCommandRunnerArgs {
   onToggleImmersiveMode: () => void;
   onToggleListVisibility: () => void;
   onRestartApp: () => void;
+  onToggleBaseColorMode: () => void;
   onToggleDevTools: () => void;
   openReadwiseReaderSettings: () => void;
   openTrashView: () => void;
@@ -49,12 +50,24 @@ interface PaletteCommandRunnerArgs {
   trashViewOpen: boolean;
 }
 
-function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
+function createPaletteSettingsActions(args: PaletteCommandRunnerArgs) {
   return {
     closeSettings: () => {
       args.setSettingsOpen(false);
       args.clearSettingsRequest();
     },
+    openReadwiseReaderSettings: args.openReadwiseReaderSettings,
+    openSettings: () => {
+      args.clearSettingsRequest();
+      args.setSettingsOpen(true);
+    },
+    toggleBaseColorMode: args.onToggleBaseColorMode
+  };
+}
+
+function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
+  return {
+    ...createPaletteSettingsActions(args),
     createFolder: args.createFolder,
     createItem: args.createItem,
     createTopic: args.createTopic,
@@ -86,11 +99,6 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
       void args.resetImportData();
     },
     openNotes: args.closeTrashView,
-    openReadwiseReaderSettings: args.openReadwiseReaderSettings,
-    openSettings: () => {
-      args.clearSettingsRequest();
-      args.setSettingsOpen(true);
-    },
     openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
     restartApp: args.onRestartApp,
     revealReviewAnswer: args.revealReviewAnswer,

@@ -30,6 +30,7 @@ interface RunAppCommandActions {
   openSettings: () => void;
   openTrash: () => void;
   restartApp: () => void;
+  toggleBaseColorMode: () => void;
   revealReviewAnswer: () => void;
   toggleReviewMode: () => void;
   toggleEditorDisplayMode: () => void;
@@ -88,6 +89,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,
     [APP_COMMAND_IDS.openSettings]: actions.openSettings,
     [APP_COMMAND_IDS.openReadwiseReaderSettings]: actions.openReadwiseReaderSettings,
+    [APP_COMMAND_IDS.toggleBaseColorMode]: actions.toggleBaseColorMode,
     [APP_COMMAND_IDS.closeSettings]: actions.closeSettings,
     [APP_COMMAND_IDS.goBack]: actions.goBack,
     [APP_COMMAND_IDS.goForward]: actions.goForward,
