@@ -1,5 +1,5 @@
 import { Copy, Minus, PanelLeft, PanelRight, Square, X } from 'lucide-react';
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { memo, useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { workspaceChangeTimestamp } from 'virtual:workspace-change-timestamp';
 
 import { useRuntimeAvailability } from '../../shared/platform/runtimeAvailability';
@@ -191,7 +191,7 @@ function WindowControlButtons({ controlsEnabled, isMaximized, onClose, onMinimiz
   );
 }
 
-export function WindowTitleBar(props: WindowTitleBarProps) {
+export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBarProps) {
   const { controlsEnabled, isMaximized, syncMaximizedState } = useWindowControlState();
 
   const handleMinimize = useCallback(() => {
@@ -238,4 +238,4 @@ export function WindowTitleBar(props: WindowTitleBarProps) {
       />
     </header>
   );
-}
+});

@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
@@ -136,9 +136,17 @@ function useDocumentPanelContentState(args: {
   );
   const sourceDetails = useNodeSourceDetails(shouldLoadSourceDetails ? args.activeNodeId : null);
   const pdfDocumentSurface = resolvePdfDocumentSurface(args.activeNodeId, sourceDetails.isLoading, sourceDetails.value);
-  const pdfHighlightLocators = args.activeNodeId
-    ? collectPdfHighlightLocators(args.activeNodeId, args.nodeOrder, args.nodesById, args.trashedNodeIds)
-    : [];
+  const pdfHighlightLocators = useMemo(() => {
+    if (!args.activeNodeId || !pdfDocumentSurface) {
+      return [];
+    }
+    return collectPdfHighlightLocators(
+      args.activeNodeId,
+      args.nodeOrder,
+      args.nodesById,
+      args.trashedNodeIds
+    );
+  }, [args.activeNodeId, args.nodeOrder, args.nodesById, args.trashedNodeIds, pdfDocumentSurface]);
   const documentFlags = getDocumentPanelFlags({
     activeNode,
     activeNodeId: args.activeNodeId,

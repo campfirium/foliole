@@ -1,12 +1,9 @@
-import { useMemo, useRef } from 'react';
+import { memo } from 'react';
 
 import { NodeListHeader } from '../../features/nodes/components/NodeListHeader';
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
-import {
-  projectWorkspaceListNodesById,
-  type WorkspaceListNodesById
-} from '../../features/nodes/model/workspaceListNode';
+import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { AppEmptyState } from '../../shared/ui';
 
@@ -17,64 +14,87 @@ import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListStudyStatusBar } from './WorkspaceListStudyStatusBar';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
-export function WorkspaceListArea({
-  onSelectNode,
-  props
-}: {
+export interface WorkspaceListAreaProps {
+  activeNodeId: string | null;
+  isStudyMode: boolean;
+  isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
+  isWorkspaceHydrated?: boolean;
+  listNodesById: WorkspaceListNodesById;
+  nodeOrder: string[];
+  onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
+  onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
   onSelectNode: (nodeId: string) => void;
-  props: WorkspaceLayoutProps;
-}) {
-  const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
-  const listNodesById = useMemo(() => {
-    const nextProjection = projectWorkspaceListNodesById(
-      props.nodesById,
-      previousListNodesByIdRef.current
-    );
-    previousListNodesByIdRef.current = nextProjection;
-    return nextProjection;
-  }, [props.nodesById]);
-  const hasVisibleWorkspaceNodes = props.nodeOrder.some(
+  onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
+  reviewCompletedCount: number;
+  reviewDueCount: number;
+  reviewQueueCount: number;
+  reviewStatus: WorkspaceLayoutProps['reviewStatus'];
+  selectedTrashNodeId: string | null;
+  trashedNodeIds: string[];
+}
+
+export const WorkspaceListArea = memo(function WorkspaceListArea({
+  activeNodeId,
+  isStudyMode,
+  isTrashViewOpen,
+  isVirtualViewOpen,
+  isWorkspaceHydrated,
+  listNodesById,
+  nodeOrder,
+  onOpenMoveToNode,
+  onOpenNotesView,
+  onSelectNode,
+  onSelectTrashNode,
+  reviewCompletedCount,
+  reviewDueCount,
+  reviewQueueCount,
+  reviewStatus,
+  selectedTrashNodeId,
+  trashedNodeIds
+}: WorkspaceListAreaProps) {
+  const hasVisibleWorkspaceNodes = nodeOrder.some(
     (nodeId) =>
       nodeId !== INBOX_NODE_ID &&
       nodeId !== VIRTUAL_ROOT_NODE_ID &&
-      !props.trashedNodeIds.includes(nodeId)
+      !trashedNodeIds.includes(nodeId)
   );
   const shouldShowEmptyState =
-    props.isWorkspaceHydrated &&
-    !props.isTrashViewOpen &&
-    !props.isVirtualViewOpen &&
+    isWorkspaceHydrated &&
+    !isTrashViewOpen &&
+    !isVirtualViewOpen &&
     !hasVisibleWorkspaceNodes;
 
   return (
     <div className="flex min-h-0 flex-col overflow-hidden bg-bg-panel text-foreground">
-      {!props.isWorkspaceHydrated ? (
+      {!isWorkspaceHydrated ? (
         <WorkspaceListLoadingState />
       ) : shouldShowEmptyState ? (
         <WorkspaceListEmptyState />
       ) : (
         <NodeListTree
-          activeNodeId={props.activeNodeId}
-          isTrashViewOpen={props.isTrashViewOpen}
-          isVirtualViewOpen={props.isVirtualViewOpen}
-          nodeOrder={props.nodeOrder}
+          activeNodeId={activeNodeId}
+          isTrashViewOpen={isTrashViewOpen}
+          isVirtualViewOpen={isVirtualViewOpen}
+          nodeOrder={nodeOrder}
           nodesById={listNodesById}
-          onOpenMoveToNode={props.onOpenMoveToNode}
-          onOpenNotesView={props.onOpenNotesView}
+          onOpenMoveToNode={onOpenMoveToNode}
+          onOpenNotesView={onOpenNotesView}
           onSelectNode={onSelectNode}
-          onSelectTrashNode={props.onSelectTrashNode}
-          selectedTrashNodeId={props.selectedTrashNodeId}
+          onSelectTrashNode={onSelectTrashNode}
+          selectedTrashNodeId={selectedTrashNodeId}
         />
       )}
       <WorkspaceListStudyStatusBar
-        isStudyMode={props.isStudyMode}
-        reviewCompletedCount={props.reviewCompletedCount}
-        reviewDueCount={props.reviewDueCount}
-        reviewQueueCount={props.reviewQueueCount}
-        reviewStatus={props.reviewStatus}
+        isStudyMode={isStudyMode}
+        reviewCompletedCount={reviewCompletedCount}
+        reviewDueCount={reviewDueCount}
+        reviewQueueCount={reviewQueueCount}
+        reviewStatus={reviewStatus}
       />
     </div>
   );
-}
+});
 
 function WorkspaceListLoadingState() {
   return (
@@ -122,7 +142,7 @@ function WorkspaceListEmptyState() {
   );
 }
 
-export function WorkspaceDocumentArea({
+export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
   documentNodeId,
   isImmersiveEditing,
   onEnterImmersiveEdit,
@@ -163,7 +183,7 @@ export function WorkspaceDocumentArea({
       )}
     </section>
   );
-}
+});
 
 function WorkspaceDocumentSurface({
   documentNodeId,
@@ -187,7 +207,7 @@ function WorkspaceDocumentSurface({
   );
 }
 
-export function WorkspaceLeftRail({
+export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
   isImportManagementOpen,
   onOpenImportManagement,
   onStartClipboardImport,
@@ -216,4 +236,4 @@ export function WorkspaceLeftRail({
       />
     </div>
   );
-}
+});

@@ -5,6 +5,9 @@ import { formatShortcutSetLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
+const EMPTY_COMMAND_ITEMS: CommandPaletteItem[] = [];
+const EMPTY_RECENT_COMMAND_IDS: string[] = [];
+
 interface CommandPaletteProps {
   isOpen: boolean;
   items: CommandPaletteItem[];
@@ -141,18 +144,23 @@ function CommandPaletteList({ activeIndex, emptyLabel, onRunItem, sections, visi
   );
 }
 
-export function CommandPalette({ isOpen, items, recentCommandIds, onClose, onRunCommand }: CommandPaletteProps) {
+function useCommandPaletteState(args: Pick<CommandPaletteProps, 'isOpen' | 'items' | 'recentCommandIds'>) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const sections = useMemo(() => buildCommandMenuSections(items, recentCommandIds, query), [items, query, recentCommandIds]);
+  const visibleItemsSource = args.isOpen ? args.items : EMPTY_COMMAND_ITEMS;
+  const visibleRecentCommandIds = args.isOpen ? args.recentCommandIds : EMPTY_RECENT_COMMAND_IDS;
+  const sections = useMemo(
+    () => buildCommandMenuSections(visibleItemsSource, visibleRecentCommandIds, query),
+    [query, visibleItemsSource, visibleRecentCommandIds]
+  );
   const visibleItems = useMemo(() => sections.flatMap((section) => section.items), [sections]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!args.isOpen) {
       setQuery('');
       setActiveIndex(0);
     }
-  }, [isOpen]);
+  }, [args.isOpen]);
 
   useEffect(() => {
     if (!visibleItems.length) {
@@ -163,6 +171,23 @@ export function CommandPalette({ isOpen, items, recentCommandIds, onClose, onRun
       setActiveIndex(visibleItems.length - 1);
     }
   }, [activeIndex, visibleItems]);
+
+  return {
+    activeIndex,
+    query,
+    sections,
+    setActiveIndex,
+    setQuery,
+    visibleItems
+  };
+}
+
+export function CommandPalette({ isOpen, items, recentCommandIds, onClose, onRunCommand }: CommandPaletteProps) {
+  const { activeIndex, query, sections, setActiveIndex, setQuery, visibleItems } = useCommandPaletteState({
+    isOpen,
+    items,
+    recentCommandIds
+  });
 
   if (!isOpen) {
     return null;

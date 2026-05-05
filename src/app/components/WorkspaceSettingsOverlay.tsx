@@ -6,11 +6,26 @@ import { useImportSourceWorkspaceState } from './useImportSourceWorkspaceState';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
 export function WorkspaceSettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
-  const importSettings = useImportSourceWorkspaceState();
-
   if (!props.isSettingsOpen) {
     return null;
   }
+
+  return (
+    <WorkspaceSettingsOverlayContent
+      onClose={props.onCloseSettings}
+      requestedCategory={props.requestedSettingsCategory}
+    />
+  );
+}
+
+function WorkspaceSettingsOverlayContent({
+  onClose,
+  requestedCategory
+}: {
+  onClose: WorkspaceLayoutProps['onCloseSettings'];
+  requestedCategory: WorkspaceLayoutProps['requestedSettingsCategory'];
+}) {
+  const importSettings = useImportSourceWorkspaceState();
 
   return (
     <SettingsPanel
@@ -29,7 +44,7 @@ export function WorkspaceSettingsOverlay({ props }: { props: WorkspaceLayoutProp
           titleStrategy={importSettings.titleStrategy}
         />
       }
-      onClose={props.onCloseSettings}
+      onClose={onClose}
       readwiseReaderCategoryContent={
         <SettingsReadwiseReaderContent
           config={importSettings.readwiseReaderConfig}
@@ -38,7 +53,7 @@ export function WorkspaceSettingsOverlay({ props }: { props: WorkspaceLayoutProp
           readwiseSources={importSettings.readwiseSources}
         />
       }
-      requestedCategory={props.requestedSettingsCategory}
+      requestedCategory={requestedCategory}
     />
   );
 }

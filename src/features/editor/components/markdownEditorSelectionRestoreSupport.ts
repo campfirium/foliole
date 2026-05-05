@@ -27,7 +27,6 @@ export function handleSelectionRestore(args: {
   restoreTarget: ReturnType<typeof resolveRestoreTarget>;
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
   shouldSuppressSelectionRestore: (() => boolean) | undefined;
-  syncScrollMetrics: () => void;
   valueLength: number;
 }) {
   if (!args.restoreTarget) {
@@ -65,7 +64,6 @@ export function handleSelectionRestore(args: {
     setReadingPositionSelection: args.setReadingPositionSelection,
     valueLength: args.valueLength
   });
-  requestAnimationFrame(args.syncScrollMetrics);
 }
 
 export function resolveRestoreTarget(args: {

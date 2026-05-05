@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -12,6 +12,10 @@ const diagnosticsMocks = vi.hoisted(() => ({
   updateNodeImageState: vi.fn(),
   updatePdfSurfaceCacheStats: vi.fn(),
   updateSourceDetailsCacheStats: vi.fn()
+}));
+
+const pdfHighlightLocatorMocks = vi.hoisted(() => ({
+  collectPdfHighlightLocators: vi.fn(() => [])
 }));
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -41,6 +45,14 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
     value: null
   })
 }));
+
+vi.mock('./pdfHighlightLocators', async () => {
+  const actual = await vi.importActual<typeof import('./pdfHighlightLocators')>('./pdfHighlightLocators');
+  return {
+    ...actual,
+    collectPdfHighlightLocators: pdfHighlightLocatorMocks.collectPdfHighlightLocators
+  };
+});
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 
@@ -138,4 +150,17 @@ it('waits for the editor document before marking body readiness', async () => {
     expect(diagnosticsMocks.markNodeBodyPainted).toHaveBeenCalledWith('node-1');
     expect(diagnosticsMocks.markNodeBodyReady).toHaveBeenCalledWith('node-1');
   });
+});
+
+it('skips pdf highlight locator collection for non-pdf documents', async () => {
+  await act(async () => {
+    renderSection({
+      editorContent: '# Markdown note',
+      nodesById: {
+        'node-1': createNode('# Markdown note')
+      }
+    });
+  });
+
+  expect(pdfHighlightLocatorMocks.collectPdfHighlightLocators).not.toHaveBeenCalled();
 });

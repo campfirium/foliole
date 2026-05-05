@@ -1,7 +1,12 @@
+import { useMemo, useRef } from 'react';
+
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import { buildNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import { getTextAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
-import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import {
+  projectWorkspaceListNodesById,
+  type WorkspaceListNodesById
+} from '../../features/nodes/model/workspaceListNode';
 import { InspectorSection } from '../../shared/ui';
 
 interface WorkspaceRightSidebarHighlightsPanelProps {
@@ -17,7 +22,7 @@ function EmptyHighlightsState({ description }: { description: string }) {
 }
 
 interface NodeHighlightItem {
-  kind: 'highlight';
+  kind: 'cloze' | 'highlight';
   nodeId: string;
   text: string;
 }
@@ -25,12 +30,13 @@ interface NodeHighlightItem {
 function collectOrderedSubtreeNodeIds(
   rootNodeId: string,
   nodeOrder: string[],
+  listNodesById: WorkspaceListNodesById,
   nodesById: Record<string, Node>,
   trashedNodeIds: string[]
 ) {
   const trashedSet = new Set(trashedNodeIds);
   const visibleNodeOrder = nodeOrder.filter((nodeId) => !trashedSet.has(nodeId) && Boolean(nodesById[nodeId]));
-  const rows = buildNodeTreeRows(visibleNodeOrder, toWorkspaceListNodesById(nodesById));
+  const rows = buildNodeTreeRows(visibleNodeOrder, listNodesById);
   const rootIndex = rows.findIndex((row) => row.node.id === rootNodeId);
   if (rootIndex < 0) {
     return [];
@@ -59,7 +65,7 @@ function normalizeNodeHighlightText(node: Node) {
 }
 
 function isSidebarAnchorKind(node: Node) {
-  return node.anchorLink?.kind === 'highlight';
+  return node.anchorLink?.kind === 'cloze' || node.anchorLink?.kind === 'highlight';
 }
 
 function shouldIncludeHighlightInSidebar(node: Node, nodesById: Record<string, Node>) {
@@ -71,6 +77,15 @@ function shouldIncludeHighlightInSidebar(node: Node, nodesById: Record<string, N
     return false;
   }
   const textLocators = getTextAnchorLocators(anchorLink.locator);
+  if (anchorLink.kind === 'cloze') {
+    return textLocators.some((locator) => {
+      if (locator.from !== locator.to) {
+        return false;
+      }
+      const originalText = locator.originalText?.trim();
+      return Boolean(originalText);
+    });
+  }
   if (textLocators.length === 0) {
     return true;
   }
@@ -87,10 +102,17 @@ function shouldIncludeHighlightInSidebar(node: Node, nodesById: Record<string, N
 function collectSubtreeHighlights(
   activeNodeId: string,
   nodeOrder: string[],
+  listNodesById: WorkspaceListNodesById,
   nodesById: Record<string, Node>,
   trashedNodeIds: string[]
 ): NodeHighlightItem[] {
-  const subtreeNodeIds = collectOrderedSubtreeNodeIds(activeNodeId, nodeOrder, nodesById, trashedNodeIds);
+  const subtreeNodeIds = collectOrderedSubtreeNodeIds(
+    activeNodeId,
+    nodeOrder,
+    listNodesById,
+    nodesById,
+    trashedNodeIds
+  );
   const highlights: NodeHighlightItem[] = [];
 
   for (const nodeId of subtreeNodeIds) {
@@ -108,7 +130,7 @@ function collectSubtreeHighlights(
     }
 
     highlights.push({
-      kind: 'highlight',
+      kind: node.anchorLink?.kind === 'cloze' ? 'cloze' : 'highlight',
       nodeId: node.id,
       text
     });
@@ -118,6 +140,16 @@ function collectSubtreeHighlights(
 }
 
 export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSidebarHighlightsPanelProps) {
+  const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
+  const listNodesById = useMemo(() => {
+    const nextProjection = projectWorkspaceListNodesById(
+      props.nodesById,
+      previousListNodesByIdRef.current
+    );
+    previousListNodesByIdRef.current = nextProjection;
+    return nextProjection;
+  }, [props.nodesById]);
+
   if (!props.activeNodeId) {
     return <EmptyHighlightsState description="Select a document to browse its highlights." />;
   }
@@ -127,7 +159,17 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
     return null;
   }
 
-  const highlights = collectSubtreeHighlights(node.id, props.nodeOrder, props.nodesById, props.trashedNodeIds);
+  const highlights = useMemo(
+    () =>
+      collectSubtreeHighlights(
+        node.id,
+        props.nodeOrder,
+        listNodesById,
+        props.nodesById,
+        props.trashedNodeIds
+      ),
+    [listNodesById, node.id, props.nodeOrder, props.nodesById, props.trashedNodeIds]
+  );
   if (highlights.length === 0) {
     return <EmptyHighlightsState description="This node and its child nodes have no highlight nodes yet." />;
   }
@@ -146,7 +188,7 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
               type="button"
             >
               <span className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45">
-                Highlight
+                {highlight.kind === 'cloze' ? 'Cloze' : 'Highlight'}
               </span>
               <span className="text-sm leading-7 text-foreground">{highlight.text}</span>
             </button>

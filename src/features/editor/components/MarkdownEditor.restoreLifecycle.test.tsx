@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
@@ -8,6 +8,7 @@ const mockRevealSelection = vi.fn();
 const mockSetScrollTop = vi.fn();
 let currentContent = '';
 let currentScrollTop = 0;
+let scrollTopOffset = 0;
 
 vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
   CodeMirrorEditorAdapter: class {
@@ -30,7 +31,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     restoreSelection(selection: { from: number; to: number }) { mockRestoreSelection(selection); }
     revealSelection() { mockRevealSelection(); }
     getScrollTop() { return currentScrollTop; }
-    setScrollTop(scrollTop: number) { currentScrollTop = scrollTop; mockSetScrollTop(scrollTop); }
+    setScrollTop(scrollTop: number) { currentScrollTop = scrollTop + scrollTopOffset; mockSetScrollTop(scrollTop); }
     getScrollMetrics() { return { clientHeight: 0, scrollHeight: 0, scrollTop: 0 }; }
     replaceRange() {}
     replaceSelection() {}
@@ -57,6 +58,7 @@ beforeEach(() => {
   mockSetScrollTop.mockClear();
   currentContent = '';
   currentScrollTop = 0;
+  scrollTopOffset = 0;
 });
 
 it('skips selection restore when immersive toggle suppression is active', () => {
@@ -75,7 +77,7 @@ it('skips selection restore when immersive toggle suppression is active', () => 
   expect(mockRevealSelection).not.toHaveBeenCalled();
 });
 
-it('releases the previous restore lock when switching to another document before restore settles', async () => {
+it('releases the previous restore lock when switching to another document after the first restore completes quickly', async () => {
   const longDocument = createLongDocument();
   const onBeginApplyingReadingPosition = vi.fn();
   const onCompleteApplyingReadingPosition = vi.fn();
@@ -102,7 +104,7 @@ it('releases the previous restore lock when switching to another document before
     />
   );
 
-  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-cancelled');
+  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
   await waitFor(() => {
     expect(onBeginApplyingReadingPosition).toHaveBeenLastCalledWith(
       { from: 51_200, to: 51_228 },
@@ -111,7 +113,7 @@ it('releases the previous restore lock when switching to another document before
   });
 });
 
-it('applies the saved scroll position before an unmount can cancel the restore cycle', () => {
+it('applies the saved scroll position before an unmount even when restore already settled', () => {
   const longDocument = createLongDocument();
   const onCompleteApplyingReadingPosition = vi.fn();
   const view = renderEditor(
@@ -127,7 +129,7 @@ it('applies the saved scroll position before an unmount can cancel the restore c
   view.unmount();
 
   expect(mockSetScrollTop).toHaveBeenCalledWith(5_400);
-  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-cancelled');
+  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
 });
 
 it('does not restart the same restore request when typing before the first restore settles', () => {
@@ -153,4 +155,39 @@ it('does not restart the same restore request when typing before the first resto
   );
 
   expect(mockRestoreSelection).toHaveBeenCalledTimes(1);
+});
+
+it('accepts a near-matching restored scroll position as settled without waiting for timeout', () => {
+  vi.useFakeTimers();
+  const requestAnimationFrameSpy = vi
+    .spyOn(window, 'requestAnimationFrame')
+    .mockImplementation((callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+  const cancelAnimationFrameSpy = vi
+    .spyOn(window, 'cancelAnimationFrame')
+    .mockImplementation((handle: number) => window.clearTimeout(handle));
+  const onCompleteApplyingReadingPosition = vi.fn();
+  scrollTopOffset = 6;
+
+  try {
+    renderEditor(
+      <MarkdownEditor
+        nodeId="node-1"
+        nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+        onChange={vi.fn()}
+        onCompleteApplyingReadingPosition={onCompleteApplyingReadingPosition}
+        value={createLongDocument()}
+      />
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
+    expect(onCompleteApplyingReadingPosition).not.toHaveBeenCalledWith('editor-restore-selection-timeout');
+  } finally {
+    requestAnimationFrameSpy.mockRestore();
+    cancelAnimationFrameSpy.mockRestore();
+    vi.useRealTimers();
+  }
 });

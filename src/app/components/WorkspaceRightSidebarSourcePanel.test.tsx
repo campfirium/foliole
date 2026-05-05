@@ -118,7 +118,8 @@ function renderSourcePanel() {
   render(
     <WorkspaceRightSidebarSourcePanel
       activeNodeId="node-1"
-      nodesById={{ 'node-1': BASE_NODE }}
+      activeNodeParentId={BASE_NODE.parentNodeId}
+      hasActiveNode={true}
       onSelectParentNode={() => undefined}
     />
   );
@@ -166,7 +167,8 @@ describe('WorkspaceRightSidebarSourcePanel', () => {
     render(
       <WorkspaceRightSidebarSourcePanel
         activeNodeId="node-1"
-        nodesById={{ 'node-1': { ...BASE_NODE, parentNodeId: 'parent-1' } }}
+        activeNodeParentId="parent-1"
+        hasActiveNode={true}
         onSelectParentNode={onSelectParentNode}
       />
     );

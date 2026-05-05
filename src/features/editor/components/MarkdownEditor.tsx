@@ -13,7 +13,6 @@ import { useEditorAdapter } from './markdownEditorAdapter';
 import { GestureTrailOverlay, buildGestureTrailPath } from './markdownEditorGestureTrail';
 import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
 import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
-import { useEditorScrollbarMetrics } from './markdownEditorScrollbar';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
@@ -72,7 +71,6 @@ function useMarkdownEditorSurfaceModel(args: {
   onImageLoadStateChange: MarkdownEditorProps['onImageLoadStateChange'];
   rootRef: MutableRefObject<HTMLDivElement | null>;
   settings: ReturnType<typeof useMouseGestureSettings>['settings'];
-  syncScrollMetrics: () => void;
   value: string;
 }) {
   const mouseGesture = useEditorMouseGesture(args.adapterRef, args.hostRef, args.bindings, args.settings);
@@ -116,11 +114,9 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.onPastedAnchors,
     props.readOnly
   );
-  const syncScrollMetrics = useEditorScrollbarMetrics(adapterRef).syncScrollMetrics;
   const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
   useEditorLayoutEffects(
     adapterRef,
-    hostRef,
     props.nodeId,
     props.readingSelection,
     props.nodeViewState,
@@ -128,7 +124,6 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.onCompleteApplyingReadingPosition,
     props.onSetReadingPositionSelection,
     props.onShouldSuppressSelectionRestore,
-    syncScrollMetrics,
     props.value,
     props.lineDiffDecorations
   );
@@ -145,7 +140,6 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     onImageLoadStateChange: props.onImageLoadStateChange,
     rootRef,
     settings,
-    syncScrollMetrics,
     value: props.value
   });
 

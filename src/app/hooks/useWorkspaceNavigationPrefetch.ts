@@ -168,6 +168,7 @@ function useNavigationTransitionHandles(
     [args.editorRef, args.saveActiveNodeView]
   );
   const openPreparedNode = usePreparedOpenNodeAction(
+    args.openNode,
     args.flushPendingEditorDraft,
     prepareForNavigation,
     finalizeNavigation,

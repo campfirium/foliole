@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import {
+  projectWorkspaceListNodesById,
+  type WorkspaceListNodesById
+} from '../../features/nodes/model/workspaceListNode';
 
 interface DocumentPanelHeaderCenterProps {
   activeNodeId: string | null;
@@ -19,6 +23,16 @@ export function DocumentPanelHeaderCenter({
   onSelectBreadcrumbNode,
   rightSlot
 }: DocumentPanelHeaderCenterProps) {
+  const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
+  const listNodesById = useMemo(() => {
+    const nextProjection = projectWorkspaceListNodesById(
+      nodesById,
+      previousListNodesByIdRef.current
+    );
+    previousListNodesByIdRef.current = nextProjection;
+    return nextProjection;
+  }, [nodesById]);
+
   if (isFolderListView) {
     return <div aria-hidden="true" className="min-h-9 flex-1 border-b border-border/60" />;
   }
@@ -28,7 +42,7 @@ export function DocumentPanelHeaderCenter({
       <div className="mx-auto grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 max-w-[var(--document-max-width)]">
         <NodeBreadcrumbs
           activeNodeId={activeNodeId}
-          nodesById={toWorkspaceListNodesById(nodesById)}
+          nodesById={listNodesById}
           onSelectNode={onSelectBreadcrumbNode}
         />
         {rightSlot ? <div className="flex shrink-0 items-center justify-end gap-1">{rightSlot}</div> : null}

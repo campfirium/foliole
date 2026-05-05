@@ -37,6 +37,7 @@ const FILE_TRACE_KEYWORDS = [
   'editor.viewport'
 ] as const;
 let lastPersistedTraceSignature: string | null = null;
+let debugApiAvailability: 'unknown' | 'enabled' | 'disabled' = 'unknown';
 
 function shouldPersistTraceToFile(event: string) {
   return FILE_TRACE_KEYWORDS.some((keyword) => event.includes(keyword));
@@ -50,10 +51,7 @@ function buildTraceSignature(entry: DebugTraceEntry) {
 }
 
 function ensureDebugApi() {
-  if (
-    typeof window === 'undefined' ||
-    (!import.meta.env.DEV && import.meta.env.MODE !== 'test' && !getElectronAPI()?.debug)
-  ) {
+  if (!isDebugApiAvailable()) {
     return null;
   }
 
@@ -108,6 +106,19 @@ function ensureDebugApi() {
 
   targetWindow.__folioleDebug = api;
   return api;
+}
+
+function isDebugApiAvailable() {
+  if (typeof window === 'undefined') {
+    debugApiAvailability = 'disabled';
+    return false;
+  }
+  if (debugApiAvailability !== 'unknown') {
+    return debugApiAvailability === 'enabled';
+  }
+  const enabled = import.meta.env.DEV || import.meta.env.MODE === 'test' || Boolean(getElectronAPI()?.debug);
+  debugApiAvailability = enabled ? 'enabled' : 'disabled';
+  return enabled;
 }
 
 export function registerDebugEditorAdapter(id: string, adapter: EditorAdapter) {

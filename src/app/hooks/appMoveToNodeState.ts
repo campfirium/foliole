@@ -10,8 +10,10 @@ export function buildControllerMoveToNodeState(args: {
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }): AppGoToNodeState {
+  const isOpen = args.runtime.isMoveToNodePaletteOpen;
   const activeNodeId = args.ws.activeNodeId;
   const targetNodeOrder = activeNodeId
+    && isOpen
     && canNodeBeMoved(args.ws.nodesById[activeNodeId])
     ? args.ws.nodeOrder.filter((nodeId) => {
         if (
@@ -34,9 +36,9 @@ export function buildControllerMoveToNodeState(args: {
     : [];
 
   return buildGoToNodeState(
-    args.runtime.isMoveToNodePaletteOpen,
+    isOpen,
     targetNodeOrder,
-    args.ws.nodesById,
+    isOpen ? args.ws.nodesById : {},
     args.runtime.recentNodeIds,
     args.ws.trashedNodeIds,
     () => args.runtime.setIsMoveToNodePaletteOpen(false),

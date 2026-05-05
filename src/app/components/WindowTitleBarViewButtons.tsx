@@ -1,4 +1,5 @@
 import { FileText, FolderTree, Trash2 } from 'lucide-react';
+import { memo } from 'react';
 
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
@@ -11,7 +12,7 @@ interface WindowTitleBarViewButtonsProps {
   onOpenTrashView: () => void;
 }
 
-export function WindowTitleBarViewButtons({
+export const WindowTitleBarViewButtons = memo(function WindowTitleBarViewButtons({
   isTrashViewOpen,
   isVirtualViewOpen,
   onOpenNotesView,
@@ -49,4 +50,4 @@ export function WindowTitleBarViewButtons({
       </button>
     </div>
   );
-}
+});

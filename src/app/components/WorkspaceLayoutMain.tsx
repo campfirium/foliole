@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 
@@ -17,22 +17,22 @@ import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
-  const handleOpenNotesView = () => {
+  const handleOpenNotesView = useCallback(() => {
     props.onCloseImportManagement();
     props.onOpenNotesView();
-  };
-  const handleOpenVirtualView = () => {
+  }, [props.onCloseImportManagement, props.onOpenNotesView]);
+  const handleOpenVirtualView = useCallback(() => {
     props.onCloseImportManagement();
     props.onOpenVirtualView();
-  };
-  const handleOpenTrashView = () => {
+  }, [props.onCloseImportManagement, props.onOpenVirtualView]);
+  const handleOpenTrashView = useCallback(() => {
     props.onCloseImportManagement();
     props.onOpenTrashView();
-  };
-  const handleSelectNode = (nodeId: string, focusAnchor?: NodeAnchorLink | null) => {
+  }, [props.onCloseImportManagement, props.onOpenTrashView]);
+  const handleSelectNode = useCallback((nodeId: string, focusAnchor?: NodeAnchorLink | null) => {
     props.onCloseImportManagement();
     props.onSelectNode(nodeId, focusAnchor);
-  };
+  }, [props.onCloseImportManagement, props.onSelectNode]);
   return {
     handleOpenNotesView,
     handleOpenVirtualView,
@@ -57,12 +57,12 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
     saveWorkspaceRightPanelPreference(activeRightPanelId);
   }, [activeRightPanelId]);
 
-  const handleSelectRightPanel = (panelId: WorkspaceRightPanelId) => {
+  const handleSelectRightPanel = useCallback((panelId: WorkspaceRightPanelId) => {
     setActiveRightPanelId(panelId);
     if (props.isRightSidebarCollapsed) {
       props.onToggleRightSidebarVisibility();
     }
-  };
+  }, [props.isRightSidebarCollapsed, props.onToggleRightSidebarVisibility]);
 
   return (
     <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>

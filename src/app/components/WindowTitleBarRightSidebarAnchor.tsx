@@ -1,5 +1,5 @@
 import { FileSearch, Gauge, Highlighter, Link2, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
-import type { CSSProperties } from 'react';
+import { memo, type CSSProperties } from 'react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
@@ -97,7 +97,9 @@ function renderRightSidebarPanelActions(props: Pick<WindowTitleBarRightSidebarAn
   );
 }
 
-export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSidebarAnchorProps) {
+export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRightSidebarAnchor(
+  props: WindowTitleBarRightSidebarAnchorProps
+) {
   if (props.isRightSidebarCollapsed) {
     return (
       <div className="window-titlebar-collapsed-sidebar-action">
@@ -119,4 +121,4 @@ export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSideb
       </div>
     </div>
   );
-}
+});

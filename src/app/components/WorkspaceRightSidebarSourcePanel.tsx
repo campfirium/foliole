@@ -1,4 +1,3 @@
-import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimeKeepImportItemDetails, RuntimeNodeImportSource, RuntimeTextImportResult } from '../../shared/platform/importBridge';
 import { AppButton, AppStatusBadge, InspectorSection } from '../../shared/ui';
 
@@ -6,7 +5,8 @@ import { useNodeSourceDetails } from './useNodeSourceDetails';
 
 interface WorkspaceRightSidebarSourcePanelProps {
   activeNodeId: string | null;
-  nodesById: Record<string, Node>;
+  activeNodeParentId: string | null;
+  hasActiveNode: boolean;
   onSelectParentNode: (nodeId: string) => void;
 }
 
@@ -178,13 +178,12 @@ function SourceHistorySection({ entries }: { entries: RuntimeTextImportResult[] 
 }
 
 export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSourcePanelProps) {
-  const hasNode = Boolean(props.activeNodeId && props.nodesById[props.activeNodeId]);
-  const details = useNodeSourceDetails(hasNode ? props.activeNodeId : null);
+  const details = useNodeSourceDetails(props.hasActiveNode ? props.activeNodeId : null);
 
   if (!props.activeNodeId) {
     return <EmptySourceInfoState description="Select a node to inspect its import source and history." />;
   }
-  if (!hasNode) {
+  if (!props.hasActiveNode) {
     return null;
   }
   if (details.isLoading && !details.value) {
@@ -194,7 +193,6 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
     return <EmptySourceInfoState description="This node has no recorded import source yet." />;
   }
   const { importRuns, importSource, inheritedFromParent, keepImportItem } = details.value;
-  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
   if (!importSource && !keepImportItem && importRuns.length === 0) {
     return <EmptySourceInfoState description="This node has no recorded import source yet." />;
   }
@@ -206,11 +204,11 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
           <p className="text-sm leading-6 text-foreground/70">
             This node is attached to an imported parent note, so the source details below come from that parent.
           </p>
-          {activeNode?.parentNodeId ? (
+          {props.activeNodeParentId ? (
             <div className="mt-3">
               <AppButton
                 className="w-full justify-center"
-                onClick={() => props.onSelectParentNode(activeNode.parentNodeId as string)}
+                onClick={() => props.onSelectParentNode(props.activeNodeParentId as string)}
                 variant="primary"
               >
                 Open parent note

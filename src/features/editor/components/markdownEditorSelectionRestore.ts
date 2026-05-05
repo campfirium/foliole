@@ -62,7 +62,6 @@ function useSelectionRestoreExecution(args: {
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
   shouldSuppressSelectionRestore: (() => boolean) | undefined;
-  syncScrollMetrics: () => void;
   value: string;
 }) {
   useLayoutEffect(() => {
@@ -83,7 +82,6 @@ function useSelectionRestoreExecution(args: {
       restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
       setReadingPositionSelection: args.setReadingPositionSelection,
       shouldSuppressSelectionRestore: args.shouldSuppressSelectionRestore,
-      syncScrollMetrics: args.syncScrollMetrics,
       value: args.value
     });
   }, [args]);
@@ -98,7 +96,6 @@ export function useEditorSelectionRestore(
   completeApplyingReadingPosition: ((reason: string) => void) | undefined,
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined,
   shouldSuppressSelectionRestore: (() => boolean) | undefined,
-  syncScrollMetrics: () => void,
   value: string
 ) {
   const {
@@ -145,7 +142,6 @@ export function useEditorSelectionRestore(
     restoreCompletionTimeoutRef,
     setReadingPositionSelection,
     shouldSuppressSelectionRestore,
-    syncScrollMetrics,
     value
   });
 }
@@ -167,7 +163,6 @@ function runSelectionRestore(args: {
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
   shouldSuppressSelectionRestore: (() => boolean) | undefined;
-  syncScrollMetrics: () => void;
   value: string;
 }) {
   const restoreTarget = resolveRestoreTarget({
@@ -198,7 +193,6 @@ function runSelectionRestore(args: {
     restoreTarget,
     setReadingPositionSelection: args.setReadingPositionSelection,
     shouldSuppressSelectionRestore: args.shouldSuppressSelectionRestore,
-    syncScrollMetrics: args.syncScrollMetrics,
     valueLength: args.value.length
   });
 }

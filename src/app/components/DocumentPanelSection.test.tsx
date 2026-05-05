@@ -134,13 +134,14 @@ describe('DocumentPanelSection primary views', () => {
     expect(screen.getByRole('button', { name: 'Open link references (1)' })).toBeInTheDocument();
   });
 
-  it('shows backlinks from runtime-backed data even when source documents are trimmed in memory', async () => {
-    renderRuntimeBacklinksView();
+it('shows backlinks from runtime-backed data even when source documents are trimmed in memory', async () => {
+  renderRuntimeBacklinksView();
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Open link references (1)' })).toBeInTheDocument()
-    );
-  });
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Open link references (1)' })).toBeInTheDocument()
+  );
+});
+
 });
 
 describe('DocumentPanelSection secondary views', () => {

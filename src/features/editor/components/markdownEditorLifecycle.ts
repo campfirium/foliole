@@ -11,34 +11,9 @@ import type { EditorDiffDecorations } from '../adapters/EditorAdapter';
 import { useEditorSelectionRestore } from './markdownEditorSelectionRestore';
 import type { EditorViewState } from './markdownEditorTypes';
 
-function useEditorScrollSync(
-  adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
-  hostRef: MutableRefObject<HTMLDivElement | null>,
-  syncScrollMetrics: () => void
-) {
-  useEffect(() => {
-    const adapter = adapterRef.current;
-    const host = hostRef.current;
-    if (!adapter || !host) {
-      return;
-    }
-
-    const unsubscribeScroll = adapter.onScroll(syncScrollMetrics);
-    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => syncScrollMetrics()) : null;
-    resizeObserver?.observe(host);
-    requestAnimationFrame(syncScrollMetrics);
-
-    return () => {
-      unsubscribeScroll();
-      resizeObserver?.disconnect();
-    };
-  }, [adapterRef, hostRef, syncScrollMetrics]);
-}
-
 function useEditorContentSync(
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
   nodeId: string | null,
-  syncScrollMetrics: () => void,
   value: string,
   lineDiffDecorations: EditorDiffDecorations | null | undefined
 ) {
@@ -50,18 +25,15 @@ function useEditorContentSync(
     if (nodeId) {
       markEditorContentSyncCompleted(nodeId, `content:${value.length}`);
     }
-    requestAnimationFrame(syncScrollMetrics);
-  }, [adapterRef, nodeId, syncScrollMetrics, value]);
+  }, [adapterRef, nodeId, value]);
 
   useEffect(() => {
     adapterRef.current?.setDiffDecorations(lineDiffDecorations ?? null);
-    requestAnimationFrame(syncScrollMetrics);
-  }, [adapterRef, lineDiffDecorations, syncScrollMetrics]);
+  }, [adapterRef, lineDiffDecorations]);
 }
 
 export function useEditorLayoutEffects(
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
-  hostRef: MutableRefObject<HTMLDivElement | null>,
   nodeId: string | null,
   readingSelection: EditorViewState['selection'] | null | undefined,
   nodeViewState: EditorViewState | undefined,
@@ -69,12 +41,10 @@ export function useEditorLayoutEffects(
   completeApplyingReadingPosition: ((reason: string) => void) | undefined,
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined,
   shouldSuppressSelectionRestore: (() => boolean) | undefined,
-  syncScrollMetrics: () => void,
   value: string,
   lineDiffDecorations: EditorDiffDecorations | null | undefined
 ) {
-  useEditorScrollSync(adapterRef, hostRef, syncScrollMetrics);
-  useEditorContentSync(adapterRef, nodeId, syncScrollMetrics, value, lineDiffDecorations);
+  useEditorContentSync(adapterRef, nodeId, value, lineDiffDecorations);
   useEditorSelectionRestore(
     adapterRef,
     nodeId,
@@ -84,7 +54,6 @@ export function useEditorLayoutEffects(
     completeApplyingReadingPosition,
     setReadingPositionSelection,
     shouldSuppressSelectionRestore,
-    syncScrollMetrics,
     value
   );
 }

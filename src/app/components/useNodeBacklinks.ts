@@ -29,7 +29,7 @@ export function useNodeBacklinks(args: {
 }) {
   const localBacklinks = useMemo(
     () => collectLocalBacklinks(args),
-    [args]
+    [args.nodeOrder, args.nodesById, args.targetNodeId, args.trashedNodeIds]
   );
   const [runtimeBacklinks, setRuntimeBacklinks] = useState<BacklinkItem[] | null>(null);
 
@@ -49,7 +49,7 @@ export function useNodeBacklinks(args: {
     return () => {
       cancelled = true;
     };
-  }, [args.targetNodeId, args.nodeOrder, args.nodesById, args.trashedNodeIds]);
+  }, [args.targetNodeId]);
 
   return runtimeBacklinks ?? localBacklinks;
 }

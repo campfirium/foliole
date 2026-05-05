@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 import { isPdfAnchorLocator, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
@@ -48,42 +50,117 @@ function renderPanel(
   }
 ) {
   if (props.activePanelId === 'dev') {
-    return (
-      <WorkspaceRightSidebarDevPanel
-        activeNodeId={props.activeNodeId}
-        nodesById={props.nodesById}
-        reviewSchedulerSettings={props.reviewSchedulerSettings}
-      />
-    );
+    return renderDevPanel(props);
   }
   if (props.activePanelId === 'performance') {
-    return <WorkspaceRightSidebarPerformancePanel activeNodeId={props.activeNodeId} nodesById={props.nodesById} />;
+    return renderPerformancePanel(props);
   }
   if (props.activePanelId === 'source-info') {
-    return (
-      <WorkspaceRightSidebarSourcePanel
-        activeNodeId={props.activeNodeId}
-        nodesById={props.nodesById}
-        onSelectParentNode={props.onSelectBreadcrumbNode}
-      />
-    );
+    return renderSourceInfoPanel(props);
   }
   if (props.activePanelId === 'highlights') {
     return renderHighlightsPanel(props);
   }
   if (props.activePanelId === 'backlinks') {
-    return (
-      <WorkspaceRightSidebarBacklinksPanel
-        activeNodeId={props.activeNodeId}
-        nodeOrder={props.nodeOrder}
-        nodesById={props.nodesById}
-        onSelectNode={props.onSelectNode}
-        trashedNodeIds={props.trashedNodeIds}
-      />
-    );
+    return renderBacklinksPanel(props);
   }
+  return renderReviewQueuePanel(props);
+}
+
+const SourceInfoSidebarPanel = memo(function SourceInfoSidebarPanel(props: {
+  activeNodeId: string | null;
+  activeNodeParentId: string | null;
+  hasActiveNode: boolean;
+  onSelectParentNode: (nodeId: string) => void;
+}) {
+  return <WorkspaceRightSidebarSourcePanel {...props} />;
+}, (previousProps, nextProps) =>
+  previousProps.activeNodeId === nextProps.activeNodeId &&
+  previousProps.activeNodeParentId === nextProps.activeNodeParentId &&
+  previousProps.hasActiveNode === nextProps.hasActiveNode &&
+  previousProps.onSelectParentNode === nextProps.onSelectParentNode
+);
+
+const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
+  currentNodeId: string | null;
+  nodesById: WorkspaceLayoutProps['nodesById'];
+  queueNodeIds: string[];
+}) {
+  return <WorkspaceRightSidebarReviewQueuePanel {...props} />;
+}, (previousProps, nextProps) => {
+  if (previousProps.currentNodeId !== nextProps.currentNodeId) {
+    return false;
+  }
+  if (previousProps.queueNodeIds.length !== nextProps.queueNodeIds.length) {
+    return false;
+  }
+  return previousProps.queueNodeIds.every((nodeId, index) => {
+    if (nodeId !== nextProps.queueNodeIds[index]) {
+      return false;
+    }
+    const previousNode = previousProps.nodesById[nodeId];
+    const nextNode = nextProps.nodesById[nodeId];
+    return (
+      previousNode?.title === nextNode?.title &&
+      previousNode?.createdAt === nextNode?.createdAt &&
+      previousNode?.review?.due === nextNode?.review?.due &&
+      previousNode?.review?.state === nextNode?.review?.state &&
+      previousNode?.reading?.nextAt === nextNode?.reading?.nextAt
+    );
+  });
+});
+
+function renderDevPanel(
+  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodesById' | 'reviewSchedulerSettings'>
+) {
   return (
-    <WorkspaceRightSidebarReviewQueuePanel
+    <WorkspaceRightSidebarDevPanel
+      activeNodeId={props.activeNodeId}
+      nodesById={props.nodesById}
+      reviewSchedulerSettings={props.reviewSchedulerSettings}
+    />
+  );
+}
+
+function renderPerformancePanel(
+  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodesById'>
+) {
+  return <WorkspaceRightSidebarPerformancePanel activeNodeId={props.activeNodeId} nodesById={props.nodesById} />;
+}
+
+function renderSourceInfoPanel(
+  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodesById' | 'onSelectBreadcrumbNode'>
+) {
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
+  return (
+    <SourceInfoSidebarPanel
+      activeNodeId={props.activeNodeId}
+      activeNodeParentId={activeNode?.parentNodeId ?? null}
+      hasActiveNode={Boolean(activeNode)}
+      onSelectParentNode={props.onSelectBreadcrumbNode}
+    />
+  );
+}
+
+function renderBacklinksPanel(
+  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'trashedNodeIds'>
+) {
+  return (
+    <WorkspaceRightSidebarBacklinksPanel
+      activeNodeId={props.activeNodeId}
+      nodeOrder={props.nodeOrder}
+      nodesById={props.nodesById}
+      onSelectNode={props.onSelectNode}
+      trashedNodeIds={props.trashedNodeIds}
+    />
+  );
+}
+
+function renderReviewQueuePanel(
+  props: Pick<WorkspaceLayoutProps, 'reviewCurrentNodeId' | 'nodesById' | 'reviewQueueNodeIds'>
+) {
+  return (
+    <ReviewQueueSidebarPanel
       currentNodeId={props.reviewCurrentNodeId}
       nodesById={props.nodesById}
       queueNodeIds={props.reviewQueueNodeIds}

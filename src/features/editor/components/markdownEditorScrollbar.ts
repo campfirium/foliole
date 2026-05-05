@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useRef, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react';
 
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 
@@ -17,23 +17,18 @@ interface ScrollbarState {
 
 const SCROLLBAR_GAP = 4;
 const SCROLLBAR_MIN_THUMB_HEIGHT = 36;
+const EMPTY_SCROLL_METRICS: ScrollMetrics = { clientHeight: 0, scrollHeight: 0, scrollTop: 0 };
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
 export function useEditorScrollbarMetrics(adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>) {
-  const [scrollMetrics, setScrollMetrics] = useState<ScrollMetrics>({ clientHeight: 0, scrollHeight: 0, scrollTop: 0 });
-
   const syncScrollMetrics = useCallback(() => {
-    const adapter = adapterRef.current;
-    if (!adapter) {
-      return;
-    }
-    setScrollMetrics(adapter.getScrollMetrics());
+    adapterRef.current?.getScrollMetrics();
   }, [adapterRef]);
 
-  return { scrollMetrics, syncScrollMetrics };
+  return { scrollMetrics: EMPTY_SCROLL_METRICS, syncScrollMetrics };
 }
 
 export function useScrollbarState(scrollMetrics: ScrollMetrics): ScrollbarState {

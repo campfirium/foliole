@@ -3,15 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   alignSelectionInViewport,
   isPositionNearViewportRatio,
-  resolveDocumentPositionAtViewportY
+  resolveDocumentPositionAtViewportY,
+  subscribeToEditorScroll
 } from './codeMirrorEditorAdapterView';
 
-describe('codeMirrorEditorAdapterView fallback alignment', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
-  });
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+});
 
+describe('codeMirrorEditorAdapterView fallback alignment', () => {
   it('aligns with line block positions when character coords are unavailable', () => {
     const scrollDOM = {
       clientHeight: 400,
@@ -74,3 +75,40 @@ describe('codeMirrorEditorAdapterView fallback alignment', () => {
     expect(lineBlockAtHeight).toHaveBeenCalledWith(110);
   });
 });
+
+describe('codeMirrorEditorAdapterView scroll subscription', () => {
+  it('coalesces repeated scroll events into one callback per frame', () => {
+    const listener = vi.fn();
+    const { scrollDOM, scrollListeners } = createScrollDomHarness();
+    const unsubscribe = subscribeToEditorScroll({ scrollDOM } as never, listener);
+    const handleScroll = scrollListeners.get('scroll');
+
+    expect(handleScroll).toBeTypeOf('function');
+    handleScroll?.(new Event('scroll'));
+    handleScroll?.(new Event('scroll'));
+    handleScroll?.(new Event('scroll'));
+
+    expect(listener).not.toHaveBeenCalled();
+
+    vi.runAllTimers();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+  });
+});
+
+function createScrollDomHarness() {
+  const scrollListeners = new Map<string, EventListener>();
+  return {
+    scrollDOM: {
+      addEventListener: vi.fn((event: string, handler: EventListener) => {
+        scrollListeners.set(event, handler);
+      }),
+      removeEventListener: vi.fn((event: string) => {
+        scrollListeners.delete(event);
+      })
+    },
+    scrollListeners
+  };
+}

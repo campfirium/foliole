@@ -1,6 +1,10 @@
-import type { ReactNode } from 'react';
+import { useMemo, useRef, type ReactNode } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import {
+  projectWorkspaceListNodesById,
+  type WorkspaceListNodesById
+} from '../../features/nodes/model/workspaceListNode';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
@@ -39,6 +43,7 @@ export function WorkspaceLayoutGrid({
   props: WorkspaceLayoutProps;
 }) {
   recordComponentRender('workspaceGrid');
+  const listNodesById = useProjectedListNodesById(props.nodesById);
   return (
     <div
       className="grid min-h-0 flex-1 overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
@@ -57,6 +62,7 @@ export function WorkspaceLayoutGrid({
         activeRightPanelId={activeRightPanelId}
         documentNodeId={documentNodeId}
         isImmersiveEditing={isImmersiveEditing}
+        listNodesById={listNodesById}
         onEnterImmersiveEdit={onEnterImmersiveEdit}
         onShouldSuppressSelectionRestore={onShouldSuppressSelectionRestore}
         onSelectNode={onSelectNode}
@@ -64,6 +70,18 @@ export function WorkspaceLayoutGrid({
       />
     </div>
   );
+}
+
+function useProjectedListNodesById(nodesById: WorkspaceLayoutProps['nodesById']) {
+  const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
+  return useMemo(() => {
+    const nextProjection = projectWorkspaceListNodesById(
+      nodesById,
+      previousListNodesByIdRef.current
+    );
+    previousListNodesByIdRef.current = nextProjection;
+    return nextProjection;
+  }, [nodesById]);
 }
 
 function WorkspaceLayoutGridFrame({
@@ -111,6 +129,7 @@ function WorkspaceGridContent({
   activeRightPanelId,
   documentNodeId,
   isImmersiveEditing,
+  listNodesById,
   onEnterImmersiveEdit,
   onShouldSuppressSelectionRestore,
   onSelectNode,
@@ -119,6 +138,7 @@ function WorkspaceGridContent({
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
   isImmersiveEditing: boolean;
+  listNodesById: WorkspaceListNodesById;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
@@ -135,6 +155,7 @@ function WorkspaceGridContent({
         activeRightPanelId,
         documentNodeId,
         isImmersiveEditing,
+        listNodesById,
         onEnterImmersiveEdit,
         onShouldSuppressSelectionRestore,
         onSelectNode,
@@ -144,10 +165,80 @@ function WorkspaceGridContent({
   );
 }
 
+function renderListColumns(args: {
+  listNodesById: WorkspaceListNodesById;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
+  props: WorkspaceLayoutProps;
+}) {
+  return [
+    <WorkspaceListArea
+      key="list"
+      activeNodeId={args.props.activeNodeId}
+      isStudyMode={args.props.isStudyMode}
+      isTrashViewOpen={args.props.isTrashViewOpen}
+      isVirtualViewOpen={args.props.isVirtualViewOpen}
+      isWorkspaceHydrated={args.props.isWorkspaceHydrated}
+      listNodesById={args.listNodesById}
+      nodeOrder={args.props.nodeOrder}
+      onOpenMoveToNode={args.props.onOpenMoveToNode}
+      onOpenNotesView={args.props.onOpenNotesView}
+      onSelectNode={args.onSelectNode}
+      onSelectTrashNode={args.props.onSelectTrashNode}
+      reviewCompletedCount={args.props.reviewCompletedCount}
+      reviewDueCount={args.props.reviewDueCount}
+      reviewQueueCount={args.props.reviewQueueCount}
+      reviewStatus={args.props.reviewStatus}
+      selectedTrashNodeId={args.props.selectedTrashNodeId}
+      trashedNodeIds={args.props.trashedNodeIds}
+    />,
+    <WorkspaceListSplitter
+      key="list-splitter"
+      isResizingList={args.props.isResizingList}
+      listWidth={args.props.listWidth}
+      onResetLayout={args.props.onResetLayout}
+      onSplitterKeyDown={args.props.onSplitterKeyDown}
+      onSplitterPointerDown={args.props.onSplitterPointerDown}
+    />
+  ];
+}
+
+function renderRightSidebarColumns(args: {
+  activeRightPanelId: WorkspaceRightPanelId;
+  documentNodeId: string | null;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
+  props: WorkspaceLayoutProps;
+}) {
+  return [
+    <WorkspaceRightSidebarSplitter
+      key="right-sidebar-splitter"
+      isResizingRightSidebar={args.props.isResizingRightSidebar}
+      onResetLayout={args.props.onResetLayout}
+      onRightSidebarSplitterKeyDown={args.props.onRightSidebarSplitterKeyDown}
+      onRightSidebarSplitterPointerDown={args.props.onRightSidebarSplitterPointerDown}
+      rightSidebarWidth={args.props.rightSidebarWidth}
+    />,
+    <WorkspaceRightSidebar
+      key="right-sidebar"
+      activePanelId={args.activeRightPanelId}
+      activeNodeId={args.documentNodeId}
+      nodeOrder={args.props.nodeOrder}
+      trashedNodeIds={args.props.trashedNodeIds}
+      nodesById={args.props.nodesById}
+      onRevealAnchorInDocument={args.props.onRevealAnchorInDocument}
+      onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
+      onSelectNode={args.onSelectNode}
+      reviewCurrentNodeId={args.props.reviewCurrentNodeId}
+      reviewQueueNodeIds={args.props.reviewPanelQueueNodeIds}
+      reviewSchedulerSettings={args.props.reviewSchedulerSettings}
+    />
+  ];
+}
+
 function renderWorkspaceGridColumns(args: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
   isImmersiveEditing: boolean;
+  listNodesById: WorkspaceListNodesById;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
@@ -157,17 +248,7 @@ function renderWorkspaceGridColumns(args: {
   const shouldShowRightSidebar = !args.props.isImmersiveMode && !args.props.isRightSidebarCollapsed;
 
   return [
-    shouldShowList ? <WorkspaceListArea key="list" onSelectNode={args.onSelectNode} props={args.props} /> : null,
-    shouldShowList ? (
-      <WorkspaceListSplitter
-        key="list-splitter"
-        isResizingList={args.props.isResizingList}
-        listWidth={args.props.listWidth}
-        onResetLayout={args.props.onResetLayout}
-        onSplitterKeyDown={args.props.onSplitterKeyDown}
-        onSplitterPointerDown={args.props.onSplitterPointerDown}
-      />
-    ) : null,
+    ...(shouldShowList ? renderListColumns(args) : []),
     <WorkspaceDocumentArea
       key="document"
       documentNodeId={args.documentNodeId}
@@ -176,31 +257,6 @@ function renderWorkspaceGridColumns(args: {
       onShouldSuppressSelectionRestore={args.onShouldSuppressSelectionRestore}
       props={args.props}
     />,
-    shouldShowRightSidebar ? (
-      <WorkspaceRightSidebarSplitter
-        key="right-sidebar-splitter"
-        isResizingRightSidebar={args.props.isResizingRightSidebar}
-        onResetLayout={args.props.onResetLayout}
-        onRightSidebarSplitterKeyDown={args.props.onRightSidebarSplitterKeyDown}
-        onRightSidebarSplitterPointerDown={args.props.onRightSidebarSplitterPointerDown}
-        rightSidebarWidth={args.props.rightSidebarWidth}
-      />
-    ) : null,
-    shouldShowRightSidebar ? (
-      <WorkspaceRightSidebar
-        key="right-sidebar"
-        activePanelId={args.activeRightPanelId}
-        activeNodeId={args.documentNodeId}
-        nodeOrder={args.props.nodeOrder}
-        trashedNodeIds={args.props.trashedNodeIds}
-        nodesById={args.props.nodesById}
-        onRevealAnchorInDocument={args.props.onRevealAnchorInDocument}
-        onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
-        onSelectNode={args.onSelectNode}
-        reviewCurrentNodeId={args.props.reviewCurrentNodeId}
-        reviewQueueNodeIds={args.props.reviewPanelQueueNodeIds}
-        reviewSchedulerSettings={args.props.reviewSchedulerSettings}
-      />
-    ) : null
+    ...(shouldShowRightSidebar ? renderRightSidebarColumns(args) : [])
   ];
 }

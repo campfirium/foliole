@@ -39,12 +39,10 @@ export function getReadingPositionSelection(props: WorkspaceLayoutProps, current
 
 export function getViewportReadingPosition(props: WorkspaceLayoutProps) {
   const editor = props.editorAdapterRef.current;
-  const sampledLineText = getViewportSampleLineText();
   const visiblePosition = editor?.getPrimaryVisiblePosition?.();
   if (typeof visiblePosition === 'number') {
     pushDebugTrace('immersive.viewport-reading.sampled', {
       activeNodeId: props.activeNodeId,
-      lineText: sampledLineText,
       position: visiblePosition
     });
     return visiblePosition;
@@ -57,31 +55,9 @@ export function getViewportReadingPosition(props: WorkspaceLayoutProps) {
   const position = editor.getDocumentPositionAtViewportY(preferredY);
   pushDebugTrace('immersive.viewport-reading.sampled', {
     activeNodeId: props.activeNodeId,
-    lineText: sampledLineText,
     position
   });
   return position;
-}
-
-function getViewportSampleLineText() {
-  const scroller = document.querySelector('.prompt-editor-host .cm-scroller');
-  if (!(scroller instanceof HTMLElement)) {
-    return null;
-  }
-  const rect = scroller.getBoundingClientRect();
-  const anchorY = rect.top + rect.height * 0.15;
-  const lines = Array.from(document.querySelectorAll('.prompt-editor-host .cm-line'))
-    .map((line) => line as HTMLElement)
-    .map((line) => {
-      const lineRect = line.getBoundingClientRect();
-      return {
-        distance: Math.abs((lineRect.top + lineRect.bottom) / 2 - anchorY),
-        text: (line.textContent ?? '').trim()
-      };
-    })
-    .filter((line) => line.text.length > 0)
-    .sort((left, right) => left.distance - right.distance);
-  return lines[0]?.text ?? null;
 }
 
 function resolveTopVisibleLineSampleY(scrollerRect: DOMRect) {

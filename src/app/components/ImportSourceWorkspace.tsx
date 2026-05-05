@@ -7,5 +7,8 @@ type ImportSourceWorkspaceProps = {
 };
 
 export function ImportSourceWorkspace({ open, onOpenChange, onSelectNode }: ImportSourceWorkspaceProps) {
+  if (!open) {
+    return null;
+  }
   return <ImportSourceWorkspaceDetails onOpenChange={onOpenChange} onSelectNode={onSelectNode} open={open} />;
 }

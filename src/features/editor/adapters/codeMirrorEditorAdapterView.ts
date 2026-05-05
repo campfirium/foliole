@@ -183,9 +183,21 @@ export function revealEditorPosition(view: EditorView, position: number) {
 }
 
 export function subscribeToEditorScroll(view: EditorView, listener: () => void) {
-  const handleScroll = () => listener();
+  let frameId: number | null = null;
+  const handleScroll = () => {
+    if (frameId !== null) {
+      return;
+    }
+    frameId = requestAnimationFrame(() => {
+      frameId = null;
+      listener();
+    });
+  };
   view.scrollDOM.addEventListener('scroll', handleScroll, { passive: true });
   return () => {
+    if (frameId !== null) {
+      cancelAnimationFrame(frameId);
+    }
     view.scrollDOM.removeEventListener('scroll', handleScroll);
   };
 }

@@ -8,11 +8,12 @@ import {
   markNodeDocumentMerged
 } from '../../shared/platform/performanceDiagnosticsProbe';
 import { resolveAncestorAnchorLink, type NodeNavigationResult } from '../../store/workspaceNavigation';
-import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
+import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 export function usePreparedOpenNodeAction(
+  action: (nodeId: string) => NodeNavigationResult | null,
   flushPendingEditorDraft: () => void,
   prepareForNavigation: (nodeIdOverride?: string | null) => void,
   finalize: (result: NodeNavigationResult | null) => void,
@@ -25,17 +26,18 @@ export function usePreparedOpenNodeAction(
       markRequested(nodeId);
       flushPendingEditorDraft();
       prepareForNavigation();
+      const result = action(nodeId);
+      finalize(result ? { ...result, focusAnchor } : result);
 
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
       if (!targetNode || isNodeDocumentLoaded(targetNode) || !getRuntimeInvoke()) {
-        finalize(null);
         return;
       }
 
       const requestToken = requestTokenRef.current + 1;
       requestTokenRef.current = requestToken;
 
-      const result = await openWorkspaceNodeWithPreparedDocument(nodeId, {
+      await ensureWorkspaceNodeDocumentReady(nodeId, {
         onDocumentMerged: (document) => {
           if (requestTokenRef.current === requestToken) {
             markNodeDocumentMerged(nodeId, `content:${document.content.length}`);
@@ -50,17 +52,10 @@ export function usePreparedOpenNodeAction(
           if (requestTokenRef.current === requestToken) {
             markNodeDocumentLoadStarted(nodeId);
           }
-        },
-        shouldApply: () => requestTokenRef.current === requestToken
+        }
       });
-
-      if (!result || requestTokenRef.current !== requestToken) {
-        return;
-      }
-
-      finalize({ ...result, focusAnchor });
     },
-    [finalize, flushPendingEditorDraft, markRequested, prepareForNavigation]
+    [action, finalize, flushPendingEditorDraft, markRequested, prepareForNavigation]
   );
 }
 

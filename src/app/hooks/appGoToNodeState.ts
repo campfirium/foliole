@@ -34,10 +34,11 @@ export interface AppGoToNodeState {
 }
 
 export function buildControllerGoToNodeState(args: GoToNodeStateArgs): AppGoToNodeState {
+  const isOpen = args.runtime.isGoToNodePaletteOpen;
   return buildGoToNodeState(
-    args.runtime.isGoToNodePaletteOpen,
-    args.ws.nodeOrder,
-    args.ws.nodesById,
+    isOpen,
+    isOpen ? args.ws.nodeOrder : [],
+    isOpen ? args.ws.nodesById : {},
     args.runtime.recentNodeIds,
     args.ws.trashedNodeIds,
     () => args.runtime.setIsGoToNodePaletteOpen(false),

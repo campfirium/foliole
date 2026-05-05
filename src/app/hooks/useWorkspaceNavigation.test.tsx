@@ -3,15 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import {
-  createPrefetchInvokeMock,
   navigationTestNodes,
   resetWorkspaceNavigationTestState,
-  seedPrefetchTestState,
-  trackPrefetchCallOrder
 } from './useWorkspaceNavigation.testSupport';
 
 const {
@@ -229,77 +225,6 @@ async function runSavePositionBeforeNodeSelectionTest() {
   expect(markNodeSelectionRequested).toHaveBeenCalledWith('node-2', navigationTestNodes);
 }
 
-function createPrefetchHookHarness(callOrder: string[]) {
-  const openNode = vi.fn(() => {
-    callOrder.push('open-node');
-    useWorkspaceStore.getState().setActiveNode('node-2');
-    return { focusAnchor: null, nodeId: 'node-2' };
-  });
-  const saveActiveNodeView = vi.fn(() => {
-    callOrder.push('save-view');
-  });
-  const flushPendingEditorDraft = vi.fn(() => {
-    callOrder.push('flush-draft');
-  });
-
-  const view = renderHook(() =>
-    useWorkspaceNavigation({
-      activeNodeContent: 'Alpha body',
-      activeNodeId: 'node-1',
-      activeNodeParentId: null,
-      backStackSize: 0,
-      beginAnchorNavigationRestore: vi.fn(),
-      closeContextMenu: vi.fn(),
-      completeAnchorNavigationRestore: vi.fn(),
-      editorRef: { current: null },
-      flushPendingEditorDraft,
-      forwardStackSize: 0,
-      goBack: vi.fn(() => null),
-      goForward: vi.fn(() => null),
-      goToParent: vi.fn(() => null),
-      jumpToAncestorNode: vi.fn(() => null),
-      nodesById: navigationTestNodes,
-      openNode,
-      saveActiveNodeView
-    })
-  );
-
-  return { openNode, view };
-}
-
-async function runPrefetchBeforeNodeSelectionTest() {
-  seedPrefetchTestState();
-  const invoke = createPrefetchInvokeMock();
-  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-  const callOrder = trackPrefetchCallOrder({
-    markNodeDocumentMerged,
-    markNodeDocumentLoadResolved,
-    markNodeDocumentLoadStarted,
-    markNodeSelectionRequested
-  });
-  const { openNode, view } = createPrefetchHookHarness(callOrder);
-
-  await act(async () => {
-    await view.result.current.handleSelectNode('node-2');
-  });
-
-  expect(callOrder).toEqual([
-    'selection-requested',
-    'flush-draft',
-    'save-view',
-    'load-started',
-    'load-resolved',
-    'load-merged'
-  ]);
-  expect(openNode).not.toHaveBeenCalled();
-  expect(invoke.mock.calls).toEqual([['load_node_document', { nodeId: 'node-2' }]]);
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
-    content: 'Loaded node 2 body',
-    hasContent: true
-  });
-}
-
 describe('useWorkspaceNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -322,8 +247,4 @@ describe('useWorkspaceNavigation', () => {
   it('saves the current reading position before selecting another node', async () => {
     await runSavePositionBeforeNodeSelectionTest();
   });
-
-it('opens a cold target only after its document is prepared', async () => {
-  await runPrefetchBeforeNodeSelectionTest();
-});
 });

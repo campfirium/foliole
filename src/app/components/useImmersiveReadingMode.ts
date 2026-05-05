@@ -108,11 +108,14 @@ function useImmersiveReadingSelectionSyncState(props: WorkspaceLayoutProps) {
   return useReadingSelectionState(props);
 }
 
-function useImmersiveModeDependencies(props: WorkspaceLayoutProps, readableNodeIds: string[]) {
+function useImmersiveModeDependencies(props: WorkspaceLayoutProps) {
   const selectionState = useImmersiveReadingSelectionSyncState(props);
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   return {
     ...selectionState,
-    canToggleImmersiveMode: Boolean(props.activeNodeId && readableNodeIds.includes(props.activeNodeId)) && !props.isStudyMode
+    canToggleImmersiveMode:
+      Boolean(props.activeNodeId && activeNode && activeNode.kind !== 'folder' && !props.trashedNodeIds.includes(props.activeNodeId)) &&
+      !props.isStudyMode
   };
 }
 
@@ -181,8 +184,11 @@ export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
   const wasImmersiveModeRef = useRef(props.isImmersiveMode);
   const selectionRestoreSuppression = useSelectionRestoreSuppression(props);
   const readableNodeIds = useMemo(
-    () => getReadableNodeIds(props.nodeOrder, props.nodesById, props.trashedNodeIds),
-    [props.nodeOrder, props.nodesById, props.trashedNodeIds]
+    () =>
+      props.isImmersiveMode
+        ? getReadableNodeIds(props.nodeOrder, props.nodesById, props.trashedNodeIds)
+        : [],
+    [props.isImmersiveMode, props.nodeOrder, props.nodesById, props.trashedNodeIds]
   );
   const {
     canToggleImmersiveMode,
@@ -192,7 +198,7 @@ export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
     getReadingSelection,
     queueReadingSelectionRestore,
     setReadingSelection
-  } = useImmersiveModeDependencies(props, readableNodeIds);
+  } = useImmersiveModeDependencies(props);
   useImmersiveLifecycleReset(props, setIsImmersiveEditing, setIsShortcutsOverlayOpen, shouldSkipNextScrollSyncRef, exitImmersiveModeRef);
   useImmersiveReadingPositionSync({
     clearPendingSelection,

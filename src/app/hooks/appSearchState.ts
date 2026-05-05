@@ -35,10 +35,11 @@ export interface AppSearchState {
 }
 
 export function buildControllerSearchState(args: SearchStateArgs): AppSearchState {
+  const isOpen = args.runtime.isSearchPaletteOpen;
   return buildSearchState(
-    args.runtime.isSearchPaletteOpen,
-    args.ws.nodeOrder,
-    toSearchNodesById(args.ws.nodesById),
+    isOpen,
+    isOpen ? args.ws.nodeOrder : [],
+    isOpen ? toSearchNodesById(args.ws.nodesById) : {},
     args.ws.trashedNodeIds,
     () => args.runtime.setIsSearchPaletteOpen(false),
     (result) => {
