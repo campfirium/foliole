@@ -27,6 +27,7 @@ export interface WorkspaceState {
   nodesById: Record<string, Node>;
   reviewSession: ReviewSessionState;
   trashedNodeIds: string[];
+  untitledSequenceByParent: Record<string, number>;
   goBack: () => NodeNavigationResult | null;
   goForward: () => NodeNavigationResult | null;
   goToParent: () => NodeNavigationResult | null;
@@ -83,6 +84,7 @@ interface WorkspacePersistedState {
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   trashedNodeIds: string[];
+  untitledSequenceByParent: Record<string, number>;
 }
 
 export interface WorkspaceLayoutState {
@@ -131,6 +133,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'nodeViewById'
   | 'reviewSession'
   | 'trashedNodeIds'
+  | 'untitledSequenceByParent'
 > {
   return {
     ...createInitialWorkspaceSnapshot(now, {
@@ -144,7 +147,8 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
       isAnswerRevealed: false,
       queueNodeIds: [],
       totalNodeCount: 0
-    }
+    },
+    untitledSequenceByParent: {}
   };
 }
 
@@ -179,7 +183,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         nodeViewById: state.nodeViewById,
         nodeOrder: state.nodeOrder,
         nodesById: state.nodesById,
-        trashedNodeIds: state.trashedNodeIds
+        trashedNodeIds: state.trashedNodeIds,
+        untitledSequenceByParent: state.untitledSequenceByParent
       }),
       merge: (persistedState, currentState) => {
         const persisted = (persistedState ?? {}) as Partial<WorkspacePersistedState>;
@@ -190,7 +195,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             ...currentState.layout,
             ...persisted.layout
           },
-          nodeViewById: persisted.nodeViewById ?? currentState.nodeViewById
+          nodeViewById: persisted.nodeViewById ?? currentState.nodeViewById,
+          untitledSequenceByParent:
+            persisted.untitledSequenceByParent ?? currentState.untitledSequenceByParent
         };
         return {
           ...nextState,

@@ -121,6 +121,12 @@ describe('createWorkspaceNodeActions content/title sync', () => {
 
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
   });
+});
+
+describe('createWorkspaceNodeActions root creation sync', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('syncs createRootNode through runtime command bridge', () => {
     const harness = createSetStateHarness(createWorkspaceFixture());
@@ -137,6 +143,26 @@ describe('createWorkspaceNodeActions content/title sync', () => {
         parentNodeId: null,
         content: '# Root node',
         title: 'Root node'
+      })
+    );
+  });
+
+  it('syncs incremented Untitled title for repeated empty root node creation', () => {
+    const harness = createSetStateHarness({
+      ...createWorkspaceFixture(),
+      activeNodeId: null,
+      nodeOrder: [],
+      nodesById: {}
+    });
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    actions.createRootNode();
+    const secondNodeId = actions.createRootNode();
+
+    expect(syncNodeContentToRuntime).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        id: secondNodeId,
+        title: 'Untitled 1'
       })
     );
   });

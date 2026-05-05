@@ -15,6 +15,8 @@ import {
 } from './workspaceNodeTreeOrder';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import { collectMovedNodeBlock, collectMoveRootIds } from './workspaceStoreMoveHelpers';
+import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceSet = (
   partial:
@@ -24,38 +26,6 @@ type WorkspaceSet = (
 ) => void;
 
 type NodeSnapshot = WorkspaceState['nodesById'][string];
-
-function collectMoveRootIds(
-  nodeIds: string[],
-  nodeOrder: string[],
-  nodesById: WorkspaceState['nodesById']
-) {
-  const selectedSet = new Set(nodeIds.filter((nodeId) => Boolean(nodesById[nodeId])));
-  return nodeOrder.filter((nodeId) => {
-    if (!selectedSet.has(nodeId)) {
-      return false;
-    }
-    let cursorId = nodesById[nodeId]?.parentNodeId ?? null;
-    while (cursorId) {
-      if (selectedSet.has(cursorId)) {
-        return false;
-      }
-      cursorId = nodesById[cursorId]?.parentNodeId ?? null;
-    }
-    return true;
-  });
-}
-
-function collectMovedNodeBlock(
-  rootNodeIds: string[],
-  nodeOrder: string[],
-  nodesById: WorkspaceState['nodesById']
-) {
-  const movedNodeIds = rootNodeIds.flatMap((nodeId) =>
-    collectOrderedSubtreeIds(nodeId, nodeOrder, nodesById)
-  );
-  return [...new Set(movedNodeIds)];
-}
 
 function resolveMovableRootNodeIds(
   state: WorkspaceState,
@@ -152,11 +122,70 @@ function createMoveNodesPatch(
   if (!rootNodeIds) {
     return null;
   }
-  const movedNodeIds = collectMovedNodeBlock(rootNodeIds, state.nodeOrder, state.nodesById);
+  const movedNodeIds = collectMovedNodeBlock(
+    rootNodeIds,
+    state.nodeOrder,
+    collectOrderedSubtreeIds,
+    state.nodesById
+  );
   if (movedNodeIds.length === 0 || !canMoveToTarget(state, rootNodeIds, movedNodeIds, targetNodeId, intent)) {
     return null;
   }
   return buildMovedState(state, rootNodeIds, movedNodeIds, targetNodeId, intent);
+}
+
+function buildCreatedChildState(
+  state: WorkspaceState,
+  parentNodeId: string,
+  nodeId: string,
+  content: string,
+  timestamp: string
+) {
+  const untitledState = resolveCreatedNodeTitleState(
+    deriveNodeTitleFromContent(content),
+    parentNodeId,
+    state
+  );
+  const nextNode = {
+    id: nodeId,
+    parentNodeId,
+    title: untitledState.title,
+    content,
+    anchorLink: null,
+    reveal: null,
+    review: null,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+  const nextNodeOrder =
+    parentNodeId === INBOX_NODE_ID
+      ? insertNodeBlockAsFirstChild(state.nodeOrder, [nodeId], parentNodeId, state.nodesById)
+      : insertNodeBlockUnderParent(state.nodeOrder, [nodeId], parentNodeId, state.nodesById);
+  const nextNodesById = {
+    ...state.nodesById,
+    [nodeId]: nextNode
+  };
+
+  return {
+    nextNode,
+    nextNodeOrder,
+    patch: {
+      activeNodeId: nodeId,
+      nodeOrder: nextNodeOrder,
+      nodesById: nextNodesById,
+      untitledSequenceByParent: untitledState.untitledSequenceByParent,
+      reviewSession: reconcileReviewSession(
+        {
+          ...state,
+          activeNodeId: nodeId,
+          nodeOrder: nextNodeOrder,
+          nodesById: nextNodesById,
+          untitledSequenceByParent: untitledState.untitledSequenceByParent
+        },
+        nodeId
+      )
+    }
+  };
 }
 
 export function createChildNodeAction(
@@ -174,41 +203,10 @@ export function createChildNodeAction(
       if (!state.nodesById[parentNodeId] || state.trashedNodeIds.includes(parentNodeId)) {
         return state;
       }
-      const nextNode = {
-        id: nodeId,
-        parentNodeId,
-        title: deriveNodeTitleFromContent(content),
-        content,
-        anchorLink: null,
-        reveal: null,
-        review: null,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      };
-      createdNode = nextNode;
-      const insertedNodeOrder =
-        parentNodeId === INBOX_NODE_ID
-          ? insertNodeBlockAsFirstChild(state.nodeOrder, [nodeId], parentNodeId, state.nodesById)
-          : insertNodeBlockUnderParent(state.nodeOrder, [nodeId], parentNodeId, state.nodesById);
-      const nextNodesById = {
-        ...state.nodesById,
-        [nodeId]: nextNode
-      };
-
-      return {
-        activeNodeId: nodeId,
-        nodeOrder: (nextNodeOrder = insertedNodeOrder),
-        nodesById: nextNodesById,
-        reviewSession: reconcileReviewSession(
-          {
-            ...state,
-            activeNodeId: nodeId,
-            nodeOrder: insertedNodeOrder,
-            nodesById: nextNodesById
-          },
-          nodeId
-        )
-      };
+      const nextChildState = buildCreatedChildState(state, parentNodeId, nodeId, content, timestamp);
+      createdNode = nextChildState.nextNode;
+      nextNodeOrder = nextChildState.nextNodeOrder;
+      return nextChildState.patch;
     });
     if (createdNode) {
       onNodeCreated?.(createdNode);

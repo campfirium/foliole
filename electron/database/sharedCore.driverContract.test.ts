@@ -136,6 +136,7 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
     null,
     'Node 1',
     1,
+    0,
     '# Node 1',
     'Answer',
     JSON.stringify({ id: 'anchor-1', kind: 'highlight' }),
@@ -226,6 +227,7 @@ it('loads workspace snapshot through query helpers only', () => {
       }
     ])
     .mockReturnValueOnce([{ node_id: 'node-1' }]);
+  queryOneSpy.mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceSnapshot(driver)).toEqual({
     activeNodeId: 'node-1',
@@ -236,6 +238,7 @@ it('loads workspace snapshot through query helpers only', () => {
         parentNodeId: null,
         title: 'Node 1',
         isTitleManual: true,
+        hideTitleHeading: false,
         content: 'content',
         reveal: null,
         anchorLink: null,
@@ -245,9 +248,10 @@ it('loads workspace snapshot through query helpers only', () => {
         updatedAt: '2026-03-14T00:00:00.000Z'
       }
     },
-    trashedNodeIds: []
+    trashedNodeIds: [],
+    untitledSequenceByParent: {}
   });
 
   expect(queryAllSpy).toHaveBeenCalledTimes(2);
-  expect(queryOneSpy).not.toHaveBeenCalled();
+  expect(queryOneSpy).toHaveBeenCalledTimes(1);
 });

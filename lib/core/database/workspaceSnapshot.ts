@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 interface WorkspaceAnchorLink {
   id: string;
@@ -50,6 +51,7 @@ export interface WorkspaceSnapshot {
   nodeOrder: string[];
   nodesById: Record<string, WorkspaceNodeSnapshot>;
   trashedNodeIds: string[];
+  untitledSequenceByParent: Record<string, number>;
 }
 
 interface WorkspaceNodeRow extends DatabaseRow {
@@ -232,7 +234,8 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
     activeNodeId,
     nodeOrder,
     nodesById,
-    trashedNodeIds
+    trashedNodeIds,
+    untitledSequenceByParent: {}
   };
 }
 
@@ -241,5 +244,8 @@ export function loadWorkspaceSnapshot(driver: DatabaseDriver): WorkspaceSnapshot
   if (rows.length === 0) {
     return null;
   }
-  return buildSnapshotRows(rows, queryNodeOrderRows(driver));
+  return {
+    ...buildSnapshotRows(rows, queryNodeOrderRows(driver)),
+    untitledSequenceByParent: loadUntitledSequenceByParent(driver)
+  };
 }

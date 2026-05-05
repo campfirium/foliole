@@ -3,6 +3,7 @@ import { NODE_TITLE_MAX_CHARS } from '../../../shared/config/nodeTitleConfig';
 export const UNTITLED_NODE_TITLE = 'Untitled';
 const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 const MARKDOWN_HEADING_PATTERN = /^\s{0,3}#{1,6}\s+(.+)$/;
+const UNTITLED_NODE_TITLE_PATTERN = /^Untitled(?: (\d+))?$/;
 
 function sanitizeTitleCandidate(value: string) {
   return value.trim().replace(/\s+/g, ' ').slice(0, NODE_TITLE_MAX_CHARS);
@@ -48,6 +49,14 @@ function pickHeadingTitle(content: string) {
   return '';
 }
 
+function parseUntitledSequence(title: string) {
+  const match = title.trim().match(UNTITLED_NODE_TITLE_PATTERN);
+  if (!match) {
+    return null;
+  }
+  return match[1] ? Number.parseInt(match[1], 10) : 0;
+}
+
 export function deriveNodeTitleFromContent(content: string) {
   const headingTitle = pickHeadingTitle(content);
   if (headingTitle) {
@@ -71,4 +80,18 @@ export function deriveNodeTitleForCloze(promptContent: string, answerContent: st
   }
 
   return deriveNodeTitleFromContent(prompt);
+}
+
+export function deriveNextUntitledNodeTitle(titles: string[]) {
+  let nextSequence = 0;
+
+  for (const title of titles) {
+    const sequence = parseUntitledSequence(title);
+    if (sequence === null) {
+      continue;
+    }
+    nextSequence = Math.max(nextSequence, sequence + 1);
+  }
+
+  return nextSequence === 0 ? UNTITLED_NODE_TITLE : `${UNTITLED_NODE_TITLE} ${nextSequence}`;
 }

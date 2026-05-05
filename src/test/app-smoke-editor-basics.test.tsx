@@ -39,6 +39,20 @@ it('creates a new empty note from node panel action', () => {
   expect(workspace.nodesById[workspace.activeNodeId]?.title).toBe('Untitled');
 });
 
+it('increments Untitled titles when creating multiple empty notes', () => {
+  useWorkspaceStore.setState({ activeNodeId: null, nodeOrder: [], nodesById: {} });
+
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'New' }));
+  fireEvent.click(screen.getByRole('button', { name: 'New' }));
+
+  const titles = useWorkspaceStore
+    .getState()
+    .nodeOrder.map((nodeId) => useWorkspaceStore.getState().nodesById[nodeId]?.title);
+
+  expect(titles).toEqual(['Untitled', 'Untitled 1']);
+});
+
 it('keeps first note content unchanged when editing a newly created note', () => {
   render(<App />);
   const originalFirstNodeContent = useWorkspaceStore.getState().nodesById['node-1']?.content;

@@ -63,6 +63,7 @@ it('restores the application sqlite state from an online backup snapshot', async
         parentNodeId: null,
         title: 'node-1',
         isTitleManual: true,
+        hideTitleHeading: false,
         content: '# original',
         reveal: null,
         anchorLink: null,
@@ -72,7 +73,8 @@ it('restores the application sqlite state from an online backup snapshot', async
         updatedAt: '2026-03-14T10:00:00.000Z'
       }
     },
-    trashedNodeIds: []
+    trashedNodeIds: [],
+    untitledSequenceByParent: {}
   });
 });
 
@@ -127,33 +129,31 @@ function mutateWorkspaceAfterBackup() {
   });
 }
 
+function createRestoredNodeSnapshot(nodeId: string, content: string, reveal: string | null = null) {
+  return {
+    id: nodeId,
+    parentNodeId: null,
+    title: nodeId,
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content,
+    reveal,
+    anchorLink: null,
+    reading: null,
+    review: null,
+    createdAt: '2026-03-14T10:00:00.000Z',
+    updatedAt: '2026-03-14T10:00:00.000Z'
+  };
+}
+
 function createRestoredWorkspaceSnapshot() {
   return {
     activeNodeId: 'node-root',
     nodeOrder: ['node-root', 'node-qa', 'node-trash'],
     nodesById: {
-      'node-root': {
-        id: 'node-root',
-        parentNodeId: null,
-        title: 'node-root',
-        isTitleManual: true,
-        content: '# root',
-        reveal: null,
-        anchorLink: null,
-        reading: null,
-        review: null,
-        createdAt: '2026-03-14T10:00:00.000Z',
-        updatedAt: '2026-03-14T10:00:00.000Z'
-      },
+      'node-root': createRestoredNodeSnapshot('node-root', '# root'),
       'node-qa': {
-        id: 'node-qa',
-        parentNodeId: null,
-        title: 'node-qa',
-        isTitleManual: true,
-        content: 'Prompt [...]',
-        reveal: 'Answer',
-        anchorLink: null,
-        reading: null,
+        ...createRestoredNodeSnapshot('node-qa', 'Prompt [...]', 'Answer'),
         review: {
           due: '2026-03-17T10:02:00.000Z',
           lastReviewAt: '2026-03-14T10:02:00.000Z',
@@ -165,24 +165,14 @@ function createRestoredWorkspaceSnapshot() {
           reps: 1,
           lapses: 0
         },
-        createdAt: '2026-03-14T10:00:00.000Z',
-        updatedAt: '2026-03-14T10:00:00.000Z'
       },
       'node-trash': {
-        id: 'node-trash',
-        parentNodeId: null,
-        title: 'node-trash',
-        isTitleManual: true,
-        content: '# trash',
-        reveal: null,
-        anchorLink: null,
-        reading: null,
-        review: null,
-        createdAt: '2026-03-14T10:00:00.000Z',
+        ...createRestoredNodeSnapshot('node-trash', '# trash'),
         updatedAt: '2026-03-14T10:01:00.000Z'
       }
     },
-    trashedNodeIds: ['node-trash']
+    trashedNodeIds: ['node-trash'],
+    untitledSequenceByParent: {}
   };
 }
 

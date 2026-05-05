@@ -69,6 +69,7 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
   expect(snapshot?.trashedNodeIds).toEqual(['node-1']);
   expect(snapshot?.activeNodeId).toBe('node-2');
   expect(snapshot?.nodesById['node-2']?.content).toBe('content:node-2');
+  expect(snapshot?.untitledSequenceByParent).toEqual({});
 });
 
 it('loads persisted reading profiles from sqlite snapshot', () => {
@@ -106,5 +107,27 @@ it('loads persisted reading profiles from sqlite snapshot', () => {
     readingPosition: 0,
     repetitionCount: 0,
     state: 'dismissed'
+  });
+  expect(snapshot?.untitledSequenceByParent).toEqual({});
+});
+
+it('loads persisted Untitled sequence state from sqlite snapshot', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-untitled',
+    parentNodeId: null,
+    title: 'Untitled 6',
+    isTitleManual: false,
+    content: '',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-18T00:00:00.000Z',
+    updatedAt: '2026-03-18T00:00:00.000Z'
+  });
+
+  const snapshot = loadWorkspaceSnapshot();
+
+  expect(snapshot?.untitledSequenceByParent).toEqual({
+    __root__: 7
   });
 });

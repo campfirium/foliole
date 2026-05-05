@@ -1,8 +1,12 @@
-import { deriveNodeTitleForCloze, deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
+import {
+  deriveNodeTitleForCloze,
+  deriveNodeTitleFromContent
+} from '../features/nodes/model/deriveNodeTitle';
 
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createDefaultReviewProfile } from './workspaceSeed';
 import type { WorkspaceState } from './workspaceStore';
+import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceSet = (
   partial:
@@ -23,7 +27,7 @@ export function createRootNodeAction(
   return (content = '') => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
-    const createdNode = {
+    let createdNode = {
       id: nodeId,
       parentNodeId: null,
       title: deriveNodeTitleFromContent(content),
@@ -37,21 +41,29 @@ export function createRootNodeAction(
     let nextNodeOrder: string[] = [];
 
     set((state) => {
+      const untitledState = resolveCreatedNodeTitleState(
+        deriveNodeTitleFromContent(content),
+        null,
+        state
+      );
       nextNodeOrder = [...state.nodeOrder, nodeId];
-      const nextNodesById = {
-        ...state.nodesById,
-        [nodeId]: createdNode
+      createdNode = {
+        ...createdNode,
+        title: untitledState.title
       };
+      const nextNodesById = { ...state.nodesById, [nodeId]: createdNode };
       return {
         activeNodeId: nodeId,
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
+        untitledSequenceByParent: untitledState.untitledSequenceByParent,
         reviewSession: reconcileReviewSession(
           {
             ...state,
             activeNodeId: nodeId,
             nodeOrder: nextNodeOrder,
-            nodesById: nextNodesById
+            nodesById: nextNodesById,
+            untitledSequenceByParent: untitledState.untitledSequenceByParent
           },
           nodeId
         )
@@ -83,10 +95,15 @@ export function createHighlightFromSelectionAction(
       if (!parentNode) {
         return state;
       }
+      const untitledState = resolveCreatedNodeTitleState(
+        deriveNodeTitleFromContent(normalizedContent),
+        parentNodeId,
+        state
+      );
       createdNode = {
         id: childNodeId,
         parentNodeId,
-        title: deriveNodeTitleFromContent(normalizedContent),
+        title: untitledState.title,
         content: normalizedContent,
         anchorLink: anchorId ? { id: anchorId, kind: 'highlight' } : null,
         reveal: null,
@@ -102,10 +119,12 @@ export function createHighlightFromSelectionAction(
       return {
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
+        untitledSequenceByParent: untitledState.untitledSequenceByParent,
         reviewSession: reconcileReviewSession({
           ...state,
           nodeOrder: nextNodeOrder,
-          nodesById: nextNodesById
+          nodesById: nextNodesById,
+          untitledSequenceByParent: untitledState.untitledSequenceByParent
         })
       };
     });
@@ -138,10 +157,15 @@ export function createQAFromSelectionAction(
       if (!parentNode) {
         return state;
       }
+      const untitledState = resolveCreatedNodeTitleState(
+        deriveNodeTitleForCloze(normalizedPrompt, normalizedAnswer),
+        parentNodeId,
+        state
+      );
       createdNode = {
         id: childNodeId,
         parentNodeId,
-        title: deriveNodeTitleForCloze(normalizedPrompt, normalizedAnswer),
+        title: untitledState.title,
         content: normalizedPrompt,
         anchorLink: anchorId ? { id: anchorId, kind: 'cloze' } : null,
         reveal: normalizedAnswer,
@@ -157,10 +181,12 @@ export function createQAFromSelectionAction(
       return {
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
+        untitledSequenceByParent: untitledState.untitledSequenceByParent,
         reviewSession: reconcileReviewSession({
           ...state,
           nodeOrder: nextNodeOrder,
-          nodesById: nextNodesById
+          nodesById: nextNodesById,
+          untitledSequenceByParent: untitledState.untitledSequenceByParent
         })
       };
     });

@@ -1,4 +1,5 @@
 import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
+import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 interface NodeAnchorLinkPayload {
   id: string;
@@ -145,6 +146,11 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       upsertNodeOrderStatement.run([input.nodeId, input.position]);
     }
     writeNodeReadingSnapshot(input, upsertNodeReadingStatement.run, deleteNodeReadingStatement.run);
+    bumpUntitledSequenceByParent(driver, {
+      parentNodeId: input.parentNodeId,
+      title: input.title,
+      updatedAt: input.updatedAt
+    });
   });
 }
 
