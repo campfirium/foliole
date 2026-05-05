@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-preview.sh');
 const RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
+const RENDERER_RELOAD_INTENT_FILE = '.windows-dev-renderer-reload-intent.json';
 
 function runScript(env) {
   return new Promise((resolve) => {
@@ -78,8 +79,12 @@ async function readRestartIntent(rootDir) {
   return JSON.parse(await readFile(path.join(rootDir, RESTART_INTENT_FILE), 'utf8'));
 }
 
+async function readRendererReloadIntent(rootDir) {
+  return JSON.parse(await readFile(path.join(rootDir, RENDERER_RELOAD_INTENT_FILE), 'utf8'));
+}
+
 describe('windows-preview update loop regressions', () => {
-  it('keeps Class A on pure sync-only without adding a second renderer reload path', async () => {
+  it('requests renderer reload intent for Class A after sync', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-regression-'));
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
@@ -102,11 +107,17 @@ describe('windows-preview update loop regressions', () => {
         WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
       });
+      const rendererReloadIntent = await readRendererReloadIntent(tempRoot);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('selected action: sync-only');
-      expect(result.stdout).not.toContain('windows-renderer-reload-intent');
-      expect(result.stdout).toContain('[windows-preview] status: SYNCED');
+      expect(result.stdout).toContain('selected action: renderer-reload-intent');
+      expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
+      expect(rendererReloadIntent).toMatchObject({
+        nonce: 1,
+        head: 'current-head',
+        reason: 'Class A: renderer-only sync path',
+        target: 'electron-dev-renderer'
+      });
       expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

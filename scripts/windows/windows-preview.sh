@@ -235,7 +235,7 @@ select_update_action() {
       SELECTED_REASON="Class B: runtime behind committed electron changes"
       return 0
     fi
-    SELECTED_ACTION="sync-only"
+    SELECTED_ACTION="renderer-reload-intent"
     SELECTED_REASON="Class A: renderer-only sync path"
     return 0
   fi
@@ -265,6 +265,45 @@ select_update_action() {
 run_sync_only() {
   echo "[windows-preview] selected action: sync-only"
   echo "[windows-preview] status: SYNCED"
+}
+
+resolve_renderer_reload_intent_root() {
+  if [ -n "${WINDOWS_RESTART_INTENT_ROOT}" ]; then
+    printf '%s' "${WINDOWS_RESTART_INTENT_ROOT}"
+    return 0
+  fi
+  if command -v wslpath >/dev/null 2>&1; then
+    wslpath -u "${WINDOWS_WORKDIR}"
+    return 0
+  fi
+  printf '%s' "${REPO_ROOT}"
+}
+
+run_renderer_reload_intent() {
+  local reload_output=""
+  local reload_exit=0
+  local reload_intent_root=""
+  echo "[windows-preview] selected action: renderer-reload-intent"
+  reload_intent_root="$(resolve_renderer_reload_intent_root)"
+  set +e
+  reload_output="$(
+    FOLIOLE_RENDERER_RELOAD_INTENT_HEAD="${CURRENT_HEAD}" \
+      FOLIOLE_RENDERER_RELOAD_INTENT_REASON="${SELECTED_REASON}" \
+      FOLIOLE_RENDERER_RELOAD_INTENT_REQUESTED_BY="wsl-windows-preview" \
+      FOLIOLE_RENDERER_RELOAD_INTENT_ROOT="${reload_intent_root}" \
+      node "${WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT}"
+  )"
+  reload_exit=$?
+  set -e
+  if [ "${reload_exit}" -eq 0 ] && echo "${reload_output}" | grep -qE 'status:\s*REQUESTED'; then
+    echo "${reload_output}"
+    return 0
+  fi
+  echo "[windows-preview] renderer reload intent failed"
+  if [ -n "${reload_output}" ]; then
+    echo "${reload_output}"
+  fi
+  return 1
 }
 
 resolve_restart_intent_root() {
@@ -353,6 +392,9 @@ fi
 case "${SELECTED_ACTION}" in
   sync-only)
     run_sync_only
+    ;;
+  renderer-reload-intent)
+    run_renderer_reload_intent
     ;;
   restart-intent)
     run_restart_intent
