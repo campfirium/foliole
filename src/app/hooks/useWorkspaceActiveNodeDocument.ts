@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
@@ -6,49 +6,14 @@ import {
   beginNodeSelectionFlow,
   markNodeDocumentMerged,
   markNodeDocumentLoadResolved,
-  markNodeDocumentLoadStarted,
-  markPreviousNodeTrimmed
+  markNodeDocumentLoadStarted
 } from '../../shared/platform/performanceDiagnosticsProbe';
-import { hasPendingNodeSync } from '../../store/workspacePendingNodeSync';
-import {
-  isNodeDocumentLoaded,
-  mergeWorkspaceNodeDocument,
-  toRendererBoundaryNode
-} from '../../store/workspaceRendererBoundary';
+import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-function trimStaleWarmInactiveNode(nodeId: string | null, nextActiveNodeId: string | null, previousActiveNodeId: string | null) {
-  if (!nodeId || nodeId === nextActiveNodeId || nodeId === previousActiveNodeId || hasPendingNodeSync(nodeId)) {
-    return;
-  }
-
-  useWorkspaceStore.setState((state) => {
-    const previousNode = state.nodesById[nodeId];
-    if (!previousNode || !isNodeDocumentLoaded(previousNode)) {
-      return state;
-    }
-    markPreviousNodeTrimmed(nodeId);
-    return {
-      nodesById: {
-        ...state.nodesById,
-        [nodeId]: toRendererBoundaryNode(previousNode, false)
-      }
-    };
-  });
-}
-
 export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
-  const previousActiveNodeIdRef = useRef<string | null>(activeNodeId);
-  const warmInactiveNodeIdRef = useRef<string | null>(null);
-
   useEffect(() => {
     const runtimeInvoke = getRuntimeInvoke();
-    const previousActiveNodeId = previousActiveNodeIdRef.current;
-    previousActiveNodeIdRef.current = activeNodeId;
-    trimStaleWarmInactiveNode(warmInactiveNodeIdRef.current, activeNodeId, previousActiveNodeId);
-    warmInactiveNodeIdRef.current =
-      previousActiveNodeId && previousActiveNodeId !== activeNodeId ? previousActiveNodeId : null;
-
     if (!runtimeInvoke || !activeNodeId) {
       return;
     }
@@ -67,7 +32,7 @@ export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
         return;
       }
       markNodeDocumentLoadResolved(activeNodeId);
-      markNodeDocumentMerged(activeNodeId);
+      markNodeDocumentMerged(activeNodeId, `content:${document.content.length}`);
       useWorkspaceStore.setState((state) => {
         const nextNode = state.nodesById[activeNodeId];
         if (!nextNode) {

@@ -103,6 +103,9 @@ function createDocumentLoader(longDocument: string) {
     if (payload.nodeId === 'node-3') {
       return Promise.resolve({ nodeId: 'node-3', content: 'Loaded node 3 body', hideTitleHeading: false, reveal: null });
     }
+    if (payload.nodeId === 'node-4') {
+      return Promise.resolve({ nodeId: 'node-4', content: 'Loaded node 4 body', hideTitleHeading: false, reveal: null });
+    }
     return Promise.resolve(null);
   });
 }
@@ -112,12 +115,13 @@ function seedTrimmedWorkspaceState() {
   useWorkspaceStore.setState({
     ...initial,
     activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2', 'node-3'],
+    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
     nodesById: {
       ...initial.nodesById,
       'node-1': { ...initial.nodesById['node-1'], id: 'node-1', title: 'Node 1', content: '', hasContent: true, reveal: null, hasReveal: false },
       'node-2': { ...initial.nodesById['node-1'], id: 'node-2', title: 'Node 2', content: '', hasContent: true, reveal: null, hasReveal: false },
-      'node-3': { ...initial.nodesById['node-1'], id: 'node-3', title: 'Node 3', content: '', hasContent: true, reveal: null, hasReveal: false }
+      'node-3': { ...initial.nodesById['node-1'], id: 'node-3', title: 'Node 3', content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-4': { ...initial.nodesById['node-1'], id: 'node-4', title: 'Node 4', content: '', hasContent: true, reveal: null, hasReveal: false }
     },
     trashedNodeIds: []
   });
@@ -187,7 +191,7 @@ it('reopens the same long document from the warm cache after switching away once
   ]);
 });
 
-it('restores a mid-document reading position after the warm cache is eventually trimmed', async () => {
+it('restores a mid-document reading position after the recent cache is eventually trimmed', async () => {
   const longDocument = createLongDocument();
   const invoke = createDocumentLoader(longDocument);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
@@ -204,6 +208,10 @@ it('restores a mid-document reading position after the warm cache is eventually 
   useWorkspaceStore.getState().setActiveNode('node-3');
   view.rerender(<HookHarness activeNodeId="node-3" />);
   await expectNodeDocument('node-3', 'Loaded node 3 body');
+
+  useWorkspaceStore.getState().setActiveNode('node-4');
+  view.rerender(<HookHarness activeNodeId="node-4" />);
+  await expectNodeDocument('node-4', 'Loaded node 4 body');
   await expectTrimmedNode('node-1');
 
   expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('');

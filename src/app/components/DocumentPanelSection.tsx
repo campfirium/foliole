@@ -11,6 +11,7 @@ import {
   markNodeBodyReady,
   recordComponentRender
 } from '../../shared/platform/performanceDiagnosticsProbe';
+import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -73,6 +74,8 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const { bodyProps, documentLayoutStyle, isFolderListView } = getDocumentPanelView(props, editorDisplayMode);
+  const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
+  const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
   const {
     currentSourceUpdateContent,
     handleSourceUpdateDraftChange,
@@ -90,7 +93,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
 
   useEffect(() => {
     const editorNodeId = props.editorNodeId;
-    if (!editorNodeId || bodyProps.emptyState) {
+    if (!editorNodeId || bodyProps.emptyState || !isEditorDocumentLoaded) {
       return;
     }
     const frameId = window.requestAnimationFrame(() => {
@@ -100,7 +103,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
       });
     });
     return () => window.cancelAnimationFrame(frameId);
-  }, [bodyProps.emptyState, bodyProps.reveal, props.editorContent, props.editorNodeId]);
+  }, [bodyProps.emptyState, bodyProps.reveal, isEditorDocumentLoaded, props.editorContent, props.editorNodeId]);
 
   useDocumentPanelImageClozePresentation({
     activeNode,

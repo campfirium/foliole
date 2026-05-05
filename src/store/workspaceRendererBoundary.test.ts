@@ -69,6 +69,62 @@ it('keeps the previous active node warm on direct active-node patches', () => {
   expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-1']);
 });
 
+it('reuses unaffected node references when only the active node changes', () => {
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  useWorkspaceStore.setState({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
+    nodesById: {
+      'node-1': {
+        ...seedNode,
+        id: 'node-1',
+        title: 'Node 1',
+        content: 'First node body',
+        hasContent: true,
+        reveal: 'First answer',
+        hasReveal: true
+      },
+      'node-2': {
+        ...seedNode,
+        id: 'node-2',
+        title: 'Node 2',
+        content: 'Second node body',
+        hasContent: true,
+        reveal: 'Second answer',
+        hasReveal: true
+      },
+      'node-3': {
+        ...seedNode,
+        id: 'node-3',
+        title: 'Node 3',
+        content: '',
+        hasContent: true,
+        reveal: null,
+        hasReveal: true
+      },
+      'node-4': {
+        ...seedNode,
+        id: 'node-4',
+        title: 'Node 4',
+        content: '',
+        hasContent: true,
+        reveal: null,
+        hasReveal: true
+      }
+    },
+    trashedNodeIds: []
+  });
+
+  const beforeNode3 = useWorkspaceStore.getState().nodesById['node-3'];
+  const beforeNode4 = useWorkspaceStore.getState().nodesById['node-4'];
+
+  useWorkspaceStore.setState({ activeNodeId: 'node-2' });
+
+  const state = useWorkspaceStore.getState();
+  expect(state.nodesById['node-3']).toBe(beforeNode3);
+  expect(state.nodesById['node-4']).toBe(beforeNode4);
+});
+
 it('keeps the previously active node warm when navigation opens another node', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(() => new Promise(() => undefined)));
 
