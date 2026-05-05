@@ -50,7 +50,7 @@ public class FolioleCompanionSyncEventStreamsTest {
 
     @Test
     public void exportsLocalReviewLogWithDeviceId() throws Exception {
-        FolioleCompanionSyncReviewLogStore.saveLocalReviewLog(database, "node-1", reviewDraft(), "android-device-1");
+        FolioleCompanionSyncReviewLogStore.saveLocalReviewLog(InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "node-1", reviewDraft(), "android-device-1");
 
         JSObject loaded = FolioleCompanionSyncReviewLogStore.loadReviewLog(
             InstrumentationRegistry.getInstrumentation().getTargetContext(),

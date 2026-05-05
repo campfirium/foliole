@@ -81,7 +81,7 @@ final class FolioleCompanionSyncStateWriteStore {
         try {
             FolioleCompanionLearningSyncPayload.applyReview(database, nodeId, buildRecord("node_review", nodeId, payload, contentHash, now));
             if (reviewLog != null) {
-                opId = FolioleCompanionSyncReviewLogStore.saveLocalReviewLog(database, nodeId, reviewLog, modifiedByDeviceId);
+                opId = FolioleCompanionSyncReviewLogStore.saveLocalReviewLog(context, database, nodeId, reviewLog, modifiedByDeviceId);
             }
             upsertTypedObjectState(context, database, "node_review", nodeId, contentHash, modifiedByDeviceId, now);
             database.setTransactionSuccessful();

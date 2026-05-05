@@ -6,6 +6,11 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     'INSERT OR REPLACE INTO sync_push_ack (client_op_id, object_type, object_id, state_seq, status, acked_at) ' +
     'VALUES (?, ?, ?, ?, ?, ?)',
   syncPushAckTableExists: "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'sync_push_ack' LIMIT 1",
+  syncReviewLogInsert:
+    'INSERT OR IGNORE INTO review_log (' +
+    'id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, ' +
+    'difficulty_before, due_after, stability_after, difficulty_after' +
+    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   syncStateExisting:
     'SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1',
   syncStateNextSeq: 'SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state',

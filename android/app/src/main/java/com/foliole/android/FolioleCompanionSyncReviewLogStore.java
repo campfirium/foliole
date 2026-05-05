@@ -1,6 +1,5 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -27,6 +26,7 @@ final class FolioleCompanionSyncReviewLogStore {
     }
 
     static String saveLocalReviewLog(
+        Context context,
         SQLiteDatabase database,
         String nodeId,
         JSONObject draft,
@@ -49,26 +49,26 @@ final class FolioleCompanionSyncReviewLogStore {
         record.put("due_after", cardAfter.getString("due"));
         record.put("stability_after", cardAfter.getDouble("stability"));
         record.put("difficulty_after", cardAfter.getDouble("difficulty"));
-        insertReviewLog(database, record);
+        insertReviewLog(context, database, record);
         return opId;
     }
 
-    private static boolean insertReviewLog(SQLiteDatabase database, JSONObject record) {
-        ContentValues values = new ContentValues();
-        values.put("id", record.optString("id", record.optString("op_id")));
-        values.put("op_id", record.optString("op_id"));
-        values.put("device_id", record.optString("device_id", ""));
-        values.put("node_id", record.optString("node_id"));
-        values.put("grade", record.optInt("grade", 0));
-        values.put("scheduler_version", record.optString("scheduler_version", ""));
-        values.put("reviewed_at", record.optString("reviewed_at"));
-        values.put("due_before", record.optString("due_before", ""));
-        values.put("stability_before", record.optDouble("stability_before", 0));
-        values.put("difficulty_before", record.optDouble("difficulty_before", 0));
-        values.put("due_after", record.optString("due_after", ""));
-        values.put("stability_after", record.optDouble("stability_after", 0));
-        values.put("difficulty_after", record.optDouble("difficulty_after", 0));
-        return database.insertWithOnConflict("review_log", null, values, SQLiteDatabase.CONFLICT_IGNORE) != -1;
+    private static void insertReviewLog(Context context, SQLiteDatabase database, JSONObject record) throws Exception {
+        FolioleCompanionNamedMutationStore.execute(context, database, "syncReviewLogInsert", new Object[] {
+            record.optString("id", record.optString("op_id")),
+            record.optString("op_id"),
+            record.optString("device_id", ""),
+            record.optString("node_id"),
+            record.optInt("grade", 0),
+            record.optString("scheduler_version", ""),
+            record.optString("reviewed_at"),
+            record.optString("due_before", ""),
+            record.optDouble("stability_before", 0),
+            record.optDouble("difficulty_before", 0),
+            record.optString("due_after", ""),
+            record.optDouble("stability_after", 0),
+            record.optDouble("difficulty_after", 0)
+        });
     }
 
     private static String whereAfterCursor(JSONObject cursor) {
