@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { buildNodeBreadcrumbs } from '../model/nodeBreadcrumbs';
+import { getNodeKindLabel } from '../model/nodeKindLabel';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { AppBreadcrumb } from '@/shared/ui';
@@ -18,7 +19,7 @@ export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeB
     id: item.id,
     isCurrent: index === sourceItems.length - 1,
     isEllipsis: item.isEllipsis,
-    label: item.title
+    label: item.isEllipsis ? item.title : <BreadcrumbLabel kind={item.kind} title={item.title} />
   }));
 
   if (items.length === 0) {
@@ -32,5 +33,18 @@ export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeB
       onExpandEllipsis={() => setIsExpanded(true)}
       onSelect={onSelectNode}
     />
+  );
+}
+
+function BreadcrumbLabel({ kind, title }: { kind?: 'folder' | 'topic' | 'item'; title: string }) {
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5 align-baseline">
+      {kind ? (
+        <span aria-hidden="true" className="text-[11px] text-[#a4aab1]">
+          {getNodeKindLabel(kind)}
+        </span>
+      ) : null}
+      <span className="min-w-0 truncate">{title}</span>
+    </span>
   );
 }

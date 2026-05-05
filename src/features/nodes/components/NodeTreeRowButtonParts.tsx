@@ -27,6 +27,7 @@ export function renderNodeTreeRowContent(props: {
   label: string;
   mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
+  nodeKindLabel: string;
   nodeIconState: NodeTreeRowIconState;
   rename: ReturnType<typeof useRenameState>;
 }) {
@@ -36,6 +37,9 @@ export function renderNodeTreeRowContent(props: {
       style={props.isMuted ? { opacity: props.mutedOpacity } : undefined}
     >
       <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} />
+      <span aria-hidden="true" className="flex-none text-[11px] text-foreground/45">
+        {props.nodeKindLabel}
+      </span>
       {renderNodeLabel(props.label, props.rename)}
       {props.descendantCount > 0 ? (
         <span aria-hidden="true" className="flex-none text-foreground/55">
@@ -74,6 +78,7 @@ export function renderNodeTreeRowButtonSurface(props: {
   isMuted: boolean;
   label: string;
   nodeIconKind: NodeTreeRowIconKind;
+  nodeKindLabel: string;
   nodeIconState: NodeTreeRowIconState;
   nodeId: string;
   rename: ReturnType<typeof useRenameState>;
@@ -105,6 +110,16 @@ export function renderNodeTreeRowButtonSurface(props: {
       style={props.style}
       variant="list"
     >
+      {renderNodeTreeRowButtonBody(props)}
+    </AppButton>
+  );
+}
+
+function renderNodeTreeRowButtonBody(
+  props: Parameters<typeof renderNodeTreeRowButtonSurface>[0]
+) {
+  return (
+    <>
       <NodeTreeRowExpandToggle
         hasChildren={props.hasChildren}
         isCollapsed={props.isCollapsed}
@@ -113,10 +128,15 @@ export function renderNodeTreeRowButtonSurface(props: {
         onToggleCollapse={props.onToggleCollapse}
       />
       {renderNodeTreeRowContent({
-        descendantCount: props.descendantCount, isMuted: props.isMuted, label: props.label,
-        mutedOpacity: props.mutedOpacity, nodeIconKind: props.nodeIconKind,
-        nodeIconState: props.nodeIconState, rename: props.rename
+        descendantCount: props.descendantCount,
+        isMuted: props.isMuted,
+        label: props.label,
+        mutedOpacity: props.mutedOpacity,
+        nodeIconKind: props.nodeIconKind,
+        nodeKindLabel: props.nodeKindLabel,
+        nodeIconState: props.nodeIconState,
+        rename: props.rename
       })}
-    </AppButton>
+    </>
   );
 }

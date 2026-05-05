@@ -2,6 +2,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent
 
 import { AppEmptyState } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
+import { getNodeKindLabel } from '../model/nodeKindLabel';
 import type { NodeTreeRow } from '../model/nodeTree';
 import { isInboxNode } from '../model/specialNodes';
 import {
@@ -66,6 +67,7 @@ function renderNodeListRow(
       isSelected={props.selectedNodeIds.includes(row.node.id)}
       key={row.node.id}
       label={row.node.title}
+      nodeKindLabel={getNodeKindLabel(node?.kind ?? 'topic')}
       nodeId={row.node.id}
       nodeIconKind={resolveNodeTreeRowIconKind(isReviewCard)}
       nodeIconState={nodeIconState}

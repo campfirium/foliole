@@ -1,21 +1,94 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
-
-import { AppButton, AppIconButton, AppToolbar, ToolbarActionGroup } from '../../../shared/ui';
+import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import {
+  AppButton,
+  AppDropdownMenu,
+  AppDropdownMenuContent,
+  AppDropdownMenuItem,
+  AppDropdownMenuTrigger,
+  AppIconButton,
+  AppToolbar,
+  ToolbarActionGroup
+} from '../../../shared/ui';
 
 interface NodeListHeaderProps {
   isTrashViewOpen: boolean;
   onOpenNotesView: () => void;
-  onCreateGlobalNode: (event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onCreateCommand: (commandId: string) => void;
   onEmptyTrash: () => void;
   onCollapseAll: () => void;
   onExpandAll: () => void;
   trashCount: number;
 }
 
+function renderCreateMenu(onCreateCommand: (commandId: string) => void) {
+  return (
+    <AppDropdownMenu>
+      <AppDropdownMenuTrigger asChild>
+        <AppIconButton
+          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+          icon={<NewNoteIcon />}
+          label="Create"
+        />
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent align="end" sideOffset={6}>
+        {FOLDER_TOPIC_ITEM_COMMANDS.map((command) => (
+          <AppDropdownMenuItem key={command.appCommandId} onSelect={() => onCreateCommand(command.appCommandId)}>
+            {command.listLabel}
+          </AppDropdownMenuItem>
+        ))}
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
+  );
+}
+
+function renderNodeListActions(
+  onCollapseAll: () => void,
+  onCreateCommand: (commandId: string) => void,
+  onExpandAll: () => void
+) {
+  return (
+    <>
+      <AppIconButton
+        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+        icon={<ExpandAllIcon />}
+        label="Expand all"
+        onClick={onExpandAll}
+      />
+      <AppIconButton
+        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+        icon={<CollapseAllIcon />}
+        label="Collapse all"
+        onClick={onCollapseAll}
+      />
+      {renderCreateMenu(onCreateCommand)}
+    </>
+  );
+}
+
+function renderTrashActions(onEmptyTrash: () => void, trashCount: number) {
+  return (
+    <>
+      <button aria-label="Create" className="sr-only" type="button">
+        Create
+      </button>
+      <AppButton
+        aria-label="Empty"
+        className="text-foreground/70 hover:text-foreground"
+        disabled={trashCount === 0}
+        onClick={onEmptyTrash}
+        size="sm"
+        variant="subtle"
+      >
+        Empty
+      </AppButton>
+    </>
+  );
+}
+
 export function NodeListHeader({
   isTrashViewOpen,
   onOpenNotesView,
-  onCreateGlobalNode,
+  onCreateCommand,
   onEmptyTrash,
   onCollapseAll,
   onExpandAll,
@@ -28,44 +101,9 @@ export function NodeListHeader({
         Nodes
       </button>
       <ToolbarActionGroup ariaLabel={isTrashViewOpen ? 'Trash actions' : 'Node list actions'}>
-        {isTrashViewOpen ? (
-          <>
-            <button aria-label="New" className="sr-only" onClick={onCreateGlobalNode} type="button">
-              New
-            </button>
-            <AppButton
-              aria-label="Empty"
-              className="text-foreground/70 hover:text-foreground"
-              disabled={trashCount === 0}
-              onClick={onEmptyTrash}
-              size="sm"
-              variant="subtle"
-            >
-              Empty
-            </AppButton>
-          </>
-        ) : (
-          <>
-            <AppIconButton
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-              icon={<ExpandAllIcon />}
-              label="Expand all"
-              onClick={onExpandAll}
-            />
-            <AppIconButton
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-              icon={<CollapseAllIcon />}
-              label="Collapse all"
-              onClick={onCollapseAll}
-            />
-            <AppIconButton
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-              icon={<NewNoteIcon />}
-              label="New"
-              onClick={onCreateGlobalNode}
-            />
-          </>
-        )}
+        {isTrashViewOpen
+          ? renderTrashActions(onEmptyTrash, trashCount)
+          : renderNodeListActions(onCollapseAll, onCreateCommand, onExpandAll)}
       </ToolbarActionGroup>
     </AppToolbar>
   );

@@ -1,8 +1,11 @@
+import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
+
 import type { WorkspaceListNode, WorkspaceListNodesById } from './workspaceListNode';
 
 export interface NodeBreadcrumbItem {
   id: string;
   isEllipsis: boolean;
+  kind?: NodeKind;
   title: string;
 }
 
@@ -56,6 +59,7 @@ export function buildNodeBreadcrumbs(
     return path.map((node) => ({
       id: node.id,
       isEllipsis: false,
+      kind: node.kind,
       title: node.title
     }));
   }
@@ -68,6 +72,7 @@ export function buildNodeBreadcrumbs(
     ...tail.map((node) => ({
       id: node.id,
       isEllipsis: false,
+      kind: node.kind,
       title: node.title
     }))
   ];

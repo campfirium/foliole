@@ -1,3 +1,5 @@
+import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
+
 import type {
   Node,
   NodeAnchorLink,
@@ -14,6 +16,7 @@ export interface WorkspaceListNode {
   hasContent: boolean;
   hasReveal: boolean;
   id: string;
+  kind?: NodeKind;
   parentNodeId: string | null;
   priority?: number | null;
   reading?: NodeReadingProfile | null;
@@ -33,6 +36,7 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     hasContent: hasNodeContent(node),
     hasReveal: hasNodeReveal(node),
     id: node.id,
+    kind: node.kind,
     parentNodeId: node.parentNodeId,
     priority: node.priority ?? null,
     reading: node.reading ?? null,

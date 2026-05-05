@@ -1,5 +1,6 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
+import { findFolderTopicItemCommandByAppCommandId } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -118,7 +119,13 @@ function NodeListPanel(props: NodeListPanelProps) {
       <NodeListHeader
         isTrashViewOpen={props.isTrashViewOpen}
         onCollapseAll={props.collapse.collapseAllNotes}
-        onCreateGlobalNode={(event) => (event.stopPropagation(), props.createGlobalNode(''))}
+        onCreateCommand={(commandId) => {
+          const command = findFolderTopicItemCommandByAppCommandId(commandId);
+          if (!command) {
+            return;
+          }
+          props.createGlobalNode('', command.kind);
+        }}
         onEmptyTrash={() => (props.deleteNodesPermanently(props.trashRowIds), props.contextMenu.closeContextMenu())}
         onExpandAll={props.collapse.expandAllNotes}
         onOpenNotesView={props.onOpenNotesView}
