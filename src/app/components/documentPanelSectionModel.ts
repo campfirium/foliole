@@ -22,8 +22,8 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
   if (!props.activeNodeId) {
     return {
       emptyState: {
-        title: 'No note selected',
-        description: 'Choose a note from the list, or create your first note to start writing.'
+        title: 'No document selected',
+        description: 'Choose a document from the list to keep working.'
       }
     };
   }
@@ -32,8 +32,8 @@ function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNod
     return {
       loadingLabel: 'Loading document',
       emptyState: {
-        title: 'Loading note',
-        description: 'The selected note is still loading.'
+        title: 'Loading document',
+        description: 'The selected document is still loading.'
       }
     };
   }

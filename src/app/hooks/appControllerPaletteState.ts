@@ -1,4 +1,3 @@
-import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
@@ -21,7 +20,7 @@ function createDirectNodeCommand(kind: 'folder' | 'topic' | 'item', args: {
 }) {
   return () => {
     args.trash.closeTrashView();
-    args.ws.createChildNode(INBOX_NODE_ID, '', kind);
+    args.ws.createRootNode('', kind);
   };
 }
 

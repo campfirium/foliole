@@ -8,7 +8,7 @@ import {
 const MAX_WIDTH = 420;
 const MIN_WIDTH = 100;
 const STEP = 16;
-export const DUAL_LIST_WIDTH_DEFAULT = 180;
+export const DUAL_LIST_WIDTH_DEFAULT = 200;
 
 interface ResizeStartState {
   startWidth: number;

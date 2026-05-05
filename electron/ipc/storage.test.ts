@@ -93,7 +93,7 @@ it('filters malformed app settings payload values', async () => {
   });
 });
 
-it('backfills missing workspace layout settings from the legacy workspace file', async () => {
+it('ignores the legacy workspace file when sqlite app settings are empty', async () => {
   await writeLegacyWorkspaceFile({
     documentMaxWidth: 960,
     isListCollapsed: true,
@@ -102,13 +102,7 @@ it('backfills missing workspace layout settings from the legacy workspace file',
     rightSidebarWidth: 410
   });
 
-  await expect(loadAppSettingsState()).resolves.toEqual({
-    'foliole-workspace-document-width': '960',
-    'foliole-workspace-list-collapsed': 'true',
-    'foliole-workspace-list-width': '388',
-    'foliole-workspace-right-sidebar-collapsed': 'false',
-    'foliole-workspace-right-sidebar-width': '410'
-  });
+  await expect(loadAppSettingsState()).resolves.toEqual({});
 });
 
 it('keeps sqlite app settings when both sqlite and legacy workspace file define the same layout key', async () => {
@@ -122,5 +116,19 @@ it('keeps sqlite app settings when both sqlite and legacy workspace file define 
 
   await expect(loadAppSettingsState()).resolves.toEqual({
     'foliole-workspace-list-width': '320'
+  });
+});
+
+it('does not let the legacy workspace file override a new sqlite width', async () => {
+  await writeLegacyWorkspaceFile({
+    listWidth: 388
+  });
+
+  await saveAppSettingsState({
+    'foliole-workspace-list-width': '450'
+  });
+
+  await expect(loadAppSettingsState()).resolves.toEqual({
+    'foliole-workspace-list-width': '450'
   });
 });

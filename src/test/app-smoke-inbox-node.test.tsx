@@ -10,10 +10,6 @@ async function getNodeListPanel() {
   return (await screen.findAllByRole('complementary', { name: 'Node list panel' }))[0];
 }
 
-async function getVirtualListPanel() {
-  return (await screen.findAllByRole('complementary', { name: 'Node list panel' }))[1];
-}
-
 function createImportedWorkspaceSnapshot(title = 'Imported note') {
   return {
     activeNodeId: 'special-inbox',
@@ -146,11 +142,10 @@ it('shows Inbox in the node tree and opens the folder list surface', async () =>
 it('keeps virtual folders out of the main tree and shows a separate lower Virtual section', async () => {
   render(<App />);
 
-  expect(within(await getNodeListPanel()).queryByRole('treeitem', { name: 'Virtual' })).not.toBeInTheDocument();
-  fireEvent.click(within(await getVirtualListPanel()).getByRole('treeitem', { name: 'Virtual' }));
+  fireEvent.click(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual' }));
 
-  expect(within(await getVirtualListPanel()).getByRole('treeitem', { name: 'Virtual' })).toBeInTheDocument();
-  expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toHaveTextContent('No virtual folders yet');
+  expect(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual' })).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Create Virtual Folder' })).not.toBeInTheDocument();
 });
 

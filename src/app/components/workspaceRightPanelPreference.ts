@@ -19,7 +19,7 @@ function isWorkspaceRightPanelId(value: string | null): value is WorkspaceRightP
   return value !== null && RIGHT_PANEL_IDS.includes(value as WorkspaceRightPanelId);
 }
 
-export function loadWorkspaceRightPanelPreference(fallback: WorkspaceRightPanelId = 'dev') {
+export function loadWorkspaceRightPanelPreference(fallback: WorkspaceRightPanelId = 'source-info') {
   const value = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarActivePanel);
   return isWorkspaceRightPanelId(value) ? value : fallback;
 }

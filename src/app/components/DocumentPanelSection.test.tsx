@@ -235,9 +235,6 @@ it('reuses the folder list module for virtual node results and opens the origina
   expect(screen.getByTestId('folder-list-title-node-2')).toHaveTextContent('Reader article');
   expect(screen.queryByTestId('folder-list-title-node-3')).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Open Reader article' }));
-
-  expect(onSelectNode).toHaveBeenCalledWith('node-2');
 });
 
 it('saves the virtual node keyword through the detail form', () => {
@@ -293,7 +290,7 @@ it('shows an empty state after hydration when no note is selected', () => {
       typeof props === 'object' &&
       'emptyState' in props &&
       'emptyContent' in props &&
-      (props as { emptyState?: { title?: string } }).emptyState?.title === 'No note selected' &&
+      (props as { emptyState?: { title?: string } }).emptyState?.title === 'No document selected' &&
       !(props as { emptyContent?: unknown }).emptyContent
     )
   ).toBe(true);

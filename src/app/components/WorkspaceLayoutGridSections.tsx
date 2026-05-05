@@ -8,7 +8,6 @@ import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListEmptyState, WorkspaceListLoadingState } from './WorkspaceListStates';
-import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
 export interface WorkspaceListAreaProps {
   activeNodeId: string | null;
@@ -23,6 +22,7 @@ export interface WorkspaceListAreaProps {
   onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
   onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
   onOpenExternalSelection: WorkspaceLayoutProps['onOpenExternalSelection'];
+  onOpenExternalLibrarySettings: WorkspaceLayoutProps['onOpenExternalLibrarySettings'];
   onOpenTrashView: WorkspaceLayoutProps['onOpenTrashView'];
   onOpenVirtualView: WorkspaceLayoutProps['onOpenVirtualView'];
   onSelectNode: (nodeId: string) => void;
@@ -74,6 +74,7 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
   onOpenMoveToNode,
   onOpenNotesView,
   onOpenExternalSelection,
+  onOpenExternalLibrarySettings,
   onOpenTrashView,
   onOpenVirtualView,
   onSelectNode,
@@ -105,6 +106,7 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
         onOpenMoveToNode,
         onOpenNotesView,
         onOpenExternalSelection,
+        onOpenExternalLibrarySettings,
         onOpenTrashView,
         onOpenVirtualView,
         onSelectNode,
@@ -136,6 +138,7 @@ function renderWorkspaceListBody(
     | 'onOpenMoveToNode'
     | 'onOpenNotesView'
     | 'onOpenExternalSelection'
+    | 'onOpenExternalLibrarySettings'
     | 'onOpenTrashView'
     | 'onOpenVirtualView'
     | 'onSelectNode'
@@ -151,6 +154,36 @@ function renderWorkspaceListBody(
   if (props.shouldShowEmptyState) {
     return <WorkspaceListEmptyState />;
   }
+  return renderWorkspaceDualListBody(props);
+}
+
+function renderWorkspaceDualListBody(
+  props: Pick<
+    WorkspaceListAreaProps,
+    | 'activeNodeId'
+    | 'activeVirtualNodeId'
+    | 'externalEntriesByFolderId'
+    | 'externalFolders'
+    | 'externalSelection'
+    | 'isExternalViewOpen'
+    | 'isTrashViewOpen'
+    | 'isVirtualViewOpen'
+    | 'listNodesById'
+    | 'nodesById'
+    | 'nodeOrder'
+    | 'onOpenMoveToNode'
+    | 'onOpenNotesView'
+    | 'onOpenExternalSelection'
+    | 'onOpenExternalLibrarySettings'
+    | 'onOpenTrashView'
+    | 'onOpenVirtualView'
+    | 'onSelectNode'
+    | 'onSelectNodeInVirtualView'
+    | 'onSelectTrashNode'
+    | 'selectedTrashNodeId'
+    | 'trashedNodeIds'
+  >
+) {
   return (
     <WorkspaceDualListContent
       activeNodeId={props.activeNodeId}
@@ -167,6 +200,7 @@ function renderWorkspaceListBody(
       onOpenMoveToNode={props.onOpenMoveToNode}
       onOpenNotesView={props.onOpenNotesView}
       onOpenExternalSelection={props.onOpenExternalSelection}
+      onOpenExternalLibrarySettings={props.onOpenExternalLibrarySettings}
       onOpenTrashView={props.onOpenTrashView}
       onOpenVirtualView={props.onOpenVirtualView}
       onSelectNode={props.onSelectNode}
@@ -201,39 +235,5 @@ export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
         props={props}
       />
     </section>
-  );
-});
-
-export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
-  isImportManagementOpen,
-  onOpenImportManagement,
-  onStartClipboardImport,
-  onStartImport,
-  showStudyDock,
-  props
-}: {
-  isImportManagementOpen: boolean;
-  onOpenImportManagement: () => void;
-  onStartClipboardImport: () => void;
-  onStartImport: () => void;
-  showStudyDock?: boolean;
-  props: WorkspaceLayoutProps;
-}) {
-  return (
-    <div className="h-full bg-bg-panel max-[1080px]:hidden">
-      <WorkspaceSideToolbar
-        canStartStudyMode={props.canStartStudyMode}
-        isImportManagementOpen={isImportManagementOpen}
-        isSettingsOpen={props.isSettingsOpen}
-        isStudyMode={props.isStudyMode}
-        reviewDueCount={props.reviewDueCount}
-        showStudyDock={showStudyDock}
-        onOpenImportManagement={onOpenImportManagement}
-        onOpenSettings={props.onOpenSettings}
-        onStartClipboardImport={onStartClipboardImport}
-        onStartImport={onStartImport}
-        onToggleReviewSession={props.onToggleReviewSession}
-      />
-    </div>
   );
 });

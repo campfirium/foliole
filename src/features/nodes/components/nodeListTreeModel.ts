@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { onWindowKeydown } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
 import { buildNodeTree } from '../model/nodeTree';
-import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
+import { VIRTUAL_ROOT_NODE_ID, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { useCollapsedNodeState } from './NodeListCollapseState';
@@ -45,6 +45,7 @@ interface NodeListTreeData {
 function useNodeWorkspaceActions() {
   return {
     createChildNode: useWorkspaceStore((state) => state.createChildNode),
+    createRootNode: useWorkspaceStore((state) => state.createRootNode),
     createVirtualNode: useWorkspaceStore((state) => state.createVirtualNode),
     deleteNodes: useWorkspaceStore((state) => state.deleteNodes),
     deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
@@ -193,7 +194,7 @@ function buildNodeListTreeModelResult(
     contextMenu: controllers.contextMenu,
     createChildNode: workspace.createChildNode,
     createGlobalNode: (content = '', kind: 'folder' | 'topic' | 'item' = 'topic') =>
-      workspace.createChildNode(INBOX_NODE_ID, content, kind),
+      workspace.createRootNode(content, kind),
     createVirtualNode: workspace.createVirtualNode,
     deleteNodes: workspace.deleteNodes,
     deleteNodesPermanently: workspace.deleteNodesPermanently,

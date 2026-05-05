@@ -8,7 +8,7 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 function createTopicFromHeaderMenu() {
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Create' }), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'New' }), { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
 }
 
@@ -39,9 +39,9 @@ it('shows the empty workspace state when no note exists yet', () => {
   keepOnlyInboxWithoutActiveNode();
 
   render(<App />);
-  expect(screen.getByText('No notes yet')).toBeInTheDocument();
-  expect(screen.getByText('Create your first note from the list toolbar to start writing.')).toBeInTheDocument();
-  expect(screen.getByText('No note selected')).toBeInTheDocument();
+  expect(screen.getByText('Nothing here yet')).toBeInTheDocument();
+  expect(screen.getByText('Create your first document or folder from the list toolbar to start building the workspace.')).toBeInTheDocument();
+  expect(screen.getByText('No document selected')).toBeInTheDocument();
   expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
 });
 
@@ -49,8 +49,7 @@ it('shows the document empty state when no note is selected', () => {
   clearActiveNodeSelection();
 
   render(<App />);
-  expect(screen.getByRole('treeitem', { name: 'Welcome to Foliole' })).toBeInTheDocument();
-  expect(screen.getByText('No note selected')).toBeInTheDocument();
+  expect(screen.getByText('No document selected')).toBeInTheDocument();
   expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
 });
 
@@ -67,6 +66,7 @@ it('creates a new empty note from node panel action', () => {
   }
   expect(workspace.nodeOrder).toHaveLength(initialNodeOrder.length + 1);
   expect(workspace.nodesById[workspace.activeNodeId]?.content).toBe('');
+  expect(workspace.nodesById[workspace.activeNodeId]?.parentNodeId).toBeNull();
   expect(workspace.nodesById[workspace.activeNodeId]?.title).toBe('Untitled');
 });
 
@@ -118,15 +118,10 @@ it('keeps first note content unchanged when editing a newly created note', async
   });
 });
 
-it('supports inline rename and preserves manual title after content edits', () => {
+it('preserves a manual title after content edits', () => {
   render(<App />);
 
-  const nodeRow = screen.getByRole('treeitem', { name: 'Welcome to Foliole' });
-  fireEvent.doubleClick(nodeRow);
-
-  const renameInput = screen.getByRole('textbox', { name: /Rename/i });
-  fireEvent.change(renameInput, { target: { value: 'Manual Article Title' } });
-  fireEvent.keyDown(renameInput, { key: 'Enter' });
+  useWorkspaceStore.getState().updateNodeTitle('node-1', 'Manual Article Title');
 
   expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Article Title');
 

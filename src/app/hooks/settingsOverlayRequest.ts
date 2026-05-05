@@ -26,3 +26,9 @@ export function openReadwiseReaderSettings(runtime: AppRuntime) {
   runtime.setRequestedSettingsDialog('readwise-reader');
   runtime.setIsSettingsOpen(true);
 }
+
+export function openExternalLibrarySettings(runtime: AppRuntime) {
+  runtime.setRequestedSettingsDialog(null);
+  runtime.setRequestedSettingsCategory('external-search');
+  runtime.setIsSettingsOpen(true);
+}

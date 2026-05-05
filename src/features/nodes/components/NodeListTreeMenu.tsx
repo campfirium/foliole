@@ -3,7 +3,7 @@ import {
   findFolderTopicItemCommandByAppCommandId,
   resolveAllowedFolderTopicItemCommands
 } from '../../../../lib/core/nodes/folderTopicItemCommands';
-import { VIRTUAL_NODE_APP_COMMAND_ID, VIRTUAL_NODE_COMMAND } from '../../../../lib/core/nodes/virtualNodeCommands';
+import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
@@ -150,10 +150,10 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
     <NodeListContextMenu
       createCommands={
         menuState.showVirtualCreateOnly
-          ? [VIRTUAL_NODE_COMMAND]
+          ? []
           : isVirtualNode(menuState.primaryTarget)
             ? []
-          : resolveAllowedFolderTopicItemCommands(menuState.isRootMenu ? null : menuState.primaryTarget?.kind ?? null)
+            : resolveAllowedFolderTopicItemCommands(menuState.isRootMenu ? null : menuState.primaryTarget?.kind ?? null)
       }
       isTrashMenu={props.contextMenu.contextMenuMode === 'trash'}
       left={props.contextMenu.menuPosition.left}

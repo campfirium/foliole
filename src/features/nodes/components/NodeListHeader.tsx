@@ -1,19 +1,14 @@
+import { ChevronDown, ChevronUp, FolderPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
-import { VIRTUAL_NODE_COMMAND } from '../../../../lib/core/nodes/virtualNodeCommands';
+import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import {
   AppButton,
-  AppDropdownMenu,
-  AppDropdownMenuContent,
-  AppDropdownMenuItem,
-  AppDropdownMenuTrigger,
   AppIconButton,
   AppToolbar,
   ToolbarActionGroup
 } from '../../../shared/ui';
 
-import { CollapseAllIcon, ExpandAllIcon, NewNoteIcon } from './NodeListHeaderIcons';
 import { NodeListSearchOverlay, renderSearchLauncher } from './NodeListSearchOverlay';
 
 interface NodeListHeaderProps {
@@ -31,30 +26,6 @@ interface NodeListHeaderProps {
   trashCount: number;
 }
 
-function renderCreateMenu(onCreateCommand: (commandId: string) => void) {
-  return (
-    <AppDropdownMenu>
-      <AppDropdownMenuTrigger asChild>
-        <AppIconButton
-          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-          icon={<NewNoteIcon />}
-          label="Create"
-        />
-      </AppDropdownMenuTrigger>
-      <AppDropdownMenuContent align="end" sideOffset={6}>
-        {FOLDER_TOPIC_ITEM_COMMANDS.map((command) => (
-          <AppDropdownMenuItem key={command.appCommandId} onSelect={() => onCreateCommand(command.appCommandId)}>
-            {command.listLabel}
-          </AppDropdownMenuItem>
-        ))}
-        <AppDropdownMenuItem onSelect={() => onCreateCommand(VIRTUAL_NODE_COMMAND.appCommandId)}>
-          {VIRTUAL_NODE_COMMAND.listLabel}
-        </AppDropdownMenuItem>
-      </AppDropdownMenuContent>
-    </AppDropdownMenu>
-  );
-}
-
 function renderNodeListActions(
   onCollapseAll: () => void,
   onCreateCommand: (commandId: string) => void,
@@ -64,32 +35,23 @@ function renderNodeListActions(
     <>
       <AppIconButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-        icon={<ExpandAllIcon />}
+        icon={<ChevronDown size={16} strokeWidth={1.9} />}
         label="Expand all"
         onClick={onExpandAll}
       />
       <AppIconButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-        icon={<CollapseAllIcon />}
+        icon={<ChevronUp size={16} strokeWidth={1.9} />}
         label="Collapse all"
         onClick={onCollapseAll}
       />
-      {renderCreateMenu(onCreateCommand)}
+      <AppIconButton
+        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+        icon={<FolderPlus size={16} strokeWidth={1.9} />}
+        label="Create folder"
+        onClick={() => onCreateCommand(FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createFolder)}
+      />
     </>
-  );
-}
-
-function renderVirtualListActions(onCreateCommand: (commandId: string) => void) {
-  return (
-    <AppButton
-      aria-label="Create Virtual Folder"
-      className="text-foreground/70 hover:text-foreground"
-      onClick={() => onCreateCommand(VIRTUAL_NODE_COMMAND.appCommandId)}
-      size="sm"
-      variant="subtle"
-    >
-      {VIRTUAL_NODE_COMMAND.listLabel}
-    </AppButton>
   );
 }
 
@@ -118,7 +80,7 @@ function shouldHideNodeListHeader(args: {
   showTitleSearch: boolean;
   showVirtualCreateAction: boolean;
 }) {
-  return args.isVirtualViewOpen && !args.showTitleSearch && !args.showVirtualCreateAction;
+  return args.isVirtualViewOpen && !args.showTitleSearch;
 }
 
 function renderNodeListHeaderShell(args: {
@@ -152,9 +114,7 @@ function renderNodeListHeaderShell(args: {
         {args.isTrashViewOpen
           ? renderTrashActions(args.onEmptyTrash, args.trashCount)
           : args.isVirtualViewOpen
-            ? args.showVirtualCreateAction
-              ? renderVirtualListActions(args.onCreateCommand)
-              : null
+            ? null
             : renderNodeListActions(args.onCollapseAll, args.onCreateCommand, args.onExpandAll)}
       </ToolbarActionGroup>
       {args.showTitleSearch && !args.isVirtualViewOpen && args.isSearchOpen ? (

@@ -232,6 +232,7 @@ export function WorkspaceTopicTree({
   return (
     <aside aria-label="Current folder contents" className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground">
       <WorkspaceTopicTreeHeader
+        onCreateTopic={() => interaction.createChildNode(activeFolderId, '', 'topic')}
         onCollapseAll={() => setCollapsedNodeIds(new Set(collapsibleNodeIds))}
         onExpandAll={() => setCollapsedNodeIds(new Set())}
         onSearchQueryChange={setSearchQuery}

@@ -130,7 +130,7 @@ export interface NodeViewState {
 }
 
 export const WORKSPACE_STORAGE_KEY = 'foliole-workspace-v1';
-export const LIST_WIDTH_DEFAULT = 200;
+export const LIST_WIDTH_DEFAULT = 450;
 export const DOCUMENT_WIDTH_DEFAULT = 860;
 export const RIGHT_SIDEBAR_WIDTH_DEFAULT = 250;
 

@@ -8,7 +8,6 @@ import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
 } from '../../shared/platform/externalSearchBridge';
-import { AppEmptyState } from '../../shared/ui';
 
 import {
   buildExternalLibraryFolderBrowseState,
@@ -20,12 +19,14 @@ import {
   loadExternalCollapsedRowIds,
   saveExternalCollapsedRowIds
 } from './externalLibraryCollapseSettings';
+import { ExternalLibrarySetupRow } from './ExternalLibrarySetupRow';
 
 interface ExternalLibrarySectionProps {
   entriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
   folders: RuntimeExternalSearchFolder[];
   isExternalViewOpen: boolean;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
+  onOpenExternalLibrarySettings?: () => void;
   selection: ExternalLibrarySelection;
 }
 
@@ -61,9 +62,10 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
     <div className="mt-1 flex min-w-0 flex-col">
       <div aria-hidden="true" className="mx-4 border-t border-border/15" />
       {props.folders.length === 0 ? (
-        <div className="px-4 py-4">
-          <AppEmptyState description="Add folders in Settings > External library to browse them here." title="No external folders" />
-        </div>
+        <ExternalLibrarySetupRow
+          isSelected={props.isExternalViewOpen && props.selection.kind === 'root'}
+          onOpenSettings={props.onOpenExternalLibrarySettings ?? (() => undefined)}
+        />
       ) : (
         <section aria-label="External folder tree" className="flex flex-col pb-2 pt-1" role="tree">
           {rows.map((row) => (

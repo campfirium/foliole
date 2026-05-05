@@ -210,6 +210,22 @@ it('shows an expand toggle for external folders before their entries finish load
   expect(screen.getByRole('button', { name: /expand .*think \*/i })).toBeInTheDocument();
 });
 
+it('opens external library settings from the External placeholder row when no folders are configured', () => {
+  const onOpenExternalLibrarySettings = vi.fn();
+
+  renderWorkspaceContent({
+    isExternalViewOpen: true,
+    onOpenExternalLibrarySettings
+  });
+
+  const setupRow = screen.getByRole('treeitem', { name: 'External' });
+  expect(setupRow).toHaveAttribute('aria-selected', 'true');
+
+  fireEvent.click(setupRow);
+
+  expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
+});
+
 it('restores persisted external collapse state without affecting sibling roots', () => {
   saveExternalCollapsedRowIds([]);
 

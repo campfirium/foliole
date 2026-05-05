@@ -20,7 +20,7 @@ export function WorkspaceDualListSplitter({
       aria-label="Resize folder list"
       aria-orientation="vertical"
       aria-valuenow={Math.round(width)}
-      className="group relative self-stretch bg-transparent"
+      className="group relative w-px self-stretch bg-transparent"
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       role="separator"

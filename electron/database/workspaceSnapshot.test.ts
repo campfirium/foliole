@@ -51,8 +51,28 @@ function seedNode(nodeId: string, position: number) {
   });
 }
 
-it('returns null when sqlite has no workspace node rows', () => {
-  expect(loadWorkspaceSnapshot()).toBeNull();
+it('seeds the initial workspace when sqlite starts empty', () => {
+  const snapshot = loadWorkspaceSnapshot();
+
+  expect(snapshot).not.toBeNull();
+  expect(snapshot?.activeNodeId).toBe('starter-welcome');
+  expect(snapshot?.nodeOrder).toEqual([
+    'special-inbox',
+    'starter-root-folder',
+    'special-virtual-root',
+    'starter-virtual-example',
+    'starter-welcome'
+  ]);
+  expect(snapshot?.nodesById['special-inbox']?.title).toBe('Inbox');
+  expect(snapshot?.nodesById['starter-root-folder']?.parentNodeId).toBeNull();
+  expect(snapshot?.nodesById['starter-root-folder']?.title).toBe('Untitled Folder');
+  expect(snapshot?.nodesById['special-virtual-root']?.parentNodeId).toBeNull();
+  expect(snapshot?.nodesById['special-virtual-root']?.title).toBe('Virtual');
+  expect(snapshot?.nodesById['starter-virtual-example']?.parentNodeId).toBe('special-virtual-root');
+  expect(snapshot?.nodesById['starter-virtual-example']?.title).toBe('Example');
+  expect(snapshot?.nodesById['starter-welcome']?.parentNodeId).toBe('special-inbox');
+  expect(snapshot?.nodesById['starter-welcome']?.title).toBe('Welcome to Foliole');
+  expect(snapshot?.nodesById['starter-welcome']?.content).toContain('# Welcome to Foliole');
 });
 
 it('loads workspace snapshot from sqlite without localStorage dependency', () => {
@@ -66,9 +86,17 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
   const snapshot = loadWorkspaceSnapshot();
 
   expect(snapshot).not.toBeNull();
-  expect(snapshot?.nodeOrder).toEqual(['node-1', 'node-2']);
+  expect(snapshot?.nodeOrder).toEqual([
+    'special-inbox',
+    'node-1',
+    'starter-root-folder',
+    'node-2',
+    'special-virtual-root',
+    'starter-virtual-example',
+    'starter-welcome'
+  ]);
   expect(snapshot?.trashedNodeIds).toEqual(['node-1']);
-  expect(snapshot?.activeNodeId).toBe('node-2');
+  expect(snapshot?.activeNodeId).toBe('starter-welcome');
   expect(snapshot?.nodesById['node-2']?.content).toBe('content:node-2');
   expect(snapshot?.untitledSequenceByParent).toEqual({});
 });

@@ -25,6 +25,7 @@ interface WorkspaceFolderColumnProps {
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onOpenNotesView: () => void;
+  onOpenExternalLibrarySettings?: () => void;
   onOpenTrashView: () => void;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenVirtualView?: (nodeId?: string) => void;
@@ -89,6 +90,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
             folders={props.externalFolders}
             isExternalViewOpen={props.isExternalViewOpen}
             onOpenExternalSelection={props.onOpenExternalSelection}
+            onOpenExternalLibrarySettings={props.onOpenExternalLibrarySettings}
             selection={props.externalSelection}
           />
         </>

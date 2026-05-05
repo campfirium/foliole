@@ -64,3 +64,9 @@ it('persists expanded sidebars when width restore reopens them', () => {
   expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.listCollapsed)).toBe('false');
   expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarCollapsed)).toBe('false');
 });
+
+it('uses the updated dual-list shell default width of 450px', () => {
+  const initial = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
+
+  expect(initial.layout.listWidth).toBe(450);
+});

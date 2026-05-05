@@ -40,6 +40,12 @@ it('uses the default folder list width when there is no saved preference', () =>
   expect(screen.getByTestId('dual-list-width').textContent).toBe(String(DUAL_LIST_WIDTH_DEFAULT));
 });
 
+it('uses the updated folder list default width of 200px', () => {
+  render(<Harness />);
+
+  expect(screen.getByTestId('dual-list-width').textContent).toBe('200');
+});
+
 it('persists folder list width updates from keyboard resize', () => {
   render(<Harness />);
 

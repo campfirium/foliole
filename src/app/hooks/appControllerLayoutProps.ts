@@ -1,32 +1,16 @@
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
-import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import type { NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
 
-import {
-  createAnswerChangeHandler,
-  createEditorChangeHandler,
-  createEditorReadyHandler,
-  createNodeContentChangeHandler,
-  type SelectNodeHandler
-} from './appControllerEditorHandlers';
+import { createAnswerChangeHandler, createEditorChangeHandler, createEditorReadyHandler, createNodeContentChangeHandler, type SelectNodeHandler } from './appControllerEditorHandlers';
 import type { useCurrentReviewPreview } from './appControllerHelpers';
 import { createLayoutEditorCtx, resolveEditorBindingArgs } from './appControllerLayoutContext';
 import { createLayoutNav, createSelectTrashNodeHandler } from './appControllerNavHandlers';
 import { createPastedTextAnchorsHandler } from './appControllerPastedTextAnchors';
 import { createReadingPositionHandlers } from './appControllerReadingPosition';
-import {
-  createPersistPdfViewState,
-  createRevealAnchorInDocument,
-  createRevealDocumentPosition,
-  createRevealDocumentSelection,
-  createResolveDocumentPositionAtViewportY,
-  createToggleListVisibility,
-  createToggleRightSidebarVisibility
-} from './appControllerRuntimeActions';
+import { createPersistPdfViewState, createRevealAnchorInDocument, createRevealDocumentPosition, createRevealDocumentSelection, createResolveDocumentPositionAtViewportY, createToggleListVisibility, createToggleRightSidebarVisibility } from './appControllerRuntimeActions';
 import {
   createOpenExternalSelection,
   createOpenNotesView,
@@ -35,7 +19,7 @@ import {
   createToggleVirtualView
 } from './appControllerTrashViewHandlers';
 import { buildLayoutProps } from './layoutPropsBuilder';
-import { createCloseSettingsHandler, createOpenSettingsHandler } from './settingsOverlayRequest';
+import { createCloseSettingsHandler, createOpenSettingsHandler, openExternalLibrarySettings } from './settingsOverlayRequest';
 import type { useAppRuntime } from './useAppRuntime';
 import type { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import type { useEditorContextCommands } from './useEditorContextCommands';
@@ -224,6 +208,9 @@ function createLayoutHandlerArgs(
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),
     onOpenMoveToNode: () => args.runtime.setIsMoveToNodePaletteOpen(true),
     onOpenSettings: createOpenSettingsHandler(args.runtime),
+    onOpenExternalView: args.externalView.openExternalFolder,
+    onOpenExternalSelection: createOpenExternalSelection(args),
+    onOpenExternalLibrarySettings: () => openExternalLibrarySettings(args.runtime),
     onCloseSettings: createCloseSettingsHandler(args.runtime),
     onOpenImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     onCloseImportManagement: () => args.runtime.setIsImportManagementOpen(false),
@@ -232,8 +219,6 @@ function createLayoutHandlerArgs(
     onExitImmersiveMode: () => args.runtime.setIsImmersiveMode(false),
     onOpenTrashView: createToggleTrashView(args),
     onOpenVirtualView: createToggleVirtualView(args),
-    onOpenExternalSelection: createOpenExternalSelection(args),
-    onOpenExternalView: args.externalView.openExternalFolder,
     onResetLayout: args.ws.resetLayout,
     onRunImportFile: args.runImportFile,
     onRunImportFolder: args.runImportDirectory,

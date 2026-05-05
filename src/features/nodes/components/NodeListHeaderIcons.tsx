@@ -1,25 +1,18 @@
-export function NewNoteIcon() {
+export function NewFolderIcon() {
   return (
     <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
       <path
-        d="M3 2.5h6.8L13 5.7v7.8H3z"
+        d="M2.5 4.5h3.2l1.2 1.4H13.5v5.6H2.5z"
         fill="none"
         stroke="currentColor"
         strokeLinejoin="round"
         strokeWidth="1.05"
       />
       <path
-        d="M9.8 2.5v3.2H13"
+        d="M8.4 8.7h2.2M9.5 7.6v2.2"
         fill="none"
         stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-      <path
-        d="m6.2 10.8 2.9-2.9 1.2 1.2-2.9 2.9-1.8.6z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinejoin="round"
+        strokeLinecap="round"
         strokeWidth="1.05"
       />
     </svg>

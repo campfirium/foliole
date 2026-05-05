@@ -12,9 +12,9 @@ import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import {
   WorkspaceDocumentArea,
-  WorkspaceLeftRail,
   WorkspaceListArea
 } from './WorkspaceLayoutGridSections';
+import { WorkspaceLeftRail } from './WorkspaceLeftRail';
 import { WorkspaceListSplitter } from './WorkspaceListSplitter';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
 import { WorkspaceRightSidebarSplitter } from './WorkspaceRightSidebarSplitter';
@@ -181,6 +181,7 @@ function renderListColumns(args: {
         onOpenMoveToNode={args.props.onOpenMoveToNode}
         onOpenNotesView={args.props.onOpenNotesView}
         onOpenExternalSelection={args.props.onOpenExternalSelection}
+        onOpenExternalLibrarySettings={args.props.onOpenExternalLibrarySettings}
         onOpenTrashView={args.props.onOpenTrashView}
         onOpenVirtualView={args.props.onOpenVirtualView}
         onSelectNode={args.onSelectNode}

@@ -126,6 +126,7 @@ export interface WorkspaceLayoutProps {
   onOpenTrashView: () => void;
   onOpenVirtualView: (nodeId?: string) => void;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
+  onOpenExternalLibrarySettings: () => void;
   onOpenExternalView: (folderId?: string) => void;
   onEnterImmersiveEdit: () => void;
   onEnterImmersiveMode: () => void;

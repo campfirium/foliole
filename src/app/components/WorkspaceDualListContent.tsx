@@ -44,6 +44,7 @@ interface WorkspaceDualListContentProps {
   onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
   onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
   onOpenExternalSelection: WorkspaceLayoutProps['onOpenExternalSelection'];
+  onOpenExternalLibrarySettings?: WorkspaceLayoutProps['onOpenExternalLibrarySettings'];
   onOpenTrashView: WorkspaceLayoutProps['onOpenTrashView'];
   onOpenVirtualView?: WorkspaceLayoutProps['onOpenVirtualView'];
   onSelectNode: (nodeId: string) => void;
@@ -233,6 +234,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
           onOpenMoveToNode={props.onOpenMoveToNode}
           onOpenNotesView={props.onOpenNotesView}
           onOpenExternalSelection={props.onOpenExternalSelection}
+          onOpenExternalLibrarySettings={props.onOpenExternalLibrarySettings}
           onOpenTrashView={props.onOpenTrashView}
           onOpenVirtualView={props.onOpenVirtualView}
           onSelectNode={props.onSelectNode}

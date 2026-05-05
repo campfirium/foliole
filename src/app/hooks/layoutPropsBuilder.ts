@@ -102,6 +102,7 @@ interface BuildLayoutPropsArgs {
   onOpenTrashView: () => void;
   onOpenVirtualView: () => void;
   onOpenExternalSelection: WorkspaceLayoutProps['onOpenExternalSelection'];
+  onOpenExternalLibrarySettings: WorkspaceLayoutProps['onOpenExternalLibrarySettings'];
   onOpenExternalView: WorkspaceLayoutProps['onOpenExternalView'];
   onResetLayout: () => void;
   onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
@@ -226,7 +227,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     getReadingPositionTargetViewportMode: args.getReadingPositionTargetViewportMode,
     getReadingPositionTargetViewportRatio: args.getReadingPositionTargetViewportRatio,
     setReadingPositionSelection: args.setReadingPositionSelection,
-    onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenMoveToNode: args.onOpenMoveToNode, onOpenTrashView: args.onOpenTrashView, onOpenVirtualView: args.onOpenVirtualView, onOpenExternalSelection: args.onOpenExternalSelection, onOpenExternalView: args.onOpenExternalView, onEnterImmersiveEdit: args.onEnterImmersiveEdit, onEnterImmersiveMode: args.onEnterImmersiveMode, onExitImmersiveMode: args.onExitImmersiveMode, onToggleListVisibility: args.onToggleListVisibility,
+    onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenMoveToNode: args.onOpenMoveToNode, onOpenTrashView: args.onOpenTrashView, onOpenVirtualView: args.onOpenVirtualView, onOpenExternalSelection: args.onOpenExternalSelection, onOpenExternalLibrarySettings: args.onOpenExternalLibrarySettings, onOpenExternalView: args.onOpenExternalView, onEnterImmersiveEdit: args.onEnterImmersiveEdit, onEnterImmersiveMode: args.onEnterImmersiveMode, onExitImmersiveMode: args.onExitImmersiveMode, onToggleListVisibility: args.onToggleListVisibility,
     onToggleImmersiveMode: args.onToggleImmersiveMode,
     onToggleRightSidebarVisibility: args.onToggleRightSidebarVisibility,
     onOpenImportManagement: args.onOpenImportManagement,

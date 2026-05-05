@@ -1,9 +1,11 @@
+import { ChevronDown, ChevronUp, FilePlus2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
 interface WorkspaceTopicTreeHeaderProps {
+  onCreateTopic: () => void;
   onCollapseAll: () => void;
   onExpandAll: () => void;
   onSearchQueryChange: (searchQuery: string) => void;
@@ -11,6 +13,7 @@ interface WorkspaceTopicTreeHeaderProps {
 }
 
 export function WorkspaceTopicTreeHeader({
+  onCreateTopic,
   onCollapseAll,
   onExpandAll,
   onSearchQueryChange,
@@ -39,15 +42,21 @@ export function WorkspaceTopicTreeHeader({
       <ToolbarActionGroup ariaLabel="Current folder item actions">
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-          icon={<ExpandAllIcon />}
+          icon={<ChevronDown size={16} strokeWidth={1.9} />}
           label="Expand all items"
           onClick={onExpandAll}
         />
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-          icon={<CollapseAllIcon />}
+          icon={<ChevronUp size={16} strokeWidth={1.9} />}
           label="Collapse all items"
           onClick={onCollapseAll}
+        />
+        <AppIconButton
+          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+          icon={<FilePlus2 size={16} strokeWidth={1.9} />}
+          label="Create topic"
+          onClick={onCreateTopic}
         />
       </ToolbarActionGroup>
       {isSearchOpen ? (
@@ -58,49 +67,5 @@ export function WorkspaceTopicTreeHeader({
         />
       ) : null}
     </AppToolbar>
-  );
-}
-
-function ExpandAllIcon() {
-  return (
-    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 16 16">
-      <path
-        d="M3.5 4.5h5M3.5 8h9M3.5 11.5h5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.05"
-      />
-      <path
-        d="M10.5 2.8 13 5.4l-2.5 2.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-    </svg>
-  );
-}
-
-function CollapseAllIcon() {
-  return (
-    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 16 16">
-      <path
-        d="M3.5 4.5h5M3.5 8h9M3.5 11.5h5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.05"
-      />
-      <path
-        d="M12.9 2.8 10.4 5.4l2.5 2.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.05"
-      />
-    </svg>
   );
 }

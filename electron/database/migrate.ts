@@ -12,6 +12,7 @@ import {
   verifyDatabaseIntegrity
 } from './integrity.js';
 import { createInternalDatabaseSnapshot } from './internalSnapshots.js';
+import { seedInitialWorkspace } from './workspaceBootstrap.js';
 
 export { DATABASE_SCHEMA_VERSION, runDatabaseMigrations } from '../../lib/core/database/migrations.js';
 
@@ -40,6 +41,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
       reportStage?.('database_migration_start');
       const initializedConnection = initializeDatabaseConnection(connection);
       reportStage?.('database_migration_complete');
+      seedInitialWorkspace(initializedConnection);
       return initializedConnection;
     } catch (error) {
       closeDatabaseConnection();
@@ -72,6 +74,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_recovery_migration_start');
     const initializedConnection = initializeDatabaseConnection(connection);
     reportStage?.('database_recovery_migration_complete');
+    seedInitialWorkspace(initializedConnection);
     return initializedConnection;
   }
 }
