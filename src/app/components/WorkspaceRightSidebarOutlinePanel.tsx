@@ -1,28 +1,17 @@
-import { useMemo } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 
 import { cn } from '../../shared/lib/utils';
 import { AppEmptyState } from '../../shared/ui';
 
 import { mayHaveOutline, resolveActiveIndex, resolveDisplayItems } from './DocumentOutlineLayerModel';
 
+const OUTLINE_SCROLL_MARGIN_PX = 32;
+
 interface WorkspaceRightSidebarOutlinePanelProps {
   activePosition: number;
   content: string;
   onRevealPosition: (position: number) => void;
-}
-
-function renderLevelGuides(level: number) {
-  return Array.from({ length: Math.max(1, level) }, (_, index) => (
-    <span
-      aria-hidden="true"
-      className={cn(
-        'pointer-events-none absolute inset-y-0 border-l border-dashed border-foreground/[0.13]',
-        index === 0 ? 'border-foreground/[0.18]' : ''
-      )}
-      key={index}
-      style={{ left: `${0.65 + index * 1.35}rem` }}
-    />
-  ));
 }
 
 function getOutlineItemTone(level: number, isActive: boolean) {
@@ -38,17 +27,72 @@ function getOutlineItemTone(level: number, isActive: boolean) {
   return 'text-foreground/64';
 }
 
-function getAccentTone(level: number, isActive: boolean) {
-  if (isActive) {
-    return 'bg-[rgb(var(--app-accent-color-rgb)/0.88)] opacity-100';
+function getScrollParent(element: HTMLElement) {
+  let parent = element.parentElement;
+  while (parent) {
+    if (parent.classList.contains('app-scrollbar')) {
+      return parent;
+    }
+    parent = parent.parentElement;
   }
-  if (level === 1) {
-    return 'bg-[rgb(var(--app-accent-color-rgb)/0.72)] opacity-90';
+  return null;
+}
+
+function resolveOutlineTreeItems(items: ReturnType<typeof resolveDisplayItems>) {
+  return items.map((item, index) => ({
+    ...item,
+    hasChildren: (items[index + 1]?.level ?? 0) > item.level
+  }));
+}
+
+export function resolveOutlineActiveScrollTop(args: {
+  containerBottom: number;
+  containerClientHeight: number;
+  containerScrollHeight: number;
+  containerScrollTop: number;
+  containerTop: number;
+  itemBottom: number;
+  itemTop: number;
+  margin: number;
+}) {
+  const maxScrollTop = Math.max(0, args.containerScrollHeight - args.containerClientHeight);
+  const visibleTop = args.containerTop + args.margin;
+  const visibleBottom = args.containerBottom - args.margin;
+  const itemHeight = args.itemBottom - args.itemTop;
+  const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+  let nextScrollTop = args.containerScrollTop;
+
+  if (itemHeight > visibleHeight || args.itemTop < visibleTop) {
+    nextScrollTop += args.itemTop - visibleTop;
+  } else if (args.itemBottom > visibleBottom) {
+    nextScrollTop += args.itemBottom - visibleBottom;
   }
-  if (level === 2) {
-    return 'bg-[rgb(var(--app-accent-color-rgb)/0.56)] opacity-80';
+
+  return Math.max(0, Math.min(maxScrollTop, nextScrollTop));
+}
+
+export function scrollActiveOutlineItemIntoView(activeItem: HTMLElement) {
+  const scrollParent = getScrollParent(activeItem);
+  if (!scrollParent) {
+    return;
   }
-  return 'bg-foreground/24 opacity-0 group-hover:opacity-70';
+  const containerRect = scrollParent.getBoundingClientRect();
+  const itemRect = activeItem.getBoundingClientRect();
+  const margin = Math.min(OUTLINE_SCROLL_MARGIN_PX, scrollParent.clientHeight / 4);
+  const nextScrollTop = resolveOutlineActiveScrollTop({
+    containerBottom: containerRect.bottom,
+    containerClientHeight: scrollParent.clientHeight,
+    containerScrollHeight: scrollParent.scrollHeight,
+    containerScrollTop: scrollParent.scrollTop,
+    containerTop: containerRect.top,
+    itemBottom: itemRect.bottom,
+    itemTop: itemRect.top,
+    margin
+  });
+
+  if (nextScrollTop !== scrollParent.scrollTop) {
+    scrollParent.scrollTop = nextScrollTop;
+  }
 }
 
 export function WorkspaceRightSidebarOutlinePanel({
@@ -56,9 +100,17 @@ export function WorkspaceRightSidebarOutlinePanel({
   content,
   onRevealPosition
 }: WorkspaceRightSidebarOutlinePanelProps) {
+  const activeItemRef = useRef<HTMLButtonElement | null>(null);
   const outlineItems = useMemo(() => (mayHaveOutline(content) ? resolveDisplayItems(content) : []), [content]);
+  const treeItems = useMemo(() => resolveOutlineTreeItems(outlineItems), [outlineItems]);
   const activeIndex = useMemo(() => resolveActiveIndex(outlineItems, activePosition), [activePosition, outlineItems]);
-  const hasNestedLevels = useMemo(() => outlineItems.some((item) => item.level > 1), [outlineItems]);
+  const hasNestedLevels = useMemo(() => treeItems.some((item) => item.level > 1), [treeItems]);
+
+  useLayoutEffect(() => {
+    if (activeItemRef.current) {
+      scrollActiveOutlineItemIntoView(activeItemRef.current);
+    }
+  }, [activeIndex]);
 
   if (outlineItems.length === 0) {
     return (
@@ -71,28 +123,29 @@ export function WorkspaceRightSidebarOutlinePanel({
 
   return (
     <nav aria-label="Document outline" className="relative min-h-full px-1 py-1">
-      <ol className="relative m-0 list-none space-y-0.5 p-0">
-        {outlineItems.map((item, index) => (
+      <ol className="relative m-0 list-none p-0">
+        {treeItems.map((item, index) => (
           <li className="relative" key={`${item.from}-${item.text}`}>
-            {hasNestedLevels ? renderLevelGuides(item.level) : null}
             <button
               aria-current={index === activeIndex ? 'location' : undefined}
               className={cn(
-                'group relative flex min-h-8 w-full items-center rounded-md py-1.5 pr-2 text-left text-sm font-normal leading-snug transition-colors',
+                'group relative flex min-h-7 w-full items-center rounded-md py-1 pr-2 text-left text-[13px] font-normal leading-5 transition-colors',
                 'hover:bg-foreground/[0.055] hover:text-foreground focus-visible:bg-foreground/[0.07] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
                 index === activeIndex ? 'bg-[rgb(var(--app-accent-color-rgb)/0.22)] shadow-[inset_0_0_0_1px_rgb(var(--app-accent-color-rgb)/0.08)]' : '',
                 getOutlineItemTone(item.level, index === activeIndex)
               )}
               onClick={() => onRevealPosition(item.from)}
-              style={{ paddingLeft: hasNestedLevels ? `${1.3 + (item.level - 1) * 1.35}rem` : '0.75rem' }}
+              ref={index === activeIndex ? activeItemRef : undefined}
+              style={{ paddingLeft: hasNestedLevels ? `${0.45 + (item.level - 1) * 1.15}rem` : '0.75rem' }}
               type="button"
             >
               {hasNestedLevels ? (
                 <span
                   aria-hidden="true"
-                  className={cn('absolute top-2 h-[calc(100%-1rem)] w-1 rounded-full transition-opacity', getAccentTone(item.level, index === activeIndex))}
-                  style={{ left: `${0.5 + (item.level - 1) * 1.35}rem` }}
-                />
+                  className="mr-1 flex size-4 shrink-0 items-center justify-center text-foreground/42"
+                >
+                  {item.hasChildren ? <ChevronDown size={14} strokeWidth={2.1} /> : null}
+                </span>
               ) : null}
               <span className="line-clamp-2">{item.text}</span>
             </button>

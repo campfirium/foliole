@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-import { WorkspaceRightSidebarOutlinePanel } from './WorkspaceRightSidebarOutlinePanel';
+import {
+  resolveOutlineActiveScrollTop,
+  WorkspaceRightSidebarOutlinePanel
+} from './WorkspaceRightSidebarOutlinePanel';
 
 function renderOutline(content: string) {
   return render(
@@ -24,18 +27,46 @@ it('keeps all outline entries at normal font weight', () => {
   expect(outlineNav.querySelector('[class*="font-medium"]')).toBeNull();
 });
 
-it('hides guide markers when the outline has only one visible level', () => {
+it('hides hierarchy arrows when the outline has only one visible level', () => {
   renderOutline('# Title\n\n## First section\n\n## Second section');
 
   const outlineNav = screen.getByRole('navigation', { name: 'Document outline' });
 
-  expect(outlineNav.querySelector('[class*="border-dashed"]')).toBeNull();
-  expect(outlineNav.querySelector('[class*="rounded-full"]')).toBeNull();
+  expect(outlineNav.querySelector('svg')).toBeNull();
 });
 
-it('shows guide markers when the outline has nested visible levels', () => {
+it('shows hierarchy arrows for outline items with children', () => {
   const { container } = renderOutline('# Title\n\n## First section\n\n### Detail');
 
-  expect(container.querySelector('[class*="border-dashed"]')).not.toBeNull();
-  expect(container.querySelector('[class*="rounded-full"]')).not.toBeNull();
+  expect(container.querySelector('svg')).not.toBeNull();
+});
+
+it('keeps visible active outline items in place', () => {
+  const scrollTop = resolveOutlineActiveScrollTop({
+    containerBottom: 400,
+    containerClientHeight: 400,
+    containerScrollHeight: 1200,
+    containerScrollTop: 200,
+    containerTop: 0,
+    itemBottom: 260,
+    itemTop: 220,
+    margin: 32
+  });
+
+  expect(scrollTop).toBe(200);
+});
+
+it('scrolls the active outline item only far enough to restore visibility', () => {
+  const scrollTop = resolveOutlineActiveScrollTop({
+    containerBottom: 400,
+    containerClientHeight: 400,
+    containerScrollHeight: 1200,
+    containerScrollTop: 200,
+    containerTop: 0,
+    itemBottom: 520,
+    itemTop: 480,
+    margin: 32
+  });
+
+  expect(scrollTop).toBe(352);
 });
