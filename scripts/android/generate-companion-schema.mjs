@@ -17,6 +17,7 @@ import {
 } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from '../../lib/core/database/androidCompanionPayloadQueryDefinitions.ts';
+import { ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES } from '../../lib/core/database/androidCompanionResourceQueryDefinitions.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
 import {
@@ -63,6 +64,7 @@ await fs.writeFile(
   queryOutputPath,
   `${JSON.stringify({
     queries: ANDROID_COMPANION_QUERY_DEFINITIONS,
+    missingResourceRead: ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES,
     syncConflictRead: ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES,
     syncObjectRead: ANDROID_COMPANION_SYNC_OBJECT_READ_RULES,
     syncStreamRead: ANDROID_COMPANION_SYNC_STREAM_READ_RULES,

@@ -1643,6 +1643,24 @@
       ]
     }
   },
+  "missingResourceRead": {
+    "attachmentResources": {
+      "byIdQueryName": "attachmentResourceMissingById",
+      "emptyResultKey": "resource",
+      "minLimit": 1,
+      "resultKey": "resources",
+      "rowsQueryName": "attachmentResourceMissingRows",
+      "summaryQueryName": "attachmentResourceMissingSummaryRows"
+    },
+    "contentBlobs": {
+      "hashKey": "hash",
+      "hashesResultKey": "hashes",
+      "hashesQueryName": "contentBlobMissingHashes",
+      "minLimit": 1,
+      "resultKey": "blobs",
+      "summaryQueryName": "contentBlobMissingSummaryRows"
+    }
+  },
   "syncConflictRead": {
     "nodeConflicts": {
       "queryName": "nodeConflicts"

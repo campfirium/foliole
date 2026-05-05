@@ -14,13 +14,19 @@ final class FolioleCompanionContentBlobMissingStore {
     static JSObject loadMissingHashes(Context context, SQLiteDatabase database, int limit) throws Exception {
         JSArray hashes = new JSArray();
         JSArray blobs = FolioleCompanionNamedQueryStore
-            .loadRows(context, database, "contentBlobMissingHashes", "blobs", new String[] { String.valueOf(Math.max(1, limit)) });
+            .loadRows(
+                context,
+                database,
+                FolioleCompanionMissingResourceQueryRules.contentHashesQueryName(context),
+                FolioleCompanionMissingResourceQueryRules.contentResultKey(context),
+                new String[] { String.valueOf(FolioleCompanionMissingResourceQueryRules.contentLimit(context, limit)) }
+            );
         for (int index = 0; index < blobs.length(); index += 1) {
-            hashes.put(blobs.getJSONObject(index).getString("hash"));
+            hashes.put(blobs.getJSONObject(index).getString(FolioleCompanionMissingResourceQueryRules.contentHashKey(context)));
         }
         JSObject result = new JSObject();
-        result.put("hashes", hashes);
-        result.put("blobs", blobs);
+        result.put(FolioleCompanionMissingResourceQueryRules.contentHashesResultKey(context), hashes);
+        result.put(FolioleCompanionMissingResourceQueryRules.contentResultKey(context), blobs);
         return result;
     }
 
@@ -29,7 +35,12 @@ final class FolioleCompanionContentBlobMissingStore {
         long bytes = 0;
         long failedCount = 0;
         long failedBytes = 0;
-        JSArray blobs = FolioleCompanionNamedQueryStore.loadRows(context, database, "contentBlobMissingSummaryRows", "blobs");
+        JSArray blobs = FolioleCompanionNamedQueryStore.loadRows(
+            context,
+            database,
+            FolioleCompanionMissingResourceQueryRules.contentSummaryQueryName(context),
+            FolioleCompanionMissingResourceQueryRules.contentResultKey(context)
+        );
         for (int index = 0; index < blobs.length(); index += 1) {
             JSONObject blob = blobs.getJSONObject(index);
             count++;

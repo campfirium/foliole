@@ -15,21 +15,31 @@ final class FolioleCompanionAttachmentResourceMissingStore {
 
     static JSObject loadMissingResources(Context context, SQLiteDatabase database, int limit) throws Exception {
         JSArray resources = new JSArray();
-        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "attachmentResourceMissingRows", "resources");
-        int maxResources = Math.max(1, limit);
+        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(
+            context,
+            database,
+            FolioleCompanionMissingResourceQueryRules.attachmentRowsQueryName(context),
+            FolioleCompanionMissingResourceQueryRules.attachmentResultKey(context)
+        );
+        int maxResources = FolioleCompanionMissingResourceQueryRules.attachmentLimit(context, limit);
         for (int index = 0; index < rows.length() && resources.length() < maxResources; index += 1) {
             JSONObject row = rows.getJSONObject(index);
             if (!isMissingResource(context, row.getString("availability"), nullableString(row, "storage_key"))) continue;
             resources.put(toResource(row));
         }
         JSObject result = new JSObject();
-        result.put("resources", resources);
+        result.put(FolioleCompanionMissingResourceQueryRules.attachmentResultKey(context), resources);
         return result;
     }
 
     static JSObject summarizeMissingResources(Context context, SQLiteDatabase database) throws Exception {
         MissingAttachmentSummary summary = new MissingAttachmentSummary();
-        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "attachmentResourceMissingSummaryRows", "resources");
+        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(
+            context,
+            database,
+            FolioleCompanionMissingResourceQueryRules.attachmentSummaryQueryName(context),
+            FolioleCompanionMissingResourceQueryRules.attachmentResultKey(context)
+        );
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
             if (!isMissingResource(context, row.getString("availability"), nullableString(row, "storage_key"))) continue;
@@ -49,13 +59,22 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
         JSObject result = new JSObject();
         JSArray rows = FolioleCompanionNamedQueryStore
-            .loadRows(context, database, "attachmentResourceMissingById", "resources", new String[] { normalizedAttachmentId });
+            .loadRows(
+                context,
+                database,
+                FolioleCompanionMissingResourceQueryRules.attachmentByIdQueryName(context),
+                FolioleCompanionMissingResourceQueryRules.attachmentResultKey(context),
+                new String[] { normalizedAttachmentId }
+            );
         if (rows.length() <= 0) {
-            result.put("resource", null);
+            result.put(FolioleCompanionMissingResourceQueryRules.attachmentEmptyResultKey(context), null);
             return result;
         }
         JSONObject row = rows.getJSONObject(0);
-        result.put("resource", isMissingResource(context, row.getString("availability"), nullableString(row, "storage_key")) ? toResource(row) : null);
+        result.put(
+            FolioleCompanionMissingResourceQueryRules.attachmentEmptyResultKey(context),
+            isMissingResource(context, row.getString("availability"), nullableString(row, "storage_key")) ? toResource(row) : null
+        );
         return result;
     }
 
