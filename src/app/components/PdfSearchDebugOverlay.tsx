@@ -17,6 +17,7 @@ function resolveDebugPayload(props: Omit<PdfSearchDebugOverlayProps, 'isOpen' | 
     hasQuery: props.searchStatus.hasQuery,
     highlights: props.searchHighlights.map((item) => ({
       active: item.isActive,
+      fragmentCount: item.fragments?.length ?? 1,
       id: item.id,
       page: item.page,
       rectCount: item.rects.length,

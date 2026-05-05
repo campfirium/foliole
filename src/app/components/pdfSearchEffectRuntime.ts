@@ -36,6 +36,12 @@ export function canScrollToMatch(match: PdfSearchMatch, shell: HTMLElement | nul
 
 export function toSearchHighlights(matches: PdfSearchMatch[], activeMatchId: string): PdfSearchVisualHighlight[] {
   return matches.map((match) => ({
+    fragments: match.fragments?.map((fragment) => ({
+      page: fragment.page,
+      rects: fragment.rects,
+      x: fragment.x,
+      y: fragment.y
+    })),
     id: match.id,
     isActive: match.id === activeMatchId,
     page: match.page,

@@ -28,7 +28,12 @@ interface RenderPdfPageArgs {
 
 export function renderPdfPage(args: RenderPdfPageArgs) {
   const pageHighlights = args.highlightLocators.filter((locator) => locator.page === args.pageNumber);
-  const pageSearchHighlights = args.searchHighlights.filter((highlight) => highlight.page === args.pageNumber);
+  const pageSearchHighlights = args.searchHighlights.filter((highlight) => {
+    if (highlight.page === args.pageNumber) {
+      return true;
+    }
+    return highlight.fragments?.some((fragment) => fragment.page === args.pageNumber) ?? false;
+  });
   const markerSize = resolvePdfOverlayMarkerSize(args.zoom);
   const selectionLocator = args.pdfSelectionLocator?.page === args.pageNumber ? { ...args.pdfSelectionLocator, id: 'pdf-selection-overlay' } : null;
   return (
@@ -53,7 +58,7 @@ export function renderPdfPage(args: RenderPdfPageArgs) {
           const highlightRects = renderPdfOverlayRects(locator);
           return highlightRects ?? renderPdfOverlayMarker(locator, markerSize);
         })}
-        {renderSearchHighlightsOnPage(pageSearchHighlights, markerSize)}
+        {renderSearchHighlightsOnPage(args.pageNumber, pageSearchHighlights, markerSize)}
         {renderSelectionOverlay(selectionLocator, markerSize)}
       </div>
     </div>
@@ -89,10 +94,24 @@ const PdfPageCanvas = memo(
   (previous, next) => previous.pageNumber === next.pageNumber && previous.rotate === next.rotate && previous.zoom === next.zoom
 );
 
-function renderSearchHighlightsOnPage(pageSearchHighlights: PdfSearchVisualHighlight[], markerSize: number) {
+function renderSearchHighlightsOnPage(pageNumber: number, pageSearchHighlights: PdfSearchVisualHighlight[], markerSize: number) {
+  const pageFragments = pageSearchHighlights.flatMap((match) => {
+    const fragments = match.fragments?.length
+      ? match.fragments
+      : [{ page: match.page, rects: match.rects, x: match.x, y: match.y }];
+    return fragments
+      .filter((fragment) => fragment.page === pageNumber)
+      .map((fragment, index) => ({
+        id: `${match.id}:${fragment.page}:${index}`,
+        isActive: match.isActive,
+        rects: fragment.rects,
+        x: fragment.x,
+        y: fragment.y
+      }));
+  });
   return (
     <>
-      {pageSearchHighlights.map((match) =>
+      {pageFragments.map((match) =>
         renderPdfOverlayRects(
           match,
           match.isActive

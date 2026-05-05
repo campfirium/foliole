@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { buildCrossPagePdfExcerpt } from './pdfCrossPageWorkspaceSearch.js';
 
 interface WorkspaceSearchRow extends DatabaseRow {
   content: string;
@@ -11,6 +12,19 @@ interface WorkspacePdfSearchRow extends DatabaseRow {
   attachment_id: string;
   id: string;
   match_start: number;
+  page: number;
+  page_text_length: number;
+  text: string;
+  title: string;
+  updated_at: string;
+}
+
+interface WorkspacePdfCrossPageSearchRow extends DatabaseRow {
+  attachment_id: string;
+  end_page: number;
+  id: string;
+  match_start: number;
+  next_text: string;
   page: number;
   page_text_length: number;
   text: string;
@@ -54,6 +68,47 @@ WHERE n.deleted_at IS NULL
   AND a.pdf_index_status = 'ready'
   AND instr(lower(ppt.text), ?) > 0
 ORDER BY n.updated_at DESC
+LIMIT ?`;
+const PDF_CROSS_PAGE_MATCH_SQL = `WITH page_pairs AS (
+  SELECT
+    na.node_id AS id,
+    COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
+    ppt.text AS text,
+    next_ppt.text AS next_text,
+    ppt.page AS page,
+    next_ppt.page AS end_page,
+    length(ppt.text) AS page_text_length,
+    n.updated_at AS updated_at,
+    a.id AS attachment_id,
+    CASE
+      WHEN length(ppt.text) > ? THEN length(ppt.text) - ?
+      ELSE 0
+    END AS tail_start,
+    substr(ppt.text, CASE WHEN length(ppt.text) - ? + 1 > 1 THEN length(ppt.text) - ? + 1 ELSE 1 END)
+      || substr(next_ppt.text, 1, ?) AS boundary_text
+  FROM pdf_page_text ppt
+  INNER JOIN pdf_page_text next_ppt ON next_ppt.attachment_id = ppt.attachment_id AND next_ppt.page = ppt.page + 1
+  INNER JOIN attachments a ON a.id = ppt.attachment_id
+  INNER JOIN node_attachments na ON na.attachment_id = a.id AND na.role = 'reference'
+  INNER JOIN nodes n ON n.id = na.node_id
+  WHERE n.deleted_at IS NULL
+    AND a.mime_type = 'application/pdf'
+    AND a.pdf_index_status = 'ready'
+)
+SELECT
+  id,
+  title,
+  text,
+  next_text,
+  page,
+  end_page,
+  instr(lower(boundary_text), ?) - 1 + tail_start AS match_start,
+  page_text_length,
+  updated_at,
+  attachment_id
+FROM page_pairs
+WHERE instr(lower(boundary_text), ?) > 0
+ORDER BY updated_at DESC
 LIMIT ?`;
 
 export interface WorkspaceSearchResult {
@@ -117,50 +172,84 @@ function sortAndLimitResults(results: WorkspaceSearchResult[]) {
     .slice(0, MAX_RESULTS);
 }
 
+function buildNodeSearchResult(row: WorkspaceSearchRow, query: string): WorkspaceSearchResult {
+  return {
+    excerpt: buildExcerpt(row.content, query),
+    id: row.id,
+    kind: 'node',
+    pdfMatch: null,
+    title: row.title.trim() || 'Untitled',
+    updatedAt: row.updated_at
+  };
+}
+
+function buildPdfSearchResult(row: WorkspacePdfSearchRow, query: string): WorkspaceSearchResult {
+  return {
+    excerpt: buildPdfExcerpt(row.text, row.match_start, query, row.page),
+    id: row.id,
+    kind: 'pdf',
+    pdfMatch: {
+      attachmentId: row.attachment_id,
+      matchStart: Math.max(0, row.match_start),
+      page: row.page,
+      pageTextLength: Math.max(0, row.page_text_length),
+      query
+    },
+    title: row.title.trim() || 'PDF Document',
+    updatedAt: row.updated_at
+  };
+}
+
+function buildCrossPagePdfSearchResult(row: WorkspacePdfCrossPageSearchRow, query: string): WorkspaceSearchResult {
+  return {
+    excerpt: buildCrossPagePdfExcerpt(row.text, row.next_text, row.match_start, query, row.page, row.end_page),
+    id: row.id,
+    kind: 'pdf',
+    pdfMatch: {
+      attachmentId: row.attachment_id,
+      matchStart: Math.max(0, row.match_start),
+      page: row.page,
+      pageTextLength: Math.max(0, row.page_text_length),
+      query
+    },
+    title: row.title.trim() || 'PDF Document',
+    updatedAt: row.updated_at
+  };
+}
+
+function loadNodeMatches(driver: DatabaseDriver, query: string) {
+  const titleMatches = driver.queryAll<WorkspaceSearchRow>(TITLE_MATCH_SQL, [query, MAX_RESULTS]).map((row) => buildNodeSearchResult(row, query));
+  const remainingResults = MAX_RESULTS - titleMatches.length;
+  const contentMatches =
+    remainingResults <= 0
+      ? []
+      : driver.queryAll<WorkspaceSearchRow>(CONTENT_MATCH_SQL, [query, query, remainingResults]).map((row) => buildNodeSearchResult(row, query));
+  return [...titleMatches, ...contentMatches];
+}
+
+function loadPdfMatches(driver: DatabaseDriver, query: string) {
+  return driver.queryAll<WorkspacePdfSearchRow>(PDF_MATCH_SQL, [query, query, MAX_RESULTS]).map((row) => buildPdfSearchResult(row, query));
+}
+
+function loadCrossPagePdfMatches(driver: DatabaseDriver, query: string) {
+  if (query.length <= 1) {
+    return [];
+  }
+  const tailLength = query.length - 1;
+  return driver
+    .queryAll<WorkspacePdfCrossPageSearchRow>(PDF_CROSS_PAGE_MATCH_SQL, [tailLength, tailLength, tailLength, tailLength, tailLength, query, query, MAX_RESULTS])
+    .map((row) => buildCrossPagePdfSearchResult(row, query));
+}
+
 export function searchWorkspace(driver: DatabaseDriver, query: string) {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) {
     return [];
   }
 
-  const titleMatches = driver.queryAll<WorkspaceSearchRow>(TITLE_MATCH_SQL, [normalizedQuery, MAX_RESULTS]).map((row) => ({
-      excerpt: buildExcerpt(row.content, normalizedQuery),
-      id: row.id,
-      kind: 'node' as const,
-      pdfMatch: null,
-      title: row.title.trim() || 'Untitled',
-      updatedAt: row.updated_at
-    }));
-
-  const remainingResults = MAX_RESULTS - titleMatches.length;
-  const contentMatches =
-    remainingResults <= 0
-      ? []
-      : driver
-          .queryAll<WorkspaceSearchRow>(CONTENT_MATCH_SQL, [normalizedQuery, normalizedQuery, remainingResults])
-          .map((row) => ({
-            excerpt: buildExcerpt(row.content, normalizedQuery),
-            id: row.id,
-            kind: 'node' as const,
-            pdfMatch: null,
-            title: row.title.trim() || 'Untitled',
-            updatedAt: row.updated_at
-          }));
-
-  const pdfResults = driver.queryAll<WorkspacePdfSearchRow>(PDF_MATCH_SQL, [normalizedQuery, normalizedQuery, MAX_RESULTS]).map((row) => ({
-    excerpt: buildPdfExcerpt(row.text, row.match_start, normalizedQuery, row.page),
-    id: row.id,
-    kind: 'pdf' as const,
-    pdfMatch: {
-      attachmentId: row.attachment_id,
-      matchStart: Math.max(0, row.match_start),
-      page: row.page,
-      pageTextLength: Math.max(0, row.page_text_length),
-      query: normalizedQuery
-    },
-    title: row.title.trim() || 'PDF Document',
-    updatedAt: row.updated_at
-  }));
-
-  return sortAndLimitResults([...titleMatches, ...contentMatches, ...pdfResults]);
+  return sortAndLimitResults([
+    ...loadNodeMatches(driver, normalizedQuery),
+    ...loadPdfMatches(driver, normalizedQuery),
+    ...loadCrossPagePdfMatches(driver, normalizedQuery)
+  ]);
 }

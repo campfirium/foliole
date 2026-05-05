@@ -50,6 +50,18 @@ const secondSearchMatch = {
   x: 0.1,
   y: 0.3
 };
+const crossPageSearchMatch = {
+  id: 'match-cross',
+  isActive: true,
+  page: 1,
+  fragments: [
+    { page: 1, rects: [{ height: 0.04, width: 0.18, x: 0.1, y: 0.1 }], x: 0.1, y: 0.1 },
+    { page: 2, rects: [{ height: 0.04, width: 0.2, x: 0.12, y: 0.22 }], x: 0.12, y: 0.22 }
+  ],
+  rects: [{ height: 0.04, width: 0.18, x: 0.1, y: 0.1 }],
+  x: 0.1,
+  y: 0.1
+};
 
 function renderPdfSearchPage(searchHighlights = [] as Array<typeof firstSearchMatch>) {
   const onTextContentLoad = vi.fn();
@@ -147,4 +159,22 @@ it('does not rerender the pdf page canvas when only the active search match chan
   );
 
   expect(onTextLayerRender).toHaveBeenCalledTimes(1);
+});
+
+it('renders the second-half highlight of a cross-page match on the next page', () => {
+  const { container } = render(
+    renderPdfPage({
+      highlightLocators: [],
+      onTextContentLoad: vi.fn(),
+      onTextLayerRender: vi.fn(),
+      pageElementsRef,
+      pageNumber: 2,
+      pdfSelectionLocator: undefined,
+      rotation: 0,
+      searchHighlights: [crossPageSearchMatch],
+      zoom: 100
+    })
+  );
+
+  expect(findSearchMatchNode(container, '22%')).toBeTruthy();
 });

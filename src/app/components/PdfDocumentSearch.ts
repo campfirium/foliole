@@ -38,6 +38,12 @@ export interface PdfSearchTarget {
 }
 
 export interface PdfSearchVisualHighlight {
+  fragments?: Array<{
+    page: number;
+    rects: Array<{ height: number; width: number; x: number; y: number }>;
+    x: number | null;
+    y: number | null;
+  }>;
   id: string;
   isActive: boolean;
   page: number;

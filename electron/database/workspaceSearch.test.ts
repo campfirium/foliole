@@ -127,3 +127,36 @@ it('includes indexed pdf page hits in workspace search results', () => {
     query: 'atlas'
   });
 });
+
+it('includes cross-page pdf hits without changing the per-page storage model', () => {
+  insertNode({
+    id: 'node-pdf-cross',
+    title: 'Imported Cross Page PDF Node',
+    content: '',
+    updatedAt: '2026-03-06T00:00:00.000Z'
+  });
+  insertPdfAttachment({ id: 'pdf-attachment-cross', originalName: 'Boundary.pdf', status: 'ready' });
+  openDatabaseConnection().sqlite
+    .prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`)
+    .run('node-pdf-cross', 'pdf-attachment-cross', 'reference');
+  openDatabaseConnection().sqlite
+    .prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?), (?, ?, ?)`)
+    .run('pdf-attachment-cross', 3, 'alpha bri', 'pdf-attachment-cross', 4, 'dge omega');
+
+  const results = searchWorkspace('bridge');
+
+  expect(results[0]).toMatchObject({
+    id: 'node-pdf-cross',
+    kind: 'pdf',
+    title: 'Boundary.pdf',
+    updatedAt: '2026-03-06T00:00:00.000Z'
+  });
+  expect(results[0]?.excerpt).toContain('Cross-page match (3-4)');
+  expect(results[0]?.pdfMatch).toEqual({
+    attachmentId: 'pdf-attachment-cross',
+    matchStart: 6,
+    page: 3,
+    pageTextLength: 9,
+    query: 'bridge'
+  });
+});

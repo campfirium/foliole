@@ -1,11 +1,19 @@
 import type { MutableRefObject } from 'react';
 
+import { collectCrossPageMatches } from './pdfCrossPageMatchCollection';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { collectMappedQueryRanges, resolveIndexedEntry, resolvePageBounds } from './pdfSearchMatchCollectionUtils';
 import { resolveGeometryFromRenderedSegments } from './pdfSearchMatchGeometry';
 import { collectTextSegments } from './pdfSearchTextSegments';
 
 export interface PdfSearchMatch {
+  fragments?: Array<{
+    element: HTMLElement;
+    page: number;
+    rects: Array<{ height: number; width: number; x: number; y: number }>;
+    x: number | null;
+    y: number | null;
+  }>;
   element: HTMLElement;
   id: string;
   matchStart: number;
@@ -30,6 +38,19 @@ interface PdfSearchPageDebug {
   route: 'indexed-pending' | 'rendered' | 'none';
 }
 
+type BaseSearchDiagnostics = Omit<PdfSearchPageDebug, 'indexedRangeCount' | 'indexedTextLength' | 'matchCount' | 'route'>;
+type RenderSearchDiagnostics = Omit<
+  PdfSearchPageDebug,
+  'indexedRangeCount' | 'indexedTextLength' | 'matchCount' | 'renderedRangeCount' | 'renderedTextLength' | 'route'
+>;
+type SearchablePageEntry = {
+  indexedEntry: PdfPageTextEntry;
+  page: number;
+  renderedSegments: ReturnType<typeof collectTextSegments>;
+  shell: HTMLDivElement;
+  text: string;
+};
+
 let lastPdfSearchDebug: PdfSearchPageDebug[] = [];
 
 export function getLastPdfSearchDebug() {
@@ -39,6 +60,7 @@ export function getLastPdfSearchDebug() {
 function buildFallbackMatch(page: number, shell: HTMLDivElement, position: number, index: number): PdfSearchMatch {
   return {
     element: shell,
+    fragments: [{ element: shell, page, rects: [], x: null, y: null }],
     id: `${page}:${position}:${index}`,
     matchStart: position,
     page,
@@ -60,6 +82,7 @@ function buildMatch(
   }
   return {
     element: geometry.element,
+    fragments: [{ element: geometry.element, page, rects: geometry.rects, x: geometry.x, y: geometry.y }],
     id: `${page}:${position}:${index}`,
     matchStart: position,
     page,
@@ -70,7 +93,7 @@ function buildMatch(
 }
 
 function collectIndexedPendingMatches(args: {
-  diagnostics: Omit<PdfSearchPageDebug, 'indexedRangeCount' | 'indexedTextLength' | 'matchCount' | 'route'>;
+  diagnostics: BaseSearchDiagnostics;
   indexedEntry: PdfPageTextEntry;
   page: number;
   query: string;
@@ -91,7 +114,7 @@ function collectIndexedPendingMatches(args: {
 }
 
 function collectRenderedMatches(args: {
-  diagnostics: Omit<PdfSearchPageDebug, 'indexedRangeCount' | 'indexedTextLength' | 'matchCount' | 'renderedRangeCount' | 'renderedTextLength' | 'route'>;
+  diagnostics: RenderSearchDiagnostics;
   page: number;
   pageBounds: HTMLElement;
   query: string;
@@ -128,6 +151,89 @@ function collectRenderedMatches(args: {
   };
 }
 
+function collectPageSearchData(args: {
+  debugPages: PdfSearchPageDebug[];
+  diagnostics: BaseSearchDiagnostics;
+  matches: PdfSearchMatch[];
+  page: number;
+  pageBounds: HTMLElement;
+  pageTextByNumberRef?: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
+  query: string;
+  searchablePages: SearchablePageEntry[];
+  shell: HTMLDivElement;
+}) {
+  const segments = collectTextSegments(args.shell);
+  if (segments.length > 0) {
+    args.searchablePages.push({
+      indexedEntry: { itemRanges: [], text: '' },
+      page: args.page,
+      renderedSegments: segments,
+      shell: args.shell,
+      text: segments.map((segment) => segment.text).join('')
+    });
+    const renderedResult = collectRenderedMatches({
+      diagnostics: args.diagnostics,
+      page: args.page,
+      pageBounds: args.pageBounds,
+      query: args.query,
+      shell: args.shell
+    });
+    args.debugPages.push(renderedResult.debug);
+    args.matches.push(...renderedResult.matches);
+    return true;
+  }
+
+  const indexedEntry = resolveIndexedEntry(args.pageTextByNumberRef?.current[args.page]);
+  const indexedPageText = indexedEntry.text.toLocaleLowerCase();
+  if (indexedPageText.length === 0) {
+    return false;
+  }
+  args.searchablePages.push({
+    indexedEntry,
+    page: args.page,
+    renderedSegments: [],
+    shell: args.shell,
+    text: indexedEntry.text
+  });
+  const indexedResult = collectIndexedPendingMatches({
+    diagnostics: args.diagnostics,
+    indexedEntry,
+    page: args.page,
+    query: args.query,
+    shell: args.shell
+  });
+  args.debugPages.push(indexedResult.debug);
+  args.matches.push(...indexedResult.matches);
+  return true;
+}
+
+function buildPageDiagnostics(page: number, pageBounds: HTMLElement, textLayer: HTMLElement | null): BaseSearchDiagnostics {
+  return {
+    hasTextLayer: !!textLayer,
+    itemNodeCount: textLayer ? textLayer.querySelectorAll('span[role="presentation"], div[role="presentation"], span, div').length : 0,
+    page,
+    pageTextLength: (pageBounds.textContent ?? '').trim().length,
+    renderedRangeCount: 0,
+    renderedTextLength: 0,
+    textLayerChildCount: textLayer?.childElementCount ?? 0,
+    textLayerTextLength: (textLayer?.textContent ?? '').trim().length
+  };
+}
+
+function buildNoMatchDebug(diagnostics: BaseSearchDiagnostics): PdfSearchPageDebug {
+  return {
+    ...diagnostics,
+    indexedRangeCount: 0,
+    indexedTextLength: 0,
+    matchCount: 0,
+    route: 'none'
+  };
+}
+
+function sortMatches(matches: PdfSearchMatch[]) {
+  return matches.sort((left, right) => left.page - right.page || left.matchStart - right.matchStart || left.id.localeCompare(right.id));
+}
+
 export function collectMatches(
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>,
   totalPages: number,
@@ -136,49 +242,31 @@ export function collectMatches(
 ): PdfSearchMatch[] {
   const matches: PdfSearchMatch[] = [];
   const debugPages: PdfSearchPageDebug[] = [];
+  const searchablePages: SearchablePageEntry[] = [];
   for (let page = 1; page <= totalPages; page += 1) {
     const shell = pageElementsRef.current[page];
     if (!shell) continue;
 
     const pageBounds = resolvePageBounds(shell);
     const textLayer = pageBounds.querySelector<HTMLElement>('.textLayer');
-    const itemNodeCount = textLayer
-      ? textLayer.querySelectorAll('span[role="presentation"], div[role="presentation"], span, div').length
-      : 0;
-    const diagnostics = {
-      hasTextLayer: !!textLayer,
-      itemNodeCount,
-      page,
-      pageTextLength: (pageBounds.textContent ?? '').trim().length,
-      renderedRangeCount: 0,
-      renderedTextLength: 0,
-      textLayerChildCount: textLayer?.childElementCount ?? 0,
-      textLayerTextLength: (textLayer?.textContent ?? '').trim().length
-    };
-    const segments = collectTextSegments(shell);
-    if (segments.length > 0) {
-      const renderedResult = collectRenderedMatches({ diagnostics, page, pageBounds, query, shell });
-      debugPages.push(renderedResult.debug);
-      matches.push(...renderedResult.matches);
+    const diagnostics = buildPageDiagnostics(page, pageBounds, textLayer);
+    if (
+      collectPageSearchData({
+        debugPages,
+        diagnostics,
+        matches,
+        page,
+        pageBounds,
+        pageTextByNumberRef,
+        query,
+        searchablePages,
+        shell
+      })
+    ) {
       continue;
     }
-
-    const indexedEntry = resolveIndexedEntry(pageTextByNumberRef?.current[page]);
-    const indexedPageText = indexedEntry.text.toLocaleLowerCase();
-    if (indexedPageText.length > 0) {
-      const indexedResult = collectIndexedPendingMatches({ diagnostics, indexedEntry, page, query, shell });
-      debugPages.push(indexedResult.debug);
-      matches.push(...indexedResult.matches);
-      continue;
-    }
-    debugPages.push({
-      ...diagnostics,
-      indexedRangeCount: 0,
-      indexedTextLength: 0,
-      matchCount: 0,
-      route: 'none'
-    });
+    debugPages.push(buildNoMatchDebug(diagnostics));
   }
   lastPdfSearchDebug = debugPages;
-  return matches;
+  return sortMatches([...matches, ...collectCrossPageMatches(searchablePages, query)]);
 }
