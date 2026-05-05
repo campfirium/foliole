@@ -508,6 +508,43 @@ function Is-NativeDevRunning {
   return $apps.Count -gt 0
 }
 
+function Is-NativeDevLauncherRunning {
+  param([string]$WorkDir)
+
+  $launchers = @(Get-NativeLauncherProcesses -WorkDir $WorkDir)
+  return $launchers.Count -gt 0
+}
+
+function Clear-WorkdirPort4600Listener {
+  param([string]$WorkDir)
+
+  $listeners = @(Get-NetTCPConnection -LocalAddress "127.0.0.1" -LocalPort 4600 -State Listen -ErrorAction SilentlyContinue)
+  if ($listeners.Count -eq 0) {
+    return
+  }
+
+  $workDirLower = $WorkDir.ToLowerInvariant()
+  $ownerIds = $listeners | Select-Object -ExpandProperty OwningProcess -Unique
+  foreach ($ownerId in $ownerIds) {
+    try {
+      $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $ownerId"
+      if (-not $proc) {
+        continue
+      }
+      $cmd = if ($proc.CommandLine) { $proc.CommandLine.ToLowerInvariant() } else { "" }
+      $exe = if ($proc.ExecutablePath) { $proc.ExecutablePath.ToLowerInvariant() } else { "" }
+      $canStop = $cmd.Contains($workDirLower) -or $cmd.Contains("vite") -or $exe.Contains("\\node.exe")
+      if (-not $canStop) {
+        continue
+      }
+      Stop-Process -Id $ownerId -Force -ErrorAction Stop
+      Write-Log "[windows-native-dev] cleared port 4600 listener pid=$ownerId"
+    } catch {
+      Write-Log "[windows-native-dev] failed to clear port 4600 listener pid=$($ownerId): $($_.Exception.Message)"
+    }
+  }
+}
+
 function Show-Status {
   param([string]$WorkDir)
 
@@ -535,10 +572,17 @@ function Show-Status {
 function Launch-NativeDev {
   param([string]$WorkDir)
 
+  if (Is-NativeDevLauncherRunning -WorkDir $WorkDir) {
+    Write-Log "[windows-native-dev] launcher already running, skip launch."
+    return ""
+  }
+
   if (Is-NativeDevRunning -WorkDir $WorkDir) {
     Write-Log "[windows-native-dev] native app already running, skip launch."
     return ""
   }
+
+  Clear-WorkdirPort4600Listener -WorkDir $WorkDir
 
   if (Test-Path $bootReadyFile) {
     Remove-Item -Force $bootReadyFile -ErrorAction SilentlyContinue

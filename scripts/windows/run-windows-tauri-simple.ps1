@@ -98,6 +98,36 @@ function Save-StateFile {
   $payload | ConvertTo-Json | Out-File -FilePath $stateFile -Encoding utf8
 }
 
+function Clear-WorkdirPort4600Listener {
+  param([string]$WorkDir)
+
+  $listeners = @(Get-NetTCPConnection -LocalAddress "127.0.0.1" -LocalPort 4600 -State Listen -ErrorAction SilentlyContinue)
+  if ($listeners.Count -eq 0) {
+    return
+  }
+
+  $workDirLower = $WorkDir.ToLowerInvariant()
+  $ownerIds = $listeners | Select-Object -ExpandProperty OwningProcess -Unique
+  foreach ($ownerId in $ownerIds) {
+    try {
+      $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $ownerId"
+      if (-not $proc) {
+        continue
+      }
+      $cmd = if ($proc.CommandLine) { $proc.CommandLine.ToLowerInvariant() } else { "" }
+      $exe = if ($proc.ExecutablePath) { $proc.ExecutablePath.ToLowerInvariant() } else { "" }
+      $canStop = $cmd.Contains($workDirLower) -or $cmd.Contains("dev-static-server.cjs") -or $cmd.Contains("vite") -or $exe.Contains("\\node.exe")
+      if (-not $canStop) {
+        continue
+      }
+      Stop-Process -Id $ownerId -Force -ErrorAction Stop
+      Write-Log "[windows-tauri-simple] cleared port 4600 listener pid=$ownerId"
+    } catch {
+      Write-Log "[windows-tauri-simple] failed to clear port 4600 listener pid=$($ownerId): $($_.Exception.Message)"
+    }
+  }
+}
+
 function Stop-Session {
   param([string]$WorkDir)
 
@@ -157,11 +187,19 @@ function Show-Status {
 function Start-Session {
   param([string]$WorkDir)
 
+  $existingLaunchers = @(Get-LauncherProcesses -WorkDir $WorkDir)
+  if ($existingLaunchers.Count -gt 0) {
+    Write-Log "[windows-tauri-simple] launcher already running, skip start."
+    return
+  }
+
   $existingApps = @(Get-AppProcesses -WorkDir $WorkDir)
   if ($existingApps.Count -gt 0) {
     Write-Log "[windows-tauri-simple] app already running, skip start."
     return
   }
+
+  Clear-WorkdirPort4600Listener -WorkDir $WorkDir
 
   $launchCommand = "cd /d `"$WorkDir`" && npm run tauri:dev"
   Write-Log "[windows-tauri-simple] step: launch tauri dev"
