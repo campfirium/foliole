@@ -99,17 +99,17 @@ beforeEach(() => {
 
 it('loads workspace list snapshot without long-lived node documents', () => {
   queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([{ node_id: 'node-1' }]);
-  queryOneSpy.mockReturnValueOnce(undefined);
+  queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceListSnapshot(driver)).toEqual(expectedWorkspaceListSnapshot);
 
   expect(queryAllSpy).toHaveBeenCalledTimes(2);
-  expect(queryOneSpy).toHaveBeenCalledTimes(1);
+  expect(queryOneSpy).toHaveBeenCalledTimes(2);
 });
 
 it('queries lightweight content flags instead of full node documents', () => {
   queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([{ node_id: 'node-1' }]);
-  queryOneSpy.mockReturnValueOnce(undefined);
+  queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   loadWorkspaceListSnapshot(driver);
 
@@ -118,4 +118,20 @@ it('queries lightweight content flags instead of full node documents', () => {
   expect(workspaceListSql).toContain('AS has_reveal');
   expect(workspaceListSql).not.toContain('n.content,');
   expect(workspaceListSql).not.toContain('n.reveal,');
+});
+
+it('prefers the persisted active node when it is still available', () => {
+  queryAllSpy.mockReturnValueOnce([
+    workspaceListRow,
+    {
+      ...workspaceListRow,
+      id: 'node-2',
+      title: 'Node 2'
+    }
+  ]).mockReturnValueOnce([{ node_id: 'node-1' }, { node_id: 'node-2' }]);
+  queryOneSpy
+    .mockReturnValueOnce({ value: 'node-2' })
+    .mockReturnValueOnce(undefined);
+
+  expect(loadWorkspaceListSnapshot(driver)?.activeNodeId).toBe('node-2');
 });

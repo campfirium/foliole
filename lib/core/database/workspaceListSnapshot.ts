@@ -46,6 +46,12 @@ interface NodeOrderRow extends DatabaseRow {
   node_id: string;
 }
 
+interface WorkspaceMetaRow extends DatabaseRow {
+  value: string;
+}
+
+const ACTIVE_NODE_META_KEY = 'active_node_id';
+
 function parseNodeKind(value: string | null): NodeKind {
   return isNodeKind(value) ? value : 'topic';
 }
@@ -132,6 +138,14 @@ function queryNodeOrderRows(driver: DatabaseDriver) {
   return driver.queryAll<NodeOrderRow>('SELECT node_id FROM node_order ORDER BY position ASC');
 }
 
+function loadPersistedActiveNodeId(driver: DatabaseDriver) {
+  const row = driver.queryOne<WorkspaceMetaRow>(
+    'SELECT value FROM workspace_meta WHERE key = ?',
+    [ACTIVE_NODE_META_KEY]
+  );
+  return row && row.value !== '' ? row.value : null;
+}
+
 export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
   const rows = queryWorkspaceRows(driver);
   if (rows.length === 0) {
@@ -179,7 +193,11 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
   }
 
   const trashedNodeSet = new Set(trashedNodeIds);
-  const activeNodeId = nodeOrder.find((nodeId) => !trashedNodeSet.has(nodeId)) ?? null;
+  const persistedActiveNodeId = loadPersistedActiveNodeId(driver);
+  const activeNodeId =
+    (persistedActiveNodeId && nodesById[persistedActiveNodeId] && !trashedNodeSet.has(persistedActiveNodeId)
+      ? persistedActiveNodeId
+      : null) ?? nodeOrder.find((nodeId) => !trashedNodeSet.has(nodeId)) ?? null;
 
   return {
     activeNodeId,

@@ -310,9 +310,15 @@ it('updates layout widths and resets to defaults', () => {
 it('hydrates sidebar collapsed flags from persisted app settings', () => {
   localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.listCollapsed, 'true');
   localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarCollapsed, 'true');
+  localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.listWidth, '512');
+  localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.documentWidth, '1024');
+  localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth, '448');
 
   const initial = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
 
   expect(initial.layout.isListCollapsed).toBe(true);
   expect(initial.layout.isRightSidebarCollapsed).toBe(true);
+  expect(initial.layout.listWidth).toBe(512);
+  expect(initial.layout.documentMaxWidth).toBe(1024);
+  expect(initial.layout.rightSidebarWidth).toBe(448);
 });

@@ -231,7 +231,7 @@ it('loads workspace snapshot through query helpers only', () => {
       }
     ])
     .mockReturnValueOnce([{ node_id: 'node-1' }]);
-  queryOneSpy.mockReturnValueOnce(undefined);
+  queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceSnapshot(driver)).toEqual({
     activeNodeId: 'node-1',
@@ -259,5 +259,5 @@ it('loads workspace snapshot through query helpers only', () => {
   });
 
   expect(queryAllSpy).toHaveBeenCalledTimes(2);
-  expect(queryOneSpy).toHaveBeenCalledTimes(1);
+  expect(queryOneSpy).toHaveBeenCalledTimes(2);
 });

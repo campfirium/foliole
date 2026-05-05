@@ -14,6 +14,7 @@ export function useWorkspaceHydration() {
     const unsubFinish = useWorkspaceStore.persist.onFinishHydration(() => {
       setIsWorkspaceHydrated(true);
     });
+    setIsWorkspaceHydrated(useWorkspaceStore.persist.hasHydrated());
 
     return () => {
       unsubHydrate();

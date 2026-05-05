@@ -1,10 +1,14 @@
 import type { CSSProperties } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { WindowTitleBar } from './WindowTitleBar';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceLayoutGrid } from './WorkspaceLayoutGrid';
+import {
+  loadWorkspaceRightPanelPreference,
+  saveWorkspaceRightPanelPreference
+} from './workspaceRightPanelPreference';
 import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
@@ -34,13 +38,20 @@ function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
 }
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
-  const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>('dev');
+  const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
+    loadWorkspaceRightPanelPreference()
+  );
   const { handleOpenNotesView, handleOpenVirtualView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(props);
   const workspaceGridStyle = {
     '--workspace-list-width': `${props.listWidth}px`,
     '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px`
   } as CSSProperties;
   const documentNodeId = props.isViewingTrashNode ? props.selectedTrashNodeId : props.activeNodeId;
+
+  useEffect(() => {
+    saveWorkspaceRightPanelPreference(activeRightPanelId);
+  }, [activeRightPanelId]);
+
   const handleSelectRightPanel = (panelId: WorkspaceRightPanelId) => {
     setActiveRightPanelId(panelId);
     if (props.isRightSidebarCollapsed) {

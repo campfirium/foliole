@@ -1,7 +1,7 @@
 type BootStageReporter = (stage: string, payload?: Record<string, unknown>) => void;
 
 interface StartupBootstrapArgs {
-  mountApp: () => void;
+  mountApp: () => void | Promise<void>;
   renderStartupError: (message: string) => void;
   reportBootStage: BootStageReporter;
   reportBridgeReady: () => Promise<void>;
@@ -28,18 +28,21 @@ async function runBackgroundTask(
 }
 
 export function bootstrapApp(args: StartupBootstrapArgs) {
-  try {
+  void (async () => {
     args.reportBootStage('boot_start');
-    args.mountApp();
-  } catch (error) {
-    console.error('[startup] fatal bootstrap error', error);
-    args.reportBootStage('fatal_bootstrap_error', {
-      message: toErrorMessage(error)
-    });
-    args.renderStartupError(toErrorMessage(error));
-    return;
-  }
+    await runBackgroundTask(args.syncAppSettings, args.reportBootStage, 'settings_sync_failed');
 
-  void runBackgroundTask(args.syncAppSettings, args.reportBootStage, 'settings_sync_failed');
-  void runBackgroundTask(args.reportBridgeReady, args.reportBootStage, 'bridge_ready_report_failed');
+    try {
+      await args.mountApp();
+    } catch (error) {
+      console.error('[startup] fatal bootstrap error', error);
+      args.reportBootStage('fatal_bootstrap_error', {
+        message: toErrorMessage(error)
+      });
+      args.renderStartupError(toErrorMessage(error));
+      return;
+    }
+
+    void runBackgroundTask(args.reportBridgeReady, args.reportBootStage, 'bridge_ready_report_failed');
+  })();
 }

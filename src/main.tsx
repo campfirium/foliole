@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
-import { App } from './app/App';
 import './app/styles.css';
 import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
 import {
@@ -70,7 +69,7 @@ function registerAppReadySignals(signalAppReady: (source: string) => void) {
   }, 1500);
 }
 
-function mountApp() {
+async function mountApp() {
   const rootElement = document.getElementById(ROOT_ID);
   if (!rootElement) {
     renderStartupError('Missing #root element in index.html.');
@@ -90,6 +89,7 @@ function mountApp() {
   });
   reportRuntimeBootStage('boot_context', bootContext);
 
+  const { App } = await import('./app/App');
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <App />

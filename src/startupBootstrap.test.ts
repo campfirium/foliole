@@ -1,71 +1,112 @@
 // @vitest-environment node
 
-import { describe, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { bootstrapApp } from './startupBootstrap';
 
-describe('bootstrapApp', () => {
-  it('mounts immediately and keeps background startup tasks non-blocking', async () => {
-    const events: string[] = [];
-    const pending = {
-      releaseBridge: null as (() => void) | null,
-      releaseSettings: null as (() => void) | null
-    };
+function flushBootstrapWork() {
+  return Promise.resolve().then(() => Promise.resolve());
+}
 
-    bootstrapApp({
-      mountApp: () => {
-        events.push('mount');
-      },
-      renderStartupError: () => {
-        events.push('render-error');
-      },
-      reportBootStage: (stage) => {
-        events.push(stage);
-      },
-      reportBridgeReady: () =>
-        new Promise<void>((resolve) => {
-          pending.releaseBridge = resolve;
-        }),
-      syncAppSettings: () =>
-        new Promise<void>((resolve) => {
-          pending.releaseSettings = resolve;
-        })
-    });
-
-    expect(events).toEqual(['boot_start', 'mount']);
-
-    const releaseSettingsFn = pending.releaseSettings;
-    const releaseBridgeFn = pending.releaseBridge;
-    if (typeof releaseSettingsFn === 'function') {
-      releaseSettingsFn();
+function createEventRecorder() {
+  const events: string[] = [];
+  return {
+    events,
+    mountApp: () => {
+      events.push('mount');
+    },
+    renderStartupError: () => {
+      events.push('render-error');
+    },
+    reportBootStage: (stage: string) => {
+      events.push(stage);
     }
-    if (typeof releaseBridgeFn === 'function') {
-      releaseBridgeFn();
-    }
-    await Promise.resolve();
-    await Promise.resolve();
+  };
+}
 
-    expect(events).toEqual(['boot_start', 'mount']);
+function createPendingTaskHarness() {
+  const recorder = createEventRecorder();
+  const pending = {
+    releaseBridge: null as (() => void) | null,
+    releaseSettings: null as (() => void) | null
+  };
+
+  bootstrapApp({
+    mountApp: recorder.mountApp,
+    renderStartupError: recorder.renderStartupError,
+    reportBootStage: recorder.reportBootStage,
+    reportBridgeReady: () =>
+      new Promise<void>((resolve) => {
+        pending.releaseBridge = resolve;
+      }),
+    syncAppSettings: () =>
+      new Promise<void>((resolve) => {
+        pending.releaseSettings = resolve;
+      })
   });
 
-  it('renders the startup error when mounting throws', () => {
-    const reportBootStage = vi.fn();
-    const renderStartupError = vi.fn();
+  return { pending, recorder };
+}
 
-    bootstrapApp({
-      mountApp: () => {
-        throw new Error('mount failed');
-      },
-      renderStartupError,
-      reportBootStage,
-      reportBridgeReady: vi.fn(async () => undefined),
-      syncAppSettings: vi.fn(async () => undefined)
-    });
+it('waits for settings sync before mounting and keeps bridge reporting non-blocking after mount', async () => {
+  const harness = createPendingTaskHarness();
 
-    expect(reportBootStage).toHaveBeenNthCalledWith(1, 'boot_start');
-    expect(reportBootStage).toHaveBeenNthCalledWith(2, 'fatal_bootstrap_error', {
-      message: 'mount failed'
-    });
-    expect(renderStartupError).toHaveBeenCalledWith('mount failed');
+  expect(harness.recorder.events).toEqual(['boot_start']);
+
+  const releaseSettingsFn = harness.pending.releaseSettings;
+  const releaseBridgeFn = harness.pending.releaseBridge;
+  if (typeof releaseSettingsFn === 'function') {
+    releaseSettingsFn();
+  }
+  await flushBootstrapWork();
+
+  expect(harness.recorder.events).toEqual(['boot_start', 'mount']);
+
+  if (typeof releaseBridgeFn === 'function') {
+    releaseBridgeFn();
+  }
+  await flushBootstrapWork();
+
+  expect(harness.recorder.events).toEqual(['boot_start', 'mount']);
+});
+
+it('still mounts when settings sync fails', async () => {
+  const recorder = createEventRecorder();
+
+  bootstrapApp({
+    mountApp: recorder.mountApp,
+    renderStartupError: recorder.renderStartupError,
+    reportBootStage: recorder.reportBootStage,
+    reportBridgeReady: vi.fn(async () => undefined),
+    syncAppSettings: vi.fn(async () => {
+      throw new Error('settings failed');
+    })
   });
+
+  await flushBootstrapWork();
+
+  expect(recorder.events).toEqual(['boot_start', 'settings_sync_failed', 'mount']);
+});
+
+it('renders the startup error when mounting throws', async () => {
+  const reportBootStage = vi.fn();
+  const renderStartupError = vi.fn();
+
+  bootstrapApp({
+    mountApp: () => {
+      throw new Error('mount failed');
+    },
+    renderStartupError,
+    reportBootStage,
+    reportBridgeReady: vi.fn(async () => undefined),
+    syncAppSettings: vi.fn(async () => undefined)
+  });
+
+  await flushBootstrapWork();
+
+  expect(reportBootStage).toHaveBeenNthCalledWith(1, 'boot_start');
+  expect(reportBootStage).toHaveBeenNthCalledWith(2, 'fatal_bootstrap_error', {
+    message: 'mount failed'
+  });
+  expect(renderStartupError).toHaveBeenCalledWith('mount failed');
 });

@@ -7,6 +7,15 @@ import {
 } from '../model/nodeTreeAutoCollapse';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import {
+  loadCollapsedTrashNodeIds,
+  loadManualCollapsedNoteNodeIds,
+  loadManualExpandedNoteNodeIds,
+  saveCollapsedTrashNodeIds,
+  saveManualCollapsedNoteNodeIds,
+  saveManualExpandedNoteNodeIds
+} from './nodeListCollapseSettings';
+
 export interface CollapsedNodeState {
   collapsedNoteNodeIds: ReadonlySet<string>;
   collapsedTrashNodeIds: ReadonlySet<string>;
@@ -31,7 +40,7 @@ export function useCollapsedNodeState({
   noteRowsAll,
   trashRowsAll
 }: UseCollapsedNodeStateInput): CollapsedNodeState {
-  const [collapsedTrashNodeIdList, setCollapsedTrashNodeIdList] = useState<string[]>([]);
+  const [collapsedTrashNodeIdList, setCollapsedTrashNodeIdList] = useState<string[]>(() => loadCollapsedTrashNodeIds());
   const noteState = useNoteCollapsedState({
     activeNodeId,
     nodesById,
@@ -43,6 +52,9 @@ export function useCollapsedNodeState({
     [collapsedTrashNodeIdList]
   );
   usePruneTrashCollapseState(trashRowsAll, setCollapsedTrashNodeIdList);
+  useEffect(() => {
+    saveCollapsedTrashNodeIds(collapsedTrashNodeIdList);
+  }, [collapsedTrashNodeIdList]);
 
   return {
     collapsedNoteNodeIds: noteState.collapsedNoteNodeIds,
@@ -86,22 +98,30 @@ function useNoteCollapsedState({
       }),
     [nodesById, noteRowsAll]
   );
-  useAutoExpandActiveNodePath(
-    activeNodeId,
-    nodesById,
-    noteParentById,
-    noteRowsAll,
-    setManualCollapsedNoteNodeIdList,
-    setManualExpandedNoteNodeIdList
+  const autoExpandedNoteNodeIds = useMemo(
+    () =>
+      collectAutoExpandedNodeIds({
+        activeNodeId,
+        nodesById,
+        parentById: noteParentById,
+        rows: noteRowsAll
+      }),
+    [activeNodeId, nodesById, noteParentById, noteRowsAll]
   );
   const collapsedNoteNodeIds = useMemo(
     () =>
       mergeCollapsedNodeIds(
         defaultCollapsedNoteNodeIds,
         manualCollapsedNoteNodeIdList,
-        manualExpandedNoteNodeIdList
+        manualExpandedNoteNodeIdList,
+        autoExpandedNoteNodeIds
       ),
-    [defaultCollapsedNoteNodeIds, manualCollapsedNoteNodeIdList, manualExpandedNoteNodeIdList]
+    [
+      autoExpandedNoteNodeIds,
+      defaultCollapsedNoteNodeIds,
+      manualCollapsedNoteNodeIdList,
+      manualExpandedNoteNodeIdList
+    ]
   );
 
   return {
@@ -114,13 +134,25 @@ function useNoteCollapsedState({
 }
 
 function useNoteManualCollapseState(noteCollapsibleNodeIds: ReadonlySet<string>) {
-  const [manualCollapsedNoteNodeIdList, setManualCollapsedNoteNodeIdList] = useState<string[]>([]);
-  const [manualExpandedNoteNodeIdList, setManualExpandedNoteNodeIdList] = useState<string[]>([]);
+  const [manualCollapsedNoteNodeIdList, setManualCollapsedNoteNodeIdList] = useState<string[]>(
+    () => loadManualCollapsedNoteNodeIds()
+  );
+  const [manualExpandedNoteNodeIdList, setManualExpandedNoteNodeIdList] = useState<string[]>(
+    () => loadManualExpandedNoteNodeIds()
+  );
 
   useEffect(() => {
     setManualCollapsedNoteNodeIdList((prev) => prev.filter((id) => noteCollapsibleNodeIds.has(id)));
     setManualExpandedNoteNodeIdList((prev) => prev.filter((id) => noteCollapsibleNodeIds.has(id)));
   }, [noteCollapsibleNodeIds]);
+
+  useEffect(() => {
+    saveManualCollapsedNoteNodeIds(manualCollapsedNoteNodeIdList);
+  }, [manualCollapsedNoteNodeIdList]);
+
+  useEffect(() => {
+    saveManualExpandedNoteNodeIds(manualExpandedNoteNodeIdList);
+  }, [manualExpandedNoteNodeIdList]);
 
   return {
     collapseAllNotes: () =>
@@ -144,37 +176,6 @@ function useNoteManualCollapseState(noteCollapsibleNodeIds: ReadonlySet<string>)
   };
 }
 
-function useAutoExpandActiveNodePath(
-  activeNodeId: string | null,
-  nodesById: WorkspaceListNodesById,
-  noteParentById: Record<string, string | null>,
-  noteRowsAll: NodeTreeRow[],
-  setManualCollapsedNoteNodeIdList: Dispatch<SetStateAction<string[]>>,
-  setManualExpandedNoteNodeIdList: Dispatch<SetStateAction<string[]>>
-) {
-  const autoExpandedNodeIds = useMemo(
-    () =>
-      collectAutoExpandedNodeIds({
-        activeNodeId,
-        nodesById,
-        parentById: noteParentById,
-        rows: noteRowsAll
-      }),
-    [activeNodeId, nodesById, noteParentById, noteRowsAll]
-  );
-
-  useEffect(() => {
-    if (autoExpandedNodeIds.size === 0) {
-      return;
-    }
-
-    setManualCollapsedNoteNodeIdList((prev) =>
-      prev.filter((nodeId) => !autoExpandedNodeIds.has(nodeId))
-    );
-    setManualExpandedNoteNodeIdList((prev) => appendUniqueList(prev, autoExpandedNodeIds));
-  }, [autoExpandedNodeIds, setManualCollapsedNoteNodeIdList, setManualExpandedNoteNodeIdList]);
-}
-
 function usePruneTrashCollapseState(
   trashRowsAll: NodeTreeRow[],
   setCollapsedTrashNodeIdList: Dispatch<SetStateAction<string[]>>
@@ -189,14 +190,6 @@ function usePruneTrashCollapseState(
 
 function appendUnique(values: string[], nodeId: string) {
   return values.includes(nodeId) ? values : [...values, nodeId];
-}
-
-function appendUniqueList(values: string[], nodeIds: ReadonlySet<string>) {
-  let next = values;
-  for (const nodeId of nodeIds) {
-    next = appendUnique(next, nodeId);
-  }
-  return next;
 }
 
 function toggleManualCollapseNode(
@@ -227,13 +220,17 @@ function setManualCollapseState(
 function mergeCollapsedNodeIds(
   autoCollapsedNodeIds: ReadonlySet<string>,
   manualCollapsedNodeIdList: string[],
-  manualExpandedNodeIdList: string[]
+  manualExpandedNodeIdList: string[],
+  autoExpandedNodeIds: ReadonlySet<string>
 ) {
   const next = new Set(autoCollapsedNodeIds);
   for (const nodeId of manualCollapsedNodeIdList) {
     next.add(nodeId);
   }
   for (const nodeId of manualExpandedNodeIdList) {
+    next.delete(nodeId);
+  }
+  for (const nodeId of autoExpandedNodeIds) {
     next.delete(nodeId);
   }
   return next;

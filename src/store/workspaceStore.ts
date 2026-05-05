@@ -7,7 +7,7 @@ import type { Node, NodeAnchorLink } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
-import { loadListCollapsedPreference, loadRightSidebarCollapsedPreference } from './workspaceLayoutPrefs';
+import { loadWorkspaceLayoutPreferenceSnapshot } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
@@ -155,11 +155,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'untitledSequenceByParent'
 > {
   return {
-    ...createInitialWorkspaceSnapshot(now, {
-      ...defaultLayoutState,
-      isListCollapsed: loadListCollapsedPreference(),
-      isRightSidebarCollapsed: loadRightSidebarCollapsedPreference()
-    }),
+    ...createInitialWorkspaceSnapshot(now, loadWorkspaceLayoutPreferenceSnapshot(defaultLayoutState)),
     navigation: { ...INITIAL_WORKSPACE_NAVIGATION_STATE },
     rendererBoundaryKeepNodeIds: [],
     reviewSession: {

@@ -13,6 +13,7 @@ vi.mock('./paths.js', () => ({
     app_data_dir: mockedAppDataDir,
     app_cache_dir: path.join(mockedAppDataDir, 'cache'),
     app_config_dir: path.join(mockedAppDataDir, 'config'),
+    documents_dir: path.join(mockedAppDataDir, 'documents'),
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
@@ -34,6 +35,20 @@ afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
+
+async function writeLegacyWorkspaceFile(layout: Record<string, unknown>) {
+  const workspaceDir = path.join(mockedAppDataDir, 'workspace');
+  await fs.mkdir(workspaceDir, { recursive: true });
+  await fs.writeFile(
+    path.join(workspaceDir, 'foliole-workspace-v1.json'),
+    JSON.stringify({
+      state: {
+        layout
+      }
+    }),
+    'utf8'
+  );
+}
 
 it('persists app settings state into sqlite settings table', async () => {
   await saveAppSettingsState({
@@ -75,5 +90,37 @@ it('filters malformed app settings payload values', async () => {
 
   await expect(loadAppSettingsState()).resolves.toEqual({
     'foliole-ui-font-preset': 'inter'
+  });
+});
+
+it('backfills missing workspace layout settings from the legacy workspace file', async () => {
+  await writeLegacyWorkspaceFile({
+    documentMaxWidth: 960,
+    isListCollapsed: true,
+    isRightSidebarCollapsed: false,
+    listWidth: 388,
+    rightSidebarWidth: 410
+  });
+
+  await expect(loadAppSettingsState()).resolves.toEqual({
+    'foliole-workspace-document-width': '960',
+    'foliole-workspace-list-collapsed': 'true',
+    'foliole-workspace-list-width': '388',
+    'foliole-workspace-right-sidebar-collapsed': 'false',
+    'foliole-workspace-right-sidebar-width': '410'
+  });
+});
+
+it('keeps sqlite app settings when both sqlite and legacy workspace file define the same layout key', async () => {
+  await writeLegacyWorkspaceFile({
+    listWidth: 388
+  });
+
+  await saveAppSettingsState({
+    'foliole-workspace-list-width': '320'
+  });
+
+  await expect(loadAppSettingsState()).resolves.toEqual({
+    'foliole-workspace-list-width': '320'
   });
 });

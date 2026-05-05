@@ -97,6 +97,12 @@ interface NodeOrderRow extends DatabaseRow {
   node_id: string;
 }
 
+interface WorkspaceMetaRow extends DatabaseRow {
+  value: string;
+}
+
+const ACTIVE_NODE_META_KEY = 'active_node_id';
+
 function parseNodeKind(value: string | null): NodeKind {
   return isNodeKind(value) ? value : 'topic';
 }
@@ -183,7 +189,19 @@ function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
   return driver.queryAll<NodeOrderRow>('SELECT node_id FROM node_order ORDER BY position ASC');
 }
 
-function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]): WorkspaceSnapshot {
+function loadPersistedActiveNodeId(driver: DatabaseDriver) {
+  const row = driver.queryOne<WorkspaceMetaRow>(
+    'SELECT value FROM workspace_meta WHERE key = ?',
+    [ACTIVE_NODE_META_KEY]
+  );
+  return row && row.value !== '' ? row.value : null;
+}
+
+function buildSnapshotRows(
+  driver: DatabaseDriver,
+  rows: WorkspaceNodeRow[],
+  orderedRows: NodeOrderRow[]
+): WorkspaceSnapshot {
   const nodesById: Record<string, WorkspaceNodeSnapshot> = {};
   const trashedNodeIds: string[] = [];
 
@@ -229,7 +247,11 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
   }
 
   const trashedNodeSet = new Set(trashedNodeIds);
-  const activeNodeId = nodeOrder.find((nodeId) => !trashedNodeSet.has(nodeId)) ?? null;
+  const persistedActiveNodeId = loadPersistedActiveNodeId(driver);
+  const activeNodeId =
+    (persistedActiveNodeId && nodesById[persistedActiveNodeId] && !trashedNodeSet.has(persistedActiveNodeId)
+      ? persistedActiveNodeId
+      : null) ?? nodeOrder.find((nodeId) => !trashedNodeSet.has(nodeId)) ?? null;
 
   return {
     activeNodeId,
@@ -246,7 +268,7 @@ export function loadWorkspaceSnapshot(driver: DatabaseDriver): WorkspaceSnapshot
     return null;
   }
   return {
-    ...buildSnapshotRows(rows, queryNodeOrderRows(driver)),
+    ...buildSnapshotRows(driver, rows, queryNodeOrderRows(driver)),
     untitledSequenceByParent: loadUntitledSequenceByParent(driver)
   };
 }

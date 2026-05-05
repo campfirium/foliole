@@ -19,6 +19,19 @@ function writeBooleanPreference(key: string, value: boolean) {
   setWhitelistedLocalStorageItem(key, value ? 'true' : 'false');
 }
 
+function readNumberPreference(key: string, fallback: number) {
+  const value = getWhitelistedLocalStorageItem(key);
+  if (value === null || value.trim() === '') {
+    return fallback;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function writeNumberPreference(key: string, value: number) {
+  setWhitelistedLocalStorageItem(key, String(value));
+}
+
 export function loadListCollapsedPreference() {
   return readBooleanPreference(APP_SETTINGS_STORAGE_KEYS.listCollapsed, false);
 }
@@ -33,4 +46,44 @@ export function loadRightSidebarCollapsedPreference() {
 
 export function saveRightSidebarCollapsedPreference(value: boolean) {
   writeBooleanPreference(APP_SETTINGS_STORAGE_KEYS.rightSidebarCollapsed, value);
+}
+
+export function loadWorkspaceLayoutPreferenceSnapshot(defaultLayoutState: {
+  documentMaxWidth: number;
+  isListCollapsed: boolean;
+  isRightSidebarCollapsed: boolean;
+  listWidth: number;
+  rightSidebarWidth: number;
+}) {
+  return {
+    documentMaxWidth: loadDocumentWidthPreference(defaultLayoutState.documentMaxWidth),
+    isListCollapsed: loadListCollapsedPreference(),
+    listWidth: loadListWidthPreference(defaultLayoutState.listWidth),
+    isRightSidebarCollapsed: loadRightSidebarCollapsedPreference(),
+    rightSidebarWidth: loadRightSidebarWidthPreference(defaultLayoutState.rightSidebarWidth)
+  };
+}
+
+export function loadListWidthPreference(fallback: number) {
+  return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.listWidth, fallback);
+}
+
+export function saveListWidthPreference(value: number) {
+  writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.listWidth, value);
+}
+
+export function loadDocumentWidthPreference(fallback: number) {
+  return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.documentWidth, fallback);
+}
+
+export function saveDocumentWidthPreference(value: number) {
+  writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.documentWidth, value);
+}
+
+export function loadRightSidebarWidthPreference(fallback: number) {
+  return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth, fallback);
+}
+
+export function saveRightSidebarWidthPreference(value: number) {
+  writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth, value);
 }

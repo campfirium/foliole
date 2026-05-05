@@ -2,7 +2,10 @@ import type { StoreApi } from 'zustand';
 
 import { normalizeWidth } from './workspaceHelpers';
 import {
+  saveDocumentWidthPreference,
   saveListCollapsedPreference,
+  saveListWidthPreference,
+  saveRightSidebarWidthPreference,
   saveRightSidebarCollapsedPreference
 } from './workspaceLayoutPrefs';
 import type { WorkspaceState } from './workspaceStore';
@@ -15,6 +18,13 @@ function setLayoutWidth(
   const normalizedWidth = normalizeWidth(width);
   if (!normalizedWidth) {
     return;
+  }
+  if (key === 'documentMaxWidth') {
+    saveDocumentWidthPreference(normalizedWidth);
+  } else if (key === 'listWidth') {
+    saveListWidthPreference(normalizedWidth);
+  } else {
+    saveRightSidebarWidthPreference(normalizedWidth);
   }
   set((state) => ({
     layout: {
@@ -50,8 +60,11 @@ export function createWorkspaceLayoutActions(
 ) {
   return {
     resetLayout: () => {
+      saveDocumentWidthPreference(defaultLayoutState.documentMaxWidth);
       saveListCollapsedPreference(false);
+      saveListWidthPreference(defaultLayoutState.listWidth);
       saveRightSidebarCollapsedPreference(false);
+      saveRightSidebarWidthPreference(defaultLayoutState.rightSidebarWidth);
       set({ layout: { ...defaultLayoutState } });
     },
     setDocumentMaxWidth: (width: number) => setLayoutWidth(set, 'documentMaxWidth', width),

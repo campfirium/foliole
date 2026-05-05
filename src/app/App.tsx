@@ -12,6 +12,13 @@ import { GoToNodePalette } from './components/GoToNodePalette';
 import { SearchPalette } from './components/SearchPalette';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { useAppController } from './hooks/useAppController';
+import { useWorkspaceHydration } from './hooks/useWorkspaceHydration';
+
+function AppBootingShell() {
+  return (
+    <div aria-busy="true" aria-label="Loading workspace" className="min-h-screen bg-background" role="status" />
+  );
+}
 
 function AppContent() {
   const controller = useAppController();
@@ -43,11 +50,13 @@ function AppContent() {
 }
 
 export function App() {
+  const isWorkspaceHydrated = useWorkspaceHydration();
+
   return (
     <AppearanceSettingsProvider>
       <MouseGestureSettingsProvider>
         <ReviewSchedulerSettingsProvider>
-          <AppContent />
+          {isWorkspaceHydrated ? <AppContent /> : <AppBootingShell />}
         </ReviewSchedulerSettingsProvider>
       </MouseGestureSettingsProvider>
     </AppearanceSettingsProvider>
