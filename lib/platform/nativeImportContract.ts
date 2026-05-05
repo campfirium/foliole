@@ -4,6 +4,10 @@ export interface NativeTextImportArgs {
   highlight_policy?: NativeImportHighlightPolicy;
 }
 
+export interface NativeDirectoryImportArgs extends NativeTextImportArgs {
+  directory_path?: string;
+}
+
 export interface NativeImportedTextFile {
   file_name: string;
   file_path: string;
@@ -25,6 +29,18 @@ export interface NativeTextImportResult {
   node_id: string | null;
   degraded_reason: string | null;
   failure_reason: string | null;
+}
+
+export interface NativeDirectoryImportEntry extends NativeTextImportResult {
+  adapter: 'html_directory' | 'markdown_directory' | 'obsidian_vault';
+}
+
+export interface NativeDirectoryImportResult {
+  root_path: string;
+  discovered_count: number;
+  imported_count: number;
+  failed_count: number;
+  entries: NativeDirectoryImportEntry[];
 }
 
 export interface NativeImportOverview {

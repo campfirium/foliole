@@ -1,5 +1,7 @@
 import { NATIVE_COMMANDS, isTypedNativeCommand } from './nativeCommands.js';
 import type {
+  NativeDirectoryImportArgs,
+  NativeDirectoryImportResult,
   NativeImportedTextFile,
   NativeTextImportArgs,
   NativeTextImportResult
@@ -23,6 +25,9 @@ export type {
   NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
 export type {
+  NativeDirectoryImportArgs,
+  NativeDirectoryImportEntry,
+  NativeDirectoryImportResult,
   NativeImportedTextFile,
   NativeTextImportArgs,
   NativeTextImportResult
@@ -118,6 +123,10 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.runTextFileImport]: {
     args: NativeTextImportArgs;
     result: NativeTextImportResult | null;
+  };
+  [NATIVE_COMMANDS.runDirectoryImport]: {
+    args: NativeDirectoryImportArgs;
+    result: NativeDirectoryImportResult | null;
   };
   [NATIVE_COMMANDS.selectImportTextFile]: {
     args: NativeTextImportArgs;

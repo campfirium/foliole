@@ -10,6 +10,7 @@ import { bootReport } from './boot.js';
 import { asString, asStringArray } from './commandParsers.js';
 import type { InvokeRequest } from './contracts.js';
 import { listSystemFonts } from './fonts.js';
+import { runDirectoryImport } from './importDirectory.js';
 import { runTextFileImport, selectImportTextFile } from './importTextFile.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
@@ -82,6 +83,9 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.runTextFileImport)) {
     return runTextFileImport(resolveTargetWindow(context), request.args);
+  }
+  if (isTypedRequest(request, NATIVE_COMMANDS.runDirectoryImport)) {
+    return runDirectoryImport(resolveTargetWindow(context), request.args);
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.selectImportTextFile)) {
     return selectImportTextFile(resolveTargetWindow(context), request.args);

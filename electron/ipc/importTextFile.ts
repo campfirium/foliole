@@ -1,15 +1,8 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { dialog, type BrowserWindow } from 'electron';
 
-import type { ImportHighlightPolicy, PersistedImportRecord } from '../../lib/core/import/contract.js';
-import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
-import { applyImportHighlightPolicy } from '../../lib/core/import/highlightPolicy.js';
-import {
-  convertHtmlToMarkdownCompatible,
-  formatHtmlConversionDegradedReason
-} from '../../lib/core/import/htmlToMarkdownCompatible.js';
+import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
 import type {
   NativeImportedTextFile,
   NativeTextImportArgs,
@@ -17,41 +10,12 @@ import type {
 } from '../../lib/platform/nativeContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 
-const IMPORTABLE_TEXT_EXTENSIONS = new Set(['.htm', '.html', '.md', '.markdown', '.txt']);
-
-function resolveImportKind(filePath: string): NativeImportedTextFile['kind'] {
-  const extension = path.extname(filePath).toLowerCase();
-  if (extension === '.htm' || extension === '.html') {
-    return 'html';
-  }
-  if (extension === '.txt') {
-    return 'text';
-  }
-  if (IMPORTABLE_TEXT_EXTENSIONS.has(extension)) {
-    return 'markdown';
-  }
-  throw new Error(`unsupported import file extension: ${extension || '(none)'}`);
-}
-
-function stripUtf8Bom(content: string) {
-  return content.startsWith('\uFEFF') ? content.slice(1) : content;
-}
-
-function resolveImportHighlightPolicy(args?: NativeTextImportArgs): ImportHighlightPolicy {
-  return args?.highlight_policy === 'adopt' ? 'adopt' : 'reference_only';
-}
-
-function toImportPayload(content: string, kind: NativeImportedTextFile['kind']) {
-  const normalizedContent = stripUtf8Bom(content);
-  if (kind !== 'html') {
-    return { content: normalizedContent, degradedReason: null };
-  }
-  const converted = convertHtmlToMarkdownCompatible(normalizedContent);
-  return {
-    content: converted.content,
-    degradedReason: formatHtmlConversionDegradedReason(converted.warnings)
-  };
-}
+import {
+  buildPreparedImportRecord,
+  loadPreparedImportRecord,
+  resolveImportHighlightPolicy,
+  resolveSingleFileImportSource
+} from './importSourcePipeline.js';
 
 function toNativeTextImportResult(record: PersistedImportRecord): NativeTextImportResult {
   return {
@@ -96,15 +60,17 @@ export async function selectImportTextFile(
   if (!filePath) {
     return null;
   }
-  const kind = resolveImportKind(filePath);
-  const { content } = toImportPayload(await fs.readFile(filePath, 'utf8'), kind);
-  const highlightPolicy = resolveImportHighlightPolicy(args);
+  const source = resolveSingleFileImportSource(filePath);
+  const prepared = await loadPreparedImportRecord(source, {
+    highlightPolicy: resolveImportHighlightPolicy(args),
+    importedAt: new Date().toISOString()
+  });
 
   return {
-    content: applyImportHighlightPolicy(content, highlightPolicy),
+    content: prepared.content,
     file_name: path.basename(filePath),
     file_path: filePath,
-    kind
+    kind: source.kind
   };
 }
 
@@ -117,31 +83,17 @@ export async function runTextFileImport(
     return null;
   }
 
-  const fileName = path.basename(filePath);
+  const source = resolveSingleFileImportSource(filePath);
   const importedAt = new Date().toISOString();
-  const kind = resolveImportKind(filePath);
   const highlightPolicy = resolveImportHighlightPolicy(args);
 
   try {
-    const { content, degradedReason } = toImportPayload(await fs.readFile(filePath, 'utf8'), kind);
-    return toNativeTextImportResult(
-      runPreparedImport(
-        createPreparedDesktopTextImport({
-          content,
-          degradedReason,
-          fileName,
-          filePath,
-          highlightPolicy,
-          importedAt,
-          kind
-        })
-      )
-    );
+    return toNativeTextImportResult(runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt })));
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
     return toNativeTextImportResult(
       recordPreparedImportFailure(
-        createPreparedDesktopTextImport({ content: '', fileName, filePath, highlightPolicy, importedAt, kind }),
+        buildPreparedImportRecord(source, { content: '', highlightPolicy, importedAt }),
         failureReason
       )
     );
