@@ -22,6 +22,7 @@ function createProps() {
     },
     lastSyncedAt: null,
     rememberedTargets: [],
+    syncConflictCount: 0,
     syncEvents: [],
     onCancelPairing: vi.fn(),
     onCheckDesktop: vi.fn(async () => undefined),
@@ -247,5 +248,24 @@ describe('CompanionSyncPanel connected state', () => {
     expect(screen.getByText('Connected')).toBeInTheDocument();
     expect(screen.getByText('Handoff reminders')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
+  });
+
+  it('shows pending sync conflicts when the local database has them', () => {
+    const props = {
+      ...createProps(),
+      pairingState: {
+        device_id: 'android-test-device',
+        device_kind: 'android-capacitor',
+        device_name: 'Android companion',
+        is_paired: true,
+        paired_at: '2026-04-22T09:00:00.000Z'
+      },
+      syncConflictCount: 2
+    };
+
+    render(<CompanionSyncPanel {...props} />);
+
+    expect(screen.getByText('Conflicts')).toBeInTheDocument();
+    expect(screen.getByText('2 pending')).toBeInTheDocument();
   });
 });

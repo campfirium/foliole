@@ -8,8 +8,6 @@ const capacitorMock = vi.hoisted(() => ({
     loadDiscoveryCandidates: vi.fn(),
     loadReadableArticle: vi.fn(),
     loadWorkspaceSyncState: vi.fn(),
-    replaceWorkspaceNode: vi.fn(),
-    replaceWorkspaceSnapshot: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(),
     savePairingCredentials: vi.fn(),
     signCompanionSyncRequest: vi.fn(),
@@ -30,7 +28,6 @@ import {
   loadCompanionWorkspaceSyncState,
   loadCompanionWorkspaceVersion,
   persistCompanionWorkspaceSnapshot,
-  pullCompanionWorkspaceSnapshot,
   removeCompanionWorkspaceSyncRememberedTarget,
   saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
@@ -89,37 +86,6 @@ function registerEndpointPersistenceTest() {
 
     expect(state.endpoint_url).toBe('http://192.168.1.8:38641');
     expect(state.remembered_targets).toEqual(['http://192.168.1.8:38641']);
-  });
-}
-
-function registerSnapshotPullTest() {
-  it('pulls the desktop workspace snapshot and persists it in web preview mode', async () => {
-    storeWebPairingState();
-    mockFetchJson({
-      app_version: '0.1.0',
-      exported_at: '2026-04-22T12:00:00.000Z',
-      peer_id: 'desktop-local',
-      workspace_snapshot: {
-        activeNodeId: 'node-1',
-        nodeOrder: ['node-1'],
-        nodesById: {
-          'node-1': {
-            content: 'Hello from desktop',
-            id: 'node-1',
-            kind: 'item',
-            title: 'Desktop node'
-          }
-        },
-        trashedNodeIds: [],
-        untitledSequenceByParent: {}
-      }
-    });
-
-    const state = await pullCompanionWorkspaceSnapshot('http://10.0.2.2:38641');
-
-    expect(state.last_synced_at).toBe('2026-04-22T12:00:00.000Z');
-    expect(state.remembered_targets).toEqual(['http://10.0.2.2:38641']);
-    expect(state.workspace_snapshot?.activeNodeId).toBe('node-1');
   });
 }
 
@@ -193,11 +159,11 @@ function registerSnapshotPersistenceTest() {
     });
   });
 
-  it('persists native companion review updates through the single-node bridge', async () => {
+  it('refreshes native companion state without snapshot replacement bridge calls', async () => {
     const updatedSnapshot = createUpdatedStoredSnapshot();
     capacitorMock.getPlatform.mockReturnValue('android');
     capacitorMock.isNativePlatform.mockReturnValue(true);
-    capacitorMock.plugin.replaceWorkspaceNode.mockResolvedValue({
+    capacitorMock.plugin.loadWorkspaceSyncState.mockResolvedValue({
       endpoint_url: updatedSnapshot.endpointUrl,
       last_synced_at: updatedSnapshot.lastSyncedAt,
       remembered_targets: ['http://10.0.2.2:38641'],
@@ -212,20 +178,13 @@ function registerSnapshotPersistenceTest() {
       changedNodeId: 'node-1'
     });
 
-    expect(capacitorMock.plugin.replaceWorkspaceNode).toHaveBeenCalledWith({
-      endpoint_url: 'http://10.0.2.2:38641',
-      last_synced_at: '2026-04-22T12:00:00.000Z',
-      node_id: 'node-1',
-      node_snapshot_json: JSON.stringify(updatedSnapshot.workspaceSnapshot.nodesById['node-1'])
-    });
-    expect(capacitorMock.plugin.replaceWorkspaceSnapshot).not.toHaveBeenCalled();
+    expect(capacitorMock.plugin.loadWorkspaceSyncState).toHaveBeenCalled();
   });
 }
 
 describe('companionWorkspaceSync', () => {
   beforeEach(() => resetCompanionWorkspaceSyncTestState(capacitorMock));
   registerEndpointPersistenceTest();
-  registerSnapshotPullTest();
   registerWorkspaceVersionTest();
   registerReadableArticleTest();
   registerSnapshotPersistenceTest();

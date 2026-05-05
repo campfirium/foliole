@@ -43,6 +43,7 @@ export interface NativeSyncStateObjectRecord extends NativeSyncObjectRecord {
 export interface NativeSyncPackApplyResult {
   applied_blob_count: number;
   applied_object_count: number;
+  pre_sync_backup_path?: string;
   to_state_seq: number;
 }
 

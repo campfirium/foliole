@@ -1,5 +1,6 @@
 import type {
   NativeSyncChangeCursor,
+  NativeSyncNodeConflictRecord,
   NativeSyncNodeRecord,
   NativeSyncObjectRecord,
   NativeSyncReviewLogRecord,
@@ -42,6 +43,13 @@ export async function loadCompanionSyncIndex() {
     return [];
   }
   return (await FolioleCompanionSync.loadSyncIndex()).entries;
+}
+
+export async function loadCompanionSyncNodeConflicts() {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return [] as NativeSyncNodeConflictRecord[];
+  }
+  return (await FolioleCompanionSync.loadSyncNodeConflicts()).conflicts;
 }
 
 export async function loadCompanionSyncObjects(

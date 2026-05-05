@@ -4,6 +4,7 @@ import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCom
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { syncCompanionObjectsFromDesktop } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
+import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
 import {
   loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
@@ -34,6 +35,7 @@ const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
 async function initializeWorkspaceSyncState(args: {
   cancelled: () => boolean;
   setReadableArticle(article: CompanionReadableArticle | null): void;
+  setSyncConflictCount(count: number): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
 }) {
@@ -43,12 +45,14 @@ async function initializeWorkspaceSyncState(args: {
   }
   args.setState(nextState);
   args.setReadableArticle(await syncReadableArticle(nextState.workspace_snapshot));
+  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   args.setStatus('idle');
 }
 
 async function syncDesktopStreams(args: {
   endpointUrl: string;
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
+  setSyncConflictCount: (count: number) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
 }) {
   const startedState = await recordCompanionWorkspaceSyncEvent({
@@ -65,6 +69,7 @@ async function syncDesktopStreams(args: {
   });
   args.setState(nextState);
   args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
+  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   return nextState;
 }
 
@@ -86,6 +91,7 @@ async function recordManualSyncFailure(args: {
 function useWorkspaceSnapshotActions(args: {
   setError: (message: string | null) => void;
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
+  setSyncConflictCount: (count: number) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
   setStatus: (status: CompanionWorkspaceSyncStatus) => void;
   state: NativeCompanionWorkspaceSyncState;
@@ -109,6 +115,7 @@ function useWorkspaceSnapshotActions(args: {
       const nextState = await syncDesktopStreams({
         endpointUrl,
         setReadableArticle: args.setReadableArticle,
+        setSyncConflictCount: args.setSyncConflictCount,
         setState: args.setState
       });
       args.setStatus('idle');
@@ -149,6 +156,7 @@ function useWorkspaceSnapshotActions(args: {
 
 function useWorkspaceSyncBootstrap(
   setReadableArticle: (article: CompanionReadableArticle | null) => void,
+  setSyncConflictCount: (count: number) => void,
   setState: (state: NativeCompanionWorkspaceSyncState) => void,
   setStatus: (status: CompanionWorkspaceSyncStatus) => void
 ) {
@@ -158,6 +166,7 @@ function useWorkspaceSyncBootstrap(
     void initializeWorkspaceSyncState({
       cancelled: () => cancelled,
       setReadableArticle,
+      setSyncConflictCount,
       setState,
       setStatus
     })
@@ -171,16 +180,17 @@ function useWorkspaceSyncBootstrap(
     return () => {
       cancelled = true;
     };
-  }, [setReadableArticle, setState, setStatus]);
+  }, [setReadableArticle, setSyncConflictCount, setState, setStatus]);
 }
 
 export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {
   const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(EMPTY_SYNC_STATE);
   const [readableArticle, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
+  const [syncConflictCount, setSyncConflictCount] = useState(0);
   const [status, setStatus] = useState<CompanionWorkspaceSyncStatus>('loading');
   const [error, setError] = useState<string | null>(null);
 
-  useWorkspaceSyncBootstrap(setReadableArticle, setState, setStatus);
+  useWorkspaceSyncBootstrap(setReadableArticle, setSyncConflictCount, setState, setStatus);
   useForegroundAutoSync(setError, setReadableArticle, setState, setStatus, state, tryForegroundAutoSync);
 
   function clearError() {
@@ -190,6 +200,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
   const snapshotActions = useWorkspaceSnapshotActions({
     setError,
     setReadableArticle,
+    setSyncConflictCount,
     setState,
     setStatus,
     state
@@ -206,6 +217,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     error,
     readableArticle,
     state,
+    syncConflictCount,
     status,
     pullFromDesktop: snapshotActions.pullFromDesktop,
     removeRememberedTarget: snapshotActions.removeRememberedTarget,

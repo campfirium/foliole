@@ -52,15 +52,6 @@ export interface CompanionWorkspaceVersionPayload {
   workspace_version: string | null;
 }
 
-export interface CompanionWorkspaceSnapshotPayload {
-  app_version: string;
-  desktop_name: string;
-  exported_at: string;
-  peer_id: string;
-  workspace_version: string;
-  workspace_snapshot: WorkspaceSnapshot | null;
-}
-
 export interface CompanionWorkspaceDiscoveryPayload {
   app_version: string;
   desktop_device_name: string;

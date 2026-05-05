@@ -10,6 +10,9 @@ const capacitorMock = vi.hoisted(() => ({
     applySyncNodeVersions: vi.fn(async () => ({ applied_node_ids: ['node-1'] })),
     applySyncReviewLog: vi.fn(async () => ({ applied_op_ids: ['op-1'] })),
     loadSyncIndex: vi.fn(async () => ({ entries: [{ object_id: 'one', object_type: 'setting' }] })),
+    loadSyncNodeConflicts: vi.fn(async () => ({
+      conflicts: [{ conflict_version_id: 'phone#1', object_id: 'node-1', snapshot: { title: 'Remote' } }]
+    })),
     loadSyncObjects: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting' }] })),
     loadSyncStateChanges: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting', state_seq: 1 }] })),
     loadMissingContentBlobHashes: vi.fn(async () => ({ hashes: ['a'.repeat(64)] })),
@@ -144,6 +147,9 @@ async function expectWebCursorFallback(api: typeof import('./companionSyncObject
 async function testNativePluginBridge() {
   const api = await import('./companionSyncObjects');
   await expect(api.loadCompanionSyncIndex()).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
+  await expect(api.loadCompanionSyncNodeConflicts()).resolves.toEqual([
+    { conflict_version_id: 'phone#1', object_id: 'node-1', snapshot: { title: 'Remote' } }
+  ]);
   await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([{ object_id: 'one', object_type: 'setting', state_seq: 1 }]);
   await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
@@ -243,6 +249,7 @@ async function testWebFallbackBridge() {
   capacitorMock.isNative.mockReturnValue(false);
   const api = await import('./companionSyncObjects');
   await expect(api.loadCompanionSyncIndex()).resolves.toEqual([]);
+  await expect(api.loadCompanionSyncNodeConflicts()).resolves.toEqual([]);
   await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([]);
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([]);
   await expect(api.loadCompanionMissingContentBlobHashes()).resolves.toEqual([]);

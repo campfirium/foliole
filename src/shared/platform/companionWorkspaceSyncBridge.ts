@@ -12,6 +12,7 @@ import type {
 import type {
   NativeSyncChangeCursor,
   NativeSyncIndexEntry,
+  NativeSyncNodeConflictRecord,
   NativeSyncNodeRecord,
   NativeSyncObjectRecord,
   NativeSyncPackApplyResult,
@@ -22,7 +23,6 @@ import type {
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
 export const PAIR_ENDPOINT_PATH = '/companion/pair';
 export const PAIR_REQUESTS_ENDPOINT_PATH = '/companion/pair-requests';
-export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 
 export interface CompanionDiscoveryCandidatesPayload {
@@ -45,6 +45,7 @@ export interface CompanionWorkspaceSyncPlugin {
     url: string;
   }): Promise<{ body: string; status: number }>;
   loadSyncIndex(): Promise<{ entries: NativeSyncIndexEntry[] }>;
+  loadSyncNodeConflicts(): Promise<{ conflicts: NativeSyncNodeConflictRecord[] }>;
   loadSyncObjects(args: {
     object_ids: string[];
     object_types?: Array<NativeSyncObjectRecord['object_type']>;
@@ -209,17 +210,6 @@ export interface CompanionWorkspaceSyncPlugin {
     path_with_query: string;
     timestamp: string;
   }): Promise<NativeCompanionSignedRequestHeaders>;
-  replaceWorkspaceSnapshot(args: {
-    endpoint_url: string;
-    last_synced_at: string;
-    workspace_snapshot_json: string;
-  }): Promise<NativeCompanionWorkspaceSyncState>;
-  replaceWorkspaceNode(args: {
-    endpoint_url: string;
-    last_synced_at: string;
-    node_id: string;
-    node_snapshot_json: string;
-  }): Promise<NativeCompanionWorkspaceSyncState>;
 }
 
 export const FolioleCompanionSync = registerPlugin<CompanionWorkspaceSyncPlugin>('FolioleCompanionSync');

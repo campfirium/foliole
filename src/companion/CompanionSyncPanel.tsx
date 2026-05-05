@@ -18,6 +18,7 @@ type CompanionSyncPanelProps = {
   handoffReminderSettings: CompanionHandoffReminderSettings;
   lastSyncedAt: string | null;
   rememberedTargets: string[];
+  syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
   onCancelPairing(): void;
   onCheckDesktop(endpointUrl: string): Promise<unknown>;
@@ -79,7 +80,7 @@ function SyncStatusCard(props: {
   );
 }
 
-function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'pairingState' | 'status' | 'syncEvents'> & {
+function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents'> & {
   endpointUrl: string;
 }) {
   const isSyncing = props.status === 'syncing';
@@ -93,6 +94,7 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'p
         lastSyncedAt={props.lastSyncedAt}
         pairingState={props.pairingState}
         status={props.status}
+        syncConflictCount={props.syncConflictCount}
         syncEvents={props.syncEvents}
       />
     </SyncStatusCard>
@@ -201,6 +203,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
             lastSyncedAt={props.lastSyncedAt}
             pairingState={props.pairingState}
             status={props.status}
+            syncConflictCount={props.syncConflictCount}
             syncEvents={props.syncEvents}
           />
         ) : props.pairingRequest ? (

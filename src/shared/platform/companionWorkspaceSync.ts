@@ -1,5 +1,4 @@
 import type {
-  CompanionWorkspaceSnapshotPayload,
   CompanionWorkspaceVersionPayload,
   NativeCompanionWorkspaceSyncState
 } from '../../../lib/platform/nativeCompanionSyncContract';
@@ -18,7 +17,6 @@ import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime,
   normalizeEndpointUrl,
-  WORKSPACE_SNAPSHOT_PATH,
   WORKSPACE_VERSION_PATH
 } from './companionWorkspaceSyncBridge';
 import { normalizeReadableArticlePayload } from './companionWorkspaceSyncPayloads';
@@ -133,40 +131,6 @@ export async function loadCompanionWorkspaceVersion(endpointUrl: string) {
   return (await response.json()) as CompanionWorkspaceVersionPayload;
 }
 
-export async function pullCompanionWorkspaceSnapshot(endpointUrl: string) {
-  const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
-  const currentState = isNativeAndroidCompanionRuntime() ? null : readWebSyncState();
-  const response = await fetch(`${normalizedEndpointUrl}${WORKSPACE_SNAPSHOT_PATH}`, {
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery: WORKSPACE_SNAPSHOT_PATH })
-  });
-  if (!response.ok) {
-    throw new Error(`Desktop sync source returned ${response.status}.`);
-  }
-  const payload = (await response.json()) as CompanionWorkspaceSnapshotPayload;
-  const lastSyncedAt =
-    typeof payload.exported_at === 'string' && payload.exported_at.trim() ? payload.exported_at : new Date().toISOString();
-  const nextState: NativeCompanionWorkspaceSyncState = {
-    endpoint_url: normalizedEndpointUrl,
-    last_synced_at: lastSyncedAt,
-    remembered_targets: appendRememberedTarget(currentState?.remembered_targets ?? [], normalizedEndpointUrl),
-    sync_events: currentState?.sync_events ?? [],
-    sync_onboarding_status: 'completed',
-    workspace_snapshot: payload.workspace_snapshot ?? null
-  };
-
-  if (!isNativeAndroidCompanionRuntime()) {
-    return writeWebSyncState(nextState);
-  }
-
-  return normalizeWorkspaceSyncState(
-    await FolioleCompanionSync.replaceWorkspaceSnapshot({
-      endpoint_url: normalizedEndpointUrl,
-      last_synced_at: lastSyncedAt,
-      workspace_snapshot_json: JSON.stringify(payload.workspace_snapshot ?? null)
-    })
-  );
-}
-
 export async function persistCompanionWorkspaceSnapshot(args: {
   changedNodeId?: string;
   endpointUrl: string | null;
@@ -182,25 +146,5 @@ export async function persistCompanionWorkspaceSnapshot(args: {
     return writeWebSyncState(nextState);
   }
 
-  const endpointUrl = args.endpointUrl?.trim() ? normalizeEndpointUrl(args.endpointUrl) : 'local://companion';
-  const lastSyncedAt = args.lastSyncedAt?.trim() ? args.lastSyncedAt : new Date().toISOString();
-  const changedNode =
-    args.changedNodeId && args.workspaceSnapshot ? args.workspaceSnapshot.nodesById[args.changedNodeId] : null;
-  if (args.changedNodeId && changedNode) {
-    return normalizeWorkspaceSyncState(
-      await FolioleCompanionSync.replaceWorkspaceNode({
-        endpoint_url: endpointUrl,
-        last_synced_at: lastSyncedAt,
-        node_id: args.changedNodeId,
-        node_snapshot_json: JSON.stringify(changedNode)
-      })
-    );
-  }
-  return normalizeWorkspaceSyncState(
-    await FolioleCompanionSync.replaceWorkspaceSnapshot({
-      endpoint_url: endpointUrl,
-      last_synced_at: lastSyncedAt,
-      workspace_snapshot_json: JSON.stringify(args.workspaceSnapshot ?? null)
-    })
-  );
+  return loadCompanionWorkspaceSyncState();
 }

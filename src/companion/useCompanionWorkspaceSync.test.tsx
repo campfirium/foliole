@@ -5,6 +5,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
 const syncObjectsMock = vi.hoisted(() => ({
+  loadCompanionSyncNodeConflicts: vi.fn(async () => []),
   syncCompanionObjectsFromDesktop: vi.fn(async () => undefined)
 }));
 const workspaceSyncMock = vi.hoisted(() => ({
@@ -14,6 +15,9 @@ const workspaceSyncMock = vi.hoisted(() => ({
 }));
 
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
+vi.mock('../shared/platform/companionSyncObjects', () => ({
+  loadCompanionSyncNodeConflicts: syncObjectsMock.loadCompanionSyncNodeConflicts
+}));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   loadCompanionReadableArticle: workspaceSyncMock.loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState: workspaceSyncMock.loadCompanionWorkspaceSyncState,
@@ -87,6 +91,7 @@ describe('useCompanionWorkspaceSync', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState(null));
+    syncObjectsMock.loadCompanionSyncNodeConflicts.mockResolvedValue([]);
     workspaceSyncMock.recordCompanionWorkspaceSyncEvent
       .mockResolvedValueOnce(createSyncState(null))
       .mockResolvedValueOnce(createSyncState(createSnapshot()));
@@ -119,5 +124,29 @@ describe('useCompanionWorkspaceSync', () => {
     expect(result.current.state.workspace_snapshot?.activeNodeId).toBe('topic-1');
     expect(result.current.readableArticle?.nodeId).toBe('topic-1');
     expect(result.current.status).toBe('idle');
+  });
+
+  it('refreshes the visible sync conflict count after manual sync', async () => {
+    syncObjectsMock.loadCompanionSyncNodeConflicts
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { conflict_version_id: 'phone#1', object_id: 'topic-1', snapshot: {} },
+        { conflict_version_id: 'phone#2', object_id: 'topic-2', snapshot: {} }
+      ]);
+    const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
+    const { result } = renderHook(() => useCompanionWorkspaceSync({
+      booted_at: '2026-04-25T09:00:00.000Z',
+      database_path: 'foliole-companion.db',
+      database_ready: true,
+      device_id: 'android-test-device',
+      runtime_kind: 'android-capacitor'
+    }));
+
+    await waitFor(() => expect(result.current.status).toBe('idle'));
+    await act(async () => {
+      await result.current.pullFromDesktop('http://10.0.2.2:38641');
+    });
+
+    expect(result.current.syncConflictCount).toBe(2);
   });
 });

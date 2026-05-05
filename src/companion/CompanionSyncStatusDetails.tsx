@@ -66,15 +66,20 @@ export function CompanionSyncStatusDetails(props: {
   endpointUrl: string;
   lastSyncedAt: string | null;
   pairingState: NativeCompanionPairingState;
+  syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
   status: 'idle' | 'loading' | 'syncing';
 }) {
   const isSyncing = props.status === 'syncing';
+  const conflictValue = props.syncConflictCount > 0
+    ? `${props.syncConflictCount} pending`
+    : 'None';
   return (
     <>
       <div>
         <SyncInfoRow label="Status" value={isSyncing ? 'Syncing' : 'Connected'} />
         <SyncInfoRow label="Last sync" value={formatSyncTimestamp(props.lastSyncedAt)} />
+        <SyncInfoRow label="Conflicts" value={conflictValue} />
         <SyncInfoRow label="Device" value={formatPairedDevice(props.pairingState)} />
         <SyncInfoRow label="Sync address" value={props.endpointUrl} />
       </div>
