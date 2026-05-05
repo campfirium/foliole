@@ -55,8 +55,10 @@ export function WorkspaceGridContent({
       props
     ]
   );
-  const outlineActivePosition =
-    props.getReadingPositionSelection()?.from ?? props.editorNodeViewState?.selection.from ?? 0;
+  const outlineActivePosition = resolveOutlineActivePosition({
+    editorSelection: props.editorNodeViewState?.selection ?? null,
+    readingSelection: props.getReadingPositionSelection()
+  });
 
   return (
     <WorkspaceLayoutGridFrame
@@ -77,6 +79,13 @@ export function WorkspaceGridContent({
       )}
     </WorkspaceLayoutGridFrame>
   );
+}
+
+export function resolveOutlineActivePosition(args: {
+  editorSelection?: { from: number } | null;
+  readingSelection?: { from: number } | null;
+}) {
+  return args.readingSelection?.from ?? args.editorSelection?.from ?? 0;
 }
 
 function useProjectedListNodesById(nodesById: WorkspaceGridContentProjectionSource['nodesById']) {
