@@ -62,7 +62,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
         assertEquals("node_review", change.getString("object_type"));
         assertEquals("desktop-review-hash", change.getString("base_content_hash"));
 
-        JSObject reviews = FolioleCompanionSyncReviewLogStore.loadReviewLog(database, null, 10, "android-device-1");
+        JSObject reviews = FolioleCompanionSyncReviewLogStore.loadReviewLog(context, database, null, 10, "android-device-1");
         JSONObject review = reviews.getJSONArray("reviews").getJSONObject(0);
         assertEquals(result.getString("op_id"), review.getString("op_id"));
         assertEquals("node-1", review.getString("node_id"));

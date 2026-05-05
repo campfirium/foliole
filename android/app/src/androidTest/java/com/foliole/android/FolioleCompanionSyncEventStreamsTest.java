@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.getcapacitor.JSObject;
 
@@ -51,7 +52,13 @@ public class FolioleCompanionSyncEventStreamsTest {
     public void exportsLocalReviewLogWithDeviceId() throws Exception {
         FolioleCompanionSyncReviewLogStore.saveLocalReviewLog(database, "node-1", reviewDraft(), "android-device-1");
 
-        JSObject loaded = FolioleCompanionSyncReviewLogStore.loadReviewLog(database, null, 10, "android-device-1");
+        JSObject loaded = FolioleCompanionSyncReviewLogStore.loadReviewLog(
+            InstrumentationRegistry.getInstrumentation().getTargetContext(),
+            database,
+            null,
+            10,
+            "android-device-1"
+        );
         JSONObject review = loaded.getJSONArray("reviews").getJSONObject(0);
 
         assertEquals("android-device-1", review.getString("device_id"));

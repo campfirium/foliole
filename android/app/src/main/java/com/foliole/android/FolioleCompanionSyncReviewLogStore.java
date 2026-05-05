@@ -1,51 +1,29 @@
 package com.foliole.android;
 
 import android.content.ContentValues;
-import android.database.Cursor;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 final class FolioleCompanionSyncReviewLogStore {
 
     private FolioleCompanionSyncReviewLogStore() {}
 
-    static JSObject loadReviewLog(SQLiteDatabase database, JSONObject cursor, int limit, String deviceId) throws Exception {
-        JSArray reviews = new JSArray();
-        String sql = "SELECT id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, " +
-            "due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after " +
-            "FROM review_log WHERE device_id = ? " + whereAfterCursor(cursor) +
-            " ORDER BY reviewed_at ASC, op_id ASC LIMIT ?";
-        String[] args = cursor == null
-            ? new String[] { deviceId, String.valueOf(normalizeLimit(limit)) }
-            : new String[] { deviceId, cursor.optString("created_at"), cursor.optString("created_at"), cursor.optString("change_id"), String.valueOf(normalizeLimit(limit)) };
-        try (Cursor row = database.rawQuery(sql, args)) {
-            while (row.moveToNext()) {
-                JSObject review = new JSObject();
-                review.put("id", row.getString(0));
-                review.put("op_id", row.getString(1));
-                review.put("device_id", row.getString(2));
-                review.put("node_id", row.getString(3));
-                review.put("grade", row.getInt(4));
-                review.put("scheduler_version", row.getString(5));
-                review.put("reviewed_at", row.getString(6));
-                review.put("due_before", row.getString(7));
-                review.put("stability_before", row.getDouble(8));
-                review.put("difficulty_before", row.getDouble(9));
-                review.put("due_after", row.getString(10));
-                review.put("stability_after", row.getDouble(11));
-                review.put("difficulty_after", row.getDouble(12));
-                reviews.put(review);
-            }
-        }
-        JSObject result = new JSObject();
-        result.put("reviews", reviews);
-        return result;
+    static JSObject loadReviewLog(Context context, SQLiteDatabase database, JSONObject cursor, int limit, String deviceId) throws Exception {
+        return FolioleCompanionNamedQueryStore.loadArray(
+            context,
+            database,
+            "syncReviewLog",
+            cursorFilterReplacement(cursor),
+            cursorArgs(cursor, deviceId, limit)
+        );
     }
 
     static String saveLocalReviewLog(
@@ -97,6 +75,26 @@ final class FolioleCompanionSyncReviewLogStore {
         return cursor == null || cursor.optString("created_at").isEmpty() || cursor.optString("change_id").isEmpty()
             ? ""
             : "AND (reviewed_at > ? OR (reviewed_at = ? AND op_id > ?))";
+    }
+
+    private static Map<String, String> cursorFilterReplacement(JSONObject cursor) {
+        Map<String, String> replacements = new HashMap<>();
+        String filter = whereAfterCursor(cursor);
+        replacements.put(":cursorFilter", filter.isEmpty() ? "" : " " + filter);
+        return replacements;
+    }
+
+    private static String[] cursorArgs(JSONObject cursor, String deviceId, int limit) {
+        if (cursor == null || cursor.optString("created_at").isEmpty() || cursor.optString("change_id").isEmpty()) {
+            return new String[] { deviceId, String.valueOf(normalizeLimit(limit)) };
+        }
+        return new String[] {
+            deviceId,
+            cursor.optString("created_at"),
+            cursor.optString("created_at"),
+            cursor.optString("change_id"),
+            String.valueOf(normalizeLimit(limit))
+        };
     }
 
     private static int normalizeLimit(int limit) {

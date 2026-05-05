@@ -127,5 +127,27 @@ export const ANDROID_COMPANION_QUERY_DEFINITIONS = {
       "SELECT json_object('node_id', node_id, 'scroll_top', scroll_top, 'selection_from', NULL, " +
       "'selection_to', NULL, 'source', source) AS payload_json FROM node_view_state " +
       'WHERE node_id = ? AND device_id = ? LIMIT 1'
+  },
+  syncReviewLog: {
+    resultKey: 'reviews',
+    sql:
+      'SELECT id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, ' +
+      'due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after ' +
+      'FROM review_log WHERE device_id = ?:cursorFilter ORDER BY reviewed_at ASC, op_id ASC LIMIT ?',
+    columns: [
+      { key: 'id', source: 'id', type: 'string' },
+      { key: 'op_id', source: 'op_id', type: 'string' },
+      { key: 'device_id', source: 'device_id', type: 'string' },
+      { key: 'node_id', source: 'node_id', type: 'string' },
+      { key: 'grade', source: 'grade', type: 'long' },
+      { key: 'scheduler_version', source: 'scheduler_version', type: 'string' },
+      { key: 'reviewed_at', source: 'reviewed_at', type: 'string' },
+      { key: 'due_before', source: 'due_before', type: 'string' },
+      { key: 'stability_before', source: 'stability_before', type: 'double' },
+      { key: 'difficulty_before', source: 'difficulty_before', type: 'double' },
+      { key: 'due_after', source: 'due_after', type: 'string' },
+      { key: 'stability_after', source: 'stability_after', type: 'double' },
+      { key: 'difficulty_after', source: 'difficulty_after', type: 'double' }
+    ]
   }
 };

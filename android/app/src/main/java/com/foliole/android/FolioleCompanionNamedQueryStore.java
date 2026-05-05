@@ -104,6 +104,10 @@ final class FolioleCompanionNamedQueryStore {
             record.put(key, cursor.getLong(columnIndex));
             return;
         }
+        if ("double".equals(type)) {
+            record.put(key, cursor.getDouble(columnIndex));
+            return;
+        }
         record.put(key, cursor.getString(columnIndex));
     }
 }
