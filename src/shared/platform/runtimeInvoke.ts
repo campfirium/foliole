@@ -42,3 +42,7 @@ export function getRuntimeInvoke(): RuntimeInvoke | null {
       });
   }) as RuntimeInvoke;
 }
+
+export function isRuntimeInvokeAvailable() {
+  return Boolean(getRuntimeInvoke());
+}

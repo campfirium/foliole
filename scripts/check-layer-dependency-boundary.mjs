@@ -20,7 +20,9 @@ const RUNTIME_COMMAND_BOUNDARY_FILES = new Set([
   'src/app/hooks/usePreparedNodeSelectionActions.ts',
   'src/app/hooks/useReadingProgressSyncPersistence.ts',
   'src/app/hooks/useWorkspaceActiveNodeDocument.ts',
-  'src/app/hooks/useWorkspaceNavigationPrefetch.ts'
+  'src/app/hooks/useWorkspaceNavigationPrefetch.ts',
+  'src/main.tsx',
+  'src/startupViewMode.ts'
 ]);
 const IMPORT_STATEMENT_PATTERN = /\bimport(?:\s+type)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
 const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = /(?:^|\/)lib\/platform\/(?:nativeCommands|nativeContract)$/;

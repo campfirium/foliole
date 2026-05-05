@@ -1,6 +1,6 @@
-import { NATIVE_COMMANDS } from '../lib/platform/nativeCommands';
-
-import type { RuntimeInvoke } from './shared/platform/bridge';
+import { openLocalPath } from './shared/platform/bridge';
+import { exportDiagnosticBundle } from './shared/platform/diagnosticBundle';
+import { closeMainWindow, restartMainWindowApp } from './shared/platform/windowControls';
 import type { StartupErrorActions } from './shared/ui/StartupSurface';
 
 export type StartupViewMode =
@@ -26,26 +26,21 @@ export function resolveStartupView(search: string): StartupViewMode | null {
 }
 
 export function createStartupErrorActions(args: {
-  getRuntimeInvoke: () => RuntimeInvoke | null;
   logPath: string | null;
-  reportActionFailure: (command: string, error: unknown) => void;
+  reportActionFailure: (action: string, error: unknown) => void;
 }): StartupErrorActions {
-  const invokeNativeCommand = (command: string, commandArgs?: Record<string, unknown>) => {
-    const runtimeInvoke = args.getRuntimeInvoke();
-    if (!runtimeInvoke) {
-      return;
-    }
-    void runtimeInvoke(command, commandArgs).catch((error) => {
-      args.reportActionFailure(command, error);
+  const runStartupAction = (action: string, runner: () => Promise<unknown>) => {
+    void runner().catch((error) => {
+      args.reportActionFailure(action, error);
     });
   };
 
   return {
-    exportDiagnostics: () => invokeNativeCommand(NATIVE_COMMANDS.exportDiagnosticBundle),
-    exit: () => invokeNativeCommand(NATIVE_COMMANDS.windowClose),
+    exportDiagnostics: () => runStartupAction('export_diagnostics', exportDiagnosticBundle),
+    exit: () => runStartupAction('exit', closeMainWindow),
     openLogs: args.logPath
-      ? () => invokeNativeCommand(NATIVE_COMMANDS.openLocalPath, { path: args.logPath })
+      ? () => runStartupAction('open_logs', () => openLocalPath(args.logPath ?? ''))
       : undefined,
-    retry: () => invokeNativeCommand(NATIVE_COMMANDS.windowRestartApp)
+    retry: () => runStartupAction('retry', restartMainWindowApp)
   };
 }

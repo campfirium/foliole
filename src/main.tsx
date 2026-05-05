@@ -4,7 +4,6 @@ import ReactDOM from 'react-dom/client';
 import './app/styles.css';
 import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
 import {
-  getRuntimeInvoke,
   reportRuntimeAppReady,
   reportRuntimeBootStage,
   reportRuntimeBridgeReady,
@@ -12,6 +11,7 @@ import {
 } from './shared/platform/bridge';
 import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
 import { installRendererErrorDiagnostics } from './shared/platform/rendererErrorDiagnostics';
+import { isRuntimeInvokeAvailable } from './shared/platform/runtimeInvoke';
 import { logRuntimeError } from './shared/platform/runtimeLogging';
 import { renderStartupErrorView } from './shared/ui/StartupSurface';
 import { bootstrapApp } from './startupBootstrap';
@@ -54,11 +54,10 @@ function renderStartupViewIfRequested() {
       moduleLabel: startupView.moduleLabel
     },
     createStartupErrorActions({
-      getRuntimeInvoke,
       logPath: startupView.logPath,
-      reportActionFailure: (command, error) => {
+      reportActionFailure: (action, error) => {
         reportRuntimeBootStage('startup_error_action_failed', {
-          command,
+          action,
           message: error instanceof Error ? error.message : String(error)
         });
       }
@@ -113,7 +112,7 @@ async function mountApp() {
   const bootContext = {
     href: window.location.href,
     readyState: document.readyState,
-    nativeInvokeReady: Boolean(getRuntimeInvoke()),
+    nativeInvokeReady: isRuntimeInvokeAvailable(),
     userAgent: navigator.userAgent
   };
   console.info('[startup] boot context', {
