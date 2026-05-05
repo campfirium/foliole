@@ -165,37 +165,28 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         }
     }
 
-    private static String rowKey(Context context, String key) throws Exception {
-        return FolioleCompanionMissingResourceQueryRules.attachmentRowKey(context, key);
-    }
-
     private static long rowLong(Context context, JSONObject row, String key) throws Exception {
-        return row.getLong(rowKey(context, key));
+        return FolioleCompanionMissingResourceQueryRules.attachmentRowLong(context, row, key);
     }
 
     private static String rowNullableString(Context context, JSONObject row, String key) throws Exception {
-        String rowKey = rowKey(context, key);
-        return row.isNull(rowKey) ? null : row.optString(rowKey, null);
+        return FolioleCompanionMissingResourceQueryRules.attachmentRowNullableString(context, row, key);
     }
 
     private static String rowString(Context context, JSONObject row, String key) throws Exception {
-        return row.getString(rowKey(context, key));
+        return FolioleCompanionMissingResourceQueryRules.attachmentRowString(context, row, key);
     }
 
     private static long fieldRowLong(Context context, JSONObject row, JSONObject field) throws Exception {
-        return row.getLong(rowKey(context, fieldRowKey(context, field)));
+        return FolioleCompanionMissingResourceQueryRules.attachmentFieldRowLong(context, row, field);
     }
 
     private static String fieldRowString(Context context, JSONObject row, JSONObject field) throws Exception {
-        return row.getString(rowKey(context, fieldRowKey(context, field)));
+        return FolioleCompanionMissingResourceQueryRules.attachmentFieldRowString(context, row, field);
     }
 
     private static String fieldOutputKey(Context context, JSONObject field) throws Exception {
         return FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field);
-    }
-
-    private static String fieldRowKey(Context context, JSONObject field) throws Exception {
-        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field);
     }
 
     private static String fieldTypeKey(Context context, JSONObject field) throws Exception {

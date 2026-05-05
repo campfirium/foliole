@@ -48,6 +48,27 @@ final class FolioleCompanionMissingResourceQueryRules {
         return attachmentObject(context, "rowKeys").getString(key);
     }
 
+    static long attachmentRowLong(Context context, JSONObject row, String key) throws Exception {
+        return row.getLong(attachmentRowKey(context, key));
+    }
+
+    static String attachmentRowNullableString(Context context, JSONObject row, String key) throws Exception {
+        String rowKey = attachmentRowKey(context, key);
+        return row.isNull(rowKey) ? null : row.optString(rowKey, null);
+    }
+
+    static String attachmentRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(attachmentRowKey(context, key));
+    }
+
+    static long attachmentFieldRowLong(Context context, JSONObject row, JSONObject field) throws Exception {
+        return row.getLong(attachmentRowKey(context, FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)));
+    }
+
+    static String attachmentFieldRowString(Context context, JSONObject row, JSONObject field) throws Exception {
+        return row.getString(attachmentRowKey(context, FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)));
+    }
+
     static String attachmentSummaryKey(Context context, String key) throws Exception {
         return attachmentObject(context, "summaryKeys").getString(key);
     }
@@ -72,6 +93,10 @@ final class FolioleCompanionMissingResourceQueryRules {
         return stringValue(context, "contentBlobs", "hashKey");
     }
 
+    static String contentHashString(Context context, JSONObject row) throws Exception {
+        return row.getString(contentHashKey(context));
+    }
+
     static int contentLimit(Context context, int limit) throws Exception {
         return Math.max(group(context, "contentBlobs").getInt("minLimit"), limit);
     }
@@ -82,6 +107,14 @@ final class FolioleCompanionMissingResourceQueryRules {
 
     static String contentRowKey(Context context, String key) throws Exception {
         return contentObject(context, "rowKeys").getString(key);
+    }
+
+    static long contentRowLong(Context context, JSONObject row, String key) throws Exception {
+        return row.getLong(contentRowKey(context, key));
+    }
+
+    static String contentRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(contentRowKey(context, key));
     }
 
     static String contentSummaryKey(Context context, String key) throws Exception {

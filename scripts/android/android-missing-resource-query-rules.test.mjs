@@ -61,17 +61,18 @@ describe('Android missing resource query rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.attachmentRowsQueryName(context)');
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.contentHashesQueryName(context)');
-    expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.attachmentRowKey(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.attachmentRowString(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.attachmentFieldRowString(context, row, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "count")');
-    expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.contentRowKey(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.contentRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.contentSummaryKey(context, key)');
     expect(combinedStoreSource).toContain('rowString(context, row, "availability")');
     expect(combinedStoreSource).toContain('rowLong(context, row, "sizeBytes")');
     expect(combinedStoreSource).toContain('fieldRowString(context, row, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
-    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
+    expect(rulesSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "missingResourceRead", groupName)');
     expect(combinedStoreSource).not.toContain('field.getString("outputKey")');
     expect(combinedStoreSource).not.toContain('field.getString("rowKey")');
@@ -81,6 +82,8 @@ describe('Android missing resource query rules', () => {
     expect(combinedStoreSource).not.toContain('categories.getString("imagePrefix")');
     expect(combinedStoreSource).not.toContain('row.getString(rowKey(context, "availability"))');
     expect(combinedStoreSource).not.toContain('row.getLong(rowKey(context, "sizeBytes"))');
+    expect(combinedStoreSource).not.toContain('row.getLong(rowKey(context, key))');
+    expect(combinedStoreSource).not.toContain('row.getString(rowKey(context, key))');
     expect(combinedStoreSource).not.toContain('blob.getString(rowKey(context, "availability"))');
     expect(combinedStoreSource).not.toContain('blob.getLong(rowKey(context, "sizeBytes"))');
     expect(combinedStoreSource).not.toContain('"attachmentResourceMissingRows"');

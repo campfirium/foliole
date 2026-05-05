@@ -59,20 +59,16 @@ final class FolioleCompanionContentBlobMissingStore {
         return summary;
     }
 
-    private static String rowKey(Context context, String key) throws Exception {
-        return FolioleCompanionMissingResourceQueryRules.contentRowKey(context, key);
-    }
-
     private static String hashString(Context context, JSONObject row) throws Exception {
-        return row.getString(FolioleCompanionMissingResourceQueryRules.contentHashKey(context));
+        return FolioleCompanionMissingResourceQueryRules.contentHashString(context, row);
     }
 
     private static long rowLong(Context context, JSONObject row, String key) throws Exception {
-        return row.getLong(rowKey(context, key));
+        return FolioleCompanionMissingResourceQueryRules.contentRowLong(context, row, key);
     }
 
     private static String rowString(Context context, JSONObject row, String key) throws Exception {
-        return row.getString(rowKey(context, key));
+        return FolioleCompanionMissingResourceQueryRules.contentRowString(context, row, key);
     }
 
     private static String summaryKey(Context context, String key) throws Exception {
