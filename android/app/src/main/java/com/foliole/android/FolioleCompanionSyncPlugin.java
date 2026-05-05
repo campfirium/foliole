@@ -234,11 +234,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to diagnose companion sync.",
-            databaseHelper -> FolioleCompanionSyncDiagnostics.diagnose(
-                getContext(),
-                databaseHelper.getReadableDatabase(),
-                getContext().getDatabasePath(FolioleCompanionDatabaseHelper.DATABASE_NAME).getAbsolutePath()
-            )
+            databaseHelper -> FolioleCompanionWorkspaceSyncPluginActions.diagnoseSync(getContext(), databaseHelper)
         );
     }
 
@@ -247,7 +243,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion workspace sync endpoint.",
-            databaseHelper -> databaseHelper.saveWorkspaceSyncEndpoint(call.getString("endpoint_url"))
+            databaseHelper -> FolioleCompanionWorkspaceSyncPluginActions.saveWorkspaceSyncEndpoint(databaseHelper, call)
         );
     }
 
@@ -256,12 +252,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to record companion workspace sync event.",
-            databaseHelper -> databaseHelper.recordWorkspaceSyncEvent(
-                call.getString("endpoint_url"),
-                call.getString("status"),
-                call.getString("message"),
-                call.getString("occurred_at")
-            )
+            databaseHelper -> FolioleCompanionWorkspaceSyncPluginActions.recordWorkspaceSyncEvent(databaseHelper, call)
         );
     }
 
@@ -270,7 +261,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync onboarding status.",
-            databaseHelper -> databaseHelper.saveSyncOnboardingStatus(call.getString("status"))
+            databaseHelper -> FolioleCompanionWorkspaceSyncPluginActions.saveSyncOnboardingStatus(databaseHelper, call)
         );
     }
 
@@ -279,13 +270,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to remove companion workspace sync target.",
-            databaseHelper -> {
-                String endpointUrl = call.getString("endpoint_url");
-                if (endpointUrl == null || endpointUrl.trim().isEmpty()) {
-                    throw new IllegalArgumentException("endpoint_url is required.");
-                }
-                return databaseHelper.removeWorkspaceSyncRememberedTarget(endpointUrl);
-            }
+            databaseHelper -> FolioleCompanionWorkspaceSyncPluginActions.removeWorkspaceSyncRememberedTarget(databaseHelper, call)
         );
     }
 
