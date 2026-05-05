@@ -14,6 +14,7 @@ import {
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const CONTENT_BLOB_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobStore.java');
+const CONTENT_BLOB_BATCH_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobBatchStore.java');
 const CONTENT_BLOB_BATCH_MANIFEST_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobBatchManifestStore.java');
 const TEXT_BODY_BLOBS = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionTextBodyBlobs.java');
 const WORKSPACE_SNAPSHOT_EXPORTER = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionWorkspaceSnapshotExporter.java');
@@ -116,6 +117,7 @@ describe('Android resource read query rules', () => {
   it('keeps resource Java stores wired to generated read rules', async () => {
     const combinedStoreSource = [
       await readFile(CONTENT_BLOB_STORE, 'utf8'),
+      await readFile(CONTENT_BLOB_BATCH_STORE, 'utf8'),
       await readFile(CONTENT_BLOB_BATCH_MANIFEST_STORE, 'utf8'),
       await readFile(TEXT_BODY_BLOBS, 'utf8'),
       await readFile(WORKSPACE_SNAPSHOT_EXPORTER, 'utf8'),
@@ -128,9 +130,12 @@ describe('Android resource read query rules', () => {
     const rulesSource = await readFile(RESOURCE_RULES, 'utf8');
 
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobString(context, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobObject(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobBatchResponseKey(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobSyncResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentString(context, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentObject(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentBatchResponseKey(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentResolveResponseKey(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentSyncResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextObject(context, "outputKeys")');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "resourceRead", groupName)');

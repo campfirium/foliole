@@ -50,12 +50,11 @@ final class FolioleCompanionContentBlobBatchStore {
         storeCachedBlobs(context, database, cachedBlobs);
         long databaseElapsedMs = elapsedMs(databaseStartedAt);
         JSObject result = new JSObject();
-        JSONObject responseKeys = resourceObject(context, "batchResponseKeys");
-        result.put(responseKeys.getString("syncedHashes"), syncedHashes);
-        result.put(responseKeys.getString("httpElapsedMs"), httpElapsedMs);
-        result.put(responseKeys.getString("parseElapsedMs"), parseElapsedMs);
-        result.put(responseKeys.getString("databaseElapsedMs"), databaseElapsedMs);
-        result.put(responseKeys.getString("totalElapsedMs"), elapsedMs(startedAt));
+        result.put(batchResponseKey(context, "syncedHashes"), syncedHashes);
+        result.put(batchResponseKey(context, "httpElapsedMs"), httpElapsedMs);
+        result.put(batchResponseKey(context, "parseElapsedMs"), parseElapsedMs);
+        result.put(batchResponseKey(context, "databaseElapsedMs"), databaseElapsedMs);
+        result.put(batchResponseKey(context, "totalElapsedMs"), elapsedMs(startedAt));
         return result;
     }
 
@@ -140,8 +139,8 @@ final class FolioleCompanionContentBlobBatchStore {
         return FolioleCompanionResourceMutationRules.contentBlobString(context, key);
     }
 
-    private static JSONObject resourceObject(Context context, String key) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.contentBlobObject(context, key);
+    private static String batchResponseKey(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobBatchResponseKey(context, key);
     }
 
     private static final class CachedBlob {

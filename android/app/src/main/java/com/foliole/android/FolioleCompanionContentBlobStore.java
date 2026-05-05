@@ -61,9 +61,8 @@ final class FolioleCompanionContentBlobStore {
             database.endTransaction();
         }
         JSObject result = new JSObject();
-        JSONObject responseKeys = resourceObject(context, "syncResponseKeys");
-        result.put(responseKeys.getString("hash"), hash);
-        result.put(responseKeys.getString("availability"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
+        result.put(syncResponseKey(context, "hash"), hash);
+        result.put(syncResponseKey(context, "availability"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
         return result;
     }
 
@@ -101,19 +100,14 @@ final class FolioleCompanionContentBlobStore {
         return FolioleCompanionResourceReadQueryRules.contentBlobString(context, key);
     }
 
-    private static JSONObject resourceObject(Context context, String key) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.contentBlobObject(context, key);
-    }
-
     private static JSObject markCached(Context context, SQLiteDatabase database, String hash) throws Exception {
         int updated = markCachedRow(context, database, hash, Instant.now().toString());
         if (updated <= 0) {
             throw new IllegalStateException("Content blob manifest is missing.");
         }
         JSObject result = new JSObject();
-        JSONObject responseKeys = resourceObject(context, "syncResponseKeys");
-        result.put(responseKeys.getString("hash"), hash);
-        result.put(responseKeys.getString("availability"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
+        result.put(syncResponseKey(context, "hash"), hash);
+        result.put(syncResponseKey(context, "availability"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
         return result;
     }
 
@@ -149,6 +143,10 @@ final class FolioleCompanionContentBlobStore {
 
     private static String mutationRule(Context context, String key) throws Exception {
         return FolioleCompanionResourceMutationRules.contentBlobString(context, key);
+    }
+
+    private static String syncResponseKey(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobSyncResponseKey(context, key);
     }
 
     private static String requireHash(Context context, String value) throws Exception {

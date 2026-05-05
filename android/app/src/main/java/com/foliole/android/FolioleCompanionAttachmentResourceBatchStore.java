@@ -41,7 +41,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             syncedAttachmentIds.put(attachmentId);
         }
         JSObject response = new JSObject();
-        response.put(resourceObject(context, "batchResponseKeys").getString("syncedAttachmentIds"), syncedAttachmentIds);
+        response.put(batchResponseKey(context, "syncedAttachmentIds"), syncedAttachmentIds);
         return response;
     }
 
@@ -184,8 +184,8 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         return FolioleCompanionResourceReadQueryRules.attachmentString(context, key);
     }
 
-    private static JSONObject resourceObject(Context context, String key) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.attachmentObject(context, key);
+    private static String batchResponseKey(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.attachmentBatchResponseKey(context, key);
     }
 
     private static final class DownloadResult {

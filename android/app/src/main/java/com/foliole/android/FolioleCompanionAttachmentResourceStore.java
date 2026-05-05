@@ -68,9 +68,8 @@ final class FolioleCompanionAttachmentResourceStore {
             throw error;
         }
         JSObject result = new JSObject();
-        JSONObject responseKeys = resourceObject(context, "syncResponseKeys");
-        result.put(responseKeys.getString("attachmentId"), normalizedAttachmentId);
-        result.put(responseKeys.getString("availability"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
+        result.put(syncResponseKey(context, "attachmentId"), normalizedAttachmentId);
+        result.put(syncResponseKey(context, "availability"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
         return result;
     }
 
@@ -108,28 +107,24 @@ final class FolioleCompanionAttachmentResourceStore {
             return missingFile(context, mimeType);
         }
         JSObject result = new JSObject();
-        JSONObject responseKeys = resourceObject(context, "resolveResponseKeys");
-        JSONObject statuses = resourceObject(context, "resolveStatuses");
-        result.put(responseKeys.getString("status"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, statuses.getString("readyStatusKey")));
-        result.put(responseKeys.getString("mimeType"), mimeType);
-        result.put(responseKeys.getString("resourceUrl"), Uri.fromFile(file).toString());
+        result.put(resolveResponseKey(context, "status"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, resolveStatus(context, "readyStatusKey")));
+        result.put(resolveResponseKey(context, "mimeType"), mimeType);
+        result.put(resolveResponseKey(context, "resourceUrl"), Uri.fromFile(file).toString());
         return result;
     }
 
     private static JSObject missingFile(Context context, String mimeType) throws Exception {
         JSObject result = new JSObject();
-        JSONObject responseKeys = resourceObject(context, "resolveResponseKeys");
-        result.put(responseKeys.getString("status"), resourceObject(context, "resolveStatuses").getString("missingFile"));
-        result.put(responseKeys.getString("mimeType"), mimeType);
-        result.put(responseKeys.getString("resourceUrl"), null);
+        result.put(resolveResponseKey(context, "status"), resolveStatus(context, "missingFile"));
+        result.put(resolveResponseKey(context, "mimeType"), mimeType);
+        result.put(resolveResponseKey(context, "resourceUrl"), null);
         return result;
     }
 
     private static JSObject notFound(Context context) throws Exception {
         JSObject result = new JSObject();
-        JSONObject responseKeys = resourceObject(context, "resolveResponseKeys");
-        result.put(responseKeys.getString("status"), resourceObject(context, "resolveStatuses").getString("notFound"));
-        result.put(responseKeys.getString("resourceUrl"), null);
+        result.put(resolveResponseKey(context, "status"), resolveStatus(context, "notFound"));
+        result.put(resolveResponseKey(context, "resourceUrl"), null);
         return result;
     }
 
@@ -145,8 +140,16 @@ final class FolioleCompanionAttachmentResourceStore {
         return FolioleCompanionResourceReadQueryRules.attachmentString(context, key);
     }
 
-    private static JSONObject resourceObject(Context context, String key) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.attachmentObject(context, key);
+    private static String resolveResponseKey(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.attachmentResolveResponseKey(context, key);
+    }
+
+    private static String resolveStatus(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.attachmentResolveStatus(context, key);
+    }
+
+    private static String syncResponseKey(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.attachmentSyncResponseKey(context, key);
     }
 
     private static String mutationRule(Context context, String key) throws Exception {
