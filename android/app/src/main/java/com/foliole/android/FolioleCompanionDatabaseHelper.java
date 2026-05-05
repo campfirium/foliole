@@ -153,7 +153,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     JSObject loadSyncNodeVersions(JSONObject cursor, int limit) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
-        return FolioleCompanionSyncNodeVersionStore.loadNodeVersions(database, cursor, limit, deviceId);
+        return FolioleCompanionSyncNodeVersionStore.loadNodeVersions(context, database, cursor, limit, deviceId);
     }
 
     JSObject loadSyncReviewLog(JSONObject cursor, int limit) throws Exception {

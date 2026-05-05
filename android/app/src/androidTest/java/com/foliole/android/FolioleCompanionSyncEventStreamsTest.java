@@ -92,7 +92,7 @@ public class FolioleCompanionSyncEventStreamsTest {
         assertEquals("remote body", selectString("nodes", "content", "id = '" + copyNodeId + "'"));
         assertEquals(1, countRows("node_order", "node_id = '" + copyNodeId + "' AND position = 0"));
         assertEquals(1, countRows("node_sync_versions", "object_id = '" + copyNodeId + "' AND device_id = 'android-test'"));
-        assertEquals(0, FolioleCompanionSyncNodeVersionStore.loadNodeVersions(database, null, 10, "android-test").getJSONArray("nodes").length());
+        assertEquals(0, FolioleCompanionSyncNodeVersionStore.loadNodeVersions(InstrumentationRegistry.getInstrumentation().getTargetContext(), database, null, 10, "android-test").getJSONArray("nodes").length());
         database.delete("nodes", "id = ?", new String[] { copyNodeId });
         FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(database, nodes, "android-test");
         assertEquals(0, countRows("nodes", "id = '" + copyNodeId + "'"));

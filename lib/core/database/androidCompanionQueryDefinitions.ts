@@ -149,5 +149,28 @@ export const ANDROID_COMPANION_QUERY_DEFINITIONS = {
       { key: 'stability_after', source: 'stability_after', type: 'double' },
       { key: 'difficulty_after', source: 'difficulty_after', type: 'double' }
     ]
+  },
+  syncNodeVersions: {
+    resultKey: 'nodes',
+    sql:
+      "SELECT v.version_id, v.object_id, 'node' AS object_type, v.parent_version_id, v.device_id, " +
+      "v.created_at AS version_created_at, COALESCE(json_extract(v.snapshot_json, '$.updated_at'), v.created_at) AS updated_at, " +
+      'v.content_hash, v.snapshot_json AS snapshot FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id ' +
+      "WHERE v.device_id = ?:cursorFilter AND v.object_id NOT LIKE 'conflict-copy-%' " +
+      'AND n.current_version_id = v.version_id AND n.deleted_at IS NULL ORDER BY v.created_at ASC, v.version_id ASC LIMIT ?',
+    columns: [
+      { key: 'version_id', source: 'version_id', type: 'string' },
+      { key: 'object_id', source: 'object_id', type: 'string' },
+      { key: 'object_type', source: 'object_type', type: 'string' },
+      { key: 'parent_version_id', source: 'parent_version_id', type: 'nullableString' },
+      { key: 'device_id', source: 'device_id', type: 'string' },
+      { key: 'version_created_at', source: 'version_created_at', type: 'string' },
+      { key: 'updated_at', source: 'updated_at', type: 'string' },
+      { key: 'content_hash', source: 'content_hash', type: 'string' },
+      { key: 'snapshot', source: 'snapshot', type: 'json' }
+    ]
+  },
+  syncNodeVersionParent: {
+    sql: 'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ? LIMIT 1'
   }
 };
