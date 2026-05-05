@@ -10,6 +10,7 @@ import {
 } from 'electron';
 
 import { registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
+import { installMainWindowContentSecurityPolicy } from './contentSecurityPolicy.js';
 import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnostics/diagnosticLog.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { handleInvokeRequest } from './ipc/commands.js';
@@ -107,6 +108,7 @@ async function createMainWindow() {
     }
   });
   const window = new BrowserWindow(options);
+  installMainWindowContentSecurityPolicy(window.webContents.session);
   await appendBootEvent('browser_window_created', {
     bounds: window.getBounds(),
     show: window.isVisible()
