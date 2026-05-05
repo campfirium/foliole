@@ -180,6 +180,26 @@ function insertImportSourceSyncState() {
   );
 }
 
+function insertPdfPageTextSyncState() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    ['pdf-1', 'paper.pdf', 'application/pdf', 128, '2026-04-27T00:05:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height)
+     VALUES (?, ?, ?, ?, ?)`,
+    ['pdf-1', 1, 'page text', 612, 792]
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('pdf_page_text', 'pdf-1:1', 7, 'pdf-page-text-hash',
+       'desktop', '2026-04-27T00:05:00.000Z', 1)`
+  );
+}
+
 function readPackRows(packPath: string) {
   const entries = readStoredZipEntries(packPath);
   const manifest = JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}');
@@ -389,6 +409,42 @@ it('packs import source metadata as a generic sync object', async () => {
       object_id: 'source-1',
       object_type: 'import_source',
       payload_json: expect.stringContaining('notes.md')
+    })]
+  });
+});
+
+it('packs pdf page text as a generic sync object', async () => {
+  insertPdfPageTextSyncState();
+  const packPath = path.join(tempRoot, 'incoming-pdf-page-text.db');
+
+  const result = await buildDesktopSyncPack({
+    outputPath: packPath,
+    packId: 'pack-pdf-page-text-1',
+    fromStateSeq: 0
+  });
+
+  expect(result).toMatchObject({
+    objectCount: 1,
+    packId: 'pack-pdf-page-text-1',
+    toStateSeq: 7
+  });
+  expect(readPackRows(packPath)).toMatchObject({
+    manifest: expect.objectContaining({
+      tables: [
+        { name: 'sync_object_state', row_count: 1 },
+        { name: 'sync_objects', row_count: 1 },
+        { name: 'nodes', row_count: 0 },
+        { name: 'node_attachments', row_count: 0 },
+        { name: 'external_documents', row_count: 0 },
+        { name: 'content_blobs', row_count: 0 },
+        { name: 'review_log', row_count: 0 }
+      ]
+    }),
+    stateRows: [{ object_id: 'pdf-1:1', object_type: 'pdf_page_text', state_seq: 7 }],
+    syncObjects: [expect.objectContaining({
+      object_id: 'pdf-1:1',
+      object_type: 'pdf_page_text',
+      payload_json: expect.stringContaining('page text')
     })]
   });
 });
