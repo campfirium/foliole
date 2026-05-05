@@ -15,6 +15,7 @@ import type { MarkdownSyntaxVisibility } from '../../shared/config/appSettings';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
 
 import type { useCurrentReviewPreview } from './appControllerHelpers';
+import { createOpenNotesView, createSelectNode, createToggleTrashView } from './appControllerTrashViewHandlers';
 import { buildLayoutProps } from './layoutPropsBuilder';
 import type { useAppRuntime } from './useAppRuntime';
 import type { useDocumentWidthResizer } from './useDocumentWidthResizer';
@@ -25,7 +26,7 @@ import type { useRightSidebarResizer } from './useRightSidebarResizer';
 import type { useTrashView } from './useTrashView';
 import type { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
-interface BuildControllerLayoutPropsArgs {
+export interface BuildControllerLayoutPropsArgs {
   activeNode: Node | undefined;
   appearance: {
     accentColorPreset: AccentColorPreset;
@@ -207,6 +208,8 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
 }
 
 function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
+  const openNotesView = createOpenNotesView(args);
+
   return {
     onAnswerChange: (answer: string) => {
       if (args.ws.activeNodeId && !args.runtime.isViewingTrashNode) {
@@ -229,11 +232,12 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onHotkeyUpdate: args.blockedHotkeyUpdate,
     onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => args.ws.updateNodeDesiredRetention(nodeId, desiredRetention),
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),
-    onOpenNotesView: args.trash.closeTrashView,
+    onOpenNotesView: openNotesView,
     onOpenSettings: () => args.runtime.setIsSettingsOpen(true),
     onCloseSettings: () => args.runtime.setIsSettingsOpen(false),
-    onOpenTrashView: () => (args.trash.isTrashViewOpen ? args.trash.closeTrashView() : args.trash.openTrashView()),
+    onOpenTrashView: createToggleTrashView(args, openNotesView),
     onResetLayout: args.ws.resetLayout,
+    onSelectNode: createSelectNode(args),
     onSelectTrashNode: (nodeId: string) => {
       args.runtime.setIsViewingTrashNode(true);
       args.trash.openTrashView();

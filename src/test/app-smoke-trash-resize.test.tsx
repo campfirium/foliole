@@ -182,6 +182,32 @@ it('empties all trash items from trash header action', () => {
   expect(workspace.trashedNodeIds).toEqual([]);
 });
 
+it('restores the main document when leaving trash after previewing a trashed node', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      ...state.nodesById,
+      'node-2': createNode({ id: 'node-2', title: 'Trashed child', content: '# Trashed child body' })
+    }
+  }));
+
+  render(<App />);
+  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Trashed child' }), {
+    clientX: 56,
+    clientY: 64
+  });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
+  fireEvent.click(within(nodePanel).getByRole('treeitem', { name: 'Trashed child' }));
+  expect(screen.getByTestId('editor-value')).toHaveValue('# Trashed child body');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+  expect(screen.getByTestId('editor-value')).toHaveValue('# Welcome to Foliole\n\nStart writing markdown here.');
+});
+
 it('does not render save badge in document header', () => {
   render(<App />);
 
