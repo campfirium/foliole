@@ -183,7 +183,8 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
         { name: 'nodes', row_count: 1 },
         { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 1 },
-        { name: 'content_blobs', row_count: 2 }
+        { name: 'content_blobs', row_count: 2 },
+        { name: 'review_log', row_count: 0 }
       ]
     }),
     nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
