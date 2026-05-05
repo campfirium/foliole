@@ -5,10 +5,7 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
-import {
-  loadListCollapsedPreference,
-  loadRightSidebarCollapsedPreference,
-} from './workspaceLayoutPrefs';
+import { loadListCollapsedPreference, loadRightSidebarCollapsedPreference } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
 import { listPendingNodeSyncNodeIds } from './workspacePendingNodeSync';
 import { workspacePersistStorage } from './workspacePersistStorage';
@@ -221,7 +218,11 @@ const workspaceStore = create<WorkspaceState>()(
         layout: state.layout,
         nodeViewById: state.nodeViewById,
         nodeOrder: state.nodeOrder,
-        nodesById: state.nodesById,
+        nodesById: trimWorkspaceNodesForRendererBoundary(
+          state.activeNodeId,
+          state.nodesById,
+          new Set(listPendingNodeSyncNodeIds())
+        ),
         trashedNodeIds: state.trashedNodeIds,
         untitledSequenceByParent: state.untitledSequenceByParent
       }),
