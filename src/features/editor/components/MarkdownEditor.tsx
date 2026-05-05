@@ -17,7 +17,9 @@ import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
 import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
 import { useEditorScrollbarMetrics } from './markdownEditorScrollbar';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
+import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
+import { useMarkdownImagePreview } from './useMarkdownImagePreview';
 
 function useEditorAdapter(
   hostRef: MutableRefObject<HTMLDivElement | null>,
@@ -166,6 +168,7 @@ export function MarkdownEditor({
   const hostRef = useRef<HTMLDivElement | null>(null), rootRef = useRef<HTMLDivElement | null>(null);
   const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value, hideTitleHeading, readOnly);
   const syncScrollMetrics = useEditorScrollbarMetrics(adapterRef).syncScrollMetrics;
+  const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
   useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value, lineDiffDecorations);
   useEditorAppearanceEffects(adapterRef, hideTitleHeading, nodeId);
   const surface = useMarkdownEditorSurfaceModel({
@@ -184,17 +187,20 @@ export function MarkdownEditor({
     value
   });
   return (
-    <MarkdownEditorSurface
-      ariaLabel={ariaLabel}
-      className={className}
-      editorStyle={surface.editorStyle}
-      fitBlockImagesToViewport={fitBlockImagesToViewport}
-      gestureTrailPath={surface.gestureTrailPath}
-      hideScrollbar={hideScrollbar}
-      hostRef={hostRef}
-      mouseGesture={surface.mouseGesture}
-      onContextMenu={onContextMenu}
-      rootRef={rootRef}
-    />
+    <>
+      <MarkdownEditorSurface
+        ariaLabel={ariaLabel}
+        className={className}
+        editorStyle={surface.editorStyle}
+        fitBlockImagesToViewport={fitBlockImagesToViewport}
+        gestureTrailPath={surface.gestureTrailPath}
+        hideScrollbar={hideScrollbar}
+        hostRef={hostRef}
+        mouseGesture={surface.mouseGesture}
+        onContextMenu={onContextMenu}
+        rootRef={rootRef}
+      />
+      <MarkdownImagePreviewDialog image={previewImage} onOpenChange={(open) => !open && closePreview()} />
+    </>
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { IMAGE_CLOZE_CREATE_EVENT, IMAGE_CLOZE_DELETE_EVENT } from '../../image-cloze/model/imageClozeEvents';
 import type { ImageClozeDraftRegion } from '../../image-cloze/model/imageCloze';
+import { IMAGE_CLOZE_CREATE_EVENT, IMAGE_CLOZE_DELETE_EVENT } from '../../image-cloze/model/imageClozeEvents';
 
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 
@@ -32,9 +32,12 @@ function createSurface() {
     },
     renderImage: () => {
       const image = document.createElement('img');
-      image.src = 'https://example.com/demo.png';
-      return image;
+        image.src = 'https://example.com/demo.png';
+        return image;
     },
+    previewAlt: 'Demo image',
+    previewPresentation: null,
+    previewSource: 'https://example.com/demo.png',
     to: 30
   });
   return surface;
@@ -120,7 +123,9 @@ describe('image cloze widget creation', () => {
     expect(detail?.regions[0]?.height).toBeCloseTo(0.25);
     window.removeEventListener(IMAGE_CLOZE_CREATE_EVENT, onCreate);
   });
+});
 
+describe('image cloze widget queued creation', () => {
   it('keeps queued regions and submits them together after using the add button', () => {
     const surface = createSurface();
     const actions = surface.querySelector('.cm-md-image-cloze-actions') as HTMLElement;

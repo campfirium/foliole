@@ -367,6 +367,12 @@ body {
   position: relative;
 }
 
+.cm-md-image-surface:hover .cm-md-image-preview-trigger,
+.cm-md-image-surface:focus-within .cm-md-image-preview-trigger {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .cm-md-image-surface-clozeable:hover,
 .cm-md-image-surface-clozeable:hover .cm-md-image-element,
 .cm-md-image-surface-clozeable[data-md-image-cloze-active='true'],
@@ -385,6 +391,11 @@ body {
   max-width: 100%;
   object-fit: contain;
   width: auto;
+}
+
+.cm-md-image-preview-trigger {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .cm-md-image-cloze-regions {
@@ -418,6 +429,12 @@ body {
   border-style: dashed;
 }
 
+.cm-md-image-cloze-region[data-region-state='selected'] {
+  background: rgb(var(--app-cloze-color-rgb) / 0.14);
+  border-color: rgb(var(--app-cloze-color-rgb) / 0.92);
+  border-style: solid;
+}
+
 .cm-md-image-cloze-action {
   align-items: center;
   background: rgb(255 255 255 / 0.96);
@@ -436,11 +453,24 @@ body {
   box-shadow: 0 8px 20px rgb(15 23 42 / 0.12);
 }
 
+.cm-md-image-cloze-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .cm-md-image-cloze-overlay {
   cursor: crosshair;
   inset: 0;
   position: absolute;
   z-index: 2;
+}
+
+.cm-md-image-cloze-overlay[data-md-image-region-hover='true'] {
+  cursor: grab;
+}
+
+.cm-md-image-cloze-overlay[data-md-image-create-mode='true'] {
+  cursor: crosshair;
 }
 
 .cm-md-image-cloze-draft {
@@ -459,6 +489,16 @@ body {
 }
 
 .cm-md-image-cloze-actions[hidden] {
+  display: none;
+}
+
+.cm-md-image-cloze-delete {
+  position: absolute;
+  transform: translate(10px, -50%);
+  z-index: 3;
+}
+
+.cm-md-image-cloze-delete[hidden] {
   display: none;
 }
 

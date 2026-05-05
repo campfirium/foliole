@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { registerImageClozeEditorPresentation, unregisterImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
+import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
 
 vi.mock('../../../shared/platform/bridge', () => ({
   openExternalUrl: vi.fn()
@@ -144,6 +145,25 @@ describe('live markdown image rendering basics', () => {
     );
 
     expectBlockAndInlineImageLayout(host);
+
+    adapter.destroy();
+  });
+
+  it('dispatches a preview request when the block image preview trigger is clicked', async () => {
+    const handlePreview = vi.fn();
+    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+    host.addEventListener(MARKDOWN_IMAGE_PREVIEW_EVENT, handlePreview as EventListener);
+
+    await expectInternalImageRendered(host);
+
+    (host.querySelector('.cm-md-image-preview-trigger') as HTMLButtonElement | null)?.click();
+
+    expect(handlePreview).toHaveBeenCalledTimes(1);
+    expect(((handlePreview.mock.calls[0]?.[0] as CustomEvent | undefined)?.detail ?? null)).toEqual({
+      alt: 'Cover',
+      presentation: null,
+      src: 'foliole-asset://attachment/hash-1'
+    });
 
     adapter.destroy();
   });

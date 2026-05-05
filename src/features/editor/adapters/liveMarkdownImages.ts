@@ -57,17 +57,18 @@ function createImageSurface(
   imageOptions: { onError?: (() => void) | null } = {}
 ) {
   const presentation = getImageClozeEditorPresentation(editorNodeId);
+  const imagePresentation =
+    presentation && imageMatch.attachmentId && presentation.regions.some((region) => region.attachmentId === imageMatch.attachmentId)
+      ? {
+          ...presentation,
+          regions: presentation.regions.filter((region) => region.attachmentId === imageMatch.attachmentId)
+        }
+      : null;
   return createImageClozeImageSurface({
     attachmentId: imageMatch.attachmentId,
     display: imageMatch.display,
     from: imageMatch.from,
-    presentation:
-      presentation && imageMatch.attachmentId && presentation.regions.some((region) => region.attachmentId === imageMatch.attachmentId)
-        ? {
-            ...presentation,
-            regions: presentation.regions.filter((region) => region.attachmentId === imageMatch.attachmentId)
-          }
-        : null,
+    presentation: imagePresentation,
     renderImage: () =>
       createImageElement({
         alt: imageMatch.alt,
@@ -75,6 +76,9 @@ function createImageSurface(
         onError: imageOptions.onError ?? null,
         source
       }),
+    previewAlt: imageMatch.alt,
+    previewPresentation: imagePresentation,
+    previewSource: source,
     to: imageMatch.to
   });
 }

@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -6,6 +6,7 @@ import {
   unregisterImageClozeEditorPresentation
 } from '../../image-cloze/model/imageClozePresentation';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
+import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
 
 const mockDestroy = vi.fn();
 const mockGetScrollMetrics = vi.fn(() => ({ clientHeight: 0, scrollHeight: 0, scrollTop: 0 }));
@@ -178,7 +179,60 @@ describe('MarkdownEditor rendering', () => {
     expect(mockCtor).toHaveBeenCalledTimes(1);
     expect(mockSetHideTitleHeading).toHaveBeenCalledWith(true);
   });
+});
 
+describe('MarkdownEditor image preview', () => {
+  resetMocks();
+
+  it('opens and closes the image preview dialog when the editor surface receives a preview request', async () => {
+    const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="![Cover](asset://hash-1.png)" />);
+    const host = container.querySelector('.markdown-editor-host') as HTMLDivElement | null;
+
+    act(() => {
+      host?.dispatchEvent(
+        new CustomEvent(MARKDOWN_IMAGE_PREVIEW_EVENT, {
+          bubbles: true,
+          detail: { alt: 'Cover', presentation: null, src: 'https://example.com/cover.png' }
+        })
+      );
+    });
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Cover' })).toHaveAttribute('src', 'https://example.com/cover.png');
+
+    act(() => {
+      screen.getByRole('button', { name: 'Close image preview' }).click();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('closes the image preview dialog when clicking outside the image', async () => {
+    const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="![Cover](asset://hash-1.png)" />);
+    const host = container.querySelector('.markdown-editor-host') as HTMLDivElement | null;
+
+    act(() => {
+      host?.dispatchEvent(
+        new CustomEvent(MARKDOWN_IMAGE_PREVIEW_EVENT, {
+          bubbles: true,
+          detail: { alt: 'Cover', presentation: null, src: 'https://example.com/cover.png' }
+        })
+      );
+    });
+
+    const dialog = await screen.findByRole('dialog');
+    const dismissSurface = dialog.querySelector('.cursor-zoom-out') as HTMLDivElement | null;
+
+    act(() => {
+      dismissSurface?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
 });
 
 describe('MarkdownEditor image cloze refresh', () => {
