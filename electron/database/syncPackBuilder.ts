@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { buildSyncPackManifest } from './syncPackManifest.js';
 import { PACK_SCHEMA } from './syncPackSchema.js';
 
 const require = createRequire(import.meta.url);
@@ -162,13 +163,26 @@ function loadPackRows(fromStateSeq: number, toStateSeq: number) {
   };
 }
 
-function writePackManifest(db: import('better-sqlite3').Database, input: BuildDesktopSyncPackInput, fromStateSeq: number, toStateSeq: number) {
-  db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run('manifest_json', JSON.stringify({
-    pack_id: input.packId,
-    from_state_seq: fromStateSeq,
-    to_state_seq: toStateSeq,
-    table_names: ['sync_object_state', 'nodes', 'external_documents', 'content_blobs']
-  }));
+function writePackManifest(
+  db: import('better-sqlite3').Database,
+  input: BuildDesktopSyncPackInput,
+  fromStateSeq: number,
+  toStateSeq: number,
+  rows: ReturnType<typeof loadPackRows>
+) {
+  db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run('manifest_json', JSON.stringify(
+    buildSyncPackManifest({
+      fromStateSeq,
+      packId: input.packId,
+      tableRows: {
+        content_blobs: rows.contentBlobs,
+        external_documents: rows.externalDocuments,
+        nodes: rows.nodes,
+        sync_object_state: rows.stateRows
+      },
+      toStateSeq
+    })
+  ));
 }
 
 function writePackRows(db: import('better-sqlite3').Database, rows: ReturnType<typeof loadPackRows>) {
@@ -224,7 +238,7 @@ export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
     const packToStateSeq = rows.stateRows.at(-1)?.state_seq ?? fromStateSeq;
 
     const writePack = packDb.transaction(() => {
-      writePackManifest(packDb, input, fromStateSeq, packToStateSeq);
+      writePackManifest(packDb, input, fromStateSeq, packToStateSeq, rows);
       writePackRows(packDb, rows);
     });
     writePack();

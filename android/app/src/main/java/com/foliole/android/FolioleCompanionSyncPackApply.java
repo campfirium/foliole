@@ -79,7 +79,11 @@ final class FolioleCompanionSyncPackApply {
                 "THEN incoming.cached_at ELSE NULL END, " +
                 "CASE WHEN EXISTS (SELECT 1 FROM main.content_blob_data data WHERE data.hash = incoming.hash) " +
                 "THEN incoming.last_verified_at ELSE NULL END " +
-                "FROM inc.content_blobs incoming"
+                "FROM inc.content_blobs incoming WHERE incoming.hash IN (" +
+                "SELECT body_blob_hash FROM inc.nodes WHERE body_blob_hash IS NOT NULL " +
+                "AND id IN (SELECT object_id FROM " + applyableStateRowsSql("node") + ") " +
+                "UNION SELECT body_blob_hash FROM inc.external_documents WHERE body_blob_hash IS NOT NULL " +
+                "AND document_id IN (SELECT object_id FROM " + applyableStateRowsSql("external_document") + "))"
         );
         return changedRows(database);
     }

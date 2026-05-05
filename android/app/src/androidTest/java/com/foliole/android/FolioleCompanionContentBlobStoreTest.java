@@ -37,6 +37,8 @@ public class FolioleCompanionContentBlobStoreTest {
             "availability TEXT NOT NULL DEFAULT 'missing', source_device_id TEXT, created_at TEXT NOT NULL, " +
             "cached_at TEXT, last_verified_at TEXT)");
         database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
+        database.execSQL("CREATE TABLE nodes (id TEXT PRIMARY KEY, body_blob_hash TEXT)");
+        database.execSQL("CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT)");
     }
 
     @After
@@ -49,6 +51,7 @@ public class FolioleCompanionContentBlobStoreTest {
         String body = "Blob article body";
         String hash = sha256(body);
         insertMissingBlob(hash);
+        database.execSQL("INSERT INTO nodes (id, body_blob_hash) VALUES ('node-1', '" + hash + "')");
         OneShotHttpServer server = new OneShotHttpServer(body);
         server.start();
 
@@ -62,6 +65,23 @@ public class FolioleCompanionContentBlobStoreTest {
         assertEquals(body, selectString("SELECT CAST(data AS TEXT) FROM content_blob_data WHERE hash = '" + hash + "'"));
         assertEquals(0, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10).getJSONArray("hashes").length());
         assertEquals("GET", server.method());
+    }
+
+    @Test
+    public void onlyListsMissingBlobHashesStillReferencedByStructureRows() throws Exception {
+        String referencedNodeHash = sha256("referenced node body");
+        String referencedDocumentHash = sha256("referenced document body");
+        String unreferencedHash = sha256("stale body");
+        insertMissingBlob(referencedNodeHash);
+        insertMissingBlob(referencedDocumentHash);
+        insertMissingBlob(unreferencedHash);
+        database.execSQL("INSERT INTO nodes (id, body_blob_hash) VALUES ('node-1', '" + referencedNodeHash + "')");
+        database.execSQL("INSERT INTO external_documents (document_id, body_blob_hash) VALUES " +
+            "('doc-1', '" + referencedDocumentHash + "')");
+
+        assertEquals(2, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .length());
     }
 
     @Test
@@ -80,6 +100,26 @@ public class FolioleCompanionContentBlobStoreTest {
         }
         throw new AssertionError("Expected content blob hash mismatch.");
     }
+
+    @Test
+    public void returnsCachedBlobWithoutDownloadingItAgain() throws Exception {
+        String body = "cached body";
+        String hash = sha256(body);
+        insertMissingBlob(hash);
+        database.execSQL("INSERT INTO nodes (id, body_blob_hash) VALUES ('node-1', '" + hash + "')");
+        database.execSQL("INSERT INTO content_blob_data (hash, data) VALUES ('" + hash + "', CAST('" + body + "' AS BLOB))");
+
+        JSObject result = FolioleCompanionContentBlobStore.syncBlob(
+            database,
+            hash,
+            "http://127.0.0.1:1/content-blob",
+            new JSONObject()
+        );
+
+        assertEquals("cached", result.getString("availability"));
+        assertEquals("cached", selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
+    }
+
 
     private void insertMissingBlob(String hash) {
         database.execSQL("INSERT INTO content_blobs (" +

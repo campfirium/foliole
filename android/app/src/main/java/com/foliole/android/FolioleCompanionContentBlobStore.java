@@ -21,6 +21,8 @@ final class FolioleCompanionContentBlobStore {
             "SELECT cb.hash FROM content_blobs cb " +
                 "LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash " +
                 "WHERE cb.kind = 'text_body' AND cbd.hash IS NULL " +
+                "AND (EXISTS (SELECT 1 FROM nodes n WHERE n.body_blob_hash = cb.hash) " +
+                "OR EXISTS (SELECT 1 FROM external_documents ed WHERE ed.body_blob_hash = cb.hash)) " +
                 "ORDER BY cb.created_at ASC LIMIT ?",
             new String[] { String.valueOf(Math.max(1, limit)) }
         )) {
@@ -35,6 +37,9 @@ final class FolioleCompanionContentBlobStore {
 
     static JSObject syncBlob(SQLiteDatabase database, String hash, String url, JSONObject headers) throws Exception {
         String normalizedHash = requireHash(hash);
+        if (hasCachedBlobData(database, normalizedHash)) {
+            return markCached(database, normalizedHash);
+        }
         byte[] bytes = FolioleCompanionDesktopHttpClient.requestBytes(requireText(url, "url"), headers);
         String actualHash = sha256(bytes);
         if (!normalizedHash.equals(actualHash)) {
@@ -62,6 +67,31 @@ final class FolioleCompanionContentBlobStore {
         }
         JSObject result = new JSObject();
         result.put("hash", normalizedHash);
+        result.put("availability", "cached");
+        return result;
+    }
+
+    private static boolean hasCachedBlobData(SQLiteDatabase database, String hash) {
+        try (Cursor cursor = database.rawQuery(
+            "SELECT 1 FROM content_blob_data WHERE hash = ? LIMIT 1",
+            new String[] { hash }
+        )) {
+            return cursor.moveToFirst();
+        }
+    }
+
+    private static JSObject markCached(SQLiteDatabase database, String hash) {
+        String now = Instant.now().toString();
+        ContentValues manifest = new ContentValues();
+        manifest.put("availability", "cached");
+        manifest.put("cached_at", now);
+        manifest.put("last_verified_at", now);
+        int updated = database.update("content_blobs", manifest, "hash = ?", new String[] { hash });
+        if (updated <= 0) {
+            throw new IllegalStateException("Content blob manifest is missing.");
+        }
+        JSObject result = new JSObject();
+        result.put("hash", hash);
         result.put("availability", "cached");
         return result;
     }

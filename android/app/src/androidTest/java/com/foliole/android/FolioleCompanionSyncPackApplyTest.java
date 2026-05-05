@@ -80,6 +80,7 @@ public class FolioleCompanionSyncPackApplyTest {
         assertEquals("local-hash", selectString(
             "SELECT content_hash FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'"
         ));
+        assertEquals(0, countRows("content_blobs"));
     }
 
     @Test
@@ -208,6 +209,13 @@ public class FolioleCompanionSyncPackApplyTest {
         try (Cursor cursor = mainDatabase.rawQuery(sql, null)) {
             cursor.moveToFirst();
             return cursor.getString(0);
+        }
+    }
+
+    private int countRows(String table) {
+        try (Cursor cursor = mainDatabase.rawQuery("SELECT COUNT(*) FROM " + table, null)) {
+            cursor.moveToFirst();
+            return cursor.getInt(0);
         }
     }
 

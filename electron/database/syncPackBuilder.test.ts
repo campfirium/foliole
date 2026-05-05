@@ -102,7 +102,12 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
     blobs: [expect.objectContaining({ kind: 'text_body' })],
     manifest: expect.objectContaining({
       pack_id: 'pack-1',
-      table_names: ['sync_object_state', 'nodes', 'external_documents', 'content_blobs']
+      tables: [
+        { name: 'sync_object_state', row_count: 1 },
+        { name: 'nodes', row_count: 1 },
+        { name: 'external_documents', row_count: 0 },
+        { name: 'content_blobs', row_count: 1 }
+      ]
     }),
     nodes: [expect.objectContaining({
       body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
@@ -159,6 +164,14 @@ it('packs external document structure with body blob manifests but no body bytes
       document_id: 'folder-1:doc.md',
       opening_text: expect.stringContaining('External body')
     })],
+    manifest: expect.objectContaining({
+      tables: [
+        { name: 'sync_object_state', row_count: 1 },
+        { name: 'nodes', row_count: 0 },
+        { name: 'external_documents', row_count: 1 },
+        { name: 'content_blobs', row_count: 1 }
+      ]
+    }),
     stateRows: [{ object_id: 'folder-1:doc.md', object_type: 'external_document', state_seq: 1 }]
   });
 });
