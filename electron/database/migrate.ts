@@ -6,12 +6,10 @@ import {
   recoverCorruptedDatabase,
   verifyDatabaseIntegrity
 } from './integrity.js';
-import { prepareLibraryDataForStartup } from './libraryDataMigration.js';
 
 export { DATABASE_SCHEMA_VERSION, runDatabaseMigrations } from '../../lib/core/database/migrations.js';
 
 export function initializeDatabase() {
-  prepareLibraryDataForStartup();
   try {
     const connection = openDatabaseConnection();
     verifyDatabaseIntegrity(connection.sqlite);

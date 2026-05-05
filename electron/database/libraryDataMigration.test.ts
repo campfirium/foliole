@@ -25,7 +25,6 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection, resolveDatabasePath } from './connection.js';
-import { resolveMigrationStatusFileForTest } from './libraryDataMigration.js';
 import { initializeDatabase, runDatabaseMigrations } from './migrate.js';
 
 let tempRoot = '';
@@ -64,73 +63,19 @@ function createLegacyDatabase() {
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run('legacy-node', null, 'Legacy Node', 1, 0, '', null, null, '2026-03-30T00:00:00.000Z', '2026-03-30T00:00:00.000Z', null);
-  sqlite
-    .prepare('INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)')
-    .run('legacy-attachment', 'legacy.png', 'image/png', 11, '2026-03-30T00:00:00.000Z');
-  sqlite.prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)').run(
-    'legacy-node',
-    'legacy-attachment',
-    'image'
-  );
   sqlite.close();
   return legacyDatabasePath;
 }
 
-it('migrates the legacy AppData database and attachments into the library home and keeps using it after restart', async () => {
+it('keeps using the library home even when legacy AppData data still exists', async () => {
   const legacyDatabasePath = createLegacyDatabase();
-  const legacyAttachmentPath = path.join(mockedAppDataDir, 'legacy-attachment');
   const libraryDatabasePath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'foliole.db');
-  const libraryAttachmentPath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'legacy-attachment.png');
 
-  await fs.writeFile(legacyAttachmentPath, 'legacy-bytes');
+  const connection = initializeDatabase();
 
-  const firstConnection = initializeDatabase();
-
-  expect(firstConnection.dbPath).toBe(libraryDatabasePath);
-  await expect(fs.readFile(libraryAttachmentPath, 'utf8')).resolves.toBe('legacy-bytes');
-  await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'legacy-attachment'))).rejects.toThrow();
-  await expect(fs.readFile(legacyAttachmentPath, 'utf8')).resolves.toBe('legacy-bytes');
-  expect(firstConnection.sqlite.prepare('SELECT COUNT(*) FROM attachments').pluck().get()).toBe(1);
+  expect(connection.dbPath).toBe(libraryDatabasePath);
   expect(resolveDatabasePath()).toBe(libraryDatabasePath);
-  expect(resolveMigrationStatusFileForTest()).toContain(path.join(mockedAppDataDir, 'config'));
-
-  closeDatabaseConnection();
-
-  const secondConnection = initializeDatabase();
-
-  expect(secondConnection.dbPath).toBe(libraryDatabasePath);
-  expect(resolveDatabasePath()).toBe(libraryDatabasePath);
-  expect(secondConnection.sqlite.prepare('SELECT title FROM nodes WHERE id = ?').pluck().get('legacy-node')).toBe('Legacy Node');
+  expect(connection.sqlite.prepare('SELECT title FROM nodes WHERE id = ?').pluck().get('legacy-node')).toBeUndefined();
   await expect(fs.readFile(legacyDatabasePath, 'utf8')).resolves.toBeTruthy();
-});
-
-it('falls back to legacy AppData data when attachment migration fails and retries cleanly later', async () => {
-  createLegacyDatabase();
-  const legacyAttachmentPath = path.join(mockedAppDataDir, 'legacy-attachment');
-  const libraryDatabasePath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'foliole.db');
-  const libraryAttachmentPath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'legacy-attachment.png');
-
-  await fs.writeFile(legacyAttachmentPath, 'legacy-bytes');
-  const originalCopyFileSync = nodeFs.copyFileSync.bind(nodeFs);
-  const copyFileSync = vi.spyOn(nodeFs, 'copyFileSync');
-  copyFileSync.mockImplementation((sourcePath, destinationPath, mode) => {
-    if (String(sourcePath) === legacyAttachmentPath) {
-      throw new Error('forced attachment copy failure');
-    }
-    return originalCopyFileSync(sourcePath, destinationPath, mode);
-  });
-
-  const fallbackConnection = initializeDatabase();
-
-  expect(fallbackConnection.dbPath).toBe(path.join(mockedAppDataDir, 'foliole.db'));
-  await expect(fs.access(libraryDatabasePath)).rejects.toThrow();
-  await expect(fs.access(libraryAttachmentPath)).rejects.toThrow();
-
-  closeDatabaseConnection();
-  copyFileSync.mockRestore();
-
-  const retriedConnection = initializeDatabase();
-
-  expect(retriedConnection.dbPath).toBe(libraryDatabasePath);
-  await expect(fs.readFile(libraryAttachmentPath, 'utf8')).resolves.toBe('legacy-bytes');
+  await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).resolves.toBeUndefined();
 });

@@ -36,9 +36,7 @@ export function openDatabaseConnection(): DatabaseConnection {
 
   const runtimeDataPaths = resolveRuntimeDataPaths();
   const dbPath = runtimeDataPaths.databasePath;
-  if (runtimeDataPaths.mode === 'library') {
-    ensureLibraryPathLayout(loadLibraryPathSettingsSync());
-  }
+  ensureLibraryPathLayout(loadLibraryPathSettingsSync());
 
   const sqlite = new BetterSqlite3(dbPath);
   sqlite.pragma('journal_mode = WAL');
