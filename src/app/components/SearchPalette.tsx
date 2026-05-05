@@ -3,8 +3,17 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboa
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
+import {
+  renderSearchResultMetaBadge,
+  renderSearchResultSourceLabel,
+  renderSearchResultText,
+  resolveSearchResultContext,
+  resolveSearchResultNodeBadge,
+  resolveSearchResultPathLabel
+} from './searchPaletteResultPresentation';
 import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
 
 interface SearchPaletteProps {
@@ -83,7 +92,14 @@ function SearchPaletteEmptyState({ query }: { query: string }) {
   );
 }
 
-function SearchPaletteList(props: { activeIndex: number; onOpenResult: (result: WorkspaceSearchResult) => void; results: WorkspaceSearchResult[] }) {
+function SearchPaletteList(props: {
+  activeIndex: number;
+  nodesById: WorkspaceListNodesById;
+  onOpenResult: (result: WorkspaceSearchResult) => void;
+  query: string;
+  results: WorkspaceSearchResult[];
+  sourceDetailsByNodeId: Record<string, RuntimeNodeSourceDetails | null | undefined>;
+}) {
   if (!props.results.length) {
     return null;
   }
@@ -91,15 +107,24 @@ function SearchPaletteList(props: { activeIndex: number; onOpenResult: (result: 
   return (
     <ul aria-label="Workspace search results" className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
       {props.results.map((item, index) => (
-        <li key={item.id}>
+        <li key={`${item.id}-${item.kind}-${index}`}>
           <button
             className="flex w-full flex-col gap-1 rounded-md px-3 py-2 text-left hover:bg-bg-subtle data-[active=true]:bg-bg-subtle"
             data-active={index === props.activeIndex}
             onClick={() => props.onOpenResult(item)}
             type="button"
           >
-            <span className="truncate text-sm font-medium text-foreground">{item.title}</span>
-            <span className="line-clamp-2 text-xs text-foreground/60">{item.excerpt}</span>
+            <span className="min-w-0 truncate text-sm font-medium text-foreground">{renderSearchResultText(item.title, props.query)}</span>
+            <span className="line-clamp-2 text-xs text-foreground/60">
+              {renderSearchResultText(resolveSearchResultContext(item), props.query)}
+            </span>
+            <span className="flex items-center justify-between gap-3 text-[11px] text-foreground/45">
+              <span className="min-w-0 truncate">{resolveSearchResultPathLabel(item, props.nodesById)}</span>
+              <span className="flex shrink-0 items-center gap-1">
+                {renderSearchResultMetaBadge(resolveSearchResultNodeBadge(item, props.nodesById))}
+                {renderSearchResultSourceLabel(props.sourceDetailsByNodeId[item.id])}
+              </span>
+            </span>
           </button>
         </li>
       ))}
@@ -137,10 +162,71 @@ function useSearchResults(props: Pick<SearchPaletteProps, 'isOpen' | 'nodeOrder'
   return getRuntimeInvoke() ? runtimeResults : localResults;
 }
 
+function useSearchResultSourceDetails(results: WorkspaceSearchResult[]) {
+  const [sourceDetailsByNodeId, setSourceDetailsByNodeId] = useState<Record<string, RuntimeNodeSourceDetails | null | undefined>>({});
+  const cacheRef = useRef<Record<string, RuntimeNodeSourceDetails | null>>({});
+
+  useEffect(() => {
+    const nodeIds = [...new Set(results.map((result) => result.id).filter(Boolean))];
+    if (nodeIds.length === 0) {
+      setSourceDetailsByNodeId({});
+      return;
+    }
+
+    setSourceDetailsByNodeId((current) => {
+      const nextEntries = Object.fromEntries(nodeIds.map((nodeId) => [nodeId, cacheRef.current[nodeId]]));
+      const currentKeys = Object.keys(current);
+      if (currentKeys.length === nodeIds.length && nodeIds.every((nodeId) => current[nodeId] === nextEntries[nodeId])) {
+        return current;
+      }
+      return nextEntries;
+    });
+
+    const missingNodeIds = nodeIds.filter((nodeId) => !Object.prototype.hasOwnProperty.call(cacheRef.current, nodeId));
+    if (missingNodeIds.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    missingNodeIds.forEach((nodeId) => {
+      void loadRuntimeNodeSourceDetails(nodeId).then((details) => {
+        if (cancelled) {
+          return;
+        }
+        cacheRef.current[nodeId] = details;
+        setSourceDetailsByNodeId((current) => (current[nodeId] === details ? current : { ...current, [nodeId]: details }));
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [results]);
+
+  return sourceDetailsByNodeId;
+}
+
+function useOrderedSearchResults(results: WorkspaceSearchResult[], nodesById: WorkspaceListNodesById) {
+  return useMemo(() => {
+    const regularResults: WorkspaceSearchResult[] = [];
+    const anchoredResults: WorkspaceSearchResult[] = [];
+    results.forEach((result) => {
+      if (nodesById[result.id]?.anchorLink?.kind) {
+        anchoredResults.push(result);
+        return;
+      }
+      regularResults.push(result);
+    });
+    return [...regularResults, ...anchoredResults];
+  }, [nodesById, results]);
+}
+
 export function SearchPalette(props: SearchPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const results = useSearchResults(props, query);
+  const rawResults = useSearchResults(props, query);
+  const results = useOrderedSearchResults(rawResults, props.nodesById);
+  const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
 
   useEffect(() => {
     if (!props.isOpen) {
@@ -182,7 +268,14 @@ export function SearchPalette(props: SearchPaletteProps) {
           totalItems={results.length}
         />
         {results.length ? (
-          <SearchPaletteList activeIndex={activeIndex} onOpenResult={props.onOpenResult} results={results} />
+          <SearchPaletteList
+            activeIndex={activeIndex}
+            nodesById={props.nodesById}
+            onOpenResult={props.onOpenResult}
+            query={query}
+            results={results}
+            sourceDetailsByNodeId={sourceDetailsByNodeId}
+          />
         ) : (
           <SearchPaletteEmptyState query={query} />
         )}

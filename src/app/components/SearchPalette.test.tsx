@@ -4,8 +4,12 @@ import { expect, it, vi } from 'vitest';
 vi.mock('../../shared/platform/bridge', () => ({
   getRuntimeInvoke: vi.fn()
 }));
+vi.mock('../../shared/platform/nodeSourceBridge', () => ({
+  loadRuntimeNodeSourceDetails: vi.fn()
+}));
 
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
 
 import { SearchPalette } from './SearchPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';
@@ -18,34 +22,27 @@ function createDeferred<T>() {
   return { promise, resolve };
 }
 
-function createSearchInvoke() {
-  return vi.fn().mockImplementation((command: string) => {
-    if (command !== 'search_workspace') {
-      return Promise.resolve(null);
-    }
-    return Promise.resolve([
-      {
-        id: 'node-2',
-        title: 'Atlas note',
-        excerpt: '...launch checklist...',
-        kind: 'node',
-        nodeMatch: {
-          from: 12,
-          query: 'launch',
-          to: 18
-        },
-        pdfMatch: null,
-        updatedAt: '2026-03-30T00:00:00.000Z'
-      }
-    ]);
-  });
+function createNodeResult() {
+  return {
+    id: 'node-2',
+    title: 'Atlas note',
+    excerpt: '...launch checklist...',
+    kind: 'node' as const,
+    nodeMatch: {
+      from: 12,
+      query: 'launch',
+      to: 18
+    },
+    pdfMatch: null,
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  };
 }
 
 function renderSearchPalette() {
   render(
     <SearchPalette
       isOpen
-      nodeOrder={['node-1', 'node-2']}
+      nodeOrder={['node-1', 'node-2', 'node-3']}
       nodesById={{
         'node-1': {
           id: 'node-1',
@@ -59,8 +56,56 @@ function renderSearchPalette() {
         },
         'node-2': {
           id: 'node-2',
-          parentNodeId: null,
+          parentNodeId: 'node-1',
           title: 'Atlas note',
+          hasContent: true,
+          hasReveal: false,
+          review: null,
+          createdAt: '2026-03-29T00:00:00.000Z',
+          updatedAt: '2026-03-29T00:00:00.000Z'
+        },
+        'node-3': {
+          id: 'node-3',
+          parentNodeId: 'node-2',
+          title: 'Atlas highlight',
+          hasContent: true,
+          hasReveal: false,
+          review: null,
+          anchorLink: {
+            kind: 'highlight',
+            id: 'anchor-1'
+          },
+          createdAt: '2026-03-29T00:00:00.000Z',
+          updatedAt: '2026-03-29T00:00:00.000Z'
+        }
+      }}
+      onClose={() => undefined}
+      onOpenResult={() => undefined}
+      trashedNodeIds={[]}
+    />
+  );
+}
+
+function renderPdfSearchPalette() {
+  render(
+    <SearchPalette
+      isOpen
+      nodeOrder={['root', 'pdf-1']}
+      nodesById={{
+        root: {
+          id: 'root',
+          parentNodeId: null,
+          title: 'Folder A',
+          hasContent: false,
+          hasReveal: false,
+          review: null,
+          createdAt: '2026-03-29T00:00:00.000Z',
+          updatedAt: '2026-03-29T00:00:00.000Z'
+        },
+        'pdf-1': {
+          id: 'pdf-1',
+          parentNodeId: 'root',
+          title: '测试文档.pdf',
           hasContent: true,
           hasReveal: false,
           review: null,
@@ -75,9 +120,55 @@ function renderSearchPalette() {
   );
 }
 
-it('loads search results from runtime without renderer content mirrors', async () => {
-  const invoke = createSearchInvoke();
-  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+function createWatchedSourceDetails(nodeId: string) {
+  return {
+    importRuns: [],
+    importSource: null,
+    inheritedFromParent: false,
+    keepImportItem: {
+      firstSeenAt: '2026-03-30T00:00:00.000Z',
+      hasSourceUpdate: false,
+      highlightPath: null,
+      keepState: 'enabled' as const,
+      lastImportedAt: '2026-03-30T00:00:00.000Z',
+      lastSeenAt: '2026-03-30T00:00:00.000Z',
+      lastStatus: 'imported' as const,
+      primaryPath: '/tmp/Watched Articles',
+      ruleId: 'rule-1',
+      ruleLabel: 'Articles Watch',
+      resolvedSourcePath: null,
+      sourceMtimeMs: 1,
+      sourcePath: '/tmp/Watched Articles/item.md',
+      sourceSizeBytes: 10,
+      sourceType: 'generic' as const
+    },
+    pdfPageDimensions: [],
+    sourceNodeId: nodeId
+  };
+}
+
+it('renders search results as title context and path rows', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(
+    vi.fn().mockResolvedValue(
+      [
+        createNodeResult(),
+        {
+          id: 'node-3',
+          title: 'Atlas highlight',
+          excerpt: '...launch highlight...',
+          kind: 'node' as const,
+          nodeMatch: {
+            from: 3,
+            query: 'launch',
+            to: 9
+          },
+          pdfMatch: null,
+          updatedAt: '2026-03-30T00:00:00.000Z'
+        }
+      ] satisfies WorkspaceSearchResult[]
+    )
+  );
+  vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   renderSearchPalette();
 
   fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), {
@@ -85,10 +176,54 @@ it('loads search results from runtime without renderer content mirrors', async (
   });
 
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /Atlas note/i })).toBeInTheDocument();
+    expect(screen.getByText('Atlas note')).toBeInTheDocument();
   });
-  expect(screen.getByText('...launch checklist...')).toBeInTheDocument();
-  expect(invoke).toHaveBeenCalledWith('search_workspace', { query: 'launch' });
+  expect(screen.getByText((_, element) => (element?.textContent ?? '') === '...launch checklist...')).toBeInTheDocument();
+  expect(screen.getByText('Home')).toBeInTheDocument();
+  expect(screen.getByText('Home / Atlas note')).toBeInTheDocument();
+  const launchMatches = screen.getAllByText('launch');
+  expect(launchMatches.every((node) => node.tagName === 'SPAN')).toBe(true);
+  expect(launchMatches.every((node) => node.getAttribute('style')?.includes('var(--app-accent-color)'))).toBe(true);
+  expect(screen.getByText('Highlight')).toBeInTheDocument();
+  expect(screen.queryByText('Content')).not.toBeInTheDocument();
+  expect(screen.queryByText('Title')).not.toBeInTheDocument();
+  const resultButtons = screen.getAllByRole('button').filter((button) => button.getAttribute('aria-label') !== 'Search workspace');
+  expect(resultButtons[0]).toHaveTextContent('Atlas note');
+  expect(resultButtons[1]).toHaveTextContent('Atlas highlight');
+});
+
+it('shows a watched source badge on the right for matching results', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(
+    vi.fn().mockResolvedValue([
+      {
+        id: 'pdf-1',
+        title: '测试文档.pdf',
+        excerpt: 'Page 13 · 这是一个测试片段',
+        kind: 'pdf',
+        nodeMatch: null,
+        pdfMatch: {
+          attachmentId: 'att-1',
+          matchStart: 4,
+          page: 13,
+          pageTextLength: 12,
+          query: '测试'
+        },
+        updatedAt: '2026-03-30T00:00:00.000Z'
+      }
+    ] satisfies WorkspaceSearchResult[])
+  );
+  vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(createWatchedSourceDetails('pdf-1'));
+  renderPdfSearchPalette();
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), {
+    target: { value: '测试' }
+  });
+
+  await waitFor(() => {
+    expect(screen.getByText('Articles Watch')).toBeInTheDocument();
+  });
+  expect(screen.getByText('Folder A')).toBeInTheDocument();
+  expect(screen.getAllByText('测试').some((node) => node.getAttribute('style')?.includes('var(--app-accent-color)'))).toBe(true);
 });
 
 it('clears stale runtime results immediately when the query changes', async () => {
@@ -104,6 +239,7 @@ it('clears stale runtime results immediately when the query changes', async () =
     return Promise.resolve([]);
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   renderSearchPalette();
 
   const input = screen.getByRole('textbox', { name: 'Search workspace' });
