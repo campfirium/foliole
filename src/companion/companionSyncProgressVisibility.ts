@@ -6,6 +6,14 @@ function hasRemainingResourceBacklog(result: CompanionSyncPassInput) {
   return result.remainingAttachmentResourceCount !== 0 || result.remainingContentBlobCount !== 0;
 }
 
+function hasContentProgress(result: CompanionSyncPassInput) {
+  return (result.syncedContentBlobHashes?.length ?? 0) > 0;
+}
+
+function hasAttachmentProgress(result: CompanionSyncPassInput) {
+  return (result.syncedAttachmentIds?.length ?? 0) > 0;
+}
+
 export function shouldClearCompanionSyncProgress(result: CompanionSyncPassInput) {
   if (result.attachmentResourceError || result.contentBlobError) {
     return !hasRemainingResourceBacklog(result);
@@ -16,6 +24,9 @@ export function shouldClearCompanionSyncProgress(result: CompanionSyncPassInput)
 
 export function buildRemainingSyncProgress(result: CompanionSyncPassInput): CompanionDesktopSyncProgress | null {
   if (result.remainingContentBlobCount !== 0) {
+    if (hasContentProgress(result)) {
+      return null;
+    }
     return {
       completed: 0,
       completedBytes: 0,
@@ -26,6 +37,9 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
     };
   }
   if (result.remainingAttachmentResourceCount !== 0) {
+    if (hasAttachmentProgress(result)) {
+      return null;
+    }
     return {
       attachmentBreakdown: result.remainingAttachmentBreakdown,
       completed: 0,

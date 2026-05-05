@@ -35,25 +35,43 @@ async function testRecordsBacklogBytes() {
 }
 
 async function testRecordsDownloadedResourcesForPass() {
-  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
-    remainingContentBlobBytes: 5242880,
-    remainingContentBlobCount: 5,
-    syncedContentBlobBytes: 1048576,
-    syncedContentBlobHashes: ['hash-1']
-  }));
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async (_endpointUrl, options) => {
+    options?.onProgress?.({
+      completed: 1,
+      completedBytes: 1048576,
+      phase: 'content',
+      total: 6,
+      totalBytes: 6291456
+    });
+    return createSyncObjectsResult({
+      remainingContentBlobBytes: 5242880,
+      remainingContentBlobCount: 5,
+      syncedContentBlobBytes: 1048576,
+      syncedContentBlobHashes: ['hash-1']
+    });
+  });
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setSyncProgress = vi.fn();
 
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
     setReadableArticle: vi.fn(),
     setState: vi.fn(),
-    setSyncProgress: vi.fn(),
+    setSyncProgress,
     setStatus: vi.fn(),
     state: createSyncState()
   });
 
   expect(outcome).toBe('backlog');
+  expect(setSyncProgress).toHaveBeenCalledTimes(1);
+  expect(setSyncProgress).toHaveBeenLastCalledWith({
+    completed: 1,
+    completedBytes: 1048576,
+    phase: 'content',
+    total: 6,
+    totalBytes: 6291456
+  });
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync; 5 topic bodies (5.0 MB) still downloading.',
     status: 'skipped'
