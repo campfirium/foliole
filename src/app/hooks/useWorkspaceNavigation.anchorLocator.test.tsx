@@ -138,6 +138,50 @@ async function runPendingTextLocatorUntilContentAvailableCase() {
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 }
 
+async function runRestoreSuppressionLifetimeCase() {
+  vi.useFakeTimers();
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+  globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) =>
+    window.setTimeout(() => callback(performance.now()), 16)) as typeof requestAnimationFrame;
+  globalThis.cancelAnimationFrame = ((handle: number) => window.clearTimeout(handle)) as typeof cancelAnimationFrame;
+
+  try {
+    const jumpToAncestorNode = vi.fn(() => ({
+      focusAnchor: {
+        id: 'text-hl-restore-1',
+        kind: 'highlight' as const,
+        locator: { from: 6, originalText: 'Beta', to: 10 }
+      },
+      nodeId: 'node-1'
+    }));
+
+    const { result, rerender, revealSelection } = renderTextLocatorNavigationHook({
+      activeNodeContent: 'Alpha Beta Gamma',
+      activeNodeId: 'text-hl-child',
+      jumpToAncestorNode
+    });
+
+    await act(async () => {
+      await result.current.handleSelectBreadcrumbNode('node-1');
+      rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
+    });
+
+    expect(revealSelection).toHaveBeenCalledWith({ from: 6, to: 10 });
+    expect(result.current.shouldSuppressSelectionRestore()).toBe(true);
+
+    await act(async () => {
+      vi.advanceTimersByTime(40);
+    });
+
+    expect(result.current.shouldSuppressSelectionRestore()).toBe(false);
+  } finally {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+    vi.useRealTimers();
+  }
+}
+
 describe('useWorkspaceNavigation text locator', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -151,7 +195,9 @@ describe('useWorkspaceNavigation text locator', () => {
 
   it('keeps pending text locator focus until the target document content becomes available', runPendingTextLocatorUntilContentAvailableCase);
 
-  it('does not reveal a text locator when the current plain-text content no longer matches', runUnresolvedLocatorCase);
+  it('keeps restore suppression active until the anchor reveal settles', runRestoreSuppressionLifetimeCase);
+
+  it('re-matches a text locator when the current plain-text content still contains a unique match', runUnresolvedLocatorCase);
   it('reveals unresolved zero-width text locators at their stored position', runUnresolvedZeroWidthLocatorCase);
 });
 
@@ -180,7 +226,7 @@ async function runUnresolvedLocatorCase() {
     });
   });
 
-  expect(revealSelection).not.toHaveBeenCalled();
+  expect(revealSelection).toHaveBeenCalledWith({ from: 0, to: 4 });
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 }
 

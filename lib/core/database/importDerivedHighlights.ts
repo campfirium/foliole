@@ -32,7 +32,7 @@ function toImportedAnchorLink(highlight: PreparedImportHighlightRecord | Anchore
     locator: {
       from: highlight.from,
       to: highlight.to,
-      originalText: highlight.content
+      originalText: highlight.locatorText ?? highlight.content
     }
   });
 }

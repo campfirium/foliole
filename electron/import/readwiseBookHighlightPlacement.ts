@@ -141,7 +141,11 @@ function groupLocatedHighlights(sections: ImportedBookSection[], markdown: strin
     preferredStartIndex = located.sectionIndex;
     matchedCount += 1;
     const sectionHighlights = groupedBySection.get(located.sectionId) ?? [];
-    sectionHighlights.push({ content: located.content, label: located.label ?? null });
+    sectionHighlights.push({
+      content: highlight.text.trim(),
+      label: located.label ?? null,
+      locatorText: located.content
+    });
     groupedBySection.set(located.sectionId, sectionHighlights);
   });
 

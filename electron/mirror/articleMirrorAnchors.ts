@@ -77,10 +77,10 @@ export function collectLocatorMirrorSpans(
     .sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }
 
-function hasOverlappingLocatorMirrorSpans(spans: ReadonlyArray<LocatorMirrorSpan>) {
+function hasTouchingLocatorMirrorSpans(spans: ReadonlyArray<LocatorMirrorSpan>) {
   let maxTo = -1;
   for (const span of spans) {
-    if (span.from < maxTo) {
+    if (span.from <= maxTo) {
       return true;
     }
     maxTo = Math.max(maxTo, span.to);
@@ -152,7 +152,7 @@ export function renderArticleBodyFromLocators(input: {
   if (spans.length === 0) {
     return input.articleContent;
   }
-  if (hasOverlappingLocatorMirrorSpans(spans)) {
+  if (hasTouchingLocatorMirrorSpans(spans)) {
     return renderArticleBodyFromOverlappingLocators({
       articleContent: input.articleContent,
       createExtraNote: input.createExtraNote,

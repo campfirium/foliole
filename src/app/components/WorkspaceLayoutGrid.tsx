@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
@@ -33,7 +34,7 @@ export function WorkspaceLayoutGrid({
   onShouldSuppressSelectionRestore: () => boolean;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
-  onSelectNode: (nodeId: string) => void;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   isImmersiveEditing: boolean;
   props: WorkspaceLayoutProps;
 }) {
@@ -120,7 +121,7 @@ function WorkspaceGridContent({
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
-  onSelectNode: (nodeId: string) => void;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   props: WorkspaceLayoutProps;
 }) {
   return (
@@ -149,7 +150,7 @@ function renderWorkspaceGridColumns(args: {
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
-  onSelectNode: (nodeId: string) => void;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   props: WorkspaceLayoutProps;
 }) {
   const shouldShowList = !args.props.isImmersiveMode && !args.props.isListCollapsed;
@@ -194,6 +195,7 @@ function renderWorkspaceGridColumns(args: {
         trashedNodeIds={args.props.trashedNodeIds}
         nodesById={args.props.nodesById}
         onRevealAnchorInDocument={args.props.onRevealAnchorInDocument}
+        onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
         onSelectNode={args.onSelectNode}
         reviewCurrentNodeId={args.props.reviewCurrentNodeId}
         reviewQueueNodeIds={args.props.reviewPanelQueueNodeIds}

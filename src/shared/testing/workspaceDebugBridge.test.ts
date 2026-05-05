@@ -84,6 +84,7 @@ function getDebugApi() {
         originalName?: string;
       }) => Promise<string | null>;
       restoreNode: (nodeId: string) => Promise<boolean>;
+      setNodeViewState: (args: { from: number; nodeId: string; scrollTop?: number; to: number }) => boolean;
       seedNodes: (nodes: Array<{
         content: string;
         id: string;
@@ -130,6 +131,11 @@ it('reads active node id and saved node view state through the debug bridge', as
   expect(debugApi?.getNodeViewState('debug-node-1')).toEqual({
     scrollTop: 5400,
     selection: { from: 48000, to: 48024 }
+  });
+  expect(debugApi?.setNodeViewState({ from: 12, nodeId: 'debug-node-1', scrollTop: 345, to: 18 })).toBe(true);
+  expect(debugApi?.getNodeViewState('debug-node-1')).toMatchObject({
+    scrollTop: 345,
+    selection: { from: 12, to: 18 }
   });
   expect(debugApi?.getNodeViewState('missing-node')).toBeNull();
 

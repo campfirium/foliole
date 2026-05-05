@@ -56,6 +56,7 @@ export function collectAnchoredImportedHighlights(content: string) {
         from: projection.rawToVisible[block.contentFrom] ?? 0,
         kind: block.kind,
         label: null,
+        locatorText: anchorContent,
         to: projection.rawToVisible[block.contentTo] ?? 0
       };
     })
@@ -166,7 +167,7 @@ export function applyImportedHighlightAnchors(input: {
   const locatedHighlights: AnchoredImportedHighlightRecord[] = [...inlineAnchors];
 
   input.highlights.forEach((highlight) => {
-    const excerpt = highlight.content.trim();
+    const excerpt = (highlight.locatorText ?? highlight.content).trim();
     if (!excerpt) {
       return;
     }
@@ -177,7 +178,13 @@ export function applyImportedHighlightAnchors(input: {
     const anchorId = `imported-highlight-${crypto.randomUUID()}`;
     searchFrom = range.to;
     occupiedRanges.push(range);
-    locatedHighlights.push({ ...highlight, anchorId, ...range, kind: 'highlight' });
+    locatedHighlights.push({
+      ...highlight,
+      anchorId,
+      ...range,
+      kind: 'highlight',
+      locatorText: content.slice(range.from, range.to)
+    });
   });
 
   return {

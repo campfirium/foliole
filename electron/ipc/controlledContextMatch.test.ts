@@ -138,6 +138,26 @@ it('trims a matched sentence down to the exact quote instead of keeping the full
   expect(findContextExcerpt(content, 'This is the highlighted sentence.')).toBe('This is the highlighted sentence.');
 });
 
+it('does not swallow the next numbered item when a highlight spans a heading and bullet lines', () => {
+  const content = [
+    '# Notes',
+    '',
+    '4. **习惯建立下一步**：完成后马上新建下一步或移动到 Waiting',
+    '5. **每周回顾**：',
+    '',
+    '\t* 是否有项目已无任务？',
+    '\t* 是否有任务长期未触发？',
+    '6. **避免任务孤岛**：只要不是“一步事”，都建项目。'
+  ].join('\n');
+
+  expect(
+    findContextExcerpt(
+      content,
+      ['**每周回顾**：', '• 是否有项目已无任务？', '• 是否有任务长期未触发？'].join('\n')
+    )
+  ).toBe(['5. **每周回顾**：', '', '\t* 是否有项目已无任务？', '\t* 是否有任务长期未触发？'].join('\n'));
+});
+
 function createMultiParagraphQuoteContent() {
   return [
     '# Article',

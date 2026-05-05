@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
@@ -34,37 +34,79 @@ interface WorkspaceNavigationHandlers {
   handleGoParent: () => void;
   handleSelectBreadcrumbNode: (nodeId: string) => void;
   handleSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
+  shouldSuppressSelectionRestore: () => boolean;
 }
 
 type PendingAnchor = NodeAnchorLink;
 
-function usePendingAnchorNavigation(
-  activeNodeContent: string | null,
-  activeNodeId: string | null,
-  editorRef: MutableRefObject<EditorAdapter | null>
-) {
-  const [pendingAnchorNodeId, setPendingAnchorNodeId] = useState<string | null>(null);
-  const [pendingAnchor, setPendingAnchor] = useState<PendingAnchor | null>(null);
+function useRestoreSuppressionController(activeNodeId: string | null) {
+  const [suppressedRestoreNodeId, setSuppressedRestoreNodeId] = useState<string | null>(null);
+  const clearSuppressionFrameRef = useRef<number | null>(null);
+  const clearSuppressionFrame2Ref = useRef<number | null>(null);
 
-  const clearPendingAnchor = useCallback(() => {
-    setPendingAnchorNodeId(null);
-    setPendingAnchor(null);
+  const clearSuppressionFrames = useCallback(() => {
+    if (clearSuppressionFrameRef.current !== null) {
+      cancelAnimationFrame(clearSuppressionFrameRef.current);
+      clearSuppressionFrameRef.current = null;
+    }
+    if (clearSuppressionFrame2Ref.current !== null) {
+      cancelAnimationFrame(clearSuppressionFrame2Ref.current);
+      clearSuppressionFrame2Ref.current = null;
+    }
   }, []);
 
-  const applyNavigationResult = useCallback((result: NodeNavigationResult | null) => {
-    if (!result) {
+  const releaseRestoreSuppression = useCallback(() => {
+    clearSuppressionFrames();
+    setSuppressedRestoreNodeId(null);
+  }, [clearSuppressionFrames]);
+
+  const scheduleRestoreSuppressionRelease = useCallback(
+    (nodeId: string) => {
+      clearSuppressionFrames();
+      clearSuppressionFrameRef.current = requestAnimationFrame(() => {
+        clearSuppressionFrameRef.current = null;
+        clearSuppressionFrame2Ref.current = requestAnimationFrame(() => {
+          clearSuppressionFrame2Ref.current = null;
+          setSuppressedRestoreNodeId((currentNodeId) => (currentNodeId === nodeId ? null : currentNodeId));
+        });
+      });
+    },
+    [clearSuppressionFrames]
+  );
+
+  useEffect(() => {
+    if (!suppressedRestoreNodeId || suppressedRestoreNodeId === activeNodeId) {
       return;
     }
-    setPendingAnchorNodeId(result.nodeId);
-    setPendingAnchor(result.focusAnchor);
-  }, []);
+    releaseRestoreSuppression();
+  }, [activeNodeId, releaseRestoreSuppression, suppressedRestoreNodeId]);
 
+  useEffect(() => () => clearSuppressionFrames(), [clearSuppressionFrames]);
+
+  return {
+    releaseRestoreSuppression,
+    scheduleRestoreSuppressionRelease,
+    setSuppressedRestoreNodeId,
+    suppressedRestoreNodeId
+  };
+}
+
+function usePendingAnchorReveal(
+  activeNodeContent: string | null,
+  activeNodeId: string | null,
+  editorRef: MutableRefObject<EditorAdapter | null>,
+  pendingAnchorNodeId: string | null,
+  pendingAnchor: PendingAnchor | null,
+  clearPendingAnchor: () => void,
+  scheduleRestoreSuppressionRelease: (nodeId: string) => void
+) {
   useEffect(() => {
     if (!activeNodeId || !pendingAnchorNodeId || !pendingAnchor || pendingAnchorNodeId !== activeNodeId) {
       return;
     }
     if (pendingAnchor.kind === 'highlight' && isPdfAnchorLocator(pendingAnchor.locator)) {
       requestPdfAnchorJump(activeNodeId, pendingAnchor.locator);
+      scheduleRestoreSuppressionRelease(activeNodeId);
       clearPendingAnchor();
       return;
     }
@@ -77,12 +119,62 @@ function usePendingAnchorNavigation(
     }
     const selection = findAnchorSelection(activeNodeContent, pendingAnchor);
     if (!selection) {
+      scheduleRestoreSuppressionRelease(activeNodeId);
       clearPendingAnchor();
       return;
     }
     adapter.revealSelection(selection);
+    scheduleRestoreSuppressionRelease(activeNodeId);
     clearPendingAnchor();
-  }, [activeNodeContent, activeNodeId, clearPendingAnchor, editorRef, pendingAnchor, pendingAnchorNodeId]);
+  }, [
+    activeNodeContent,
+    activeNodeId,
+    clearPendingAnchor,
+    editorRef,
+    pendingAnchor,
+    pendingAnchorNodeId,
+    scheduleRestoreSuppressionRelease
+  ]);
+}
+
+function usePendingAnchorNavigation(
+  activeNodeContent: string | null,
+  activeNodeId: string | null,
+  editorRef: MutableRefObject<EditorAdapter | null>
+) {
+  const [pendingAnchorNodeId, setPendingAnchorNodeId] = useState<string | null>(null);
+  const [pendingAnchor, setPendingAnchor] = useState<PendingAnchor | null>(null);
+  const {
+    releaseRestoreSuppression,
+    scheduleRestoreSuppressionRelease,
+    setSuppressedRestoreNodeId,
+    suppressedRestoreNodeId
+  } = useRestoreSuppressionController(activeNodeId);
+
+  const clearPendingAnchor = useCallback(() => {
+    setPendingAnchorNodeId(null);
+    setPendingAnchor(null);
+  }, []);
+
+  const applyNavigationResult = useCallback((result: NodeNavigationResult | null) => {
+    if (!result) {
+      releaseRestoreSuppression();
+      return;
+    }
+    setPendingAnchorNodeId(result.nodeId);
+    setPendingAnchor(result.focusAnchor);
+    setSuppressedRestoreNodeId(result.focusAnchor ? result.nodeId : null);
+  }, [releaseRestoreSuppression, setSuppressedRestoreNodeId]);
+
+  usePendingAnchorReveal(
+    activeNodeContent,
+    activeNodeId,
+    editorRef,
+    pendingAnchorNodeId,
+    pendingAnchor,
+    clearPendingAnchor,
+    scheduleRestoreSuppressionRelease
+  );
 
   useEffect(() => {
     if (!pendingAnchorNodeId || pendingAnchorNodeId === activeNodeId) {
@@ -91,7 +183,19 @@ function usePendingAnchorNavigation(
     clearPendingAnchor();
   }, [activeNodeId, clearPendingAnchor, pendingAnchorNodeId]);
 
-  return applyNavigationResult;
+  const shouldSuppressSelectionRestore = useCallback(
+    () =>
+      Boolean(
+        activeNodeId &&
+          ((pendingAnchorNodeId === activeNodeId && pendingAnchor) || suppressedRestoreNodeId === activeNodeId)
+      ),
+    [activeNodeId, pendingAnchor, pendingAnchorNodeId, suppressedRestoreNodeId]
+  );
+
+  return {
+    applyNavigationResult,
+    shouldSuppressSelectionRestore
+  };
 }
 
 export function useWorkspaceNavigation({
@@ -110,7 +214,11 @@ export function useWorkspaceNavigation({
   openNode,
   saveActiveNodeView
 }: WorkspaceNavigationDependencies): WorkspaceNavigationHandlers {
-  const applyNavigationResult = usePendingAnchorNavigation(activeNodeContent, activeNodeId, editorRef);
+  const { applyNavigationResult, shouldSuppressSelectionRestore } = usePendingAnchorNavigation(
+    activeNodeContent,
+    activeNodeId,
+    editorRef
+  );
   const preparedHandlers = usePreparedNavigationHandlers({
     applyNavigationResult,
     activeNodeContent,
@@ -125,11 +233,11 @@ export function useWorkspaceNavigation({
     openNode,
     saveActiveNodeView
   });
-
   return {
     canGoBack: backStackSize > 0,
     canGoForward: forwardStackSize > 0,
     canGoParent: Boolean(activeNodeParentId),
+    shouldSuppressSelectionRestore,
     ...preparedHandlers
   };
 }

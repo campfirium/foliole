@@ -6,7 +6,8 @@ export function createLayoutNav(args: BuildControllerLayoutPropsArgs) {
     onGoForward: args.nav.handleGoForward,
     onGoParent: args.nav.handleGoParent,
     onSelectBreadcrumbNode: args.nav.handleSelectBreadcrumbNode,
-    onSelectNode: args.nav.handleSelectNode
+    onSelectNode: args.nav.handleSelectNode,
+    shouldSuppressNavigationSelectionRestore: args.nav.shouldSuppressSelectionRestore
   };
 }
 

@@ -142,10 +142,91 @@ function tryExtractDirectQuote(rawExcerpt: string, quote: string) {
   return normalizedExcerpt.raw.slice(rawStart, rawEnd + 1).trim();
 }
 
+function stripLeadingLineMarkers(value: string) {
+  let current = normalizeLineEndings(value).trimStart();
+  while (true) {
+    const next = current
+      .replace(/^(?:>\s*)+/u, '')
+      .replace(/^(?:[-*+•]\s+|\d+[.)]\s+)/u, '');
+    if (next === current) {
+      return current;
+    }
+    current = next.trimStart();
+  }
+}
+
+function normalizeExcerptLine(value: string) {
+  return normalizeText(stripLeadingLineMarkers(value));
+}
+
+function collectNormalizedQuoteLines(quote: string) {
+  return normalizeLineEndings(quote)
+    .split('\n')
+    .map((line) => normalizeExcerptLine(line))
+    .filter((line) => line.length > 0);
+}
+
+function findOrderedQuoteLineRange(rawExcerpt: string, quote: string) {
+  const lines = normalizeLineEndings(rawExcerpt).split('\n');
+  const quoteLines = collectNormalizedQuoteLines(quote);
+  if (quoteLines.length < 2) {
+    return null;
+  }
+
+  let startLineIndex = -1;
+  let endLineIndex = -1;
+  let cursor = 0;
+  for (const quoteLine of quoteLines) {
+    let matched = false;
+    for (let index = cursor; index < lines.length; index += 1) {
+      const normalizedLine = normalizeExcerptLine(lines[index] ?? '');
+      if (!normalizedLine || !normalizedLine.includes(quoteLine)) {
+        continue;
+      }
+      if (startLineIndex < 0) {
+        startLineIndex = index;
+      }
+      endLineIndex = index;
+      cursor = index + 1;
+      matched = true;
+      break;
+    }
+    if (!matched) {
+      return null;
+    }
+  }
+
+  if (startLineIndex < 0 || endLineIndex < startLineIndex) {
+    return null;
+  }
+  return { endLineIndex, lines, startLineIndex };
+}
+
+export function containsOrderedQuoteLines(rawExcerpt: string, quote: string) {
+  const quoteLines = collectNormalizedQuoteLines(quote);
+  if (quoteLines.length < 2) {
+    return true;
+  }
+  return findOrderedQuoteLineRange(rawExcerpt, quote) !== null;
+}
+
+function tryExtractOrderedQuoteLines(rawExcerpt: string, quote: string) {
+  const range = findOrderedQuoteLineRange(rawExcerpt, quote);
+  if (!range) {
+    return null;
+  }
+  return range.lines.slice(range.startLineIndex, range.endLineIndex + 1).join('\n').trim();
+}
+
 export function trimMatchedExcerpt(rawExcerpt: string, quote: string, anchorFragment: string) {
   const directQuote = tryExtractDirectQuote(rawExcerpt, quote);
   if (directQuote) {
     return directQuote;
+  }
+
+  const orderedQuoteLines = tryExtractOrderedQuoteLines(rawExcerpt, quote);
+  if (orderedQuoteLines) {
+    return orderedQuoteLines;
   }
 
   const normalizedExcerpt = normalizeText(rawExcerpt);

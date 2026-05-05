@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
@@ -27,9 +29,9 @@ function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
     props.onCloseImportManagement();
     props.onOpenTrashView();
   };
-  const handleSelectNode = (nodeId: string) => {
+  const handleSelectNode = (nodeId: string, focusAnchor?: NodeAnchorLink | null) => {
     props.onCloseImportManagement();
-    props.onSelectNode(nodeId);
+    props.onSelectNode(nodeId, focusAnchor);
   };
   return {
     handleOpenNotesView,
@@ -140,11 +142,14 @@ function renderWorkspaceGrid(args: {
   isImportManagementOpen: boolean;
   onEnterImmersiveEdit: () => void;
   onOpenImportManagement: () => void;
-  onSelectNode: (nodeId: string) => void;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
   props: WorkspaceLayoutProps;
 }) {
+  const shouldSuppressSelectionRestore = () =>
+    args.immersive.shouldSuppressSelectionRestore() || args.props.shouldSuppressNavigationSelectionRestore();
+
   return (
     <WorkspaceLayoutGrid
       activeRightPanelId={args.activeRightPanelId}
@@ -154,7 +159,7 @@ function renderWorkspaceGrid(args: {
       onEnterImmersiveEdit={args.onEnterImmersiveEdit}
       onOpenImportManagement={args.onOpenImportManagement}
       onSelectNode={args.onSelectNode}
-      onShouldSuppressSelectionRestore={args.immersive.shouldSuppressSelectionRestore}
+      onShouldSuppressSelectionRestore={shouldSuppressSelectionRestore}
       onStartClipboardImport={args.onStartClipboardImport}
       onStartImport={args.onStartImport}
       props={args.props}
@@ -184,7 +189,7 @@ function WorkspaceMainChrome({
   onOpenNotesView: () => void;
   onOpenVirtualView: () => void;
   onOpenTrashView: () => void;
-  onSelectNode: (nodeId: string) => void;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onStartClipboardImport: () => void;
   onStartImport: () => void;

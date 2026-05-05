@@ -135,8 +135,9 @@ function collectPreparedMatchedHighlights(input: {
   return [
     ...input.highlightPolicyResult.highlights,
     ...input.contextResult.matchedHighlights.map(({ excerpt, highlight }) => ({
-      content: excerpt,
-      label: highlight.label?.trim() || null
+      content: normalizeImportedContent(highlight.text).trim(),
+      label: highlight.label?.trim() || null,
+      locatorText: excerpt
     }))
   ];
 }

@@ -62,6 +62,7 @@ it('queues pdf jump for parent node when highlight parent is not active yet', ()
       nodeOrder={['node-root', 'node-parent', 'node-highlight']}
       nodesById={{ 'node-highlight': highlightNode, 'node-parent': parentNode, 'node-root': rootNode }}
       onRevealAnchorInDocument={onRevealAnchorInDocument}
+      onSelectBreadcrumbNode={vi.fn()}
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
@@ -111,6 +112,7 @@ it('opens parent node with text highlight focus when highlight parent is not act
       nodeOrder={['node-root', 'node-parent', 'node-highlight']}
       nodesById={{ 'node-highlight': highlightNode, 'node-parent': parentNode, 'node-root': rootNode }}
       onRevealAnchorInDocument={onRevealAnchorInDocument}
+      onSelectBreadcrumbNode={vi.fn()}
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
@@ -168,6 +170,7 @@ it('does not list cloze nodes in the highlights panel', () => {
       nodeOrder={['node-root', 'node-parent', 'node-cloze']}
       nodesById={{ 'node-cloze': clozeNode, 'node-parent': parentNode, 'node-root': rootNode }}
       onRevealAnchorInDocument={onRevealAnchorInDocument}
+      onSelectBreadcrumbNode={vi.fn()}
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
@@ -207,6 +210,7 @@ it('reveals pdf locator without re-opening when parent document is already activ
       nodeOrder={['node-parent', 'node-highlight']}
       nodesById={{ 'node-highlight': highlightNode, 'node-parent': parentNode }}
       onRevealAnchorInDocument={onRevealAnchorInDocument}
+      onSelectBreadcrumbNode={vi.fn()}
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
@@ -245,6 +249,7 @@ it('renders backlinks in the dedicated inspector panel and opens the linked note
         })
       }}
       onRevealAnchorInDocument={vi.fn()}
+      onSelectBreadcrumbNode={vi.fn()}
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}

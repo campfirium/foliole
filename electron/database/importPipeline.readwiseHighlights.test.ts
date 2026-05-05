@@ -109,7 +109,7 @@ function expectReadwiseDerivedChildren(input: {
         id: firstAnchorLink.id,
         kind: 'highlight',
         locator: expect.objectContaining({
-          originalText: 'This is the highlighted sentence'
+          originalText: 'This is the highlighted sentence inside the article body.'
         })
       }),
       content: 'This is the highlighted sentence',
@@ -122,7 +122,7 @@ function expectReadwiseDerivedChildren(input: {
         id: secondAnchorLink.id,
         kind: 'highlight',
         locator: expect.objectContaining({
-          originalText: 'Another matching excerpt'
+          originalText: 'Another paragraph with Another matching excerpt. End.'
         })
       }),
       content: 'Another matching excerpt',
@@ -192,7 +192,7 @@ function expectImportedChildrenInSnapshot(nodeId: string, sourceFingerprint: str
       anchorLink: expect.objectContaining({
         id: firstAnchorLink.id,
         kind: 'highlight',
-        locator: expect.objectContaining({ originalText: 'This is the highlighted sentence' })
+        locator: expect.objectContaining({ originalText: 'This is the highlighted sentence inside the article body.' })
       })
     }),
     expect.objectContaining({
@@ -200,7 +200,7 @@ function expectImportedChildrenInSnapshot(nodeId: string, sourceFingerprint: str
       anchorLink: expect.objectContaining({
         id: secondAnchorLink.id,
         kind: 'highlight',
-        locator: expect.objectContaining({ originalText: 'Another matching excerpt' })
+        locator: expect.objectContaining({ originalText: 'Another paragraph with Another matching excerpt. End.' })
       })
     })
   ]);

@@ -37,6 +37,7 @@ function renderPanel(
     | 'nodeOrder'
     | 'trashedNodeIds'
     | 'nodesById'
+    | 'onSelectBreadcrumbNode'
     | 'onSelectNode'
     | 'reviewCurrentNodeId'
     | 'reviewQueueNodeIds'
@@ -59,7 +60,13 @@ function renderPanel(
     return <WorkspaceRightSidebarPerformancePanel activeNodeId={props.activeNodeId} nodesById={props.nodesById} />;
   }
   if (props.activePanelId === 'source-info') {
-    return <WorkspaceRightSidebarSourcePanel activeNodeId={props.activeNodeId} nodesById={props.nodesById} />;
+    return (
+      <WorkspaceRightSidebarSourcePanel
+        activeNodeId={props.activeNodeId}
+        nodesById={props.nodesById}
+        onSelectParentNode={props.onSelectBreadcrumbNode}
+      />
+    );
   }
   if (props.activePanelId === 'highlights') {
     return renderHighlightsPanel(props);
@@ -128,6 +135,7 @@ export function WorkspaceRightSidebar(props: Pick<
   | 'nodeOrder'
   | 'trashedNodeIds'
   | 'nodesById'
+  | 'onSelectBreadcrumbNode'
   | 'onSelectNode'
   | 'reviewCurrentNodeId'
   | 'reviewQueueNodeIds'

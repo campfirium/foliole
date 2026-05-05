@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -115,7 +115,13 @@ const NODE_SOURCE_DETAILS = createNodeSourceDetails({
 });
 
 function renderSourcePanel() {
-  render(<WorkspaceRightSidebarSourcePanel activeNodeId="node-1" nodesById={{ 'node-1': BASE_NODE }} />);
+  render(
+    <WorkspaceRightSidebarSourcePanel
+      activeNodeId="node-1"
+      nodesById={{ 'node-1': BASE_NODE }}
+      onSelectParentNode={() => undefined}
+    />
+  );
 }
 
 async function expectLoadedNodeSourcePanel() {
@@ -152,5 +158,24 @@ describe('WorkspaceRightSidebarSourcePanel', () => {
     await waitFor(() => {
       expect(screen.getByText('This node has no recorded import source yet.')).toBeInTheDocument();
     });
+  });
+
+  it('opens the parent note from inherited source info', async () => {
+    const onSelectParentNode = vi.fn();
+    loadRuntimeNodeSourceDetails.mockResolvedValue(createNodeSourceDetails({ inheritedFromParent: true }));
+    render(
+      <WorkspaceRightSidebarSourcePanel
+        activeNodeId="node-1"
+        nodesById={{ 'node-1': { ...BASE_NODE, parentNodeId: 'parent-1' } }}
+        onSelectParentNode={onSelectParentNode}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Open parent note' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open parent note' }));
+    expect(onSelectParentNode).toHaveBeenCalledWith('parent-1');
   });
 });

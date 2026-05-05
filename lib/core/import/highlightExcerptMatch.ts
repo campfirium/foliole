@@ -1,4 +1,4 @@
-import { findContextExcerptInLocatorByQuoteLocator, type ContextExcerptLocator } from './contextExcerptLocator.js';
+import { findContextExcerptLocatorTextInLocatorByQuoteLocator, type ContextExcerptLocator } from './contextExcerptLocator.js';
 import {
   createContextExcerptQuoteLocator,
   type ContextExcerptQuoteLocator
@@ -31,5 +31,5 @@ export function findPreparedHighlightExcerptInLocator(
   if (!prepared.quoteLocator) {
     return null;
   }
-  return findContextExcerptInLocatorByQuoteLocator(locator, prepared.quote, prepared.quoteLocator);
+  return findContextExcerptLocatorTextInLocatorByQuoteLocator(locator, prepared.quote, prepared.quoteLocator);
 }

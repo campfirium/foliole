@@ -17,6 +17,7 @@ export type ImportSourceTrackingMode = 'tracked' | 'untracked';
 export interface PreparedImportHighlightRecord {
   content: string;
   label: string | null;
+  locatorText?: string | null;
 }
 
 export interface PreparedImportEmbeddedImage {

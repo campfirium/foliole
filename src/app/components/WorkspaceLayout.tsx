@@ -87,6 +87,7 @@ export interface WorkspaceLayoutProps {
   onResetLayout: () => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
+  shouldSuppressNavigationSelectionRestore: () => boolean;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;

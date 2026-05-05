@@ -106,3 +106,48 @@ it('refreshes imported highlight child nodes when a generic merged import change
     }
   ]);
 });
+
+it('keeps merged child text from the highlight file while storing the matched parent text for location', () => {
+  const imported = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: ['# Imported', '', 'Before the quote. This is the highlighted sentence. After the quote.'].join('\n'),
+      fileName: 'note.md',
+      filePath: '/tmp/note.md',
+      importedAt: '2026-03-22T10:25:00.000Z',
+      kind: 'markdown'
+    })
+  );
+
+  const updated = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: ['# Imported', '', 'Before the quote. This is the highlighted sentence. After the quote.'].join('\n'),
+      fileName: 'note.md',
+      filePath: '/tmp/note.md',
+      highlightSidecar: [{ text: 'This is the highlighted sentence.' }],
+      importedAt: '2026-03-22T10:30:00.000Z',
+      kind: 'markdown',
+      sourceProfile: 'body_with_highlight_sidecar'
+    })
+  );
+
+  const { childRows } = readPersistedImportState(imported.sourceFingerprint, updated.nodeId);
+  const importedAnchorLink = parseAnchorLink(childRows[0]!.anchor_link);
+
+  expect(childRows.map((row) => ({
+    anchorLink: parseAnchorLink(row.anchor_link),
+    content: row.content,
+    parent_id: row.parent_id,
+    title: row.title
+  }))).toEqual([
+    {
+      anchorLink: expect.objectContaining({
+        id: importedAnchorLink.id,
+        kind: 'highlight',
+        locator: expect.objectContaining({ originalText: 'Before the quote. This is the highlighted sentence. After the quote.' })
+      }),
+      content: 'This is the highlighted sentence.',
+      parent_id: updated.nodeId,
+      title: 'This is the highlighted sentence.'
+    }
+  ]);
+});

@@ -1,12 +1,13 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimeKeepImportItemDetails, RuntimeNodeImportSource, RuntimeTextImportResult } from '../../shared/platform/importBridge';
-import { AppStatusBadge, InspectorSection } from '../../shared/ui';
+import { AppButton, AppStatusBadge, InspectorSection } from '../../shared/ui';
 
 import { useNodeSourceDetails } from './useNodeSourceDetails';
 
 interface WorkspaceRightSidebarSourcePanelProps {
   activeNodeId: string | null;
   nodesById: Record<string, Node>;
+  onSelectParentNode: (nodeId: string) => void;
 }
 
 function formatImportTime(timestamp: string) {
@@ -193,6 +194,7 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
     return <EmptySourceInfoState description="This node has no recorded import source yet." />;
   }
   const { importRuns, importSource, inheritedFromParent, keepImportItem } = details.value;
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
   if (!importSource && !keepImportItem && importRuns.length === 0) {
     return <EmptySourceInfoState description="This node has no recorded import source yet." />;
   }
@@ -200,10 +202,22 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
   return (
     <div className="flex min-h-0 flex-col gap-3">
       {inheritedFromParent ? (
-        <InspectorSection
-          description="This node is attached to an imported parent note, so the source details below come from that parent."
-          title="Source link"
-        />
+        <InspectorSection title="Source link">
+          <p className="text-sm leading-6 text-foreground/70">
+            This node is attached to an imported parent note, so the source details below come from that parent.
+          </p>
+          {activeNode?.parentNodeId ? (
+            <div className="mt-3">
+              <AppButton
+                className="w-full justify-center"
+                onClick={() => props.onSelectParentNode(activeNode.parentNodeId as string)}
+                variant="primary"
+              >
+                Open parent note
+              </AppButton>
+            </div>
+          ) : null}
+        </InspectorSection>
       ) : null}
       {importRuns.length > 0 ? <SourceSummarySection entries={importRuns} /> : null}
       {importSource ? <SourceRegistrySection importSource={importSource} /> : null}

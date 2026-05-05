@@ -146,6 +146,67 @@ function seedArticleWithOverlappingLocatorHighlights() {
   });
 }
 
+function seedArticleWithAdjacentLocatorHighlights() {
+  upsertNodeSnapshot({
+    nodeId: 'node-article-adjacent',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'Mirror Export Adjacent Demo',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: 'ABCDE',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-04-14T00:00:00.000Z',
+    updatedAt: '2026-04-14T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'node-highlight-adjacent-1',
+    parentNodeId: 'node-article-adjacent',
+    kind: 'topic',
+    title: 'AB',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: 'AB',
+    reveal: null,
+    anchorLink: {
+      id: 'hl-1',
+      kind: 'highlight',
+      locator: {
+        from: 0,
+        to: 2,
+        originalText: 'AB'
+      }
+    },
+    position: 1,
+    createdAt: '2026-04-14T00:00:00.000Z',
+    updatedAt: '2026-04-14T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'node-highlight-adjacent-2',
+    parentNodeId: 'node-article-adjacent',
+    kind: 'topic',
+    title: 'CD',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: 'CD',
+    reveal: null,
+    anchorLink: {
+      id: 'hl-2',
+      kind: 'highlight',
+      locator: {
+        from: 2,
+        to: 4,
+        originalText: 'CD'
+      }
+    },
+    position: 2,
+    createdAt: '2026-04-14T00:00:00.000Z',
+    updatedAt: '2026-04-14T00:00:00.000Z'
+  });
+}
+
 function seedArticleWithUnresolvedLocatorHighlight() {
   upsertNodeSnapshot({
     nodeId: 'node-article-unresolved',
@@ -208,6 +269,20 @@ it('preserves overlapping locator-backed highlights when exporting article markd
 
   expect(renderArticleMirrorMarkdown(articleRow)).toContain(
     '<highlight id="hl-1">AB<highlight id="hl-2">C</highlight id="hl-1">DE</highlight id="hl-2">'
+  );
+});
+
+it('keeps adjacent locator-backed highlights as separate spans when exporting article markdown', () => {
+  seedArticleWithAdjacentLocatorHighlights();
+
+  const articleRow = loadArticleNode('node-article-adjacent');
+  expect(articleRow).not.toBeNull();
+  if (!articleRow) {
+    throw new Error('expected article row');
+  }
+
+  expect(renderArticleMirrorMarkdown(articleRow)).toContain(
+    '<highlight id="hl-1">AB</highlight id="hl-1"><highlight id="hl-2">CD</highlight id="hl-2">E'
   );
 });
 

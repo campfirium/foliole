@@ -4,6 +4,8 @@ import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNode
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 import { getRuntimeInvoke } from '../platform/bridge';
 
+import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
+
 interface DebugNodeSeed {
   anchorLink?: NodeAnchorLink | null;
   content: string;
@@ -51,6 +53,7 @@ interface WorkspaceDebugApi {
   listNodes: () => Array<{ id: string; title: string }>;
   openNode: (nodeId: string) => Promise<boolean>;
   restoreNode: (nodeId: string) => Promise<boolean>;
+  setNodeViewState: (args: { from: number; nodeId: string; scrollTop?: number; to: number }) => boolean;
   seedNodes: (nodes: DebugNodeSeed[]) => Promise<void>;
   updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }
@@ -140,24 +143,6 @@ function getExistingNodeState(nodeId: string) {
   return state;
 }
 
-function createClipboardImportHandler(): WorkspaceDebugApi['importClipboardImageAttachment'] {
-  return async ({ bytesBase64, mimeType, nodeId, originalName }) => {
-    const runtimeInvoke = getRuntimeInvoke();
-    if (!runtimeInvoke) {
-      return null;
-    }
-    const result = await runtimeInvoke(NATIVE_COMMANDS.importClipboardImageAttachment, {
-      bytesBase64,
-      mimeType,
-      nodeId,
-      originalName: originalName ?? 'debug-image.png'
-    });
-    return result && typeof result === 'object' && 'attachment_id' in result && typeof result.attachment_id === 'string'
-      ? result.attachment_id
-      : null;
-  };
-}
-
 function createNodeMutationDebugApi(): Pick<
   WorkspaceDebugApi,
   'createTextClozeChild' | 'createTextHighlightChild' | 'deleteNode' | 'deleteNodePermanently' | 'restoreNode' | 'updateNodeContent'
@@ -196,7 +181,7 @@ function createNodeMutationDebugApi(): Pick<
 
 function createNodeReadDebugApi(): Pick<
   WorkspaceDebugApi,
-  'getActiveNodeId' | 'getNode' | 'getNodeViewState' | 'listNodes' | 'openNode'
+  'getActiveNodeId' | 'getNode' | 'getNodeViewState' | 'listNodes' | 'openNode' | 'setNodeViewState'
 > {
   return {
     getActiveNodeId: () => useWorkspaceStore.getState().activeNodeId,
@@ -231,6 +216,17 @@ function createNodeReadDebugApi(): Pick<
       } catch {
         return false;
       }
+    },
+    setNodeViewState: ({ from, nodeId, scrollTop = 0, to }) => {
+      const state = getExistingNodeState(nodeId);
+      if (!state) {
+        return false;
+      }
+      state.setNodeViewState(nodeId, {
+        scrollTop,
+        selection: { from, to }
+      });
+      return true;
     }
   };
 }

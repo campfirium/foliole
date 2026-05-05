@@ -172,12 +172,12 @@ it('wires readwise keep import into existing highlight-derived child creation', 
   expect(firstAnchorLink).toEqual(expect.objectContaining({
     id: firstAnchorLink.id,
     kind: 'highlight',
-    locator: expect.objectContaining({ originalText: 'This is the highlighted sentence.' })
+    locator: expect.objectContaining({ originalText: 'Before the quote. This is the highlighted sentence. After the quote.' })
   }));
   expect(secondAnchorLink).toEqual(expect.objectContaining({
     id: secondAnchorLink.id,
     kind: 'highlight',
-    locator: expect.objectContaining({ originalText: 'Another matching excerpt.' })
+    locator: expect.objectContaining({ originalText: 'Another paragraph with Another matching excerpt. End.' })
   }));
 });
 

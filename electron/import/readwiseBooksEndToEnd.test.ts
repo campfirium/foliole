@@ -187,7 +187,7 @@ function expectImportedHighlights(connection: ReturnType<typeof openDatabaseConn
       anchorLink: expect.objectContaining({
         id: chapterOneAnchorLink.id,
         kind: 'highlight',
-        locator: expect.objectContaining({ originalText: 'early remembered quote' })
+        locator: expect.objectContaining({ originalText: 'First chapter keeps the early remembered quote in place.' })
       }),
       content: 'early remembered quote',
       title: 'early remembered quote'
@@ -202,7 +202,7 @@ function expectImportedHighlights(connection: ReturnType<typeof openDatabaseConn
       anchorLink: expect.objectContaining({
         id: chapterTwoAnchorLink.id,
         kind: 'highlight',
-        locator: expect.objectContaining({ originalText: 'later insight' })
+        locator: expect.objectContaining({ originalText: 'Second chapter saves the later insight for a different section.' })
       }),
       content: 'later insight',
       title: 'later insight'
