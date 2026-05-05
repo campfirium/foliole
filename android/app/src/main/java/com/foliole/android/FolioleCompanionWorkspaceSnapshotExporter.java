@@ -40,9 +40,8 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         );
         for (int index = 0; index < nodes.length(); index += 1) {
             JSONObject row = nodes.getJSONObject(index);
-            String nodeId = row.getString(snapshotRule(context, "nodeIdRowKey"));
-            String deletedAtRowKey = snapshotRule(context, "deletedAtRowKey");
-            String deletedAt = row.isNull(deletedAtRowKey) ? null : row.getString(deletedAtRowKey);
+            String nodeId = snapshotRowString(context, row, "nodeIdRowKey");
+            String deletedAt = snapshotRowNullableString(context, row, "deletedAtRowKey");
             if (deletedAt != null) {
                 trashedNodeIds.put(nodeId);
             } else if (firstActiveNodeId == null) {
@@ -113,7 +112,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
             snapshotRule(context, "orderedNodeIdsResultKey")
         );
         for (int index = 0; index < rows.length(); index += 1) {
-            result.put(rows.getJSONObject(index).getString(snapshotRule(context, "nodeIdRowKey")));
+            result.put(snapshotRowString(context, rows.getJSONObject(index), "nodeIdRowKey"));
         }
         return result;
     }
@@ -168,8 +167,12 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         return FolioleCompanionWorkspaceReadQueryRules.snapshotOutputKey(context, key);
     }
 
-    private static JSONObject snapshotObject(Context context, String key) throws Exception {
-        return FolioleCompanionWorkspaceReadQueryRules.snapshotObject(context, key);
+    private static String snapshotRowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.snapshotRowString(context, row, key);
+    }
+
+    private static String snapshotRowNullableString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.snapshotRowNullableString(context, row, key);
     }
 
     private static String contentBlobRule(Context context, String key) throws Exception {

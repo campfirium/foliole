@@ -16,9 +16,9 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
     static JSObject build(Context context, SQLiteDatabase database, JSONObject row, String deletedAt) throws Exception {
         JSObject node = new JSObject();
         JSONObject rules = nodePayloadRules(context);
-        String nodeId = row.getString(snapshotString(context, "nodeIdRowKey"));
+        String nodeId = snapshotRowString(context, row, "nodeIdRowKey");
         putFields(context, node, row, rules.getJSONArray(fieldCollectionKey(context, "fields")), rules);
-        putBodyStatus(context, node, row.getString(nodePayloadBodyStatusRowKey(context, rules)));
+        putBodyStatus(context, node, nodePayloadBodyStatusRowString(context, row, rules));
         JSONArray attachments = FolioleCompanionNodeAttachmentStore.loadNodeAttachments(context, database, nodeId);
         if (attachments.length() > 0) node.put(nodePayloadAttachmentsOutputKey(context, rules), attachments);
         node.put(nestedPayloadOutputKey(context, "readingPayload"), buildNestedPayload(context, row, "readingPayload"));
@@ -42,7 +42,7 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
             if (row.isNull(requiredRowKeys.getString(index))) return null;
         }
         if (rules.has(fieldCollectionKey(context, "validStates"))) {
-            String state = row.optString(nestedPayloadStateRowKey(context, rules), null);
+            String state = nestedPayloadStateRowOptString(context, row, rules);
             if (!contains(rules.getJSONArray(fieldCollectionKey(context, "validStates")), state)) return null;
         }
         JSObject payload = new JSObject();
@@ -98,8 +98,8 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
         return FolioleCompanionWorkspaceReadQueryRules.snapshotObject(context, key);
     }
 
-    private static String snapshotString(Context context, String key) throws Exception {
-        return FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key);
+    private static String snapshotRowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.snapshotRowString(context, row, key);
     }
 
     private static boolean fieldRowBooleanLong(Context context, JSONObject row, JSONObject field) throws Exception {
@@ -150,8 +150,8 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
         return FolioleCompanionWorkspaceReadQueryRules.nestedPayloadOutputKey(context, groupName);
     }
 
-    private static String nestedPayloadStateRowKey(Context context, JSONObject rules) throws Exception {
-        return FolioleCompanionWorkspaceReadQueryRules.nestedPayloadStateRowKey(context, rules);
+    private static String nestedPayloadStateRowOptString(Context context, JSONObject row, JSONObject rules) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.nestedPayloadStateRowOptString(context, row, rules);
     }
 
     private static String nodePayloadAttachmentsOutputKey(Context context, JSONObject rules) throws Exception {
@@ -162,8 +162,8 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
         return FolioleCompanionWorkspaceReadQueryRules.nodePayloadBodyStatusOutputKey(context, rules);
     }
 
-    private static String nodePayloadBodyStatusRowKey(Context context, JSONObject rules) throws Exception {
-        return FolioleCompanionWorkspaceReadQueryRules.nodePayloadBodyStatusRowKey(context, rules);
+    private static String nodePayloadBodyStatusRowString(Context context, JSONObject row, JSONObject rules) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.nodePayloadBodyStatusRowString(context, row, rules);
     }
 
     private static String nodePayloadDefaultKind(Context context, JSONObject rules) throws Exception {

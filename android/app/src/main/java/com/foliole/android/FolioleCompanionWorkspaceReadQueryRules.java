@@ -20,12 +20,25 @@ final class FolioleCompanionWorkspaceReadQueryRules {
         return snapshotObject(context, "outputKeys").getString(key);
     }
 
+    static String snapshotRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(snapshotString(context, key));
+    }
+
+    static String snapshotRowNullableString(Context context, JSONObject row, String key) throws Exception {
+        String rowKey = snapshotString(context, key);
+        return row.isNull(rowKey) ? null : row.getString(rowKey);
+    }
+
     static String nestedPayloadOutputKey(Context context, String groupName) throws Exception {
         return snapshotObject(context, groupName).getString(nestedPayloadKey(context, "outputKey"));
     }
 
     static String nestedPayloadStateRowKey(Context context, JSONObject rules) throws Exception {
         return rules.getString(nestedPayloadKey(context, "stateRowKey"));
+    }
+
+    static String nestedPayloadStateRowOptString(Context context, JSONObject row, JSONObject rules) throws Exception {
+        return row.optString(nestedPayloadStateRowKey(context, rules), null);
     }
 
     static String nodePayloadAttachmentsOutputKey(Context context, JSONObject rules) throws Exception {
@@ -38,6 +51,10 @@ final class FolioleCompanionWorkspaceReadQueryRules {
 
     static String nodePayloadBodyStatusRowKey(Context context, JSONObject rules) throws Exception {
         return rules.getString(nodePayloadKey(context, "bodyStatusRowKey"));
+    }
+
+    static String nodePayloadBodyStatusRowString(Context context, JSONObject row, JSONObject rules) throws Exception {
+        return row.getString(nodePayloadBodyStatusRowKey(context, rules));
     }
 
     static String nodePayloadDefaultKind(Context context, JSONObject rules) throws Exception {
@@ -62,6 +79,10 @@ final class FolioleCompanionWorkspaceReadQueryRules {
 
     static JSONArray viewStateArray(Context context, String key) throws Exception {
         return group(context, "viewState").getJSONArray(key);
+    }
+
+    static String viewStateRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(viewStateString(context, key));
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {

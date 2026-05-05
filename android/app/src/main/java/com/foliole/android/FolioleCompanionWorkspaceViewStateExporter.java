@@ -22,10 +22,10 @@ final class FolioleCompanionWorkspaceViewStateExporter {
                 FolioleCompanionWorkspaceReadQueryRules.viewStateString(context, "queryName"),
                 FolioleCompanionWorkspaceReadQueryRules.viewStateString(context, "resultKey"),
                 new String[] { deviceId }
-            );
+        );
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            String nodeId = row.getString(FolioleCompanionWorkspaceReadQueryRules.viewStateString(context, "nodeIdRowKey"));
+            String nodeId = FolioleCompanionWorkspaceReadQueryRules.viewStateRowString(context, row, "nodeIdRowKey");
             statesById.put(nodeId, buildViewState(context, row));
         }
         return statesById;
