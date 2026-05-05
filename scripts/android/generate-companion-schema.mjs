@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.ts';
 import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
 import {
+  ANDROID_COMPANION_MIGRATION_ACTION_TYPES,
   ANDROID_COMPANION_MIGRATION_PLAN,
   ANDROID_COMPANION_MIGRATION_REPAIR_RULES,
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS
@@ -58,6 +59,7 @@ await fs.writeFile(outputPath, `${JSON.stringify({ statements }, null, 2)}\n`, '
 await fs.writeFile(
   migrationOutputPath,
   `${JSON.stringify({
+    actionTypes: ANDROID_COMPANION_MIGRATION_ACTION_TYPES,
     plan: ANDROID_COMPANION_MIGRATION_PLAN,
     repairRules: ANDROID_COMPANION_MIGRATION_REPAIR_RULES,
     statementsByName: ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS

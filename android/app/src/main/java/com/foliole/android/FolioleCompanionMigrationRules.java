@@ -18,12 +18,24 @@ final class FolioleCompanionMigrationRules {
         return group(context, groupName).getJSONArray(key);
     }
 
+    static String actionType(Context context, String key) throws Exception {
+        return section(context, "actionTypes").getString(key);
+    }
+
     static String rowKey(Context context, String key) throws Exception {
         return group(context, "syncObjectStateSequence").getJSONObject("rowKeys").getString(key);
     }
 
+    private static JSONObject section(Context context, String key) throws Exception {
+        JSONObject section = new JSONObject(FolioleCompanionAssetReader.read(context, MIGRATION_SCHEMA_ASSET_PATH)).optJSONObject(key);
+        if (section == null) {
+            throw new IllegalStateException("Companion migration schema asset is missing section: " + key);
+        }
+        return section;
+    }
+
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, MIGRATION_SCHEMA_ASSET_PATH)).optJSONObject("repairRules");
+        JSONObject rules = section(context, "repairRules");
         if (rules == null) {
             throw new IllegalStateException("Companion migration schema asset is missing repairRules.");
         }

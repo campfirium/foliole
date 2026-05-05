@@ -22,6 +22,14 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
     'CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_seq ON sync_object_state (object_type, state_seq)'
 };
 
+export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
+  addNodeViewStateSourceIfMissing: 'addNodeViewStateSourceIfMissing',
+  addSyncBaseContentHashIfMissing: 'addSyncBaseContentHashIfMissing',
+  backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
+  installSchema: 'installSchema',
+  migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
+} as const;
+
 export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to upgrade companion schema.', type: 'installSchema' }],

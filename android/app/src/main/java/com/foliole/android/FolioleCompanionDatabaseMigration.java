@@ -38,23 +38,23 @@ final class FolioleCompanionDatabaseMigration {
 
     private static void runAction(Context context, SQLiteDatabase database, JSONObject action) {
         String type = action.optString("type", "");
-        if ("installSchema".equals(type)) {
+        if (actionType(context, "installSchema").equals(type)) {
             installSchema(context, database, action.optString("errorMessage", "Failed to install companion schema."));
             return;
         }
-        if ("migrateSyncObjectStateSequence".equals(type)) {
+        if (actionType(context, "migrateSyncObjectStateSequence").equals(type)) {
             migrateSyncObjectStateSequence(context, database);
             return;
         }
-        if ("backfillNodeAttachmentsFromVersions".equals(type)) {
+        if (actionType(context, "backfillNodeAttachmentsFromVersions").equals(type)) {
             FolioleCompanionNodeAttachmentStore.backfillNodeAttachmentsFromVersions(context, database);
             return;
         }
-        if ("addNodeViewStateSourceIfMissing".equals(type)) {
+        if (actionType(context, "addNodeViewStateSourceIfMissing").equals(type)) {
             addNodeViewStateSourceIfMissing(context, database);
             return;
         }
-        if ("addSyncBaseContentHashIfMissing".equals(type)) {
+        if (actionType(context, "addSyncBaseContentHashIfMissing").equals(type)) {
             addSyncBaseContentHashIfMissing(context, database);
             return;
         }
@@ -185,6 +185,14 @@ final class FolioleCompanionDatabaseMigration {
 
     private static String rowKey(Context context, String key) throws Exception {
         return FolioleCompanionMigrationRules.rowKey(context, key);
+    }
+
+    private static String actionType(Context context, String key) {
+        try {
+            return FolioleCompanionMigrationRules.actionType(context, key);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Companion migration action type is missing: " + key, exception);
+        }
     }
 
 }
