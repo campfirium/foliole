@@ -73,6 +73,8 @@ describe('Android host bridge contract metadata', () => {
     const hostBridgeSource = await readFile(HOST_BRIDGE_CONTRACT_READER, 'utf8');
 
     expect(bridgeSource).toContain('hostApiString(Context context, String groupName, String objectName, String key)');
+    expect(bridgeSource).toContain('hostApiInt(Context context, String groupName, String objectName, String key)');
+    expect(bridgeSource).toContain('hostApiArray(Context context, String groupName, String objectName, String key)');
     expect(hostBridgeSource).toContain('workspaceSyncRequestKey(context, "endpointUrl")');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.bootstrapBootedAtOutputKey(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.bootstrapEmulatorModelTokens(context)');
@@ -99,5 +101,7 @@ describe('Android host bridge contract metadata', () => {
     expect(combinedSource).not.toContain('contains("sdk")');
     expect(combinedSource).not.toContain('contains("gphone")');
     expect(combinedSource).not.toContain('contains("emulator")');
+    expect(hostBridgeSource).not.toContain('getJSONObject("deviceNameDefaults")');
+    expect(hostBridgeSource).not.toContain('getJSONObject("discoveryDefaults")');
   });
 });

@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import android.content.Context;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionBridgeContractDefinitions {
@@ -210,17 +211,31 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     static String hostApiString(Context context, String groupName, String objectName, String key) throws Exception {
-        JSONObject object = section(context, "hostApi").getJSONObject(groupName).optJSONObject(objectName);
-        if (object == null || !object.has(key)) {
-            throw new IllegalStateException(
-                "Companion bridge contract asset is missing key: hostApi." + groupName + "." + objectName + "." + key
-            );
-        }
-        return object.getString(key);
+        return hostApiObject(context, groupName, objectName).getString(key);
+    }
+
+    static String hostApiString(Context context, String groupName, String key) throws Exception {
+        return hostApiGroup(context, groupName).getString(key);
+    }
+
+    static int hostApiInt(Context context, String groupName, String objectName, String key) throws Exception {
+        return hostApiObject(context, groupName, objectName).getInt(key);
+    }
+
+    static JSONArray hostApiArray(Context context, String groupName, String objectName, String key) throws Exception {
+        return hostApiObject(context, groupName, objectName).getJSONArray(key);
     }
 
     static JSONObject hostApiGroup(Context context, String groupName) throws Exception {
         return section(context, "hostApi").getJSONObject(groupName);
+    }
+
+    private static JSONObject hostApiObject(Context context, String groupName, String objectName) throws Exception {
+        JSONObject object = hostApiGroup(context, groupName).optJSONObject(objectName);
+        if (object == null) {
+            throw new IllegalStateException("Companion bridge contract asset is missing object: hostApi." + groupName + "." + objectName);
+        }
+        return object;
     }
 
     private static String pairingSignatureString(Context context, String objectName, String key) throws Exception {

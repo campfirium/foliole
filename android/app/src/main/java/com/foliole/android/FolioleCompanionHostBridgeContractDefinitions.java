@@ -32,7 +32,7 @@ final class FolioleCompanionHostBridgeContractDefinitions {
     }
 
     static String bootstrapRuntimeKind(Context context) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.hostApiGroup(context, "bootstrap").getString("runtimeKind");
+        return FolioleCompanionBridgeContractDefinitions.hostApiString(context, "bootstrap", "runtimeKind");
     }
 
     static String bootstrapDefaultDeviceName(Context context) throws Exception {
@@ -44,9 +44,7 @@ final class FolioleCompanionHostBridgeContractDefinitions {
     }
 
     static JSONArray bootstrapEmulatorModelTokens(Context context) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.hostApiGroup(context, "bootstrap")
-            .getJSONObject("deviceNameDefaults")
-            .getJSONArray("emulatorModelTokens");
+        return FolioleCompanionBridgeContractDefinitions.hostApiArray(context, "bootstrap", "deviceNameDefaults", "emulatorModelTokens");
     }
 
     static String contentBlobBatchBlobHashResponseHeaderKey(Context context) throws Exception {
@@ -168,9 +166,7 @@ final class FolioleCompanionHostBridgeContractDefinitions {
     }
 
     private static int networkDiscoveryDefaultInt(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.hostApiGroup(context, "network")
-            .getJSONObject("discoveryDefaults")
-            .getInt(key);
+        return FolioleCompanionBridgeContractDefinitions.hostApiInt(context, "network", "discoveryDefaults", key);
     }
 
     private static String networkRequestKey(Context context, String key) throws Exception {
