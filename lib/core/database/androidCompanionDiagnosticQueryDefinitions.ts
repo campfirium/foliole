@@ -189,6 +189,20 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
 
 export const ANDROID_COMPANION_DIAGNOSTIC_READ_RULES = {
   activeTopic: { queryName: 'diagnosticActiveTopic', resultKey: 'topics' },
+  content: {
+    outputKeys: {
+      activeTopic: 'active_topic',
+      recentTopics: 'recent_topics'
+    },
+    bodyMetricKeys: [
+      'missing_topic_body_count',
+      'missing_top_level_topic_body_count',
+      'missing_nested_topic_body_count',
+      'missing_external_document_body_count',
+      'missing_due_review_body_count',
+      'missing_active_topic_body_count'
+    ]
+  },
   contentBodyMetrics: { queryName: 'diagnosticContentBodyMetrics' },
   dirtyObjects: { queryName: 'diagnosticDirtyObjects', resultKey: 'objects' },
   metaValue: { queryName: 'companionMetaValue' },

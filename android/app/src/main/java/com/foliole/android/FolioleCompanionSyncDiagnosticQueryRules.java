@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import android.content.Context;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionSyncDiagnosticQueryRules {
@@ -15,6 +16,14 @@ final class FolioleCompanionSyncDiagnosticQueryRules {
 
     static String resultKey(Context context, String key) throws Exception {
         return group(context, key).getString("resultKey");
+    }
+
+    static JSONObject object(Context context, String groupKey, String key) throws Exception {
+        return group(context, groupKey).getJSONObject(key);
+    }
+
+    static JSONArray array(Context context, String groupKey, String key) throws Exception {
+        return group(context, groupKey).getJSONArray(key);
     }
 
     private static JSONObject group(Context context, String key) throws Exception {

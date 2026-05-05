@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionSyncDiagnosticContent {
@@ -13,47 +14,42 @@ final class FolioleCompanionSyncDiagnosticContent {
 
     static JSObject load(Context context, SQLiteDatabase database) throws Exception {
         JSObject content = new JSObject();
-        copyBodySummary(content, FolioleCompanionContentBlobStore.summarizeMissingBodies(context, database));
-        copyBodyDetail(content, FolioleCompanionGeneratedQueryRunner.loadLongMetrics(
+        copyBodySummary(context, content, FolioleCompanionContentBlobStore.summarizeMissingBodies(context, database));
+        copyBodyDetail(context, content, FolioleCompanionGeneratedQueryRunner.loadLongMetrics(
             context,
             database,
             FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "contentBodyMetrics")
         ));
-        copyAttachmentSummary(content, FolioleCompanionAttachmentResourceStore.summarizeMissingResources(context, database));
-        content.put("active_topic", loadActiveTopic(context, database));
-        content.put("recent_topics", loadRecentTopics(context, database));
+        copyAttachmentSummary(context, content, FolioleCompanionAttachmentResourceStore.summarizeMissingResources(context, database));
+        JSONObject outputKeys = contentOutputKeys(context);
+        content.put(outputKeys.getString("activeTopic"), loadActiveTopic(context, database));
+        content.put(outputKeys.getString("recentTopics"), loadRecentTopics(context, database));
         return content;
     }
 
-    private static void copyBodySummary(JSObject content, JSObject summary) throws Exception {
-        content.put("missing_content_blob_count", summary.optLong("missing_content_blob_count", 0));
-        content.put("missing_content_blob_bytes", summary.optLong("missing_content_blob_bytes", 0));
-        content.put("failed_content_blob_count", summary.optLong("failed_content_blob_count", 0));
-        content.put("failed_content_blob_bytes", summary.optLong("failed_content_blob_bytes", 0));
+    private static void copyBodySummary(Context context, JSObject content, JSObject summary) throws Exception {
+        copyMappedLongs(content, summary, FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys"));
     }
 
-    private static void copyBodyDetail(JSObject content, JSObject detail) throws Exception {
-        content.put("missing_topic_body_count", detail.optLong("missing_topic_body_count", 0));
-        content.put("missing_top_level_topic_body_count", detail.optLong("missing_top_level_topic_body_count", 0));
-        content.put("missing_nested_topic_body_count", detail.optLong("missing_nested_topic_body_count", 0));
-        content.put("missing_external_document_body_count", detail.optLong("missing_external_document_body_count", 0));
-        content.put("missing_due_review_body_count", detail.optLong("missing_due_review_body_count", 0));
-        content.put("missing_active_topic_body_count", detail.optLong("missing_active_topic_body_count", 0));
+    private static void copyAttachmentSummary(Context context, JSObject content, JSObject summary) throws Exception {
+        copyMappedLongs(content, summary, FolioleCompanionMissingResourceQueryRules.attachmentObject(context, "summaryKeys"));
     }
 
-    private static void copyAttachmentSummary(JSObject content, JSObject summary) throws Exception {
-        content.put("missing_attachment_resource_count", summary.optLong("missing_attachment_resource_count", 0));
-        content.put("missing_attachment_resource_bytes", summary.optLong("missing_attachment_resource_bytes", 0));
-        content.put("failed_attachment_resource_count", summary.optLong("failed_attachment_resource_count", 0));
-        content.put("failed_attachment_resource_bytes", summary.optLong("failed_attachment_resource_bytes", 0));
-        content.put("missing_active_topic_attachment_resource_count", summary.optLong("missing_active_topic_attachment_resource_count", 0));
-        content.put("missing_image_attachment_resource_count", summary.optLong("missing_image_attachment_resource_count", 0));
-        content.put("missing_image_attachment_resource_bytes", summary.optLong("missing_image_attachment_resource_bytes", 0));
-        content.put("missing_pdf_attachment_resource_count", summary.optLong("missing_pdf_attachment_resource_count", 0));
-        content.put("missing_pdf_attachment_resource_bytes", summary.optLong("missing_pdf_attachment_resource_bytes", 0));
-        content.put("missing_other_attachment_resource_count", summary.optLong("missing_other_attachment_resource_count", 0));
-        content.put("missing_other_attachment_resource_bytes", summary.optLong("missing_other_attachment_resource_bytes", 0));
-        content.put("missing_due_review_attachment_resource_count", summary.optLong("missing_due_review_attachment_resource_count", 0));
+    private static void copyBodyDetail(Context context, JSObject content, JSObject detail) throws Exception {
+        JSONArray keys = FolioleCompanionSyncDiagnosticQueryRules.array(context, "content", "bodyMetricKeys");
+        for (int index = 0; index < keys.length(); index += 1) {
+            String key = keys.getString(index);
+            content.put(key, detail.optLong(key, 0));
+        }
+    }
+
+    private static void copyMappedLongs(JSObject target, JSObject source, JSONObject keys) throws Exception {
+        JSONArray names = keys.names();
+        if (names == null) return;
+        for (int index = 0; index < names.length(); index += 1) {
+            String key = keys.getString(names.getString(index));
+            target.put(key, source.optLong(key, 0));
+        }
     }
 
     private static JSObject loadActiveTopic(Context context, SQLiteDatabase database) throws Exception {
@@ -74,5 +70,9 @@ final class FolioleCompanionSyncDiagnosticContent {
             FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "recentTopics"),
             FolioleCompanionSyncDiagnosticQueryRules.resultKey(context, "recentTopics")
         );
+    }
+
+    private static JSONObject contentOutputKeys(Context context) throws Exception {
+        return FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys");
     }
 }

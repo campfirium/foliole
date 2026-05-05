@@ -53,6 +53,7 @@ describe('Android sync diagnostics metadata', () => {
     const sources = await Promise.all([
       javaSource('FolioleCompanionSyncMetaStore.java'),
       javaSource('FolioleCompanionSyncDiagnostics.java'),
+      javaSource('FolioleCompanionSyncDiagnosticContent.java'),
       javaSource('FolioleCompanionSyncDiagnosticState.java'),
       javaSource('FolioleCompanionSyncDiagnosticVerdicts.java'),
       javaSource('FolioleCompanionSyncDiagnosticQueryRules.java')
@@ -63,6 +64,8 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", "events")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fullSyncCompletedMessage")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdict(context, key)');
+    expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys")');
+    expect(combined).toContain('FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys")');
     expect(combined).toContain('optJSONObject("diagnosticRead")');
     expect(combined).not.toContain('"workspace_sync_endpoint_url"');
     expect(combined).not.toContain('"workspace_sync_events"');
@@ -77,6 +80,13 @@ describe('Android sync diagnostics metadata', () => {
 
     expect(definitions.diagnosticRead).toMatchObject({
       activeTopic: { queryName: 'diagnosticActiveTopic', resultKey: 'topics' },
+      content: {
+        outputKeys: {
+          activeTopic: 'active_topic',
+          recentTopics: 'recent_topics'
+        },
+        bodyMetricKeys: expect.arrayContaining(['missing_topic_body_count'])
+      },
       dirtyObjects: { queryName: 'diagnosticDirtyObjects', resultKey: 'objects' },
       metaValue: { queryName: 'companionMetaValue' },
       stateMetrics: { queryName: 'diagnosticSyncStateMetrics' },
