@@ -6,11 +6,13 @@ import { loadLocalSyncDiagnostics } from './companionSyncDiagnostics';
 import {
   loadCompanionMissingAttachmentResources,
   loadCompanionMissingContentBlobs,
-  syncCompanionContentBlob
+  syncCompanionContentBlob,
+  syncCompanionContentBlobs
 } from './companionSyncObjects';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 
 const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';
+const CONTENT_BLOB_BATCH_PATH = '/companion/content-blobs';
 const CONTENT_BLOB_ACK_PATH = '/companion/content-blob/ack';
 export const CONTENT_BLOB_BATCH_LIMIT = 64;
 export const CONTENT_BLOB_MAX_BATCHES_PER_SYNC = 20;
@@ -84,6 +86,7 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedContentBlobHashes: string[] = [];
   const { contentBreakdown, failed, failedBytes, total, totalBytes } = await loadMissingContentBlobSummary();
+  let contentBacklogRemaining = true;
   let syncedBytes = 0;
   onProgress?.({ completed: 0, completedBytes: 0, contentBreakdown, elapsedMs: 0, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'content', total, totalBytes });
   for (let batchIndex = 0; batchIndex < CONTENT_BLOB_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
@@ -91,7 +94,10 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
       break;
     }
     const blobs = await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
-    if (blobs.length === 0) break;
+    if (blobs.length === 0) {
+      contentBacklogRemaining = false;
+      break;
+    }
     const hashes = blobs.map((blob) => blob.hash);
     const sizeByHash = new Map(blobs.map((blob) => [blob.hash, Math.max(0, blob.size_bytes ?? 0)]));
     const batch = await pullContentBlobBatch(endpoint, hashes, (syncedChunkHashes) => {
@@ -105,9 +111,12 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
       if (syncedContentBlobHashes.length > 0) break;
       throw new Error('Topic body batch could not download any requested body.');
     }
-    if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedBatchHashes.length === 0) break;
+    if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedBatchHashes.length === 0) {
+      contentBacklogRemaining = syncedBatchHashes.length === 0 || batch.failedContentBlobCount > 0;
+      break;
+    }
   }
-  return { syncedContentBlobBytes: syncedBytes, syncedContentBlobHashes };
+  return { contentBacklogRemaining, syncedContentBlobBytes: syncedBytes, syncedContentBlobHashes };
 }
 
 export async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: ProgressHandler) {
@@ -161,25 +170,47 @@ async function pullContentBlobBatch(
   hashes: string[],
   onSyncedChunk?: (hashes: string[]) => void
 ) {
-  const syncedContentBlobHashes: string[] = [];
-  let failedContentBlobCount = 0;
-  for (let index = 0; index < hashes.length; index += CONTENT_BLOB_CONCURRENT_FETCH_LIMIT) {
-    const chunk = hashes.slice(index, index + CONTENT_BLOB_CONCURRENT_FETCH_LIMIT);
-    const syncedChunkHashes = await Promise.all(chunk.map(async (hash) => {
-      try {
-        return await pullContentBlob(endpoint, hash);
-      } catch {
-        failedContentBlobCount += 1;
-        return null;
-      }
-    }));
-    const syncedHashes = syncedChunkHashes.filter((hash): hash is string => Boolean(hash));
-    syncedContentBlobHashes.push(...syncedHashes);
-    if (syncedHashes.length > 0) {
-      onSyncedChunk?.(syncedHashes);
+  try {
+    const syncedContentBlobHashes = await pullContentBlobNativeBatch(endpoint, hashes);
+    if (syncedContentBlobHashes.length > 0) {
+      onSyncedChunk?.(syncedContentBlobHashes);
     }
+    return {
+      failedContentBlobCount: hashes.length - syncedContentBlobHashes.length,
+      syncedContentBlobHashes
+    };
+  } catch {
+    const syncedContentBlobHashes: string[] = [];
+    let failedContentBlobCount = 0;
+    for (let index = 0; index < hashes.length; index += CONTENT_BLOB_CONCURRENT_FETCH_LIMIT) {
+      const chunk = hashes.slice(index, index + CONTENT_BLOB_CONCURRENT_FETCH_LIMIT);
+      const syncedChunkHashes = await Promise.all(chunk.map(async (hash) => {
+        try {
+          return await pullContentBlob(endpoint, hash);
+        } catch {
+          failedContentBlobCount += 1;
+          return null;
+        }
+      }));
+      const syncedHashes = syncedChunkHashes.filter((hash): hash is string => Boolean(hash));
+      syncedContentBlobHashes.push(...syncedHashes);
+      if (syncedHashes.length > 0) {
+        onSyncedChunk?.(syncedHashes);
+      }
+    }
+    return { failedContentBlobCount, syncedContentBlobHashes };
   }
-  return { failedContentBlobCount, syncedContentBlobHashes };
+}
+
+async function pullContentBlobNativeBatch(endpoint: string, hashes: string[]) {
+  const pathWithQuery = CONTENT_BLOB_BATCH_PATH;
+  const body = JSON.stringify({ hashes });
+  const result = await syncCompanionContentBlobs({
+    body,
+    headers: await createSignedRequestHeaders({ bodyText: body, method: 'POST', pathWithQuery }),
+    url: `${endpoint}${pathWithQuery}`
+  });
+  return result.synced_hashes;
 }
 
 async function pullContentBlob(endpoint: string, hash: string) {

@@ -117,27 +117,31 @@ async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDes
   let syncedAttachmentIds: string[] = [];
   let syncedContentBlobBytes = 0;
   let syncedContentBlobHashes: string[] = [];
+  let contentBacklogRemaining = true;
   try {
     const blobs = await withSyncStepTimeout(
       'fetching topic bodies',
       pullMissingContentBlobs(endpointUrl, onProgress),
       COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
     );
+    contentBacklogRemaining = blobs.contentBacklogRemaining;
     syncedContentBlobBytes = blobs.syncedContentBlobBytes;
     syncedContentBlobHashes = blobs.syncedContentBlobHashes;
   } catch (error) {
     contentBlobError = errorMessage(error);
   }
-  try {
-    const attachments = await withSyncStepTimeout(
-      'fetching attachment resources',
-      pullMissingAttachmentResources(endpointUrl, onProgress),
-      COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
-    );
-    syncedAttachmentResourceBytes = attachments.syncedAttachmentResourceBytes;
-    syncedAttachmentIds = attachments.syncedAttachmentIds;
-  } catch (error) {
-    attachmentResourceError = errorMessage(error);
+  if (!contentBlobError && !contentBacklogRemaining) {
+    try {
+      const attachments = await withSyncStepTimeout(
+        'fetching attachment resources',
+        pullMissingAttachmentResources(endpointUrl, onProgress),
+        COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
+      );
+      syncedAttachmentResourceBytes = attachments.syncedAttachmentResourceBytes;
+      syncedAttachmentIds = attachments.syncedAttachmentIds;
+    } catch (error) {
+      attachmentResourceError = errorMessage(error);
+    }
   }
   return {
     attachmentResourceError,

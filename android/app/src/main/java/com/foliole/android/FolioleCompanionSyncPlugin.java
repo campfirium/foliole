@@ -7,26 +7,68 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
+    private static final int DATABASE_EXECUTOR_THREADS = 4;
+
+    private final ExecutorService databaseExecutor = Executors.newFixedThreadPool(DATABASE_EXECUTOR_THREADS);
+    private final Object databaseHelperLock = new Object();
+    private FolioleCompanionDatabaseHelper databaseHelper;
 
     private interface DatabaseWork {
         JSObject run(FolioleCompanionDatabaseHelper databaseHelper) throws Exception;
     }
 
-    private void resolveWithDatabase(PluginCall call, String errorMessage, DatabaseWork work) {
-        new Thread(() -> {
-            FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-            try {
-                call.resolve(work.run(databaseHelper));
-            } catch (Exception exception) {
-                call.reject(errorMessage, exception);
-            } finally {
-                databaseHelper.close();
+    private FolioleCompanionDatabaseHelper getDatabaseHelper() {
+        synchronized (databaseHelperLock) {
+            if (databaseHelper == null) {
+                databaseHelper = new FolioleCompanionDatabaseHelper(getContext().getApplicationContext());
             }
-        }).start();
+            return databaseHelper;
+        }
     }
 
+    private void resolveWithDatabase(PluginCall call, String errorMessage, DatabaseWork work) {
+        databaseExecutor.execute(() -> {
+            try {
+                call.resolve(work.run(getDatabaseHelper()));
+            } catch (Exception exception) {
+                call.reject(formatPluginError(errorMessage, exception), exception);
+            }
+        });
+    }
+
+    private static String formatPluginError(String errorMessage, Exception exception) {
+        String detail = exception.getMessage();
+        if (detail == null || detail.trim().isEmpty()) {
+            return errorMessage;
+        }
+        return errorMessage + " " + detail.trim();
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        super.handleOnDestroy();
+        databaseExecutor.shutdown();
+        try {
+            if (!databaseExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                databaseExecutor.shutdownNow();
+            }
+        } catch (InterruptedException exception) {
+            databaseExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        synchronized (databaseHelperLock) {
+            if (databaseHelper != null) {
+                databaseHelper.close();
+                databaseHelper = null;
+            }
+        }
+    }
 
     @PluginMethod
     public void desktopHttpRequest(PluginCall call) {
@@ -69,6 +111,15 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         );
     }
 
+    @PluginMethod
+    public void syncAttachmentResources(PluginCall call) {
+        resolveWithDatabase(
+            call,
+            "Failed to sync companion attachment resources.",
+            databaseHelper -> databaseHelper.syncAttachmentResources(call.getData().optJSONArray("resources"))
+        );
+    }
+
 
     @PluginMethod
     public void loadMissingAttachmentResources(PluginCall call) {
@@ -107,6 +158,19 @@ public class FolioleCompanionSyncPlugin extends Plugin {
                 call.getString("hash"),
                 call.getString("url"),
                 call.getData().optJSONObject("headers")
+            )
+        );
+    }
+
+    @PluginMethod
+    public void syncContentBlobs(PluginCall call) {
+        resolveWithDatabase(
+            call,
+            "Failed to sync companion content blobs.",
+            databaseHelper -> databaseHelper.syncContentBlobs(
+                call.getString("url"),
+                call.getData().optJSONObject("headers"),
+                call.getString("body")
             )
         );
     }

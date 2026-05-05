@@ -2,7 +2,9 @@ import type http from 'node:http';
 
 import {
   acknowledgeCompanionContentBlobs,
-  CONTENT_BLOB_ACK_PATH
+  CONTENT_BLOB_ACK_PATH,
+  CONTENT_BLOB_BATCH_PATH,
+  loadCompanionContentBlobBatch
 } from './companionLanContentBlobs.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
@@ -16,6 +18,14 @@ type WriteJson = (
   payload: unknown,
   methods?: string
 ) => void;
+
+function writeBinary(response: http.ServerResponse, statusCode: number, body: Buffer, mimeType: string) {
+  response.writeHead(statusCode, {
+    'Content-Length': body.byteLength,
+    'Content-Type': mimeType
+  });
+  response.end(body);
+}
 
 export async function handleAuthenticatedPost(
   request: http.IncomingMessage,
@@ -34,6 +44,15 @@ export async function handleAuthenticatedPost(
     writeJson(request, response, ack.status === 'ok' ? 200 : ack.statusCode, ack.status === 'ok' ? ack : {
       error: ack.error
     }, 'POST, OPTIONS');
+    return true;
+  }
+  if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) {
+    const batch = loadCompanionContentBlobBatch(bodyText);
+    if (batch.status === 'ready') {
+      writeBinary(response, 200, batch.body, batch.mimeType);
+    } else {
+      writeJson(request, response, batch.statusCode, { error: batch.error }, 'POST, OPTIONS');
+    }
     return true;
   }
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) {

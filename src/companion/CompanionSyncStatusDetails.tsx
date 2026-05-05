@@ -141,7 +141,7 @@ function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: Nat
   if (event.status === 'failed') {
     return isSupersededFailure(event, laterEvents)
       ? 'Earlier sync attempt did not complete'
-      : 'Sync did not complete';
+      : event.message;
   }
   if (event.status === 'skipped') {
     return event.message;

@@ -140,7 +140,10 @@ async function testFailsAttachmentStageWhenWholeBatchReturnsEmpty() {
 }
 
 describe('companion desktop sync resource failures', () => {
-  beforeEach(resetCompanionDesktopSyncMocks);
+  beforeEach(() => {
+    resetCompanionDesktopSyncMocks();
+    syncBridgeMock.syncCompanionContentBlobs.mockRejectedValue(new Error('Batch endpoint unavailable.'));
+  });
 
   it('continues a content body batch after one body fails', testContinuesContentBatchAfterSingleBodyFailure);
   it('keeps earlier content bodies when a later batch fails', testKeepsEarlierContentWhenLaterBatchFails);

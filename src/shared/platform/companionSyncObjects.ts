@@ -91,48 +91,17 @@ export async function applyCompanionDesktopSyncPack(args: {
   return FolioleCompanionSync.applyDesktopSyncPack(args);
 }
 
-export async function loadCompanionMissingContentBlobHashes(limit = 50) {
-  if (!isNativeAndroidCompanionRuntime()) {
-    return [] as string[];
-  }
-  return (await FolioleCompanionSync.loadMissingContentBlobHashes({ limit })).hashes;
-}
+export {
+  loadCompanionMissingContentBlobHashes,
+  loadCompanionMissingContentBlobs,
+  syncCompanionContentBlob,
+  syncCompanionContentBlobs
+} from './companionContentBlobSync';
 
-export async function loadCompanionMissingContentBlobs(limit = 50): Promise<Array<{ hash: string; size_bytes?: number }>> {
-  if (!isNativeAndroidCompanionRuntime()) {
-    return [] as Array<{ hash: string; size_bytes?: number }>;
-  }
-  const result = await FolioleCompanionSync.loadMissingContentBlobHashes({ limit });
-  if (Array.isArray(result.blobs)) {
-    return result.blobs;
-  }
-  return result.hashes.map((hash) => ({ hash }));
-}
-
-export async function loadCompanionMissingAttachmentResources(limit = 50) {
-  if (!isNativeAndroidCompanionRuntime()) {
-    return [] as Array<{ attachment_id: string; content_hash: string; size_bytes?: number }>;
-  }
-  return (await FolioleCompanionSync.loadMissingAttachmentResources({ limit })).resources;
-}
-
-export async function loadCompanionMissingAttachmentResource(attachmentId: string) {
-  if (!isNativeAndroidCompanionRuntime()) {
-    return null as { attachment_id: string; content_hash: string; size_bytes?: number } | null;
-  }
-  return (await FolioleCompanionSync.loadMissingAttachmentResource({ attachment_id: attachmentId })).resource;
-}
-
-export async function syncCompanionContentBlob(args: {
-  hash: string;
-  headers: Record<string, string>;
-  url: string;
-}) {
-  if (!isNativeAndroidCompanionRuntime()) {
-    return { availability: 'missing', hash: args.hash };
-  }
-  return FolioleCompanionSync.syncContentBlob(args);
-}
+export {
+  loadCompanionMissingAttachmentResource,
+  loadCompanionMissingAttachmentResources
+} from './companionAttachmentResourceSync';
 
 export async function applyCompanionSyncNodeVersions(nodes: NativeSyncNodeRecord[]) {
   if (!isNativeAndroidCompanionRuntime()) {

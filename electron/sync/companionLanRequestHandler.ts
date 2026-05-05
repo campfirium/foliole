@@ -10,6 +10,7 @@ import {
 import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
 import {
   CONTENT_BLOB_ACK_PATH,
+  CONTENT_BLOB_BATCH_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
   loadCompanionContentBlobResource
 } from './companionLanContentBlobs.js';
@@ -43,6 +44,7 @@ export const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
 export {
   ATTACHMENT_RESOURCE_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
+  CONTENT_BLOB_BATCH_PATH,
   CONTENT_BLOB_ACK_PATH,
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,

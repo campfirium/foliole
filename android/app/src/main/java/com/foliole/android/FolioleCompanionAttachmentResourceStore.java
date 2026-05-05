@@ -12,7 +12,6 @@ import com.getcapacitor.JSObject;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.time.Instant;
 
 final class FolioleCompanionAttachmentResourceStore {
@@ -186,15 +185,12 @@ final class FolioleCompanionAttachmentResourceStore {
         String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
         String normalizedContentHash = requireText(contentHash, "content_hash");
         try {
-            byte[] bytes = FolioleCompanionDesktopHttpClient.requestBytes(requireText(url, "url"), headers);
             File outputFile = attachmentFile(context, normalizedContentHash);
             File parent = outputFile.getParentFile();
             if (parent != null && !parent.exists() && !parent.mkdirs()) {
                 throw new IllegalStateException("Failed to create attachment directory.");
             }
-            try (FileOutputStream output = new FileOutputStream(outputFile)) {
-                output.write(bytes);
-            }
+            FolioleCompanionDesktopHttpClient.downloadToFile(requireText(url, "url"), headers, outputFile);
             String now = Instant.now().toString();
             ContentValues values = new ContentValues();
             values.put("storage_key", normalizedContentHash);

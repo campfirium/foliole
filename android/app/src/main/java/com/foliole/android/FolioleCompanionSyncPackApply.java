@@ -97,16 +97,15 @@ final class FolioleCompanionSyncPackApply {
             "INSERT OR REPLACE INTO main.content_blobs (" +
                 "hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
                 "original_sha256, stored_sha256, availability, source_device_id, created_at, cached_at, last_verified_at) " +
-                "SELECT hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
-                "original_sha256, stored_sha256, " +
-                "CASE WHEN EXISTS (SELECT 1 FROM main.content_blob_data data WHERE data.hash = incoming.hash) " +
-                "THEN 'cached' ELSE 'missing' END, " +
-                "source_device_id, created_at, " +
-                "CASE WHEN EXISTS (SELECT 1 FROM main.content_blob_data data WHERE data.hash = incoming.hash) " +
-                "THEN incoming.cached_at ELSE NULL END, " +
-                "CASE WHEN EXISTS (SELECT 1 FROM main.content_blob_data data WHERE data.hash = incoming.hash) " +
-                "THEN incoming.last_verified_at ELSE NULL END " +
-                "FROM inc.content_blobs incoming WHERE incoming.hash IN (" +
+                "SELECT incoming.hash, incoming.storage_key, incoming.kind, incoming.mime_type, incoming.compression, " +
+                "incoming.original_size_bytes, incoming.stored_size_bytes, incoming.original_sha256, incoming.stored_sha256, " +
+                "CASE WHEN data.hash IS NOT NULL THEN 'cached' ELSE 'missing' END, " +
+                "incoming.source_device_id, incoming.created_at, " +
+                "CASE WHEN data.hash IS NOT NULL THEN incoming.cached_at ELSE NULL END, " +
+                "CASE WHEN data.hash IS NOT NULL THEN incoming.last_verified_at ELSE NULL END " +
+                "FROM inc.content_blobs incoming " +
+                "LEFT JOIN main.content_blob_data data ON data.hash = incoming.hash " +
+                "WHERE incoming.hash IN (" +
                 "SELECT body_blob_hash FROM inc.nodes WHERE body_blob_hash IS NOT NULL " +
                 "AND id IN (SELECT object_id FROM " + applyableStateRowsSql("node") + ") " +
                 "UNION SELECT body_blob_hash FROM inc.external_documents WHERE body_blob_hash IS NOT NULL " +

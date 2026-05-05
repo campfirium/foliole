@@ -23,6 +23,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 
 import {
   acknowledgeCompanionContentBlobs,
+  loadCompanionContentBlobBatch,
   loadCompanionContentBlobResource
 } from './companionLanContentBlobs.js';
 
@@ -51,6 +52,33 @@ it('loads text body blob bytes by content hash', async () => {
     mimeType: 'text/plain',
     status: 'ready'
   });
+});
+
+it('loads a batch of text body blobs by content hash', () => {
+  const firstHash = upsertTextBodyBlob(
+    openDatabaseConnection().driver,
+    'first body',
+    '2026-04-27T00:00:00.000Z'
+  );
+  const secondHash = upsertTextBodyBlob(
+    openDatabaseConnection().driver,
+    'second body',
+    '2026-04-27T00:00:01.000Z'
+  );
+
+  const batch = loadCompanionContentBlobBatch(JSON.stringify({
+    hashes: [firstHash, secondHash, 'a'.repeat(64)]
+  }));
+  expect(batch.status).toBe('ready');
+  if (batch.status !== 'ready') return;
+  const bodyText = batch.body.toString('utf8');
+  expect(batch.mimeType).toMatch(/^multipart\/mixed; boundary=foliole-content-blobs-/);
+  expect(batch.missingHashes).toEqual(['a'.repeat(64)]);
+  expect(bodyText).toContain(`X-Blob-Hash: ${firstHash}`);
+  expect(bodyText).toContain('Content-Length: 10');
+  expect(bodyText).toContain('\r\n\r\nfirst body\r\n');
+  expect(bodyText).toContain(`X-Blob-Hash: ${secondHash}`);
+  expect(bodyText).toContain('\r\n\r\nsecond body\r\n');
 });
 
 it('rejects invalid and missing content blob hashes', async () => {

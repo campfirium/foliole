@@ -63,6 +63,7 @@ vi.mock('./companionLanAttachmentResources.js', () => ({
 }));
 vi.mock('./companionLanContentBlobs.js', () => ({
   CONTENT_BLOB_ACK_PATH: '/companion/content-blob/ack',
+  CONTENT_BLOB_BATCH_PATH: '/companion/content-blobs',
   CONTENT_BLOB_RESOURCE_PATH: '/companion/content-blob',
   acknowledgeCompanionContentBlobs: contentBlobResourceMock.acknowledgeCompanionContentBlobs,
   loadCompanionContentBlobResource: contentBlobResourceMock.loadCompanionContentBlobResource

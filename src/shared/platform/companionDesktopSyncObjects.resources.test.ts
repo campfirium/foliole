@@ -22,13 +22,13 @@ async function testPullsContentBlobs() {
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
   expect(result.syncedContentBlobHashes).toEqual([bodyHash]);
-  expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledWith({
-    hash: bodyHash,
+  expect(syncBridgeMock.syncCompanionContentBlobs).toHaveBeenCalledWith({
+    body: JSON.stringify({ hashes: [bodyHash] }),
     headers: {
       'X-Device-Id': 'android-test-device',
-      'X-Signature': `signed:/companion/content-blob?hash=${bodyHash}`
+      'X-Signature': 'signed:/companion/content-blobs'
     },
-    url: `http://10.0.2.2:38641/companion/content-blob?hash=${bodyHash}`
+    url: 'http://10.0.2.2:38641/companion/content-blobs'
   });
   expect(fetchMock).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/content-blob/ack', expect.any(Object));
 }
@@ -145,9 +145,9 @@ async function testStopsContentPassAtResourceBudget() {
   let now = 0;
   vi.spyOn(Date, 'now').mockImplementation(() => now);
   syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValue(hashes.map((hash) => ({ hash, size_bytes: 1 })));
-  syncBridgeMock.syncCompanionContentBlob.mockImplementation(async ({ hash }: { hash: string }) => {
+  syncBridgeMock.syncCompanionContentBlobs.mockImplementation(async ({ body }: { body: string }) => {
     now = COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS + 1;
-    return { availability: 'cached', hash };
+    return { synced_hashes: JSON.parse(body).hashes as string[] };
   });
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: hashes, status: 'ok' }), { status: 200 })));
 
@@ -156,6 +156,30 @@ async function testStopsContentPassAtResourceBudget() {
   expect(result.contentBlobError).toBeNull();
   expect(result.syncedContentBlobHashes).toHaveLength(CONTENT_BLOB_BATCH_LIMIT);
   expect(syncBridgeMock.loadCompanionMissingContentBlobs).toHaveBeenCalledTimes(1);
+  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
+}
+
+async function testDefersAttachmentsUntilContentBacklogClears() {
+  const { COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS } = await import('./companionDesktopSyncResources');
+  const { CONTENT_BLOB_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const hashes = Array.from({ length: CONTENT_BLOB_BATCH_LIMIT }, (_, index) => `${index}`.padStart(64, '0'));
+  let now = 0;
+  vi.spyOn(Date, 'now').mockImplementation(() => now);
+  syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValue(hashes.map((hash) => ({ hash, size_bytes: 1 })));
+  syncBridgeMock.syncCompanionContentBlobs.mockImplementation(async ({ body }: { body: string }) => {
+    now = COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS + 1;
+    return { synced_hashes: JSON.parse(body).hashes as string[] };
+  });
+  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+    { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
+  ]);
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: hashes, status: 'ok' }), { status: 200 })));
+
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(result.syncedContentBlobHashes).toHaveLength(CONTENT_BLOB_BATCH_LIMIT);
+  expect(result.syncedAttachmentIds).toEqual([]);
+  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
 }
 
 async function testStopsAttachmentPassAtResourceBudget() {
@@ -211,6 +235,24 @@ async function testRoutesAckThroughNativeHttp() {
   }));
 }
 
+async function testFallsBackToSingleBodyRequestsWhenNativeBatchFails() {
+  const bodyHash = '4'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
+    .mockResolvedValueOnce([]);
+  syncBridgeMock.syncCompanionContentBlobs.mockRejectedValue(new Error('Batch endpoint unavailable.'));
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 })));
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(result.syncedContentBlobHashes).toEqual([bodyHash]);
+  expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledWith(expect.objectContaining({
+    hash: bodyHash,
+    url: `http://10.0.2.2:38641/companion/content-blob?hash=${bodyHash}`
+  }));
+}
+
 describe('companion desktop sync resources', () => {
   beforeEach(resetCompanionDesktopSyncMocks);
 
@@ -226,7 +268,11 @@ describe('companion desktop sync resources', () => {
 
   it('stops a content body pass at the resource time budget without failing sync', testStopsContentPassAtResourceBudget);
 
+  it('defers attachment resources until the topic body backlog is clear', testDefersAttachmentsUntilContentBacklogClears);
+
   it('stops an attachment pass at the resource time budget without failing sync', testStopsAttachmentPassAtResourceBudget);
 
   it('routes content blob acknowledgements through native desktop HTTP on Android', testRoutesAckThroughNativeHttp);
+
+  it('falls back to single body requests when native batch sync fails', testFallsBackToSingleBodyRequestsWhenNativeBatchFails);
 });

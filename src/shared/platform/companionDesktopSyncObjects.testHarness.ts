@@ -10,7 +10,10 @@ export const syncBridgeMock = {
   loadCompanionSyncReviewLogPushCursor: vi.fn(async () => null as { change_id: string; created_at: string } | null),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncReviewLogPushCursor: vi.fn(async () => undefined),
-  syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
+  syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash })),
+  syncCompanionContentBlobs: vi.fn(async ({ body }: { body: string }) => ({
+    synced_hashes: JSON.parse(body).hashes as string[]
+  }))
 };
 
 export const attachmentResourceMock = {
@@ -83,6 +86,9 @@ export function resetCompanionDesktopSyncMocks() {
   syncBridgeMock.loadCompanionSyncReviewLogPushCursor.mockResolvedValue(null);
   syncBridgeMock.saveCompanionSyncPackCursor.mockImplementation(async (cursor: number | null) => cursor);
   syncBridgeMock.syncCompanionContentBlob.mockImplementation(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }));
+  syncBridgeMock.syncCompanionContentBlobs.mockImplementation(async ({ body }: { body: string }) => ({
+    synced_hashes: JSON.parse(body).hashes as string[]
+  }));
   diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue(null);
   diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue(null);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockImplementation(async (

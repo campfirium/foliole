@@ -88,6 +88,29 @@ async function testKeepsUnreachableDesktopQuiet() {
   }));
 }
 
+async function testRecordsStructureApplyFailureCause() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue(new Error(
+    'Failed to apply companion desktop sync pack. ambiguous column name: hash'
+  ));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('failed');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Topic list sync failed: ambiguous column name: hash',
+    status: 'failed'
+  }));
+}
+
 async function testRecordsStructureLagWithoutCompleting() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingStructureChangeCount: 4
@@ -173,6 +196,8 @@ describe('tryForegroundAutoSync', () => {
   it('uses a remembered sync target when the active endpoint is missing', testUsesRememberedSyncTarget);
 
   it('does not surface unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
+
+  it('records structure apply failure causes in sync activity', testRecordsStructureApplyFailureCause);
 
   it('records structure lag without marking the pass completed', testRecordsStructureLagWithoutCompleting);
 

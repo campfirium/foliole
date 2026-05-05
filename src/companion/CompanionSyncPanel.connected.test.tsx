@@ -170,6 +170,19 @@ function testOlderFailuresAreNeutralAfterBacklogPass() {
   expect(oldFailure.className).not.toContain('text-error');
 }
 
+function testCurrentFailureShowsCause() {
+  render(
+    <CompanionSyncPanel
+      {...createConnectedProps()}
+      page="syncActivity"
+      syncEvents={[failedEvent()]}
+    />
+  );
+
+  expect(screen.getByText('Desktop sync timed out while fetching content blobs.')).toBeInTheDocument();
+  expect(screen.queryByText('Sync did not complete')).not.toBeInTheDocument();
+}
+
 describe('CompanionSyncPanel connected state', () => {
   it('shows a paired state without setup controls', testShowsPairedState);
   it('shows pending sync conflicts when the local database has them', testShowsPendingSyncConflicts);
@@ -178,4 +191,5 @@ describe('CompanionSyncPanel connected state', () => {
   it('shows older failures as neutral history after a later completed sync', testOlderFailuresAreNeutralAfterCompletedPass);
   it('shows a healthy backlog sync pass without claiming strict completion', testHealthyBacklogPassAvoidsStrictCompletion);
   it('shows older failures as neutral history after a later backlog sync pass', testOlderFailuresAreNeutralAfterBacklogPass);
+  it('shows the current failure cause in activity', testCurrentFailureShowsCause);
 });

@@ -28,6 +28,26 @@ function madeResourceProgress(result: Awaited<ReturnType<typeof syncCompanionObj
   return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
 }
 
+function formatSyncFailureMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : 'Desktop sync failed.';
+  if (message.includes('Failed to apply companion desktop sync pack.')) {
+    return `Topic list sync failed: ${message.replace('Failed to apply companion desktop sync pack.', '').trim() || 'Android could not apply the desktop sync pack.'}`;
+  }
+  if (message.includes('applying the structure pack')) {
+    return `Topic list sync failed: ${message}`;
+  }
+  if (message.includes('fetching topic bodies')) {
+    return `Topic body sync failed: ${message}`;
+  }
+  if (message.includes('fetching attachment resources')) {
+    return `Attachment file sync failed: ${message}`;
+  }
+  if (message.includes('pushing local review changes')) {
+    return `Local change upload failed: ${message}`;
+  }
+  return message;
+}
+
 export function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
   const remainingStructure = result.remainingStructureChangeCount ?? 0;
   const waitingLocalChanges =
@@ -120,7 +140,7 @@ export async function tryForegroundAutoSync(args: {
     return await runCompanionStreamSync({ ...args, endpointUrl }) ?? 'skipped';
   } catch (syncError) {
     if (args.cancelled()) return 'skipped';
-    const message = syncError instanceof Error ? syncError.message : 'Desktop sync failed.';
+    const message = formatSyncFailureMessage(syncError);
     args.setStatus('idle');
     args.setSyncProgress(null);
     const failedState = await recordCompanionWorkspaceSyncEvent({ endpointUrl, message, status: 'failed' }).catch(() => null);

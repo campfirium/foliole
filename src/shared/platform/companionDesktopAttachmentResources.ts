@@ -57,6 +57,16 @@ function buildAttachmentResourcePath(request: AttachmentResourceRequest) {
   return `${ATTACHMENT_RESOURCE_PATH}?${params.toString()}`;
 }
 
+async function buildSignedAttachmentResourceRequest(endpoint: string, request: AttachmentResourceRequest) {
+  const pathWithQuery = buildAttachmentResourcePath(request);
+  return {
+    attachment_id: request.attachmentId,
+    content_hash: request.contentHash,
+    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+    url: `${endpoint}${pathWithQuery}`
+  };
+}
+
 export async function syncCompanionAttachmentResourcesFromDesktop(
   endpointUrl: string,
   records: NativeSyncObjectRecord[]
@@ -82,17 +92,13 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   let failedAttachmentCount = 0;
   for (let index = 0; index < requests.length; index += ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT) {
     const chunk = requests.slice(index, index + ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT);
-    const results = await Promise.all(chunk.map((request) => syncAttachmentResourceRequest(endpoint, request)));
-    for (const result of results) {
-      if (result) {
-        syncedAttachmentIds.push(result);
-      } else {
-        failedAttachmentCount += 1;
-      }
+    const results = await syncAttachmentResourceRequestBatch(endpoint, chunk);
+    if (results.length === 0) {
+      failedAttachmentCount += chunk.length;
     }
-    const syncedChunkIds = results.filter((result): result is string => Boolean(result));
-    if (syncedChunkIds.length > 0) {
-      onSyncedChunk?.(syncedChunkIds);
+    syncedAttachmentIds.push(...results);
+    if (results.length > 0) {
+      onSyncedChunk?.(results);
     }
   }
   if (requests.length > 0 && failedAttachmentCount === requests.length) {
@@ -101,15 +107,24 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   return syncedAttachmentIds;
 }
 
-async function syncAttachmentResourceRequest(endpoint: string, request: AttachmentResourceRequest) {
-  const pathWithQuery = buildAttachmentResourcePath(request);
+async function syncAttachmentResourceRequestBatch(endpoint: string, requests: AttachmentResourceRequest[]) {
   try {
-    await FolioleCompanionSync.syncAttachmentResource({
-      attachment_id: request.attachmentId,
-      content_hash: request.contentHash,
-      headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
-      url: `${endpoint}${pathWithQuery}`
-    });
+    const resources = await Promise.all(requests.map((request) => buildSignedAttachmentResourceRequest(endpoint, request)));
+    const result = await FolioleCompanionSync.syncAttachmentResources({ resources });
+    return result.synced_attachment_ids;
+  } catch {
+    return syncAttachmentResourceRequestFallback(endpoint, requests);
+  }
+}
+
+async function syncAttachmentResourceRequestFallback(endpoint: string, requests: AttachmentResourceRequest[]) {
+  const results = await Promise.all(requests.map((request) => syncAttachmentResourceRequest(endpoint, request)));
+  return results.filter((result): result is string => Boolean(result));
+}
+
+async function syncAttachmentResourceRequest(endpoint: string, request: AttachmentResourceRequest) {
+  try {
+    await FolioleCompanionSync.syncAttachmentResource(await buildSignedAttachmentResourceRequest(endpoint, request));
     return request.attachmentId;
   } catch {
     return null;
