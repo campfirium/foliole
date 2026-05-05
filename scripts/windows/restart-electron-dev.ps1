@@ -486,6 +486,9 @@ function Get-StaleElectronRuntimeProcesses {
 
   $trackedPid = Get-TrackedRuntimePid
   $candidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)
+  if ($candidates.Count -eq 1) {
+    return @()
+  }
   if ($null -eq $trackedPid) {
     return $candidates
   }
@@ -976,7 +979,7 @@ function Stop-Electron {
 
 if ($Action -eq "status") {
   $tracked = Get-TrackedProcess
-  $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+  $runtime = Get-ElectronRuntimeProcess -WorkDir $WindowsWorkDir
   $runtimeSession = Get-TrackedRuntimeSession
   $runtimeHead = Get-TrackedRuntimeHead
   $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
@@ -986,28 +989,28 @@ if ($Action -eq "status") {
   }
   if ($null -ne $tracked) {
     if ($staleRuntimes.Count -gt 0) {
-      Write-Info "status: STOPPED reason=stale-runtime-detected shell_pid=$($tracked.Id) runtime_pid=$($staleRuntimes[0].Id)"
+      Write-Info "status: STOPPED trust=FAILED reason=stale-runtime-detected shell_pid=$($tracked.Id) runtime_pid=$($staleRuntimes[0].Id)"
     } elseif ($null -ne $runtime -and -not $runtimeTrust.ok) {
-      Write-Info "status: STOPPED reason=$($runtimeTrust.reason) shell_pid=$($tracked.Id) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
+      Write-Info "status: STOPPED trust=FAILED reason=$($runtimeTrust.reason) shell_pid=$($tracked.Id) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     } elseif ($null -ne $runtime) {
       $headInfo = ""
       if ($null -ne $runtimeHead) {
         $headInfo = " head=$runtimeHead"
       }
-      Write-Info "status: RUNNING pid=$($tracked.Id) runtime_pid=$($runtime.Id)$headInfo"
+      Write-Info "status: RUNNING trust=OK pid=$($tracked.Id) runtime_pid=$($runtime.Id)$headInfo"
     } else {
-      Write-Info "status: STOPPED reason=runtime-missing shell_pid=$($tracked.Id)"
+      Write-Info "status: STOPPED trust=FAILED reason=runtime-missing shell_pid=$($tracked.Id)"
     }
     exit 0
   }
 
   if ($staleRuntimes.Count -gt 0) {
-    Write-Info "status: STOPPED reason=stale-runtime-detected runtime_pid=$($staleRuntimes[0].Id)"
+    Write-Info "status: STOPPED trust=FAILED reason=stale-runtime-detected runtime_pid=$($staleRuntimes[0].Id)"
     exit 0
   }
 
   if ($null -ne $runtime -and -not $runtimeTrust.ok) {
-    Write-Info "status: STOPPED reason=$($runtimeTrust.reason) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
+    Write-Info "status: STOPPED trust=FAILED reason=$($runtimeTrust.reason) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     exit 0
   }
 
@@ -1016,11 +1019,11 @@ if ($Action -eq "status") {
     if ($null -ne $runtimeHead) {
       $headInfo = " head=$runtimeHead"
     }
-    Write-Info "status: RUNNING runtime_pid=$($runtime.Id)$headInfo"
+    Write-Info "status: RUNNING trust=OK runtime_pid=$($runtime.Id)$headInfo"
     exit 0
   }
 
-  Write-Info "status: STOPPED"
+  Write-Info "status: STOPPED trust=FAILED reason=no-runtime"
   exit 0
 }
 
@@ -1032,7 +1035,7 @@ if ($Action -eq "stop") {
 if ($Action -eq "start") {
   $tracked = Get-TrackedProcess
   if ($null -ne $tracked) {
-    $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+    $runtime = Get-ElectronRuntimeProcess -WorkDir $WindowsWorkDir
     $runtimeSession = Get-TrackedRuntimeSession
     $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
     $runtimeTrust = $null
@@ -1046,10 +1049,10 @@ if ($Action -eq "start") {
     }
     if ($null -ne $runtime) {
       if ($runtimeTrust.ok) {
-        Write-Info "status: RUNNING pid=$($tracked.Id) runtime_pid=$($runtime.Id)"
+        Write-Info "status: RUNNING trust=OK pid=$($tracked.Id) runtime_pid=$($runtime.Id)"
         exit 0
       }
-      Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeTrust.reason)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
+      Write-Info "discarded untrusted runtime trust=FAILED pid=$($runtime.Id) reason=$($runtimeTrust.reason)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     }
     Stop-Electron
     try {
@@ -1064,7 +1067,7 @@ if ($Action -eq "start") {
     exit 0
   }
 
-  $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+  $runtime = Get-ElectronRuntimeProcess -WorkDir $WindowsWorkDir
   $runtimeSession = Get-TrackedRuntimeSession
   $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
   $runtimeTrust = $null
@@ -1076,14 +1079,14 @@ if ($Action -eq "start") {
   }
   if ($null -ne $runtime) {
     if ($runtimeTrust.ok) {
-      Write-Info "status: RUNNING runtime_pid=$($runtime.Id)"
+      Write-Info "status: RUNNING trust=OK runtime_pid=$($runtime.Id)"
       exit 0
     }
     Stop-ProcessTree -ProcessId $runtime.Id
     Remove-TrackedRuntimePid
     Remove-TrackedRuntimeSession
     Remove-TrackedRuntimeHead
-    Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeTrust.reason)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
+    Write-Info "discarded untrusted runtime trust=FAILED pid=$($runtime.Id) reason=$($runtimeTrust.reason)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
   }
 
   try {
@@ -1100,7 +1103,7 @@ if ($Action -eq "start") {
 
 if ($Action -eq "restart") {
   $tracked = Get-TrackedProcess
-  $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+  $runtime = Get-ElectronRuntimeProcess -WorkDir $WindowsWorkDir
   $runtimeSession = Get-TrackedRuntimeSession
   $runtimeTrust = $null
   $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
@@ -1114,7 +1117,7 @@ if ($Action -eq "restart") {
   }
   if (($null -eq $runtime -and $null -ne $tracked) -or ($null -ne $runtime -and -not $runtimeTrust.ok)) {
     if ($null -ne $runtime -and -not $runtimeTrust.ok) {
-      Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeTrust.reason)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
+      Write-Info "discarded untrusted runtime trust=FAILED pid=$($runtime.Id) reason=$($runtimeTrust.reason)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     }
     Stop-Electron
     try {

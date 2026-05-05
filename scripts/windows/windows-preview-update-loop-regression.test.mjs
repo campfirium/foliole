@@ -194,7 +194,8 @@ describe('windows-preview update loop regressions', () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('reason: Class C: no trusted running client');
+      expect(result.stdout).toContain('reason: Class C: no trusted running client (no-runtime)');
+      expect(result.stdout).toContain('client status detail: status: STOPPED reason=no-runtime');
       expect(result.stdout).toContain('selected action: fallback-start');
       expect(result.stdout).not.toContain('selected action: restart-intent');
       expect(await readActions(actionLog)).toEqual(['status', 'start']);

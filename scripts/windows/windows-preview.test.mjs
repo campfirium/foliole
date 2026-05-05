@@ -283,7 +283,8 @@ describe('windows-preview script', () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('reason: Class C: no trusted running client');
+      expect(result.stdout).toContain('reason: Class C: no trusted running client (stale-runtime-detected)');
+      expect(result.stdout).toContain('client status detail: status: STOPPED reason=stale-runtime-detected');
       expect(result.stdout).toContain('selected action: fallback-start');
       expect(result.stdout).toContain('status: STARTED');
       expect(await readActions(actionLog)).toEqual(['status', 'start']);
@@ -320,7 +321,10 @@ describe('windows-preview script', () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('reason: Class C: no trusted running client');
+      expect(result.stdout).toContain('reason: Class C: no trusted running client (bridge-ready-missing)');
+      expect(result.stdout).toContain(
+        'client status detail: status: STOPPED reason=bridge-ready-missing shell_pid=400 runtime_pid=401 marker_pid=401'
+      );
       expect(result.stdout).toContain('selected action: fallback-start');
       expect(result.stdout).toContain('status: STARTED');
       expect(await readActions(actionLog)).toEqual(['status', 'start']);
@@ -356,7 +360,8 @@ describe('windows-preview script', () => {
       });
 
       expect(result.code).toBe(1);
-      expect(result.stdout).toContain('reason: Class C: no trusted running client');
+      expect(result.stdout).toContain('reason: Class C: no trusted running client (stale-runtime-detected)');
+      expect(result.stdout).toContain('client status detail: status: STOPPED reason=stale-runtime-detected');
       expect(result.stdout).toContain('selected action: fallback-start');
       expect(result.stdout).toContain('fallback start failed');
       expect(result.stdout).toContain('status: RUNNING head=old-head');

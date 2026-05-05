@@ -1,44 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/quality-gate-lib.sh"
+
 if [[ ! -f "package.json" ]]; then
   echo "[quality-gate-fast] package.json not found."
   exit 1
 fi
 
-pm="npm"
-if [[ -f "pnpm-lock.yaml" ]]; then
-  pm="pnpm"
-elif [[ -f "bun.lockb" || -f "bun.lock" ]]; then
-  pm="bun"
-elif [[ -f "yarn.lock" ]]; then
-  pm="yarn"
+pm="$(resolve_package_manager)"
+
+if quality_gate_should_print_step; then
+  echo "[quality-gate-fast] detected package manager: ${pm}"
 fi
-
-has_script() {
-  local script_name="$1"
-  node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts['$script_name'] ? 0 : 1)"
-}
-
-run_if_exists() {
-  local script_name="$1"
-  if has_script "$script_name"; then
-    if [[ "$pm" == "yarn" ]]; then
-      echo "[quality-gate-fast] running: yarn ${script_name}"
-      yarn "${script_name}"
-    else
-      echo "[quality-gate-fast] running: ${pm} run ${script_name}"
-      "${pm}" run "${script_name}"
-    fi
-  else
-    echo "[quality-gate-fast] missing script: ${script_name}"
-    exit 1
-  fi
-}
-
-echo "[quality-gate-fast] detected package manager: ${pm}"
-run_if_exists "lint"
-run_if_exists "typecheck"
-run_if_exists "test"
+run_quality_gate_script "quality-gate-fast" "${pm}" "lint"
+run_quality_gate_script "quality-gate-fast" "${pm}" "typecheck"
+run_quality_gate_script "quality-gate-fast" "${pm}" "test"
 
 echo "[quality-gate-fast] all checks passed."

@@ -51,7 +51,14 @@ function parseArgs(argv) {
 }
 
 async function runQualityGate() {
-  await runCommand('bash', ['scripts/quality-gate-fast.sh'], { cwd: REPO_ROOT, stdio: 'inherit' });
+  await runCommand('bash', ['scripts/quality-gate-fast.sh'], {
+    cwd: REPO_ROOT,
+    env: {
+      ...process.env,
+      QUALITY_GATE_LOG_MODE: process.env.QUALITY_GATE_LOG_MODE ?? 'fail-only'
+    },
+    stdio: 'inherit'
+  });
 }
 
 async function appendLoopFailureRecord(record) {

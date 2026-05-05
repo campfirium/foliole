@@ -30,6 +30,14 @@ extract_runtime_head() {
   printf '%s\n' "$1" | sed -n 's/.* head=\([^[:space:]]*\).*/\1/p' | head -n 1
 }
 
+extract_status_reason() {
+  printf '%s\n' "$1" | sed -n 's/.* reason=\([^[:space:]]*\).*/\1/p' | head -n 1
+}
+
+extract_status_detail() {
+  printf '%s\n' "$1" | sed -n 's/^\[windows-restart-client\] //p' | tail -n 1
+}
+
 has_committed_electron_changes_since() {
   local runtime_head="$1"
   if [ -n "${WINDOWS_PREVIEW_COMMITTED_ELECTRON_CHANGES:-}" ]; then
@@ -174,6 +182,9 @@ select_update_action() {
   local status_output=""
   local status_exit=0
   local runtime_head=""
+  local status_reason=""
+
+  SELECTED_STATUS_DETAIL=""
 
   set +e
   status_output="$(run_windows_client_action status)"
@@ -181,6 +192,7 @@ select_update_action() {
   set -e
 
   if [ "${status_exit}" -eq 0 ] && status_is_running "${status_output}"; then
+    SELECTED_STATUS_DETAIL="$(extract_status_detail "${status_output}")"
     runtime_head="$(extract_runtime_head "${status_output}")"
     if has_runtime_code_changes "${changed_files}"; then
       SELECTED_ACTION="restart-intent"
@@ -198,8 +210,14 @@ select_update_action() {
   fi
 
   if [ "${status_exit}" -eq 0 ] && status_is_stopped "${status_output}"; then
+    SELECTED_STATUS_DETAIL="$(extract_status_detail "${status_output}")"
+    status_reason="$(extract_status_reason "${status_output}")"
     SELECTED_ACTION="fallback-start"
-    SELECTED_REASON="Class C: no trusted running client"
+    if [ -n "${status_reason}" ]; then
+      SELECTED_REASON="Class C: no trusted running client (${status_reason})"
+    else
+      SELECTED_REASON="Class C: no trusted running client"
+    fi
     return 0
   fi
 
@@ -320,6 +338,9 @@ select_update_action "${changed_files}"
 
 echo "[windows-preview] step 3/3: apply update action"
 echo "[windows-preview] reason: ${SELECTED_REASON}"
+if [ -n "${SELECTED_STATUS_DETAIL:-}" ]; then
+  echo "[windows-preview] client status detail: ${SELECTED_STATUS_DETAIL}"
+fi
 
 case "${SELECTED_ACTION}" in
   sync-only)
