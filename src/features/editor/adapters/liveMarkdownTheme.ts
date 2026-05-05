@@ -3,6 +3,10 @@ import { EditorView } from '@codemirror/view';
 const TEXT_SELECTION_BACKGROUND_COLOR = 'var(--app-text-selection-bg-color)';
 const SHARED_HIGHLIGHT_SURFACE_COLOR = 'var(--app-highlight-surface-color)';
 const SHARED_CLOZE_SURFACE_COLOR = 'var(--app-cloze-surface-color)';
+const DIFF_ADDED_SURFACE_COLOR = 'var(--app-diff-added-surface-color)';
+const DIFF_ADDED_SPACER_COLOR = 'var(--app-diff-added-spacer-color)';
+const DIFF_REMOVED_SURFACE_COLOR = 'var(--app-diff-removed-surface-color)';
+const DIFF_REMOVED_SPACER_COLOR = 'var(--app-diff-removed-spacer-color)';
 
 export const liveMarkdownTheme = EditorView.theme({
   '&': { backgroundColor: 'transparent', height: '100%' },
@@ -33,11 +37,11 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-line.cm-line-frontmatter-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-line.cm-line-title-heading-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-line.cm-diff-line': { borderRadius: '0.35rem' },
-  '.cm-line.cm-diff-line-added': { backgroundColor: 'rgba(34, 197, 94, 0.16)' },
-  '.cm-line.cm-diff-line-removed': { backgroundColor: 'rgba(239, 68, 68, 0.14)' },
+  '.cm-line.cm-diff-line-added': { backgroundColor: DIFF_ADDED_SURFACE_COLOR },
+  '.cm-line.cm-diff-line-removed': { backgroundColor: DIFF_REMOVED_SURFACE_COLOR },
   '.cm-diff-spacer': { pointerEvents: 'none' },
-  '.cm-diff-spacer-added': { backgroundColor: 'rgba(34, 197, 94, 0.12)', borderRadius: '0.35rem' },
-  '.cm-diff-spacer-removed': { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.35rem' },
+  '.cm-diff-spacer-added': { backgroundColor: DIFF_ADDED_SPACER_COLOR, borderRadius: '0.35rem' },
+  '.cm-diff-spacer-removed': { backgroundColor: DIFF_REMOVED_SPACER_COLOR, borderRadius: '0.35rem' },
   '.cm-diff-spacer-line': { color: 'transparent', userSelect: 'none' },
   '.cm-md-syntax-visible': { color: 'var(--app-accent-color)', opacity: '0.74' },
   '.cm-md-frontmatter-summary': {

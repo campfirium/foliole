@@ -11,4 +11,5 @@ it('renders startup error messages as text content', () => {
   expect(rootElement.textContent).toContain(message);
   expect(rootElement.querySelector('img')).toBeNull();
   expect(rootElement.querySelector('[onerror]')).toBeNull();
+  expect(rootElement.querySelector('p')?.getAttribute('style')).toContain('rgb(var(--color-error))');
 });

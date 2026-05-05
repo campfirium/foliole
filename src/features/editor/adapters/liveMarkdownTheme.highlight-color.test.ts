@@ -40,6 +40,8 @@ it('uses dedicated selection, highlight, and cloze color tokens', () => {
   expect(cssText).toContain('-webkit-text-fill-color: inherit;');
   expect(cssText).toContain('var(--app-highlight-surface-color)');
   expect(cssText).toContain('var(--app-cloze-surface-color)');
+  expect(cssText).toContain('var(--app-diff-added-surface-color)');
+  expect(cssText).toContain('var(--app-diff-removed-surface-color)');
   expect(cssText).toContain('var(--app-accent-color)');
   expect(cssText).toContain('.cm-cursor');
   expect(cssText).toContain('border-left-color: var(--color-text-primary);');

@@ -10,11 +10,11 @@ export function renderStartupErrorView(rootElement: HTMLElement, message: string
   title.textContent = STARTUP_ERROR_TITLE;
 
   const messageElement = document.createElement('p');
-  messageElement.style.cssText = 'margin:0;color:#b91c1c;';
+  messageElement.style.cssText = 'margin:0;color:rgb(var(--color-error));';
   messageElement.textContent = message;
 
   const help = document.createElement('p');
-  help.style.cssText = 'margin:8px 0 0;color:#475569;';
+  help.style.cssText = 'margin:8px 0 0;color:var(--color-text-secondary);';
   help.textContent = STARTUP_ERROR_HELP;
 
   section.append(title, messageElement, help);
