@@ -1,5 +1,7 @@
 package com.foliole.android;
 
+import android.content.Context;
+
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
@@ -11,12 +13,13 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
     private FolioleCompanionSyncDiagnosticVerdicts() {}
 
     static JSArray build(
+        Context context,
         JSObject connection,
         JSObject storage,
         JSObject syncState,
         JSObject content,
         JSArray events
-    ) {
+    ) throws Exception {
         JSArray verdicts = new JSArray();
         if (connection.optString("endpoint_url", null) == null) {
             add(verdicts, "android_endpoint_missing", "warning", "This device has no desktop sync address.", connection);
@@ -24,7 +27,7 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
         if (!syncState.has("pack_cursor") || syncState.isNull("pack_cursor")) {
             add(verdicts, "android_pack_cursor_missing", "info", "This device has not applied a sync pack yet.", syncState);
         }
-        if (storage.optLong("active_node_count", 0) == 0 && hasCompletedEvent(events)) {
+        if (storage.optLong("active_node_count", 0) == 0 && hasCompletedEvent(context, events)) {
             add(verdicts, "android_no_nodes_after_completed_sync", "error", "Completed sync left no topics on this device.", storage);
         }
         if (content.optLong("missing_content_blob_count", 0) > 0) {
@@ -33,7 +36,7 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
         if (content.optLong("missing_attachment_resource_count", 0) > 0) {
             add(verdicts, "android_missing_attachment_resources", "info", "Some attachment files are still downloading.", content);
         }
-        JSONObject failed = recentFailedEvent(events);
+        JSONObject failed = recentFailedEvent(context, events);
         if (failed != null) {
             JSObject evidence = new JSObject();
             evidence.put("message", failed.optString("message"));
@@ -55,12 +58,13 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
         return verdicts;
     }
 
-    private static boolean hasCompletedEvent(JSArray events) {
+    private static boolean hasCompletedEvent(Context context, JSArray events) throws Exception {
+        String completedStatus = syncEventCompletedStatus(context);
         for (int index = 0; index < events.length(); index += 1) {
             JSONObject event = events.optJSONObject(index);
             if (
                 event != null &&
-                "completed".equals(event.optString("status")) &&
+                completedStatus.equals(event.optString("status")) &&
                 FULL_SYNC_COMPLETED_MESSAGE.equals(event.optString("message"))
             ) {
                 return true;
@@ -69,15 +73,30 @@ final class FolioleCompanionSyncDiagnosticVerdicts {
         return false;
     }
 
-    private static JSONObject recentFailedEvent(JSArray events) {
+    private static JSONObject recentFailedEvent(Context context, JSArray events) throws Exception {
+        String completedStatus = syncEventCompletedStatus(context);
+        String failedStatus = syncEventFallbackStatus(context);
+        String skippedStatus = syncEventSkippedStatus(context);
         for (int index = 0; index < events.length(); index += 1) {
             JSONObject event = events.optJSONObject(index);
             if (event == null) continue;
             String status = event.optString("status");
-            if ("failed".equals(status)) return event;
-            if ("completed".equals(status) || "skipped".equals(status)) return null;
+            if (failedStatus.equals(status)) return event;
+            if (completedStatus.equals(status) || skippedStatus.equals(status)) return null;
         }
         return null;
+    }
+
+    private static String syncEventCompletedStatus(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "completedStatus");
+    }
+
+    private static String syncEventFallbackStatus(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fallbackStatus");
+    }
+
+    private static String syncEventSkippedStatus(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "skippedStatus");
     }
 
     private static void add(JSArray verdicts, String code, String severity, String message, JSObject evidence) {

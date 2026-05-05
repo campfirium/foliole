@@ -30,7 +30,7 @@ final class FolioleCompanionSyncDiagnostics {
         JSArray events = loadEvents(context, database);
         result.put("content", content);
         result.put("events", events);
-        result.put("verdicts", FolioleCompanionSyncDiagnosticVerdicts.build(connection, storage, syncState, content, events));
+        result.put("verdicts", FolioleCompanionSyncDiagnosticVerdicts.build(context, connection, storage, syncState, content, events));
         return result;
     }
 
