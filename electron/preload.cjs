@@ -1,8 +1,13 @@
+const process = require('node:process');
 const { contextBridge, ipcRenderer } = require('electron');
 
 const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
+
+function isDesktopDebugProbeEnabled() {
+  return process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE === '1' || Boolean(process.env.ELECTRON_RENDERER_URL);
+}
 
 function subscribe(channel, handler) {
   if (channel !== IPC_MENU_EVENT_CHANNEL && channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL) {
@@ -23,8 +28,16 @@ function subscribe(channel, handler) {
   };
 }
 
-contextBridge.exposeInMainWorld('electronAPI', {
+const electronApi = {
   invoke: (command, args) => ipcRenderer.invoke(IPC_INVOKE_CHANNEL, { command, args }),
   onNativeMenuCommand: (handler) => subscribe(IPC_MENU_EVENT_CHANNEL, handler),
   onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler)
-});
+};
+
+if (isDesktopDebugProbeEnabled()) {
+  electronApi.debug = {
+    runtimeHead: process.env.FOLIOLE_RUNTIME_HEAD ?? null
+  };
+}
+
+contextBridge.exposeInMainWorld('electronAPI', electronApi);

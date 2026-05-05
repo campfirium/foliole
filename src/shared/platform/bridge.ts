@@ -1,19 +1,20 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
 import type { RuntimeAppPaths, RuntimeSystemFontCatalog } from './bridgePayloads';
 import { toRuntimeAppPaths, toRuntimeSystemFontCatalog } from './bridgePayloads';
 import { getElectronAPI } from './electronApi';
 import { isDesktopRuntime } from './runtime';
+import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
 const EXTERNAL_URL_WINDOW_FEATURES = 'noopener,noreferrer';
 
-export type RuntimeInvoke = NativeInvoke;
 export type NativeMenuUnlisten = (() => void) | null;
 export type WindowResizeUnlisten = (() => void) | null;
 
 export type { RuntimeAppPaths, RuntimeSystemFontCatalog } from './bridgePayloads';
+export { getRuntimeInvoke } from './runtimeInvoke';
+export type { RuntimeInvoke } from './runtimeInvoke';
 
 interface BootPayload {
   [key: string]: unknown;
@@ -23,13 +24,6 @@ declare global {
   interface Window {
     __FOLIOLE_APP_READY_REPORTED__?: boolean;
   }
-}
-
-export function getRuntimeInvoke(): RuntimeInvoke | null {
-  if (!isDesktopRuntime()) {
-    return null;
-  }
-  return getElectronAPI()?.invoke ?? null;
 }
 
 function getElectronBridge() {

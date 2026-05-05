@@ -48,6 +48,10 @@ export function createDesktopLaunchOptions(target, timeoutMs, env = process.env)
   return {
     args: [target.mainEntry],
     cwd: target.appRoot,
+    env: {
+      ...env,
+      FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE?.trim() || '1'
+    },
     executablePath: executablePath ? path.resolve(executablePath) : undefined,
     timeout: timeoutMs
   };

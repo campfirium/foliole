@@ -99,6 +99,10 @@ describe('playwright electron spike', () => {
       {
         args: ['/workspace/foliole/electron-dist/electron/main.js'],
         cwd: '/workspace/foliole',
+        env: {
+          FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS: '12345',
+          FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
+        },
         executablePath: undefined,
         timeout: 12_345
       }

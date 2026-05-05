@@ -41,6 +41,9 @@ describe('playwright desktop harness', () => {
     expect(createDesktopLaunchOptions(target, 12_345, {})).toEqual({
       args: ['/workspace/foliole/electron-dist/electron/main.js'],
       cwd: '/workspace/foliole',
+      env: {
+        FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
+      },
       executablePath: undefined,
       timeout: 12_345
     });
@@ -50,6 +53,10 @@ describe('playwright desktop harness', () => {
         FOLIOLE_ELECTRON_EXECUTABLE_PATH: '../Electron/electron.exe'
       })
     ).toMatchObject({
+      env: {
+        FOLIOLE_ELECTRON_EXECUTABLE_PATH: '../Electron/electron.exe',
+        FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
+      },
       executablePath: expect.stringMatching(/Electron\/electron\.exe$/),
       timeout: 9_999
     });
@@ -182,6 +189,10 @@ describe('playwright desktop harness', () => {
       {
         args: ['/workspace/foliole/electron-dist/electron/main.js'],
         cwd: '/workspace/foliole',
+        env: {
+          FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '12345',
+          FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
+        },
         executablePath: undefined,
         timeout: 12_345
       }

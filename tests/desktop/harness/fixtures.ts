@@ -21,7 +21,13 @@ export type DesktopSession = {
   close: () => Promise<void>;
   electronApp: ElectronApplication;
   firstWindow: Page;
-  launchOptions: { args: string[]; cwd: string; executablePath?: string; timeout: number };
+  launchOptions: {
+    args: string[];
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    executablePath?: string;
+    timeout: number;
+  };
   snapshot: { appName: string; appPath: string; isReady: boolean };
   target: DesktopLaunchTarget;
   timeoutMs: number;

@@ -7,6 +7,7 @@ import { App } from './app/App';
 import './app/styles.css';
 import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
 import { getRuntimeInvoke, reportRuntimeAppReady, reportRuntimeBootStage } from './shared/platform/bridge';
+import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
 
 const ROOT_ID = 'root';
 
@@ -123,5 +124,7 @@ async function bootstrap() {
     renderStartupError(message);
   }
 }
+
+installDesktopDebugProbe();
 
 void bootstrap();
