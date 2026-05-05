@@ -30,7 +30,7 @@ final class FolioleCompanionMetaRecords {
     static JSObject loadNumberCursor(Context context, SQLiteDatabase database, String key) throws Exception {
         JSObject result = new JSObject();
         int cursor = loadNumberCursorValue(context, database, key);
-        result.put(cursorPayloadKey(context, "cursor"), cursor <= 0 ? JSONObject.NULL : cursor);
+        result.put(FolioleCompanionSyncProtocolDefinitions.syncCursorCursorPayloadKey(context), cursor <= 0 ? JSONObject.NULL : cursor);
         return result;
     }
 
@@ -55,13 +55,13 @@ final class FolioleCompanionMetaRecords {
     static JSObject loadJsonCursor(Context context, SQLiteDatabase database, String key) throws Exception {
         JSObject result = new JSObject();
         String stored = loadValue(context, database, key);
-        result.put(cursorPayloadKey(context, "cursor"), stored == null ? JSONObject.NULL : new JSONObject(stored));
+        result.put(FolioleCompanionSyncProtocolDefinitions.syncCursorCursorPayloadKey(context), stored == null ? JSONObject.NULL : new JSONObject(stored));
         return result;
     }
 
     static JSObject saveJsonCursor(Context context, SQLiteDatabase database, String key, JSONObject cursor) throws Exception {
-        String createdAtKey = cursorPayloadKey(context, "createdAt");
-        String changeIdKey = cursorPayloadKey(context, "changeId");
+        String createdAtKey = FolioleCompanionSyncProtocolDefinitions.syncCursorCreatedAtPayloadKey(context);
+        String changeIdKey = FolioleCompanionSyncProtocolDefinitions.syncCursorChangeIdPayloadKey(context);
         if (cursor == null || cursor.isNull(createdAtKey) || cursor.isNull(changeIdKey)) {
             deleteValue(context, database, key);
         } else {
@@ -103,7 +103,4 @@ final class FolioleCompanionMetaRecords {
         return FolioleCompanionHostSupportMutationRules.companionMetaString(context, key);
     }
 
-    private static String cursorPayloadKey(Context context, String key) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncCursorPayloadKeys", key);
-    }
 }

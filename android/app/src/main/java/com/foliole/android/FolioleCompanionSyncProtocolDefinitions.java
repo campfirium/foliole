@@ -65,6 +65,22 @@ final class FolioleCompanionSyncProtocolDefinitions {
         return syncPluginRequestKey(context, "objectTypes");
     }
 
+    static String syncCursorChangeIdPayloadKey(Context context) throws Exception {
+        return syncCursorPayloadKey(context, "changeId");
+    }
+
+    static String syncCursorCreatedAtPayloadKey(Context context) throws Exception {
+        return syncCursorPayloadKey(context, "createdAt");
+    }
+
+    static String syncCursorCursorPayloadKey(Context context) throws Exception {
+        return syncCursorPayloadKey(context, "cursor");
+    }
+
+    private static String syncCursorPayloadKey(Context context, String key) throws Exception {
+        return stringValue(context, "syncCursorPayloadKeys", key);
+    }
+
     private static String syncPluginRequestKey(Context context, String key) throws Exception {
         return stringValue(context, "syncPluginRequestKeys", key);
     }

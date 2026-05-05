@@ -227,7 +227,10 @@ describe('Android sync push ack protocol rules', () => {
       createdAt: 'created_at',
       cursor: 'cursor'
     });
-    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncCursorPayloadKeys", key)');
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.syncCursorCursorPayloadKey(context)');
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.syncCursorCreatedAtPayloadKey(context)');
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.syncCursorChangeIdPayloadKey(context)');
+    expect(source).not.toContain('stringValue(context, "syncCursorPayloadKeys", key)');
     expect(source).not.toContain('result.put("cursor"');
     expect(source).not.toContain('cursor.isNull("created_at"');
     expect(source).not.toContain('cursor.getString("change_id"');
