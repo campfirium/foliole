@@ -160,7 +160,7 @@ final class FolioleCompanionSyncPackApply {
         try (Cursor cursor = database.rawQuery(
             "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM " +
                 applyableStateRowsSql(null) + " WHERE object_type IN (" +
-                "'node', 'external_document', 'node_reading', 'node_review', 'setting') ORDER BY state_seq ASC",
+                "'attachment', 'node', 'external_document', 'node_reading', 'node_review', 'setting') ORDER BY state_seq ASC",
             null
         )) {
             while (cursor.moveToNext()) {

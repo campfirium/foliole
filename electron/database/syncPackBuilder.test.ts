@@ -72,6 +72,29 @@ function insertNodeSyncState() {
   );
 }
 
+function insertAttachmentSyncState() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    ['att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:02:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO attachment_blobs (
+       attachment_id, content_hash, storage_key, size_bytes, mime_type,
+       availability, source_device_id, created_at, cached_at, last_verified_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['att-1', 'sha256:att-1', 'attachments/sha256-att-1.png', 12, 'image/png',
+      'local', 'desktop-fixture', '2026-04-27T00:02:00.000Z',
+      '2026-04-27T00:02:00.000Z', '2026-04-27T00:02:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('attachment', 'att-1', 3, 'attachment-hash', 'desktop', '2026-04-27T00:02:00.000Z', 1)`
+  );
+}
+
 function readPackRows(packPath: string) {
   const entries = readStoredZipEntries(packPath);
   const manifest = JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}');
@@ -166,6 +189,40 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
       object_id: 'user_space:windows:desktop:*:app_settings',
       object_type: 'setting',
       payload_json: expect.stringContaining('theme')
+    })]
+  });
+});
+
+it('packs attachment metadata as a generic sync object', async () => {
+  insertAttachmentSyncState();
+  const packPath = path.join(tempRoot, 'incoming-attachment.db');
+
+  const result = await buildDesktopSyncPack({
+    outputPath: packPath,
+    packId: 'pack-attachment-1',
+    fromStateSeq: 0
+  });
+
+  expect(result).toMatchObject({
+    objectCount: 1,
+    packId: 'pack-attachment-1',
+    toStateSeq: 3
+  });
+  expect(readPackRows(packPath)).toMatchObject({
+    manifest: expect.objectContaining({
+      tables: [
+        { name: 'sync_object_state', row_count: 1 },
+        { name: 'sync_objects', row_count: 1 },
+        { name: 'nodes', row_count: 0 },
+        { name: 'external_documents', row_count: 0 },
+        { name: 'content_blobs', row_count: 0 }
+      ]
+    }),
+    stateRows: [{ object_id: 'att-1', object_type: 'attachment', state_seq: 3 }],
+    syncObjects: [expect.objectContaining({
+      object_id: 'att-1',
+      object_type: 'attachment',
+      payload_json: expect.stringContaining('cover.png')
     })]
   });
 });

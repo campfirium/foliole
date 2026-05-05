@@ -24,7 +24,7 @@ export const SYNC_PACK_OBJECT_TYPES = new Set<SyncPackObjectType>(
   Object.keys(SYNC_PACK_OBJECT_TYPE_TABLES) as SyncPackObjectType[]
 );
 
-export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set(['node_reading', 'node_review', 'setting']);
+export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set(['attachment', 'node_reading', 'node_review', 'setting']);
 
 export function isSyncPackObjectType(value: string): value is SyncPackObjectType {
   return SYNC_PACK_OBJECT_TYPES.has(value as SyncPackObjectType);

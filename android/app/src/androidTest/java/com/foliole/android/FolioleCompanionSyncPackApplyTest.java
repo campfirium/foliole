@@ -141,6 +141,21 @@ public class FolioleCompanionSyncPackApplyTest {
         ));
     }
 
+    @Test
+    public void appliesAttachmentMetadataPayloadRowsFromIncomingPack() throws Exception {
+        createIncomingPack();
+        appendIncomingAttachmentRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(2, result.getInt("applied_object_count"));
+        assertEquals("cover.png", selectString("SELECT original_name FROM attachments WHERE id = 'att-1'"));
+        assertEquals("remote_known", selectString("SELECT availability FROM attachment_blobs WHERE attachment_id = 'att-1'"));
+        assertEquals("attachment-hash", selectString(
+            "SELECT content_hash FROM sync_object_state WHERE object_type = 'attachment' AND object_id = 'att-1'"
+        ));
+    }
+
     private void createMainSchema() {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
@@ -174,6 +189,16 @@ public class FolioleCompanionSyncPackApplyTest {
             "form_factor TEXT NOT NULL DEFAULT '*', device_id TEXT NOT NULL DEFAULT '*', " +
             "value_json TEXT NOT NULL, content_hash TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, " +
             "PRIMARY KEY (key, scope, platform, form_factor, device_id))");
+        mainDatabase.execSQL("CREATE TABLE attachments (" +
+            "id TEXT PRIMARY KEY, original_name TEXT, mime_type TEXT, size_bytes INTEGER NOT NULL DEFAULT 0, " +
+            "created_at TEXT NOT NULL)");
+        mainDatabase.execSQL("CREATE TABLE attachment_blobs (" +
+            "attachment_id TEXT PRIMARY KEY, content_hash TEXT, storage_key TEXT, size_bytes INTEGER NOT NULL DEFAULT 0, " +
+            "mime_type TEXT, availability TEXT NOT NULL DEFAULT 'remote_known', source_device_id TEXT, " +
+            "created_at TEXT NOT NULL, cached_at TEXT, last_verified_at TEXT)");
+        mainDatabase.execSQL("CREATE TABLE pdf_page_text (" +
+            "attachment_id TEXT NOT NULL, page INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', " +
+            "page_width REAL, page_height REAL, PRIMARY KEY (attachment_id, page))");
     }
 
     private void createIncomingPack() {
@@ -267,6 +292,26 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("INSERT INTO sync_object_state (" +
                 "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
                 "'setting', '" + objectId + "', 2, 'setting-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
+    private void appendIncomingAttachmentRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String now = "2026-04-27T00:07:00.000Z";
+            String payload = "{\"attachment_id\":\"att-1\",\"original_name\":\"cover.png\",\"mime_type\":\"image/png\"," +
+                "\"size_bytes\":12,\"created_at\":\"" + now + "\",\"blob\":{\"content_hash\":\"sha256:att-1\"," +
+                "\"storage_key\":\"attachments/sha256-att-1.png\",\"size_bytes\":12,\"mime_type\":\"image/png\"," +
+                "\"availability\":\"local\",\"source_device_id\":\"desktop-test\",\"created_at\":\"" + now + "\"}}";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":2}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("INSERT INTO sync_objects (" +
+                "object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (" +
+                "'attachment', 'att-1', 'attachment-hash', '" + payload + "', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'attachment', 'att-1', 2, 'attachment-hash', '" + now + "', NULL)");
         } finally {
             packDatabase.close();
         }
