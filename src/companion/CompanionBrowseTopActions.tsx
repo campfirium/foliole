@@ -91,9 +91,13 @@ function BrowseMenuHeader(props: {
 function BrowseMainMenu(props: {
   activeSortLabel: string;
   onOpenSort(): void;
+  onSync?: () => void;
+  syncDisabled?: boolean;
+  syncStatus?: string;
 }) {
   return (
     <>
+      <MenuRow disabled={props.syncDisabled} label="Sync" onSelect={props.onSync} status={props.syncStatus} />
       <MenuRow label="Sort" onSelect={props.onOpenSort} status={props.activeSortLabel} trailingIcon={ChevronRight} />
       <MenuRow disabled label="Theme" status="Not available yet" />
     </>
@@ -135,9 +139,12 @@ function CompanionBrowseMenuSheet(props: {
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
   onOpenChange(open: boolean): void;
+  onSync?: () => void;
   open: boolean;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
+  syncDisabled?: boolean;
+  syncStatus?: string;
 }) {
   const [view, setView] = useState<BrowseMenuView>('menu');
   const activeSortLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Last opened';
@@ -157,7 +164,13 @@ function CompanionBrowseMenuSheet(props: {
             <BrowseMenuHeader onBack={() => setView('menu')} view={view} />
             <div className="border-t border-companion-divider">
               {view === 'menu' ? (
-                <BrowseMainMenu activeSortLabel={activeSortLabel} onOpenSort={() => setView('sort')} />
+                <BrowseMainMenu
+                  activeSortLabel={activeSortLabel}
+                  onOpenSort={() => setView('sort')}
+                  onSync={props.onSync}
+                  syncDisabled={props.syncDisabled}
+                  syncStatus={props.syncStatus}
+                />
               ) : (
                 <BrowseSortMenu
                   onChangeSortDirection={props.onChangeSortDirection}
@@ -178,8 +191,11 @@ export function CompanionBrowseTopActions(props: {
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
   onOpenCapture(): void;
+  onSync?: () => void;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
+  syncDisabled?: boolean;
+  syncStatus?: string;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -191,9 +207,12 @@ export function CompanionBrowseTopActions(props: {
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}
         onOpenChange={setIsMenuOpen}
+        onSync={props.onSync}
         open={isMenuOpen}
         sortDirection={props.sortDirection}
         sortKey={props.sortKey}
+        syncDisabled={props.syncDisabled}
+        syncStatus={props.syncStatus}
       />
     </div>
   );

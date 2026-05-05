@@ -1,15 +1,31 @@
-import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 import type {
   FolderListSortDirection,
   FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
+import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
+import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
+
+type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
+
+function resolveBrowseSyncProps(workspaceSync: WorkspaceSync) {
+  const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state);
+  return {
+    onSync: endpointUrl
+      ? () => {
+          void workspaceSync.pullFromDesktop(endpointUrl);
+        }
+      : undefined,
+    syncDisabled: !endpointUrl || workspaceSync.status === 'syncing',
+    syncStatus: workspaceSync.status === 'syncing' ? 'Syncing' : endpointUrl ? undefined : 'Not connected'
+  };
+}
 
 export function useCompanionTopBarProps(args: {
   directorySelection: CompanionDirectorySelection;
@@ -27,7 +43,7 @@ export function useCompanionTopBarProps(args: {
   setSettingsPage(page: CompanionSettingsPage): void;
   settingsPage: CompanionSettingsPage;
   surface: ReturnType<typeof useCompanionArticleSurface>;
-  workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
+  workspaceSync: WorkspaceSync;
 }) {
   const backDirectorySelection = () => {
     const parentSelection = resolveDirectoryParentSelection({
@@ -37,6 +53,8 @@ export function useCompanionTopBarProps(args: {
     });
     if (parentSelection) args.resetDirectorySelection(parentSelection);
   };
+  const browseSync = resolveBrowseSyncProps(args.workspaceSync);
+
   return resolveCompanionTopBarProps(
     args.surface,
     args.settingsPage,
@@ -53,6 +71,9 @@ export function useCompanionTopBarProps(args: {
     },
     () => args.setIsCaptureSheetOpen(true),
     () => args.setIsOnlyReviewOpen(true),
+    browseSync.onSync,
+    browseSync.syncDisabled,
+    browseSync.syncStatus,
     () => args.setIsOnlyReviewOpen(false),
     () => args.surface.handleTabAction('recent'),
     () => args.setSettingsPage('list'),

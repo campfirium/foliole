@@ -69,6 +69,21 @@ describe('CompanionSyncPanel', () => {
       expect(props.onCheckDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
     });
   });
+
+  it('runs manual sync from a paired device sync page', async () => {
+    const props = {
+      ...createProps(),
+      pairingState: { ...createProps().pairingState, is_paired: true }
+    };
+
+    render(<CompanionSyncPanel {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
+
+    await waitFor(() => {
+      expect(props.onClearError).toHaveBeenCalledTimes(1);
+      expect(props.onPull).toHaveBeenCalledWith('http://10.0.2.2:38641');
+    });
+  });
 });
 
 describe('CompanionSyncPanel pairing states', () => {

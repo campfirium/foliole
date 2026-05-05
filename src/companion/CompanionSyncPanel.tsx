@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
@@ -7,6 +5,7 @@ import type { CompanionDesktopSyncProgress } from '../shared/platform/companionD
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
 import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
 import { CompanionSyncDiscoveryDialog } from './CompanionSyncDiscoveryDialog';
+import { AwaitingApprovalState, EmptyDiscoveryState } from './CompanionSyncSetupStates';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
@@ -54,129 +53,62 @@ function resolveDesktopDiscoveries(props: CompanionSyncPanelProps) {
   return props.desktopDiscoveries?.length ? props.desktopDiscoveries : props.desktopDiscovery ? [props.desktopDiscovery] : [];
 }
 
-function PrimaryAction(props: {
-  children: string;
-  disabled?: boolean;
-  onClick(): void;
-}) {
-  return (
-    <button
-      className="w-full rounded-2xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-      disabled={props.disabled}
-      onClick={props.onClick}
-      type="button"
-    >
-      {props.children}
-    </button>
-  );
-}
-
-function SyncStatusCard(props: {
-  children?: React.ReactNode;
-  detail?: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-border bg-canvas px-5 py-5 text-foreground">
-      <h3 className="text-lg font-semibold leading-tight">{props.title}</h3>
-      {props.detail ? <div className="mt-3 text-sm leading-6 text-accent">{props.detail}</div> : null}
-      {props.children ? <div className="mt-5">{props.children}</div> : null}
-    </div>
-  );
-}
-
 function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onOpenSettingsPage' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
   endpointUrl: string;
+  onSync(): void;
 }) {
   return (
-    <CompanionSyncStatusDetails
-      endpointUrl={props.endpointUrl}
-      lastSyncedAt={props.lastSyncedAt}
-      pairingState={props.pairingState}
-      status={props.status}
-      syncConflictCount={props.syncConflictCount}
-      syncEvents={props.syncEvents}
-      syncProgress={props.syncProgress}
-      page={props.page}
-      onOpenPage={props.onOpenSettingsPage}
-    />
+    <>
+      <CompanionSyncStatusDetails
+        endpointUrl={props.endpointUrl}
+        lastSyncedAt={props.lastSyncedAt}
+        pairingState={props.pairingState}
+        status={props.status}
+        syncConflictCount={props.syncConflictCount}
+        syncEvents={props.syncEvents}
+        syncProgress={props.syncProgress}
+        page={props.page}
+        onOpenPage={props.onOpenSettingsPage}
+      />
+      <button
+        className="w-full rounded-2xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+        disabled={props.status === 'syncing'}
+        onClick={props.onSync}
+        type="button"
+      >
+        {props.status === 'syncing' ? 'Syncing' : 'Sync'}
+      </button>
+    </>
   );
 }
 
-function useExpiryCountdown(expiresAtIso: string) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(timer);
-  }, [expiresAtIso]);
-  const expiresAt = new Date(expiresAtIso).getTime();
-  const remainingMs = Math.max(0, expiresAt - now);
-  const remainingSeconds = Math.ceil(remainingMs / 1000);
-  return { isExpired: remainingMs <= 0, remainingMs, remainingSeconds };
-}
-
-function AwaitingApprovalState(props: {
-  expiresAt: string;
-  onCancel(): void;
-}) {
-  const { isExpired, remainingMs, remainingSeconds } = useExpiryCountdown(props.expiresAt);
-  const totalWindowMs = 45_000;
-  const progressPct = Math.min(100, Math.max(0, (remainingMs / totalWindowMs) * 100));
-  return (
-    <SyncStatusCard
-      detail="Look at the desktop you're connecting to and tap Approve. We'll continue automatically as soon as you do."
-      title="Asking the desktop to allow this device"
-    >
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 text-sm text-foreground">
-          <span aria-hidden className="relative inline-flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground opacity-60" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-foreground" />
-          </span>
-          <span>
-            {isExpired
-              ? 'Request expired. Tap Cancel and try again.'
-              : `Waiting for approval... ${remainingSeconds}s left`}
-          </span>
-        </div>
-        <div
-          aria-hidden
-          className="h-1.5 w-full overflow-hidden rounded-full bg-bg-subtle"
-        >
-          <div
-            className="h-full rounded-full bg-foreground transition-all duration-500 ease-linear"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-        <button
-          className="w-full rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition hover:bg-bg-subtle"
-          onClick={props.onCancel}
-          type="button"
-        >
-          Cancel
-        </button>
-      </div>
-    </SyncStatusCard>
-  );
-}
-
-function EmptyDiscoveryState(props: {
-  disabled: boolean;
+function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onCancelPairing' | 'onOpenSettingsPage' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
+  endpointUrl: string;
+  isBusy: boolean;
+  isDiscovering: boolean;
+  onSync(): void;
   onTryAgain(): void;
 }) {
-  return (
-    <div className="text-center">
-      <h2 className="text-xl font-semibold leading-tight text-foreground">Bring content from another device</h2>
-      <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-accent">
-        First open Device sync on the device that already has your content, then allow this device to connect.
-      </p>
-      <div className="mt-6">
-        <PrimaryAction disabled={props.disabled} onClick={props.onTryAgain}>
-          {props.disabled ? 'Looking...' : 'Connect another device'}
-        </PrimaryAction>
-      </div>
-    </div>
-  );
+  if (props.pairingState.is_paired) {
+    return props.page === 'syncHandoff' ? null : (
+      <ConnectedState
+        endpointUrl={props.endpointUrl}
+        lastSyncedAt={props.lastSyncedAt}
+        pairingState={props.pairingState}
+        status={props.status}
+        syncConflictCount={props.syncConflictCount}
+        syncEvents={props.syncEvents}
+        syncProgress={props.syncProgress}
+        page={props.page}
+        onSync={props.onSync}
+        onOpenSettingsPage={props.onOpenSettingsPage}
+      />
+    );
+  }
+  if (props.pairingRequest) {
+    return <AwaitingApprovalState expiresAt={props.pairingRequest.expiresAt} onCancel={props.onCancelPairing} />;
+  }
+  return props.isDiscovering ? null : <EmptyDiscoveryState disabled={props.isBusy} onTryAgain={props.onTryAgain} />;
 }
 
 export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
@@ -196,31 +128,22 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
     await props.onRequestPairing(pairingEndpointUrl);
   }
 
+  async function handleSync() {
+    props.onClearError();
+    await props.onPull(endpointUrl);
+  }
+
   return (
     <section className="mb-8 px-5 py-5">
       <div className="flex flex-col gap-5">
-        {hasPairing ? (
-          props.page === 'syncHandoff' ? null : (
-            <ConnectedState
-              endpointUrl={endpointUrl}
-              lastSyncedAt={props.lastSyncedAt}
-              pairingState={props.pairingState}
-              status={props.status}
-              syncConflictCount={props.syncConflictCount}
-              syncEvents={props.syncEvents}
-              syncProgress={props.syncProgress}
-              page={props.page}
-              onOpenSettingsPage={props.onOpenSettingsPage}
-            />
-          )
-        ) : props.pairingRequest ? (
-          <AwaitingApprovalState
-            expiresAt={props.pairingRequest.expiresAt}
-            onCancel={props.onCancelPairing}
-          />
-        ) : isDiscovering ? null : (
-          <EmptyDiscoveryState disabled={isBusy} onTryAgain={() => void handleTryAgain()} />
-        )}
+        <MainSyncContent
+          {...props}
+          endpointUrl={endpointUrl}
+          isBusy={isBusy}
+          isDiscovering={isDiscovering}
+          onSync={() => void handleSync()}
+          onTryAgain={() => void handleTryAgain()}
+        />
         {props.error ? <p className="text-sm text-error">{props.error}</p> : null}
         {hasPairing && (props.page === 'sync' || props.page === 'syncHandoff') ? (
           <CompanionHandoffReminderSettingsPanel

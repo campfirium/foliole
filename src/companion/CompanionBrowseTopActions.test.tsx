@@ -29,3 +29,22 @@ it('opens sort choices from the browse menu sort row', () => {
   expect(within(sortDialog).getByText('Date modified')).toBeInTheDocument();
   expect(within(sortDialog).queryByText('Title')).not.toBeInTheDocument();
 });
+
+it('runs sync from the browse menu', () => {
+  const onSync = vi.fn();
+  render(
+    <CompanionBrowseTopActions
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
+      onOpenCapture={vi.fn()}
+      onSync={onSync}
+      sortDirection="desc"
+      sortKey="dateLastOpened"
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
+
+  expect(onSync).toHaveBeenCalledTimes(1);
+});

@@ -25,6 +25,9 @@ export function resolveCompanionTopBarProps(
   onOpenBrowseDirectory: () => void,
   onOpenAddSheet: () => void,
   onOpenOnlyReview: () => void,
+  onSyncBrowse: (() => void) | undefined,
+  syncDisabled: boolean,
+  syncStatus: string | undefined,
   onCloseOnlyReview: () => void,
   onExitReview: () => void,
   onBackToSettingsList: () => void,
@@ -44,7 +47,10 @@ export function resolveCompanionTopBarProps(
       onChangeBrowseSortDirection,
       onChangeBrowseSortKey,
       onOpenAddSheet,
-      onOpenBrowseDirectory
+      onOpenBrowseDirectory,
+      onSyncBrowse,
+      syncDisabled,
+      syncStatus
     });
   }
   if (surface.activeAction === 'search') return {};
@@ -75,14 +81,20 @@ function resolveBrowseTopBar(args: {
   onChangeBrowseSortKey: (sortKey: FolderListSortKey) => void;
   onOpenAddSheet: () => void;
   onOpenBrowseDirectory: () => void;
+  onSyncBrowse: (() => void) | undefined;
+  syncDisabled: boolean;
+  syncStatus: string | undefined;
 }) {
   const rightSlot = (
     <CompanionBrowseTopActions
       onChangeSortDirection={args.onChangeBrowseSortDirection}
       onChangeSortKey={args.onChangeBrowseSortKey}
       onOpenCapture={args.onOpenAddSheet}
+      onSync={args.onSyncBrowse}
       sortDirection={args.browseSortDirection}
       sortKey={args.browseSortKey}
+      syncDisabled={args.syncDisabled}
+      syncStatus={args.syncStatus}
     />
   );
   if (args.isBrowseDirectoryOpen) {
