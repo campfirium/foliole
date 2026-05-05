@@ -127,7 +127,6 @@ function AppearanceSupportingSections(props: ReturnType<typeof useAppearanceSect
 
   return (
     <>
-      <WorkspaceSurfaceColorSection />
       <NodeIconSettingsSection />
       <NodeListRowSpacingSection />
       <SettingsAppearanceFontSection
@@ -158,10 +157,11 @@ function AppearanceSupportingSections(props: ReturnType<typeof useAppearanceSect
   );
 }
 
-export function SettingsAppearanceSection() {
+export function SettingsAppearanceSection(props: { onEnterPreview: () => void }) {
   const state = useAppearanceSectionState();
   return (
     <>
+      <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <AppearanceColorSection {...state} />
       <AppearanceSupportingSections {...state} />
     </>

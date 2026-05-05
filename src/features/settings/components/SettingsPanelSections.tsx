@@ -55,6 +55,7 @@ export interface SettingsCategoryContentProps {
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+  onEnterPreview: () => void;
 }
 
 export function SettingsSidebar(props: {
@@ -171,7 +172,7 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     case 'editor':
       return <SettingsEditorSection />;
     case 'appearance':
-      return <SettingsAppearanceSection />;
+      return <SettingsAppearanceSection onEnterPreview={props.onEnterPreview} />;
     case 'mouse-gestures':
       return <SettingsMouseGesturesSection />;
     case 'library':

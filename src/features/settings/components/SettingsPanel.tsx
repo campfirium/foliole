@@ -102,9 +102,30 @@ type SettingsPanelCategoryProps = Omit<
   'hotkeyItems' | 'onHotkeyReset' | 'onHotkeyResetAll' | 'onHotkeyUpdate'
 >;
 
-function SettingsPanelBody(props: SettingsPanelBodyProps) {
-  const hotkeys = useHotkeySettings();
-  const categoryProps: SettingsPanelCategoryProps = {
+function useSettingsPreviewMode() {
+  const [isPreviewActive, setIsPreviewActive] = useState(false);
+
+  useEffect(() => {
+    if (!isPreviewActive) {
+      return undefined;
+    }
+    const stopPreview = () => setIsPreviewActive(false);
+    window.addEventListener('keydown', stopPreview, { once: true });
+    window.addEventListener('pointerdown', stopPreview, { once: true });
+    return () => {
+      window.removeEventListener('keydown', stopPreview);
+      window.removeEventListener('pointerdown', stopPreview);
+    };
+  }, [isPreviewActive]);
+
+  return { isPreviewActive, setIsPreviewActive };
+}
+
+function createSettingsCategoryProps(
+  props: SettingsPanelBodyProps,
+  setIsPreviewActive: (value: boolean) => void
+): SettingsPanelCategoryProps {
+  return {
     activeCategory: props.activeCategory,
     assetsPath: props.assetsPath,
     errorByLocation: props.errorByLocation,
@@ -134,18 +155,27 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
     onRestoreDefault: props.onRestoreDefault,
     onUpdateExternalSearchFolder: props.onUpdateExternalSearchFolder,
     pendingLocation: props.pendingLocation,
-    readwiseReaderCategoryContent: props.readwiseReaderCategoryContent
+    readwiseReaderCategoryContent: props.readwiseReaderCategoryContent,
+    onEnterPreview: () => setIsPreviewActive(true)
   };
+}
 
+function SettingsPanelDialog(props: {
+  categoryProps: SettingsPanelCategoryProps;
+  hotkeys: ReturnType<typeof useHotkeySettings>;
+  isPreviewActive: boolean;
+  onClose: () => void;
+  title: string;
+  description: string;
+  activeCategory: SettingsCategoryId;
+  setActiveCategory: (category: SettingsCategoryId) => void;
+}) {
   return (
     <AppDialog modal open onOpenChange={(open) => !open && props.onClose()}>
       <AppDialogPortal>
-        <AppDialogOverlay aria-label="Settings" onClick={props.onClose} role="presentation" />
-        <AppDialogContent
-          aria-label="Settings dialog"
-          aria-describedby={undefined}
-          className="grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[300px_minmax(0,1fr)] overflow-hidden rounded-2xl border-settings-outline bg-settings-shell shadow-settings"
-        >
+        <AppDialogOverlay aria-label="Settings" className={props.isPreviewActive ? 'bg-transparent' : undefined} onClick={props.isPreviewActive ? undefined : props.onClose} role="presentation" />
+        {props.isPreviewActive ? <div className="fixed inset-0 z-[80]" /> : null}
+        <AppDialogContent aria-label="Settings dialog" aria-describedby={undefined} className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[300px_minmax(0,1fr)] overflow-hidden rounded-2xl border-settings-outline bg-settings-shell shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}>
           <SettingsSidebar activeCategory={props.activeCategory} setActiveCategory={props.setActiveCategory} />
           <div className="app-scrollbar overflow-auto bg-settings-shell px-7 pb-7 pt-6">
             <header className="mb-3 min-h-[48px] border-b border-settings-divider px-1 pb-5">
@@ -153,10 +183,29 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
               <h2 className="text-[1.16rem] font-semibold text-foreground">{props.title}</h2>
               <p className="mt-2 max-w-[720px] text-[0.96rem] text-foreground/62">{props.description}</p>
             </header>
-            <SettingsCategoryContent {...categoryProps} {...hotkeys} />
+            <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} />
           </div>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
+  );
+}
+
+function SettingsPanelBody(props: SettingsPanelBodyProps) {
+  const hotkeys = useHotkeySettings();
+  const preview = useSettingsPreviewMode();
+  const categoryProps = createSettingsCategoryProps(props, preview.setIsPreviewActive);
+
+  return (
+    <SettingsPanelDialog
+      activeCategory={props.activeCategory}
+      categoryProps={categoryProps}
+      description={props.description}
+      hotkeys={hotkeys}
+      isPreviewActive={preview.isPreviewActive}
+      onClose={props.onClose}
+      setActiveCategory={props.setActiveCategory}
+      title={props.title}
+    />
   );
 }

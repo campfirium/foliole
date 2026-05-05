@@ -1,6 +1,8 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
+import { sanitizeWorkspaceSurfaceColor } from './workspaceSurfaceColor';
+
 export const WORKSPACE_SURFACE_REGION_IDS = [
   'titlebar-rail',
   'titlebar-folder',
@@ -54,11 +56,6 @@ const STORAGE_KEYS = {
   palette: APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette
 } as const;
 
-function normalizeHexColor(value: string, fallback: string) {
-  const match = /^#([0-9a-fA-F]{6})$/.exec(value.trim());
-  return match ? `#${match[1].toLowerCase()}` : fallback;
-}
-
 function clampAssignment(value: number, paletteLength: number) {
   if (paletteLength <= 0) {
     return 0;
@@ -72,7 +69,7 @@ function normalizePalette(input: unknown): WorkspaceSurfacePalette {
   }
   const normalized = input
     .filter((value): value is string => typeof value === 'string')
-    .map((value, index) => normalizeHexColor(value, DEFAULT_WORKSPACE_SURFACE_PALETTE[index] ?? DEFAULT_WORKSPACE_SURFACE_PALETTE[0]));
+    .map((value, index) => sanitizeWorkspaceSurfaceColor(value, DEFAULT_WORKSPACE_SURFACE_PALETTE[index] ?? DEFAULT_WORKSPACE_SURFACE_PALETTE[0]));
   return normalized.length > 0 ? normalized : [...DEFAULT_WORKSPACE_SURFACE_PALETTE];
 }
 
