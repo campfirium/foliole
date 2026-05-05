@@ -110,7 +110,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
                 if (contentHash == null) {
                     throw new IllegalStateException("Attachment manifest is missing.");
                 }
-                int updated = FolioleCompanionNamedMutationStore.executeChanged(
+                int updated = FolioleCompanionGeneratedMutationRunner.executeChanged(
                     context,
                     database,
                     mutationRule(context, "markCachedMutationName"),
@@ -154,7 +154,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
     }
 
     private static void markFailed(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
-        FolioleCompanionNamedMutationStore.executeChanged(
+        FolioleCompanionGeneratedMutationRunner.executeChanged(
             context,
             database,
             mutationRule(context, "markFailedMutationName"),

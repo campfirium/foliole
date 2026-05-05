@@ -11,7 +11,7 @@ final class FolioleCompanionDocumentSyncPayload {
 
     static void apply(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         if (!record.isNull(recordKey(context, "recordDeletedAtKey"))) {
-            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "markMissingMutationName"), new Object[] {
+            FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "markMissingMutationName"), new Object[] {
                 FolioleCompanionDocumentPayloadRules.deletedAt(context, record),
                 FolioleCompanionDocumentPayloadRules.updatedAt(context, record),
                 objectId
@@ -19,7 +19,7 @@ final class FolioleCompanionDocumentSyncPayload {
             return;
         }
         JSONObject payload = payload(record);
-        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "upsertMutationName"), new Object[] {
+        FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "upsertMutationName"), new Object[] {
             objectId,
             filePart(context, payload, "folderIdPayloadKey"),
             filePart(context, payload, "relativePathPayloadKey"),

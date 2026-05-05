@@ -104,7 +104,7 @@ final class FolioleCompanionDatabaseMigration {
 
     private static void insertLegacySyncObjectStateRow(Context context, SQLiteDatabase database, JSONObject row, int stateSeq) {
         try {
-            FolioleCompanionNamedMutationStore.execute(context, database, repairValue(context, "nextInsertMutationName"), new Object[] {
+            FolioleCompanionGeneratedMutationRunner.execute(context, database, repairValue(context, "nextInsertMutationName"), new Object[] {
                 row.getString(rowKey(context, "objectType")),
                 row.getString(rowKey(context, "objectId")),
                 stateSeq,

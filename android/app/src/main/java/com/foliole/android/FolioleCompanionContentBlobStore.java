@@ -48,7 +48,7 @@ final class FolioleCompanionContentBlobStore {
         String now = Instant.now().toString();
         database.beginTransaction();
         try {
-            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "dataReplaceMutationName"), new Object[] { hash, bytes });
+            FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "dataReplaceMutationName"), new Object[] { hash, bytes });
             int updated = markCachedRow(context, database, hash, now);
             if (updated <= 0) {
                 throw new IllegalStateException("Content blob manifest is missing.");
@@ -109,7 +109,7 @@ final class FolioleCompanionContentBlobStore {
     }
 
     private static int markCachedRow(Context context, SQLiteDatabase database, String hash, String now) throws Exception {
-        return FolioleCompanionNamedMutationStore.executeChanged(
+        return FolioleCompanionGeneratedMutationRunner.executeChanged(
             context,
             database,
             mutationRule(context, "markCachedMutationName"),
@@ -118,7 +118,7 @@ final class FolioleCompanionContentBlobStore {
     }
 
     private static void markFetching(Context context, SQLiteDatabase database, String hash) throws Exception {
-        int updated = FolioleCompanionNamedMutationStore.executeChanged(
+        int updated = FolioleCompanionGeneratedMutationRunner.executeChanged(
             context,
             database,
             mutationRule(context, "markFetchingMutationName"),
@@ -130,7 +130,7 @@ final class FolioleCompanionContentBlobStore {
     }
 
     private static void markFailed(Context context, SQLiteDatabase database, String hash) throws Exception {
-        FolioleCompanionNamedMutationStore.executeChanged(
+        FolioleCompanionGeneratedMutationRunner.executeChanged(
             context,
             database,
             mutationRule(context, "markFailedMutationName"),

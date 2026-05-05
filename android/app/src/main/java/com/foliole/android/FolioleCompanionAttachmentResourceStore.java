@@ -44,7 +44,7 @@ final class FolioleCompanionAttachmentResourceStore {
             }
             FolioleCompanionDesktopHttpClient.downloadToFile(requireText(url, "url"), headers, outputFile);
             String now = Instant.now().toString();
-            int updated = FolioleCompanionNamedMutationStore.executeChanged(
+            int updated = FolioleCompanionGeneratedMutationRunner.executeChanged(
                 context,
                 database,
                 mutationRule(context, "markCachedMutationName"),
@@ -64,7 +64,7 @@ final class FolioleCompanionAttachmentResourceStore {
     }
 
     private static void markFailed(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
-        FolioleCompanionNamedMutationStore.executeChanged(
+        FolioleCompanionGeneratedMutationRunner.executeChanged(
             context,
             database,
             mutationRule(context, "markFailedMutationName"),

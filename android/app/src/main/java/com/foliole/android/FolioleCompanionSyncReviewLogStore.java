@@ -52,7 +52,7 @@ final class FolioleCompanionSyncReviewLogStore {
 
     private static void insertReviewLog(Context context, SQLiteDatabase database, JSONObject record) throws Exception {
         String queryName = FolioleCompanionSyncStreamQueryRules.reviewLogQueryName(context);
-        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "insertMutationName"), new Object[] {
+        FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "insertMutationName"), new Object[] {
             recordString(context, queryName, record, "id", recordString(context, queryName, record, "op_id", "")),
             recordString(context, queryName, record, "op_id", ""),
             recordString(context, queryName, record, "device_id", ""),

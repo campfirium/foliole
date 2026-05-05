@@ -66,10 +66,10 @@ final class FolioleCompanionViewStateSyncStore {
         String activeKey = activeNodeKey(context);
         if (FolioleCompanionViewStatePayloadRules.isActiveDeleted(context, record)) {
             if (key.equals(activeKey)) {
-                FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "activeNodeDeleteMutationName"), new Object[] {});
+                FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "activeNodeDeleteMutationName"), new Object[] {});
             }
             if (FolioleCompanionSyncPayloadQueryStore.isViewNodeKey(context, key) && FolioleCompanionViewStatePayloadRules.isNodeDeleted(context, record)) {
-                FolioleCompanionNamedMutationStore.execute(
+                FolioleCompanionGeneratedMutationRunner.execute(
                     context,
                     database,
                     mutationRule(context, "nodeStateDeleteMutationName"),
@@ -102,11 +102,11 @@ final class FolioleCompanionViewStateSyncStore {
     }
 
     private static void writeSyncRows(Context context, SQLiteDatabase database, String objectId, String deviceId, String contentHash, JSONObject payload, String now) throws Exception {
-        FolioleCompanionNamedMutationStore.upsertSyncStateRow(context, database, syncObjectType(context), objectId, null, contentHash, deviceId, now, null, 1);
+        FolioleCompanionGeneratedMutationRunner.upsertSyncStateRow(context, database, syncObjectType(context), objectId, null, contentHash, deviceId, now, null, 1);
     }
 
     private static void upsertActiveNode(Context context, SQLiteDatabase database, String nodeId, String now) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "activeNodeUpsertMutationName"), new Object[] {
+        FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "activeNodeUpsertMutationName"), new Object[] {
             FolioleCompanionSyncPayloadQueryStore.viewActiveNodeWorkspaceMetaKey(context),
             nodeId == null ? "" : nodeId,
             now
@@ -114,7 +114,7 @@ final class FolioleCompanionViewStateSyncStore {
     }
 
     private static void upsertNodeViewState(Context context, SQLiteDatabase database, String nodeId, String deviceId, int scrollTop, String source, String now) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "nodeStateUpsertMutationName"), new Object[] {
+        FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "nodeStateUpsertMutationName"), new Object[] {
             nodeId,
             deviceId,
             Math.max(0, scrollTop),

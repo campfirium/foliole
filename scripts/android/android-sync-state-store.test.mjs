@@ -176,7 +176,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
       source.indexOf('private static JSONObject buildRecord')
     );
 
-    expect(writeStateBody).toContain('FolioleCompanionNamedMutationStore.upsertSyncStateRow');
+    expect(writeStateBody).toContain('FolioleCompanionGeneratedMutationRunner.upsertSyncStateRow');
     expect(writeStateBody).toContain(', 1)');
   });
 
@@ -202,7 +202,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
       source.indexOf('private static void upsertActiveNode')
     );
 
-    expect(writeStateBody).toContain('FolioleCompanionNamedMutationStore.upsertSyncStateRow');
+    expect(writeStateBody).toContain('FolioleCompanionGeneratedMutationRunner.upsertSyncStateRow');
     expect(writeStateBody).toContain(', 1)');
   });
 

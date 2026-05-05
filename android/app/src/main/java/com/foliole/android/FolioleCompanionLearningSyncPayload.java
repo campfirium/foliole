@@ -11,13 +11,13 @@ final class FolioleCompanionLearningSyncPayload {
     static void applyReading(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName();
         if (FolioleCompanionLearningPayloadRules.isDeleted(context, record, queryName)) {
-            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "readingDeleteMutationName"), new Object[] { objectId });
-            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "readingDeviceStateDeleteMutationName"), new Object[] { objectId });
+            FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "readingDeleteMutationName"), new Object[] { objectId });
+            FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "readingDeviceStateDeleteMutationName"), new Object[] { objectId });
             return;
         }
         JSONObject payload = payload(record);
         String updatedAt = FolioleCompanionLearningPayloadRules.updatedAt(context, record, queryName);
-        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "readingUpsertMutationName"), new Object[] {
+        FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "readingUpsertMutationName"), new Object[] {
             objectId,
             FolioleCompanionLearningPayloadRules.longValue(context, payload, queryName, "intervalDurationMsPayloadKey", "defaultIntervalDurationMs"),
             FolioleCompanionLearningPayloadRules.doubleValue(context, payload, queryName, "intervalGrowthFactorPayloadKey", "defaultIntervalGrowthFactor"),
@@ -28,7 +28,7 @@ final class FolioleCompanionLearningSyncPayload {
             FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "statePayloadKey", defaultReadingState(context))
         });
         if (FolioleCompanionLearningPayloadRules.has(context, payload, queryName, "readingPositionPayloadKey")) {
-            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "readingDeviceStateUpsertMutationName"), new Object[] {
+            FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "readingDeviceStateUpsertMutationName"), new Object[] {
                 objectId,
                 FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "deviceIdPayloadKey", defaultReadingDeviceId(context)),
                 FolioleCompanionLearningPayloadRules.longValue(context, payload, queryName, "readingPositionPayloadKey", "defaultReadingPosition"),
@@ -40,12 +40,12 @@ final class FolioleCompanionLearningSyncPayload {
     static void applyReview(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReviewPayloadQueryName();
         if (FolioleCompanionLearningPayloadRules.isDeleted(context, record, queryName)) {
-            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "reviewDeleteMutationName"), new Object[] { objectId });
+            FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "reviewDeleteMutationName"), new Object[] { objectId });
             return;
         }
         JSONObject payload = payload(record);
         String updatedAt = FolioleCompanionLearningPayloadRules.updatedAt(context, record, queryName);
-        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "reviewUpsertMutationName"), new Object[] {
+        FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "reviewUpsertMutationName"), new Object[] {
             objectId,
             FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "duePayloadKey", updatedAt),
             nullIfEmpty(FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "lastReviewAtPayloadKey", "")),

@@ -28,6 +28,12 @@ const ALLOWED_DIRECT_NAMED_QUERY = [
     text: 'FolioleCompanionNamedQueryStore.'
   }
 ];
+const ALLOWED_DIRECT_NAMED_MUTATION = [
+  {
+    file: 'FolioleCompanionGeneratedMutationRunner.java',
+    text: 'FolioleCompanionNamedMutationStore.'
+  }
+];
 
 function collectJavaFiles(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -70,6 +76,15 @@ function directNamedQueryLines(filePath) {
     .filter((entry) => entry.text.includes('FolioleCompanionNamedQueryStore.'));
 }
 
+function directNamedMutationLines(filePath) {
+  return fs
+    .readFileSync(filePath, 'utf8')
+    .split(/\r?\n/)
+    .map((line, index) => ({ file: relativeFile(filePath), line: index + 1, text: line.trim() }))
+    .filter((entry) => entry.file !== 'FolioleCompanionNamedMutationStore.java')
+    .filter((entry) => entry.text.includes('FolioleCompanionNamedMutationStore.'));
+}
+
 function isAllowedAccessLine(entry) {
   if (entry.file === 'FolioleCompanionNamedQueryStore.java') {
     return entry.text.includes('database.rawQuery(sql, args)');
@@ -84,15 +99,21 @@ function isAllowedDirectNamedQuery(entry) {
   return ALLOWED_DIRECT_NAMED_QUERY.some((allowed) => allowed.file === entry.file && entry.text.includes(allowed.text));
 }
 
+function isAllowedDirectNamedMutation(entry) {
+  return ALLOWED_DIRECT_NAMED_MUTATION.some((allowed) => allowed.file === entry.file && entry.text.includes(allowed.text));
+}
+
 describe('Android Java SQL surface', () => {
   it('keeps direct Java SQL limited to generated runners and runtime probes', () => {
     const files = collectJavaFiles(JAVA_ROOT);
     const unexpectedLiterals = files.flatMap(sqlLiterals).filter((entry) => !isAllowedSqlLiteral(entry));
     const unexpectedAccess = files.flatMap(interestingAccessLines).filter((entry) => !isAllowedAccessLine(entry));
     const unexpectedDirectNamedQuery = files.flatMap(directNamedQueryLines).filter((entry) => !isAllowedDirectNamedQuery(entry));
+    const unexpectedDirectNamedMutation = files.flatMap(directNamedMutationLines).filter((entry) => !isAllowedDirectNamedMutation(entry));
 
     expect(unexpectedLiterals).toEqual([]);
     expect(unexpectedAccess).toEqual([]);
     expect(unexpectedDirectNamedQuery).toEqual([]);
+    expect(unexpectedDirectNamedMutation).toEqual([]);
   });
 });

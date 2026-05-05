@@ -38,13 +38,13 @@ final class FolioleCompanionSyncPushAckStore {
                 String clientOpId = ack.optString("client_op_id", ack.optString("clientOpId"));
                 String objectType = identity.optString("objectType");
                 String objectId = identity.optString("objectId");
-                FolioleCompanionNamedMutationStore.execute(
+                FolioleCompanionGeneratedMutationRunner.execute(
                     context,
                     database,
                     mutationRule(context, "deleteIssuesMutationName"),
                     new Object[] { objectType, objectId }
                 );
-                FolioleCompanionNamedMutationStore.execute(
+                FolioleCompanionGeneratedMutationRunner.execute(
                     context,
                     database,
                     mutationRule(context, "upsertMutationName"),

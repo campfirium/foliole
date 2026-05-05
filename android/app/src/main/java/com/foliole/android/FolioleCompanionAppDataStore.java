@@ -23,7 +23,7 @@ final class FolioleCompanionAppDataStore {
             database.beginTransaction();
             try {
                 clearTables(context, database);
-                FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "deleteMetaExceptDeviceMutationName"), null);
+                FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "deleteMetaExceptDeviceMutationName"), null);
                 database.setTransactionSuccessful();
             } finally {
                 database.endTransaction();
@@ -34,12 +34,12 @@ final class FolioleCompanionAppDataStore {
     }
 
     private static void clearTables(Context context, SQLiteDatabase database) throws Exception {
-        JSONArray mutations = FolioleCompanionNamedMutationStore.appDataClearMutations(context);
+        JSONArray mutations = FolioleCompanionGeneratedMutationRunner.appDataClearMutations(context);
         for (int index = 0; index < mutations.length(); index += 1) {
             JSONObject mutation = mutations.getJSONObject(index);
             String table = mutation.getString("table");
             if (FolioleCompanionSqliteRuntime.tableExists(database, table)) {
-                FolioleCompanionNamedMutationStore.execute(context, database, mutation.getString("statementName"), null);
+                FolioleCompanionGeneratedMutationRunner.execute(context, database, mutation.getString("statementName"), null);
             }
         }
     }

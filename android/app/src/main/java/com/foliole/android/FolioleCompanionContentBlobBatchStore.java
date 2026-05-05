@@ -93,11 +93,11 @@ final class FolioleCompanionContentBlobBatchStore {
         CachedBlob blob,
         String now
     ) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "dataReplaceMutationName"), new Object[] {
+        FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "dataReplaceMutationName"), new Object[] {
             blob.hash,
             blob.bytes
         });
-        int updated = FolioleCompanionNamedMutationStore.executeChanged(
+        int updated = FolioleCompanionGeneratedMutationRunner.executeChanged(
             context,
             database,
             mutationRule(context, "markCachedMutationName"),

@@ -120,7 +120,7 @@ describe('schema inventory drift gate', () => {
   it('moves Android app data clear table order out of Java', async () => {
     const source = await readFile(COMPANION_APP_DATA_STORE, 'utf8');
 
-    expect(source).toContain('FolioleCompanionNamedMutationStore.appDataClearMutations(context)');
+    expect(source).toContain('FolioleCompanionGeneratedMutationRunner.appDataClearMutations(context)');
     expect(source).not.toContain('new ClearMutation("');
   });
 
