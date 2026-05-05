@@ -114,6 +114,13 @@ function buildProps() {
   };
 }
 
+function buildImageScrollProps() {
+  const built = buildProps();
+  vi.mocked(built.adapter.getContent).mockReturnValue('Alpha\n\n![Cover](asset://hash-1.png)\n\nGamma');
+  vi.mocked(built.adapter.getSelection).mockReturnValue({ from: 7, to: 35 });
+  return built;
+}
+
 function mountViewportHost() {
   const scroller = document.createElement('div');
   scroller.className = 'cm-scroller';
@@ -236,5 +243,35 @@ it('ignores the immediate scroll event caused by paragraph navigation', () => {
   });
 
   expect(props.getReadingPositionSelection()).toEqual({ from: 7, to: 7 });
+  expect(adapter.setSelection).not.toHaveBeenCalled();
+});
+
+it('ignores whitespace viewport samples while an image block is selected', () => {
+  const { adapter, props, triggerScroll } = buildImageScrollProps();
+  mountViewportHost();
+  vi.mocked(adapter.getPrimaryVisiblePosition).mockReturnValue(36);
+  renderHook(() => useImmersiveReadingMode(props));
+  vi.mocked(adapter.setSelection).mockClear();
+
+  act(() => {
+    triggerScroll();
+  });
+
+  expect(props.getReadingPositionSelection()).toBeNull();
+  expect(adapter.setSelection).not.toHaveBeenCalled();
+});
+
+it('ignores image-adjacent viewport samples that drift outside the selected image block', () => {
+  const { adapter, props, triggerScroll } = buildImageScrollProps();
+  mountViewportHost();
+  vi.mocked(adapter.getPrimaryVisiblePosition).mockReturnValue(0);
+  renderHook(() => useImmersiveReadingMode(props));
+  vi.mocked(adapter.setSelection).mockClear();
+
+  act(() => {
+    triggerScroll();
+  });
+
+  expect(props.getReadingPositionSelection()).toBeNull();
   expect(adapter.setSelection).not.toHaveBeenCalled();
 });

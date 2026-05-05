@@ -9,10 +9,15 @@ import {
 } from './immersiveReadingApplying';
 import {
   clearParagraphMarker,
-  getReadingPositionSelection,
   getViewportReadingSelection,
   syncParagraphMarkerToReadingPosition
 } from './immersiveReadingMarker';
+import {
+  captureReadingSelection,
+  commitReadingSelectionUpdate,
+  resolveStoredReadingSelection,
+  shouldIgnoreWhitespaceViewportSample
+} from './immersiveReadingScrollSyncSupport';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
 export function useImmersiveParagraphMarkerSync(props: WorkspaceLayoutProps, isImmersiveEditing: boolean) {
@@ -48,22 +53,6 @@ export function useImmersiveScrollSync(
       unsubscribe();
     };
   }, [getReadingSelection, isImmersiveEditing, props, setReadingSelection, shouldSkipNextScrollSyncRef]);
-}
-
-function resolveStoredReadingSelection(props: WorkspaceLayoutProps) {
-  const applyingSelection = getCurrentApplyingSelection(props);
-  if (applyingSelection) {
-    return applyingSelection;
-  }
-  const runtimeSelection = props.getReadingPositionSelection();
-  if (runtimeSelection) {
-    return runtimeSelection;
-  }
-  const editor = props.editorAdapterRef.current;
-  if (!editor) {
-    return getReadingPositionSelection(props, { from: 0, to: 0 });
-  }
-  return getReadingPositionSelection(props, editor.getSelection());
 }
 
 export function useImmersiveEntrySelectionSync(
@@ -156,73 +145,25 @@ function syncViewportReadingSelection(
     return;
   }
   const previousSelection = getReadingSelection();
+  if (!props.isImmersiveMode || (previousSelection.from === selection.from && previousSelection.to === selection.to)) {
+    return;
+  }
+  if (shouldIgnoreWhitespaceViewportSample(editor, selection)) {
+    pushDebugTrace('immersive.scroll-sync.ignored-whitespace-sample', {
+      isImmersiveMode: props.isImmersiveMode,
+      selection
+    });
+    return;
+  }
   setReadingSelection(selection, 'scroll-sync');
   pushDebugTrace('immersive.scroll-sync.selection-updated', {
     isImmersiveMode: props.isImmersiveMode,
     previousSelection,
     selection
   });
-  if (!props.isImmersiveMode || (previousSelection.from === selection.from && previousSelection.to === selection.to)) {
-    return;
-  }
   editor.setSelection(selection);
   syncParagraphMarkerToReadingPosition(props);
 }
-
-function commitReadingSelectionUpdate(args: {
-  props: WorkspaceLayoutProps;
-  readingSelectionRef: MutableRefObject<{ from: number; to: number }>;
-  selection: { from: number; to: number };
-  source: string;
-}) {
-  const applyingSelection = getCurrentApplyingSelection(args.props);
-  if (
-    applyingSelection &&
-    (applyingSelection.from !== args.selection.from || applyingSelection.to !== args.selection.to)
-  ) {
-    pushDebugTrace('immersive.reading-selection.rejected-applying', {
-      activeNodeId: args.props.activeNodeId,
-      selection: args.selection,
-      source: args.source,
-      targetSelection: applyingSelection
-    });
-    return false;
-  }
-  args.readingSelectionRef.current = args.selection;
-  args.props.setReadingPositionSelection(args.selection);
-  pushDebugTrace('immersive.reading-selection.updated', {
-    activeNodeId: args.props.activeNodeId,
-    selection: args.selection,
-    source: args.source
-  });
-  return true;
-}
-
-function captureReadingSelection(args: {
-  pendingSelectionRef: MutableRefObject<{ from: number; to: number } | null>;
-  props: WorkspaceLayoutProps;
-  readingSelectionRef: MutableRefObject<{ from: number; to: number }>;
-}) {
-  const selection = getViewportReadingSelection(args.props);
-  if (!selection) {
-    pushDebugTrace('immersive.capture-selection.skip-missing-selection', {
-      activeNodeId: args.props.activeNodeId
-    });
-    return;
-  }
-  commitReadingSelectionUpdate({
-    props: args.props,
-    readingSelectionRef: args.readingSelectionRef,
-    selection,
-    source: 'capture-viewport'
-  });
-  args.pendingSelectionRef.current = selection;
-  pushDebugTrace('immersive.capture-selection.updated', {
-    activeNodeId: args.props.activeNodeId,
-    selection
-  });
-}
-
 
 export function useReadingSelectionState(
   props: WorkspaceLayoutProps
