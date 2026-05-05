@@ -15,6 +15,8 @@ import { buildPaletteState, useCurrentReviewPreview } from './appControllerHelpe
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
 import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createPaletteCommandRunner } from './appPaletteCommandRunner';
+import type { AppSearchState } from './appSearchState';
+import { buildControllerSearchState } from './appSearchState';
 import { countDueReviewNodes } from './layoutPropsBuilder';
 import {
   isReviewShortcutCommand,
@@ -44,6 +46,7 @@ export interface AppControllerResult {
   };
   layoutProps: WorkspaceLayoutProps;
   paletteState: AppPaletteState;
+  searchState: AppSearchState;
 }
 
 function buildControllerPaletteState(args: {
@@ -143,6 +146,7 @@ function useReviewEditingState(args: {
   return useReviewKeyboardShortcuts({
     isStudyMode: args.isStudyMode,
     isCommandPaletteOpen: args.runtime.isCommandPaletteOpen,
+    isSearchPaletteOpen: args.runtime.isSearchPaletteOpen,
     isSettingsOpen: args.runtime.isSettingsOpen,
     reviewCurrentNodeId: args.ws.reviewSession.currentNodeId,
     isAnswerRevealed: args.ws.reviewSession.isAnswerRevealed,
@@ -242,6 +246,7 @@ export function useAppController(): AppControllerResult {
     trash: controller.trash,
     ws
   });
+  const searchState = buildControllerSearchState({ runtime: controller.runtime, trash: controller.trash, ws });
 
   useNativeCommandMenu(paletteState.items, paletteState.onRunCommand);
   const hotkeySettings = {
@@ -254,6 +259,7 @@ export function useAppController(): AppControllerResult {
   return {
     hotkeySettings,
     layoutProps,
-    paletteState
+    paletteState,
+    searchState
   };
 }

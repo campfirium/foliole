@@ -1,6 +1,7 @@
 import type { NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
+import type { AppSearchState } from './appSearchState';
 import type { AppPaletteState } from './useAppController';
 import { useReviewPreview } from './useReviewPreview';
 
@@ -12,6 +13,17 @@ export function buildPaletteState(
   onRunCommand: (id: string) => void
 ): AppPaletteState {
   return { isOpen, items, recentCommandIds, onClose, onRunCommand };
+}
+
+export function buildSearchState(
+  isOpen: boolean,
+  nodeOrder: string[],
+  nodesById: AppSearchState['nodesById'],
+  trashedNodeIds: string[],
+  onClose: () => void,
+  onOpenNode: (nodeId: string) => void
+): AppSearchState {
+  return { isOpen, nodeOrder, nodesById, onClose, onOpenNode, trashedNodeIds };
 }
 
 type WorkspaceSelectors = {

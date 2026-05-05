@@ -7,6 +7,7 @@ import { onWindowKeydown } from '../../shared/platform/keyboard';
 interface UseReviewKeyboardShortcutsArgs {
   isStudyMode: boolean;
   isCommandPaletteOpen: boolean;
+  isSearchPaletteOpen: boolean;
   isSettingsOpen: boolean;
   reviewCurrentNodeId: string | null;
   isAnswerRevealed: boolean;
@@ -102,7 +103,7 @@ function handleReviewKeydown(
   isReviewEditing: boolean,
   setIsReviewEditing: (value: boolean) => void
 ) {
-  if (!args.isStudyMode || args.isCommandPaletteOpen || args.isSettingsOpen) {
+  if (!args.isStudyMode || args.isCommandPaletteOpen || args.isSearchPaletteOpen || args.isSettingsOpen) {
     return;
   }
   if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.isComposing || event.repeat) {

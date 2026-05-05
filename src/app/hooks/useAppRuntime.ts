@@ -32,6 +32,15 @@ export function isCommandPaletteToggleShortcut(event: CommandPaletteToggleShortc
   );
 }
 
+export function isSearchPaletteToggleShortcut(event: CommandPaletteToggleShortcutEvent) {
+  return (
+    (event.metaKey || event.ctrlKey) &&
+    !event.altKey &&
+    !event.shiftKey &&
+    event.key.toLowerCase() === 'k'
+  );
+}
+
 export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
   const editorRef = useRef<EditorAdapter | null>(null);
   const lastExpandedListWidthRef = useRef(initialListWidth);
@@ -39,6 +48,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isSearchPaletteOpen, setIsSearchPaletteOpen] = useState(false);
   const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
   const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
 
@@ -52,7 +62,14 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
         }
         if (isCommandPaletteToggleShortcut(event)) {
           event.preventDefault();
+          setIsSearchPaletteOpen(false);
           setIsCommandPaletteOpen((open) => !open);
+          return;
+        }
+        if (isSearchPaletteToggleShortcut(event)) {
+          event.preventDefault();
+          setIsCommandPaletteOpen(false);
+          setIsSearchPaletteOpen((open) => !open);
         }
       }),
     []
@@ -70,6 +87,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     editorRef,
     isCommandPaletteOpen,
     isImportManagementOpen,
+    isSearchPaletteOpen,
     isSettingsOpen,
     isViewingTrashNode,
     lastExpandedListWidthRef,
@@ -78,6 +96,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     recordRecentCommand,
     setIsCommandPaletteOpen,
     setIsImportManagementOpen,
+    setIsSearchPaletteOpen,
     setIsSettingsOpen,
     setIsViewingTrashNode
   };

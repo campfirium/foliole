@@ -4,6 +4,7 @@ import { MouseGestureSettingsProvider } from '../features/settings/context/Mouse
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 
 import { CommandPalette } from './components/CommandPalette';
+import { SearchPalette } from './components/SearchPalette';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { useAppController } from './hooks/useAppController';
 
@@ -14,6 +15,7 @@ function AppContent() {
       <>
         <WorkspaceLayout {...controller.layoutProps} />
         <CommandPalette {...controller.paletteState} />
+        <SearchPalette {...controller.searchState} />
       </>
     </HotkeySettingsProvider>
   );
