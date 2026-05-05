@@ -1,6 +1,9 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
+import { parseAnchorBlocks } from '../model/anchorBlocks';
+import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
+
 const CODE_FENCE_PATTERN = /^\s*`{3,}/;
 const PREFIX_PATTERN = /^\s*(#{1,6}\s*|[-*+]\s+|\d+\.\s+|>\s?)/;
 const INLINE_TOKEN_PATTERN = /(\*\*|__|~~|`+|!\[|\[|\]\(|\]|\(|\))/g;
@@ -61,7 +64,7 @@ function addPrefixDecoration(
   ranges: Range<Decoration>[],
   from: number,
   text: string,
-  isCursorLine: boolean
+  showSyntax: boolean
 ) {
   const prefixMatch = text.match(PREFIX_PATTERN);
   if (!prefixMatch) {
@@ -69,7 +72,7 @@ function addPrefixDecoration(
   }
 
   const prefixLength = prefixMatch[0].length;
-  if (isCursorLine) {
+  if (showSyntax) {
     addMark(ranges, from, from + prefixLength, 'cm-md-syntax-visible');
     return;
   }
@@ -81,7 +84,7 @@ function addInlineTokenDecorations(
   from: number,
   text: string,
   inCodeBlock: boolean,
-  isCursorLine: boolean
+  showSyntax: boolean
 ) {
   if (inCodeBlock) {
     return;
@@ -91,7 +94,7 @@ function addInlineTokenDecorations(
 
   while (tokenMatch) {
     const tokenFrom = from + tokenMatch.index;
-    if (isCursorLine) {
+    if (showSyntax) {
       addMark(ranges, tokenFrom, tokenFrom + tokenMatch[0].length, 'cm-md-syntax-visible');
     } else {
       addReplace(ranges, tokenFrom, tokenFrom + tokenMatch[0].length);
@@ -122,8 +125,7 @@ function addSemanticMarkDecorations(
   ranges: Range<Decoration>[],
   from: number,
   text: string,
-  inCodeBlock: boolean,
-  isCursorLine: boolean
+  inCodeBlock: boolean
 ) {
   if (inCodeBlock) {
     return;
@@ -136,13 +138,8 @@ function addSemanticMarkDecorations(
     const contentFrom = start + 2;
     const contentTo = start + matchText.length - 2;
     addMark(ranges, contentFrom, contentTo, 'cm-md-highlight');
-    if (isCursorLine) {
-      addMark(ranges, start, start + 2, 'cm-md-syntax-visible');
-      addMark(ranges, contentTo, contentTo + 2, 'cm-md-syntax-visible');
-    } else {
-      addReplace(ranges, start, start + 2);
-      addReplace(ranges, contentTo, contentTo + 2);
-    }
+    addReplace(ranges, start, start + 2);
+    addReplace(ranges, contentTo, contentTo + 2);
     highlightMatch = INLINE_HIGHLIGHT_PATTERN.exec(text);
   }
   INLINE_HIGHLIGHT_PATTERN.lastIndex = 0;
@@ -154,16 +151,21 @@ function addSemanticMarkDecorations(
     const contentFrom = start + 2;
     const contentTo = start + matchText.length - 2;
     addMark(ranges, contentFrom, contentTo, 'cm-md-cloze');
-    if (isCursorLine) {
-      addMark(ranges, start, start + 2, 'cm-md-syntax-visible');
-      addMark(ranges, contentTo, contentTo + 2, 'cm-md-syntax-visible');
-    } else {
-      addReplace(ranges, start, start + 2);
-      addReplace(ranges, contentTo, contentTo + 2);
-    }
+    addReplace(ranges, start, start + 2);
+    addReplace(ranges, contentTo, contentTo + 2);
     clozeMatch = INLINE_CLOZE_PATTERN.exec(text);
   }
   INLINE_CLOZE_PATTERN.lastIndex = 0;
+}
+
+function addAnchorTagDecorations(ranges: Range<Decoration>[], content: string) {
+  const { blocks } = parseAnchorBlocks(content);
+
+  for (const block of blocks) {
+    addReplace(ranges, block.openTagFrom, block.openTagTo);
+    addReplace(ranges, block.closeTagFrom, block.closeTagTo);
+    addMark(ranges, block.contentFrom, block.contentTo, block.kind === 'highlight' ? 'cm-md-highlight' : 'cm-md-cloze');
+  }
 }
 
 function getCursorLineNumber(view: EditorView) {
@@ -176,6 +178,10 @@ function getCursorLineNumber(view: EditorView) {
 
 function buildLineDecorations(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
+  const content = view.state.doc.toString();
+  addAnchorTagDecorations(ranges, content);
+
+  const showMarkdownSyntax = getMarkdownSyntaxVisibility() === 'visible';
   const cursorLineNumber = getCursorLineNumber(view);
   let inCodeBlock = false;
 
@@ -183,15 +189,16 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     const line = view.state.doc.line(lineNumber);
     const lineClass = createLineClass(line.text, inCodeBlock);
     const isCursorLine = cursorLineNumber !== null && lineNumber === cursorLineNumber;
+    const showSyntaxOnLine = showMarkdownSyntax && isCursorLine;
 
     if (lineClass) {
       addLine(ranges, line.from, lineClass);
     }
 
-    addPrefixDecoration(ranges, line.from, line.text, isCursorLine);
-    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, isCursorLine);
+    addPrefixDecoration(ranges, line.from, line.text, showSyntaxOnLine);
+    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, showSyntaxOnLine);
     addStrongTextDecorations(ranges, line.from, line.text, inCodeBlock);
-    addSemanticMarkDecorations(ranges, line.from, line.text, inCodeBlock, isCursorLine);
+    addSemanticMarkDecorations(ranges, line.from, line.text, inCodeBlock);
 
     if (CODE_FENCE_PATTERN.test(line.text)) {
       inCodeBlock = !inCodeBlock;
