@@ -2,15 +2,20 @@ import path from 'node:path';
 
 import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
+import { renderMarkedSource, stripLeadingMatchingHeading } from './articleMirrorMarkup.js';
+import {
+  compactNoteText,
+  normalizeClozeComparableText,
+  normalizeComparableText,
+  preserveNoteLines,
+  stripAnchorTags
+} from './articleMirrorText.js';
+import { collectArticleData } from './articleMirrorTree.js';
 import {
   createRootReservedDirectoryNames,
   resolveArticleDirectory
 } from './mirrorTargetDirectories.js';
-
-const INBOX_NODE_ID = 'special-inbox';
-const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 const INLINE_ANCHOR_PATTERN = /<(highlight|cloze)\s+id="([^"]+)">([\s\S]*?)<\/\1 id="\2">/g;
-
 type ArticleNode = WorkspaceSnapshot['nodesById'][string];
 
 export interface ArticleMirrorTarget {
@@ -19,24 +24,6 @@ export interface ArticleMirrorTarget {
   relativePath: string;
   sourceUpdatedAt: string;
   targetPath: string;
-}
-
-function stripAnchorTags(value: string) {
-  return value.replace(ANCHOR_TAG_PATTERN, '');
-}
-
-function normalizeComparableText(value: string | null | undefined) {
-  return stripAnchorTags(value ?? '')
-    .replace(/\r\n?/g, '\n')
-    .trim()
-    .replace(/\s+/g, ' ');
-}
-
-function compactNoteText(value: string | null | undefined) {
-  return stripAnchorTags(value ?? '')
-    .replace(/\r\n?/g, ' ')
-    .trim()
-    .replace(/\s+/g, ' ');
 }
 
 function sanitizeArticleTitle(title: string) {
@@ -54,10 +41,6 @@ function sanitizeArticleTitle(title: string) {
   return cleaned || 'Untitled';
 }
 
-function sanitizePathSegment(title: string) {
-  return sanitizeArticleTitle(title);
-}
-
 function createStableFileName(title: string, nodeId: string, usedNames: Set<string>) {
   const baseName = sanitizeArticleTitle(title);
   const firstCandidate = `${baseName}.md`;
@@ -72,7 +55,7 @@ function createStableFileName(title: string, nodeId: string, usedNames: Set<stri
 }
 
 function createStableDirectoryName(title: string, nodeId: string, usedNames: Set<string>) {
-  const baseName = sanitizePathSegment(title);
+  const baseName = sanitizeArticleTitle(title);
   if (!usedNames.has(baseName)) {
     usedNames.add(baseName);
     return baseName;
@@ -85,6 +68,10 @@ function createStableDirectoryName(title: string, nodeId: string, usedNames: Set
 
 function createBaselineClozePrompt(articleContent: string, from: number, to: number) {
   return compactNoteText(`${articleContent.slice(0, from)}[...]${articleContent.slice(to)}`);
+}
+
+function formatSnowflake(parts: string[]) {
+  return ` (❄ ${parts.join('; ')})`;
 }
 
 function createExtraNote(
@@ -104,19 +91,22 @@ function createExtraNote(
   const notes = linkedChildren
     .map((child) => {
       if (kind === 'highlight') {
-        if (normalizeComparableText(child.content) === normalizeComparableText(sourceText)) {
+        const note = preserveNoteLines(child.content);
+        if (normalizeComparableText(note) === normalizeComparableText(sourceText)) {
           return null;
         }
-        return compactNoteText(child.content) || 'updated highlight';
+        return `highlight: ${note || 'updated highlight'}`;
       }
 
       const parts: string[] = [];
       const baselinePrompt = createBaselineClozePrompt(article.content, from, to);
-      if (normalizeComparableText(child.content) !== normalizeComparableText(baselinePrompt)) {
-        parts.push(`prompt: ${compactNoteText(child.content) || 'updated prompt'}`);
+      const prompt = preserveNoteLines(stripLeadingMatchingHeading(stripAnchorTags(child.content), article.title.trim() || 'Untitled'));
+      if (normalizeClozeComparableText(prompt) !== normalizeClozeComparableText(baselinePrompt)) {
+        parts.push(`cloze: ${prompt || 'updated cloze'}`);
       }
-      if (normalizeComparableText(child.reveal) !== normalizeComparableText(sourceText)) {
-        parts.push(`answer: ${compactNoteText(child.reveal) || 'updated answer'}`);
+      const answer = preserveNoteLines(child.reveal) || preserveNoteLines(sourceText) || 'updated answer';
+      if (normalizeComparableText(answer) !== normalizeComparableText(sourceText)) {
+        parts.push(`answer: ${answer}`);
       }
       return parts.length > 0 ? parts.join('; ') : null;
     })
@@ -129,15 +119,31 @@ function renderArticleBody(article: ArticleNode, derivedByAnchorKey: Map<string,
   return article.content
     .replace(INLINE_ANCHOR_PATTERN, (match, rawKind, anchorId, sourceText, offset) => {
       const kind = rawKind as 'highlight' | 'cloze';
-      const markedSource = kind === 'highlight' ? `==${sourceText}==` : `_${sourceText}_`;
-      return markedSource + createExtraNote(article, kind, sourceText, anchorId, offset, offset + match.length, derivedByAnchorKey);
+      return renderMarkedSource(kind, sourceText) + createExtraNote(article, kind, sourceText, anchorId, offset, offset + match.length, derivedByAnchorKey);
     })
-    .replace(ANCHOR_TAG_PATTERN, '');
+    .replace(/<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g, '');
 }
 
-function renderArticleMarkdown(article: ArticleNode, derivedByAnchorKey: Map<string, ArticleNode[]>) {
+function renderManualTopicAppendix(manualTopics: ArticleNode[]) {
+  if (manualTopics.length === 0) {
+    return '';
+  }
+  const appendix = manualTopics
+    .map((topic) => {
+      const parts = [`keyword: ${compactNoteText(topic.title) || 'Untitled'}`];
+      const note = preserveNoteLines(topic.content);
+      if (note) {
+        parts.push(`note: ${note}`);
+      }
+      return formatSnowflake(parts);
+    })
+    .join('\n');
+  return `\n\n${appendix}`;
+}
+
+function renderArticleMarkdown(article: ArticleNode, derivedByAnchorKey: Map<string, ArticleNode[]>, manualTopics: ArticleNode[]) {
   const title = article.title.trim() || 'Untitled';
-  const body = renderArticleBody(article, derivedByAnchorKey).trim();
+  const body = `${renderArticleBody(article, derivedByAnchorKey).trim()}${renderManualTopicAppendix(manualTopics)}`.trim();
   if (body.length === 0) {
     return `# ${title}\n`;
   }
@@ -158,15 +164,6 @@ function buildDerivedChildMap(snapshot: WorkspaceSnapshot, articleId: string) {
   }
   return { derivedByAnchorKey: map, derivedChildren };
 }
-
-function collectArticleNodes(snapshot: WorkspaceSnapshot) {
-  const orderedIds = new Map(snapshot.nodeOrder.map((nodeId, index) => [nodeId, index]));
-  const trashedNodeIds = new Set(snapshot.trashedNodeIds);
-  return Object.values(snapshot.nodesById)
-    .filter((node) => node.id !== INBOX_NODE_ID && node.anchorLink === null && node.kind === 'topic' && !trashedNodeIds.has(node.id))
-    .sort((left, right) => (orderedIds.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (orderedIds.get(right.id) ?? Number.MAX_SAFE_INTEGER));
-}
-
 function toRelativeMirrorPath(mirrorRoot: string, targetPath: string) {
   return path.relative(mirrorRoot, targetPath).split(path.sep).join('/');
 }
@@ -179,7 +176,7 @@ function resolveSourceUpdatedAt(article: ArticleNode, derivedChildren: ArticleNo
 }
 
 export function collectArticleMirrorTargets(snapshot: WorkspaceSnapshot, mirrorRoot: string): ArticleMirrorTarget[] {
-  const articles = collectArticleNodes(snapshot);
+  const { articles, manualTopicsByArticleId } = collectArticleData(snapshot);
   const usedFileNamesByDirectory = new Map<string, Set<string>>();
   const usedDirectoryNamesByParent = createRootReservedDirectoryNames(mirrorRoot);
   const resolvedFolderDirectories = new Map<string, string>();
@@ -198,11 +195,12 @@ export function collectArticleMirrorTargets(snapshot: WorkspaceSnapshot, mirrorR
     const fileName = createStableFileName(article.title.trim() || 'Untitled', article.id, usedNames);
     const targetPath = path.join(targetDirectory, fileName);
     const { derivedByAnchorKey, derivedChildren } = buildDerivedChildMap(snapshot, article.id);
+    const manualTopics = manualTopicsByArticleId.get(article.id) ?? [];
     return {
       articleId: article.id,
-      markdown: renderArticleMarkdown(article, derivedByAnchorKey),
+      markdown: renderArticleMarkdown(article, derivedByAnchorKey, manualTopics),
       relativePath: toRelativeMirrorPath(mirrorRoot, targetPath),
-      sourceUpdatedAt: resolveSourceUpdatedAt(article, derivedChildren),
+      sourceUpdatedAt: resolveSourceUpdatedAt(article, [...derivedChildren, ...manualTopics]),
       targetPath
     };
   });

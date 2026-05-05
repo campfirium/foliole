@@ -101,7 +101,7 @@ it('updates the same article mirror when highlight content changes', async () =>
   });
 
   await expect(syncIncrementalMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
-  await expect(readMirror('Mirror Demo.md')).resolves.toContain('==bright text== (❄ gold text)');
+  await expect(readMirror('Mirror Demo.md')).resolves.toContain('==bright text== (❄ highlight: gold text)');
 });
 
 it('updates the same article mirror when cloze content changes', async () => {
@@ -115,8 +115,29 @@ it('updates the same article mirror when cloze content changes', async () => {
   });
 
   await expect(syncIncrementalMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
-  await expect(readMirror('Mirror Demo.md')).resolves.toContain('Study _answer_');
-  await expect(readMirror('Mirror Demo.md')).resolves.toContain('Custom prompt [...] today.; answer: final answer');
+  await expect(readMirror('Mirror Demo.md')).resolves.toContain('Study <u>answer</u>');
+  await expect(readMirror('Mirror Demo.md')).resolves.toContain(
+    'cloze: Keep bright text here.\n\nCustom prompt [...] today.; answer: final answer'
+  );
+});
+
+it('updates the parent article mirror when a manual child topic changes', async () => {
+  saveNode('node-article', null, 'Parent body.', '2026-03-30T00:00:00.000Z', { title: 'Mirror Demo' });
+  saveNode('node-child-topic', 'node-article', 'First child body.', '2026-03-30T00:00:00.000Z', {
+    kind: 'topic',
+    title: 'Key Point',
+    position: 1
+  });
+  await rebuildMirrorOutput();
+
+  saveNode('node-child-topic', 'node-article', 'Updated child body.', '2030-03-30T00:17:00.000Z', {
+    kind: 'topic',
+    title: 'Key Point',
+    position: 1
+  });
+
+  await expect(syncIncrementalMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
+  await expect(readMirror('Mirror Demo.md')).resolves.toContain('(❄ keyword: Key Point; note: Updated child body.)');
 });
 
 it('startup backfill only recreates missing article files without refreshing existing stale ones', async () => {
@@ -169,7 +190,7 @@ it('moves article mirrors when the parent folder path changes', async () => {
   await expect(fs.access(mirrorPath(path.join('Projects', 'Research', 'Mirror Demo.md')))).rejects.toThrow();
 });
 
-it('keeps child topics under the nearest folder ancestor instead of leaking them to mirror root', async () => {
+it('appends manual child topics to the parent article mirror instead of exporting extra files', async () => {
   saveNode('folder-root', null, '', '2026-03-30T00:00:00.000Z', { kind: 'folder', title: 'test' });
   saveNode('node-parent-topic', 'folder-root', 'Parent body.', '2026-03-30T00:00:00.000Z', {
     kind: 'topic',
@@ -178,11 +199,11 @@ it('keeps child topics under the nearest folder ancestor instead of leaking them
   });
   saveNode('node-child-topic', 'node-parent-topic', 'Child body.', '2026-03-30T00:00:00.000Z', {
     kind: 'topic',
-    title: 'Untitled',
+    title: 'Key Point',
     position: 2
   });
 
-  await expect(rebuildMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 2, queued_article_count: 2 });
-  await expect(readMirror(path.join('test', 'Untitled.md'))).resolves.toContain('Child body.');
-  await expect(fs.access(mirrorPath('Untitled.md'))).rejects.toThrow();
+  await expect(rebuildMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
+  await expect(readMirror(path.join('test', 'Parent Topic.md'))).resolves.toContain('(❄ keyword: Key Point; note: Child body.)');
+  await expect(fs.access(mirrorPath(path.join('test', 'Key Point.md')))).rejects.toThrow();
 });

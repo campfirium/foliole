@@ -44,9 +44,9 @@ export function getSelectionCommandPayload(
     return null;
   }
 
-  const prefix = content.slice(0, from).trimEnd();
-  const suffix = content.slice(to).trimStart();
-  const clozeRawContent = `${prefix} ${CLOZE_PLACEHOLDER} ${suffix}`.trim();
+  const prefix = content.slice(0, from);
+  const suffix = content.slice(to);
+  const clozeRawContent = `${prefix}${CLOZE_PLACEHOLDER}${suffix}`;
   const clozeContent = stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
   const anchorId = String(getNextAnchorNumericId(content));
 

@@ -75,7 +75,7 @@ function seedMirrorArticleFixture(articleContent: string) {
     kind: 'item',
     title: 'Study [...] today.',
     isTitleManual: true,
-    content: 'Keep bright text here.\n\nStudy [...] today.\n\nEdited guess later.',
+    content: '# Mirror Demo\n\nKeep bright text here.\n\nStudy [...] today.\n\nEdited guess later.',
     reveal: 'answer',
     anchorLink: { id: '2', kind: 'cloze' },
     position: 2,
@@ -118,11 +118,12 @@ it('writes one readable article .md with inline highlights, inline clozes, and s
 
   expect(output).toContain('# Mirror Demo');
   expect(output).toContain('Keep ==bright text== here.');
-  expect(output).toContain('Study _answer_ today.');
-  expect(output).toContain('Edited _guess_ (❄ prompt: Custom prompt [...] only; answer: real answer) later.');
+  expect(output).toContain('Study <u>answer</u> today.');
+  expect(output).toContain('Edited <u>guess</u> (❄ cloze: Custom prompt [...] only; answer: real answer) later.');
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Highlights.md'))).rejects.toThrow();
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Clozes.md'))).rejects.toThrow();
 });
+
 
 it('exports blank topics as files and skips folders even when both are empty', async () => {
   upsertNodeSnapshot({
