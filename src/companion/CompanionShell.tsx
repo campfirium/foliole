@@ -21,8 +21,8 @@ import { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
 function useCompanionNavigationVisibility(floatingBar: ReturnType<typeof useFloatingBarVisibility>, isReviewTaskActive: boolean) {
   const isNavigationVisible = useMemo(
-    () => !isReviewTaskActive && floatingBar.isVisible,
-    [floatingBar.isVisible, isReviewTaskActive]
+    () => !isReviewTaskActive,
+    [isReviewTaskActive]
   );
 
   const handleContentTap = () => {
