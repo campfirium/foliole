@@ -51,6 +51,19 @@ describe('Android sync diagnostics metadata', () => {
     });
     expect(definitions.syncEvents.fullSyncCompletedMessage).toBe('Sync fully completed.');
     expect(definitions.syncDiagnostics.host).toBe('android');
+    expect(definitions.syncDiagnostics.outputKeys).toMatchObject({
+      collectedAt: 'collected_at',
+      syncState: 'sync_state',
+      verdicts: 'verdicts'
+    });
+    expect(definitions.syncDiagnostics.identityKeys).toMatchObject({
+      appVersion: 'app_version',
+      databasePath: 'database_path'
+    });
+    expect(definitions.syncDiagnostics.stateKeys).toMatchObject({
+      maxStateSeq: 'max_state_seq',
+      packCursor: 'pack_cursor'
+    });
     expect(definitions.syncDiagnostics.verdicts.endpointMissing).toEqual({
       code: 'android_endpoint_missing',
       message: 'This device has no desktop sync address.',
@@ -74,6 +87,7 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", "events")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaOutputKeys", key)');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEventRecordKeys", key)');
+    expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.objectValue(context, "syncDiagnostics", key)');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fullSyncCompletedMessage")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdict(context, key)');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys")');
@@ -84,6 +98,11 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).not.toContain('result.put("endpoint_url"');
     expect(combined).not.toContain('result.put("sync_events"');
     expect(combined).not.toContain('event.put("occurred_at"');
+    expect(combined).not.toContain('result.put("collected_at"');
+    expect(combined).not.toContain('identity.put("database_path"');
+    expect(combined).not.toContain('connection.put("endpoint_url"');
+    expect(combined).not.toContain('state.put("pack_cursor"');
+    expect(combined).not.toContain('verdict.put("evidence"');
     expect(combined).not.toContain('"sync_pack_cursor"');
     expect(combined).not.toContain('"android_endpoint_missing"');
     expect(combined).not.toContain('"Android sync state is readable."');

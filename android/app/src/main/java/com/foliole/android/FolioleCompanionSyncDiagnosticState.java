@@ -22,14 +22,16 @@ final class FolioleCompanionSyncDiagnosticState {
             database,
             FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaCursors", "pack")
         );
-        long maxStateSeq = state.optLong("max_state_seq", 0);
-        state.remove("max_state_seq");
-        state.put("pack_cursor", cursor <= 0 ? JSONObject.NULL : cursor);
-        state.put("max_state_seq", maxStateSeq <= 0 ? JSONObject.NULL : maxStateSeq);
-        state.put("dirty_objects", loadRows(context, database, "dirtyObjects"));
-        state.put("pending_acks", loadRows(context, database, "pendingAcks"));
-        state.put("push_issues", loadRows(context, database, "pushIssues"));
-        state.put("state_counts", loadRows(context, database, "stateCounts"));
+        JSONObject stateKeys = diagnosticObject(context, "stateKeys");
+        String maxStateSeqKey = stateKeys.getString("maxStateSeq");
+        long maxStateSeq = state.optLong(maxStateSeqKey, 0);
+        state.remove(maxStateSeqKey);
+        state.put(stateKeys.getString("packCursor"), cursor <= 0 ? JSONObject.NULL : cursor);
+        state.put(maxStateSeqKey, maxStateSeq <= 0 ? JSONObject.NULL : maxStateSeq);
+        state.put(stateKeys.getString("dirtyObjects"), loadRows(context, database, "dirtyObjects"));
+        state.put(stateKeys.getString("pendingAcks"), loadRows(context, database, "pendingAcks"));
+        state.put(stateKeys.getString("pushIssues"), loadRows(context, database, "pushIssues"));
+        state.put(stateKeys.getString("stateCounts"), loadRows(context, database, "stateCounts"));
         return state;
     }
 
@@ -45,5 +47,9 @@ final class FolioleCompanionSyncDiagnosticState {
     private static int loadNumberMetaValue(Context context, SQLiteDatabase database, String key) throws Exception {
         String stored = FolioleCompanionSyncDiagnosticMeta.load(context, database, key);
         return stored == null ? 0 : Math.max(0, Integer.parseInt(stored));
+    }
+
+    private static JSONObject diagnosticObject(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.objectValue(context, "syncDiagnostics", key);
     }
 }

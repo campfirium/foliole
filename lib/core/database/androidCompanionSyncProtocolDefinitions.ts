@@ -33,6 +33,46 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
   },
   syncDiagnostics: {
     host: 'android',
+    connectionKeys: {
+      endpointUrl: 'endpoint_url',
+      lastError: 'last_error',
+      state: 'state'
+    },
+    identityKeys: {
+      appVersion: 'app_version',
+      databasePath: 'database_path',
+      deviceId: 'device_id',
+      deviceName: 'device_name'
+    },
+    outputKeys: {
+      collectedAt: 'collected_at',
+      connection: 'connection',
+      content: 'content',
+      events: 'events',
+      host: 'host',
+      identity: 'identity',
+      storage: 'storage',
+      syncState: 'sync_state',
+      verdicts: 'verdicts'
+    },
+    stateKeys: {
+      dirtyObjects: 'dirty_objects',
+      maxStateSeq: 'max_state_seq',
+      packCursor: 'pack_cursor',
+      pendingAcks: 'pending_acks',
+      pushIssues: 'push_issues',
+      stateCounts: 'state_counts'
+    },
+    verdictEvidenceKeys: {
+      message: 'message',
+      occurredAt: 'occurred_at'
+    },
+    verdictKeys: {
+      code: 'code',
+      evidence: 'evidence',
+      message: 'message',
+      severity: 'severity'
+    },
     verdicts: {
       endpointMissing: {
         code: 'android_endpoint_missing',

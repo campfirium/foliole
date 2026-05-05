@@ -67,6 +67,14 @@ final class FolioleCompanionSyncProtocolDefinitions {
         return value;
     }
 
+    static JSONObject objectValue(Context context, String sectionName, String key) throws Exception {
+        JSONObject value = section(context, sectionName).optJSONObject(key);
+        if (value == null) {
+            throw new IllegalStateException("Companion sync protocol definitions asset is missing object: " + sectionName + "." + key);
+        }
+        return value;
+    }
+
     private static JSONObject section(Context context, String sectionName) throws Exception {
         JSONObject section = load(context).optJSONObject(sectionName);
         if (section == null) {
