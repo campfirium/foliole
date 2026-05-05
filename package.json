@@ -18,6 +18,7 @@
     "windows:client:start": "WINDOWS_CLIENT_ACTION=start bash scripts/windows/windows-restart-client.sh",
     "windows:client:stop": "WINDOWS_CLIENT_ACTION=stop bash scripts/windows/windows-restart-client.sh",
     "windows:dev:native": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"scripts/windows/run-electron-stable.ps1\"",
+    "desktop:spike:electron": "node scripts/windows/playwright-electron-spike.mjs",
     "desktop:dev": "npm run electron:dev",
     "electron:compile": "tsc -p electron/tsconfig.json",
     "electron:dev": "node scripts/electron-dev.mjs",
