@@ -8,11 +8,11 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import {
+  syncCreateNodeToRuntime,
   syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime,
-  syncRelearnNodeToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
@@ -22,6 +22,7 @@ import {
   createQAFromSelectionAction,
   createRootNodeAction
 } from './workspaceStoreCreateActions';
+import { createRelearnNodeAction } from './workspaceStoreNodeRelearnAction';
 import {
   createUpdateNodeDesiredRetentionAction,
   createUpdateNodePriorityAction
@@ -194,46 +195,6 @@ function createDismissNodeAction(set: WorkspaceSet): WorkspaceNodeActions['dismi
   };
 }
 
-function createRelearnNodeAction(set: WorkspaceSet): WorkspaceNodeActions['relearnNode'] {
-  return (nodeId, now = new Date().toISOString()) => {
-    let relearned = false;
-    let shouldSyncReviewReset = false;
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
-    set((state) => {
-      const node = state.nodesById[nodeId];
-      if (!node || isInboxNode(node) || !hasNodeContent(node)) {
-        return state;
-      }
-      if (!isFsrsReviewItemNode(node) && node.reading === null) {
-        return state;
-      }
-      relearned = true;
-      shouldSyncReviewReset = isFsrsReviewItemNode(node);
-      const nextNode: Node = {
-        ...node,
-        review: shouldSyncReviewReset ? null : node.review,
-        reading: null,
-        updatedAt: now
-      };
-      nextNodeForSync = nextNode;
-      return {
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: nextNode
-        }
-      };
-    });
-    if (shouldSyncReviewReset) {
-      syncRelearnNodeToRuntime({ nodeId });
-      return relearned;
-    }
-    if (nextNodeForSync) {
-      syncNodeContentToRuntime(nextNodeForSync);
-    }
-    return relearned;
-  };
-}
-
 export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActions {
   const trashActions = createWorkspaceTrashActions(set, {
     syncNodeContent: syncNodeContentToRuntime,
@@ -241,7 +202,11 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     syncRestoreNodes: syncRestoreNodesToRuntime,
     syncDeleteNodesPermanently: syncDeleteNodesPermanentlyToRuntime
   });
-  const runtimeHandlers = { syncNodeContent: syncNodeContentToRuntime, syncNodeOrder: syncNodeOrderToRuntime };
+  const runtimeHandlers = {
+    syncNodeContent: syncNodeContentToRuntime,
+    syncNodeCreation: syncCreateNodeToRuntime,
+    syncNodeOrder: syncNodeOrderToRuntime
+  };
   const syncMovedNodes = (nodes: WorkspaceState['nodesById'][string][]) => {
     for (const node of nodes) {
       syncNodeContentToRuntime(node);
@@ -258,7 +223,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateNodePriority: createUpdateNodePriorityAction(set),
     updateNodeDesiredRetention: createUpdateNodeDesiredRetentionAction(set),
     createRootNode: createRootNodeAction(set, runtimeHandlers),
-    createChildNode: createChildNodeAction(set, syncNodeContentToRuntime, syncNodeOrderToRuntime),
+    createChildNode: createChildNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
     createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers),
     moveNode: createMoveNodeAction(set, syncMovedNodes, syncNodeOrderToRuntime),

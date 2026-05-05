@@ -1,3 +1,5 @@
+import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../lib/core/nodes/folderTopicItemCommands';
+
 export const APP_COMMAND_IDS = {
   toggleCommandPaletteMac: 'commandPalette.toggle.mac',
   toggleCommandPaletteWin: 'commandPalette.toggle.win',
@@ -26,6 +28,9 @@ export const APP_COMMAND_IDS = {
   resetImportData: 'dev.resetImportData',
   openNotes: 'workspace.openNotes',
   openTrash: 'workspace.openTrash',
+  createFolder: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createFolder,
+  createTopic: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createTopic,
+  createItem: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createItem,
   openSettings: 'workspace.openSettings',
   restartApp: 'workspace.restartApp',
   toggleList: 'workspace.toggleList',

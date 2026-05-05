@@ -36,6 +36,7 @@ import {
   asString,
   asStringArray,
   asTimestamp,
+  parseNodeCreationArgs,
   parseNodeSnapshotArgs,
   parseNodeViewStatePayloadArray
 } from './commandParsers.js';
@@ -76,6 +77,21 @@ function handleSqliteMaintenanceCommand(command: string, args: Record<string, un
 }
 
 async function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.createFolder) {
+    upsertNodeSnapshot(parseNodeCreationArgs(args, 'folder'));
+    await syncIncrementalMirrorOutput();
+    return null;
+  }
+  if (command === NATIVE_COMMANDS.createTopic) {
+    upsertNodeSnapshot(parseNodeCreationArgs(args, 'topic'));
+    await syncIncrementalMirrorOutput();
+    return null;
+  }
+  if (command === NATIVE_COMMANDS.createItem) {
+    upsertNodeSnapshot(parseNodeCreationArgs(args, 'item'));
+    await syncIncrementalMirrorOutput();
+    return null;
+  }
   if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
     upsertNodeSnapshot(parseNodeSnapshotArgs(args));
     await syncIncrementalMirrorOutput();

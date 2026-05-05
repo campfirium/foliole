@@ -7,6 +7,7 @@ import { isDesktopRuntime } from '../shared/platform/runtime';
 
 import { mergePendingNodeSyncIntoSnapshot } from './workspacePendingNodeSync';
 import {
+  syncCreateNodeToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime,
@@ -158,6 +159,16 @@ describe('workspaceRuntimeSync node mutations', () => {
     syncNodeContentToRuntime(createNodeFixture());
 
     expectNodeMutationSync(invoke, 'update_node_content');
+    expectNoWorkspacePersist(invoke);
+  });
+
+  it('sends created nodes through kind-specific create command', () => {
+    const invoke = vi.fn().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    syncCreateNodeToRuntime(createNodeFixture());
+
+    expect(invoke).toHaveBeenCalledWith('create_topic', expect.objectContaining({ kind: 'topic' }));
     expectNoWorkspacePersist(invoke);
   });
 

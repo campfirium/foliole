@@ -144,6 +144,17 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
   };
 }
 
+export function parseNodeCreationArgs(
+  args: Record<string, unknown>,
+  expectedKind: 'folder' | 'topic' | 'item'
+) {
+  const parsed = parseNodeSnapshotArgs(args);
+  if (parsed.kind !== expectedKind) {
+    throw new Error('invalid argument: kind');
+  }
+  return parsed;
+}
+
 interface NodeViewStatePayload {
   nodeId: string;
   scrollTop: number;

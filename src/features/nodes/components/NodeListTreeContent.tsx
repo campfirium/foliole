@@ -22,7 +22,7 @@ interface NodeListPanelProps {
   activeRows: NodeTreeRow[];
   collapse: NodeListCollapseController;
   contextMenu: NodeListContextMenuController;
-  createGlobalNode: (content?: string) => string;
+  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
   isTrashViewOpen: boolean;
@@ -149,8 +149,8 @@ interface NodeListTreeContentProps {
   activeRows: NodeTreeRow[];
   collapse: NodeListCollapseController;
   contextMenu: NodeListContextMenuController;
-  createChildNode: (parentNodeId: string, content?: string) => string;
-  createGlobalNode: (content?: string) => string;
+  createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => string;
+  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;

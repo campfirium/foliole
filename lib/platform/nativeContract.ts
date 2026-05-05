@@ -24,6 +24,12 @@ import type {
 } from './nativeUtilityContract.js';
 export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
+
+type NativeNodeSnapshotMutationSpec = {
+  args: NativeNodeSnapshotArgs;
+  result: null;
+};
+
 export type NativeCommandMap = NativeUtilityCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
@@ -209,14 +215,11 @@ export type NativeCommandMap = NativeUtilityCommandMap & {
     args: { sourcePath: string };
     result: NativeSqliteRestoreResult;
   };
-  [NATIVE_COMMANDS.updateNodeContent]: {
-    args: NativeNodeSnapshotArgs;
-    result: null;
-  };
-  [NATIVE_COMMANDS.updateNodeReveal]: {
-    args: NativeNodeSnapshotArgs;
-    result: null;
-  };
+  [NATIVE_COMMANDS.createFolder]: NativeNodeSnapshotMutationSpec;
+  [NATIVE_COMMANDS.createTopic]: NativeNodeSnapshotMutationSpec;
+  [NATIVE_COMMANDS.createItem]: NativeNodeSnapshotMutationSpec;
+  [NATIVE_COMMANDS.updateNodeContent]: NativeNodeSnapshotMutationSpec;
+  [NATIVE_COMMANDS.updateNodeReveal]: NativeNodeSnapshotMutationSpec;
   [NATIVE_COMMANDS.relearnNode]: {
     args: NativeRelearnNodeArgs;
     result: null;

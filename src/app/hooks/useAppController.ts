@@ -4,17 +4,16 @@ import { useReviewSchedulerSettings } from '../../features/settings/context/Revi
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
-import { restartMainWindowApp, toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
-import { buildPaletteState, useCurrentReviewPreview } from './appControllerHelpers';
+import { useCurrentReviewPreview } from './appControllerHelpers';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
+import { buildControllerPaletteState } from './appControllerPaletteState';
 import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { buildControllerGoToNodeState } from './appGoToNodeState';
 import type { AppGoToNodeState } from './appGoToNodeState';
 import { buildHotkeySettings, type AppHotkeySettings } from './appHotkeySettings';
 import { buildControllerMoveToNodeState } from './appMoveToNodeState';
-import { createPaletteCommandRunner } from './appPaletteCommandRunner';
 import type { AppSearchState } from './appSearchState';
 import { buildControllerSearchState } from './appSearchState';
 import { countDueReviewNodes } from './layoutPropsBuilder';
@@ -86,63 +85,6 @@ function useDerivedControllerState(args: {
     ws: args.ws
   });
   return { layoutProps, paletteItems };
-}
-
-function buildControllerPaletteState(args: {
-  appearance: ReturnType<typeof useAppearanceSettings>;
-  formalImport: ReturnType<typeof useFormalImport>;
-  isStudyMode: boolean;
-  layoutProps: WorkspaceLayoutProps;
-  nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
-  paletteItems: CommandPaletteItem[];
-  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
-  study: ReturnType<typeof useWorkspaceControllerState>['study'];
-  trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
-  const runPaletteCommand = createPaletteCommandRunner({
-    closeTrashView: args.trash.closeTrashView,
-    completeReviewItem: args.ws.completeReviewItem,
-    deferReviewItem: args.ws.deferReviewItem,
-    dismissReviewItem: args.ws.dismissReviewItem,
-    exitReviewSession: args.ws.exitReviewSession,
-    exitStudyMode: args.study.exitStudyMode,
-    goBack: args.nav.handleGoBack,
-    goForward: args.nav.handleGoForward,
-    goToNode: () => undefined,
-    moveToNode: () => undefined,
-    goParent: args.nav.handleGoParent,
-    gradeReviewCard: args.ws.gradeReviewCard,
-    importDirectory: args.formalImport.startImportDirectory,
-    importSingleFile: args.formalImport.startImportFile,
-    resetImportData: args.formalImport.resetImportData,
-    isReviewMode: args.isStudyMode,
-    openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
-    onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode,
-    onToggleListVisibility: args.layoutProps.onToggleListVisibility,
-    onRestartApp: restartMainWindowApp,
-    onToggleDevTools: toggleMainWindowDevTools,
-    openTrashView: args.trash.openTrashView,
-    paletteItems: args.paletteItems,
-    recordRecentCommand: args.runtime.recordRecentCommand,
-    revealReviewAnswer: args.ws.revealReviewAnswer,
-    setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,
-    setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
-    setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
-    setSettingsOpen: args.runtime.setIsSettingsOpen,
-    startClipboardImport: args.layoutProps.onStartClipboardImport,
-    startReviewSession: args.ws.startReviewSession,
-    startStudyMode: args.study.startStudyMode,
-    trashViewOpen: args.trash.isTrashViewOpen
-  });
-
-  return buildPaletteState(
-    args.runtime.isCommandPaletteOpen,
-    args.paletteItems,
-    args.runtime.recentCommandIds,
-    () => args.runtime.setIsCommandPaletteOpen(false),
-    runPaletteCommand
-  );
 }
 
 function useReviewEditingState(args: {

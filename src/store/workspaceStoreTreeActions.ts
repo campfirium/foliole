@@ -1,3 +1,4 @@
+import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID, isInboxNode } from '../features/nodes/model/specialNodes';
 
@@ -139,6 +140,7 @@ function buildCreatedChildState(
   parentNodeId: string,
   nodeId: string,
   content: string,
+  kind: NodeKind,
   timestamp: string
 ) {
   const untitledState = resolveCreatedNodeTitleState(
@@ -149,7 +151,7 @@ function buildCreatedChildState(
   const nextNode = {
     id: nodeId,
     parentNodeId,
-    kind: 'topic' as const,
+    kind,
     title: untitledState.title,
     content,
     anchorLink: null,
@@ -194,7 +196,7 @@ export function createChildNodeAction(
   onNodeCreated?: (node: NodeSnapshot) => void,
   onNodeOrderChanged?: (nodeOrder: string[]) => void
 ): WorkspaceState['createChildNode'] {
-  return (parentNodeId, content = '') => {
+  return (parentNodeId, content = '', kind: NodeKind = 'topic') => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
     let createdNode: NodeSnapshot | null = null;
@@ -204,7 +206,7 @@ export function createChildNodeAction(
       if (!state.nodesById[parentNodeId] || state.trashedNodeIds.includes(parentNodeId)) {
         return state;
       }
-      const nextChildState = buildCreatedChildState(state, parentNodeId, nodeId, content, timestamp);
+      const nextChildState = buildCreatedChildState(state, parentNodeId, nodeId, content, kind, timestamp);
       createdNode = nextChildState.nextNode;
       nextNodeOrder = nextChildState.nextNodeOrder;
       return nextChildState.patch;

@@ -1,3 +1,4 @@
+import { findFolderTopicItemCommandByAppCommandId } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import { isInboxNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
@@ -9,8 +10,8 @@ import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 
 interface NodeListTreeMenuProps {
   contextMenu: NodeListContextMenuController;
-  createChildNode: (parentNodeId: string, content?: string) => string;
-  createGlobalNode: (content?: string) => string;
+  createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => string;
+  createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   dismissNode: (nodeId: string, now?: string) => boolean;
@@ -47,13 +48,18 @@ function buildMenuState(props: NodeListTreeMenuProps) {
 }
 
 function createCreateNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: string | null, isRootMenu: boolean) {
-  return () => {
-    if (isRootMenu || !primaryTargetId) {
-      props.createGlobalNode('');
+  return (commandId: string) => {
+    const command = findFolderTopicItemCommandByAppCommandId(commandId);
+    if (!command) {
       props.contextMenu.closeContextMenu();
       return;
     }
-    props.createChildNode(primaryTargetId, '');
+    if (isRootMenu || !primaryTargetId) {
+      props.createGlobalNode('', command.kind);
+      props.contextMenu.closeContextMenu();
+      return;
+    }
+    props.createChildNode(primaryTargetId, '', command.kind);
     props.contextMenu.closeContextMenu();
   };
 }
@@ -82,7 +88,7 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
       isTrashMenu={props.contextMenu.contextMenuMode === 'trash'}
       left={props.contextMenu.menuPosition.left}
       onClose={props.contextMenu.closeContextMenu}
-      onCreateNode={createCreateNodeHandler(props, menuState.primaryTargetId, menuState.isRootMenu)}
+      onCreateCommand={createCreateNodeHandler(props, menuState.primaryTargetId, menuState.isRootMenu)}
       onDeleteNode={() => (
         props.deleteNodes(sortNodeIdsByVisibleOrder(menuState.contextTargets, props.state.noteRowIds)),
         props.contextMenu.closeContextMenu()

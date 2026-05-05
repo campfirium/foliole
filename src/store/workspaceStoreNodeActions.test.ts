@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { syncNodeContentToRuntime, syncNodeOrderToRuntime, syncNodeRevealToRuntime } from './workspaceRuntimeSync';
+import { syncCreateNodeToRuntime, syncNodeContentToRuntime, syncNodeOrderToRuntime, syncNodeRevealToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -135,11 +136,12 @@ describe('createWorkspaceNodeActions root creation sync', () => {
     const createdNodeId = actions.createRootNode('# Root node');
 
     expect(createdNodeId).toContain('node-');
-    expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncCreateNodeToRuntime).toHaveBeenCalledTimes(1);
     expect(syncNodeOrderToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
+    expect(syncCreateNodeToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: createdNodeId,
+        kind: 'topic',
         parentNodeId: null,
         content: '# Root node',
         title: 'Root node'
@@ -159,7 +161,7 @@ describe('createWorkspaceNodeActions root creation sync', () => {
     actions.createRootNode();
     const secondNodeId = actions.createRootNode();
 
-    expect(syncNodeContentToRuntime).toHaveBeenLastCalledWith(
+    expect(syncCreateNodeToRuntime).toHaveBeenLastCalledWith(
       expect.objectContaining({
         id: secondNodeId,
         title: 'Untitled 1'
@@ -215,11 +217,12 @@ describe('createWorkspaceNodeActions create sync', () => {
     const childNodeId = actions.createChildNode('node-1', 'Child body');
 
     expect(childNodeId).toContain('node-');
-    expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncCreateNodeToRuntime).toHaveBeenCalledTimes(1);
     expect(syncNodeOrderToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
+    expect(syncCreateNodeToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: childNodeId,
+        kind: 'topic',
         parentNodeId: 'node-1',
         content: 'Child body'
       })

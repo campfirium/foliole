@@ -1,3 +1,4 @@
+import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, isInboxNode } from '../../features/nodes/model/specialNodes';
@@ -45,8 +46,8 @@ export interface BuildControllerLayoutPropsArgs {
   trash: ReturnType<typeof useTrashView>;
   ws: {
     activeNodeId: string | null;
-    createChildNode: (parentNodeId: string, content?: string) => string;
-    createRootNode: (content?: string) => string;
+    createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
+    createRootNode: (content?: string, kind?: NodeKind) => string;
     documentMaxWidth: number;
     exitReviewSession: () => void;
     gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;

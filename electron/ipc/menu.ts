@@ -6,9 +6,12 @@ import {
   type MenuItemConstructorOptions
 } from 'electron';
 
+import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../lib/core/nodes/folderTopicItemCommands.js';
+
 import { IPC_MENU_EVENT_CHANNEL, type MenuCommandEvent } from './contracts.js';
 
 const MENU_COMMAND_IDS = [
+  ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => command.appCommandId),
   'import.singleFileToInbox',
   'import.folderToInbox',
   'import.clipboard',
@@ -63,6 +66,8 @@ export function installAppMenu() {
     {
       label: 'Workspace',
       submenu: [
+        ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => commandItem(command.menuLabel, command.appCommandId)),
+        { type: 'separator' },
         commandItem('Import Files…', 'import.singleFileToInbox'),
         commandItem('Import Folder…', 'import.folderToInbox'),
         commandItem('Clipboard Import *', 'import.clipboard'),

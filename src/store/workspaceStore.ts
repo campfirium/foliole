@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
@@ -60,8 +61,8 @@ export interface WorkspaceState {
   restoreNode: (nodeId: string) => void;
   deleteNodePermanently: (nodeId: string) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
-  createRootNode: (content?: string) => string;
-  createChildNode: (parentNodeId: string, content?: string) => string;
+  createRootNode: (content?: string, kind?: NodeKind) => string;
+  createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
   createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string) => string | null;
   createQANodeFromSelection: (
     parentNodeId: string,

@@ -4,6 +4,9 @@ import { runAppCommand, runReviewModeToggle } from './appCommands';
 
 interface PaletteCommandRunnerArgs {
   closeTrashView: () => void;
+  createFolder: () => void;
+  createItem: () => void;
+  createTopic: () => void;
   exitReviewSession: () => void;
   exitStudyMode: () => void;
   goBack: () => void;
@@ -38,6 +41,50 @@ interface PaletteCommandRunnerArgs {
   trashViewOpen: boolean;
 }
 
+function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
+  return {
+    closeSettings: () => args.setSettingsOpen(false),
+    createFolder: args.createFolder,
+    createItem: args.createItem,
+    createTopic: args.createTopic,
+    goBack: args.goBack,
+    goForward: args.goForward,
+    goToNode: () => args.setGoToNodePaletteOpen(true),
+    moveToNode: () => args.setIsMoveToNodePaletteOpen(true),
+    goParent: args.goParent,
+    importDirectory: () => {
+      void args.importDirectory();
+    },
+    importSingleFile: () => {
+      void args.importSingleFile();
+    },
+    openImportManagement: args.openImportManagement,
+    resetImportData: () => {
+      if (!window.confirm('Reset imported content and import records? This cannot be undone.')) {
+        return false;
+      }
+      void args.resetImportData();
+    },
+    openNotes: args.closeTrashView,
+    openSettings: () => args.setSettingsOpen(true),
+    openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
+    restartApp: args.onRestartApp,
+    revealReviewAnswer: args.revealReviewAnswer,
+    startClipboardImport: args.startClipboardImport,
+    toggleReviewMode,
+    toggleEditorDisplayMode: args.onToggleEditorDisplayMode,
+    toggleList: args.onToggleListVisibility,
+    toggleDevTools: args.onToggleDevTools,
+    gradeReviewAgain: () => args.gradeReviewCard(1),
+    gradeReviewHard: () => args.gradeReviewCard(2),
+    gradeReviewGood: () => args.gradeReviewCard(3),
+    gradeReviewEasy: () => args.gradeReviewCard(4),
+    readingReviewLater: () => args.deferReviewItem(),
+    readingReviewRead: () => args.completeReviewItem(),
+    readingReviewDismiss: () => args.dismissReviewItem()
+  };
+}
+
 export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
   const toggleReviewMode = () =>
     runReviewModeToggle(args.isReviewMode, {
@@ -53,44 +100,7 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
     if (!canRun) {
       return;
     }
-    const handled = runAppCommand(id, {
-      closeSettings: () => args.setSettingsOpen(false),
-      goBack: args.goBack,
-      goForward: args.goForward,
-      goToNode: () => args.setGoToNodePaletteOpen(true),
-      moveToNode: () => args.setIsMoveToNodePaletteOpen(true),
-      goParent: args.goParent,
-      importDirectory: () => {
-        void args.importDirectory();
-      },
-      importSingleFile: () => {
-        void args.importSingleFile();
-      },
-      openImportManagement: args.openImportManagement,
-      resetImportData: () => {
-        if (!window.confirm('Reset imported content and import records? This cannot be undone.')) {
-          return false;
-        }
-        void args.resetImportData();
-      },
-      openNotes: args.closeTrashView,
-      openSettings: () => args.setSettingsOpen(true),
-      openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
-      restartApp: args.onRestartApp,
-      revealReviewAnswer: args.revealReviewAnswer,
-      startClipboardImport: args.startClipboardImport,
-      toggleReviewMode,
-      toggleEditorDisplayMode: args.onToggleEditorDisplayMode,
-      toggleList: args.onToggleListVisibility,
-      toggleDevTools: args.onToggleDevTools,
-      gradeReviewAgain: () => args.gradeReviewCard(1),
-      gradeReviewHard: () => args.gradeReviewCard(2),
-      gradeReviewGood: () => args.gradeReviewCard(3),
-      gradeReviewEasy: () => args.gradeReviewCard(4),
-      readingReviewLater: () => args.deferReviewItem(),
-      readingReviewRead: () => args.completeReviewItem(),
-      readingReviewDismiss: () => args.dismissReviewItem()
-    });
+    const handled = runAppCommand(id, createPaletteCommandActions(args, toggleReviewMode));
     if (!handled) {
       return;
     }

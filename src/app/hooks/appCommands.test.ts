@@ -7,6 +7,9 @@ import { buildAppPaletteItems, runAppCommand, runReviewModeToggle } from './appC
 function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand>[1]> = {}) {
   return {
     closeSettings: () => undefined,
+    createFolder: () => undefined,
+    createItem: () => undefined,
+    createTopic: () => undefined,
     goBack: () => undefined,
     goForward: () => undefined,
     goToNode: () => undefined,
@@ -62,6 +65,9 @@ describe('buildAppPaletteItems', () => {
     });
 
     expect(items.length).toBeGreaterThanOrEqual(12);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.createFolder)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.createTopic)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.createItem)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
@@ -135,6 +141,14 @@ describe('runAppCommand', () => {
 
     expect(importSingleFile).toHaveBeenCalledTimes(1);
     expect(importDirectory).not.toHaveBeenCalled();
+  });
+
+  it('runs create topic through the shared command handler', () => {
+    const createTopic = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.createTopic, { createTopic });
+
+    expect(createTopic).toHaveBeenCalledTimes(1);
   });
 
   it('runs restart app through the shared command handler', () => {

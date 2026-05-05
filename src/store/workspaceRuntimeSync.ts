@@ -1,3 +1,4 @@
+import { findFolderTopicItemCommandByKind } from '../../lib/core/nodes/folderTopicItemCommands';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
 import type {
   NativeCommandArgs,
@@ -17,6 +18,9 @@ import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRen
 
 type FireAndForgetRuntimeCommand = Extract<
   NativeCommandName,
+  | typeof NATIVE_COMMANDS.createFolder
+  | typeof NATIVE_COMMANDS.createTopic
+  | typeof NATIVE_COMMANDS.createItem
   | typeof NATIVE_COMMANDS.updateNodeContent
   | typeof NATIVE_COMMANDS.updateNodeReveal
   | typeof NATIVE_COMMANDS.relearnNode
@@ -68,7 +72,12 @@ function runFireAndForgetRuntimeSync<T extends FireAndForgetRuntimeCommand>(
 }
 
 function runFireAndForgetNodeSnapshotRuntimeSync(
-  command: typeof NATIVE_COMMANDS.updateNodeContent | typeof NATIVE_COMMANDS.updateNodeReveal,
+  command:
+    | typeof NATIVE_COMMANDS.createFolder
+    | typeof NATIVE_COMMANDS.createTopic
+    | typeof NATIVE_COMMANDS.createItem
+    | typeof NATIVE_COMMANDS.updateNodeContent
+    | typeof NATIVE_COMMANDS.updateNodeReveal,
   node: Node,
   position: number | undefined,
   action: string
@@ -123,6 +132,15 @@ function runFireAndForgetNodeSnapshotRuntimeSync(
 
 export function syncNodeContentToRuntime(node: Node, position?: number) {
   runFireAndForgetNodeSnapshotRuntimeSync(NATIVE_COMMANDS.updateNodeContent, node, position, 'sync_node_content');
+}
+
+export function syncCreateNodeToRuntime(node: Node, position?: number) {
+  const command = findFolderTopicItemCommandByKind(node.kind)?.nativeCommand;
+  if (!command) {
+    runFireAndForgetNodeSnapshotRuntimeSync(NATIVE_COMMANDS.updateNodeContent, node, position, 'sync_create_node_fallback');
+    return;
+  }
+  runFireAndForgetNodeSnapshotRuntimeSync(command, node, position, 'sync_create_node');
 }
 
 export function syncNodeRevealToRuntime(node: Node, position?: number) {

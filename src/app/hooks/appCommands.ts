@@ -1,3 +1,4 @@
+import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../lib/core/nodes/folderTopicItemCommands';
 import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -23,6 +24,9 @@ interface BuildAppPaletteItemsOptions {
 interface RunAppCommandActions {
   importDirectory: () => void | Promise<void>;
   closeSettings: () => void;
+  createFolder: () => void;
+  createItem: () => void;
+  createTopic: () => void;
   openImportManagement: () => void;
   goBack: () => void;
   goForward: () => void;
@@ -65,6 +69,12 @@ interface AppPaletteCommandMeta {
 type CommandActionResult = boolean | void | Promise<void>;
 
 const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
+  ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => ({
+    id: command.appCommandId,
+    title: command.paletteTitle,
+    section: 'Workspace',
+    keywords: ['create', command.kind]
+  })),
   {
     id: APP_COMMAND_IDS.importSingleFile,
     title: 'Import Files',
@@ -198,6 +208,9 @@ export function runReviewModeToggle(isReviewMode: boolean, actions: ReviewModeTo
 
 export function runAppCommand(id: string, actions: RunAppCommandActions) {
   const handlers: Record<string, () => CommandActionResult> = {
+    [APP_COMMAND_IDS.createFolder]: actions.createFolder,
+    [APP_COMMAND_IDS.createTopic]: actions.createTopic,
+    [APP_COMMAND_IDS.createItem]: actions.createItem,
     [APP_COMMAND_IDS.importSingleFile]: actions.importSingleFile,
     [APP_COMMAND_IDS.importFolder]: actions.importDirectory,
     [APP_COMMAND_IDS.clipboardImport]: actions.startClipboardImport,

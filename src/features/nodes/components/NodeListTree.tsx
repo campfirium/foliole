@@ -157,7 +157,8 @@ function useNodeListTreeModel({
     collapsedState,
     contextMenu: controllers.contextMenu,
     createChildNode: workspace.createChildNode,
-    createGlobalNode: (content = '') => workspace.createChildNode(INBOX_NODE_ID, content),
+    createGlobalNode: (content = '', kind: 'folder' | 'topic' | 'item' = 'topic') =>
+      workspace.createChildNode(INBOX_NODE_ID, content, kind),
     deleteNodes: workspace.deleteNodes,
     deleteNodesPermanently: workspace.deleteNodesPermanently,
     dismissNode: workspace.dismissNode,

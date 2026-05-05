@@ -1,3 +1,4 @@
+import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
@@ -17,6 +18,7 @@ type WorkspaceSet = (
 
 interface RuntimeSyncHandlers {
   syncNodeContent: (node: WorkspaceState['nodesById'][string]) => void;
+  syncNodeCreation: (node: WorkspaceState['nodesById'][string]) => void;
   syncNodeOrder: (nodeOrder: string[]) => void;
 }
 
@@ -51,13 +53,13 @@ export function createRootNodeAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
 ): WorkspaceState['createRootNode'] {
-  return (content = '') => {
+  return (content = '', kind: NodeKind = 'topic') => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
     let createdNode = {
       id: nodeId,
       parentNodeId: null,
-      kind: 'topic' as const,
+      kind,
       title: deriveNodeTitleFromContent(content),
       hasContent: content.trim().length > 0,
       content,
@@ -99,7 +101,7 @@ export function createRootNodeAction(
         )
       };
     });
-    handlers.syncNodeContent(createdNode);
+    handlers.syncNodeCreation(createdNode);
     handlers.syncNodeOrder(nextNodeOrder);
     return nodeId;
   };
