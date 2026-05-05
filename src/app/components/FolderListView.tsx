@@ -1,3 +1,11 @@
+import { useMemo, useState } from 'react';
+
+import {
+  DEFAULT_FOLDER_LIST_SORT_KEY,
+  getFolderListNodeAuthor,
+  sortFolderListNodes,
+  type FolderListSortKey
+} from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 interface FolderListViewProps {
@@ -83,14 +91,56 @@ function renderAuthorSlot(nodeId: string) {
   );
 }
 
-function FolderListHeader({ itemCount }: { itemCount: number }) {
+const FOLDER_LIST_SORT_OPTIONS: { key: FolderListSortKey; label: string }[] = [
+  { key: 'date', label: 'Date' },
+  { key: 'title', label: 'Title' },
+  { key: 'author', label: 'Author' }
+];
+
+function FolderListSortButton(props: {
+  isActive: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-pressed={props.isActive}
+      className={[
+        'rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        props.isActive
+          ? 'border-border-strong bg-bg-elevated text-foreground'
+          : 'border-border bg-transparent text-foreground/72 hover:bg-bg-elevated hover:text-foreground'
+      ].join(' ')}
+      onClick={props.onClick}
+      type="button"
+    >
+      {props.label}
+    </button>
+  );
+}
+
+function FolderListHeader({
+  itemCount,
+  sortKey,
+  onChangeSortKey
+}: {
+  itemCount: number;
+  sortKey: FolderListSortKey;
+  onChangeSortKey: (sortKey: FolderListSortKey) => void;
+}) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-      <div aria-label="Folder list sorting" className="flex items-center gap-2 text-sm text-foreground/72">
+      <div aria-label="Folder list sorting" className="flex flex-wrap items-center gap-2 text-sm text-foreground/72">
         <span className="font-medium text-foreground">Sort</span>
-        <span className="rounded-full border border-border bg-bg-elevated px-2.5 py-1 text-xs font-medium text-foreground/78">
-          Manual order
-        </span>
+        {FOLDER_LIST_SORT_OPTIONS.map((option) => (
+          <FolderListSortButton
+            isActive={sortKey === option.key}
+            key={option.key}
+            label={option.label}
+            onClick={() => onChangeSortKey(option.key)}
+          />
+        ))}
+        <span className="text-xs text-foreground/56">Default: latest updated first</span>
       </div>
       <p className="text-sm text-foreground/65">{formatItemCount(itemCount)}</p>
     </div>
@@ -111,6 +161,8 @@ function FolderListEmptyState() {
 }
 
 function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => void }) {
+  const author = getFolderListNodeAuthor(props.node);
+
   return (
     <li>
       <button
@@ -134,7 +186,16 @@ function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => v
           </span>
         </span>
         <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-          {renderAuthorSlot(props.node.id)}
+          {author ? (
+            <span
+              className="block min-h-4 min-w-0 truncate text-xs text-foreground/52"
+              data-testid={`folder-list-author-${props.node.id}`}
+            >
+              {author}
+            </span>
+          ) : (
+            renderAuthorSlot(props.node.id)
+          )}
           <span className="shrink-0 text-xs text-foreground/56" data-testid={`folder-list-date-${props.node.id}`}>
             {formatNodeDate(props.node.updatedAt)}
           </span>
@@ -145,7 +206,11 @@ function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => v
 }
 
 export function FolderListView({ folderNodeId, nodeOrder, nodesById, onSelectNode }: FolderListViewProps) {
-  const childNodes = getDirectChildNodes(folderNodeId, nodeOrder, nodesById);
+  const [sortKey, setSortKey] = useState<FolderListSortKey>(DEFAULT_FOLDER_LIST_SORT_KEY);
+  const childNodes = useMemo(
+    () => sortFolderListNodes(getDirectChildNodes(folderNodeId, nodeOrder, nodesById), sortKey),
+    [folderNodeId, nodeOrder, nodesById, sortKey]
+  );
 
   return (
     <div className="flex min-h-0 flex-1 px-4 pt-4 pb-4 max-[1080px]:px-2 max-[1080px]:pt-2">
@@ -153,7 +218,7 @@ export function FolderListView({ folderNodeId, nodeOrder, nodesById, onSelectNod
         aria-label="Folder list view"
         className="mx-auto flex min-h-0 w-full max-w-[var(--document-max-width)] flex-1 flex-col overflow-hidden rounded-[var(--radius-3)] border border-border bg-bg-panel"
       >
-        <FolderListHeader itemCount={childNodes.length} />
+        <FolderListHeader itemCount={childNodes.length} onChangeSortKey={setSortKey} sortKey={sortKey} />
 
         {childNodes.length === 0 ? (
           <FolderListEmptyState />

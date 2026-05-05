@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -8,7 +8,7 @@ import { FolderListView } from './FolderListView';
 function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node {
   return {
     id: overrides.id,
-    parentNodeId: overrides.parentNodeId ?? 'folder-1',
+    parentNodeId: overrides.parentNodeId === undefined ? 'folder-1' : overrides.parentNodeId,
     kind: overrides.kind ?? 'topic',
     title: overrides.title,
     content: overrides.content ?? '',
@@ -35,7 +35,13 @@ function renderFolderList(children: Node[], onSelectNode = vi.fn()) {
   return { onSelectNode };
 }
 
-describe('FolderListView', () => {
+function getRenderedEntryTitles() {
+  return within(screen.getByRole('list', { name: 'Folder contents' }))
+    .getAllByRole('button')
+    .map((button) => button.getAttribute('aria-label')?.replace(/^Open\s+/, '') ?? '');
+}
+
+describe('FolderListView content', () => {
   it('shows title, summary, and date for entries with content', () => {
     renderFolderList([
       createNode({
@@ -69,6 +75,62 @@ describe('FolderListView', () => {
     expect(authorSlot.className).toContain('min-h-4');
   });
 
+});
+
+describe('FolderListView sorting', () => {
+  it('sorts by latest updated date by default', () => {
+    renderFolderList([
+      createNode({ id: 'node-1', title: 'Old note', updatedAt: '2026-04-01T09:00:00.000Z' }),
+      createNode({ id: 'node-2', title: 'Newest note', updatedAt: '2026-04-03T09:00:00.000Z' }),
+      createNode({ id: 'node-3', title: 'Middle note', updatedAt: '2026-04-02T09:00:00.000Z' })
+    ]);
+
+    expect(getRenderedEntryTitles()).toEqual(['Newest note', 'Middle note', 'Old note']);
+  });
+
+  it('switches to stable title sorting', () => {
+    renderFolderList([
+      createNode({ id: 'node-1', title: 'Beta', updatedAt: '2026-04-01T09:00:00.000Z' }),
+      createNode({ id: 'node-2', title: 'Alpha', updatedAt: '2026-04-03T09:00:00.000Z' }),
+      createNode({ id: 'node-3', title: 'Alpha', updatedAt: '2026-04-02T09:00:00.000Z' })
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Title' }));
+
+    expect(getRenderedEntryTitles()).toEqual(['Alpha', 'Alpha', 'Beta']);
+  });
+
+  it('keeps author sorting stable when some authors are missing', () => {
+    renderFolderList([
+      createNode({
+        id: 'node-1',
+        title: 'No author B',
+        content: 'Body only',
+        updatedAt: '2026-04-03T09:00:00.000Z'
+      }),
+      createNode({
+        id: 'node-2',
+        title: 'Named author',
+        content: '---\nauthor: Zoe\n---\nBody only',
+        updatedAt: '2026-04-02T09:00:00.000Z'
+      }),
+      createNode({
+        id: 'node-3',
+        title: 'No author A',
+        content: 'More body only',
+        updatedAt: '2026-04-01T09:00:00.000Z'
+      })
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Author' }));
+
+    expect(getRenderedEntryTitles()).toEqual(['Named author', 'No author A', 'No author B']);
+    expect(screen.getByTestId('folder-list-author-node-2')).toHaveTextContent('Zoe');
+  });
+
+});
+
+describe('FolderListView interactions', () => {
   it('opens the selected entry when a list item is clicked', () => {
     const { onSelectNode } = renderFolderList([
       createNode({ id: 'node-3', title: 'Open me', content: 'Preview body' })
@@ -79,6 +141,9 @@ describe('FolderListView', () => {
     expect(onSelectNode).toHaveBeenCalledWith('node-3');
   });
 
+});
+
+describe('FolderListView layout', () => {
   it('keeps long titles, empty bodies, and long summaries clamped inside the row', () => {
     renderFolderList([
       createNode({
