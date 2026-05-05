@@ -6,6 +6,7 @@ import type {
   SyncDiagnosticVerdict
 } from '../../lib/platform/syncDiagnosticsContract';
 import {
+  buildSyncConvergenceReport,
   runSyncConvergenceCheck,
   type SyncConvergenceReport
 } from '../shared/platform/companionSyncConvergence';
@@ -252,7 +253,9 @@ export function CompanionSyncDiagnosticsPanel(props: { endpointUrl: string | nul
     setError(null);
     setStatus('running');
     try {
-      setResult(await runCombinedSyncDiagnostics(props.endpointUrl));
+      const nextResult = await runCombinedSyncDiagnostics(props.endpointUrl);
+      setResult(nextResult);
+      setConvergenceReport(buildSyncConvergenceReport(nextResult));
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Sync diagnostic failed.');
     } finally {

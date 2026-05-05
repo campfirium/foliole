@@ -128,6 +128,10 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.queryByText('sync_android_not_caught_up')).not.toBeInTheDocument();
     expect(screen.getByText('Foliole will bring them in on the next sync.')).toBeInTheDocument();
     expect(screen.getByText('Sync status')).toBeInTheDocument();
+    expect(screen.getByText('Convergence check')).toBeInTheDocument();
+    expect(screen.getByText('Blocked')).toBeInTheDocument();
+    expect(screen.getByText('Latest completed event is not fully converged')).toBeInTheDocument();
+    expect(screen.getByText('Completed was recorded while 1 dirty change(s), 1 pending ack(s), 5 body blob(s), 2 attachment file(s), and 3 structure change(s) remain.')).toBeInTheDocument();
     expect(screen.getByText('Topic list')).toBeInTheDocument();
     expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
     expect(screen.getByText('Stage 2 · FSRS priority')).toBeInTheDocument();
@@ -163,6 +167,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getByText('seq 4')).toBeInTheDocument();
     expect(screen.getByText('Desktop')).toBeInTheDocument();
     expect(diagnosticsMock.runCombinedSyncDiagnostics).toHaveBeenCalledWith('http://10.0.2.2:38641');
+    expect(convergenceMock.runSyncConvergenceCheck).not.toHaveBeenCalled();
   });
 
   it('runs convergence check on demand and shows invariant failures', async () => {
