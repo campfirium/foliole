@@ -23,6 +23,7 @@ const APP_DATA_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/folio
 const PDF_PAGE_TEXT_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionPdfPageTextStore.java');
 const RESOURCE_RULES = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionResourceReadQueryRules.java');
 const READABLE_ARTICLE_QUERY = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionReadableArticleQuery.java');
+const EXTERNAL_DOCUMENT_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionExternalDocumentStore.java');
 
 describe('Android resource read query rules', () => {
   it('generates content blob, attachment resource, and PDF text read metadata', async () => {
@@ -57,6 +58,18 @@ describe('Android resource read query rules', () => {
       outputKeys: {
         contentStatus: 'content_status',
         nodeId: 'node_id'
+      }
+    });
+    expect(definitions.contentRead.externalDocuments).toMatchObject({
+      outputKeys: {
+        document: 'document',
+        matchStart: 'match_start',
+        results: 'results'
+      },
+      rowKeys: {
+        bodyBlobData: 'body_blob_data',
+        documentId: 'document_id',
+        matchIndex: 'match_index'
       }
     });
     expect(definitions.contentRead).toEqual(ANDROID_COMPANION_CONTENT_READ_RULES);
@@ -100,5 +113,17 @@ describe('Android resource read query rules', () => {
     expect(source).not.toContain('article.put("content_status"');
     expect(source).not.toContain('row.getString("id"');
     expect(source).not.toContain('optString("text"');
+  });
+
+  it('keeps external document Java shape wired to generated content rules', async () => {
+    const source = await readFile(EXTERNAL_DOCUMENT_STORE, 'utf8');
+
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentObject(context, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentArray(context, key)');
+    expect(source).not.toContain('result.put("document"');
+    expect(source).not.toContain('entry.put("document_id"');
+    expect(source).not.toContain('target.put("content_status"');
+    expect(source).not.toContain('row.getString("document_id"');
+    expect(source).not.toContain('row.getInt("match_index"');
   });
 });

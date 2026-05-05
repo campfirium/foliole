@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionExternalDocumentStore {
@@ -13,7 +14,8 @@ final class FolioleCompanionExternalDocumentStore {
 
     static JSObject loadDocument(Context context, SQLiteDatabase database, String documentId) throws Exception {
         JSObject result = new JSObject();
-        result.put("document", JSONObject.NULL);
+        JSONObject outputKeys = outputKeys(context);
+        result.put(outputKeys.getString("document"), JSONObject.NULL);
         if (documentId == null || documentId.trim().isEmpty()) {
             return result;
         }
@@ -26,7 +28,7 @@ final class FolioleCompanionExternalDocumentStore {
                 new String[] { documentId.trim() }
             );
         if (documents.length() > 0) {
-            result.put("document", toDocument(context, documents.getJSONObject(0)));
+            result.put(outputKeys.getString("document"), toDocument(context, documents.getJSONObject(0)));
         }
         return result;
     }
@@ -42,7 +44,7 @@ final class FolioleCompanionExternalDocumentStore {
                 stringRule(context, "foldersResultKey")
             )
         );
-        result.put("entries", loadEntries(context, database));
+        result.put(outputKeys(context).getString("entries"), loadEntries(context, database));
         return result;
     }
 
@@ -50,8 +52,9 @@ final class FolioleCompanionExternalDocumentStore {
         JSObject result = new JSObject();
         JSArray results = new JSArray();
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
-        result.put("query", query);
-        result.put("results", results);
+        JSONObject outputKeys = outputKeys(context);
+        result.put(outputKeys.getString("query"), query);
+        result.put(outputKeys.getString("results"), results);
         if (normalizedQuery.isEmpty()) {
             return result;
         }
@@ -88,16 +91,9 @@ final class FolioleCompanionExternalDocumentStore {
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
             JSObject entry = new JSObject();
-            String documentId = row.getString("document_id");
-            entry.put("document_id", documentId);
-            entry.put("folder_id", nullableString(row, "folder_id"));
-            entry.put("relative_path", nullableString(row, "relative_path"));
-            entry.put("file_name", nullableString(row, "file_name"));
-            entry.put("extension", nullableString(row, "extension"));
-            entry.put("title", nullableString(row, "title"));
-            entry.put("opening_text", nullableString(row, "opening_text"));
-            entry.put("modified_at", nullableString(row, "modified_at"));
-            entry.put("absolute_path", documentId);
+            String documentId = row.getString(rowKeys(context).getString("documentId"));
+            putFields(context, entry, row, arrayRule(context, "directoryEntryFields"));
+            entry.put(outputKeys(context).getString("absolutePath"), documentId);
             entries.put(entry);
         }
         return entries;
@@ -111,36 +107,46 @@ final class FolioleCompanionExternalDocumentStore {
 
     private static JSObject toSearchResult(Context context, JSONObject row) throws Exception {
         JSObject result = new JSObject();
-        int matchStart = Math.max(0, row.getInt("match_index") - 1);
+        JSONObject outputKeys = outputKeys(context);
+        int matchStart = Math.max(0, row.getInt(rowKeys(context).getString("matchIndex")) - 1);
         putDocumentFields(context, result, row);
-        result.put("match_start", matchStart);
-        result.put("excerpt", buildExcerpt(context, resolveContent(row), matchStart));
+        result.put(outputKeys.getString("matchStart"), matchStart);
+        result.put(outputKeys.getString("excerpt"), buildExcerpt(context, resolveContent(context, row), matchStart));
         return result;
     }
 
     private static void putDocumentFields(Context context, JSObject target, JSONObject row) throws Exception {
-        target.put("document_id", nullableString(row, "document_id"));
-        target.put("folder_id", nullableString(row, "folder_id"));
-        target.put("relative_path", nullableString(row, "relative_path"));
-        target.put("file_name", nullableString(row, "file_name"));
-        target.put("extension", nullableString(row, "extension"));
-        target.put("title", nullableString(row, "title"));
-        target.put("opening_text", nullableString(row, "opening_text"));
-        target.put("content", resolveContent(row));
-        target.put("content_status", resolveContentStatus(context, row));
-        target.put("updated_at", nullableString(row, "updated_at"));
+        putFields(context, target, row, arrayRule(context, "documentFields"));
     }
 
-    private static String resolveContent(JSONObject row) {
-        String bodyBlobData = nullableString(row, "body_blob_data");
-        return bodyBlobData == null ? nullableString(row, "content") : bodyBlobData;
+    private static void putFields(Context context, JSObject target, JSONObject row, JSONArray fields) throws Exception {
+        for (int index = 0; index < fields.length(); index += 1) {
+            JSONObject field = fields.getJSONObject(index);
+            target.put(field.getString("outputKey"), fieldValue(context, row, field));
+        }
+    }
+
+    private static Object fieldValue(Context context, JSONObject row, JSONObject field) throws Exception {
+        String type = field.getString("type");
+        String rowKey = field.getString("rowKey");
+        if ("nullableString".equals(type)) return nullableString(row, rowKey);
+        if ("resolvedContent".equals(type)) return resolveContent(context, row);
+        if ("contentStatus".equals(type)) return resolveContentStatus(context, row);
+        throw new IllegalStateException("Unsupported external document field type: " + type);
+    }
+
+    private static String resolveContent(Context context, JSONObject row) throws Exception {
+        JSONObject rowKeys = rowKeys(context);
+        String bodyBlobData = nullableString(row, rowKeys.getString("bodyBlobData"));
+        return bodyBlobData == null ? nullableString(row, rowKeys.getString("content")) : bodyBlobData;
     }
 
     private static String resolveContentStatus(Context context, JSONObject row) throws Exception {
-        String bodyBlobHash = nullableString(row, "body_blob_hash");
+        JSONObject rowKeys = rowKeys(context);
+        String bodyBlobHash = nullableString(row, rowKeys.getString("bodyBlobHash"));
         boolean hasBodyBlobHash = bodyBlobHash != null && !bodyBlobHash.trim().isEmpty();
-        if (hasBodyBlobHash && nullableString(row, "body_blob_data") == null) {
-            String availability = nullableString(row, "availability");
+        if (hasBodyBlobHash && nullableString(row, rowKeys.getString("bodyBlobData")) == null) {
+            String availability = nullableString(row, rowKeys.getString("availability"));
             if (FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "passthroughAvailabilityStatuses").contains(availability)) {
                 return availability;
             }
@@ -176,6 +182,22 @@ final class FolioleCompanionExternalDocumentStore {
 
     private static int intRule(Context context, String key) throws Exception {
         return FolioleCompanionContentReadQueryRules.externalDocumentInt(context, key);
+    }
+
+    private static JSONObject objectRule(Context context, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.externalDocumentObject(context, key);
+    }
+
+    private static JSONArray arrayRule(Context context, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.externalDocumentArray(context, key);
+    }
+
+    private static JSONObject outputKeys(Context context) throws Exception {
+        return objectRule(context, "outputKeys");
+    }
+
+    private static JSONObject rowKeys(Context context) throws Exception {
+        return objectRule(context, "rowKeys");
     }
 
 }

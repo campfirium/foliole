@@ -1,4 +1,5 @@
 import { ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionAttachmentResourceQueryDefinitions.ts';
+import { ANDROID_COMPANION_CONTENT_READ_RULES } from './androidCompanionContentReadDefinitions.ts';
 import { ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionContentResourceQueryDefinitions.ts';
 import { ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionDocumentResourceQueryDefinitions.ts';
 import { ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES } from './androidCompanionMissingResourceQueryDefinitions.ts';
@@ -13,50 +14,7 @@ export const ANDROID_COMPANION_RESOURCE_QUERY_DEFINITIONS = {
 
 export { ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES };
 
-export const ANDROID_COMPANION_CONTENT_READ_RULES = {
-  externalDocuments: {
-    byIdQueryName: 'externalDocumentById',
-    defaultSearchLimit: 20,
-    directoryEntriesQueryName: 'externalDocumentDirectoryEntries',
-    directoryEntriesResultKey: 'entries',
-    documentResultKey: 'document',
-    documentsResultKey: 'documents',
-    excerptRadius: 80,
-    foldersQueryName: 'externalSearchFolders',
-    foldersResultKey: 'folders',
-    maxSearchLimit: 100,
-    searchQueryName: 'externalDocumentSearch',
-    searchResultsKey: 'results'
-  },
-  readableArticle: {
-    activeNodeIdQueryName: 'readableArticleActiveNodeId',
-    articleResultKey: 'readable_article',
-    articlesResultKey: 'articles',
-    byNodeIdQueryName: 'readableArticleByNodeId',
-    firstNodeQueryName: 'readableArticleFirstNode',
-    pdfPagesQueryName: 'pdfPageTextPages',
-    pdfPagesResultKey: 'pages',
-    pdfPlaceholderText: 'Linked PDF source ready for the reader surface.',
-    referencePdfAttachmentQueryName: 'readableArticleReferencePdfAttachment',
-    untitledTitle: 'Untitled',
-    rowKeys: {
-      availability: 'availability',
-      bodyBlobData: 'body_blob_data',
-      bodyBlobHash: 'body_blob_hash',
-      content: 'content',
-      id: 'id',
-      title: 'title'
-    },
-    outputKeys: {
-      bodyBlobHash: 'body_blob_hash',
-      content: 'content',
-      contentStatus: 'content_status',
-      nodeId: 'node_id',
-      pdfAttachmentId: 'pdf_attachment_id',
-      title: 'title'
-    }
-  }
-} as const;
+export { ANDROID_COMPANION_CONTENT_READ_RULES };
 
 export const ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES = {
   backfillSnapshots: {

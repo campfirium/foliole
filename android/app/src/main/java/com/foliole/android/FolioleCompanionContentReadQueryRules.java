@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import android.content.Context;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionContentReadQueryRules {
@@ -15,6 +16,14 @@ final class FolioleCompanionContentReadQueryRules {
 
     static int externalDocumentInt(Context context, String key) throws Exception {
         return group(context, "externalDocuments").getInt(key);
+    }
+
+    static JSONObject externalDocumentObject(Context context, String key) throws Exception {
+        return group(context, "externalDocuments").getJSONObject(key);
+    }
+
+    static JSONArray externalDocumentArray(Context context, String key) throws Exception {
+        return group(context, "externalDocuments").getJSONArray(key);
     }
 
     static String readableArticleString(Context context, String key) throws Exception {
