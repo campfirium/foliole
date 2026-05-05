@@ -93,6 +93,11 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
     excerptRadius: 80,
     matchIndexKey: 'match_index',
     maxSearchLimit: 100,
+    outputKeys: {
+      excerpt: 'excerpt',
+      matchStart: 'match_start',
+      query: 'query'
+    },
     pageHeightKey: 'page_height',
     pageKey: 'page',
     pagesQueryName: 'pdfPageTextPages',

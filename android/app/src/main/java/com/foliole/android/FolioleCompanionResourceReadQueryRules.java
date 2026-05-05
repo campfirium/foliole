@@ -37,6 +37,10 @@ final class FolioleCompanionResourceReadQueryRules {
         return group(context, "pdfPageText").getString(key);
     }
 
+    static JSONObject pdfPageTextObject(Context context, String key) throws Exception {
+        return group(context, "pdfPageText").getJSONObject(key);
+    }
+
     private static JSONObject group(Context context, String groupName) throws Exception {
         JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("resourceRead");
         if (rules == null) {

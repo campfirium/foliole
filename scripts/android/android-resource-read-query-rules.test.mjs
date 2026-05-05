@@ -70,6 +70,11 @@ describe('Android resource read query rules', () => {
       defaultSearchLimit: 20,
       excerptRadius: 80,
       maxSearchLimit: 100,
+      outputKeys: {
+        excerpt: 'excerpt',
+        matchStart: 'match_start',
+        query: 'query'
+      },
       pagesQueryName: 'pdfPageTextPages',
       searchQueryName: 'pdfPageTextSearch',
       searchResultKey: 'results'
@@ -117,6 +122,7 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentObject(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextObject(context, "outputKeys")');
     expect(rulesSource).toContain('optJSONObject("resourceRead")');
     expect(rulesSource).toContain('getJSONObject(key)');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestByHash"');
@@ -131,6 +137,9 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).not.toContain('put("synced_hashes"');
     expect(combinedStoreSource).not.toContain('put("resource_url"');
     expect(combinedStoreSource).not.toContain('put("availability"');
+    expect(combinedStoreSource).not.toContain('put("query"');
+    expect(combinedStoreSource).not.toContain('put("match_start"');
+    expect(combinedStoreSource).not.toContain('put("excerpt"');
     expect(combinedStoreSource).not.toContain('optString("attachment_id"');
     expect(combinedStoreSource).not.toContain('optString("content_hash"');
     expect(combinedStoreSource).not.toContain('DEFAULT_SEARCH_LIMIT');
