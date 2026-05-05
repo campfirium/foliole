@@ -1,43 +1,43 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
     private FolioleCompanionWorkspaceNodeSnapshotBuilder() {}
 
-    static JSObject build(Context context, SQLiteDatabase database, Cursor cursor, String deletedAt) throws Exception {
+    static JSObject build(Context context, SQLiteDatabase database, JSONObject row, String deletedAt) throws Exception {
         JSObject node = new JSObject();
-        node.put("id", cursor.getString(0));
-        node.put("parentNodeId", cursor.isNull(1) ? null : cursor.getString(1));
-        node.put("kind", normalizeKind(cursor.isNull(2) ? null : cursor.getString(2)));
-        if (!cursor.isNull(3)) node.put("priority", cursor.getInt(3));
-        if (!cursor.isNull(4)) node.put("desiredRetention", cursor.getDouble(4));
-        node.put("title", normalizeTitle(cursor.isNull(5) ? null : cursor.getString(5)));
-        node.put("isTitleManual", cursor.getInt(6) == 1);
-        node.put("hideTitleHeading", cursor.getInt(7) == 1);
-        node.put("content", cursor.getString(8));
-        node.put("bodyBlobHash", cursor.isNull(36) ? null : cursor.getString(36));
-        putBodyStatus(node, cursor.getString(10));
-        JSONArray attachments = FolioleCompanionNodeAttachmentStore.loadNodeAttachments(context, database, cursor.getString(0));
+        String nodeId = row.getString("id");
+        node.put("id", nodeId);
+        node.put("parentNodeId", nullableString(row, "parent_id"));
+        node.put("kind", normalizeKind(nullableString(row, "kind")));
+        if (!row.isNull("priority")) node.put("priority", row.getLong("priority"));
+        if (!row.isNull("desired_retention")) node.put("desiredRetention", row.getDouble("desired_retention"));
+        node.put("title", normalizeTitle(nullableString(row, "title")));
+        node.put("isTitleManual", row.getLong("is_title_manual") == 1);
+        node.put("hideTitleHeading", row.getLong("hide_title_heading") == 1);
+        node.put("content", nullableString(row, "content"));
+        node.put("bodyBlobHash", nullableString(row, "body_blob_hash"));
+        putBodyStatus(node, row.getString("body_status"));
+        JSONArray attachments = FolioleCompanionNodeAttachmentStore.loadNodeAttachments(context, database, nodeId);
         if (attachments.length() > 0) node.put("attachments", attachments);
-        node.put("openingText", cursor.isNull(9) ? null : cursor.getString(9));
-        node.put("virtualFilter", FolioleCompanionJsonValueParser.parse(cursor.isNull(11) ? null : cursor.getString(11)));
-        node.put("reveal", cursor.isNull(12) ? null : cursor.getString(12));
-        node.put("anchorLink", FolioleCompanionJsonValueParser.parse(cursor.isNull(13) ? null : cursor.getString(13)));
-        node.put("imageRegions", FolioleCompanionJsonValueParser.parse(cursor.isNull(14) ? null : cursor.getString(14)));
-        node.put("reading", buildReading(cursor));
-        node.put("review", buildReview(cursor));
-        node.put("createdAt", cursor.getString(15));
-        node.put("updatedAt", cursor.getString(16));
-        node.put("currentVersionId", cursor.isNull(18) ? null : cursor.getString(18));
+        node.put("openingText", nullableString(row, "opening_text"));
+        node.put("virtualFilter", FolioleCompanionJsonValueParser.parse(nullableString(row, "virtual_filter")));
+        node.put("reveal", nullableString(row, "reveal"));
+        node.put("anchorLink", FolioleCompanionJsonValueParser.parse(nullableString(row, "anchor_link")));
+        node.put("imageRegions", FolioleCompanionJsonValueParser.parse(nullableString(row, "image_regions")));
+        node.put("reading", buildReading(row));
+        node.put("review", buildReview(row));
+        node.put("createdAt", row.getString("created_at"));
+        node.put("updatedAt", row.getString("updated_at"));
+        node.put("currentVersionId", nullableString(row, "current_version_id"));
         if (deletedAt != null) node.put("deletedAt", deletedAt);
         return node;
     }
@@ -48,35 +48,39 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
         }
     }
 
-    private static Object buildReading(Cursor cursor) {
-        if (cursor.isNull(21) || cursor.isNull(22) || cursor.isNull(26)) return null;
-        String state = cursor.getString(26);
+    private static Object buildReading(JSONObject row) {
+        if (row.isNull("last_handled_at") || row.isNull("next_at") || row.isNull("reading_state")) return null;
+        String state = row.optString("reading_state", null);
         if (!"active".equals(state) && !"done".equals(state) && !"dismissed".equals(state)) return null;
         JSObject reading = new JSObject();
-        reading.put("intervalDurationMs", cursor.isNull(19) ? 0 : cursor.getLong(19));
-        reading.put("intervalGrowthFactor", cursor.isNull(20) ? 1 : cursor.getDouble(20));
-        reading.put("lastHandledAt", cursor.getString(21));
-        reading.put("nextAt", cursor.getString(22));
-        reading.put("priority", cursor.isNull(23) ? 0 : cursor.getDouble(23));
-        reading.put("readingPosition", cursor.isNull(24) ? 0 : cursor.getLong(24));
-        reading.put("repetitionCount", cursor.isNull(25) ? 0 : cursor.getLong(25));
+        reading.put("intervalDurationMs", row.isNull("interval_duration_ms") ? 0 : row.optLong("interval_duration_ms", 0));
+        reading.put("intervalGrowthFactor", row.isNull("interval_growth_factor") ? 1 : row.optDouble("interval_growth_factor", 1));
+        reading.put("lastHandledAt", row.optString("last_handled_at", null));
+        reading.put("nextAt", row.optString("next_at", null));
+        reading.put("priority", row.isNull("reading_priority") ? 0 : row.optDouble("reading_priority", 0));
+        reading.put("readingPosition", row.isNull("reading_position") ? 0 : row.optLong("reading_position", 0));
+        reading.put("repetitionCount", row.isNull("repetition_count") ? 0 : row.optLong("repetition_count", 0));
         reading.put("state", state);
         return reading;
     }
 
-    private static Object buildReview(Cursor cursor) {
-        if (cursor.isNull(27)) return null;
+    private static Object buildReview(JSONObject row) {
+        if (row.isNull("due")) return null;
         JSObject review = new JSObject();
-        review.put("due", cursor.getString(27));
-        review.put("lastReviewAt", cursor.isNull(28) ? null : cursor.getString(28));
-        review.put("state", cursor.isNull(29) ? 0 : cursor.getInt(29));
-        review.put("stability", cursor.isNull(30) ? 0 : cursor.getDouble(30));
-        review.put("difficulty", cursor.isNull(31) ? 0 : cursor.getDouble(31));
-        review.put("elapsedDays", cursor.isNull(32) ? 0 : cursor.getInt(32));
-        review.put("scheduledDays", cursor.isNull(33) ? 0 : cursor.getInt(33));
-        review.put("reps", cursor.isNull(34) ? 0 : cursor.getInt(34));
-        review.put("lapses", cursor.isNull(35) ? 0 : cursor.getInt(35));
+        review.put("due", row.optString("due", null));
+        review.put("lastReviewAt", nullableString(row, "last_review_at"));
+        review.put("state", row.isNull("review_state") ? 0 : row.optLong("review_state", 0));
+        review.put("stability", row.isNull("stability") ? 0 : row.optDouble("stability", 0));
+        review.put("difficulty", row.isNull("difficulty") ? 0 : row.optDouble("difficulty", 0));
+        review.put("elapsedDays", row.isNull("elapsed_days") ? 0 : row.optLong("elapsed_days", 0));
+        review.put("scheduledDays", row.isNull("scheduled_days") ? 0 : row.optLong("scheduled_days", 0));
+        review.put("reps", row.isNull("reps") ? 0 : row.optLong("reps", 0));
+        review.put("lapses", row.isNull("lapses") ? 0 : row.optLong("lapses", 0));
         return review;
+    }
+
+    private static String nullableString(JSONObject row, String key) {
+        return row.isNull(key) ? null : row.optString(key, null);
     }
 
     private static String normalizeKind(String kind) {

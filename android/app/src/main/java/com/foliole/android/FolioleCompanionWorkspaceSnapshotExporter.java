@@ -4,11 +4,13 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 final class FolioleCompanionWorkspaceSnapshotExporter {
 
@@ -37,35 +39,19 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         JSONArray trashedNodeIds = new JSONArray();
         String firstActiveNodeId = null;
 
-        try (Cursor cursor = database.rawQuery(
-            "SELECT " +
-                "n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.title, n.is_title_manual, " +
-                "n.hide_title_heading, " + contentExpression + ", n.opening_text, " + bodyStatusExpression + ", " +
-                "n.virtual_filter, n.reveal, n.anchor_link, " +
-                "n.image_regions, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, " +
-                "rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority, " +
-                "rds.reading_position, rd.repetition_count, rd.state, " +
-                "nr.due, nr.last_review_at, nr.state, nr.stability, nr.difficulty, nr.elapsed_days, " +
-                "nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash " +
-            "FROM nodes n " +
-            contentBlobJoin +
-            "LEFT JOIN node_reading rd ON rd.node_id = n.id " +
-            "LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? " +
-            "LEFT JOIN node_review nr ON nr.node_id = n.id " +
-            "ORDER BY CASE WHEN EXISTS (SELECT 1 FROM node_order no WHERE no.node_id = n.id) THEN 0 ELSE 1 END, " +
-                "(SELECT no.position FROM node_order no WHERE no.node_id = n.id), n.created_at ASC",
-            new String[] { deviceId }
-        )) {
-            while (cursor.moveToNext()) {
-                String nodeId = cursor.getString(0);
-                String deletedAt = cursor.isNull(17) ? null : cursor.getString(17);
-                if (deletedAt != null) {
-                    trashedNodeIds.put(nodeId);
-                } else if (firstActiveNodeId == null) {
-                    firstActiveNodeId = nodeId;
-                }
-                nodesById.put(nodeId, FolioleCompanionWorkspaceNodeSnapshotBuilder.build(context, database, cursor, deletedAt));
+        JSONArray nodes = FolioleCompanionNamedQueryStore
+            .loadArray(context, database, "workspaceSnapshotNodes", snapshotQueryReplacements(contentExpression, contentBlobJoin, bodyStatusExpression), new String[] { deviceId })
+            .getJSONArray("nodes");
+        for (int index = 0; index < nodes.length(); index += 1) {
+            JSONObject row = nodes.getJSONObject(index);
+            String nodeId = row.getString("id");
+            String deletedAt = row.isNull("deleted_at") ? null : row.getString("deleted_at");
+            if (deletedAt != null) {
+                trashedNodeIds.put(nodeId);
+            } else if (firstActiveNodeId == null) {
+                firstActiveNodeId = nodeId;
             }
+            nodesById.put(nodeId, FolioleCompanionWorkspaceNodeSnapshotBuilder.build(context, database, row, deletedAt));
         }
 
         if (nodesById.length() == 0) {
@@ -80,6 +66,18 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         snapshot.put("trashedNodeIds", trashedNodeIds);
         snapshot.put("untitledSequenceByParent", loadUntitledSequenceByParent(context, database));
         return snapshot;
+    }
+
+    private static Map<String, String> snapshotQueryReplacements(
+        String contentExpression,
+        String contentBlobJoin,
+        String bodyStatusExpression
+    ) {
+        Map<String, String> replacements = new HashMap<>();
+        replacements.put("__CONTENT_EXPRESSION__", contentExpression);
+        replacements.put("__CONTENT_BLOB_JOIN__", contentBlobJoin);
+        replacements.put("__BODY_STATUS_EXPRESSION__", bodyStatusExpression);
+        return replacements;
     }
 
     private static boolean hasTable(SQLiteDatabase database, String tableName) {

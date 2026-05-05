@@ -99,6 +99,61 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
     resultKey: 'rows',
     sql: 'SELECT value FROM workspace_meta WHERE key = ? LIMIT 1',
     columns: [{ key: 'value', source: 'value', type: 'nullableString' }]
+  },
+  workspaceSnapshotNodes: {
+    resultKey: 'nodes',
+    sql:
+      'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.title, n.is_title_manual, ' +
+      'n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, ' +
+      'n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, ' +
+      'rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, ' +
+      'rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, ' +
+      'nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash ' +
+      'FROM nodes n __CONTENT_BLOB_JOIN__ ' +
+      'LEFT JOIN node_reading rd ON rd.node_id = n.id ' +
+      'LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? ' +
+      'LEFT JOIN node_review nr ON nr.node_id = n.id ' +
+      'ORDER BY CASE WHEN EXISTS (SELECT 1 FROM node_order no WHERE no.node_id = n.id) THEN 0 ELSE 1 END, ' +
+      '(SELECT no.position FROM node_order no WHERE no.node_id = n.id), n.created_at ASC',
+    columns: [
+      { key: 'id', source: 'id', type: 'string' },
+      { key: 'parent_id', source: 'parent_id', type: 'nullableString' },
+      { key: 'kind', source: 'kind', type: 'nullableString' },
+      { key: 'priority', source: 'priority', type: 'long' },
+      { key: 'desired_retention', source: 'desired_retention', type: 'double' },
+      { key: 'title', source: 'title', type: 'nullableString' },
+      { key: 'is_title_manual', source: 'is_title_manual', type: 'long' },
+      { key: 'hide_title_heading', source: 'hide_title_heading', type: 'long' },
+      { key: 'content', source: 'content', type: 'nullableString' },
+      { key: 'opening_text', source: 'opening_text', type: 'nullableString' },
+      { key: 'body_status', source: 'body_status', type: 'string' },
+      { key: 'virtual_filter', source: 'virtual_filter', type: 'nullableString' },
+      { key: 'reveal', source: 'reveal', type: 'nullableString' },
+      { key: 'anchor_link', source: 'anchor_link', type: 'nullableString' },
+      { key: 'image_regions', source: 'image_regions', type: 'nullableString' },
+      { key: 'created_at', source: 'created_at', type: 'string' },
+      { key: 'updated_at', source: 'updated_at', type: 'string' },
+      { key: 'deleted_at', source: 'deleted_at', type: 'nullableString' },
+      { key: 'current_version_id', source: 'current_version_id', type: 'nullableString' },
+      { key: 'interval_duration_ms', source: 'interval_duration_ms', type: 'long' },
+      { key: 'interval_growth_factor', source: 'interval_growth_factor', type: 'double' },
+      { key: 'last_handled_at', source: 'last_handled_at', type: 'nullableString' },
+      { key: 'next_at', source: 'next_at', type: 'nullableString' },
+      { key: 'reading_priority', source: 'reading_priority', type: 'double' },
+      { key: 'reading_position', source: 'reading_position', type: 'long' },
+      { key: 'repetition_count', source: 'repetition_count', type: 'long' },
+      { key: 'reading_state', source: 'reading_state', type: 'nullableString' },
+      { key: 'due', source: 'due', type: 'nullableString' },
+      { key: 'last_review_at', source: 'last_review_at', type: 'nullableString' },
+      { key: 'review_state', source: 'review_state', type: 'long' },
+      { key: 'stability', source: 'stability', type: 'double' },
+      { key: 'difficulty', source: 'difficulty', type: 'double' },
+      { key: 'elapsed_days', source: 'elapsed_days', type: 'long' },
+      { key: 'scheduled_days', source: 'scheduled_days', type: 'long' },
+      { key: 'reps', source: 'reps', type: 'long' },
+      { key: 'lapses', source: 'lapses', type: 'long' },
+      { key: 'body_blob_hash', source: 'body_blob_hash', type: 'nullableString' }
+    ]
   }
 };
 
