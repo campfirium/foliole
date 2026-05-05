@@ -352,7 +352,7 @@ describe('companion desktop sync push acknowledgements', () => {
     ]);
   });
 
-  it('skips legacy node_reading dirty rows that do not have a base reference', async () => {
+  it('pushes dirty state rows with a null base as create attempts', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReadingChange({
       base_content_hash: null
     })]);
@@ -360,11 +360,14 @@ describe('companion desktop sync push acknowledgements', () => {
 
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-    expect(result.pushedObjectIds).toEqual([]);
-    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
+    expect(result.pushedObjectIds).toEqual(['node_reading:node-1']);
+    expect(fetch).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/sync-push', expect.objectContaining({
+      body: expect.stringContaining('"baseContentHash":null'),
+      method: 'POST'
+    }));
   });
 
-  it('skips legacy node_review dirty rows that do not have a base reference', async () => {
+  it('pushes node_review dirty rows with a null base as create attempts', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([{
       ...createLocalNodeReviewChange(),
       base_content_hash: null
@@ -373,11 +376,14 @@ describe('companion desktop sync push acknowledgements', () => {
 
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-    expect(result.pushedObjectIds).toEqual([]);
-    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
+    expect(result.pushedObjectIds).toEqual(['node_review:node-1']);
+    expect(fetch).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/sync-push', expect.objectContaining({
+      body: expect.stringContaining('"baseContentHash":null'),
+      method: 'POST'
+    }));
   });
 
-  it('does not push review_log when the matching node_review state is not pushable', async () => {
+  it('pushes review_log when the matching node_review is a create attempt', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([{
       ...createLocalNodeReviewChange(),
       base_content_hash: null
@@ -387,8 +393,8 @@ describe('companion desktop sync push acknowledgements', () => {
 
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-    expect(result.pushedReviewOpIds).toEqual([]);
-    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
+    expect(result.pushedReviewOpIds).toEqual(['op-1']);
+    expect(fetch).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/sync-push', expect.any(Object));
     expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
   });
 });

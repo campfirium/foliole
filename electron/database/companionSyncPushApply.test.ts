@@ -190,6 +190,19 @@ describe('companion sync push apply', () => {
     )).toEqual({ content_hash: 'android-next', sync_dirty: 0 });
   });
 
+  it('accepts node_review create attempts when desktop has no current state', () => {
+    const result = applyCompanionSyncPush([createNodeReviewPush({
+      base: { baseContentHash: null, kind: 'content_hash' }
+    })]);
+
+    expect(result.appliedObjectIds).toEqual(['node_review:node-1']);
+    expect(result.acks).toMatchObject([{ stateSeq: 1, status: 'accepted' }]);
+    expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; sync_dirty: number }>(
+      `SELECT content_hash, sync_dirty FROM sync_object_state
+       WHERE object_type = 'node_review' AND object_id = 'node-1'`
+    )).toEqual({ content_hash: 'android-next', sync_dirty: 0 });
+  });
+
   it('accepts node_reading when base content hash matches current desktop state', () => {
     insertBaseReadingState();
 
@@ -240,6 +253,25 @@ describe('companion sync push apply', () => {
     insertBaseReviewState('desktop-newer');
 
     const result = applyCompanionSyncPush([createNodeReviewPush()]);
+
+    expect(result.appliedObjectIds).toEqual([]);
+    expect(result.acks).toMatchObject([{
+      conflictReason: 'base_content_hash_mismatch',
+      stateSeq: 1,
+      status: 'conflict'
+    }]);
+    expect(openDatabaseConnection().driver.queryOne<{ content_hash: string }>(
+      `SELECT content_hash FROM sync_object_state
+       WHERE object_type = 'node_review' AND object_id = 'node-1'`
+    )).toEqual({ content_hash: 'desktop-newer' });
+  });
+
+  it('returns conflict for null-base node_review when desktop state already exists', () => {
+    insertBaseReviewState('desktop-newer');
+
+    const result = applyCompanionSyncPush([createNodeReviewPush({
+      base: { baseContentHash: null, kind: 'content_hash' }
+    })]);
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{

@@ -15,7 +15,7 @@ type SyncPushStatus = 'accepted' | 'already_applied' | 'conflict' | 'rejected';
 
 type SyncBaseReference =
   | { kind: 'blocked'; reason: 'missing_base_reference' }
-  | { baseContentHash: string; kind: 'content_hash' }
+  | { baseContentHash: string | null; kind: 'content_hash' }
   | { kind: 'op_id'; opId: string };
 
 export interface SyncObjectIdentity {
@@ -144,7 +144,10 @@ function applyStateObjectPush(
         appliedReviewOpIds: []
       };
     }
-    if (!current || current.content_hash !== item.base.baseContentHash) {
+    if (
+      (current && current.content_hash !== item.base.baseContentHash)
+      || (!current && item.base.baseContentHash !== null)
+    ) {
       return {
         acks: [{
           clientOpId: item.clientOpId,

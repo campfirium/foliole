@@ -152,12 +152,12 @@ function testBuildsViewStatePayload() {
   });
 }
 
-function testBlocksLegacyMissingBase() {
+function testUsesNullBaseForCreateAttempts() {
   const row = createNodeReviewRow({ base_content_hash: null });
 
   expect(nodeReviewSyncAdapter.baseReference(row)).toEqual({
-    kind: 'blocked',
-    reason: 'missing_base_reference'
+    baseContentHash: null,
+    kind: 'content_hash'
   });
 }
 
@@ -240,7 +240,7 @@ describe('companion sync push protocol adapters', () => {
   it('builds a node_reading push payload with content-hash base reference', testBuildsNodeReadingPayload);
   it('builds a setting push payload scoped by the setting identity tuple', testBuildsSettingPayload);
   it('builds a view_state push payload scoped by its state scope', testBuildsViewStatePayload);
-  it('blocks legacy node_review dirty rows that have no base reference', testBlocksLegacyMissingBase);
+  it('uses a null base reference for state object create attempts', testUsesNullBaseForCreateAttempts);
   it('blocks state pull payloads when local dirty state exists', testBlocksPullApplyForDirtyStateRows);
   it('applies state pull payloads when the local state is clean', testAppliesPullWhenLocalStateIsClean);
   it('confirms node_review dirty only after pulled state reaches the ack state_seq', testConfirmsNodeReviewByAckStateSeq);

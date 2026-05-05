@@ -16,7 +16,7 @@ export interface SyncObjectIdentity {
 
 export type SyncBaseReference =
   | { kind: 'blocked'; reason: 'invalid_identity' | 'missing_base_reference' }
-  | { baseContentHash: string; kind: 'content_hash' }
+  | { baseContentHash: string | null; kind: 'content_hash' }
   | { kind: 'op_id'; opId: string }
   | { ancestorVersionIds: string[]; kind: 'node_version'; parentVersionId: string | null };
 
@@ -106,9 +106,7 @@ function createStateObjectSyncAdapter(
       if (!isValidStateObjectIdentity(row)) {
         return { kind: 'blocked', reason: 'invalid_identity' };
       }
-      return row.base_content_hash
-        ? { baseContentHash: row.base_content_hash, kind: 'content_hash' }
-        : { kind: 'blocked', reason: 'missing_base_reference' };
+      return { baseContentHash: row.base_content_hash ?? null, kind: 'content_hash' };
     },
     buildPushPayload(row) {
       return {
