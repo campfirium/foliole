@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
-import type { Node, NodeAnchorLink } from '../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../features/nodes/model/nodeTypes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
 import { loadWorkspaceLayoutPreferenceSnapshot } from './workspaceLayoutPrefs';
@@ -71,7 +71,8 @@ export interface WorkspaceState {
     parentNodeId: string,
     content: string,
     anchorId?: string,
-    anchorLink?: NodeAnchorLink
+    anchorLink?: NodeAnchorLink,
+    imageRegions?: NodeImageRegionGroup[] | null
   ) => string | null;
   createQANodeFromSelection: (
     parentNodeId: string,

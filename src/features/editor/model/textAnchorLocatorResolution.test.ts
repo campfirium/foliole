@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { remapTextAnchorLocator, resolveTextAnchorLocatorSelection } from './textAnchorLocatorResolution';
 
 describe('textAnchorLocatorResolution selection', () => {
-  it('keeps exact matching locator positions', () => {
+  it('uses stored locator positions directly', () => {
     expect(
       resolveTextAnchorLocatorSelection('Alpha Beta Gamma', {
         from: 6,
@@ -16,7 +16,7 @@ describe('textAnchorLocatorResolution selection', () => {
     });
   });
 
-  it('recovers a stale locator when the original text exists in one unique place', () => {
+  it('does not rematch by original text when the surrounding text changes', () => {
     expect(
       resolveTextAnchorLocatorSelection('Start Alpha Beta Gamma', {
         from: 6,
@@ -24,24 +24,27 @@ describe('textAnchorLocatorResolution selection', () => {
         to: 10
       })
     ).toEqual({
-      from: 'Start Alpha Beta Gamma'.indexOf('Beta'),
-      to: 'Start Alpha Beta Gamma'.indexOf('Beta') + 'Beta'.length
+      from: 6,
+      to: 10
     });
   });
 
-  it('does not guess when the original text appears multiple times', () => {
+  it('clamps locators that extend past the current content length', () => {
     expect(
-      resolveTextAnchorLocatorSelection('Beta Alpha Beta Gamma', {
+      resolveTextAnchorLocatorSelection('Beta', {
         from: 6,
         originalText: 'Beta',
         to: 10
       })
-    ).toBeNull();
+    ).toEqual({
+      from: 4,
+      to: 4
+    });
   });
 });
 
 describe('textAnchorLocatorResolution remap', () => {
-  it('remaps locators with the same recovery rule', () => {
+  it('keeps locator positions when there is no previous content context', () => {
     expect(
       remapTextAnchorLocator('Start Alpha Beta Gamma', {
         from: 6,
@@ -49,19 +52,19 @@ describe('textAnchorLocatorResolution remap', () => {
         to: 10
       })
     ).toEqual({
-      from: 'Start Alpha Beta Gamma'.indexOf('Beta'),
+      from: 6,
       originalText: 'Beta',
-      to: 'Start Alpha Beta Gamma'.indexOf('Beta') + 'Beta'.length
+      to: 10
     });
   });
 
-  it('recovers an edited word near the stored offset when the text was expanded in place', () => {
+  it('maps locators through parent content edits', () => {
     expect(
       remapTextAnchorLocator('Alpha Better Gamma', {
         from: 6,
         originalText: 'Beta',
         to: 10
-      })
+      }, 'Alpha Beta Gamma')
     ).toEqual({
       from: 6,
       originalText: 'Better',
@@ -69,17 +72,31 @@ describe('textAnchorLocatorResolution remap', () => {
     });
   });
 
-  it('falls back to an unresolved zero-width locator when the old text can no longer be proven', () => {
+  it('falls back to a zero-width locator when the anchored range is fully deleted', () => {
     expect(
       remapTextAnchorLocator('Alpha  Gamma', {
         from: 6,
         originalText: 'Beta',
         to: 10
-      })
+      }, 'Alpha Beta Gamma')
     ).toEqual({
       from: 6,
       originalText: 'Beta',
       to: 6
+    });
+  });
+
+  it('clamps locators when the current content is shorter and there is no edit context', () => {
+    expect(
+      remapTextAnchorLocator('Beta', {
+        from: 6,
+        originalText: 'Beta',
+        to: 10
+      })
+    ).toEqual({
+      from: 4,
+      originalText: 'Beta',
+      to: 4
     });
   });
 });

@@ -30,6 +30,17 @@ it('treats contiguous markdown table rows as a standalone reading block', () => 
   expect(resolveCurrentParagraphSelection(content, { from: 20, to: 20 })).toEqual({ from: 7, to: 47 });
 });
 
+it('treats a standalone markdown image line as its own reading block', () => {
+  const content = 'Alpha\n\n![Cover](asset://hash-1.png)\n\nGamma';
+
+  expect(getParagraphSelections(content)).toEqual([
+    { from: 0, to: 5 },
+    { from: 7, to: 35 },
+    { from: 37, to: 42 }
+  ]);
+  expect(resolveCurrentParagraphSelection(content, { from: 10, to: 10 })).toEqual({ from: 7, to: 35 });
+});
+
 it('selects the current paragraph before advancing when given only a point', () => {
   const content = 'Alpha line\nstill alpha\n\nBeta\n\nGamma';
 

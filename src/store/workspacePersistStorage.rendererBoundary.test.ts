@@ -5,7 +5,6 @@ import { appendReadingPositionTraceLog, getRuntimeInvoke } from '../shared/platf
 import { workspacePersistStorage } from './workspacePersistStorage';
 import {
   createUpdatedChildAnchorRuntimeInvoke,
-  expectReplayedUpdatedChildCloze,
   expectReplayedUpdatedChildHighlight,
   readHydratedState
 } from './workspacePersistStorage.rendererBoundary.test-support';
@@ -121,19 +120,21 @@ async function runClozeRehydrateCase() {
 
   expect(state?.nodesById['node-cloze']).toMatchObject({
     title: 'Alpha [...] Gamma',
-    content: 'Alpha [...] Gamma',
-    reveal: 'Better',
+    content: '',
+    reveal: null,
     anchorLink: {
       id: 'cloze-1',
       kind: 'cloze',
-      locator: {
-        from: 6,
-        originalText: 'Better',
-        to: 12
-      }
+        locator: {
+          from: 6,
+          originalText: 'Beta',
+          to: 10
+        }
     }
   });
-  expectReplayedUpdatedChildCloze(invoke);
+  expect(invoke).not.toHaveBeenCalledWith('update_node_content', expect.objectContaining({
+    nodeId: 'node-cloze'
+  }));
 }
 
 describe('workspacePersistStorage renderer boundary', () => {
@@ -145,6 +146,6 @@ describe('workspacePersistStorage renderer boundary', () => {
   });
 
   it('keeps only active and pending node documents in the hydrate payload', runKeepsOnlyActiveAndPendingDocumentsCase);
-  it('rehydrates pending child highlights with refreshed text and locator before runtime replay finishes', runPendingHighlightRehydrateCase);
-  it('rehydrates child clozes with refreshed reveal and locator after the parent text changes', runClozeRehydrateCase);
+  it('rehydrates pending child highlights with refreshed locator before runtime replay finishes', runPendingHighlightRehydrateCase);
+  it('rehydrates child clozes with refreshed locator after the parent text changes', runClozeRehydrateCase);
 });

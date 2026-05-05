@@ -1,5 +1,6 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { createLineClass } from '../../features/editor/model/markdownLineSyntax';
+import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
 
 function buildLineRanges(content: string) {
   const lines: Array<{ blank: boolean; end: number; start: number; text: string }> = [];
@@ -37,6 +38,15 @@ function isMarkdownTableLine(text: string) {
     return false;
   }
   return trimmed.length > 1;
+}
+
+function isStandaloneMarkdownImageLine(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('![')) {
+    return false;
+  }
+  const matches = collectMarkdownImageReferences(trimmed);
+  return matches.length === 1 && matches[0]?.fullMatch === trimmed;
 }
 
 function pushSelection(selections: EditorSelection[], from: number | null, to: number) {
@@ -81,6 +91,13 @@ export function getParagraphSelections(content: string): EditorSelection[] {
     pushSelection(selections, tableStart, tableEnd);
     tableStart = null;
     tableEnd = 0;
+    if (isStandaloneMarkdownImageLine(line.text)) {
+      pushSelection(selections, paragraphStart, paragraphEnd);
+      selections.push({ from: line.start, to: line.end });
+      paragraphStart = null;
+      paragraphEnd = 0;
+      return;
+    }
     if (standaloneBlock) {
       pushSelection(selections, paragraphStart, paragraphEnd);
       selections.push({ from: line.start, to: line.end });

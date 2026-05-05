@@ -366,7 +366,9 @@ body {
 
 .cm-md-image-widget-block {
   display: flex;
+  font-size: var(--content-panel-font-size, 1.0625rem);
   justify-content: center;
+  position: relative;
   width: 100%;
 }
 
@@ -374,6 +376,38 @@ body {
   display: inline-flex;
   max-width: 100%;
   position: relative;
+}
+
+.markdown-editor-host .cm-editor .cm-line.cm-paragraph-marker-line-image::before {
+  display: none;
+}
+
+.markdown-editor-host .cm-editor .cm-line.cm-paragraph-marker-line-image .cm-md-image-widget-block::before {
+  background-color: var(--app-accent-color);
+  bottom: 0;
+  content: '';
+  left: -1.2em;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 3px;
+  z-index: 5;
+}
+
+.markdown-editor-host .cm-md-image-surface[data-md-image-highlighted='true'] {
+  background:
+    linear-gradient(
+      to bottom,
+      rgb(var(--app-highlight-color-rgb) / 0.38) 0,
+      rgb(var(--app-highlight-color-rgb) / 0.38) 0.5em,
+      transparent 0.5em,
+      transparent calc(100% - 0.5em),
+      rgb(var(--app-highlight-color-rgb) / 0.38) calc(100% - 0.5em),
+      rgb(var(--app-highlight-color-rgb) / 0.38) 100%
+    );
+  border-radius: 0.6rem;
+  padding-bottom: 0.5em;
+  padding-top: 0.5em;
 }
 
 .cm-md-image-surface:hover .cm-md-image-preview-trigger,
@@ -393,13 +427,21 @@ body {
   margin: 0 auto;
 }
 
+.markdown-editor-host .cm-md-image-surface-inline[data-md-image-highlighted='true'] {
+  border-radius: 0.35rem;
+  padding-bottom: 0.35em;
+  padding-top: 0.35em;
+}
+
 .cm-md-image-element {
   display: block;
   height: auto;
   max-height: var(--editor-image-max-height, none);
   max-width: 100%;
   object-fit: contain;
+  position: relative;
   width: auto;
+  z-index: 1;
 }
 
 .cm-md-image-preview-trigger {
@@ -411,7 +453,7 @@ body {
   inset: 0;
   pointer-events: none;
   position: absolute;
-  z-index: 1;
+  z-index: 2;
 }
 
 .cm-md-image-cloze-region {
@@ -437,6 +479,11 @@ body {
   border-color: rgb(14 116 144 / 0.92);
   border-style: dashed;
 }
+
+.cm-md-image-cloze-region[data-region-state='outlined'][data-region-scope='full-image'] {
+  border-color: transparent;
+}
+
 
 .cm-md-image-cloze-region[data-region-state='selected'] {
   background: rgb(var(--app-cloze-color-rgb) / 0.14);

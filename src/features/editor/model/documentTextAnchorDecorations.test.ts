@@ -74,14 +74,42 @@ function registerDocumentTextAnchorDecorationTests() {
     });
   });
 
-  it('ignores stale text locators that no longer match the document text', () => {
+  it('renders by stored locator positions without re-matching text', () => {
     expect(
       collectDocumentTextAnchorDecorations({
         activeNodeId: 'node-1',
         nodesById: {
+          'node-1': createParentNode('Start Alpha Beta Gamma'),
           'node-2': createHighlightChildNode({
             locator: {
-              from: 0,
+              from: 6,
+              originalText: 'Beta',
+              to: 10
+            },
+            parentNodeId: 'node-1'
+          })
+        },
+        parentContent: 'Start Alpha Beta Gamma',
+        trashedNodeIds: []
+      })
+    ).toEqual([
+      {
+        from: 6,
+        kind: 'highlight',
+        to: 10
+      }
+    ]);
+  });
+
+  it('hides zero-width locators from visible highlight decorations', () => {
+    expect(
+      collectDocumentTextAnchorDecorations({
+        activeNodeId: 'node-1',
+        nodesById: {
+          'node-1': createParentNode('Gamma Delta'),
+          'node-2': createHighlightChildNode({
+            locator: {
+              from: 4,
               originalText: 'Beta',
               to: 4
             },
@@ -92,15 +120,6 @@ function registerDocumentTextAnchorDecorationTests() {
         trashedNodeIds: []
       })
     ).toEqual([]);
-  });
-
-  it('recovers a stale text locator when the original text moved to one unique place', () => {
-    const content = 'Start Alpha Beta Gamma';
-    expectHighlightDecorationForContent(content, {
-      from: 6,
-      originalText: 'Beta',
-      to: 10
-    });
   });
 }
 

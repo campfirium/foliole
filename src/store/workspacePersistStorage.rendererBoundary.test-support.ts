@@ -160,7 +160,7 @@ export function expectReplayedUpdatedChildCloze(invoke: ReturnType<typeof vi.fn>
     nodeId: 'node-cloze',
     title: 'Alpha [...] Gamma',
     content: 'Alpha [...] Gamma',
-    reveal: 'Better',
+    reveal: 'Beta',
     anchorLink: {
       id: 'cloze-1',
       kind: 'cloze',

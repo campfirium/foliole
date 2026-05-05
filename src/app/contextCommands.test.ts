@@ -126,4 +126,19 @@ describe('getSelectionCommandPayload', () => {
   it('merges overlapping ranges before building payload entries', runMergesOverlappingRangesCase);
 
   it('merges touching ranges into one continuous payload entry', runMergesTouchingRangesCase);
+
+  it('collects selected attachment images as full-image regions', () => {
+    const content = 'Before\n\n![Cover](asset://hash-1.png)\n\nAfter';
+    const from = content.indexOf('![Cover]');
+    const to = from + '![Cover](asset://hash-1.png)'.length;
+
+    const payload = getSelectionCommandPayloadForContentRanges('node-1', content, [{ from, to }]);
+
+    expect(payload?.imageRegions).toEqual([
+      {
+        attachmentId: 'hash-1',
+        regions: [{ height: 1, id: expect.stringContaining('-image-0'), width: 1, x: 0, y: 0 }]
+      }
+    ]);
+  });
 });

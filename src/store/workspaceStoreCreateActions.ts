@@ -8,6 +8,7 @@ import type { NodeAnchorLink } from '../features/nodes/model/nodeTypes';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createDefaultReviewProfile } from './workspaceSeed';
 import type { WorkspaceState } from './workspaceStore';
+import { createHighlightNodeRecord } from './workspaceStoreHighlightNodeRecord';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceSet = (
@@ -49,6 +50,14 @@ function createQANodeRecord(args: {
     createdAt: args.timestamp,
     updatedAt: args.timestamp
   };
+}
+
+function syncCreatedNode(node: WorkspaceNode | null, nodeOrder: string[] | null, handlers: RuntimeSyncHandlers) {
+  if (!node || !nodeOrder) {
+    return;
+  }
+  handlers.syncNodeContent(node);
+  handlers.syncNodeOrder(nodeOrder);
 }
 
 export function createRootNodeAction(
@@ -113,7 +122,7 @@ export function createHighlightFromSelectionAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
 ): WorkspaceState['createHighlightNodeFromSelection'] {
-  return (parentNodeId, content, anchorId, anchorLink) => {
+  return (parentNodeId, content, anchorId, anchorLink, imageRegions) => {
     const normalizedContent = content.trim();
     if (!normalizedContent) {
       return null;
@@ -133,20 +142,16 @@ export function createHighlightFromSelectionAction(
         parentNodeId,
         state
       );
-      createdNode = {
-        id: childNodeId,
-        parentNodeId,
-        kind: 'topic',
-        title: untitledState.title,
-        hasContent: normalizedContent.length > 0,
+      createdNode = createHighlightNodeRecord({
+        anchorId,
+        anchorLink,
         content: normalizedContent,
-        anchorLink: resolveHighlightAnchorLink(anchorId, anchorLink),
-        hasReveal: false,
-        reveal: null,
-        review: null,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      };
+        imageRegions,
+        nodeId: childNodeId,
+        parentNodeId,
+        timestamp,
+        title: untitledState.title
+      });
       nextNodeOrder = [...state.nodeOrder, childNodeId];
       const nextNodesById = {
         ...state.nodesById,
@@ -164,19 +169,9 @@ export function createHighlightFromSelectionAction(
         })
       };
     });
-    if (createdNode && nextNodeOrder) {
-      handlers.syncNodeContent(createdNode);
-      handlers.syncNodeOrder(nextNodeOrder);
-    }
+    syncCreatedNode(createdNode, nextNodeOrder, handlers);
     return childNodeId;
   };
-}
-
-function resolveHighlightAnchorLink(anchorId?: string, anchorLink?: NodeAnchorLink): NodeAnchorLink | null {
-  if (anchorLink && anchorLink.kind === 'highlight' && typeof anchorLink.id === 'string' && anchorLink.id.trim().length > 0) {
-    return anchorLink;
-  }
-  return null;
 }
 
 export function createQAFromSelectionAction(

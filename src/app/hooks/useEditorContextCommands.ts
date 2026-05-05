@@ -31,7 +31,8 @@ interface UseEditorContextCommandsParams {
     parentNodeId: string,
     selectionText: string,
     anchorId: string,
-    anchorLink?: NodeAnchorLink
+    anchorLink?: NodeAnchorLink,
+    imageRegions?: import('../../features/nodes/model/nodeTypes').NodeImageRegionGroup[] | null
   ) => string | null;
   createImageClozeNodes?: (
     parentNodeId: string,
@@ -134,7 +135,7 @@ export function useEditorContextCommands({
     setContextMenu
   });
   const runSelectionCommand = createSelectionCommandRunner(
-    contextMenu?.kind === 'selection' ? contextMenu : null,
+    contextMenu ? { payload: contextMenu.payload } : null,
     editorRef,
     closeContextMenu
   );

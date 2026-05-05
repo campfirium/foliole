@@ -1,4 +1,7 @@
+import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences';
+import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl';
 import type { EditorAdapter, EditorSelection } from '../features/editor/adapters/EditorAdapter';
+import type { NodeImageRegionGroup } from '../features/nodes/model/nodeTypes';
 import type { TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 
 export interface SelectionCommandEntry {
@@ -13,6 +16,7 @@ export interface SelectionCommandPayload {
   anchorId: string;
   clozeContent: string;
   entries: SelectionCommandEntry[];
+  imageRegions?: NodeImageRegionGroup[] | null;
   parentNodeId: string;
   selectionText: string;
 }
@@ -95,12 +99,14 @@ function buildSelectionCommandPayload(
     return null;
   }
   const clozeContent = buildCombinedClozeContent(content, entries);
+  const imageRegions = buildSelectedImageRegions(content, entries);
   const selectionText = entries.map((entry) => entry.selectionText).join('\n');
 
   return {
     anchorId: entries[0]?.anchorId ?? createAnchorId(),
     clozeContent,
     entries,
+    imageRegions,
     parentNodeId,
     selectionText
   };
@@ -151,4 +157,33 @@ function buildCombinedClozeContent(content: string, entries: SelectionCommandEnt
       content
     );
   return clozeRawContent || CLOZE_PLACEHOLDER;
+}
+
+function buildSelectedImageRegions(content: string, entries: SelectionCommandEntry[]): NodeImageRegionGroup[] | null {
+  const groupsByAttachmentId = new Map<string, NodeImageRegionGroup>();
+  const selectedRanges = entries.map((entry) => entry.range);
+
+  collectMarkdownImageReferences(content).forEach((match, index) => {
+    if (!selectedRanges.some((range) => range.from < match.end && range.to > match.start)) {
+      return;
+    }
+    const target = parseMarkdownImageTarget(match.rawTarget);
+    const attachmentId = target ? parseAssetMarkdownUrl(target.destination) : null;
+    if (!attachmentId) {
+      return;
+    }
+    const group = groupsByAttachmentId.get(attachmentId) ?? { attachmentId, regions: [] };
+    if (!groupsByAttachmentId.has(attachmentId)) {
+      groupsByAttachmentId.set(attachmentId, group);
+    }
+    group.regions.push({
+      id: `${entries[0]?.anchorId ?? 'anchor'}-image-${index}`,
+      height: 1,
+      width: 1,
+      x: 0,
+      y: 0
+    });
+  });
+
+  return groupsByAttachmentId.size > 0 ? [...groupsByAttachmentId.values()] : null;
 }

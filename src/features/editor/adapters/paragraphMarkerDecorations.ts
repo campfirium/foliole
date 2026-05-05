@@ -3,6 +3,11 @@ import { Decoration, type DecorationSet, type EditorView } from '@codemirror/vie
 
 import type { EditorSelection } from './EditorAdapter';
 
+function isStandaloneMarkdownImageLine(text: string) {
+  const trimmed = text.trim();
+  return /^!\[[^\]]*]\([^)]+\)$/.test(trimmed);
+}
+
 function clampSelection(selection: EditorSelection, maxLength: number) {
   const from = Math.max(0, Math.min(selection.from, selection.to, maxLength));
   const to = Math.max(0, Math.min(Math.max(selection.from, selection.to), maxLength));
@@ -28,7 +33,10 @@ export function buildParagraphMarkerDecorations(
 
   while (lineNumber <= lastLineNumber) {
     const line = view.state.doc.line(lineNumber);
-    builder.add(line.from, line.from, Decoration.line({ attributes: { class: 'cm-paragraph-marker-line' } }));
+    const className = isStandaloneMarkdownImageLine(line.text)
+      ? 'cm-paragraph-marker-line cm-paragraph-marker-line-image'
+      : 'cm-paragraph-marker-line';
+    builder.add(line.from, line.from, Decoration.line({ attributes: { class: className } }));
     lineNumber += 1;
   }
 

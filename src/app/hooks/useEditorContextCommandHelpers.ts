@@ -6,6 +6,7 @@ import { copyAttachmentImageToClipboard, exportAttachmentImage } from '../../sha
 import type { WorkspaceEditorContextMenu } from '../components/WorkspaceLayout';
 import {
   getSelectionCommandPayload,
+  getSelectionCommandPayloadForRanges,
   normalizeContextMenuPosition,
   type SelectionCommandPayload
 } from '../contextCommands';
@@ -54,8 +55,18 @@ function refreshSelectionHighlight(adapter: EditorAdapter | null) {
   });
 }
 
+function selectionPayloadOverlapsImage(
+  payload: SelectionCommandPayload | null,
+  imageRange: { from: number; to: number }
+) {
+  if (!payload) {
+    return false;
+  }
+  return payload.entries.some((entry) => entry.range.from < imageRange.to && entry.range.to > imageRange.from);
+}
+
 export function createSelectionCommandRunner(
-  contextMenu: SelectionContextMenuState | null,
+  contextMenu: Pick<SelectionContextMenuState, 'payload'> | null,
   editorRef: MutableRefObject<EditorAdapter | null>,
   closeContextMenu: () => void
 ) {
@@ -84,13 +95,24 @@ export function createHandleEditorContextMenu(args: {
     }
 
     const position = normalizeContextMenuPosition(event.clientX, event.clientY);
+    const commandPayload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);
     const imageContextMenu = resolveImageContextMenuState(event, position);
     if (imageContextMenu) {
-      args.setContextMenu(imageContextMenu);
+      const fallbackPayload = getSelectionCommandPayloadForRanges(
+        args.activeNodeId,
+        args.editorRef.current,
+        [imageContextMenu.imageRange]
+      );
+      args.setContextMenu({
+        ...imageContextMenu,
+        canRunCommands: Boolean(
+          selectionPayloadOverlapsImage(commandPayload, imageContextMenu.imageRange) ? commandPayload : fallbackPayload
+        ),
+        payload: selectionPayloadOverlapsImage(commandPayload, imageContextMenu.imageRange) ? commandPayload : fallbackPayload
+      });
       return;
     }
 
-    const commandPayload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);
     args.setContextMenu({
       canRunCommands: !!commandPayload,
       kind: 'selection',

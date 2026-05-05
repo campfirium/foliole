@@ -1,8 +1,6 @@
 import { getTextAnchorLocators, type Node } from '../../nodes/model/nodeTypes';
 import { type EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
 
-import { resolveTextAnchorLocatorSelection } from './textAnchorLocatorResolution';
-
 function resolveNodeTextAnchorDecorations(
   node: Node,
   parentContent: string
@@ -13,8 +11,12 @@ function resolveNodeTextAnchorDecorations(
     return [];
   }
   return locators
-    .map((locator) => resolveTextAnchorLocatorSelection(parentContent, locator))
-    .filter((selection): selection is NonNullable<typeof selection> => selection !== null)
+    .map((locator) => {
+      const from = Math.max(0, Math.min(locator.from, parentContent.length));
+      const to = Math.max(from, Math.min(locator.to, parentContent.length));
+      return { from, to };
+    })
+    .filter((selection) => selection.from < selection.to)
     .map((selection) => ({
       from: selection.from,
       kind: anchorLink.kind,

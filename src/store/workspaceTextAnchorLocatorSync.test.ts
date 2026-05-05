@@ -107,7 +107,7 @@ function expectUpdatedClozeNode(node: Node) {
     expect.objectContaining({
       id: 'child-cloze',
       content: 'Alpha [...] Gamma',
-      reveal: 'Better',
+      reveal: 'Beta',
       title: 'Alpha [...] Gamma',
       anchorLink: {
         id: 'cloze-1',
@@ -148,7 +148,7 @@ function runDirectChildSyncCase() {
           from: 6,
           originalText: 'Beta',
           to: 10
-        })
+        }, 'Alpha Beta Gamma')
       }
     })
   ]);
@@ -169,8 +169,8 @@ function runHighlightRefreshCase() {
   expect(result.updatedNodes).toEqual([
     expect.objectContaining({
       id: 'child-1',
-      content: 'Better',
-      title: 'Better',
+      content: 'Beta',
+      title: 'Beta',
       anchorLink: {
         id: 'hl-1',
         kind: 'highlight',
@@ -244,7 +244,7 @@ function runMultiRangeClozeRefreshCase() {
     expect.objectContaining({
       id: 'child-cloze-multi',
       content: '[...] Beta [...] Delta',
-      reveal: 'Alphaa\nGamma',
+      reveal: 'Alpha\nGamma',
       title: '[...] Beta [...] Delta',
       anchorLink: {
         id: 'cloze-multi-1',
@@ -268,76 +268,10 @@ function runMultiRangeClozeRefreshCase() {
   ]);
 }
 
-function expectMovedBetaLocator(value: unknown) {
-  expect(value).toEqual({
-    from: 'Start Alpha Beta Gamma'.indexOf('Beta'),
-    originalText: 'Beta',
-    to: 'Start Alpha Beta Gamma'.indexOf('Beta') + 'Beta'.length
-  });
-}
-
-describe('workspaceTextAnchorLocatorSync remap', () => {
-  it('keeps locator unchanged when the anchored text still matches in place', () => {
-    expect(
-      remapTextAnchorLocator('Alpha Beta Gamma', {
-        from: 6,
-        originalText: 'Beta',
-        to: 10
-      })
-    ).toEqual({
-      from: 6,
-      originalText: 'Beta',
-      to: 10
-    });
-  });
-
-  it('moves locator to the unique matching text after parent content shifts', () => {
-    expectMovedBetaLocator(
-      remapTextAnchorLocator('Start Alpha Beta Gamma', {
-        from: 6,
-        originalText: 'Beta',
-        to: 10
-      })
-    );
-  });
-
-  it('keeps tracking edits that happen inside the anchored text itself', () => {
-    expect(
-      remapTextAnchorLocator(
-        'Alpha Better Gamma',
-        {
-          from: 6,
-          originalText: 'Beta',
-          to: 10
-        },
-        'Alpha Beta Gamma'
-      )
-    ).toEqual({
-      from: 6,
-      originalText: 'Better',
-      to: 12
-    });
-  });
-
-  it('marks the locator unresolved when the original text is no longer unique', () => {
-    expect(
-      remapTextAnchorLocator('Beta Alpha Beta Gamma', {
-        from: 6,
-        originalText: 'Beta',
-        to: 10
-      })
-    ).toEqual({
-      from: 6,
-      originalText: 'Beta',
-      to: 6
-    });
-  });
-});
-
 describe('workspaceTextAnchorLocatorSync parent sync', () => {
   it('updates only direct child text anchors for the edited parent', runDirectChildSyncCase);
-  it('refreshes highlight child text when the parent edit changes the anchored text itself', runHighlightRefreshCase);
-  it('refreshes cloze child prompt and answer when the parent edit changes the anchored text itself', runClozeRefreshCase);
-  it('refreshes multi-range cloze child prompt and answer when each anchored segment changes in place', runMultiRangeClozeRefreshCase);
+  it('updates highlight locators without rewriting child text when the parent edit changes the anchored text itself', runHighlightRefreshCase);
+  it('updates cloze locators without rewriting child prompt and answer when the parent edit changes the anchored text itself', runClozeRefreshCase);
+  it('updates multi-range cloze locators without rewriting child content when each anchored segment changes in place', runMultiRangeClozeRefreshCase);
   it('keeps the child highlight as an unresolved zero-width anchor when the anchored text is deleted entirely', runDeletedAnchorTextCase);
 });

@@ -1,6 +1,7 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import type { WorkspaceEditorContextMenu } from './components/WorkspaceLayout';
+import type { SelectionCommandPayload } from './contextCommands';
 
 export interface ImageContextMenuState extends WorkspaceEditorContextMenu {
   imageAttachmentId: string;
@@ -9,6 +10,7 @@ export interface ImageContextMenuState extends WorkspaceEditorContextMenu {
     to: number;
   };
   kind: 'image';
+  payload: SelectionCommandPayload | null;
 }
 
 function parseImageRangeValue(value: string | undefined) {
@@ -39,6 +41,7 @@ export function resolveImageContextMenuState(
     imageRange: { from, to },
     kind: 'image',
     left: position.left,
+    payload: null,
     top: position.top
   };
 }

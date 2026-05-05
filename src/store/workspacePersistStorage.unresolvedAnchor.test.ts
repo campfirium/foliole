@@ -150,39 +150,28 @@ describe('workspacePersistStorage unresolved text anchors pending replay', () =>
 });
 
 describe('workspacePersistStorage hydrated text anchors edited-word recovery', () => {
-  it('refreshes hydrated child highlights when the loaded parent text expands the anchored word in place', async () => {
+  it('updates hydrated child highlight locators without rewriting child text when the loaded parent text expands the anchored word in place', async () => {
     const invoke = createHydrateInvoke(createChangedParentSnapshot(), 'Alpha Better Gamma');
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
     const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
 
     expect(state?.nodesById['node-highlight']).toMatchObject({
-      title: 'Better',
-      content: 'Better',
+      title: 'Beta',
+      content: '',
       reveal: null,
       anchorLink: {
         id: 'hl-1',
         kind: 'highlight',
         locator: {
           from: 6,
-          originalText: 'Better',
-          to: 12
+          originalText: 'Beta',
+          to: 10
         }
       }
     });
-    expect(invoke).toHaveBeenCalledWith('update_node_content', expect.objectContaining({
-      nodeId: 'node-highlight',
-      title: 'Better',
-      content: 'Better',
-      anchorLink: {
-        id: 'hl-1',
-        kind: 'highlight',
-        locator: {
-          from: 6,
-          originalText: 'Better',
-          to: 12
-        }
-      }
+    expect(invoke).not.toHaveBeenCalledWith('update_node_content', expect.objectContaining({
+      nodeId: 'node-highlight'
     }));
   });
 });

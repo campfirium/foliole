@@ -1,7 +1,7 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { NodeAnchorLink, TextAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import type { NodeAnchorLink, NodeImageRegionGroup, TextAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import type { SelectionCommandPayload } from '../contextCommands';
 
 export function runSelectionCommandFromPayload(args: {
@@ -24,7 +24,8 @@ function createHighlightFactory(
     parentNodeId: string,
     selectionText: string,
     anchorId: string,
-    anchorLink?: NodeAnchorLink
+    anchorLink?: NodeAnchorLink,
+    imageRegions?: NodeImageRegionGroup[] | null
   ) => string | null
 ) {
   return (payload: SelectionCommandPayload) =>
@@ -32,7 +33,8 @@ function createHighlightFactory(
       payload.parentNodeId,
       payload.selectionText,
       payload.anchorId,
-      createTextAnchorLink(payload, 'highlight')
+      createTextAnchorLink(payload, 'highlight'),
+      payload.imageRegions
     ) ?? null;
 }
 
@@ -104,7 +106,8 @@ function createHighlightHandlers(args: {
     parentNodeId: string,
     selectionText: string,
     anchorId: string,
-    anchorLink?: NodeAnchorLink
+    anchorLink?: NodeAnchorLink,
+    imageRegions?: NodeImageRegionGroup[] | null
   ) => string | null;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
@@ -143,7 +146,8 @@ export function createSelectionHandlers(args: {
     parentNodeId: string,
     selectionText: string,
     anchorId: string,
-    anchorLink?: NodeAnchorLink
+    anchorLink?: NodeAnchorLink,
+    imageRegions?: NodeImageRegionGroup[] | null
   ) => string | null;
   createQANodeFromSelection: (
     parentNodeId: string,

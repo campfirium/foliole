@@ -24,7 +24,7 @@ beforeEach(() => {
   resetWorkspaceStore();
 });
 
-it('refreshes highlight child text after editing the parent content inside the anchored range', () => {
+it('updates only the highlight locator after editing the parent content inside the anchored range', () => {
   const seedNodeId = getSeedNodeId();
   useWorkspaceStore.getState().updateNodeContent(seedNodeId, 'Alpha Beta Gamma');
 
@@ -46,8 +46,8 @@ it('refreshes highlight child text after editing the parent content inside the a
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toEqual(
     expect.objectContaining({
-      content: 'Better',
-      title: 'Better',
+      content: 'Beta',
+      title: 'Beta',
       anchorLink: {
         id: 'hl-4',
         kind: 'highlight',

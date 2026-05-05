@@ -30,6 +30,9 @@ export function EditorContextMenu({
   if (kind === 'image') {
     return (
       <AppSelectionDropdownMenu left={left} onClose={onClose} top={top}>
+        <AppSelectionDropdownMenuItem disabled={!canRunCommands} onClick={onCreateHighlight}>
+          Highlight
+        </AppSelectionDropdownMenuItem>
         <AppSelectionDropdownMenuItem onClick={onCopyImage}>Copy image</AppSelectionDropdownMenuItem>
         <AppSelectionDropdownMenuItem onClick={onCutImage}>Cut image</AppSelectionDropdownMenuItem>
         <AppSelectionDropdownMenuItem onClick={onExportImage}>Export image</AppSelectionDropdownMenuItem>

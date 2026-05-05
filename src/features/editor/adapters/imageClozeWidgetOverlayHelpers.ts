@@ -4,6 +4,10 @@ function toPercent(value: number) {
   return `${value * 100}%`;
 }
 
+function isWholeImageRegion(region: { height: number; width: number; x: number; y: number }) {
+  return region.x <= 0.001 && region.y <= 0.001 && region.width >= 0.999 && region.height >= 0.999;
+}
+
 function setRegionElementBounds(element: HTMLElement, region: { height: number; width: number; x: number; y: number }) {
   element.style.left = toPercent(region.x);
   element.style.top = toPercent(region.y);
@@ -19,6 +23,7 @@ export function createImageRegionElement(
   regionElement.className = 'cm-md-image-cloze-region';
   regionElement.dataset.regionId = region.id;
   regionElement.dataset.regionState = state;
+  regionElement.dataset.regionScope = isWholeImageRegion(region) ? 'full-image' : 'partial';
   setRegionElementBounds(regionElement, region);
   return regionElement;
 }

@@ -82,6 +82,25 @@ function createOutlinedPresentation() {
   };
 }
 
+function createFullImageHighlightPresentation() {
+  return {
+    canCreate: true,
+    focusRegionId: null,
+    hiddenRegionIds: [],
+    outlinedRegionIds: ['region-full'],
+    regions: [
+      {
+        attachmentId: 'hash-1',
+        height: 1,
+        id: 'region-full',
+        width: 1,
+        x: 0,
+        y: 0
+      }
+    ]
+  };
+}
+
 async function expectOutlinedRegionRendered(host: HTMLElement) {
   await waitFor(() => {
     const region = host.querySelector('.cm-md-image-cloze-region[data-region-id="region-1"]');
@@ -215,6 +234,25 @@ describe('live markdown image rendering image cloze presentation', () => {
     adapter.refreshImageClozePresentation();
     await expectOutlinedRegionRemoved(host);
 
+    adapter.destroy();
+  });
+
+  it('marks a whole-image highlight presentation with the dedicated image highlight surface state', async () => {
+    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+
+    adapter.setNodeId('node-1');
+    registerImageClozeEditorPresentation('node-1', createFullImageHighlightPresentation());
+    adapter.refreshImageClozePresentation();
+
+    await waitFor(() => {
+      expect(host.querySelector('.cm-md-image-surface')).toHaveAttribute('data-md-image-highlighted', 'true');
+    });
+    expect(host.querySelector('.cm-md-image-cloze-region[data-region-id="region-full"]')).toHaveAttribute(
+      'data-region-scope',
+      'full-image'
+    );
+
+    unregisterImageClozeEditorPresentation('node-1');
     adapter.destroy();
   });
 });

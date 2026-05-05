@@ -20,7 +20,7 @@ function expectDirectTextLocatorSelection() {
   });
 }
 
-function expectRecoveredStaleTextLocatorSelection() {
+function expectStoredTextLocatorSelectionWithoutRematch() {
   const content = 'Start Alpha Beta Gamma';
   expect(
     findAnchorSelection(content, {
@@ -33,8 +33,8 @@ function expectRecoveredStaleTextLocatorSelection() {
       }
     })
   ).toEqual({
-    from: content.indexOf('Beta'),
-    to: content.indexOf('Beta') + 'Beta'.length
+    from: 6,
+    to: 10
   });
 }
 
@@ -42,7 +42,7 @@ function expectPureMarkdownWithoutLocatorReturnsNull() {
   expect(findAnchorSelection('Alpha Beta Gamma', { id: 'anchor-4', kind: 'highlight' })).toBeNull();
 }
 
-function expectTextLocatorDoesNotFallBackToLegacyInlineMarkup() {
+function expectTextLocatorUsesStoredRangeEvenWhenTextNoLongerMatches() {
   const content = 'Start Legacy End';
   expect(
     findAnchorSelection(content, {
@@ -54,7 +54,10 @@ function expectTextLocatorDoesNotFallBackToLegacyInlineMarkup() {
         to: 4
       }
     })
-  ).toBeNull();
+  ).toEqual({
+    from: 0,
+    to: 4
+  });
 }
 
 function expectUnresolvedZeroWidthTextLocatorFallsBackToStoredPosition() {
@@ -79,16 +82,16 @@ describe('anchorNavigation', () => {
     expectDirectTextLocatorSelection();
   });
 
-  it('recovers stale text locators when the original text moved to one unique place', () => {
-    expectRecoveredStaleTextLocatorSelection();
+  it('uses stored text locator positions without re-matching the document', () => {
+    expectStoredTextLocatorSelectionWithoutRematch();
   });
 
   it('returns null when runtime navigation receives no locator', () => {
     expectPureMarkdownWithoutLocatorReturnsNull();
   });
 
-  it('returns null when a text locator no longer resolves against the current plain-text content', () => {
-    expectTextLocatorDoesNotFallBackToLegacyInlineMarkup();
+  it('keeps using the stored text locator range when the text no longer matches', () => {
+    expectTextLocatorUsesStoredRangeEvenWhenTextNoLongerMatches();
   });
 
   it('falls back to the stored zero-width position when an unresolved text locator has no matching text anymore', () => {

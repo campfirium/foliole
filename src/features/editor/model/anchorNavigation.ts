@@ -2,8 +2,6 @@ import { getTextAnchorLocators, isTextAnchorLocator } from '../../nodes/model/no
 import type { NodeAnchorLink, TextAnchorLocator } from '../../nodes/model/nodeTypes';
 import type { EditorSelection } from '../adapters/EditorAdapter';
 
-import { resolveTextAnchorLocatorSelection } from './textAnchorLocatorResolution';
-
 export type AnchorNavigationTarget = Pick<NodeAnchorLink, 'id' | 'kind' | 'locator'>;
 
 function resolveUnresolvedTextAnchorFallback(
@@ -25,13 +23,13 @@ function resolveTextAnchorSelection(
   if (locators.length === 0) {
     return null;
   }
-  for (const textLocator of locators) {
-    const selection = resolveTextAnchorLocatorSelection(content, textLocator);
-    if (selection) {
-      return selection;
-    }
+  const firstLocator = locators[0] as TextAnchorLocator;
+  const from = Math.max(0, Math.min(firstLocator.from, content.length));
+  const to = Math.max(from, Math.min(firstLocator.to, content.length));
+  if (from === to) {
+    return resolveUnresolvedTextAnchorFallback(content, firstLocator);
   }
-  return resolveUnresolvedTextAnchorFallback(content, locators[0] as TextAnchorLocator);
+  return { from, to };
 }
 
 export function findAnchorSelection(content: string, anchor: AnchorNavigationTarget): EditorSelection | null {

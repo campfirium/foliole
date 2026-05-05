@@ -2,6 +2,7 @@ import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
@@ -65,7 +66,8 @@ export interface BuildControllerLayoutPropsArgs {
       parentNodeId: string,
       content: string,
       anchorId?: string,
-      anchorLink?: NodeAnchorLink
+      anchorLink?: NodeAnchorLink,
+      imageRegions?: NodeImageRegionGroup[] | null
     ) => string | null;
     createVirtualNode: () => string;
     createRootNode: (content?: string, kind?: NodeKind) => string;

@@ -4,6 +4,21 @@ import { dispatchMarkdownImagePreviewRequest } from '../model/markdownImagePrevi
 import { attachImageClozeOverlayInteractions } from './imageClozeWidgetInteractions';
 import { createSavedRegionLayer, focusImageRegionInViewport } from './imageClozeWidgetOverlayHelpers';
 
+function isWholeImageHighlightRegion(region: { height: number; width: number; x: number; y: number }) {
+  return region.x <= 0.001 && region.y <= 0.001 && region.width >= 0.999 && region.height >= 0.999;
+}
+
+function hasWholeImageHighlight(presentation: ImageClozeEditorPresentation | null | undefined, attachmentId: string | null) {
+  if (!presentation || !attachmentId) {
+    return false;
+  }
+  const outlinedRegionIds = new Set(presentation.outlinedRegionIds);
+  return presentation.regions.some(
+    (region) =>
+      region.attachmentId === attachmentId && outlinedRegionIds.has(region.id) && isWholeImageHighlightRegion(region)
+  );
+}
+
 function createImagePreviewTrigger(args: { alt: string; presentation: ImageClozeEditorPresentation | null; source: string }) {
   const button = document.createElement('button');
   button.className =
@@ -40,6 +55,7 @@ export function createImageClozeImageSurface(args: {
   const wrapper = document.createElement('span');
   wrapper.className =
     args.display === 'inline' ? 'cm-md-image-surface cm-md-image-surface-inline' : 'cm-md-image-surface cm-md-image-surface-block';
+  wrapper.dataset.mdImageHighlighted = hasWholeImageHighlight(args.presentation, args.attachmentId) ? 'true' : 'false';
   wrapper.append(args.renderImage());
   const regionLayer = createSavedRegionLayer(args.presentation ?? null);
   wrapper.append(regionLayer);

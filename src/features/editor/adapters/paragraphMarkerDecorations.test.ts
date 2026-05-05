@@ -36,4 +36,27 @@ describe('buildParagraphMarkerDecorations', () => {
       { className: 'cm-paragraph-marker-line', from: 6 }
     ]);
   });
+
+  it('marks standalone image lines with the dedicated image marker class', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+
+    view = new EditorView({
+      parent: host,
+      state: EditorState.create({
+        doc: '![Cover](asset://hash-1.png)\n\nGamma'
+      })
+    });
+
+    const decorations = buildParagraphMarkerDecorations(view, { from: 0, to: 28 });
+    const ranges: Array<{ from: number; className: string | null }> = [];
+
+    decorations.between(0, view.state.doc.length, (from, _to, value) => {
+      ranges.push({ className: value.spec.attributes?.class ?? null, from });
+    });
+
+    expect(ranges).toEqual([
+      { className: 'cm-paragraph-marker-line cm-paragraph-marker-line-image', from: 0 }
+    ]);
+  });
 });
