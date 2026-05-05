@@ -66,6 +66,7 @@ export function NodeListRows(props: NodeListRowsProps) {
         isDerived={isDerivedNode}
         isDragDisabled={props.isTrashViewOpen || isDerivedNode}
         isDropTarget={props.drag.dropTargetNodeId === row.node.id}
+        isMuted={nodeIconState === 'dismissed'}
         dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
         isSelected={props.selectedNodeIds.includes(row.node.id)}
         key={row.node.id}

@@ -120,13 +120,26 @@ it('renders reading and review leaf variants in the node list', () => {
 
 it('maps node list icons to pending, active, and dismissed states', () => {
   const listPanel = renderNodeIconApp((state) => seedIconStateNodes(state));
+  const pendingReadingRow = within(listPanel).getByRole('treeitem', { name: 'Reading 1' });
+  const activeReadingRow = within(listPanel).getByRole('treeitem', { name: 'Active Reading' });
+  const pendingReviewRow = within(listPanel).getByRole('treeitem', { name: 'QA Node' });
+  const dismissedReadingRow = within(listPanel).getByRole('treeitem', { name: 'Dismissed Reading' });
 
   expect(getTreeItemIcon(listPanel, 'Reading 1')).toHaveAttribute('data-node-icon-state', 'pending');
+  expect(getTreeItemIcon(listPanel, 'Reading 1')).toHaveAttribute('data-node-icon-pattern', 'dash');
+  expect(pendingReadingRow).toHaveAttribute('data-node-visibility', 'normal');
   expect(getTreeItemIcon(listPanel, 'Active Reading')).toHaveAttribute('data-node-icon-state', 'active');
+  expect(getTreeItemIcon(listPanel, 'Active Reading')).toHaveAttribute('data-node-icon-pattern', 'dot-dash');
+  expect(activeReadingRow).toHaveAttribute('data-node-visibility', 'normal');
   expect(getTreeItemIcon(listPanel, 'QA Node')).toHaveAttribute('data-node-icon-state', 'pending');
+  expect(pendingReviewRow).toHaveAttribute('data-node-visibility', 'normal');
   expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-state', 'active');
   expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-kind', 'review');
+  expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-pattern', 'dot-dash');
   expect(getTreeItemIcon(listPanel, 'Dismissed Reading')).toHaveAttribute('data-node-icon-state', 'dismissed');
+  expect(getTreeItemIcon(listPanel, 'Dismissed Reading')).toHaveAttribute('data-node-icon-pattern', 'faded');
+  expect(dismissedReadingRow).toHaveAttribute('data-node-visibility', 'muted');
+  expect(dismissedReadingRow.className).toContain('opacity-35');
 });
 
 it('treats later-handled reading nodes as active instead of pending', () => {
@@ -225,6 +238,10 @@ it('uses separate custom svgs for reading and review variants', () => {
   expect(reviewNodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-mirror',
     'none'
+  );
+  expect(reviewNodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
+    'data-node-icon-pattern',
+    'dash'
   );
 });
 

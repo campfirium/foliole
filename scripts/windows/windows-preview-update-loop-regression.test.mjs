@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-preview.sh');
 const RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
+const RENDERER_RELOAD_INTENT_FILE = '.windows-dev-renderer-reload-intent.json';
 
 function runScript(env) {
   return new Promise((resolve) => {
@@ -71,7 +72,52 @@ async function readRestartIntent(rootDir) {
   return JSON.parse(await readFile(path.join(rootDir, RESTART_INTENT_FILE), 'utf8'));
 }
 
+async function readRendererReloadIntent(rootDir) {
+  return JSON.parse(await readFile(path.join(rootDir, RENDERER_RELOAD_INTENT_FILE), 'utf8'));
+}
+
 describe('windows-preview update loop regressions', () => {
+  it('writes a renderer reload intent for Class A instead of returning a blind SYNCED no-op', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-regression-'));
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: RUNNING head=current-head"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_RESTART_INTENT_ROOT: tempRoot,
+        WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
+      });
+
+      const reloadIntent = await readRendererReloadIntent(tempRoot);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('selected action: sync-only');
+      expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
+      expect(reloadIntent).toMatchObject({
+        nonce: 1,
+        head: 'current-head',
+        reason: 'Class A: renderer-only sync path',
+        target: 'electron-dev-renderer'
+      });
+      expect(await readActions(actionLog)).toEqual(['status']);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('classifies mixed renderer and electron changes as Class B restart-intent', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-regression-'));
     try {

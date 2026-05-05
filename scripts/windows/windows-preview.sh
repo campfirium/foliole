@@ -6,6 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WINDOWS_SYNC_SCRIPT="${WINDOWS_SYNC_SCRIPT:-scripts/windows/windows-sync.sh}"
 WINDOWS_CLIENT_SCRIPT="${WINDOWS_CLIENT_SCRIPT:-scripts/windows/windows-restart-client.sh}"
 WINDOWS_RESTART_INTENT_SCRIPT="${WINDOWS_RESTART_INTENT_SCRIPT:-scripts/windows/write-restart-intent.mjs}"
+WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT="${WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT:-scripts/windows/write-renderer-reload-intent.mjs}"
 WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT="${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT:-scripts/windows/check-electron-dist-fresh.mjs}"
 WINDOWS_RESTART_INTENT_ROOT="${WINDOWS_RESTART_INTENT_ROOT:-}"
 WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-C:\\dev\\foliole}"
@@ -189,7 +190,29 @@ select_update_action() {
 }
 
 run_sync_only() {
+  local reload_output=""
+  local reload_exit=0
+  local reload_intent_root=""
   echo "[windows-preview] selected action: sync-only"
+  reload_intent_root="$(resolve_restart_intent_root)"
+  set +e
+  reload_output="$(
+    FOLIOLE_RENDERER_RELOAD_INTENT_HEAD="${CURRENT_HEAD}" \
+      FOLIOLE_RENDERER_RELOAD_INTENT_REASON="${SELECTED_REASON}" \
+      FOLIOLE_RENDERER_RELOAD_INTENT_REQUESTED_BY="wsl-windows-preview" \
+      FOLIOLE_RENDERER_RELOAD_INTENT_ROOT="${reload_intent_root}" \
+      node "${WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT}"
+  )"
+  reload_exit=$?
+  set -e
+  if [ "${reload_exit}" -ne 0 ]; then
+    echo "[windows-preview] renderer reload intent failed"
+    if [ -n "${reload_output}" ]; then
+      echo "${reload_output}"
+    fi
+    return 1
+  fi
+  echo "${reload_output}"
   echo "[windows-preview] status: SYNCED"
 }
 

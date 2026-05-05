@@ -51,6 +51,8 @@ it('keeps derived node icons at normal tone while lowering row emphasis', () => 
 
   expect(regularRow).toHaveAttribute('data-node-emphasis', 'primary');
   expect(derivedRow).toHaveAttribute('data-node-emphasis', 'secondary');
+  expect(regularRow.className).toContain('font-bold');
+  expect(derivedRow.className).toContain('font-normal');
   expect(regularRow.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-tone',
     'normal'

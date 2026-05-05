@@ -11,6 +11,7 @@ import {
 } from 'electron';
 
 import { initializeDatabase } from './database/migrate.js';
+import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { handleInvokeRequest } from './ipc/commands.js';
 import {
@@ -208,6 +209,9 @@ if (!hasSingleInstanceLock) {
 }
 
 const devRestartIntentWatcher = installDevRestartIntentWatcher({ app });
+const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({
+  getWindows: () => BrowserWindow.getAllWindows()
+});
 
 app.on('second-instance', () => {
   focusFirstWindow();
@@ -215,6 +219,7 @@ app.on('second-instance', () => {
 
 app.on('before-quit', () => {
   devRestartIntentWatcher?.close();
+  devRendererReloadIntentWatcher?.close();
 });
 
 app.whenReady().then(async () => {

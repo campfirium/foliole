@@ -9,15 +9,16 @@ import { cn } from '../../../shared/lib/utils';
 import { AppButton } from '../../../shared/ui';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
-import { NodeTreeRowIcon } from './NodeTreeRowIcon';
-import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
+import { NodeTreeRowIcon } from './NodeTreeRowIcon'; import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
 import { NodeRenameInput, useRenameState } from './NodeTreeRowRename';
+import { resolveNodeRowButtonClassName, resolveNodeVisibilityValue } from './NodeTreeRowStyle';
 
 interface NodeTreeRowProps {
   depth: number;
   isActive: boolean;
   isCollapsed: boolean;
   isDerived?: boolean;
+  isMuted?: boolean;
   nodeIconKind?: NodeTreeRowIconKind;
   nodeIconState?: NodeTreeRowIconState;
   isSelected: boolean;
@@ -69,6 +70,7 @@ export function NodeTreeRow({
   isActive,
   isCollapsed,
   isDerived = false,
+  isMuted = false,
   nodeIconKind = 'reading',
   nodeIconState = 'active',
   isSelected,
@@ -90,7 +92,6 @@ export function NodeTreeRow({
   onToggleCollapse
 }: NodeTreeRowProps) {
   const style = resolveNodeRowStyle(depth);
-
   return (
     <div
       className={resolveNodeRowFrameClassName(isDropTarget, dropIntent)}
@@ -108,6 +109,7 @@ export function NodeTreeRow({
         isActive={isActive}
         isCollapsed={isCollapsed}
         isDerived={isDerived}
+        isMuted={isMuted}
         nodeIconKind={nodeIconKind}
         nodeIconState={nodeIconState}
         isSelected={isSelected}
@@ -130,6 +132,7 @@ interface NodeTreeRowButtonProps {
   isActive: boolean;
   isCollapsed: boolean;
   isDerived: boolean;
+  isMuted: boolean;
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
   isSelected: boolean;
@@ -164,6 +167,7 @@ function NodeTreeRowButton({
   isActive,
   isCollapsed,
   isDerived,
+  isMuted,
   nodeIconKind,
   nodeIconState,
   isSelected,
@@ -177,13 +181,7 @@ function NodeTreeRowButton({
   style
 }: NodeTreeRowButtonProps) {
   const rename = useRenameState(label, nodeId, onRename);
-  const buttonClassName = cn(
-    'gap-0 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4',
-    'text-[#111317]',
-    !isDerived && 'font-medium',
-    isDerived && 'font-normal',
-    isSelected && 'bg-foreground/[0.05]'
-  );
+  const buttonClassName = resolveNodeRowButtonClassName({ isDerived, isMuted, isSelected });
   return (
     <AppButton
       active={false}
@@ -196,6 +194,7 @@ function NodeTreeRowButton({
       data-node-derived={isDerived ? 'true' : 'false'}
       data-node-emphasis={isDerived ? 'secondary' : 'primary'}
       data-node-id={nodeId}
+      data-node-visibility={resolveNodeVisibilityValue(isMuted)}
       id={`node-treeitem-${nodeId}`}
       onContextMenu={onContextMenu ? (event) => onContextMenu(nodeId, event) : undefined}
       onKeyDown={onKeyDown ? (event) => onKeyDown(nodeId, event) : undefined}
@@ -254,7 +253,6 @@ function NodeTreeRowExpandToggle({
     </span>
   );
 }
-
 function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg
