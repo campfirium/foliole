@@ -201,6 +201,24 @@ async function createMainWindow() {
       });
     }
   );
+  window.webContents.on('did-finish-load', () => {
+    void window.webContents
+      .executeJavaScript(
+        `(() => ({
+          bridgeAvailable: typeof window.electronAPI !== 'undefined',
+          debugProbeAvailable: typeof window.__FOLIOLE_DESKTOP_DEBUG_PROBE__ !== 'undefined',
+          href: window.location.href,
+          readyState: document.readyState
+        }))()`,
+        true
+      )
+      .then((snapshot) => {
+        console.info('[electron-main] renderer bridge snapshot', snapshot);
+      })
+      .catch((error) => {
+        console.error('[electron-main] renderer bridge snapshot failed', error);
+      });
+  });
   await loadRenderer(window);
   console.info(
     '[electron-main] active runtime diagnostics',
