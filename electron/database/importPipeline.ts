@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -8,7 +8,7 @@ import {
 } from '../../lib/core/database/index.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
-import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordByHash } from '../database/attachments.js';
+import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordById } from '../database/attachments.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { rewriteInlineImageReferences } from './inlineImageReferences.js';
@@ -75,13 +75,12 @@ function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
 }
 
 function createAttachmentRecordIfNeeded(hash: string, sourcePath: string, mimeType: string, sizeBytes: number) {
-  const existingAttachment = findAttachmentRecordByHash(hash);
+  const existingAttachment = findAttachmentRecordById(hash);
   if (existingAttachment) {
     return existingAttachment;
   }
   const attachment = {
-    id: `attachment-${randomUUID()}`,
-    hash,
+    id: hash,
     originalName: path.basename(sourcePath),
     mimeType,
     sizeBytes,

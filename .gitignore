@@ -1,4 +1,5 @@
 .lab/
+.claude/
 ref/
 node_modules/
 dist/

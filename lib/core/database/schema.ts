@@ -78,7 +78,6 @@ export const nodeViewState = sqliteTable('node_view_state', {
 
 export const attachments = sqliteTable('attachments', {
   id: text('id').primaryKey(),
-  hash: text('hash').notNull().unique(),
   originalName: text('original_name'),
   mimeType: text('mime_type'),
   sizeBytes: integer('size_bytes'),

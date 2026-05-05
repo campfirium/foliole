@@ -4,7 +4,6 @@ import { openDatabaseConnection } from './connection.js';
 
 export interface AttachmentRecordInput {
   id: string;
-  hash: string;
   originalName: string | null;
   mimeType: string | null;
   sizeBytes: number | null;
@@ -27,7 +26,6 @@ interface NodeAttachmentRow extends DatabaseRow {
   node_id: string;
   attachment_id: string;
   role: string;
-  hash: string;
   original_name: string | null;
   mime_type: string | null;
   size_bytes: number | null;
@@ -42,7 +40,6 @@ interface AttachmentNodeLinkRow extends DatabaseRow {
 
 interface AttachmentRecordRow extends DatabaseRow {
   id: string;
-  hash: string;
   original_name: string | null;
   mime_type: string | null;
   size_bytes: number | null;
@@ -52,7 +49,6 @@ interface AttachmentRecordRow extends DatabaseRow {
 function toAttachmentRecord(row: AttachmentRecordRow): AttachmentRecord {
   return {
     id: row.id,
-    hash: row.hash,
     originalName: row.original_name,
     mimeType: row.mime_type,
     sizeBytes: row.size_bytes,
@@ -65,13 +61,12 @@ export function createAttachmentRecord(input: AttachmentRecordInput): void {
   connection.driver.execute(
     `INSERT INTO attachments (
        id,
-       hash,
        original_name,
        mime_type,
        size_bytes,
        created_at
-     ) VALUES (?, ?, ?, ?, ?, ?)`,
-    [input.id, input.hash, input.originalName, input.mimeType, input.sizeBytes, input.createdAt]
+     ) VALUES (?, ?, ?, ?, ?)`,
+    [input.id, input.originalName, input.mimeType, input.sizeBytes, input.createdAt]
   );
 }
 
@@ -85,13 +80,13 @@ export function createNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
   );
 }
 
-export function findAttachmentRecordByHash(hash: string): AttachmentRecord | null {
+export function findAttachmentRecordById(id: string): AttachmentRecord | null {
   const connection = openDatabaseConnection();
   const row = connection.driver.queryOne<AttachmentRecordRow>(
-    `SELECT id, hash, original_name, mime_type, size_bytes, created_at
+    `SELECT id, original_name, mime_type, size_bytes, created_at
      FROM attachments
-     WHERE hash = ?`,
-    [hash]
+     WHERE id = ?`,
+    [id]
   );
 
   return row ? toAttachmentRecord(row) : null;
@@ -104,7 +99,6 @@ export function listNodeAttachments(nodeId: string): NodeAttachmentRecord[] {
        na.node_id,
        na.attachment_id,
        na.role,
-       a.hash,
        a.original_name,
        a.mime_type,
        a.size_bytes,
@@ -122,7 +116,6 @@ export function listNodeAttachments(nodeId: string): NodeAttachmentRecord[] {
     role: row.role,
     attachment: {
       id: row.attachment_id,
-      hash: row.hash,
       originalName: row.original_name,
       mimeType: row.mime_type,
       sizeBytes: row.size_bytes,

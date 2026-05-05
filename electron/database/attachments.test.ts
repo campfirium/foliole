@@ -69,8 +69,7 @@ function getAttachmentRowCount(attachmentId: string) {
 
 function createSharedAttachment() {
   createAttachmentRecord({
-    id: 'attachment-1',
-    hash: 'hash-1',
+    id: 'hash-1',
     originalName: 'shared.pdf',
     mimeType: 'application/pdf',
     sizeBytes: 8192,
@@ -81,7 +80,7 @@ function createSharedAttachment() {
 function linkSharedAttachment(nodeId: string) {
   createNodeAttachmentLink({
     nodeId,
-    attachmentId: 'attachment-1',
+    attachmentId: 'hash-1',
     role: 'reference'
   });
 }
@@ -90,11 +89,10 @@ function expectSharedAttachmentForNode(nodeId: string) {
   expect(listNodeAttachments(nodeId)).toEqual([
     {
       nodeId,
-      attachmentId: 'attachment-1',
+      attachmentId: 'hash-1',
       role: 'reference',
       attachment: {
-        id: 'attachment-1',
-        hash: 'hash-1',
+        id: 'hash-1',
         originalName: 'shared.pdf',
         mimeType: 'application/pdf',
         sizeBytes: 8192,
@@ -107,8 +105,7 @@ function expectSharedAttachmentForNode(nodeId: string) {
 it('creates an attachment record and returns it through node-based lookup', () => {
   seedNode('node-1');
   createAttachmentRecord({
-    id: 'attachment-1',
-    hash: 'hash-1',
+    id: 'hash-1',
     originalName: 'diagram.png',
     mimeType: 'image/png',
     sizeBytes: 2048,
@@ -117,18 +114,17 @@ it('creates an attachment record and returns it through node-based lookup', () =
 
   createNodeAttachmentLink({
     nodeId: 'node-1',
-    attachmentId: 'attachment-1',
+    attachmentId: 'hash-1',
     role: 'image'
   });
 
   expect(listNodeAttachments('node-1')).toEqual([
     {
       nodeId: 'node-1',
-      attachmentId: 'attachment-1',
+      attachmentId: 'hash-1',
       role: 'image',
       attachment: {
-        id: 'attachment-1',
-        hash: 'hash-1',
+        id: 'hash-1',
         originalName: 'diagram.png',
         mimeType: 'image/png',
         sizeBytes: 2048,
@@ -136,10 +132,10 @@ it('creates an attachment record and returns it through node-based lookup', () =
       }
     }
   ]);
-  expect(listAttachmentNodeLinks('attachment-1')).toEqual([
+  expect(listAttachmentNodeLinks('hash-1')).toEqual([
     {
       nodeId: 'node-1',
-      attachmentId: 'attachment-1',
+      attachmentId: 'hash-1',
       role: 'image'
     }
   ]);
@@ -152,33 +148,33 @@ it('supports reusing the same attachment across multiple nodes and keeps the att
   linkSharedAttachment('node-1');
   linkSharedAttachment('node-2');
 
-  expect(listAttachmentNodeLinks('attachment-1')).toEqual([
+  expect(listAttachmentNodeLinks('hash-1')).toEqual([
     {
       nodeId: 'node-1',
-      attachmentId: 'attachment-1',
+      attachmentId: 'hash-1',
       role: 'reference'
     },
     {
       nodeId: 'node-2',
-      attachmentId: 'attachment-1',
+      attachmentId: 'hash-1',
       role: 'reference'
     }
   ]);
 
   deleteNodeAttachmentLink({
     nodeId: 'node-1',
-    attachmentId: 'attachment-1',
+    attachmentId: 'hash-1',
     role: 'reference'
   });
 
-  expect(listAttachmentNodeLinks('attachment-1')).toEqual([
+  expect(listAttachmentNodeLinks('hash-1')).toEqual([
     {
       nodeId: 'node-2',
-      attachmentId: 'attachment-1',
+      attachmentId: 'hash-1',
       role: 'reference'
     }
   ]);
   expect(listNodeAttachments('node-1')).toEqual([]);
   expectSharedAttachmentForNode('node-2');
-  expect(getAttachmentRowCount('attachment-1')).toBe(1);
+  expect(getAttachmentRowCount('hash-1')).toBe(1);
 });

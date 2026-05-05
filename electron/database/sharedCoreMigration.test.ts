@@ -60,3 +60,68 @@ it('initializes schema through the shared core entry', () => {
     { name: 'workspace_meta' }
   ]);
 });
+
+it('migrates legacy attachment ids to content hashes and rewrites node references', () => {
+  const connection = openDatabaseConnection();
+
+  connection.sqlite.exec(`
+    CREATE TABLE attachments (
+      id TEXT PRIMARY KEY,
+      hash TEXT NOT NULL UNIQUE,
+      original_name TEXT,
+      mime_type TEXT,
+      size_bytes INTEGER,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE nodes (
+      id TEXT PRIMARY KEY,
+      content TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE node_attachments (
+      node_id TEXT NOT NULL,
+      attachment_id TEXT NOT NULL REFERENCES attachments(id),
+      role TEXT NOT NULL,
+      PRIMARY KEY (node_id, attachment_id, role)
+    );
+  `);
+
+  connection.sqlite
+    .prepare('INSERT INTO attachments (id, hash, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run('attachment-legacy', 'hash-1', 'cover.png', 'image/png', 12, '2026-03-29T00:00:00.000Z');
+  connection.sqlite.prepare('INSERT INTO nodes (id, content) VALUES (?, ?)').run(
+    'node-1',
+    '![Cover](attachment://attachment-legacy)\nSecond use: attachment://attachment-legacy'
+  );
+  connection.sqlite
+    .prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
+    .run('node-1', 'attachment-legacy', 'image');
+  connection.sqlite.pragma('user_version = 10');
+
+  initializeDatabaseConnection(connection);
+
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(
+    connection.sqlite.prepare(`SELECT id, original_name, mime_type, size_bytes, created_at FROM attachments`).all()
+  ).toEqual([
+    {
+      id: 'hash-1',
+      original_name: 'cover.png',
+      mime_type: 'image/png',
+      size_bytes: 12,
+      created_at: '2026-03-29T00:00:00.000Z'
+    }
+  ]);
+  expect(connection.sqlite.prepare(`SELECT attachment_id, node_id, role FROM node_attachments`).all()).toEqual([
+    {
+      attachment_id: 'hash-1',
+      node_id: 'node-1',
+      role: 'image'
+    }
+  ]);
+  expect(connection.sqlite.prepare(`SELECT content FROM nodes WHERE id = ?`).get('node-1')).toEqual({
+    content: '![Cover](attachment://hash-1)\nSecond use: attachment://hash-1'
+  });
+  expect(
+    (connection.sqlite.prepare(`PRAGMA table_info(attachments)`).all() as Array<{ name: string }>).map((column) => column.name)
+  ).not.toContain('hash');
+});

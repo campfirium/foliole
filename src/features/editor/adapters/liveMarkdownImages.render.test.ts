@@ -33,7 +33,7 @@ describe('live markdown image rendering', () => {
     document.body.append(host);
 
     const adapter = new CodeMirrorEditorAdapter(host, {
-      initialContent: '![Cover](attachment://attachment-1)'
+      initialContent: '![Cover](attachment://hash-1)'
     });
 
     await waitFor(() => {
@@ -41,7 +41,7 @@ describe('live markdown image rendering', () => {
       expect(image).not.toBeNull();
       expect(image?.getAttribute('src')).toBe('file:///tmp/cover.png');
     });
-    expect(resolveRuntimeAttachmentResource).toHaveBeenCalledWith('attachment://attachment-1');
+    expect(resolveRuntimeAttachmentResource).toHaveBeenCalledWith('attachment://hash-1');
 
     adapter.destroy();
   });
@@ -57,7 +57,7 @@ describe('live markdown image rendering', () => {
     document.body.append(host);
 
     const adapter = new CodeMirrorEditorAdapter(host, {
-      initialContent: '![Cover](attachment://attachment-1)'
+      initialContent: '![Cover](attachment://hash-1)'
     });
 
     await waitFor(() => {

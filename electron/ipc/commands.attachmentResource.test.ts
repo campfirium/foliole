@@ -88,20 +88,20 @@ it('routes attachment resource requests through the unified runtime entry', asyn
   await expect(
     handleInvokeRequest({
       command: NATIVE_COMMANDS.resolveAttachmentResource,
-      args: { attachment_id: 'attachment-1' }
+      args: { attachment_id: 'hash-1' }
     })
   ).resolves.toEqual({
     status: 'ready',
     mime_type: 'image/png',
     resource_url: 'file:///tmp/attachment-1.png'
   });
-  expect(resolveAttachmentResource).toHaveBeenCalledWith('attachment-1');
+  expect(resolveAttachmentResource).toHaveBeenCalledWith('hash-1');
 });
 
 it('routes local image attachment imports through the unified runtime entry', async () => {
   importLocalImageAttachment.mockResolvedValue({
     status: 'imported',
-    attachment_id: 'attachment-1',
+    attachment_id: 'hash-1',
     attachment_record: 'created',
     created_at: '2026-03-29T00:00:00.000Z',
     hash: 'hash-1',
@@ -118,7 +118,7 @@ it('routes local image attachment imports through the unified runtime entry', as
     })
   ).resolves.toEqual({
     status: 'imported',
-    attachment_id: 'attachment-1',
+    attachment_id: 'hash-1',
     attachment_record: 'created',
     created_at: '2026-03-29T00:00:00.000Z',
     hash: 'hash-1',

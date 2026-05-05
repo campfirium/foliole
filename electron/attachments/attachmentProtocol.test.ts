@@ -68,9 +68,9 @@ it('serves attachment bytes with the stored mime type through the custom protoco
   const handler = handle.mock.calls[0]?.[1];
   expect(typeof handler).toBe('function');
 
-  const response = await handler({ url: buildAttachmentAssetUrl('attachment-1') });
+  const response = await handler({ url: buildAttachmentAssetUrl('hash-1') });
 
-  expect(resolveAttachmentFile).toHaveBeenCalledWith('attachment-1');
+  expect(resolveAttachmentFile).toHaveBeenCalledWith('hash-1');
   expect(readFile).toHaveBeenCalledWith('/tmp/attachment-hash');
   expect(response.status).toBe(200);
   expect(response.headers.get('content-type')).toBe('image/png');
@@ -82,7 +82,7 @@ it('returns not found when the attachment file cannot be resolved', async () => 
 
   registerAttachmentProtocol();
   const handler = handle.mock.calls[0]?.[1];
-  const response = await handler({ url: buildAttachmentAssetUrl('attachment-1') });
+  const response = await handler({ url: buildAttachmentAssetUrl('hash-1') });
 
   expect(response.status).toBe(404);
 });

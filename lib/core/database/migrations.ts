@@ -1,6 +1,10 @@
 export interface DatabaseMigrationTarget {
   exec(sql: string): void;
   pragma(command: string, options?: { simple?: boolean }): unknown;
+  prepare(sql: string): {
+    all(...params: unknown[]): unknown[];
+    run(...params: unknown[]): unknown;
+  };
   transaction<T>(fn: () => T): () => T;
 }
 
@@ -8,7 +12,7 @@ export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget 
   sqlite: TSqlite;
 }
 
-export const DATABASE_SCHEMA_VERSION = 10;
+export const DATABASE_SCHEMA_VERSION = 11;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -56,7 +60,6 @@ const CREATE_TABLE_STATEMENTS_V1 = [
   )`,
   `CREATE TABLE IF NOT EXISTS attachments (
     id TEXT PRIMARY KEY,
-    hash TEXT NOT NULL UNIQUE,
     original_name TEXT,
     mime_type TEXT,
     size_bytes INTEGER,
@@ -166,6 +169,59 @@ const CREATE_TABLE_STATEMENTS_V10 = [
   'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)'
 ];
 
+function migrateAttachmentIdsToHashes(sqlite: DatabaseMigrationTarget) {
+  const attachmentColumns = sqlite
+    .prepare('PRAGMA table_info(attachments)')
+    .all() as Array<{ name: string }>;
+
+  if (!attachmentColumns.some((column) => column.name === 'hash')) {
+    return;
+  }
+
+  sqlite.exec('ALTER TABLE attachments RENAME TO attachments_legacy');
+  sqlite.exec('ALTER TABLE node_attachments RENAME TO node_attachments_legacy');
+  sqlite.exec(`CREATE TABLE attachments (
+    id TEXT PRIMARY KEY,
+    original_name TEXT,
+    mime_type TEXT,
+    size_bytes INTEGER,
+    created_at TEXT NOT NULL
+  )`);
+  sqlite.exec(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
+    SELECT hash, original_name, mime_type, size_bytes, created_at
+    FROM attachments_legacy`);
+  sqlite.exec(`CREATE TABLE node_attachments (
+    node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    attachment_id TEXT NOT NULL REFERENCES attachments(id),
+    role TEXT NOT NULL,
+    PRIMARY KEY (node_id, attachment_id, role)
+  )`);
+  sqlite.exec(`INSERT INTO node_attachments (node_id, attachment_id, role)
+    SELECT legacy.node_id, attachments_legacy.hash, legacy.role
+    FROM node_attachments_legacy legacy
+    INNER JOIN attachments_legacy ON attachments_legacy.id = legacy.attachment_id`);
+  sqlite.exec('CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)');
+
+  const legacyAttachments = sqlite
+    .prepare('SELECT id, hash FROM attachments_legacy')
+    .all() as Array<{ id: string; hash: string }>;
+
+  const updateNodeContent = sqlite.prepare(
+    `UPDATE nodes
+     SET content = REPLACE(content, ?, ?)
+     WHERE content LIKE ?`
+  );
+
+  for (const attachment of legacyAttachments) {
+    const oldReference = `attachment://${attachment.id}`;
+    const newReference = `attachment://${attachment.hash}`;
+    updateNodeContent.run(oldReference, newReference, `%${oldReference}%`);
+  }
+
+  sqlite.exec('DROP TABLE node_attachments_legacy');
+  sqlite.exec('DROP TABLE attachments_legacy');
+}
+
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -185,15 +241,24 @@ const MIGRATION_STEPS = [
   { statements: CREATE_TABLE_STATEMENTS_V7, version: 7 },
   { statements: CREATE_TABLE_STATEMENTS_V8, version: 8 },
   { statements: CREATE_TABLE_STATEMENTS_V9, version: 9 },
-  { statements: CREATE_TABLE_STATEMENTS_V10, version: 10 }
+  { statements: CREATE_TABLE_STATEMENTS_V10, version: 10 },
+  { migrate: migrateAttachmentIdsToHashes, version: 11 }
 ];
 
 function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
   if (currentVersion >= step.version) {
     return;
   }
-  for (const statement of step.statements) {
-    sqlite.exec(statement);
+  if (Array.isArray(step.statements)) {
+    for (const statement of step.statements) {
+      sqlite.exec(statement);
+    }
+  } else {
+    const migrate = step.migrate;
+    if (!migrate) {
+      throw new Error(`missing migration handler for schema version ${step.version}`);
+    }
+    migrate(sqlite);
   }
   setUserVersion(sqlite, step.version);
 }

@@ -11,7 +11,6 @@ import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
 const ATTACHMENTS_DIRECTORY_NAME = 'attachments';
 
 interface AttachmentLookupRow extends DatabaseRow {
-  hash: string;
   mime_type: string | null;
 }
 
@@ -31,7 +30,7 @@ export type ResolvedAttachmentFile =
 
 function resolveAttachmentLookup(attachmentId: string) {
   const row = openDatabaseConnection().driver.queryOne<AttachmentLookupRow>(
-    `SELECT hash, mime_type
+    `SELECT mime_type
      FROM attachments
      WHERE id = ?`,
     [attachmentId]
@@ -39,8 +38,8 @@ function resolveAttachmentLookup(attachmentId: string) {
   return row ?? null;
 }
 
-export function resolveAttachmentStoragePath(hash: string, appDataDir = resolveAppPaths().app_data_dir) {
-  return path.join(appDataDir, ATTACHMENTS_DIRECTORY_NAME, hash);
+export function resolveAttachmentStoragePath(attachmentId: string, appDataDir = resolveAppPaths().app_data_dir) {
+  return path.join(appDataDir, ATTACHMENTS_DIRECTORY_NAME, attachmentId);
 }
 
 export function resolveAttachmentFile(
@@ -57,13 +56,12 @@ export function resolveAttachmentFile(
     return { status: 'not_found' };
   }
 
-  const resolvedPath = resolveAttachmentStoragePath(row.hash, appDataDir);
+  const resolvedPath = resolveAttachmentStoragePath(normalizedAttachmentId, appDataDir);
   if (!fs.existsSync(resolvedPath)) {
     console.warn('[native] attachment resource file missing', {
       area: 'native',
       action: 'resolve_attachment_resource',
       attachment_id: normalizedAttachmentId,
-      hash: row.hash,
       expected_path: resolvedPath,
       fallback: 'return_missing_file'
     });

@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
@@ -9,7 +9,7 @@ import type {
 import {
   createAttachmentRecord,
   createNodeAttachmentLink,
-  findAttachmentRecordByHash
+  findAttachmentRecordById
 } from '../database/attachments.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
@@ -82,7 +82,7 @@ async function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
 }
 
 function createAttachmentRecordIfNeeded(hash: string, sourcePath: string, mimeType: string, sizeBytes: number) {
-  const existingAttachment = findAttachmentRecordByHash(hash);
+  const existingAttachment = findAttachmentRecordById(hash);
   if (existingAttachment) {
     return {
       attachment: existingAttachment,
@@ -92,8 +92,7 @@ function createAttachmentRecordIfNeeded(hash: string, sourcePath: string, mimeTy
 
   const createdAt = new Date().toISOString();
   const attachment = {
-    id: `attachment-${randomUUID()}`,
-    hash,
+    id: hash,
     originalName: path.basename(sourcePath),
     mimeType,
     sizeBytes,
@@ -167,7 +166,7 @@ export async function importLocalImageAttachment(
     attachment_id: attachment.id,
     attachment_record: attachmentRecord,
     created_at: attachment.createdAt,
-    hash: attachment.hash,
+    hash: attachment.id,
     mime_type: mimeType,
     original_name: attachment.originalName ?? path.basename(normalizedSourcePath),
     size_bytes: sourceBytes.byteLength,

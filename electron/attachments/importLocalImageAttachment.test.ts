@@ -76,7 +76,7 @@ it('imports a local png into the app attachment directory and links it to the no
 
   await expect(importLocalImageAttachment('node-1', sourcePath)).resolves.toEqual({
     status: 'imported',
-    attachment_id: expect.any(String),
+    attachment_id: hashBytes(imageBytes),
     attachment_record: 'created',
     created_at: expect.any(String),
     hash: hashBytes(imageBytes),
@@ -89,11 +89,10 @@ it('imports a local png into the app attachment directory and links it to the no
   const [nodeAttachment] = listNodeAttachments('node-1');
   expect(nodeAttachment).toEqual({
     nodeId: 'node-1',
-    attachmentId: expect.any(String),
+    attachmentId: hashBytes(imageBytes),
     role: 'image',
     attachment: {
-      id: expect.any(String),
-      hash: hashBytes(imageBytes),
+      id: hashBytes(imageBytes),
       originalName: 'cover.png',
       mimeType: 'image/png',
       sizeBytes: imageBytes.byteLength,

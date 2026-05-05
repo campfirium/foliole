@@ -40,8 +40,7 @@ afterEach(async () => {
 
 function createImageAttachment() {
   createAttachmentRecord({
-    id: 'attachment-1',
-    hash: 'hash-1',
+    id: 'hash-1',
     originalName: 'diagram.png',
     mimeType: 'image/png',
     sizeBytes: 2048,
@@ -56,10 +55,10 @@ it('returns a unified attachment resource URL when the record and file both exis
   await fs.mkdir(path.dirname(storedFilePath), { recursive: true });
   await fs.writeFile(storedFilePath, 'image-bytes');
 
-  expect(resolveAttachmentResource('attachment-1', mockedAppDataDir)).toEqual({
+  expect(resolveAttachmentResource('hash-1', mockedAppDataDir)).toEqual({
     status: 'ready',
     mime_type: 'image/png',
-    resource_url: buildAttachmentAssetUrl('attachment-1')
+    resource_url: buildAttachmentAssetUrl('hash-1')
   });
 });
 
@@ -74,7 +73,7 @@ it('returns a distinct missing-file result and logs a warning when the file is g
   createImageAttachment();
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-  expect(resolveAttachmentResource('attachment-1', mockedAppDataDir)).toEqual({
+  expect(resolveAttachmentResource('hash-1', mockedAppDataDir)).toEqual({
     status: 'missing_file',
     mime_type: 'image/png',
     resource_url: null
@@ -84,8 +83,7 @@ it('returns a distinct missing-file result and logs a warning when the file is g
     expect.objectContaining({
       area: 'native',
       action: 'resolve_attachment_resource',
-      attachment_id: 'attachment-1',
-      hash: 'hash-1',
+      attachment_id: 'hash-1',
       fallback: 'return_missing_file',
       expected_path: resolveAttachmentStoragePath('hash-1', mockedAppDataDir)
     })
