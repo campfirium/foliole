@@ -3,7 +3,7 @@ import type {
   NativeDirectoryImportArgs, NativeDirectoryImportResult, NativeNodeSourceDetails, NativeKeepImportPreviewArgs,
   NativeKeepImportPreviewResult, NativeImportedTextFile, NativeTextImportArgs, NativeTextImportResult
 } from './nativeImportContract.js';
-import type { NativeReadwiseDetectionResult } from './nativeReadwiseContract.js';
+import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type {
   NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
   NativeImportRemoteImageAttachmentArgs,
@@ -30,7 +30,7 @@ type NativeNodeSnapshotMutationSpec = {
   result: null;
 };
 
-export type NativeCommandMap = NativeUtilityCommandMap & {
+export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;
@@ -57,18 +57,6 @@ export type NativeCommandMap = NativeUtilityCommandMap & {
       path: string;
     };
     result: null;
-  };
-  [NATIVE_COMMANDS.inspectReadwiseReaderSetup]: {
-    args: {
-      articleDirectoryPath: string;
-      fullDocumentDirectoryPath: string;
-      highlightsHeading: string;
-      highlightSeparator: string;
-      newHighlightsHeading: string;
-      noteKeyword: string;
-      tagKeyword: string;
-    };
-    result: NativeReadwiseDetectionResult;
   };
   [NATIVE_COMMANDS.runTextFileImport]: {
     args: NativeTextImportArgs;

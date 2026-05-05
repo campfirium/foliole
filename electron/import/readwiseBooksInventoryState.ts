@@ -83,6 +83,17 @@ export function loadPersistedReadwiseBooksInventory(paths: InventoryPaths) {
   return state.inventories[createInventoryKey(paths)] ?? null;
 }
 
+export function findPersistedReadwiseBookByNodeId(nodeId: string) {
+  const state = normalizeState(loadJsonSetting(READWISE_BOOKS_INVENTORY_STATE_KEY));
+  for (const inventory of Object.values(state.inventories)) {
+    const book = inventory.books.find((candidate) => candidate.generatedNodeId === nodeId);
+    if (book) {
+      return { book, inventory };
+    }
+  }
+  return null;
+}
+
 export function mergePersistedReadwiseBooksInventory(input: {
   currentInventory: ReadwiseBooksInventory;
   restoreMissingBooks: boolean;
@@ -99,6 +110,8 @@ export function mergePersistedReadwiseBooksInventory(input: {
         book.bookKey,
         {
           ...book,
+          epubPath: book.epubPath ?? persistedBook?.epubPath ?? null,
+          epubStatus: book.epubPath || persistedBook?.epubPath ? 'received' : 'missing',
           importStatus:
             book.importStatus === 'completed' || persistedBook?.importStatus === 'completed' ? 'completed' : 'pending'
         } satisfies ReadwiseBookInventoryItem
