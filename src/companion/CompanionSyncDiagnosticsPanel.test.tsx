@@ -174,11 +174,11 @@ function expectAndroidDiagnosticRows() {
   expect(screen.getByText('Changes needing review')).toBeInTheDocument();
   expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Attachment bytes still caching').length).toBeGreaterThan(0);
-  expect(screen.getByText('Due review bodies')).toBeInTheDocument();
+  expect(screen.getByText('Review queue bodies')).toBeInTheDocument();
   expect(screen.getByText('Current topic body')).toBeInTheDocument();
   expect(screen.getByText('Top-level topic bodies')).toBeInTheDocument();
   expect(screen.getByText('Nested topic bodies')).toBeInTheDocument();
-  expect(screen.getByText('Due review attachments')).toBeInTheDocument();
+  expect(screen.getByText('Review queue attachments')).toBeInTheDocument();
   expect(screen.getByText('Current topic attachments')).toBeInTheDocument();
   expect(screen.getByText('Image attachments')).toBeInTheDocument();
   expect(screen.getByText('PDF attachments')).toBeInTheDocument();
