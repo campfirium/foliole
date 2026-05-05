@@ -15,12 +15,12 @@ export type BottomBarGrade = 1 | 2 | 3 | 4;
 
 function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
   if (progress.phase === 'structure') {
-    return 'Structure pack';
+    return 'Stage 1 · Library index';
   }
   if (progress.phase === 'attachment') {
-    return 'Attachment files';
+    return 'Stage 4 · Attachments';
   }
-  return 'Topic bodies';
+  return 'Stage 3 · Topic bodies';
 }
 
 function formatBytes(bytes: number) {

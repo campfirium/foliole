@@ -5,6 +5,23 @@ import { CompanionBottomTabBar } from './CompanionFloatingBars';
 import { DEFAULT_COMPANION_TAB_CONFIG } from './CompanionTabsConfig';
 
 describe('CompanionBottomTabBar', () => {
+  it('shows the library index stage above the bottom tabs', () => {
+    render(
+      <CompanionBottomTabBar
+        activeAction="recent"
+        activeSecondaryDestinationId={null}
+        config={DEFAULT_COMPANION_TAB_CONFIG}
+        onAction={vi.fn()}
+        onSecondaryDestination={vi.fn()}
+        syncProgress={{ completed: 820, phase: 'structure', total: 820 }}
+        visible
+      />
+    );
+
+    expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
+    expect(screen.getByText('820/820')).toBeInTheDocument();
+  });
+
   it('shows sync phase and body progress above the bottom tabs', () => {
     render(
       <CompanionBottomTabBar
@@ -19,7 +36,7 @@ describe('CompanionBottomTabBar', () => {
     );
 
     expect(screen.getByLabelText('Sync progress')).toBeInTheDocument();
-    expect(screen.getByText('Topic bodies')).toBeInTheDocument();
+    expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
     expect(screen.getByText('128/616 - 1.0 MB/2.0 MB')).toBeInTheDocument();
   });
 
@@ -36,7 +53,7 @@ describe('CompanionBottomTabBar', () => {
       />
     );
 
-    expect(screen.getByText('Attachment files')).toBeInTheDocument();
+    expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
     expect(screen.getByText('4/12 - 2.0 MB/8.0 MB')).toBeInTheDocument();
   });
 });
