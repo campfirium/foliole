@@ -25,6 +25,7 @@ function isBookInventoryItem(value: unknown): value is ReadwiseBookInventoryItem
   return (
     typeof candidate.annotationStatus === 'string' &&
     typeof candidate.bookKey === 'string' &&
+    (typeof candidate.downloadUrl === 'string' || candidate.downloadUrl === null) &&
     (typeof candidate.epubPath === 'string' || candidate.epubPath === null) &&
     typeof candidate.epubStatus === 'string' &&
     (typeof candidate.fullDocumentMarkdownPath === 'string' || candidate.fullDocumentMarkdownPath === null) &&
@@ -121,6 +122,7 @@ export function mergePersistedReadwiseBooksInventory(input: {
         book.bookKey,
         {
           ...book,
+          downloadUrl: book.downloadUrl ?? persistedBook?.downloadUrl ?? null,
           epubPath: book.epubPath ?? persistedBook?.epubPath ?? null,
           epubStatus: book.epubPath || persistedBook?.epubPath ? 'received' : 'missing',
           generatedNodeId,

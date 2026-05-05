@@ -1,55 +1,75 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { loadRuntimeReadwiseBookEpub, loadRuntimeReadwiseBooksInventory, openRuntimeReadwiseBookDownload } = vi.hoisted(() => ({
+const {
+  loadRuntimeReadwiseBookEpub,
+  loadRuntimeReadwiseBooksInventory,
+  onRuntimeReadwiseBookEpubProgress,
+  openRuntimeReadwiseBookDownload
+} = vi.hoisted(() => ({
   loadRuntimeReadwiseBookEpub: vi.fn(),
   loadRuntimeReadwiseBooksInventory: vi.fn(),
+  onRuntimeReadwiseBookEpubProgress: vi.fn(),
   openRuntimeReadwiseBookDownload: vi.fn()
 }));
 
 vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
   loadRuntimeReadwiseBookEpub,
   loadRuntimeReadwiseBooksInventory,
+  onRuntimeReadwiseBookEpubProgress,
   openRuntimeReadwiseBookDownload
 }));
 
 import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 
-describe('ReadwiseBookActionsPanel', () => {
+function seedDefaultInventory() {
+  loadRuntimeReadwiseBooksInventory.mockResolvedValue({
+    books: [
+      {
+        annotationStatus: 'has_highlights',
+        bookKey: 'book-1',
+        epubPath: null,
+        epubStatus: 'missing',
+        generatedNodeId: 'node-book-1',
+        highlightMarkdownPath: '/tmp/book-1.md',
+        importStatus: 'pending',
+        nodeStatus: 'generated',
+        title: 'Book One'
+      }
+    ],
+    scannedAt: '2026-04-03T00:00:00.000Z'
+  });
+}
+
+function renderBookActionsPanel(activeNodeId: string) {
+  render(<ReadwiseBookActionsPanel activeNodeId={activeNodeId} />);
+}
+
+function setupReadwiseBookActionsPanelMocks() {
+  vi.clearAllMocks();
+  seedDefaultInventory();
+  openRuntimeReadwiseBookDownload.mockResolvedValue({
+    book_key: 'book-1',
+    status: 'opened',
+    title: 'Book One',
+    url: 'https://example.com/book-1.epub'
+  });
+  onRuntimeReadwiseBookEpubProgress.mockReturnValue(() => undefined);
+  loadRuntimeReadwiseBookEpub.mockResolvedValue({
+    book_key: 'book-1',
+    epub_path: '/tmp/book-1.epub',
+    status: 'selected',
+    title: 'Book One'
+  });
+}
+
+describe('ReadwiseBookActionsPanel actions', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    loadRuntimeReadwiseBooksInventory.mockResolvedValue({
-      books: [
-        {
-          annotationStatus: 'has_highlights',
-          bookKey: 'book-1',
-          epubPath: null,
-          epubStatus: 'missing',
-          generatedNodeId: 'node-book-1',
-          highlightMarkdownPath: '/tmp/book-1.md',
-          importStatus: 'pending',
-          nodeStatus: 'generated',
-          title: 'Book One'
-        }
-      ],
-      scannedAt: '2026-04-03T00:00:00.000Z'
-    });
-    openRuntimeReadwiseBookDownload.mockResolvedValue({
-      book_key: 'book-1',
-      status: 'opened',
-      title: 'Book One',
-      url: 'https://example.com/book-1.epub'
-    });
-    loadRuntimeReadwiseBookEpub.mockResolvedValue({
-      book_key: 'book-1',
-      epub_path: '/tmp/book-1.epub',
-      status: 'selected',
-      title: 'Book One'
-    });
+    setupReadwiseBookActionsPanelMocks();
   });
 
   it('renders manual EPUB actions for the matching book node', async () => {
-    render(<ReadwiseBookActionsPanel activeNodeId="node-book-1" />);
+    renderBookActionsPanel('node-book-1');
 
     expect(await screen.findByRole('button', { name: 'Download EPUB' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Load EPUB' })).toBeInTheDocument();
@@ -71,13 +91,78 @@ describe('ReadwiseBookActionsPanel', () => {
     expect(screen.getByText('EPUB already received. You can load another file if you want to replace it.')).toBeInTheDocument();
   });
 
+  it('resets the loading state and shows a failure message when epub loading fails', async () => {
+    loadRuntimeReadwiseBookEpub.mockResolvedValue({
+      book_key: 'book-1',
+      error_message: 'Could not load this EPUB. Please try another file.',
+      epub_path: null,
+      status: 'failed',
+      title: 'Book One'
+    });
+
+    renderBookActionsPanel('node-book-1');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Load EPUB' }));
+
+    expect(await screen.findByText('Could not load this EPUB. Please try another file.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load EPUB' })).toBeInTheDocument();
+  });
+});
+
+describe('ReadwiseBookActionsPanel visibility', () => {
+  beforeEach(() => {
+    setupReadwiseBookActionsPanelMocks();
+  });
+
   it('stays hidden for a non-book node', async () => {
-    render(<ReadwiseBookActionsPanel activeNodeId="node-plain-1" />);
+    renderBookActionsPanel('node-plain-1');
 
     await waitFor(() => {
       expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalled();
     });
     expect(screen.queryByRole('button', { name: 'Download EPUB' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load EPUB' })).not.toBeInTheDocument();
+  });
+});
+
+describe('ReadwiseBookActionsPanel progress', () => {
+  beforeEach(() => {
+    setupReadwiseBookActionsPanelMocks();
+  });
+
+  it('shows staged progress while loading an epub', async () => {
+    let progressHandler: ((payload: { detail: string; nodeId: string; phase: string; progress: number }) => void) | null = null;
+    onRuntimeReadwiseBookEpubProgress.mockImplementation((handler) => {
+      progressHandler = handler;
+      return () => undefined;
+    });
+    loadRuntimeReadwiseBookEpub.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          progressHandler?.({
+            detail: 'Importing EPUB…',
+            nodeId: 'node-book-1',
+            phase: 'importing_epub',
+            progress: 0.35
+          });
+          progressHandler?.({
+            detail: 'Placing highlights…',
+            nodeId: 'node-book-1',
+            phase: 'placing_highlights',
+            progress: 0.8
+          });
+          resolve({
+            book_key: 'book-1',
+            epub_path: '/tmp/book-1.epub',
+            status: 'selected',
+            title: 'Book One'
+          });
+        })
+    );
+
+    renderBookActionsPanel('node-book-1');
+    fireEvent.click(await screen.findByRole('button', { name: 'Load EPUB' }));
+
+    expect(await screen.findByText('Placing highlights…')).toBeInTheDocument();
   });
 });

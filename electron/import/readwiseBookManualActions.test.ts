@@ -137,6 +137,47 @@ it('extracts the current book download link and opens it through the host shell'
   expect(openExternal).toHaveBeenCalledWith('https://readwise.example.com/books/manual-book.epub');
 });
 
+it('extracts the original file link from the readwise full document body and opens it through the host shell', async () => {
+  const readwiseRoot = path.join(tempRoot, 'Readwise');
+  const highlightDir = path.join(readwiseRoot, 'Books');
+  const fullDocumentDir = path.join(readwiseRoot, 'Full Document Contents', 'Books');
+  await fs.mkdir(highlightDir, { recursive: true });
+  await fs.mkdir(fullDocumentDir, { recursive: true });
+  await fs.writeFile(path.join(highlightDir, 'Manual Book.md'), '# Manual Book\n', 'utf8');
+  await fs.writeFile(
+    path.join(fullDocumentDir, 'Manual Book.md'),
+    [
+      '# Manual Book',
+      '',
+      '## Full Document',
+      'Waiting for EPUB.'
+      ,
+      '[Download original file →](https://readwise.io/reader/document_raw_content/287639057)'
+    ].join('\n'),
+    'utf8'
+  );
+  saveImportManagerSettings({ readwiseRootPath: readwiseRoot });
+
+  const inventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
+
+  expect(nodeId).toBeTruthy();
+
+  const result = await openReadwiseBookDownload(nodeId!);
+
+  expect(result).toEqual({
+    book_key: 'manual book',
+    status: 'opened',
+    title: 'Manual Book',
+    url: 'https://readwise.io/reader/document_raw_content/287639057'
+  });
+  expect(openExternal).toHaveBeenCalledWith('https://readwise.io/reader/document_raw_content/287639057');
+});
+
 it('imports the selected EPUB into a real book structure and keeps that node on reload', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
   const selectedEpubPath = await createBookEpub('selected-book.epub');

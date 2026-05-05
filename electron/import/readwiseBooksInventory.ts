@@ -21,6 +21,7 @@ export type ReadwiseBookImportStatus = 'completed' | 'pending';
 export interface ReadwiseBookInventoryItem {
   annotationStatus: ReadwiseBookAnnotationStatus;
   bookKey: string;
+  downloadUrl: string | null;
   epubPath: string | null;
   epubStatus: ReadwiseBookEpubStatus;
   fullDocumentMarkdownPath: string | null;
@@ -39,6 +40,7 @@ export interface ReadwiseBooksInventory {
 }
 
 interface ReadwiseBookSourceBucket {
+  downloadUrl: string | null;
   epubPath: string | null;
   fullDocumentMarkdownPath: string | null;
   highlightMarkdownPath: string | null;
@@ -57,6 +59,7 @@ function createBookKey(sourceName: string) {
 
 function createBucket(sourceName: string): ReadwiseBookSourceBucket {
   return {
+    downloadUrl: null,
     epubPath: null,
     fullDocumentMarkdownPath: null,
     highlightMarkdownPath: null,
@@ -86,6 +89,22 @@ async function isDirectoryAvailable(rootDir: string) {
   } catch {
     return false;
   }
+}
+
+function extractReadwiseDownloadUrl(markdown: string) {
+  const directDownloadMatch = /\[Download original file[^\]]*]\((https?:\/\/[^)\s]+)\)/i.exec(markdown);
+  if (directDownloadMatch?.[1]) {
+    return directDownloadMatch[1];
+  }
+  const documentRawContentMatch = /(https?:\/\/\S*\/document_raw_content\/\d+\S*)/i.exec(markdown);
+  if (documentRawContentMatch?.[1]) {
+    return documentRawContentMatch[1];
+  }
+  const metadataDownloadMatch =
+    /(?:^|\n)-?\s*(?:epub_download_url|download_url|epub_url|book_download_url|download url)\s*:\s*(https?:\/\/\S+)/i.exec(
+      markdown
+    );
+  return metadataDownloadMatch?.[1] ?? null;
 }
 
 function collectBooksByKey(
@@ -132,6 +151,18 @@ async function resolveAnnotationStatus(bucket: ReadwiseBookSourceBucket, readwis
   }
 }
 
+async function resolveDownloadUrl(bucket: ReadwiseBookSourceBucket) {
+  if (!bucket.fullDocumentMarkdownPath) {
+    return null;
+  }
+  try {
+    const markdown = await fs.readFile(bucket.fullDocumentMarkdownPath, 'utf8');
+    return extractReadwiseDownloadUrl(markdown);
+  } catch {
+    return null;
+  }
+}
+
 export async function scanReadwiseBooksInventory(input: {
   fullDocumentDirectoryPath: string;
   highlightDirectoryPath: string;
@@ -148,10 +179,12 @@ export async function scanReadwiseBooksInventory(input: {
     books: await Promise.all(
     collectBooksByKey(highlightSources, fullDocumentSources).map(async (bucket) => {
       const annotationStatus = await resolveAnnotationStatus(bucket, input.readwiseConfig);
+      const downloadUrl = await resolveDownloadUrl(bucket);
       const generatedNodeId = resolveGeneratedNodeId(bucket);
       return {
         annotationStatus,
         bookKey: bucket.key,
+        downloadUrl,
         epubPath: bucket.epubPath,
         epubStatus: bucket.epubPath ? 'received' : 'missing',
         fullDocumentMarkdownPath: bucket.fullDocumentMarkdownPath,

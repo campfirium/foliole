@@ -1,12 +1,13 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { loadRuntimeReadwiseBooksInventory } from './readwiseBooksBridge';
+import { loadRuntimeReadwiseBooksInventory, onRuntimeReadwiseBookEpubProgress } from './readwiseBooksBridge';
 
 function createMockElectronApi(invoke: ReturnType<typeof vi.fn>) {
   return {
     invoke,
     onManagedInboxUpdated: vi.fn(() => () => undefined),
     onNativeMenuCommand: vi.fn(() => () => undefined),
+    onReadwiseBookEpubProgress: vi.fn(() => () => undefined),
     onWindowResized: vi.fn(() => () => undefined)
   };
 }
@@ -76,4 +77,32 @@ it('returns null when the readwise books inventory payload is malformed', async 
       fallback: 'return_null'
     })
   );
+});
+
+it('normalizes readwise book epub progress events', () => {
+  const onReadwiseBookEpubProgress = vi.fn(
+    (handler: (payload: { detail: string; nodeId: string; phase: string; progress: number }) => void) => {
+    handler({
+      detail: 'Placing highlights…',
+      nodeId: 'node-book-a',
+      phase: 'placing_highlights',
+      progress: 0.8
+    });
+    return () => undefined;
+    }
+  );
+  window.electronAPI = {
+    ...createMockElectronApi(vi.fn()),
+    onReadwiseBookEpubProgress
+  };
+  const handler = vi.fn();
+
+  onRuntimeReadwiseBookEpubProgress(handler);
+
+  expect(handler).toHaveBeenCalledWith({
+    detail: 'Placing highlights…',
+    nodeId: 'node-book-a',
+    phase: 'placing_highlights',
+    progress: 0.8
+  });
 });

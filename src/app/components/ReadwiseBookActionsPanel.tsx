@@ -7,7 +7,9 @@ import type {
 import {
   loadRuntimeReadwiseBookEpub,
   loadRuntimeReadwiseBooksInventory,
+  onRuntimeReadwiseBookEpubProgress,
   openRuntimeReadwiseBookDownload,
+  type RuntimeReadwiseBookEpubProgressEvent,
   type RuntimeReadwiseBookInventoryItem
 } from '../../shared/platform/readwiseBooksBridge';
 import { AppButton } from '../../shared/ui';
@@ -42,28 +44,29 @@ function formatLoadMessage(result: NativeReadwiseBookEpubLoadResult | null, book
   if (result.status === 'cancelled') {
     return 'Load EPUB was cancelled.';
   }
+  if (result.status === 'failed') {
+    return result.error_message?.trim() || `Could not load an EPUB for ${label}.`;
+  }
   return `Loaded an EPUB for ${label}.`;
 }
 
-function useReadwiseBookActions(activeNodeId: string | null) {
+function createIdleProgress() {
+  return { detail: '', progress: 0 };
+}
+
+function useReadwiseBookInventory(activeNodeId: string | null) {
   const [book, setBook] = useState<RuntimeReadwiseBookInventoryItem | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'download' | 'load' | null>(null);
-  const [statusMessage, setStatusMessage] = useState('');
 
   useEffect(() => {
     if (!activeNodeId) {
       setBook(null);
       setIsLoading(false);
-      setPendingAction(null);
-      setStatusMessage('');
       return;
     }
 
     let isDisposed = false;
     setIsLoading(true);
-    setPendingAction(null);
-    setStatusMessage('');
 
     void loadRuntimeReadwiseBooksInventory().then((inventory) => {
       if (isDisposed) {
@@ -76,6 +79,49 @@ function useReadwiseBookActions(activeNodeId: string | null) {
     return () => {
       isDisposed = true;
     };
+  }, [activeNodeId]);
+
+  return { book, isLoading, setBook };
+}
+
+function useReadwiseBookLoadProgress(activeNodeId: string | null) {
+  const [loadProgress, setLoadProgress] = useState(createIdleProgress);
+
+  useEffect(() => {
+    if (!activeNodeId) {
+      setLoadProgress(createIdleProgress());
+      return;
+    }
+    return (
+      onRuntimeReadwiseBookEpubProgress((payload: RuntimeReadwiseBookEpubProgressEvent) => {
+        if (payload.nodeId !== activeNodeId) {
+          return;
+        }
+        setLoadProgress({
+          detail: payload.detail,
+          progress: Math.max(0, Math.min(1, payload.progress))
+        });
+      }) ?? undefined
+    );
+  }, [activeNodeId]);
+
+  return { loadProgress, setLoadProgress };
+}
+
+function useReadwiseBookActions(activeNodeId: string | null) {
+  const { book, isLoading, setBook } = useReadwiseBookInventory(activeNodeId);
+  const { loadProgress, setLoadProgress } = useReadwiseBookLoadProgress(activeNodeId);
+  const [pendingAction, setPendingAction] = useState<'download' | 'load' | null>(null);
+  const [statusMessage, setStatusMessage] = useState('');
+
+  useEffect(() => {
+    if (!activeNodeId) {
+      setPendingAction(null);
+      setStatusMessage('');
+      return;
+    }
+    setPendingAction(null);
+    setStatusMessage('');
   }, [activeNodeId]);
 
   const runDownload = useCallback(async () => {
@@ -93,19 +139,27 @@ function useReadwiseBookActions(activeNodeId: string | null) {
       return;
     }
     setPendingAction('load');
-    const result = await loadRuntimeReadwiseBookEpub(activeNodeId);
-    setStatusMessage(formatLoadMessage(result, book));
-    if (result?.status === 'selected') {
-      setBook((current) => (current ? { ...current, epubStatus: 'received' } : current));
+    setLoadProgress({ detail: 'Waiting for EPUB file…', progress: 0.1 });
+    try {
+      const result = await loadRuntimeReadwiseBookEpub(activeNodeId);
+      setStatusMessage(formatLoadMessage(result, book));
+      if (result?.status === 'selected') {
+        setBook((current) => (current ? { ...current, epubStatus: 'received' } : current));
+        setLoadProgress({ detail: 'Done.', progress: 1 });
+      } else {
+        setLoadProgress(createIdleProgress());
+      }
+    } finally {
+      setPendingAction(null);
     }
-    setPendingAction(null);
   }, [activeNodeId, book]);
 
-  return { book, isLoading, pendingAction, runDownload, runLoad, statusMessage };
+  return { book, isLoading, loadProgress, pendingAction, runDownload, runLoad, statusMessage };
 }
 
 export function ReadwiseBookActionsPanel({ activeNodeId }: { activeNodeId: string | null }) {
-  const { book, isLoading, pendingAction, runDownload, runLoad, statusMessage } = useReadwiseBookActions(activeNodeId);
+  const { book, isLoading, loadProgress, pendingAction, runDownload, runLoad, statusMessage } =
+    useReadwiseBookActions(activeNodeId);
 
   const helperText = useMemo(() => {
     if (!book) {
@@ -124,6 +178,7 @@ export function ReadwiseBookActionsPanel({ activeNodeId }: { activeNodeId: strin
   }
 
   const isBusy = pendingAction !== null;
+  const showLoadProgress = pendingAction === 'load' || loadProgress.progress > 0;
 
   return (
     <div className="px-4 pt-4">
@@ -140,6 +195,18 @@ export function ReadwiseBookActionsPanel({ activeNodeId }: { activeNodeId: strin
             {pendingAction === 'load' ? 'Loading…' : 'Load EPUB'}
           </AppButton>
         </div>
+        {showLoadProgress ? (
+          <div className="flex flex-col gap-1">
+            <div className="h-2 overflow-hidden rounded-full bg-foreground/10">
+              <div
+                aria-hidden="true"
+                className="h-full rounded-full bg-foreground/70 transition-[width] duration-200"
+                style={{ width: `${Math.round(loadProgress.progress * 100)}%` }}
+              />
+            </div>
+            <p className="text-[12px] text-foreground/65">{loadProgress.detail}</p>
+          </div>
+        ) : null}
         <p aria-live="polite" className="min-h-5 text-[12px] text-foreground/65">
           {statusMessage}
         </p>

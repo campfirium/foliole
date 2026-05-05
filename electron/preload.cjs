@@ -7,6 +7,7 @@ const preloadPath = typeof __filename === 'string' ? __filename : null;
 const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
+const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
 const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
 
 function isDesktopDebugProbeEnabled() {
@@ -17,6 +18,7 @@ function subscribe(channel, handler) {
   if (
     channel !== IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL &&
     channel !== IPC_MENU_EVENT_CHANNEL &&
+    channel !== IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL &&
     channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL
   ) {
     return () => undefined;
@@ -29,6 +31,15 @@ function subscribe(channel, handler) {
     }
     if (channel === IPC_MENU_EVENT_CHANNEL) {
       handler(payload?.commandId ?? '');
+      return;
+    }
+    if (channel === IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL) {
+      handler({
+        detail: payload?.detail ?? '',
+        nodeId: payload?.nodeId ?? '',
+        phase: payload?.phase ?? '',
+        progress: typeof payload?.progress === 'number' ? payload.progress : 0
+      });
       return;
     }
     handler();
@@ -44,6 +55,7 @@ const electronApi = {
   invoke: (command, args) => ipcRenderer.invoke(IPC_INVOKE_CHANNEL, { command, args }),
   onManagedInboxUpdated: (handler) => subscribe(IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, handler),
   onNativeMenuCommand: (handler) => subscribe(IPC_MENU_EVENT_CHANNEL, handler),
+  onReadwiseBookEpubProgress: (handler) => subscribe(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, handler),
   onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler)
 };
 

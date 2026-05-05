@@ -22,9 +22,17 @@ export interface NativeReadwiseBookDownloadResult {
   url: string | null;
 }
 
+export interface NativeReadwiseBookEpubProgressEvent {
+  detail: string;
+  node_id: string;
+  phase: 'importing_epub' | 'placing_highlights' | 'completed' | 'failed';
+  progress: number;
+}
+
 export interface NativeReadwiseBookEpubLoadResult {
   book_key: string | null;
+  error_message?: string | null;
   epub_path: string | null;
-  status: 'book_not_found' | 'cancelled' | 'selected';
+  status: 'book_not_found' | 'cancelled' | 'selected' | 'failed';
   title: string | null;
 }

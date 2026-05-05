@@ -10,6 +10,9 @@ export interface ElectronAPI {
   invoke: NativeInvoke;
   onManagedInboxUpdated: (handler: (importId: string) => void) => () => void;
   onNativeMenuCommand: (handler: (commandId: string) => void) => () => void;
+  onReadwiseBookEpubProgress?: (
+    handler: (payload: { detail: string; nodeId: string; phase: string; progress: number }) => void
+  ) => () => void;
   onWindowResized: (handler: () => void) => () => void;
 }
 

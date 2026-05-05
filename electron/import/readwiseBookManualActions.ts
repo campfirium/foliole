@@ -4,11 +4,13 @@ import path from 'node:path';
 import { dialog, shell, type BrowserWindow } from 'electron';
 
 import type {
+  NativeReadwiseBookEpubProgressEvent,
   NativeReadwiseBookDownloadResult,
   NativeReadwiseBookEpubLoadResult
 } from '../../lib/platform/nativeReadwiseContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import { IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL } from '../ipc/contracts.js';
 import { runEpubImport } from '../ipc/epubImport.js';
 import { resolveSingleFileImportSource } from '../ipc/importSourcePipeline.js';
 
@@ -21,58 +23,9 @@ import {
   savePersistedReadwiseBooksInventory
 } from './readwiseBooksInventoryState.js';
 
-const PREFERRED_DOWNLOAD_METADATA_KEYS = [
-  'epub_download_url',
-  'download_url',
-  'epub_url',
-  'book_download_url',
-  'book_url',
-  'source_url',
-  'url'
-];
 const READWISE_BOOK_EPUB_PICKER_STATE_KEY = 'readwise_book_epub_picker_state';
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-function normalizeLineEndings(value: string) {
-  return value.replace(/\r\n?/g, '\n');
-}
-function normalizeMetadataKey(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-function parseMetadataEntries(markdown: string) {
-  const normalized = normalizeLineEndings(markdown);
-  const match = /^## Metadata[^\n]*\n([\s\S]*?)(?=^## |\s*$)/im.exec(normalized);
-  if (!match) {
-    return [] as Array<{ key: string; value: string }>;
-  }
-  return match[1]
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .flatMap((line) => {
-      const entry = /^-?\s*([^:]+):\s*(.+?)\s*$/.exec(line);
-      if (!entry) {
-        return [];
-      }
-      const key = normalizeMetadataKey(entry[1]);
-      const value = entry[2].trim();
-      return key && value ? [{ key, value }] : [];
-    });
-}
-function extractUrl(value: string) {
-  const markdownLinkMatch = /\((https?:\/\/[^)\s]+)\)/i.exec(value);
-  if (markdownLinkMatch?.[1]) {
-    return markdownLinkMatch[1];
-  }
-  const directMatch = /(https?:\/\/\S+)/i.exec(value);
-  return directMatch?.[1] ?? null;
 }
 
 async function pathExists(targetPath: string) {
@@ -114,34 +67,6 @@ async function resolveReadwiseBookEpubDialogDefaultPath(book: ReadwiseBookInvent
 
   return undefined;
 }
-async function readBookDownloadUrl(book: ReadwiseBookInventoryItem) {
-  for (const sourcePath of [book.fullDocumentMarkdownPath, book.highlightMarkdownPath]) {
-    if (!sourcePath) {
-      continue;
-    }
-    try {
-      const markdown = await fs.readFile(sourcePath, 'utf8');
-      const metadataEntries = parseMetadataEntries(markdown);
-      for (const preferredKey of PREFERRED_DOWNLOAD_METADATA_KEYS) {
-        const matchedEntry = metadataEntries.find((entry) => entry.key === preferredKey);
-        const url = matchedEntry ? extractUrl(matchedEntry.value) : null;
-        if (url) {
-          return url;
-        }
-      }
-      for (const entry of metadataEntries) {
-        const url = extractUrl(entry.value);
-        if (url) {
-          return url;
-        }
-      }
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
 async function loadBookByNodeId(nodeId: string) {
   const inventory = await loadReadwiseBooksInventory();
   const book =
@@ -171,13 +96,124 @@ export async function openReadwiseBookDownload(nodeId: string): Promise<NativeRe
     return { book_key: null, status: 'book_not_found', title: null, url: null };
   }
 
-  const url = await readBookDownloadUrl(book);
+  const url = book.downloadUrl?.trim() ?? '';
   if (!url) {
     return { book_key: book.bookKey, status: 'missing_link', title: book.title, url: null };
   }
 
   await shell.openExternal(url);
   return { book_key: book.bookKey, status: 'opened', title: book.title, url };
+}
+
+async function importSelectedReadwiseBookEpub(input: {
+  book: ReadwiseBookInventoryItem;
+  epubPath: string;
+  inventory: Awaited<ReturnType<typeof loadBookByNodeId>>['inventory'];
+  onBeforeHighlightPlacement?: () => void;
+}) {
+  saveRecentReadwiseBookEpubDirectory(input.epubPath);
+  const importedAt = new Date().toISOString();
+  const imported = await runEpubImport(resolveSingleFileImportSource(input.epubPath), importedAt);
+  input.onBeforeHighlightPlacement?.();
+  await placeReadwiseBookHighlights({
+    highlightMarkdownPath: input.book.highlightMarkdownPath,
+    importedAt,
+    readwiseConfig: loadImportManagerSettings().readwiseReaderConfig,
+    rootNodeId: imported.nodeId
+  });
+  const generatedNodeId = imported.nodeId ?? input.book.generatedNodeId;
+  const updatedBook = {
+    ...input.book,
+    epubPath: input.epubPath,
+    epubStatus: 'received',
+    generatedNodeId,
+    importStatus: generatedNodeId ? 'completed' : input.book.importStatus,
+    nodeStatus: generatedNodeId ? 'generated' : input.book.nodeStatus
+  } satisfies ReadwiseBookInventoryItem;
+  const updatedInventory = {
+    ...input.inventory,
+    books: input.inventory.books.map((candidate) => (candidate.bookKey === input.book.bookKey ? updatedBook : candidate)),
+    scannedAt: new Date().toISOString()
+  };
+
+  savePersistedReadwiseBooksInventory(updatedInventory);
+  refreshPlaceholderNode(updatedBook);
+  return updatedBook;
+}
+
+function createReadwiseBookEpubFailureResult(book: ReadwiseBookInventoryItem) {
+  return {
+    book_key: book.bookKey,
+    error_message: 'Could not load this EPUB. Please try another file.',
+    epub_path: null,
+    status: 'failed',
+    title: book.title
+  } satisfies NativeReadwiseBookEpubLoadResult;
+}
+
+function publishReadwiseBookEpubProgress(
+  window: BrowserWindow | null,
+  payload: NativeReadwiseBookEpubProgressEvent
+) {
+  if (!window || window.isDestroyed()) {
+    return;
+  }
+  window.webContents.send(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, {
+    detail: payload.detail,
+    nodeId: payload.node_id,
+    phase: payload.phase,
+    progress: payload.progress
+  });
+}
+
+async function selectReadwiseBookEpubPath(book: ReadwiseBookInventoryItem, window: BrowserWindow | null) {
+  const defaultPath = await resolveReadwiseBookEpubDialogDefaultPath(book);
+  const dialogOptions = {
+    ...(defaultPath ? { defaultPath } : {}),
+    filters: [{ extensions: ['epub'], name: 'EPUB' }],
+    properties: ['openFile']
+  } satisfies Parameters<typeof dialog.showOpenDialog>[0];
+  const selection = window
+    ? await dialog.showOpenDialog(window, dialogOptions)
+    : await dialog.showOpenDialog(dialogOptions);
+  return selection.canceled || selection.filePaths.length === 0 || !selection.filePaths[0]?.trim()
+    ? null
+    : selection.filePaths[0].trim();
+}
+
+async function importReadwiseBookEpubWithProgress(input: {
+  book: ReadwiseBookInventoryItem;
+  epubPath: string;
+  inventory: Awaited<ReturnType<typeof loadBookByNodeId>>['inventory'];
+  nodeId: string;
+  window: BrowserWindow | null;
+}) {
+  publishReadwiseBookEpubProgress(input.window, {
+    detail: 'Importing EPUB…',
+    node_id: input.nodeId,
+    phase: 'importing_epub',
+    progress: 0.35
+  });
+  const updatedBook = await importSelectedReadwiseBookEpub({
+    book: input.book,
+    epubPath: input.epubPath,
+    inventory: input.inventory,
+    onBeforeHighlightPlacement: () => {
+      publishReadwiseBookEpubProgress(input.window, {
+        detail: 'Placing highlights…',
+        node_id: input.nodeId,
+        phase: 'placing_highlights',
+        progress: 0.8
+      });
+    }
+  });
+  publishReadwiseBookEpubProgress(input.window, {
+    detail: 'Done.',
+    node_id: input.nodeId,
+    phase: 'completed',
+    progress: 1
+  });
+  return updatedBook;
 }
 
 export async function loadReadwiseBookEpub(
@@ -189,48 +225,37 @@ export async function loadReadwiseBookEpub(
     return { book_key: null, epub_path: null, status: 'book_not_found', title: null };
   }
 
-  const defaultPath = await resolveReadwiseBookEpubDialogDefaultPath(book);
-  const dialogOptions = {
-    ...(defaultPath ? { defaultPath } : {}),
-    filters: [{ extensions: ['epub'], name: 'EPUB' }],
-    properties: ['openFile']
-  } satisfies Parameters<typeof dialog.showOpenDialog>[0];
-
-  const selection = window
-    ? await dialog.showOpenDialog(window, dialogOptions)
-    : await dialog.showOpenDialog(dialogOptions);
-
-  if (selection.canceled || selection.filePaths.length === 0 || !selection.filePaths[0]?.trim()) {
+  const epubPath = await selectReadwiseBookEpubPath(book, window);
+  if (!epubPath) {
     return { book_key: book.bookKey, epub_path: null, status: 'cancelled', title: book.title };
   }
 
-  const epubPath = selection.filePaths[0].trim();
-  saveRecentReadwiseBookEpubDirectory(epubPath);
-  const importedAt = new Date().toISOString();
-  const imported = await runEpubImport(resolveSingleFileImportSource(epubPath), importedAt);
-  await placeReadwiseBookHighlights({
-    highlightMarkdownPath: book.highlightMarkdownPath,
-    importedAt,
-    readwiseConfig: loadImportManagerSettings().readwiseReaderConfig,
-    rootNodeId: imported.nodeId
-  });
-  const generatedNodeId = imported.nodeId ?? book.generatedNodeId;
-  const updatedBook = {
-    ...book,
-    epubPath,
-    epubStatus: 'received',
-    generatedNodeId,
-    importStatus: generatedNodeId ? 'completed' : book.importStatus,
-    nodeStatus: generatedNodeId ? 'generated' : book.nodeStatus
-  } satisfies ReadwiseBookInventoryItem;
-  const updatedInventory = {
-    ...inventory,
-    books: inventory.books.map((candidate) => (candidate.bookKey === book.bookKey ? updatedBook : candidate)),
-    scannedAt: new Date().toISOString()
-  };
-
-  savePersistedReadwiseBooksInventory(updatedInventory);
-  refreshPlaceholderNode(updatedBook);
-
-  return { book_key: updatedBook.bookKey, epub_path: updatedBook.epubPath, status: 'selected', title: updatedBook.title };
+  try {
+    const updatedBook = await importReadwiseBookEpubWithProgress({
+      book,
+      epubPath,
+      inventory,
+      nodeId,
+      window
+    });
+    return {
+      book_key: updatedBook.bookKey,
+      epub_path: updatedBook.epubPath,
+      status: 'selected',
+      title: updatedBook.title
+    };
+  } catch (error) {
+    console.error('[readwise-books] load epub failed', {
+      bookKey: book.bookKey,
+      epubPath,
+      error
+    });
+    publishReadwiseBookEpubProgress(window, {
+      detail: 'Load EPUB failed.',
+      node_id: nodeId,
+      phase: 'failed',
+      progress: 1
+    });
+    return createReadwiseBookEpubFailureResult(book);
+  }
 }

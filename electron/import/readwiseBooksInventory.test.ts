@@ -87,6 +87,7 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
     {
       annotationStatus: 'has_highlights',
       bookKey: 'annotated book',
+      downloadUrl: null,
       epubPath: null,
       epubStatus: 'missing',
       fullDocumentMarkdownPath: path.join(fullDocumentDir, 'Annotated Book.md'),
@@ -99,6 +100,7 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
     {
       annotationStatus: 'no_highlights',
       bookKey: 'epub only book',
+      downloadUrl: null,
       epubPath: path.join(fullDocumentDir, 'Epub Only Book.epub'),
       epubStatus: 'received',
       fullDocumentMarkdownPath: null,
@@ -111,6 +113,7 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
     {
       annotationStatus: 'no_highlights',
       bookKey: 'plain book',
+      downloadUrl: null,
       epubPath: path.join(fullDocumentDir, 'Plain Book.epub'),
       epubStatus: 'received',
       fullDocumentMarkdownPath: path.join(fullDocumentDir, 'Plain Book.md'),
@@ -195,6 +198,7 @@ it('loads the books inventory from import manager settings', async () => {
     {
       annotationStatus: 'no_highlights',
       bookKey: 'settings book',
+      downloadUrl: null,
       epubPath: null,
       epubStatus: 'missing',
       fullDocumentMarkdownPath: null,
