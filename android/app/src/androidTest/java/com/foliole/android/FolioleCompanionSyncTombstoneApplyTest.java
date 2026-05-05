@@ -57,7 +57,7 @@ public class FolioleCompanionSyncTombstoneApplyTest {
 
     @Test
     public void appliesRemoteTombstoneOverDirtyActiveLocalNode() throws Exception {
-        JSObject applied = FolioleCompanionSyncNodeVersionStore.applyNodeVersions(
+        JSObject applied = FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(
             database,
             new JSONArray().put(tombstoneRecord()),
             "android-test"

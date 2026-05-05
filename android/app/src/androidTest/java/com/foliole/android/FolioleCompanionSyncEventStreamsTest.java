@@ -72,8 +72,8 @@ public class FolioleCompanionSyncEventStreamsTest {
             .put("snapshot", nodeSnapshot("remote body"))
             .put("ancestor_version_ids", new JSONArray().put("desktop#1")));
 
-        JSObject applied = FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
-        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
+        JSObject applied = FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(database, nodes, "android-test");
+        FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(database, nodes, "android-test");
 
         assertEquals(0, applied.getJSONArray("applied_node_ids").length());
         assertEquals("local body", selectString("nodes", "content", "id = 'node-1'"));
@@ -87,7 +87,7 @@ public class FolioleCompanionSyncEventStreamsTest {
         assertEquals(1, countRows("node_sync_versions", "object_id = '" + copyNodeId + "' AND device_id = 'android-test'"));
         assertEquals(0, FolioleCompanionSyncNodeVersionStore.loadNodeVersions(database, null, 10, "android-test").getJSONArray("nodes").length());
         database.delete("nodes", "id = ?", new String[] { copyNodeId });
-        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
+        FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(database, nodes, "android-test");
         assertEquals(0, countRows("nodes", "id = '" + copyNodeId + "'"));
     }
 
@@ -107,7 +107,7 @@ public class FolioleCompanionSyncEventStreamsTest {
             .put("snapshot", snapshot)
             .put("ancestor_version_ids", new JSONArray().put("desktop#1")));
 
-        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
+        FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(database, nodes, "android-test");
 
         String copyNodeId = selectString("nodes", "id", "id LIKE 'conflict-copy-%'");
         assertEquals("Remote Node (conflict copy - Android)", selectString("nodes", "title", "id = '" + copyNodeId + "'"));
@@ -120,8 +120,8 @@ public class FolioleCompanionSyncEventStreamsTest {
             .put("ancestor_version_ids", new JSONArray().put("phone#1").put("desktop#1"));
         JSONArray nodes = new JSONArray().put(first).put(latest);
 
-        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes, "android-test");
-        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, new JSONArray().put(first), "android-test");
+        FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(database, nodes, "android-test");
+        FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(database, new JSONArray().put(first), "android-test");
 
         String copyNodeId = selectString("nodes", "id", "id LIKE 'conflict-copy-%'");
         assertEquals(1, countRows("nodes", "id LIKE 'conflict-copy-%'"));
@@ -137,7 +137,7 @@ public class FolioleCompanionSyncEventStreamsTest {
             .put("id", "conflict-copy-source")
             .put("title", "Remote Node (conflict copy - Android)");
 
-        FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, new JSONArray().put(record), "android-test");
+        FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(database, new JSONArray().put(record), "android-test");
 
         assertEquals(0, countRows("nodes", "id LIKE 'conflict-copy-%'"));
         assertEquals(0, countRows("node_sync_conflicts", "1 = 1"));
@@ -153,7 +153,7 @@ public class FolioleCompanionSyncEventStreamsTest {
 
         JSONObject record = remoteNodeRecord("phone#old", "desktop#2", "remote active body", "2026-04-26T03:00:00.000Z")
             .put("ancestor_version_ids", new JSONArray().put("desktop#2").put("desktop#1"));
-        JSObject applied = FolioleCompanionSyncNodeVersionStore.applyNodeVersions(
+        JSObject applied = FolioleCompanionSyncNodeVersionApplyHarness.applyNodeVersions(
             database,
             new JSONArray().put(record),
             "android-test"

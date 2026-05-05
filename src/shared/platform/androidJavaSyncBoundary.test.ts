@@ -10,6 +10,7 @@ const FORBIDDEN_MAIN_PATTERNS = [
   /\bclass\s+FolioleCompanionSyncObjectApply\b/,
   /\bapplyDesktopSyncPack\s*\(/,
   /\bapplySyncPack\s*\(/,
+  /\bapplyNodeVersions\s*\(/,
   /\bapplySyncNodeVersions\s*\(/,
   /\bpublic\s+void\s+applySyncObjects\s*\(/,
   /\bpublic\s+void\s+applySyncReviewLog\s*\(/
