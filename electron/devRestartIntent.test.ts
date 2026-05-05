@@ -113,4 +113,39 @@ describe('installDevRestartIntentWatcher', () => {
     harness.watcher?.close();
     expect(harness.unwatchPath()).toBe(harness.intentPath);
   });
+
+  it('ignores later restart intents after relaunch was already requested', () => {
+    const harness = createWatcherHarness();
+
+    harness.setIntentContent(createIntentContent());
+    harness.triggerChange();
+
+    harness.setIntentContent(
+      JSON.stringify({
+        kind: DEV_RESTART_INTENT_KIND,
+        target: 'electron-dev',
+        nonce: 8,
+        requestedAt: '2026-03-15T10:01:00.000Z',
+        requestedBy: 'wsl-windows-preview',
+        head: 'def456',
+        reason: 'Class B: runtime behind committed electron changes'
+      })
+    );
+    harness.triggerChange();
+
+    expect(harness.relaunch).toHaveBeenCalledTimes(1);
+    expect(harness.exit).toHaveBeenCalledTimes(1);
+    expect(harness.info).toHaveBeenCalledTimes(2);
+    expect(harness.info).toHaveBeenNthCalledWith(2, '[electron-main] consumed dev restart intent', {
+      head: 'abc123',
+      intentPath: harness.intentPath,
+      nonce: 7,
+      reason: 'Class B: working tree electron changes detected',
+      requestedAt: '2026-03-15T10:00:00.000Z',
+      requestedBy: 'wsl-windows-preview'
+    });
+    expect(harness.error).not.toHaveBeenCalled();
+
+    harness.watcher?.close();
+  });
 });
