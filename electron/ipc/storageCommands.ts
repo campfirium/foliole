@@ -20,6 +20,7 @@ import { loadImportManagerSettings, saveImportManagerSettings } from '../import/
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
+import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
 import { exportCurrentArticleMirror } from '../mirror/exportCurrentArticleMirror.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
@@ -218,6 +219,9 @@ export async function handleStorageCommand(
   }
   if (command === NATIVE_COMMANDS.loadNodeSourceUpdatePreview) {
     return loadNodeSourceUpdatePreview(asString(args.node_id, 'node_id'));
+  }
+  if (command === NATIVE_COMMANDS.mergeReadwiseTopicHighlights) {
+    return mergeReadwiseTopicHighlights(asString(args.node_id, 'node_id'), window);
   }
   if (command === NATIVE_COMMANDS.resetImportData) {
     return resetImportData();

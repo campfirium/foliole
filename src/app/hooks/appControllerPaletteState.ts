@@ -2,7 +2,9 @@ import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
+import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
 import { restartMainWindowApp, toggleMainWindowDevTools } from '../../shared/platform/windowControls';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { buildPaletteState } from './appControllerHelpers';
@@ -44,6 +46,25 @@ function createExportCurrentArticleCommand(args: {
   };
 }
 
+function createMergeHighlightsIntoTopicCommand(args: {
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return async () => {
+    if (!args.ws.activeNodeId) {
+      return false;
+    }
+    const result = await mergeRuntimeReadwiseTopicHighlights(args.ws.activeNodeId);
+    if (!result || result.status === 'error') {
+      window.alert('合并失败。');
+      return false;
+    }
+    if (result.status === 'merged') {
+      await useWorkspaceStore.persist.rehydrate();
+    }
+    return true;
+  };
+}
+
 function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
@@ -69,6 +90,7 @@ function createPaletteRunnerArgs(args: {
     exitReviewSession: args.ws.exitReviewSession,
     exitStudyMode: args.study.exitStudyMode,
     exportCurrentArticle: createExportCurrentArticleCommand(args),
+    mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
     goBack: args.nav.handleGoBack,
     goForward: args.nav.handleGoForward,
     goParent: args.nav.handleGoParent,

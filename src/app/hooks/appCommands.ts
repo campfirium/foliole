@@ -12,6 +12,7 @@ interface RunAppCommandActions {
   createTopic: () => void;
   createVirtualNode: () => void;
   exportCurrentArticle: () => void | Promise<void>;
+  mergeHighlightsIntoTopic: () => void | Promise<void>;
   openImportManagement: () => void;
   goBack: () => void;
   goForward: () => void;
@@ -76,6 +77,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.exportCurrentArticle]: actions.exportCurrentArticle,
+    [APP_COMMAND_IDS.mergeHighlightsIntoTopic]: actions.mergeHighlightsIntoTopic,
     [APP_COMMAND_IDS.restartApp]: actions.restartApp,
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,
     [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,

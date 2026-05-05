@@ -6,6 +6,7 @@ export interface BuildAppPaletteItemsOptions {
   canExportCurrentArticle: boolean;
   canImportFile: boolean;
   canImportFolder: boolean;
+  canMergeHighlightsIntoTopic: boolean;
   canResetImportData: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -54,6 +55,12 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.openNotes, title: 'Open Notes', section: 'Workspace' },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Article', section: 'Workspace', keywords: ['export', 'article', 'mirror', 'markdown', 'save'] },
+  {
+    id: APP_COMMAND_IDS.mergeHighlightsIntoTopic,
+    title: 'Merge Highlights',
+    section: 'Workspace',
+    keywords: ['merge', 'highlights', 'topic', 'append', 'file']
+  },
   { id: APP_COMMAND_IDS.restartApp, title: 'Restart App', section: 'Workspace', keywords: ['restart', 'relaunch'] },
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
   { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Workspace', keywords: ['developer', 'inspect'] },
@@ -104,6 +111,9 @@ export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItem
   }
   if (id === APP_COMMAND_IDS.exportCurrentArticle) {
     return options.canExportCurrentArticle;
+  }
+  if (id === APP_COMMAND_IDS.mergeHighlightsIntoTopic) {
+    return options.canMergeHighlightsIntoTopic;
   }
   if (id === APP_COMMAND_IDS.goForward) {
     return options.canGoForward;

@@ -133,23 +133,21 @@ it('creates an inbox child from the global new button', () => {
   expect(inboxChildren).toHaveLength(initialInboxCount + 1);
 });
 
-it('keeps node menus focused on relearn and import actions for ordinary notes', () => {
+it('shows merge import actions on ordinary article topics', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-source',
     nodeOrder: ['node-source', 'node-target'],
     nodesById: {
       ...state.nodesById,
-      'node-source': createNode({ id: 'node-source', title: 'Source node', content: 'Move me' }),
-      'node-target': createNode({ id: 'node-target', title: 'Target node', content: '' })
+      'node-source': createNode({ id: 'node-source', kind: 'topic', title: 'Source node', content: 'Move me' }),
+      'node-target': createNode({ id: 'node-target', kind: 'topic', title: 'Target node', content: '' })
     }
   }));
 
   render(<App />);
 
   openNodeMenu('Source node');
-  expect(screen.getByRole('menuitem', { name: 'Relearn' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Import here *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Merge Highlights' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Paste here *' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
-  expect(screen.queryByRole('menuitem', { name: 'Move to' })).toBeNull();
 });

@@ -12,6 +12,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     createTopic: () => undefined,
     createVirtualNode: () => undefined,
     exportCurrentArticle: () => undefined,
+    mergeHighlightsIntoTopic: () => undefined,
     goBack: () => undefined,
     goForward: () => undefined,
     goToNode: () => undefined,
@@ -52,6 +53,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canImportFile: true,
     canImportFolder: true,
     canExportCurrentArticle: true,
+    canMergeHighlightsIntoTopic: true,
     canResetImportData: true,
     canGoBack: true,
     canGoForward: true,
@@ -89,6 +91,7 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openReadwiseReaderSettings)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
 }
 
@@ -149,6 +152,14 @@ describe('runAppCommand basics', () => {
     expectCommandRuns(APP_COMMAND_IDS.exportCurrentArticle, { exportCurrentArticle });
 
     expect(exportCurrentArticle).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs merge highlights into topic through the shared command handler', () => {
+    const mergeHighlightsIntoTopic = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.mergeHighlightsIntoTopic, { mergeHighlightsIntoTopic });
+
+    expect(mergeHighlightsIntoTopic).toHaveBeenCalledTimes(1);
   });
 });
 

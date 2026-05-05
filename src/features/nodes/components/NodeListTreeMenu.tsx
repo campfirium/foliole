@@ -4,6 +4,8 @@ import {
   resolveAllowedFolderTopicItemCommands
 } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import { VIRTUAL_NODE_APP_COMMAND_ID, VIRTUAL_NODE_COMMAND } from '../../../../lib/core/nodes/virtualNodeCommands';
+import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
+import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
 import { isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -42,6 +44,12 @@ function buildMenuState(props: NodeListTreeMenuProps) {
   const primaryTargetId = contextTargets[0] ?? null;
   const primaryTarget = primaryTargetId ? props.nodesById[primaryTargetId] : undefined;
   const isSingleNodeTarget = Boolean(primaryTarget && contextTargets.length === 1);
+  const showNodeImportActions =
+    Boolean(primaryTarget) &&
+    primaryTarget?.kind === 'topic' &&
+    !primaryTarget.anchorLink &&
+    !isVirtualRootNode(primaryTarget) &&
+    !isVirtualNode(primaryTarget);
 
   return {
     contextTargets,
@@ -50,9 +58,9 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     primaryTarget,
     primaryTargetId,
     showDeleteAction: isSingleNodeTarget ? !isProtectedRootNode(primaryTarget) : contextTargets.length > 0,
+    showMergeHighlightsIntoTopicAction: showNodeImportActions,
     showMoveToNodeAction: isSingleNodeTarget && canNodeBeMoved(primaryTarget),
-    showNodeImportActions:
-      isSingleNodeTarget && !primaryTarget?.anchorLink && !isVirtualRootNode(primaryTarget) && !isVirtualNode(primaryTarget),
+    showNodeImportActions,
     showVirtualCreateOnly: props.isVirtualViewOpen || (isSingleNodeTarget && isVirtualRootNode(primaryTarget))
   };
 }
@@ -109,6 +117,28 @@ function createMoveToNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: 
   };
 }
 
+function createMergeHighlightsIntoTopicHandler(args: {
+  closeContextMenu: () => void;
+  primaryTargetId: string | null;
+}) {
+  return () => {
+    if (!args.primaryTargetId) {
+      args.closeContextMenu();
+      return;
+    }
+    void mergeRuntimeReadwiseTopicHighlights(args.primaryTargetId).then(async (result) => {
+      if (!result || result.status === 'error') {
+        window.alert('合并失败。');
+        return;
+      }
+      if (result.status === 'merged') {
+        await useWorkspaceStore.persist.rehydrate();
+      }
+    });
+    args.closeContextMenu();
+  };
+}
+
 export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
   if (!props.contextMenu.menuPosition) {
     return null;
@@ -140,7 +170,10 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
       )}
       onDeleteNodePermanently={() => (props.deleteNodesPermanently(menuState.contextTargets), props.contextMenu.closeContextMenu())}
       onDismissNode={createDismissNodeAction(menuState.contextTargets, props.dismissNode, props.contextMenu.closeContextMenu)}
-      onImportIntoNode={props.contextMenu.closeContextMenu}
+      onMergeHighlightsIntoTopic={createMergeHighlightsIntoTopicHandler({
+        closeContextMenu: props.contextMenu.closeContextMenu,
+        primaryTargetId: menuState.primaryTargetId
+      })}
       onMoveToNode={createMoveToNodeHandler(props, menuState.primaryTargetId)}
       onPasteIntoNode={props.contextMenu.closeContextMenu}
       onRestoreNode={() => (
@@ -150,7 +183,7 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
       onReturnNode={createReturnNodeAction(menuState.contextTargets, props.returnNode, props.contextMenu.closeContextMenu)}
       showDeleteAction={menuState.showDeleteAction}
       showDismissAction={menuState.isNotesMenu && hasDismissTargets(menuState.contextTargets, props.nodesById)}
-      showImportIntoNodeAction={menuState.showNodeImportActions}
+      showMergeHighlightsIntoTopicAction={menuState.showMergeHighlightsIntoTopicAction}
       showMoveToNodeAction={menuState.showMoveToNodeAction}
       showPasteIntoNodeAction={menuState.showNodeImportActions}
       showRootCreateOnly={menuState.isRootMenu || menuState.showVirtualCreateOnly}

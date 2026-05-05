@@ -12,6 +12,7 @@ export const NATIVE_COMMANDS = {
   resetReadwiseBookImport: 'reset_readwise_book_import',
   loadNodeSourceDetails: 'load_node_source_details',
   loadNodeSourceUpdatePreview: 'load_node_source_update_preview',
+  mergeReadwiseTopicHighlights: 'merge_readwise_topic_highlights',
   previewKeepImportRule: 'preview_keep_import_rule',
   loadImportOverview: 'load_import_overview',
   loadPdfImportsInventory: 'load_pdf_imports_inventory',

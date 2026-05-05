@@ -48,6 +48,17 @@ function canExportCurrentArticle(args: {
   return Boolean(activeNode.parentNodeId);
 }
 
+function canMergeHighlightsIntoTopic(args: {
+  activeNodeId: string | null;
+  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
+}) {
+  if (!args.activeNodeId || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
+    return false;
+  }
+  const activeNode = args.ws.nodesById[args.activeNodeId];
+  return Boolean(activeNode && activeNode.kind === 'topic' && !activeNode.anchorLink);
+}
+
 export function useAppPaletteItems(args: {
   activeNodeId: string | null;
   formalImportAvailable: boolean;
@@ -80,6 +91,7 @@ export function useAppPaletteItems(args: {
         canExportCurrentArticle: canExportCurrentArticle(args),
         canImportFile: args.formalImportAvailable,
         canImportFolder: args.formalImportAvailable,
+        canMergeHighlightsIntoTopic: canMergeHighlightsIntoTopic(args),
         canResetImportData: args.formalImportAvailable,
         canGoBack: args.nav.canGoBack,
         canGoForward: args.nav.canGoForward,

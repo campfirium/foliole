@@ -8,6 +8,9 @@ const { loadNodeSourceDetails } = vi.hoisted(() => ({
 const { loadNodeSourceUpdatePreview } = vi.hoisted(() => ({
   loadNodeSourceUpdatePreview: vi.fn()
 }));
+const { mergeReadwiseTopicHighlights } = vi.hoisted(() => ({
+  mergeReadwiseTopicHighlights: vi.fn()
+}));
 const { loadImportManagerSettings } = vi.hoisted(() => ({
   loadImportManagerSettings: vi.fn()
 }));
@@ -44,6 +47,7 @@ vi.mock('../import/importManagerSettings.js', () => ({
   saveImportManagerSettings: vi.fn()
 }));
 vi.mock('../import/nodeSourceUpdatePreview.js', () => ({ loadNodeSourceUpdatePreview }));
+vi.mock('../import/readwiseTopicMerge.js', () => ({ mergeReadwiseTopicHighlights }));
 vi.mock('../import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: vi.fn() }));
 vi.mock('../import/managedInboxMonitor.js', () => ({ refreshManagedInboxMonitorFromSettings: vi.fn() }));
 vi.mock('./storage.js', () => ({
@@ -204,4 +208,20 @@ it('returns node source update preview payloads', async () => {
     source_node_id: 'node-1',
     updated_content: 'Updated content'
   });
+});
+
+it('passes the current window into merge highlights command handling', async () => {
+  const mockWindow = { id: 1 } as never;
+  mergeReadwiseTopicHighlights.mockResolvedValue({
+    merged_highlight_count: 1,
+    node_id: 'node-1',
+    status: 'merged'
+  });
+
+  await expect(handleStorageCommand('merge_readwise_topic_highlights', { node_id: 'node-1' }, mockWindow)).resolves.toEqual({
+    merged_highlight_count: 1,
+    node_id: 'node-1',
+    status: 'merged'
+  });
+  expect(mergeReadwiseTopicHighlights).toHaveBeenCalledWith('node-1', mockWindow);
 });

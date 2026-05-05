@@ -159,30 +159,47 @@ it('deletes all selected nodes from node-list context menu', () => {
 });
 
 it('marks in-progress import actions on ordinary node context menus', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-article',
+    nodeOrder: ['node-article'],
+    nodesById: {
+      ...state.nodesById,
+      'node-article': createNode({ id: 'node-article', kind: 'topic', title: 'Article node', content: '# Article body' })
+    }
+  }));
   render(<App />);
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
 
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Welcome to Foliole' }), {
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Article node' }), {
     clientX: 56,
     clientY: 64
   });
 
-  expect(screen.getByRole('menuitem', { name: 'Import here *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Merge Highlights' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Paste here *' })).toBeInTheDocument();
 });
 
 it('hides import actions on derived node context menus', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-article',
+    nodeOrder: ['node-article'],
+    nodesById: {
+      ...state.nodesById,
+      'node-article': createNode({ id: 'node-article', kind: 'topic', title: 'Article node', content: '# Article body' })
+    }
+  }));
   render(<App />);
   act(() => {
-    useWorkspaceStore.getState().createHighlightNodeFromSelection('node-1', 'Welcome');
+    useWorkspaceStore.getState().createHighlightNodeFromSelection('node-article', 'Welcome', 'hl-1');
   });
 
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  fireEvent.click(within(nodePanel).getByRole('button', { name: 'Expand all' }));
   fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Welcome' }), {
     clientX: 56,
     clientY: 64
   });
 
-  expect(screen.getByRole('menuitem', { name: 'Import here *' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Paste here *' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Merge Highlights' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Paste here *' })).toBeNull();
 });

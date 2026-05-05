@@ -10,6 +10,7 @@ import type {
   NativeImportLocalImageAttachmentResult,
   NativeRelearnNodeArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
   NativeResetImportDataResult,
+  NativeMergeReadwiseTopicHighlightsResult,
   NativeReviewSchedulerSettings,
   NativeSaveReadingProgressArgs,
   NativeWorkspaceNodeDocument,
@@ -82,6 +83,10 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
       source_node_id: string;
       updated_content: string;
     } | null;
+  };
+  [NATIVE_COMMANDS.mergeReadwiseTopicHighlights]: {
+    args: { node_id: string };
+    result: NativeMergeReadwiseTopicHighlightsResult;
   };
   [NATIVE_COMMANDS.selectImportTextFile]: {
     args: NativeTextImportArgs;

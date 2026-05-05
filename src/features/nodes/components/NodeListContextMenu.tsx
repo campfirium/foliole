@@ -12,14 +12,14 @@ interface NodeListContextMenuProps {
   onDeleteNode: () => void;
   onDeleteNodePermanently: () => void;
   onDismissNode?: () => void;
-  onImportIntoNode?: () => void;
+  onMergeHighlightsIntoTopic?: () => void;
   onMoveToNode?: () => void;
   onPasteIntoNode?: () => void;
   onReturnNode?: () => void;
   onRestoreNode: () => void;
   showDeleteAction?: boolean;
   showDismissAction?: boolean;
-  showImportIntoNodeAction?: boolean;
+  showMergeHighlightsIntoTopicAction?: boolean;
   showMoveToNodeAction?: boolean;
   showPasteIntoNodeAction?: boolean;
   showRootCreateOnly?: boolean;
@@ -37,13 +37,13 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       onCreateCommand={props.onCreateCommand}
       onDeleteNode={props.onDeleteNode}
       onDismissNode={props.onDismissNode}
-      onImportIntoNode={props.onImportIntoNode}
+      onMergeHighlightsIntoTopic={props.onMergeHighlightsIntoTopic}
       onMoveToNode={props.onMoveToNode}
       onPasteIntoNode={props.onPasteIntoNode}
       onReturnNode={props.onReturnNode}
       showDeleteAction={props.showDeleteAction}
       showDismissAction={props.showDismissAction}
-      showImportIntoNodeAction={props.showImportIntoNodeAction}
+      showMergeHighlightsIntoTopicAction={props.showMergeHighlightsIntoTopicAction}
       showMoveToNodeAction={props.showMoveToNodeAction}
       showPasteIntoNodeAction={props.showPasteIntoNodeAction}
       showRootCreateOnly={props.showRootCreateOnly}
@@ -96,13 +96,13 @@ function NoteMenuItems({
   onCreateCommand,
   onDeleteNode,
   onDismissNode,
-  onImportIntoNode,
+  onMergeHighlightsIntoTopic,
   onMoveToNode,
   onPasteIntoNode,
   onReturnNode,
   showDeleteAction,
   showDismissAction,
-  showImportIntoNodeAction,
+  showMergeHighlightsIntoTopicAction,
   showMoveToNodeAction,
   showPasteIntoNodeAction,
   showRootCreateOnly,
@@ -117,7 +117,7 @@ function NoteMenuItems({
       ))}
       {showRootCreateOnly ? null : showReturnAction && onReturnNode ? <AppDropdownMenuItem onSelect={onReturnNode}>Relearn</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDismissAction && onDismissNode ? <AppDropdownMenuItem onSelect={onDismissNode}>Dismiss</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showImportIntoNodeAction ? <AppDropdownMenuItem onSelect={onImportIntoNode}>Import here *</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showMergeHighlightsIntoTopicAction ? <AppDropdownMenuItem onSelect={onMergeHighlightsIntoTopic}>Merge Highlights</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showPasteIntoNodeAction ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here *</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showMoveToNodeAction && onMoveToNode ? <AppDropdownMenuItem onSelect={onMoveToNode}>Move to</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDeleteAction ? <AppDropdownMenuItem onSelect={onDeleteNode}>Delete</AppDropdownMenuItem> : null}

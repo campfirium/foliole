@@ -217,6 +217,12 @@ export interface NativeApplyReviewGradeArgs {
   cardAfter: NativeSchedulerCard;
 }
 
+export interface NativeMergeReadwiseTopicHighlightsResult {
+  merged_highlight_count: number;
+  node_id: string;
+  status: 'error' | 'merged' | 'noop';
+}
+
 export interface NativeRelearnNodeArgs {
   nodeId: string;
 }
