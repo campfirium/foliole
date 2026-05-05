@@ -64,6 +64,26 @@ function createRemoteNodeRecord(): NativeSyncNodeRecord {
   };
 }
 
+function createModifiedRemoteNodeRecord(): NativeSyncNodeRecord {
+  const base = createRemoteNodeRecord();
+  return {
+    ...base,
+    ancestor_version_ids: ['desktop#0', 'phone#1'],
+    content_hash: 'hash-2',
+    parent_version_id: 'phone#1',
+    snapshot: {
+      ...base.snapshot,
+      content: 'remote body updated',
+      position: 1,
+      title: 'Remote Node Updated',
+      updated_at: '2026-04-21T12:00:00.000Z'
+    },
+    updated_at: '2026-04-21T12:00:00.000Z',
+    version_created_at: '2026-04-21T12:00:00.000Z',
+    version_id: 'phone#2'
+  };
+}
+
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-apply-async-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
@@ -101,4 +121,29 @@ it('applies remote sync nodes through the async desktop DbPort entry', async () 
     sync_dirty: 0,
     title: 'Remote Node'
   });
+});
+
+it('covers create, repeated apply, and modify through the shared desktop DbPort path', async () => {
+  const first = createRemoteNodeRecord();
+
+  await expect(applySyncNodesAsync([first])).resolves.toEqual(['node-1']);
+  await expect(applySyncNodesAsync([first])).resolves.toEqual([]);
+  await expect(applySyncNodesAsync([createModifiedRemoteNodeRecord()])).resolves.toEqual(['node-1']);
+
+  const connection = openDatabaseConnection();
+  expect(
+    connection.sqlite.prepare(
+      `SELECT current_version_id, title, content, position, sync_dirty
+       FROM nodes WHERE id = ?`
+    ).get('node-1')
+  ).toEqual({
+    content: 'remote body updated',
+    current_version_id: 'phone#2',
+    position: 1,
+    sync_dirty: 0,
+    title: 'Remote Node Updated'
+  });
+  expect(
+    connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_versions WHERE object_id = ?').get('node-1')
+  ).toEqual({ count: 2 });
 });

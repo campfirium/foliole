@@ -4,7 +4,7 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 
 it('runs companion sync writer tasks one at a time', async () => {
   const events: string[] = [];
-  let releaseFirst = () => undefined;
+  let releaseFirst = () => {};
   const firstRelease = new Promise<void>((resolve) => {
     releaseFirst = resolve;
   });
