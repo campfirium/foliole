@@ -9,6 +9,7 @@ vi.mock('../shared/platform/bridge', () => ({
 }));
 
 beforeEach(() => {
+  vi.restoreAllMocks();
   vi.mocked(getRuntimeInvoke).mockReset();
   window.localStorage.clear();
 });
@@ -92,6 +93,44 @@ describe('workspacePersistStorage runtime fallback', () => {
 
     expect(value).toBe(
       '{"state":{"activeNodeId":"node-2","nodeOrder":["node-1","node-2"],"nodesById":{"node-1":{"id":"node-1"},"node-2":{"id":"node-2"}},"trashedNodeIds":[],"nodeViewById":{}},"version":0}'
+    );
+  });
+});
+
+describe('workspacePersistStorage runtime logging', () => {
+  it('logs degraded hydrate when reading progress load fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const invoke = vi.fn().mockImplementation((command: string) => {
+      if (command === 'load_workspace_snapshot') {
+        return Promise.resolve({
+          activeNodeId: 'node-2',
+          nodeOrder: ['node-1', 'node-2'],
+          nodesById: {
+            'node-1': { id: 'node-1' },
+            'node-2': { id: 'node-2' }
+          },
+          trashedNodeIds: []
+        });
+      }
+      return Promise.reject(new Error('sqlite busy'));
+    });
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+
+    expect(value).toBe(
+      '{"state":{"activeNodeId":"node-2","nodeOrder":["node-1","node-2"],"nodesById":{"node-1":{"id":"node-1"},"node-2":{"id":"node-2"}},"trashedNodeIds":[]},"version":0}'
+    );
+    expect(warn).toHaveBeenCalledWith(
+      '[persistence] reading progress load failed during workspace hydrate',
+      expect.objectContaining({
+        area: 'persistence',
+        action: 'hydrate_workspace_state',
+        command: 'load_reading_progress',
+        fallback: 'merge_snapshot_without_reading_progress',
+        storageKey: 'foliole-workspace-v1',
+        error: { name: 'Error', message: 'sqlite busy' }
+      })
     );
   });
 });

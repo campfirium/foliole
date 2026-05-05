@@ -21,6 +21,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
 }
 
 beforeEach(() => {
+  vi.restoreAllMocks();
   window.electronAPI = undefined;
   window.__FOLIOLE_APP_READY_REPORTED__ = undefined;
 });
@@ -48,10 +49,20 @@ it('resolves runtime app paths via native invoke', async () => {
 });
 
 it('returns null app paths when payload is malformed', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   const invoke = vi.fn().mockResolvedValue({ app_data_dir: '/data' });
   window.electronAPI = createMockElectronApi(invoke);
 
   await expect(resolveRuntimeAppPaths()).resolves.toBeNull();
+  expect(warn).toHaveBeenCalledWith(
+    '[bridge] native app path payload invalid',
+    expect.objectContaining({
+      area: 'bridge',
+      action: 'resolve_runtime_app_paths',
+      command: 'resolve_app_paths',
+      fallback: 'return_null'
+    })
+  );
 });
 
 it('normalizes runtime system font payload', async () => {
@@ -75,6 +86,28 @@ it('opens external urls through typed native invoke when available', async () =>
   await openExternalUrl('https://example.com/docs');
 
   expect(invoke).toHaveBeenCalledWith('open_external_url', { url: 'https://example.com/docs' });
+});
+
+it('logs and falls back when native external URL open fails', async () => {
+  const invoke = vi.fn().mockRejectedValue(new Error('shell disabled'));
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+  window.electronAPI = createMockElectronApi(invoke as ElectronAPI['invoke']);
+
+  await openExternalUrl('https://example.com/docs');
+
+  expect(warn).toHaveBeenCalledWith(
+    '[bridge] native external URL open failed',
+    expect.objectContaining({
+      area: 'bridge',
+      action: 'open_external_url',
+      command: 'open_external_url',
+      fallback: 'window.open',
+      target: 'https://example.com/docs',
+      error: { name: 'Error', message: 'shell disabled' }
+    })
+  );
+  expect(open).toHaveBeenCalledWith('https://example.com/docs', '_blank', 'noopener,noreferrer');
 });
 
 it('reports boot stages through the typed boot report contract', async () => {

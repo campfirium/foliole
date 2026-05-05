@@ -2,6 +2,7 @@ import type { StateStorage } from 'zustand/middleware';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLogging';
 
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
 
@@ -26,10 +27,29 @@ export const workspacePersistStorage: StateStorage = {
       try {
         const [snapshot, readingProgress] = await Promise.all([
           runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceSnapshot),
-          runtimeInvoke(NATIVE_COMMANDS.loadReadingProgress).catch(() => null)
+          runtimeInvoke(NATIVE_COMMANDS.loadReadingProgress).catch((error) => {
+            logRuntimeWarning('reading progress load failed during workspace hydrate', {
+              area: 'persistence',
+              action: 'hydrate_workspace_state',
+              command: NATIVE_COMMANDS.loadReadingProgress,
+              fallback: 'merge_snapshot_without_reading_progress',
+              storageKey: name,
+              error
+            });
+            return null;
+          })
         ]);
         return toPersistedStatePayload(mergeWorkspaceSnapshotWithReadingProgress(snapshot, readingProgress));
-      } catch {
+      } catch (error) {
+        logRuntimeError('workspace hydrate failed', {
+          area: 'persistence',
+          action: 'hydrate_workspace_state',
+          command: NATIVE_COMMANDS.loadWorkspaceSnapshot,
+          relatedCommand: NATIVE_COMMANDS.loadReadingProgress,
+          fallback: 'return_null',
+          storageKey: name,
+          error
+        });
         return null;
       }
     }
