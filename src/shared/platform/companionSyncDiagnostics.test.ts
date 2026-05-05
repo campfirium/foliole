@@ -143,7 +143,7 @@ function expectContentBacklogSeparateFromStructure() {
       missing_external_document_body_count: 3,
       missing_topic_body_count: 9
     }),
-    message: 'Some topic bodies are still being cached.',
+    message: 'Some topic bodies are still downloading.',
     severity: 'info'
   }));
   expect(verdicts).not.toContainEqual(expect.objectContaining({ code: 'sync_android_not_caught_up' }));
@@ -158,7 +158,7 @@ function expectAttachmentBacklogSeparateFromStructure() {
   expect(verdicts).toContainEqual(expect.objectContaining({ code: 'sync_structure_aligned' }));
   expect(verdicts).toContainEqual(expect.objectContaining({
     code: 'sync_android_attachment_cache_backlog',
-    message: 'Some attachment files are still being cached.',
+    message: 'Some attachment files are still downloading.',
     severity: 'info'
   }));
   expect(verdicts).not.toContainEqual(expect.objectContaining({ code: 'sync_android_not_caught_up' }));

@@ -344,10 +344,10 @@ final class FolioleCompanionSyncDiagnostics {
             addVerdict(verdicts, "android_no_nodes_after_completed_sync", "error", "Completed sync left no topics on this device.", storage);
         }
         if (content.optLong("missing_content_blob_count", 0) > 0) {
-            addVerdict(verdicts, "android_missing_content_blobs", "info", "Some topic bodies are still being cached.", content);
+            addVerdict(verdicts, "android_missing_content_blobs", "info", "Some topic bodies are still downloading.", content);
         }
         if (content.optLong("missing_attachment_resource_count", 0) > 0) {
-            addVerdict(verdicts, "android_missing_attachment_resources", "info", "Some attachment files are still being cached.", content);
+            addVerdict(verdicts, "android_missing_attachment_resources", "info", "Some attachment files are still downloading.", content);
         }
         JSONObject failed = recentFailedEvent(events);
         if (failed != null) {

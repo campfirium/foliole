@@ -66,7 +66,7 @@ function formatActiveTopicBodyStatus(result: CombinedSyncDiagnosticResult) {
   const activeTopic = result.android?.content.active_topic;
   if (!activeTopic) return 'None';
   if (activeTopic.body_status === 'ready' || activeTopic.body_status === 'cached') return `Ready: ${activeTopic.title}`;
-  if (activeTopic.body_status === 'missing') return `Caching: ${activeTopic.title}`;
+  if (activeTopic.body_status === 'missing') return `Downloading: ${activeTopic.title}`;
   if (activeTopic.body_status === 'fetching') return `Loading: ${activeTopic.title}`;
   if (activeTopic.body_status === 'failed') return `Retry needed: ${activeTopic.title}`;
   return `Empty: ${activeTopic.title}`;
@@ -105,10 +105,10 @@ export function CompanionSyncDiagnosticCheckpoint(props: { result: CombinedSyncD
           value={`${formatNumber(props.result.android?.storage.active_node_count)} on device / ${formatNumber(props.result.desktop?.storage.active_node_count)} on desktop`}
         />
         <MetricRow label="Device changes to send" value={formatNumber(props.result.android?.sync_state.local_dirty_count)} />
-        <MetricRow label="Topic bodies still caching" value={formatNumber(props.result.android?.content.missing_content_blob_count)} />
-        <MetricRow label="Body bytes still caching" value={formatBytes(props.result.android?.content.missing_content_blob_bytes)} />
-        <MetricRow label="Attachment files still caching" value={formatNumber(props.result.android?.content.missing_attachment_resource_count)} />
-        <MetricRow label="Attachment bytes still caching" value={formatBytes(props.result.android?.content.missing_attachment_resource_bytes)} />
+        <MetricRow label="Topic bodies to download" value={formatNumber(props.result.android?.content.missing_content_blob_count)} />
+        <MetricRow label="Body bytes to download" value={formatBytes(props.result.android?.content.missing_content_blob_bytes)} />
+        <MetricRow label="Attachment files to download" value={formatNumber(props.result.android?.content.missing_attachment_resource_count)} />
+        <MetricRow label="Attachment bytes to download" value={formatBytes(props.result.android?.content.missing_attachment_resource_bytes)} />
         <MetricRow label="Current topic" value={formatActiveTopicBodyStatus(props.result)} wrap />
         <MetricRow label="Latest sync" value={formatEvent(latestAndroidEvent)} wrap />
       </div>

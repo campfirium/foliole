@@ -129,7 +129,7 @@ describe('companion desktop attachment resource queue', () => {
     await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
       { attachmentId: 'att-2', contentHash: 'blob-hash-2' },
       { attachmentId: 'att-3', contentHash: 'blob-hash-3' }
-    ])).rejects.toThrow('Attachment batch could not cache any requested file.');
+    ])).rejects.toThrow('Attachment batch could not download any requested file.');
   });
 
   it('downloads a missing attachment resource by attachment id for active item priority', async () => {

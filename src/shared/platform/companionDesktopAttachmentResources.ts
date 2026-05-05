@@ -92,7 +92,7 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
     }
   }
   if (requests.length > 0 && failedAttachmentCount === requests.length) {
-    throw new Error('Attachment batch could not cache any requested file.');
+    throw new Error('Attachment batch could not download any requested file.');
   }
   return syncedAttachmentIds;
 }

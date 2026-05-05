@@ -66,11 +66,11 @@ function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
     suffixes.push('structure confirmation is still pending');
   }
   if (remainingBodies !== 0 && remainingAttachments !== 0) {
-    suffixes.push(`${bodyLabel} and ${attachmentLabel} still caching`);
+    suffixes.push(`${bodyLabel} and ${attachmentLabel} still downloading`);
   } else if (remainingBodies !== 0) {
-    suffixes.push(`${bodyLabel} still caching`);
+    suffixes.push(`${bodyLabel} still downloading`);
   } else if (remainingAttachments !== 0) {
-    suffixes.push(`${attachmentLabel} still caching`);
+    suffixes.push(`${attachmentLabel} still downloading`);
   }
   return suffixes.length === 0 ? prefix : joinBacklogSuffix(prefix, `${suffixes.join(', and ')}.`);
 }
@@ -81,10 +81,10 @@ function createPassResult(message: string, status: CompanionSyncPassResult['stat
 
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {
   if (result.attachmentResourceError) {
-    return createPassResult(`Attachment cache failed: ${result.attachmentResourceError}`, 'failed');
+    return createPassResult(`Attachment download failed: ${result.attachmentResourceError}`, 'failed');
   }
   if (result.contentBlobError) {
-    return createPassResult(`Topic body cache failed: ${result.contentBlobError}`, 'failed');
+    return createPassResult(`Topic body download failed: ${result.contentBlobError}`, 'failed');
   }
   if (result.pushError) {
     return createPassResult(

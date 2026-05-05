@@ -150,12 +150,12 @@ function expectStageCheckpoint() {
   expect(screen.getByText('5 remaining')).toBeInTheDocument();
   expect(screen.getByText('2 remaining')).toBeInTheDocument();
   expect(screen.getByText('New desktop changes')).toBeInTheDocument();
-  expect(screen.getByText('Topic bodies still caching')).toBeInTheDocument();
+  expect(screen.getByText('Topic bodies are still downloading')).toBeInTheDocument();
 }
 
 function expectCheckpointDetails() {
   expect(screen.getByText('Current topic')).toBeInTheDocument();
-  expect(screen.getByText('Caching: Current topic')).toBeInTheDocument();
+  expect(screen.getByText('Downloading: Current topic')).toBeInTheDocument();
   expect(screen.getByText('Legacy sync pass finished')).toBeInTheDocument();
   expect(screen.queryByText('Completed')).not.toBeInTheDocument();
   expect(screen.getByText('3 changes')).toBeInTheDocument();
@@ -172,8 +172,8 @@ function expectAndroidDiagnosticRows() {
   expect(screen.getByText('1 waiting · 1 confirming · 1 review needed')).toBeInTheDocument();
   expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
   expect(screen.getByText('Changes needing review')).toBeInTheDocument();
-  expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('Attachment bytes still caching').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Body bytes to download').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Attachment bytes to download').length).toBeGreaterThan(0);
   expect(screen.getByText('Review queue bodies')).toBeInTheDocument();
   expect(screen.getByText('Current topic body')).toBeInTheDocument();
   expect(screen.getByText('Top-level topic bodies')).toBeInTheDocument();
@@ -252,7 +252,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
         ...diagnosticResult.android,
         events: [{
           endpoint_url: 'http://10.0.2.2:38641',
-          message: 'Some topic bodies are still being cached.',
+          message: 'Some topic bodies are still downloading.',
           occurred_at: '2026-04-29T01:20:00.000Z',
           status: 'skipped'
         }]

@@ -185,7 +185,7 @@ function testKeepsBodyBacklogPending() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'content_backlog_exists',
-      detail: '3 body blob(s) remain uncached: 2 topic, 1 external document.'
+      detail: '3 body blob(s) remain to download: 2 topic, 1 external document.'
     })
   ]));
   expect(report.checks.map((item) => item.code)).toEqual(expect.arrayContaining([

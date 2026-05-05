@@ -33,14 +33,14 @@ describe('describeCompanionSyncPassResult', () => {
     });
   });
 
-  it('keeps body and attachment backlog as a skipped caching pass', () => {
+  it('keeps body and attachment backlog as a skipped download pass', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingAttachmentResourceBytes: 3145728,
       remainingAttachmentResourceCount: 2,
       remainingContentBlobBytes: 5242880,
       remainingContentBlobCount: 5
     }))).toEqual({
-      message: 'Sync pass finished; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still caching.',
+      message: 'Sync pass finished; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -62,7 +62,7 @@ describe('describeCompanionSyncPassResult', () => {
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Sync pass finished; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push; 3 topic bodies still caching.',
+      message: 'Sync pass finished; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push; 3 topic bodies still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -74,7 +74,7 @@ describe('describeCompanionSyncPassResult', () => {
       remainingAttachmentResourceCount: 0,
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Sync pass finished; 1 device change(s) need review before they can be sent; 3 topic bodies still caching.',
+      message: 'Sync pass finished; 1 device change(s) need review before they can be sent; 3 topic bodies still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });

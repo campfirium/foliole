@@ -73,7 +73,7 @@ function backlogEvent() {
   return {
     endpoint_url: 'http://10.0.2.2:38641',
     id: 'backlog-event',
-    message: 'Some topic bodies are still being cached.',
+    message: 'Some topic bodies are still downloading.',
     occurred_at: '2026-04-29T02:24:44.000Z',
     status: 'skipped' as const
   };
@@ -150,7 +150,7 @@ function testHealthyBacklogPassAvoidsStrictCompletion() {
   render(<CompanionSyncPanel {...createConnectedProps()} syncEvents={[backlogEvent()]} />);
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
-  expect(screen.getByText('Some topic bodies are still being cached.')).toBeInTheDocument();
+  expect(screen.getByText('Some topic bodies are still downloading.')).toBeInTheDocument();
   expect(screen.queryByText('No finished sync pass yet')).not.toBeInTheDocument();
   expect(screen.queryByText('Finished automatic pass')).not.toBeInTheDocument();
 }
@@ -164,7 +164,7 @@ function testOlderFailuresAreNeutralAfterBacklogPass() {
     />
   );
 
-  expect(screen.getByText('Some topic bodies are still being cached.')).toBeInTheDocument();
+  expect(screen.getByText('Some topic bodies are still downloading.')).toBeInTheDocument();
   const oldFailure = screen.getByText('Earlier sync attempt did not complete');
   expect(oldFailure).toBeInTheDocument();
   expect(oldFailure.className).not.toContain('text-error');

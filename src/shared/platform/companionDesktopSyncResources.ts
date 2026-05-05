@@ -87,7 +87,7 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
       .reduce((sum, blob) => sum + Math.max(0, blob.size_bytes ?? 0), 0);
     onProgress?.({ completed: syncedContentBlobHashes.length, completedBytes: syncedBytes, contentBreakdown, phase: 'content', total, totalBytes });
     if (syncedBatchHashes.length === 0 && batch.failedContentBlobCount > 0) {
-      throw new Error('Topic body batch could not cache any requested body.');
+      throw new Error('Topic body batch could not download any requested body.');
     }
     if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedBatchHashes.length === 0) break;
   }

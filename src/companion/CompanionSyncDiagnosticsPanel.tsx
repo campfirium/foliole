@@ -37,14 +37,14 @@ function friendlyVerdict(verdict: SyncDiagnosticVerdict) {
   }
   if (verdict.code === 'sync_android_content_cache_backlog' || verdict.code === 'android_missing_content_blobs') {
     return {
-      description: 'Topics can open now; uncached bodies load as needed.',
-      title: 'Topic bodies are still caching'
+      description: 'Topics can open now; missing bodies download as needed.',
+      title: 'Topic bodies are still downloading'
     };
   }
   if (verdict.code === 'sync_android_attachment_cache_backlog' || verdict.code === 'android_missing_attachment_resources') {
     return {
-      description: 'Attachment files continue caching during sync.',
-      title: 'Attachment files are still caching'
+      description: 'Attachment files keep downloading during sync.',
+      title: 'Attachment files are still downloading'
     };
   }
   if (verdict.code === 'android_has_local_dirty_state') {

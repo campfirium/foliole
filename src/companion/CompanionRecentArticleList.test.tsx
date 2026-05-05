@@ -85,13 +85,13 @@ function testKeepsEmptyRecentTopicsPassive() {
   );
 
   expect(screen.getByText('No recent topics are available on this device yet.')).toBeInTheDocument();
-  expect(screen.getByText('Recent topics will appear here after background sync caches them.')).toBeInTheDocument();
+  expect(screen.getByText('Recent topics will appear here after background sync downloads them.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
 }
 
 describe('RecentArticleList', () => {
   it('clamps article previews to three lines', testClampsArticlePreviews);
-  it('keeps recent topics quiet while their bodies are still caching', testKeepsCachingTopicsQuiet);
+  it('keeps recent topics quiet while their bodies are still downloading', testKeepsCachingTopicsQuiet);
   it('marks recent topics whose content is empty', testMarksEmptyTopic);
   it('marks recent topics whose body is unavailable', testMarksUnavailableTopicBody);
   it('keeps the empty recent topics state passive while automatic sync owns refresh', testKeepsEmptyRecentTopicsPassive);

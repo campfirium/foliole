@@ -10,7 +10,7 @@ export function RecentArticleList(props: {
     return (
       <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
         <p>No recent topics are available on this device yet.</p>
-        <p className="mt-3">Recent topics will appear here after background sync caches them.</p>
+        <p className="mt-3">Recent topics will appear here after background sync downloads them.</p>
       </section>
     );
   }

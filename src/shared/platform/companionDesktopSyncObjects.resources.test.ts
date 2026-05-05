@@ -147,7 +147,7 @@ async function testFailsContentStageWhenWholeBodyBatchFails() {
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-  expect(result.contentBlobError).toBe('Topic body batch could not cache any requested body.');
+  expect(result.contentBlobError).toBe('Topic body batch could not download any requested body.');
   expect(result.syncedContentBlobHashes).toEqual([]);
 }
 

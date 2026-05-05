@@ -169,12 +169,12 @@ function buildResourceChecks(result: CombinedSyncDiagnosticResult) {
     checks.push(check(
       'content_backlog_exists',
       'info',
-      'Topic bodies are still caching',
-      `${missing} body blob(s) remain uncached: ${topicBodies} topic, ${externalBodies} external document.`
+      'Topic bodies are still downloading',
+      `${missing} body blob(s) remain to download: ${topicBodies} topic, ${externalBodies} external document.`
     ));
   }
   if (missingAttachments > 0) {
-    checks.push(check('attachment_backlog_exists', 'info', 'Attachment files are still caching', `${missingAttachments} attachment file(s) remain uncached.`));
+    checks.push(check('attachment_backlog_exists', 'info', 'Attachment files are still downloading', `${missingAttachments} attachment file(s) remain to download.`));
   }
   return checks;
 }
