@@ -123,7 +123,7 @@ it('skips nav documents and guide-marked cover pages during epub chapter import'
 
   expect(children).toHaveLength(1);
   expect(children[0]).toEqual({
-    content: '## Real Chapter\n\nHello world.',
+    content: '# Real Chapter\n\nHello world.',
     title: 'Real Chapter'
   });
 });
@@ -186,7 +186,7 @@ it('skips toc-like chapters even when the epub does not mark them as nav documen
 
   expect(children).toHaveLength(1);
   expect(children[0]).toEqual({
-    content: '## Real Chapter\n\nHello world.',
+    content: '# Real Chapter\n\nHello world.',
     title: 'Real Chapter'
   });
 });

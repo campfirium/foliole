@@ -1,19 +1,38 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { buildRetainedDegradedImportContent } from '../../lib/core/import/controlledContext.js';
 
 import { readEpubArchiveEntries } from './epubArchive.js';
 import { buildChapterMarkdown } from './epubChapterMarkdown.js';
 import { collectManagedEpubImages } from './epubEmbeddedImages.js';
 import { isCoverLikeChapter, isTocLikeChapter } from './epubImportChapterHeuristics.js';
+import {
+  buildCoverRootContentFromChapter,
+  buildRootCoverFromImage,
+  type ManifestItem,
+  type RootBookContent
+} from './epubImportRootContent.js';
 import { buildBookNodes, type RawBookNode } from './epubImportTree.js';
 import { readEpubToc } from './epubToc.js';
 import { type ImportSourceDescriptor } from './importSourcePipeline.js';
 
 export interface RawEpubBook {
   nodes: RawBookNode[];
+  rootContent: string;
+  rootDegradedReason: string | null;
+  rootEmbeddedImages: PreparedImportEmbeddedImage[];
   title: string;
+}
+
+interface SpineChapterNode extends RawBookNode {
+  href: string;
+}
+
+interface SpineChapterBuildResult {
+  chapter: SpineChapterNode | null;
+  rootCover: RootBookContent | null;
 }
 
 function decodeText(bytes: Uint8Array) {
@@ -46,7 +65,7 @@ function readPackagePath(containerXml: string) {
 }
 
 function parseManifest(opfXml: string, opfDirectory: string) {
-  const manifest = new Map<string, { href: string; mediaType: string | null; properties: string[] }>();
+  const manifest = new Map<string, ManifestItem>();
   for (const match of opfXml.matchAll(/<item\b([^>]*)\/?>/gi)) {
     const attributes = parseAttributes(match[1]);
     if (!attributes.id || !attributes.href) continue;
@@ -88,7 +107,7 @@ function buildDegradedChapterNode(input: {
   href: string;
   index: number;
   reason: string;
-}) {
+}): SpineChapterNode {
   return {
     content: buildRetainedDegradedImportContent({ reason: input.reason, sourceKind: 'epub', sourceName: input.fallbackTitle }),
     degradedReason: input.reason,
@@ -100,6 +119,18 @@ function buildDegradedChapterNode(input: {
   };
 }
 
+function buildDegradedSpineChapterResult(input: {
+  fallbackTitle: string;
+  href: string;
+  index: number;
+  reason: string;
+}): SpineChapterBuildResult {
+  return {
+    chapter: buildDegradedChapterNode(input),
+    rootCover: null
+  };
+}
+
 function buildSpineChapterNode(input: {
   entries: ReadonlyMap<string, Uint8Array>;
   fallbackTitle: string;
@@ -108,12 +139,12 @@ function buildSpineChapterNode(input: {
   index: number;
   mediaType: string | null;
   properties: string[];
-}) {
+}): SpineChapterBuildResult {
   if (input.properties.includes('nav')) {
-    return null;
+    return { chapter: null, rootCover: null };
   }
   if (input.mediaType && !['application/xhtml+xml', 'text/html'].includes(input.mediaType)) {
-    return buildDegradedChapterNode({
+    return buildDegradedSpineChapterResult({
       fallbackTitle: input.fallbackTitle,
       href: input.href,
       index: input.index,
@@ -122,7 +153,7 @@ function buildSpineChapterNode(input: {
   }
   const htmlBytes = input.entries.get(input.href);
   if (!htmlBytes) {
-    return buildDegradedChapterNode({
+    return buildDegradedSpineChapterResult({
       fallbackTitle: input.fallbackTitle,
       href: input.href,
       index: input.index,
@@ -132,19 +163,25 @@ function buildSpineChapterNode(input: {
   const chapter = buildChapterMarkdown(decodeText(htmlBytes), input.fallbackTitle);
   const embeddedImages = collectManagedEpubImages(chapter.content, input.href, input.entries);
   if (isCoverLikeChapter({ content: chapter.content, title: chapter.title }, input.href, input.guideCoverPaths)) {
-    return null;
+    return {
+      chapter: null,
+      rootCover: buildCoverRootContentFromChapter({ content: chapter.content, degradedReason: chapter.degradedReason, embeddedImages })
+    };
   }
   if (isTocLikeChapter({ content: chapter.content, title: chapter.title })) {
-    return null;
+    return { chapter: null, rootCover: null };
   }
   return {
-    content: chapter.content,
-    degradedReason: chapter.degradedReason,
-    embeddedImages,
-    href: input.href,
-    key: `${input.index}-${input.href}`,
-    parentKey: null,
-    title: chapter.title
+    chapter: {
+      content: chapter.content,
+      degradedReason: chapter.degradedReason,
+      embeddedImages,
+      href: input.href,
+      key: `${input.index}-${input.href}`,
+      parentKey: null,
+      title: chapter.title
+    },
+    rootCover: null
   };
 }
 
@@ -154,11 +191,11 @@ function buildSpineChapterNodes(input: {
   manifest: ReturnType<typeof parseManifest>;
   spine: string[];
 }) {
-  return input.spine.flatMap((idref, index) => {
+  return input.spine.reduce<{ chapters: SpineChapterNode[]; rootCover: RootBookContent | null }>((result, idref, index) => {
     const item = input.manifest.get(idref);
     const fallbackTitle = `Chapter ${index + 1}`;
     if (!item) {
-      return [{
+      result.chapters.push({
         content: buildRetainedDegradedImportContent({
           reason: `EPUB chapter missing manifest entry: ${idref}`,
           sourceKind: 'epub',
@@ -170,9 +207,10 @@ function buildSpineChapterNodes(input: {
         key: `${index}-${idref}`,
         parentKey: null,
         title: fallbackTitle
-      }];
+      });
+      return result;
     }
-    const chapter = buildSpineChapterNode({
+    const built = buildSpineChapterNode({
       entries: input.entries,
       fallbackTitle,
       guideCoverPaths: input.guideCoverPaths,
@@ -181,8 +219,14 @@ function buildSpineChapterNodes(input: {
       mediaType: item.mediaType,
       properties: item.properties
     });
-    return chapter ? [chapter] : [];
-  });
+    if (built?.chapter) {
+      result.chapters.push(built.chapter);
+    }
+    if (!result.rootCover && built?.rootCover?.content) {
+      result.rootCover = built.rootCover;
+    }
+    return result;
+  }, { chapters: [], rootCover: null });
 }
 
 export async function readRawEpubBook(source: ImportSourceDescriptor): Promise<RawEpubBook> {
@@ -202,8 +246,15 @@ export async function readRawEpubBook(source: ImportSourceDescriptor): Promise<R
     throw new Error('EPUB import failed: package document does not declare any spine chapters');
   }
   const title = readBookTitle(opfXml, source.sourceName);
-  const chapters = buildSpineChapterNodes({ entries, guideCoverPaths, manifest, spine });
+  const builtSpine = buildSpineChapterNodes({ entries, guideCoverPaths, manifest, spine });
   const toc = readEpubToc({ entries, manifest, opfDirectory, opfXml });
+  const rootCover = builtSpine.rootCover ?? buildRootCoverFromImage({ entries, manifest, opfXml });
 
-  return { nodes: buildBookNodes({ chapters, toc }), title };
+  return {
+    nodes: buildBookNodes({ chapters: builtSpine.chapters, toc }),
+    rootContent: rootCover?.content ?? '',
+    rootDegradedReason: rootCover?.degradedReason ?? null,
+    rootEmbeddedImages: rootCover?.embeddedImages ?? [],
+    title
+  };
 }

@@ -23,6 +23,12 @@ interface PreparedBookNode {
   title: string;
 }
 
+interface PreparedImportNodeContent {
+  content: string;
+  degradedReason: string | null;
+  embeddedImages: PreparedImportEmbeddedImage[];
+}
+
 function appendReason(current: string | null, next: string | null) {
   if (!next) return current;
   if (!current) return next;
@@ -56,7 +62,12 @@ function prepareBookNode(node: RawBookNode, index: number, importedAt: string) {
   } satisfies PreparedBookNode;
 }
 
-async function importEmbeddedImagesForNode(nodeId: string, importedAt: string, node: PreparedBookNode) {
+function buildRootContent(title: string, body: string) {
+  const trimmedBody = body.trim();
+  return trimmedBody ? `# ${title}\n\n${trimmedBody}` : `# ${title}`;
+}
+
+async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(nodeId: string, importedAt: string, node: T) {
   if (node.embeddedImages.length === 0) {
     return node;
   }
@@ -168,28 +179,38 @@ export async function loadEpubPreview(source: ImportSourceDescriptor) {
   const book = await readRawEpubBook(source);
   const importedAt = new Date().toISOString();
   const nodes = book.nodes.map((node, index) => prepareBookNode(node, index, importedAt));
-  return ['# ' + book.title, ...nodes.flatMap((node) => ['', node.content])].join('\n').trim();
+  return [buildRootContent(book.title, book.rootContent), ...nodes.map((node) => node.content)].join('\n\n').trim();
 }
 
 export async function runEpubImport(source: ImportSourceDescriptor, importedAt: string) {
   const book = await readRawEpubBook(source);
   const nodes = book.nodes.map((node, index) => prepareBookNode(node, index, importedAt));
-  const summary = createPreparedDesktopTextImport({
-    content: ['# ' + book.title, '', ...nodes.map((node) => `- ${node.title}`)].join('\n'),
+  const rootNode = createPreparedDesktopTextImport({
+    content: buildRootContent(book.title, book.rootContent),
+    degradedReason: book.rootDegradedReason,
     fileName: source.sourceName,
     filePath: source.filePath,
     importedAt,
     kind: 'epub',
+    managedEpubImageDestinations: book.rootEmbeddedImages.map((image) => image.destination),
     sourceTrackingMode: 'untracked',
     sourceProfile: 'epub',
     titleStrategy: 'heading'
   });
-  const imported = runPreparedImport(summary);
+  const imported = runPreparedImport(rootNode);
   if (!imported.nodeId) {
     throw new Error('EPUB import failed: parent node was not created');
   }
 
+  const finalizedRoot = await importEmbeddedImagesForNode(imported.nodeId, importedAt, {
+    content: rootNode.content,
+    degradedReason: rootNode.degradedReason,
+    embeddedImages: book.rootEmbeddedImages
+  });
   const finalizedNodes = await syncBookNodes(imported.nodeId, imported.sourceFingerprint, importedAt, nodes);
-  const aggregateReason = finalizedNodes.reduce<string | null>((reason, node) => appendReason(reason, node.degradedReason), imported.degradedReason);
+  const aggregateReason = finalizedNodes.reduce<string | null>(
+    (reason, node) => appendReason(reason, node.degradedReason),
+    appendReason(imported.degradedReason, finalizedRoot.degradedReason)
+  );
   return applyAggregateDegrade(imported, aggregateReason);
 }
