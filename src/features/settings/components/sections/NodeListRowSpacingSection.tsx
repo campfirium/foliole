@@ -1,14 +1,11 @@
 import { useState } from 'react';
 
-import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { SettingsControlSlot, SettingsRow, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
 import {
   DEFAULT_NODE_LIST_ROW_SPACING,
   getNodeListRowSpacing,
   setNodeListRowSpacing
 } from '../../../nodes/components/nodeListRowSpacingSettings';
-
-const SETTINGS_INPUT_CLASS_NAME =
-  'w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground';
 
 export function NodeListRowSpacingSection() {
   const [rowSpacing, setRowSpacing] = useState(() => getNodeListRowSpacing());
@@ -24,7 +21,7 @@ export function NodeListRowSpacingSection() {
             <span className="sr-only">Node list row spacing</span>
             <input
               aria-label="Node list row spacing"
-              className={SETTINGS_INPUT_CLASS_NAME}
+              className={settingsFieldClassName()}
               min={0}
               onChange={(event) => {
                 const nextValue = Number(event.target.value);

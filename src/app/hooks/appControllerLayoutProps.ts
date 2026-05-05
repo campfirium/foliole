@@ -19,7 +19,11 @@ import {
   createToggleVirtualView
 } from './appControllerTrashViewHandlers';
 import { buildLayoutProps } from './layoutPropsBuilder';
-import { createCloseSettingsHandler, createOpenSettingsHandler, openExternalLibrarySettings } from './settingsOverlayRequest';
+import {
+  createCloseSettingsHandler,
+  createOpenSettingsHandler,
+  openExternalLibrarySettings
+} from './settingsOverlayRequest';
 import type { useAppRuntime } from './useAppRuntime';
 import type { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import type { useEditorContextCommands } from './useEditorContextCommands';

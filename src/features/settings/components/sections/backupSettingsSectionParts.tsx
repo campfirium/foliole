@@ -1,6 +1,13 @@
 import { useState } from 'react';
 
-import { AppInput, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import {
+  AppInput,
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsButtonClassName,
+  settingsValueBoxClassName
+} from '../../../../shared/ui';
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
@@ -9,11 +16,9 @@ const BACKUP_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   timeStyle: 'short'
 });
 
-export const ACTION_BUTTON_CLASS_NAME =
-  'inline-flex min-w-[112px] items-center justify-center rounded-md border border-border bg-background px-3 py-[7px] text-sm text-foreground disabled:cursor-default disabled:opacity-55';
+export const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName('min-w-[112px]');
 
-const SETTINGS_BUTTON_CLASS_NAME =
-  'rounded-md border border-border bg-bg-panel px-3 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50';
+const SETTINGS_BUTTON_CLASS_NAME = settingsButtonClassName();
 
 function describeBackupKind(entry: DatabaseBackupEntry) {
   if (entry.kind === 'manual') return 'Manual backup';
@@ -75,7 +80,7 @@ export function BackupPathRow(props: {
   return (
     <SettingsRow description="Backups, auto backups, and safety snapshots are all stored in this folder." title="Backup location">
       <SettingsControlSlot className="flex-col items-stretch gap-2">
-        <div className="rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm text-foreground/75">
+        <div className={settingsValueBoxClassName()}>
           <span className="break-all">{props.backupPath || 'Loading…'}</span>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -94,7 +99,7 @@ export function BackupRulesSection(props: {
   onChangeField: (field: keyof DatabaseBackupSettings, value: string) => void;
 }) {
   return (
-    <SettingsSection ariaLabel="Backup settings section" description="Auto backups rotate by time window. Manual backups and safety snapshots keep a fixed recent count. Total size limit removes the oldest backup first when space runs over the limit." title="Backup rules">
+    <SettingsSection ariaLabel="Backup settings section" title="Backup rules">
       <NumberRuleRow description="Keep 1 auto backup per hour within this window." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_hourly_hours', value)} title="Hourly window (hours)" value={String(props.draft.auto_hourly_hours)} />
       <NumberRuleRow description="Keep 1 auto backup per day within this window." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_daily_days', value)} title="Daily window (days)" value={String(props.draft.auto_daily_days)} />
       <NumberRuleRow description="Keep 1 auto backup per week within this window." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('auto_weekly_weeks', value)} title="Weekly window (weeks)" value={String(props.draft.auto_weekly_weeks)} />
@@ -134,7 +139,7 @@ export function BackupListSection(props: {
 
   return (
     <SettingsSection ariaLabel="Backup list section" title="Backups">
-      <SettingsRow description={props.statusMessage || 'Create a manual backup any time. You can restore from any listed backup or safety snapshot.'} title="Create backup">
+      <SettingsRow description={props.statusMessage || undefined} title="Create backup">
         <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
           <button className={ACTION_BUTTON_CLASS_NAME} disabled={!props.isBackupActionsAvailable || props.isCreatingBackup || props.restoringPath.length > 0} onClick={props.createBackup} type="button">
             {props.isCreatingBackup ? 'Creating…' : 'Create backup'}
@@ -155,7 +160,6 @@ export function BackupListSection(props: {
       ))}
       {props.isBackupActionsAvailable && !props.isLoadingBackups && props.backups.length > 3 ? (
         <SettingsRow
-          description={isExpanded ? 'Show the newest three backups only.' : `${hiddenBackupCount} more backups are hidden.`}
           title={isExpanded ? 'Collapse backup list' : 'More backups'}
         >
           <SettingsControlSlot className="justify-end max-[1080px]:justify-start">

@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
+import type { DesktopCompanionPairingOverviewPayload } from './nativeCompanionSyncContract.js';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeConflictRecord,
@@ -34,5 +35,29 @@ export type NativeSyncCommandMap = {
   [NATIVE_COMMANDS.saveSyncPeers]: {
     args: { peers: NativeSyncPeer[] };
     result: NativeSyncPeer[];
+  };
+  [NATIVE_COMMANDS.loadCompanionPairingOverview]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
+  [NATIVE_COMMANDS.enableCompanionSync]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
+  [NATIVE_COMMANDS.disableCompanionSync]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
+  [NATIVE_COMMANDS.clearCompanionPairedDevices]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
+  [NATIVE_COMMANDS.approveCompanionPairRequest]: {
+    args: { pair_request_id: string };
+    result: DesktopCompanionPairingOverviewPayload;
+  };
+  [NATIVE_COMMANDS.rejectCompanionPairRequest]: {
+    args: { pair_request_id: string };
+    result: DesktopCompanionPairingOverviewPayload;
   };
 };

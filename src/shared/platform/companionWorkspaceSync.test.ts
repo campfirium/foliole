@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
-
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'web'),
   isNativePlatform: vi.fn(() => false),
   plugin: {
+    loadPairingState: vi.fn(),
     loadReadableArticle: vi.fn(),
     loadWorkspaceSyncState: vi.fn(),
     replaceWorkspaceNode: vi.fn(),
     replaceWorkspaceSnapshot: vi.fn(),
+    savePairingCredentials: vi.fn(),
+    signCompanionSyncRequest: vi.fn(),
     saveWorkspaceSyncEndpoint: vi.fn()
   }
 }));
@@ -23,118 +24,56 @@ vi.mock('@capacitor/core', () => ({
 }));
 
 import {
+  loadCompanionDiscovery,
   loadCompanionReadableArticle,
+  loadCompanionPairingState,
   loadCompanionWorkspaceSyncState,
+  pairCompanionWithDesktop,
   persistCompanionWorkspaceSnapshot,
   pullCompanionWorkspaceSnapshot,
   loadCompanionWorkspaceVersion,
+  removeCompanionWorkspaceSyncRememberedTarget,
+  requestCompanionPairing,
   saveCompanionWorkspaceSyncEndpoint
 } from './companionWorkspaceSync';
-
-function createStoredSyncState(): NativeCompanionWorkspaceSyncState {
-  return {
-    endpoint_url: 'http://10.0.2.2:38641',
-    last_synced_at: '2026-04-22T12:00:00.000Z',
-    workspace_snapshot: {
-      activeNodeId: 'node-1',
-      nodeOrder: ['node-1', 'node-2'],
-      nodesById: {
-        'node-1': {
-          content: 'Readable from local snapshot',
-          createdAt: '2026-04-22T11:00:00.000Z',
-          id: 'node-1',
-          isTitleManual: false,
-          hideTitleHeading: false,
-          kind: 'item',
-          parentNodeId: null,
-          reading: null,
-          reveal: null,
-          review: null,
-          title: 'Synced article',
-          updatedAt: '2026-04-22T11:30:00.000Z',
-          anchorLink: null
-        },
-        'node-2': {
-          content: 'Fallback',
-          createdAt: '2026-04-22T10:00:00.000Z',
-          id: 'node-2',
-          isTitleManual: false,
-          hideTitleHeading: false,
-          kind: 'item',
-          parentNodeId: null,
-          reading: null,
-          reveal: null,
-          review: null,
-          title: 'Fallback article',
-          updatedAt: '2026-04-22T10:30:00.000Z',
-          anchorLink: null
-        }
-      },
-      trashedNodeIds: [],
-      untitledSequenceByParent: {}
-    }
-  };
-}
-
-function mockFetchJson(payload: unknown) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () => new Response(JSON.stringify(payload), { status: 200 }))
-  );
-}
-
-function createUpdatedStoredSnapshot() {
-  const storedState = createStoredSyncState();
-  const baseSnapshot = storedState.workspace_snapshot;
-  if (!baseSnapshot) {
-    throw new Error('Expected stored snapshot to exist.');
-  }
-  return {
-    endpointUrl: storedState.endpoint_url,
-    lastSyncedAt: storedState.last_synced_at,
-    workspaceSnapshot: {
-      ...baseSnapshot,
-      nodesById: {
-        ...baseSnapshot.nodesById,
-        'node-1': {
-          ...baseSnapshot.nodesById['node-1'],
-          review: {
-            difficulty: 4.1,
-            due: '2026-04-25T12:00:00.000Z',
-            elapsedDays: 0,
-            lapses: 0,
-            lastReviewAt: '2026-04-22T12:30:00.000Z',
-            reps: 2,
-            scheduledDays: 3,
-            stability: 3.2,
-            state: 2 as const
-          },
-          updatedAt: '2026-04-22T12:30:00.000Z'
-        }
-      }
-    }
-  };
-}
-
-function resetCompanionWorkspaceSyncTestState() {
-  window.localStorage.clear();
-  vi.clearAllMocks();
-  vi.unstubAllGlobals();
-  capacitorMock.getPlatform.mockReturnValue('web');
-  capacitorMock.isNativePlatform.mockReturnValue(false);
-}
+import {
+  createStoredSyncState,
+  createUpdatedStoredSnapshot,
+  mockFetchJson,
+  resetCompanionWorkspaceSyncTestState,
+  storeWebPairingState
+} from './companionWorkspaceSync.testSupport';
 
 function registerEndpointPersistenceTest() {
   it('stores the sync endpoint in web preview mode', async () => {
     const state = await saveCompanionWorkspaceSyncEndpoint('http://10.0.2.2:38641/');
 
     expect(state.endpoint_url).toBe('http://10.0.2.2:38641');
+    expect(state.remembered_targets).toEqual(['http://10.0.2.2:38641']);
     expect((await loadCompanionWorkspaceSyncState()).endpoint_url).toBe('http://10.0.2.2:38641');
+  });
+
+  it('moves the latest target to the front of remembered desktops', async () => {
+    window.localStorage.setItem('foliole-companion-workspace-sync-state', JSON.stringify(createStoredSyncState()));
+
+    const state = await saveCompanionWorkspaceSyncEndpoint('http://192.168.1.8:38641');
+
+    expect(state.remembered_targets).toEqual(['http://192.168.1.8:38641', 'http://10.0.2.2:38641']);
+  });
+
+  it('removes a remembered desktop target and falls back when removing the current one', async () => {
+    window.localStorage.setItem('foliole-companion-workspace-sync-state', JSON.stringify(createStoredSyncState()));
+
+    const state = await removeCompanionWorkspaceSyncRememberedTarget('http://10.0.2.2:38641');
+
+    expect(state.endpoint_url).toBe('http://192.168.1.8:38641');
+    expect(state.remembered_targets).toEqual(['http://192.168.1.8:38641']);
   });
 }
 
 function registerSnapshotPullTest() {
   it('pulls the desktop workspace snapshot and persists it in web preview mode', async () => {
+    storeWebPairingState();
     mockFetchJson({
       app_version: '0.1.0',
       exported_at: '2026-04-22T12:00:00.000Z',
@@ -158,12 +97,14 @@ function registerSnapshotPullTest() {
     const state = await pullCompanionWorkspaceSnapshot('http://10.0.2.2:38641');
 
     expect(state.last_synced_at).toBe('2026-04-22T12:00:00.000Z');
+    expect(state.remembered_targets).toEqual(['http://10.0.2.2:38641']);
     expect(state.workspace_snapshot?.activeNodeId).toBe('node-1');
   });
 }
 
 function registerWorkspaceVersionTest() {
   it('loads the lightweight workspace version payload', async () => {
+    storeWebPairingState();
     mockFetchJson({
       app_version: '0.1.0',
       exported_at: '2026-04-22T12:00:00.000Z',
@@ -172,12 +113,85 @@ function registerWorkspaceVersionTest() {
     });
 
     const payload = await loadCompanionWorkspaceVersion('http://10.0.2.2:38641');
+    const fetchMock = vi.mocked(fetch);
 
     expect(payload).toMatchObject({
       exported_at: '2026-04-22T12:00:00.000Z',
       has_snapshot: true,
       peer_id: 'desktop-local'
     });
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: expect.objectContaining({
+        'X-Device-Id': 'web-preview-device',
+        'X-Nonce': expect.any(String),
+        'X-Signature': expect.any(String),
+        'X-Timestamp': expect.any(String)
+      })
+    });
+  });
+}
+
+function registerPairingTest() {
+  it('discovers the desktop, requests pairing, and stores web preview credentials after approval', async () => {
+    mockFetchJson({
+      app_version: '0.1.0',
+      desktop_name: 'Foliole Desktop',
+      pairing_mode: 'desktop-confirm',
+      peer_id: 'desktop-local'
+    });
+
+    const discovery = await loadCompanionDiscovery('http://10.0.2.2:38641/');
+
+    expect(discovery).toMatchObject({
+      desktop_name: 'Foliole Desktop',
+      pairing_mode: 'desktop-confirm',
+      peer_id: 'desktop-local'
+    });
+
+    mockFetchJson(
+      {
+        expires_at: '2026-04-22T12:02:00.000Z',
+        pair_request_id: 'pair-request-1',
+        status: 'pending'
+      },
+      202
+    );
+
+    const request = await requestCompanionPairing({
+      deviceId: 'web-preview-device',
+      deviceKind: 'web-preview',
+      deviceName: 'Preview',
+      endpointUrl: 'http://10.0.2.2:38641/'
+    });
+
+    expect(request).toEqual({
+      expires_at: '2026-04-22T12:02:00.000Z',
+      pair_request_id: 'pair-request-1',
+      status: 'pending'
+    });
+
+    mockFetchJson({
+      device_id: 'web-preview-device',
+      device_secret: 'test-secret',
+      paired_at: '2026-04-22T12:00:00.000Z',
+      peer_id: 'desktop-local'
+    });
+
+    const state = await pairCompanionWithDesktop({
+      deviceKind: 'web-preview',
+      deviceName: 'Preview',
+      endpointUrl: 'http://10.0.2.2:38641/',
+      pairRequestId: 'pair-request-1'
+    });
+
+    expect(state).toEqual({
+      device_id: 'web-preview-device',
+      device_kind: 'web-preview',
+      device_name: 'Preview',
+      is_paired: true,
+      paired_at: '2026-04-22T12:00:00.000Z'
+    });
+    await expect(loadCompanionPairingState()).resolves.toMatchObject({ is_paired: true });
   });
 }
 
@@ -225,11 +239,13 @@ function registerSnapshotPersistenceTest() {
     capacitorMock.plugin.replaceWorkspaceNode.mockResolvedValue({
       endpoint_url: updatedSnapshot.endpointUrl,
       last_synced_at: updatedSnapshot.lastSyncedAt,
+      remembered_targets: ['http://10.0.2.2:38641'],
       workspace_snapshot: updatedSnapshot.workspaceSnapshot
     });
 
     await persistCompanionWorkspaceSnapshot({
       ...updatedSnapshot,
+      rememberedTargets: ['http://10.0.2.2:38641'],
       changedNodeId: 'node-1'
     });
 
@@ -244,7 +260,8 @@ function registerSnapshotPersistenceTest() {
 }
 
 describe('companionWorkspaceSync', () => {
-  beforeEach(resetCompanionWorkspaceSyncTestState);
+  beforeEach(() => resetCompanionWorkspaceSyncTestState(capacitorMock));
+  registerPairingTest();
   registerEndpointPersistenceTest();
   registerSnapshotPullTest();
   registerWorkspaceVersionTest();

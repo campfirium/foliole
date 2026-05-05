@@ -61,19 +61,40 @@ function createSnapshot(): WorkspaceSnapshot {
   };
 }
 
-function createWorkspaceSync(snapshot = createSnapshot()) {
+function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot()) {
   const state = {
     endpoint_url: 'http://10.0.2.2:38641',
     last_synced_at: '2026-04-22T08:03:00.000Z',
+    remembered_targets: ['http://10.0.2.2:38641'],
     workspace_snapshot: snapshot
   };
 
   return {
+    bootstrapState: {
+      booted_at: '2026-04-22T08:03:00.000Z',
+      database_path: 'foliole-companion-preview.db',
+      database_ready: true,
+      device_id: 'android-test-device',
+      runtime_kind: 'android-capacitor' as const
+    },
+    checkDesktop: vi.fn(),
     clearError: vi.fn(),
+    completePairing: vi.fn(),
+    desktopDiscovery: null,
     error: null,
+    pendingPairRequest: null,
+    pairingState: {
+      device_id: 'android-test-device',
+      device_kind: 'android-capacitor',
+      device_name: 'Android companion',
+      is_paired: true,
+      paired_at: '2026-04-22T08:03:00.000Z'
+    },
+    pairingStatus: 'idle' as const,
     pullFromDesktop: vi.fn(async () => ({
       endpoint_url: 'http://10.0.2.2:38641',
       last_synced_at: '2026-04-22T08:03:00.000Z',
+      remembered_targets: ['http://10.0.2.2:38641'],
       workspace_snapshot: snapshot
     })),
     readableArticle: {
@@ -84,9 +105,31 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
       title: 'First article'
     },
     replaceSnapshot: vi.fn(async () => state),
+    removeRememberedTarget: vi.fn(),
+    requestPairing: vi.fn(),
     saveEndpoint: vi.fn(),
     state,
     status: 'idle' as const
+  };
+}
+
+function createUnpairedWorkspaceSync() {
+  return {
+    ...createWorkspaceSync(null),
+    pairingState: {
+      device_id: 'android-test-device',
+      device_kind: 'android-capacitor',
+      device_name: 'Android companion',
+      is_paired: false,
+      paired_at: null
+    },
+    readableArticle: null,
+    state: {
+      endpoint_url: null,
+      last_synced_at: null,
+      remembered_targets: [],
+      workspace_snapshot: null
+    }
   };
 }
 
@@ -102,6 +145,12 @@ function createFloatingBar() {
 }
 
 describe('useCompanionArticleSurface', () => {
+  it('opens the connection page first when the phone has no desktop content yet', () => {
+    const { result } = renderHook(() => useCompanionArticleSurface(createUnpairedWorkspaceSync(), createFloatingBar()));
+
+    expect(result.current.activeAction).toBe('more');
+  });
+
   it('switches recent article selections into browse mode', () => {
     const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(), createFloatingBar()));
 

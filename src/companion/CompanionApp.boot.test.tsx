@@ -26,6 +26,7 @@ describe('CompanionApp bootstrap states', () => {
       state: {
         endpoint_url: null,
         last_synced_at: null,
+        remembered_targets: [],
         workspace_snapshot: null
       },
       status: 'idle'

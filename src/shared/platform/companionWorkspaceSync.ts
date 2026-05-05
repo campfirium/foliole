@@ -1,97 +1,33 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
-
 import type {
   NativeCompanionDirtyNodePayload,
   CompanionWorkspaceSnapshotPayload,
   CompanionWorkspaceVersionPayload,
-  NativeCompanionReadableArticlePayload,
   NativeCompanionWorkspaceSyncState
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
 import { resolveReadableCompanionArticle, type CompanionReadableArticle } from './companionReadableArticle';
-
-const WEB_SYNC_STATE_KEY = 'foliole-companion-workspace-sync-state';
-const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
-const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
-
-interface CompanionWorkspaceSyncPlugin {
-  loadDirtyNodes(): Promise<NativeCompanionDirtyNodePayload>;
-  loadWorkspaceSyncState(): Promise<NativeCompanionWorkspaceSyncState>;
-  loadReadableArticle(): Promise<NativeCompanionReadableArticlePayload>;
-  saveWorkspaceSyncEndpoint(args: { endpoint_url: string | null }): Promise<NativeCompanionWorkspaceSyncState>;
-  replaceWorkspaceSnapshot(args: {
-    endpoint_url: string;
-    last_synced_at: string;
-    workspace_snapshot_json: string;
-  }): Promise<NativeCompanionWorkspaceSyncState>;
-  replaceWorkspaceNode(args: {
-    endpoint_url: string;
-    last_synced_at: string;
-    node_id: string;
-    node_snapshot_json: string;
-  }): Promise<NativeCompanionWorkspaceSyncState>;
-}
-
-const FolioleCompanionSync = registerPlugin<CompanionWorkspaceSyncPlugin>('FolioleCompanionSync');
-
-function isNativeAndroidCompanionRuntime() {
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
-}
-
-function normalizeWorkspaceSyncState(value: unknown): NativeCompanionWorkspaceSyncState {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {
-      endpoint_url: null,
-      last_synced_at: null,
-      workspace_snapshot: null
-    };
-  }
-
-  const raw = value as Record<string, unknown>;
-  return {
-    endpoint_url: typeof raw.endpoint_url === 'string' && raw.endpoint_url.trim() ? raw.endpoint_url.trim() : null,
-    last_synced_at: typeof raw.last_synced_at === 'string' && raw.last_synced_at.trim() ? raw.last_synced_at.trim() : null,
-    workspace_snapshot:
-      raw.workspace_snapshot && typeof raw.workspace_snapshot === 'object' && !Array.isArray(raw.workspace_snapshot)
-        ? (raw.workspace_snapshot as NativeCompanionWorkspaceSyncState['workspace_snapshot'])
-        : null
-  };
-}
-
-function readWebSyncState() {
-  if (typeof window === 'undefined') {
-    return normalizeWorkspaceSyncState(null);
-  }
-  try {
-    return normalizeWorkspaceSyncState(JSON.parse(window.localStorage.getItem(WEB_SYNC_STATE_KEY) ?? 'null'));
-  } catch {
-    return normalizeWorkspaceSyncState(null);
-  }
-}
-
-function writeWebSyncState(state: NativeCompanionWorkspaceSyncState) {
-  if (typeof window === 'undefined') {
-    return state;
-  }
-  window.localStorage.setItem(WEB_SYNC_STATE_KEY, JSON.stringify(state));
-  return state;
-}
-
-function normalizePersistedSyncState(args: {
-  endpointUrl: string | null;
-  lastSyncedAt: string | null;
-  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
-}) {
-  return {
-    endpoint_url: args.endpointUrl,
-    last_synced_at: args.lastSyncedAt,
-    workspace_snapshot: args.workspaceSnapshot
-  } satisfies NativeCompanionWorkspaceSyncState;
-}
-
-function normalizeEndpointUrl(endpointUrl: string) {
-  return endpointUrl.trim().replace(/\/+$/, '');
-}
+import {
+  createSignedRequestHeaders,
+  loadCompanionDiscovery,
+  loadCompanionPairingState,
+  pairCompanionWithDesktop,
+  requestCompanionPairing
+} from './companionWorkspacePairing';
+import {
+  FolioleCompanionSync,
+  isNativeAndroidCompanionRuntime,
+  normalizeEndpointUrl,
+  WORKSPACE_SNAPSHOT_PATH,
+  WORKSPACE_VERSION_PATH
+} from './companionWorkspaceSyncBridge';
+import {
+  appendRememberedTarget,
+  normalizePersistedSyncState,
+  normalizeWorkspaceSyncState,
+  readWebSyncState,
+  removeRememberedTarget,
+  writeWebSyncState
+} from './companionWorkspaceSyncState';
 
 function normalizeReadableArticlePayload(value: unknown): CompanionReadableArticle | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -152,6 +88,13 @@ export async function loadCompanionWorkspaceSyncState() {
   return normalizeWorkspaceSyncState(await FolioleCompanionSync.loadWorkspaceSyncState());
 }
 
+export {
+  loadCompanionDiscovery,
+  loadCompanionPairingState,
+  pairCompanionWithDesktop,
+  requestCompanionPairing
+};
+
 export async function loadCompanionDirtyNodes() {
   if (!isNativeAndroidCompanionRuntime()) {
     const state = readWebSyncState();
@@ -170,11 +113,28 @@ export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
     const current = readWebSyncState();
     return writeWebSyncState({
       ...current,
-      endpoint_url: normalizedEndpointUrl
+      endpoint_url: normalizedEndpointUrl,
+      remembered_targets: appendRememberedTarget(current.remembered_targets, normalizedEndpointUrl)
     });
   }
   return normalizeWorkspaceSyncState(
     await FolioleCompanionSync.saveWorkspaceSyncEndpoint({ endpoint_url: normalizedEndpointUrl })
+  );
+}
+
+export async function removeCompanionWorkspaceSyncRememberedTarget(endpointUrl: string) {
+  const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
+  if (!isNativeAndroidCompanionRuntime()) {
+    const current = readWebSyncState();
+    const nextRememberedTargets = removeRememberedTarget(current.remembered_targets, normalizedEndpointUrl);
+    return writeWebSyncState({
+      ...current,
+      endpoint_url: current.endpoint_url === normalizedEndpointUrl ? nextRememberedTargets[0] ?? null : current.endpoint_url,
+      remembered_targets: nextRememberedTargets
+    });
+  }
+  return normalizeWorkspaceSyncState(
+    await FolioleCompanionSync.removeWorkspaceSyncRememberedTarget({ endpoint_url: normalizedEndpointUrl })
   );
 }
 
@@ -187,7 +147,9 @@ export async function loadCompanionReadableArticle(snapshot?: NativeCompanionWor
 
 export async function loadCompanionWorkspaceVersion(endpointUrl: string) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
-  const response = await fetch(`${normalizedEndpointUrl}${WORKSPACE_VERSION_PATH}`);
+  const response = await fetch(`${normalizedEndpointUrl}${WORKSPACE_VERSION_PATH}`, {
+    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery: WORKSPACE_VERSION_PATH })
+  });
   if (!response.ok) {
     throw new Error(`Desktop sync source returned ${response.status}.`);
   }
@@ -196,7 +158,10 @@ export async function loadCompanionWorkspaceVersion(endpointUrl: string) {
 
 export async function pullCompanionWorkspaceSnapshot(endpointUrl: string) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
-  const response = await fetch(`${normalizedEndpointUrl}${WORKSPACE_SNAPSHOT_PATH}`);
+  const currentState = isNativeAndroidCompanionRuntime() ? null : readWebSyncState();
+  const response = await fetch(`${normalizedEndpointUrl}${WORKSPACE_SNAPSHOT_PATH}`, {
+    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery: WORKSPACE_SNAPSHOT_PATH })
+  });
   if (!response.ok) {
     throw new Error(`Desktop sync source returned ${response.status}.`);
   }
@@ -206,6 +171,7 @@ export async function pullCompanionWorkspaceSnapshot(endpointUrl: string) {
   const nextState: NativeCompanionWorkspaceSyncState = {
     endpoint_url: normalizedEndpointUrl,
     last_synced_at: lastSyncedAt,
+    remembered_targets: appendRememberedTarget(currentState?.remembered_targets ?? [], normalizedEndpointUrl),
     workspace_snapshot: payload.workspace_snapshot ?? null
   };
 
@@ -226,6 +192,7 @@ export async function persistCompanionWorkspaceSnapshot(args: {
   changedNodeId?: string;
   endpointUrl: string | null;
   lastSyncedAt: string | null;
+  rememberedTargets: NativeCompanionWorkspaceSyncState['remembered_targets'];
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
   const nextState = normalizePersistedSyncState(args);

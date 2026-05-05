@@ -2,6 +2,7 @@ import { FolderOpen } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { AppButton } from './Button';
+import { settingsButtonClassName } from './SettingsLayout';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -86,7 +87,7 @@ export function ObjectConfigPathButton({
   return (
     <AppButton
       aria-label={label}
-      className="h-10 w-full justify-between rounded-md border border-border bg-bg-elevated px-3 text-left text-sm text-foreground/75"
+      className={settingsButtonClassName('w-full justify-between text-left')}
       disabled={disabled}
       onClick={onClick}
       title={disabled ? undefined : pathTooltip(path)}

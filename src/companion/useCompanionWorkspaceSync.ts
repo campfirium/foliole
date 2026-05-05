@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
-import { isNativeCompanionRuntime } from '../shared/platform/companionBootstrap';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import {
   loadCompanionReadableArticle,
@@ -9,21 +9,20 @@ import {
   loadCompanionWorkspaceVersion,
   persistCompanionWorkspaceSnapshot,
   pullCompanionWorkspaceSnapshot,
+  removeCompanionWorkspaceSyncRememberedTarget,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
-import {
-  ANDROID_EMULATOR_DEFAULT_ENDPOINT,
-  shouldAutoPullInitialDesktopSnapshot,
-  shouldPullUpdatedDesktopSnapshot
-} from './companionAutoSync';
+import { shouldPullUpdatedDesktopSnapshot } from './companionAutoSync';
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
+import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
 
 type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 
 const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
   endpoint_url: null,
   last_synced_at: null,
+  remembered_targets: [],
   workspace_snapshot: null
 };
 
@@ -47,52 +46,8 @@ async function applyPulledSnapshot(args: {
   args.setStatus('idle');
 }
 
-async function tryAutoPullInitialSnapshot(args: {
-  cancelled: () => boolean;
-  setError(error: string | null): void;
-  setReadableArticle(article: CompanionReadableArticle | null): void;
-  setState(state: NativeCompanionWorkspaceSyncState): void;
-  setStatus(status: CompanionWorkspaceSyncStatus): void;
-  state: NativeCompanionWorkspaceSyncState;
-}) {
-  if (
-    !shouldAutoPullInitialDesktopSnapshot({
-      isNativeRuntime: isNativeCompanionRuntime(),
-      state: args.state
-    })
-  ) {
-    return false;
-  }
-
-  const endpointUrl = args.state.endpoint_url ?? ANDROID_EMULATOR_DEFAULT_ENDPOINT;
-  args.setStatus('syncing');
-  try {
-    const savedState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
-    if (args.cancelled()) {
-      return true;
-    }
-    args.setState(savedState);
-    await applyPulledSnapshot({
-      cancelled: args.cancelled,
-      endpointUrl,
-      setReadableArticle: args.setReadableArticle,
-      setState: args.setState,
-      setStatus: args.setStatus
-    });
-    return true;
-  } catch (syncError) {
-    if (args.cancelled()) {
-      return true;
-    }
-    args.setStatus('idle');
-    args.setError(syncError instanceof Error ? syncError.message : 'Desktop sync failed.');
-    return true;
-  }
-}
-
 async function initializeWorkspaceSyncState(args: {
   cancelled: () => boolean;
-  setError(error: string | null): void;
   setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
@@ -103,18 +58,6 @@ async function initializeWorkspaceSyncState(args: {
   }
   args.setState(nextState);
   args.setReadableArticle(await syncReadableArticle(nextState.workspace_snapshot));
-  if (
-    await tryAutoPullInitialSnapshot({
-      cancelled: args.cancelled,
-      setError: args.setError,
-      setReadableArticle: args.setReadableArticle,
-      setState: args.setState,
-      setStatus: args.setStatus,
-      state: nextState
-    })
-  ) {
-    return;
-  }
   args.setStatus('idle');
 }
 
@@ -162,8 +105,61 @@ async function tryForegroundAutoSync(args: {
   }
 }
 
+function useWorkspaceSnapshotActions(args: {
+  setError: (message: string | null) => void;
+  setReadableArticle: (article: CompanionReadableArticle | null) => void;
+  setState: (state: NativeCompanionWorkspaceSyncState) => void;
+  setStatus: (status: CompanionWorkspaceSyncStatus) => void;
+  state: NativeCompanionWorkspaceSyncState;
+}) {
+  async function saveEndpoint(endpointUrl: string) {
+    const nextState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
+    args.setState(nextState);
+    return nextState;
+  }
+
+  async function removeRememberedTarget(endpointUrl: string) {
+    const nextState = await removeCompanionWorkspaceSyncRememberedTarget(endpointUrl);
+    args.setState(nextState);
+    return nextState;
+  }
+
+  async function pullFromDesktop(endpointUrl: string) {
+    args.setStatus('syncing');
+    args.setError(null);
+    try {
+      const nextState = await pullCompanionWorkspaceSnapshot(endpointUrl);
+      args.setState(nextState);
+      args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
+      args.setStatus('idle');
+      return nextState;
+    } catch (syncError) {
+      args.setStatus('idle');
+      args.setError(syncError instanceof Error ? syncError.message : 'Desktop sync failed.');
+      throw syncError;
+    }
+  }
+
+  async function replaceSnapshot(
+    workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
+    changedNodeId?: string
+  ) {
+    const nextState = await persistCompanionWorkspaceSnapshot({
+      changedNodeId,
+      endpointUrl: args.state.endpoint_url,
+      lastSyncedAt: args.state.last_synced_at,
+      rememberedTargets: args.state.remembered_targets,
+      workspaceSnapshot
+    });
+    args.setState(nextState);
+    args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
+    return nextState;
+  }
+
+  return { pullFromDesktop, removeRememberedTarget, replaceSnapshot, saveEndpoint };
+}
+
 function useWorkspaceSyncBootstrap(
-  setError: (error: string | null) => void,
   setReadableArticle: (article: CompanionReadableArticle | null) => void,
   setState: (state: NativeCompanionWorkspaceSyncState) => void,
   setStatus: (status: CompanionWorkspaceSyncStatus) => void
@@ -173,83 +169,60 @@ function useWorkspaceSyncBootstrap(
 
     void initializeWorkspaceSyncState({
       cancelled: () => cancelled,
-      setError,
       setReadableArticle,
       setState,
       setStatus
     })
-      .catch((loadError) => {
+      .catch(() => {
         if (cancelled) {
           return;
         }
         setStatus('idle');
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load companion sync state.');
       });
 
     return () => {
       cancelled = true;
     };
-  }, [setError, setReadableArticle, setState, setStatus]);
+  }, [setReadableArticle, setState, setStatus]);
 }
 
-export function useCompanionWorkspaceSync() {
+export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {
   const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(EMPTY_SYNC_STATE);
   const [readableArticle, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
   const [status, setStatus] = useState<CompanionWorkspaceSyncStatus>('loading');
   const [error, setError] = useState<string | null>(null);
 
-  useWorkspaceSyncBootstrap(setError, setReadableArticle, setState, setStatus);
+  useWorkspaceSyncBootstrap(setReadableArticle, setState, setStatus);
   useForegroundAutoSync(setError, setReadableArticle, setState, setStatus, state, tryForegroundAutoSync);
-
-  async function saveEndpoint(endpointUrl: string) {
-    const nextState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
-    setState(nextState);
-    return nextState;
-  }
-
-  async function pullFromDesktop(endpointUrl: string) {
-    setStatus('syncing');
-    setError(null);
-    try {
-      const nextState = await pullCompanionWorkspaceSnapshot(endpointUrl);
-      setState(nextState);
-      setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
-      setStatus('idle');
-      return nextState;
-    } catch (syncError) {
-      setStatus('idle');
-      setError(syncError instanceof Error ? syncError.message : 'Desktop sync failed.');
-      throw syncError;
-    }
-  }
 
   function clearError() {
     setError(null);
   }
 
-  async function replaceSnapshot(
-    workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
-    changedNodeId?: string
-  ) {
-    const nextState = await persistCompanionWorkspaceSnapshot({
-      changedNodeId,
-      endpointUrl: state.endpoint_url,
-      lastSyncedAt: state.last_synced_at,
-      workspaceSnapshot
-    });
-    setState(nextState);
-    setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
-    return nextState;
-  }
+  const snapshotActions = useWorkspaceSnapshotActions({
+    setError,
+    setReadableArticle,
+    setState,
+    setStatus,
+    state
+  });
+  const pairing = useCompanionWorkspacePairing({
+    bootstrapState,
+    onError: setError,
+    onSaveEndpoint: snapshotActions.saveEndpoint
+  });
 
   return {
+    bootstrapState,
     clearError,
     error,
-    pullFromDesktop,
     readableArticle,
-    replaceSnapshot,
-    saveEndpoint,
     state,
-    status
+    status,
+    pullFromDesktop: snapshotActions.pullFromDesktop,
+    removeRememberedTarget: snapshotActions.removeRememberedTarget,
+    replaceSnapshot: snapshotActions.replaceSnapshot,
+    saveEndpoint: snapshotActions.saveEndpoint,
+    ...pairing
   };
 }

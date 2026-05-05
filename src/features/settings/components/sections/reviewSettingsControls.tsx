@@ -1,8 +1,4 @@
-import { SettingsControlSlot } from '../../../../shared/ui';
-
-function reviewFieldClassName() {
-  return 'w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground';
-}
+import { SettingsControlSlot, settingsFieldClassName } from '../../../../shared/ui';
 
 export function ReviewToggleControl(props: {
   ariaLabel: string;
@@ -14,7 +10,7 @@ export function ReviewToggleControl(props: {
       <span className="sr-only">{props.ariaLabel}</span>
       <select
         aria-label={props.ariaLabel}
-        className={reviewFieldClassName()}
+        className={settingsFieldClassName()}
         onChange={(event) => props.onChange(event.target.value === 'on')}
         value={props.value ? 'on' : 'off'}
       >
@@ -36,7 +32,7 @@ export function ReviewNumberInput(props: {
   return (
     <input
       aria-label={props.ariaLabel}
-      className={reviewFieldClassName()}
+      className={settingsFieldClassName()}
       max={props.max}
       min={props.min}
       onChange={(event) => props.onChange(Number(event.target.value))}
@@ -56,7 +52,7 @@ export function DefaultPriorityControl(props: {
       <span className="sr-only">Default node priority</span>
       <select
         aria-label="Default node priority"
-        className={reviewFieldClassName()}
+        className={settingsFieldClassName()}
         onChange={(event) => props.onChange(Number(event.target.value))}
         value={String(props.value)}
       >

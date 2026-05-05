@@ -9,9 +9,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 import java.io.File;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
@@ -22,6 +25,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     private static final String DEVICE_ID_KEY = "device_id";
     private static final String WORKSPACE_SYNC_ENDPOINT_URL_KEY = "workspace_sync_endpoint_url";
     private static final String WORKSPACE_SYNC_LAST_SYNCED_AT_KEY = "workspace_sync_last_synced_at";
+    private static final String WORKSPACE_SYNC_REMEMBERED_TARGETS_KEY = "workspace_sync_remembered_targets";
     private final Context context;
 
     FolioleCompanionDatabaseHelper(Context context) {
@@ -69,6 +73,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
         result.put("endpoint_url", endpointUrl);
         result.put("last_synced_at", lastSyncedAt);
+        result.put("remembered_targets", new JSONArray(loadRememberedTargets(database)));
         result.put("workspace_snapshot", workspaceSnapshot);
         return result;
     }
@@ -79,7 +84,26 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         if (endpointUrl == null || endpointUrl.trim().isEmpty()) {
             deleteMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
         } else {
-            saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, endpointUrl.trim(), now);
+            String normalizedEndpointUrl = endpointUrl.trim();
+            saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, normalizedEndpointUrl, now);
+            saveRememberedTargets(database, appendRememberedTarget(loadRememberedTargets(database), normalizedEndpointUrl), now);
+        }
+        return loadWorkspaceSyncState();
+    }
+
+    JSObject removeWorkspaceSyncRememberedTarget(String endpointUrl) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        String now = Instant.now().toString();
+        String normalizedEndpointUrl = endpointUrl.trim();
+        List<String> nextTargets = removeRememberedTarget(loadRememberedTargets(database), normalizedEndpointUrl);
+        saveRememberedTargets(database, nextTargets, now);
+        String currentEndpointUrl = loadMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
+        if (normalizedEndpointUrl.equals(currentEndpointUrl)) {
+            if (nextTargets.isEmpty()) {
+                deleteMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
+            } else {
+                saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, nextTargets.get(0), now);
+            }
         }
         return loadWorkspaceSyncState();
     }
@@ -89,6 +113,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         FolioleCompanionSnapshotImporter.replaceWorkspaceSnapshot(database, workspaceSnapshotJson, lastSyncedAt);
         saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, endpointUrl.trim(), lastSyncedAt);
         saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, lastSyncedAt.trim(), lastSyncedAt);
+        saveRememberedTargets(database, appendRememberedTarget(loadRememberedTargets(database), endpointUrl.trim()), lastSyncedAt);
         return loadWorkspaceSyncState();
     }
 
@@ -111,6 +136,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         }
         saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, endpointUrl.trim(), lastSyncedAt);
         saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, lastSyncedAt.trim(), lastSyncedAt);
+        saveRememberedTargets(database, appendRememberedTarget(loadRememberedTargets(database), endpointUrl.trim()), lastSyncedAt);
         return loadWorkspaceSyncState();
     }
 
@@ -157,6 +183,56 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     private void deleteMetaValue(SQLiteDatabase database, String key) {
         database.delete(META_TABLE, "key = ?", new String[] { key });
+    }
+
+    private List<String> loadRememberedTargets(SQLiteDatabase database) throws Exception {
+        String stored = loadMetaValue(database, WORKSPACE_SYNC_REMEMBERED_TARGETS_KEY);
+        List<String> rememberedTargets = new ArrayList<>();
+        if (stored == null || stored.trim().isEmpty()) {
+            return rememberedTargets;
+        }
+        JSONArray items = new JSONArray(stored);
+        for (int index = 0; index < items.length(); index += 1) {
+            String value = items.optString(index, null);
+            if (value == null) {
+                continue;
+            }
+            String normalizedValue = value.trim();
+            if (!normalizedValue.isEmpty() && !rememberedTargets.contains(normalizedValue)) {
+                rememberedTargets.add(normalizedValue);
+            }
+        }
+        return rememberedTargets;
+    }
+
+    private List<String> appendRememberedTarget(List<String> rememberedTargets, String endpointUrl) {
+        List<String> nextTargets = new ArrayList<>();
+        nextTargets.add(endpointUrl);
+        for (String target : rememberedTargets) {
+            if (!endpointUrl.equals(target)) {
+                nextTargets.add(target);
+            }
+        }
+        return nextTargets;
+    }
+
+    private List<String> removeRememberedTarget(List<String> rememberedTargets, String endpointUrl) {
+        List<String> nextTargets = new ArrayList<>();
+        for (String target : rememberedTargets) {
+            if (!endpointUrl.equals(target)) {
+                nextTargets.add(target);
+            }
+        }
+        return nextTargets;
+    }
+
+    private void saveRememberedTargets(SQLiteDatabase database, List<String> rememberedTargets, String updatedAt) {
+        saveMetaValue(
+            database,
+            WORKSPACE_SYNC_REMEMBERED_TARGETS_KEY,
+            new JSONArray(rememberedTargets).toString(),
+            updatedAt
+        );
     }
 
     private void saveMetaValue(SQLiteDatabase database, String key, String value, String updatedAt) {

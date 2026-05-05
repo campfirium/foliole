@@ -4,11 +4,14 @@ const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'web'),
   isNativePlatform: vi.fn(() => false),
   plugin: {
+    loadPairingState: vi.fn(),
     loadDirtyNodes: vi.fn(),
     loadReadableArticle: vi.fn(),
     loadWorkspaceSyncState: vi.fn(),
     replaceWorkspaceNode: vi.fn(),
     replaceWorkspaceSnapshot: vi.fn(),
+    savePairingCredentials: vi.fn(),
+    signCompanionSyncRequest: vi.fn(),
     saveWorkspaceSyncEndpoint: vi.fn()
   }
 }));
@@ -27,6 +30,7 @@ function createStoredSyncState() {
   return {
     endpoint_url: 'http://10.0.2.2:38641',
     last_synced_at: '2026-04-22T12:00:00.000Z',
+    remembered_targets: ['http://10.0.2.2:38641'],
     workspace_snapshot: {
       activeNodeId: 'node-1',
       nodeOrder: ['node-1'],

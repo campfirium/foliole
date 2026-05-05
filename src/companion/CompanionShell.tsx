@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { TopFloatingBar } from './CompanionFloatingBars';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
+import { CompanionSyncPanel } from './CompanionSyncPanel';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import { useFloatingBarVisibility } from './useFloatingBarVisibility';
@@ -41,7 +44,7 @@ function renderReviewFallback(
             </p>
           ) : (
             <p className="mt-3">
-              Pull a newer desktop snapshot when you want the companion to refresh upcoming review work.
+              Pull a newer snapshot when you want this device to refresh upcoming review work.
             </p>
           )}
         </>
@@ -49,7 +52,7 @@ function renderReviewFallback(
         <>
           <p>No article has been synced to this device yet.</p>
           <p className="mt-3">
-            Keep the desktop client available on the same machine or network. The companion will refresh this reading surface when a newer snapshot is found.
+            Open device sync when you want to reconnect to a paired device and pull the latest snapshot by hand.
           </p>
         </>
       )}
@@ -60,11 +63,15 @@ function renderReviewFallback(
 
 function renderMainContent(
   surface: ReturnType<typeof useCompanionArticleSurface>,
+  workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>,
   workspaceError: string | null,
   hasSnapshot: boolean,
   reviewBreadcrumbItems: { id: string; isCurrent?: boolean; label: string; targetNodeId: string }[],
   onSelectReviewBreadcrumbItem: (id: string) => void
 ) {
+  if (surface.activeAction === 'more') {
+    return renderSyncContent(workspaceSync);
+  }
   if (surface.activeAction === 'recent') {
     return renderRecentBrowseContent(surface);
   }
@@ -72,6 +79,30 @@ function renderMainContent(
     return renderReviewContent(surface, workspaceError, hasSnapshot, reviewBreadcrumbItems, onSelectReviewBreadcrumbItem);
   }
   return renderReadableArticleOrFallback(surface, workspaceError, hasSnapshot);
+}
+
+function renderSyncContent(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) {
+  return (
+    <CompanionSyncPanel
+      bootstrapState={workspaceSync.bootstrapState}
+      desktopDiscovery={workspaceSync.desktopDiscovery}
+      endpointUrl={workspaceSync.state.endpoint_url}
+      error={workspaceSync.error}
+      lastSyncedAt={workspaceSync.state.last_synced_at}
+      rememberedTargets={workspaceSync.state.remembered_targets}
+      onCheckDesktop={workspaceSync.checkDesktop}
+      onClearError={workspaceSync.clearError}
+      onCompletePairing={workspaceSync.completePairing}
+      onPull={workspaceSync.pullFromDesktop}
+      onRemoveRememberedTarget={workspaceSync.removeRememberedTarget}
+      onRequestPairing={workspaceSync.requestPairing}
+      onSaveEndpoint={workspaceSync.saveEndpoint}
+      pairingRequest={workspaceSync.pendingPairRequest}
+      pairingState={workspaceSync.pairingState}
+      pairingStatus={workspaceSync.pairingStatus}
+      status={workspaceSync.status}
+    />
+  );
 }
 
 function renderRecentBrowseContent(surface: ReturnType<typeof useCompanionArticleSurface>) {
@@ -182,9 +213,9 @@ function useImmersiveReviewToolbar(
   };
 }
 
-export function CompanionShell() {
+export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrapState }) {
   const floatingBar = useFloatingBarVisibility('companion-top-bar');
-  const workspaceSync = useCompanionWorkspaceSync();
+  const workspaceSync = useCompanionWorkspaceSync(props.bootstrapState);
   const surface = useCompanionArticleSurface(workspaceSync, floatingBar);
   const isBottomBarDisabled = surface.isSubmittingGrade || surface.isSubmittingReadingAction;
   const isImmersiveReview = surface.activeAction === 'review' && Boolean(surface.reviewSession.currentCard);
@@ -216,6 +247,7 @@ export function CompanionShell() {
             </div>
             {renderMainContent(
               surface,
+              workspaceSync,
               workspaceSync.error,
               Boolean(workspaceSync.state.workspace_snapshot),
               reviewBreadcrumbItems,

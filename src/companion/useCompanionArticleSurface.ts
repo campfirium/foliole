@@ -219,7 +219,9 @@ function useCompanionInteractionState(
 }
 
 export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSyncApi, floatingBar: FloatingBarVisibilityApi) {
-  const [activeAction, setActiveAction] = useState<TopBarAction>('review');
+  const [activeAction, setActiveAction] = useState<TopBarAction>(() => {
+    return workspaceSync.state.workspace_snapshot ? 'review' : 'more';
+  });
   const browseState = useCompanionBrowseState(workspaceSync);
   const interactionState = useCompanionInteractionState(
     floatingBar,
@@ -229,6 +231,12 @@ export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSync
     browseState.snapshot,
     workspaceSync
   );
+
+  useEffect(() => {
+    if (!workspaceSync.state.workspace_snapshot) {
+      setActiveAction('more');
+    }
+  }, [workspaceSync.state.workspace_snapshot]);
 
   return {
     activeAction,

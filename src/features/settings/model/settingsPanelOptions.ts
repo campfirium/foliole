@@ -6,6 +6,7 @@ import type { InterfaceFontPreset, MonospaceFontPreset } from './appearanceSetti
 export type SettingsCategoryId =
   | 'about'
   | 'backups'
+  | 'companion-sync'
   | 'editor'
   | 'external-search'
   | 'mouse-gestures'
@@ -19,6 +20,11 @@ export type SettingsCategoryId =
 export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCategoryId; label: string }> = [
   { id: 'about', label: 'About', description: 'Version details, diagnostics, and workspace support tools.' },
   { id: 'backups', label: 'Backups', description: 'Manage backup location, retention, and recovery tools.' },
+  {
+    id: 'companion-sync',
+    label: 'Device sync',
+    description: 'Let another device connect to this desktop and manage local sync availability.'
+  },
   { id: 'editor', label: 'Editor', description: 'Choose how editing, images, and writing surfaces behave.' },
   { id: 'appearance', label: 'Appearance', description: 'Control the look and density of the workspace.' },
   { id: 'library', label: 'Library', description: 'Point Foliole to your library home, inbox, and mirror paths.' },

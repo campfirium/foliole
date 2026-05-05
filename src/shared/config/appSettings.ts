@@ -1,4 +1,4 @@
-import { MANAGED_INBOX_APP_SETTING_KEY } from '../../../lib/platform/managedInbox';
+import { MANAGED_INBOX_APP_SETTING_KEY } from '../../../lib/platform/managedInbox.js';
 
 export const APP_SETTINGS_STORAGE_KEYS = {
   markdownSyntaxVisibility: 'foliole-markdown-syntax-visibility',
@@ -92,7 +92,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   managedInboxPath: MANAGED_INBOX_APP_SETTING_KEY,
   commandRecents: 'foliole-command-recents',
   nodePaletteRecents: 'foliole-node-palette-recents',
-  commandShortcutOverrides: 'foliole-command-shortcut-overrides'
+  commandShortcutOverrides: 'foliole-command-shortcut-overrides',
+  desktopDeviceSyncEnabled: 'foliole-desktop-device-sync-enabled'
 } as const;
 
 export const APP_SETTINGS_OPTIONS = {

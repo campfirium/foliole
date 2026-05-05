@@ -18,6 +18,47 @@ const { loadSyncPeers, saveSyncPeers } = vi.hoisted(() => ({
   )
 }));
 
+const companionPairingMocks = vi.hoisted(() => ({
+  approveCompanionPairRequest: vi.fn().mockImplementation((pairRequestId: string) =>
+    pairRequestId === 'pair-request-1'
+      ? {
+          device_id: 'android-1',
+          device_kind: 'android',
+          device_name: 'Pixel 9',
+          expires_at: '2026-04-24T10:02:00.000Z',
+          pair_request_id: 'pair-request-1',
+          requested_at: '2026-04-24T10:00:00.000Z',
+          status: 'approved'
+        }
+      : null
+  ),
+  loadPendingCompanionPairRequests: vi.fn().mockReturnValue([
+    {
+      device_id: 'android-1',
+      device_kind: 'android',
+      device_name: 'Pixel 9',
+      expires_at: '2026-04-24T10:02:00.000Z',
+      pair_request_id: 'pair-request-1',
+      requested_at: '2026-04-24T10:00:00.000Z',
+      status: 'pending'
+    }
+  ]),
+  clearPairedCompanionDevices: vi.fn(),
+  rejectCompanionPairRequest: vi.fn().mockImplementation((pairRequestId: string) =>
+    pairRequestId === 'pair-request-1'
+      ? {
+          device_id: 'android-1',
+          device_kind: 'android',
+          device_name: 'Pixel 9',
+          expires_at: '2026-04-24T10:02:00.000Z',
+          pair_request_id: 'pair-request-1',
+          requested_at: '2026-04-24T10:00:00.000Z',
+          status: 'rejected'
+        }
+      : null
+  )
+}));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
@@ -44,6 +85,48 @@ vi.mock('../database/nodeMutations.js', () => ({
   upsertNodeSnapshots: vi.fn()
 }));
 vi.mock('../database/syncPeers.js', () => ({ loadSyncPeers, saveSyncPeers }));
+vi.mock('../sync/companionPairingRequests.js', () => companionPairingMocks);
+vi.mock('../sync/companionPairingStore.js', () => ({
+  clearPairedCompanionDevices: companionPairingMocks.clearPairedCompanionDevices
+}));
+vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
+  ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue({
+    advertised_urls: ['http://127.0.0.1:38641'],
+    last_error: null,
+    paired_device_count: 1,
+    pending_pair_request_count: 1,
+    port: 38641,
+    state: 'running'
+  }),
+    getLanWorkspaceSyncServerStatus: vi.fn().mockReturnValue({
+    advertised_urls: ['http://127.0.0.1:38641'],
+    last_error: null,
+    paired_device_count: 1,
+    pending_pair_request_count: 1,
+    port: 38641,
+    state: 'running'
+  }),
+  refreshLanWorkspaceSyncServerPairingStatus: vi.fn().mockReturnValue({
+    advertised_urls: ['http://127.0.0.1:38641'],
+    last_error: null,
+    paired_device_count: 1,
+    pending_pair_request_count: 0,
+    port: 38641,
+    state: 'running'
+  }),
+  stopLanWorkspaceSyncServer: vi.fn().mockResolvedValue({
+    advertised_urls: [],
+    last_error: null,
+    paired_device_count: 0,
+    pending_pair_request_count: 0,
+    port: null,
+    state: 'stopped'
+  })
+}));
+vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({
+  isDesktopCompanionSyncEnabled: vi.fn().mockReturnValue(true),
+  setDesktopCompanionSyncEnabled: vi.fn()
+}));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
   saveAppSettingsState: vi.fn().mockResolvedValue(undefined)

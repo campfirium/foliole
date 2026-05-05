@@ -9,6 +9,7 @@ import { installWorkspaceDebugBridge } from '../shared/testing/workspaceDebugBri
 import { ensureWorkspaceHydrated } from '../store/workspaceStore';
 
 import { CommandPalette } from './components/CommandPalette';
+import { CompanionPairingRequestsDialog } from './components/CompanionPairingRequestsDialog';
 import { ExternalDocumentPreviewPanel } from './components/ExternalDocumentPreviewPanel';
 import type { ExternalDocumentPreviewRequest } from './components/externalDocumentPreviewState';
 import { GoToNodePalette } from './components/GoToNodePalette';
@@ -34,6 +35,7 @@ function AppContent() {
     <HotkeySettingsProvider {...controller.hotkeySettings}>
       <>
         <WorkspaceLayout {...controller.layoutProps} />
+        <CompanionPairingRequestsDialog onOpenCompanionSyncSettings={controller.onOpenCompanionSyncSettings} />
         <CommandPalette {...controller.paletteState} />
         <SearchPalette {...controller.searchState} />
         <GoToNodePalette {...controller.goToNodeState} />

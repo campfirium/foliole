@@ -20,6 +20,7 @@ import {
   REVIEW_SHORTCUT_COMMAND_IDS,
   useCommandShortcutState
 } from './reviewHotkeysState';
+import { openCompanionSyncSettings } from './settingsOverlayRequest';
 import { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import { useControllerPaletteItems } from './useControllerPaletteItems';
 import { useFormalImport } from './useFormalImport';
@@ -40,6 +41,7 @@ export interface AppControllerResult {
   goToNodeState: AppGoToNodeState;
   moveToNodeState: AppGoToNodeState;
   layoutProps: WorkspaceLayoutProps;
+  onOpenCompanionSyncSettings: () => void;
   paletteState: AppPaletteState;
   searchState: AppSearchState;
 }
@@ -244,6 +246,7 @@ export function useAppController(args: {
     goToNodeState: auxiliaryState.goToNodeState,
     moveToNodeState: auxiliaryState.moveToNodeState,
     layoutProps,
+    onOpenCompanionSyncSettings: () => openCompanionSyncSettings(controller.runtime),
     paletteState: auxiliaryState.paletteState,
     searchState: auxiliaryState.searchState
   };

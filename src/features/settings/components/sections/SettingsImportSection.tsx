@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react';
 
-import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import {
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsButtonClassName,
+  settingsValueBoxClassName
+} from '../../../../shared/ui';
 
 import type { LibraryPathLocation, SettingsImportSectionProps } from './settingsImportSectionTypes';
 
@@ -19,12 +25,12 @@ function LibraryLocationRow(props: {
   return (
     <SettingsRow description={props.description} title={props.title}>
       <SettingsControlSlot className="flex-col items-stretch gap-2">
-        <div className="rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm text-foreground/75">
+        <div className={settingsValueBoxClassName()}>
           <span className="break-all">{props.path}</span>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            className="rounded-md border border-border bg-bg-panel px-3 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            className={settingsButtonClassName()}
             disabled={!props.isDesktopRuntime || props.isPending}
             onClick={() => props.onChangeLocation(props.location)}
             type="button"
@@ -32,7 +38,7 @@ function LibraryLocationRow(props: {
             Change location
           </button>
           <button
-            className="rounded-md border border-border bg-bg-panel px-3 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            className={settingsButtonClassName()}
             disabled={!props.isDesktopRuntime || props.isPending}
             onClick={() => props.onRestoreDefault(props.location)}
             type="button"
@@ -68,7 +74,7 @@ function MirrorRebuildControls(props: {
           </p>
           <div className="flex flex-wrap gap-2">
             <button
-              className="rounded-md border border-border bg-bg-panel px-3 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className={settingsButtonClassName()}
               disabled={!props.isDesktopRuntime || props.isRebuildingMirrorOutput || props.pendingLocation !== null}
               onClick={props.onRebuildMirrorOutput}
               type="button"
@@ -87,7 +93,7 @@ function MirrorRebuildControls(props: {
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
             <button
-              className="rounded-md border border-border bg-bg-panel px-3 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className={settingsButtonClassName()}
               disabled={!props.isDesktopRuntime || props.isRebuildingMirrorLinks || props.pendingLocation !== null}
               onClick={props.onRebuildMirrorLinks}
               type="button"

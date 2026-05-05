@@ -73,12 +73,39 @@ function mockFloatingBar() {
 
 function mockWorkspaceSync(snapshot = createSnapshot()) {
   useCompanionWorkspaceSync.mockReturnValue({
+    bootstrapState: {
+      booted_at: '2026-04-22T09:05:00.000Z',
+      database_path: 'foliole-companion-preview.db',
+      database_ready: true,
+      device_id: 'android-test-device',
+      runtime_kind: 'android-capacitor'
+    },
+    checkDesktop: vi.fn(),
+    clearError: vi.fn(),
+    completePairing: vi.fn(),
+    desktopDiscovery: null,
     error: null,
+    pairingRequest: null,
+    pairingState: {
+      device_id: 'android-test-device',
+      device_kind: 'android-capacitor',
+      device_name: 'Android companion',
+      is_paired: true,
+      paired_at: '2026-04-22T09:00:00.000Z'
+    },
+    pairingStatus: 'idle',
+    pullFromDesktop: vi.fn(),
+    readableArticle: null,
+    removeRememberedTarget: vi.fn(),
+    replaceSnapshot: vi.fn(),
+    saveEndpoint: vi.fn(),
     state: {
       endpoint_url: 'http://10.0.2.2:38641',
       last_synced_at: '2026-04-22T09:00:00.000Z',
+      remembered_targets: ['http://10.0.2.2:38641'],
       workspace_snapshot: snapshot
-    }
+    },
+    status: 'idle'
   });
 }
 
@@ -87,7 +114,17 @@ async function renderShellWithSurface(surface: MockSurface) {
   mockWorkspaceSync();
   useCompanionArticleSurface.mockReturnValue(surface);
   const { CompanionShell } = await import('./CompanionShell');
-  render(<CompanionShell />);
+  render(
+    <CompanionShell
+      bootstrapState={{
+        booted_at: '2026-04-22T09:05:00.000Z',
+        database_path: 'foliole-companion-preview.db',
+        database_ready: true,
+        device_id: 'android-test-device',
+        runtime_kind: 'android-capacitor'
+      }}
+    />
+  );
   return { floatingBar };
 }
 
@@ -195,5 +232,16 @@ describe('CompanionShell review surfaces', () => {
     fireEvent.click(screen.getByTestId('companion-scroll-container'));
 
     expect(floatingBar.revealBar).toHaveBeenCalled();
+  });
+
+  it('shows the manual sync panel from the more action', async () => {
+    await renderShellWithSurface({
+      ...createReviewEmptySurface(),
+      activeAction: 'more'
+    });
+
+    expect(screen.getByText('Bring content from another device')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'http://10.0.2.2:38641' })).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('http://10.0.2.2:38641')).not.toBeInTheDocument();
   });
 });

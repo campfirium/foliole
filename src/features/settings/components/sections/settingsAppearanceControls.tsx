@@ -1,5 +1,4 @@
-import { SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
-import { AppInput } from '../../../../shared/ui';
+import { AppInput, SettingsControlSlot, SettingsRow, settingsFieldClassName, settingsIconButtonClassName } from '../../../../shared/ui';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
   DEFAULT_CLOZE_COLOR_PRESET,
@@ -9,10 +8,6 @@ import {
   INTERFACE_FONT_SIZE_MAX,
   INTERFACE_FONT_SIZE_MIN
 } from '../../model/appearanceSettings';
-
-function settingsFieldClassName() {
-  return 'w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground';
-}
 
 export function SettingsSelectRow(props: {
   ariaLabel?: string;
@@ -51,7 +46,7 @@ function ColorSettingRow(props: {
   return (
     <SettingsRow description={props.description} title={props.title}>
       <SettingsControlSlot>
-        <button aria-label={props.resetButtonAriaLabel} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/65 transition-colors hover:bg-foreground/[0.06] hover:text-foreground disabled:cursor-default disabled:opacity-55" disabled={props.value === props.defaultValue} onClick={props.onReset} type="button">↺</button>
+        <button aria-label={props.resetButtonAriaLabel} className={settingsIconButtonClassName('text-foreground/65 disabled:cursor-default disabled:opacity-55')} disabled={props.value === props.defaultValue} onClick={props.onReset} type="button">↺</button>
         <div className="inline-flex min-h-9 items-center gap-2.5">
           <label className="relative h-9 w-9 shrink-0">
             <span
@@ -70,7 +65,7 @@ function ColorSettingRow(props: {
           <label className="w-28 shrink-0 text-sm text-foreground/72">
             <AppInput
               aria-label={`${props.title} hex value`}
-              className="h-9 rounded-md px-3 text-sm tabular-nums"
+              className="rounded-md px-3 text-sm tabular-nums"
               onChange={(event) => props.onChange(event.target.value)}
               spellCheck={false}
               value={props.value.toUpperCase()}
@@ -186,7 +181,7 @@ export function FontSizeRow(props: {
   return (
     <SettingsRow description="Adjust main content panel font size in pixels." title="Font size">
       <SettingsControlSlot className="justify-end">
-        <button aria-label="Reset font size" className="inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/65 transition-colors hover:bg-foreground/[0.06] hover:text-foreground" onClick={props.onInterfaceFontSizeReset} type="button">↺</button>
+        <button aria-label="Reset font size" className={settingsIconButtonClassName('text-foreground/65')} onClick={props.onInterfaceFontSizeReset} type="button">↺</button>
         <input aria-label="Interface font size" className="w-[136px]" max={INTERFACE_FONT_SIZE_MAX} min={INTERFACE_FONT_SIZE_MIN} onChange={(event) => props.onInterfaceFontSizeChange(Number(event.target.value))} step={1} type="range" value={props.interfaceFontSize} />
         <span className="min-w-[38px] text-right text-[0.86rem] text-foreground/65">{props.interfaceFontSize}px</span>
       </SettingsControlSlot>

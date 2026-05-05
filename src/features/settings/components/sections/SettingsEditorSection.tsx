@@ -1,4 +1,4 @@
-import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { SettingsControlSlot, SettingsRow, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 
 export function SettingsEditorSection() {
@@ -35,7 +35,7 @@ export function SettingsEditorSection() {
         <SettingsControlSlot>
           <span className="sr-only">Markdown syntax visibility</span>
           <select
-            className="w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
+            className={settingsFieldClassName()}
             onChange={(event) => setMarkdownSyntaxVisibility(event.target.value as typeof markdownSyntaxVisibility)}
             value={markdownSyntaxVisibility}
           >

@@ -7,10 +7,8 @@ export function shouldAutoPullInitialDesktopSnapshot(args: {
   isNativeRuntime: boolean;
   state: NativeCompanionWorkspaceSyncState;
 }) {
-  if (!args.isNativeRuntime) {
-    return false;
-  }
-  return !args.state.last_synced_at && !args.state.workspace_snapshot;
+  void args;
+  return false;
 }
 
 export function shouldPullUpdatedDesktopSnapshot(args: {
@@ -28,8 +26,6 @@ export function shouldRunForegroundAutoSyncCheck(args: {
   lastCheckedAt: number;
   now: number;
 }) {
-  if (!args.isNativeRuntime) {
-    return false;
-  }
-  return args.now - args.lastCheckedAt >= AUTO_SYNC_MIN_INTERVAL_MS;
+  void args;
+  return false;
 }

@@ -42,6 +42,7 @@ import {
   parseNodeCreationArgs,
   parseNodeSnapshotArgs
 } from './commandParsers.js';
+import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 import { toNativeImportOverview } from './importOverviewPayload.js';
 import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
 import {
@@ -122,6 +123,7 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
   }
   return undefined;
 }
+
 async function handleSettingsStorageCommand(
   command: string,
   args: Record<string, unknown>,
@@ -129,6 +131,8 @@ async function handleSettingsStorageCommand(
 ) {
   const externalSearchResult = handleExternalSearchStorageCommand(command, args);
   if (externalSearchResult !== undefined) return externalSearchResult;
+  const companionPairingResult = handleCompanionPairingCommand(command, args);
+  if (companionPairingResult !== undefined) return companionPairingResult;
   if (command === NATIVE_COMMANDS.loadImportManagerSettings) return loadImportManagerSettings();
   if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
   if (command === NATIVE_COMMANDS.saveAppSettingsState) {

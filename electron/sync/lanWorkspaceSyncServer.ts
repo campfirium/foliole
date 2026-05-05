@@ -1,16 +1,24 @@
 import http from 'node:http';
 import os from 'node:os';
 
-import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
-import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import {
+  createLanWorkspaceSyncRequestHandler,
+  DISCOVERY_ENDPOINT_PATH,
+  PAIR_ENDPOINT_PATH,
+  PAIR_REQUESTS_ENDPOINT_PATH,
+  WORKSPACE_SNAPSHOT_PATH,
+  WORKSPACE_VERSION_PATH
+} from './companionLanRequestHandler.js';
+import { countPendingCompanionPairRequests } from './companionPairingRequests.js';
+import { countPairedCompanionDevices } from './companionPairingStore.js';
 
 const DEFAULT_SYNC_PORT = 38641;
-const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
-const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 
 export interface LanWorkspaceSyncServerStatus {
   advertised_urls: string[];
   last_error: string | null;
+  paired_device_count: number;
+  pending_pair_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
 }
@@ -19,9 +27,26 @@ let activeServer: http.Server | null = null;
 let activeStatus: LanWorkspaceSyncServerStatus = {
   advertised_urls: [],
   last_error: null,
+  paired_device_count: 0,
+  pending_pair_request_count: 0,
   port: null,
   state: 'stopped'
 };
+
+function resolveLatestPairingStatus() {
+  return {
+    paired_device_count: countPairedCompanionDevices(),
+    pending_pair_request_count: countPendingCompanionPairRequests()
+  };
+}
+
+export function refreshLanWorkspaceSyncServerPairingStatus() {
+  activeStatus = {
+    ...activeStatus,
+    ...resolveLatestPairingStatus()
+  };
+  return activeStatus;
+}
 
 function resolveSyncPort() {
   const rawPort = process.env.FOLIOLE_COMPANION_SYNC_PORT;
@@ -42,74 +67,21 @@ function collectAdvertisedUrls(port: number) {
   return [...new Set([`http://127.0.0.1:${port}`, ...externalUrls])];
 }
 
-function writeJson(response: http.ServerResponse, statusCode: number, payload: unknown) {
-  response.writeHead(statusCode, {
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'application/json; charset=utf-8'
-  });
-  response.end(JSON.stringify(payload));
-}
-
-function buildWorkspaceSnapshotPayload(appVersion: string, peerId: string, snapshot: WorkspaceSnapshot | null) {
-  return {
-    app_version: appVersion,
-    exported_at: new Date().toISOString(),
-    peer_id: peerId,
-    workspace_snapshot: snapshot
-  };
-}
-
-function buildWorkspaceVersionPayload(appVersion: string, peerId: string, snapshot: WorkspaceSnapshot | null) {
-  return {
-    app_version: appVersion,
-    exported_at: new Date().toISOString(),
-    has_snapshot: snapshot !== null,
-    peer_id: peerId
-  };
-}
-
-function createRequestHandler(appVersion: string, peerId: string) {
-  return (request: http.IncomingMessage, response: http.ServerResponse) => {
-    const requestUrl = request.url ?? '/';
-    if (request.method === 'OPTIONS') {
-      response.writeHead(204, {
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Origin': '*'
-      });
-      response.end();
-      return;
-    }
-    if (request.method !== 'GET') {
-      writeJson(response, 405, { error: 'method_not_allowed' });
-      return;
-    }
-    if (requestUrl === '/health') {
-      writeJson(response, 200, { ok: true, peer_id: peerId });
-      return;
-    }
-    const snapshot = loadWorkspaceSnapshot();
-    if (requestUrl === WORKSPACE_VERSION_PATH) {
-      writeJson(response, 200, buildWorkspaceVersionPayload(appVersion, peerId, snapshot));
-      return;
-    }
-    if (requestUrl !== WORKSPACE_SNAPSHOT_PATH) {
-      writeJson(response, 404, { error: 'not_found' });
-      return;
-    }
-    writeJson(response, 200, buildWorkspaceSnapshotPayload(appVersion, peerId, snapshot));
-  };
-}
-
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
   if (activeServer) {
     return activeStatus;
   }
 
   const port = resolveSyncPort();
-  const server = http.createServer(createRequestHandler(args.appVersion, args.peerId));
+  const server = http.createServer(
+    createLanWorkspaceSyncRequestHandler({
+      appVersion: args.appVersion,
+      peerId: args.peerId,
+      updatePairingStatus: (pairing) => {
+        activeStatus = { ...activeStatus, ...pairing };
+      }
+    })
+  );
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -120,11 +92,18 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
     activeStatus = {
       advertised_urls: collectAdvertisedUrls(port),
       last_error: null,
+      ...resolveLatestPairingStatus(),
       port,
       state: 'running'
     };
     console.info('[companion-sync] lan workspace sync server started', {
-      endpointPaths: [WORKSPACE_VERSION_PATH, WORKSPACE_SNAPSHOT_PATH],
+      endpointPaths: [
+        DISCOVERY_ENDPOINT_PATH,
+        PAIR_REQUESTS_ENDPOINT_PATH,
+        PAIR_ENDPOINT_PATH,
+        WORKSPACE_VERSION_PATH,
+        WORKSPACE_SNAPSHOT_PATH
+      ],
       ...activeStatus
     });
     return activeStatus;
@@ -133,6 +112,8 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
     activeStatus = {
       advertised_urls: [],
       last_error: error instanceof Error ? error.message : 'Unknown sync server error.',
+      paired_device_count: 0,
+      pending_pair_request_count: 0,
       port: null,
       state: 'failed'
     };
@@ -146,6 +127,8 @@ export async function stopLanWorkspaceSyncServer() {
     activeStatus = {
       advertised_urls: [],
       last_error: null,
+      paired_device_count: 0,
+      pending_pair_request_count: 0,
       port: null,
       state: 'stopped'
     };
@@ -166,6 +149,8 @@ export async function stopLanWorkspaceSyncServer() {
   activeStatus = {
     advertised_urls: [],
     last_error: null,
+    paired_device_count: 0,
+    pending_pair_request_count: 0,
     port: null,
     state: 'stopped'
   };
@@ -173,5 +158,5 @@ export async function stopLanWorkspaceSyncServer() {
 }
 
 export function getLanWorkspaceSyncServerStatus() {
-  return activeStatus;
+  return refreshLanWorkspaceSyncServerPairingStatus();
 }

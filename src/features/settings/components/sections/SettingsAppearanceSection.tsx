@@ -78,6 +78,17 @@ function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionSta
 
   return (
     <SettingsSection ariaLabel="Appearance color section" title="Color">
+      <SettingsSelectRow
+        description="Choose whether Foliole stays light, stays dark, or follows the system appearance."
+        label="Base color mode"
+        onChange={(value) => appearance.setBaseColorMode(value as typeof appearance.baseColorMode)}
+        options={[
+          { label: 'Light', value: 'light' },
+          { label: 'Dark', value: 'dark' },
+          { label: 'Follow system', value: 'system' }
+        ]}
+        value={appearance.baseColorMode}
+      />
       <FontColorRow
         defaultFontColor={defaultFontColor}
         onFontColorPresetReset={appearance.resetFontColorPreset}

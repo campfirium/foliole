@@ -19,28 +19,11 @@ function createWorkspaceSnapshot(): WorkspaceSnapshot {
   };
 }
 
-function expectInitialAutoPull(args: {
-  endpoint_url: string | null;
-  isNativeRuntime: boolean;
-  last_synced_at: string | null;
-  workspace_snapshot: WorkspaceSnapshot | null;
-}) {
-  expect(
-    shouldAutoPullInitialDesktopSnapshot({
-      isNativeRuntime: args.isNativeRuntime,
-      state: {
-        endpoint_url: args.endpoint_url,
-        last_synced_at: args.last_synced_at,
-        workspace_snapshot: args.workspace_snapshot
-      }
-    })
-  ).toBe(true);
-}
-
 function expectNoInitialAutoPull(args: {
   endpoint_url: string | null;
   isNativeRuntime: boolean;
   last_synced_at: string | null;
+  remembered_targets?: string[];
   workspace_snapshot: WorkspaceSnapshot | null;
 }) {
   expect(
@@ -49,6 +32,7 @@ function expectNoInitialAutoPull(args: {
       state: {
         endpoint_url: args.endpoint_url,
         last_synced_at: args.last_synced_at,
+        remembered_targets: args.remembered_targets ?? [],
         workspace_snapshot: args.workspace_snapshot
       }
     })
@@ -56,8 +40,8 @@ function expectNoInitialAutoPull(args: {
 }
 
 describe('shouldAutoPullInitialDesktopSnapshot', () => {
-  it('returns true for native runtime with no saved sync state', () => {
-    expectInitialAutoPull({
+  it('returns false for native runtime with no saved sync state because sync is manual', () => {
+    expectNoInitialAutoPull({
       endpoint_url: null,
       isNativeRuntime: true,
       last_synced_at: null,
@@ -83,8 +67,8 @@ describe('shouldAutoPullInitialDesktopSnapshot', () => {
     });
   });
 
-  it('still returns true when endpoint exists but snapshot has never been pulled', () => {
-    expectInitialAutoPull({
+  it('still returns false when endpoint exists but snapshot has never been pulled', () => {
+    expectNoInitialAutoPull({
       endpoint_url: 'http://10.0.2.2:38641',
       isNativeRuntime: true,
       last_synced_at: null,
@@ -114,7 +98,7 @@ describe('shouldPullUpdatedDesktopSnapshot', () => {
 });
 
 describe('shouldRunForegroundAutoSyncCheck', () => {
-  it('throttles foreground auto sync checks', () => {
+  it('returns false because paired companion stays quiet in foreground transitions', () => {
     expect(
       shouldRunForegroundAutoSyncCheck({
         isNativeRuntime: true,
@@ -128,6 +112,6 @@ describe('shouldRunForegroundAutoSyncCheck', () => {
         lastCheckedAt: 1_000,
         now: 1_000 + AUTO_SYNC_MIN_INTERVAL_MS
       })
-    ).toBe(true);
+    ).toBe(false);
   });
 });

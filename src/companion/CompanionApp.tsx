@@ -34,7 +34,7 @@ export function CompanionApp() {
       return <BootstrapStateCard detail={bootstrap.message} title="Companion bootstrap failed" tone="critical" />;
     }
 
-    return <CompanionShell />;
+    return <CompanionShell bootstrapState={bootstrap.state} />;
   })();
 
   return <MouseGestureSettingsProvider>{content}</MouseGestureSettingsProvider>;

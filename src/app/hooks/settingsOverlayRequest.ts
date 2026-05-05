@@ -32,3 +32,9 @@ export function openExternalLibrarySettings(runtime: AppRuntime) {
   runtime.setRequestedSettingsCategory('external-search');
   runtime.setIsSettingsOpen(true);
 }
+
+export function openCompanionSyncSettings(runtime: AppRuntime) {
+  runtime.setRequestedSettingsDialog(null);
+  runtime.setRequestedSettingsCategory('companion-sync');
+  runtime.setIsSettingsOpen(true);
+}

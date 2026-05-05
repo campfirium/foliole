@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../shared/ui';
+import {
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsButtonClassName,
+  settingsFieldClassName,
+  settingsIconButtonClassName
+} from '../../../shared/ui';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 
-const HOTKEY_INPUT_CLASS_NAME =
-  'w-40 min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground max-[1080px]:w-full';
-const HOTKEY_TEXT_BUTTON_CLASS_NAME =
-  'rounded-md border border-border bg-transparent px-[9px] py-[5px] text-[0.84rem] text-foreground';
-const HOTKEY_RESET_BUTTON_CLASS_NAME =
-  'inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/65 transition-colors hover:bg-foreground/[0.06] hover:text-foreground';
+const HOTKEY_INPUT_CLASS_NAME = settingsFieldClassName('w-40 max-[1080px]:w-full');
+const HOTKEY_TEXT_BUTTON_CLASS_NAME = settingsButtonClassName();
+const HOTKEY_RESET_BUTTON_CLASS_NAME = settingsIconButtonClassName('text-foreground/65');
 
 interface HotkeySettingsSectionProps {
   items: HotkeySettingItem[];
@@ -174,7 +178,7 @@ function HotkeyRow({ primaryDraft, secondaryDraft, item, primaryMessage, seconda
   return (
     <div role="listitem">
       <SettingsRow description={rowDescription} title={item.title}>
-        <SettingsControlSlot className="flex-[0_0_360px] flex-wrap justify-end gap-2 max-[1080px]:justify-start">
+        <SettingsControlSlot className="flex-[0_0_320px] flex-wrap justify-end gap-2 max-[1080px]:justify-start">
           <HotkeyInput
             ariaLabel={`Primary shortcut for ${item.title}`}
             commandId={item.commandId}
@@ -226,7 +230,7 @@ export function HotkeySettingsSection({ items, onUpdate, onReset, onResetAll }: 
         <span className="sr-only">Search shortcuts</span>
         <input
           aria-label="Search shortcuts"
-          className="w-full rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
+          className={settingsFieldClassName()}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search commands"
           type="search"

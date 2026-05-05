@@ -85,6 +85,58 @@ async function expectSyncAndAppSettingsCommands() {
       args: { settings: { 'foliole-ui-font-preset': 'source-sans' } }
     })
   ).resolves.toBeNull();
+  await expectCompanionPairingCommands();
+}
+
+async function expectCompanionPairingCommands() {
+  await expect(handleInvokeRequest({ command: 'load_companion_pairing_overview' })).resolves.toMatchObject({
+    pending_requests: [
+      {
+        device_id: 'android-1',
+        device_kind: 'android',
+        device_name: 'Pixel 9',
+        pair_request_id: 'pair-request-1',
+        status: 'pending'
+      }
+    ],
+    server_status: {
+      paired_device_count: 1,
+      pending_pair_request_count: 1,
+      state: 'running'
+    }
+  });
+  await expect(
+    handleInvokeRequest({
+      command: 'approve_companion_pair_request',
+      args: { pair_request_id: 'pair-request-1' }
+    })
+  ).resolves.toMatchObject({
+    server_status: {
+      pending_pair_request_count: 0,
+      state: 'running'
+    }
+  });
+  await expect(
+    handleInvokeRequest({
+      command: 'clear_companion_paired_devices'
+    })
+  ).resolves.toMatchObject({
+    server_status: {
+      pending_pair_request_count: 0,
+      state: 'running'
+    }
+  });
+  await expect(
+    handleInvokeRequest({
+      command: 'reject_companion_pair_request',
+      args: { pair_request_id: 'pair-request-1' }
+    })
+  ).resolves.toMatchObject({
+    server_status: {
+      pending_pair_request_count: 0,
+      state: 'running'
+    }
+  });
 }
 
 async function expectImportSettingsCommands() {

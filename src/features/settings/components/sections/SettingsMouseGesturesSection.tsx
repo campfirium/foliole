@@ -1,6 +1,13 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
 
-import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import {
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsColorFieldClassName,
+  settingsFieldClassName,
+  settingsValueBoxClassName
+} from '../../../../shared/ui';
 import type { EditorMouseGestureId } from '../../../editor/model/editorMouseGestures';
 import {
   EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS,
@@ -27,7 +34,7 @@ const ACTION_LABELS: Record<EditorMouseGestureActionSetting, string> = {
 
 function GestureIcon({ gestureId }: { gestureId: EditorMouseGestureId }) {
   const iconClassName = 'h-4 w-4';
-  const containerClassName = 'inline-flex items-center gap-1 rounded-md border border-border bg-bg-elevated px-2 py-1 text-foreground/75';
+  const containerClassName = 'inline-flex items-center gap-1 rounded-md bg-bg-elevated px-2.5 py-1.5 text-foreground/75';
 
   if (gestureId === 'left') {
     return <span className={containerClassName}><ArrowLeft className={iconClassName} /></span>;
@@ -56,7 +63,7 @@ function NumberField(props: {
     <div className="flex w-full items-center gap-2">
       <input
         aria-label={props.ariaLabel}
-        className="w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
+        className={settingsFieldClassName()}
         max={props.max}
         min={props.min}
         onChange={(event) => props.onChange(Number(event.target.value))}
@@ -78,7 +85,7 @@ function MouseGestureAreaSection() {
     >
       <SettingsRow description="More areas can be added later without changing the gesture model." readonly title="Active area">
         <SettingsControlSlot>
-          <div className="w-full rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground">
+          <div className={settingsValueBoxClassName('w-full text-foreground')}>
             Main panel
           </div>
         </SettingsControlSlot>
@@ -99,11 +106,11 @@ function MouseGestureBindingsSection(props: {
     >
       {GESTURE_ROWS.map((gesture) => (
         <SettingsRow description={gesture.description} key={gesture.gestureId} title={gesture.label}>
-          <SettingsControlSlot className="flex-[0_0_420px] gap-3 max-[1080px]:flex-auto">
+          <SettingsControlSlot className="flex-[0_0_320px] gap-3 max-[1080px]:flex-auto">
             <GestureIcon gestureId={gesture.gestureId} />
             <select
               aria-label={`${gesture.label} mouse gesture action`}
-              className="w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
+              className={settingsFieldClassName()}
               onChange={(event) => props.onActionChange(gesture.gestureId, event.target.value as EditorMouseGestureActionSetting)}
               value={settings.gestureActions[gesture.gestureId]}
             >
@@ -136,14 +143,14 @@ function MouseGestureTrailSection(props: {
         <SettingsControlSlot>
           <input
             aria-label="Mouse gesture trail color"
-            className="h-10 w-14 rounded-md border border-border bg-bg-elevated p-1"
+            className={settingsColorFieldClassName()}
             onChange={(event) => props.onTrailColorChange(event.target.value)}
             type="color"
             value={settings.trailColor}
           />
           <input
             aria-label="Mouse gesture trail color hex"
-            className="w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
+            className={settingsFieldClassName()}
             onChange={(event) => props.onTrailColorChange(event.target.value)}
             value={settings.trailColor}
           />

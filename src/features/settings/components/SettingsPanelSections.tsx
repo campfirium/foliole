@@ -8,6 +8,7 @@ import { HotkeySettingsSection } from './HotkeySettingsSection';
 import { SettingsAboutSection } from './sections/SettingsAboutSection';
 import { SettingsAppearanceSection } from './sections/SettingsAppearanceSection';
 import { SettingsBackupsSection } from './sections/SettingsBackupsSection';
+import { SettingsCompanionSyncSection } from './sections/SettingsCompanionSyncSection';
 import { SettingsEditorSection } from './sections/SettingsEditorSection';
 import { SettingsExternalSearchSection } from './sections/SettingsExternalSearchSection';
 import { SettingsImportSection } from './sections/SettingsImportSection';
@@ -76,7 +77,7 @@ export function SettingsSidebar(props: {
           <AppButton
             active={category.id === props.activeCategory}
             className={cn(
-              'min-h-0 rounded-lg px-5 py-[10px] text-[0.98rem]',
+              'min-h-0 rounded-md px-5 py-[10px] text-[0.98rem]',
               category.id === props.activeCategory
                 ? 'bg-settings-selected font-semibold'
                 : 'border-transparent bg-transparent text-foreground/72 hover:bg-settings-selected/70'
@@ -156,6 +157,9 @@ function renderFallbackCategory(props: SettingsCategoryContentProps) {
   }
   if (props.activeCategory === 'about') {
     return <SettingsAboutSection />;
+  }
+  if (props.activeCategory === 'companion-sync') {
+    return <SettingsCompanionSyncSection />;
   }
   return (
     <HotkeySettingsSection

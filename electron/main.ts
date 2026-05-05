@@ -60,6 +60,7 @@ import {
 } from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
 import { runStartupTask } from './startupTasks.js';
+import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
 import { ensureLanWorkspaceSyncServer, stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
@@ -241,10 +242,12 @@ app.whenReady().then(async () => {
   registerAttachmentProtocol();
   installInvokeHandler();
   installAppMenu();
-  await ensureLanWorkspaceSyncServer({
-    appVersion: app.getVersion(),
-    peerId: 'desktop-local'
-  });
+  if (isDesktopCompanionSyncEnabled()) {
+    await ensureLanWorkspaceSyncServer({
+      appVersion: app.getVersion(),
+      peerId: 'desktop-local'
+    });
+  }
   await createMainWindow();
   await appendBootEvent('main_window_ready');
   void runStartupTask('[backup] automatic backup reconcile failed', reconcileAutomaticDatabaseBackups);
