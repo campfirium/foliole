@@ -1,9 +1,6 @@
-import { useMemo } from 'react';
-
-import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
@@ -14,11 +11,14 @@ import {
   ToolbarActionGroup
 } from '../../shared/ui';
 
+import { DocumentPanelHeaderCenter } from './DocumentPanelHeaderCenter';
+
 interface DocumentPanelHeaderProps {
   activeNodeId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
+  editableNodeId: string | null;
   folderListToolbar?: JSX.Element | null;
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
@@ -26,8 +26,11 @@ interface DocumentPanelHeaderProps {
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
+  onNodePriorityChange: (nodeId: string, priority: number | null) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onToggleSourceUpdatePanel: () => void;
+  priorityQuickSetShortcutLabel: string;
+  reviewSchedulerSettings: ReviewSchedulerSettings;
   showSourceUpdateAction: boolean;
 }
 
@@ -114,30 +117,12 @@ function renderHeaderActions(args: {
   );
 }
 
-function renderHeaderCenter(args: {
-  activeNodeId: string | null;
-  isFolderListView: boolean;
-  nodesById: ReturnType<typeof toWorkspaceListNodesById>;
-  onSelectBreadcrumbNode: (nodeId: string) => void;
-}) {
-  if (args.isFolderListView) {
-    return <div aria-hidden="true" className="min-h-9 flex-1 border-b border-border/60" />;
-  }
-
-  return (
-    <div className="min-w-0 flex-1">
-      <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
-        <NodeBreadcrumbs activeNodeId={args.activeNodeId} nodesById={args.nodesById} onSelectNode={args.onSelectBreadcrumbNode} />
-      </div>
-    </div>
-  );
-}
-
 export function DocumentPanelHeader({
   activeNodeId,
   canGoBack,
   canGoForward,
   canGoParent,
+  editableNodeId,
   folderListToolbar,
   isFolderListView,
   isSourceUpdatePanelOpen,
@@ -145,12 +130,14 @@ export function DocumentPanelHeader({
   onGoBack,
   onGoForward,
   onGoParent,
+  onNodePriorityChange,
   onSelectBreadcrumbNode,
   onToggleSourceUpdatePanel,
+  priorityQuickSetShortcutLabel,
+  reviewSchedulerSettings,
   showSourceUpdateAction
 }: DocumentPanelHeaderProps) {
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
-  const listNodesById = useMemo(() => toWorkspaceListNodesById(nodesById), [nodesById]);
 
   return (
     <AppToolbar as="header" className="min-h-[40px] gap-2 px-3">
@@ -167,12 +154,16 @@ export function DocumentPanelHeader({
           />
         </ToolbarActionGroup>
       ) : null}
-      {renderHeaderCenter({
-        activeNodeId,
-        isFolderListView,
-        nodesById: listNodesById,
-        onSelectBreadcrumbNode
-      })}
+      <DocumentPanelHeaderCenter
+        activeNodeId={activeNodeId}
+        defaultPriority={reviewSchedulerSettings.pushQueue.defaultPriority}
+        editableNodeId={editableNodeId}
+        isFolderListView={isFolderListView}
+        nodesById={nodesById}
+        onNodePriorityChange={onNodePriorityChange}
+        onSelectBreadcrumbNode={onSelectBreadcrumbNode}
+        priorityQuickSetShortcutLabel={priorityQuickSetShortcutLabel}
+      />
       {renderHeaderActions({
         editorDisplayMode,
         folderListToolbar,

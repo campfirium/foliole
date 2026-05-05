@@ -42,6 +42,7 @@ interface BuildLayoutPropsArgs {
   isResizingList: boolean;
   isResizingRightSidebar: boolean;
   isImportManagementOpen: boolean;
+  isPriorityQuickSetActive: boolean;
   isSettingsOpen: boolean;
   requestedSettingsCategory: SettingsCategoryId | null;
   requestedSettingsDialog: 'readwise-reader' | null;
@@ -62,6 +63,7 @@ interface BuildLayoutPropsArgs {
   onNodePriorityChange: WorkspaceLayoutProps['onNodePriorityChange'];
   onAnswerChange: WorkspaceLayoutProps['onAnswerChange'];
   onEditorChange: WorkspaceLayoutProps['onEditorChange'];
+  onEnterPriorityQuickSet: WorkspaceLayoutProps['onEnterPriorityQuickSet'];
   onNodeContentChange: WorkspaceLayoutProps['onNodeContentChange'];
   onEditorReady: WorkspaceLayoutProps['onEditorReady'];
   onOpenNotesView: () => void;
@@ -88,6 +90,7 @@ interface BuildLayoutPropsArgs {
   onRunImportFile: WorkspaceLayoutProps['onRunImportFile'];
   onRunImportFolder: WorkspaceLayoutProps['onRunImportFolder'];
   onStartClipboardImport: WorkspaceLayoutProps['onStartClipboardImport'];
+  priorityQuickSetShortcutLabel: string;
   reviewDueCount: number;
   reviewPreview: SchedulerPreviewResult | null;
   reviewSession: WorkspaceState['reviewSession'];
@@ -167,8 +170,8 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
 
   return {
     activeNodeId: args.activeNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
-    documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', isEditorReadOnly: args.activeNodeId ? !activeNode || !isNodeDocumentLoaded(activeNode) || isNodeContentLocked(args.activeNodeId, args.nodeOrder, args.nodesById, new Set(args.trashedNodeIds)) : false, editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
-    onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange,
+    documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', isEditorReadOnly: args.activeNodeId ? !activeNode || !isNodeDocumentLoaded(activeNode) || isNodeContentLocked(args.activeNodeId, args.nodeOrder, args.nodesById, new Set(args.trashedNodeIds)) : false, isPriorityQuickSetActive: args.isPriorityQuickSetActive, editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
+    onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange, onEnterPriorityQuickSet: args.onEnterPriorityQuickSet, priorityQuickSetShortcutLabel: args.priorityQuickSetShortcutLabel,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, requestedSettingsCategory: args.requestedSettingsCategory, requestedSettingsDialog: args.requestedSettingsDialog, isReviewEditing: args.isReviewEditing,
     isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewPanelQueueNodeIds, reviewQueueNodeIds: args.reviewSession.queueNodeIds, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isVirtualViewOpen: args.isVirtualViewOpen, isViewingTrashNode: args.isViewingTrashNode,
     isListCollapsed: args.isListCollapsed, isRightSidebarCollapsed: args.isRightSidebarCollapsed, showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, trashedNodeIds: args.trashedNodeIds, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange, onNodeContentChange: args.onNodeContentChange,

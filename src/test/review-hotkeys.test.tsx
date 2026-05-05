@@ -6,32 +6,40 @@ import './app-smoke.shared';
 import { App } from '../app/App';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { FIXED_TIMESTAMP } from './app-smoke.shared';
+import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
 
-it('supports review keyboard flow with edit mode guard (Esc -> Space -> 1/2/3/4)', async () => {
+function seedActiveNode(node: ReturnType<typeof createNode>) {
   useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-1',
-    nodeOrder: ['node-1'],
+    activeNodeId: node.id,
+    nodeOrder: [node.id],
     nodesById: {
       ...state.nodesById,
-      'node-1': {
-        ...state.nodesById['node-1'],
-        kind: 'item',
-        reveal: 'Answer 1',
-        review: {
-          due: FIXED_TIMESTAMP,
-          lastReviewAt: null,
-          state: 0,
-          stability: 0,
-          difficulty: 0,
-          elapsedDays: 0,
-          scheduledDays: 0,
-          reps: 0,
-          lapses: 0
-        }
-      }
+      [node.id]: node
     }
   }));
+}
+
+it('supports review keyboard flow with edit mode guard (Esc -> Space -> 1/2/3/4)', async () => {
+  seedActiveNode(
+    createNode({
+      id: 'node-1',
+      title: 'Node 1',
+      content: 'Question',
+      kind: 'item',
+      reveal: 'Answer 1',
+      review: {
+        due: FIXED_TIMESTAMP,
+        lastReviewAt: null,
+        state: 0,
+        stability: 0,
+        difficulty: 0,
+        elapsedDays: 0,
+        scheduledDays: 0,
+        reps: 0,
+        lapses: 0
+      }
+    })
+  );
 
   render(<App />);
 
@@ -68,9 +76,19 @@ it('shows separate primary and secondary review shortcuts in hotkey settings', (
   expect(screen.getByLabelText('Primary shortcut for Reading: Read')).toHaveValue('3');
   expect(screen.getByLabelText('Secondary shortcut for Reading: Read')).toHaveValue('Space');
   expect(screen.getByLabelText('Primary shortcut for Reading: Dismiss')).toHaveValue('5');
+  expect(screen.getByLabelText('Primary shortcut for Set Priority…')).toHaveValue('Ctrl+M');
 });
 
 it('uses reading hotkeys without reusing FSRS grading semantics', async () => {
+  seedActiveNode(
+    createNode({
+      id: 'node-1',
+      title: 'Node 1',
+      content: 'Body',
+      kind: 'topic'
+    })
+  );
+
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
@@ -84,4 +102,27 @@ it('uses reading hotkeys without reusing FSRS grading semantics', async () => {
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
   });
+});
+
+it('supports quick priority changes from the two-step shortcut', () => {
+  seedActiveNode(
+    createNode({
+      id: 'node-1',
+      title: 'Node 1',
+      content: 'Body',
+      kind: 'topic'
+    })
+  );
+
+  render(<App />);
+
+  fireEvent.keyDown(window, { key: 'm', ctrlKey: true });
+  expect(screen.getByText('Set priority')).toBeInTheDocument();
+  expect(screen.getByText('0-9 to set')).toBeInTheDocument();
+  expect(screen.getByText('Esc to cancel')).toBeInTheDocument();
+
+  fireEvent.keyDown(window, { key: '0' });
+
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.priority).toBe(0);
+  expect(screen.getByRole('button', { name: /Priority P0 set on this node/i })).toBeInTheDocument();
 });

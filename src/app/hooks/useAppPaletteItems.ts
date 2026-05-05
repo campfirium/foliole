@@ -61,6 +61,7 @@ export function useAppPaletteItems(args: {
   formalImportAvailable: boolean;
   hasReviewCard: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
+  isViewingTrashNode: boolean;
   isCurrentReviewItemGradable: boolean;
   isStudyMode: boolean;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
@@ -96,6 +97,7 @@ export function useAppPaletteItems(args: {
         canMoveToNode,
         canGoParent: args.nav.canGoParent,
         canFindInCurrentTopic: canMergeHighlightsIntoTopic(args),
+        canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
         canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
         canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
         canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,

@@ -175,6 +175,7 @@ function WorkspaceDocumentSurface({
       editorNodeViewState={props.editorNodeViewState}
       isDocumentResizing={props.isDocumentResizing}
       isEditorReadOnly={props.isEditorReadOnly}
+      isPriorityQuickSetActive={props.isPriorityQuickSetActive}
       nodeOrder={props.nodeOrder}
       nodesById={props.nodesById}
       onAnswerChange={props.onAnswerChange}
@@ -193,6 +194,7 @@ function WorkspaceDocumentSurface({
       onGoForward={props.onGoForward}
       onGoParent={props.onGoParent}
       onNodeContentChange={props.onNodeContentChange}
+      onNodePriorityChange={props.onNodePriorityChange}
       onPersistPdfViewState={props.onPersistPdfViewState}
       onResetLayout={props.onResetLayout}
       onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
@@ -201,6 +203,8 @@ function WorkspaceDocumentSurface({
       onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
       onSelectNode={props.onSelectNode}
       onStartDocumentResize={props.onStartDocumentResize}
+      priorityQuickSetShortcutLabel={props.priorityQuickSetShortcutLabel}
+      reviewSchedulerSettings={props.reviewSchedulerSettings}
       showAnswerSection={props.showAnswerSection}
       trashedNodeIds={props.trashedNodeIds}
     />

@@ -14,6 +14,7 @@ export interface BuildAppPaletteItemsOptions {
   canMoveToNode: boolean;
   canGoParent: boolean;
   canFindInCurrentTopic: boolean;
+  canSetNodePriority: boolean;
   canRevealAnswer: boolean;
   canToggleReviewMode: boolean;
   canGradeReview: boolean;
@@ -79,6 +80,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.moveToNode, title: 'Move to', section: 'Navigation', keywords: ['move', 'reparent', 'node'] },
   { id: APP_COMMAND_IDS.goParent, title: 'Go Parent', section: 'Navigation' },
   { id: APP_COMMAND_IDS.findInTopic, title: 'Find in Topic', section: 'Navigation', keywords: ['find', 'search', 'topic', 'document', 'text'] },
+  { id: APP_COMMAND_IDS.enterPriorityMode, title: 'Set Priority…', section: 'Navigation', keywords: ['priority', 'queue', 'p0', 'p1', 'quick set'] },
   { id: APP_COMMAND_IDS.toggleEditorDisplayMode, title: 'Toggle Editor Display Mode', section: 'Editor' },
   { id: APP_COMMAND_IDS.startStudyMode, title: 'Enter Review Mode', section: 'Review' },
   { id: APP_COMMAND_IDS.revealReviewAnswer, title: 'Reveal Review Answer', section: 'Review' },
@@ -96,6 +98,15 @@ function resolveCommandTitle(id: string, isReviewMode: boolean, title: string) {
     return title;
   }
   return isReviewMode ? 'Exit Review Mode' : 'Enter Review Mode';
+}
+
+function isReviewGradeCommand(id: string) {
+  return (
+    id === APP_COMMAND_IDS.gradeReviewAgain ||
+    id === APP_COMMAND_IDS.gradeReviewHard ||
+    id === APP_COMMAND_IDS.gradeReviewGood ||
+    id === APP_COMMAND_IDS.gradeReviewEasy
+  );
 }
 
 export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
@@ -132,6 +143,9 @@ export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItem
   if (id === APP_COMMAND_IDS.findInTopic) {
     return options.canFindInCurrentTopic;
   }
+  if (id === APP_COMMAND_IDS.enterPriorityMode) {
+    return options.canSetNodePriority;
+  }
   if (id === APP_COMMAND_IDS.startStudyMode) {
     return options.canToggleReviewMode;
   }
@@ -147,12 +161,7 @@ export function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItem
   if (id === APP_COMMAND_IDS.readingReviewDismiss) {
     return options.canDismissReadingReview;
   }
-  if (
-    id === APP_COMMAND_IDS.gradeReviewAgain ||
-    id === APP_COMMAND_IDS.gradeReviewHard ||
-    id === APP_COMMAND_IDS.gradeReviewGood ||
-    id === APP_COMMAND_IDS.gradeReviewEasy
-  ) {
+  if (isReviewGradeCommand(id)) {
     return options.canGradeReview;
   }
   return true;

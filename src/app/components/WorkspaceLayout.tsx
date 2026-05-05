@@ -34,10 +34,13 @@ export interface WorkspaceLayoutProps {
   documentMaxWidth: number;
   editorContent: string;
   isEditorReadOnly: boolean;
+  isPriorityQuickSetActive: boolean;
   onNodePriorityChange: (nodeId: string, priority: number | null) => void;
   onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => void;
+  onEnterPriorityQuickSet: () => void;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
+  priorityQuickSetShortcutLabel: string;
   canStartStudyMode: boolean;
   reviewDueCount: number;
   reviewPreview: SchedulerPreviewResult | null;

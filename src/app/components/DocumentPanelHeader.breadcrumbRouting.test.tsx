@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -27,6 +29,7 @@ it('routes breadcrumb clicks to onSelectBreadcrumbNode', () => {
       canGoBack={false}
       canGoForward={false}
       canGoParent={false}
+      editableNodeId="node-1"
       folderListToolbar={null}
       isFolderListView={false}
       isSourceUpdatePanelOpen={false}
@@ -47,8 +50,11 @@ it('routes breadcrumb clicks to onSelectBreadcrumbNode', () => {
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onGoParent={vi.fn()}
+      onNodePriorityChange={vi.fn()}
       onSelectBreadcrumbNode={onSelectBreadcrumbNode}
       onToggleSourceUpdatePanel={vi.fn()}
+      priorityQuickSetShortcutLabel="Ctrl+M"
+      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showSourceUpdateAction={false}
     />
   );

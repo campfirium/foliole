@@ -12,6 +12,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.goBack]: { primary: { key: 'ArrowLeft', altKey: true } },
   [APP_COMMAND_IDS.goForward]: { primary: { key: 'ArrowRight', altKey: true } },
   [APP_COMMAND_IDS.findInTopic]: { primary: { key: 'f', ctrlKey: true }, secondary: { key: 'f', metaKey: true } },
+  [APP_COMMAND_IDS.enterPriorityMode]: { primary: { key: 'm', ctrlKey: true } },
   [APP_COMMAND_IDS.toggleDevTools]: { primary: { key: 'i', ctrlKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.revealReviewAnswer]: { primary: { key: ' ' } },
   [APP_COMMAND_IDS.gradeReviewAgain]: { primary: { key: '1' } },

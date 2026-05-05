@@ -86,6 +86,7 @@ function createPaletteRunnerArgs(args: {
     createItem: createDirectNodeCommand('item', args),
     createTopic: createDirectNodeCommand('topic', args),
     createVirtualNode: createVirtualNodeCommand(args),
+    enterPriorityMode: args.layoutProps.onEnterPriorityQuickSet,
     deferReviewItem: args.ws.deferReviewItem,
     dismissReviewItem: args.ws.dismissReviewItem,
     exitReviewSession: args.ws.exitReviewSession,

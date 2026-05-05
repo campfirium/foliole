@@ -2,14 +2,14 @@ import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { INBOX_NODE_ID, isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
 
 import type { useCurrentReviewPreview } from './appControllerHelpers';
+import { createLayoutEditorCtx, isVirtualEditorNode, resolveEditorBindingArgs } from './appControllerLayoutContext';
 import { createLayoutNav, createSelectTrashNodeHandler } from './appControllerNavHandlers';
-import { createPdfHighlightHandler } from './appControllerPdfHighlight';
 import {
   createPersistPdfViewState,
   createRevealAnchorInDocument,
@@ -39,6 +39,11 @@ export interface BuildControllerLayoutPropsArgs {
   exitStudyMode: () => void;
   isReviewEditing: boolean;
   isStudyMode: boolean;
+  priorityQuickSet: {
+    enter: () => boolean;
+    isActive: boolean;
+    shortcutLabel: string;
+  };
   listResize: ReturnType<typeof useListResizer>;
   nav: ReturnType<typeof useWorkspaceNavigation>;
   nowIso: string;
@@ -96,36 +101,11 @@ export interface BuildControllerLayoutPropsArgs {
   runImportFile: () => Promise<boolean>;
 }
 
-function resolveEditorBindingArgs(args: BuildControllerLayoutPropsArgs) {
-  const isInboxActiveNode = !args.runtime.isViewingTrashNode && isInboxNode(args.activeNode);
-  return {
-    editorNodeId: args.runtime.isViewingTrashNode || isInboxActiveNode ? null : args.ws.activeNodeId,
-    editorNodeViewState:
-      !args.runtime.isViewingTrashNode && !isInboxActiveNode && args.ws.activeNodeId
-        ? args.ws.nodeViewById[args.ws.activeNodeId]
-        : undefined
-  };
-}
-
 export function buildAppControllerLayoutProps(args: BuildControllerLayoutPropsArgs) {
   return buildLayoutProps({
     ...createLayoutDataArgs(args),
     ...createLayoutHandlerArgs(args)
   });
-}
-
-function createLayoutEditorCtx(args: BuildControllerLayoutPropsArgs) {
-  return {
-    onCloseContextMenu: args.editorCtx.closeContextMenu,
-    onCopyImage: args.editorCtx.handleCopyImage,
-    onCreateCloze: args.editorCtx.handleCreateCloze,
-    onCreateHighlight: args.editorCtx.handleCreateHighlight,
-    onCreatePdfHighlight: createPdfHighlightHandler(args),
-    onCutImage: args.editorCtx.handleCutImage,
-    onDeleteImage: args.editorCtx.handleDeleteImage,
-    onEditorContextMenu: args.editorCtx.handleEditorContextMenu,
-    onExportImage: args.editorCtx.handleExportImage
-  };
 }
 
 function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
@@ -150,6 +130,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     isStudyMode: args.isStudyMode,
     isReviewEditing: args.isReviewEditing,
     isImportManagementOpen: args.runtime.isImportManagementOpen,
+    isPriorityQuickSetActive: args.priorityQuickSet.isActive,
     isListCollapsed: args.ws.isListCollapsed,
     isRightSidebarCollapsed: args.ws.isRightSidebarCollapsed,
     requestedSettingsCategory: args.runtime.requestedSettingsCategory,
@@ -196,6 +177,9 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
       }
     },
     onEditorChange: createEditorChangeHandler(args),
+    onEnterPriorityQuickSet: () => {
+      args.priorityQuickSet.enter();
+    },
     onNodeContentChange: createNodeContentChangeHandler(args),
     onEditorReady: (adapter: EditorAdapter | null) => {
       args.runtime.editorRef.current = adapter;
@@ -230,7 +214,8 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade),
     completeReviewItem: () => args.ws.completeReviewItem(),
     deferReviewItem: () => args.ws.deferReviewItem(),
-    dismissReviewItem: () => args.ws.dismissReviewItem()
+    dismissReviewItem: () => args.ws.dismissReviewItem(),
+    priorityQuickSetShortcutLabel: args.priorityQuickSet.shortcutLabel
   };
 }
 
@@ -252,7 +237,7 @@ function createNodeContentChangeHandler(args: BuildControllerLayoutPropsArgs) {
     if (args.runtime.isViewingTrashNode) {
       return;
     }
-    if (isVirtualNode(args.ws.nodesById[nodeId])) {
+    if (isVirtualEditorNode(args, nodeId)) {
       args.ws.updateVirtualNodeFilter(nodeId, content);
       return;
     }

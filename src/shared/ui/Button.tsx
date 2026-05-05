@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '@/shared/lib/utils';
@@ -29,15 +30,10 @@ function resolveSizeClass(size: ButtonSize) {
   return size === 'sm' ? 'min-h-8 px-3 text-sm' : 'min-h-9 px-3.5 text-sm';
 }
 
-export function AppButton({
-  children,
-  variant = 'ghost',
-  size = 'sm',
-  className,
-  active = false,
-  type = 'button',
-  ...rest
-}: ButtonProps) {
+export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function AppButton(
+  { children, variant = 'ghost', size = 'sm', className, active = false, type = 'button', ...rest },
+  ref
+) {
   const isList = variant === 'list';
 
   return (
@@ -50,10 +46,11 @@ export function AppButton({
         className
       )}
       data-active={active}
+      ref={ref}
       type={type}
       {...rest}
     >
       {children}
     </button>
   );
-}
+});

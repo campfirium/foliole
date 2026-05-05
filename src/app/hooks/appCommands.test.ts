@@ -11,6 +11,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     createItem: () => undefined,
     createTopic: () => undefined,
     createVirtualNode: () => undefined,
+    enterPriorityMode: () => undefined,
     exportCurrentArticle: () => undefined,
     findInTopic: () => undefined,
     mergeHighlightsIntoTopic: () => undefined,
@@ -62,6 +63,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canMoveToNode: true,
     canGoParent: true,
     canFindInCurrentTopic: true,
+    canSetNodePriority: true,
     canRevealAnswer: true,
     canToggleReviewMode: true,
     canGradeReview: true,
@@ -87,6 +89,7 @@ function expectCorePaletteEntries() {
   expect(items.find((item) => item.id === APP_COMMAND_IDS.goToNode)?.title).toBe('Go to…');
   expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.findInTopic)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.enterPriorityMode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
@@ -171,6 +174,14 @@ describe('runAppCommand basics', () => {
     expectCommandRuns(APP_COMMAND_IDS.findInTopic, { findInTopic });
 
     expect(findInTopic).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs enter priority mode through the shared command handler', () => {
+    const enterPriorityMode = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.enterPriorityMode, { enterPriorityMode });
+
+    expect(enterPriorityMode).toHaveBeenCalledTimes(1);
   });
 });
 

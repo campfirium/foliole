@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -17,6 +19,7 @@ it('shows the breadcrumb title without a kind label in the document header', () 
       canGoBack
       canGoForward
       canGoParent={false}
+      editableNodeId="node-1"
       folderListToolbar={null}
       isFolderListView={false}
       isSourceUpdatePanelOpen={false}
@@ -37,13 +40,17 @@ it('shows the breadcrumb title without a kind label in the document header', () 
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onGoParent={vi.fn()}
+      onNodePriorityChange={vi.fn()}
       onSelectBreadcrumbNode={vi.fn()}
       onToggleSourceUpdatePanel={vi.fn()}
+      priorityQuickSetShortcutLabel="Ctrl+M"
+      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showSourceUpdateAction={false}
     />
   );
 
   expect(screen.getByRole('button', { name: 'Prompt' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Priority P5 from the default fallback/i })).toBeInTheDocument();
   expect(screen.queryByText('Item')).not.toBeInTheDocument();
 });
 
@@ -54,6 +61,7 @@ it('shows folder list sorting instead of editor actions in folder mode', () => {
       canGoBack
       canGoForward
       canGoParent={false}
+      editableNodeId="node-1"
       folderListToolbar={<button type="button">Date</button>}
       isFolderListView
       isSourceUpdatePanelOpen={false}
@@ -74,8 +82,11 @@ it('shows folder list sorting instead of editor actions in folder mode', () => {
       onGoBack={vi.fn()}
       onGoForward={vi.fn()}
       onGoParent={vi.fn()}
+      onNodePriorityChange={vi.fn()}
       onSelectBreadcrumbNode={vi.fn()}
       onToggleSourceUpdatePanel={vi.fn()}
+      priorityQuickSetShortcutLabel="Ctrl+M"
+      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showSourceUpdateAction={false}
     />
   );

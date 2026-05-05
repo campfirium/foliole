@@ -7,10 +7,12 @@ import {
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import { DocumentPanelContent } from './DocumentPanelSectionParts';
+import { DocumentPriorityQuickSetHint } from './DocumentPriorityQuickSetHint';
 import { DocumentTopicSearchToolbar } from './DocumentTopicSearchToolbar';
 import { FolderListSortControls } from './FolderListSortControls';
 
@@ -63,6 +65,7 @@ function renderDocumentPanelHeader(args: {
       canGoBack={args.props.canGoBack}
       canGoForward={args.props.canGoForward}
       canGoParent={args.props.canGoParent}
+      editableNodeId={args.props.editableNodeId}
       folderListToolbar={
         <FolderListSortControls
           onChangeSortDirection={args.onChangeSortDirection}
@@ -77,8 +80,11 @@ function renderDocumentPanelHeader(args: {
       onGoBack={args.props.onGoBack}
       onGoForward={args.props.onGoForward}
       onGoParent={args.props.onGoParent}
+      onNodePriorityChange={args.props.onNodePriorityChange ?? (() => undefined)}
       onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
       onToggleSourceUpdatePanel={args.onToggleSourceUpdatePanel}
+      priorityQuickSetShortcutLabel={args.props.priorityQuickSetShortcutLabel ?? ''}
+      reviewSchedulerSettings={args.props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showSourceUpdateAction={args.showSourceUpdateAction}
     />
   );
@@ -99,7 +105,7 @@ export function DocumentPanelSectionShell({
     DEFAULT_FOLDER_LIST_SORT_DIRECTION
   );
   return (
-    <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
+    <section aria-label="Document panel" className="relative flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
       {renderDocumentPanelHeader({
         folderListSortDirection,
         folderListSortKey,
@@ -111,6 +117,7 @@ export function DocumentPanelSectionShell({
         props,
         showSourceUpdateAction
       })}
+      <DocumentPriorityQuickSetHint isActive={!isFolderListView && Boolean(props.isPriorityQuickSetActive)} />
       {renderDocumentSearchToolbar(props, onPreviewDocumentSelection, onPreviewTopicSearchDecorations)}
       <DocumentPanelContent
         activeNodeId={props.activeNodeId}

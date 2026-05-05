@@ -6,6 +6,7 @@ import type { EditorSearchDecorations, EditorSelection } from '../../features/ed
 import { createInlineAnchorKey } from '../../features/editor/adapters/liveMarkdownAnchors';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, type ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import {
   markDocumentPanelBound,
   markNodeBodyPainted,
@@ -35,6 +36,7 @@ export interface DocumentPanelSectionProps {
   editorContent: string;
   editorAppearanceKey: string;
   isEditorReadOnly: boolean;
+  isPriorityQuickSetActive?: boolean;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
   isDocumentResizing: boolean;
@@ -42,6 +44,7 @@ export interface DocumentPanelSectionProps {
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
+  onNodePriorityChange?: (nodeId: string, priority: number | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onCloseContextMenu: () => void;
@@ -66,6 +69,8 @@ export interface DocumentPanelSectionProps {
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
+  priorityQuickSetShortcutLabel?: string;
+  reviewSchedulerSettings?: ReviewSchedulerSettings;
   nodeOrder: string[];
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
@@ -187,6 +192,13 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
   const model = useDocumentPanelSectionModel(props);
   const editorAdapterRef = useRef<EditorAdapter | null>(null);
+  const resolvedProps = {
+    ...props,
+    isPriorityQuickSetActive: props.isPriorityQuickSetActive ?? false,
+    onNodePriorityChange: props.onNodePriorityChange ?? (() => undefined),
+    priorityQuickSetShortcutLabel: props.priorityQuickSetShortcutLabel ?? '',
+    reviewSchedulerSettings: props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS
+  };
 
   function handleEditorReady(adapter: EditorAdapter | null) {
     editorAdapterRef.current = adapter;
@@ -217,7 +229,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         }
         onPreviewTopicSearchDecorations={handlePreviewTopicSearchDecorations}
         props={{
-          ...props,
+          ...resolvedProps,
           onEditorReady: handleEditorReady
         }}
         onPreviewDocumentSelection={handlePreviewDocumentSelection}

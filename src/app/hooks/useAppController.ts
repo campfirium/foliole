@@ -26,6 +26,7 @@ import {
 import { useAppPaletteItems } from './useAppPaletteItems';
 import { useFormalImport } from './useFormalImport';
 import { useNativeCommandMenu } from './useNativeCommandMenu';
+import { usePriorityQuickSet } from './usePriorityQuickSet';
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
 
@@ -46,6 +47,25 @@ export interface AppControllerResult {
   searchState: AppSearchState;
 }
 
+function useControllerPriorityQuickSet(args: {
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
+  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return usePriorityQuickSet({
+    activeNodeId: args.ws.activeNodeId,
+    blocked:
+      args.runtime.isCommandPaletteOpen ||
+      args.runtime.isSearchPaletteOpen ||
+      args.runtime.isSettingsOpen ||
+      args.runtime.isGoToNodePaletteOpen ||
+      args.runtime.isMoveToNodePaletteOpen ||
+      args.runtime.isViewingTrashNode,
+    onPriorityChange: args.ws.updateNodePriority,
+    shortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.enterPriorityMode]
+  });
+}
+
 function useDerivedControllerState(args: {
   controller: ReturnType<typeof useWorkspaceControllerState>;
   exitStudyMode: () => void;
@@ -55,6 +75,7 @@ function useDerivedControllerState(args: {
   isReviewEditing: boolean;
   isStudyMode: boolean;
   nowIso: string;
+  priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
   startStudyMode: () => void;
@@ -78,6 +99,7 @@ function useDerivedControllerState(args: {
     formalImportAvailable: args.formalImport.isAvailable && !args.formalImport.isImporting,
     hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
     hotkeys: args.hotkeys,
+    isViewingTrashNode: args.controller.runtime.isViewingTrashNode,
     isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,
     isStudyMode: args.isStudyMode,
     nav: args.controller.nav,
@@ -93,6 +115,7 @@ function useDerivedControllerState(args: {
       isReviewEditing: args.isReviewEditing,
       isStudyMode: args.isStudyMode,
       nowIso: args.nowIso,
+      priorityQuickSet: args.priorityQuickSet,
       reviewDueCount,
       reviewPreview: args.reviewPreview,
       reviewSettings: args.reviewSettings,
@@ -141,6 +164,7 @@ function buildControllerLayoutState(args: {
   isReviewEditing: boolean;
   isStudyMode: boolean;
   nowIso: string;
+  priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
@@ -158,6 +182,7 @@ function buildControllerLayoutState(args: {
     listResize: args.controller.listResize,
     nav: args.controller.nav,
     nowIso: args.nowIso,
+    priorityQuickSet: args.priorityQuickSet,
     reviewDueCount: args.reviewDueCount,
     reviewPreview: args.reviewPreview,
     reviewSettings: args.reviewSettings,
@@ -183,6 +208,7 @@ export function useAppController(): AppControllerResult {
   const formalImport = useFormalImport();
   const { exitStudyMode, isStudyMode, startStudyMode } = controller.study;
   const hotkeys = useCommandShortcutState([...REVIEW_SHORTCUT_COMMAND_IDS, ...DOCUMENT_SHORTCUT_COMMAND_IDS]);
+  const priorityQuickSet = useControllerPriorityQuickSet({ hotkeys, runtime: controller.runtime, ws });
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
   const currentReviewNode = ws.reviewSession.currentNodeId ? ws.nodesById[ws.reviewSession.currentNodeId] : undefined;
   const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
@@ -196,6 +222,7 @@ export function useAppController(): AppControllerResult {
     isReviewEditing,
     isStudyMode,
     nowIso,
+    priorityQuickSet,
     reviewPreview,
     reviewSettings,
     startStudyMode,
