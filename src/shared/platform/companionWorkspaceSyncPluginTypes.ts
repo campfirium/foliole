@@ -22,7 +22,6 @@ export interface CompanionDiscoveryCandidatesPayload {
 }
 
 export interface CompanionWorkspaceSyncPlugin {
-  applySyncReviewLog(args: { reviews: NativeSyncReviewLogRecord[] }): Promise<{ applied_op_ids: string[] }>;
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;

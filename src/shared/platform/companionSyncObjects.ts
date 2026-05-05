@@ -1,7 +1,6 @@
 import type {
   NativeSyncNodeConflictRecord,
-  NativeSyncObjectRecord,
-  NativeSyncReviewLogRecord
+  NativeSyncObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
@@ -32,6 +31,7 @@ export {
   saveCompanionSyncSettingRecord
 } from './companionSyncStateWriters';
 export { applyCompanionSyncObjects } from './companionSyncStateObjects';
+export { applyCompanionSyncReviewLog } from './companionSyncReviewLogApply';
 
 export async function loadCompanionSyncIndex() {
   if (!isNativeAndroidCompanionRuntime()) {
@@ -95,15 +95,6 @@ export {
   saveCompanionSyncStatePushCursor
 } from './companionSyncCursors';
 export { applyCompanionSyncNodeVersions } from './companionSyncNodeVersions';
-
-export async function applyCompanionSyncReviewLog(reviews: NativeSyncReviewLogRecord[]) {
-  if (!isNativeAndroidCompanionRuntime()) {
-    return [];
-  }
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.applySyncReviewLog({ reviews })
-  ).applied_op_ids);
-}
 
 export async function loadCompanionPdfPageText(attachmentId: string) {
   if (!isNativeAndroidCompanionRuntime()) {

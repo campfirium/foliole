@@ -157,11 +157,6 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionExternalDocumentStore.searchDocuments(database, query, limit);
     }
 
-    JSObject applySyncReviewLog(JSONArray reviews) throws Exception {
-        SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncReviewLogStore.applyReviewLog(database, reviews);
-    }
-
     JSObject loadSyncNodeVersions(JSONObject cursor, int limit) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());

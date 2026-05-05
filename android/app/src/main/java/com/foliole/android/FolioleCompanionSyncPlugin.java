@@ -442,12 +442,4 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
         );
     }
 
-    @PluginMethod
-    public void applySyncReviewLog(PluginCall call) {
-        resolveWithDatabase(
-            call,
-            "Failed to apply companion sync review log.",
-            databaseHelper -> FolioleCompanionSyncDataPluginActions.applySyncReviewLog(databaseHelper, call)
-        );
-    }
 }

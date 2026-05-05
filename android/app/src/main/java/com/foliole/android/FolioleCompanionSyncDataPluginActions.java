@@ -31,10 +31,6 @@ final class FolioleCompanionSyncDataPluginActions {
         );
     }
 
-    static JSObject applySyncReviewLog(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.applySyncReviewLog(call.getData().optJSONArray("reviews"));
-    }
-
     private static Integer readNullableIntCursor(PluginCall call) throws Exception {
         return call.getData().has("cursor") && !call.getData().isNull("cursor")
             ? call.getData().getInt("cursor")
