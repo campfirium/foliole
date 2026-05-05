@@ -31,7 +31,7 @@ export function SettingsAppearanceSection(props: {
   onMonospaceFontSelectionChange: (value: string) => void;
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
-  accentColorInputRef: React.RefObject<HTMLInputElement | null>;
+  accentColorInputRef: React.RefObject<HTMLInputElement>;
 }) {
   const {
     baseColorMode,

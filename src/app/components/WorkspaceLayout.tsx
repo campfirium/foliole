@@ -34,6 +34,7 @@ export interface WorkspaceLayoutProps {
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
   canStartStudyMode: boolean;
+  reviewDueCount: number;
   isStudyMode: boolean;
   isSettingsOpen: boolean;
   isAnswerRevealed: boolean;
@@ -69,6 +70,7 @@ export interface WorkspaceLayoutProps {
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
   onStartStudyMode: () => void;
+  onToggleReviewSession: () => void;
   onOpenSettings: () => void;
   onCloseSettings: () => void;
   onBaseColorModeChange: (value: BaseColorMode) => void;

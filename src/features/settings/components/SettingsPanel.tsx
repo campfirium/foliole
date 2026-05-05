@@ -67,7 +67,7 @@ function SettingsPanelContent(props: SettingsPanelProps) {
 }
 
 function useSettingsPanelViewState(props: SettingsPanelProps) {
-  const accentColorInputRef = useRef<HTMLInputElement | null>(null);
+  const accentColorInputRef = useRef<HTMLInputElement>(null);
   const safeAccentColor = ensureAccentHex(props.accentColorPreset);
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => getInitialSettingsCategory());
   const [availableSystemFonts, setAvailableSystemFonts] = useState<string[]>([]);
@@ -100,7 +100,7 @@ function useSettingsPanelViewState(props: SettingsPanelProps) {
 
 function SettingsPanelBody(props: {
   activeCategory: SettingsCategoryId;
-  accentColorInputRef: React.RefObject<HTMLInputElement | null>;
+  accentColorInputRef: React.RefObject<HTMLInputElement>;
   baseColorMode: BaseColorMode;
   hotkeyItems: HotkeySettingItem[];
   interfaceFontOptions: string[];

@@ -142,6 +142,15 @@ export function addInlineCodeDecorations(
   }
 }
 
+function isWithinRanges(from: number, to: number, ranges: ReadonlyArray<RangeBounds>) {
+  for (const range of ranges) {
+    if (from < range.to && to > range.from) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function collectInlineLinkMatches(
   from: number,
   text: string,

@@ -68,8 +68,9 @@ function WorkspaceGrid({ documentNodeId, props }: WorkspaceContentProps) {
           canStartStudyMode={props.canStartStudyMode}
           isStudyMode={props.isStudyMode}
           isSettingsOpen={props.isSettingsOpen}
+          reviewDueCount={props.reviewDueCount}
           onOpenSettings={props.onOpenSettings}
-          onStartStudyMode={props.onStartStudyMode}
+          onToggleReviewSession={props.onToggleReviewSession}
         />
       </div>
       <div className="col-start-2 min-h-0 min-w-0 overflow-hidden max-[1080px]:col-start-1">

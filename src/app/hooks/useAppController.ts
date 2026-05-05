@@ -1,20 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import {
-  getEditorDisplayMode,
-  setEditorDisplayMode,
-  type EditorDisplayMode
-} from '../../features/editor/model/editorDisplayMode';
+import { getEditorDisplayMode, type EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import {
   getMarkdownSyntaxVisibility,
-  setMarkdownSyntaxVisibility,
   type MarkdownSyntaxVisibility
 } from '../../features/editor/model/markdownSyntaxSetting';
-import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import {
-  INTERFACE_FONT_SIZE_DEFAULT,
-  DEFAULT_ACCENT_COLOR_PRESET,
   applyAppearanceSettings,
   getAccentColorPreset,
   getBaseColorMode,
@@ -25,15 +16,6 @@ import {
   getInterfaceFontSize,
   getMonospaceFontPreset,
   getUiFontPreset,
-  setAccentColorPreset,
-  setBaseColorMode,
-  setCustomInterfaceFont,
-  setCustomMonospaceFont,
-  setCustomUiFont,
-  setInterfaceFontPreset,
-  setInterfaceFontSize,
-  setMonospaceFontPreset,
-  setUiFontPreset,
   type AccentColorPreset,
   type BaseColorMode,
   type InterfaceFontPreset,
@@ -42,10 +24,11 @@ import {
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
-import { onWindowKeydown } from '../../shared/platform/keyboard';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
+import { buildLayoutProps, countDueReviewNodes } from './layoutPropsBuilder';
+import { useAppRuntime } from './useAppRuntime';
 import { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import { useEditorContextCommands } from './useEditorContextCommands';
 import { useListResizer } from './useListResizer';
@@ -133,73 +116,20 @@ function useAppearanceState() {
   };
 }
 
-function useAppRuntime(ws: ReturnType<typeof useWorkspaceSelectors>, startStudyMode: () => void) {
-  const editorRef = useRef<EditorAdapter | null>(null);
-  const lastExpandedListWidthRef = useRef(ws.listWidth);
-  const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [recentCommandIds, setRecentCommandIds] = useState<string[]>([]);
-
-  useEffect(
-    () =>
-      onWindowKeydown((event) => {
-        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-          event.preventDefault();
-          setIsCommandPaletteOpen((open) => !open);
-        }
-      }),
-    []
-  );
-
-  const runSimpleCommand = (id: string, closeTrashView: () => void, openTrashView: () => void) => {
-    setRecentCommandIds((prev) => [id, ...prev.filter((item) => item !== id)].slice(0, 20));
-    if (id === APP_COMMAND_IDS.openNotes) closeTrashView();
-    if (id === APP_COMMAND_IDS.openTrash) openTrashView();
-    if (id === APP_COMMAND_IDS.openSettings) setIsSettingsOpen((open) => !open);
-    if (id === APP_COMMAND_IDS.startStudyMode && ws.startReviewSession()) startStudyMode();
-    setIsCommandPaletteOpen(false);
-  };
-
-  return {
-    editorRef,
-    isCommandPaletteOpen,
-    isSettingsOpen,
-    isViewingTrashNode,
-    lastExpandedListWidthRef,
-    recentCommandIds,
-    runSimpleCommand,
-    setIsCommandPaletteOpen,
-    setIsSettingsOpen,
-    setIsViewingTrashNode
-  };
-}
-
 export function useAppController(): AppControllerResult {
-  const ws = useWorkspaceSelectors();
-  const appearance = useAppearanceState();
-  const trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
-  const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
-  const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
-  const study = useStudyMode({ activeNodeId: ws.activeNodeId, isViewingTrashNode: false });
-  const runtime = useAppRuntime(ws, study.startStudyMode);
-  const listResize = useListResizer(ws.listWidth, ws.setListWidth);
-  const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
-  const saveActiveNodeView = useCallback(() => {
-    if (runtime.isViewingTrashNode || !ws.activeNodeId || !runtime.editorRef.current) return;
-    ws.setNodeViewState(ws.activeNodeId, { scrollTop: runtime.editorRef.current.getScrollTop(), selection: runtime.editorRef.current.getSelection() });
-  }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
-
+  const ws = useWorkspaceSelectors(), appearance = useAppearanceState(), trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
+  const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined, selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
+  const study = useStudyMode({ activeNodeId: ws.activeNodeId, isViewingTrashNode: false }), runtime = useAppRuntime(ws, study.startStudyMode, ws.listWidth);
+  const listResize = useListResizer(ws.listWidth, ws.setListWidth), documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
+  const saveActiveNodeView = useCallback(() => { if (runtime.isViewingTrashNode || !ws.activeNodeId || !runtime.editorRef.current) return; ws.setNodeViewState(ws.activeNodeId, { scrollTop: runtime.editorRef.current.getScrollTop(), selection: runtime.editorRef.current.getSelection() }); }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
   const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, closeContextMenu: () => undefined, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, openNode: ws.openNode, saveActiveNodeView });
   const editorCtx = useEditorContextCommands({ activeNode, activeNodeId: ws.activeNodeId, createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection, createQANodeFromSelection: ws.createQANodeFromSelection, editorRef: runtime.editorRef, isTrashViewOpen: runtime.isViewingTrashNode, updateNodeContent: ws.updateNodeContent });
-
-  const hotkeyItems: HotkeySettingItem[] = useMemo(
-    () => buildPaletteItems().map((item) => ({ commandId: item.id, title: item.title, section: item.section, shortcutLabel: '', isCustomized: false })),
-    []
-  );
+  const hotkeyItems: HotkeySettingItem[] = useMemo(() => buildPaletteItems().map((item) => ({ commandId: item.id, title: item.title, section: item.section, shortcutLabel: '', isCustomized: false })), []);
   const onHotkeyUpdate = (): HotkeyUpdateResult => ({ status: 'blocked', message: 'Hotkey customization is temporarily unavailable.' });
-
-  const layoutProps = buildLayoutProps({ appearance, documentNode: runtime.isViewingTrashNode ? selectedTrashNode : activeNode, documentResize, editorCtx, hotkeyItems, listResize, nav, onHotkeyUpdate, runtime, study, trash, ws });
+  const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, new Date().toISOString()), [ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
+  const { exitStudyMode, isStudyMode, startStudyMode } = study;
+  useEffect(() => { if (isStudyMode && ws.reviewSession.currentNodeId === null) exitStudyMode(); }, [exitStudyMode, isStudyMode, ws.reviewSession.currentNodeId]);
+  const layoutProps = buildLayoutProps({ activeNodeId: ws.activeNodeId, appearance, canGoBack: nav.canGoBack, canGoForward: nav.canGoForward, canGoParent: nav.canGoParent, canStartStudyMode: reviewDueCount > 0 && study.canStartStudyMode, contextMenu: editorCtx.contextMenu, documentMaxWidth: ws.documentMaxWidth, documentNode: runtime.isViewingTrashNode ? selectedTrashNode : activeNode, documentResize, editorNodeId: runtime.isViewingTrashNode ? null : ws.activeNodeId, editorNodeViewState: !runtime.isViewingTrashNode && ws.activeNodeId ? ws.nodeViewById[ws.activeNodeId] : undefined, hotkeyItems, isResizingList: listResize.isResizingList, isSettingsOpen: runtime.isSettingsOpen, isStudyMode, isTrashViewOpen: trash.isTrashViewOpen, isViewingTrashNode: runtime.isViewingTrashNode, listWidth: ws.listWidth, nodeOrder: ws.nodeOrder, nodesById: ws.nodesById, onAnswerChange: (answer) => ws.activeNodeId && !runtime.isViewingTrashNode && ws.updateNodeReveal(ws.activeNodeId, answer), onEditorChange: (content) => !runtime.isViewingTrashNode && (ws.activeNodeId ? ws.updateNodeContent(ws.activeNodeId, content) : ws.createRootNode(content)), onEditorReady: (adapter) => { runtime.editorRef.current = adapter; }, onHotkeyUpdate, onOpenNotesView: trash.closeTrashView, onOpenSettings: () => runtime.setIsSettingsOpen(true), onCloseSettings: () => runtime.setIsSettingsOpen(false), onOpenTrashView: () => (trash.isTrashViewOpen ? trash.closeTrashView() : trash.openTrashView()), onResetLayout: ws.resetLayout, onSelectTrashNode: (nodeId) => (runtime.setIsViewingTrashNode(true), trash.openTrashView(), trash.setSelectedTrashNodeId(nodeId)), onSplitterKeyDown: listResize.handleSplitterKeyDown, onSplitterPointerDown: listResize.handleSplitterPointerDown, onToggleListVisibility: () => (ws.listWidth <= 0 ? ws.setListWidth(Math.max(220, runtime.lastExpandedListWidthRef.current || 300)) : (runtime.lastExpandedListWidthRef.current = ws.listWidth, ws.setListWidth(0))), reviewDueCount, reviewSession: ws.reviewSession, showAnswerSection: !isStudyMode || ws.reviewSession.isAnswerRevealed, selectedTrashNodeId: trash.selectedTrashNodeId, startStudyMode, startReviewSession: ws.startReviewSession, exitReviewSession: ws.exitReviewSession, exitStudyMode, updateGrade: (grade) => void ws.gradeReviewCard(grade), revealReviewAnswer: ws.revealReviewAnswer, nav: { onGoBack: nav.handleGoBack, onGoForward: nav.handleGoForward, onGoParent: nav.handleGoParent, onSelectBreadcrumbNode: nav.handleSelectBreadcrumbNode, onSelectNode: nav.handleSelectNode }, editorCtx: { onCloseContextMenu: editorCtx.closeContextMenu, onCreateCloze: editorCtx.handleCreateCloze, onCreateHighlight: editorCtx.handleCreateHighlight, onEditorContextMenu: editorCtx.handleEditorContextMenu } });
   return {
     layoutProps,
     paletteState: {
@@ -209,53 +139,5 @@ export function useAppController(): AppControllerResult {
       onClose: () => runtime.setIsCommandPaletteOpen(false),
       onRunCommand: (id) => runtime.runSimpleCommand(id, trash.closeTrashView, trash.openTrashView)
     }
-  };
-}
-
-function buildLayoutProps(args: {
-  appearance: ReturnType<typeof useAppearanceState>;
-  documentNode: typeof useWorkspaceStore extends never ? never : { content: string } | undefined;
-  documentResize: ReturnType<typeof useDocumentWidthResizer>;
-  editorCtx: ReturnType<typeof useEditorContextCommands>;
-  hotkeyItems: HotkeySettingItem[];
-  listResize: ReturnType<typeof useListResizer>;
-  nav: ReturnType<typeof useWorkspaceNavigation>;
-  onHotkeyUpdate: () => HotkeyUpdateResult;
-  runtime: ReturnType<typeof useAppRuntime>;
-  study: ReturnType<typeof useStudyMode>;
-  trash: ReturnType<typeof useTrashView>;
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}): WorkspaceLayoutProps {
-  const { appearance, documentNode, documentResize, editorCtx, hotkeyItems, listResize, nav, onHotkeyUpdate, runtime, study, trash, ws } = args;
-  return {
-    activeNodeId: ws.activeNodeId, canGoBack: nav.canGoBack, canGoForward: nav.canGoForward, canGoParent: nav.canGoParent, contextMenu: editorCtx.contextMenu,
-    documentMaxWidth: ws.documentMaxWidth, editorContent: documentNode?.content ?? '', editorNodeId: runtime.isViewingTrashNode ? null : ws.activeNodeId,
-    editorNodeViewState: !runtime.isViewingTrashNode && ws.activeNodeId ? ws.nodeViewById[ws.activeNodeId] : undefined, canStartStudyMode: study.canStartStudyMode,
-    isStudyMode: study.isStudyMode, isSettingsOpen: runtime.isSettingsOpen, isAnswerRevealed: ws.reviewSession.isAnswerRevealed, isDocumentResizing: documentResize.isResizingDocument,
-    isResizingList: listResize.isResizingList, isTrashViewOpen: trash.isTrashViewOpen, isViewingTrashNode: runtime.isViewingTrashNode, showAnswerSection: !study.isStudyMode || ws.reviewSession.isAnswerRevealed,
-    listWidth: ws.listWidth, nodeOrder: ws.nodeOrder, nodesById: ws.nodesById, onAnswerChange: (answer) => ws.activeNodeId && !runtime.isViewingTrashNode && ws.updateNodeReveal(ws.activeNodeId, answer),
-    onEditorChange: (content) => !runtime.isViewingTrashNode && (ws.activeNodeId ? ws.updateNodeContent(ws.activeNodeId, content) : ws.createRootNode(content)), onEditorReady: (adapter) => (runtime.editorRef.current = adapter),
-    onEditorContextMenu: editorCtx.handleEditorContextMenu, onResetLayout: ws.resetLayout, onSelectBreadcrumbNode: nav.handleSelectBreadcrumbNode, onSelectNode: nav.handleSelectNode,
-    onSelectTrashNode: (nodeId) => (runtime.setIsViewingTrashNode(true), trash.openTrashView(), trash.setSelectedTrashNodeId(nodeId)), onSplitterKeyDown: listResize.handleSplitterKeyDown,
-    onSplitterPointerDown: listResize.handleSplitterPointerDown, onOpenNotesView: trash.closeTrashView, onOpenTrashView: () => (trash.isTrashViewOpen ? trash.closeTrashView() : trash.openTrashView()),
-    onToggleListVisibility: () => (ws.listWidth <= 0 ? ws.setListWidth(Math.max(220, runtime.lastExpandedListWidthRef.current || 300)) : (runtime.lastExpandedListWidthRef.current = ws.listWidth, ws.setListWidth(0))),
-    onGoBack: nav.handleGoBack, onGoForward: nav.handleGoForward, onGoParent: nav.handleGoParent, onCloseContextMenu: editorCtx.closeContextMenu, onCreateHighlight: editorCtx.handleCreateHighlight,
-    onCreateCloze: editorCtx.handleCreateCloze, onStartDocumentResize: documentResize.startResize, onStartStudyMode: () => ws.startReviewSession() && study.startStudyMode(), onOpenSettings: () => runtime.setIsSettingsOpen(true),
-    onCloseSettings: () => runtime.setIsSettingsOpen(false), onBaseColorModeChange: (value) => (setBaseColorMode(value), appearance.setBaseColorModeState(value)), onAccentColorPresetChange: (value) => (setAccentColorPreset(value), appearance.setAccentColorPresetState(value)),
-    onAccentColorPresetReset: () => (setAccentColorPreset(DEFAULT_ACCENT_COLOR_PRESET), appearance.setAccentColorPresetState(DEFAULT_ACCENT_COLOR_PRESET)), onInterfaceFontPresetChange: (value) => (setInterfaceFontPreset(value), appearance.setInterfaceFontPresetState(value)),
-    onUiFontPresetChange: (value) => (setUiFontPreset(value), appearance.setUiFontPresetState(value)), onCustomUiFontChange: (value) => (setCustomUiFont(value), appearance.setCustomUiFontState(value)), onCustomInterfaceFontChange: (value) => (setCustomInterfaceFont(value), appearance.setCustomInterfaceFontState(value)),
-    onMonospaceFontPresetChange: (value) => (setMonospaceFontPreset(value), appearance.setMonospaceFontPresetState(value)), onCustomMonospaceFontChange: (value) => (setCustomMonospaceFont(value), appearance.setCustomMonospaceFontState(value)),
-    onInterfaceFontSizeChange: (value) => (setInterfaceFontSize(value), appearance.setInterfaceFontSizeState(value)), onInterfaceFontSizeReset: () => (setInterfaceFontSize(INTERFACE_FONT_SIZE_DEFAULT), appearance.setInterfaceFontSizeState(INTERFACE_FONT_SIZE_DEFAULT)),
-    onMarkdownSyntaxVisibilityChange: (value) => (setMarkdownSyntaxVisibility(value), appearance.setMarkdownSyntaxVisibilityState(value)), onToggleEditorDisplayMode: () => {
-      const next: EditorDisplayMode = appearance.editorDisplayMode === 'preview' ? 'source' : 'preview';
-      setEditorDisplayMode(next);
-      appearance.setEditorDisplayModeState(next);
-    },
-    onRevealAnswer: ws.revealReviewAnswer, onGradeReview: (grade: ReviewGrade) => void ws.gradeReviewCard(grade), customUiFont: appearance.customUiFont,
-    customInterfaceFont: appearance.customInterfaceFont, customMonospaceFont: appearance.customMonospaceFont, baseColorMode: appearance.baseColorMode,
-    accentColorPreset: appearance.accentColorPreset, uiFontPreset: appearance.uiFontPreset, interfaceFontPreset: appearance.interfaceFontPreset,
-    interfaceFontSize: appearance.interfaceFontSize, markdownSyntaxVisibility: appearance.markdownSyntaxVisibility, editorDisplayMode: appearance.editorDisplayMode,
-    monospaceFontPreset: appearance.monospaceFontPreset, hotkeyItems, selectedTrashNodeId: trash.selectedTrashNodeId, onHotkeyUpdate,
-    onHotkeyReset: () => undefined, onHotkeyResetAll: () => undefined
   };
 }
