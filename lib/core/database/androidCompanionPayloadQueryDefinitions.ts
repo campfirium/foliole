@@ -66,13 +66,34 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ? LIMIT 1"
   },
   syncPayloadViewActiveNode: {
-    syncPayload: { argMode: 'none', objectIdKey: 'active_node', objectType: 'view_state', workspaceMetaKey: 'active_node_id' },
+    syncPayload: {
+      activeNodePayloadKey: 'active_node_id',
+      argMode: 'none',
+      formFactor: 'phone',
+      objectIdKey: 'active_node',
+      objectType: 'view_state',
+      platform: 'android',
+      scope: 'session_resume',
+      workspaceMetaKey: 'active_node_id'
+    },
     sql:
       "SELECT json_object('active_node_id', NULLIF(value, '')) AS payload_json " +
       "FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1"
   },
   syncPayloadViewNodeState: {
-    syncPayload: { argMode: 'view_state_node', objectIdPrefix: 'node:', objectType: 'view_state' },
+    syncPayload: {
+      appliedSource: 'sync-apply',
+      argMode: 'view_state_node',
+      hashIgnoredPayloadKeys: ['source'],
+      localSource: 'user-scroll',
+      nodeIdPayloadKey: 'node_id',
+      objectIdPrefix: 'node:',
+      objectType: 'view_state',
+      scrollTopPayloadKey: 'scroll_top',
+      selectionFromPayloadKey: 'selection_from',
+      selectionToPayloadKey: 'selection_to',
+      sourcePayloadKey: 'source'
+    },
     sql:
       "SELECT json_object('node_id', node_id, 'scroll_top', scroll_top, 'selection_from', NULL, " +
       "'selection_to', NULL, 'source', source) AS payload_json FROM node_view_state " +

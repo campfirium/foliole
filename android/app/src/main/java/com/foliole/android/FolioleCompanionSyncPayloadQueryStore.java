@@ -8,8 +8,10 @@ import com.getcapacitor.JSObject;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 final class FolioleCompanionSyncPayloadQueryStore {
     private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
@@ -28,12 +30,60 @@ final class FolioleCompanionSyncPayloadQueryStore {
         return metadata(context, "syncPayloadViewActiveNode", "objectIdKey");
     }
 
+    static String viewActiveNodePayloadKey(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewActiveNode", "activeNodePayloadKey");
+    }
+
+    static String viewFormFactor(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewActiveNode", "formFactor");
+    }
+
+    static Set<String> viewHashIgnoredPayloadKeys(Context context) throws Exception {
+        return metadataSet(context, "syncPayloadViewNodeState", "hashIgnoredPayloadKeys");
+    }
+
+    static String viewLocalSource(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewNodeState", "localSource");
+    }
+
+    static String viewNodeIdPayloadKey(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewNodeState", "nodeIdPayloadKey");
+    }
+
     static String viewActiveNodeWorkspaceMetaKey(Context context) throws Exception {
         return metadata(context, "syncPayloadViewActiveNode", "workspaceMetaKey");
     }
 
     static String viewNodeKeyPrefix(Context context) throws Exception {
         return metadata(context, "syncPayloadViewNodeState", "objectIdPrefix");
+    }
+
+    static String viewPlatform(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewActiveNode", "platform");
+    }
+
+    static String viewScrollTopPayloadKey(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewNodeState", "scrollTopPayloadKey");
+    }
+
+    static String viewSelectionFromPayloadKey(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewNodeState", "selectionFromPayloadKey");
+    }
+
+    static String viewSelectionToPayloadKey(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewNodeState", "selectionToPayloadKey");
+    }
+
+    static String viewSourcePayloadKey(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewNodeState", "sourcePayloadKey");
+    }
+
+    static String viewSyncAppliedSource(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewNodeState", "appliedSource");
+    }
+
+    static String viewScope(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewActiveNode", "scope");
     }
 
     static JSObject loadRowsWithPayloads(
@@ -106,6 +156,16 @@ final class FolioleCompanionSyncPayloadQueryStore {
             throw new IllegalStateException("Companion query definitions asset is missing queries.");
         }
         return queries;
+    }
+
+    private static Set<String> metadataSet(Context context, String queryName, String key) throws Exception {
+        JSONArray values = loadQuery(context, queryName).getJSONObject("syncPayload").getJSONArray(key);
+        Set<String> result = new HashSet<>();
+        for (int index = 0; index < values.length(); index += 1) {
+            String value = values.getString(index).trim();
+            if (!value.isEmpty()) result.add(value);
+        }
+        return result;
     }
 
     private static boolean matches(JSONObject query, String objectType, String objectIdKey) {

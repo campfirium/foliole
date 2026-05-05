@@ -9,23 +9,20 @@ import org.json.JSONObject;
 
 import java.time.Instant;
 import java.util.Iterator;
+import java.util.Set;
 
 final class FolioleCompanionViewStateSyncStore {
-
-    private static final String FORM_FACTOR = "phone";
-    private static final String PLATFORM = "android";
-    private static final String SCOPE = "session_resume";
 
     private FolioleCompanionViewStateSyncStore() {}
 
     static JSObject saveActiveNode(Context context, SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
-        String nodeId = nullIfEmpty(input.optString("node_id", ""));
+        String nodeId = nullIfEmpty(input.optString(nodeIdPayloadKey(context), ""));
         JSONObject payload = new JSONObject();
-        payload.put("active_node_id", nodeId == null ? JSONObject.NULL : nodeId);
+        payload.put(activeNodePayloadKey(context), nodeId == null ? JSONObject.NULL : nodeId);
         String now = Instant.now().toString();
         String key = activeNodeKey(context);
-        String objectId = objectId(deviceId, key);
-        String contentHash = contentHash(deviceId, key, payload);
+        String objectId = objectId(context, deviceId, key);
+        String contentHash = contentHash(context, deviceId, key, payload);
         database.beginTransaction();
         try {
             upsertActiveNode(context, database, nodeId, now);
@@ -38,20 +35,23 @@ final class FolioleCompanionViewStateSyncStore {
     }
 
     static JSObject saveNodeViewState(Context context, SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
-        String nodeId = input.optString("node_id");
+        String nodeIdKey = nodeIdPayloadKey(context);
+        String scrollTopKey = scrollTopPayloadKey(context);
+        String source = localSource(context);
+        String nodeId = input.optString(nodeIdKey);
         JSONObject payload = new JSONObject();
-        payload.put("node_id", nodeId);
-        payload.put("scroll_top", Math.max(0, input.optInt("scroll_top", 0)));
-        payload.put("selection_from", JSONObject.NULL);
-        payload.put("selection_to", JSONObject.NULL);
-        payload.put("source", "user-scroll");
+        payload.put(nodeIdKey, nodeId);
+        payload.put(scrollTopKey, Math.max(0, input.optInt(scrollTopKey, 0)));
+        payload.put(selectionFromPayloadKey(context), JSONObject.NULL);
+        payload.put(selectionToPayloadKey(context), JSONObject.NULL);
+        payload.put(sourcePayloadKey(context), source);
         String now = Instant.now().toString();
         String key = nodeKeyPrefix(context) + nodeId;
-        String objectId = objectId(deviceId, key);
-        String contentHash = contentHash(deviceId, key, payload);
+        String objectId = objectId(context, deviceId, key);
+        String contentHash = contentHash(context, deviceId, key, payload);
         database.beginTransaction();
         try {
-            upsertNodeViewState(context, database, nodeId, deviceId, payload.optInt("scroll_top", 0), "user-scroll", now);
+            upsertNodeViewState(context, database, nodeId, deviceId, payload.optInt(scrollTopKey, 0), source, now);
             writeSyncRows(context, database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
@@ -76,10 +76,11 @@ final class FolioleCompanionViewStateSyncStore {
         }
         JSONObject payload = payload(record);
         if (key.equals(activeKey)) {
-            upsertActiveNode(context, database, nullIfEmpty(payload.optString("active_node_id", "")), record.optString("updated_at"));
+            upsertActiveNode(context, database, nullIfEmpty(payload.optString(activeNodePayloadKey(context), "")), record.optString("updated_at"));
         } else if (key.startsWith(nodePrefix)) {
-            String source = payload.has("source") ? "sync-apply" : "user-scroll";
-            upsertNodeViewState(context, database, key.substring(nodePrefix.length()), deviceId, payload.optInt("scroll_top", 0), source, record.optString("updated_at"));
+            String sourceKey = sourcePayloadKey(context);
+            String source = payload.has(sourceKey) ? syncAppliedSource(context) : localSource(context);
+            upsertNodeViewState(context, database, key.substring(nodePrefix.length()), deviceId, payload.optInt(scrollTopPayloadKey(context), 0), source, record.optString("updated_at"));
         }
     }
 
@@ -89,7 +90,7 @@ final class FolioleCompanionViewStateSyncStore {
 
     private static void upsertActiveNode(Context context, SQLiteDatabase database, String nodeId, String now) throws Exception {
         FolioleCompanionNamedMutationStore.execute(context, database, "syncViewActiveNodeUpsert", new Object[] {
-            "active_node_id",
+            FolioleCompanionSyncPayloadQueryStore.viewActiveNodeWorkspaceMetaKey(context),
             nodeId == null ? "" : nodeId,
             now
         });
@@ -107,16 +108,64 @@ final class FolioleCompanionViewStateSyncStore {
         });
     }
 
-    private static String objectId(String deviceId, String key) {
-        return SCOPE + ":" + PLATFORM + ":" + FORM_FACTOR + ":" + deviceId + ":" + key;
+    private static String objectId(Context context, String deviceId, String key) throws Exception {
+        return scope(context) + ":" + platform(context) + ":" + formFactor(context) + ":" + deviceId + ":" + key;
     }
 
     private static String activeNodeKey(Context context) throws Exception {
         return FolioleCompanionSyncPayloadQueryStore.viewActiveNodeKey(context);
     }
 
+    private static String activeNodePayloadKey(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewActiveNodePayloadKey(context);
+    }
+
+    private static String formFactor(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewFormFactor(context);
+    }
+
+    private static Set<String> hashIgnoredPayloadKeys(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewHashIgnoredPayloadKeys(context);
+    }
+
+    private static String localSource(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewLocalSource(context);
+    }
+
+    private static String nodeIdPayloadKey(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewNodeIdPayloadKey(context);
+    }
+
     private static String nodeKeyPrefix(Context context) throws Exception {
         return FolioleCompanionSyncPayloadQueryStore.viewNodeKeyPrefix(context);
+    }
+
+    private static String platform(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewPlatform(context);
+    }
+
+    private static String scope(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewScope(context);
+    }
+
+    private static String scrollTopPayloadKey(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewScrollTopPayloadKey(context);
+    }
+
+    private static String selectionFromPayloadKey(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewSelectionFromPayloadKey(context);
+    }
+
+    private static String selectionToPayloadKey(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewSelectionToPayloadKey(context);
+    }
+
+    private static String sourcePayloadKey(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewSourcePayloadKey(context);
+    }
+
+    private static String syncAppliedSource(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewSyncAppliedSource(context);
     }
 
     private static String objectIdKey(String objectId) {
@@ -133,17 +182,18 @@ final class FolioleCompanionViewStateSyncStore {
         return FolioleCompanionSyncPayloadJson.payload(record);
     }
 
-    private static String contentHash(String deviceId, String key, JSONObject payload) throws Exception {
+    private static String contentHash(Context context, String deviceId, String key, JSONObject payload) throws Exception {
         JSONObject canonical = new JSONObject();
         canonical.put("device_id", deviceId);
-        canonical.put("form_factor", FORM_FACTOR);
+        canonical.put("form_factor", formFactor(context));
         canonical.put("key", key);
-        canonical.put("platform", PLATFORM);
-        canonical.put("scope", SCOPE);
+        canonical.put("platform", platform(context));
+        canonical.put("scope", scope(context));
+        Set<String> ignoredPayloadKeys = hashIgnoredPayloadKeys(context);
         Iterator<String> payloadKeys = payload.keys();
         while (payloadKeys.hasNext()) {
             String payloadKey = payloadKeys.next();
-            if (payloadKey.equals("source")) continue;
+            if (ignoredPayloadKeys.contains(payloadKey)) continue;
             canonical.put(payloadKey, payload.get(payloadKey));
         }
         return FolioleCompanionSyncContentHash.hash(canonical);
