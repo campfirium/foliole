@@ -10,6 +10,7 @@ import type {
 } from '../../lib/platform/nativeContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 
+import { loadEpubPreview, runEpubImport } from './epubImport.js';
 import {
   buildPreparedImportRecord,
   loadPreparedImportRecord,
@@ -66,6 +67,9 @@ async function runImportForFilePath(filePath: string, args?: NativeTextImportArg
   const titleStrategy = resolveImportNodeTitleStrategy(args);
 
   try {
+    if (source.kind === 'epub') {
+      return toNativeTextImportResult(await runEpubImport(source, importedAt));
+    }
     return toNativeTextImportResult(
       runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt, titleStrategy }))
     );
@@ -86,14 +90,19 @@ export async function selectImportTextFile(
     return null;
   }
   const source = resolveSingleFileImportSource(filePath);
-  const prepared = await loadPreparedImportRecord(source, {
-    highlightPolicy: resolveImportHighlightPolicy(args),
-    importedAt: new Date().toISOString(),
-    titleStrategy: resolveImportNodeTitleStrategy(args)
-  });
+  const content =
+    source.kind === 'epub'
+      ? await loadEpubPreview(source)
+      : (
+          await loadPreparedImportRecord(source, {
+            highlightPolicy: resolveImportHighlightPolicy(args),
+            importedAt: new Date().toISOString(),
+            titleStrategy: resolveImportNodeTitleStrategy(args)
+          })
+        ).content;
 
   return {
-    content: prepared.content,
+    content,
     file_name: path.basename(filePath),
     file_path: filePath,
     kind: source.kind

@@ -8,6 +8,11 @@ const { readFile, runPreparedImport, showOpenDialog } = vi.hoisted(() => ({
   showOpenDialog: vi.fn()
 }));
 
+const { loadEpubPreview, runEpubImport } = vi.hoisted(() => ({
+  loadEpubPreview: vi.fn(),
+  runEpubImport: vi.fn()
+}));
+
 vi.mock('electron', () => ({
   dialog: { showOpenDialog }
 }));
@@ -22,6 +27,11 @@ vi.mock('../database/importPipeline.js', () => ({
   runPreparedImport
 }));
 
+vi.mock('./epubImport.js', () => ({
+  loadEpubPreview,
+  runEpubImport
+}));
+
 import { runTextFileImport, selectImportTextFile } from './importTextFile.js';
 
 const DEGRADED_HTML =
@@ -31,6 +41,22 @@ beforeEach(() => {
   vi.clearAllMocks();
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.html'] });
   readFile.mockResolvedValue('<h2>Imported</h2><p><strong>Bold</strong> text</p>');
+  loadEpubPreview.mockResolvedValue('# Sample Book\n\n# Chapter 1\n\nBody');
+  runEpubImport.mockResolvedValue({
+    contentFingerprint: 'epub-content-fingerprint',
+    degradedReason: null,
+    duplicateSemantic: 'new',
+    failureReason: null,
+    importId: 'import-epub',
+    importedAt: '2026-03-22T12:10:00.000Z',
+    nodeId: 'node-import-epub',
+    provider: 'desktop_text_file',
+    resultStatus: 'imported',
+    sourceFingerprint: 'epub-source-fingerprint',
+    sourceKind: 'epub',
+    sourceLocator: '/tmp/book.epub',
+    sourceName: 'book.epub'
+  });
   runPreparedImport.mockReturnValue({
     contentFingerprint: 'content-fingerprint',
     degradedReason: null,
@@ -130,43 +156,27 @@ it('supports adopting markdown highlight markers during import', async () => {
   );
 });
 
-it('retains EPUB imports as explicit degraded results instead of dropping them', async () => {
+it('routes EPUB previews and imports through the dedicated extractor', async () => {
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/book.epub'] });
-  runPreparedImport.mockReturnValue({
-    contentFingerprint: 'content-fingerprint',
-    degradedReason: 'EPUB import degraded: text extraction is not implemented yet',
-    duplicateSemantic: 'new',
-    failureReason: null,
-    importId: 'import-epub',
-    importedAt: '2026-03-22T12:10:00.000Z',
-    nodeId: 'node-import-epub',
-    provider: 'desktop_text_file',
-    resultStatus: 'degraded',
-    sourceFingerprint: 'source-fingerprint',
-    sourceKind: 'epub',
-    sourceLocator: '/tmp/book.epub',
-    sourceName: 'book.epub'
-  });
 
   await expect(selectImportTextFile()).resolves.toEqual({
-    content:
-      '# book.epub\n[Degraded import retained]\n- source kind: epub\n- reason: EPUB import degraded: text extraction is not implemented yet',
+    content: '# Sample Book\n\n# Chapter 1\n\nBody',
     file_name: 'book.epub',
     file_path: '/tmp/book.epub',
     kind: 'epub'
   });
 
   await expect(runTextFileImport()).resolves.toEqual({
-    content_fingerprint: 'content-fingerprint',
-    degraded_reason: 'EPUB import degraded: text extraction is not implemented yet',
+    content_fingerprint: 'epub-content-fingerprint',
+    degraded_reason: null,
     duplicate_semantic: 'new',
     failure_reason: null,
     import_id: 'import-epub',
     imported_at: '2026-03-22T12:10:00.000Z',
     node_id: 'node-import-epub',
     provider: 'desktop_text_file',
-    result_status: 'degraded',
-    source_fingerprint: 'source-fingerprint',
+    result_status: 'imported',
+    source_fingerprint: 'epub-source-fingerprint',
     source_kind: 'epub',
     source_locator: '/tmp/book.epub',
     source_name: 'book.epub'
@@ -178,17 +188,15 @@ it('retains EPUB imports as explicit degraded results instead of dropping them',
       properties: ['openFile', 'multiSelections']
     })
   );
-  expect(runPreparedImport).toHaveBeenCalledWith(
-    expect.objectContaining({
-      content:
-        '# book.epub\n[Degraded import retained]\n- source kind: epub\n- reason: EPUB import degraded: text extraction is not implemented yet',
-      degradedReason: 'EPUB import degraded: text extraction is not implemented yet',
-      sourceKind: 'epub',
-      sourceLocator: '/tmp/book.epub',
-      sourceName: 'book.epub'
-    })
+  expect(loadEpubPreview).toHaveBeenCalledWith(
+    expect.objectContaining({ filePath: '/tmp/book.epub', kind: 'epub', sourceName: 'book.epub' })
+  );
+  expect(runEpubImport).toHaveBeenCalledWith(
+    expect.objectContaining({ filePath: '/tmp/book.epub', kind: 'epub', sourceName: 'book.epub' }),
+    expect.any(String)
   );
   expect(readFile).not.toHaveBeenCalled();
+  expect(runPreparedImport).not.toHaveBeenCalled();
 });
 
 it('imports every selected file and returns the last import result', async () => {

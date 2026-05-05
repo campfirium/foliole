@@ -1,0 +1,127 @@
+// @vitest-environment node
+
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+let mockedAppDataDir = '/tmp/foliole-epub-import-tests';
+
+vi.mock('../ipc/paths.js', () => ({
+  resolveAppPaths: () => ({
+    app_data_dir: mockedAppDataDir,
+    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
+    app_config_dir: path.join(mockedAppDataDir, 'config'),
+    app_log_dir: path.join(mockedAppDataDir, 'logs')
+  })
+}));
+
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { initializeDatabase } from '../database/migrate.js';
+
+import { runEpubImport } from './epubImport.js';
+import { createTestZip } from './testZipBuilder.js';
+
+let tempRoot = '';
+
+beforeEach(async () => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-epub-import-'));
+  mockedAppDataDir = path.join(tempRoot, 'app-data');
+  initializeDatabase();
+});
+
+afterEach(async () => {
+  closeDatabaseConnection();
+  await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
+async function writeEpub(fileName: string, entries: Array<{ content: string; name: string }>) {
+  const filePath = path.join(tempRoot, fileName);
+  await fs.writeFile(filePath, createTestZip(entries.map((entry) => ({ ...entry, compression: 'store' as const }))));
+  return filePath;
+}
+
+function source(filePath: string) {
+  return { adapterId: 'text_file' as const, filePath, kind: 'epub' as const, sourceName: path.basename(filePath) };
+}
+
+function readImportedChildren(parentNodeId: string) {
+  return openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT n.title, n.content
+       FROM nodes n
+       JOIN node_order o ON o.node_id = n.id
+       WHERE n.parent_id = ?
+       ORDER BY o.position ASC`
+    )
+    .all(parentNodeId) as Array<{ content: string; title: string }>;
+}
+
+it('imports chapters in spine order and uses page title before first heading', async () => {
+  const filePath = await writeEpub('ordered.epub', [
+    { content: 'application/epub+zip', name: 'mimetype' },
+    {
+      content:
+        '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+      name: 'META-INF/container.xml'
+    },
+    {
+      content:
+        '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Sample Book</dc:title></metadata><manifest><item id="later" href="text/later.xhtml" media-type="application/xhtml+xml"/><item id="first" href="text/first.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="first"/><itemref idref="later"/></spine></package>',
+      name: 'OPS/book.opf'
+    },
+    {
+      content: '<html><head><title>Page First</title></head><body><h1>Body First</h1><p>First spine body.</p></body></html>',
+      name: 'OPS/text/first.xhtml'
+    },
+    {
+      content: '<html><body><h1>Fallback Heading</h1><p>Second spine body.</p></body></html>',
+      name: 'OPS/text/later.xhtml'
+    }
+  ]);
+
+  const imported = await runEpubImport(source(filePath), '2026-04-01T12:00:00.000Z');
+  const children = readImportedChildren(imported.nodeId as string);
+
+  expect(imported.resultStatus).toBe('imported');
+  expect(children.map((child) => child.title)).toEqual(['Page First', 'Fallback Heading']);
+  expect(children[0]?.content).toContain('First spine body.');
+  expect(children[1]?.content).toContain('Second spine body.');
+});
+
+it('fails with a readable reason when the package entry is missing', async () => {
+  const filePath = await writeEpub('missing-container.epub', [{ content: 'application/epub+zip', name: 'mimetype' }]);
+  await expect(runEpubImport(source(filePath), '2026-04-01T12:05:00.000Z')).rejects.toThrow(
+    'EPUB import failed: missing META-INF/container.xml'
+  );
+});
+
+it('keeps valid chapters and marks the run degraded when one chapter is missing', async () => {
+  const filePath = await writeEpub('broken-chapter.epub', [
+    { content: 'application/epub+zip', name: 'mimetype' },
+    {
+      content:
+        '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+      name: 'META-INF/container.xml'
+    },
+    {
+      content:
+        '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Broken Book</dc:title></metadata><manifest><item id="good" href="text/good.xhtml" media-type="application/xhtml+xml"/><item id="bad" href="text/missing.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="good"/><itemref idref="bad"/></spine></package>',
+      name: 'OPS/book.opf'
+    },
+    {
+      content: '<html><head><title>Good Chapter</title></head><body><p>Good body.</p></body></html>',
+      name: 'OPS/text/good.xhtml'
+    }
+  ]);
+
+  const imported = await runEpubImport(source(filePath), '2026-04-01T12:10:00.000Z');
+  const children = readImportedChildren(imported.nodeId as string);
+
+  expect(imported.resultStatus).toBe('degraded');
+  expect(imported.degradedReason).toContain('EPUB chapter missing entry: OPS/text/missing.xhtml');
+  expect(children).toHaveLength(2);
+  expect(children[0]?.title).toBe('Good Chapter');
+  expect(children[1]?.content).toContain('EPUB chapter missing entry: OPS/text/missing.xhtml');
+});
