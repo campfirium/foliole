@@ -155,6 +155,11 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
     objectIds: 'object_ids',
     objectTypes: 'object_types'
   },
+  syncCursorPayloadKeys: {
+    changeId: 'change_id',
+    createdAt: 'created_at',
+    cursor: 'cursor'
+  },
   syncMetaCursors: {
     nodeVersion: 'sync_node_version_cursor',
     nodeVersionPush: 'sync_node_version_push_cursor',

@@ -30,7 +30,7 @@ final class FolioleCompanionMetaRecords {
     static JSObject loadNumberCursor(Context context, SQLiteDatabase database, String key) throws Exception {
         JSObject result = new JSObject();
         int cursor = loadNumberCursorValue(context, database, key);
-        result.put("cursor", cursor <= 0 ? JSONObject.NULL : cursor);
+        result.put(cursorPayloadKey(context, "cursor"), cursor <= 0 ? JSONObject.NULL : cursor);
         return result;
     }
 
@@ -55,17 +55,19 @@ final class FolioleCompanionMetaRecords {
     static JSObject loadJsonCursor(Context context, SQLiteDatabase database, String key) throws Exception {
         JSObject result = new JSObject();
         String stored = loadValue(context, database, key);
-        result.put("cursor", stored == null ? JSONObject.NULL : new JSONObject(stored));
+        result.put(cursorPayloadKey(context, "cursor"), stored == null ? JSONObject.NULL : new JSONObject(stored));
         return result;
     }
 
     static JSObject saveJsonCursor(Context context, SQLiteDatabase database, String key, JSONObject cursor) throws Exception {
-        if (cursor == null || cursor.isNull("created_at") || cursor.isNull("change_id")) {
+        String createdAtKey = cursorPayloadKey(context, "createdAt");
+        String changeIdKey = cursorPayloadKey(context, "changeId");
+        if (cursor == null || cursor.isNull(createdAtKey) || cursor.isNull(changeIdKey)) {
             deleteValue(context, database, key);
         } else {
             JSONObject normalized = new JSONObject();
-            normalized.put("created_at", cursor.getString("created_at"));
-            normalized.put("change_id", cursor.getString("change_id"));
+            normalized.put(createdAtKey, cursor.getString(createdAtKey));
+            normalized.put(changeIdKey, cursor.getString(changeIdKey));
             saveValue(context, database, key, normalized.toString(), Instant.now().toString());
         }
         return loadJsonCursor(context, database, key);
@@ -99,5 +101,9 @@ final class FolioleCompanionMetaRecords {
 
     private static String mutationRule(Context context, String key) throws Exception {
         return FolioleCompanionHostSupportMutationRules.companionMetaString(context, key);
+    }
+
+    private static String cursorPayloadKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncCursorPayloadKeys", key);
     }
 }

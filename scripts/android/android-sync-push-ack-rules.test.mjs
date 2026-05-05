@@ -66,6 +66,7 @@ const SYNC_META_STORE = path.join(
   'android',
   'FolioleCompanionSyncMetaStore.java'
 );
+const META_RECORDS = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionMetaRecords.java');
 const SYNC_DIAGNOSTIC_VERDICTS = path.join(
   REPO_ROOT,
   'android',
@@ -213,5 +214,19 @@ describe('Android sync push ack protocol rules', () => {
     expect(source).not.toContain('optJSONArray("object_ids"');
     expect(source).not.toContain('optJSONObject("cursor"');
     expect(source).not.toContain('getInt("cursor"');
+  });
+
+  it('loads sync cursor payload keys from generated definitions', async () => {
+    const source = await readFile(META_RECORDS, 'utf8');
+
+    expect(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS.syncCursorPayloadKeys).toMatchObject({
+      changeId: 'change_id',
+      createdAt: 'created_at',
+      cursor: 'cursor'
+    });
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncCursorPayloadKeys", key)');
+    expect(source).not.toContain('result.put("cursor"');
+    expect(source).not.toContain('cursor.isNull("created_at"');
+    expect(source).not.toContain('cursor.getString("change_id"');
   });
 });
