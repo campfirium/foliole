@@ -109,15 +109,15 @@ export function usePdfViewportRuntime(args: {
   zoom: number;
 }) {
   const runtime = usePdfViewportRuntimeState(args.page, args.pdfSource);
-  usePageJumpEffect(args.pageJumpRequest, runtime.pageElementsRef, runtime.scrollContainerRef, args.totalPages, args.clearPageJumpRequest, runtime.programmaticPageJumpRef);
+  usePageJumpEffect(args.pageJumpRequest, runtime.pageElementsRef, runtime.scrollContainerRef, args.totalPages, args.clearPageJumpRequest);
   useViewportTransformAnchor(args.rotation, runtime.scrollContainerRef, args.zoom);
   useRefreshSearchTextLayers(args, runtime);
   const handleScroll = useVisiblePageSync(
+    args.pageJumpRequest,
     runtime.pageElementsRef,
     runtime.scrollContainerRef,
     args.setVisibleLocation,
     args.totalPages,
-    runtime.programmaticPageJumpRef,
     runtime.setVisiblePage
   );
   return {
@@ -167,7 +167,6 @@ function usePdfViewportRuntimeState(page: number, pdfSource: string) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const pageTextByNumberRef = useRef<Record<number, PdfPageTextEntry | string>>({});
-  const programmaticPageJumpRef = useRef<{ expiresAt: number; requestId: number; targetPage: number } | null>(null);
   const textLayerSignatureByPageRef = useRef<Record<number, string>>({});
   const [searchDebug, setSearchDebug] = useState<PdfSearchDebugInfo>({ pages: [] });
   const [searchHighlights, setSearchHighlights] = useState<PdfSearchVisualHighlight[]>([]);
@@ -183,10 +182,13 @@ function usePdfViewportRuntimeState(page: number, pdfSource: string) {
     refreshSearchRevision(setSearchRevision);
   }, [pdfSource]);
 
+  useEffect(() => {
+    setVisiblePage(page);
+  }, [page]);
+
   return {
     pageElementsRef,
     pageTextByNumberRef,
-    programmaticPageJumpRef,
     scrollContainerRef,
     searchDebug,
     searchHighlights,

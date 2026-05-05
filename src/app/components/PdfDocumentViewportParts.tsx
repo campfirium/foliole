@@ -6,10 +6,10 @@ import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { PdfDocumentViewportContentBody } from './PdfDocumentViewportContentBody';
 import { usePdfDocumentViewportSearchRuntime } from './PdfDocumentViewportSearchRuntime';
-import { armProgrammaticPageJumpGuard, shouldSkipVisiblePageSync, type ProgrammaticPageJumpRef } from './pdfPageJumpGuard';
+import type { PdfPageDimensions } from './pdfPageDimensions';
+import { observePendingPageJump } from './pdfPageJumpEffect';
 import type { PdfPageTextEntry } from './pdfPageText';
-
-const PDF_PAGE_MIN = 1;
+import { resolveVisiblePage, resolveVisiblePositionY } from './pdfVisiblePageMetrics';
 
 export type PdfPageElementsRef = MutableRefObject<Record<number, HTMLDivElement | null>>;
 
@@ -18,75 +18,41 @@ export function usePageJumpEffect(
   pageElementsRef: PdfPageElementsRef,
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
   totalPages: number | null,
-  onPageJumpHandled: (requestId: number) => void,
-  programmaticPageJumpRef?: ProgrammaticPageJumpRef
+  onPageJumpHandled: (requestId: number) => void
 ) {
   useEffect(() => {
     if (!pageJumpRequest) {
       return;
     }
     const container = scrollContainerRef.current;
-    const target = pageElementsRef.current[pageJumpRequest.page];
-    if (!container || !target) {
+    if (!container || !totalPages) {
       return;
     }
     const positionY = typeof pageJumpRequest.positionY === 'number' ? Math.max(0, Math.min(1, pageJumpRequest.positionY)) : null;
-    const top =
-      positionY === null
-        ? Math.max(0, target.offsetTop - 8)
-        : Math.max(0, target.offsetTop + target.clientHeight * positionY - container.clientHeight * 0.35);
-    armProgrammaticPageJumpGuard(programmaticPageJumpRef, pageJumpRequest);
-    if (typeof container.scrollTo === 'function') {
-      container.scrollTo({ behavior: 'smooth', top });
-    } else {
-      container.scrollTop = top;
-    }
-    onPageJumpHandled(pageJumpRequest.id);
-  }, [onPageJumpHandled, pageJumpRequest, pageElementsRef, programmaticPageJumpRef, scrollContainerRef, totalPages]);
-}
-
-function resolveVisiblePage(container: HTMLDivElement, pageElementsRef: PdfPageElementsRef, totalPages: number) {
-  const anchor = container.scrollTop + container.clientHeight * 0.35;
-  let visiblePage = PDF_PAGE_MIN;
-  for (let index = PDF_PAGE_MIN; index <= totalPages; index += 1) {
-    const element = pageElementsRef.current[index];
-    if (!element) {
-      continue;
-    }
-    if (element.offsetTop <= anchor) {
-      visiblePage = index;
-    } else {
-      break;
-    }
-  }
-  return visiblePage;
-}
-
-function resolveVisiblePositionY(container: HTMLDivElement, pageElement: HTMLDivElement | null) {
-  if (!pageElement) {
-    return 0;
-  }
-  const anchor = container.scrollTop + container.clientHeight * 0.35;
-  return Math.max(0, Math.min(1, (anchor - pageElement.offsetTop) / Math.max(pageElement.clientHeight, 1)));
+    return observePendingPageJump({
+      container,
+      onPageJumpHandled,
+      pageElementsRef,
+      pageJumpRequest,
+      positionY
+    });
+  }, [onPageJumpHandled, pageJumpRequest, pageElementsRef, scrollContainerRef, totalPages]);
 }
 
 export function useVisiblePageSync(
+  pageJumpRequest: PdfJumpRequest | null,
   pageElementsRef: PdfPageElementsRef,
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
   setVisibleLocation: (page: number, positionY: number) => void,
   totalPages: number | null,
-  programmaticPageJumpRef?: ProgrammaticPageJumpRef,
   onVisiblePageChange?: (page: number) => void
 ) {
   return () => {
     const container = scrollContainerRef.current;
-    if (!container || !totalPages || container.offsetParent === null || container.clientHeight === 0) {
+    if (!container || !totalPages || container.offsetParent === null || container.clientHeight === 0 || pageJumpRequest) {
       return;
     }
     const visiblePage = resolveVisiblePage(container, pageElementsRef, totalPages);
-    if (shouldSkipVisiblePageSync(programmaticPageJumpRef, visiblePage)) {
-      return;
-    }
     onVisiblePageChange?.(visiblePage);
     setVisibleLocation(visiblePage, resolveVisiblePositionY(container, pageElementsRef.current[visiblePage]));
   };
@@ -159,8 +125,11 @@ interface PdfDocumentViewportContentProps {
   onZoomOut: () => void;
   visiblePage: number;
   page: number;
+  pageJumpRequest: PdfJumpRequest | null;
   pageElementsRef: PdfPageElementsRef;
   pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
+  persistedPageCount: number | null;
+  persistedPageDimensions: Record<number, PdfPageDimensions>;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
@@ -257,7 +226,10 @@ function resolveViewportContentBodyProps(
     onZoomOut: props.onZoomOut,
     visiblePage: props.visiblePage,
     page: props.page,
+    pageJumpRequest: props.pageJumpRequest,
     pageElementsRef: props.pageElementsRef,
+    persistedPageCount: props.persistedPageCount,
+    persistedPageDimensions: props.persistedPageDimensions,
     pdfSelectionLocator: props.pdfSelectionLocator,
     pdfSource: props.pdfSource,
     rotation: props.rotation,

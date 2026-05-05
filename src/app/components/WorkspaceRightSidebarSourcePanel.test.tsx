@@ -64,6 +64,7 @@ function createNodeSourceDetails(overrides: Partial<RuntimeNodeSourceDetails> = 
     },
     inheritedFromParent: false,
     keepImportItem: null,
+    pdfPageDimensions: [],
     sourceNodeId: 'node-1',
     ...overrides
   };

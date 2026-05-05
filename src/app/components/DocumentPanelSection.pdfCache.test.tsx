@@ -116,6 +116,7 @@ function createSourceDetails(sourceKind: 'pdf' | 'markdown', sourceLocator: stri
       },
       inheritedFromParent: false,
       keepImportItem: null,
+      pdfPageDimensions: [],
       sourceNodeId: 'node-1'
     }
   };

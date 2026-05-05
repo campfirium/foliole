@@ -39,4 +39,33 @@ describe('usePdfSystemController visibility restore', () => {
       positionY: 0.45
     });
   });
+
+  it('does not reissue a jump for the default first-page position', () => {
+    const { result, rerender } = renderHook(
+      ({ isVisible }: { isVisible: boolean }) =>
+        usePdfSystemController(
+          {
+            scrollTop: 0,
+            selection: {
+              from: 1,
+              to: 0
+            }
+          },
+          vi.fn(),
+          '/tmp/sample.pdf',
+          isVisible
+        ),
+      {
+        initialProps: { isVisible: false }
+      }
+    );
+
+    act(() => {
+      result.current.actions.reportLoadSuccess(9);
+    });
+
+    rerender({ isVisible: true });
+
+    expect(result.current.state.pageJumpRequest).toBeNull();
+  });
 });

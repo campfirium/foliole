@@ -4,6 +4,7 @@ import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
 import type { PdfSearchRequest, PdfSearchStatus, PdfSearchTarget } from './PdfDocumentSearch';
 import { PdfDocumentViewport } from './PdfDocumentViewport';
+import type { PdfPageDimensions } from './pdfPageDimensions';
 
 interface PdfDocumentSurfaceLayoutProps {
   clearPageJumpRequest: (requestId: number) => void;
@@ -16,6 +17,8 @@ interface PdfDocumentSurfaceLayoutProps {
   maxPage: number;
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
+  persistedPageCount: number | null;
+  persistedPageDimensions: Record<number, PdfPageDimensions>;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSelectionContextMenu: JSX.Element;
   pdfSource: string;
@@ -71,6 +74,8 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       visiblePage={props.page}
       page={props.page}
       pageJumpRequest={props.pageJumpRequest}
+      persistedPageCount={props.persistedPageCount}
+      persistedPageDimensions={props.persistedPageDimensions}
       pdfSelectionLocator={props.pdfSelectionLocator}
       pdfSource={props.pdfSource}
       rotation={props.rotation}

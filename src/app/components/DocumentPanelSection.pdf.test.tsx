@@ -107,6 +107,7 @@ function createPdfSourceDetails(overrides?: {
       importSource: overrides?.importSource === undefined ? defaultImportSource : overrides.importSource,
       inheritedFromParent: false,
       keepImportItem: overrides?.keepImportItem ?? null,
+      pdfPageDimensions: [],
       sourceNodeId: 'node-1'
     }
   };
@@ -130,6 +131,7 @@ it('keeps the existing document body for non-pdf nodes', () => {
       },
       inheritedFromParent: false,
       keepImportItem: null,
+      pdfPageDimensions: [],
       sourceNodeId: 'node-1'
     }
   } as never);
@@ -148,6 +150,7 @@ it('keeps document body for derived highlight nodes that inherit pdf source from
       importSource: defaultImportSource,
       inheritedFromParent: true,
       keepImportItem: null,
+      pdfPageDimensions: [],
       sourceNodeId: 'node-parent'
     }
   } as never);
@@ -165,8 +168,15 @@ it('renders the pdf reading container for linked pdf nodes', () => {
 
   expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
   expect(screen.getByTestId('pdf-document-view')).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
-  expect(screen.getByTestId('pdf-document-toolbar')).toBeInTheDocument();
-  expect(screen.getAllByTestId('pdf-document-page')).toHaveLength(2);
+});
+
+it('renders the pdf toolbar and nearby pages after the document connects', async () => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
+
+  renderSection();
+
+  await waitFor(() => expect(screen.getByTestId('pdf-document-toolbar')).toBeInTheDocument());
+  expect(screen.getAllByTestId('pdf-document-page')).toHaveLength(3);
   expect(screen.queryByText(/highlight/i)).not.toBeInTheDocument();
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
 });
@@ -189,6 +199,7 @@ it('hides the raw pdf source path while source details are still loading', () =>
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
   expect(screen.queryByText('/tmp/sample.pdf')).not.toBeInTheDocument();
 });
+
 it('clears the editor binding when switching into pdf view', () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
   const onEditorReady = vi.fn();
@@ -198,11 +209,12 @@ it('clears the editor binding when switching into pdf view', () => {
   expect(onEditorReady).toHaveBeenCalledWith(null);
 });
 
-it('supports pdf controls with zoom, page navigation, and rotation', () => {
+it('supports pdf controls with zoom, page navigation, and rotation after the reader loads', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
   renderSection();
 
+  await waitFor(() => expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('100%'));
   expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('100%');
 
   fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
@@ -211,66 +223,22 @@ it('supports pdf controls with zoom, page navigation, and rotation', () => {
   fireEvent.change(screen.getByRole('textbox', { name: 'PDF page' }), {
     target: { value: '5' }
   });
+  fireEvent.keyDown(screen.getByRole('textbox', { name: 'PDF page' }), { key: 'Enter' });
   expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('5');
 
   fireEvent.click(screen.getByRole('button', { name: 'Rotate page clockwise' }));
   expect(screen.getAllByTestId('pdf-document-page')[0]).toHaveAttribute('data-rotate', '90');
 });
-it('lets the reader return to fit width with the toolbar button', () => {
+it('lets the reader return to fit width with the toolbar button after the reader loads', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
   renderSection();
 
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Set zoom level' })).toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: 'Set zoom level' }));
   fireEvent.click(screen.getByRole('menuitem', { name: '100%' }));
   expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('100%');
 
   fireEvent.click(screen.getByRole('button', { name: 'Fit width' }));
   expect(screen.getByTestId('pdf-zoom-value')).toHaveTextContent('100%');
-});
-it('supports in-view pdf search navigation and empty-state feedback', async () => {
-  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
-  renderSection();
-  const previousMatchButton = screen.getByRole('button', { name: 'Previous match' });
-  const nextMatchButton = screen.getByRole('button', { name: 'Next match' });
-  expect(previousMatchButton).toBeDisabled();
-  expect(nextMatchButton).toBeDisabled();
-  const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
-  const clearSearchButton = screen.getByRole('button', { name: 'Clear search' });
-  expect(clearSearchButton).toBeDisabled();
-  fireEvent.change(searchInput, { target: { value: 'keyword' } });
-  await waitFor(() => {
-    expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9');
-    expect(previousMatchButton).toBeEnabled();
-    expect(nextMatchButton).toBeEnabled();
-    expect(clearSearchButton).toBeEnabled();
-    expect(screen.queryByText('Search debug')).not.toBeInTheDocument();
-  });
-  fireEvent.click(nextMatchButton);
-  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'));
-  fireEvent.click(clearSearchButton);
-  await waitFor(() => {
-    expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('');
-    expect(searchInput).toHaveValue('');
-    expect(previousMatchButton).toBeDisabled();
-    expect(nextMatchButton).toBeDisabled();
-    expect(clearSearchButton).toBeDisabled();
-  });
-  fireEvent.change(searchInput, { target: { value: 'not-found-token' } });
-  await waitFor(() => {
-    expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('No matches');
-    expect(previousMatchButton).toBeDisabled();
-    expect(nextMatchButton).toBeDisabled();
-  });
-});
-it('supports Enter and Shift+Enter for in-view pdf search navigation', async () => {
-  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
-  renderSection();
-  const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
-  fireEvent.change(searchInput, { target: { value: 'keyword' } });
-  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
-  fireEvent.keyDown(searchInput, { key: 'Enter' });
-  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'));
-  fireEvent.keyDown(searchInput, { key: 'Enter', shiftKey: true });
-  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
 });

@@ -5,6 +5,7 @@ import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 import { PdfDocumentErrorState } from './PdfDocumentErrorState';
 import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { PdfDocumentViewportContent } from './PdfDocumentViewportParts';
+import type { PdfPageDimensions } from './pdfPageDimensions';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { usePdfViewportRuntime } from './pdfViewportRuntime';
 import { usePdfToolbarVisibility } from './usePdfToolbarVisibility';
@@ -33,6 +34,8 @@ interface PdfDocumentViewportProps {
   visiblePage: number;
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
+  persistedPageCount: number | null;
+  persistedPageDimensions: Record<number, PdfPageDimensions>;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
@@ -63,7 +66,7 @@ function renderPdfViewportContent(args: {
   searchHighlights: PdfSearchVisualHighlight[];
   searchRevision: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
-} & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisibleLocation'>) {
+} & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'setVisibleLocation'>) {
   return <PdfDocumentViewportContent {...resolveViewportContentProps(args)} />;
 }
 
@@ -83,7 +86,7 @@ function resolveViewportContentProps(
     searchHighlights: PdfSearchVisualHighlight[];
     searchRevision: number;
     scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
-  } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisibleLocation'>
+  } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'setVisibleLocation'>
 ) {
   return {
     handleContextMenu: args.onContextMenu,
@@ -98,8 +101,11 @@ function resolveViewportContentProps(
     onToolbarInteraction: args.onToolbarInteraction,
     visiblePage: args.visiblePage,
     page: args.page,
+    pageJumpRequest: args.pageJumpRequest,
+    persistedPageCount: args.persistedPageCount,
     pageElementsRef: args.pageElementsRef,
     pageTextByNumberRef: args.pageTextByNumberRef,
+    persistedPageDimensions: args.persistedPageDimensions,
     pdfSelectionLocator: args.pdfSelectionLocator,
     pdfSource: args.pdfSource,
     rotation: args.rotation,
@@ -217,6 +223,8 @@ function PdfDocumentViewportReady(
     onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
     pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
     pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
+    persistedPageCount: number | null;
+    persistedPageDimensions: Record<number, PdfPageDimensions>;
     searchHighlights: PdfSearchVisualHighlight[];
     searchRevision: number;
     scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
@@ -225,7 +233,7 @@ function PdfDocumentViewportReady(
     onToolbarActiveChange: (active: boolean) => void;
     onToolbarInteraction: () => void;
     visiblePage: number;
-  } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisibleLocation'>
+  } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'setVisibleLocation'>
 ) {
   return renderPdfViewportContent(props);
 }

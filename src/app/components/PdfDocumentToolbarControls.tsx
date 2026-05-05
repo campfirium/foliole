@@ -62,6 +62,15 @@ function handleSearchInputKeyDown(
   onFindNext();
 }
 
+function sanitizePageInput(value: string) {
+  return value.replace(/\D/g, '');
+}
+
+function clampPageInputValue(value: number, maxPage: number) {
+  const resolvedMaxPage = Number.isFinite(maxPage) ? Math.max(1, maxPage) : Number.MAX_SAFE_INTEGER;
+  return Math.max(1, Math.min(resolvedMaxPage, value));
+}
+
 function resolveSearchStatusLabel(status: PdfSearchStatus, indexingHint: string | null) {
   if (indexingHint) {
     return indexingHint;
@@ -95,14 +104,15 @@ function PdfPageButtons({ canGoNext, canGoPrevious, onNextPage, onPreviousPage, 
 }
 
 export function PdfPageControls({ displayPage, maxPage, onNextPage, onPageChange, onPreviousPage, onToolbarInteraction }: PageControlsProps) {
+  const { pageInputValue, handlePageInputBlur, handlePageInputChange, handlePageInputFocus, handlePageInputKeyDown } = usePdfPageInputState({
+    displayPage,
+    maxPage,
+    onPageChange,
+    onToolbarInteraction
+  });
   const pageCountLabel = Number.isFinite(maxPage) ? maxPage : '--';
-  const [pageInputValue, setPageInputValue] = useState(() => String(displayPage));
   const canGoPrevious = displayPage > 1;
   const canGoNext = Number.isFinite(maxPage) ? displayPage < maxPage : true;
-
-  useEffect(() => {
-    setPageInputValue(String(displayPage));
-  }, [displayPage]);
 
   return (
     <div className="flex items-center gap-2">
@@ -114,15 +124,10 @@ export function PdfPageControls({ displayPage, maxPage, onNextPage, onPageChange
         className="h-8 w-14 appearance-none border-transparent bg-transparent px-2 text-center text-sm focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         id="pdf-page-input"
         inputMode="numeric"
-        onChange={(event) => {
-          const digitsOnly = event.target.value.replace(/\D/g, '');
-          setPageInputValue(digitsOnly);
-          if (!digitsOnly) {
-            return;
-          }
-          onToolbarInteraction();
-          onPageChange(Number(digitsOnly));
-        }}
+        onBlur={handlePageInputBlur}
+        onChange={(event) => handlePageInputChange(event.target.value)}
+        onFocus={handlePageInputFocus}
+        onKeyDown={handlePageInputKeyDown}
         pattern="[0-9]*"
         type="text"
         value={pageInputValue}
@@ -139,6 +144,66 @@ export function PdfPageControls({ displayPage, maxPage, onNextPage, onPageChange
       />
     </div>
   );
+}
+
+function usePdfPageInputState(args: {
+  displayPage: number;
+  maxPage: number;
+  onPageChange: (value: number) => void;
+  onToolbarInteraction: () => void;
+}) {
+  const [pageInputValue, setPageInputValue] = useState(() => String(args.displayPage));
+  const [isEditingPageInput, setIsEditingPageInput] = useState(false);
+  const [pendingCommittedPageValue, setPendingCommittedPageValue] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isEditingPageInput) {
+      return;
+    }
+    if (pendingCommittedPageValue !== null) {
+      if (pendingCommittedPageValue === String(args.displayPage)) {
+        setPendingCommittedPageValue(null);
+      } else {
+        setPageInputValue(pendingCommittedPageValue);
+        return;
+      }
+    }
+    setPageInputValue(String(args.displayPage));
+  }, [args.displayPage, isEditingPageInput, pendingCommittedPageValue]);
+
+  const commitPageInputValue = () => {
+    setIsEditingPageInput(false);
+    const digitsOnly = sanitizePageInput(pageInputValue);
+    if (!digitsOnly) {
+      setPendingCommittedPageValue(null);
+      setPageInputValue(String(args.displayPage));
+      return;
+    }
+    const nextPage = clampPageInputValue(Number(digitsOnly), args.maxPage);
+    const nextPageValue = String(nextPage);
+    setPendingCommittedPageValue(nextPageValue);
+    setPageInputValue(nextPageValue);
+    args.onToolbarInteraction();
+    args.onPageChange(nextPage);
+  };
+
+  return {
+    handlePageInputBlur: commitPageInputValue,
+    handlePageInputChange: (value: string) => {
+      setIsEditingPageInput(true);
+      setPendingCommittedPageValue(null);
+      setPageInputValue(sanitizePageInput(value));
+    },
+    handlePageInputFocus: () => setIsEditingPageInput(true),
+    handlePageInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== 'Enter') {
+        return;
+      }
+      event.preventDefault();
+      commitPageInputValue();
+    },
+    pageInputValue
+  };
 }
 
 function PdfSearchInput(props: SearchControlsProps & { canNavigateMatches: boolean }) {

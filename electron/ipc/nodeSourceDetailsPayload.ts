@@ -103,6 +103,14 @@ function toNativeKeepImportItem(record: NonNullable<ReturnType<typeof loadNodeSo
   };
 }
 
+function toNativePdfPageDimension(record: NonNullable<ReturnType<typeof loadNodeSourceDetails>>['pdfPageDimensions'][number]) {
+  return {
+    page: record.page,
+    page_height: record.page_height,
+    page_width: record.page_width
+  };
+}
+
 export function toNativeNodeSourceDetails(nodeId: string) {
   const details = loadNodeSourceDetails(nodeId);
   if (!details) {
@@ -113,6 +121,7 @@ export function toNativeNodeSourceDetails(nodeId: string) {
     import_source: toNativeImportSource(details.importSource, details.sourceNodeId),
     inherited_from_parent: details.inheritedFromParent,
     keep_import_item: toNativeKeepImportItem(details.keepImportItem),
+    pdf_page_dimensions: details.pdfPageDimensions.map((record) => toNativePdfPageDimension(record)),
     source_node_id: details.sourceNodeId
   };
 }

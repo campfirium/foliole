@@ -1,9 +1,10 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Page } from 'react-pdf';
 
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import { renderPdfOverlayMarker, renderPdfOverlayRects, resolvePdfOverlayMarkerSize } from './pdfOverlayRender';
+import { resolvePdfPageDimensions, resolveRenderedPageDimensions, type PdfPageDimensions } from './pdfPageDimensions';
 import { resolvePageText, type PdfPageTextEntry } from './pdfPageText';
 
 interface PdfPageRenderLocator {
@@ -17,12 +18,13 @@ interface PdfPageRenderLocator {
 interface RenderPdfPageArgs {
   fitWidthTargetWidth: number | null;
   highlightLocators: PdfPageRenderLocator[];
-  onPageLoadSuccess: (pageNumber: number, baseWidth: number) => void;
+  onPageLoadSuccess: (pageNumber: number, dimensions: PdfPageDimensions) => void;
   onPageRenderReady?: (pageNumber: number) => void;
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
   pageNumber: number;
+  pageDimensions?: PdfPageDimensions | null;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   rotation: number;
   searchHighlights: PdfSearchVisualHighlight[];
@@ -41,34 +43,116 @@ export function renderPdfPage(args: RenderPdfPageArgs) {
   const markerSize = resolvePdfOverlayMarkerSize(args.zoom);
   const selectionLocator = args.pdfSelectionLocator?.page === args.pageNumber ? { ...args.pdfSelectionLocator, id: 'pdf-selection-overlay' } : null;
   return (
+    <PdfPageShell
+      fitWidthTargetWidth={args.fitWidthTargetWidth}
+      key={args.pageNumber}
+      markerSize={markerSize}
+      onPageLoadSuccess={args.onPageLoadSuccess}
+      onPageRenderReady={args.onPageRenderReady}
+      onTextContentLoad={args.onTextContentLoad}
+      onTextLayerRender={args.onTextLayerRender}
+      pageDimensions={args.pageDimensions}
+      pageElementsRef={args.pageElementsRef}
+      pageHighlights={pageHighlights}
+      pageNumber={args.pageNumber}
+      pageSearchHighlights={pageSearchHighlights}
+      pdfSelectionLocator={selectionLocator}
+      rotation={args.rotation}
+      zoomMode={args.zoomMode}
+      zoom={args.zoom}
+    />
+  );
+}
+
+function PdfPageShell(props: {
+  fitWidthTargetWidth: number | null;
+  markerSize: number;
+  onPageLoadSuccess: (pageNumber: number, dimensions: PdfPageDimensions) => void;
+  onPageRenderReady?: (pageNumber: number) => void;
+  onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
+  onTextLayerRender: (pageNumber: number) => void;
+  pageDimensions?: PdfPageDimensions | null;
+  pageElementsRef: PdfPageElementsRef;
+  pageHighlights: PdfPageRenderLocator[];
+  pageNumber: number;
+  pageSearchHighlights: PdfSearchVisualHighlight[];
+  pdfSelectionLocator: { id: string; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | null;
+  rotation: number;
+  zoomMode: 'custom' | 'fit-width';
+  zoom: number;
+}) {
+  const [isRendered, setIsRendered] = useState(false);
+  const placeholderDimensions = resolveRenderedPageDimensions(props.pageDimensions, props.fitWidthTargetWidth, props.rotation, props.zoomMode, props.zoom);
+  const handlePageRenderReady = (pageNumber: number) => {
+    setIsRendered(true);
+    props.onPageRenderReady?.(pageNumber);
+  };
+
+  return (
+    <div
+      className="relative flex w-full justify-center px-4"
+      data-pdf-page-number={props.pageNumber}
+      data-pdf-page-state={isRendered ? 'ready' : 'loading'}
+      data-testid="pdf-document-page-shell"
+      ref={(element) => {
+        props.pageElementsRef.current[props.pageNumber] = element;
+      }}
+    >
+      <div className="relative inline-block">
+        {!isRendered ? (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 rounded-sm bg-bg-panel/20 shadow-sm"
+            style={{ height: placeholderDimensions.height, width: placeholderDimensions.width }}
+          />
+        ) : null}
+        <PdfPageCanvas
+          fitWidthTargetWidth={props.fitWidthTargetWidth}
+          onPageLoadSuccess={props.onPageLoadSuccess}
+          onPageRenderReady={handlePageRenderReady}
+          onTextContentLoad={props.onTextContentLoad}
+          onTextLayerRender={props.onTextLayerRender}
+          pageDimensions={props.pageDimensions}
+          pageNumber={props.pageNumber}
+          rotate={props.rotation}
+          zoomMode={props.zoomMode}
+          zoom={props.zoom}
+        />
+        {renderPdfHighlightMarkers(props.pageHighlights, props.markerSize)}
+        {renderSearchHighlightsOnPage(props.pageNumber, props.pageSearchHighlights, props.markerSize)}
+        {renderSelectionOverlay(props.pdfSelectionLocator, props.markerSize)}
+      </div>
+    </div>
+  );
+}
+
+function renderPdfHighlightMarkers(pageHighlights: PdfPageRenderLocator[], markerSize: number) {
+  return pageHighlights.map((locator) => {
+    const highlightRects = renderPdfOverlayRects(locator);
+    return highlightRects ?? renderPdfOverlayMarker(locator, markerSize);
+  });
+}
+
+export function renderPdfPagePlaceholder(
+  args: Pick<
+    RenderPdfPageArgs,
+    'fitWidthTargetWidth' | 'pageDimensions' | 'pageElementsRef' | 'pageNumber' | 'rotation' | 'zoomMode' | 'zoom'
+  >
+) {
+  const { height, width } = resolveRenderedPageDimensions(args.pageDimensions, args.fitWidthTargetWidth, args.rotation, args.zoomMode, args.zoom);
+
+  return (
     <div
       className="relative flex w-full justify-center px-4"
       data-pdf-page-number={args.pageNumber}
+      data-pdf-page-state="placeholder"
       data-testid="pdf-document-page-shell"
       key={args.pageNumber}
       ref={(element) => {
         args.pageElementsRef.current[args.pageNumber] = element;
       }}
     >
-      <div className="relative inline-block">
-        <PdfPageCanvas
-          onPageLoadSuccess={args.onPageLoadSuccess}
-          onPageRenderReady={args.onPageRenderReady}
-          onTextContentLoad={args.onTextContentLoad}
-          onTextLayerRender={args.onTextLayerRender}
-          pageNumber={args.pageNumber}
-          rotate={args.rotation}
-          fitWidthTargetWidth={args.fitWidthTargetWidth}
-          zoomMode={args.zoomMode}
-          zoom={args.zoom}
-        />
-        {pageHighlights.map((locator) => {
-          const highlightRects = renderPdfOverlayRects(locator);
-          return highlightRects ?? renderPdfOverlayMarker(locator, markerSize);
-        })}
-        {renderSearchHighlightsOnPage(args.pageNumber, pageSearchHighlights, markerSize)}
-        {renderSelectionOverlay(selectionLocator, markerSize)}
-      </div>
+      <div aria-hidden="true" className="rounded-sm bg-bg-panel/20 shadow-sm" style={{ height, width }} />
     </div>
   );
 }
@@ -76,10 +160,11 @@ export function renderPdfPage(args: RenderPdfPageArgs) {
 const PdfPageCanvas = memo(
   function PdfPageCanvas(props: {
     fitWidthTargetWidth: number | null;
-    onPageLoadSuccess: (pageNumber: number, baseWidth: number) => void;
+    onPageLoadSuccess: (pageNumber: number, dimensions: PdfPageDimensions) => void;
     onPageRenderReady?: (pageNumber: number) => void;
     onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
     onTextLayerRender: (pageNumber: number) => void;
+    pageDimensions?: PdfPageDimensions | null;
     pageNumber: number;
     rotate: number;
     zoomMode: 'custom' | 'fit-width';
@@ -89,9 +174,9 @@ const PdfPageCanvas = memo(
       <Page
         className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
         onLoadSuccess={(page: unknown) => {
-          const baseWidth = resolvePdfPageBaseWidth(page);
-          if (baseWidth) {
-            props.onPageLoadSuccess(props.pageNumber, baseWidth);
+          const dimensions = resolvePdfPageDimensions(page);
+          if (dimensions) {
+            props.onPageLoadSuccess(props.pageNumber, dimensions);
           }
         }}
         data-testid="pdf-document-page"
@@ -121,29 +206,6 @@ const PdfPageCanvas = memo(
     previous.zoom === next.zoom &&
     previous.zoomMode === next.zoomMode
 );
-
-function resolvePdfPageBaseWidth(page: unknown) {
-  if (!page || typeof page !== 'object') {
-    return null;
-  }
-  const candidate = page as {
-    getViewport?: (input: { scale: number }) => { width?: number };
-    originalWidth?: number;
-    view?: [number, number, number, number];
-  };
-  if (typeof candidate.getViewport === 'function') {
-    const width = candidate.getViewport({ scale: 1 }).width;
-    return typeof width === 'number' && Number.isFinite(width) && width > 0 ? width : null;
-  }
-  if (typeof candidate.originalWidth === 'number' && Number.isFinite(candidate.originalWidth) && candidate.originalWidth > 0) {
-    return candidate.originalWidth;
-  }
-  if (Array.isArray(candidate.view) && candidate.view.length >= 3) {
-    const width = Math.abs(candidate.view[2] - candidate.view[0]);
-    return width > 0 ? width : null;
-  }
-  return null;
-}
 
 function renderSearchHighlightsOnPage(pageNumber: number, pageSearchHighlights: PdfSearchVisualHighlight[], markerSize: number) {
   const pageFragments = pageSearchHighlights.flatMap((match) => {

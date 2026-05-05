@@ -116,6 +116,12 @@ function buildToolbarHarnessProps(input: {
     visiblePage: input.page,
     page: input.page,
     pageJumpRequest: null,
+    persistedPageCount: 3,
+    persistedPageDimensions: {
+      1: { height: 1131, width: 800 },
+      2: { height: 1131, width: 800 },
+      3: { height: 1131, width: 800 }
+    },
     pdfSelectionLocator: undefined,
     pdfSource: '/tmp/sample.pdf',
     rotation: 0,

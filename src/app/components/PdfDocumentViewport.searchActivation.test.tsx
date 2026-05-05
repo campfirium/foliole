@@ -100,6 +100,8 @@ function PdfDocumentViewportSearchActivationHarness() {
       visiblePage={1}
       page={1}
       pageJumpRequest={null}
+      persistedPageCount={1}
+      persistedPageDimensions={{ 1: { height: 1131, width: 800 } }}
       pdfSelectionLocator={undefined}
       pdfSource="/tmp/sample.pdf"
       rotation={0}
@@ -127,6 +129,7 @@ describe('PdfDocumentViewport search activation', () => {
     });
 
     render(<PdfDocumentViewportSearchActivationHarness />);
+    await waitFor(() => expect(screen.getByLabelText('PDF search')).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText('PDF search'), { target: { value: 'keyword' } });
 
@@ -145,6 +148,7 @@ describe('PdfDocumentViewport search activation', () => {
     });
 
     render(<PdfDocumentViewportSearchActivationHarness />);
+    await waitFor(() => expect(screen.getByLabelText('PDF search')).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText('PDF search'), { target: { value: 'keyword' } });
 

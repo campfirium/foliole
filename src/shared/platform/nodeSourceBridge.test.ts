@@ -50,6 +50,10 @@ const NODE_SOURCE_DETAILS_PAYLOAD = {
     source_size_bytes: 456,
     source_type: 'readwise'
   },
+  pdf_page_dimensions: [
+    { page: 1, page_height: 1131, page_width: 800 },
+    { page: 2, page_height: 1200, page_width: 820 }
+  ],
   source_node_id: 'node-parent'
 };
 
@@ -118,6 +122,10 @@ it('normalizes node source details from the runtime bridge', async () => {
       sourceSizeBytes: 456,
       sourceType: 'readwise'
     },
+    pdfPageDimensions: [
+      { page: 1, pageHeight: 1131, pageWidth: 800 },
+      { page: 2, pageHeight: 1200, pageWidth: 820 }
+    ],
     sourceNodeId: 'node-parent'
   });
   expect(invoke).toHaveBeenCalledWith('load_node_source_details', { node_id: 'node-1' });

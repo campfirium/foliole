@@ -12,14 +12,31 @@ function MockDocument({
 }: {
   children: React.ReactNode;
   file?: string;
-  onLoadSuccess?: (payload: { numPages: number }) => void;
+  onLoadSuccess?: (payload: { getPage: (pageNumber: number) => Promise<{ getViewport: (input: { scale: number }) => { height: number; width: number } }>; numPages: number }) => void;
 }) {
+  const onLoadSuccessRef = React.useRef(onLoadSuccess);
+  const [isLoaded, setIsLoaded] = React.useState(false);
+
   React.useEffect(() => {
-    onLoadSuccess?.({ numPages: 9 });
-  }, [file, onLoadSuccess]);
+    onLoadSuccessRef.current = onLoadSuccess;
+  }, [onLoadSuccess]);
+
+  React.useEffect(() => {
+    setIsLoaded(false);
+    const timeoutId = window.setTimeout(() => {
+      onLoadSuccessRef.current?.({
+        getPage: async () => ({
+          getViewport: ({ scale }: { scale: number }) => ({ height: 1131 * scale, width: 800 * scale })
+        }),
+        numPages: 9
+      });
+      setIsLoaded(true);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [file]);
   return (
     <div data-file={file} data-testid="pdf-document-view">
-      {children}
+      {isLoaded ? children : null}
     </div>
   );
 }
@@ -34,7 +51,7 @@ function MockPage({
   onGetTextSuccess,
   onRenderTextLayerSuccess
 }: {
-  onLoadSuccess?: (page: { getViewport: (input: { scale: number }) => { width: number } }) => void;
+  onLoadSuccess?: (page: { getViewport: (input: { scale: number }) => { height: number; width: number } }) => void;
   onRenderSuccess?: () => void;
   onGetTextSuccess?: (payload: { items: Array<{ str: string }> }) => void;
   onRenderTextLayerSuccess?: () => void;
@@ -45,7 +62,7 @@ function MockPage({
 }) {
   React.useEffect(() => {
     onLoadSuccess?.({
-      getViewport: ({ scale: nextScale }: { scale: number }) => ({ width: 800 * nextScale })
+      getViewport: ({ scale: nextScale }: { scale: number }) => ({ height: 1131 * nextScale, width: 800 * nextScale })
     });
     onRenderSuccess?.();
     onGetTextSuccess?.({ items: [{ str: `keyword match on page ${pageNumber}` }] });

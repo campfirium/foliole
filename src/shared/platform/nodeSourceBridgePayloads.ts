@@ -37,6 +37,11 @@ export interface RuntimeNodeSourceDetails {
   importSource: RuntimeNodeImportSource | null;
   inheritedFromParent: boolean;
   keepImportItem: RuntimeKeepImportItemDetails | null;
+  pdfPageDimensions: Array<{
+    page: number;
+    pageHeight: number | null;
+    pageWidth: number | null;
+  }>;
   sourceNodeId: string;
 }
 
@@ -138,16 +143,48 @@ function toRuntimeKeepImportItemDetails(value: unknown): RuntimeKeepImportItemDe
   };
 }
 
+function toRuntimePdfPageDimension(
+  value: unknown
+): { page: number; pageHeight: number | null; pageWidth: number | null } | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const payload = value as Record<string, unknown>;
+  if (
+    typeof payload.page !== 'number' ||
+    !Number.isInteger(payload.page) ||
+    payload.page < 1 ||
+    (payload.page_height !== null && typeof payload.page_height !== 'number') ||
+    (payload.page_width !== null && typeof payload.page_width !== 'number')
+  ) {
+    return null;
+  }
+  return {
+    page: payload.page,
+    pageHeight: payload.page_height,
+    pageWidth: payload.page_width
+  };
+}
+
 export function toRuntimeNodeSourceDetails(value: unknown): RuntimeNodeSourceDetails | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }
   const payload = value as Record<string, unknown>;
-  if (!Array.isArray(payload.import_runs) || typeof payload.inherited_from_parent !== 'boolean' || typeof payload.source_node_id !== 'string') {
+  if (
+    !Array.isArray(payload.import_runs) ||
+    !Array.isArray(payload.pdf_page_dimensions) ||
+    typeof payload.inherited_from_parent !== 'boolean' ||
+    typeof payload.source_node_id !== 'string'
+  ) {
     return null;
   }
   const importRuns = payload.import_runs.map(toRuntimeTextImportResult);
+  const pdfPageDimensions = payload.pdf_page_dimensions.map(toRuntimePdfPageDimension);
   if (importRuns.some((entry) => !entry)) {
+    return null;
+  }
+  if (pdfPageDimensions.some((entry) => !entry)) {
     return null;
   }
   const importSource = payload.import_source === null ? null : toRuntimeNodeImportSource(payload.import_source);
@@ -160,6 +197,7 @@ export function toRuntimeNodeSourceDetails(value: unknown): RuntimeNodeSourceDet
     importSource,
     inheritedFromParent: payload.inherited_from_parent,
     keepImportItem,
+    pdfPageDimensions: pdfPageDimensions.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
     sourceNodeId: payload.source_node_id
   };
 }

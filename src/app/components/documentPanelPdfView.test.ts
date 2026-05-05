@@ -23,6 +23,7 @@ const pdfSourceDetails = {
   },
   inheritedFromParent: false,
   keepImportItem: null,
+  pdfPageDimensions: [],
   sourceNodeId: 'node-pdf-root'
 };
 
@@ -34,6 +35,6 @@ describe('resolvePdfDocumentSurface', () => {
 
   it('returns ready surface when active node is the pdf source node', () => {
     const surface = resolvePdfDocumentSurface('node-pdf-root', false, pdfSourceDetails);
-    expect(surface).toEqual({ pdfIndexStatus: 'ready', sourceHint: '/tmp/sample.pdf', state: 'ready' });
+    expect(surface).toEqual({ details: pdfSourceDetails, pdfIndexStatus: 'ready', sourceHint: '/tmp/sample.pdf', state: 'ready' });
   });
 });

@@ -42,6 +42,12 @@ interface KeepImportItemRow extends DatabaseRow {
   source_size_bytes: number;
 }
 
+interface PdfPageDimensionRow extends DatabaseRow {
+  page: number;
+  page_height: number | null;
+  page_width: number | null;
+}
+
 interface NodeContextRow extends DatabaseRow {
   anchor_link: string | null;
   id: string;
@@ -53,6 +59,7 @@ export interface NodeSourceDetails {
   importSource: ImportSourceRow | null;
   inheritedFromParent: boolean;
   keepImportItem: KeepImportItemRow | null;
+  pdfPageDimensions: PdfPageDimensionRow[];
   sourceNodeId: string;
 }
 
@@ -156,6 +163,25 @@ function readKeepImportItem(driver: DatabaseDriver, nodeId: string) {
   );
 }
 
+function readPdfPageDimensions(driver: DatabaseDriver, nodeId: string) {
+  return driver.queryAll<PdfPageDimensionRow>(
+    `SELECT
+       pdf_page_text.page,
+       pdf_page_text.page_width,
+       pdf_page_text.page_height
+     FROM node_attachments
+     INNER JOIN attachments
+       ON attachments.id = node_attachments.attachment_id
+      AND attachments.mime_type = 'application/pdf'
+     INNER JOIN pdf_page_text
+       ON pdf_page_text.attachment_id = attachments.id
+     WHERE node_attachments.node_id = ?
+       AND node_attachments.role = 'reference'
+     ORDER BY pdf_page_text.page ASC`,
+    [nodeId]
+  );
+}
+
 export function loadNodeSourceDetails(driver: DatabaseDriver, nodeId: string, runLimit = 6): NodeSourceDetails | null {
   const context = resolveSourceNodeContext(driver, nodeId);
   if (!context) {
@@ -167,6 +193,7 @@ export function loadNodeSourceDetails(driver: DatabaseDriver, nodeId: string, ru
     importSource: readImportSource(driver, context.sourceNodeId),
     inheritedFromParent: context.inheritedFromParent,
     keepImportItem: readKeepImportItem(driver, context.sourceNodeId),
+    pdfPageDimensions: readPdfPageDimensions(driver, context.sourceNodeId),
     sourceNodeId: context.sourceNodeId
   };
 }

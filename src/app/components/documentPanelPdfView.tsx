@@ -8,6 +8,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { PdfDocumentSurface } from './PdfDocumentSurface';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
+import type { PdfPageDimensions } from './pdfPageDimensions';
 
 export type PdfDocumentSurfaceState = 'empty' | 'failed' | 'loading' | 'ready';
 type PdfIndexStatus = 'failed' | 'indexing' | 'pending' | 'ready' | null;
@@ -27,11 +28,30 @@ function resolvePdfSourceHint(details: RuntimeNodeSourceDetails) {
   return details.keepImportItem?.resolvedSourcePath || details.keepImportItem?.sourcePath || details.importSource?.sourceLocator || null;
 }
 
+function resolvePersistedPdfPageDimensions(details: RuntimeNodeSourceDetails): Record<number, PdfPageDimensions> {
+  return Object.fromEntries(
+    details.pdfPageDimensions.flatMap((entry) =>
+      typeof entry.pageWidth === 'number' &&
+      Number.isFinite(entry.pageWidth) &&
+      entry.pageWidth > 0 &&
+      typeof entry.pageHeight === 'number' &&
+      Number.isFinite(entry.pageHeight) &&
+      entry.pageHeight > 0
+        ? [[entry.page, { height: entry.pageHeight, width: entry.pageWidth }] as const]
+        : []
+    )
+  );
+}
+
+function resolvePersistedPdfPageCount(details: RuntimeNodeSourceDetails) {
+  return details.pdfPageDimensions.reduce((maxPage, entry) => Math.max(maxPage, entry.page), 0) || null;
+}
+
 export function resolvePdfDocumentSurface(
   activeNodeId: string | null,
   isLoading: boolean,
   details: RuntimeNodeSourceDetails | null
-): { pdfIndexStatus: PdfIndexStatus; sourceHint: string | null; state: PdfDocumentSurfaceState } | null {
+): { details: RuntimeNodeSourceDetails; pdfIndexStatus: PdfIndexStatus; sourceHint: string | null; state: PdfDocumentSurfaceState } | null {
   if (!isPdfSourceDetails(details) || !details || details.inheritedFromParent) {
     return null;
   }
@@ -41,16 +61,17 @@ export function resolvePdfDocumentSurface(
 
   const sourceHint = resolvePdfSourceHint(details);
   if (details.keepImportItem?.lastStatus === 'failed') {
-    return { pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null, sourceHint, state: 'failed' };
+    return { details, pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null, sourceHint, state: 'failed' };
   }
   if (!sourceHint) {
     return {
+      details,
       pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null,
       sourceHint: sourceHint ?? null,
       state: isLoading ? 'loading' : 'empty'
     };
   }
-  return { pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null, sourceHint, state: 'ready' };
+  return { details, pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null, sourceHint, state: 'ready' };
 }
 
 function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>) {
@@ -79,7 +100,7 @@ function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>)
 }
 
 export function renderPdfDocumentSurface(
-  pdfDocumentSurface: { pdfIndexStatus: PdfIndexStatus; sourceHint: string | null; state: PdfDocumentSurfaceState },
+  pdfDocumentSurface: { details: RuntimeNodeSourceDetails; pdfIndexStatus: PdfIndexStatus; sourceHint: string | null; state: PdfDocumentSurfaceState },
   pdfViewContext: {
     editorNodeId: string | null;
     editorNodeViewState: ComponentProps<typeof DocumentPanelBody>['editorNodeViewState'];
@@ -101,6 +122,8 @@ export function renderPdfDocumentSurface(
           }
         }}
         nodeId={pdfViewContext.editorNodeId}
+        persistedPageCount={resolvePersistedPdfPageCount(pdfDocumentSurface.details)}
+        persistedPageDimensions={resolvePersistedPdfPageDimensions(pdfDocumentSurface.details)}
         pdfIndexStatus={pdfDocumentSurface.pdfIndexStatus}
         sourceHint={pdfDocumentSurface.sourceHint ?? ''}
       />

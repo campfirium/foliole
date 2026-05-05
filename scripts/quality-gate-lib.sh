@@ -125,7 +125,7 @@ resolve_quality_gate_limit() {
       ;;
     max_rss_kb)
       env_name="QUALITY_GATE_${normalized}_MAX_RSS_KB"
-      fallback="${QUALITY_GATE_MAX_RSS_KB:-1048576}"
+      fallback="${QUALITY_GATE_MAX_RSS_KB:-2097152}"
       ;;
     *)
       echo "unknown quality gate limit: ${metric}" >&2

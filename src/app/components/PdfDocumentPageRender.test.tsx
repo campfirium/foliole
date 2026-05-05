@@ -11,7 +11,7 @@ vi.mock('react-pdf', async () => {
       onRenderTextLayerSuccess,
       pageNumber
     }: {
-      onLoadSuccess?: (page: { getViewport: (input: { scale: number }) => { width: number } }) => void;
+      onLoadSuccess?: (page: { getViewport: (input: { scale: number }) => { height: number; width: number } }) => void;
       onRenderSuccess?: () => void;
       onGetTextSuccess?: (payload: { items: Array<{ str: string }> }) => void;
       onRenderTextLayerSuccess?: () => void;
@@ -19,7 +19,7 @@ vi.mock('react-pdf', async () => {
     }) => {
       React.useEffect(() => {
         onLoadSuccess?.({
-          getViewport: ({ scale }: { scale: number }) => ({ width: 800 * scale })
+          getViewport: ({ scale }: { scale: number }) => ({ height: 1131 * scale, width: 800 * scale })
         });
         onRenderSuccess?.();
         onGetTextSuccess?.({ items: [{ str: `mock text ${pageNumber}` }] });
@@ -39,7 +39,7 @@ vi.mock('react-pdf', async () => {
   };
 });
 
-import { renderPdfPage } from './PdfDocumentPageRender';
+import { renderPdfPage, renderPdfPagePlaceholder } from './PdfDocumentPageRender';
 
 const pageElementsRef = { current: {} as Record<number, HTMLDivElement | null> };
 const firstSearchMatch = {
@@ -200,4 +200,20 @@ it('renders the second-half highlight of a cross-page match on the next page', (
   );
 
   expect(findSearchMatchNode(container, '22%')).toBeTruthy();
+});
+
+it('renders a placeholder shell for pages outside the active render window', () => {
+  const { container } = render(
+    renderPdfPagePlaceholder({
+      fitWidthTargetWidth: null,
+      pageDimensions: undefined,
+      pageElementsRef,
+      pageNumber: 3,
+      rotation: 0,
+      zoomMode: 'custom',
+      zoom: 100
+    })
+  );
+
+  expect(container.querySelector('[data-pdf-page-state="placeholder"]')).not.toBeNull();
 });

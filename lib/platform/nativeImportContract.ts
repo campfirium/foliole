@@ -143,6 +143,11 @@ export interface NativeNodeSourceDetails {
   import_source: NativeNodeImportSource | null;
   inherited_from_parent: boolean;
   keep_import_item: NativeKeepImportItemDetails | null;
+  pdf_page_dimensions: Array<{
+    page: number;
+    page_height: number | null;
+    page_width: number | null;
+  }>;
   source_node_id: string;
 }
 

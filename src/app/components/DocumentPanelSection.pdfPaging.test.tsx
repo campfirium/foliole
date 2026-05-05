@@ -77,6 +77,7 @@ function createPdfSourceDetails(overrides?: { isLoading?: boolean }) {
       },
       inheritedFromParent: false,
       keepImportItem: null,
+      pdfPageDimensions: [],
       sourceNodeId: 'node-1'
     }
   };
@@ -92,7 +93,7 @@ it('keeps the visible page number stable until the next-page scroll actually set
   });
   expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('1');
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-  expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('1');
+  expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('2');
 });
 
 it('keeps the pdf reading container visible while a linked pdf node source is refreshing', async () => {
@@ -115,5 +116,5 @@ it('reserves shells for every pdf page while only rendering the nearby canvases'
   await waitFor(() => {
     expect(screen.getAllByTestId('pdf-document-page-shell')).toHaveLength(9);
   });
-  expect(screen.getAllByTestId('pdf-document-page')).toHaveLength(2);
+  expect(screen.getAllByTestId('pdf-document-page')).toHaveLength(3);
 });

@@ -1,7 +1,7 @@
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 
 const PDF_PAGE_MIN = 1;
-const PDF_INITIAL_RENDER_RADIUS = 1;
+const PDF_INITIAL_RENDER_RADIUS = 2;
 
 interface ResolvePageNumberArgs {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;

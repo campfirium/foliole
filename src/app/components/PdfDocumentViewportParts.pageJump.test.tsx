@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { expect, it, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
@@ -8,38 +8,57 @@ import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 import { usePageJumpEffect, useVisiblePageSync } from './PdfDocumentViewportParts';
 
 function PageJumpHarness({
+  mountTargetLater = false,
   onJumpHandled,
   pageJumpRequest,
+  targetState = 'ready',
   totalPages
 }: {
+  mountTargetLater?: boolean;
   onJumpHandled: (requestId: number) => void;
   pageJumpRequest: PdfJumpRequest | null;
+  targetState?: 'placeholder' | 'ready';
   totalPages: number | null;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
-  const programmaticPageJumpRef = useRef<{ expiresAt: number; requestId: number; targetPage: number } | null>(null);
+  const [isTargetMounted, setIsTargetMounted] = useState(!mountTargetLater);
 
-  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, totalPages, onJumpHandled, programmaticPageJumpRef);
+  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, totalPages, onJumpHandled);
+
+  useEffect(() => {
+    if (!mountTargetLater) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setIsTargetMounted(true);
+    }, 0);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [mountTargetLater]);
 
   return (
     <div data-testid="pdf-scroll-container" ref={scrollContainerRef}>
-      <div
-        data-testid="pdf-page-target"
-        ref={(element) => {
-          pageElementsRef.current[5] = element;
-          if (element) {
-            Object.defineProperty(element, 'offsetTop', {
-              configurable: true,
-              value: 240
-            });
-            Object.defineProperty(element, 'clientHeight', {
-              configurable: true,
-              value: 400
-            });
-          }
-        }}
-      />
+      {isTargetMounted ? (
+        <div
+          data-testid="pdf-page-target"
+          data-pdf-page-state={targetState}
+          ref={(element) => {
+            pageElementsRef.current[5] = element;
+            if (element) {
+              Object.defineProperty(element, 'offsetTop', {
+                configurable: true,
+                value: 240
+              });
+              Object.defineProperty(element, 'clientHeight', {
+                configurable: true,
+                value: 400
+              });
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -51,17 +70,20 @@ function VisiblePageSyncHarness({
   onVisibleLocation: (page: number, positionY: number) => void;
   pageJumpRequest: PdfJumpRequest | null;
 }) {
+  const [activePageJumpRequest, setActivePageJumpRequest] = useState(pageJumpRequest);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
-  const programmaticPageJumpRef = useRef<{ expiresAt: number; requestId: number; targetPage: number } | null>(null);
-  const handleScroll = useVisiblePageSync(pageElementsRef, scrollContainerRef, onVisibleLocation, 3, programmaticPageJumpRef);
+  const handleScroll = useVisiblePageSync(activePageJumpRequest, pageElementsRef, scrollContainerRef, onVisibleLocation, 3);
 
-  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, 3, () => undefined, programmaticPageJumpRef);
+  usePageJumpEffect(activePageJumpRequest, pageElementsRef, scrollContainerRef, 3, () => {
+    setActivePageJumpRequest(null);
+  });
 
   return (
     <div data-testid="pdf-visible-page-scroll-container" onScroll={handleScroll} ref={scrollContainerRef}>
       {[1, 2, 3].map((pageNumber) => (
         <div
+          data-pdf-page-state="ready"
           data-testid={`pdf-visible-page-${pageNumber}`}
           key={pageNumber}
           ref={(element) => {
@@ -102,8 +124,8 @@ it('triggers page jump effect for repeated requests to the same page', async () 
   rerender(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 2, page: 5, positionY: 0.8 }} totalPages={9} />);
 
   await waitFor(() => expect(scrollToMock).toHaveBeenCalledTimes(2));
-  expect(scrollToMock).toHaveBeenNthCalledWith(1, { behavior: 'smooth', top: 250 });
-  expect(scrollToMock).toHaveBeenNthCalledWith(2, { behavior: 'smooth', top: 490 });
+  expect(scrollToMock).toHaveBeenNthCalledWith(1, { behavior: 'auto', top: 250 });
+  expect(scrollToMock).toHaveBeenNthCalledWith(2, { behavior: 'auto', top: 490 });
   expect(onJumpHandled).toHaveBeenNthCalledWith(1, 1);
   expect(onJumpHandled).toHaveBeenNthCalledWith(2, 2);
 });
@@ -133,7 +155,55 @@ it('retries pending jump after document pages become available', async () => {
   expect(onJumpHandled).toHaveBeenCalledWith(4);
 });
 
-it('ignores intermediate scroll updates until the jump reaches the requested page', async () => {
+it('keeps watching until the target page shell mounts', async () => {
+  const onJumpHandled = vi.fn();
+  render(<PageJumpHarness mountTargetLater onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 8, page: 5, positionY: 0.5 }} totalPages={9} />);
+
+  const scrollContainer = screen.getByTestId('pdf-scroll-container') as HTMLDivElement;
+  Object.defineProperty(scrollContainer, 'clientHeight', {
+    configurable: true,
+    value: 200
+  });
+  const scrollToMock = vi.fn();
+  Object.defineProperty(scrollContainer, 'scrollTo', {
+    configurable: true,
+    value: scrollToMock
+  });
+
+  await waitFor(() => expect(scrollToMock).toHaveBeenCalledWith({ behavior: 'auto', top: 370 }));
+  expect(onJumpHandled).toHaveBeenCalledWith(8);
+});
+
+it('waits for the real rendered page before handling the jump', async () => {
+  const onJumpHandled = vi.fn();
+  const { rerender } = render(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={null} targetState="placeholder" totalPages={9} />);
+
+  const scrollContainer = screen.getByTestId('pdf-scroll-container') as HTMLDivElement;
+  Object.defineProperty(scrollContainer, 'clientHeight', {
+    configurable: true,
+    value: 200
+  });
+  const scrollToMock = vi.fn();
+  Object.defineProperty(scrollContainer, 'scrollTo', {
+    configurable: true,
+    value: scrollToMock
+  });
+
+  rerender(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 5, page: 5, positionY: 0.5 }} targetState="placeholder" totalPages={9} />);
+
+  await waitFor(() => {
+    expect(scrollToMock).toHaveBeenCalledWith({ behavior: 'auto', top: 370 });
+  });
+  expect(onJumpHandled).not.toHaveBeenCalled();
+
+  rerender(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 5, page: 5, positionY: 0.5 }} targetState="ready" totalPages={9} />);
+
+  await waitFor(() => expect(scrollToMock).toHaveBeenCalledTimes(2));
+  expect(scrollToMock).toHaveBeenLastCalledWith({ behavior: 'auto', top: 370 });
+  expect(onJumpHandled).toHaveBeenCalledWith(5);
+});
+
+it('resumes visible page updates after the jump request has been handled', async () => {
   const onVisibleLocation = vi.fn();
   render(<VisiblePageSyncHarness onVisibleLocation={onVisibleLocation} pageJumpRequest={{ id: 7, page: 2, positionY: 0 }} />);
 
@@ -160,7 +230,7 @@ it('ignores intermediate scroll updates until the jump reaches the requested pag
 
   scrollContainer.scrollTop = 0;
   scrollContainer.dispatchEvent(new Event('scroll'));
-  expect(onVisibleLocation).not.toHaveBeenCalled();
+  expect(onVisibleLocation).toHaveBeenCalledWith(1, 0.175);
 
   scrollContainer.scrollTop = 600;
   scrollContainer.dispatchEvent(new Event('scroll'));

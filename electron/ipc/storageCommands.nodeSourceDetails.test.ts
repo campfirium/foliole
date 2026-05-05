@@ -94,6 +94,10 @@ const NODE_SOURCE_DETAILS_RECORD = {
     source_path: '/Users/me/Readwise/Full Document Contents/Articles/note.md',
     source_size_bytes: 456
   },
+  pdfPageDimensions: [
+    { page: 1, page_height: 1131, page_width: 800 },
+    { page: 2, page_height: 1200, page_width: 820 }
+  ],
   sourceNodeId: 'node-parent'
 };
 
@@ -163,6 +167,10 @@ const EXPECTED_NODE_SOURCE_PAYLOAD = {
     source_size_bytes: 456,
     source_type: 'readwise'
   },
+  pdf_page_dimensions: [
+    { page: 1, page_height: 1131, page_width: 800 },
+    { page: 2, page_height: 1200, page_width: 820 }
+  ],
   source_node_id: 'node-parent'
 };
 

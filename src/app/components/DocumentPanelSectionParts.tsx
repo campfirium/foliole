@@ -71,6 +71,25 @@ function createPdfCache(args: {
     <>
       <PdfDocumentSurfaceCache
         activeNodeId={args.activeNodeId}
+        activePersistedPageCount={args.pdfDocumentSurface?.state === 'ready'
+          ? args.pdfDocumentSurface.details.pdfPageDimensions.reduce((maxPage, entry) => Math.max(maxPage, entry.page), 0) || null
+          : null}
+        activePersistedPageDimensions={
+          args.pdfDocumentSurface?.state === 'ready'
+            ? Object.fromEntries(
+                args.pdfDocumentSurface.details.pdfPageDimensions.flatMap((entry) =>
+                  typeof entry.pageWidth === 'number' &&
+                  Number.isFinite(entry.pageWidth) &&
+                  entry.pageWidth > 0 &&
+                  typeof entry.pageHeight === 'number' &&
+                  Number.isFinite(entry.pageHeight) &&
+                  entry.pageHeight > 0
+                    ? [[entry.page, { height: entry.pageHeight, width: entry.pageWidth }] as const]
+                    : []
+                )
+              )
+            : {}
+        }
         activePdfState={args.pdfDocumentSurface?.state ?? null}
         activeSourceHint={args.pdfDocumentSurface?.sourceHint ?? null}
         editorNodeId={args.bodyProps.editorNodeId}

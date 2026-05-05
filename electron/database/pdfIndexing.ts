@@ -106,6 +106,21 @@ function resolvePdfPageText(content: { items: unknown[] }) {
     .join('');
 }
 
+function resolvePdfPageDimensions(pdfPage: { getViewport: (input: { scale: number }) => { width?: number; height?: number } }) {
+  const viewport = pdfPage.getViewport({ scale: 1 });
+  if (
+    typeof viewport.width !== 'number' ||
+    !Number.isFinite(viewport.width) ||
+    viewport.width <= 0 ||
+    typeof viewport.height !== 'number' ||
+    !Number.isFinite(viewport.height) ||
+    viewport.height <= 0
+  ) {
+    return null;
+  }
+  return { height: viewport.height, width: viewport.width };
+}
+
 async function extractPdfPageText(attachmentId: string) {
   const resolved = resolveAttachmentFile(attachmentId);
   if (resolved.status !== 'ready') {
@@ -120,11 +135,17 @@ async function extractPdfPageText(attachmentId: string) {
   });
   const document = await loadingTask.promise;
   try {
-    const pages: Array<{ page: number; text: string }> = [];
+    const pages: Array<{ page: number; text: string; pageHeight: number | null; pageWidth: number | null }> = [];
     for (let page = 1; page <= document.numPages; page += 1) {
       const pdfPage = await document.getPage(page);
       const textContent = await pdfPage.getTextContent();
-      pages.push({ page, text: resolvePdfPageText(textContent) });
+      const pageDimensions = resolvePdfPageDimensions(pdfPage);
+      pages.push({
+        page,
+        pageHeight: pageDimensions?.height ?? null,
+        pageWidth: pageDimensions?.width ?? null,
+        text: resolvePdfPageText(textContent)
+      });
     }
     return pages;
   } finally {
@@ -132,16 +153,19 @@ async function extractPdfPageText(attachmentId: string) {
   }
 }
 
-function savePdfPageTextRows(attachmentId: string, pages: Array<{ page: number; text: string }>) {
+function savePdfPageTextRows(attachmentId: string, pages: Array<{ page: number; text: string; pageHeight: number | null; pageWidth: number | null }>) {
   const connection = openDatabaseConnection();
   const runInTransaction = connection.sqlite.transaction(() => {
     connection.driver.execute('DELETE FROM pdf_page_text WHERE attachment_id = ?', [attachmentId]);
     for (const page of pages) {
       connection.driver.execute(
-        `INSERT INTO pdf_page_text (attachment_id, page, text)
-         VALUES (?, ?, ?)
-         ON CONFLICT(attachment_id, page) DO UPDATE SET text = excluded.text`,
-        [attachmentId, page.page, page.text]
+        `INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(attachment_id, page) DO UPDATE SET
+           text = excluded.text,
+           page_width = excluded.page_width,
+           page_height = excluded.page_height`,
+        [attachmentId, page.page, page.text, page.pageWidth, page.pageHeight]
       );
     }
   });

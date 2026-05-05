@@ -1,68 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { Document } from 'react-pdf';
 
-import { renderPdfPage } from './PdfDocumentPageRender';
-import type { PdfSearchStatus, PdfSearchVisualHighlight } from './PdfDocumentSearch';
-import { PdfDocumentToolbar } from './PdfDocumentToolbar';
+import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
+import type { PdfPageDimensions } from './pdfPageDimensions';
 import type { PdfPageTextEntry } from './pdfPageText';
-import { resolveInitialReadyPageNumbers, resolveRenderablePageNumbers } from './pdfViewportPageNumbers';
-
-interface PdfViewportToolbarProps {
-  displayPage: number;
-  isVisible: boolean;
-  maxPage: number;
-  onClearSearch: () => void;
-  onNextPage: () => void;
-  onPageChange: (value: number) => void;
-  onPreviousPage: () => void;
-  onRotateClockwise: () => void;
-  onSearchFocusChange: (focused: boolean) => void;
-  onSearchQueryChange: (value: string) => void;
-  onSearchRequest: (direction: 'next' | 'previous') => void;
-  onSetFitWidth: () => void;
-  onSetZoom: (value: number) => void;
-  onToolbarActiveChange: (active: boolean) => void;
-  onToolbarInteraction: () => void;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  page: number;
-  searchIndexingHint: string | null;
-  searchQuery: string;
-  searchStatus: PdfSearchStatus;
-  zoomMode: 'custom' | 'fit-width';
-  zoom: number;
-}
-
-export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
-  return (
-    <PdfDocumentToolbar
-      displayPage={props.displayPage}
-      isVisible={props.isVisible}
-      maxPage={props.maxPage}
-      onClearSearch={props.onClearSearch}
-      onFindNext={() => props.onSearchRequest('next')}
-      onFindPrevious={() => props.onSearchRequest('previous')}
-      onNextPage={props.onNextPage}
-      onPageChange={props.onPageChange}
-      onPreviousPage={props.onPreviousPage}
-      onRotateClockwise={props.onRotateClockwise}
-      onSearchFocusChange={props.onSearchFocusChange}
-      searchIndexingHint={props.searchIndexingHint}
-      onSearchQueryChange={props.onSearchQueryChange}
-      onSetFitWidth={props.onSetFitWidth}
-      onSetZoom={props.onSetZoom}
-      onToolbarActiveChange={props.onToolbarActiveChange}
-      onToolbarInteraction={props.onToolbarInteraction}
-      onZoomIn={props.onZoomIn}
-      onZoomOut={props.onZoomOut}
-      searchQuery={props.searchQuery}
-      searchStatus={props.searchStatus}
-      zoomMode={props.zoomMode}
-      zoom={props.zoom}
-    />
-  );
-}
+import { collectPdfPageDimensions, renderDocumentPages } from './pdfViewportPageLayout';
+import { resolveRenderablePageNumbers } from './pdfViewportPageNumbers';
+import { PdfViewportPlaceholderStack } from './pdfViewportPlaceholderStack';
+import { usePdfInitialRenderReadyState } from './usePdfInitialRenderReadyState';
 
 interface PdfViewportDocumentProps {
   fitWidthTargetWidth: number | null;
@@ -74,107 +21,173 @@ interface PdfViewportDocumentProps {
     y: number | null;
   }>;
   onInitialRenderReadyChange: (ready: boolean) => void;
+  onLayoutReadyChange: (ready: boolean) => void;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
-  onPageLoadSuccess: (pageNumber: number, baseWidth: number) => void;
+  onPageLoadSuccess: (pageNumber: number, dimensions: PdfPageDimensions) => void;
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   page: number;
   pageElementsRef: PdfPageElementsRef;
+  persistedPageCount: number | null;
+  persistedPageDimensions: Record<number, PdfPageDimensions>;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
   searchQuery: string;
   searchHighlights: PdfSearchVisualHighlight[];
   totalPages: number | null;
+  visiblePage: number;
   zoomMode: 'custom' | 'fit-width';
   zoom: number;
 }
 
 export function PdfViewportDocument(props: PdfViewportDocumentProps) {
+  const persistedPageDimensions = props.persistedPageDimensions ?? {};
+  const [pageDimensionsByNumber, setPageDimensionsByNumber] = useState<Record<number, PdfPageDimensions>>(persistedPageDimensions);
+  const [isDocumentLoaded, setIsDocumentLoaded] = useState(false);
   const { handlePageRenderReady } = usePdfInitialRenderReadyState(props);
-  return renderPdfDocument(props, handlePageRenderReady);
-}
-function usePdfInitialRenderReadyState(props: PdfViewportDocumentProps) {
-  const expectedPageNumbers = props.totalPages
-    ? resolveInitialReadyPageNumbers({
-        highlightLocators: props.highlightLocators,
-        page: props.page,
-        pdfSelectionLocator: props.pdfSelectionLocator,
-        searchHighlights: props.searchHighlights,
-        searchQuery: props.searchQuery,
-        totalPages: props.totalPages
-      })
-    : [];
-  const [readyPageNumbers, setReadyPageNumbers] = useState<Record<number, true>>({});
-  const [isInitialRenderReady, setIsInitialRenderReady] = useState(false);
+  const totalPages = props.totalPages ?? props.persistedPageCount;
+  const totalPageCount = totalPages ?? 0;
+  const hasCompletePageMetrics = totalPageCount > 0 && Object.keys(pageDimensionsByNumber).length >= totalPageCount;
+  const isLayoutReady = isDocumentLoaded && hasCompletePageMetrics;
+  const persistedPageDimensionsKey = Object.entries(persistedPageDimensions)
+    .sort(([left], [right]) => Number(left) - Number(right))
+    .map(([pageNumber, dimensions]) => `${pageNumber}:${dimensions.width}x${dimensions.height}`)
+    .join('|');
   const previousPdfSourceRef = useRef(props.pdfSource);
+  const previousPersistedPageDimensionsKeyRef = useRef(persistedPageDimensionsKey);
+
   useEffect(() => {
-    if (previousPdfSourceRef.current === props.pdfSource) {
+    if (
+      previousPdfSourceRef.current === props.pdfSource &&
+      previousPersistedPageDimensionsKeyRef.current === persistedPageDimensionsKey
+    ) {
       return;
     }
     previousPdfSourceRef.current = props.pdfSource;
-    setReadyPageNumbers({});
-    setIsInitialRenderReady(false);
-  }, [props.pdfSource]);
+    previousPersistedPageDimensionsKeyRef.current = persistedPageDimensionsKey;
+    setPageDimensionsByNumber(persistedPageDimensions);
+    setIsDocumentLoaded(false);
+  }, [persistedPageDimensionsKey, props.pdfSource]);
 
   useEffect(() => {
-    if (!isInitialRenderReady && expectedPageNumbers.length > 0 && expectedPageNumbers.every((pageNumber) => readyPageNumbers[pageNumber])) setIsInitialRenderReady(true);
-  }, [expectedPageNumbers, isInitialRenderReady, readyPageNumbers]);
-  useEffect(() => {
-    props.onInitialRenderReadyChange(isInitialRenderReady);
-  }, [isInitialRenderReady, props.onInitialRenderReadyChange]);
-  return {
-    handlePageRenderReady: (pageNumber: number) => {
-      setReadyPageNumbers((current) => (current[pageNumber] ? current : { ...current, [pageNumber]: true }));
-    }
-  };
-}
-function renderPdfDocument(props: PdfViewportDocumentProps, handlePageRenderReady: (pageNumber: number) => void) {
-  return (
-    <Document
-      className="mx-auto flex w-full max-w-none flex-col items-center gap-4"
-      data-testid="pdf-document-view"
-      file={props.pdfSource}
-      loading={<div aria-hidden="true" className="min-h-[360px] w-full rounded-md bg-bg-panel/20" />}
-      noData={<p className="text-sm text-foreground/70">No PDF file selected.</p>}
-      onLoadError={(error) => props.onLoadError(error.message || 'Failed to load PDF document.')}
-      onLoadSuccess={({ numPages }: { numPages: number }) => props.onLoadSuccess(numPages)}
-    >
-      <PdfDocumentPages
-        highlightLocators={props.highlightLocators}
-        onPageRenderReady={handlePageRenderReady}
-        onTextContentLoad={props.onTextContentLoad}
-        onTextLayerRender={props.onTextLayerRender}
-        onPageLoadSuccess={props.onPageLoadSuccess}
-        page={props.page}
-        pageElementsRef={props.pageElementsRef}
-        pdfSelectionLocator={props.pdfSelectionLocator}
-        fitWidthTargetWidth={props.fitWidthTargetWidth}
-        rotation={props.rotation}
-        searchQuery={props.searchQuery}
-        searchHighlights={props.searchHighlights}
-        totalPages={props.totalPages}
-        zoomMode={props.zoomMode}
-        zoom={props.zoom}
-      />
-    </Document>
+    props.onLayoutReadyChange(isLayoutReady);
+  }, [isLayoutReady, props.onLayoutReadyChange]);
+
+  return renderPdfDocument(
+    props,
+    handlePageRenderReady,
+    pageDimensionsByNumber,
+    isLayoutReady,
+    hasCompletePageMetrics,
+    setIsDocumentLoaded,
+    setPageDimensionsByNumber
   );
 }
+function renderPdfDocument(
+  props: PdfViewportDocumentProps,
+  handlePageRenderReady: (pageNumber: number) => void,
+  pageDimensionsByNumber: Record<number, PdfPageDimensions>,
+  isLayoutReady: boolean,
+  hasCompletePageMetrics: boolean,
+  setIsDocumentLoaded: Dispatch<SetStateAction<boolean>>,
+  setPageDimensionsByNumber: Dispatch<SetStateAction<Record<number, PdfPageDimensions>>>
+) {
+  const handleDocumentLoadSuccess = createDocumentLoadSuccessHandler(props, setIsDocumentLoaded, setPageDimensionsByNumber);
+  const handlePageLoadSuccess = createPageLoadSuccessHandler(props, setPageDimensionsByNumber);
+
+  return (
+    <>
+      {hasCompletePageMetrics && !isLayoutReady ? (
+        <PdfViewportPlaceholderStack
+          fitWidthTargetWidth={props.fitWidthTargetWidth}
+          pageDimensionsByNumber={pageDimensionsByNumber}
+          pageElementsRef={props.pageElementsRef}
+          persistedPageCount={props.persistedPageCount}
+          rotation={props.rotation}
+          totalPages={props.totalPages}
+          zoomMode={props.zoomMode}
+          zoom={props.zoom}
+        />
+      ) : null}
+      <Document
+        className={isLayoutReady ? 'mx-auto flex w-full max-w-none flex-col items-center gap-4' : 'hidden'}
+        data-testid="pdf-document-view"
+        file={props.pdfSource}
+        loading={null}
+        noData={<p className="text-sm text-foreground/70">No PDF file selected.</p>}
+        onLoadError={(error) => props.onLoadError(error.message || 'Failed to load PDF document.')}
+        onLoadSuccess={handleDocumentLoadSuccess}
+      >
+        <PdfDocumentPages
+          fitWidthTargetWidth={props.fitWidthTargetWidth}
+          highlightLocators={props.highlightLocators}
+          onPageRenderReady={handlePageRenderReady}
+          onTextContentLoad={props.onTextContentLoad}
+          onTextLayerRender={props.onTextLayerRender}
+          onPageLoadSuccess={handlePageLoadSuccess}
+          pageDimensionsByNumber={pageDimensionsByNumber}
+          pageElementsRef={props.pageElementsRef}
+          pdfSelectionLocator={props.pdfSelectionLocator}
+          rotation={props.rotation}
+          searchQuery={props.searchQuery}
+          searchHighlights={props.searchHighlights}
+          totalPages={props.totalPages}
+          visiblePage={props.visiblePage}
+          zoomMode={props.zoomMode}
+          zoom={props.zoom}
+        />
+      </Document>
+    </>
+  );
+}
+
+function createDocumentLoadSuccessHandler(
+  props: PdfViewportDocumentProps,
+  setIsDocumentLoaded: Dispatch<SetStateAction<boolean>>,
+  setPageDimensionsByNumber: Dispatch<SetStateAction<Record<number, PdfPageDimensions>>>
+) {
+  return (document: { getPage?: (pageNumber: number) => Promise<unknown>; numPages: number }) => {
+    setIsDocumentLoaded(true);
+    props.onLoadSuccess(document.numPages);
+    if (Object.keys(props.persistedPageDimensions ?? {}).length > 0) {
+      return;
+    }
+    void collectPdfPageDimensions(document).then((pageDimensions) => {
+      setPageDimensionsByNumber(pageDimensions);
+    });
+  };
+}
+
+function createPageLoadSuccessHandler(
+  props: PdfViewportDocumentProps,
+  setPageDimensionsByNumber: Dispatch<SetStateAction<Record<number, PdfPageDimensions>>>
+) {
+  return (pageNumber: number, dimensions: PdfPageDimensions) => {
+    props.onPageLoadSuccess(pageNumber, dimensions);
+    setPageDimensionsByNumber((current) =>
+      current[pageNumber]?.width === dimensions.width && current[pageNumber]?.height === dimensions.height
+        ? current
+        : { ...current, [pageNumber]: dimensions }
+    );
+  };
+}
 function PdfDocumentPages({
+  fitWidthTargetWidth,
   highlightLocators,
   onPageRenderReady,
   onTextContentLoad,
   onTextLayerRender,
   onPageLoadSuccess,
-  page,
+  pageDimensionsByNumber,
   pageElementsRef,
   pdfSelectionLocator,
-  fitWidthTargetWidth,
   rotation,
   searchQuery,
   searchHighlights,
   totalPages,
+  visiblePage,
   zoomMode,
   zoom
 }: PdfDocumentPagesProps) {
@@ -183,19 +196,20 @@ function PdfDocumentPages({
   }
   const pageNumbers = resolveRenderablePageNumbers({
     highlightLocators,
-    page,
+    page: visiblePage,
     pdfSelectionLocator,
     searchHighlights,
     searchQuery,
     totalPages
   });
-  return renderRenderablePages(pageNumbers, {
+  return renderDocumentPages(totalPages, pageNumbers, {
     fitWidthTargetWidth,
     highlightLocators,
     onPageRenderReady,
     onPageLoadSuccess,
     onTextContentLoad,
     onTextLayerRender,
+    pageDimensionsByNumber,
     pageElementsRef,
     pdfSelectionLocator,
     rotation,
@@ -216,17 +230,15 @@ interface PdfDocumentPagesProps {
   onPageRenderReady: (pageNumber: number) => void;
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
-  onPageLoadSuccess: (pageNumber: number, baseWidth: number) => void;
-  page: number;
+  onPageLoadSuccess: (pageNumber: number, dimensions: PdfPageDimensions) => void;
+  pageDimensionsByNumber: Record<number, PdfPageDimensions>;
   pageElementsRef: PdfPageElementsRef;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   rotation: number;
   searchQuery: string;
   searchHighlights: PdfSearchVisualHighlight[];
   totalPages: number | null;
+  visiblePage: number;
   zoomMode: 'custom' | 'fit-width';
   zoom: number;
-}
-function renderRenderablePages(pageNumbers: number[], args: Omit<Parameters<typeof renderPdfPage>[0], 'pageNumber'>) {
-  return pageNumbers.map((pageNumber) => renderPdfPage({ ...args, pageNumber }));
 }

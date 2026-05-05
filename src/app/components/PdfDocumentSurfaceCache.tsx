@@ -4,6 +4,7 @@ import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { PdfDocumentSurface } from './PdfDocumentSurface';
+import type { PdfPageDimensions } from './pdfPageDimensions';
 
 type PdfDocumentSurfaceState = 'empty' | 'failed' | 'loading' | 'ready';
 
@@ -11,6 +12,8 @@ const MAX_CACHED_SURFACES = 3;
 
 interface CachedPdfSurface {
   nodeId: string;
+  persistedPageCount: number | null;
+  persistedPageDimensions: Record<number, PdfPageDimensions>;
   sourceHint: string;
 }
 
@@ -30,17 +33,26 @@ function shouldDisplayCachedSurface(activeNodeId: string | null, nodeId: string,
 function resolveRenderEntries(
   cachedSurfaces: CachedPdfSurface[],
   activePdfState: PdfDocumentSurfaceState | null,
+  activePersistedPageCount: number | null,
+  activePersistedPageDimensions: Record<number, PdfPageDimensions>,
   activeSourceHint: string | null,
   editorNodeId: string | null
 ) {
   if (activePdfState !== 'ready' || !activeSourceHint || !editorNodeId) {
     return cachedSurfaces;
   }
-  return upsertCachedSurface(cachedSurfaces, { nodeId: editorNodeId, sourceHint: activeSourceHint });
+  return upsertCachedSurface(cachedSurfaces, {
+    nodeId: editorNodeId,
+    persistedPageCount: activePersistedPageCount,
+    persistedPageDimensions: activePersistedPageDimensions,
+    sourceHint: activeSourceHint
+  });
 }
 
 export function PdfDocumentSurfaceCache(props: {
   activeNodeId: string | null;
+  activePersistedPageCount: number | null;
+  activePersistedPageDimensions: Record<number, PdfPageDimensions>;
   activePdfState: PdfDocumentSurfaceState | null;
   activeSourceHint: string | null;
   editorNodeId: string | null;
@@ -61,12 +73,21 @@ export function PdfDocumentSurfaceCache(props: {
     setCachedSurfaces((current) =>
       upsertCachedSurface(current, {
         nodeId: editorNodeId,
+        persistedPageCount: props.activePersistedPageCount,
+        persistedPageDimensions: props.activePersistedPageDimensions,
         sourceHint: activeSourceHint
       })
     );
-  }, [props.activePdfState, props.activeSourceHint, props.editorNodeId]);
+  }, [props.activePdfState, props.activePersistedPageCount, props.activePersistedPageDimensions, props.activeSourceHint, props.editorNodeId]);
 
-  const renderEntries = resolveRenderEntries(cachedSurfaces, props.activePdfState, props.activeSourceHint, props.editorNodeId);
+  const renderEntries = resolveRenderEntries(
+    cachedSurfaces,
+    props.activePdfState,
+    props.activePersistedPageCount,
+    props.activePersistedPageDimensions,
+    props.activeSourceHint,
+    props.editorNodeId
+  );
 
   useEffect(() => {
     const visible = renderEntries.some((entry) =>
@@ -105,6 +126,8 @@ function renderCachedSurfaceEntry(
             props.onPersistPdfViewState(entry.nodeId, viewState);
           }
         }}
+        persistedPageCount={entry.persistedPageCount}
+        persistedPageDimensions={entry.persistedPageDimensions}
         pdfIndexStatus={null}
         sourceHint={entry.sourceHint}
       />

@@ -160,7 +160,9 @@ export const pdfPageText = sqliteTable(
   {
     attachmentId: text('attachment_id').notNull(),
     page: integer('page').notNull(),
-    text: text('text').notNull()
+    text: text('text').notNull(),
+    pageWidth: real('page_width'),
+    pageHeight: real('page_height')
   },
   (table) => [primaryKey({ columns: [table.attachmentId, table.page] })]
 );

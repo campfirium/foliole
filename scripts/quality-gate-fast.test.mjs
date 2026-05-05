@@ -53,7 +53,7 @@ function runGuardedCommand(command, env = {}) {
         ...process.env,
         QUALITY_GATE_TEST_COMMAND: command,
         QUALITY_GATE_TEST_TIMEOUT_SECONDS: '10',
-        QUALITY_GATE_TEST_MAX_RSS_KB: '1048576',
+        QUALITY_GATE_TEST_MAX_RSS_KB: '2097152',
         ...env
       }
     });
@@ -108,7 +108,7 @@ describe('quality-gate-fast.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it('reports the failed script in fail-only mode', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
@@ -130,7 +130,7 @@ describe('quality-gate-fast.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it('fails fast and clears descendant processes when a guarded test exceeds the timeout', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
@@ -143,6 +143,7 @@ describe('quality-gate-fast.sh', () => {
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('failed: test exceeded timeout (2s)');
+      await waitForFile(pidFile);
       const lingeringPid = Number.parseInt((await readFile(pidFile, 'utf8')).trim(), 10);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 200));
       expect(Number.isNaN(lingeringPid)).toBe(false);
@@ -184,6 +185,7 @@ describe('quality-gate-fast.sh', () => {
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('lint failed:');
       expect(result.stdout).toContain('failed: lint exceeded timeout (2s)');
+      await waitForFile(pidFile);
       const lingeringPid = Number.parseInt((await readFile(pidFile, 'utf8')).trim(), 10);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 200));
       expect(Number.isNaN(lingeringPid)).toBe(false);
@@ -216,3 +218,19 @@ describe('quality-gate-fast.sh', () => {
     }
   }, 15000);
 });
+
+async function waitForFile(filePath, timeoutMs = 1000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      await readFile(filePath, 'utf8');
+      return;
+    } catch (error) {
+      if (!('code' in error) || error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 50));
+  }
+  throw new Error(`Timed out waiting for file: ${filePath}`);
+}

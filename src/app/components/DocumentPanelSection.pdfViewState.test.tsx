@@ -110,6 +110,7 @@ beforeEach(() => {
       },
       inheritedFromParent: false,
       keepImportItem: null,
+      pdfPageDimensions: [],
       sourceNodeId: 'node-1'
     }
   } as never);
@@ -122,6 +123,7 @@ it('writes pdf page and zoom through onPersistPdfViewState callback', async () =
 
   expect(onPersistPdfViewState).not.toHaveBeenCalled();
 
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
 
   await waitFor(() =>
@@ -137,9 +139,11 @@ it('keeps fit width as the default persisted zoom mode for a new pdf', async () 
 
   render(<DocumentPanelSection {...defaultProps} onPersistPdfViewState={onPersistPdfViewState} />);
 
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF page' })).toBeInTheDocument());
   fireEvent.change(screen.getByRole('textbox', { name: 'PDF page' }), {
     target: { value: '2' }
   });
+  fireEvent.keyDown(screen.getByRole('textbox', { name: 'PDF page' }), { key: 'Enter' });
 
   await waitFor(() =>
     expect(onPersistPdfViewState).toHaveBeenCalledWith('node-1', {

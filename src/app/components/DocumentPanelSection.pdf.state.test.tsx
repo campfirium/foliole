@@ -78,7 +78,14 @@ function renderSection() {
 function createPdfSourceDetails(overrides?: { importSource?: Record<string, unknown> | null; keepImportItem?: Record<string, unknown> | null }) {
   return {
     isLoading: false,
-    value: { importRuns: [], importSource: overrides?.importSource === undefined ? defaultImportSource : overrides.importSource, inheritedFromParent: false, keepImportItem: overrides?.keepImportItem ?? null, sourceNodeId: 'node-1' }
+    value: {
+      importRuns: [],
+      importSource: overrides?.importSource === undefined ? defaultImportSource : overrides.importSource,
+      inheritedFromParent: false,
+      keepImportItem: overrides?.keepImportItem ?? null,
+      pdfPageDimensions: [],
+      sourceNodeId: 'node-1'
+    }
   };
 }
 

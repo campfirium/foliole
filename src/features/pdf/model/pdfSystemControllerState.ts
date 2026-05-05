@@ -35,8 +35,13 @@ export function createInitialPageJumpRequest(initialViewState: InitialPdfViewSta
     : null;
 }
 
+function shouldRestorePdfJump(page: number, positionY: number) {
+  return page > PDF_PAGE_MIN || positionY > 0;
+}
+
 export function usePdfSourceReset(args: {
   initialViewState: InitialPdfViewState;
+  initialTotalPages: number | null;
   resolvedSource: string;
   setLoadError: (value: string | null) => void;
   setPage: Dispatch<SetStateAction<number>>;
@@ -55,7 +60,7 @@ export function usePdfSourceReset(args: {
     }
     lastResolvedSourceRef.current = args.resolvedSource;
     args.setLoadError(null);
-    args.setTotalPages(null);
+    args.setTotalPages(args.initialTotalPages);
     args.setPage(args.initialViewState.page);
     args.setPageJumpRequest(createInitialPageJumpRequest(args.initialViewState));
     args.setPositionY(args.initialViewState.positionY);
@@ -128,7 +133,7 @@ export function usePdfVisibilityRestore(args: {
     const becameReadyWhileVisible = args.isVisible && !previousTotalPagesRef.current && Boolean(args.totalPages);
     previousVisibleRef.current = args.isVisible;
     previousTotalPagesRef.current = args.totalPages;
-    if (!becameVisible && !becameReadyWhileVisible) {
+    if ((!becameVisible && !becameReadyWhileVisible) || !shouldRestorePdfJump(args.page, args.positionY)) {
       return;
     }
     args.setPageJumpRequest({ id: restoreJumpIdRef.current, page: args.page, positionY: args.positionY });

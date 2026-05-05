@@ -37,6 +37,7 @@ function createPdfDetails(nodeId: string): RuntimeNodeSourceDetails {
     },
     inheritedFromParent: false,
     keepImportItem: null,
+    pdfPageDimensions: [],
     sourceNodeId: nodeId
   };
 }

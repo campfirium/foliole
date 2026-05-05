@@ -11,6 +11,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import { normalizeContextMenuPosition } from '../contextCommands';
 
 import { PdfDocumentSurfaceLayout } from './PdfDocumentSurfaceLayout';
+import type { PdfPageDimensions } from './pdfPageDimensions';
 import { resolveContextMenuSelection, useTrackPdfSelection, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
 import { useRegisterPdfSurface } from './pdfSurfaceRegistration';
 import { usePdfSearchControls } from './pdfSurfaceSearchControls';
@@ -34,6 +35,8 @@ interface PdfDocumentSurfaceProps {
   nodeId: string | null;
   onCreateHighlightFromSelection?: (selectionText: string, locator: PdfAnchorLocator) => boolean;
   onPersistViewState: (viewState: NodeViewState) => void;
+  persistedPageCount: number | null;
+  persistedPageDimensions: Record<number, PdfPageDimensions>;
   pdfIndexStatus: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   sourceHint: string;
   nodeViewState?: NodeViewState;
@@ -122,10 +125,12 @@ export function PdfDocumentSurface({
   nodeViewState,
   onCreateHighlightFromSelection,
   onPersistViewState,
+  persistedPageCount,
+  persistedPageDimensions,
   pdfIndexStatus,
   sourceHint
 }: PdfDocumentSurfaceProps) {
-  const pdfSystem = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint, isVisible);
+  const pdfSystem = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint, isVisible, persistedPageCount);
   const selectionState = usePdfSelectionContextMenu(onCreateHighlightFromSelection);
   const searchState = usePdfSearchControls();
   useRegisterPdfSurface(nodeId, pdfSystem.actions.requestAnchorJump, searchState.applyExternalSearch);
@@ -134,7 +139,11 @@ export function PdfDocumentSurface({
     ? 'Indexing in progress'
     : null;
 
-  const layoutProps = buildPdfSurfaceLayoutProps(highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint);
+  const layoutProps = {
+    ...buildPdfSurfaceLayoutProps(highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint),
+    persistedPageCount,
+    persistedPageDimensions
+  };
 
   return (
     <PdfDocumentSurfaceLayout {...layoutProps} />
@@ -167,6 +176,8 @@ function buildPdfSurfaceLayoutProps(
     maxPage: pdfSystem.state.maxPage,
     page: pdfSystem.state.page,
     pageJumpRequest: pdfSystem.state.pageJumpRequest,
+    persistedPageCount: null,
+    persistedPageDimensions: {},
     pdfSelectionLocator: selectionState.selectionOverlayLocator,
     pdfSelectionContextMenu: selectionMenu,
     pdfSource: pdfSystem.state.pdfSource,
