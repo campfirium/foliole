@@ -7,7 +7,7 @@ import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId
 import { loadReadwiseBooksInventory, type ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 import {
   findPersistedReadwiseBookByNodeId,
-  savePersistedReadwiseBooksInventory
+  savePersistedReadwiseBookMovedToTop
 } from './readwiseBooksInventoryState.js';
 
 interface ActiveNodeRow {
@@ -82,6 +82,11 @@ function listNodeOrderWithout(removedNodeIds: Set<string>) {
     .filter((nodeId) => !removedNodeIds.has(nodeId));
 }
 
+function resolveNextNodePosition() {
+  const row = openDatabaseConnection().driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
+  return (row?.position ?? -1) + 1;
+}
+
 function buildResetBook(book: ReadwiseBookInventoryItem, nodeId: string) {
   return {
     ...book,
@@ -103,6 +108,27 @@ function createBookNotFoundResult(book?: ReadwiseBookInventoryItem | null): Nati
     title: book?.title ?? null,
     updated_at: null
   };
+}
+
+function rebuildPlaceholderNode(book: ReadwiseBookInventoryItem, nodeId: string) {
+  const updatedAt = new Date().toISOString();
+  const resetBook = buildResetBook(book, nodeId);
+  const placeholderContent = buildReadwiseBookPlaceholderContent(resetBook);
+  upsertNodeSnapshot({
+    anchorLink: null,
+    content: placeholderContent,
+    createdAt: updatedAt,
+    hideTitleHeading: false,
+    isTitleManual: true,
+    kind: 'topic',
+    nodeId,
+    parentNodeId: 'special-inbox',
+    position: resolveNextNodePosition(),
+    reveal: null,
+    title: resetBook.title,
+    updatedAt
+  });
+  return { placeholderContent, resetBook, updatedAt };
 }
 
 function resetImportedTree(activeNode: ActiveNodeRow, book: ReadwiseBookInventoryItem) {
@@ -143,16 +169,35 @@ export async function resetReadwiseBookImport(nodeId: string): Promise<NativeRea
 
   const activeNode = readActiveNode(nodeId);
   if (!activeNode) {
-    return createBookNotFoundResult(book);
+    const restoredNodeId = book.generatedNodeId ?? nodeId;
+    const { placeholderContent, resetBook, updatedAt } = rebuildPlaceholderNode(book, restoredNodeId);
+    const updatedInventory = {
+      ...inventory,
+      books: inventory.books.map((candidate) => (candidate.bookKey === resetBook.bookKey ? resetBook : candidate)),
+      scannedAt: updatedAt
+    };
+    savePersistedReadwiseBookMovedToTop(updatedInventory, resetBook.bookKey);
+    return {
+      book_key: resetBook.bookKey,
+      content: placeholderContent,
+      node_id: restoredNodeId,
+      removed_node_ids: [],
+      status: 'reset',
+      title: resetBook.title,
+      updated_at: updatedAt
+    };
   }
 
   const { descendantNodeIds, placeholderContent, resetBook, updatedAt } = resetImportedTree(activeNode, book);
 
-  savePersistedReadwiseBooksInventory({
+  savePersistedReadwiseBookMovedToTop(
+    {
     ...inventory,
     books: inventory.books.map((candidate) => (candidate.bookKey === resetBook.bookKey ? resetBook : candidate)),
     scannedAt: updatedAt
-  });
+    },
+    resetBook.bookKey
+  );
 
   return {
     book_key: resetBook.bookKey,

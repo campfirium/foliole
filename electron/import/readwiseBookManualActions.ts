@@ -20,7 +20,7 @@ import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId
 import { loadReadwiseBooksInventory, type ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 import {
   findPersistedReadwiseBookByNodeId,
-  savePersistedReadwiseBooksInventory
+  savePersistedReadwiseBookMovedToTop
 } from './readwiseBooksInventoryState.js';
 
 const READWISE_BOOK_EPUB_PICKER_STATE_KEY = 'readwise_book_epub_picker_state';
@@ -145,7 +145,7 @@ async function importSelectedReadwiseBookEpub(input: {
     scannedAt: new Date().toISOString()
   };
 
-  savePersistedReadwiseBooksInventory(updatedInventory);
+  savePersistedReadwiseBookMovedToTop(updatedInventory, updatedBook.bookKey);
   refreshPlaceholderNode(updatedBook);
   return updatedBook;
 }

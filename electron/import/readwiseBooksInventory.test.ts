@@ -19,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -209,4 +209,31 @@ it('loads the books inventory from import manager settings', async () => {
       title: 'Settings Book'
     }
   ]);
+});
+
+it('promotes changed books to the top and marks deleted book nodes as pending', async () => {
+  const { fullDocumentDir, highlightDir } = await seedReadwiseBooksFixture();
+  const initialInventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  const plainBook = initialInventory.books.find((book) => book.bookKey === 'plain book');
+  expect(plainBook?.generatedNodeId).toBeTruthy();
+  const connection = openDatabaseConnection().sqlite;
+  connection
+    .prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?')
+    .run('2026-04-04T00:00:00.000Z', plainBook!.generatedNodeId);
+
+  const reloadedInventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+
+  expect(reloadedInventory.books[0]).toMatchObject({
+    bookKey: 'plain book',
+    importStatus: 'pending',
+    nodeStatus: 'missing'
+  });
 });

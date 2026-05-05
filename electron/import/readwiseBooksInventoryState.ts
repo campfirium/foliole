@@ -90,6 +90,32 @@ function resolveGeneratedNodeId(book: ReadwiseBookInventoryItem, persistedBook?:
     : book.generatedNodeId;
 }
 
+function isSameBookState(left: ReadwiseBookInventoryItem, right: ReadwiseBookInventoryItem) {
+  return (
+    left.annotationStatus === right.annotationStatus &&
+    left.downloadUrl === right.downloadUrl &&
+    left.epubPath === right.epubPath &&
+    left.epubStatus === right.epubStatus &&
+    left.fullDocumentMarkdownPath === right.fullDocumentMarkdownPath &&
+    left.generatedNodeId === right.generatedNodeId &&
+    left.highlightMarkdownPath === right.highlightMarkdownPath &&
+    left.importStatus === right.importStatus &&
+    left.nodeStatus === right.nodeStatus &&
+    left.title === right.title
+  );
+}
+
+function moveBookToTop(inventory: ReadwiseBooksInventory, bookKey: string) {
+  const target = inventory.books.find((book) => book.bookKey === bookKey);
+  if (!target) {
+    return inventory;
+  }
+  return {
+    ...inventory,
+    books: [target, ...inventory.books.filter((book) => book.bookKey !== bookKey)]
+  } satisfies ReadwiseBooksInventory;
+}
+
 function hasActiveNode(nodeId: string) {
   const connection = openDatabaseConnection();
   const row = connection.driver.queryOne<{ id: string }>(
@@ -124,22 +150,31 @@ export function mergePersistedReadwiseBooksInventory(input: {
     return input.currentInventory;
   }
 
+  const changedBookKeys: string[] = [];
+  const currentBookOrder = input.currentInventory.books.map((book) => book.bookKey);
   const mergedBooks = new Map(
     input.currentInventory.books.map((book) => {
       const persistedBook = persistedInventory.books.find((candidate) => candidate.bookKey === book.bookKey);
       const generatedNodeId = resolveGeneratedNodeId(book, persistedBook);
+      const nodeStatus = generatedNodeId && hasActiveNode(generatedNodeId) ? 'generated' : 'missing';
+      const mergedBook = {
+        ...book,
+        downloadUrl: book.downloadUrl ?? persistedBook?.downloadUrl ?? null,
+        epubPath: book.epubPath ?? persistedBook?.epubPath ?? null,
+        epubStatus: book.epubPath || persistedBook?.epubPath ? 'received' : 'missing',
+        generatedNodeId,
+        importStatus:
+          nodeStatus === 'generated' && (book.importStatus === 'completed' || persistedBook?.importStatus === 'completed')
+            ? 'completed'
+            : 'pending',
+        nodeStatus
+      } satisfies ReadwiseBookInventoryItem;
+      if (!persistedBook || !isSameBookState(mergedBook, persistedBook)) {
+        changedBookKeys.push(book.bookKey);
+      }
       return [
         book.bookKey,
-        {
-          ...book,
-          downloadUrl: book.downloadUrl ?? persistedBook?.downloadUrl ?? null,
-          epubPath: book.epubPath ?? persistedBook?.epubPath ?? null,
-          epubStatus: book.epubPath || persistedBook?.epubPath ? 'received' : 'missing',
-          generatedNodeId,
-          importStatus:
-            book.importStatus === 'completed' || persistedBook?.importStatus === 'completed' ? 'completed' : 'pending',
-          nodeStatus: generatedNodeId && hasActiveNode(generatedNodeId) ? 'generated' : 'missing'
-        } satisfies ReadwiseBookInventoryItem
+        mergedBook
       ] as const;
     })
   );
@@ -152,9 +187,19 @@ export function mergePersistedReadwiseBooksInventory(input: {
     }
   }
 
+  const changedBookKeySet = new Set(changedBookKeys);
+  const orderedKeys = [
+    ...changedBookKeys,
+    ...persistedInventory.books
+      .map((book) => book.bookKey)
+      .filter((bookKey) => mergedBooks.has(bookKey) && !changedBookKeySet.has(bookKey)),
+    ...currentBookOrder.filter((bookKey) => mergedBooks.has(bookKey) && !changedBookKeySet.has(bookKey)),
+    ...Array.from(mergedBooks.keys())
+  ].filter((bookKey, index, list) => list.indexOf(bookKey) === index);
+
   return {
     ...input.currentInventory,
-    books: [...mergedBooks.values()].sort((left, right) => left.title.localeCompare(right.title))
+    books: orderedKeys.map((bookKey) => mergedBooks.get(bookKey)).filter((book): book is ReadwiseBookInventoryItem => Boolean(book))
   } satisfies ReadwiseBooksInventory;
 }
 
@@ -171,4 +216,8 @@ export function savePersistedReadwiseBooksInventory(inventory: ReadwiseBooksInve
     },
     inventory.scannedAt
   );
+}
+
+export function savePersistedReadwiseBookMovedToTop(inventory: ReadwiseBooksInventory, bookKey: string) {
+  savePersistedReadwiseBooksInventory(moveBookToTop(inventory, bookKey));
 }

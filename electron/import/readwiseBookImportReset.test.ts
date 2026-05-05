@@ -140,3 +140,30 @@ it('resets an imported readwise book back to its pre-load placeholder state', as
     .all(nodeId) as Array<{ id: string }>;
   expect(childNodes).toEqual([]);
 });
+
+it('recreates a deleted readwise book node when re-import is triggered', async () => {
+  const { fullDocumentDir, highlightDir } = await createBooksFixture();
+  const inventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
+  expect(nodeId).toBeTruthy();
+
+  openDatabaseConnection().sqlite.prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?').run('2026-04-04T11:00:00.000Z', nodeId);
+
+  const resetResult = await resetReadwiseBookImport(nodeId!);
+  expect(resetResult).toMatchObject({
+    book_key: 'manual book',
+    node_id: nodeId,
+    status: 'reset'
+  });
+
+  const restoredNode = openDatabaseConnection().sqlite
+    .prepare('SELECT id, deleted_at, content FROM nodes WHERE id = ?')
+    .get(nodeId) as { content: string; deleted_at: string | null; id: string } | undefined;
+  expect(restoredNode?.id).toBe(nodeId);
+  expect(restoredNode?.deleted_at).toBeNull();
+  expect(restoredNode?.content).toContain('Book import pending');
+});

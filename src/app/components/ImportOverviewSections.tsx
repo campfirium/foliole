@@ -11,32 +11,28 @@ function formatReadwiseAnnotationStatus(annotationStatus: RuntimeReadwiseBooksIn
   return annotationStatus === 'has_highlights' ? 'Has highlights' : 'No highlights';
 }
 
-function formatReadwiseEpubStatus(epubStatus: RuntimeReadwiseBooksInventory['books'][number]['epubStatus']) {
-  return epubStatus === 'received' ? 'EPUB received' : 'EPUB missing';
-}
-
-function formatReadwiseImportStatus(importStatus: RuntimeReadwiseBooksInventory['books'][number]['importStatus']) {
-  return importStatus === 'completed' ? 'Imported' : 'Not imported';
-}
-
-function formatReadwiseNodeStatus(nodeStatus: RuntimeReadwiseBooksInventory['books'][number]['nodeStatus']) {
-  return nodeStatus === 'generated' ? 'Node ready' : 'Node missing';
+function formatReadwiseImportStatus(book: RuntimeReadwiseBooksInventory['books'][number]) {
+  if (book.importStatus === 'completed' && book.nodeStatus === 'generated') {
+    return 'Loaded';
+  }
+  if (book.nodeStatus !== 'generated' && book.generatedNodeId) {
+    return 'Deleted';
+  }
+  return 'Not loaded';
 }
 
 function resolveReadwiseAnnotationTone(annotationStatus: RuntimeReadwiseBooksInventory['books'][number]['annotationStatus']) {
   return annotationStatus === 'has_highlights' ? ('success' as const) : ('neutral' as const);
 }
 
-function resolveReadwiseEpubTone(epubStatus: RuntimeReadwiseBooksInventory['books'][number]['epubStatus']) {
-  return epubStatus === 'received' ? ('success' as const) : ('warning' as const);
-}
-
-function resolveReadwiseImportTone(importStatus: RuntimeReadwiseBooksInventory['books'][number]['importStatus']) {
-  return importStatus === 'completed' ? ('info' as const) : ('neutral' as const);
-}
-
-function resolveReadwiseNodeTone(nodeStatus: RuntimeReadwiseBooksInventory['books'][number]['nodeStatus']) {
-  return nodeStatus === 'generated' ? ('info' as const) : ('warning' as const);
+function resolveReadwiseImportTone(book: RuntimeReadwiseBooksInventory['books'][number]) {
+  if (book.importStatus === 'completed' && book.nodeStatus === 'generated') {
+    return 'success' as const;
+  }
+  if (book.nodeStatus !== 'generated' && book.generatedNodeId) {
+    return 'warning' as const;
+  }
+  return 'neutral' as const;
 }
 
 function formatImportOutcome(entry: RuntimeTextImportResult) {
@@ -202,11 +198,9 @@ export function ReadwiseBooksInventorySection({
                   label={formatReadwiseAnnotationStatus(book.annotationStatus)}
                   tone={resolveReadwiseAnnotationTone(book.annotationStatus)}
                 />
-                <AppStatusBadge label={formatReadwiseNodeStatus(book.nodeStatus)} tone={resolveReadwiseNodeTone(book.nodeStatus)} />
-                <AppStatusBadge label={formatReadwiseEpubStatus(book.epubStatus)} tone={resolveReadwiseEpubTone(book.epubStatus)} />
                 <AppStatusBadge
-                  label={formatReadwiseImportStatus(book.importStatus)}
-                  tone={resolveReadwiseImportTone(book.importStatus)}
+                  label={formatReadwiseImportStatus(book)}
+                  tone={resolveReadwiseImportTone(book)}
                 />
               </div>
               <div className="mt-3 flex items-center justify-end">

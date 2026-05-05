@@ -47,6 +47,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   nodeListRowSpacing: 'foliole-node-list-row-spacing',
   listCollapsed: 'foliole-workspace-list-collapsed',
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',
+  importManagementActivePage: 'foliole-import-management-active-page',
   managedInboxPath: MANAGED_INBOX_APP_SETTING_KEY,
   commandRecents: 'foliole-command-recents',
   nodePaletteRecents: 'foliole-node-palette-recents',

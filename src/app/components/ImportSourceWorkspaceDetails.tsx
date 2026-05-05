@@ -1,11 +1,13 @@
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import {
   loadRuntimeReadwiseBooksInventory,
   resetRuntimeReadwiseBookImport,
   type RuntimeReadwiseBooksInventory
 } from '../../shared/platform/readwiseBooksBridge';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppEmptyState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -20,25 +22,21 @@ type ImportSourceWorkspaceDetailsProps = {
 
 const importManagementPages = [
   {
-    description: 'Review everything that lands in the import inbox from one place.',
     emptyDescription: 'Imported inbox content will appear here once the content view is wired in.',
     id: 'inbox',
     title: 'Inbox'
   },
   {
-    description: 'Manage imported Readwise book content here without mixing it into settings.',
     emptyDescription: 'Readwise book content will appear here once the list view is ready.',
     id: 'readwise-books',
     title: 'Readwise Books'
   },
   {
-    description: 'Manage imported Readwise article content here without mixing it into settings.',
     emptyDescription: 'Readwise article content will appear here once the list view is ready.',
     id: 'readwise-articles',
     title: 'Readwise Articles'
   }
 ] as const satisfies ReadonlyArray<{
-  description: string;
   emptyDescription: string;
   id: ImportManagementPageId;
   title: string;
@@ -46,11 +44,8 @@ const importManagementPages = [
 
 function ImportSourceWorkspaceHeader({ onClose }: { onClose: () => void }) {
   return (
-    <header className="flex items-center justify-between border-b border-border/60 px-6 pb-4 pt-5">
-      <div className="min-w-0 pr-4">
-        <AppDialogTitle className="text-[1.02rem] font-semibold">Import management</AppDialogTitle>
-        <p className="mt-1 text-sm text-foreground/68">Use this space to manage imported content. Source settings now live in Settings.</p>
-      </div>
+    <header className="flex items-center justify-end px-6 pb-3 pt-5">
+      <AppDialogTitle className="sr-only">Import management</AppDialogTitle>
       <AppButton aria-label="Close import management" className="size-8 px-0" onClick={onClose} variant="ghost">
         <X aria-hidden="true" size={15} strokeWidth={1.9} />
       </AppButton>
@@ -93,15 +88,11 @@ function ImportSourceWorkspacePage({
   const page = importManagementPages.find((entry) => entry.id === pageId) ?? importManagementPages[0];
 
   return (
-    <section aria-label={`${page.title} page`} className="flex min-h-0 flex-1 flex-col px-6 py-5">
-      <div className="border-b border-border/60 pb-4">
-        <h2 className="text-lg font-semibold text-foreground">{page.title}</h2>
-        <p className="mt-1 text-sm text-foreground/68">{page.description}</p>
-      </div>
+    <section aria-label={`${page.title} page`} className="flex min-h-0 flex-1 flex-col px-6 pb-5 pt-2">
       {children ? (
-        <div className="app-scrollbar flex min-h-0 flex-1 overflow-auto py-6">{children}</div>
+        <div className="app-scrollbar flex min-h-0 flex-1 overflow-auto">{children}</div>
       ) : (
-        <div className="flex min-h-0 flex-1 items-center justify-center py-6">
+        <div className="flex min-h-0 flex-1 items-center justify-center py-2">
           <AppEmptyState description={page.emptyDescription} title={`${page.title} page`} />
         </div>
       )}
@@ -224,7 +215,17 @@ function ImportSourceWorkspacePageContent({
 }
 
 export function ImportSourceWorkspaceDetails({ open, onOpenChange }: ImportSourceWorkspaceDetailsProps) {
-  const [activePageId, setActivePageId] = useState<ImportManagementPageId>('inbox');
+  const [activePageId, setActivePageId] = useState<ImportManagementPageId>(() => {
+    const persisted = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.importManagementActivePage);
+    if (persisted === 'inbox' || persisted === 'readwise-books' || persisted === 'readwise-articles') {
+      return persisted;
+    }
+    return 'inbox';
+  });
+
+  useEffect(() => {
+    setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.importManagementActivePage, activePageId);
+  }, [activePageId]);
 
   return (
     <AppDialog onOpenChange={onOpenChange} open={open}>

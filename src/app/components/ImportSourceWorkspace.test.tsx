@@ -1,5 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 
@@ -14,6 +16,7 @@ vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
 }));
 
 beforeEach(() => {
+  window.localStorage.clear();
   loadRuntimeReadwiseBookEpub.mockReset();
   loadRuntimeReadwiseBooksInventory.mockReset();
   loadRuntimeReadwiseBookEpub.mockResolvedValue({
@@ -46,12 +49,11 @@ beforeEach(() => {
 it('shows the import management navigation shell without readwise settings controls', () => {
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
-  expect(screen.getByRole('heading', { name: 'Import management' })).toBeInTheDocument();
   expect(screen.getByRole('navigation', { name: 'Import management navigation' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Books' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Articles' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Inbox' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Inbox' })).not.toBeInTheDocument();
   expect(screen.queryByText('Readwise Reader settings')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Open Readwise Reader settings' })).not.toBeInTheDocument();
 });
@@ -60,14 +62,21 @@ it('switches the content container when a navigation item is selected', async ()
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Books' }));
-  expect(screen.getByRole('heading', { name: 'Readwise Books' })).toBeInTheDocument();
   await waitFor(() => {
     expect(screen.getByText('Book A')).toBeInTheDocument();
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Articles' }));
-  expect(screen.getByRole('heading', { name: 'Readwise Articles' })).toBeInTheDocument();
   expect(screen.getByText('Readwise article content will appear here once the list view is ready.')).toBeInTheDocument();
+});
+
+it('restores the last active import management page from persistent settings', async () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.importManagementActivePage, 'readwise-books');
+
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  expect(screen.getByRole('button', { name: 'Readwise Books' })).toHaveAttribute('aria-pressed', 'true');
+  await act(() => Promise.resolve());
 });
 
 it('closes import management from the header close button', () => {
