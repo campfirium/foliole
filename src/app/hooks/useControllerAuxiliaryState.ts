@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -57,13 +59,17 @@ export function useControllerAuxiliaryState(args: {
   });
 
   useNativeCommandMenu(paletteState.items, paletteState.onRunCommand);
+  const hotkeySettings = useMemo(
+    () => buildHotkeySettings(args.paletteItems, args.hotkeys),
+    [args.paletteItems, args.hotkeys]
+  );
 
   return {
     goToNodeState,
     moveToNodeState,
     paletteState,
     searchState,
-    hotkeySettings: buildHotkeySettings(args.paletteItems, args.hotkeys),
+    hotkeySettings,
     isCurrentReviewItemGradable: getReviewItemKind(
       args.ws.reviewSession.currentNodeId ? args.ws.nodesById[args.ws.reviewSession.currentNodeId] : undefined
     ) === 'fsrs'

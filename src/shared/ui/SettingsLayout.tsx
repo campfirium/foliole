@@ -36,6 +36,9 @@ export const SETTINGS_ACTION_ROW_CLASS_NAME = 'grid w-full min-w-0 grid-cols-[mi
 export const SETTINGS_SELECT_WIDTH_CLASS_NAME = 'w-auto max-w-[260px]';
 export const SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME = 'xl:grid-cols-[minmax(0,1fr)_300px]';
 export const SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME = '[grid-template-columns:minmax(160px,0.9fr)_minmax(140px,0.75fr)_minmax(108px,0.48fr)_minmax(104px,0.45fr)_minmax(96px,0.42fr)_36px]';
+export const SETTINGS_HOTKEY_LIST_COLUMNS_CLASS_NAME = 'grid-cols-[minmax(0,1fr)_auto]';
+
+export type SettingsHotkeyChipState = 'assigned' | 'empty' | 'recording';
 
 export function settingsActionTableClassName(className?: string) {
   return cn('w-full min-w-0 overflow-hidden rounded-md bg-settings-group', className);
@@ -59,6 +62,45 @@ export function settingsActionTableAddButtonClassName(className?: string) {
     'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
     className
   );
+}
+
+
+export function settingsHotkeySearchPanelClassName(className?: string) {
+  return cn('border-b border-settings-divider/55 px-5 py-4', className);
+}
+
+export function settingsHotkeySearchHeaderClassName(className?: string) {
+  return cn('mb-3 flex items-center justify-between gap-3', className);
+}
+
+export function settingsHotkeySearchFieldClassName(className?: string) {
+  return settingsFieldClassName('h-9 w-full pl-9 pr-10', className);
+}
+
+export function settingsHotkeyChipClassName(state: SettingsHotkeyChipState, className?: string) {
+  return cn(
+    'group inline-flex h-7 max-w-[34ch] cursor-pointer items-center justify-center gap-1 rounded-sm border border-transparent bg-settings-control px-2.5 py-0 font-mono text-sm text-foreground transition-colors',
+    state === 'recording' && 'bg-settings-control-active text-foreground ring-1 ring-ring',
+    state === 'empty' && 'text-foreground/55',
+    'hover:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    className
+  );
+}
+
+export function settingsHotkeyChipClearClassName(className?: string) {
+  return cn(
+    'inline-flex size-4 shrink-0 items-center justify-center rounded-sm text-foreground/50 transition-colors',
+    'hover:bg-settings-control-active hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    className
+  );
+}
+
+export function settingsHotkeyToolbarClassName(className?: string) {
+  return cn('flex items-center gap-2 border-b border-settings-divider/55 px-5 py-4', className);
+}
+
+export function settingsHotkeyRowClassName(className?: string) {
+  return cn('grid min-h-14 items-center gap-4 border-t border-settings-divider/55 px-5 py-2.5 first:border-t-0', SETTINGS_HOTKEY_LIST_COLUMNS_CLASS_NAME, className);
 }
 
 

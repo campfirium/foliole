@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
-import { describe, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 const PRELOAD_PATH = path.resolve(process.cwd(), 'electron', 'preload.cjs');
 
@@ -19,7 +19,8 @@ function executePreload(env: Record<string, string | undefined> = {}) {
         ipcRenderer: {
           invoke: ipcInvoke,
           on: ipcOn,
-          removeListener: ipcRemoveListener
+          removeListener: ipcRemoveListener,
+          send: vi.fn()
         }
       };
     }
@@ -47,7 +48,6 @@ function executePreload(env: Record<string, string | undefined> = {}) {
   };
 }
 
-describe('electron preload', () => {
   it('boots under sandbox-limited require and exposes the bridge API', () => {
     const { exposeInMainWorld } = executePreload();
 
@@ -58,8 +58,10 @@ describe('electron preload', () => {
         invoke: expect.any(Function),
         logDiagnosticEvent: expect.any(Function),
         onManagedInboxUpdated: expect.any(Function),
+        onNativeKeyboardInput: expect.any(Function),
         onNativeMenuCommand: expect.any(Function),
-        onWindowResized: expect.any(Function)
+        onWindowResized: expect.any(Function),
+        setNativeHotkeyRecordingActive: expect.any(Function)
       })
     );
   });
@@ -98,6 +100,32 @@ describe('electron preload', () => {
     });
   });
 
+
+  it('exposes native keyboard input subscription and recorder active bridge', () => {
+    const { exposeInMainWorld, ipcOn, ipcRemoveListener } = executePreload();
+    const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+    const handler = vi.fn();
+
+    const unsubscribe = electronApi.onNativeKeyboardInput(handler);
+    const listener = ipcOn.mock.calls[0]?.[1];
+    listener({}, { altKey: true, code: 'KeyG', controlKey: true, key: 'g', metaKey: false, shiftKey: false, type: 'keyDown' });
+    unsubscribe();
+
+    expect(ipcOn).toHaveBeenCalledWith('foliole:native-keyboard-input', expect.any(Function));
+    expect(handler).toHaveBeenCalledWith({ altKey: true, code: 'KeyG', controlKey: true, key: 'g', metaKey: false, shiftKey: false, type: 'keyDown' });
+    expect(ipcRemoveListener).toHaveBeenCalledWith('foliole:native-keyboard-input', listener);
+  });
+
+  it('sends native hotkey recorder active state through preload', () => {
+    const { exposeInMainWorld, sandboxRequire } = executePreload();
+    const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+    const ipcRenderer = sandboxRequire.mock.results[0]?.value.ipcRenderer;
+
+    electronApi.setNativeHotkeyRecordingActive(true);
+
+    expect(ipcRenderer.send).toHaveBeenCalledWith('foliole:hotkey-recorder-active', true);
+  });
+
   it('keeps debug metadata when desktop debug probe is enabled', () => {
     const { exposeInMainWorld } = executePreload({
       ELECTRON_RENDERER_URL: 'http://127.0.0.1:24600/',
@@ -110,4 +138,3 @@ describe('electron preload', () => {
       runtimeHead: 'head-123'
     });
   });
-});

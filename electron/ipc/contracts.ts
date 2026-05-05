@@ -6,6 +6,8 @@ export const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-up
 export const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 export const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
 export const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
+export const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
+export const IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL = 'foliole:native-keyboard-input';
 
 export const IPC_WINDOW_MINIMIZE_CHANNEL = 'foliole:window:minimize';
 export const IPC_WINDOW_TOGGLE_MAXIMIZE_CHANNEL = 'foliole:window:toggle-maximize';
@@ -21,4 +23,14 @@ export type InvokeRequest = NativeInvokeRequest | UnknownInvokeRequest;
 
 export interface MenuCommandEvent {
   commandId: string;
+}
+
+export interface NativeKeyboardInputEvent {
+  altKey: boolean;
+  code: string;
+  controlKey: boolean;
+  key: string;
+  metaKey: boolean;
+  shiftKey: boolean;
+  type: string;
 }

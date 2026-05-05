@@ -10,6 +10,8 @@ const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
 const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
+const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
+const IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL = 'foliole:native-keyboard-input';
 
 function isDesktopDebugProbeEnabled() {
   return process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE === '1' || Boolean(process.env.ELECTRON_RENDERER_URL);
@@ -20,7 +22,8 @@ function subscribe(channel, handler) {
     channel !== IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL &&
     channel !== IPC_MENU_EVENT_CHANNEL &&
     channel !== IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL &&
-    channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL
+    channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL &&
+    channel !== IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL
   ) {
     return () => undefined;
   }
@@ -32,6 +35,18 @@ function subscribe(channel, handler) {
     }
     if (channel === IPC_MENU_EVENT_CHANNEL) {
       handler(payload?.commandId ?? '');
+      return;
+    }
+    if (channel === IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL) {
+      handler({
+        altKey: Boolean(payload?.altKey),
+        code: payload?.code ?? '',
+        controlKey: Boolean(payload?.controlKey),
+        key: payload?.key ?? '',
+        metaKey: Boolean(payload?.metaKey),
+        shiftKey: Boolean(payload?.shiftKey),
+        type: payload?.type ?? ''
+      });
       return;
     }
     if (channel === IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL) {
@@ -57,8 +72,10 @@ const electronApi = {
   logDiagnosticEvent: (input) => ipcRenderer.invoke(IPC_DIAGNOSTIC_LOG_CHANNEL, input),
   onManagedInboxUpdated: (handler) => subscribe(IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, handler),
   onNativeMenuCommand: (handler) => subscribe(IPC_MENU_EVENT_CHANNEL, handler),
+  onNativeKeyboardInput: (handler) => subscribe(IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL, handler),
   onReadwiseBookEpubProgress: (handler) => subscribe(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, handler),
-  onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler)
+  onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler),
+  setNativeHotkeyRecordingActive: (active) => ipcRenderer.send(IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL, active === true)
 };
 
 if (isDesktopDebugProbeEnabled()) {
