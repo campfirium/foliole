@@ -1,0 +1,103 @@
+import { expect, it } from 'vitest';
+
+import {
+  DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
+  buildQueueMixCycle,
+  compareReadingNextAtAscending,
+  getPriorityWeight,
+  getReadingIntervalGrowthFactor,
+  isAbsolutePushQueuePriority,
+  normalizePushQueuePriority,
+  normalizeRegularPushQueuePriority,
+  normalizeUnifiedPushQueueRules,
+  resolveReadingNextAt
+} from './unifiedPushQueueRules';
+
+it('freezes the spec defaults for unified push queue rules', () => {
+  expect(DEFAULT_UNIFIED_PUSH_QUEUE_RULES).toEqual({
+    defaultPriority: 5,
+    priorityRatio: 5,
+    queueMixRatio: { reading: 1, fsrs: 5 },
+    readingInitialIntervalMs: 86_400_000,
+    readingIntervalGrowthFactorRange: { min: 1.1, max: 1.5 }
+  });
+});
+
+it('normalizes push priority into the frozen 0~9 contract', () => {
+  expect(normalizePushQueuePriority(-4)).toBe(0);
+  expect(normalizePushQueuePriority(0)).toBe(0);
+  expect(normalizePushQueuePriority(3.2)).toBe(3);
+  expect(normalizePushQueuePriority(8.6)).toBe(9);
+  expect(normalizePushQueuePriority(99)).toBe(9);
+  expect(normalizePushQueuePriority(undefined)).toBe(5);
+  expect(normalizeRegularPushQueuePriority(0)).toBe(5);
+});
+
+it('maps every regular priority to the spec growth factor table', () => {
+  const priorities = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+
+  expect(priorities.map((priority) => getReadingIntervalGrowthFactor(priority))).toEqual([
+    1.1,
+    1.15,
+    1.2,
+    1.25,
+    1.3,
+    1.35,
+    1.4,
+    1.45,
+    1.5
+  ]);
+});
+
+it('keeps priorityRatio semantics as the P1:P9 weight multiple', () => {
+  const p1Weight = getPriorityWeight(1);
+  const p9Weight = getPriorityWeight(9);
+
+  expect(p1Weight / p9Weight).toBeCloseTo(5, 10);
+  expect(isAbsolutePushQueuePriority(0)).toBe(true);
+  expect(isAbsolutePushQueuePriority(5)).toBe(false);
+});
+
+it('locks queueMixRatio to one reading card per five fsrs cards by default', () => {
+  expect(buildQueueMixCycle()).toEqual(['fsrs', 'fsrs', 'fsrs', 'fsrs', 'fsrs', 'reading']);
+});
+
+it('keeps reading nextAt on exact timestamps instead of day buckets', () => {
+  const lastHandledAt = '2026-03-16T09:15:30.000Z';
+  const nextAt = resolveReadingNextAt(lastHandledAt, 90 * 60 * 1000);
+
+  expect(nextAt).toBe('2026-03-16T10:45:30.000Z');
+});
+
+it('sorts reading queue candidates by exact nextAt timestamps', () => {
+  const queue = [
+    { nextAt: '2026-03-16T15:00:00.000Z' },
+    { nextAt: '2026-03-16T09:30:00.000Z' },
+    { nextAt: '2026-03-16T09:00:00.000Z' }
+  ];
+
+  queue.sort(compareReadingNextAtAscending);
+
+  expect(queue.map((item) => item.nextAt)).toEqual([
+    '2026-03-16T09:00:00.000Z',
+    '2026-03-16T09:30:00.000Z',
+    '2026-03-16T15:00:00.000Z'
+  ]);
+});
+
+it('normalizes partial rule payloads back onto the frozen defaults', () => {
+  expect(
+    normalizeUnifiedPushQueueRules({
+      defaultPriority: 0,
+      priorityRatio: 7,
+      queueMixRatio: { reading: 2, fsrs: 4 },
+      readingIntervalGrowthFactorRange: { min: 1.12, max: 1.48 }
+    })
+  ).toEqual({
+    defaultPriority: 5,
+    priorityRatio: 7,
+    queueMixRatio: { reading: 2, fsrs: 4 },
+    readingInitialIntervalMs: 86_400_000,
+    readingIntervalGrowthFactorRange: { min: 1.12, max: 1.48 }
+  });
+});
