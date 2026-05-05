@@ -73,6 +73,12 @@ export interface SyncDiagnosticContent {
   missing_attachment_resource_bytes?: number;
   missing_due_review_attachment_resource_count?: number;
   missing_due_review_body_count?: number;
+  missing_image_attachment_resource_bytes?: number;
+  missing_image_attachment_resource_count?: number;
+  missing_other_attachment_resource_bytes?: number;
+  missing_other_attachment_resource_count?: number;
+  missing_pdf_attachment_resource_bytes?: number;
+  missing_pdf_attachment_resource_count?: number;
   missing_content_blob_count: number;
   missing_content_blob_bytes?: number;
   missing_external_document_body_count?: number;

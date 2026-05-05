@@ -143,6 +143,38 @@ final class FolioleCompanionSyncDiagnostics {
             "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
                 "AND TRIM(content_hash) != '' AND availability <> 'cached'"
         ));
+        content.put("missing_image_attachment_resource_count", count(database,
+            "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
+                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
+                "AND lower(COALESCE(mime_type, '')) LIKE 'image/%'"
+        ));
+        content.put("missing_image_attachment_resource_bytes", count(database,
+            "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
+                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
+                "AND lower(COALESCE(mime_type, '')) LIKE 'image/%'"
+        ));
+        content.put("missing_pdf_attachment_resource_count", count(database,
+            "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
+                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
+                "AND lower(COALESCE(mime_type, '')) = 'application/pdf'"
+        ));
+        content.put("missing_pdf_attachment_resource_bytes", count(database,
+            "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
+                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
+                "AND lower(COALESCE(mime_type, '')) = 'application/pdf'"
+        ));
+        content.put("missing_other_attachment_resource_count", count(database,
+            "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
+                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
+                "AND lower(COALESCE(mime_type, '')) NOT LIKE 'image/%' " +
+                "AND lower(COALESCE(mime_type, '')) != 'application/pdf'"
+        ));
+        content.put("missing_other_attachment_resource_bytes", count(database,
+            "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
+                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
+                "AND lower(COALESCE(mime_type, '')) NOT LIKE 'image/%' " +
+                "AND lower(COALESCE(mime_type, '')) != 'application/pdf'"
+        ));
         content.put("missing_due_review_attachment_resource_count", count(database,
             "SELECT COUNT(DISTINCT b.attachment_id) FROM attachment_blobs b " +
                 "JOIN node_attachments na ON na.attachment_id = b.attachment_id " +

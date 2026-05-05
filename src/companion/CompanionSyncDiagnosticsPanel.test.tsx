@@ -32,7 +32,13 @@ const diagnosticResult = {
       missing_due_review_attachment_resource_count: 1,
       missing_due_review_body_count: 2,
       missing_external_document_body_count: 1,
+      missing_image_attachment_resource_bytes: 1048576,
+      missing_image_attachment_resource_count: 1,
       missing_nested_topic_body_count: 3,
+      missing_other_attachment_resource_bytes: 524288,
+      missing_other_attachment_resource_count: 1,
+      missing_pdf_attachment_resource_bytes: 1572864,
+      missing_pdf_attachment_resource_count: 1,
       missing_top_level_topic_body_count: 1,
       missing_topic_body_count: 4
     },
@@ -166,6 +172,9 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getByText('Top-level topic bodies')).toBeInTheDocument();
     expect(screen.getByText('Nested topic bodies')).toBeInTheDocument();
     expect(screen.getByText('Due review attachments')).toBeInTheDocument();
+    expect(screen.getByText('Image attachments')).toBeInTheDocument();
+    expect(screen.getByText('PDF attachments')).toBeInTheDocument();
+    expect(screen.getByText('Other attachments')).toBeInTheDocument();
     expect(screen.getAllByText('5.0 MB').length).toBeGreaterThan(0);
     expect(screen.getAllByText('3.0 MB').length).toBeGreaterThan(0);
     expect(screen.getByText('Desktop confirmations waiting')).toBeInTheDocument();

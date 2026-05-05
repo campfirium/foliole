@@ -62,12 +62,27 @@ describe('CompanionBottomTabBar', () => {
         config={DEFAULT_COMPANION_TAB_CONFIG}
         onAction={vi.fn()}
         onSecondaryDestination={vi.fn()}
-        syncProgress={{ completed: 4, completedBytes: 2097152, phase: 'attachment', total: 12, totalBytes: 8388608 }}
+        syncProgress={{
+          attachmentBreakdown: {
+            imageAttachments: 5,
+            imageBytes: 1048576,
+            otherAttachments: 3,
+            otherBytes: 1048576,
+            pdfAttachments: 4,
+            pdfBytes: 6291456
+          },
+          completed: 4,
+          completedBytes: 2097152,
+          phase: 'attachment',
+          total: 12,
+          totalBytes: 8388608
+        }}
         visible
       />
     );
 
     expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
     expect(screen.getByText('4/12 - 2.0 MB/8.0 MB')).toBeInTheDocument();
+    expect(screen.getByText('Images 5 · PDFs 4 · Other 3')).toBeInTheDocument();
   });
 });

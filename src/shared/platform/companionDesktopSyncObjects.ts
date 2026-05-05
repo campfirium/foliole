@@ -32,6 +32,14 @@ export interface CompanionDesktopSyncOptions {
 }
 
 export interface CompanionDesktopSyncProgress {
+  attachmentBreakdown?: {
+    imageAttachments?: number;
+    imageBytes?: number;
+    otherAttachments?: number;
+    otherBytes?: number;
+    pdfAttachments?: number;
+    pdfBytes?: number;
+  };
   completed: number;
   completedBytes?: number;
   contentBreakdown?: {
@@ -150,6 +158,14 @@ async function loadMissingContentBlobSummary() {
 async function loadMissingAttachmentResourceSummary() {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   return {
+    attachmentBreakdown: diagnostics ? {
+      imageAttachments: diagnostics.content.missing_image_attachment_resource_count,
+      imageBytes: diagnostics.content.missing_image_attachment_resource_bytes,
+      otherAttachments: diagnostics.content.missing_other_attachment_resource_count,
+      otherBytes: diagnostics.content.missing_other_attachment_resource_bytes,
+      pdfAttachments: diagnostics.content.missing_pdf_attachment_resource_count,
+      pdfBytes: diagnostics.content.missing_pdf_attachment_resource_bytes
+    } : undefined,
     total: diagnostics?.content.missing_attachment_resource_count ?? null,
     totalBytes: diagnostics?.content.missing_attachment_resource_bytes ?? null
   };
@@ -201,10 +217,10 @@ async function pullMissingContentBlobs(endpointUrl: string, onProgress?: Compani
 }
 
 async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
-  const { total, totalBytes } = await loadMissingAttachmentResourceSummary();
+  const { attachmentBreakdown, total, totalBytes } = await loadMissingAttachmentResourceSummary();
   const syncedAttachmentIds: string[] = [];
   let syncedBytes = 0;
-  onProgress?.({ completed: 0, completedBytes: 0, phase: 'attachment', total, totalBytes });
+  onProgress?.({ attachmentBreakdown, completed: 0, completedBytes: 0, phase: 'attachment', total, totalBytes });
   for (let batchIndex = 0; batchIndex < ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
     const resources = await loadCompanionMissingAttachmentResources(ATTACHMENT_RESOURCE_BATCH_LIMIT);
     if (resources.length === 0) {
@@ -223,6 +239,7 @@ async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: 
       .filter((resource) => syncedIdSet.has(resource.attachment_id))
       .reduce((sum, resource) => sum + Math.max(0, resource.size_bytes ?? 0), 0);
     onProgress?.({
+      attachmentBreakdown,
       completed: syncedAttachmentIds.length,
       completedBytes: syncedBytes,
       phase: 'attachment',

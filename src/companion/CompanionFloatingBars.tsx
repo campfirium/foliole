@@ -49,6 +49,21 @@ function formatContentBreakdown(progress: CompanionDesktopSyncProgress) {
   return segments.length > 0 ? segments.join(' · ') : null;
 }
 
+function formatAttachmentBreakdown(progress: CompanionDesktopSyncProgress) {
+  if (progress.phase !== 'attachment' || !progress.attachmentBreakdown) {
+    return null;
+  }
+  const breakdown = progress.attachmentBreakdown;
+  const segments = [
+    ['Images', breakdown.imageAttachments],
+    ['PDFs', breakdown.pdfAttachments],
+    ['Other', breakdown.otherAttachments]
+  ]
+    .filter((segment): segment is [string, number] => typeof segment[1] === 'number')
+    .map(([label, count]) => `${label} ${count}`);
+  return segments.length > 0 ? segments.join(' · ') : null;
+}
+
 function CompanionBottomSyncStatus(props: {
   progress: CompanionDesktopSyncProgress | null;
 }) {
@@ -65,6 +80,8 @@ function CompanionBottomSyncStatus(props: {
     ? null
     : `${formatBytes(props.progress.completedBytes)}/${formatBytes(props.progress.totalBytes)}`;
   const contentBreakdown = formatContentBreakdown(props.progress);
+  const attachmentBreakdown = formatAttachmentBreakdown(props.progress);
+  const detailBreakdown = contentBreakdown ?? attachmentBreakdown;
   return (
     <section
       aria-label="Sync progress"
@@ -74,7 +91,7 @@ function CompanionBottomSyncStatus(props: {
         <span className="font-medium text-foreground">{formatSyncPhase(props.progress)}</span>
         <span className="shrink-0 tabular-nums">{byteLabel ? `${countLabel} - ${byteLabel}` : countLabel}</span>
       </div>
-      {contentBreakdown ? <div className="mt-0.5 truncate text-companion-text-secondary">{contentBreakdown}</div> : null}
+      {detailBreakdown ? <div className="mt-0.5 truncate text-companion-text-secondary">{detailBreakdown}</div> : null}
       {props.progress.total === null ? null : (
         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-companion-divider">
           <div className="h-full rounded-full bg-companion-accent" style={{ width: `${ratio}%` }} />
