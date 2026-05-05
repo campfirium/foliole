@@ -22,9 +22,9 @@ it('supports ctrl/cmd multi-select and shift range select in node list', () => {
   render(<App />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  const node1Button = within(listPanel).getByRole('button', { name: 'Welcome to Foliole Start writing markdown here.' });
-  const node2Button = within(listPanel).getByRole('button', { name: 'Node 2' });
-  const node3Button = within(listPanel).getByRole('button', { name: 'Node 3' });
+  const node1Button = within(listPanel).getByRole('treeitem', { name: 'Welcome to Foliole Start writing markdown here.' });
+  const node2Button = within(listPanel).getByRole('treeitem', { name: 'Node 2' });
+  const node3Button = within(listPanel).getByRole('treeitem', { name: 'Node 3' });
 
   fireEvent.click(node2Button, { ctrlKey: true });
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
@@ -36,6 +36,47 @@ it('supports ctrl/cmd multi-select and shift range select in node list', () => {
   expect(node1Button).toHaveAttribute('aria-pressed', 'false');
   expect(node2Button).toHaveAttribute('aria-pressed', 'true');
   expect(node3Button).toHaveAttribute('aria-pressed', 'true');
+});
+
+it('supports tree keyboard navigation for node list', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2', 'node-3'],
+    nodesById: {
+      ...state.nodesById,
+      'node-1': createNode({ id: 'node-1', title: 'Root', content: '# Root' }),
+      'node-2': createNode({
+        id: 'node-2',
+        parentNodeId: 'node-1',
+        title: 'Child',
+        content: '# Child'
+      }),
+      'node-3': createNode({ id: 'node-3', title: 'Sibling', content: '# Sibling' })
+    }
+  }));
+
+  render(<App />);
+
+  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const rootButton = within(listPanel).getByRole('treeitem', { name: /Root/i });
+  const siblingButton = within(listPanel).getByRole('treeitem', { name: /Sibling/i });
+  fireEvent.keyDown(rootButton, { key: 'End' });
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
+
+  fireEvent.keyDown(siblingButton, { key: 'Home' });
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+
+  fireEvent.click(within(listPanel).getByRole('button', { name: 'Collapse all' }));
+  expect(within(listPanel).queryByRole('treeitem', { name: /Child/i })).not.toBeInTheDocument();
+
+  fireEvent.keyDown(rootButton, { key: 'ArrowRight' });
+  const childButton = within(listPanel).getByRole('treeitem', { name: /Child/i });
+
+  fireEvent.keyDown(rootButton, { key: 'ArrowRight' });
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+
+  fireEvent.keyDown(childButton, { key: 'ArrowLeft' });
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
 });
 
 it('renders breadcrumbs in document header and jumps to ancestor anchor', () => {

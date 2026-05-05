@@ -1,11 +1,14 @@
 import type {
   CSSProperties,
   DragEvent as ReactDragEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent
 } from 'react';
 
 import { cn } from '../../../lib/utils';
 import { AppButton } from '../../../shared/ui';
+
+import type { NodeSelectModifiers } from './NodeListTreeState';
 
 interface NodeTreeRowProps {
   depth: number;
@@ -23,8 +26,17 @@ interface NodeTreeRowProps {
   onDragStart?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDrop?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
-  onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
+  onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
+}
+
+function resolveSelectModifiers(event: ReactMouseEvent<HTMLButtonElement>): NodeSelectModifiers {
+  return {
+    ctrlKey: event.ctrlKey,
+    metaKey: event.metaKey,
+    shiftKey: event.shiftKey
+  };
 }
 
 export function NodeTreeRow({
@@ -43,6 +55,7 @@ export function NodeTreeRow({
   onDragStart,
   onDrop,
   onContextMenu,
+  onKeyDown,
   onSelect,
   onToggleCollapse
 }: NodeTreeRowProps) {
@@ -61,26 +74,80 @@ export function NodeTreeRow({
       onDrop={onDrop ? (event) => onDrop(nodeId, event) : undefined}
       title={isDragDisabled ? 'Derived nodes cannot be moved.' : undefined}
     >
-      <AppButton
-        active={isSelected}
-        aria-current={isActive ? 'page' : undefined}
-        aria-pressed={isSelected}
-        className="gap-2 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4"
-        onContextMenu={onContextMenu ? (event) => onContextMenu(nodeId, event) : undefined}
-        onClick={(event) => onSelect(nodeId, event)}
+      <NodeTreeRowButton
+        depth={depth}
+        hasChildren={hasChildren}
+        isActive={isActive}
+        isCollapsed={isCollapsed}
+        isSelected={isSelected}
+        label={label}
+        nodeId={nodeId}
+        onContextMenu={onContextMenu}
+        onKeyDown={onKeyDown}
+        onSelect={onSelect}
+        onToggleCollapse={onToggleCollapse}
         style={style}
-        variant="list"
-      >
-        <NodeTreeRowExpandToggle
-          hasChildren={hasChildren}
-          isCollapsed={isCollapsed}
-          label={label}
-          nodeId={nodeId}
-          onToggleCollapse={onToggleCollapse}
-        />
-        <span className="min-w-0 truncate">{label}</span>
-      </AppButton>
+      />
     </div>
+  );
+}
+
+interface NodeTreeRowButtonProps {
+  depth: number;
+  hasChildren: boolean;
+  isActive: boolean;
+  isCollapsed: boolean;
+  isSelected: boolean;
+  label: string;
+  nodeId: string;
+  onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
+  onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
+  onToggleCollapse: (nodeId: string) => void;
+  style: CSSProperties;
+}
+
+function NodeTreeRowButton({
+  depth,
+  hasChildren,
+  isActive,
+  isCollapsed,
+  isSelected,
+  label,
+  nodeId,
+  onContextMenu,
+  onKeyDown,
+  onSelect,
+  onToggleCollapse,
+  style
+}: NodeTreeRowButtonProps) {
+  return (
+    <AppButton
+      active={isSelected}
+      aria-current={isActive ? 'page' : undefined}
+      aria-expanded={hasChildren ? !isCollapsed : undefined}
+      aria-level={depth + 1}
+      aria-pressed={isSelected}
+      aria-selected={isSelected}
+      className="gap-2 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4"
+      data-node-id={nodeId}
+      id={`node-treeitem-${nodeId}`}
+      onContextMenu={onContextMenu ? (event) => onContextMenu(nodeId, event) : undefined}
+      onKeyDown={onKeyDown ? (event) => onKeyDown(nodeId, event) : undefined}
+      onClick={(event) => onSelect(nodeId, resolveSelectModifiers(event))}
+      role="treeitem"
+      style={style}
+      variant="list"
+    >
+      <NodeTreeRowExpandToggle
+        hasChildren={hasChildren}
+        isCollapsed={isCollapsed}
+        label={label}
+        nodeId={nodeId}
+        onToggleCollapse={onToggleCollapse}
+      />
+      <span className="min-w-0 truncate">{label}</span>
+    </AppButton>
   );
 }
 

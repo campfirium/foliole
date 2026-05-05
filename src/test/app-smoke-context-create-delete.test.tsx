@@ -86,7 +86,7 @@ it('deletes a node from node-list context menu', () => {
 
   render(<App />);
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), {
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), {
     clientX: 56,
     clientY: 64
   });
@@ -111,8 +111,8 @@ it('deletes all selected nodes from node-list context menu', () => {
 
   render(<App />);
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  const node2Button = within(nodePanel).getByRole('button', { name: 'Node 2' });
-  const node3Button = within(nodePanel).getByRole('button', { name: 'Node 3' });
+  const node2Button = within(nodePanel).getByRole('treeitem', { name: 'Node 2' });
+  const node3Button = within(nodePanel).getByRole('treeitem', { name: 'Node 3' });
 
   fireEvent.click(node2Button);
   fireEvent.click(node3Button, { ctrlKey: true });

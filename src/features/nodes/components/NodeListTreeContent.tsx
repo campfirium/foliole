@@ -11,7 +11,8 @@ import type {
   NodeListCollapseController,
   NodeListContextMenuController
 } from './NodeListTreeHooks';
-import type { NodeListState } from './NodeListTreeState';
+import { createNodeListRowKeydownHandler } from './NodeListTreeKeyboard';
+import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
 
 interface NodeListRowsProps {
@@ -21,7 +22,7 @@ interface NodeListRowsProps {
   isTrashViewOpen: boolean;
   nodesById: Record<string, Node>;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
-  onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
   rows: NodeTreeRow[];
   selectedNodeIds: string[];
@@ -36,6 +37,13 @@ function NodeListRows(props: NodeListRowsProps) {
       <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
     );
   }
+
+  const onRowKeyDown = createNodeListRowKeydownHandler({
+    collapsedNodeIds: props.collapsedNodeIds,
+    onSelect: (nodeId) => props.onSelect(nodeId),
+    onToggleCollapse: props.onToggleCollapse,
+    rows: props.rows
+  });
 
   return props.rows.map((row) => (
     <NodeTreeRowItem
@@ -56,6 +64,7 @@ function NodeListRows(props: NodeListRowsProps) {
       onDragOver={props.drag.onDragOverNode}
       onDragStart={props.drag.onDragStartNode}
       onDrop={props.drag.onDropOnNode}
+      onKeyDown={onRowKeyDown}
       onContextMenu={props.onContextMenu}
       onSelect={props.onSelect}
       onToggleCollapse={props.onToggleCollapse}
@@ -75,7 +84,7 @@ interface NodeListPanelProps {
   moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
   nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
-  onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
   trashRowIds: string[];
@@ -108,8 +117,10 @@ function NodeListPanel(props: NodeListPanelProps) {
       />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-2">
         <section
+          aria-multiselectable="true"
           aria-label={props.isTrashViewOpen ? 'Trash section' : undefined}
           className="flex flex-1 flex-col gap-2"
+          role="tree"
           onDoubleClick={(event) => event.target === event.currentTarget && props.createRootNode('')}
           onDragOver={(event) => event.target === event.currentTarget && drag.onDragOverRoot(event)}
           onDrop={(event) => event.target === event.currentTarget && drag.onDropRoot(event)}
@@ -155,7 +166,7 @@ interface NodeListTreeContentProps {
   moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
   nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
-  onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   restoreNode: (nodeId: string) => void;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;

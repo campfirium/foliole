@@ -129,7 +129,7 @@ it('syncs node list selection when review grading advances active node', async (
   });
   const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
   await waitFor(() => {
-    expect(within(listPanel).getByRole('button', { name: 'QA 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(listPanel).getByRole('treeitem', { name: 'QA 2' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
@@ -193,7 +193,7 @@ it('loads selected node content into editor', () => {
   render(<App />);
 
   expect(screen.getByTestId('editor-value')).toHaveValue('# Welcome to Foliole\n\nStart writing markdown here.');
-  fireEvent.click(screen.getByRole('button', { name: 'QA 2' }));
+  fireEvent.click(screen.getByRole('treeitem', { name: 'QA 2' }));
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [...]');
   expect(screen.getByTestId('answer-editor-value')).toHaveValue('Answer');

@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import { AppButton, AppEmptyState } from '../../../shared/ui';
 import type { NodeTreeRow as NodeTreeRowModel } from '../model/nodeTree';
 
+import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow } from './NodeTreeRow';
 
 const NOOP_TOGGLE_COLLAPSE = () => undefined;
@@ -11,7 +12,7 @@ interface NodeTrashSectionProps {
   isOpen: boolean;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onEmptyTrash: () => void;
-  onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   rows: NodeTreeRowModel[];
   selectedNodeIds: string[];
 }

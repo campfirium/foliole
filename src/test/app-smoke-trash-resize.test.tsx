@@ -20,19 +20,19 @@ it('restores and permanently deletes nodes from trash context menu actions', () 
 
   render(<App />);
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
 
   fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
-  fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
 
   fireEvent.click(within(nodePanel).getByRole('button', { name: 'Nodes' }));
-  fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
   fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
-  fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
   expect(useWorkspaceStore.getState().nodesById['node-2']).toBeUndefined();
 });
@@ -50,14 +50,14 @@ it('supports multi-select permanent delete inside trash', () => {
 
   render(<App />);
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
-  fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Node 3' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 3' }), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
 
   fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
-  const trashedNode2 = within(nodePanel).getByRole('button', { name: 'Node 2' });
-  const trashedNode3 = within(nodePanel).getByRole('button', { name: 'Node 3' });
+  const trashedNode2 = within(nodePanel).getByRole('treeitem', { name: 'Node 2' });
+  const trashedNode3 = within(nodePanel).getByRole('treeitem', { name: 'Node 3' });
   fireEvent.click(trashedNode2);
   fireEvent.click(trashedNode3, { ctrlKey: true });
   fireEvent.contextMenu(trashedNode3, { clientX: 56, clientY: 64 });
@@ -80,7 +80,7 @@ it('empties all trash items from trash header action', () => {
 
   render(<App />);
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
   fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
   fireEvent.click(within(nodePanel).getByRole('button', { name: 'Empty' }));

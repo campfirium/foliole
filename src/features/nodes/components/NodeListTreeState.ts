@@ -3,13 +3,18 @@ import {
   useMemo,
   useState,
   type Dispatch,
-  type MouseEvent as ReactMouseEvent,
   type SetStateAction
 } from 'react';
 
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTree, buildVisibleNodeTreeRows, type NodeTreeRow } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
+
+export interface NodeSelectModifiers {
+  ctrlKey?: boolean;
+  metaKey?: boolean;
+  shiftKey?: boolean;
+}
 
 export interface NodeListState {
   noteRows: NodeTreeRow[];
@@ -182,7 +187,7 @@ export function useNodeSelectionHandler({
   state: NodeListState;
   trashedNodeIds: string[];
 }) {
-  return (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
+  return (nodeId: string, modifiers?: NodeSelectModifiers) => {
     const isTrashNode = trashedNodeIds.includes(nodeId);
     const scopeIds = isTrashNode ? state.trashRowIds : state.noteRowIds;
     const scoped = state.selectedNodeIds.filter((id) =>
@@ -190,14 +195,14 @@ export function useNodeSelectionHandler({
     );
     const notify = isTrashNode ? onSelectTrashNode : onSelectNode;
     const fallbackAnchor = isTrashNode ? (selectedTrashNodeId ?? nodeId) : (activeNodeId ?? nodeId);
-    if (event.shiftKey) {
+    if (modifiers?.shiftKey) {
       state.setSelectedNodeIds(
         collectRangeNodeIds(scopeIds, state.selectionAnchorNodeId ?? fallbackAnchor, nodeId)
       );
       notify(nodeId);
       return;
     }
-    if (event.metaKey || event.ctrlKey) {
+    if (modifiers?.metaKey || modifiers?.ctrlKey) {
       handleToggleSelection(
         nodeId,
         scoped,
