@@ -117,6 +117,7 @@ describe('useCompanionWorkspacePairing request flow', () => {
       await result.current.requestPairing('http://192.168.1.8:38641');
     });
 
+    expect(syncMocks.discoverCompanionDesktop).not.toHaveBeenCalled();
     expect(result.current.pendingPairRequest?.pairRequestId).toBe('pair-request-1');
     expect(result.current.desktopDiscoveries).toHaveLength(2);
 

@@ -10,10 +10,8 @@ function createSurface() {
     handleCompleteReviewItem: vi.fn(),
     handleDeferReviewItem: vi.fn(),
     handleDismissReviewItem: vi.fn(),
-    handleDismissSyncOnboarding: vi.fn(),
     handleGradeReview: vi.fn(),
     handleRevealAnswer: vi.fn(),
-    handleStartSyncOnboarding: vi.fn(),
     handleTabAction: vi.fn(),
     isAnswerRevealed: false,
     reviewSession: {
@@ -22,56 +20,34 @@ function createSurface() {
   } as unknown as ReturnType<typeof useCompanionArticleSurface>;
 }
 
-describe('CompanionShellOverlays sync onboarding', () => {
-  it('shows onboarding only while the user has not decided', () => {
+describe('CompanionShellOverlays', () => {
+  it('does not block the shell with sync onboarding', () => {
     render(
       <CompanionShellOverlays
         isBottomBarDisabled={false}
         isCaptureSheetOpen={false}
         isNavigationVisible={false}
-        isSyncPaired={false}
         onCaptureSheetOpenChange={vi.fn()}
         onNavigationAction={vi.fn()}
         surface={createSurface()}
-        syncOnboardingStatus="pending"
-      />
-    );
-
-    expect(screen.getByText('Bring your content to this device?')).toBeInTheDocument();
-    expect(screen.getByText('Bring content from another device')).toBeInTheDocument();
-  });
-
-  it('keeps onboarding dismissed when the user opted out', () => {
-    render(
-      <CompanionShellOverlays
-        isBottomBarDisabled={false}
-        isCaptureSheetOpen={false}
-        isNavigationVisible={false}
-        isSyncPaired={false}
-        onCaptureSheetOpenChange={vi.fn()}
-        onNavigationAction={vi.fn()}
-        surface={createSurface()}
-        syncOnboardingStatus="dismissed"
       />
     );
 
     expect(screen.queryByText('Bring your content to this device?')).not.toBeInTheDocument();
   });
 
-  it('hides onboarding after the user starts setup', () => {
+  it('keeps navigation available when visible', () => {
     render(
       <CompanionShellOverlays
         isBottomBarDisabled={false}
         isCaptureSheetOpen={false}
-        isNavigationVisible={false}
-        isSyncPaired={false}
+        isNavigationVisible
         onCaptureSheetOpenChange={vi.fn()}
         onNavigationAction={vi.fn()}
         surface={createSurface()}
-        syncOnboardingStatus="accepted"
       />
     );
 
-    expect(screen.queryByText('Bring your content to this device?')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review' })).toBeInTheDocument();
   });
 });

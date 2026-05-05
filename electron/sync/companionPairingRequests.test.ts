@@ -32,6 +32,21 @@ describe('companion pairing requests', () => {
     ]);
   });
 
+  it('expires pending pair requests after the approval window', () => {
+    const nowMs = Date.parse('2026-04-24T10:00:00.000Z');
+    createCompanionPairRequest({
+      clientAddress: '192.168.1.22',
+      deviceId: 'android-1',
+      deviceKind: 'android-capacitor',
+      deviceName: 'Android companion android-1',
+      nowMs,
+      pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
+    });
+
+    expect(loadPendingCompanionPairRequests(nowMs + 119_000)).toHaveLength(1);
+    expect(loadPendingCompanionPairRequests(nowMs + 120_001)).toHaveLength(0);
+  });
+
   it('rate limits new pairing requests by client address', () => {
     const nowMs = Date.parse('2026-04-24T10:00:00.000Z');
     for (let index = 0; index < 5; index += 1) {

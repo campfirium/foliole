@@ -34,6 +34,7 @@ export interface ElectronAPI {
     handler: (payload: { detail: string; nodeId: string; phase: string; progress: number }) => void
   ) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
+  onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;
   setNativeHotkeyRecordingActive?: (active: boolean) => void;
 }

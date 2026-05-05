@@ -32,8 +32,8 @@ describe('RecentArticleList', () => {
       />
     );
 
-    expect(screen.getByText('No recent topics have been synced to this device yet.')).toBeInTheDocument();
-    expect(screen.getByText('Connect this device with desktop, then reopen the app to sync automatically.')).toBeInTheDocument();
+    expect(screen.getByText('No recent topics are available on this device yet.')).toBeInTheDocument();
+    expect(screen.getByText('Recent topics will appear here after background sync completes.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 });

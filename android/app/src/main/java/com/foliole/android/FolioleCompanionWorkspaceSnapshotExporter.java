@@ -201,7 +201,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
     }
 
     private static String normalizeKind(String kind) {
-        return "item".equals(kind) || "topic".equals(kind) ? kind : "topic";
+        return "folder".equals(kind) || "item".equals(kind) || "topic".equals(kind) ? kind : "topic";
     }
 
     private static String normalizeTitle(String title) {

@@ -116,14 +116,14 @@ function createRequestPairingAction(
     args.setPairingStatus('requesting-pair');
     args.onError(null);
     try {
-      const { discovery, endpointUrl: discoveredEndpointUrl } = await discoverCompanionDesktop(endpointUrl);
+      const selectedDiscovery = args.desktopDiscoveries.find((discovery) => discovery.endpointUrl === endpointUrl.trim());
+      const normalizedDiscovery = selectedDiscovery ?? await discoverAndNormalizeDesktop(endpointUrl);
       const nextRequest = await requestCompanionPairing({
         deviceId: args.bootstrapState.device_id,
         deviceKind: args.bootstrapState.runtime_kind,
         deviceName: createCompanionDeviceName(args.bootstrapState),
-        endpointUrl: discoveredEndpointUrl
+        endpointUrl: normalizedDiscovery.endpointUrl
       });
-      const normalizedDiscovery = normalizeDiscovery(discoveredEndpointUrl, discovery);
       args.setDesktopDiscoveries(mergeSelectedDiscovery(args.desktopDiscoveries, normalizedDiscovery));
       args.setPendingPairRequest({
         endpointUrl: normalizedDiscovery.endpointUrl,
@@ -139,6 +139,11 @@ function createRequestPairingAction(
       throw error;
     }
   };
+}
+
+async function discoverAndNormalizeDesktop(endpointUrl: string) {
+  const { discovery, endpointUrl: discoveredEndpointUrl } = await discoverCompanionDesktop(endpointUrl);
+  return normalizeDiscovery(discoveredEndpointUrl, discovery);
 }
 
 type CompletePairingActionArgs = PairingHookArgs & {

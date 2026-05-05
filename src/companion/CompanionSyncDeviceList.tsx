@@ -1,3 +1,5 @@
+import { Loader2 } from 'lucide-react';
+
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
 function formatEndpoint(endpointUrl: string) {
@@ -15,6 +17,7 @@ function resolveDeviceTitle(desktop: CompanionDesktopDiscovery) {
 
 function PairAction(props: {
   disabled: boolean;
+  isConnecting: boolean;
   onClick(): void;
 }) {
   return (
@@ -24,7 +27,12 @@ function PairAction(props: {
       onClick={props.onClick}
       type="button"
     >
-      Connect
+      {props.isConnecting ? (
+        <>
+          <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.8} />
+          Connecting...
+        </>
+      ) : 'Connect'}
     </button>
   );
 }
@@ -32,6 +40,7 @@ function PairAction(props: {
 function DeviceRow(props: {
   desktop: CompanionDesktopDiscovery;
   disabled: boolean;
+  isConnecting: boolean;
   onPair(endpointUrl: string): void;
 }) {
   const deviceTitle = resolveDeviceTitle(props.desktop);
@@ -45,7 +54,11 @@ function DeviceRow(props: {
           </p>
           <p className="mt-1 truncate text-xs text-accent">{endpointLabel}</p>
         </div>
-        <PairAction disabled={props.disabled} onClick={() => props.onPair(props.desktop.endpointUrl)} />
+        <PairAction
+          disabled={props.disabled}
+          isConnecting={props.isConnecting}
+          onClick={() => props.onPair(props.desktop.endpointUrl)}
+        />
       </div>
     </div>
   );
@@ -54,19 +67,24 @@ function DeviceRow(props: {
 export function CompanionSyncDeviceList(props: {
   desktops: CompanionDesktopDiscovery[];
   disabled: boolean;
+  isConnecting?: boolean;
   onPair(endpointUrl: string): void;
+  showHeading?: boolean;
 }) {
   const deviceCount = props.desktops.length;
   return (
     <div>
-      <h2 className="text-xl font-semibold leading-tight text-foreground">
-        Found {deviceCount} {deviceCount === 1 ? 'device' : 'devices'}
-      </h2>
-      <div className="mt-3 flex flex-col gap-2">
+      {props.showHeading === false ? null : (
+        <h2 className="text-xl font-semibold leading-tight text-foreground">
+          Found {deviceCount} {deviceCount === 1 ? 'device' : 'devices'}
+        </h2>
+      )}
+      <div className={props.showHeading === false ? 'flex flex-col gap-2' : 'mt-3 flex flex-col gap-2'}>
         {props.desktops.map((desktop) => (
           <DeviceRow
             desktop={desktop}
             disabled={props.disabled}
+            isConnecting={props.isConnecting === true}
             key={`${desktop.peerId}:${desktop.endpointUrl}`}
             onPair={props.onPair}
           />

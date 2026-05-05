@@ -60,6 +60,7 @@ function executePreload(env: Record<string, string | undefined> = {}) {
         onManagedInboxUpdated: expect.any(Function),
         onNativeKeyboardInput: expect.any(Function),
         onNativeMenuCommand: expect.any(Function),
+        onCompanionPairingRequestsChanged: expect.any(Function),
         onWorkspaceSyncApplied: expect.any(Function),
         onWindowResized: expect.any(Function),
         setNativeHotkeyRecordingActive: expect.any(Function)

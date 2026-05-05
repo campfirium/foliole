@@ -60,8 +60,23 @@ describe('CompanionSyncContent', () => {
   });
 
 
-  it('shows and persists mobile handoff reminder settings', () => {
+  it('hides handoff reminder settings before pairing', () => {
     const workspaceSync = createWorkspaceSync();
+
+    render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+
+    expect(screen.queryByText('Handoff reminders')).not.toBeInTheDocument();
+  });
+
+  it('shows and persists mobile handoff reminder settings after pairing', () => {
+    const workspaceSync = createWorkspaceSync();
+    workspaceSync.pairingState = {
+      device_id: 'android-test-device',
+      device_kind: 'android-capacitor',
+      device_name: 'Android Emulator',
+      is_paired: true,
+      paired_at: '2026-04-24T10:03:00.000Z'
+    };
 
     render(<CompanionSyncContent workspaceSync={workspaceSync} />);
 

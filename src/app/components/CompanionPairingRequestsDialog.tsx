@@ -1,3 +1,4 @@
+import { Loader2 } from 'lucide-react';
 import { forwardRef } from 'react';
 
 import { useDesktopCompanionPairingRequests } from '../../shared/platform/useDesktopCompanionPairingRequests';
@@ -113,6 +114,7 @@ function PairingDialogActions({
   state: ReturnType<typeof useDesktopCompanionPairingRequests>;
 }) {
   const disabled = state.pendingActionId === request.pair_request_id;
+  const actionIcon = disabled ? <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.8} /> : null;
   return (
     <div className="grid grid-cols-2 gap-3">
       <AppButton
@@ -121,7 +123,8 @@ function PairingDialogActions({
         onClick={() => void state.rejectRequest(request.pair_request_id)}
         variant="primary"
       >
-        Reject
+        {actionIcon}
+        {disabled ? 'Working...' : 'Reject'}
       </AppButton>
       <AppButton
         className="border border-border-strong"
@@ -129,7 +132,8 @@ function PairingDialogActions({
         onClick={() => void state.approveRequest(request.pair_request_id)}
         variant="primary"
       >
-        Allow
+        {actionIcon}
+        {disabled ? 'Working...' : 'Allow'}
       </AppButton>
     </div>
   );

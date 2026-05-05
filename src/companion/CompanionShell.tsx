@@ -110,7 +110,7 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
         >
           <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pb-24 pt-4 sm:px-7">
             <CompanionTopBar {...model.topBarProps} visible={!model.isReviewTaskActive} />
-            {model.surface.activeAction === 'more' ? null : <CompanionSyncInlineStatus workspaceSync={model.workspaceSync} />}
+            <CompanionSyncInlineStatus workspaceSync={model.workspaceSync} />
             {renderCompanionShellContent(
               {
                 hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
@@ -131,11 +131,9 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
         isBottomBarDisabled={model.isBottomBarDisabled}
         isCaptureSheetOpen={model.isCaptureSheetOpen}
         isNavigationVisible={model.isNavigationVisible}
-        isSyncPaired={model.workspaceSync.pairingState.is_paired}
         onCaptureSheetOpenChange={model.setIsCaptureSheetOpen}
         onNavigationAction={model.handleNavigationAction}
         surface={model.surface}
-        syncOnboardingStatus={model.workspaceSync.state.sync_onboarding_status}
       />
     </>
   );

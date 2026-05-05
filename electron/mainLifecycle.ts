@@ -23,6 +23,8 @@ import { runStartupTask } from './startupTasks.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
 import { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler, stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 
+const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
+
 interface MainLifecycleArgs {
   createMainWindow: () => Promise<void>;
   installInvokeHandler: () => void;
@@ -94,6 +96,7 @@ function installPairingFocusHandler() {
     if (!window) return;
     if (!window.isVisible()) window.show();
     focusWindow(window);
+    window.webContents.send(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL);
   });
 }
 

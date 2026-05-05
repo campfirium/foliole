@@ -89,7 +89,7 @@ describe('CompanionApp bootstrap states', () => {
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByLabelText('Review')).toBeInTheDocument();
-    expect(screen.getByLabelText('Device sync')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Device sync/ })).toBeInTheDocument();
   });
 
   it('shows a failure state when bootstrap rejects', async () => {

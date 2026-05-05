@@ -207,28 +207,6 @@ describe('useCompanionArticleSurface', () => {
     expect(result.current.activeAction).toBe('more');
   });
 
-  it('opens sync setup from the initial prompt and records acceptance', async () => {
-    const workspaceSync = createUnpairedWorkspaceSync();
-    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
-
-    await act(async () => {
-      await result.current.handleStartSyncOnboarding();
-    });
-
-    expect(workspaceSync.saveSyncOnboardingStatus).toHaveBeenCalledWith('accepted');
-    expect(result.current.activeAction).toBe('more');
-  });
-
-  it('persists the initial sync prompt dismissal', async () => {
-    const workspaceSync = createUnpairedWorkspaceSync();
-    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
-
-    await act(async () => {
-      await result.current.handleDismissSyncOnboarding();
-    });
-
-    expect(workspaceSync.saveSyncOnboardingStatus).toHaveBeenCalledWith('dismissed');
-  });
 });
 
 describe('useCompanionArticleSurface browsing', () => {

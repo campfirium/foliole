@@ -51,6 +51,7 @@ describe('CompanionSyncPanel', () => {
 
     render(<CompanionSyncPanel {...props} />);
 
+    expect(screen.queryByText('Handoff reminders')).not.toBeInTheDocument();
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
     expect(screen.getByText('Bring content from another device')).toBeInTheDocument();
     expect(screen.getByText(/device that already has your content/i)).toBeInTheDocument();
@@ -68,12 +69,23 @@ describe('CompanionSyncPanel', () => {
 
 describe('CompanionSyncPanel pairing states', () => {
 
-  it('shows a searching state while automatic discovery is running', () => {
-    render(<CompanionSyncPanel {...createProps()} pairingStatus="checking-desktop" />);
+  it('shows searching inside the connection dialog while discovery is running', async () => {
+    const props = createProps();
 
+    render(<CompanionSyncPanel {...props} pairingStatus="checking-desktop" />);
+
+    expect(screen.getByRole('dialog', { name: 'Looking for another device' })).toBeInTheDocument();
     expect(screen.getByText('Looking for another device')).toBeInTheDocument();
-    expect(screen.getByText(/another device with Device sync turned on/)).toBeInTheDocument();
+    expect(screen.getByText(/open Device sync on the desktop/)).toBeInTheDocument();
+    expect(screen.getByText('Searching...')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    await waitFor(() => {
+      expect(props.onCheckDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
+    });
   });
 });
 
@@ -96,7 +108,10 @@ describe('CompanionSyncPanel discovery list', () => {
 
     render(<CompanionSyncPanel {...props} />);
 
+    expect(screen.getByRole('dialog', { name: 'Found 1 device' })).toBeInTheDocument();
     expect(screen.getByText('Found 1 device')).toBeInTheDocument();
+    expect(screen.getByText('Connect to this desktop to bring your topics onto this device.')).toBeInTheDocument();
+    expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
     expect(screen.queryByText('Choose the device to pair and sync with.')).not.toBeInTheDocument();
     expect(screen.getByText('ZEPHU-PC')).toBeInTheDocument();
@@ -108,6 +123,28 @@ describe('CompanionSyncPanel discovery list', () => {
     await waitFor(() => {
       expect(props.onRequestPairing).toHaveBeenCalledWith('http://192.168.1.8:38641');
     });
+  });
+
+  it('shows connecting feedback after the user starts pairing', () => {
+    const props = {
+      ...createProps(),
+      desktopDiscoveries: [
+        {
+          appVersion: '37.10.3',
+          desktopDeviceName: 'Foliole Desktop on V',
+          desktopName: 'Foliole Desktop',
+          desktopPlatform: 'Windows',
+          endpointUrl: 'http://192.168.1.8:38641',
+          hostName: 'V',
+          peerId: 'desktop-v'
+        }
+      ],
+      pairingStatus: 'requesting-pair' as const
+    };
+
+    render(<CompanionSyncPanel {...props} />);
+
+    expect(screen.getByRole('button', { name: 'Connecting...' })).toBeDisabled();
   });
 });
 
@@ -139,7 +176,9 @@ describe('CompanionSyncPanel multiple discovery list', () => {
 
     render(<CompanionSyncPanel {...props} />);
 
+    expect(screen.getByRole('dialog', { name: 'Found 2 devices' })).toBeInTheDocument();
     expect(screen.getByText('Found 2 devices')).toBeInTheDocument();
+    expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
     expect(screen.getByText('V')).toBeInTheDocument();
     expect(screen.getByText('Studio')).toBeInTheDocument();
     const pairButtons = screen.getAllByRole('button', { name: 'Connect' });
@@ -152,23 +191,12 @@ describe('CompanionSyncPanel multiple discovery list', () => {
 });
 
 describe('CompanionSyncPanel approval states', () => {
-  it('can leave the desktop approval wait state and return to discovered devices', () => {
+  it('shows live waiting feedback with countdown and a cancel control', () => {
     const props = {
       ...createProps(),
-      desktopDiscoveries: [
-        {
-          appVersion: '37.10.3',
-          desktopDeviceName: 'Foliole Desktop on V',
-          desktopName: 'Foliole Desktop',
-          desktopPlatform: 'Windows',
-          endpointUrl: 'http://192.168.1.8:38641',
-          hostName: 'V',
-          peerId: 'desktop-v'
-        }
-      ],
       pairingRequest: {
         endpointUrl: 'http://192.168.1.8:38641',
-        expiresAt: '2026-04-24T10:02:00.000Z',
+        expiresAt: new Date(Date.now() + 30_000).toISOString(),
         pairRequestId: 'pair-request-1'
       },
       pairingStatus: 'awaiting-approval' as const
@@ -176,17 +204,20 @@ describe('CompanionSyncPanel approval states', () => {
 
     render(<CompanionSyncPanel {...props} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Choose another device' }));
+    expect(screen.getByText(/Asking the desktop to allow this device/i)).toBeInTheDocument();
+    expect(screen.getByText(/Waiting for approval\.\.\./i)).toBeInTheDocument();
+    expect(screen.getByText(/s left/i)).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(props.onCancelPairing).toHaveBeenCalledTimes(1);
   });
 
-  it('continues after desktop approval and starts pulling data', async () => {
+  it('shows an expired message when the pairing window elapses', () => {
     const props = {
       ...createProps(),
       pairingRequest: {
         endpointUrl: 'http://192.168.1.8:38641',
-        expiresAt: '2026-04-24T10:02:00.000Z',
+        expiresAt: new Date(Date.now() - 1_000).toISOString(),
         pairRequestId: 'pair-request-1'
       },
       pairingStatus: 'awaiting-approval' as const
@@ -194,12 +225,7 @@ describe('CompanionSyncPanel approval states', () => {
 
     render(<CompanionSyncPanel {...props} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-
-    await waitFor(() => {
-      expect(props.onCompletePairing).toHaveBeenCalled();
-      expect(props.onPull).toHaveBeenCalledWith('http://192.168.1.8:38641');
-    });
+    expect(screen.getByText(/Request expired/i)).toBeInTheDocument();
   });
 });
 
@@ -219,6 +245,7 @@ describe('CompanionSyncPanel connected state', () => {
     render(<CompanionSyncPanel {...props} />);
 
     expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.getByText('Handoff reminders')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
   });
 });

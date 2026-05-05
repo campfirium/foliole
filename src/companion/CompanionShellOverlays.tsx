@@ -1,32 +1,16 @@
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { CompanionCaptureSheet } from './CompanionCaptureSheet';
 import { CompanionBottomTabBar, type CompanionTabAction } from './CompanionFloatingBars';
-import { CompanionSyncOnboardingPrompt } from './CompanionSyncOnboardingPrompt';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
-import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 export function CompanionShellOverlays(props: {
   isBottomBarDisabled: boolean;
   isCaptureSheetOpen: boolean;
   isNavigationVisible: boolean;
-  isSyncPaired: boolean;
   onCaptureSheetOpenChange(open: boolean): void;
   onNavigationAction(action: CompanionTabAction): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
-  syncOnboardingStatus: ReturnType<typeof useCompanionWorkspaceSync>['state']['sync_onboarding_status'];
 }) {
-  const shouldShowSyncOnboarding = !props.isSyncPaired && props.syncOnboardingStatus === 'pending';
-
-  if (shouldShowSyncOnboarding) {
-    return (
-      <CompanionSyncOnboardingPrompt
-        onDismiss={props.surface.handleDismissSyncOnboarding}
-        onStart={props.surface.handleStartSyncOnboarding}
-        visible
-      />
-    );
-  }
-
   return (
     <>
       <CompanionBottomTabBar

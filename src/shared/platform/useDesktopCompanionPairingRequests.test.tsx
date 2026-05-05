@@ -2,7 +2,8 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const bridgeMocks = vi.hoisted(() => ({
-  loadDesktopCompanionPairingOverview: vi.fn()
+  loadDesktopCompanionPairingOverview: vi.fn(),
+  onDesktopCompanionPairingRequestsChanged: vi.fn()
 }));
 
 vi.mock('./desktopCompanionPairingBridge', () => ({
@@ -11,6 +12,7 @@ vi.mock('./desktopCompanionPairingBridge', () => ({
   disableDesktopCompanionSync: vi.fn(),
   enableDesktopCompanionSync: vi.fn(),
   loadDesktopCompanionPairingOverview: bridgeMocks.loadDesktopCompanionPairingOverview,
+  onDesktopCompanionPairingRequestsChanged: bridgeMocks.onDesktopCompanionPairingRequestsChanged,
   removeDesktopCompanionPairedDevice: vi.fn(),
   rejectDesktopCompanionPairRequest: vi.fn()
 }));
@@ -55,6 +57,7 @@ describe('useDesktopCompanionPairingRequests', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     bridgeMocks.loadDesktopCompanionPairingOverview.mockResolvedValue(createOverview(0));
+    bridgeMocks.onDesktopCompanionPairingRequestsChanged.mockReturnValue(() => undefined);
   });
 
   afterEach(() => {
@@ -79,6 +82,34 @@ describe('useDesktopCompanionPairingRequests', () => {
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(bridgeMocks.loadDesktopCompanionPairingOverview).toHaveBeenCalledTimes(2);
+    expect(result.current.overview.pending_requests).toHaveLength(1);
+  });
+
+  it('refreshes immediately when native pairing requests change', async () => {
+    let listener: (() => void) | null = null;
+    bridgeMocks.onDesktopCompanionPairingRequestsChanged.mockImplementation((nextListener: () => void) => {
+      listener = nextListener;
+      return () => {
+        listener = null;
+      };
+    });
+    bridgeMocks.loadDesktopCompanionPairingOverview
+      .mockResolvedValueOnce(createOverview(0))
+      .mockResolvedValueOnce(createOverview(1));
+
+    const { result } = renderHook(() => useDesktopCompanionPairingRequests(2_000));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.overview.pending_requests).toHaveLength(0);
+
+    await act(async () => {
+      listener?.();
+      await Promise.resolve();
     });
 
     expect(bridgeMocks.loadDesktopCompanionPairingOverview).toHaveBeenCalledTimes(2);

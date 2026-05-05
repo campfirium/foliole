@@ -22,6 +22,7 @@ import {
 
 const WEB_PAIRING_STATE_KEY = 'foliole-companion-pairing-state';
 const pairingKeyIdsByRequestId = new Map<string, string>();
+const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-state?limit=1&after_state_seq=0';
 
 type WebCompanionPairingState = NativeCompanionPairingState & { device_secret?: string };
 
@@ -146,6 +147,18 @@ export async function createSignedRequestHeaders(args: { bodyText?: string; meth
   };
 }
 
+async function verifyNativePairingCanSignRequest() {
+  try {
+    const headers = await createSignedRequestHeaders({ method: 'GET', pathWithQuery: PAIRING_SIGNATURE_CHECK_PATH });
+    if (!headers['X-Device-Id'] || !headers['X-Signature']) {
+      throw new Error('Android pairing credentials did not produce signed request headers.');
+    }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'unknown error';
+    throw new Error(`Android pairing credentials cannot sign sync requests: ${reason}`);
+  }
+}
+
 export async function loadCompanionDiscovery(endpointUrl: string) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
   const response = await requestDesktop(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, { method: 'GET' });
@@ -225,6 +238,7 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
   if (!storedPairingState.is_paired) {
     throw new Error('Android pairing credentials were not saved.');
   }
+  await verifyNativePairingCanSignRequest();
   return storedPairingState;
 }
 

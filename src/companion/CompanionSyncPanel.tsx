@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
+
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
 import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
-import { CompanionSyncDeviceList } from './CompanionSyncDeviceList';
+import { CompanionSyncDiscoveryDialog } from './CompanionSyncDiscoveryDialog';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
@@ -97,39 +99,60 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'p
   );
 }
 
+function useExpiryCountdown(expiresAtIso: string) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(timer);
+  }, [expiresAtIso]);
+  const expiresAt = new Date(expiresAtIso).getTime();
+  const remainingMs = Math.max(0, expiresAt - now);
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  return { isExpired: remainingMs <= 0, remainingMs, remainingSeconds };
+}
+
 function AwaitingApprovalState(props: {
-  disabled: boolean;
+  expiresAt: string;
   onCancel(): void;
-  onComplete(): void;
 }) {
+  const { isExpired, remainingMs, remainingSeconds } = useExpiryCountdown(props.expiresAt);
+  const totalWindowMs = 45_000;
+  const progressPct = Math.min(100, Math.max(0, (remainingMs / totalWindowMs) * 100));
   return (
     <SyncStatusCard
-      detail="Approve this device on the device that already has your content. Then come back here to continue."
-      title="Waiting for approval"
+      detail="Look at the desktop you're connecting to and tap Approve. We'll continue automatically as soon as you do."
+      title="Asking the desktop to allow this device"
     >
-      <div className="space-y-3">
-        <PrimaryAction disabled={props.disabled} onClick={props.onComplete}>
-          {props.disabled ? 'Checking approval...' : 'Continue'}
-        </PrimaryAction>
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 text-sm text-foreground">
+          <span aria-hidden className="relative inline-flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground opacity-60" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-foreground" />
+          </span>
+          <span>
+            {isExpired
+              ? 'Request expired. Tap Cancel and try again.'
+              : `Waiting for approval... ${remainingSeconds}s left`}
+          </span>
+        </div>
+        <div
+          aria-hidden
+          className="h-1.5 w-full overflow-hidden rounded-full bg-bg-subtle"
+        >
+          <div
+            className="h-full rounded-full bg-foreground transition-all duration-500 ease-linear"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
         <button
-          className="w-full rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition hover:bg-bg-subtle disabled:cursor-not-allowed disabled:opacity-45"
-          disabled={props.disabled}
+          className="w-full rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition hover:bg-bg-subtle"
           onClick={props.onCancel}
           type="button"
         >
-          Choose another device
+          Cancel
         </button>
       </div>
     </SyncStatusCard>
-  );
-}
-
-function SearchingDiscoveryState() {
-  return (
-    <SyncStatusCard
-      detail="Looking for another device with Device sync turned on. Keep both devices on the same Wi-Fi."
-      title="Looking for another device"
-    />
   );
 }
 
@@ -156,6 +179,8 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
   const endpointUrl = resolveEndpoint(props);
   const isBusy = props.pairingStatus !== 'idle' && props.pairingStatus !== 'awaiting-approval';
   const desktopDiscoveries = resolveDesktopDiscoveries(props);
+  const hasPairing = props.pairingState.is_paired;
+  const isDiscovering = props.pairingStatus === 'checking-desktop' || desktopDiscoveries.length > 0;
 
   async function handleTryAgain() {
     props.onClearError();
@@ -167,16 +192,10 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
     await props.onRequestPairing(pairingEndpointUrl);
   }
 
-  async function handleCompletePairing() {
-    props.onClearError();
-    await props.onCompletePairing();
-    await props.onPull(endpointUrl);
-  }
-
   return (
     <section className="mb-8 px-5 py-5">
       <div className="flex flex-col gap-5">
-        {props.pairingState.is_paired ? (
+        {hasPairing ? (
           <ConnectedState
             endpointUrl={endpointUrl}
             lastSyncedAt={props.lastSyncedAt}
@@ -186,25 +205,26 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
           />
         ) : props.pairingRequest ? (
           <AwaitingApprovalState
-            disabled={props.pairingStatus === 'completing-pair'}
+            expiresAt={props.pairingRequest.expiresAt}
             onCancel={props.onCancelPairing}
-            onComplete={() => void handleCompletePairing()}
           />
-        ) : desktopDiscoveries.length > 0 ? (
-          <CompanionSyncDeviceList
-            desktops={desktopDiscoveries}
-            disabled={props.pairingStatus === 'requesting-pair'}
-            onPair={(pairingEndpointUrl) => void handlePair(pairingEndpointUrl)}
-          />
-        ) : props.pairingStatus === 'checking-desktop' ? (
-          <SearchingDiscoveryState />
-        ) : (
+        ) : isDiscovering ? null : (
           <EmptyDiscoveryState disabled={isBusy} onTryAgain={() => void handleTryAgain()} />
         )}
         {props.error ? <p className="text-sm text-error">{props.error}</p> : null}
-        <CompanionHandoffReminderSettingsPanel
-          settings={props.handoffReminderSettings}
-          onChange={props.onChangeHandoffReminderSettings}
+        {hasPairing ? (
+          <CompanionHandoffReminderSettingsPanel
+            settings={props.handoffReminderSettings}
+            onChange={props.onChangeHandoffReminderSettings}
+          />
+        ) : null}
+        <CompanionSyncDiscoveryDialog
+          desktops={hasPairing || props.pairingRequest ? [] : desktopDiscoveries}
+          disabled={props.pairingStatus === 'requesting-pair'}
+          isConnecting={props.pairingStatus === 'requesting-pair'}
+          isSearching={!hasPairing && !props.pairingRequest && props.pairingStatus === 'checking-desktop'}
+          onPair={(pairingEndpointUrl) => void handlePair(pairingEndpointUrl)}
+          onRefresh={() => void handleTryAgain()}
         />
       </div>
     </section>

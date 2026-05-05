@@ -6,8 +6,8 @@ import type {
   DesktopCompanionSyncServerStatusPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
-
 
 function normalizePairedDevice(value: unknown): DesktopCompanionPairedDevicePayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -163,4 +163,8 @@ export function rejectDesktopCompanionPairRequest(pairRequestId: string) {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.rejectCompanionPairRequest, {
     pair_request_id: pairRequestId
   });
+}
+
+export function onDesktopCompanionPairingRequestsChanged(handler: () => void) {
+  return getElectronAPI()?.onCompanionPairingRequestsChanged?.(handler) ?? null;
 }

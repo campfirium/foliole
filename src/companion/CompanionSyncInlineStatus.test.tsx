@@ -39,8 +39,9 @@ describe('CompanionSyncInlineStatus visibility', () => {
       />
     );
 
-    expect(screen.getByText('Syncing with desktop')).toBeInTheDocument();
-    expect(screen.getByText('Keeping this device and desktop up to date.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Sync status')).toBeInTheDocument();
+    expect(screen.getByText('Syncing topics')).toBeInTheDocument();
+    expect(screen.getByText('Bringing the latest desktop content onto this device.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 

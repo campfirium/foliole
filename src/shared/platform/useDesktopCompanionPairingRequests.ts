@@ -8,6 +8,7 @@ import {
   approveDesktopCompanionPairRequest,
   clearDesktopCompanionPairedDevices,
   loadDesktopCompanionPairingOverview,
+  onDesktopCompanionPairingRequestsChanged,
   removeDesktopCompanionPairedDevice,
   rejectDesktopCompanionPairRequest
 } from './desktopCompanionPairingBridge';
@@ -97,6 +98,17 @@ function useCompanionPairingPolling(
       window.clearInterval(timer);
     };
   }, [pollMs, setError, setIsLoading, setOverview]);
+}
+
+function useCompanionPairingPushRefresh(refresh: () => Promise<DesktopCompanionPairingOverviewPayload>) {
+  useEffect(() => {
+    if (!isDesktopRuntime()) {
+      return undefined;
+    }
+    return onDesktopCompanionPairingRequestsChanged(() => {
+      void refresh();
+    }) ?? undefined;
+  }, [refresh]);
 }
 
 function useCompanionPairingAction(
@@ -222,6 +234,7 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
     state.setIsLoading,
     state.setPendingActionId
   );
+  useCompanionPairingPushRefresh(refresh);
   useCompanionPairingPolling(pollMs, state.setOverview, state.setError, state.setIsLoading);
 
   return useMemo(

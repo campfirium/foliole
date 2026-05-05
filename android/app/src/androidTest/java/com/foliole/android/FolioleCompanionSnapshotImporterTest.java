@@ -142,6 +142,21 @@ public class FolioleCompanionSnapshotImporterTest {
         assertNodeSyncState("review-1", 1, "android-test-device");
     }
 
+    @Test
+    public void exportsFolderKindWithoutNormalizingItToTopic() throws Exception {
+        insertNode("folder-1", null, "folder", "Folder", "");
+        insertNode("topic-1", "folder-1", "topic", "Topic", "Readable body");
+        database.execSQL("INSERT INTO node_order (node_id, position) VALUES ('folder-1', 0), ('topic-1', 1)");
+
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database);
+
+        assertNotNull(snapshot);
+        JSONObject nodesById = snapshot.getJSONObject("nodesById");
+        assertEquals("folder", nodesById.getJSONObject("folder-1").getString("kind"));
+        assertEquals("topic", nodesById.getJSONObject("topic-1").getString("kind"));
+        assertEquals("folder-1", nodesById.getJSONObject("topic-1").getString("parentNodeId"));
+    }
+
     private static String createWorkspaceSnapshotJson() throws Exception {
         JSONObject snapshot = new JSONObject();
         snapshot.put("activeNodeId", "article-1");
@@ -239,5 +254,12 @@ public class FolioleCompanionSnapshotImporterTest {
                 assertEquals(deviceId, cursor.getString(1));
             }
         }
+    }
+
+    private void insertNode(String id, String parentId, String kind, String title, String content) {
+        database.execSQL(
+            "INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            new Object[] { id, parentId, kind, title, content, "2026-04-23T08:00:00.000Z", "2026-04-23T08:00:00.000Z" }
+        );
     }
 }

@@ -36,7 +36,7 @@ final class FolioleCompanionPairingStore {
         result.put("device_id", trimToNull(deviceId));
         result.put("device_kind", trimToNull(prefs.getString(DEVICE_KIND_KEY, null)));
         result.put("device_name", trimToNull(prefs.getString(DEVICE_NAME_KEY, null)));
-        result.put("is_paired", trimToNull(deviceId) != null && trimToNull(prefs.getString(DEVICE_SECRET_KEY, null)) != null);
+        result.put("is_paired", canReadPairingSecret(context, deviceId));
         result.put("paired_at", trimToNull(prefs.getString(PAIRED_AT_KEY, null)));
         return result;
     }
@@ -81,13 +81,11 @@ final class FolioleCompanionPairingStore {
         String deviceId = requireMeta(context, DEVICE_ID_KEY);
         String secret = decryptSecret(context);
         String canonical = method.toUpperCase() + "\n" + pathWithQuery + "\n" + timestamp + "\n" + nonce + "\n" + bodyHash;
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         JSObject headers = new JSObject();
         headers.put("X-Device-Id", deviceId);
         headers.put("X-Timestamp", timestamp);
         headers.put("X-Nonce", nonce);
-        headers.put("X-Signature", toHex(mac.doFinal(canonical.getBytes(StandardCharsets.UTF_8))));
+        headers.put("X-Signature", signCanonicalRequest(secret, canonical));
         JSObject result = new JSObject();
         result.put("headers", headers);
         return result;
@@ -95,6 +93,31 @@ final class FolioleCompanionPairingStore {
 
     private static SharedPreferences prefs(Context context) {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    private static boolean canReadPairingSecret(Context context, String deviceId) {
+        if (trimToNull(deviceId) == null || trimToNull(prefs(context).getString(DEVICE_SECRET_KEY, null)) == null) {
+            return false;
+        }
+        try {
+            String secret = decryptSecret(context);
+            signCanonicalRequest(secret, "pairing-state-check");
+            return trimToNull(secret) != null;
+        } catch (Exception exception) {
+            clearPairingCredentials(context);
+            return false;
+        }
+    }
+
+    private static void clearPairingCredentials(Context context) {
+        prefs(context).edit()
+            .remove(DEVICE_ID_KEY)
+            .remove(DEVICE_KIND_KEY)
+            .remove(DEVICE_NAME_KEY)
+            .remove(DEVICE_SECRET_KEY)
+            .remove(IV_KEY)
+            .remove(PAIRED_AT_KEY)
+            .apply();
     }
 
     private static SecretKey loadOrCreateSecretKey() throws Exception {
@@ -148,5 +171,11 @@ final class FolioleCompanionPairingStore {
             builder.append(String.format("%02x", value));
         }
         return builder.toString();
+    }
+
+    private static String signCanonicalRequest(String secret, String canonical) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        return toHex(mac.doFinal(canonical.getBytes(StandardCharsets.UTF_8)));
     }
 }

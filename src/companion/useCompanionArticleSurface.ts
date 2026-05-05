@@ -9,7 +9,6 @@ import {
   resolveCompanionReviewSession
 } from './companionReviewSession';
 import { persistCompanionReviewSyncObject } from './companionReviewSyncPersistence';
-import { useCompanionSyncOnboardingActions } from './companionSyncOnboardingActions';
 import { useCompanionBrowseState } from './useCompanionBrowseState';
 import { useCompanionViewStateSync } from './useCompanionViewStateSync';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -206,10 +205,6 @@ function useCompanionInteractionState(
     setReviewError,
     setSelectedBrowseNodeId
   });
-  const syncOnboardingActions = useCompanionSyncOnboardingActions({
-    saveSyncOnboardingStatus: workspaceSync.saveSyncOnboardingStatus,
-    setActiveAction
-  });
 
   useEffect(() => {
     setIsAnswerRevealed(false);
@@ -227,7 +222,6 @@ function useCompanionInteractionState(
     handleRevealAnswer,
     handleSelectBrowseNode,
     handleSelectRecentArticle,
-    ...syncOnboardingActions,
     handleTabAction,
     isAnswerRevealed,
     isSubmittingGrade,

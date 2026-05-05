@@ -122,6 +122,14 @@ it('verifies native pairing credentials are readable after saving', async () => 
     is_paired: true,
     paired_at: '2026-04-22T12:00:00.000Z'
   });
+  capacitorMock.plugin.signCompanionSyncRequest.mockResolvedValue({
+    headers: {
+      'X-Device-Id': 'android-test-device',
+      'X-Nonce': 'nonce',
+      'X-Signature': 'signed',
+      'X-Timestamp': '2026-04-22T12:00:00.000Z'
+    }
+  });
 
   await requestCompanionPairing({
     deviceId: 'android-test-device',
@@ -142,6 +150,10 @@ it('verifies native pairing credentials are readable after saving', async () => 
     url: 'http://10.0.2.2:38641/companion/pair'
   });
   expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(1);
+  expect(capacitorMock.plugin.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
+    method: 'GET',
+    path_with_query: '/companion/sync-state?limit=1&after_state_seq=0'
+  }));
 });
 
 it('fails native pairing when credentials cannot be read back locally', async () => {
@@ -163,4 +175,38 @@ it('fails native pairing when credentials cannot be read back locally', async ()
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
   })).rejects.toThrow('Android pairing credentials were not saved.');
+});
+
+it('fails native pairing when saved credentials cannot sign sync requests', async () => {
+  capacitorMock.getPlatform.mockReturnValue('android');
+  capacitorMock.isNativePlatform.mockReturnValue(true);
+  mockNativePairingHttp();
+  capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
+    device_id: 'android-test-device',
+    device_kind: 'android-capacitor',
+    device_name: 'Pixel 9',
+    is_paired: true,
+    paired_at: '2026-04-22T12:00:00.000Z'
+  });
+  capacitorMock.plugin.loadPairingState.mockResolvedValue({
+    device_id: 'android-test-device',
+    device_kind: 'android-capacitor',
+    device_name: 'Pixel 9',
+    is_paired: true,
+    paired_at: '2026-04-22T12:00:00.000Z'
+  });
+  capacitorMock.plugin.signCompanionSyncRequest.mockRejectedValue(new Error('Failed to sign companion sync request.'));
+
+  await requestCompanionPairing({
+    deviceId: 'android-test-device',
+    deviceKind: 'android-capacitor',
+    deviceName: 'Pixel 9',
+    endpointUrl: 'http://10.0.2.2:38641'
+  });
+  await expect(pairCompanionWithDesktop({
+    deviceKind: 'android-capacitor',
+    deviceName: 'Pixel 9',
+    endpointUrl: 'http://10.0.2.2:38641',
+    pairRequestId: 'pair-request-1'
+  })).rejects.toThrow('Android pairing credentials cannot sign sync requests');
 });
