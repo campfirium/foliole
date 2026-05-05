@@ -18,6 +18,7 @@ import { loadReadingProgress, saveReadingProgress } from '../database/readingPro
 import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
+import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import {
   loadReviewSchedulerSettings,
@@ -118,24 +119,7 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
   return undefined;
 }
 
-export async function handleStorageCommand(
-  command: string,
-  args: Record<string, unknown>
-): Promise<unknown> {
-  const nodeMutationResult = handleNodeMutationCommand(command, args);
-  if (nodeMutationResult !== undefined) {
-    return nodeMutationResult;
-  }
-  const sqliteMaintenanceResult = handleSqliteMaintenanceCommand(command, args);
-  if (sqliteMaintenanceResult !== undefined) {
-    return sqliteMaintenanceResult;
-  }
-  if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
-    return loadWorkspaceSnapshot();
-  }
-  if (command === NATIVE_COMMANDS.loadImportOverview) {
-    return toNativeImportOverview();
-  }
+async function handleSettingsStorageCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadImportManagerSettings) {
     return loadImportManagerSettings();
   }
@@ -148,7 +132,9 @@ export async function handleStorageCommand(
     return null;
   }
   if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
-    return saveImportManagerSettings(readSettingsObject(args.settings));
+    const result = saveImportManagerSettings(readSettingsObject(args.settings));
+    await refreshKeepImportMonitorFromSettings();
+    return result;
   }
   if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) {
     return loadReviewSchedulerSettings();
@@ -156,6 +142,10 @@ export async function handleStorageCommand(
   if (command === NATIVE_COMMANDS.saveReviewSchedulerSettings) {
     return saveReviewSchedulerSettings(readSettingsObject(args.settings));
   }
+  return undefined;
+}
+
+function handleReadingAndReviewCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadReadingProgress) {
     return loadReadingProgress();
   }
@@ -174,6 +164,35 @@ export async function handleStorageCommand(
   if (command === NATIVE_COMMANDS.relearnNode) {
     resetNodeReviewState(asString(args.nodeId, 'nodeId'));
     return null;
+  }
+  return undefined;
+}
+
+export async function handleStorageCommand(
+  command: string,
+  args: Record<string, unknown>
+): Promise<unknown> {
+  const nodeMutationResult = handleNodeMutationCommand(command, args);
+  if (nodeMutationResult !== undefined) {
+    return nodeMutationResult;
+  }
+  const sqliteMaintenanceResult = handleSqliteMaintenanceCommand(command, args);
+  if (sqliteMaintenanceResult !== undefined) {
+    return sqliteMaintenanceResult;
+  }
+  if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
+    return loadWorkspaceSnapshot();
+  }
+  if (command === NATIVE_COMMANDS.loadImportOverview) {
+    return toNativeImportOverview();
+  }
+  const settingsResult = await handleSettingsStorageCommand(command, args);
+  if (settingsResult !== undefined) {
+    return settingsResult;
+  }
+  const readingAndReviewResult = handleReadingAndReviewCommand(command, args);
+  if (readingAndReviewResult !== undefined) {
+    return readingAndReviewResult;
   }
   return undefined;
 }

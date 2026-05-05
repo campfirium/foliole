@@ -5,6 +5,7 @@ import {
   isTypedNativeRequest,
   type NativeInvokeRequest
 } from '../../lib/platform/nativeContract.js';
+import { previewKeepImportRule } from '../import/keepImportService.js';
 
 import { bootReport } from './boot.js';
 import { asString, asStringArray } from './commandParsers.js';
@@ -86,10 +87,7 @@ async function selectImportDirectory(context?: InvokeContext) {
   return selection.filePaths[0] ?? null;
 }
 
-export async function handleInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
-  const command = request.command;
-  const args = (request.args ?? {}) as Record<string, unknown>;
-
+async function handleImportCommand(request: InvokeRequest, context?: InvokeContext) {
   if (isTypedRequest(request, NATIVE_COMMANDS.openExternalUrl)) {
     const url = asString(request.args.url, 'url').trim();
     if (!url) {
@@ -107,13 +105,23 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   if (isTypedRequest(request, NATIVE_COMMANDS.runDirectoryImport)) {
     return runDirectoryImport(resolveTargetWindow(context), request.args);
   }
+  if (isTypedRequest(request, NATIVE_COMMANDS.previewKeepImportRule)) {
+    return previewKeepImportRule({
+      directoryPath: asString(request.args.directory_path, 'directory_path'),
+      highlightPolicy: 'reference_only',
+      ruleId: asString(request.args.rule_id, 'rule_id')
+    });
+  }
   if (isTypedRequest(request, NATIVE_COMMANDS.selectImportTextFile)) {
     return selectImportTextFile(resolveTargetWindow(context), request.args);
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.selectImportDirectory)) {
     return selectImportDirectory(context);
   }
+  return undefined;
+}
 
+function handleUtilityCommand(request: InvokeRequest) {
   if (isTypedRequest(request, NATIVE_COMMANDS.resolveAppPaths)) {
     return resolveAppPaths();
   }
@@ -124,16 +132,10 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
     syncAppMenuState(asStringArray(request.args.enabledCommandIds, 'enabledCommandIds'));
     return null;
   }
+  return undefined;
+}
 
-  const storageResult = await handleStorageCommand(command, args);
-  if (storageResult !== undefined) {
-    return storageResult;
-  }
-
-  const windowResult = await handleWindowCommand(request, context);
-  if (windowResult !== undefined) {
-    return windowResult;
-  }
+async function handleReviewAndBootCommand(request: InvokeRequest) {
   if (isTypedRequest(request, NATIVE_COMMANDS.bootReport)) {
     await bootReport(asString(request.args.stage, 'stage'), request.args.payload ?? null);
     return null;
@@ -146,6 +148,34 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.appGetVersion)) {
     return app.getVersion();
+  }
+  return undefined;
+}
+
+export async function handleInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+  const command = request.command;
+  const args = (request.args ?? {}) as Record<string, unknown>;
+
+  const importResult = await handleImportCommand(request, context);
+  if (importResult !== undefined) {
+    return importResult;
+  }
+  const utilityResult = handleUtilityCommand(request);
+  if (utilityResult !== undefined) {
+    return utilityResult;
+  }
+  const storageResult = await handleStorageCommand(command, args);
+  if (storageResult !== undefined) {
+    return storageResult;
+  }
+
+  const windowResult = await handleWindowCommand(request, context);
+  if (windowResult !== undefined) {
+    return windowResult;
+  }
+  const trailingResult = await handleReviewAndBootCommand(request);
+  if (trailingResult !== undefined) {
+    return trailingResult;
   }
   throw new Error(`unsupported native command: ${command}`);
 }

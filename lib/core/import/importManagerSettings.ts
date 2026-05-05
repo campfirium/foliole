@@ -5,20 +5,34 @@ import {
 } from './readwiseReaderSettings.js';
 
 export type ImportHighlightMode = 'merged' | 'split';
-export type ImportSourceAction = 'delete' | 'keep' | 'move';
-export type ImportTriggerMode = 'manual' | 'scheduled';
 export type ReadwiseSourceKind = 'books' | 'articles' | 'tweets' | 'podcasts';
+export type KeepImportRuleState = 'draft' | 'enabled' | 'previewed';
+
+export interface KeepImportPreviewSample {
+  detail: string | null;
+  sourcePath: string;
+  status: 'blocked_deleted' | 'failed' | 'new' | 'unchanged' | 'updated';
+}
+
+export interface KeepImportPreviewSummary {
+  blockedCount: number;
+  discoveredCount: number;
+  failedCount: number;
+  newCount: number;
+  previewedAt: string;
+  samples: KeepImportPreviewSample[];
+  unchangedCount: number;
+  updatedCount: number;
+}
 
 export interface ImportManagerSourceDraft {
-  actionMode: ImportSourceAction;
-  archivePath: string;
-  frequency: string;
   highlightMode: ImportHighlightMode;
   highlightPath: string;
   id: string;
   kind?: ReadwiseSourceKind;
+  keepPreview: KeepImportPreviewSummary | null;
+  keepState: KeepImportRuleState;
   primaryPath: string;
-  triggerMode: ImportTriggerMode;
 }
 
 export interface ImportManagerSettings {
@@ -31,7 +45,7 @@ export interface ImportManagerSettings {
   version: number;
 }
 
-const IMPORT_MANAGER_SETTINGS_VERSION = 2;
+const IMPORT_MANAGER_SETTINGS_VERSION = 3;
 const DEFAULT_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 const READWISE_SOURCE_KINDS: ReadwiseSourceKind[] = ['articles', 'books', 'tweets', 'podcasts'];
 const READWISE_FOLDER_NAMES: Record<ReadwiseSourceKind, string> = {
@@ -40,13 +54,6 @@ const READWISE_FOLDER_NAMES: Record<ReadwiseSourceKind, string> = {
   podcasts: 'Podcasts',
   tweets: 'Tweets'
 };
-
-export const importFrequencyOptions = ['5 min', '15 min', '30 min', '1 hour', '4 hours', '24 hours'];
-export const importActionOptions = [
-  { label: 'Keep', value: 'keep' },
-  { label: 'Delete', value: 'delete' },
-  { label: 'Move', value: 'move' }
-] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -91,16 +98,60 @@ function normalizeHighlightMode(value: unknown, fallback: ImportHighlightMode) {
   return value === 'split' || value === 'merged' ? value : fallback;
 }
 
-function normalizeTriggerMode(value: unknown, fallback: ImportTriggerMode) {
-  return value === 'manual' || value === 'scheduled' ? value : fallback;
+function normalizeKeepImportRuleState(value: unknown, fallback: KeepImportRuleState) {
+  return value === 'draft' || value === 'enabled' || value === 'previewed' ? value : fallback;
 }
 
-function normalizeActionMode(value: unknown, fallback: ImportSourceAction) {
-  return value === 'keep' || value === 'delete' || value === 'move' ? value : fallback;
+function normalizeKeepImportPreviewSample(value: unknown): KeepImportPreviewSample | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  if (
+    typeof value.sourcePath !== 'string' ||
+    typeof value.detail !== 'string' && value.detail !== null ||
+    (value.status !== 'new' &&
+      value.status !== 'updated' &&
+      value.status !== 'unchanged' &&
+      value.status !== 'blocked_deleted' &&
+      value.status !== 'failed')
+  ) {
+    return null;
+  }
+  return {
+    detail: value.detail,
+    sourcePath: value.sourcePath,
+    status: value.status
+  };
 }
 
-function normalizeFrequency(value: unknown, fallback: string) {
-  return typeof value === 'string' && importFrequencyOptions.includes(value) ? value : fallback;
+function normalizeKeepImportPreview(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const samples = Array.isArray(value.samples)
+    ? value.samples.map(normalizeKeepImportPreviewSample).filter((sample): sample is KeepImportPreviewSample => sample !== null)
+    : [];
+  if (
+    typeof value.previewedAt !== 'string' ||
+    typeof value.discoveredCount !== 'number' ||
+    typeof value.newCount !== 'number' ||
+    typeof value.updatedCount !== 'number' ||
+    typeof value.unchangedCount !== 'number' ||
+    typeof value.blockedCount !== 'number' ||
+    typeof value.failedCount !== 'number'
+  ) {
+    return null;
+  }
+  return {
+    blockedCount: value.blockedCount,
+    discoveredCount: value.discoveredCount,
+    failedCount: value.failedCount,
+    newCount: value.newCount,
+    previewedAt: value.previewedAt,
+    samples,
+    unchangedCount: value.unchangedCount,
+    updatedCount: value.updatedCount
+  } satisfies KeepImportPreviewSummary;
 }
 
 function normalizeSource(
@@ -110,31 +161,26 @@ function normalizeSource(
 ): ImportManagerSourceDraft {
   const payload = isRecord(value) ? value : {};
   const highlightMode = normalizeHighlightMode(payload.highlightMode, fallback.highlightMode);
-  const actionMode = normalizeActionMode(payload.actionMode, fallback.actionMode);
 
   return {
-    actionMode,
-    archivePath: actionMode === 'move' ? normalizeString(payload.archivePath, fallback.archivePath) : '',
-    frequency: normalizeFrequency(payload.frequency, fallback.frequency),
     highlightMode,
     highlightPath: highlightMode === 'split' ? normalizeString(payload.highlightPath, fallback.highlightPath) : '',
     id: normalizeString(payload.id, fallback.id).trim() || fallback.id,
     kind,
-    primaryPath: normalizeString(payload.primaryPath, fallback.primaryPath),
-    triggerMode: normalizeTriggerMode(payload.triggerMode, fallback.triggerMode)
+    keepPreview: normalizeKeepImportPreview(payload.keepPreview),
+    keepState: normalizeKeepImportRuleState(payload.keepState, fallback.keepState),
+    primaryPath: normalizeString(payload.primaryPath, fallback.primaryPath)
   };
 }
 
 export function createDraftImportSource(index: number): ImportManagerSourceDraft {
   return {
-    actionMode: 'keep',
-    archivePath: '',
-    frequency: importFrequencyOptions[0],
     highlightMode: 'merged',
     highlightPath: '',
     id: createImportSourceId(index),
-    primaryPath: '',
-    triggerMode: 'scheduled'
+    keepPreview: null,
+    keepState: 'draft',
+    primaryPath: ''
   };
 }
 
@@ -144,15 +190,13 @@ function createReadwiseDraftImportSource(
   rootPath = ''
 ): ImportManagerSourceDraft {
   return {
-    actionMode: 'keep',
-    archivePath: '',
-    frequency: importFrequencyOptions[0],
     highlightMode: 'split',
     highlightPath: resolveReadwiseHighlightPath(rootPath, kind),
     id: createImportSourceId(index),
     kind,
-    primaryPath: resolveReadwiseOriginalPath(rootPath, kind),
-    triggerMode: 'scheduled'
+    keepPreview: null,
+    keepState: 'draft',
+    primaryPath: resolveReadwiseOriginalPath(rootPath, kind)
   };
 }
 
@@ -172,6 +216,8 @@ export function applyReadwiseRootPath(sources: ImportManagerSourceDraft[], rootP
     return {
       ...source,
       highlightPath: resolveReadwiseHighlightPath(rootPath, source.kind),
+      keepPreview: null,
+      keepState: 'draft' as KeepImportRuleState,
       primaryPath: resolveReadwiseOriginalPath(rootPath, source.kind)
     };
   });

@@ -1,0 +1,278 @@
+import fs from 'node:fs';
+
+import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
+import type { ImportManagerSettings, ImportManagerSourceDraft } from '../../lib/core/import/importManagerSettings.js';
+
+import { loadImportManagerSettings } from './importManagerSettings.js';
+import { runKeepImportRule } from './keepImportService.js';
+
+interface KeepImportWatchHandle {
+  close(): void;
+}
+
+interface KeepImportConfig {
+  adapterConfigId: string;
+  directoryPath: string;
+  highlightPolicy: ImportHighlightPolicy;
+}
+
+interface KeepImportMonitorDeps {
+  debounceMs: number;
+  loadSettings(): ImportManagerSettings;
+  logError(message: string, error: unknown): void;
+  runCycle(config: KeepImportConfig): Promise<void>;
+  watch(rootPath: string, listener: () => void): KeepImportWatchHandle;
+}
+
+interface KeepImportSourceConfig extends KeepImportConfig {
+  sourceId: string;
+}
+
+interface KeepImportSourceState {
+  config: KeepImportSourceConfig;
+  debounceTimer: ReturnType<typeof setTimeout> | null;
+  importInFlight: boolean;
+  rerunRequested: boolean;
+  watcher: KeepImportWatchHandle | null;
+}
+
+export interface KeepImportMonitor {
+  refreshFromSettings(): Promise<void>;
+  start(): Promise<void>;
+  stop(): void;
+}
+
+function watchKeepImportDirectory(rootPath: string, listener: () => void): KeepImportWatchHandle {
+  try {
+    const watcher = fs.watch(rootPath, { recursive: true }, listener);
+    return {
+      close() {
+        watcher.close();
+      }
+    };
+  } catch {
+    const watcher = fs.watch(rootPath, listener);
+    return {
+      close() {
+        watcher.close();
+      }
+    };
+  }
+}
+
+function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
+  return {
+    debounceMs: 250,
+    loadSettings: loadImportManagerSettings,
+    logError(message, error) {
+      console.error(message, error);
+    },
+  async runCycle(config) {
+      await runKeepImportRule({
+        directoryPath: config.directoryPath,
+        highlightPolicy: config.highlightPolicy,
+        ruleId: config.adapterConfigId
+      });
+    },
+    watch: watchKeepImportDirectory
+  };
+}
+
+function createSourceState(config: KeepImportSourceConfig): KeepImportSourceState {
+  return {
+    config,
+    debounceTimer: null,
+    importInFlight: false,
+    rerunRequested: false,
+    watcher: null
+  };
+}
+
+function clearScheduledRun(state: KeepImportSourceState) {
+  if (!state.debounceTimer) {
+    return;
+  }
+  clearTimeout(state.debounceTimer);
+  state.debounceTimer = null;
+}
+
+function closeWatcher(state: KeepImportSourceState) {
+  state.watcher?.close();
+  state.watcher = null;
+}
+
+function normalizeKeepDirectoryPath(path: string) {
+  return path.trim();
+}
+
+function toKeepImportConfig(
+  source: ImportManagerSourceDraft,
+  highlightPolicy: ImportHighlightPolicy
+): KeepImportSourceConfig | null {
+  const directoryPath = normalizeKeepDirectoryPath(source.primaryPath);
+  if (source.keepState !== 'enabled' || !directoryPath) {
+    return null;
+  }
+  return {
+    adapterConfigId: source.id,
+    directoryPath,
+    highlightPolicy,
+    sourceId: source.id
+  };
+}
+
+export function resolveKeepImportConfigs(settings: ImportManagerSettings): KeepImportSourceConfig[] {
+  return [
+    ...settings.sources
+      .map((source) => toKeepImportConfig(source, 'reference_only'))
+      .filter((config): config is KeepImportSourceConfig => config !== null),
+    ...settings.readwiseSources
+      .map((source) => toKeepImportConfig(source, 'reference_only'))
+      .filter((config): config is KeepImportSourceConfig => config !== null)
+  ];
+}
+
+async function ensureWatcher(
+  deps: KeepImportMonitorDeps,
+  state: KeepImportSourceState,
+  scheduleRun: () => void
+) {
+  if (state.watcher) {
+    return;
+  }
+  state.watcher = deps.watch(state.config.directoryPath, () => {
+    if (state.importInFlight) {
+      state.rerunRequested = true;
+      return;
+    }
+    scheduleRun();
+  });
+}
+
+async function runImportCycle(
+  deps: KeepImportMonitorDeps,
+  startedRef: { current: boolean },
+  state: KeepImportSourceState,
+  scheduleRun: () => void
+) {
+  if (!startedRef.current) {
+    return;
+  }
+  if (state.importInFlight) {
+    state.rerunRequested = true;
+    return;
+  }
+  state.importInFlight = true;
+  try {
+    await ensureWatcher(deps, state, scheduleRun);
+    do {
+      state.rerunRequested = false;
+      await deps.runCycle(state.config);
+    } while (state.rerunRequested && startedRef.current);
+  } catch (error) {
+    deps.logError(`[keep-import] auto cycle failed for ${state.config.directoryPath}`, error);
+  } finally {
+    state.importInFlight = false;
+  }
+}
+
+function startConfigRun(
+  deps: KeepImportMonitorDeps,
+  startedRef: { current: boolean },
+  state: KeepImportSourceState
+) {
+  function scheduleRun(immediate = false) {
+    if (!startedRef.current) {
+      return;
+    }
+    clearScheduledRun(state);
+    state.debounceTimer = setTimeout(() => {
+      state.debounceTimer = null;
+      void runImportCycle(deps, startedRef, state, () => scheduleRun());
+    }, immediate ? 0 : deps.debounceMs);
+  }
+
+  scheduleRun(true);
+  return scheduleRun;
+}
+
+export function createKeepImportMonitor(
+  deps: KeepImportMonitorDeps = createDefaultKeepImportMonitorDeps()
+): KeepImportMonitor {
+  const sourceStateById = new Map<string, KeepImportSourceState>();
+  const startedRef = { current: false };
+
+  function stopSource(state: KeepImportSourceState) {
+    clearScheduledRun(state);
+    closeWatcher(state);
+    state.rerunRequested = false;
+  }
+
+  async function refreshFromSettings() {
+    if (!startedRef.current) {
+      return;
+    }
+
+    const nextConfigs = resolveKeepImportConfigs(deps.loadSettings());
+    const nextConfigIds = new Set(nextConfigs.map((config) => config.adapterConfigId));
+
+    for (const [configId, state] of sourceStateById) {
+      if (nextConfigIds.has(configId)) {
+        continue;
+      }
+      stopSource(state);
+      sourceStateById.delete(configId);
+    }
+
+    for (const config of nextConfigs) {
+      const existingState = sourceStateById.get(config.adapterConfigId);
+      if (
+        existingState &&
+        existingState.config.directoryPath === config.directoryPath &&
+        existingState.config.highlightPolicy === config.highlightPolicy
+      ) {
+        continue;
+      }
+
+      if (existingState) {
+        stopSource(existingState);
+      }
+
+      const nextState = createSourceState(config);
+      sourceStateById.set(config.adapterConfigId, nextState);
+      startConfigRun(deps, startedRef, nextState);
+    }
+  }
+
+  return {
+    refreshFromSettings,
+    async start() {
+      if (startedRef.current) {
+        return;
+      }
+      startedRef.current = true;
+      await refreshFromSettings();
+    },
+    stop() {
+      startedRef.current = false;
+      for (const state of sourceStateById.values()) {
+        stopSource(state);
+      }
+      sourceStateById.clear();
+    }
+  };
+}
+
+const keepImportMonitor = createKeepImportMonitor();
+
+export async function startKeepImportMonitor() {
+  await keepImportMonitor.start();
+}
+
+export async function refreshKeepImportMonitorFromSettings() {
+  await keepImportMonitor.refreshFromSettings();
+}
+
+export function stopKeepImportMonitor() {
+  keepImportMonitor.stop();
+}

@@ -5,6 +5,22 @@ import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { applyReadwiseRootPath, createReadwiseImportSources } from './importSourceWorkspaceModel';
 
 vi.mock('../../shared/platform/importBridge', () => ({
+  previewRuntimeKeepImportRule: vi.fn(async ({ directoryPath, ruleId }: { directoryPath: string; ruleId: string }) => ({
+    blockedCount: 1,
+    discoveredCount: 3,
+    entries: [
+      { detail: 'New file will be imported when enabled.', sourcePath: 'new.md', status: 'new' },
+      { detail: 'No file changes detected since the last keep scan.', sourcePath: 'same.md', status: 'unchanged' },
+      { detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.', sourcePath: 'blocked.md', status: 'blocked_deleted' }
+    ],
+    failedCount: 0,
+    newCount: 1,
+    previewedAt: '2026-03-25T00:03:00.000Z',
+    rootPath: directoryPath,
+    rule_id: ruleId,
+    unchangedCount: 1,
+    updatedCount: 1
+  })),
   selectRuntimeImportDirectory: vi.fn(async () => '/tmp/chosen-folder')
 }));
 
@@ -54,48 +70,23 @@ beforeEach(() => {
   window.electronAPI = createMockElectronApi();
 });
 
-it('shows readwise defaults for the four readwise source groups', async () => {
+it('shows keep-focused controls and removes trigger handling controls', async () => {
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
   expect(screen.getByRole('heading', { name: 'Import management' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Readwise Reader for Obsidian' })).toBeInTheDocument();
   expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toBeInTheDocument();
-  expect(screen.getByLabelText('Readwise original folder draft-import-source-2')).toBeInTheDocument();
-  expect(screen.getByLabelText('Readwise original folder draft-import-source-3')).toBeInTheDocument();
-  expect(screen.getByLabelText('Readwise original folder draft-import-source-4')).toBeInTheDocument();
-  expect(screen.getByLabelText('Trigger draft-import-source-101')).toBeInTheDocument();
-
-  const triggerSelect = screen.getByLabelText('Trigger draft-import-source-1');
-  const handlingSelect = screen.getByLabelText('Handling draft-import-source-1');
-
-  expect(screen.getByRole('button', { name: 'Hide details' })).toBeInTheDocument();
-  expect(triggerSelect).toHaveValue('scheduled');
-  expect(handlingSelect).toHaveValue('keep');
-  expect(screen.getByLabelText('Mode draft-import-source-1')).toHaveValue('split');
-  expect(screen.getByLabelText('Every draft-import-source-1')).toHaveValue('5 min');
-  expect(screen.getByRole('button', { name: 'Import draft-import-source-1' })).toBeInTheDocument();
-
-  fireEvent.change(handlingSelect, { target: { value: 'move' } });
-  expect(await screen.findByDisplayValue('Move')).toBeInTheDocument();
-
-  fireEvent.change(triggerSelect, { target: { value: 'manual' } });
-  expect(triggerSelect).toHaveValue('manual');
-
-  fireEvent.click(screen.getByRole('button', { name: 'Hide details' }));
-  expect(screen.queryByText('Books')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Detailed settings' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Trigger draft-import-source-101')).toBeInTheDocument();
-});
-
-it('lets the user reopen the readwise advanced settings', () => {
-  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+  expect(screen.queryByLabelText('Trigger draft-import-source-1')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Handling draft-import-source-1')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Every draft-import-source-1')).not.toBeInTheDocument();
+  expect(screen.queryByText('Enable')).not.toBeInTheDocument();
+  expect(screen.queryByText('Status')).not.toBeInTheDocument();
+  expect(screen.queryByText('Actions')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Preview draft-import-source-1' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Preview draft-import-source-101' })).toBeDisabled();
 
   fireEvent.click(screen.getByRole('button', { name: 'Hide details' }));
   expect(screen.getByRole('button', { name: 'Detailed settings' })).toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Detailed settings' }));
-  expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toBeInTheDocument();
-  expect(screen.getByLabelText('Trigger draft-import-source-1')).toHaveValue('scheduled');
 });
 
 it('fills readwise folders from the selected root path', () => {
@@ -125,11 +116,9 @@ it('shows only the last folder name and keeps the full path in the hover hint', 
   await waitFor(() => {
     expect(screen.getByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
   });
-  expect(screen.queryByText('/tmp/chosen-folder')).not.toBeInTheDocument();
   await waitFor(() => {
     expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toHaveTextContent('Articles');
   });
-  expect(screen.queryByText('/tmp/chosen-folder/Full Document Contents/Articles')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toHaveAttribute(
     'title',
     '/tmp/chosen-folder/Full Document Contents/Articles'
@@ -137,11 +126,59 @@ it('shows only the last folder name and keeps the full path in the hover hint', 
   expect(screen.getByLabelText('Original folder draft-import-source-101')).toHaveAttribute('title', '/tmp/chosen-folder');
 });
 
+it('opens a preview dialog and only enables after confirmation', async () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByLabelText('Original folder draft-import-source-101'));
+  await waitFor(() => {
+    expect(screen.getByLabelText('Original folder draft-import-source-101')).toHaveTextContent('chosen-folder');
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Preview draft-import-source-101' }));
+
+  await waitFor(() => {
+    expect(screen.getByRole('heading', { name: 'Preview keep import' })).toBeInTheDocument();
+  });
+  expect(screen.getByText('1 new · 1 updated · 1 unchanged · 1 blocked')).toBeInTheDocument();
+  expect(screen.getByText('blocked.md')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+
+  await waitFor(() => {
+    expect(window.electronAPI?.invoke).toHaveBeenLastCalledWith(
+      'save_import_manager_settings',
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          sources: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'draft-import-source-101',
+              keepPreview: expect.objectContaining({
+                blockedCount: 1,
+                discoveredCount: 3,
+                newCount: 1
+              }),
+              keepState: 'enabled',
+              primaryPath: '/tmp/chosen-folder'
+            })
+          ])
+        })
+      })
+    );
+  });
+
+  expect(screen.getByRole('switch', { name: 'Keep import enabled draft-import-source-101' })).toHaveAttribute('aria-checked', 'true');
+});
+
 it('persists import manager settings after the panel remounts', async () => {
   const { unmount } = render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
-  fireEvent.click(screen.getByLabelText('Readwise root folder'));
-  fireEvent.change(screen.getByLabelText('Trigger draft-import-source-1'), { target: { value: 'manual' } });
+  fireEvent.click(screen.getByLabelText('Original folder draft-import-source-101'));
+  await waitFor(() => {
+    expect(screen.getByLabelText('Original folder draft-import-source-101')).toHaveTextContent('chosen-folder');
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Preview draft-import-source-101' }));
+  await waitFor(() => {
+    expect(screen.getByRole('heading', { name: 'Preview keep import' })).toBeInTheDocument();
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
   fireEvent.click(screen.getByRole('button', { name: 'Copy draft-import-source-101' }));
   fireEvent.click(screen.getByRole('button', { name: 'Hide details' }));
 
@@ -151,7 +188,13 @@ it('persists import manager settings after the panel remounts', async () => {
       expect.objectContaining({
         settings: expect.objectContaining({
           detailsOpen: false,
-          readwiseRootPath: '/tmp/chosen-folder'
+          sources: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'draft-import-source-101',
+              keepState: 'enabled',
+              primaryPath: '/tmp/chosen-folder'
+            })
+          ])
         })
       })
     );
@@ -162,9 +205,44 @@ it('persists import manager settings after the panel remounts', async () => {
 
   expect(await screen.findByRole('button', { name: 'Detailed settings' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Detailed settings' }));
-  expect(await screen.findByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
-  expect(screen.getByLabelText('Trigger draft-import-source-1')).toHaveValue('manual');
+  expect(await screen.findByLabelText('Original folder draft-import-source-101')).toHaveTextContent('chosen-folder');
+  expect(screen.getByRole('switch', { name: 'Keep import enabled draft-import-source-101' })).toHaveAttribute('aria-checked', 'true');
   expect(screen.getByLabelText('Original folder draft-import-source-103')).toBeInTheDocument();
+});
+
+it('asks for confirmation before turning an enabled keep import off', async () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByLabelText('Original folder draft-import-source-101'));
+  await waitFor(() => {
+    expect(screen.getByLabelText('Original folder draft-import-source-101')).toHaveTextContent('chosen-folder');
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Preview draft-import-source-101' }));
+  expect(await screen.findByRole('heading', { name: 'Preview keep import' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+
+  const toggle = await screen.findByRole('switch', { name: 'Keep import enabled draft-import-source-101' });
+  fireEvent.click(toggle);
+  expect(await screen.findByRole('heading', { name: 'Turn off keep import' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Turn off' }));
+
+  await waitFor(() => {
+    expect(window.electronAPI?.invoke).toHaveBeenLastCalledWith(
+      'save_import_manager_settings',
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          sources: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'draft-import-source-101',
+              keepState: 'previewed'
+            })
+          ])
+        })
+      })
+    );
+  });
+
+  expect(screen.getByRole('button', { name: 'Preview draft-import-source-101' })).toBeInTheDocument();
 });
 
 it('blocks the readwise settings entry until the root folder is chosen', () => {

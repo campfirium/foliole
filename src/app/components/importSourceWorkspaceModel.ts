@@ -5,11 +5,8 @@ import {
   createNextImportSourceIndex,
   createReadwiseImportSources,
   formatReadwiseSourceLabel,
-  importActionOptions,
-  importFrequencyOptions,
   type ImportHighlightMode,
-  type ImportManagerSourceDraft as DraftImportSource,
-  type ImportTriggerMode
+  type ImportManagerSourceDraft as DraftImportSource
 } from '../../../lib/core/import/importManagerSettings';
 
 export type DraftImportSourceField = keyof DraftImportSource;
@@ -29,8 +26,14 @@ export function formatHighlightModeLabel(mode: ImportHighlightMode) {
   return mode === 'split' ? 'Split' : 'Merged';
 }
 
-export function formatTriggerModeLabel(mode: ImportTriggerMode) {
-  return mode === 'scheduled' ? 'Scheduled' : 'Manual';
+export function formatKeepStateLabel(state: DraftImportSource['keepState']) {
+  if (state === 'enabled') {
+    return 'Enabled';
+  }
+  if (state === 'previewed') {
+    return 'Ready to enable';
+  }
+  return 'Needs preview';
 }
 
 export function updateDraftImportSource(
@@ -43,28 +46,22 @@ export function updateDraftImportSource(
     return {
       ...source,
       highlightMode,
-      highlightPath: highlightMode === 'split' ? source.highlightPath : ''
-    };
-  }
-
-  if (field === 'triggerMode') {
-    return {
-      ...source,
-      triggerMode: value === 'scheduled' ? 'scheduled' : 'manual'
-    };
-  }
-
-  if (field === 'actionMode') {
-    const actionMode = value === 'move' || value === 'delete' ? value : 'keep';
-    return {
-      ...source,
-      actionMode,
-      archivePath: actionMode === 'move' ? source.archivePath : ''
+      highlightPath: highlightMode === 'split' ? source.highlightPath : '',
+      keepPreview: null,
+      keepState: 'draft'
     };
   }
 
   return {
     ...source,
+    keepPreview:
+      field === 'primaryPath' || field === 'highlightPath'
+        ? null
+        : source.keepPreview,
+    keepState:
+      field === 'primaryPath' || field === 'highlightPath'
+        ? 'draft'
+        : source.keepState,
     [field]: value
   };
 }
@@ -75,7 +72,5 @@ export {
   createDraftImportSource,
   createNextImportSourceIndex,
   createReadwiseImportSources,
-  formatReadwiseSourceLabel,
-  importActionOptions,
-  importFrequencyOptions
+  formatReadwiseSourceLabel
 };

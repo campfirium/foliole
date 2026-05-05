@@ -112,6 +112,18 @@ export const importRuns = sqliteTable('import_runs', {
   failureReason: text('failure_reason')
 });
 
+export const keepImportItems = sqliteTable('keep_import_items', {
+  ruleId: text('rule_id').notNull(),
+  sourcePath: text('source_path').notNull(),
+  sourceMtimeMs: integer('source_mtime_ms').notNull(),
+  sourceSizeBytes: integer('source_size_bytes').notNull(),
+  lastNodeId: text('last_node_id'),
+  lastStatus: text('last_status').notNull(),
+  firstSeenAt: text('first_seen_at').notNull(),
+  lastSeenAt: text('last_seen_at').notNull(),
+  lastImportedAt: text('last_imported_at')
+});
+
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),

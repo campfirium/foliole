@@ -2,6 +2,7 @@ export {
   attachments,
   importRuns,
   importSources,
+  keepImportItems,
   nodeOrder,
   nodeReview,
   nodes,

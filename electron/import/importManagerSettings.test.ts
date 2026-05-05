@@ -50,10 +50,17 @@ const IMPORT_MANAGER_SETTINGS_INPUT = {
       primaryPath: '/tmp/readwise-root/Full Document Contents/Articles',
       highlightPath: '/tmp/readwise-root/Articles',
       highlightMode: 'split',
-      actionMode: 'move',
-      archivePath: '/tmp/archive/articles',
-      triggerMode: 'manual',
-      frequency: '30 min'
+      keepPreview: {
+        blockedCount: 0,
+        discoveredCount: 2,
+        failedCount: 0,
+        newCount: 1,
+        previewedAt: '2026-03-25T00:03:00.000Z',
+        samples: [{ detail: 'New file will be imported when enabled.', sourcePath: 'one.md', status: 'new' }],
+        unchangedCount: 1,
+        updatedCount: 0
+      },
+      keepState: 'previewed'
     }
   ],
   sources: [
@@ -62,20 +69,16 @@ const IMPORT_MANAGER_SETTINGS_INPUT = {
       primaryPath: '/tmp/source-a',
       highlightPath: '/tmp/highlight-a',
       highlightMode: 'split',
-      actionMode: 'keep',
-      archivePath: '',
-      triggerMode: 'scheduled',
-      frequency: '15 min'
+      keepPreview: null,
+      keepState: 'draft'
     },
     {
       id: 'draft-import-source-105',
       primaryPath: '/tmp/source-b',
       highlightPath: '',
       highlightMode: 'merged',
-      actionMode: 'delete',
-      archivePath: '/tmp/should-clear',
-      triggerMode: 'manual',
-      frequency: '4 hours'
+      keepPreview: null,
+      keepState: 'enabled'
     }
   ]
 };
@@ -95,9 +98,7 @@ function expectNormalizedSavedSettings() {
         kind: 'articles',
         primaryPath: '/tmp/readwise-root/Full Document Contents/Articles',
         highlightPath: '/tmp/readwise-root/Articles',
-        actionMode: 'move',
-        archivePath: '/tmp/archive/articles',
-        triggerMode: 'manual'
+        keepState: 'previewed'
       },
       {
         kind: 'books'
@@ -112,14 +113,13 @@ function expectNormalizedSavedSettings() {
     sources: [
       {
         id: 'draft-import-source-101',
-        frequency: '15 min'
+        keepState: 'draft'
       },
       {
         id: 'draft-import-source-105',
         highlightMode: 'merged',
         highlightPath: '',
-        actionMode: 'delete',
-        archivePath: ''
+        keepState: 'enabled'
       }
     ]
   });
@@ -140,8 +140,10 @@ function expectReloadedSettingsAfterRestart() {
     readwiseSources: [
       {
         id: 'draft-import-source-1',
-        kind: 'articles',
-        archivePath: '/tmp/archive/articles'
+        keepPreview: expect.objectContaining({
+          discoveredCount: 2
+        }),
+        kind: 'articles'
       },
       {
         kind: 'books'
@@ -160,8 +162,7 @@ function expectReloadedSettingsAfterRestart() {
       },
       {
         id: 'draft-import-source-105',
-        actionMode: 'delete',
-        archivePath: ''
+        keepState: 'enabled'
       }
     ]
   });

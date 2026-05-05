@@ -4,6 +4,7 @@ export const NATIVE_COMMANDS = {
   listSystemFonts: 'list_system_fonts',
   openExternalUrl: 'open_external_url',
   inspectReadwiseReaderSetup: 'inspect_readwise_reader_setup',
+  previewKeepImportRule: 'preview_keep_import_rule',
   loadImportOverview: 'load_import_overview',
   loadImportManagerSettings: 'load_import_manager_settings',
   runDirectoryImport: 'run_directory_import',

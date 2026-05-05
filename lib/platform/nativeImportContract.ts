@@ -16,6 +16,29 @@ export interface NativeDirectoryImportArgs extends NativeTextImportArgs {
   source_adapter?: NativeDirectoryImportSourceAdapter;
 }
 
+export interface NativeKeepImportPreviewArgs {
+  directory_path: string;
+  rule_id: string;
+}
+
+export interface NativeKeepImportPreviewEntry {
+  detail: string | null;
+  source_path: string;
+  status: 'blocked_deleted' | 'failed' | 'new' | 'unchanged' | 'updated';
+}
+
+export interface NativeKeepImportPreviewResult {
+  blocked_count: number;
+  discovered_count: number;
+  entries: NativeKeepImportPreviewEntry[];
+  failed_count: number;
+  new_count: number;
+  previewed_at: string;
+  root_path: string;
+  unchanged_count: number;
+  updated_count: number;
+}
+
 export interface NativeImportedTextFile {
   file_name: string;
   file_path: string;

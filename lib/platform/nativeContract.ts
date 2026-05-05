@@ -2,6 +2,8 @@ import { NATIVE_COMMANDS, isTypedNativeCommand } from './nativeCommands.js';
 import type {
   NativeDirectoryImportArgs,
   NativeDirectoryImportResult,
+  NativeKeepImportPreviewArgs,
+  NativeKeepImportPreviewResult,
   NativeImportedTextFile,
   NativeTextImportArgs,
   NativeTextImportResult
@@ -41,6 +43,9 @@ export type {
   NativeDirectoryImportEntry,
   NativeDirectoryImportResult,
   NativeDirectoryImportSourceAdapter,
+  NativeKeepImportPreviewArgs,
+  NativeKeepImportPreviewEntry,
+  NativeKeepImportPreviewResult,
   NativeImportedTextFile,
   NativeManagedInboxConsumePolicy,
   NativeTextImportArgs,
@@ -98,6 +103,10 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.runDirectoryImport]: {
     args: NativeDirectoryImportArgs;
     result: NativeDirectoryImportResult | null;
+  };
+  [NATIVE_COMMANDS.previewKeepImportRule]: {
+    args: NativeKeepImportPreviewArgs;
+    result: NativeKeepImportPreviewResult;
   };
   [NATIVE_COMMANDS.selectImportTextFile]: {
     args: NativeTextImportArgs;

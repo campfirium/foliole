@@ -1,11 +1,13 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import {
+  toRuntimeKeepImportPreviewResult,
   toRuntimeDirectoryImportResult,
   toRuntimeImportedTextFile,
   toRuntimeImportOverview,
   toRuntimeTextImportResult,
   type RuntimeDirectoryImportResult,
+  type RuntimeKeepImportPreviewResult,
   type RuntimeImportOverview,
   type RuntimeImportedTextFile,
   type RuntimeTextImportResult
@@ -17,6 +19,7 @@ export type ImportHighlightPolicy = 'adopt' | 'reference_only';
 export type {
   RuntimeDirectoryImportEntry,
   RuntimeDirectoryImportResult,
+  RuntimeKeepImportPreviewResult,
   RuntimeImportOverview,
   RuntimeImportedTextFile,
   RuntimeTextImportResult
@@ -143,6 +146,43 @@ export async function runRuntimeDirectoryImport(): Promise<RuntimeDirectoryImpor
       action: 'run_runtime_directory_import',
       area: 'bridge',
       command: NATIVE_COMMANDS.runDirectoryImport,
+      fallback: 'rethrow_to_ui',
+      error
+    });
+    throw error;
+  }
+}
+
+export async function previewRuntimeKeepImportRule(args: {
+  directoryPath: string;
+  ruleId: string;
+}): Promise<RuntimeKeepImportPreviewResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+
+  try {
+    const result = toRuntimeKeepImportPreviewResult(
+      await runtimeInvoke(NATIVE_COMMANDS.previewKeepImportRule, {
+        directory_path: args.directoryPath,
+        rule_id: args.ruleId
+      })
+    );
+    if (!result) {
+      logRuntimeWarning('native keep import preview payload invalid', {
+        action: 'preview_runtime_keep_import_rule',
+        area: 'bridge',
+        command: NATIVE_COMMANDS.previewKeepImportRule,
+        fallback: 'return_null'
+      });
+    }
+    return result;
+  } catch (error) {
+    logRuntimeWarning('native keep import preview failed', {
+      action: 'preview_runtime_keep_import_rule',
+      area: 'bridge',
+      command: NATIVE_COMMANDS.previewKeepImportRule,
       fallback: 'rethrow_to_ui',
       error
     });

@@ -1,6 +1,5 @@
 import {
   formatHighlightModeLabel,
-  formatTriggerModeLabel,
   importSourceSelectClassName,
   type DraftImportSource,
   type DraftImportSourceField
@@ -8,12 +7,10 @@ import {
 import {
   ColumnHeader,
   FolderButton,
+  KeepActionCell,
   resolveFolderPathHint,
-  HandlingCell,
   resolveFolderPathLabel,
-  RowActions,
-  rowGridClassName,
-  TriggerCell
+  rowGridClassName
 } from './ImportSourceWorkspaceTableParts';
 
 function SourceRow({
@@ -21,19 +18,19 @@ function SourceRow({
   onChange,
   onChoosePrimaryFolder,
   onChooseHighlightFolder,
-  onChangeAction,
+  onDisableKeepImport,
   onCopySource,
   onDeleteSource,
-  onRunNow
+  onPreviewKeepImport
 }: {
   source: DraftImportSource;
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
-  onChangeAction: (sourceId: string, value: string) => void;
+  onDisableKeepImport: (sourceId: string) => void;
   onCopySource: (sourceId: string) => void;
   onDeleteSource: (sourceId: string) => void;
-  onRunNow: (sourceId: string) => void;
+  onPreviewKeepImport: (sourceId: string) => void;
 }) {
   return (
     <div className={`${rowGridClassName} items-start border-b border-border/60 py-2`}>
@@ -59,18 +56,7 @@ function SourceRow({
         <option value="merged">{formatHighlightModeLabel('merged')}</option>
         <option value="split">{formatHighlightModeLabel('split')}</option>
       </select>
-      <HandlingCell onChangeAction={onChangeAction} source={source} />
-      <select
-        aria-label={`Trigger ${source.id}`}
-        className={importSourceSelectClassName}
-        onChange={(event) => onChange(source.id, 'triggerMode', event.target.value)}
-        value={source.triggerMode}
-      >
-        <option value="manual">{formatTriggerModeLabel('manual')}</option>
-        <option value="scheduled">{formatTriggerModeLabel('scheduled')}</option>
-      </select>
-      <TriggerCell onChange={onChange} source={source} />
-      <RowActions onCopy={onCopySource} onDelete={onDeleteSource} onRunNow={onRunNow} source={source} />
+      <KeepActionCell onCopy={onCopySource} onDelete={onDeleteSource} onDisable={onDisableKeepImport} onPreview={onPreviewKeepImport} source={source} />
     </div>
   );
 }
@@ -80,19 +66,19 @@ export function ImportSourceTable({
   onChange,
   onChoosePrimaryFolder,
   onChooseHighlightFolder,
-  onChangeAction,
+  onDisableKeepImport,
   onCopySource,
   onDeleteSource,
-  onRunNow
+  onPreviewKeepImport
 }: {
   sources: DraftImportSource[];
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
-  onChangeAction: (sourceId: string, value: string) => void;
+  onDisableKeepImport: (sourceId: string) => void;
   onCopySource: (sourceId: string) => void;
   onDeleteSource: (sourceId: string) => void;
-  onRunNow: (sourceId: string) => void;
+  onPreviewKeepImport: (sourceId: string) => void;
 }) {
   return (
     <div className="min-w-[920px]">
@@ -100,22 +86,19 @@ export function ImportSourceTable({
         <ColumnHeader title="Original" />
         <ColumnHeader title="Highlight" />
         <ColumnHeader title="Mode" />
-        <ColumnHeader help="After import" title="Handling" />
-        <ColumnHeader help="When it runs" title="Trigger" />
-        <ColumnHeader help="Repeat" title="Every" />
-        <ColumnHeader title="Actions" />
+        <ColumnHeader title="" />
       </div>
       <div className="mt-2 flex flex-col">
         {sources.map((source) => (
           <SourceRow
             key={source.id}
             onChange={onChange}
-            onChangeAction={onChangeAction}
             onChooseHighlightFolder={onChooseHighlightFolder}
             onChoosePrimaryFolder={onChoosePrimaryFolder}
+            onDisableKeepImport={onDisableKeepImport}
             onCopySource={onCopySource}
             onDeleteSource={onDeleteSource}
-            onRunNow={onRunNow}
+            onPreviewKeepImport={onPreviewKeepImport}
             source={source}
           />
         ))}

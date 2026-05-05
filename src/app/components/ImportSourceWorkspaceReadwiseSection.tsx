@@ -6,7 +6,6 @@ import { AppButton, AppIconButton, AppStatusBadge, SettingsControlSlot, Settings
 
 import {
   formatHighlightModeLabel,
-  formatTriggerModeLabel,
   importSourceSelectClassName,
   type DraftImportSource,
   type DraftImportSourceField
@@ -14,11 +13,10 @@ import {
 import {
   ColumnHeader,
   FolderButton,
-  HandlingCell,
+  KeepActionCell,
   resolveFolderPathHint,
   resolveFolderPathLabel,
-  rowGridClassName,
-  TriggerCell
+  rowGridClassName
 } from './ImportSourceWorkspaceTableParts';
 
 function ReadwiseRootRow({ readwiseRootPath, onChooseRootFolder }: { readwiseRootPath: string; onChooseRootFolder: () => void }) {
@@ -45,10 +43,7 @@ function ReadwiseHeader() {
       <ColumnHeader title="Original" />
       <ColumnHeader title="Highlight" />
       <ColumnHeader title="Mode" />
-      <ColumnHeader help="After import" title="Handling" />
-      <ColumnHeader help="When it runs" title="Trigger" />
-      <ColumnHeader help="Repeat" title="Every" />
-      <ColumnHeader title="Actions" />
+      <ColumnHeader title="" />
     </div>
   );
 }
@@ -65,21 +60,15 @@ function ReadwiseSectionActions(props: {
   );
 }
 
-function ReadwiseRow({
-  source,
-  onChange,
-  onChoosePrimaryFolder,
-  onChooseHighlightFolder,
-  onChangeAction,
-  onRunNow
-}: {
+function ReadwiseRow(props: {
   source: DraftImportSource;
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
-  onChangeAction: (sourceId: string, value: string) => void;
-  onRunNow: (sourceId: string) => void;
+  onDisableKeepImport: (sourceId: string) => void;
+  onPreviewKeepImport: (sourceId: string) => void;
 }) {
+  const { source } = props;
   if (!source.kind) {
     return null;
   }
@@ -88,66 +77,26 @@ function ReadwiseRow({
     <div className={`${rowGridClassName} items-start border-b border-border/60 py-2`}>
       <FolderButton
         label={`Readwise original folder ${source.id}`}
-        onClick={() => onChoosePrimaryFolder(source.id)}
+        onClick={() => props.onChoosePrimaryFolder(source.id)}
         path={resolveFolderPathLabel(source.primaryPath, 'Choose folder')}
         tooltip={resolveFolderPathHint(source.primaryPath)}
       />
       <FolderButton
         label={`Readwise highlight folder ${source.id}`}
-        onClick={() => onChooseHighlightFolder(source.id)}
+        onClick={() => props.onChooseHighlightFolder(source.id)}
         path={resolveFolderPathLabel(source.highlightPath, 'Choose folder')}
         tooltip={resolveFolderPathHint(source.highlightPath)}
       />
       <select
         aria-label={`Mode ${source.id}`}
         className={importSourceSelectClassName}
-        onChange={(event) => onChange(source.id, 'highlightMode', event.target.value)}
+        onChange={(event) => props.onChange(source.id, 'highlightMode', event.target.value)}
         value={source.highlightMode}
       >
         <option value="merged">{formatHighlightModeLabel('merged')}</option>
         <option value="split">{formatHighlightModeLabel('split')}</option>
       </select>
-      <HandlingCell onChangeAction={onChangeAction} source={source} />
-      <select
-        aria-label={`Trigger ${source.id}`}
-        className={importSourceSelectClassName}
-        onChange={(event) => onChange(source.id, 'triggerMode', event.target.value)}
-        value={source.triggerMode}
-      >
-        <option value="manual">{formatTriggerModeLabel('manual')}</option>
-        <option value="scheduled">{formatTriggerModeLabel('scheduled')}</option>
-      </select>
-      <TriggerCell onChange={onChange} source={source} />
-      <div className="flex h-full items-center justify-end">
-        <AppButton aria-label={`Import ${source.id}`} className="h-9 min-w-16 whitespace-nowrap px-3" onClick={() => onRunNow(source.id)} variant="primary">
-          Import
-        </AppButton>
-      </div>
-    </div>
-  );
-}
-
-function ReadwiseRows(props: {
-  sources: DraftImportSource[];
-  onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
-  onChoosePrimaryFolder: (sourceId: string) => void;
-  onChooseHighlightFolder: (sourceId: string) => void;
-  onChangeAction: (sourceId: string, value: string) => void;
-  onRunNow: (sourceId: string) => void;
-}) {
-  return (
-    <div className="mt-2 flex flex-col">
-      {props.sources.map((source) => (
-        <ReadwiseRow
-          key={source.id}
-          onChange={props.onChange}
-          onChangeAction={props.onChangeAction}
-          onChooseHighlightFolder={props.onChooseHighlightFolder}
-          onChoosePrimaryFolder={props.onChoosePrimaryFolder}
-          onRunNow={props.onRunNow}
-          source={source}
-        />
-      ))}
+      <KeepActionCell onDisable={props.onDisableKeepImport} onPreview={props.onPreviewKeepImport} source={source} />
     </div>
   );
 }
@@ -159,8 +108,8 @@ function ReadwiseTable(props: {
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
-  onChangeAction: (sourceId: string, value: string) => void;
-  onRunNow: (sourceId: string) => void;
+  onDisableKeepImport: (sourceId: string) => void;
+  onPreviewKeepImport: (sourceId: string) => void;
 }) {
   return (
     <div className="rounded-lg border border-border bg-bg-elevated px-3 py-3">
@@ -180,7 +129,19 @@ function ReadwiseTable(props: {
       {props.detailsOpen ? (
         <div className="mt-3 min-w-[1060px]">
           <ReadwiseHeader />
-          <ReadwiseRows {...props} />
+          <div className="mt-2 flex flex-col">
+            {props.sources.map((source) => (
+              <ReadwiseRow
+                key={source.id}
+                onChange={props.onChange}
+                onDisableKeepImport={props.onDisableKeepImport}
+                onChooseHighlightFolder={props.onChooseHighlightFolder}
+                onChoosePrimaryFolder={props.onChoosePrimaryFolder}
+                onPreviewKeepImport={props.onPreviewKeepImport}
+                source={source}
+              />
+            ))}
+          </div>
         </div>
       ) : null}
     </div>
@@ -198,8 +159,8 @@ export function ImportSourceWorkspaceReadwiseSection(props: {
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
-  onChangeAction: (sourceId: string, value: string) => void;
-  onRunNow: (sourceId: string) => void;
+  onDisableKeepImport: (sourceId: string) => void;
+  onPreviewKeepImport: (sourceId: string) => void;
 }) {
   const [gateMessage, setGateMessage] = useState('');
   const configured = props.readwiseRootPath.trim().length > 0 && isReadwiseReaderConfigReady(props.readwiseReaderConfig);
@@ -221,13 +182,22 @@ export function ImportSourceWorkspaceReadwiseSection(props: {
       }
       ariaLabel="Readwise Reader import"
       className="mb-6"
-      description="Readwise is configured separately here. Other import sources stay available below."
+      description="Keep sources now run automatically after preview and confirmation. Readwise stays here as the first real sample."
       title="Readwise Reader for Obsidian"
     >
       <ReadwiseRootRow onChooseRootFolder={props.onChooseRootFolder} readwiseRootPath={props.readwiseRootPath} />
       {gateMessage ? <p className="text-sm text-amber-700">{gateMessage}</p> : null}
       <div className="overflow-auto">
-        <ReadwiseTable {...props} />
+        <ReadwiseTable
+          detailsOpen={props.detailsOpen}
+          onChange={props.onChange}
+          onDisableKeepImport={props.onDisableKeepImport}
+          onChooseHighlightFolder={props.onChooseHighlightFolder}
+          onChoosePrimaryFolder={props.onChoosePrimaryFolder}
+          onPreviewKeepImport={props.onPreviewKeepImport}
+          onToggleDetails={props.onToggleDetails}
+          sources={props.sources}
+        />
       </div>
     </SettingsSection>
   );

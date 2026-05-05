@@ -23,12 +23,11 @@ type ImportSourceWorkspaceDetailsProps = {
   onChooseHighlightFolder: (sourceId: string) => void;
   onChooseReadwisePrimaryFolder: (sourceId: string) => void;
   onChooseReadwiseHighlightFolder: (sourceId: string) => void;
-  onChangeAction: (sourceId: string, value: string) => void;
-  onChangeReadwiseAction: (sourceId: string, value: string) => void;
+  onDisableKeepImport: (sourceId: string, scope: 'readwiseSources' | 'sources') => void;
   onCopySource: (sourceId: string) => void;
   onDeleteSource: (sourceId: string) => void;
+  onPreviewKeepImport: (sourceId: string, scope: 'readwiseSources' | 'sources') => void;
   onToggleDetails: () => void;
-  onRunNow: (sourceId: string) => void;
 };
 
 function ImportSourceWorkspaceHeader({ onClose }: { onClose: () => void }) {
@@ -56,10 +55,10 @@ function ImportSourceWorkspaceBody(props: Omit<ImportSourceWorkspaceDetailsProps
         onChooseRootFolder={props.onChooseReadwiseRootFolder}
         onChooseHighlightFolder={props.onChooseReadwiseHighlightFolder}
         onChoosePrimaryFolder={props.onChooseReadwisePrimaryFolder}
-        onChangeAction={props.onChangeReadwiseAction}
+        onDisableKeepImport={(sourceId) => props.onDisableKeepImport(sourceId, 'readwiseSources')}
         onOpenReadwiseConfig={props.onOpenReadwiseConfig}
+        onPreviewKeepImport={(sourceId) => void props.onPreviewKeepImport(sourceId, 'readwiseSources')}
         onToggleDetails={props.onToggleDetails}
-        onRunNow={props.onRunNow}
         readwiseReaderConfig={props.readwiseReaderConfig}
         readwiseRootPath={props.readwiseRootPath}
         sources={props.readwiseSources}
@@ -69,10 +68,10 @@ function ImportSourceWorkspaceBody(props: Omit<ImportSourceWorkspaceDetailsProps
           onChange={props.onChange}
           onChooseHighlightFolder={props.onChooseHighlightFolder}
           onChoosePrimaryFolder={props.onChoosePrimaryFolder}
-          onChangeAction={props.onChangeAction}
+          onDisableKeepImport={(sourceId) => props.onDisableKeepImport(sourceId, 'sources')}
           onCopySource={props.onCopySource}
           onDeleteSource={props.onDeleteSource}
-          onRunNow={props.onRunNow}
+          onPreviewKeepImport={(sourceId) => void props.onPreviewKeepImport(sourceId, 'sources')}
           sources={props.sources}
         />
       </div>
@@ -96,12 +95,11 @@ export function ImportSourceWorkspaceDetails({
   onChooseHighlightFolder,
   onChooseReadwisePrimaryFolder,
   onChooseReadwiseHighlightFolder,
-  onChangeAction,
-  onChangeReadwiseAction,
+  onDisableKeepImport,
   onCopySource,
   onDeleteSource,
+  onPreviewKeepImport,
   onToggleDetails,
-  onRunNow
 }: ImportSourceWorkspaceDetailsProps) {
   return (
     <AppDialog onOpenChange={onOpenChange} open={open}>
@@ -116,18 +114,17 @@ export function ImportSourceWorkspaceDetails({
             <ImportSourceWorkspaceBody
               detailsOpen={detailsOpen}
               onChange={onChange}
-              onChangeAction={onChangeAction}
               onChangeReadwise={onChangeReadwise}
-              onChangeReadwiseAction={onChangeReadwiseAction}
               onChooseHighlightFolder={onChooseHighlightFolder}
               onChoosePrimaryFolder={onChoosePrimaryFolder}
               onChooseReadwiseHighlightFolder={onChooseReadwiseHighlightFolder}
               onChooseReadwisePrimaryFolder={onChooseReadwisePrimaryFolder}
               onChooseReadwiseRootFolder={onChooseReadwiseRootFolder}
+              onDisableKeepImport={onDisableKeepImport}
               onCopySource={onCopySource}
               onDeleteSource={onDeleteSource}
               onOpenReadwiseConfig={onOpenReadwiseConfig}
-              onRunNow={onRunNow}
+              onPreviewKeepImport={onPreviewKeepImport}
               onToggleDetails={onToggleDetails}
               readwiseReaderConfig={readwiseReaderConfig}
               readwiseRootPath={readwiseRootPath}
