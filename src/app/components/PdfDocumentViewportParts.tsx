@@ -128,6 +128,7 @@ interface PdfDocumentViewportContentProps {
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleScroll: () => void;
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
+  isToolbarVisible: boolean;
   maxPage: number;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
@@ -140,6 +141,7 @@ interface PdfDocumentViewportContentProps {
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
   onRotateClockwise: () => void;
+  onSearchFocusChange: (focused: boolean) => void;
   onSearchQueryChange: (value: string) => void;
   onSearchRequestHandled: (requestId: number) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
@@ -222,6 +224,7 @@ function resolveViewportContentBodyProps(
     handleContextMenu: props.handleContextMenu,
     handleScroll: props.handleScroll,
     highlightLocators: props.highlightLocators,
+    isToolbarVisible: props.isToolbarVisible,
     maxPage: props.maxPage,
     onLoadError: props.onLoadError,
     onLoadSuccess: props.onLoadSuccess,
@@ -230,6 +233,7 @@ function resolveViewportContentBodyProps(
     onPageChange: props.onPageChange,
     onPreviousPage: props.onPreviousPage,
     onRotateClockwise: props.onRotateClockwise,
+    onSearchFocusChange: props.onSearchFocusChange,
     onSearchQueryChange: props.onSearchQueryChange,
     onSearchRequest: props.onSearchRequest,
     onTextLayerRender: props.onTextLayerRender,

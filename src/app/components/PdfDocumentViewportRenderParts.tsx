@@ -9,11 +9,13 @@ import type { PdfPageTextEntry } from './pdfPageText';
 const PDF_PAGE_MIN = 1;
 
 interface PdfViewportToolbarProps {
+  isVisible: boolean;
   maxPage: number;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
   onRotateClockwise: () => void;
+  onSearchFocusChange: (focused: boolean) => void;
   onSearchQueryChange: (value: string) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
   onZoomIn: () => void;
@@ -29,6 +31,7 @@ interface PdfViewportToolbarProps {
 export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
   return (
     <PdfDocumentToolbar
+      isVisible={props.isVisible}
       maxPage={props.maxPage}
       onFindNext={() => props.onSearchRequest('next')}
       onFindPrevious={() => props.onSearchRequest('previous')}
@@ -36,6 +39,7 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
       onPageChange={props.onPageChange}
       onPreviousPage={props.onPreviousPage}
       onRotateClockwise={props.onRotateClockwise}
+      onSearchFocusChange={props.onSearchFocusChange}
       searchIndexingHint={props.searchIndexingHint}
       onSearchQueryChange={props.onSearchQueryChange}
       onZoomIn={props.onZoomIn}

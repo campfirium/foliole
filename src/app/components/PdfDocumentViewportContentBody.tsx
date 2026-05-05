@@ -9,6 +9,7 @@ interface PdfDocumentViewportContentBodyProps {
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleScroll: () => void;
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
+  isToolbarVisible: boolean;
   maxPage: number;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
@@ -17,6 +18,7 @@ interface PdfDocumentViewportContentBodyProps {
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
   onRotateClockwise: () => void;
+  onSearchFocusChange: (focused: boolean) => void;
   onSearchQueryChange: (value: string) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
   onTextLayerRender: (pageNumber: number) => void;
@@ -42,14 +44,17 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
       className="app-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-auto px-2 pb-5"
       onContextMenu={props.handleContextMenu}
       onScroll={props.handleScroll}
+      data-testid="pdf-scroll-container"
       ref={props.scrollContainerRef}
     >
       <PdfViewportToolbar
+        isVisible={props.isToolbarVisible}
         maxPage={props.maxPage}
         onNextPage={props.onNextPage}
         onPageChange={props.onPageChange}
         onPreviousPage={props.onPreviousPage}
         onRotateClockwise={props.onRotateClockwise}
+        onSearchFocusChange={props.onSearchFocusChange}
         searchIndexingHint={props.searchIndexingHint}
         onSearchQueryChange={props.onSearchQueryChange}
         onSearchRequest={props.onSearchRequest}

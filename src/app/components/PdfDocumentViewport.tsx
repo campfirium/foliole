@@ -1,5 +1,4 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
-import type { MutableRefObject } from 'react';
+import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
@@ -8,6 +7,7 @@ import { PdfViewportSearchDebugOverlay, useSearchDebugOverlayState } from './Pdf
 import { PdfDocumentErrorState, PdfDocumentViewportContent } from './PdfDocumentViewportParts';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { usePdfViewportRuntime } from './pdfViewportRuntime';
+import { usePdfToolbarVisibility } from './usePdfToolbarVisibility';
 
 interface PdfDocumentViewportProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
@@ -47,8 +47,10 @@ function renderPdfViewportContent(args: {
   handleTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   handleTextLayerRender: (pageNumber: number) => void;
   handleScroll: () => void;
+  isToolbarVisible: boolean;
   onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
+  onSearchFocusChange: (focused: boolean) => void;
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
   pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
   searchHighlights: PdfSearchVisualHighlight[];
@@ -60,6 +62,7 @@ function renderPdfViewportContent(args: {
       handleContextMenu={args.onContextMenu}
       handleScroll={args.handleScroll}
       highlightLocators={args.highlightLocators}
+      isToolbarVisible={args.isToolbarVisible}
       maxPage={args.maxPage}
       onLoadError={args.onLoadError}
       onLoadSuccess={args.onLoadSuccess}
@@ -71,6 +74,7 @@ function renderPdfViewportContent(args: {
       onPageChange={args.onPageChange}
       onPreviousPage={args.onPreviousPage}
       onRotateClockwise={args.onRotateClockwise}
+      onSearchFocusChange={args.onSearchFocusChange}
       onSearchQueryChange={args.onSearchQueryChange}
       onSearchRequest={args.onSearchRequest}
       onSearchRequestHandled={args.onSearchRequestHandled}
@@ -113,6 +117,7 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
       totalPages: props.totalPages,
       zoom: props.zoom
     });
+  const { handleToolbarScroll, handleSearchFocusChange, isToolbarVisible } = usePdfToolbarVisibility(props.searchQuery, scrollContainerRef, handleScroll);
   const [isSearchDebugOpen, setIsSearchDebugOpen] = usePdfSearchDebugState(props.searchQuery, props.searchRequest, props.searchStatus, props.searchTarget, searchHighlights.length);
 
   if (props.loadError) {
@@ -122,11 +127,13 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
   return (
     <>
       <PdfDocumentViewportReady
-        handleScroll={handleScroll}
+        handleScroll={handleToolbarScroll}
         handleTextContentLoad={handleTextContentLoad}
         handleTextLayerRender={handleTextLayerRender}
+        isToolbarVisible={isToolbarVisible}
         onSearchHighlightsChange={setSearchHighlights}
         onSearchDebugChange={setSearchDebug}
+        onSearchFocusChange={handleSearchFocusChange}
         pageElementsRef={pageElementsRef}
         pageTextByNumberRef={pageTextByNumberRef}
         scrollContainerRef={scrollContainerRef}
@@ -163,6 +170,7 @@ function PdfDocumentViewportReady(
     handleScroll: () => void;
     handleTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
     handleTextLayerRender: (pageNumber: number) => void;
+    isToolbarVisible: boolean;
     onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
     pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
     pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
@@ -170,6 +178,7 @@ function PdfDocumentViewportReady(
     searchRevision: number;
     scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
     onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
+    onSearchFocusChange: (focused: boolean) => void;
   } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>
 ) {
   return renderPdfViewportContent(props);

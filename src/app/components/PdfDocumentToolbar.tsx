@@ -5,6 +5,7 @@ import { AppIconButton, AppInput } from '../../shared/ui';
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 
 interface PdfDocumentToolbarProps {
+  isVisible: boolean;
   maxPage: number;
   onFindNext: () => void;
   onFindPrevious: () => void;
@@ -12,6 +13,7 @@ interface PdfDocumentToolbarProps {
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
   onRotateClockwise: () => void;
+  onSearchFocusChange: (focused: boolean) => void;
   searchIndexingHint: string | null;
   onSearchQueryChange: (value: string) => void;
   onZoomIn: () => void;
@@ -116,16 +118,30 @@ function resolveSearchStatusLabel(status: PdfSearchStatus, indexingHint: string 
   return `${status.current} / ${status.total}`;
 }
 
+function resolveToolbarShellClassName() {
+  return [
+    'sticky top-0 z-20 h-0 w-full px-4 pt-3 pointer-events-none'
+  ].join(' ');
+}
+
+function resolveToolbarPanelClassName(isVisible: boolean) {
+  return [
+    'pointer-events-auto absolute left-1/2 top-3 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-bg-elevated px-4 py-2 shadow-sm transition-[opacity,transform] duration-200 ease-out',
+    isVisible ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0 pointer-events-none'
+  ].join(' ');
+}
+
 function PdfSearchControls({
   onFindNext,
   onFindPrevious,
+  onSearchFocusChange,
   onSearchQueryChange,
   searchIndexingHint,
   searchQuery,
   searchStatus
 }: Pick<
   PdfDocumentToolbarProps,
-  'onFindNext' | 'onFindPrevious' | 'onSearchQueryChange' | 'searchIndexingHint' | 'searchQuery' | 'searchStatus'
+  'onFindNext' | 'onFindPrevious' | 'onSearchFocusChange' | 'onSearchQueryChange' | 'searchIndexingHint' | 'searchQuery' | 'searchStatus'
 >) {
   const canNavigateMatches = !searchIndexingHint && searchStatus.hasQuery && searchStatus.total > 0;
 
@@ -146,6 +162,8 @@ function PdfSearchControls({
           onFindNext();
         }}
         onChange={(event) => onSearchQueryChange(event.target.value)}
+        onBlur={() => onSearchFocusChange(false)}
+        onFocus={() => onSearchFocusChange(true)}
         placeholder="Search PDF…"
         type="text"
         value={searchQuery}
@@ -172,6 +190,7 @@ function PdfSearchControls({
 }
 
 export function PdfDocumentToolbar({
+  isVisible,
   maxPage,
   onFindNext,
   onFindPrevious,
@@ -179,6 +198,7 @@ export function PdfDocumentToolbar({
   onPageChange,
   onPreviousPage,
   onRotateClockwise,
+  onSearchFocusChange,
   searchIndexingHint,
   onSearchQueryChange,
   onZoomIn,
@@ -190,8 +210,8 @@ export function PdfDocumentToolbar({
   zoom
 }: PdfDocumentToolbarProps) {
   return (
-    <div className="mb-4 flex justify-center px-4 pt-3" data-testid="pdf-document-toolbar">
-      <div className="flex items-center gap-4 rounded-full bg-gradient-to-b from-bg-elevated/96 via-bg-elevated/82 to-bg-elevated/58 px-4 py-2 shadow-sm backdrop-blur">
+    <div className={resolveToolbarShellClassName()} data-testid="pdf-document-toolbar" data-toolbar-visible={isVisible ? 'true' : 'false'}>
+      <div className={resolveToolbarPanelClassName(isVisible)}>
         <div className="flex items-center gap-1">
           <PdfZoomControls
             onRotateClockwise={onRotateClockwise}
@@ -213,6 +233,7 @@ export function PdfDocumentToolbar({
         <PdfSearchControls
           onFindNext={onFindNext}
           onFindPrevious={onFindPrevious}
+          onSearchFocusChange={onSearchFocusChange}
           onSearchQueryChange={onSearchQueryChange}
           searchIndexingHint={searchIndexingHint}
           searchQuery={searchQuery}
