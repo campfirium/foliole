@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { loadRuntimeNodeSourceDetails } from './nodeSourceBridge';
+import { loadRuntimeNodeSourceDetails, loadRuntimeNodeSourceUpdatePreview } from './nodeSourceBridge';
 
 const NODE_SOURCE_DETAILS_PAYLOAD = {
   import_runs: [
@@ -121,4 +121,22 @@ it('normalizes node source details from the runtime bridge', async () => {
     sourceNodeId: 'node-parent'
   });
   expect(invoke).toHaveBeenCalledWith('load_node_source_details', { node_id: 'node-1' });
+});
+
+it('normalizes node source update previews from the runtime bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    checked_at: '2026-03-28T04:00:00.000Z',
+    current_content: 'Current content',
+    source_node_id: 'node-1',
+    updated_content: 'Updated content'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(loadRuntimeNodeSourceUpdatePreview('node-1')).resolves.toEqual({
+    checkedAt: '2026-03-28T04:00:00.000Z',
+    currentContent: 'Current content',
+    sourceNodeId: 'node-1',
+    updatedContent: 'Updated content'
+  });
+  expect(invoke).toHaveBeenCalledWith('load_node_source_update_preview', { node_id: 'node-1' });
 });

@@ -120,6 +120,9 @@ function shouldExposeReadwiseUpdate(input: {
   if (input.comparableCurrentContent === input.comparablePreparedContent) {
     return false;
   }
+  if (input.keepImportItem.has_source_update) {
+    return true;
+  }
   if (input.sourceSignatureChanged) {
     return true;
   }
@@ -172,7 +175,7 @@ export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeS
           sourceSignatureChanged,
           storedSourceFingerprint: sourceDetails.importSource?.last_content_fingerprint
         })
-      : comparableCurrentContent !== comparablePreparedContent && sourceSignatureChanged;
+      : comparableCurrentContent !== comparablePreparedContent && (sourceSignatureChanged || Boolean(keepImportItem.has_source_update));
 
   if (!hasUpdate) {
     return null;

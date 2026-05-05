@@ -16,12 +16,13 @@ interface DocumentPanelHeaderProps {
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
+  isSourceUpdatePanelOpen: boolean;
   nodesById: Record<string, Node>;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
-  onOpenUpdatedSourceFile: () => void;
   onSelectNode: (nodeId: string) => void;
+  onToggleSourceUpdatePanel: () => void;
   showSourceUpdateAction: boolean;
 }
 
@@ -47,10 +48,12 @@ function NavigationButtons({ canGoBack, canGoForward, canGoParent, onGoBack, onG
 }
 
 function SourceUpdateAction({
-  onOpen,
+  isOpen,
+  onToggle,
   visible
 }: {
-  onOpen: () => void;
+  isOpen: boolean;
+  onToggle: () => void;
   visible: boolean;
 }) {
   if (!visible) {
@@ -58,10 +61,12 @@ function SourceUpdateAction({
   }
   return (
     <AppIconButton
-      className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+      aria-pressed={isOpen}
+      className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+      data-active={isOpen}
       icon={<SplitPanelIcon />}
-      label="Open updated source file"
-      onClick={onOpen}
+      label="Toggle source update panel"
+      onClick={onToggle}
     />
   );
 }
@@ -71,12 +76,13 @@ export function DocumentPanelHeader({
   canGoBack,
   canGoForward,
   canGoParent,
+  isSourceUpdatePanelOpen,
   nodesById,
   onGoBack,
   onGoForward,
   onGoParent,
-  onOpenUpdatedSourceFile,
   onSelectNode,
+  onToggleSourceUpdatePanel,
   showSourceUpdateAction
 }: DocumentPanelHeaderProps) {
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
@@ -100,7 +106,7 @@ export function DocumentPanelHeader({
         </div>
       </div>
       <ToolbarActionGroup ariaLabel="Document editor actions">
-        <SourceUpdateAction onOpen={onOpenUpdatedSourceFile} visible={showSourceUpdateAction} />
+        <SourceUpdateAction isOpen={isSourceUpdatePanelOpen} onToggle={onToggleSourceUpdatePanel} visible={showSourceUpdateAction} />
         <AppDropdownMenu>
           <AppDropdownMenuTrigger asChild>
             <AppIconButton

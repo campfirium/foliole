@@ -38,6 +38,13 @@ export interface RuntimeNodeSourceDetails {
   sourceNodeId: string;
 }
 
+export interface RuntimeNodeSourceUpdatePreview {
+  checkedAt: string;
+  currentContent: string;
+  sourceNodeId: string;
+  updatedContent: string;
+}
+
 function isKeepImportItemStatus(value: unknown): value is RuntimeKeepImportItemDetails['lastStatus'] {
   return value === 'blocked_deleted' || value === 'degraded' || value === 'duplicate' || value === 'failed' || value === 'imported';
 }
@@ -139,5 +146,26 @@ export function toRuntimeNodeSourceDetails(value: unknown): RuntimeNodeSourceDet
     inheritedFromParent: payload.inherited_from_parent,
     keepImportItem,
     sourceNodeId: payload.source_node_id
+  };
+}
+
+export function toRuntimeNodeSourceUpdatePreview(value: unknown): RuntimeNodeSourceUpdatePreview | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const payload = value as Record<string, unknown>;
+  if (
+    typeof payload.checked_at !== 'string' ||
+    typeof payload.current_content !== 'string' ||
+    typeof payload.source_node_id !== 'string' ||
+    typeof payload.updated_content !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    checkedAt: payload.checked_at,
+    currentContent: payload.current_content,
+    sourceNodeId: payload.source_node_id,
+    updatedContent: payload.updated_content
   };
 }

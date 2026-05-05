@@ -1,4 +1,5 @@
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -10,6 +11,7 @@ import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { DocumentPanelHeader } from './DocumentPanelHeader';
+import { DocumentSourceUpdatePanel } from './DocumentSourceUpdatePanel';
 import { EditorContextMenu } from './EditorContextMenu';
 import { useNodeSourceUpdatePreview } from './useNodeSourceUpdatePreview';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
@@ -106,12 +108,76 @@ function getDocumentPanelBodyProps(
   };
 }
 
+function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
+  return {
+    scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
+    selection: {
+      from: Math.max(0, Math.trunc(viewState.selection.from)),
+      to: Math.max(0, Math.trunc(viewState.selection.to))
+    }
+  };
+}
+
+function isSameNodeViewState(left: NodeViewState | undefined, right: NodeViewState) {
+  return left?.scrollTop === right.scrollTop && left?.selection.from === right.selection.from && left?.selection.to === right.selection.to;
+}
+
+function useSplitPanelNodeViewState(activeNodeId: string | null, isSplitPanelOpen: boolean) {
+  const [panelNodeViewById, setPanelNodeViewById] = useState<Record<string, NodeViewState | undefined>>({});
+  const panelEditorRef = useRef<EditorAdapter | null>(null);
+  const panelNodeViewState = activeNodeId ? panelNodeViewById[activeNodeId] : undefined;
+
+  useEffect(() => {
+    if (!isSplitPanelOpen || !activeNodeId) {
+      return;
+    }
+    const capturePanelViewState = () => {
+      const adapter = panelEditorRef.current;
+      if (!adapter) {
+        return;
+      }
+      const nextViewState = normalizeNodeViewState({
+        scrollTop: adapter.getScrollTop(),
+        selection: adapter.getSelection()
+      });
+      setPanelNodeViewById((current) => {
+        if (isSameNodeViewState(current[activeNodeId], nextViewState)) {
+          return current;
+        }
+        return {
+          ...current,
+          [activeNodeId]: nextViewState
+        };
+      });
+    };
+    capturePanelViewState();
+    const timer = window.setInterval(capturePanelViewState, 240);
+    return () => {
+      window.clearInterval(timer);
+      capturePanelViewState();
+    };
+  }, [activeNodeId, isSplitPanelOpen]);
+
+  return {
+    panelEditorRef,
+    panelNodeViewState
+  };
+}
+
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
+  const [isSourceUpdatePanelOpen, setIsSourceUpdatePanelOpen] = useState(false);
   const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props, editorDisplayMode);
   const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
   const bodyProps = getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal);
+  const { panelEditorRef, panelNodeViewState } = useSplitPanelNodeViewState(props.activeNodeId, isSourceUpdatePanelOpen);
   const sourceUpdatePreview = useNodeSourceUpdatePreview(props.activeNodeId);
+
+  useEffect(() => {
+    if (!sourceUpdatePreview.value && !sourceUpdatePreview.isLoading) {
+      setIsSourceUpdatePanelOpen(false);
+    }
+  }, [sourceUpdatePreview.isLoading, sourceUpdatePreview.value]);
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
@@ -121,18 +187,32 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           canGoBack={props.canGoBack}
           canGoForward={props.canGoForward}
           canGoParent={props.canGoParent}
+          isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
           nodesById={props.nodesById}
           onGoBack={props.onGoBack}
           onGoForward={props.onGoForward}
           onGoParent={props.onGoParent}
-          onOpenUpdatedSourceFile={() => {
-            void sourceUpdatePreview.openSourceFile();
-          }}
           onSelectNode={props.onSelectNode}
-          showSourceUpdateAction={sourceUpdatePreview.hasSourceUpdate}
+          onToggleSourceUpdatePanel={() => setIsSourceUpdatePanelOpen((current) => !current)}
+          showSourceUpdateAction={Boolean(sourceUpdatePreview.value)}
         />
         <DocumentPanelBody {...bodyProps} />
       </section>
+      {sourceUpdatePreview.value ? (
+        <DocumentSourceUpdatePanel
+          currentContent={sourceUpdatePreview.value.currentContent}
+          currentNodeId={sourceUpdatePreview.value.sourceNodeId}
+          documentMaxWidth={props.documentMaxWidth}
+          editorAppearanceKey={props.editorAppearanceKey}
+          onOpenChange={setIsSourceUpdatePanelOpen}
+          open={isSourceUpdatePanelOpen}
+          panelNodeViewState={panelNodeViewState}
+          setPanelEditorAdapter={(adapter) => {
+            panelEditorRef.current = adapter;
+          }}
+          updatedContent={sourceUpdatePreview.value.updatedContent}
+        />
+      ) : null}
       {props.contextMenu ? (
         <EditorContextMenu
           canRunCommands={props.contextMenu.canRunCommands}

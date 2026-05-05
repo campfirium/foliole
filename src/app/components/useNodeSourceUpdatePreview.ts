@@ -1,28 +1,17 @@
 import { useEffect, useState } from 'react';
 
-import { onManagedInboxUpdated, openLocalPath } from '../../shared/platform/bridge';
-import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import { onManagedInboxUpdated } from '../../shared/platform/bridge';
+import { loadRuntimeNodeSourceUpdatePreview, type RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceBridge';
 
 interface NodeSourceUpdatePreviewState {
-  hasSourceUpdate: boolean;
   isLoading: boolean;
-  sourceFilePath: string | null;
+  value: RuntimeNodeSourceUpdatePreview | null;
 }
 
 const DEFAULT_STATE: NodeSourceUpdatePreviewState = {
-  hasSourceUpdate: false,
   isLoading: false,
-  sourceFilePath: null
+  value: null
 };
-
-function toSourceUpdateState(details: Awaited<ReturnType<typeof loadRuntimeNodeSourceDetails>>): NodeSourceUpdatePreviewState {
-  const keepItem = details?.keepImportItem ?? null;
-  return {
-    hasSourceUpdate: Boolean(keepItem?.hasSourceUpdate && keepItem.resolvedSourcePath),
-    isLoading: false,
-    sourceFilePath: keepItem?.resolvedSourcePath ?? null
-  };
-}
 
 export function useNodeSourceUpdatePreview(nodeId: string | null) {
   const [state, setState] = useState<NodeSourceUpdatePreviewState>(DEFAULT_STATE);
@@ -36,18 +25,18 @@ export function useNodeSourceUpdatePreview(nodeId: string | null) {
     let isDisposed = false;
     let unlisten: (() => void) | null = null;
 
-    const loadState = async () => {
-      setState((current) => ({ ...current, isLoading: true }));
-      const details = await loadRuntimeNodeSourceDetails(nodeId);
+    const loadPreview = async () => {
+      setState((current) => ({ isLoading: true, value: current.value }));
+      const value = await loadRuntimeNodeSourceUpdatePreview(nodeId);
       if (!isDisposed) {
-        setState(toSourceUpdateState(details));
+        setState({ isLoading: false, value });
       }
     };
 
-    void loadState();
+    void loadPreview();
 
     void onManagedInboxUpdated(() => {
-      void loadState();
+      void loadPreview();
     }).then((dispose) => {
       if (isDisposed) {
         dispose?.();
@@ -62,13 +51,5 @@ export function useNodeSourceUpdatePreview(nodeId: string | null) {
     };
   }, [nodeId]);
 
-  return {
-    ...state,
-    openSourceFile: async () => {
-      if (!state.sourceFilePath) {
-        return;
-      }
-      await openLocalPath(state.sourceFilePath);
-    }
-  };
+  return state;
 }

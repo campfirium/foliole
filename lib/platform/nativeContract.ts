@@ -80,6 +80,15 @@ export type NativeCommandMap = {
     args: { node_id: string };
     result: NativeNodeSourceDetails | null;
   };
+  [NATIVE_COMMANDS.loadNodeSourceUpdatePreview]: {
+    args: { node_id: string };
+    result: {
+      checked_at: string;
+      current_content: string;
+      source_node_id: string;
+      updated_content: string;
+    } | null;
+  };
   [NATIVE_COMMANDS.selectImportTextFile]: {
     args: NativeTextImportArgs;
     result: NativeImportedTextFile | null;

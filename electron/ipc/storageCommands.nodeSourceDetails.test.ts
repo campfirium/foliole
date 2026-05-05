@@ -5,6 +5,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const { loadNodeSourceDetails } = vi.hoisted(() => ({
   loadNodeSourceDetails: vi.fn()
 }));
+const { loadNodeSourceUpdatePreview } = vi.hoisted(() => ({
+  loadNodeSourceUpdatePreview: vi.fn()
+}));
 const { loadImportManagerSettings } = vi.hoisted(() => ({
   loadImportManagerSettings: vi.fn()
 }));
@@ -40,6 +43,7 @@ vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings,
   saveImportManagerSettings: vi.fn()
 }));
+vi.mock('../import/nodeSourceUpdatePreview.js', () => ({ loadNodeSourceUpdatePreview }));
 vi.mock('../import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: vi.fn() }));
 vi.mock('../import/managedInboxMonitor.js', () => ({ refreshManagedInboxMonitorFromSettings: vi.fn() }));
 vi.mock('./storage.js', () => ({
@@ -176,4 +180,20 @@ it('serializes node source details with keep-import metadata', async () => {
   loadNodeSourceDetails.mockReturnValue(NODE_SOURCE_DETAILS_RECORD);
   loadImportManagerSettings.mockReturnValue(IMPORT_MANAGER_SETTINGS_RECORD);
   await expectNodeSourcePayload();
+});
+
+it('returns node source update preview payloads', async () => {
+  loadNodeSourceUpdatePreview.mockResolvedValue({
+    checked_at: '2026-03-28T04:00:00.000Z',
+    current_content: 'Current content',
+    source_node_id: 'node-1',
+    updated_content: 'Updated content'
+  });
+
+  await expect(handleStorageCommand('load_node_source_update_preview', { node_id: 'node-1' })).resolves.toEqual({
+    checked_at: '2026-03-28T04:00:00.000Z',
+    current_content: 'Current content',
+    source_node_id: 'node-1',
+    updated_content: 'Updated content'
+  });
 });

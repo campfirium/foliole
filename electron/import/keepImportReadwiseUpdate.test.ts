@@ -63,6 +63,7 @@ it('adds only newly anchored readwise highlights during keep import updates', as
   const fixture = await seedReadwiseArticleFixture(tempRoot);
   saveReadwiseKeepImportSettings(fixture);
   await runReadwiseKeepImport(fixture.fullDocumentDir);
+  const initialState = readImportedChildRows();
 
   await fs.writeFile(
     path.join(fixture.fullDocumentDir, 'Sample Article.md'),
@@ -102,19 +103,22 @@ it('adds only newly anchored readwise highlights during keep import updates', as
     )
     .get() as { has_source_update: number };
 
-  expect(childRows).toHaveLength(2);
+  expect(childRows).toEqual(initialState.childRows);
   expect(keepItem.has_source_update).toBe(1);
   expect(parentRow.content).not.toContain('Completely different upstream body.');
-  expect(parentRow.content).toContain('<highlight id="1">This is the highlighted sentence.</highlight id="1">');
-  expect(parentRow.content).toContain('<highlight id="2">Another matching excerpt.</highlight id="2">');
-  expect(parentRow.content).toContain('## Unmatched Sidecar Highlights');
-  expect(parentRow.content).toContain('- Highlight 1: Missing new quote.');
+  expect(parentRow.content).toBe(initialState.parentRow.content);
+  expect(parentRow.content).not.toContain('Missing new quote.');
 });
 
-it('refreshes the node when only the readwise highlight file changes', async () => {
+it('flags source updates without rewriting the imported node when only the readwise highlight file changes', async () => {
   const fixture = await seedReadwiseArticleFixture(tempRoot);
   saveReadwiseKeepImportSettings(fixture);
   await runReadwiseKeepImport(fixture.fullDocumentDir);
+  const initialState = readImportedChildRows();
+
+  const importCountBefore = openDatabaseConnection().sqlite
+    .prepare(`SELECT COUNT(*) AS count FROM import_runs WHERE source_name = 'Sample Article.md'`)
+    .get() as { count: number };
 
   await fs.writeFile(
     path.join(fixture.highlightDir, 'Sample Article.md'),
@@ -140,15 +144,14 @@ it('refreshes the node when only the readwise highlight file changes', async () 
        WHERE rule_id = 'draft-import-source-1' AND source_path = 'Sample Article.md'`
     )
     .get() as { has_source_update: number };
+  const importCountAfter = openDatabaseConnection().sqlite
+    .prepare(`SELECT COUNT(*) AS count FROM import_runs WHERE source_name = 'Sample Article.md'`)
+    .get() as { count: number };
 
-  expect(childRows).toHaveLength(3);
-  expect(keepItem.has_source_update).toBe(0);
-  expect(parentRow.content).toContain('<highlight id="3">After the quote.</highlight id="3">');
-  expect(childRows[2]).toEqual({
-    anchor_link: JSON.stringify({ id: '3', kind: 'highlight' }),
-    content: 'After the quote.',
-    title: 'After the quote.'
-  });
+  expect(childRows).toEqual(initialState.childRows);
+  expect(importCountAfter.count).toBe(importCountBefore.count);
+  expect(keepItem.has_source_update).toBe(1);
+  expect(parentRow.content).toBe(initialState.parentRow.content);
 });
 
 it('keeps the same imported source after the readwise root folder moves', async () => {
@@ -191,7 +194,6 @@ it('keeps the same imported source after the readwise root folder moves', async 
 
   expect(secondSource.source_fingerprint).toBe(firstSource.source_fingerprint);
   expect(secondSource.latest_node_id).toBe(firstSource.latest_node_id);
-  expect(secondSource.source_locator).toBe(path.join(movedFixture.fullDocumentDir, 'Sample Article.md'));
-  expect(secondSource.source_locator).not.toBe(firstSource.source_locator);
+  expect(secondSource.source_locator).toBe(firstSource.source_locator);
   expect(sourceCount.count).toBe(1);
 });

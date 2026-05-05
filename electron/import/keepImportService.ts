@@ -7,6 +7,7 @@ import { buildPreparedImportRecord, discoverDirectoryImportSources, type Directo
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { logReadwiseScanFailed, logReadwiseScanStarted } from './importRunLogger.js';
+import { persistDetectedSourceUpdate } from './keepImportDetectedSourceUpdate.js';
 import {
   loadPreparedKeepImportRecord,
   resolveKeepImportSourceSignature,
@@ -166,6 +167,43 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
   }
 }
 
+async function runSingleKeepImportSource(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor): Promise<KeepImportRunEntry> {
+  const preview = await classifySource(config, source);
+  if (preview.status === 'unchanged' || preview.status === 'failed' || preview.status === 'blocked_deleted') {
+    await persistBlockedKeepImportState(config, preview.status, source);
+    return {
+      action: 'skipped',
+      detail: preview.detail,
+      failureReason: preview.status === 'failed' ? preview.detail : preview.status === 'blocked_deleted' ? 'blocked_deleted' : null,
+      importStatus: preview.status === 'blocked_deleted' ? 'blocked_deleted' : null,
+      previewStatus: preview.status,
+      sourcePath: source.sourceName
+    };
+  }
+  if (preview.status === 'updated') {
+    const result = await persistDetectedSourceUpdate(config, source);
+    notifyManagedInboxUpdated(result.importId);
+    return {
+      action: 'skipped',
+      detail: result.detail,
+      failureReason: result.failureReason,
+      importStatus: result.importStatus,
+      previewStatus: preview.status,
+      sourcePath: source.sourceName
+    };
+  }
+  const result = await runKeepImportSource(config, source);
+  notifyManagedInboxUpdated(result.importId);
+  return {
+    action: 'import_attempted',
+    detail: result.detail,
+    failureReason: result.failureReason,
+    importStatus: result.importStatus,
+    previewStatus: preview.status,
+    sourcePath: source.sourceName
+  };
+}
+
 export async function runKeepImportRule(config: KeepImportRuleConfig) {
   if (shouldLogReadwiseScan(config.sourceType)) {
     await logReadwiseScanStarted({ directoryPath: config.directoryPath, ruleId: config.ruleId });
@@ -179,29 +217,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
     ).filter((source): source is DirectoryImportSourceDescriptor => source !== null);
     const runEntries: KeepImportRunEntry[] = [];
     for (const source of importableSources) {
-      const preview = await classifySource(config, source);
-      if (preview.status === 'unchanged' || preview.status === 'failed' || preview.status === 'blocked_deleted') {
-        await persistBlockedKeepImportState(config, preview.status, source);
-        runEntries.push({
-          action: 'skipped',
-          detail: preview.detail,
-          failureReason: preview.status === 'failed' ? preview.detail : preview.status === 'blocked_deleted' ? 'blocked_deleted' : null,
-          importStatus: preview.status === 'blocked_deleted' ? 'blocked_deleted' : null,
-          previewStatus: preview.status,
-          sourcePath: source.sourceName
-        });
-        continue;
-      }
-      const result = await runKeepImportSource(config, source);
-      notifyManagedInboxUpdated(result.importId);
-      runEntries.push({
-        action: 'import_attempted',
-        detail: result.detail,
-        failureReason: result.failureReason,
-        importStatus: result.importStatus,
-        previewStatus: preview.status,
-        sourcePath: source.sourceName
-      });
+      runEntries.push(await runSingleKeepImportSource(config, source));
     }
     if (shouldLogReadwiseScan(config.sourceType)) {
       await logReadwiseRunCompleted({
