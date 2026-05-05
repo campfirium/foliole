@@ -1,6 +1,5 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -46,17 +45,17 @@ final class FolioleCompanionAttachmentResourceStore {
             }
             FolioleCompanionDesktopHttpClient.downloadToFile(requireText(url, "url"), headers, outputFile);
             String now = Instant.now().toString();
-            ContentValues values = new ContentValues();
-            values.put("storage_key", normalizedContentHash);
-            values.put("availability", "cached");
-            values.put("cached_at", now);
-            values.put("last_verified_at", now);
-            int updated = database.update("attachment_blobs", values, "attachment_id = ?", new String[] { normalizedAttachmentId });
+            int updated = FolioleCompanionNamedMutationStore.executeChanged(
+                context,
+                database,
+                "attachmentResourceMarkCached",
+                new Object[] { normalizedContentHash, now, now, normalizedAttachmentId }
+            );
             if (updated <= 0) {
                 throw new IllegalStateException("Attachment manifest is missing.");
             }
         } catch (Exception error) {
-            markFailed(database, normalizedAttachmentId);
+            markFailed(context, database, normalizedAttachmentId);
             throw error;
         }
         JSObject result = new JSObject();
@@ -65,10 +64,13 @@ final class FolioleCompanionAttachmentResourceStore {
         return result;
     }
 
-    private static void markFailed(SQLiteDatabase database, String attachmentId) {
-        ContentValues values = new ContentValues();
-        values.put("availability", "failed");
-        database.update("attachment_blobs", values, "attachment_id = ?", new String[] { attachmentId });
+    private static void markFailed(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
+        FolioleCompanionNamedMutationStore.executeChanged(
+            context,
+            database,
+            "attachmentResourceMarkFailed",
+            new Object[] { attachmentId }
+        );
     }
 
     static JSObject resolveResource(Context context, SQLiteDatabase database, String attachmentId) {

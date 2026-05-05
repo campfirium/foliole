@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
 
 import org.json.JSONObject;
 
@@ -13,6 +14,13 @@ final class FolioleCompanionNamedMutationStore {
 
     static void execute(Context context, SQLiteDatabase database, String statementName, Object[] args) throws Exception {
         database.execSQL(statement(context, statementName), args);
+    }
+
+    static int executeChanged(Context context, SQLiteDatabase database, String statementName, Object[] args) throws Exception {
+        try (SQLiteStatement compiled = database.compileStatement(statement(context, statementName))) {
+            bindArgs(compiled, args);
+            return compiled.executeUpdateDelete();
+        }
     }
 
     static void upsertSyncStateRow(
@@ -81,6 +89,29 @@ final class FolioleCompanionNamedMutationStore {
             throw new IllegalStateException("Companion mutation definitions asset is missing statement: " + name);
         }
         return statement;
+    }
+
+    private static void bindArgs(SQLiteStatement statement, Object[] args) {
+        if (args == null) {
+            return;
+        }
+        for (int index = 0; index < args.length; index += 1) {
+            bindArg(statement, index + 1, args[index]);
+        }
+    }
+
+    private static void bindArg(SQLiteStatement statement, int index, Object value) {
+        if (value == null) {
+            statement.bindNull(index);
+        } else if (value instanceof byte[]) {
+            statement.bindBlob(index, (byte[]) value);
+        } else if (value instanceof Double || value instanceof Float) {
+            statement.bindDouble(index, ((Number) value).doubleValue());
+        } else if (value instanceof Number) {
+            statement.bindLong(index, ((Number) value).longValue());
+        } else {
+            statement.bindString(index, value.toString());
+        }
     }
 
     private static String nextBaseContentHash(ExistingState current, int syncDirty) {
