@@ -15,7 +15,7 @@ export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget 
   sqlite: TSqlite;
 }
 
-export const DATABASE_SCHEMA_VERSION = 13;
+export const DATABASE_SCHEMA_VERSION = 14;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -175,6 +175,8 @@ const CREATE_TABLE_STATEMENTS_V10 = [
 const CREATE_TABLE_STATEMENTS_V12 = ['CREATE TABLE IF NOT EXISTS mirror_articles (article_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE, relative_path TEXT NOT NULL, mirrored_at TEXT NOT NULL)'];
 
 const CREATE_TABLE_STATEMENTS_V13 = ['ALTER TABLE nodes ADD COLUMN kind TEXT NOT NULL DEFAULT \'topic\''];
+
+const CREATE_TABLE_STATEMENTS_V14 = ['ALTER TABLE nodes ADD COLUMN virtual_filter TEXT'];
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -194,7 +196,8 @@ const MIGRATION_STEPS = [
   { statements: CREATE_TABLE_STATEMENTS_V10, version: 10 },
   { migrate: migrateAttachmentIdsToHashes, version: 11 },
   { statements: CREATE_TABLE_STATEMENTS_V12, version: 12 },
-  { migrate: migrateNodeKinds, statements: CREATE_TABLE_STATEMENTS_V13, version: 13 }
+  { migrate: migrateNodeKinds, statements: CREATE_TABLE_STATEMENTS_V13, version: 13 },
+  { statements: CREATE_TABLE_STATEMENTS_V14, version: 14 }
 ];
 function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
   if (currentVersion >= step.version) {

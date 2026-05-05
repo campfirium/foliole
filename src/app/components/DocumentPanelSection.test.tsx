@@ -159,74 +159,82 @@ describe('DocumentPanelSection basic views', () => {
   });
 });
 
-describe('DocumentPanelSection virtual nodes', () => {
-  it('shows the virtual node detail shell with clear empty states', () => {
-    renderSectionWithProps({
-      activeNodeId: 'node-1',
-      editorNodeId: 'node-1',
-      nodesById: {
-        'node-1': { ...baseNode, kind: 'folder', specialKind: 'virtual', title: 'Saved search' }
-      }
-    });
-
-    expect(screen.getByRole('region', { name: 'Virtual node details' })).toBeInTheDocument();
-    expect(screen.getByText('Saved filter')).toBeInTheDocument();
-    expect(screen.getByText('Saved value: none')).toBeInTheDocument();
-    expect(screen.getByText('No saved filter yet')).toBeInTheDocument();
-    expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
+it('shows the virtual node detail shell with clear empty states', () => {
+  renderSectionWithProps({
+    activeNodeId: 'node-1',
+    editorNodeId: 'node-1',
+    nodesById: {
+      'node-1': { ...baseNode, kind: 'folder', specialKind: 'virtual', title: 'Saved search' }
+    }
   });
 
-  it('reuses the folder list module for virtual node results and opens the original article node', () => {
-    const onSelectNode = vi.fn();
+  expect(screen.getByRole('region', { name: 'Virtual node details' })).toBeInTheDocument();
+  expect(screen.getByText('Saved filter')).toBeInTheDocument();
+  expect(screen.getByText('Saved value: none')).toBeInTheDocument();
+  expect(screen.getByText('No saved filter yet')).toBeInTheDocument();
+  expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
+});
 
-    renderSectionWithProps({
-      activeNodeId: 'node-1',
-      editorNodeId: 'node-1',
-      nodeOrder: ['node-1', 'node-2', 'node-3'],
-      nodesById: {
-        'node-1': { ...baseNode, kind: 'folder', specialKind: 'virtual', title: 'Saved search', content: 'reader' },
-        'node-2': {
-          ...baseNode,
-          id: 'node-2',
-          title: 'Reader article',
-          content: 'A reader note that should appear in the reused list.'
-        },
-        'node-3': {
-          ...baseNode,
-          id: 'node-3',
-          title: 'Another note',
-          content: 'No matching keyword here.'
+it('reuses the folder list module for virtual node results and opens the original article node', () => {
+  const onSelectNode = vi.fn();
+
+  renderSectionWithProps({
+    activeNodeId: 'node-1',
+    editorNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2', 'node-3'],
+    nodesById: {
+      'node-1': {
+        ...baseNode,
+        kind: 'folder',
+        specialKind: 'virtual',
+        title: 'Saved search',
+        virtualFilter: {
+          version: 1,
+          match: 'all',
+          conditions: [{ field: 'text', operator: 'contains', value: 'reader' }]
         }
       },
-      onSelectNode
-    });
-
-    expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
-    expect(screen.getByTestId('folder-list-title-node-2')).toHaveTextContent('Reader article');
-    expect(screen.queryByTestId('folder-list-title-node-3')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Open Reader article' }));
-
-    expect(onSelectNode).toHaveBeenCalledWith('node-2');
-  });
-
-  it('saves the virtual node keyword through the detail form', () => {
-    const onNodeContentChange = vi.fn();
-
-    renderSectionWithProps({
-      activeNodeId: 'node-1',
-      editorNodeId: 'node-1',
-      nodesById: {
-        'node-1': { ...baseNode, kind: 'folder', specialKind: 'virtual', title: 'Saved search' }
+      'node-2': {
+        ...baseNode,
+        id: 'node-2',
+        title: 'Reader article',
+        content: 'A reader note that should appear in the reused list.'
       },
-      onNodeContentChange
-    });
-
-    fireEvent.change(screen.getByLabelText('Keyword'), { target: { value: 'reader' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save and run' }));
-
-    expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'reader');
+      'node-3': {
+        ...baseNode,
+        id: 'node-3',
+        title: 'Another note',
+        content: 'No matching keyword here.'
+      }
+    },
+    onSelectNode
   });
+
+  expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
+  expect(screen.getByTestId('folder-list-title-node-2')).toHaveTextContent('Reader article');
+  expect(screen.queryByTestId('folder-list-title-node-3')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open Reader article' }));
+
+  expect(onSelectNode).toHaveBeenCalledWith('node-2');
+});
+
+it('saves the virtual node keyword through the detail form', () => {
+  const onNodeContentChange = vi.fn();
+
+  renderSectionWithProps({
+    activeNodeId: 'node-1',
+    editorNodeId: 'node-1',
+    nodesById: {
+      'node-1': { ...baseNode, kind: 'folder', specialKind: 'virtual', title: 'Saved search' }
+    },
+    onNodeContentChange
+  });
+
+  fireEvent.change(screen.getByLabelText('Keyword'), { target: { value: 'reader' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save and run' }));
+
+  expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'reader');
 });
 
 describe('DocumentPanelSection source updates', () => {

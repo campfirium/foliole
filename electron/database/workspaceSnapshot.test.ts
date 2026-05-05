@@ -113,6 +113,35 @@ it('loads persisted reading profiles from sqlite snapshot', () => {
   expect(snapshot?.untitledSequenceByParent).toEqual({});
 });
 
+it('loads persisted virtual filter config from sqlite snapshot', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-virtual',
+    parentNodeId: 'special-virtual-root',
+    kind: 'folder',
+    title: 'Saved search',
+    isTitleManual: true,
+    content: '',
+    virtualFilter: {
+      version: 1,
+      match: 'all',
+      conditions: [{ field: 'text', operator: 'contains', value: 'reader' }]
+    },
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-18T00:00:00.000Z',
+    updatedAt: '2026-03-18T00:00:00.000Z'
+  });
+
+  const snapshot = loadWorkspaceSnapshot();
+
+  expect(snapshot?.nodesById['node-virtual']?.virtualFilter).toEqual({
+    version: 1,
+    match: 'all',
+    conditions: [{ field: 'text', operator: 'contains', value: 'reader' }]
+  });
+});
+
 it('loads persisted Untitled sequence state from sqlite snapshot', () => {
   upsertNodeSnapshot({
     nodeId: 'node-untitled',

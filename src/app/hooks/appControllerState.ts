@@ -53,6 +53,7 @@ export function useWorkspaceSelectors() {
     rightSidebarWidth: useWorkspaceStore((state) => state.layout.rightSidebarWidth),
     trashedNodeIds: useWorkspaceStore((state) => state.trashedNodeIds),
     updateNodeContent: useWorkspaceStore((state) => state.updateNodeContent),
+    updateVirtualNodeFilter: useWorkspaceStore((state) => state.updateVirtualNodeFilter),
     updateNodeDesiredRetention: useWorkspaceStore((state) => state.updateNodeDesiredRetention),
     updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
     updateNodeReveal: useWorkspaceStore((state) => state.updateNodeReveal),

@@ -42,6 +42,7 @@ function toNodeSnapshotPayload(node: Node, position?: number): NativeNodeSnapsho
     isTitleManual: Boolean(node.isTitleManual),
     hideTitleHeading: Boolean(node.hideTitleHeading),
     content: node.content,
+    virtualFilter: node.virtualFilter ?? null,
     reveal: node.reveal,
     anchorLink: node.anchorLink ?? null,
     reading: node.reading ?? null,

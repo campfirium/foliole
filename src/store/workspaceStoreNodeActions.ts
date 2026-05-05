@@ -35,6 +35,7 @@ import {
   createMoveNodesAction
 } from './workspaceStoreTreeActions';
 import { createVirtualNodeAction } from './workspaceStoreVirtualNodeActions';
+import { createUpdateVirtualNodeFilterAction } from './workspaceStoreVirtualNodeFilterActions';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
@@ -59,6 +60,7 @@ type WorkspaceNodeActions = Pick<
   | 'updateNodePriority'
   | 'updateNodeTitle'
   | 'updateNodeContent'
+  | 'updateVirtualNodeFilter'
   | 'updateNodeReveal'
 >;
 
@@ -126,6 +128,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
     }
   };
 }
+
 
 function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeReveal'] {
   return (nodeId, reveal) => {
@@ -223,6 +226,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     setNodeViewState: createSetNodeViewStateAction(set),
     updateNodeTitle: createUpdateNodeTitleAction(set),
     updateNodeContent: createUpdateNodeContentAction(set),
+    updateVirtualNodeFilter: createUpdateVirtualNodeFilterAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
     dismissNode: createDismissNodeAction(set),
     relearnNode: createRelearnNodeAction(set),

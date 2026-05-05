@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { FolderListView } from '../../../app/components/FolderListView';
 import type { Node } from '../model/nodeTypes';
-import { getVirtualNodeResultNodes } from '../model/virtualNodeDetail';
+import { getVirtualNodePrimaryKeyword, getVirtualNodeResultNodes } from '../model/virtualNodeDetail';
 
 interface VirtualNodeDetailViewProps {
   node: Node;
@@ -26,14 +26,14 @@ function getEmptyStateCopy(hasSavedFilter: boolean) {
 }
 
 export function VirtualNodeDetailView({ node, nodesById, onSelectNode, onUpdateFilter }: VirtualNodeDetailViewProps) {
-  const [draftFilter, setDraftFilter] = useState(node.content);
+  const [draftFilter, setDraftFilter] = useState(getVirtualNodePrimaryKeyword(node.virtualFilter));
 
   useEffect(() => {
-    setDraftFilter(node.content);
-  }, [node.content, node.id]);
+    setDraftFilter(getVirtualNodePrimaryKeyword(node.virtualFilter));
+  }, [node.id, node.virtualFilter]);
 
-  const savedFilter = node.content.trim();
-  const resultNodes = useMemo(() => getVirtualNodeResultNodes(node.id, nodesById, savedFilter), [node.id, nodesById, savedFilter]);
+  const savedFilter = getVirtualNodePrimaryKeyword(node.virtualFilter).trim();
+  const resultNodes = useMemo(() => getVirtualNodeResultNodes(node.id, nodesById, node.virtualFilter), [node.id, node.virtualFilter, nodesById]);
 
   return (
     <section aria-label="Virtual node details" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4 max-[1080px]:px-2 max-[1080px]:py-2">

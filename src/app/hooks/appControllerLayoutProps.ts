@@ -1,7 +1,7 @@
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { INBOX_NODE_ID, isInboxNode } from '../../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
@@ -73,6 +73,7 @@ export interface BuildControllerLayoutPropsArgs {
     startReviewSession: (now?: string) => boolean;
     trashedNodeIds: string[];
     updateNodeContent: (nodeId: string, content: string) => void;
+    updateVirtualNodeFilter: (nodeId: string, value: string) => void;
     updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
     updateNodePriority: (nodeId: string, priority: number | null) => void;
     updateNodeReveal: (nodeId: string, reveal: string) => void;
@@ -241,6 +242,10 @@ function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) {
 function createNodeContentChangeHandler(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string, content: string) => {
     if (args.runtime.isViewingTrashNode) {
+      return;
+    }
+    if (isVirtualNode(args.ws.nodesById[nodeId])) {
+      args.ws.updateVirtualNodeFilter(nodeId, content);
       return;
     }
     args.ws.updateNodeContent(nodeId, content);

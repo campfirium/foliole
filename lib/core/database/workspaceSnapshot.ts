@@ -1,4 +1,5 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
+import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
@@ -41,6 +42,7 @@ interface WorkspaceNodeSnapshot {
   isTitleManual: boolean;
   hideTitleHeading: boolean;
   content: string;
+  virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: WorkspaceAnchorLink | null;
   reading: WorkspaceReadingProfile | null;
@@ -66,6 +68,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   title: string;
   is_title_manual: number;
   hide_title_heading: number;
+  virtual_filter: string | null;
   content: string;
   reveal: string | null;
   anchor_link: string | null;
@@ -164,6 +167,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        n.title,
        n.is_title_manual,
        n.hide_title_heading,
+       n.virtual_filter,
        n.content,
        n.reveal,
        n.anchor_link,
@@ -210,6 +214,7 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
       isTitleManual: row.is_title_manual === 1,
       hideTitleHeading: row.hide_title_heading === 1,
       content: row.content,
+      virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
       reveal: row.reveal,
       anchorLink: parseAnchorLink(row.anchor_link),
       reading: toReadingProfile(row),

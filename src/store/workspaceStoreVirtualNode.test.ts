@@ -20,18 +20,28 @@ it('creates virtual nodes under the fixed virtual root', () => {
     kind: 'folder',
     isTitleManual: true,
     parentNodeId: VIRTUAL_ROOT_NODE_ID,
-    specialKind: 'virtual'
+    specialKind: 'virtual',
+    virtualFilter: {
+      version: 1,
+      match: 'all',
+      conditions: []
+    }
   });
 });
 
-it('keeps the virtual node title stable when saving filter text into content', () => {
+it('keeps the virtual node title stable when saving a virtual filter', () => {
   const createdId = useWorkspaceStore.getState().createVirtualNode();
   const initialTitle = useWorkspaceStore.getState().nodesById[createdId]?.title;
 
-  useWorkspaceStore.getState().updateNodeContent(createdId, 'reader');
+  useWorkspaceStore.getState().updateVirtualNodeFilter(createdId, 'reader');
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toMatchObject({
-    content: 'reader',
+    content: '',
+    virtualFilter: {
+      version: 1,
+      match: 'all',
+      conditions: [{ field: 'text', operator: 'contains', value: 'reader' }]
+    },
     title: initialTitle
   });
 });

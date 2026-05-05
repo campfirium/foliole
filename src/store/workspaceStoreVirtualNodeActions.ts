@@ -1,3 +1,4 @@
+import { VIRTUAL_NODE_FILTER_VERSION, type VirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 
@@ -14,6 +15,14 @@ type WorkspaceSet = (
 ) => void;
 
 type NodeSnapshot = WorkspaceState['nodesById'][string];
+
+function createEmptyVirtualNodeFilter(): VirtualNodeFilter {
+  return {
+    version: VIRTUAL_NODE_FILTER_VERSION,
+    match: 'all',
+    conditions: []
+  };
+}
 
 export function createVirtualNodeAction(
   set: WorkspaceSet,
@@ -36,6 +45,7 @@ export function createVirtualNodeAction(
         title: untitledState.title,
         isTitleManual: true,
         content: '',
+        virtualFilter: createEmptyVirtualNodeFilter(),
         anchorLink: null,
         reveal: null,
         review: null,

@@ -1,4 +1,5 @@
 import { isNodeKind } from '../../lib/core/nodes/nodeKind.js';
+import { isVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 
 export function asString(value: unknown, field: string): string {
   if (typeof value !== 'string') {
@@ -124,6 +125,16 @@ function asReadingProfile(value: unknown, field: string): ReadingProfilePayload 
   };
 }
 
+function asVirtualNodeFilterValue(value: unknown, field: string) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (!isVirtualNodeFilter(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value;
+}
+
 export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
   return {
     nodeId: asString(args.nodeId, 'nodeId'),
@@ -135,6 +146,7 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
     hideTitleHeading: args.hideTitleHeading === undefined ? false : asBoolean(args.hideTitleHeading, 'hideTitleHeading'),
     content: asString(args.content, 'content'),
+    virtualFilter: asVirtualNodeFilterValue(args.virtualFilter, 'virtualFilter'),
     reveal: asNullableString(args.reveal, 'reveal'),
     anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
     reading: asReadingProfile(args.reading, 'reading'),

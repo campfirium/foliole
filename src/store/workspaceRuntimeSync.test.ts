@@ -106,6 +106,7 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
     isTitleManual: false,
     hideTitleHeading: true,
     content: '# Seed',
+    virtualFilter: null,
     reveal: 'Reveal',
     anchorLink: { id: 'hl-1', kind: 'highlight' },
     reading: {

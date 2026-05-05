@@ -115,6 +115,7 @@ it.each([
     title,
     isTitleManual: false,
     content: '',
+    virtualFilter: null,
     reveal: null,
     anchorLink: null,
     reading: null,

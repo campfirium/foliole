@@ -1,4 +1,5 @@
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
+import type { VirtualNodeFilter } from '../../../../lib/core/nodes/virtualNodeFilter';
 
 export interface NodeReviewProfile {
   due: string;
@@ -43,6 +44,7 @@ export interface Node {
   hasContent?: boolean;
   hasReveal?: boolean;
   content: string;
+  virtualFilter?: VirtualNodeFilter | null;
   anchorLink?: NodeAnchorLink | null;
   reveal: string | null;
   reading?: NodeReadingProfile | null;

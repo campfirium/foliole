@@ -1,4 +1,6 @@
 import type { NodeKind } from '../nodes/nodeKind.js';
+import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
+import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
@@ -34,6 +36,7 @@ export interface UpsertNodeSnapshotInput {
   isTitleManual: boolean;
   hideTitleHeading?: boolean;
   content: string;
+  virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: NodeAnchorLinkPayload | null;
   reading?: NodeReadingPayload | null;
@@ -64,8 +67,8 @@ function createUpsertNodeStatement(driver: DatabaseDriver) {
   return driver.prepare(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+       content, virtual_filter, reveal, anchor_link, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
        kind = excluded.kind,
@@ -75,6 +78,7 @@ function createUpsertNodeStatement(driver: DatabaseDriver) {
        is_title_manual = excluded.is_title_manual,
        hide_title_heading = excluded.hide_title_heading,
        content = excluded.content,
+       virtual_filter = excluded.virtual_filter,
        reveal = excluded.reveal,
        anchor_link = excluded.anchor_link,
        updated_at = excluded.updated_at,
@@ -138,8 +142,8 @@ function ensureSpecialRootNode(driver: DatabaseDriver, nodeId: keyof typeof SPEC
   driver.execute(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, NULL, 'folder', NULL, NULL, ?, 1, 0, '', NULL, NULL, ?, ?, NULL)`,
+       content, virtual_filter, reveal, anchor_link, created_at, updated_at, deleted_at
+     ) VALUES (?, NULL, 'folder', NULL, NULL, ?, 1, 0, '', NULL, NULL, NULL, ?, ?, NULL)`,
     [nodeId, SPECIAL_ROOT_NODE_RECORDS[nodeId].title, updatedAt, updatedAt]
   );
 }
@@ -180,6 +184,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       input.isTitleManual ? 1 : 0,
       input.hideTitleHeading === true ? 1 : 0,
       input.content,
+      stringifyVirtualNodeFilter(input.virtualFilter ?? null),
       input.reveal,
       toAnchorLinkValue(input.anchorLink),
       input.createdAt,

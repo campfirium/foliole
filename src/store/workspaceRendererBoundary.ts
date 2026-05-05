@@ -1,4 +1,5 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
+import type { VirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { hasNodeContent, hasNodeReveal } from '../features/nodes/model/nodeTypes';
 
@@ -12,6 +13,7 @@ export interface WorkspaceNodeDocument {
   hideTitleHeading: boolean;
   kind: NodeKind;
   reveal: string | null;
+  virtualFilter?: VirtualNodeFilter | null;
 }
 
 export function isNodeDocumentLoaded(node: Node | null | undefined) {
@@ -63,6 +65,7 @@ export function mergeWorkspaceNodeDocument(node: Node, document: WorkspaceNodeDo
     hideTitleHeading: document.hideTitleHeading,
     kind: document.kind,
     reveal: document.reveal,
+    virtualFilter: document.virtualFilter ?? null,
     hasReveal: document.reveal !== null
   };
 }

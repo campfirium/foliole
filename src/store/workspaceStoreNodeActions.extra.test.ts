@@ -39,6 +39,7 @@ function createWorkspaceFixture(): WorkspaceState {
     setActiveNode: () => undefined,
     updateNodeTitle: () => undefined,
     updateNodeContent: () => undefined,
+    updateVirtualNodeFilter: () => undefined,
     updateNodeReveal: () => undefined,
     updateNodePriority: () => undefined,
     updateNodeDesiredRetention: () => undefined,

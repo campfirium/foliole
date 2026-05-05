@@ -1,4 +1,5 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
+import { parseVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 
@@ -8,6 +9,7 @@ interface WorkspaceNodeDocumentRow extends DatabaseRow {
   id: string;
   kind: string | null;
   reveal: string | null;
+  virtual_filter: string | null;
 }
 
 function parseNodeKind(value: string | null): NodeKind {
@@ -16,7 +18,7 @@ function parseNodeKind(value: string | null): NodeKind {
 
 export function loadWorkspaceNodeDocument(driver: DatabaseDriver, nodeId: string) {
   const row = driver.queryOne<WorkspaceNodeDocumentRow>(
-    `SELECT id, kind, content, reveal, hide_title_heading
+    `SELECT id, kind, content, reveal, hide_title_heading, virtual_filter
      FROM nodes
      WHERE id = ?`,
     [nodeId]
@@ -29,6 +31,7 @@ export function loadWorkspaceNodeDocument(driver: DatabaseDriver, nodeId: string
     kind: parseNodeKind(row.kind),
     content: row.content,
     hideTitleHeading: row.hide_title_heading === 1,
+    virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
     reveal: row.reveal
   };
 }

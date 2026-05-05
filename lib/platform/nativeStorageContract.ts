@@ -1,4 +1,5 @@
 import type { NodeKind } from '../core/nodes/nodeKind.js';
+import type { VirtualNodeFilter } from '../core/nodes/virtualNodeFilter.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
 
 import type { NativeSchedulerCard } from './nativeContract.js';
@@ -43,6 +44,7 @@ export interface NativeWorkspaceNodeSnapshot {
   hasContent?: boolean;
   hasReveal?: boolean;
   content: string;
+  virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
   reading: NativeWorkspaceReadingProfile | null;
@@ -63,6 +65,7 @@ export interface NativeWorkspaceNodeDocument {
   hideTitleHeading: boolean;
   kind: NodeKind;
   nodeId: string;
+  virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
 }
 
@@ -136,6 +139,7 @@ export interface NativeNodeSnapshotArgs {
   isTitleManual: boolean;
   hideTitleHeading?: boolean;
   content: string;
+  virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
   reading?: NativeWorkspaceReadingProfile | null;

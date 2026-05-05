@@ -58,8 +58,8 @@ function seedNode(nodeId: string, parentNodeId: string | null, position: number)
 
 function getNodeRow(nodeId: string) {
   const connection = openDatabaseConnection();
-  return connection.sqlite.prepare('SELECT id, parent_id, deleted_at FROM nodes WHERE id = ?').get(nodeId) as
-    | { id: string; parent_id: string | null; deleted_at: string | null }
+  return connection.sqlite.prepare('SELECT id, parent_id, deleted_at, virtual_filter FROM nodes WHERE id = ?').get(nodeId) as
+    | { id: string; parent_id: string | null; deleted_at: string | null; virtual_filter: string | null }
     | undefined;
 }
 
@@ -185,4 +185,29 @@ it('deletes subtree nodes and rewrites node_order while clearing review side tab
   expect(getNodeOrderRows()).toEqual([{ node_id: 'node-keep', position: 0 }]);
   expect(getReviewCounts('node-child')).toEqual({ reviewCount: 0, reviewLogCount: 0 });
   expect(getNodeReadingRow('node-child')).toBeUndefined();
+});
+
+it('stores virtual filter payload in sqlite node rows', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-virtual',
+    parentNodeId: 'special-virtual-root',
+    kind: 'folder',
+    title: 'Saved search',
+    isTitleManual: true,
+    content: '',
+    virtualFilter: {
+      version: 1,
+      match: 'all',
+      conditions: [{ field: 'text', operator: 'contains', value: 'reader' }]
+    },
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-06T00:00:00.000Z',
+    updatedAt: '2026-03-06T00:00:00.000Z'
+  });
+
+  expect(getNodeRow('node-virtual')?.virtual_filter).toBe(
+    '{"version":1,"match":"all","conditions":[{"field":"text","operator":"contains","value":"reader"}]}'
+  );
 });

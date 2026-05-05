@@ -1,4 +1,5 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
+import { parseVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
@@ -12,6 +13,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   title: string;
   is_title_manual: number;
   hide_title_heading: number;
+  virtual_filter: string | null;
   has_content: number;
   has_reveal: number;
   anchor_link: string | null;
@@ -110,6 +112,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        n.title,
        n.is_title_manual,
        n.hide_title_heading,
+       n.virtual_filter,
        CASE WHEN LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
        CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
        n.anchor_link,
@@ -164,6 +167,7 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
       hasContent: row.has_content === 1,
       hasReveal: row.has_reveal === 1,
       content: '',
+      virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
       reveal: null,
       anchorLink: parseAnchorLink(row.anchor_link),
       reading: toReadingProfile(row),
