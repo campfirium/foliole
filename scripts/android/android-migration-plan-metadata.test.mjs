@@ -53,6 +53,8 @@ describe('Android migration plan metadata', () => {
       installSchema: 'installSchema',
       migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
     });
+    expect(schema.actionKeys).toMatchObject({ errorMessage: 'errorMessage', type: 'type' });
+    expect(schema.planKeys).toMatchObject({ actions: 'actions', beforeVersion: 'beforeVersion' });
     expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
     expect(schema.repairRules.syncObjectStateSequence).toMatchObject({
       legacyRowsQueryName: 'migrationLegacySyncObjectStateRows',
@@ -91,13 +93,19 @@ describe('Android migration plan metadata', () => {
 
     expect(installerSource).toContain('static JSONArray migrationPlan(Context context)');
     expect(rulesSource).toContain('section(context, "actionTypes")');
+    expect(rulesSource).toContain('section(context, "actionKeys")');
+    expect(rulesSource).toContain('section(context, "planKeys")');
     expect(rulesSource).toContain('section(context, "repairRules")');
     expect(migrationSource).toContain('FolioleCompanionSchemaInstaller.migrationPlan(context)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.actionType(context, key)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.stringValue');
-    expect(migrationSource).toContain('oldVersion < step.getInt("beforeVersion")');
+    expect(migrationSource).toContain('oldVersion < step.getInt(planKey(context, "beforeVersion"))');
+    expect(migrationSource).toContain('step.getJSONArray(planKey(context, "actions"))');
     expect(migrationSource).not.toContain('"installSchema".equals(type)');
     expect(migrationSource).not.toContain('"migrateSyncObjectStateSequence".equals(type)');
+    expect(migrationSource).not.toContain('step.getInt("beforeVersion")');
+    expect(migrationSource).not.toContain('step.getJSONArray("actions")');
+    expect(migrationSource).not.toContain('action.optString("type"');
     expect(migrationSource).not.toContain('oldVersion < 4');
     expect(migrationSource).not.toContain('oldVersion < 14');
     expect(migrationSource).not.toContain('"migrationLegacySyncObjectStateRows"');

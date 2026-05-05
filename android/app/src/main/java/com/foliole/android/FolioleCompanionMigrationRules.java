@@ -22,6 +22,18 @@ final class FolioleCompanionMigrationRules {
         return section(context, "actionTypes").getString(key);
     }
 
+    static String actionKey(Context context, String key) throws Exception {
+        return section(context, "actionKeys").getString(key);
+    }
+
+    static String defaultMessage(Context context, String key) throws Exception {
+        return section(context, "defaultMessages").getString(key);
+    }
+
+    static String planKey(Context context, String key) throws Exception {
+        return section(context, "planKeys").getString(key);
+    }
+
     static String rowKey(Context context, String key) throws Exception {
         return group(context, "syncObjectStateSequence").getJSONObject("rowKeys").getString(key);
     }

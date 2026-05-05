@@ -12,7 +12,7 @@ final class FolioleCompanionDatabaseMigration {
     private FolioleCompanionDatabaseMigration() {}
 
     static void create(Context context, SQLiteDatabase database) {
-        installSchema(context, database, "Failed to install companion schema.");
+        installSchema(context, database, defaultMessage(context, "installSchemaErrorMessage"));
         addSyncBaseContentHashIfMissing(context, database);
     }
 
@@ -21,8 +21,8 @@ final class FolioleCompanionDatabaseMigration {
             JSONArray plan = FolioleCompanionSchemaInstaller.migrationPlan(context);
             for (int index = 0; index < plan.length(); index += 1) {
                 JSONObject step = plan.getJSONObject(index);
-                if (oldVersion < step.getInt("beforeVersion")) {
-                    runActions(context, database, step.getJSONArray("actions"));
+                if (oldVersion < step.getInt(planKey(context, "beforeVersion"))) {
+                    runActions(context, database, step.getJSONArray(planKey(context, "actions")));
                 }
             }
         } catch (Exception exception) {
@@ -37,9 +37,13 @@ final class FolioleCompanionDatabaseMigration {
     }
 
     private static void runAction(Context context, SQLiteDatabase database, JSONObject action) {
-        String type = action.optString("type", "");
+        String type = action.optString(actionKey(context, "type"), "");
         if (actionType(context, "installSchema").equals(type)) {
-            installSchema(context, database, action.optString("errorMessage", "Failed to install companion schema."));
+            installSchema(
+                context,
+                database,
+                action.optString(actionKey(context, "errorMessage"), defaultMessage(context, "installSchemaErrorMessage"))
+            );
             return;
         }
         if (actionType(context, "migrateSyncObjectStateSequence").equals(type)) {
@@ -143,10 +147,10 @@ final class FolioleCompanionDatabaseMigration {
         try {
             JSONArray statements = FolioleCompanionMigrationRules.stringArray(context, "syncObjectStateSequence", "indexStatementNames");
             for (int index = 0; index < statements.length(); index += 1) {
-                installMigrationStatement(context, database, statements.getString(index), "Failed to create sync object state index.");
+                installMigrationStatement(context, database, statements.getString(index), repairValue(context, "indexStatementErrorMessage"));
             }
         } catch (Exception exception) {
-            throw new IllegalStateException("Failed to create sync object state indexes.", exception);
+            throw new IllegalStateException(repairValue(context, "indexStatementsErrorMessage"), exception);
         }
     }
 
@@ -192,6 +196,30 @@ final class FolioleCompanionDatabaseMigration {
             return FolioleCompanionMigrationRules.actionType(context, key);
         } catch (Exception exception) {
             throw new IllegalStateException("Companion migration action type is missing: " + key, exception);
+        }
+    }
+
+    private static String actionKey(Context context, String key) {
+        try {
+            return FolioleCompanionMigrationRules.actionKey(context, key);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Companion migration action key is missing: " + key, exception);
+        }
+    }
+
+    private static String defaultMessage(Context context, String key) {
+        try {
+            return FolioleCompanionMigrationRules.defaultMessage(context, key);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Companion migration default message is missing: " + key, exception);
+        }
+    }
+
+    private static String planKey(Context context, String key) {
+        try {
+            return FolioleCompanionMigrationRules.planKey(context, key);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Companion migration plan key is missing: " + key, exception);
         }
     }
 

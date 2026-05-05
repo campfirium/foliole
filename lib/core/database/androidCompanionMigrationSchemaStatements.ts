@@ -30,6 +30,20 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
 } as const;
 
+export const ANDROID_COMPANION_MIGRATION_ACTION_KEYS = {
+  errorMessage: 'errorMessage',
+  type: 'type'
+} as const;
+
+export const ANDROID_COMPANION_MIGRATION_DEFAULT_MESSAGES = {
+  installSchemaErrorMessage: 'Failed to install companion schema.'
+} as const;
+
+export const ANDROID_COMPANION_MIGRATION_PLAN_KEYS = {
+  actions: 'actions',
+  beforeVersion: 'beforeVersion'
+} as const;
+
 export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to upgrade companion schema.', type: 'installSchema' }],
@@ -105,6 +119,8 @@ export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {
     dropLegacyErrorMessage: 'Failed to drop legacy sync object state table.',
     dropLegacyStatementName: 'syncObjectStateDropLegacyTable',
     indexStatementNames: ['syncObjectStateSeqIndex', 'syncObjectStateTypeSeqIndex'],
+    indexStatementsErrorMessage: 'Failed to create sync object state indexes.',
+    indexStatementErrorMessage: 'Failed to create sync object state index.',
     legacyRowsErrorMessage: 'Failed to load legacy sync object state rows.',
     legacyRowsQueryName: 'migrationLegacySyncObjectStateRows',
     legacyRowsResultKey: 'rows',

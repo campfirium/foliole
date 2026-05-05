@@ -1,10 +1,17 @@
 {
+  "actionKeys": {
+    "errorMessage": "errorMessage",
+    "type": "type"
+  },
   "actionTypes": {
     "addNodeViewStateSourceIfMissing": "addNodeViewStateSourceIfMissing",
     "addSyncBaseContentHashIfMissing": "addSyncBaseContentHashIfMissing",
     "backfillNodeAttachmentsFromVersions": "backfillNodeAttachmentsFromVersions",
     "installSchema": "installSchema",
     "migrateSyncObjectStateSequence": "migrateSyncObjectStateSequence"
+  },
+  "defaultMessages": {
+    "installSchemaErrorMessage": "Failed to install companion schema."
   },
   "plan": [
     {
@@ -115,6 +122,10 @@
       "beforeVersion": 14
     }
   ],
+  "planKeys": {
+    "actions": "actions",
+    "beforeVersion": "beforeVersion"
+  },
   "repairRules": {
     "nodeViewStateSource": {
       "columnName": "source",
@@ -137,6 +148,8 @@
         "syncObjectStateSeqIndex",
         "syncObjectStateTypeSeqIndex"
       ],
+      "indexStatementsErrorMessage": "Failed to create sync object state indexes.",
+      "indexStatementErrorMessage": "Failed to create sync object state index.",
       "legacyRowsErrorMessage": "Failed to load legacy sync object state rows.",
       "legacyRowsQueryName": "migrationLegacySyncObjectStateRows",
       "legacyRowsResultKey": "rows",
