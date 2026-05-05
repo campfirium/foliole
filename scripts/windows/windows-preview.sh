@@ -43,6 +43,10 @@ extract_status_detail() {
   printf '%s\n' "$1" | sed -n 's/^\[windows-restart-client\] //p' | tail -n 1
 }
 
+extract_runtime_pid() {
+  printf '%s\n' "$1" | sed -n 's/.* runtime_pid=\([0-9][0-9]*\).*/\1/p' | head -n 1
+}
+
 extract_intent_nonce() {
   printf '%s\n' "$1" | sed -n 's/.* nonce=\([^[:space:]]*\).*/\1/p' | head -n 1
 }
@@ -104,6 +108,55 @@ has_committed_electron_changes_since() {
   return 1
 }
 
+is_shell_config_file() {
+  local file="$1"
+  # Vite-time config captured at electron-dev.mjs boot. A renderer reload or
+  # runtime-only Electron restart keeps the same Vite process, so these need a
+  # full shell restart to re-run npm run electron:dev from scratch.
+  if echo "${file}" | grep -qE '^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|package\.json|package-lock\.json)$'; then
+    return 0
+  fi
+  return 1
+}
+
+has_shell_config_changes() {
+  local changed_files="$1"
+  while IFS= read -r file; do
+    if is_shell_config_file "${file}"; then
+      return 0
+    fi
+  done <<< "${changed_files}"
+  return 1
+}
+
+has_committed_shell_config_changes_since() {
+  local runtime_head="$1"
+  if [ -n "${WINDOWS_PREVIEW_COMMITTED_SHELL_CONFIG_CHANGES:-}" ]; then
+    [ -n "${WINDOWS_PREVIEW_COMMITTED_SHELL_CONFIG_CHANGES}" ]
+    return
+  fi
+  if [ -z "${runtime_head}" ] || [ -z "${CURRENT_HEAD}" ]; then
+    return 1
+  fi
+  if [ "${runtime_head}" = "${CURRENT_HEAD}" ]; then
+    return 1
+  fi
+  if ! git rev-parse --verify "${runtime_head}^{commit}" >/dev/null 2>&1; then
+    return 0
+  fi
+  local committed_files=""
+  committed_files="$(git diff --name-only "${runtime_head}..${CURRENT_HEAD}")"
+  if [ -z "${committed_files}" ]; then
+    return 1
+  fi
+  while IFS= read -r file; do
+    if is_shell_config_file "${file}"; then
+      return 0
+    fi
+  done <<< "${committed_files}"
+  return 1
+}
+
 CURRENT_HEAD="$(resolve_current_head)"
 
 run_windows_client_action() {
@@ -119,7 +172,7 @@ run_windows_client_action() {
   if [ "${action}" = "start" ]; then
     timeout_seconds="${WINDOWS_PREVIEW_TIMEOUT_START_SECONDS}"
   fi
-  if [ "${action}" = "restart" ]; then
+  if [ "${action}" = "restart" ] || [ "${action}" = "full-restart" ]; then
     timeout_seconds="${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}"
   fi
 
@@ -128,8 +181,9 @@ run_windows_client_action() {
   action_pid=$!
   while kill -0 "${action_pid}" 2>/dev/null; do
     local current_output=""
+    local status_probe_output=""
     current_output="$(cat "${output_file}")"
-    if [ "${action}" = "restart" ] && echo "${current_output}" | grep -qE 'status:\s*RESTARTED'; then
+    if { [ "${action}" = "restart" ] || [ "${action}" = "full-restart" ]; } && echo "${current_output}" | grep -qE 'status:\s*RESTARTED'; then
       kill "${action_pid}" 2>/dev/null || true
       sleep 1
       kill -9 "${action_pid}" 2>/dev/null || true
@@ -150,6 +204,19 @@ run_windows_client_action() {
       sleep 1
       kill -9 "${action_pid}" 2>/dev/null || true
       printf '%s' "${current_output}"
+      rm -f "${output_file}"
+      return 0
+    fi
+    if [ "${action}" = "start" ] &&
+      status_probe_output="$(probe_running_status_detail)"; then
+      kill "${action_pid}" 2>/dev/null || true
+      sleep 1
+      kill -9 "${action_pid}" 2>/dev/null || true
+      if [ -n "${current_output}" ]; then
+        printf '%s\n%s' "${current_output}" "${status_probe_output}"
+      else
+        printf '%s' "${status_probe_output}"
+      fi
       rm -f "${output_file}"
       return 0
     fi
@@ -246,6 +313,28 @@ status_is_stopped() {
   echo "$1" | grep -qE 'status:\s*STOPPED'
 }
 
+status_is_running_trusted() {
+  echo "$1" | grep -qE 'status:\s*RUNNING\b' && echo "$1" | grep -qE 'trust=OK'
+}
+
+status_is_started_or_running_trusted() {
+  echo "$1" | grep -qE 'status:\s*STARTED' || status_is_running_trusted "$1"
+}
+
+probe_running_status_detail() {
+  local status_output=""
+  local status_exit=0
+  set +e
+  status_output="$(run_windows_client_action status)"
+  status_exit=$?
+  set -e
+  if [ "${status_exit}" -eq 0 ] && status_is_running_trusted "${status_output}"; then
+    printf '%s' "${status_output}"
+    return 0
+  fi
+  return 1
+}
+
 select_update_action() {
   local changed_files="$1"
   local status_output=""
@@ -254,6 +343,7 @@ select_update_action() {
   local status_reason=""
 
   SELECTED_STATUS_DETAIL=""
+  SELECTED_RUNTIME_PID=""
 
   set +e
   status_output="$(run_windows_client_action status)"
@@ -262,7 +352,18 @@ select_update_action() {
 
   if [ "${status_exit}" -eq 0 ] && status_is_running "${status_output}"; then
     SELECTED_STATUS_DETAIL="$(extract_status_detail "${status_output}")"
+    SELECTED_RUNTIME_PID="$(extract_runtime_pid "${status_output}")"
     runtime_head="$(extract_runtime_head "${status_output}")"
+    if has_shell_config_changes "${changed_files}"; then
+      SELECTED_ACTION="full-restart"
+      SELECTED_REASON="Class D: working tree shell/vite config changes detected"
+      return 0
+    fi
+    if has_committed_shell_config_changes_since "${runtime_head}"; then
+      SELECTED_ACTION="full-restart"
+      SELECTED_REASON="Class D: runtime behind committed shell/vite config changes"
+      return 0
+    fi
     if has_runtime_code_changes "${changed_files}"; then
       SELECTED_ACTION="restart-intent"
       SELECTED_REASON="Class B: working tree electron changes detected"
@@ -386,9 +487,56 @@ wait_for_running_status() {
   return 1
 }
 
+restart_ready_can_use_existing_markers() {
+  local requested_at="$1"
+  local previous_runtime_pid="${2:-}"
+  local boot_ready_path=""
+  local bridge_ready_path=""
+  local boot_timestamp=""
+  local bridge_timestamp=""
+  local status_output=""
+  local status_exit=0
+  local current_runtime_pid=""
+  local runtime_head=""
+
+  boot_ready_path="$(resolve_boot_ready_path)"
+  bridge_ready_path="$(resolve_bridge_ready_path)"
+  set +e
+  boot_timestamp="$(read_json_field "${boot_ready_path}" timestamp 2>/dev/null)"
+  local boot_exit=$?
+  bridge_timestamp="$(read_json_field "${bridge_ready_path}" timestamp 2>/dev/null)"
+  local bridge_exit=$?
+  status_output="$(run_windows_client_action status)"
+  status_exit=$?
+  set -e
+
+  if [ "${boot_exit}" -ne 0 ] || [ "${bridge_exit}" -ne 0 ]; then
+    return 1
+  fi
+  if [ "${status_exit}" -ne 0 ] || ! status_is_running_trusted "${status_output}"; then
+    return 1
+  fi
+
+  current_runtime_pid="$(extract_runtime_pid "${status_output}")"
+  runtime_head="$(extract_runtime_head "${status_output}")"
+
+  if [ -n "${previous_runtime_pid}" ] && [ -n "${current_runtime_pid}" ] && [ "${current_runtime_pid}" != "${previous_runtime_pid}" ]; then
+    echo "[windows-preview] restart markers accepted via trusted running status runtime_pid=${current_runtime_pid} boot=${boot_timestamp} bridge=${bridge_timestamp}"
+    return 0
+  fi
+
+  if [ -n "${CURRENT_HEAD}" ] && [ -n "${runtime_head}" ] && [ "${runtime_head}" = "${CURRENT_HEAD}" ]; then
+    echo "[windows-preview] restart markers accepted via trusted running current head=${runtime_head} boot=${boot_timestamp} bridge=${bridge_timestamp}"
+    return 0
+  fi
+
+  return 1
+}
+
 wait_for_restart_ready_markers() {
   local requested_at="$1"
   local timeout_seconds="$2"
+  local previous_runtime_pid="${3:-}"
   local boot_ready_path
   local bridge_ready_path
   local elapsed_seconds=0
@@ -409,6 +557,9 @@ wait_for_restart_ready_markers() {
       iso_timestamp_gte "${boot_timestamp}" "${requested_at}" &&
       iso_timestamp_gte "${bridge_timestamp}" "${requested_at}"; then
       echo "[windows-preview] restart markers updated boot=${boot_timestamp} bridge=${bridge_timestamp}"
+      return 0
+    fi
+    if restart_ready_can_use_existing_markers "${requested_at}" "${previous_runtime_pid}"; then
       return 0
     fi
     sleep 1
@@ -505,7 +656,7 @@ run_restart_intent() {
       echo "[windows-preview] restart delivery missing requestedAt nonce=${restart_nonce}"
       return 1
     fi
-    if ! wait_for_restart_ready_markers "${requested_at}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}"; then
+    if ! wait_for_restart_ready_markers "${requested_at}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" "${SELECTED_RUNTIME_PID:-}"; then
       echo "[windows-preview] restart markers missing after intent delivery; falling back to direct restart"
       run_direct_restart
       return $?
@@ -533,13 +684,33 @@ run_fallback_start() {
   start_output="$(run_windows_client_action start)"
   start_exit=$?
   set -e
-  if [ "${start_exit}" -eq 0 ] && echo "${start_output}" | grep -qE 'status:\s*STARTED'; then
+  if [ "${start_exit}" -eq 0 ] && status_is_started_or_running_trusted "${start_output}"; then
     echo "[windows-preview] status: STARTED"
     return 0
   fi
   echo "[windows-preview] fallback start failed"
   if [ -n "${start_output}" ]; then
     echo "${start_output}"
+  fi
+  return 1
+}
+
+run_full_restart() {
+  local output=""
+  local exit_code=0
+  echo "[windows-preview] selected action: full-restart"
+  set +e
+  output="$(run_windows_client_action full-restart)"
+  exit_code=$?
+  set -e
+  if [ "${exit_code}" -eq 0 ] && echo "${output}" | grep -qE 'status:\s*RESTARTED'; then
+    echo "${output}"
+    echo "[windows-preview] status: STARTED"
+    return 0
+  fi
+  echo "[windows-preview] full restart failed"
+  if [ -n "${output}" ]; then
+    echo "${output}"
   fi
   return 1
 }
@@ -606,6 +777,9 @@ case "${SELECTED_ACTION}" in
     ;;
   restart-intent)
     run_restart_intent
+    ;;
+  full-restart)
+    run_full_restart
     ;;
   fallback-start)
     run_fallback_start

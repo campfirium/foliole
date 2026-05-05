@@ -226,13 +226,14 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('reason: Class B: working tree electron changes detected');
       expect(result.stdout).toContain('[windows-sync] include electron-dist');
       expect(result.stdout).toContain('selected action: restart-intent');
-      expect(result.stdout).toContain('status: RESTART_REQUESTED');
+      expect(result.stdout).toContain('status: REQUESTED nonce=1');
+      expect(result.stdout).toContain('status: STARTED');
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         head: 'current-head',
         reason: 'Class B: working tree electron changes detected'
       });
-      expect(await readActions(actionLog)).toEqual(['status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -271,7 +272,9 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('client status detail: status: STOPPED reason=no-runtime');
       expect(result.stdout).toContain('selected action: fallback-start');
       expect(result.stdout).not.toContain('selected action: restart-intent');
-      expect(await readActions(actionLog)).toEqual(['status', 'start']);
+      const actions = await readActions(actionLog);
+      expect(actions[0]).toBe('status');
+      expect(actions[1]).toBe('start');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

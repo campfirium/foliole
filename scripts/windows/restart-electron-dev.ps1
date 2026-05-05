@@ -1,5 +1,5 @@
 param(
-  [ValidateSet("status", "start", "stop", "restart")]
+  [ValidateSet("status", "start", "stop", "restart", "full-restart")]
   [string]$Action = "status",
   [string]$WindowsWorkDir = "C:\dev\foliole",
   [string]$PidFile = "$env:TEMP\foliole-electron-dev.pid",
@@ -29,6 +29,22 @@ function Get-HealthCheckSeconds {
     return $value
   } catch {
     return 90
+  }
+}
+
+function Get-TaskkillTimeoutSeconds {
+  $raw = $env:FOLIOLE_TASKKILL_TIMEOUT_SECONDS
+  if ([string]::IsNullOrWhiteSpace($raw)) {
+    return 15
+  }
+  try {
+    $value = [int]$raw
+    if ($value -lt 1) {
+      return 1
+    }
+    return $value
+  } catch {
+    return 15
   }
 }
 
@@ -612,7 +628,20 @@ function Stop-ProcessTree {
   if ($ProcessId -le 0) {
     return
   }
-  Start-Process -FilePath "taskkill.exe" -ArgumentList "/PID", "$ProcessId", "/T", "/F" -NoNewWindow -Wait -ErrorAction SilentlyContinue
+
+  $taskkill = $null
+  try {
+    $taskkill = Start-Process -FilePath "taskkill.exe" -ArgumentList "/PID", "$ProcessId", "/T", "/F" -NoNewWindow -PassThru -ErrorAction Stop
+    Wait-Process -Id $taskkill.Id -Timeout (Get-TaskkillTimeoutSeconds) -ErrorAction SilentlyContinue
+    $taskkill.Refresh()
+    if (-not $taskkill.HasExited) {
+      Write-Info "taskkill timeout pid=$ProcessId helper_pid=$($taskkill.Id)"
+      Stop-Process -Id $taskkill.Id -Force -ErrorAction SilentlyContinue
+    }
+  } catch {
+    Write-Info "taskkill launch failed pid=$ProcessId reason=$($_.Exception.Message)"
+  }
+
   Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
 }
 
@@ -1259,5 +1288,19 @@ if ($Action -eq "restart") {
     $shellPidInfo = " shell_pid=$($tracked.Id)"
   }
   Write-Info "status: RESTARTED mode=runtime-only old_runtime_pid=$($restarted.oldRuntimePid) runtime_pid=$($restarted.runtimePid) renderer_url=$($restarted.rendererUrl)$shellPidInfo"
+  exit 0
+}
+
+if ($Action -eq "full-restart") {
+  Stop-Electron
+  try {
+    $started = Start-ElectronWithHealthCheck -WorkDir $WindowsWorkDir
+  } catch {
+    Write-Info "status: RESTART_FAILED reason=$($_.Exception.Message)"
+    exit 1
+  }
+  Save-TrackedRuntimePid -ProcessId $started.runtimePid
+  Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WindowsWorkDir)
+  Write-Info "status: RESTARTED mode=full-shell-restart shell_pid=$($started.shellPid) runtime_pid=$($started.runtimePid)"
   exit 0
 }

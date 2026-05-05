@@ -56,4 +56,13 @@ describe('restart-electron-dev script', () => {
     expect(script).toContain('if ($runtimeCandidates.Count -eq 1) {');
     expect(script).toContain('$runtime = $runtimeCandidates[0]');
   });
+
+  it('bounds taskkill waits so full restarts cannot hang indefinitely on process teardown', async () => {
+    const script = await readFile(SCRIPT_PATH, 'utf8');
+
+    expect(script).toContain('function Get-TaskkillTimeoutSeconds');
+    expect(script).toContain('Start-Process -FilePath "taskkill.exe"');
+    expect(script).toContain('Wait-Process -Id $taskkill.Id -Timeout (Get-TaskkillTimeoutSeconds)');
+    expect(script).toContain('taskkill timeout pid=');
+  });
 });
