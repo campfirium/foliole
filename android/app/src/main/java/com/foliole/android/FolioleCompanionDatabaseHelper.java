@@ -22,7 +22,6 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     private static final String DEVICE_ID_KEY = "device_id";
     private static final String WORKSPACE_SYNC_ENDPOINT_URL_KEY = "workspace_sync_endpoint_url";
     private static final String WORKSPACE_SYNC_LAST_SYNCED_AT_KEY = "workspace_sync_last_synced_at";
-    private static final String WORKSPACE_SYNC_SNAPSHOT_JSON_KEY = "workspace_sync_snapshot_json";
     private final Context context;
 
     FolioleCompanionDatabaseHelper(Context context) {
@@ -56,11 +55,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     FolioleCompanionBootstrapState loadBootstrapState(Context context) {
         SQLiteDatabase database = getWritableDatabase();
         String now = Instant.now().toString();
-        String deviceId = loadMetaValue(database, DEVICE_ID_KEY);
-        if (deviceId == null) {
-          deviceId = "android-" + UUID.randomUUID();
-          saveMetaValue(database, DEVICE_ID_KEY, deviceId, now);
-        }
+        String deviceId = loadOrCreateDeviceId(database, now);
         File databaseFile = context.getDatabasePath(DATABASE_NAME);
         return new FolioleCompanionBootstrapState(now, databaseFile.getAbsolutePath(), true, deviceId);
     }
@@ -70,15 +65,11 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         JSObject result = new JSObject();
         String endpointUrl = loadMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
         String lastSyncedAt = loadMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY);
-        String snapshotJson = loadMetaValue(database, WORKSPACE_SYNC_SNAPSHOT_JSON_KEY);
+        JSObject workspaceSnapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database);
 
         result.put("endpoint_url", endpointUrl);
         result.put("last_synced_at", lastSyncedAt);
-        if (snapshotJson == null || snapshotJson.trim().isEmpty() || "null".equals(snapshotJson.trim())) {
-            result.put("workspace_snapshot", null);
-            return result;
-        }
-        result.put("workspace_snapshot", new JSONObject(snapshotJson));
+        result.put("workspace_snapshot", workspaceSnapshot);
         return result;
     }
 
@@ -98,18 +89,52 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         FolioleCompanionSnapshotImporter.replaceWorkspaceSnapshot(database, workspaceSnapshotJson, lastSyncedAt);
         saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, endpointUrl.trim(), lastSyncedAt);
         saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, lastSyncedAt.trim(), lastSyncedAt);
-        saveMetaValue(
-            database,
-            WORKSPACE_SYNC_SNAPSHOT_JSON_KEY,
-            workspaceSnapshotJson == null || workspaceSnapshotJson.trim().isEmpty() ? "null" : workspaceSnapshotJson,
-            lastSyncedAt
-        );
         return loadWorkspaceSyncState();
+    }
+
+    JSObject replaceWorkspaceNode(String endpointUrl, String lastSyncedAt, String nodeId, String nodeSnapshotJson) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        database.beginTransaction();
+        try {
+            String deviceId = loadOrCreateDeviceId(database, lastSyncedAt);
+            FolioleCompanionNodeSnapshotWriter.upsertNodeSnapshot(
+                database,
+                nodeId,
+                new JSONObject(nodeSnapshotJson),
+                lastSyncedAt,
+                true,
+                deviceId
+            );
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+        saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, endpointUrl.trim(), lastSyncedAt);
+        saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, lastSyncedAt.trim(), lastSyncedAt);
+        return loadWorkspaceSyncState();
+    }
+
+    JSObject loadDirtyNodes() throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        String now = Instant.now().toString();
+        String deviceId = loadOrCreateDeviceId(database, now);
+        String lastSyncedAt = loadMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY);
+        return FolioleCompanionDirtyNodeExport.loadDirtyNodes(database, deviceId, lastSyncedAt);
     }
 
     JSObject loadReadableArticle() {
         SQLiteDatabase database = getWritableDatabase();
         return FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+    }
+
+    private String loadOrCreateDeviceId(SQLiteDatabase database, String now) {
+        String deviceId = loadMetaValue(database, DEVICE_ID_KEY);
+        if (deviceId != null) {
+            return deviceId;
+        }
+        String nextDeviceId = "android-" + UUID.randomUUID();
+        saveMetaValue(database, DEVICE_ID_KEY, nextDeviceId, now);
+        return nextDeviceId;
     }
 
     private String loadMetaValue(SQLiteDatabase database, String key) {

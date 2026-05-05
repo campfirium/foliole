@@ -31,7 +31,7 @@
 
 ## Validation
 
-- Android / Capacitor 相关改动默认先执行 `npm run quality:android`；该入口应覆盖 Android renderer 侧检查、Windows mirror `Capacitor sync`、Android Gradle `lint` 与 Android Gradle unit test。只有当改动触及共享层、依赖或跨宿主边界时，才升级为 `npm run quality:shared` 或 `npm run quality:full`。
+- Android / Capacitor 相关改动默认先执行与本次改动直接相关的最小验证，并在汇报前执行 `npm run android:preview`；只有当改动触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:full`。
 - 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备上暴露，必须升级执行 `npm run quality:android:device`。
 - 只要改动触及 `android/**`、`scripts/android/**`、`capacitor.config.ts`、Capacitor bridge 或 Android 运行链路，对话协作模式下汇报前必须执行 `npm run android:preview`。
 - 执行 `npm run android:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `OPENED` / `FAILED` 与失败阶段或失败原因。

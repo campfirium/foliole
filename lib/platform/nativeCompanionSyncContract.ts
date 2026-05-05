@@ -6,6 +6,20 @@ export interface NativeCompanionWorkspaceSyncState {
   workspace_snapshot: WorkspaceSnapshot | null;
 }
 
+export interface NativeCompanionDirtyNodeRecord {
+  device_id: string;
+  object_id: string;
+  object_type: 'node';
+  snapshot: NonNullable<WorkspaceSnapshot['nodesById'][string]>;
+  updated_at: string;
+}
+
+export interface NativeCompanionDirtyNodePayload {
+  device_id: string;
+  last_synced_at: string | null;
+  nodes: NativeCompanionDirtyNodeRecord[];
+}
+
 export interface NativeCompanionReadableArticlePayload {
   readable_article: {
     content: string;

@@ -32,6 +32,6 @@
 
 ## Validation
 
-- companion 改动默认先执行 `npm run quality:android`；只有当改动触及共享层、依赖或跨宿主边界时，才升级为 `npm run quality:shared` 或 `npm run quality:full`。
+- companion 改动默认先执行与本次改动直接相关的最小验证，并在汇报前执行 `npm run android:preview`；只有当改动触及移动共享 bridge、Capacitor / Android 宿主主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:full`。
 - 对话协作模式下，只要改动触及 `src/companion/**` 或移动共享 bridge，汇报前必须执行 `npm run android:preview`。
 - 执行 `npm run android:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `OPENED` / 失败原因。

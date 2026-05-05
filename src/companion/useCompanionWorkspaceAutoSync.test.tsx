@@ -57,6 +57,7 @@ describe('useForegroundAutoSync', () => {
     subscribeNativeAppForeground.mockResolvedValue(() => undefined);
     const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
     const tryForegroundAutoSync = vi.fn(async () => undefined);
+    const initialProps: { endpointUrl: string | null } = { endpointUrl: null };
 
     const { rerender } = renderHook(
       ({ endpointUrl }: { endpointUrl: string | null }) =>
@@ -72,7 +73,7 @@ describe('useForegroundAutoSync', () => {
           },
           tryForegroundAutoSync
         ),
-      { initialProps: { endpointUrl: null } }
+      { initialProps }
     );
 
     expect(tryForegroundAutoSync).not.toHaveBeenCalled();

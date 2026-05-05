@@ -1,0 +1,210 @@
+package com.foliole.android;
+
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+
+import com.getcapacitor.JSObject;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+final class FolioleCompanionWorkspaceSnapshotExporter {
+
+    private static final String ACTIVE_NODE_META_KEY = "active_node_id";
+    private static final String UNTITLED_SEQUENCE_META_KEY = "untitled_sequence_by_parent";
+
+    private FolioleCompanionWorkspaceSnapshotExporter() {}
+
+    static JSObject loadWorkspaceSnapshot(SQLiteDatabase database) throws JSONException {
+        JSONArray orderedNodeIds = loadOrderedNodeIds(database);
+        if (orderedNodeIds.length() == 0) {
+            return null;
+        }
+
+        JSObject nodesById = new JSObject();
+        JSONArray trashedNodeIds = new JSONArray();
+        String firstActiveNodeId = null;
+
+        try (Cursor cursor = database.rawQuery(
+            "SELECT " +
+                "n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.title, n.is_title_manual, " +
+                "n.hide_title_heading, n.content, n.opening_text, n.virtual_filter, n.reveal, n.anchor_link, " +
+                "n.image_regions, n.created_at, n.updated_at, n.deleted_at, " +
+                "rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority, " +
+                "rd.reading_position, rd.repetition_count, rd.state, " +
+                "nr.due, nr.last_review_at, nr.state, nr.stability, nr.difficulty, nr.elapsed_days, " +
+                "nr.scheduled_days, nr.reps, nr.lapses " +
+            "FROM nodes n " +
+            "LEFT JOIN node_reading rd ON rd.node_id = n.id " +
+            "LEFT JOIN node_review nr ON nr.node_id = n.id " +
+            "ORDER BY CASE WHEN EXISTS (SELECT 1 FROM node_order no WHERE no.node_id = n.id) THEN 0 ELSE 1 END, " +
+                "(SELECT no.position FROM node_order no WHERE no.node_id = n.id), n.created_at ASC",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                String nodeId = cursor.getString(0);
+                String deletedAt = cursor.isNull(16) ? null : cursor.getString(16);
+                if (deletedAt != null) {
+                    trashedNodeIds.put(nodeId);
+                } else if (firstActiveNodeId == null) {
+                    firstActiveNodeId = nodeId;
+                }
+                nodesById.put(nodeId, buildNode(cursor, deletedAt));
+            }
+        }
+
+        if (nodesById.length() == 0) {
+            return null;
+        }
+
+        JSObject snapshot = new JSObject();
+        snapshot.put("activeNodeId", resolveActiveNodeId(database, nodesById, trashedNodeIds, firstActiveNodeId));
+        snapshot.put("nodeOrder", orderedNodeIds);
+        snapshot.put("nodesById", nodesById);
+        snapshot.put("trashedNodeIds", trashedNodeIds);
+        snapshot.put("untitledSequenceByParent", loadUntitledSequenceByParent(database));
+        return snapshot;
+    }
+
+    private static JSONArray loadOrderedNodeIds(SQLiteDatabase database) {
+        JSONArray result = new JSONArray();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT n.id " +
+            "FROM nodes n " +
+            "LEFT JOIN node_order no ON no.node_id = n.id " +
+            "ORDER BY CASE WHEN no.position IS NULL THEN 1 ELSE 0 END, no.position ASC, n.created_at ASC",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                result.put(cursor.getString(0));
+            }
+        }
+        return result;
+    }
+
+    private static JSObject buildNode(Cursor cursor, String deletedAt) throws JSONException {
+        JSObject node = new JSObject();
+        node.put("id", cursor.getString(0));
+        node.put("parentNodeId", cursor.isNull(1) ? null : cursor.getString(1));
+        node.put("kind", normalizeKind(cursor.isNull(2) ? null : cursor.getString(2)));
+        if (!cursor.isNull(3)) {
+            node.put("priority", cursor.getInt(3));
+        }
+        if (!cursor.isNull(4)) {
+            node.put("desiredRetention", cursor.getDouble(4));
+        }
+        node.put("title", normalizeTitle(cursor.isNull(5) ? null : cursor.getString(5)));
+        node.put("isTitleManual", cursor.getInt(6) == 1);
+        node.put("hideTitleHeading", cursor.getInt(7) == 1);
+        node.put("content", cursor.getString(8));
+        node.put("openingText", cursor.isNull(9) ? null : cursor.getString(9));
+        node.put("virtualFilter", FolioleCompanionJsonValueParser.parse(cursor.isNull(10) ? null : cursor.getString(10)));
+        node.put("reveal", cursor.isNull(11) ? null : cursor.getString(11));
+        node.put("anchorLink", FolioleCompanionJsonValueParser.parse(cursor.isNull(12) ? null : cursor.getString(12)));
+        node.put("imageRegions", FolioleCompanionJsonValueParser.parse(cursor.isNull(13) ? null : cursor.getString(13)));
+        node.put("reading", buildReading(cursor));
+        node.put("review", buildReview(cursor));
+        node.put("createdAt", cursor.getString(14));
+        node.put("updatedAt", cursor.getString(15));
+        if (deletedAt != null) {
+            node.put("deletedAt", deletedAt);
+        }
+        return node;
+    }
+
+    private static Object buildReading(Cursor cursor) {
+        if (cursor.isNull(19) || cursor.isNull(20) || cursor.isNull(24)) {
+            return null;
+        }
+        String state = cursor.getString(24);
+        if (!"active".equals(state) && !"done".equals(state) && !"dismissed".equals(state)) {
+            return null;
+        }
+        JSObject reading = new JSObject();
+        reading.put("intervalDurationMs", cursor.isNull(17) ? 0 : cursor.getLong(17));
+        reading.put("intervalGrowthFactor", cursor.isNull(18) ? 1 : cursor.getDouble(18));
+        reading.put("lastHandledAt", cursor.getString(19));
+        reading.put("nextAt", cursor.getString(20));
+        reading.put("priority", cursor.isNull(21) ? 0 : cursor.getDouble(21));
+        reading.put("readingPosition", cursor.isNull(22) ? 0 : cursor.getLong(22));
+        reading.put("repetitionCount", cursor.isNull(23) ? 0 : cursor.getLong(23));
+        reading.put("state", state);
+        return reading;
+    }
+
+    private static Object buildReview(Cursor cursor) {
+        if (cursor.isNull(25)) {
+            return null;
+        }
+        JSObject review = new JSObject();
+        review.put("due", cursor.getString(25));
+        review.put("lastReviewAt", cursor.isNull(26) ? null : cursor.getString(26));
+        review.put("state", cursor.isNull(27) ? 0 : cursor.getInt(27));
+        review.put("stability", cursor.isNull(28) ? 0 : cursor.getDouble(28));
+        review.put("difficulty", cursor.isNull(29) ? 0 : cursor.getDouble(29));
+        review.put("elapsedDays", cursor.isNull(30) ? 0 : cursor.getInt(30));
+        review.put("scheduledDays", cursor.isNull(31) ? 0 : cursor.getInt(31));
+        review.put("reps", cursor.isNull(32) ? 0 : cursor.getInt(32));
+        review.put("lapses", cursor.isNull(33) ? 0 : cursor.getInt(33));
+        return review;
+    }
+
+    private static String resolveActiveNodeId(
+        SQLiteDatabase database,
+        JSObject nodesById,
+        JSONArray trashedNodeIds,
+        String fallbackActiveNodeId
+    ) {
+        String persistedActiveNodeId = loadWorkspaceMetaValue(database, ACTIVE_NODE_META_KEY);
+        if (persistedActiveNodeId != null && nodesById.has(persistedActiveNodeId) && !contains(trashedNodeIds, persistedActiveNodeId)) {
+            return persistedActiveNodeId;
+        }
+        return fallbackActiveNodeId;
+    }
+
+    private static JSObject loadUntitledSequenceByParent(SQLiteDatabase database) throws JSONException {
+        String rawValue = loadWorkspaceMetaValue(database, UNTITLED_SEQUENCE_META_KEY);
+        if (rawValue == null || rawValue.trim().isEmpty()) {
+            return new JSObject();
+        }
+        Object parsed = FolioleCompanionJsonValueParser.parse(rawValue);
+        return parsed instanceof JSONObject ? new JSObject(rawValue) : new JSObject();
+    }
+
+    private static String loadWorkspaceMetaValue(SQLiteDatabase database, String key) {
+        try (Cursor cursor = database.query(
+            "workspace_meta",
+            new String[] { "value" },
+            "key = ?",
+            new String[] { key },
+            null,
+            null,
+            null,
+            "1"
+        )) {
+            if (!cursor.moveToFirst()) {
+                return null;
+            }
+            String value = cursor.getString(0);
+            return value == null || value.trim().isEmpty() ? null : value;
+        }
+    }
+
+    private static boolean contains(JSONArray values, String target) {
+        for (int index = 0; index < values.length(); index += 1) {
+            if (target.equals(values.optString(index, null))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String normalizeKind(String kind) {
+        return "item".equals(kind) || "topic".equals(kind) ? kind : "topic";
+    }
+
+    private static String normalizeTitle(String title) {
+        return title == null || title.trim().isEmpty() ? "Untitled" : title.trim();
+    }
+}

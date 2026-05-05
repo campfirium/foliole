@@ -2,6 +2,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
 
+const capacitorMock = vi.hoisted(() => ({
+  getPlatform: vi.fn(() => 'web'),
+  isNativePlatform: vi.fn(() => false),
+  plugin: {
+    loadReadableArticle: vi.fn(),
+    loadWorkspaceSyncState: vi.fn(),
+    replaceWorkspaceNode: vi.fn(),
+    replaceWorkspaceSnapshot: vi.fn(),
+    saveWorkspaceSyncEndpoint: vi.fn()
+  }
+}));
+
+vi.mock('@capacitor/core', () => ({
+  Capacitor: {
+    getPlatform: capacitorMock.getPlatform,
+    isNativePlatform: capacitorMock.isNativePlatform
+  },
+  registerPlugin: vi.fn(() => capacitorMock.plugin)
+}));
+
 import {
   loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
@@ -98,7 +118,10 @@ function createUpdatedStoredSnapshot() {
 
 function resetCompanionWorkspaceSyncTestState() {
   window.localStorage.clear();
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  capacitorMock.getPlatform.mockReturnValue('web');
+  capacitorMock.isNativePlatform.mockReturnValue(false);
 }
 
 function registerEndpointPersistenceTest() {
@@ -193,6 +216,30 @@ function registerSnapshotPersistenceTest() {
         due: '2026-04-25T12:00:00.000Z'
       }
     });
+  });
+
+  it('persists native companion review updates through the single-node bridge', async () => {
+    const updatedSnapshot = createUpdatedStoredSnapshot();
+    capacitorMock.getPlatform.mockReturnValue('android');
+    capacitorMock.isNativePlatform.mockReturnValue(true);
+    capacitorMock.plugin.replaceWorkspaceNode.mockResolvedValue({
+      endpoint_url: updatedSnapshot.endpointUrl,
+      last_synced_at: updatedSnapshot.lastSyncedAt,
+      workspace_snapshot: updatedSnapshot.workspaceSnapshot
+    });
+
+    await persistCompanionWorkspaceSnapshot({
+      ...updatedSnapshot,
+      changedNodeId: 'node-1'
+    });
+
+    expect(capacitorMock.plugin.replaceWorkspaceNode).toHaveBeenCalledWith({
+      endpoint_url: 'http://10.0.2.2:38641',
+      last_synced_at: '2026-04-22T12:00:00.000Z',
+      node_id: 'node-1',
+      node_snapshot_json: JSON.stringify(updatedSnapshot.workspaceSnapshot.nodesById['node-1'])
+    });
+    expect(capacitorMock.plugin.replaceWorkspaceSnapshot).not.toHaveBeenCalled();
   });
 }
 

@@ -48,49 +48,51 @@ const baseNode = {
   updatedAt: ''
 };
 
-const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
-  activeNodeId: 'node-1',
-  canGoBack: true,
-  canGoForward: true,
-  canGoParent: false,
-  contextMenu: null,
-  documentMaxWidth: 760,
-  editableNodeId: 'node-1',
-  editorAppearanceKey: 'appearance-1',
-  editorContent: '# Node 1',
-  isEditorReadOnly: false,
-  editorNodeId: 'node-1',
-  editorNodeViewState: undefined,
-  isDocumentResizing: false,
-  nodeOrder: ['node-1'],
-  trashedNodeIds: [],
-  nodesById: { 'node-1': baseNode },
-  onAnswerChange: () => undefined,
-  onCloseContextMenu: () => undefined,
-  onCopyImage: () => undefined,
-  onCreateCloze: () => undefined,
-  onCreateHighlight: () => undefined,
-  onCreatePdfHighlight: () => false,
-  onCutImage: () => undefined,
-  onDeleteImage: () => undefined,
-  onEditorChange: () => undefined,
-  onNodeContentChange: () => undefined,
-  onEditorContextMenu: () => undefined,
-  onEditorReady: () => undefined,
-  onExportImage: () => undefined,
-  onGoBack: () => undefined,
-  onGoForward: () => undefined,
-  onGoParent: () => undefined,
-  onPersistPdfViewState: () => undefined,
-  onResetLayout: () => undefined,
-  onResolveDocumentPositionAtViewportY: () => null,
-  onRevealDocumentPosition: () => undefined,
-  onRevealDocumentSelection: () => undefined,
-  onSelectBreadcrumbNode: () => undefined,
-  onSelectNode: () => undefined,
-  onStartDocumentResize: () => undefined,
-  showAnswerSection: false
-};
+function createDefaultProps(): ComponentProps<typeof DocumentPanelSection> {
+  return {
+    activeNodeId: 'node-1',
+    canGoBack: true,
+    canGoForward: true,
+    canGoParent: false,
+    contextMenu: null,
+    documentMaxWidth: 760,
+    editableNodeId: 'node-1',
+    editorAppearanceKey: 'appearance-1',
+    editorContent: '# Node 1',
+    isEditorReadOnly: false,
+    editorNodeId: 'node-1',
+    editorNodeViewState: undefined,
+    isDocumentResizing: false,
+    nodeOrder: ['node-1'],
+    trashedNodeIds: [],
+    nodesById: { 'node-1': { ...baseNode } },
+    onAnswerChange: () => undefined,
+    onCloseContextMenu: () => undefined,
+    onCopyImage: () => undefined,
+    onCreateCloze: () => undefined,
+    onCreateHighlight: () => undefined,
+    onCreatePdfHighlight: () => false,
+    onCutImage: () => undefined,
+    onDeleteImage: () => undefined,
+    onEditorChange: () => undefined,
+    onNodeContentChange: () => undefined,
+    onEditorContextMenu: () => undefined,
+    onEditorReady: () => undefined,
+    onExportImage: () => undefined,
+    onGoBack: () => undefined,
+    onGoForward: () => undefined,
+    onGoParent: () => undefined,
+    onPersistPdfViewState: () => undefined,
+    onResetLayout: () => undefined,
+    onResolveDocumentPositionAtViewportY: () => null,
+    onRevealDocumentPosition: () => undefined,
+    onRevealDocumentSelection: () => undefined,
+    onSelectBreadcrumbNode: () => undefined,
+    onSelectNode: () => undefined,
+    onStartDocumentResize: () => undefined,
+    showAnswerSection: false
+  };
+}
 
 beforeEach(() => {
   useNodeSourceDetails.mockReturnValue({
@@ -119,7 +121,7 @@ beforeEach(() => {
 it('writes pdf page and zoom through onPersistPdfViewState callback', async () => {
   const onPersistPdfViewState = vi.fn();
 
-  render(<DocumentPanelSection {...defaultProps} onPersistPdfViewState={onPersistPdfViewState} />);
+  render(<DocumentPanelSection {...createDefaultProps()} onPersistPdfViewState={onPersistPdfViewState} />);
 
   expect(onPersistPdfViewState).not.toHaveBeenCalled();
 
@@ -137,7 +139,7 @@ it('writes pdf page and zoom through onPersistPdfViewState callback', async () =
 it('keeps fit width as the default persisted zoom mode for a new pdf', async () => {
   const onPersistPdfViewState = vi.fn();
 
-  render(<DocumentPanelSection {...defaultProps} onPersistPdfViewState={onPersistPdfViewState} />);
+  render(<DocumentPanelSection {...createDefaultProps()} onPersistPdfViewState={onPersistPdfViewState} />);
 
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF page' })).toBeInTheDocument());
   fireEvent.change(screen.getByRole('textbox', { name: 'PDF page' }), {

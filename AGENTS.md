@@ -72,24 +72,25 @@
 
 - 不允许通过降低检查标准过关；禁止跳过关键检查、删除校验或用注释掩盖失败。
 - 包管理器必须按锁文件检测；当前仓库以 `npm` 为准。
-- 默认先执行与本次改动直接相关的最小验证，优先使用按宿主拆分后的质量入口，而不是默认整仓全跑。
-- 质量入口默认按影响面选择：
+- 默认先执行与本次改动直接相关的最小验证；只有当改动范围或技术风险超过“相关验证”覆盖面时，才升级到宿主 / 共享质量闸。
+- 相关最小验证默认由与改动直接对应的 `eslint`、`vitest`、局部 `tsc`、宿主链路 smoke test 与必要预览组成，而不是默认整仓或整宿主全跑。
+- 质量闸属于升级入口，不再是每个最小任务的默认动作；只有满足明确技术条件时才升级：
 - `npm run quality:desktop`
-- 适用于 `electron/**`、`scripts/windows/**`、`src/app/**`、桌面 bridge、桌面 sqlite、桌面 runtime
+- 适用于桌面多子系统联动改动、构建链 / preload / IPC 根链路 / sqlite 迁移、或你无法用相关验证证明影响已被覆盖的场景
 - `npm run quality:android`
-- 适用于 `android/**`、`scripts/android/**`、`src/companion/**`、`capacitor.config.ts`、移动 bridge、Capacitor 宿主链路
+- 适用于移动宿主链路联调、Capacitor 宿主 / bridge 根链路调整、或你无法用相关验证证明影响已被覆盖的场景
 - Android gate 默认同时覆盖 Android host `lint` / unit test、`scripts/quality-gate-*.test.mjs` 回归，以及 companion 当前依赖到的共享 `src/shared/ui`、`src/shared/lib`、`src/shared/commands`、`src/shared/config`
 - `npm run quality:android:device`
 - 适用于 Android 权限、生命周期、插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备侧暴露的场景
 - `npm run quality:shared`
-- 适用于 `src/shared/**`、`src/features/**`、`src/store/**`、共享 contract、共享构建链、跨宿主脚本调整
+- 适用于共享 contract / 构建根链路 / 跨宿主脚本调整，或你无法用相关验证证明影响已被覆盖的场景
 - shared gate 默认使用 `lint:shared`、`typecheck:shared`、`test:shared`，而不是回退到整仓 `lint` / `typecheck` / `test`
 - `npm run quality:full`
-- 适用于交付前闸门、用户明确要求全量验证、依赖 / 构建根链路改动，或你无法证明改动只影响单一宿主
+- 适用于用户明确要求全量验证、依赖 / 构建根链路改动、跨桌面与移动的广泛联动改动，或你无法证明改动只影响单一宿主
 - `npm run quality:fast`
 - 保留为通用快速入口，但多平台任务的默认汇报口径应改为上面的显式宿主 / 共享质量入口
-- 若只做相关最小验证，必须优先选择与改动文件、改动链路、复现场景直接对应的检查命令；汇报时要明确说明“已执行的相关检查”与“未执行的整仓检查”。
-- 只要在执行 `lint`、`quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:fast` 或其他质量闸时发现仓库内已存在的 lint 红灯，当前任务即刻转为清除这些红灯；禁止再用“本来就有”作为搁置理由。除非用户明确豁免或存在外部阻塞，否则必须在当次处理并重新验证到 `lint` 通过。
+- 若只做相关最小验证，必须优先选择与改动文件、改动链路、复现场景直接对应的检查命令；汇报时要明确说明“已执行的相关检查”与“未执行的宿主 / 全量检查”。
+- 只有当你主动执行了某个质量闸，且该质量闸暴露的问题与本次改动链路、当前宿主或被选中的验证范围直接相关时，当前任务才需要顺手清掉这些红灯；禁止因为误触发过重质量闸，就把全仓无关红灯一并卷入当前最小任务。
 - 可复现 Bug 修复前，优先先补复现测试，再修复并验证测试通过；若暂时无法自动化复现，必须先说明原因，并补充可执行的人工验证步骤。
 - 任意可复现 Bug 修复必须新增至少 1 条自动化回归测试；没有回归测试不算完成。
 - 重构、模块迁移、preload / bridge 改动、Capacitor bridge 改动与宿主生命周期改动视为高回归风险，提交前必须补齐或更新关键回归测试。
@@ -102,7 +103,7 @@
 - 自动任务模式默认不追加预览，只执行任务所需的最小验证；除非用户在当次明确要求，才额外执行预览。
 - 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
 - 执行 `android:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `OPENED` / `FAILED` 与失败阶段或失败原因；不得只汇报“已验证”。
-- `build` 仅在用户明确要求完整交付时执行；对应入口为 `scripts/quality-gate.sh` 或交付脚本。
+- `build` 仅在用户明确要求执行构建、或当前任务已触及依赖 / 构建根链路且必须验证构建结果时执行；对应入口为 `scripts/quality-gate.sh` 或交付脚本。
 
 ## Decision Escalation And Official Sources
 

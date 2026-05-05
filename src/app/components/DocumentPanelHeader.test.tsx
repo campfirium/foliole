@@ -25,11 +25,23 @@ it('shows the breadcrumb title without a kind label in the document header', () 
       isFolderListView={false}
       isSourceUpdatePanelOpen={false}
       nodesById={{
+        'topic-1': {
+          id: 'topic-1',
+          kind: 'topic',
+          title: 'Inbox',
+          parentNodeId: null,
+          content: '',
+          anchorLink: null,
+          reveal: null,
+          review: null,
+          createdAt: '',
+          updatedAt: ''
+        },
         'node-1': {
           id: 'node-1',
           kind: 'item',
           title: 'Prompt',
-          parentNodeId: null,
+          parentNodeId: 'topic-1',
           content: 'Q',
           anchorLink: null,
           reveal: 'A',
@@ -51,7 +63,7 @@ it('shows the breadcrumb title without a kind label in the document header', () 
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Prompt' })).toBeInTheDocument();
+  expect(screen.getByText('Inbox')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Priority P5 from the default fallback/i })).toBeInTheDocument();
   expect(screen.queryByText('Item')).not.toBeInTheDocument();
 });

@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
 import type {
+  NativeCompanionDirtyNodePayload,
   CompanionWorkspaceSnapshotPayload,
   CompanionWorkspaceVersionPayload,
   NativeCompanionReadableArticlePayload,
@@ -14,6 +15,7 @@ const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 
 interface CompanionWorkspaceSyncPlugin {
+  loadDirtyNodes(): Promise<NativeCompanionDirtyNodePayload>;
   loadWorkspaceSyncState(): Promise<NativeCompanionWorkspaceSyncState>;
   loadReadableArticle(): Promise<NativeCompanionReadableArticlePayload>;
   saveWorkspaceSyncEndpoint(args: { endpoint_url: string | null }): Promise<NativeCompanionWorkspaceSyncState>;
@@ -21,6 +23,12 @@ interface CompanionWorkspaceSyncPlugin {
     endpoint_url: string;
     last_synced_at: string;
     workspace_snapshot_json: string;
+  }): Promise<NativeCompanionWorkspaceSyncState>;
+  replaceWorkspaceNode(args: {
+    endpoint_url: string;
+    last_synced_at: string;
+    node_id: string;
+    node_snapshot_json: string;
   }): Promise<NativeCompanionWorkspaceSyncState>;
 }
 
@@ -106,11 +114,54 @@ function normalizeReadableArticlePayload(value: unknown): CompanionReadableArtic
   };
 }
 
+function normalizeDirtyNodePayload(value: unknown): NativeCompanionDirtyNodePayload {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {
+      device_id: 'web-preview',
+      last_synced_at: null,
+      nodes: []
+    };
+  }
+  const raw = value as Record<string, unknown>;
+  return {
+    device_id: typeof raw.device_id === 'string' && raw.device_id.trim() ? raw.device_id.trim() : 'web-preview',
+    last_synced_at: typeof raw.last_synced_at === 'string' && raw.last_synced_at.trim() ? raw.last_synced_at.trim() : null,
+    nodes: Array.isArray(raw.nodes)
+      ? raw.nodes.filter((node): node is NativeCompanionDirtyNodePayload['nodes'][number] => {
+          return Boolean(
+            node &&
+            typeof node === 'object' &&
+            !Array.isArray(node) &&
+            typeof (node as { device_id?: unknown }).device_id === 'string' &&
+            typeof (node as { object_id?: unknown }).object_id === 'string' &&
+            (node as { object_type?: unknown }).object_type === 'node' &&
+            typeof (node as { updated_at?: unknown }).updated_at === 'string' &&
+            (node as { snapshot?: unknown }).snapshot &&
+            typeof (node as { snapshot: unknown }).snapshot === 'object' &&
+            !Array.isArray((node as { snapshot: unknown }).snapshot)
+          );
+        })
+      : []
+  };
+}
+
 export async function loadCompanionWorkspaceSyncState() {
   if (!isNativeAndroidCompanionRuntime()) {
     return readWebSyncState();
   }
   return normalizeWorkspaceSyncState(await FolioleCompanionSync.loadWorkspaceSyncState());
+}
+
+export async function loadCompanionDirtyNodes() {
+  if (!isNativeAndroidCompanionRuntime()) {
+    const state = readWebSyncState();
+    return {
+      device_id: 'web-preview',
+      last_synced_at: state.last_synced_at,
+      nodes: []
+    } satisfies NativeCompanionDirtyNodePayload;
+  }
+  return normalizeDirtyNodePayload(await FolioleCompanionSync.loadDirtyNodes());
 }
 
 export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
@@ -172,6 +223,7 @@ export async function pullCompanionWorkspaceSnapshot(endpointUrl: string) {
 }
 
 export async function persistCompanionWorkspaceSnapshot(args: {
+  changedNodeId?: string;
   endpointUrl: string | null;
   lastSyncedAt: string | null;
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
@@ -183,6 +235,18 @@ export async function persistCompanionWorkspaceSnapshot(args: {
 
   const endpointUrl = args.endpointUrl?.trim() ? normalizeEndpointUrl(args.endpointUrl) : 'local://companion';
   const lastSyncedAt = args.lastSyncedAt?.trim() ? args.lastSyncedAt : new Date().toISOString();
+  const changedNode =
+    args.changedNodeId && args.workspaceSnapshot ? args.workspaceSnapshot.nodesById[args.changedNodeId] : null;
+  if (args.changedNodeId && changedNode) {
+    return normalizeWorkspaceSyncState(
+      await FolioleCompanionSync.replaceWorkspaceNode({
+        endpoint_url: endpointUrl,
+        last_synced_at: lastSyncedAt,
+        node_id: args.changedNodeId,
+        node_snapshot_json: JSON.stringify(changedNode)
+      })
+    );
+  }
   return normalizeWorkspaceSyncState(
     await FolioleCompanionSync.replaceWorkspaceSnapshot({
       endpoint_url: endpointUrl,

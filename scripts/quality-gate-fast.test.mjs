@@ -212,7 +212,9 @@ describe('quality-gate-fast.sh', () => {
       }
     );
 
-    expect(result.stdout).toContain('waiting: test still running (1s elapsed');
+    expect(result.stdout).toMatch(
+      /\[quality-gate-fast\] waiting: test still running \([0-9]+s elapsed, peak test memory [0-9]+ KiB\)/
+    );
   }, 15000);
 
   it('applies timeout limits to the lint step too', async () => {
