@@ -182,8 +182,8 @@ function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {
   return [check(
     'completed_event_with_local_work',
     'error',
-    'Latest completed event is not fully converged',
-    `Completed was recorded while ${dirtyCount} dirty change(s), ${pendingAckCount} pending ack(s), ${missingBodies} body blob(s), ${missingAttachments} attachment file(s), and ${lag} structure change(s) remain.`
+    'Latest finished sync pass is not fully converged',
+    `A finished sync pass was recorded while ${dirtyCount} dirty change(s), ${pendingAckCount} pending ack(s), ${missingBodies} body blob(s), ${missingAttachments} attachment file(s), and ${lag} structure change(s) remain.`
   )];
 }
 

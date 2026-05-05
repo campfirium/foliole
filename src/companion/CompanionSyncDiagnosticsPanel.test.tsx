@@ -116,8 +116,8 @@ function expectDiagnosticSummary() {
   expect(screen.getByText('Sync status')).toBeInTheDocument();
   expect(screen.getByText('Convergence check')).toBeInTheDocument();
   expect(screen.getByText('Blocked')).toBeInTheDocument();
-  expect(screen.getByText('Latest completed event is not fully converged')).toBeInTheDocument();
-  expect(screen.getByText('Completed was recorded while 1 dirty change(s), 1 pending ack(s), 5 body blob(s), 2 attachment file(s), and 3 structure change(s) remain.')).toBeInTheDocument();
+  expect(screen.getByText('Latest finished sync pass is not fully converged')).toBeInTheDocument();
+  expect(screen.getByText('A finished sync pass was recorded while 1 dirty change(s), 1 pending ack(s), 5 body blob(s), 2 attachment file(s), and 3 structure change(s) remain.')).toBeInTheDocument();
 }
 
 function expectStageCheckpoint() {
@@ -143,7 +143,7 @@ function expectCheckpointDetails() {
   expect(screen.queryByText('Lagging object types')).not.toBeInTheDocument();
   expect(screen.getByText('2 on device / 2 on desktop')).toBeInTheDocument();
   expect(screen.queryByText('failed: Failed to apply companion desktop sync pack.')).not.toBeInTheDocument();
-  expect(screen.queryByText('A completed event exists, but the Android cursor is still behind desktop.')).not.toBeInTheDocument();
+  expect(screen.queryByText('A finished sync pass exists, but the Android cursor is still behind desktop.')).not.toBeInTheDocument();
 }
 
 function expectAndroidDiagnosticRows() {
@@ -185,9 +185,9 @@ describe('CompanionSyncDiagnosticsPanel', () => {
         status: 'blocked',
         checks: [{
           code: 'completed_event_with_local_work',
-          detail: 'Completed was recorded while 1 dirty change(s) and 1 pending ack(s) remain.',
+          detail: 'A finished sync pass was recorded while 1 dirty change(s) and 1 pending ack(s) remain.',
           severity: 'error',
-          title: 'Latest completed event is not fully converged'
+          title: 'Latest finished sync pass is not fully converged'
         }]
       }
     });
@@ -215,8 +215,8 @@ describe('CompanionSyncDiagnosticsPanel', () => {
 
     await waitFor(() => expect(screen.getByText('Convergence check')).toBeInTheDocument());
     expect(screen.getByText('Blocked')).toBeInTheDocument();
-    expect(screen.getByText('Latest completed event is not fully converged')).toBeInTheDocument();
-    expect(screen.getByText('Completed was recorded while 1 dirty change(s) and 1 pending ack(s) remain.')).toBeInTheDocument();
+    expect(screen.getByText('Latest finished sync pass is not fully converged')).toBeInTheDocument();
+    expect(screen.getByText('A finished sync pass was recorded while 1 dirty change(s) and 1 pending ack(s) remain.')).toBeInTheDocument();
     expect(convergenceMock.runSyncConvergenceCheck).toHaveBeenCalledWith('http://10.0.2.2:38641');
   });
 
