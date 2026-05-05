@@ -13,6 +13,7 @@
 - Android 宿主只消费 `dist/companion` 构建产物；禁止把 Android 原生目录当作第二套业务前端目录。
 - 若某能力既影响 Android 又可能影响未来 iPhone，优先先落到共享 bridge / contract 或 `src/companion/**`，再由 Android 宿主接入。
 - 除原生权限、生命周期、intent、插件接缝与设备集成这类宿主特有能力外，Android 相关需求默认都应先复用或抽取 `src/shared/**` / `src/features/**` / 共享 contract；不得因为入口发生在 Android 就把节点列表、跳转逻辑、浏览语义、状态切换等非原生专属能力落到 Android / companion 私有实现。
+- Android 首轮交付优先验证存储、生命周期、同步入口与真实数据复习闭环；不得先扩展桌面级 UI 宽度或复杂编辑表面。
 - Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
 
 ## Read Before Editing
@@ -35,14 +36,4 @@
 - 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备上暴露，必须升级执行 `npm run quality:android:device`。
 - 只要改动触及 `android/**`、`scripts/android/**`、`capacitor.config.ts`、Capacitor bridge 或 Android 运行链路，对话协作模式下汇报前必须执行 `npm run android:preview`。
 - 执行 `npm run android:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `OPENED` / `FAILED` 与失败阶段或失败原因。
-- Android 宿主公开入口默认使用以下 npm 命令，不直接口头推荐裸命令：
-- `npm run quality:android`
-- `npm run quality:android:device`
-- `npm run android:sync`
-- `npm run android:host:lint`
-- `npm run android:host:test`
-- `npm run android:host:device-test`
-- `npm run android:open`
-- `npm run android:emulator`
-- `npm run android:logcat`
-- `npm run android:preview`
+- Android 宿主公开入口默认使用 `package.json` 中已有的 `npm run quality:android*` 与 `npm run android:*` 脚本，不直接口头推荐裸 Gradle、adb 或 Capacitor 命令。

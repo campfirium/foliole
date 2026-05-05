@@ -33,6 +33,7 @@
 ## Desktop Startup Troubleshooting
 
 - 客户端启动问题，优先排查日志，没有日志则完善日志功能。
+- 判断 Windows Electron runtime 是否可信时，必须以 main path、ready marker、runtime pid、boot session 与 bridge availability 的同轮校验为准；不得用“窗口可见”或“进程存在”替代可信判定。
 
 ## Validation
 

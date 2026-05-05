@@ -27,7 +27,7 @@
 - `src/app/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 desktop renderer 规则
 - `src/features/**`、`src/store/**`、`src/shared/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 shared / cross-host 规则
 - 若一次任务同时跨多个宿主或表面，必须把相关局部 `AGENTS.md` 全部读齐；冲突时按“更靠近改动目录的规则优先，跨目录共享规则回退到根规则”执行。
-- 不得把关键平台约束只写在 spec 里却不写进对应目录 `AGENTS.md`。
+- 关键平台约束必须落在根或对应目录 `AGENTS.md`，不得只放在普通项目文档里。
 
 ## Document Read Order
 
@@ -35,7 +35,7 @@
 - 任务涉及 renderer UI 改动（`src/app/**`、`src/companion/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须先读取 `DESIGN.md`，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
 - 任务涉及 UI 文案、产品对象命名、空状态、按钮、菜单、队列与阅读单元称呼时，实施前必须读取 `.lab/specs/_product/terminology-and-copy.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
-- 任务涉及新增或重写 agent 规则、目录式 `AGENTS.md`、规则路由或治理结构时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
+- 任务涉及新增、重写或审计 agent 规则时，按 `$agents-maintainer` 流程只审根与局部 `AGENTS.md`；不默认扫描其他项目文档。
 - 仅在判断验证或停车策略时读取 `.lab/internal/runtime/windows-preview.flag` 与 `.lab/internal/runtime/park.flag`。
 
 ## Task Execution
@@ -67,22 +67,11 @@
 - 当前仓库没有强制 git hooks / CI 兜底；质量闸由执行者按任务范围主动选择并运行，不得假设提交或推送时会自动补跑。
 - 默认先执行与本次改动直接相关的最小验证；只有当改动范围或技术风险超过“相关验证”覆盖面时，才升级到宿主 / 共享质量闸。
 - 相关最小验证默认由与改动直接对应的 `eslint`、`vitest`、局部 `tsc`、宿主链路 smoke test 与必要预览组成，而不是默认整仓或整宿主全跑。
-- 质量闸属于升级入口，不再是每个最小任务的默认动作；只有满足明确技术条件时才升级：
-- `npm run quality:desktop`
-- 适用于桌面多子系统联动改动、构建链 / preload / IPC 根链路 / sqlite 迁移、或你无法用相关验证证明影响已被覆盖的场景
-- `npm run quality:android`
-- 适用于移动宿主链路联调、Capacitor 宿主 / bridge 根链路调整、或你无法用相关验证证明影响已被覆盖的场景
-- Android gate 默认同时覆盖 Android host `lint` / unit test、`scripts/quality-gate-*.test.mjs` 回归，以及 companion 当前依赖到的共享 `src/shared/ui`、`src/shared/lib`、`src/shared/commands`、`src/shared/config`
-- `npm run quality:android:device`
-- 适用于 Android 权限、生命周期、插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备侧暴露的场景
-- `npm run quality:shared`
-- 适用于共享 contract / 构建根链路 / 跨宿主脚本调整，或你无法用相关验证证明影响已被覆盖的场景
-- shared gate 默认使用 `lint:shared`、`typecheck:shared`、`test:shared`，而不是回退到整仓 `lint` / `typecheck` / `test`
-- `npm run quality:full`
-- 适用于用户明确要求全量验证、依赖 / 构建根链路改动、跨桌面与移动的广泛联动改动，或你无法证明改动只影响单一宿主
-- `npm run quality:fast`
-- 保留为通用快速入口；内部按改动文件自动选择 light / mid / full：light 跑 copy guard、repository root boundary、相关 lint 与 typecheck；mid 额外跑 workspace boundary 与相关测试；full 直接委派 `quality-gate-target.sh full`。
-- 多平台任务的默认汇报口径应改为上面的显式宿主 / 共享质量入口，而不是只写 `quality:fast`
+- 质量闸属于升级入口，不是每个最小任务的默认动作；满足条件时按范围选择：`npm run quality:desktop`、`npm run quality:android`、`npm run quality:android:device`、`npm run quality:shared`、`npm run quality:full` 或 `npm run quality:fast`。
+- `quality:desktop` 适用于桌面多子系统联动、构建链 / preload / IPC 根链路 / sqlite 迁移，或相关验证不足以覆盖风险的场景。
+- `quality:android` 适用于移动宿主联调、Capacitor 宿主 / bridge 根链路调整，或相关验证不足以覆盖风险的场景；权限、生命周期、插件、intent、安装 / 启动链路或设备侧问题升级到 `quality:android:device`。
+- `quality:shared` 适用于共享 contract / 构建根链路 / 跨宿主脚本调整，或相关验证不足以覆盖风险的场景；`quality:full` 只用于用户明确要求、依赖 / 构建根链路、广泛跨宿主联动或无法证明单宿主影响的场景。
+- `quality:fast` 仅作为通用自动选择入口；多平台任务汇报默认说清实际宿主 / 共享质量入口，不只写 `quality:fast`。
 - 若只做相关最小验证，必须优先选择与改动文件、改动链路、复现场景直接对应的检查命令；汇报时要明确说明“已执行的相关检查”与“未执行的宿主 / 全量检查”。
 - 只有当你主动执行了某个质量闸，且该质量闸暴露的问题与本次改动链路、当前宿主或被选中的验证范围直接相关时，当前任务才需要顺手清掉这些红灯；禁止因为误触发过重质量闸，就把全仓无关红灯一并卷入当前最小任务。
 - 可复现 Bug 修复前，优先先补复现测试，再修复并验证测试通过；若暂时无法自动化复现，必须先说明原因，并补充可执行的人工验证步骤。
@@ -97,9 +86,7 @@
 - 自动任务模式默认不追加预览，只执行任务所需的最小验证；除非用户在当次明确要求，才额外执行预览。
 - 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
 - 执行 `android:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `OPENED` / `FAILED` 与失败阶段或失败原因；不得只汇报“已验证”。
-- 最终汇报默认言简意赅，只说用户关心的结果、必要状态与下一步；禁止套用固定“改动 / 验证”模板，禁止逐条罗列文件路径、函数名、测试命令或实现细节，除非用户明确要求追踪细节，或存在失败、风险、未完成项必须说明。
-- 默认交付汇报应采用“结果一句话 + 必要风险/失败 + 下一步”口径；不要把实现文件、函数名、测试列表当作默认交付内容。用户问“改了哪些文件 / 细节 / 怎么实现 / 验证命令”时，才展开文件路径、函数名、测试命令和实现说明。
-- 验证汇报默认只报验证结论与失败原因；若验证全部通过，可概括为“相关检查通过”，不逐条列命令。例外：`windows:preview` / `android:preview` 必须按本节规则报告实际命令和最终 `status` 字段。
+- 最终汇报默认采用“结果一句话 + 必要风险/失败 + 下一步”口径；除非用户追问或存在失败、风险、未完成项，否则不逐条罗列文件路径、函数名、测试命令或实现细节。例外：`windows:preview` / `android:preview` 必须报告实际命令和最终 `status` 字段。
 - UI 文案术语检查入口为 `npm run copy:guard`；该检查默认只报告 warning，不阻塞质量闸。只有用户明确要求或任务目标是收敛文案术语债时，才使用 `npm run copy:guard:strict`。
 - 若 `copy:guard` 报出 warning，修复前必须先读取 `.lab/specs/_product/terminology-and-copy.md`，按术语规则判断后再修改；禁止只根据脚本命中词机械替换。
 - `build` 仅在用户明确要求执行构建、或当前任务已触及依赖 / 构建根链路且必须验证构建结果时执行；对应入口为 `npm run quality:full` 或交付脚本。
@@ -123,7 +110,6 @@
 - 单文件目标 <= 220 行，硬上限 > 260 行必须拆分。
 - 单函数目标 <= 40 行，硬上限 > 60 行必须拆分或提取子函数。
 - 遇到 `max-lines`、`max-lines-per-function` 等规模约束时，禁止通过压缩格式、合并多条语句到单行、删除必要留白等方式规避；必须通过拆函数、拆组件或拆文件解决。
-- UI 代码禁止新增硬编码颜色、圆角、阴影或间距值；所有视觉值只从 `tailwind.config.js` token 消费。
 - 每个文件只承载一个核心职责；禁止把 UI、数据访问、业务规则长期混写。
 - 复杂逻辑优先模块化拆分；禁止用极端紧凑写法规避规模限制。
 - 全局设置不得进入 `WorkspaceLayoutProps` 或 workspace 中间层 props 链；新增全局设置默认走统一 settings provider，由设置页和实际消费位置直接读取。
@@ -135,6 +121,7 @@
 - 语法升级只保证新写入 / 新编辑路径符合当前规范，不做历史语法迁移。
 - 数据格式切换不进入产品代码；转换由人工离线一次性完成，禁止长期双写、双读、运行时迁移与自动探测回退。
 - 所有关键数据变更优先可恢复，避免不可逆破坏。
+- 涉及同步、跨宿主数据合并或冲突处理时，必须保证可回退，禁止静默覆盖冲突。
 - 默认将用户可感知、会影响后续行为的状态视为永久态；禁止先按“临时态”假设实现，再靠后续补持久化。
 - 仅纯 UI 过程量允许不落持久化，例如弹窗开关、hover / focus、一次性展示态、当前会话游标、编辑器瞬时滚动与选区；除此之外默认都必须持久化。
 - 凡是会影响重启后结果、后续队列构建、节点图标、过滤条件、调度结果、统计口径或“该节点以后会怎样”的字段，一律按永久态处理，必须同时完成 renderer 写路径、bridge / runtime sync 与存储 hydrate 闭环。
