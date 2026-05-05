@@ -20,6 +20,7 @@ interface DocumentPanelContentProps {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
   folderListSortKey: FolderListSortKey;
+  onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void;
   isFolderListView: boolean;
   nodeOrder: string[];
   trashedNodeIds: string[];
@@ -181,6 +182,7 @@ export function DocumentPanelContent({
   activeNodeId,
   bodyProps,
   folderListSortKey,
+  onChangeFolderListSortKey,
   isFolderListView,
   nodeOrder,
   trashedNodeIds,
@@ -222,6 +224,7 @@ export function DocumentPanelContent({
     activeNodeId,
     bodyProps,
     folderListSortKey,
+    onChangeFolderListSortKey,
     isActivePdfCachedVisible,
     isFolderListView,
     nodeOrder,

@@ -28,28 +28,29 @@ export function DocumentPanelSectionShell({
 
   return (
     <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
-      <DocumentPanelHeader
-        activeNodeId={props.activeNodeId}
-        canGoBack={props.canGoBack}
-        canGoForward={props.canGoForward}
-        canGoParent={props.canGoParent}
-        folderListToolbar={
-          isFolderListView ? <FolderListSortControls onChangeSortKey={setFolderListSortKey} sortKey={folderListSortKey} /> : null
-        }
-        isFolderListView={isFolderListView}
-        isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
-        nodesById={props.nodesById}
-        onGoBack={props.onGoBack}
-        onGoForward={props.onGoForward}
-        onGoParent={props.onGoParent}
-        onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
-        onToggleSourceUpdatePanel={onToggleSourceUpdatePanel}
-        showSourceUpdateAction={showSourceUpdateAction}
-      />
+      {isFolderListView ? null : (
+        <DocumentPanelHeader
+          activeNodeId={props.activeNodeId}
+          canGoBack={props.canGoBack}
+          canGoForward={props.canGoForward}
+          canGoParent={props.canGoParent}
+          folderListToolbar={<FolderListSortControls onChangeSortKey={setFolderListSortKey} sortKey={folderListSortKey} />}
+          isFolderListView={isFolderListView}
+          isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
+          nodesById={props.nodesById}
+          onGoBack={props.onGoBack}
+          onGoForward={props.onGoForward}
+          onGoParent={props.onGoParent}
+          onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
+          onToggleSourceUpdatePanel={onToggleSourceUpdatePanel}
+          showSourceUpdateAction={showSourceUpdateAction}
+        />
+      )}
       <DocumentPanelContent
         activeNodeId={props.activeNodeId}
         bodyProps={bodyProps}
         folderListSortKey={folderListSortKey}
+        onChangeFolderListSortKey={setFolderListSortKey}
         isFolderListView={isFolderListView}
         nodeOrder={props.nodeOrder}
         trashedNodeIds={props.trashedNodeIds}

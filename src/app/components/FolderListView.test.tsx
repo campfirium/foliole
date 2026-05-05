@@ -59,6 +59,7 @@ describe('FolderListView content', () => {
 
     expect(screen.getByTestId('folder-list-title-node-1')).toHaveTextContent('Child topic');
     expect(screen.getByRole('heading', { level: 2, name: 'Content list' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sort list by Date' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-excerpt-node-1')).toHaveTextContent(
       'This is the first useful sentence inside the folder list body.'
     );
@@ -213,6 +214,7 @@ describe('FolderListView secondary sorting', () => {
     expect(getRenderedEntryTitles()).toEqual(['Named author', 'No author A', 'No author B']);
     expect(screen.getByTestId('folder-list-meta-node-2')).toHaveTextContent('Zoe');
   });
+
 });
 
 describe('FolderListView interactions', () => {
@@ -224,6 +226,22 @@ describe('FolderListView interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open Open me' }));
 
     expect(onSelectNode).toHaveBeenCalledWith('node-3');
+  });
+
+  it('filters the current folder list from the toolbar search entry', () => {
+    renderFolderList([
+      createNode({ id: 'node-1', title: 'Alpha note', content: 'First body' }),
+      createNode({ id: 'node-2', title: 'Beta note', content: 'Second body' })
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search folder contents' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search folder contents' }), {
+      target: { value: 'beta' }
+    });
+
+    expect(screen.queryByRole('button', { name: 'Open Alpha note' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Beta note' })).toBeInTheDocument();
+    expect(screen.getByText('1 of 2 items')).toBeInTheDocument();
   });
 });
 
@@ -245,9 +263,9 @@ describe('FolderListView layout', () => {
     expect(screen.getByTestId('folder-list-title-node-4').className).toContain('line-clamp-2');
     expect(screen.getByTestId('folder-list-excerpt-node-4')).toHaveTextContent('');
     expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('line-clamp-2');
-    expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('min-h-12');
+    expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('min-h-14');
     expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('line-clamp-2');
-    expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('min-h-12');
+    expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('min-h-14');
     expect(screen.queryByText('Topic')).not.toBeInTheDocument();
   });
 });

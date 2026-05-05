@@ -23,7 +23,7 @@ export function FolderListSortControls(props: {
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label={`Sort list by ${activeLabel}`}
-          className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-bg-panel px-4 text-sm font-medium text-foreground transition-colors hover:bg-bg-subtle focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="inline-flex h-8 items-center gap-2 bg-transparent px-0 text-sm font-medium text-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
           type="button"
         >
           <SortIcon />
@@ -51,7 +51,7 @@ export function FolderListSortControls(props: {
 
 function SortIcon() {
   return (
-    <svg aria-hidden="true" className="h-4 w-4 text-foreground/60" viewBox="0 0 16 16">
+    <svg aria-hidden="true" className="h-4 w-4 text-current" viewBox="0 0 16 16">
       <path d="M5 3v10" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.1" />
       <path d="m2.8 5.1 2.2-2.2 2.2 2.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.1" />
       <path d="M11 13V3" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.1" />
@@ -62,7 +62,7 @@ function SortIcon() {
 
 function ChevronDownIcon() {
   return (
-    <svg aria-hidden="true" className="h-4 w-4 text-foreground/55" viewBox="0 0 16 16">
+    <svg aria-hidden="true" className="h-4 w-4 text-current/75" viewBox="0 0 16 16">
       <path d="m4.5 6.5 3.5 3.5 3.5-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.1" />
     </svg>
   );

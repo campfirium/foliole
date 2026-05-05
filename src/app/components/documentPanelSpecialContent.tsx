@@ -51,6 +51,7 @@ function renderVirtualContent(
 function renderFolderContent(
   activeNodeId: string,
   folderListSortKey: FolderListSortKey,
+  onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void,
   nodeOrder: string[],
   nodesById: Record<string, Node>,
   onSelectNode: (nodeId: string) => void,
@@ -63,9 +64,8 @@ function renderFolderContent(
         folderNodeId={activeNodeId}
         nodeOrder={nodeOrder}
         nodesById={nodesById}
-        onChangeSortKey={() => undefined}
+        onChangeSortKey={onChangeFolderListSortKey}
         onSelectNode={onSelectNode}
-        showEmbeddedHeader={false}
         sortKey={folderListSortKey}
       />
     </>
@@ -131,6 +131,7 @@ export function resolveDocumentPanelContentBody(args: {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
   folderListSortKey: FolderListSortKey;
+  onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void;
   isActivePdfCachedVisible: boolean;
   isFolderListView: boolean;
   nodeOrder: string[];
@@ -154,7 +155,15 @@ export function resolveDocumentPanelContentBody(args: {
     );
   }
   if (args.isFolderListView && args.activeNodeId) {
-    return renderFolderContent(args.activeNodeId, args.folderListSortKey, args.nodeOrder, args.nodesById, args.onSelectNode, args.pdfCache);
+    return renderFolderContent(
+      args.activeNodeId,
+      args.folderListSortKey,
+      args.onChangeFolderListSortKey,
+      args.nodeOrder,
+      args.nodesById,
+      args.onSelectNode,
+      args.pdfCache
+    );
   }
   if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {
     return renderLegacyImageClozeContent(
