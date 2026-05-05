@@ -51,7 +51,34 @@ describe('buildSyncConvergenceReport', () => {
 
     expect(report.status).toBe('blocked');
     expect(report.checks).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: 'completed_event_with_local_work', severity: 'error' })
+      expect.objectContaining({
+        code: 'completed_event_with_local_work',
+        detail: 'Completed was recorded while 1 dirty change(s), 1 pending ack(s), 0 body blob(s), 0 attachment file(s), and 0 structure change(s) remain.',
+        severity: 'error'
+      })
+    ]));
+  });
+
+  it('blocks completed events that still have structure or resource backlog', () => {
+    const report = buildSyncConvergenceReport(result({
+      android: {
+        ...result().android!,
+        content: {
+          missing_attachment_resource_count: 2,
+          missing_content_blob_count: 3
+        },
+        events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync completed.', occurred_at: '2026-05-01T00:01:00.000Z', status: 'completed' }],
+        sync_state: { ...result().android!.sync_state, pack_cursor: 9 }
+      }
+    }));
+
+    expect(report.status).toBe('blocked');
+    expect(report.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'completed_event_with_local_work',
+        detail: 'Completed was recorded while 0 dirty change(s), 0 pending ack(s), 3 body blob(s), 2 attachment file(s), and 1 structure change(s) remain.',
+        severity: 'error'
+      })
     ]));
   });
 

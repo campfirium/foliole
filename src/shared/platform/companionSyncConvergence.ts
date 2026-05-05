@@ -118,12 +118,15 @@ function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {
   if (latest?.status !== 'completed') return [];
   const dirtyCount = result.android?.sync_state.local_dirty_count ?? 0;
   const pendingAckCount = result.android?.sync_state.pending_ack_count ?? 0;
-  if (dirtyCount === 0 && pendingAckCount === 0) return [];
+  const missingBodies = result.android?.content.missing_content_blob_count ?? 0;
+  const missingAttachments = result.android?.content.missing_attachment_resource_count ?? 0;
+  const lag = structureLag(result) ?? 0;
+  if (dirtyCount === 0 && pendingAckCount === 0 && missingBodies === 0 && missingAttachments === 0 && lag === 0) return [];
   return [check(
     'completed_event_with_local_work',
     'error',
     'Latest completed event is not fully converged',
-    `Completed was recorded while ${dirtyCount} dirty change(s) and ${pendingAckCount} pending ack(s) remain.`
+    `Completed was recorded while ${dirtyCount} dirty change(s), ${pendingAckCount} pending ack(s), ${missingBodies} body blob(s), ${missingAttachments} attachment file(s), and ${lag} structure change(s) remain.`
   )];
 }
 
