@@ -9,6 +9,7 @@ interface PdfDocumentSurfaceLayoutProps {
   clearPageJumpRequest: (requestId: number) => void;
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleSearchRequest: (direction: 'next' | 'previous') => void;
+  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   loadError: string | null;
   maxPage: number;
   page: number;
@@ -38,6 +39,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
   return (
     <PdfDocumentViewport
       clearPageJumpRequest={props.clearPageJumpRequest}
+      highlightLocators={props.highlightLocators}
       loadError={props.loadError}
       maxPage={props.maxPage}
       onContextMenu={props.handleContextMenu}

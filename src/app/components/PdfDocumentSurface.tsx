@@ -29,6 +29,7 @@ function configurePdfWorker() {
 configurePdfWorker();
 
 interface PdfDocumentSurfaceProps {
+  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   nodeId: string | null;
   onCreateHighlightFromSelection?: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onPersistViewState: (viewState: NodeViewState) => void;
@@ -132,7 +133,7 @@ function usePdfSearchControls() {
   return { handleSearchRequest, searchQuery, searchRequest, searchStatus, setSearchQuery, setSearchStatus };
 }
 
-export function PdfDocumentSurface({ nodeId, nodeViewState, onCreateHighlightFromSelection, onPersistViewState, sourceHint }: PdfDocumentSurfaceProps) {
+export function PdfDocumentSurface({ highlightLocators, nodeId, nodeViewState, onCreateHighlightFromSelection, onPersistViewState, sourceHint }: PdfDocumentSurfaceProps) {
   const {
     actions: {
       clearPageJumpRequest,
@@ -159,6 +160,7 @@ export function PdfDocumentSurface({ nodeId, nodeViewState, onCreateHighlightFro
       clearPageJumpRequest={clearPageJumpRequest}
       handleContextMenu={handleContextMenu}
       handleSearchRequest={handleSearchRequest}
+      highlightLocators={highlightLocators}
       loadError={loadError}
       maxPage={maxPage}
       page={page}

@@ -11,6 +11,7 @@ import { DocumentPanelBody } from './DocumentPanelBody';
 import { EditorContextMenu } from './EditorContextMenu';
 import { FolderListView } from './FolderListView';
 import { PdfDocumentSurface } from './PdfDocumentSurface';
+import { collectPdfHighlightLocators, type PdfHighlightLocator } from './pdfHighlightLocators';
 import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 import { useNodeSourceDetails } from './useNodeSourceDetails';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
@@ -64,6 +65,9 @@ function resolvePdfDocumentSurface(
   }
 
   const sourceHint = resolvePdfSourceHint(details);
+  if (details.inheritedFromParent) {
+    return null;
+  }
   if (isLoading) {
     return { sourceHint, state: 'loading' };
   }
@@ -107,12 +111,15 @@ function renderPdfDocumentSurface(
     editorNodeId: string | null;
     editorNodeViewState: ComponentProps<typeof DocumentPanelBody>['editorNodeViewState'];
   },
+  highlightLocators: PdfHighlightLocator[],
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean,
   onPersistPdfViewState: (viewState: NodeViewState) => void
 ) {
   if (pdfDocumentSurface.state === 'ready') {
     return (
       <PdfDocumentSurface
+        highlightLocators={highlightLocators}
+        key={`${pdfViewContext.editorNodeId ?? 'pdf-node'}:${pdfDocumentSurface.sourceHint ?? ''}`}
         nodeViewState={pdfViewContext.editorNodeViewState}
         onCreateHighlightFromSelection={onCreatePdfHighlight}
         onPersistViewState={onPersistPdfViewState}
@@ -148,6 +155,7 @@ export function DocumentPanelContent({
   const shouldLoadSourceDetails = Boolean(activeNodeId && activeNode && !isVirtualNode(activeNode) && !isFolderListView);
   const sourceDetails = useNodeSourceDetails(shouldLoadSourceDetails ? activeNodeId : null);
   const pdfDocumentSurface = resolvePdfDocumentSurface(sourceDetails.isLoading, sourceDetails.value);
+  const pdfHighlightLocators = activeNodeId ? collectPdfHighlightLocators(activeNodeId, nodeOrder, nodesById) : [];
 
   if (activeNode && isVirtualNode(activeNode)) {
     return (
@@ -175,6 +183,7 @@ export function DocumentPanelContent({
     return renderPdfDocumentSurface(
       pdfDocumentSurface,
       { editorNodeId: bodyProps.editorNodeId, editorNodeViewState: bodyProps.editorNodeViewState },
+      pdfHighlightLocators,
       onCreatePdfHighlight,
       onPersistPdfViewState
     );

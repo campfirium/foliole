@@ -17,23 +17,24 @@ import {
   resolvePdfSource
 } from './pdfSystemStateUtils';
 
-function useNodeViewRestore(
-  nodeViewState: NodeViewState | undefined,
-  setPage: Dispatch<SetStateAction<number>>,
-  setZoom: Dispatch<SetStateAction<number>>
+function useSourceReset(
+  resolvedSource: string,
+  setLoadError: (value: string | null) => void,
+  setPageJumpRequest: Dispatch<SetStateAction<PdfJumpRequest | null>>,
+  setPdfSource: (value: string) => void,
+  setTotalPages: (value: number | null) => void
 ) {
+  const lastResolvedSourceRef = useRef(resolvedSource);
   useEffect(() => {
-    setPage(resolveInitialPage(nodeViewState));
-    setZoom(resolveInitialZoom(nodeViewState));
-  }, [nodeViewState, setPage, setZoom]);
-}
-
-function useSourceReset(sourceHint: string, setLoadError: (value: string | null) => void, setTotalPages: (value: number | null) => void, setPdfSource: (value: string) => void) {
-  useEffect(() => {
+    if (resolvedSource === lastResolvedSourceRef.current) {
+      return;
+    }
+    lastResolvedSourceRef.current = resolvedSource;
     setLoadError(null);
     setTotalPages(null);
-    setPdfSource(resolvePdfSource(sourceHint));
-  }, [setLoadError, setPdfSource, setTotalPages, sourceHint]);
+    setPageJumpRequest(null);
+    setPdfSource(resolvedSource);
+  }, [resolvedSource, setLoadError, setPageJumpRequest, setPdfSource, setTotalPages]);
 }
 
 function useViewStateSync(page: number, zoom: number, onPersistViewState: (viewState: NodeViewState) => void) {
@@ -176,15 +177,15 @@ function usePdfCoreState(
   totalPages: number | null;
   zoom: number;
 } {
+  const resolvedSource = useMemo(() => resolvePdfSource(sourceHint), [sourceHint]);
   const [page, setPage] = useState(() => resolveInitialPage(nodeViewState));
   const [zoom, setZoom] = useState(() => resolveInitialZoom(nodeViewState));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
-  const [pdfSource, setPdfSource] = useState(() => resolvePdfSource(sourceHint));
+  const [pdfSource, setPdfSource] = useState(() => resolvedSource);
   const [pageJumpRequest, setPageJumpRequest] = useState<PdfJumpRequest | null>(null);
-  useNodeViewRestore(nodeViewState, setPage, setZoom);
-  useSourceReset(sourceHint, setLoadError, setTotalPages, setPdfSource);
+  useSourceReset(resolvedSource, setLoadError, setPageJumpRequest, setPdfSource, setTotalPages);
   useViewStateSync(page, zoom, onPersistViewState);
 
   useEffect(() => {

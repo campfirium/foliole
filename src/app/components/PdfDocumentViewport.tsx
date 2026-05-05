@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { MutableRefObject } from 'react';
 
@@ -14,6 +14,7 @@ import {
 } from './PdfDocumentViewportParts';
 
 interface PdfDocumentViewportProps {
+  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   loadError: string | null;
   maxPage: number;
@@ -42,14 +43,17 @@ interface PdfDocumentViewportProps {
 }
 
 function renderPdfViewportContent(args: {
+  handleTextLayerRender: (pageNumber: number) => void;
   handleScroll: () => void;
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
+  searchRevision: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
 } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>) {
   return (
     <PdfDocumentViewportContent
       handleContextMenu={args.onContextMenu}
       handleScroll={args.handleScroll}
+      highlightLocators={args.highlightLocators}
       maxPage={args.maxPage}
       onLoadError={args.onLoadError}
       onLoadSuccess={args.onLoadSuccess}
@@ -68,19 +72,22 @@ function renderPdfViewportContent(args: {
       rotation={args.rotation}
       scrollContainerRef={args.scrollContainerRef}
       searchQuery={args.searchQuery}
+      searchRevision={args.searchRevision}
       searchRequest={args.searchRequest}
       searchStatus={args.searchStatus}
       totalPages={args.totalPages}
+      onTextLayerRender={args.handleTextLayerRender}
       zoom={args.zoom}
     />
   );
 }
 
 export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
-  const { handleScroll, pageElementsRef, scrollContainerRef } = usePdfViewportRuntime(
+  const { handleScroll, handleTextLayerRender, pageElementsRef, scrollContainerRef, searchRevision } = usePdfViewportRuntime(
     props.clearPageJumpRequest,
     props.page,
     props.pageJumpRequest,
+    props.pdfSource,
     props.rotation,
     props.setVisiblePage,
     props.totalPages,
@@ -94,7 +101,9 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
   return (
     <PdfDocumentViewportReady
       handleScroll={handleScroll}
+      handleTextLayerRender={handleTextLayerRender}
       pageElementsRef={pageElementsRef}
+      searchRevision={searchRevision}
       scrollContainerRef={scrollContainerRef}
       {...props}
     />
@@ -104,7 +113,9 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
 function PdfDocumentViewportReady(
   props: {
     handleScroll: () => void;
+    handleTextLayerRender: (pageNumber: number) => void;
     pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
+    searchRevision: number;
     scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
   } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>
 ) {
@@ -115,6 +126,7 @@ function usePdfViewportRuntime(
   clearPageJumpRequest: (requestId: number) => void,
   page: number,
   pageJumpRequest: PdfJumpRequest | null,
+  pdfSource: string,
   rotation: number,
   setVisiblePage: (page: number) => void,
   totalPages: number | null,
@@ -122,10 +134,24 @@ function usePdfViewportRuntime(
 ) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
+  const renderedTextLayerPagesRef = useRef<Set<number>>(new Set());
+  const [searchRevision, setSearchRevision] = useState(0);
 
-  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, clearPageJumpRequest);
+  useEffect(() => {
+    renderedTextLayerPagesRef.current.clear();
+    setSearchRevision((current) => current + 1);
+  }, [pdfSource]);
+
+  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, totalPages, clearPageJumpRequest);
   useViewportTransformAnchor(rotation, scrollContainerRef, zoom);
   const handleScroll = useVisiblePageSync(page, pageElementsRef, scrollContainerRef, setVisiblePage, totalPages);
+  const handleTextLayerRender = (pageNumber: number) => {
+    if (renderedTextLayerPagesRef.current.has(pageNumber)) {
+      return;
+    }
+    renderedTextLayerPagesRef.current.add(pageNumber);
+    setSearchRevision((current) => current + 1);
+  };
 
-  return { handleScroll, pageElementsRef, scrollContainerRef };
+  return { handleScroll, pageElementsRef, searchRevision, scrollContainerRef, handleTextLayerRender };
 }

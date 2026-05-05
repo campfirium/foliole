@@ -1,3 +1,5 @@
+import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
+
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 
 export function createOpenNotesView(args: BuildControllerLayoutPropsArgs) {
@@ -21,6 +23,15 @@ export function createToggleTrashView(args: BuildControllerLayoutPropsArgs, open
 export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string) => {
     args.runtime.setIsViewingTrashNode(false);
+    const selectedNode = args.ws.nodesById[nodeId];
+    if (selectedNode?.anchorLink?.kind === 'highlight' && selectedNode.parentNodeId) {
+      args.virtualView.closeVirtualView();
+      args.nav.handleSelectNode(selectedNode.parentNodeId);
+      if (selectedNode.anchorLink.locator) {
+        requestPdfAnchorJump(selectedNode.parentNodeId, selectedNode.anchorLink.locator);
+      }
+      return;
+    }
     if (args.ws.nodesById[nodeId]?.specialKind !== 'virtual') {
       args.virtualView.closeVirtualView();
     }

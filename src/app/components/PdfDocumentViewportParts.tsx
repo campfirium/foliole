@@ -5,7 +5,7 @@ import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
 import type { PdfSearchRequest, PdfSearchStatus } from './PdfDocumentSearch';
 import { usePdfSearchEffect } from './PdfDocumentSearch';
-import { PdfViewportDocument, PdfViewportToolbar } from './PdfDocumentViewportRenderParts';
+import { PdfDocumentViewportContentBody } from './PdfDocumentViewportContentBody';
 
 const PDF_PAGE_MIN = 1;
 
@@ -15,6 +15,7 @@ export function usePageJumpEffect(
   pageJumpRequest: PdfJumpRequest | null,
   pageElementsRef: PdfPageElementsRef,
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
+  totalPages: number | null,
   onPageJumpHandled: (requestId: number) => void
 ) {
   useEffect(() => {
@@ -37,7 +38,7 @@ export function usePageJumpEffect(
       container.scrollTop = top;
     }
     onPageJumpHandled(pageJumpRequest.id);
-  }, [onPageJumpHandled, pageJumpRequest, pageElementsRef, scrollContainerRef]);
+  }, [onPageJumpHandled, pageJumpRequest, pageElementsRef, scrollContainerRef, totalPages]);
 }
 
 function resolveVisiblePage(container: HTMLDivElement, pageElementsRef: PdfPageElementsRef, totalPages: number) {
@@ -125,9 +126,11 @@ export function PdfDocumentErrorState({ loadError }: { loadError: string }) {
 interface PdfDocumentViewportContentProps {
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleScroll: () => void;
+  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   maxPage: number;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
+  onTextLayerRender: (pageNumber: number) => void;
   onSearchStatusChange: (status: PdfSearchStatus) => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
@@ -143,6 +146,7 @@ interface PdfDocumentViewportContentProps {
   rotation: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
   searchQuery: string;
+  searchRevision: number;
   searchRequest: PdfSearchRequest | null;
   searchStatus: PdfSearchStatus;
   totalPages: number | null;
@@ -154,18 +158,24 @@ function usePdfSearchRuntime({
   pageElementsRef,
   scrollContainerRef,
   searchQuery,
+  searchRevision,
   searchRequest,
   totalPages
-}: Pick<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'pageElementsRef' | 'scrollContainerRef' | 'searchQuery' | 'searchRequest' | 'totalPages'>) {
-  usePdfSearchEffect({ onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, totalPages });
+}: Pick<
+  PdfDocumentViewportContentProps,
+  'onSearchStatusChange' | 'pageElementsRef' | 'scrollContainerRef' | 'searchQuery' | 'searchRequest' | 'searchRevision' | 'totalPages'
+>) {
+  usePdfSearchEffect({ onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, searchRevision, totalPages });
 }
 
 export function PdfDocumentViewportContent({
   handleContextMenu,
   handleScroll,
+  highlightLocators,
   maxPage,
   onLoadError,
   onLoadSuccess,
+  onTextLayerRender,
   onSearchStatusChange,
   onNextPage,
   onPageChange,
@@ -181,16 +191,18 @@ export function PdfDocumentViewportContent({
   rotation,
   scrollContainerRef,
   searchQuery,
+  searchRevision,
   searchRequest,
   searchStatus,
   totalPages,
   zoom
 }: PdfDocumentViewportContentProps) {
-  usePdfSearchRuntime({ onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, totalPages });
+  usePdfSearchRuntime({ onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, searchRevision, totalPages });
   return (
-    <PdfViewportContentBody
+    <PdfDocumentViewportContentBody
       handleContextMenu={handleContextMenu}
       handleScroll={handleScroll}
+      highlightLocators={highlightLocators}
       maxPage={maxPage}
       onLoadError={onLoadError}
       onLoadSuccess={onLoadSuccess}
@@ -210,67 +222,8 @@ export function PdfDocumentViewportContent({
       searchQuery={searchQuery}
       searchStatus={searchStatus}
       totalPages={totalPages}
+      onTextLayerRender={onTextLayerRender}
       zoom={zoom}
     />
-  );
-}
-
-function PdfViewportContentBody({
-  handleContextMenu,
-  handleScroll,
-  maxPage,
-  onLoadError,
-  onLoadSuccess,
-  onNextPage,
-  onPageChange,
-  onPreviousPage,
-  onRotateClockwise,
-  onSearchQueryChange,
-  onSearchRequest,
-  onZoomIn,
-  onZoomOut,
-  page,
-  pageElementsRef,
-  pdfSource,
-  rotation,
-  scrollContainerRef,
-  searchQuery,
-  searchStatus,
-  totalPages,
-  zoom
-}: Omit<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'searchRequest'>) {
-  return (
-    <div
-      className="app-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-auto px-2 pb-5"
-      onContextMenu={handleContextMenu}
-      onScroll={handleScroll}
-      ref={scrollContainerRef}
-    >
-      <PdfViewportToolbar
-        maxPage={maxPage}
-        onNextPage={onNextPage}
-        onPageChange={onPageChange}
-        onPreviousPage={onPreviousPage}
-        onRotateClockwise={onRotateClockwise}
-        onSearchQueryChange={onSearchQueryChange}
-        onSearchRequest={onSearchRequest}
-        onZoomIn={onZoomIn}
-        onZoomOut={onZoomOut}
-        page={page}
-        rotation={rotation}
-        searchQuery={searchQuery}
-        searchStatus={searchStatus}
-        zoom={zoom}
-      />
-      <PdfViewportDocument
-        onLoadError={onLoadError}
-        onLoadSuccess={onLoadSuccess}
-        pageElementsRef={pageElementsRef}
-        pdfSource={pdfSource}
-        rotation={rotation}
-        totalPages={totalPages}
-        zoom={zoom}
-      />
-    </div>
   );
 }

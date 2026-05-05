@@ -46,8 +46,10 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
 }
 
 interface PdfViewportDocumentProps {
+  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
+  onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
   pdfSource: string;
   rotation: number;
@@ -70,7 +72,14 @@ export function PdfViewportDocument(props: PdfViewportDocumentProps) {
       onLoadError={(error) => props.onLoadError(error.message || 'Failed to load PDF document.')}
       onLoadSuccess={({ numPages }: { numPages: number }) => props.onLoadSuccess(numPages)}
     >
-      <PdfDocumentPages pageElementsRef={props.pageElementsRef} rotation={props.rotation} totalPages={props.totalPages} zoom={props.zoom} />
+      <PdfDocumentPages
+        highlightLocators={props.highlightLocators}
+        onTextLayerRender={props.onTextLayerRender}
+        pageElementsRef={props.pageElementsRef}
+        rotation={props.rotation}
+        totalPages={props.totalPages}
+        zoom={props.zoom}
+      />
     </Document>
   );
 }
@@ -85,15 +94,56 @@ function stripTextLayerInlineFonts(page: HTMLDivElement | null) {
   }
 }
 
-function PdfDocumentPages({ pageElementsRef, rotation, totalPages, zoom }: { pageElementsRef: PdfPageElementsRef; rotation: number; totalPages: number | null; zoom: number }) {
+function resolvePageHighlightLocators(
+  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>,
+  page: number
+) {
+  return highlightLocators.filter((locator) => locator.page === page);
+}
+
+function resolveMarkerSize(zoom: number) {
+  return Math.max(10, Math.round((zoom / 100) * 12));
+}
+
+function renderPageHighlightMarker(locator: { id: string; x: number | null; y: number | null }, markerSize: number) {
+  const markerTop = `${Math.max(0, Math.min(100, (locator.y ?? 0.5) * 100))}%`;
+  const markerLeft = `${Math.max(0, Math.min(100, (locator.x ?? 0.5) * 100))}%`;
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/50 shadow-sm ring-1 ring-accent/30"
+      data-testid="pdf-highlight-marker"
+      key={locator.id}
+      style={{ height: markerSize, left: markerLeft, top: markerTop, width: markerSize }}
+    />
+  );
+}
+
+function PdfDocumentPages({
+  highlightLocators,
+  onTextLayerRender,
+  pageElementsRef,
+  rotation,
+  totalPages,
+  zoom
+}: {
+  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
+  onTextLayerRender: (pageNumber: number) => void;
+  pageElementsRef: PdfPageElementsRef;
+  rotation: number;
+  totalPages: number | null;
+  zoom: number;
+}) {
   if (!totalPages) {
     return null;
   }
   return Array.from({ length: totalPages }, (_, index) => {
     const pageNumber = index + PDF_PAGE_MIN;
+    const pageHighlights = resolvePageHighlightLocators(highlightLocators, pageNumber);
+    const markerSize = resolveMarkerSize(zoom);
     return (
       <div
-        className="flex w-full justify-center px-4"
+        className="relative flex w-full justify-center px-4"
         data-pdf-page-number={pageNumber}
         data-testid="pdf-document-page-shell"
         key={pageNumber}
@@ -101,16 +151,22 @@ function PdfDocumentPages({ pageElementsRef, rotation, totalPages, zoom }: { pag
           pageElementsRef.current[pageNumber] = element;
         }}
       >
-        <Page
-          className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
-          data-testid="pdf-document-page"
-          onRenderTextLayerSuccess={() => stripTextLayerInlineFonts(pageElementsRef.current[pageNumber])}
-          pageNumber={pageNumber}
-          renderAnnotationLayer
-          renderTextLayer
-          rotate={rotation}
-          scale={zoom / 100}
-        />
+        <div className="relative inline-block">
+          <Page
+            className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
+            data-testid="pdf-document-page"
+            onRenderTextLayerSuccess={() => {
+              stripTextLayerInlineFonts(pageElementsRef.current[pageNumber]);
+              onTextLayerRender(pageNumber);
+            }}
+            pageNumber={pageNumber}
+            renderAnnotationLayer
+            renderTextLayer
+            rotate={rotation}
+            scale={zoom / 100}
+          />
+          {pageHighlights.map((locator) => renderPageHighlightMarker(locator, markerSize))}
+        </div>
       </div>
     );
   });

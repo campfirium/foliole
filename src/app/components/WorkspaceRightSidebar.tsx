@@ -1,4 +1,5 @@
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceRightSidebarDevPanel } from './WorkspaceRightSidebarDevPanel';
@@ -49,31 +50,46 @@ function renderPanel(
     return <WorkspaceRightSidebarSourcePanel activeNodeId={props.activeNodeId} nodesById={props.nodesById} />;
   }
   if (props.activePanelId === 'highlights') {
-    return (
-      <WorkspaceRightSidebarHighlightsPanel
-        activeNodeId={props.activeNodeId}
-        nodeOrder={props.nodeOrder}
-        trashedNodeIds={props.trashedNodeIds}
-        nodesById={props.nodesById}
-        onRevealHighlight={(nodeId) => {
-          const highlightNode = props.nodesById[nodeId];
-          if (highlightNode?.anchorLink?.kind === 'highlight' && highlightNode.parentNodeId) {
-            props.onSelectNode(highlightNode.parentNodeId);
-            window.requestAnimationFrame(() => {
-              props.onRevealAnchorInDocument(highlightNode.anchorLink as NodeAnchorLink);
-            });
-            return;
-          }
-          props.onSelectNode(nodeId);
-        }}
-      />
-    );
+    return renderHighlightsPanel(props);
   }
   return (
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={props.reviewCurrentNodeId}
       nodesById={props.nodesById}
       queueNodeIds={props.reviewQueueNodeIds}
+    />
+  );
+}
+
+function renderHighlightsPanel(
+  props: Pick<
+    WorkspaceLayoutProps,
+    'activeNodeId' | 'nodeOrder' | 'trashedNodeIds' | 'nodesById' | 'onSelectNode'
+  > & {
+    onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
+  }
+) {
+  return (
+    <WorkspaceRightSidebarHighlightsPanel
+      activeNodeId={props.activeNodeId}
+      nodeOrder={props.nodeOrder}
+      trashedNodeIds={props.trashedNodeIds}
+      nodesById={props.nodesById}
+      onRevealHighlight={(nodeId) => {
+        const highlightNode = props.nodesById[nodeId];
+        if (highlightNode?.anchorLink?.kind === 'highlight' && highlightNode.parentNodeId) {
+          if (props.activeNodeId === highlightNode.parentNodeId) {
+            props.onRevealAnchorInDocument(highlightNode.anchorLink as NodeAnchorLink);
+            return;
+          }
+          props.onSelectNode(highlightNode.parentNodeId);
+          if (highlightNode.anchorLink.locator) {
+            requestPdfAnchorJump(highlightNode.parentNodeId, highlightNode.anchorLink.locator);
+          }
+          return;
+        }
+        props.onSelectNode(nodeId);
+      }}
     />
   );
 }

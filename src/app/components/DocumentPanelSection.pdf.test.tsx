@@ -153,6 +153,24 @@ it('keeps the existing document body for non-pdf nodes', () => {
   expect(screen.queryByTestId('pdf-document-surface')).not.toBeInTheDocument();
 });
 
+it('keeps document body for derived highlight nodes that inherit pdf source from parent', () => {
+  useNodeSourceDetails.mockReturnValue({
+    isLoading: false,
+    value: {
+      importRuns: [],
+      importSource: defaultImportSource,
+      inheritedFromParent: true,
+      keepImportItem: null,
+      sourceNodeId: 'node-parent'
+    }
+  } as never);
+
+  renderSection();
+
+  expect(screen.getByTestId('document-panel-body')).toBeInTheDocument();
+  expect(screen.queryByTestId('pdf-document-surface')).not.toBeInTheDocument();
+});
+
 it('renders the pdf reading container for linked pdf nodes', () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 

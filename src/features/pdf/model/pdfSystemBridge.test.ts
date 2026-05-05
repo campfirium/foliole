@@ -32,3 +32,17 @@ it('stops forwarding after unregistering active pdf system', () => {
   expect(requestPdfAnchorJump(NODE_ID, { page: 3, x: 0.2, y: 0.5 })).toBe(false);
   expect(requestAnchorJump).not.toHaveBeenCalled();
 });
+
+it('replays the latest queued jump when registration happens after request', () => {
+  const requestAnchorJump = vi.fn();
+
+  expect(requestPdfAnchorJump(NODE_ID, { page: 2, x: 0.1, y: 0.2 })).toBe(false);
+  expect(requestPdfAnchorJump(NODE_ID, { page: 6, x: 0.5, y: 0.8 })).toBe(false);
+
+  registerPdfSystem(NODE_ID, {
+    requestAnchorJump
+  });
+
+  expect(requestAnchorJump).toHaveBeenCalledTimes(1);
+  expect(requestAnchorJump).toHaveBeenCalledWith({ page: 6, x: 0.5, y: 0.8 });
+});

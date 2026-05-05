@@ -1,9 +1,21 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
+
+const { requestPdfAnchorJump } = vi.hoisted(() => ({
+  requestPdfAnchorJump: vi.fn()
+}));
+
+vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
+  requestPdfAnchorJump
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 function createNode(overrides: Partial<Node>): Node {
   return {
@@ -20,50 +32,88 @@ function createNode(overrides: Partial<Node>): Node {
   };
 }
 
-describe('WorkspaceRightSidebar highlights', () => {
-  it('opens parent document and reveals pdf locator when clicking a highlight row', () => {
-    const onSelectNode = vi.fn();
-    const onRevealAnchorInDocument = vi.fn();
-    const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
-      callback(0);
-      return 1;
-    });
+it('queues pdf jump for parent node when highlight parent is not active yet', () => {
+  const onSelectNode = vi.fn();
+  const onRevealAnchorInDocument = vi.fn();
 
-    const parentNode = createNode({
-      id: 'node-parent',
-      content: 'Parent content',
-      title: 'Parent'
-    });
-    const highlightNode = createNode({
-      anchorLink: { id: 'pdf-hl-1', kind: 'highlight', locator: { page: 4, x: 0.3, y: 0.6 } },
-      content: 'Picked text',
-      id: 'node-highlight',
-      parentNodeId: 'node-parent',
-      title: 'Highlight'
-    });
-
-    render(
-      <WorkspaceRightSidebar
-        activeNodeId="node-parent"
-        activePanelId="highlights"
-        nodeOrder={['node-parent', 'node-highlight']}
-        nodesById={{ 'node-highlight': highlightNode, 'node-parent': parentNode }}
-        onRevealAnchorInDocument={onRevealAnchorInDocument}
-        onSelectNode={onSelectNode}
-        reviewCurrentNodeId={null}
-        reviewQueueNodeIds={[]}
-        reviewSchedulerSettings={{} as never}
-        trashedNodeIds={[]}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /picked text/i }));
-
-    expect(onSelectNode).toHaveBeenCalledWith('node-parent');
-    expect(onRevealAnchorInDocument).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'pdf-hl-1', kind: 'highlight', locator: { page: 4, x: 0.3, y: 0.6 } })
-    );
-
-    raf.mockRestore();
+  const parentNode = createNode({
+    id: 'node-parent',
+    content: 'Parent content',
+    title: 'Parent',
+    parentNodeId: 'node-root'
   });
+  const rootNode = createNode({
+    id: 'node-root',
+    content: 'Root content',
+    title: 'Root'
+  });
+  const highlightNode = createNode({
+    anchorLink: { id: 'pdf-hl-1', kind: 'highlight', locator: { page: 4, x: 0.3, y: 0.6 } },
+    content: 'Picked text',
+    id: 'node-highlight',
+    parentNodeId: 'node-parent',
+    title: 'Highlight'
+  });
+
+  render(
+    <WorkspaceRightSidebar
+      activeNodeId="node-root"
+      activePanelId="highlights"
+      nodeOrder={['node-root', 'node-parent', 'node-highlight']}
+      nodesById={{ 'node-highlight': highlightNode, 'node-parent': parentNode, 'node-root': rootNode }}
+      onRevealAnchorInDocument={onRevealAnchorInDocument}
+      onSelectNode={onSelectNode}
+      reviewCurrentNodeId={null}
+      reviewQueueNodeIds={[]}
+      reviewSchedulerSettings={{} as never}
+      trashedNodeIds={[]}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /picked text/i }));
+
+  expect(onSelectNode).toHaveBeenCalledWith('node-parent');
+  expect(onRevealAnchorInDocument).not.toHaveBeenCalled();
+  expect(requestPdfAnchorJump).toHaveBeenCalledWith('node-parent', { page: 4, x: 0.3, y: 0.6 });
+});
+
+it('reveals pdf locator without re-opening when parent document is already active', () => {
+  const onSelectNode = vi.fn();
+  const onRevealAnchorInDocument = vi.fn();
+
+  const parentNode = createNode({
+    id: 'node-parent',
+    content: 'Parent content',
+    title: 'Parent'
+  });
+  const highlightNode = createNode({
+    anchorLink: { id: 'pdf-hl-1', kind: 'highlight', locator: { page: 4, x: 0.3, y: 0.6 } },
+    content: 'Picked text',
+    id: 'node-highlight',
+    parentNodeId: 'node-parent',
+    title: 'Highlight'
+  });
+
+  render(
+    <WorkspaceRightSidebar
+      activeNodeId="node-parent"
+      activePanelId="highlights"
+      nodeOrder={['node-parent', 'node-highlight']}
+      nodesById={{ 'node-highlight': highlightNode, 'node-parent': parentNode }}
+      onRevealAnchorInDocument={onRevealAnchorInDocument}
+      onSelectNode={onSelectNode}
+      reviewCurrentNodeId={null}
+      reviewQueueNodeIds={[]}
+      reviewSchedulerSettings={{} as never}
+      trashedNodeIds={[]}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /picked text/i }));
+
+  expect(onSelectNode).not.toHaveBeenCalled();
+  expect(onRevealAnchorInDocument).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'pdf-hl-1', kind: 'highlight', locator: { page: 4, x: 0.3, y: 0.6 } })
+  );
+  expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 });

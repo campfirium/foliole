@@ -7,11 +7,19 @@ import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
 import { usePageJumpEffect } from './PdfDocumentViewportParts';
 
-function PageJumpHarness({ onJumpHandled, pageJumpRequest }: { onJumpHandled: (requestId: number) => void; pageJumpRequest: PdfJumpRequest | null }) {
+function PageJumpHarness({
+  onJumpHandled,
+  pageJumpRequest,
+  totalPages
+}: {
+  onJumpHandled: (requestId: number) => void;
+  pageJumpRequest: PdfJumpRequest | null;
+  totalPages: number | null;
+}) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
 
-  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, onJumpHandled);
+  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, totalPages, onJumpHandled);
 
   return (
     <div data-testid="pdf-scroll-container" ref={scrollContainerRef}>
@@ -37,7 +45,7 @@ function PageJumpHarness({ onJumpHandled, pageJumpRequest }: { onJumpHandled: (r
 
 it('triggers page jump effect for repeated requests to the same page', async () => {
   const onJumpHandled = vi.fn();
-  const { rerender } = render(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={null} />);
+  const { rerender } = render(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={null} totalPages={null} />);
 
   const scrollContainer = screen.getByTestId('pdf-scroll-container') as HTMLDivElement;
   Object.defineProperty(scrollContainer, 'clientHeight', {
@@ -50,12 +58,37 @@ it('triggers page jump effect for repeated requests to the same page', async () 
     value: scrollToMock
   });
 
-  rerender(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 1, page: 5, positionY: 0.2 }} />);
-  rerender(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 2, page: 5, positionY: 0.8 }} />);
+  rerender(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 1, page: 5, positionY: 0.2 }} totalPages={9} />);
+  rerender(<PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 2, page: 5, positionY: 0.8 }} totalPages={9} />);
 
   await waitFor(() => expect(scrollToMock).toHaveBeenCalledTimes(2));
   expect(scrollToMock).toHaveBeenNthCalledWith(1, { behavior: 'smooth', top: 250 });
   expect(scrollToMock).toHaveBeenNthCalledWith(2, { behavior: 'smooth', top: 490 });
   expect(onJumpHandled).toHaveBeenNthCalledWith(1, 1);
   expect(onJumpHandled).toHaveBeenNthCalledWith(2, 2);
+});
+
+it('retries pending jump after document pages become available', async () => {
+  const onJumpHandled = vi.fn();
+  const { rerender } = render(
+    <PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 4, page: 5, positionY: 0.5 }} totalPages={null} />
+  );
+
+  const scrollContainer = screen.getByTestId('pdf-scroll-container') as HTMLDivElement;
+  Object.defineProperty(scrollContainer, 'clientHeight', {
+    configurable: true,
+    value: 200
+  });
+  const scrollToMock = vi.fn();
+  Object.defineProperty(scrollContainer, 'scrollTo', {
+    configurable: true,
+    value: scrollToMock
+  });
+
+  rerender(
+    <PageJumpHarness onJumpHandled={onJumpHandled} pageJumpRequest={{ id: 4, page: 5, positionY: 0.5 }} totalPages={9} />
+  );
+
+  await waitFor(() => expect(scrollToMock).toHaveBeenCalledTimes(1));
+  expect(onJumpHandled).toHaveBeenCalledWith(4);
 });
