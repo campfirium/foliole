@@ -12,11 +12,6 @@ const electronMock = vi.hoisted(() => ({
 }));
 
 const syncDatabaseMock = vi.hoisted(() => ({
-  applySyncNodes: vi.fn(() => ['node-mobile']),
-  applySyncObjects: vi.fn((objects: Array<{ object_id: string; object_type: string }>) => (
-    objects.map((object) => `${object.object_type}:${object.object_id}`)
-  )),
-  applySyncReviewLog: vi.fn(() => ['op-mobile']),
   flushDirtyNodeSyncVersions: vi.fn(() => ['node-1']),
   loadSyncIndex: vi.fn(() => [{
     content_hash: 'setting-hash',
@@ -80,11 +75,8 @@ vi.mock('../database/syncObjects.js', () => ({
 }));
 vi.mock('../database/syncNodes.js', () => ({ loadSyncNodeVersionsSince: syncDatabaseMock.loadSyncNodeVersionsSince }));
 vi.mock('../database/syncReviewLog.js', () => ({
-  applySyncReviewLog: syncDatabaseMock.applySyncReviewLog,
   loadSyncReviewLogSince: syncDatabaseMock.loadSyncReviewLogSince
 }));
-vi.mock('../database/syncObjectApply.js', () => ({ applySyncObjects: syncDatabaseMock.applySyncObjects }));
-vi.mock('../database/syncApply.js', () => ({ applySyncNodes: syncDatabaseMock.applySyncNodes }));
 vi.mock('./workspaceSyncAppliedEvents.js', () => ({
   notifyWorkspaceSyncApplied: syncAppliedEventsMock.notifyWorkspaceSyncApplied
 }));
@@ -228,7 +220,6 @@ async function testRetiresPushedMobileStateObjects() {
 
   expect(response.status).toBe(410);
   await expect(response.json()).resolves.toEqual({ error: 'sync_json_endpoint_retired' });
-  expect(syncDatabaseMock.applySyncObjects).not.toHaveBeenCalled();
 }
 
 describe('lan workspace sync objects', () => {

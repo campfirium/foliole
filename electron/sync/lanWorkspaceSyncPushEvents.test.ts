@@ -10,10 +10,6 @@ import { postSigned } from './lanWorkspaceSyncObjects.testSupport.js';
 const electronMock = vi.hoisted(() => ({
   userDataPath: `/tmp/foliole-sync-push-events-${Math.random().toString(16).slice(2)}`
 }));
-const syncDatabaseMock = vi.hoisted(() => ({
-  applySyncNodes: vi.fn(() => ['node-mobile']),
-  applySyncReviewLog: vi.fn(() => ['op-mobile'])
-}));
 const syncAppliedEventsMock = vi.hoisted(() => ({ notifyWorkspaceSyncApplied: vi.fn() }));
 
 vi.mock('electron', () => ({
@@ -24,8 +20,6 @@ vi.mock('electron', () => ({
     isEncryptionAvailable: vi.fn(() => true)
   }
 }));
-vi.mock('../database/syncApply.js', () => ({ applySyncNodes: syncDatabaseMock.applySyncNodes }));
-vi.mock('../database/syncReviewLog.js', () => ({ applySyncReviewLog: syncDatabaseMock.applySyncReviewLog }));
 vi.mock('./workspaceSyncAppliedEvents.js', () => ({
   notifyWorkspaceSyncApplied: syncAppliedEventsMock.notifyWorkspaceSyncApplied
 }));
@@ -107,8 +101,6 @@ describe('lan workspace sync push events', () => {
 
     await expectRetiredNodeAndReviewPushes('http://127.0.0.1:38685', paired);
 
-    expect(syncDatabaseMock.applySyncNodes).not.toHaveBeenCalled();
-    expect(syncDatabaseMock.applySyncReviewLog).not.toHaveBeenCalled();
     expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).not.toHaveBeenCalled();
   });
 });
