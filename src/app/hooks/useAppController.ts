@@ -1,29 +1,27 @@
-import { useMemo } from 'react';
-
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
-import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { restartMainWindowApp, toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
-import { buildAppPaletteItems } from './appCommands';
 import { buildPaletteState, useCurrentReviewPreview } from './appControllerHelpers';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
 import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { buildControllerGoToNodeState } from './appGoToNodeState';
+import type { AppGoToNodeState } from './appGoToNodeState';
+import { buildHotkeySettings, type AppHotkeySettings } from './appHotkeySettings';
 import { createPaletteCommandRunner } from './appPaletteCommandRunner';
 import type { AppSearchState } from './appSearchState';
 import { buildControllerSearchState } from './appSearchState';
 import { countDueReviewNodes } from './layoutPropsBuilder';
 import {
-  isReviewShortcutCommand,
-  mapPaletteItemsToHotkeyItems,
   REVIEW_SHORTCUT_COMMAND_IDS,
   useCommandShortcutState
 } from './reviewHotkeysState';
+import { useAppPaletteItems } from './useAppPaletteItems';
 import { useFormalImport } from './useFormalImport';
 import { useNativeCommandMenu } from './useNativeCommandMenu';
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
@@ -38,15 +36,53 @@ export interface AppPaletteState {
 }
 
 export interface AppControllerResult {
-  hotkeySettings: {
-    hotkeyItems: HotkeySettingItem[];
-    onHotkeyReset: (commandId: string) => void;
-    onHotkeyResetAll: () => void;
-    onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
-  };
+  hotkeySettings: AppHotkeySettings;
+  goToNodeState: AppGoToNodeState;
   layoutProps: WorkspaceLayoutProps;
   paletteState: AppPaletteState;
   searchState: AppSearchState;
+}
+
+function useDerivedControllerState(args: {
+  controller: ReturnType<typeof useWorkspaceControllerState>;
+  exitStudyMode: () => void;
+  formalImport: ReturnType<typeof useFormalImport>;
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
+  isCurrentReviewItemGradable: boolean;
+  isReviewEditing: boolean;
+  isStudyMode: boolean;
+  nowIso: string;
+  reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
+  reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
+  startStudyMode: () => void;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  const reviewDueCount = countDueReviewNodes(args.ws.nodeOrder, args.ws.nodesById, args.ws.trashedNodeIds, args.nowIso, args.reviewSettings.reviewSchedulerSettings.pushQueue);
+  const paletteItems = useAppPaletteItems({
+    formalImportAvailable: args.formalImport.isAvailable && !args.formalImport.isImporting,
+    hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
+    hotkeys: args.hotkeys,
+    isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,
+    isStudyMode: args.isStudyMode,
+    nav: args.controller.nav,
+    reviewSession: args.ws.reviewSession,
+    study: args.controller.study,
+    ws: args.ws
+  });
+  const layoutProps = buildControllerLayoutState({
+    controller: args.controller,
+    exitStudyMode: args.exitStudyMode,
+    formalImport: args.formalImport,
+    isReviewEditing: args.isReviewEditing,
+    isStudyMode: args.isStudyMode,
+    nowIso: args.nowIso,
+    reviewDueCount,
+    reviewPreview: args.reviewPreview,
+    reviewSettings: args.reviewSettings,
+    startStudyMode: args.startStudyMode,
+    ws: args.ws
+  });
+  return { layoutProps, paletteItems };
 }
 
 function buildControllerPaletteState(args: {
@@ -70,6 +106,7 @@ function buildControllerPaletteState(args: {
     exitStudyMode: args.study.exitStudyMode,
     goBack: args.nav.handleGoBack,
     goForward: args.nav.handleGoForward,
+    goToNode: () => undefined,
     goParent: args.nav.handleGoParent,
     gradeReviewCard: args.ws.gradeReviewCard,
     importDirectory: args.formalImport.startImportDirectory,
@@ -86,6 +123,7 @@ function buildControllerPaletteState(args: {
     recordRecentCommand: args.runtime.recordRecentCommand,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,
+    setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
     setSettingsOpen: args.runtime.setIsSettingsOpen,
     startClipboardImport: args.layoutProps.onStartClipboardImport,
     startReviewSession: args.ws.startReviewSession,
@@ -99,40 +137,6 @@ function buildControllerPaletteState(args: {
     args.runtime.recentCommandIds,
     () => args.runtime.setIsCommandPaletteOpen(false),
     runPaletteCommand
-  );
-}
-
-function useReviewPaletteItems(args: {
-  formalImportAvailable: boolean;
-  hasReviewCard: boolean;
-  hotkeys: ReturnType<typeof useCommandShortcutState>;
-  isCurrentReviewItemGradable: boolean;
-  isStudyMode: boolean;
-  nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
-  reviewSession: ReturnType<typeof useWorkspaceSelectors>['reviewSession'];
-  study: ReturnType<typeof useWorkspaceControllerState>['study'];
-}) {
-  return useMemo(
-    () =>
-      buildAppPaletteItems({
-        canImportFile: args.formalImportAvailable,
-        canImportFolder: args.formalImportAvailable,
-        canResetImportData: args.formalImportAvailable,
-        canGoBack: args.nav.canGoBack,
-        canGoForward: args.nav.canGoForward,
-        canGoParent: args.nav.canGoParent,
-        canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
-        canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
-        canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,
-        canDeferReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
-        canCompleteReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
-        canDismissReadingReview: args.hasReviewCard && !args.isCurrentReviewItemGradable,
-        isReviewMode: args.isStudyMode
-      }).map((item) => ({
-        ...item,
-        shortcuts: isReviewShortcutCommand(item.id) ? args.hotkeys.shortcutMap[item.id] : item.shortcuts
-      })),
-    [args]
   );
 }
 
@@ -219,16 +223,15 @@ export function useAppController(): AppControllerResult {
   const currentReviewNode = ws.reviewSession.currentNodeId ? ws.nodesById[ws.reviewSession.currentNodeId] : undefined;
   const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
   const isReviewEditing = useReviewEditingState({ hotkeys, isCurrentReviewItemGradable, isStudyMode, runtime: controller.runtime, ws });
-  const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso, reviewSettings.reviewSchedulerSettings.pushQueue), [nowIso, reviewSettings.reviewSchedulerSettings.pushQueue, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
-  const paletteItems = useReviewPaletteItems({ formalImportAvailable: formalImport.isAvailable && !formalImport.isImporting, hasReviewCard: Boolean(ws.reviewSession.currentNodeId), hotkeys, isCurrentReviewItemGradable, isStudyMode, nav: controller.nav, reviewSession: ws.reviewSession, study: controller.study });
-  const layoutProps = buildControllerLayoutState({
+  const { layoutProps, paletteItems } = useDerivedControllerState({
     controller,
     exitStudyMode,
     formalImport,
+    hotkeys,
+    isCurrentReviewItemGradable,
     isReviewEditing,
     isStudyMode,
     nowIso,
-    reviewDueCount,
     reviewPreview,
     reviewSettings,
     startStudyMode,
@@ -246,18 +249,14 @@ export function useAppController(): AppControllerResult {
     trash: controller.trash,
     ws
   });
+  const goToNodeState = buildControllerGoToNodeState({ runtime: controller.runtime, trash: controller.trash, ws });
   const searchState = buildControllerSearchState({ runtime: controller.runtime, trash: controller.trash, ws });
 
   useNativeCommandMenu(paletteState.items, paletteState.onRunCommand);
-  const hotkeySettings = {
-    hotkeyItems: mapPaletteItemsToHotkeyItems(paletteItems, hotkeys.overrides),
-    onHotkeyReset: hotkeys.resetShortcut,
-    onHotkeyResetAll: hotkeys.resetAllShortcuts,
-    onHotkeyUpdate: hotkeys.updateShortcut
-  };
 
   return {
-    hotkeySettings,
+    hotkeySettings: buildHotkeySettings(paletteItems, hotkeys),
+    goToNodeState,
     layoutProps,
     paletteState,
     searchState

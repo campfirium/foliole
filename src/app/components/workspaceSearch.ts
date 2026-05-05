@@ -14,6 +14,14 @@ function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+function matchesWorkspaceNode(node: Node, normalizedQuery: string) {
+  const normalizedTitle = node.title.trim().toLowerCase();
+  if (normalizedTitle.includes(normalizedQuery)) {
+    return true;
+  }
+  return node.content.toLowerCase().includes(normalizedQuery);
+}
+
 function buildExcerpt(content: string, query: string) {
   const normalizedContent = normalizeWhitespace(content);
   if (!normalizedContent) {
@@ -31,14 +39,6 @@ function buildExcerpt(content: string, query: string) {
   const prefix = start > 0 ? '...' : '';
   const suffix = end < normalizedContent.length ? '...' : '';
   return `${prefix}${normalizedContent.slice(start, end)}${suffix}`;
-}
-
-function matchesWorkspaceNode(node: Node, normalizedQuery: string) {
-  const normalizedTitle = node.title.trim().toLowerCase();
-  if (normalizedTitle.includes(normalizedQuery)) {
-    return true;
-  }
-  return node.content.toLowerCase().includes(normalizedQuery);
 }
 
 export function buildWorkspaceSearchResults(

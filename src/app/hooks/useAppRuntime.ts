@@ -41,17 +41,11 @@ export function isSearchPaletteToggleShortcut(event: CommandPaletteToggleShortcu
   );
 }
 
-export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
-  const editorRef = useRef<EditorAdapter | null>(null);
-  const lastExpandedListWidthRef = useRef(initialListWidth);
-  const lastExpandedRightSidebarWidthRef = useRef(initialRightSidebarWidth);
-  const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isSearchPaletteOpen, setIsSearchPaletteOpen] = useState(false);
-  const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
-  const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
-
+function useWindowHotkeys(args: {
+  setIsCommandPaletteOpen: (update: (open: boolean) => boolean) => void;
+  setIsGoToNodePaletteOpen: (open: boolean) => void;
+  setIsSearchPaletteOpen: (update: (open: boolean) => boolean) => void;
+}) {
   useEffect(
     () =>
       onWindowKeydown((event) => {
@@ -62,18 +56,35 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
         }
         if (isCommandPaletteToggleShortcut(event)) {
           event.preventDefault();
-          setIsSearchPaletteOpen(false);
-          setIsCommandPaletteOpen((open) => !open);
+          args.setIsSearchPaletteOpen(() => false);
+          args.setIsGoToNodePaletteOpen(false);
+          args.setIsCommandPaletteOpen((open) => !open);
           return;
         }
         if (isSearchPaletteToggleShortcut(event)) {
           event.preventDefault();
-          setIsCommandPaletteOpen(false);
-          setIsSearchPaletteOpen((open) => !open);
+          args.setIsCommandPaletteOpen(() => false);
+          args.setIsGoToNodePaletteOpen(false);
+          args.setIsSearchPaletteOpen((open) => !open);
         }
       }),
-    []
+    [args]
   );
+}
+
+export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
+  const editorRef = useRef<EditorAdapter | null>(null);
+  const lastExpandedListWidthRef = useRef(initialListWidth);
+  const lastExpandedRightSidebarWidthRef = useRef(initialRightSidebarWidth);
+  const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isSearchPaletteOpen, setIsSearchPaletteOpen] = useState(false);
+  const [isGoToNodePaletteOpen, setIsGoToNodePaletteOpen] = useState(false);
+  const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
+  const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
+
+  useWindowHotkeys({ setIsCommandPaletteOpen, setIsGoToNodePaletteOpen, setIsSearchPaletteOpen });
 
   const recordRecentCommand = (id: string) => {
     setRecentCommandIdsState((current) => {
@@ -86,6 +97,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   return {
     editorRef,
     isCommandPaletteOpen,
+    isGoToNodePaletteOpen,
     isImportManagementOpen,
     isSearchPaletteOpen,
     isSettingsOpen,
@@ -95,6 +107,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     recentCommandIds,
     recordRecentCommand,
     setIsCommandPaletteOpen,
+    setIsGoToNodePaletteOpen,
     setIsImportManagementOpen,
     setIsSearchPaletteOpen,
     setIsSettingsOpen,

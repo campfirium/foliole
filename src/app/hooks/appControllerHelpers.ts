@@ -1,6 +1,7 @@
 import type { NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
+import type { AppGoToNodeState } from './appGoToNodeState';
 import type { AppSearchState } from './appSearchState';
 import type { AppPaletteState } from './useAppController';
 import { useReviewPreview } from './useReviewPreview';
@@ -23,6 +24,17 @@ export function buildSearchState(
   onClose: () => void,
   onOpenNode: (nodeId: string) => void
 ): AppSearchState {
+  return { isOpen, nodeOrder, nodesById, onClose, onOpenNode, trashedNodeIds };
+}
+
+export function buildGoToNodeState(
+  isOpen: boolean,
+  nodeOrder: string[],
+  nodesById: AppGoToNodeState['nodesById'],
+  trashedNodeIds: string[],
+  onClose: () => void,
+  onOpenNode: (nodeId: string) => void
+): AppGoToNodeState {
   return { isOpen, nodeOrder, nodesById, onClose, onOpenNode, trashedNodeIds };
 }
 

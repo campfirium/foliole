@@ -9,6 +9,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     closeSettings: () => undefined,
     goBack: () => undefined,
     goForward: () => undefined,
+    goToNode: () => undefined,
     goParent: () => undefined,
     importDirectory: () => undefined,
     importSingleFile: () => undefined,
@@ -43,6 +44,7 @@ describe('buildAppPaletteItems', () => {
       canResetImportData: true,
       canGoBack: true,
       canGoForward: true,
+      canGoToNode: true,
       canGoParent: true,
       canRevealAnswer: true,
       canToggleReviewMode: true,
@@ -57,6 +59,7 @@ describe('buildAppPaletteItems', () => {
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.goToNode)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
@@ -72,6 +75,7 @@ describe('buildAppPaletteItems', () => {
       canResetImportData: true,
       canGoBack: true,
       canGoForward: true,
+      canGoToNode: true,
       canGoParent: true,
       canRevealAnswer: true,
       canToggleReviewMode: true,
@@ -103,6 +107,18 @@ describe('runAppCommand', () => {
     expect(toggleDevTools).toHaveBeenCalledTimes(1);
     expect(importSingleFile).not.toHaveBeenCalled();
     expect(importDirectory).not.toHaveBeenCalled();
+  });
+
+  it('runs go to node through the shared command handler', () => {
+    const goToNode = vi.fn();
+
+    expect(
+      runAppCommand(APP_COMMAND_IDS.goToNode, createCommandActions({
+        goToNode
+      }))
+    ).toBe(true);
+
+    expect(goToNode).toHaveBeenCalledTimes(1);
   });
 
   it('runs formal import through the shared command handler', () => {

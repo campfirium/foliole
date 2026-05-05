@@ -26,6 +26,7 @@ const MENU_COMMAND_IDS = [
   'review.gradeEasy',
   'navigation.goBack',
   'navigation.goForward',
+  'navigation.goToNode',
   'navigation.goParent'
 ] as const;
 
@@ -79,6 +80,7 @@ export function installAppMenu() {
       submenu: [
         commandItem('Go Back', 'navigation.goBack'),
         commandItem('Go Forward', 'navigation.goForward'),
+        commandItem('Go to Node…', 'navigation.goToNode'),
         commandItem('Go to Parent', 'navigation.goParent')
       ]
     },

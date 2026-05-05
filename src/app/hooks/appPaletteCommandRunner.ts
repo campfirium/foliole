@@ -8,6 +8,7 @@ interface PaletteCommandRunnerArgs {
   exitStudyMode: () => void;
   goBack: () => void;
   goForward: () => void;
+  goToNode: () => void;
   goParent: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
   importDirectory: () => Promise<boolean>;
@@ -27,6 +28,7 @@ interface PaletteCommandRunnerArgs {
   recordRecentCommand: (id: string) => void;
   revealReviewAnswer: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
+  setGoToNodePaletteOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   startClipboardImport: () => void;
   startReviewSession: () => boolean;
@@ -53,6 +55,7 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       closeSettings: () => args.setSettingsOpen(false),
       goBack: args.goBack,
       goForward: args.goForward,
+      goToNode: () => args.setGoToNodePaletteOpen(true),
       goParent: args.goParent,
       importDirectory: () => {
         void args.importDirectory();

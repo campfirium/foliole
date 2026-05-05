@@ -6,6 +6,7 @@ export const APP_COMMAND_IDS = {
   closeContextMenu: 'ui.closeContextMenu',
   goBack: 'navigation.goBack',
   goForward: 'navigation.goForward',
+  goToNode: 'navigation.goToNode',
   goParent: 'navigation.goParent',
   toggleEditorDisplayMode: 'editor.toggleDisplayMode',
   startStudyMode: 'review.startStudyMode',
