@@ -215,6 +215,44 @@ describe('companion desktop sync push acknowledgements', () => {
     expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalled();
   });
 
+  it('reports rejected and conflicted push acknowledgements without storing them as pending acks', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([
+      createLocalNodeReadingChange(),
+      createLocalNodeReviewChange()
+    ]);
+    vi.mocked(fetch).mockResolvedValueOnce({
+      json: async () => ({
+        acks: parsePushItems({
+          body: JSON.stringify({
+            items: [
+              {
+                clientOpId: 'node_reading:node-1:9',
+                identity: { objectId: 'node-1', objectType: 'node_reading', scope: 'workspace' }
+              },
+              {
+                clientOpId: 'node_review:node-1:10',
+                identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' }
+              }
+            ]
+          })
+        }).items.map((item, index) => ({
+          client_op_id: item.clientOpId,
+          identity: item.identity,
+          status: index === 0 ? 'conflict' : 'rejected'
+        }))
+      }),
+      ok: true
+    } as Response);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushConflictCount).toBe(1);
+    expect(result.pushRejectedCount).toBe(1);
+    expect(result.pushedObjectIds).toEqual([]);
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([]);
+  });
+
   it('skips legacy node_reading dirty rows that do not have a base reference', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReadingChange({
       base_content_hash: null

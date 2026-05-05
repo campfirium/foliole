@@ -53,6 +53,8 @@ export interface CompanionDesktopSyncResult {
   contentBlobError: string | null;
   localDirtyCount: number | null;
   pendingAckCount: number | null;
+  pushConflictCount: number;
+  pushRejectedCount: number;
   remainingAttachmentResourceBytes: number | null;
   remainingAttachmentResourceCount: number | null;
   remainingContentBlobBytes: number | null;
@@ -258,7 +260,13 @@ async function runCompanionObjectsSync(
   options: CompanionDesktopSyncOptions = {}
 ): Promise<CompanionDesktopSyncResult> {
   const pushed = await withSyncStepTimeout('pushing local review changes', pushLocalDirtyObjects(endpointUrl))
-    .catch((error) => ({ pushedObjectIds: [], pushedReviewOpIds: [], pushError: pushErrorMessage(error) }));
+    .catch((error) => ({
+      pushConflictCount: 0,
+      pushedObjectIds: [],
+      pushedReviewOpIds: [],
+      pushError: pushErrorMessage(error),
+      pushRejectedCount: 0
+    }));
   const pack = await withSyncStepTimeout('applying the structure pack', pullRemoteStructurePack(endpointUrl));
   options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
   await options.onStructureSynced?.();
@@ -304,11 +312,13 @@ async function runCompanionObjectsSync(
     contentBlobError,
     localDirtyCount: finalSummary.localDirtyCount,
     pendingAckCount: finalSummary.pendingAckCount,
+    pushConflictCount: pushed.pushConflictCount,
     remainingAttachmentResourceBytes: finalSummary.remainingAttachmentResourceBytes,
     remainingAttachmentResourceCount: finalSummary.remainingAttachmentResourceCount,
     remainingContentBlobBytes: finalSummary.remainingContentBlobBytes,
     remainingContentBlobCount: finalSummary.remainingContentBlobCount,
-    syncedContentBlobHashes
+    syncedContentBlobHashes,
+    pushRejectedCount: pushed.pushRejectedCount
   };
 }
 

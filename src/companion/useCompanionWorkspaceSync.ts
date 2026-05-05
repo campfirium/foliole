@@ -35,7 +35,9 @@ function describeManualSyncPassResult(result: {
   remainingContentBlobCount: number | null;
   localDirtyCount?: number | null;
   pendingAckCount?: number | null;
+  pushConflictCount?: number;
   pushError?: string | null;
+  pushRejectedCount?: number;
 }) {
   if (result.attachmentResourceError) {
     return {
@@ -66,6 +68,13 @@ function describeManualSyncPassResult(result: {
     }
     return {
       message: `${prefix}; ${bodyLabel} and ${attachmentLabel} still caching.`,
+      status: 'skipped' as const
+    };
+  }
+  const rejectedOrConflicted = (result.pushConflictCount ?? 0) + (result.pushRejectedCount ?? 0);
+  if (rejectedOrConflicted > 0) {
+    return {
+      message: `Sync pass finished; ${rejectedOrConflicted} device change(s) need review before they can be sent.`,
       status: 'skipped' as const
     };
   }

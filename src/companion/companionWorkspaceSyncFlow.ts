@@ -24,7 +24,9 @@ function describeSyncPassResult(result: {
   remainingContentBlobCount: number | null;
   localDirtyCount?: number | null;
   pendingAckCount?: number | null;
+  pushConflictCount?: number;
   pushError?: string | null;
+  pushRejectedCount?: number;
 }) {
   if (result.attachmentResourceError) {
     return {
@@ -65,6 +67,14 @@ function describeSyncPassResult(result: {
     }
     return {
       message: `${prefix}; ${bodyLabel} and ${attachmentLabel} still caching.`,
+      outcome: 'skipped' as const,
+      status: 'skipped' as const
+    };
+  }
+  const rejectedOrConflicted = (result.pushConflictCount ?? 0) + (result.pushRejectedCount ?? 0);
+  if (rejectedOrConflicted > 0) {
+    return {
+      message: `Sync pass finished; ${rejectedOrConflicted} device change(s) need review before they can be sent.`,
       outcome: 'skipped' as const,
       status: 'skipped' as const
     };

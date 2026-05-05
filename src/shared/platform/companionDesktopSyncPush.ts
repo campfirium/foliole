@@ -19,9 +19,11 @@ import {
 const SYNC_PUSH_PATH = '/companion/sync-push';
 
 export interface CompanionDesktopSyncPushResult {
+  pushConflictCount: number;
   pushedObjectIds: string[];
   pushedReviewOpIds: string[];
   pushError: string | null;
+  pushRejectedCount: number;
 }
 
 interface DesktopSyncPushResponse {
@@ -74,6 +76,10 @@ function acceptedAcks(acks: SyncPushAck[]) {
   return acks.filter((ack) => ack.status === 'accepted' || ack.status === 'already_applied');
 }
 
+function countAcksByStatus(acks: SyncPushAck[], status: SyncPushAck['status']) {
+  return acks.filter((ack) => ack.status === status).length;
+}
+
 function formatPushError(error: unknown) {
   return error instanceof Error ? error.message : 'Desktop sync push failed.';
 }
@@ -82,7 +88,13 @@ export async function pushLocalDirtyObjects(endpointUrl: string): Promise<Compan
   try {
     const { items, reviewLog } = await collectLocalPushItems();
     if (items.length === 0) {
-      return { pushedObjectIds: [], pushedReviewOpIds: [], pushError: null };
+      return {
+        pushConflictCount: 0,
+        pushedObjectIds: [],
+        pushedReviewOpIds: [],
+        pushError: null,
+        pushRejectedCount: 0
+      };
     }
     const response = await postDesktopJson<DesktopSyncPushResponse>(endpointUrl, SYNC_PUSH_PATH, { items });
     const acks = response.acks.map(toPushAck);
@@ -96,10 +108,18 @@ export async function pushLocalDirtyObjects(endpointUrl: string): Promise<Compan
       pushedReviewOpIds: accepted
         .filter((ack) => ack.identity.objectType === 'review_log')
         .map((ack) => ack.identity.objectId),
-      pushError: null
+      pushConflictCount: countAcksByStatus(acks, 'conflict'),
+      pushError: null,
+      pushRejectedCount: countAcksByStatus(acks, 'rejected')
     };
   } catch (error) {
-    return { pushedObjectIds: [], pushedReviewOpIds: [], pushError: formatPushError(error) };
+    return {
+      pushConflictCount: 0,
+      pushedObjectIds: [],
+      pushedReviewOpIds: [],
+      pushError: formatPushError(error),
+      pushRejectedCount: 0
+    };
   }
 }
 
