@@ -6,8 +6,10 @@ import {
   resolveEditorMouseGesture,
   resolveEditorMouseGestureAction,
   type EditorMouseGestureBinding,
-  type EditorMouseGestureDirection
+  type EditorMouseGestureDirection,
+  type EditorMouseGestureId
 } from '../model/editorMouseGestures';
+import type { EditorMouseGestureSettings } from '../model/editorMouseGestureSettings';
 
 import { runEditorMouseGestureAction } from './editorMouseGestureActions';
 
@@ -22,37 +24,53 @@ interface GestureTrackingState {
 }
 
 interface GestureTrailState {
+  color: string;
   height: number;
+  lineWidth: number;
+  opacity: number;
   points: Point[];
   width: number;
 }
-
-const SEGMENT_THRESHOLD_PX = 18;
-const TRAIL_POINT_THRESHOLD_PX = 6;
 
 interface WindowGestureHandlers {
   handleWindowMouseMove: (event: MouseEvent) => void;
   handleWindowMouseUp: (event: MouseEvent) => void;
 }
 
-function resolveDominantDirection(deltaX: number, deltaY: number): EditorMouseGestureDirection | null {
+function resolveDominantDirection(
+  deltaX: number,
+  deltaY: number,
+  segmentThresholdPx: number
+): EditorMouseGestureDirection | null {
   if (Math.abs(deltaX) >= Math.abs(deltaY)) {
-    if (Math.abs(deltaX) < SEGMENT_THRESHOLD_PX) {
+    if (Math.abs(deltaX) < segmentThresholdPx) {
       return null;
     }
     return deltaX < 0 ? 'left' : 'right';
   }
 
-  if (Math.abs(deltaY) < SEGMENT_THRESHOLD_PX) {
+  if (Math.abs(deltaY) < segmentThresholdPx) {
     return null;
   }
   return deltaY < 0 ? 'up' : 'down';
+}
+
+function canExtendGesture(directions: EditorMouseGestureDirection[]) {
+  return directions.length === 1 && directions[0] === 'left';
+}
+
+function resolveGesturePreview(directions: EditorMouseGestureDirection[]): EditorMouseGestureId | null {
+  if (canExtendGesture(directions)) {
+    return null;
+  }
+  return resolveEditorMouseGesture(directions);
 }
 
 function createWindowGestureHandlers(
   adapterRef: React.MutableRefObject<EditorAdapter | null>,
   hostRef: React.MutableRefObject<HTMLDivElement | null>,
   bindings: EditorMouseGestureBinding[],
+  settings: EditorMouseGestureSettings,
   trackingRef: React.MutableRefObject<GestureTrackingState | null>,
   suppressNextContextMenuRef: React.MutableRefObject<boolean>,
   setTrail: React.Dispatch<React.SetStateAction<GestureTrailState | null>>
@@ -63,19 +81,23 @@ function createWindowGestureHandlers(
       return;
     }
 
-    const direction = resolveDominantDirection(event.clientX - tracking.lastPoint.x, event.clientY - tracking.lastPoint.y);
+    const direction = resolveDominantDirection(
+      event.clientX - tracking.lastPoint.x,
+      event.clientY - tracking.lastPoint.y,
+      settings.segmentThresholdPx
+    );
     if (!direction) {
       return;
     }
 
     event.preventDefault();
     tracking.lastPoint = { x: event.clientX, y: event.clientY };
-    syncTrail(hostRef.current, event.clientX, event.clientY, setTrail);
+    syncTrail(hostRef.current, event.clientX, event.clientY, settings, setTrail);
     if (tracking.directions.at(-1) === direction || tracking.directions.length >= 2) {
       return;
     }
     tracking.directions.push(direction);
-    if (resolveEditorMouseGesture(tracking.directions)) {
+    if (resolveGesturePreview(tracking.directions)) {
       suppressNextContextMenuRef.current = true;
     }
   };
@@ -123,6 +145,7 @@ function syncTrail(
   host: HTMLDivElement | null,
   clientX: number,
   clientY: number,
+  settings: EditorMouseGestureSettings,
   setTrail: React.Dispatch<React.SetStateAction<GestureTrailState | null>>
 ) {
   if (!host) {
@@ -132,21 +155,43 @@ function syncTrail(
   const { point, rect } = toRelativePoint(host, clientX, clientY);
   setTrail((current) => {
     if (!current) {
-      return { height: rect.height, points: [point], width: rect.width };
+      return {
+        color: settings.trailColor,
+        height: rect.height,
+        lineWidth: settings.trailLineWidth,
+        opacity: settings.trailOpacity,
+        points: [point],
+        width: rect.width
+      };
     }
 
     const lastPoint = current.points.at(-1);
     if (!lastPoint) {
-      return { height: rect.height, points: [point], width: rect.width };
+      return {
+        color: settings.trailColor,
+        height: rect.height,
+        lineWidth: settings.trailLineWidth,
+        opacity: settings.trailOpacity,
+        points: [point],
+        width: rect.width
+      };
     }
 
     const distance = Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y);
-    if (distance < TRAIL_POINT_THRESHOLD_PX) {
-      return current;
+    if (distance < settings.trailPointThresholdPx) {
+      return {
+        ...current,
+        color: settings.trailColor,
+        lineWidth: settings.trailLineWidth,
+        opacity: settings.trailOpacity
+      };
     }
 
     return {
+      color: settings.trailColor,
       height: rect.height,
+      lineWidth: settings.trailLineWidth,
+      opacity: settings.trailOpacity,
       points: [...current.points, point],
       width: rect.width
     };
@@ -156,7 +201,8 @@ function syncTrail(
 export function useEditorMouseGesture(
   adapterRef: React.MutableRefObject<EditorAdapter | null>,
   hostRef: React.MutableRefObject<HTMLDivElement | null>,
-  bindings: EditorMouseGestureBinding[]
+  bindings: EditorMouseGestureBinding[],
+  settings: EditorMouseGestureSettings
 ) {
   const trackingRef = useRef<GestureTrackingState | null>(null);
   const suppressNextContextMenuRef = useRef(false);
@@ -167,6 +213,7 @@ export function useEditorMouseGesture(
       adapterRef,
       hostRef,
       bindings,
+      settings,
       trackingRef,
       suppressNextContextMenuRef,
       setTrail
@@ -178,7 +225,7 @@ export function useEditorMouseGesture(
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
     };
-  }, [adapterRef, bindings, hostRef]);
+  }, [adapterRef, bindings, hostRef, settings]);
 
   const handleMouseDownCapture = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 2 || !bindings.length) {
@@ -190,7 +237,7 @@ export function useEditorMouseGesture(
       lastPoint: { x: event.clientX, y: event.clientY }
     };
     suppressNextContextMenuRef.current = false;
-    syncTrail(hostRef.current, event.clientX, event.clientY, setTrail);
+    syncTrail(hostRef.current, event.clientX, event.clientY, settings, setTrail);
   };
 
   const handleContextMenu = (event: ReactMouseEvent<HTMLDivElement>, onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void) => {

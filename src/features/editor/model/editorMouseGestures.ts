@@ -1,5 +1,6 @@
 export type EditorMouseGestureDirection = 'left' | 'right' | 'up' | 'down';
-export type EditorMouseGestureId = 'left-down' | 'left-up';
+export const EDITOR_MOUSE_GESTURE_IDS = ['left', 'right', 'left-up', 'left-down'] as const;
+export type EditorMouseGestureId = (typeof EDITOR_MOUSE_GESTURE_IDS)[number];
 export type EditorMouseGestureActionId = 'scroll-top' | 'scroll-bottom';
 
 export interface EditorMouseGestureBinding {
@@ -15,15 +16,20 @@ export const DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS: EditorMouseGestureBinding[] 
 export function resolveEditorMouseGesture(
   directions: EditorMouseGestureDirection[]
 ): EditorMouseGestureId | null {
-  if (directions.length < 2) {
+  if (directions.length === 0) {
     return null;
   }
 
-  const normalized = directions.slice(0, 2);
-  if (normalized[0] === 'left' && normalized[1] === 'down') {
+  if (directions[0] === 'right') {
+    return 'right';
+  }
+  if (directions[0] === 'left' && directions.length === 1) {
+    return 'left';
+  }
+  if (directions[0] === 'left' && directions[1] === 'down') {
     return 'left-down';
   }
-  if (normalized[0] === 'left' && normalized[1] === 'up') {
+  if (directions[0] === 'left' && directions[1] === 'up') {
     return 'left-up';
   }
   return null;

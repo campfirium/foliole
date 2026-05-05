@@ -3,6 +3,14 @@ import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as Reac
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
+import type {
+  EditorMouseGestureBinding,
+  EditorMouseGestureId
+} from '../../features/editor/model/editorMouseGestures';
+import type {
+  EditorMouseGestureActionSetting,
+  EditorMouseGestureSettings
+} from '../../features/editor/model/editorMouseGestureSettings';
 import type { MarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
@@ -128,6 +136,12 @@ export interface WorkspaceLayoutProps {
   onReadingIntervalGrowthFactorMinChange: (value: number) => void;
   onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
+  onMouseGestureActionChange: (gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) => void;
+  onMouseGestureTrailColorChange: (value: string) => void;
+  onMouseGestureTrailLineWidthChange: (value: number) => void;
+  onMouseGestureTrailOpacityChange: (value: number) => void;
+  onMouseGestureSegmentThresholdChange: (value: number) => void;
+  onMouseGestureTrailPointThresholdChange: (value: number) => void;
   onToggleEditorDisplayMode: () => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
@@ -145,6 +159,8 @@ export interface WorkspaceLayoutProps {
   interfaceFontSize: number;
   reviewSchedulerSettings: ReviewSchedulerSettings;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
+  mouseGestureBindings: EditorMouseGestureBinding[];
+  mouseGestureSettings: EditorMouseGestureSettings;
   editorDisplayMode: EditorDisplayMode;
   monospaceFontPreset: MonospaceFontPreset;
   hotkeyItems: HotkeySettingItem[];

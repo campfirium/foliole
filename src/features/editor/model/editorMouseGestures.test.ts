@@ -7,15 +7,17 @@ import {
 } from './editorMouseGestures';
 
 describe('editorMouseGestures', () => {
-  it('recognizes left-down and left-up gestures from the first two segments', () => {
+  it('recognizes one-stroke and two-stroke gestures', () => {
+    expect(resolveEditorMouseGesture(['left'])).toBe('left');
+    expect(resolveEditorMouseGesture(['right'])).toBe('right');
     expect(resolveEditorMouseGesture(['left', 'down'])).toBe('left-down');
     expect(resolveEditorMouseGesture(['left', 'up', 'up'])).toBe('left-up');
   });
 
-  it('rejects paths that do not start with left then vertical', () => {
+  it('rejects paths that do not match the supported gesture tree', () => {
     expect(resolveEditorMouseGesture(['down', 'left'])).toBeNull();
-    expect(resolveEditorMouseGesture(['left'])).toBeNull();
     expect(resolveEditorMouseGesture(['left', 'right'])).toBeNull();
+    expect(resolveEditorMouseGesture(['up'])).toBeNull();
   });
 
   it('maps gestures to actions through bindings', () => {

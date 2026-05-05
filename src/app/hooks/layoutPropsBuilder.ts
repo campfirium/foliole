@@ -1,4 +1,8 @@
 import { setEditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
+import {
+  getEditorMouseGestureBindings,
+  type EditorMouseGestureSettings
+} from '../../features/editor/model/editorMouseGestureSettings';
 import { setMarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
@@ -24,6 +28,7 @@ import type { WorkspaceState } from '../../store/workspaceStore';
 import { buildReviewQueueVisibility } from '../components/reviewQueueVisibility';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
+import { createMouseGestureActions } from './mouseGestureLayoutActions';
 import { createReviewActions } from './reviewSettingsLayoutActions';
 
 interface AppearanceLayoutState {
@@ -56,9 +61,15 @@ interface ReviewSettingsLayoutState {
   setReviewSchedulerSettingsState: (value: ReviewSchedulerSettings) => void;
 }
 
+interface MouseGestureLayoutState {
+  mouseGestureSettings: EditorMouseGestureSettings;
+  setMouseGestureSettingsState: (value: EditorMouseGestureSettings) => void;
+}
+
 interface BuildLayoutPropsArgs {
   activeNodeId: string | null;
   appearance: AppearanceLayoutState;
+  mouseGestures: MouseGestureLayoutState;
   reviewSettings: ReviewSettingsLayoutState;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -197,6 +208,7 @@ function getReviewSessionSummary(reviewSession: WorkspaceState['reviewSession'])
 export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutProps {
   const sessionActions = createSessionActions(args);
   const appearanceActions = createAppearanceActions(args);
+  const mouseGestureActions = createMouseGestureActions(args.mouseGestures);
   const reviewActions = createReviewActions(args);
   const currentReviewNode = args.reviewSession.currentNodeId ? args.nodesById[args.reviewSession.currentNodeId] : undefined;
   const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
@@ -239,10 +251,11 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onStartClipboardImport: args.onStartClipboardImport,
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze,
     onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions, ...appearanceActions, ...reviewActions,
+    ...mouseGestureActions,
     onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession, customUiFont: args.appearance.customUiFont,
     customInterfaceFont: args.appearance.customInterfaceFont, customMonospaceFont: args.appearance.customMonospaceFont, baseColorMode: args.appearance.baseColorMode,
     accentColorPreset: args.appearance.accentColorPreset, uiFontPreset: args.appearance.uiFontPreset, interfaceFontPreset: args.appearance.interfaceFontPreset,
     interfaceFontSize: args.appearance.interfaceFontSize, reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, markdownSyntaxVisibility: args.appearance.markdownSyntaxVisibility, editorDisplayMode: args.appearance.editorDisplayMode,
-    monospaceFontPreset: args.appearance.monospaceFontPreset, hotkeyItems: args.hotkeyItems, selectedTrashNodeId: args.selectedTrashNodeId, onHotkeyUpdate: args.onHotkeyUpdate, onHotkeyReset: () => undefined, onHotkeyResetAll: () => undefined
+    monospaceFontPreset: args.appearance.monospaceFontPreset, mouseGestureSettings: args.mouseGestures.mouseGestureSettings, mouseGestureBindings: getEditorMouseGestureBindings(args.mouseGestures.mouseGestureSettings), hotkeyItems: args.hotkeyItems, selectedTrashNodeId: args.selectedTrashNodeId, onHotkeyUpdate: args.onHotkeyUpdate, onHotkeyReset: () => undefined, onHotkeyResetAll: () => undefined
   };
 }

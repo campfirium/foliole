@@ -174,6 +174,56 @@ it('updates remaining review scheduler controls from review settings section', a
   });
 });
 
+it('updates mouse gesture bindings and trail controls from the dedicated section', async () => {
+  const onMouseGestureActionChange = vi.fn();
+  const onMouseGestureTrailColorChange = vi.fn();
+  const onMouseGestureTrailLineWidthChange = vi.fn();
+  const onMouseGestureTrailOpacityChange = vi.fn();
+  const onMouseGestureSegmentThresholdChange = vi.fn();
+  const onMouseGestureTrailPointThresholdChange = vi.fn();
+
+  render(
+    <SettingsPanel
+      {...createProps()}
+      onMouseGestureActionChange={onMouseGestureActionChange}
+      onMouseGestureTrailColorChange={onMouseGestureTrailColorChange}
+      onMouseGestureTrailLineWidthChange={onMouseGestureTrailLineWidthChange}
+      onMouseGestureTrailOpacityChange={onMouseGestureTrailOpacityChange}
+      onMouseGestureSegmentThresholdChange={onMouseGestureSegmentThresholdChange}
+      onMouseGestureTrailPointThresholdChange={onMouseGestureTrailPointThresholdChange}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Mouse gestures' }));
+  fireEvent.change(screen.getByLabelText('Left then up mouse gesture action'), {
+    target: { value: 'scroll-bottom' }
+  });
+  fireEvent.change(screen.getByLabelText('Mouse gesture trail color hex'), {
+    target: { value: '#ff5500' }
+  });
+  fireEvent.change(screen.getByLabelText('Mouse gesture trail line width'), {
+    target: { value: '4.5' }
+  });
+  fireEvent.change(screen.getByLabelText('Mouse gesture trail opacity'), {
+    target: { value: '0.6' }
+  });
+  fireEvent.change(screen.getByLabelText('Mouse gesture direction threshold'), {
+    target: { value: '24' }
+  });
+  fireEvent.change(screen.getByLabelText('Mouse gesture trail point threshold'), {
+    target: { value: '10' }
+  });
+
+  await waitFor(() => {
+    expect(onMouseGestureActionChange).toHaveBeenCalledWith('left-up', 'scroll-bottom');
+    expect(onMouseGestureTrailColorChange).toHaveBeenCalledWith('#ff5500');
+    expect(onMouseGestureTrailLineWidthChange).toHaveBeenCalledWith(4.5);
+    expect(onMouseGestureTrailOpacityChange).toHaveBeenCalledWith(0.6);
+    expect(onMouseGestureSegmentThresholdChange).toHaveBeenCalledWith(24);
+    expect(onMouseGestureTrailPointThresholdChange).toHaveBeenCalledWith(10);
+  });
+});
+
 it('keeps push queue defaults, saved values, and reopened review fields in sync', async () => {
   render(<PushQueueSettingsHarness />);
 

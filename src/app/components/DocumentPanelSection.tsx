@@ -3,6 +3,8 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as Reac
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
+import type { EditorMouseGestureBinding } from '../../features/editor/model/editorMouseGestures';
+import type { EditorMouseGestureSettings } from '../../features/editor/model/editorMouseGestureSettings';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -23,6 +25,8 @@ interface DocumentPanelSectionProps {
   documentMaxWidth: number;
   editorContent: string;
   editorDisplayMode: EditorDisplayMode;
+  editorMouseGestureBindings: EditorMouseGestureBinding[];
+  editorMouseGestureSettings: EditorMouseGestureSettings;
   editorAppearanceKey: string;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -61,14 +65,21 @@ function resolveInboxEmptyState(activeNode: Node | undefined) {
     : undefined;
 }
 
-export function DocumentPanelSection(props: DocumentPanelSectionProps) {
+function getDocumentPanelState(props: DocumentPanelSectionProps) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const inboxEmptyState = resolveInboxEmptyState(activeNode);
+  const emptyState = resolveInboxEmptyState(activeNode);
   const reveal = activeNode?.reveal ?? '';
-  const hasAnswerSection = Boolean(
-    !inboxEmptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && props.showAnswerSection
-  );
-  const editorContentPaddingBottom = props.editorDisplayMode === 'preview' ? 'min(68dvh, 36rem)' : undefined;
+
+  return {
+    editorContentPaddingBottom: props.editorDisplayMode === 'preview' ? 'min(68dvh, 36rem)' : undefined,
+    emptyState,
+    hasAnswerSection: Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && props.showAnswerSection),
+    reveal
+  };
+}
+
+export function DocumentPanelSection(props: DocumentPanelSectionProps) {
+  const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props);
   const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
 
   return (
@@ -92,9 +103,11 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           editorAppearanceKey={props.editorAppearanceKey}
           editorContent={props.editorContent}
           editorContentPaddingBottom={editorContentPaddingBottom}
+          editorMouseGestureBindings={props.editorMouseGestureBindings}
+          editorMouseGestureSettings={props.editorMouseGestureSettings}
           editorNodeId={props.editorNodeId}
           editorNodeViewState={props.editorNodeViewState}
-          emptyState={inboxEmptyState}
+          emptyState={emptyState}
           hasAnswerSection={hasAnswerSection}
           isDocumentResizing={props.isDocumentResizing}
           onAnswerChange={props.onAnswerChange}

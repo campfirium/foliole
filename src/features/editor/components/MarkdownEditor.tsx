@@ -4,6 +4,10 @@ import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../sh
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorAdapter } from '../adapters/EditorAdapter';
 import { DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS, type EditorMouseGestureBinding } from '../model/editorMouseGestures';
+import {
+  DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS,
+  type EditorMouseGestureSettings
+} from '../model/editorMouseGestureSettings';
 
 import { useEditorScrollbarMetrics, useScrollbarState, useThumbPointerHandlers, useTrackPointerHandler } from './markdownEditorScrollbar';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
@@ -28,6 +32,7 @@ interface MarkdownEditorProps {
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
   mouseGestureBindings?: EditorMouseGestureBinding[];
+  mouseGestureSettings?: EditorMouseGestureSettings;
 }
 
 function useEditorAdapter(
@@ -132,7 +137,7 @@ function GestureTrailOverlay({
   trail
 }: {
   path: string;
-  trail: { height: number; width: number } | null;
+  trail: { color: string; height: number; lineWidth: number; opacity: number; width: number } | null;
 }) {
   if (!trail || !path) {
     return null;
@@ -141,7 +146,7 @@ function GestureTrailOverlay({
   return (
     <svg
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-20 text-foreground/25"
+      className="pointer-events-none absolute inset-0 z-20"
       height={trail.height}
       viewBox={`0 0 ${trail.width} ${trail.height}`}
       width={trail.width}
@@ -150,10 +155,11 @@ function GestureTrailOverlay({
         d={path}
         data-editor-gesture-trail="true"
         fill="none"
-        stroke="currentColor"
+        stroke={trail.color}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="3"
+        strokeOpacity={trail.opacity}
+        strokeWidth={trail.lineWidth}
       />
     </svg>
   );
@@ -170,6 +176,7 @@ export function MarkdownEditor({
   onChange,
   onContextMenu,
   mouseGestureBindings = DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS,
+  mouseGestureSettings = DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS,
   onReady
 }: MarkdownEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -182,7 +189,7 @@ export function MarkdownEditor({
   const thumbStyle = useMemo(() => scrollbar.thumbStyle, [scrollbar.thumbStyle]);
   const onTrackPointerDown = useTrackPointerHandler(adapterRef, hostRef, scrollbar, syncScrollMetrics);
   const handlers = useThumbPointerHandlers(adapterRef, scrollMetrics, scrollbar, syncScrollMetrics);
-  const mouseGesture = useEditorMouseGesture(adapterRef, hostRef, mouseGestureBindings);
+  const mouseGesture = useEditorMouseGesture(adapterRef, hostRef, mouseGestureBindings, mouseGestureSettings);
   const editorStyle = { '--editor-content-padding-bottom': contentPaddingBottom } as CSSProperties;
   const gestureTrailPath = useMemo(() => buildGestureTrailPath(mouseGesture.trail?.points ?? []), [mouseGesture.trail?.points]);
 

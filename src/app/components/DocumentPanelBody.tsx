@@ -3,6 +3,8 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
+import type { EditorMouseGestureBinding } from '../../features/editor/model/editorMouseGestures';
+import type { EditorMouseGestureSettings } from '../../features/editor/model/editorMouseGestureSettings';
 import { cn } from '../../shared/lib/utils';
 import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -15,6 +17,8 @@ interface DocumentPanelBodyProps {
   editorAppearanceKey: string;
   editorContent: string;
   editorContentPaddingBottom?: string;
+  editorMouseGestureBindings: EditorMouseGestureBinding[];
+  editorMouseGestureSettings: EditorMouseGestureSettings;
   emptyContent?: ReactNode;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -47,6 +51,8 @@ interface DocumentWidthHandleProps {
 }
 
 interface AnswerSectionProps {
+  editorMouseGestureBindings: EditorMouseGestureBinding[];
+  editorMouseGestureSettings: EditorMouseGestureSettings;
   editorAppearanceKey: string;
   editorNodeId: string | null;
   onAnswerChange: (answer: string) => void;
@@ -78,7 +84,14 @@ function DocumentWidthHandle({ ariaLabel, onPointerDown, onResetLayout, side }: 
   );
 }
 
-function AnswerSection({ editorAppearanceKey, editorNodeId, onAnswerChange, reveal }: AnswerSectionProps) {
+function AnswerSection({
+  editorAppearanceKey,
+  editorMouseGestureBindings,
+  editorMouseGestureSettings,
+  editorNodeId,
+  onAnswerChange,
+  reveal
+}: AnswerSectionProps) {
   return (
     <section aria-label="Cloze answer section" className="relative flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden pt-3">
       <div
@@ -90,6 +103,8 @@ function AnswerSection({ editorAppearanceKey, editorNodeId, onAnswerChange, reve
         className="answer-editor-host min-h-0"
         debugId="answer-editor"
         key={`answer-${editorAppearanceKey}`}
+        mouseGestureBindings={editorMouseGestureBindings}
+        mouseGestureSettings={editorMouseGestureSettings}
         nodeId={editorNodeId}
         onChange={onAnswerChange}
         value={reveal}
@@ -119,6 +134,8 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
         contentPaddingBottom={props.editorContentPaddingBottom}
         debugId="prompt-editor"
         key={`prompt-${props.editorAppearanceKey}`}
+        mouseGestureBindings={props.editorMouseGestureBindings}
+        mouseGestureSettings={props.editorMouseGestureSettings}
         nodeId={props.editorNodeId}
         nodeViewState={props.editorNodeViewState}
         onChange={props.onEditorChange}
@@ -138,6 +155,8 @@ function renderAnswerSection(props: DocumentPanelBodyProps) {
   return (
     <AnswerSection
       editorAppearanceKey={props.editorAppearanceKey}
+      editorMouseGestureBindings={props.editorMouseGestureBindings}
+      editorMouseGestureSettings={props.editorMouseGestureSettings}
       editorNodeId={props.editorNodeId}
       onAnswerChange={props.onAnswerChange}
       reveal={props.reveal}
@@ -189,6 +208,8 @@ export function DocumentPanelBody({
   editorAppearanceKey,
   editorContent,
   editorContentPaddingBottom,
+  editorMouseGestureBindings,
+  editorMouseGestureSettings,
   emptyContent,
   editorNodeId,
   editorNodeViewState,
@@ -211,6 +232,8 @@ export function DocumentPanelBody({
     editorAppearanceKey,
     editorContent,
     editorContentPaddingBottom,
+    editorMouseGestureBindings,
+    editorMouseGestureSettings,
     emptyContent,
     editorNodeId,
     editorNodeViewState,

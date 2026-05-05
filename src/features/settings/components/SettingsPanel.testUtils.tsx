@@ -1,6 +1,80 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
+const DEFAULT_MOUSE_GESTURE_SETTINGS = {
+  area: 'main-panel' as const,
+  gestureActions: {
+    left: 'disabled' as const,
+    right: 'disabled' as const,
+    'left-up': 'scroll-top' as const,
+    'left-down': 'scroll-bottom' as const
+  },
+  segmentThresholdPx: 18,
+  trailColor: '#2f3b4d',
+  trailLineWidth: 3,
+  trailOpacity: 0.25,
+  trailPointThresholdPx: 6
+};
+
+const DEFAULT_SETTINGS_PANEL_PROPS = {
+  accentColorPreset: '#3f8f68' as const,
+  baseColorMode: 'light' as const,
+  customInterfaceFont: '',
+  customMonospaceFont: '',
+  customUiFont: '',
+  desiredRetention: 0.9,
+  maximumIntervalDays: 36500,
+  enableFuzz: false,
+  enableShortTerm: false,
+  defaultPriority: 5,
+  priorityRatio: 5,
+  queueMixRatioReading: 1,
+  queueMixRatioFsrs: 5,
+  readingInitialIntervalMs: 24 * 60 * 60 * 1000,
+  readingIntervalGrowthFactorMin: 1.1,
+  readingIntervalGrowthFactorMax: 1.5,
+  hotkeyItems: [],
+  interfaceFontPreset: 'default' as const,
+  interfaceFontSize: 17,
+  markdownSyntaxVisibility: 'visible' as const,
+  mouseGestureSettings: DEFAULT_MOUSE_GESTURE_SETTINGS,
+  monospaceFontPreset: 'default' as const,
+  onAccentColorPresetChange: () => undefined,
+  onAccentColorPresetReset: () => undefined,
+  onBaseColorModeChange: () => undefined,
+  onClose: () => undefined,
+  onCustomInterfaceFontChange: () => undefined,
+  onCustomMonospaceFontChange: () => undefined,
+  onCustomUiFontChange: () => undefined,
+  onDesiredRetentionChange: () => undefined,
+  onDefaultPriorityChange: () => undefined,
+  onMaximumIntervalDaysChange: () => undefined,
+  onEnableFuzzChange: () => undefined,
+  onEnableShortTermChange: () => undefined,
+  onPriorityRatioChange: () => undefined,
+  onQueueMixRatioReadingChange: () => undefined,
+  onQueueMixRatioFsrsChange: () => undefined,
+  onReadingInitialIntervalDaysChange: () => undefined,
+  onReadingIntervalGrowthFactorMinChange: () => undefined,
+  onReadingIntervalGrowthFactorMaxChange: () => undefined,
+  onHotkeyReset: () => undefined,
+  onHotkeyResetAll: () => undefined,
+  onHotkeyUpdate: () => ({ status: 'blocked' as const }),
+  onInterfaceFontPresetChange: () => undefined,
+  onInterfaceFontSizeChange: () => undefined,
+  onInterfaceFontSizeReset: () => undefined,
+  onMarkdownSyntaxVisibilityChange: () => undefined,
+  onMouseGestureActionChange: () => undefined,
+  onMouseGestureTrailColorChange: () => undefined,
+  onMouseGestureTrailLineWidthChange: () => undefined,
+  onMouseGestureTrailOpacityChange: () => undefined,
+  onMouseGestureSegmentThresholdChange: () => undefined,
+  onMouseGestureTrailPointThresholdChange: () => undefined,
+  onMonospaceFontPresetChange: () => undefined,
+  onUiFontPresetChange: () => undefined,
+  uiFontPreset: 'default' as const
+};
+
 export function createDeferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((nextResolve) => {
@@ -10,57 +84,7 @@ export function createDeferred<T>() {
 }
 
 export function createProps() {
-  return {
-    accentColorPreset: '#3f8f68' as const,
-    baseColorMode: 'light' as const,
-    customInterfaceFont: '',
-    customMonospaceFont: '',
-    customUiFont: '',
-    desiredRetention: 0.9,
-    maximumIntervalDays: 36500,
-    enableFuzz: false,
-    enableShortTerm: false,
-    defaultPriority: 5,
-    priorityRatio: 5,
-    queueMixRatioReading: 1,
-    queueMixRatioFsrs: 5,
-    readingInitialIntervalMs: 24 * 60 * 60 * 1000,
-    readingIntervalGrowthFactorMin: 1.1,
-    readingIntervalGrowthFactorMax: 1.5,
-    hotkeyItems: [],
-    interfaceFontPreset: 'default' as const,
-    interfaceFontSize: 17,
-    markdownSyntaxVisibility: 'visible' as const,
-    monospaceFontPreset: 'default' as const,
-    onAccentColorPresetChange: () => undefined,
-    onAccentColorPresetReset: () => undefined,
-    onBaseColorModeChange: () => undefined,
-    onClose: () => undefined,
-    onCustomInterfaceFontChange: () => undefined,
-    onCustomMonospaceFontChange: () => undefined,
-    onCustomUiFontChange: () => undefined,
-    onDesiredRetentionChange: () => undefined,
-    onDefaultPriorityChange: () => undefined,
-    onMaximumIntervalDaysChange: () => undefined,
-    onEnableFuzzChange: () => undefined,
-    onEnableShortTermChange: () => undefined,
-    onPriorityRatioChange: () => undefined,
-    onQueueMixRatioReadingChange: () => undefined,
-    onQueueMixRatioFsrsChange: () => undefined,
-    onReadingInitialIntervalDaysChange: () => undefined,
-    onReadingIntervalGrowthFactorMinChange: () => undefined,
-    onReadingIntervalGrowthFactorMaxChange: () => undefined,
-    onHotkeyReset: () => undefined,
-    onHotkeyResetAll: () => undefined,
-    onHotkeyUpdate: () => ({ status: 'blocked' as const }),
-    onInterfaceFontPresetChange: () => undefined,
-    onInterfaceFontSizeChange: () => undefined,
-    onInterfaceFontSizeReset: () => undefined,
-    onMarkdownSyntaxVisibilityChange: () => undefined,
-    onMonospaceFontPresetChange: () => undefined,
-    onUiFontPresetChange: () => undefined,
-    uiFontPreset: 'default' as const
-  };
+  return { ...DEFAULT_SETTINGS_PANEL_PROPS };
 }
 
 export function openReviewSettings() {
