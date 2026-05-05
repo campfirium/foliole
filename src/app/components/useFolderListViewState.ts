@@ -12,7 +12,7 @@ import {
 } from '../../features/nodes/model/workspaceListNode';
 
 function formatItemCount(count: number) {
-  return `${count} ${count === 1 ? 'item' : 'items'}`;
+  return String(count);
 }
 
 function filterFolderListNodes(nodes: Node[], searchQuery: string) {
@@ -41,28 +41,18 @@ export function useFolderListViewState(
 ) {
   const [uncontrolledSortKey, setUncontrolledSortKey] = useState<FolderListSortKey>(defaultSortKey);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const sortKey = controlledSortKey ?? uncontrolledSortKey;
   const childNodes = useMemo(() => sortFolderListNodes(listedNodes, sortKey), [listedNodes, sortKey]);
   const filteredNodes = useMemo(() => filterFolderListNodes(childNodes, searchQuery), [childNodes, searchQuery]);
   const itemCount = childNodes.length;
-  const itemCountLabel = searchQuery.trim()
-    ? `${filteredNodes.length} of ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`
-    : formatItemCount(itemCount);
+  const itemCountLabel = searchQuery.trim() ? `${filteredNodes.length} / ${itemCount}` : formatItemCount(itemCount);
 
   return {
     filteredNodes,
-    isSearchOpen,
     itemCountLabel,
     searchQuery,
     sortKey,
     setSearchQuery,
-    toggleSearch: () => {
-      if (isSearchOpen) {
-        setSearchQuery('');
-      }
-      setIsSearchOpen((value) => !value);
-    },
     updateSortKey: (nextSortKey: FolderListSortKey) => {
       if (controlledSortKey === undefined) {
         setUncontrolledSortKey(nextSortKey);

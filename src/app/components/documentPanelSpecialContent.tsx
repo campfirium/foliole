@@ -49,23 +49,31 @@ function renderVirtualContent(
 }
 
 function renderFolderContent(
+  documentMaxWidth: number,
   activeNodeId: string,
+  folderTitle: string,
   folderListSortKey: FolderListSortKey,
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void,
   nodeOrder: string[],
   nodesById: Record<string, Node>,
+  onResetLayout: () => void,
   onSelectNode: (nodeId: string) => void,
+  onStartDocumentResize: ComponentProps<typeof DocumentPanelBody>['onStartDocumentResize'],
   pdfCache: JSX.Element
 ) {
   return (
     <>
       {pdfCache}
       <FolderListView
+        documentMaxWidth={documentMaxWidth}
         folderNodeId={activeNodeId}
+        folderTitle={folderTitle}
         nodeOrder={nodeOrder}
         nodesById={nodesById}
         onChangeSortKey={onChangeFolderListSortKey}
+        onResetLayout={onResetLayout}
         onSelectNode={onSelectNode}
+        onStartDocumentResize={onStartDocumentResize}
         sortKey={folderListSortKey}
       />
     </>
@@ -145,33 +153,9 @@ export function resolveDocumentPanelContentBody(args: {
   pdfHighlightLocators: PdfHighlightLocator[];
   shouldHideEditorBodyDuringSourceLoad: boolean;
 }) {
-  if (args.activeNode && isVirtualNode(args.activeNode)) {
-    return renderVirtualContent(
-      args.activeNode,
-      args.nodesById,
-      args.onNodeContentChange,
-      args.onSelectNode,
-      args.pdfCache
-    );
-  }
-  if (args.isFolderListView && args.activeNodeId) {
-    return renderFolderContent(
-      args.activeNodeId,
-      args.folderListSortKey,
-      args.onChangeFolderListSortKey,
-      args.nodeOrder,
-      args.nodesById,
-      args.onSelectNode,
-      args.pdfCache
-    );
-  }
-  if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {
-    return renderLegacyImageClozeContent(
-      args.activeNode,
-      args.bodyProps.onAnswerChange,
-      args.pdfCache,
-      args.bodyProps.hasAnswerSection
-    );
+  const specialContent = resolveSpecialDocumentContent(args);
+  if (specialContent) {
+    return specialContent;
   }
 
   return renderPdfOrBodyContent({
@@ -185,4 +169,40 @@ export function resolveDocumentPanelContentBody(args: {
     pdfHighlightLocators: args.pdfHighlightLocators,
     shouldHideEditorBodyDuringSourceLoad: args.shouldHideEditorBodyDuringSourceLoad
   });
+}
+
+function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPanelContentBody>[0]) {
+  if (args.activeNode && isVirtualNode(args.activeNode)) {
+    return renderVirtualContent(
+      args.activeNode,
+      args.nodesById,
+      args.onNodeContentChange,
+      args.onSelectNode,
+      args.pdfCache
+    );
+  }
+  if (args.isFolderListView && args.activeNodeId) {
+    return renderFolderContent(
+      args.bodyProps.documentMaxWidth,
+      args.activeNodeId,
+      args.activeNode?.title ?? 'Folder',
+      args.folderListSortKey,
+      args.onChangeFolderListSortKey,
+      args.nodeOrder,
+      args.nodesById,
+      args.bodyProps.onResetLayout,
+      args.onSelectNode,
+      args.bodyProps.onStartDocumentResize,
+      args.pdfCache
+    );
+  }
+  if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {
+    return renderLegacyImageClozeContent(
+      args.activeNode,
+      args.bodyProps.onAnswerChange,
+      args.pdfCache,
+      args.bodyProps.hasAnswerSection
+    );
+  }
+  return null;
 }

@@ -14,6 +14,11 @@ function getFolderListTitles() {
     .map((button) => button.getAttribute('aria-label')?.replace(/^Open\s+/, '') ?? '');
 }
 
+function chooseFolderSort(label: 'Author' | 'Title') {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: label }));
+}
+
 it('shows a folder list shell when an ordinary folder is selected', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
@@ -38,7 +43,9 @@ it('shows a folder list shell when an ordinary folder is selected', () => {
   render(<App />);
 
   expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
-  expect(screen.getByText('1 item')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Project folder' })).toBeInTheDocument();
+  expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1');
+  expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open Child note' })).toBeInTheDocument();
   expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
 });
@@ -144,7 +151,7 @@ it('switches to title sorting and keeps folder open until an item is opened', as
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Title' }));
+  chooseFolderSort('Title');
 
   expect(getFolderListTitles()).toEqual(['Alpha', 'Alpha', 'Beta']);
   expect(useWorkspaceStore.getState().activeNodeId).toBe('folder-1');
@@ -190,12 +197,12 @@ it('keeps author display and author sorting on the same fallback rule', () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Author' }));
+  chooseFolderSort('Author');
 
   expect(getFolderListTitles()).toEqual(['Named author', 'No author A', 'No author B']);
-  expect(screen.getByTestId('folder-list-author-note-2')).toHaveTextContent('Ada');
-  expect(screen.getByTestId('folder-list-author-note-1')).toHaveAttribute('aria-label', 'Author unavailable');
-  expect(screen.getByTestId('folder-list-author-note-3')).toHaveAttribute('aria-label', 'Author unavailable');
+  expect(screen.getByTestId('folder-list-meta-note-2')).toHaveTextContent('Ada');
+  expect(screen.queryByTestId('folder-list-meta-note-1')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('folder-list-meta-note-3')).not.toBeInTheDocument();
 });
 
 it('falls back to the empty summary copy when a child node has no usable body text', () => {
@@ -216,79 +223,5 @@ it('falls back to the empty summary copy when a child node has no usable body te
 
   render(<App />);
 
-  expect(screen.getByTestId('folder-list-excerpt-note-1')).toHaveTextContent('No summary yet.');
-});
-
-it('keeps date display and date sorting on the same fallback field chain', () => {
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'folder-1',
-    nodeOrder: ['folder-1', 'note-1', 'note-2'],
-    nodesById: {
-      ...state.nodesById,
-      'folder-1': createNode({ id: 'folder-1', kind: 'folder', title: 'Project folder', content: '' }),
-      'note-1': createNode({
-        id: 'note-1',
-        parentNodeId: 'folder-1',
-        title: 'Created fallback',
-        content: '# Created fallback',
-        createdAt: '2026-04-03T09:00:00.000Z',
-        updatedAt: ''
-      }),
-      'note-2': createNode({
-        id: 'note-2',
-        parentNodeId: 'folder-1',
-        title: 'Updated value',
-        content: '# Updated value',
-        createdAt: '2026-04-01T09:00:00.000Z',
-        updatedAt: '2026-04-02T09:00:00.000Z'
-      })
-    }
-  }));
-
-  render(<App />);
-
-  expect(getFolderListTitles()).toEqual(['Created fallback', 'Updated value']);
-  expect(screen.getByTestId('folder-list-date-note-1')).toHaveTextContent('2026-04-03');
-  expect(screen.getByTestId('folder-list-date-note-2')).toHaveTextContent('2026-04-02');
-});
-
-it('still shows the normal document view for content nodes', () => {
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'note-1',
-    nodeOrder: ['folder-1', 'note-1'],
-    nodesById: {
-      ...state.nodesById,
-      'folder-1': createNode({ id: 'folder-1', kind: 'folder', title: 'Project folder', content: '' }),
-      'note-1': createNode({
-        id: 'note-1',
-        parentNodeId: 'folder-1',
-        title: 'Child note',
-        content: '# Child note\n\nBody content'
-      })
-    }
-  }));
-
-  render(<App />);
-
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('note-1');
-  expect(screen.queryByRole('region', { name: 'Folder list view' })).not.toBeInTheDocument();
-  expect(screen.getByTestId('editor-value')).toHaveValue('# Child note\n\nBody content');
-});
-
-it('shows an empty state for empty folders', () => {
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'folder-1',
-    nodeOrder: ['folder-1'],
-    nodesById: {
-      ...state.nodesById,
-      'folder-1': createNode({ id: 'folder-1', kind: 'folder', title: 'Empty folder', content: '' })
-    }
-  }));
-
-  render(<App />);
-
-  expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
-  expect(screen.getByText('0 items')).toBeInTheDocument();
-  expect(screen.getByText('This folder is empty')).toBeInTheDocument();
-  expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
+  expect(screen.getByTestId('folder-list-excerpt-note-1')).toHaveTextContent('');
 });

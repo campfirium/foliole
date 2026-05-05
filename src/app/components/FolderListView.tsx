@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useMemo } from 'react';
 
 import {
@@ -12,18 +12,25 @@ import {
   getWorkspaceListNodeDateLabel,
   getWorkspaceListNodeOpening
 } from '../../features/nodes/model/workspaceListNode';
-import { AppEmptyState, AppIconButton, AppInput, ToolbarActionGroup } from '../../shared/ui';
+import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
-import { FolderListSortControls } from './FolderListSortControls';
+import { FolderListViewLayout } from './FolderListViewLayout';
 import { useFolderListViewState } from './useFolderListViewState';
 
 interface FolderListViewProps {
+  documentMaxWidth?: number;
   folderNodeId?: string;
+  folderTitle?: string;
   nodeOrder?: string[];
   nodes?: Node[];
   nodesById: Record<string, Node>;
   onChangeSortKey?: (sortKey: FolderListSortKey) => void;
+  onResetLayout?: () => void;
   onSelectNode: (nodeId: string) => void;
+  onStartDocumentResize?: (
+    side: ResizeSide,
+    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
+  ) => void;
   emptyState?: {
     description: string;
     title: string;
@@ -44,56 +51,14 @@ const DEFAULT_EMPTY_STATE = {
   title: 'This folder is empty'
 } as const;
 
-function FolderListHeader({
-  itemCountLabel,
-  isSearchOpen,
-  onChangeSearchQuery,
-  onToggleSearch,
-  searchQuery,
-  sortKey,
-  onChangeSortKey
-}: {
-  itemCountLabel: string;
-  isSearchOpen: boolean;
-  searchQuery: string;
-  sortKey: FolderListSortKey;
-  onChangeSearchQuery: (value: string) => void;
-  onToggleSearch: () => void;
-  onChangeSortKey: (sortKey: FolderListSortKey) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
-      <div className="flex min-w-0 items-center gap-3">
-        <ToolbarActionGroup ariaLabel="Folder list search" className="gap-2 border-0">
-          <AppIconButton
-            aria-pressed={isSearchOpen}
-            className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.05] data-[active=true]:text-foreground"
-            data-active={isSearchOpen}
-            icon={<Search aria-hidden="true" size={15} strokeWidth={1.9} />}
-            label={isSearchOpen ? 'Hide folder search' : 'Search folder contents'}
-            onClick={onToggleSearch}
-          />
-          {isSearchOpen ? (
-            <AppInput
-              aria-label="Search folder contents"
-              className="h-8 w-[220px] border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
-              onChange={(event) => onChangeSearchQuery(event.target.value)}
-              placeholder="Search in this folder"
-              type="search"
-              value={searchQuery}
-            />
-          ) : null}
-        </ToolbarActionGroup>
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold text-foreground">Content list</h2>
-          <p className="mt-1 text-sm text-foreground/65">{itemCountLabel}</p>
-        </div>
-      </div>
-      <div className="shrink-0">
-          <FolderListSortControls onChangeSortKey={onChangeSortKey} sortKey={sortKey} />
-      </div>
-    </div>
-  );
+function resolveFolderTitle(folderTitle: string | undefined, folderNodeId: string | undefined, nodesById: Record<string, Node>) {
+  if (folderTitle && folderTitle.trim()) {
+    return folderTitle;
+  }
+  if (folderNodeId) {
+    return nodesById[folderNodeId]?.title || 'Folder';
+  }
+  return 'Folder';
 }
 
 function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => void }) {
@@ -105,7 +70,7 @@ function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => v
     <li>
       <button
         aria-label={`Open ${props.node.title}`}
-        className="flex w-full flex-col gap-3 border-b border-border/55 py-5 text-left transition-colors hover:bg-bg-subtle focus-visible:bg-bg-subtle focus-visible:outline-none last:border-b-0"
+        className="flex w-full flex-col gap-3 py-5 text-left transition-colors hover:bg-bg-subtle focus-visible:bg-bg-subtle focus-visible:outline-none"
         onClick={() => props.onSelectNode(props.node.id)}
         type="button"
       >
@@ -167,13 +132,17 @@ function buildFolderListEmptyState(
 }
 
 export function FolderListView({
+  documentMaxWidth,
   emptyState,
   folderNodeId,
+  folderTitle,
   nodeOrder,
   nodes,
   nodesById,
   onChangeSortKey,
+  onResetLayout,
   onSelectNode,
+  onStartDocumentResize,
   regionLabel,
   showEmbeddedHeader = true,
   sortKey: controlledSortKey
@@ -190,32 +159,26 @@ export function FolderListView({
   );
   const resolvedEmptyState = emptyState ?? DEFAULT_EMPTY_STATE;
   const currentEmptyState = buildFolderListEmptyState(resolvedEmptyState, state.searchQuery);
+  const resolvedFolderTitle = resolveFolderTitle(folderTitle, folderNodeId, nodesById);
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
-      <section aria-label={regionLabel ?? 'Folder list view'} className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
-        {showEmbeddedHeader ? (
-          <FolderListHeader
-            isSearchOpen={state.isSearchOpen}
-            itemCountLabel={state.itemCountLabel}
-            onChangeSearchQuery={state.setSearchQuery}
-            onChangeSortKey={state.updateSortKey}
-            onToggleSearch={state.toggleSearch}
-            searchQuery={state.searchQuery}
-            sortKey={state.sortKey}
-          />
-        ) : null}
-        {state.filteredNodes.length === 0 ? (
-          <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
-            <AppEmptyState description={currentEmptyState.description} title={currentEmptyState.title} />
-          </div>
-        ) : (
-          <ul aria-label="Folder contents" className="flex flex-col">
-            {state.filteredNodes.map((node) => (
-              <FolderListItem key={node.id} node={node} onSelectNode={onSelectNode} />
-            ))}
-          </ul>
-        )}
+      <section aria-label={regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
+        <FolderListViewLayout
+          currentEmptyState={currentEmptyState}
+          documentMaxWidth={documentMaxWidth}
+          filteredNodes={state.filteredNodes}
+          folderTitle={resolvedFolderTitle}
+          itemCountLabel={state.itemCountLabel}
+          onChangeSearchQuery={state.setSearchQuery}
+          onChangeSortKey={state.updateSortKey}
+          onRenderItem={(node) => <FolderListItem key={node.id} node={node} onSelectNode={onSelectNode} />}
+          onResetLayout={onResetLayout}
+          onStartDocumentResize={onStartDocumentResize}
+          searchQuery={state.searchQuery}
+          showEmbeddedHeader={showEmbeddedHeader}
+          sortKey={state.sortKey}
+        />
       </section>
     </div>
   );

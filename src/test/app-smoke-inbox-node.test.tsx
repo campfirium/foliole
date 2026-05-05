@@ -133,7 +133,7 @@ it('shows Inbox in the node tree and opens the folder list surface', async () =>
 
   fireEvent.click(inboxItem);
 
-  expect(screen.getByRole('heading', { level: 2, name: 'Content list' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
   expect(screen.getByRole('list', { name: 'Folder contents' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open Imported note' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
@@ -174,7 +174,7 @@ it('opens import management from the left toolbar instead of replacing Inbox', a
 
   fireEvent.click(screen.getByRole('button', { name: 'Close import management' }));
 
-  expect(screen.getByRole('heading', { level: 2, name: 'Content list' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Import management' })).not.toBeInTheDocument();
 });
 

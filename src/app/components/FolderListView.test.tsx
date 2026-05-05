@@ -58,8 +58,10 @@ describe('FolderListView content', () => {
     ]);
 
     expect(screen.getByTestId('folder-list-title-node-1')).toHaveTextContent('Child topic');
-    expect(screen.getByRole('heading', { level: 2, name: 'Content list' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Library root' })).toBeInTheDocument();
+    expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1');
     expect(screen.getByRole('button', { name: 'Sort list by Date' })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-excerpt-node-1')).toHaveTextContent(
       'This is the first useful sentence inside the folder list body.'
     );
@@ -234,14 +236,13 @@ describe('FolderListView interactions', () => {
       createNode({ id: 'node-2', title: 'Beta note', content: 'Second body' })
     ]);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Search folder contents' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search folder contents' }), {
       target: { value: 'beta' }
     });
 
     expect(screen.queryByRole('button', { name: 'Open Alpha note' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open Beta note' })).toBeInTheDocument();
-    expect(screen.getByText('1 of 2 items')).toBeInTheDocument();
+    expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1 / 2');
   });
 });
 
@@ -267,5 +268,25 @@ describe('FolderListView layout', () => {
     expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('line-clamp-2');
     expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('min-h-14');
     expect(screen.queryByText('Topic')).not.toBeInTheDocument();
+  });
+
+  it('reuses the shared width resize handles when the document width props are provided', () => {
+    render(
+      <FolderListView
+        documentMaxWidth={760}
+        folderNodeId="folder-1"
+        nodeOrder={['folder-1']}
+        nodesById={{
+          'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' })
+        }}
+        onChangeSortKey={() => undefined}
+        onResetLayout={() => undefined}
+        onSelectNode={() => undefined}
+        onStartDocumentResize={() => undefined}
+      />
+    );
+
+    expect(screen.getByRole('separator', { name: 'Resize document width from left' })).toBeInTheDocument();
+    expect(screen.getByRole('separator', { name: 'Resize document width from right' })).toBeInTheDocument();
   });
 });
