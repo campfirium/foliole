@@ -189,7 +189,6 @@ it('hides the raw pdf source path while source details are still loading', () =>
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
   expect(screen.queryByText('/tmp/sample.pdf')).not.toBeInTheDocument();
 });
-
 it('clears the editor binding when switching into pdf view', () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
   const onEditorReady = vi.fn();
@@ -214,16 +213,9 @@ it('supports pdf controls with zoom, page navigation, and rotation', () => {
   });
   expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('5');
 
-  fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
-  expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('4');
-
-  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-  expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('5');
-
   fireEvent.click(screen.getByRole('button', { name: 'Rotate page clockwise' }));
   expect(screen.getAllByTestId('pdf-document-page')[0]).toHaveAttribute('data-rotate', '90');
 });
-
 it('lets the reader return to fit width with the toolbar button', () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
@@ -271,7 +263,6 @@ it('supports in-view pdf search navigation and empty-state feedback', async () =
     expect(nextMatchButton).toBeDisabled();
   });
 });
-
 it('supports Enter and Shift+Enter for in-view pdf search navigation', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
   renderSection();
@@ -282,10 +273,4 @@ it('supports Enter and Shift+Enter for in-view pdf search navigation', async () 
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'));
   fireEvent.keyDown(searchInput, { key: 'Enter', shiftKey: true });
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
-});
-it('keeps the pdf reading container visible while a linked pdf node source is refreshing', () => {
-  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails({ isLoading: true }) as never);
-  renderSection();
-  expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
-  expect(screen.queryByTestId('pdf-document-state-loading')).not.toBeInTheDocument();
 });

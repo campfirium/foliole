@@ -9,6 +9,7 @@ import type { PdfPageTextEntry } from './pdfPageText';
 import { resolveInitialReadyPageNumbers, resolveRenderablePageNumbers } from './pdfViewportPageNumbers';
 
 interface PdfViewportToolbarProps {
+  displayPage: number;
   isVisible: boolean;
   maxPage: number;
   onClearSearch: () => void;
@@ -36,6 +37,7 @@ interface PdfViewportToolbarProps {
 export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
   return (
     <PdfDocumentToolbar
+      displayPage={props.displayPage}
       isVisible={props.isVisible}
       maxPage={props.maxPage}
       onClearSearch={props.onClearSearch}
@@ -54,7 +56,6 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
       onToolbarInteraction={props.onToolbarInteraction}
       onZoomIn={props.onZoomIn}
       onZoomOut={props.onZoomOut}
-      page={props.page}
       searchQuery={props.searchQuery}
       searchStatus={props.searchStatus}
       zoomMode={props.zoomMode}

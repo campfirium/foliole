@@ -113,6 +113,7 @@ function buildToolbarHarnessProps(input: {
     },
     onZoomIn: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setZoom((current) => current + 10)),
     onZoomOut: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setZoom((current) => current - 10)),
+    visiblePage: input.page,
     page: input.page,
     pageJumpRequest: null,
     pdfSelectionLocator: undefined,

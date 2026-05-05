@@ -81,6 +81,7 @@ function PdfDocumentViewportSearchActivationHarness() {
       onSetZoom={() => undefined}
       onZoomIn={() => undefined}
       onZoomOut={() => undefined}
+      visiblePage={1}
       page={1}
       pageJumpRequest={null}
       pdfSelectionLocator={undefined}

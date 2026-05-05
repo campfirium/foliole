@@ -40,13 +40,21 @@ interface DocumentPanelContextMenuProps {
   onExportImage: () => void;
 }
 
+const PDF_READER_PLACEHOLDER_TEXT = 'Linked PDF source ready for the reader surface.';
+
 function isLikelyPdfSourceReference(content: string) {
   const normalized = content.trim();
+  if (normalized.includes(PDF_READER_PLACEHOLDER_TEXT)) {
+    return true;
+  }
   if (!normalized || !/[.][Pp][Dd][Ff](?:$|[?#\s)\]])/.test(normalized)) {
     return false;
   }
   const lineCount = normalized.split('\n').length;
-  return lineCount <= 3 || /(?:file:\/\/|[A-Za-z]:[\\/]|\/)/.test(normalized);
+  if (lineCount <= 6 && normalized.length <= 480) {
+    return true;
+  }
+  return /(?:file:\/\/|[A-Za-z]:[\\/]|\/)/.test(normalized);
 }
 
 function renderPdfLoadingSurface() {

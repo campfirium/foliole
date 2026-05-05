@@ -2,8 +2,9 @@ import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
+import { PdfDocumentErrorState } from './PdfDocumentErrorState';
 import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
-import { PdfDocumentErrorState, PdfDocumentViewportContent } from './PdfDocumentViewportParts';
+import { PdfDocumentViewportContent } from './PdfDocumentViewportParts';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { usePdfViewportRuntime } from './pdfViewportRuntime';
 import { usePdfToolbarVisibility } from './usePdfToolbarVisibility';
@@ -29,6 +30,7 @@ interface PdfDocumentViewportProps {
   onSetZoom: (value: number) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  visiblePage: number;
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
@@ -94,6 +96,7 @@ function resolveViewportContentProps(
     onTextLayerRender: args.handleTextLayerRender,
     onToolbarActiveChange: args.onToolbarActiveChange,
     onToolbarInteraction: args.onToolbarInteraction,
+    visiblePage: args.visiblePage,
     page: args.page,
     pageElementsRef: args.pageElementsRef,
     pageTextByNumberRef: args.pageTextByNumberRef,
@@ -159,7 +162,7 @@ function resolveViewportActionProps(args: {
 }
 
 export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
-  const { handleScroll, handleTextContentLoad, handleTextLayerRender, pageElementsRef, pageTextByNumberRef, scrollContainerRef, searchHighlights, searchRevision, setSearchDebug, setSearchHighlights } =
+  const { handleScroll, handleTextContentLoad, handleTextLayerRender, pageElementsRef, pageTextByNumberRef, scrollContainerRef, searchHighlights, searchRevision, setSearchDebug, setSearchHighlights, visiblePage } =
     usePdfViewportRuntime({
       clearPageJumpRequest: props.clearPageJumpRequest,
       page: props.page,
@@ -198,6 +201,7 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
         searchHighlights={searchHighlights}
         searchRevision={searchRevision}
         {...props}
+        visiblePage={visiblePage}
       />
     </>
   );
@@ -220,6 +224,7 @@ function PdfDocumentViewportReady(
     onSearchFocusChange: (focused: boolean) => void;
     onToolbarActiveChange: (active: boolean) => void;
     onToolbarInteraction: () => void;
+    visiblePage: number;
   } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisibleLocation'>
 ) {
   return renderPdfViewportContent(props);

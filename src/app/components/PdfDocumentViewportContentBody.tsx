@@ -29,6 +29,7 @@ interface PdfDocumentViewportContentBodyProps {
   onToolbarInteraction: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  visiblePage: number;
   page: number;
   pageElementsRef: PdfPageElementsRef;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
@@ -132,6 +133,7 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
 function renderViewportToolbar(props: PdfDocumentViewportContentBodyProps, displayedZoom: number) {
   return (
     <PdfViewportToolbar
+      displayPage={props.visiblePage}
       isVisible={props.isToolbarVisible}
       maxPage={props.maxPage}
       onClearSearch={props.onClearSearch}

@@ -1,5 +1,5 @@
 import { ArrowDownToLine, ArrowUpToLine, Search, X } from 'lucide-react';
-import type { KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 
 import { AppIconButton, AppInput } from '../../shared/ui';
 
@@ -19,12 +19,12 @@ interface SearchControlsProps {
 }
 
 interface PageControlsProps {
+  displayPage: number;
   maxPage: number;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
   onToolbarInteraction: () => void;
-  page: number;
 }
 
 interface ZoomControlsProps {
@@ -94,10 +94,15 @@ function PdfPageButtons({ canGoNext, canGoPrevious, onNextPage, onPreviousPage, 
   );
 }
 
-export function PdfPageControls({ maxPage, onNextPage, onPageChange, onPreviousPage, onToolbarInteraction, page }: PageControlsProps) {
+export function PdfPageControls({ displayPage, maxPage, onNextPage, onPageChange, onPreviousPage, onToolbarInteraction }: PageControlsProps) {
   const pageCountLabel = Number.isFinite(maxPage) ? maxPage : '--';
-  const canGoPrevious = page > 1;
-  const canGoNext = Number.isFinite(maxPage) ? page < maxPage : true;
+  const [pageInputValue, setPageInputValue] = useState(() => String(displayPage));
+  const canGoPrevious = displayPage > 1;
+  const canGoNext = Number.isFinite(maxPage) ? displayPage < maxPage : true;
+
+  useEffect(() => {
+    setPageInputValue(String(displayPage));
+  }, [displayPage]);
 
   return (
     <div className="flex items-center gap-2">
@@ -111,6 +116,7 @@ export function PdfPageControls({ maxPage, onNextPage, onPageChange, onPreviousP
         inputMode="numeric"
         onChange={(event) => {
           const digitsOnly = event.target.value.replace(/\D/g, '');
+          setPageInputValue(digitsOnly);
           if (!digitsOnly) {
             return;
           }
@@ -119,7 +125,7 @@ export function PdfPageControls({ maxPage, onNextPage, onPageChange, onPreviousP
         }}
         pattern="[0-9]*"
         type="text"
-        value={page}
+        value={pageInputValue}
       />
       <p className="min-w-16 text-xs text-foreground/55" data-testid="pdf-page-count">
         / {pageCountLabel}

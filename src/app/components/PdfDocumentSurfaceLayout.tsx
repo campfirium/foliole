@@ -68,6 +68,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       onSetZoom={props.setZoom}
       onZoomIn={props.zoomIn}
       onZoomOut={props.zoomOut}
+      visiblePage={props.page}
       page={props.page}
       pageJumpRequest={props.pageJumpRequest}
       pdfSelectionLocator={props.pdfSelectionLocator}

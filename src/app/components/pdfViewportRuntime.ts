@@ -108,21 +108,18 @@ export function usePdfViewportRuntime(args: {
   totalPages: number | null;
   zoom: number;
 }) {
-  const runtime = usePdfViewportRuntimeState(args.pdfSource);
-  usePageJumpEffect(args.pageJumpRequest, runtime.pageElementsRef, runtime.scrollContainerRef, args.totalPages, args.clearPageJumpRequest);
+  const runtime = usePdfViewportRuntimeState(args.page, args.pdfSource);
+  usePageJumpEffect(args.pageJumpRequest, runtime.pageElementsRef, runtime.scrollContainerRef, args.totalPages, args.clearPageJumpRequest, runtime.programmaticPageJumpRef);
   useViewportTransformAnchor(args.rotation, runtime.scrollContainerRef, args.zoom);
-  useEffect(() => {
-    refreshExistingSearchTextLayers({
-      pageElementsRef: runtime.pageElementsRef,
-      previousSignatures: runtime.textLayerSignatureByPageRef.current,
-      searchQuery: args.searchQuery,
-      searchRequest: args.searchRequest,
-      searchTarget: args.searchTarget,
-      setSearchRevision: runtime.setSearchRevision,
-      totalPages: args.totalPages
-    });
-  }, [args.searchQuery, args.searchRequest, args.searchTarget, args.totalPages, runtime.pageElementsRef, runtime.setSearchRevision, runtime.textLayerSignatureByPageRef]);
-  const handleScroll = useVisiblePageSync(runtime.pageElementsRef, runtime.scrollContainerRef, args.setVisibleLocation, args.totalPages);
+  useRefreshSearchTextLayers(args, runtime);
+  const handleScroll = useVisiblePageSync(
+    runtime.pageElementsRef,
+    runtime.scrollContainerRef,
+    args.setVisibleLocation,
+    args.totalPages,
+    runtime.programmaticPageJumpRef,
+    runtime.setVisiblePage
+  );
   return {
     ...runtime,
     handleScroll,
@@ -149,26 +146,47 @@ export function usePdfViewportRuntime(args: {
   };
 }
 
-function usePdfViewportRuntimeState(pdfSource: string) {
+function useRefreshSearchTextLayers(
+  args: Pick<Parameters<typeof usePdfViewportRuntime>[0], 'searchQuery' | 'searchRequest' | 'searchTarget' | 'totalPages'>,
+  runtime: Pick<ReturnType<typeof usePdfViewportRuntimeState>, 'pageElementsRef' | 'setSearchRevision' | 'textLayerSignatureByPageRef'>
+) {
+  useEffect(() => {
+    refreshExistingSearchTextLayers({
+      pageElementsRef: runtime.pageElementsRef,
+      previousSignatures: runtime.textLayerSignatureByPageRef.current,
+      searchQuery: args.searchQuery,
+      searchRequest: args.searchRequest,
+      searchTarget: args.searchTarget,
+      setSearchRevision: runtime.setSearchRevision,
+      totalPages: args.totalPages
+    });
+  }, [args.searchQuery, args.searchRequest, args.searchTarget, args.totalPages, runtime.pageElementsRef, runtime.setSearchRevision, runtime.textLayerSignatureByPageRef]);
+}
+
+function usePdfViewportRuntimeState(page: number, pdfSource: string) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const pageTextByNumberRef = useRef<Record<number, PdfPageTextEntry | string>>({});
+  const programmaticPageJumpRef = useRef<{ expiresAt: number; requestId: number; targetPage: number } | null>(null);
   const textLayerSignatureByPageRef = useRef<Record<number, string>>({});
   const [searchDebug, setSearchDebug] = useState<PdfSearchDebugInfo>({ pages: [] });
   const [searchHighlights, setSearchHighlights] = useState<PdfSearchVisualHighlight[]>([]);
   const [searchRevision, setSearchRevision] = useState(0);
+  const [visiblePage, setVisiblePage] = useState(page);
 
   useEffect(() => {
     pageTextByNumberRef.current = {};
     textLayerSignatureByPageRef.current = {};
     setSearchDebug({ pages: [] });
     setSearchHighlights([]);
+    setVisiblePage(page);
     refreshSearchRevision(setSearchRevision);
   }, [pdfSource]);
 
   return {
     pageElementsRef,
     pageTextByNumberRef,
+    programmaticPageJumpRef,
     scrollContainerRef,
     searchDebug,
     searchHighlights,
@@ -176,6 +194,8 @@ function usePdfViewportRuntimeState(pdfSource: string) {
     setSearchDebug,
     setSearchHighlights,
     setSearchRevision,
-    textLayerSignatureByPageRef
+    setVisiblePage,
+    textLayerSignatureByPageRef,
+    visiblePage
   };
 }

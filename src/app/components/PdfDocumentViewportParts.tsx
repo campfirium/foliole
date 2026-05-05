@@ -6,6 +6,7 @@ import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { PdfDocumentViewportContentBody } from './PdfDocumentViewportContentBody';
 import { usePdfDocumentViewportSearchRuntime } from './PdfDocumentViewportSearchRuntime';
+import { armProgrammaticPageJumpGuard, shouldSkipVisiblePageSync, type ProgrammaticPageJumpRef } from './pdfPageJumpGuard';
 import type { PdfPageTextEntry } from './pdfPageText';
 
 const PDF_PAGE_MIN = 1;
@@ -17,7 +18,8 @@ export function usePageJumpEffect(
   pageElementsRef: PdfPageElementsRef,
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
   totalPages: number | null,
-  onPageJumpHandled: (requestId: number) => void
+  onPageJumpHandled: (requestId: number) => void,
+  programmaticPageJumpRef?: ProgrammaticPageJumpRef
 ) {
   useEffect(() => {
     if (!pageJumpRequest) {
@@ -33,13 +35,14 @@ export function usePageJumpEffect(
       positionY === null
         ? Math.max(0, target.offsetTop - 8)
         : Math.max(0, target.offsetTop + target.clientHeight * positionY - container.clientHeight * 0.35);
+    armProgrammaticPageJumpGuard(programmaticPageJumpRef, pageJumpRequest);
     if (typeof container.scrollTo === 'function') {
       container.scrollTo({ behavior: 'smooth', top });
     } else {
       container.scrollTop = top;
     }
     onPageJumpHandled(pageJumpRequest.id);
-  }, [onPageJumpHandled, pageJumpRequest, pageElementsRef, scrollContainerRef, totalPages]);
+  }, [onPageJumpHandled, pageJumpRequest, pageElementsRef, programmaticPageJumpRef, scrollContainerRef, totalPages]);
 }
 
 function resolveVisiblePage(container: HTMLDivElement, pageElementsRef: PdfPageElementsRef, totalPages: number) {
@@ -71,7 +74,9 @@ export function useVisiblePageSync(
   pageElementsRef: PdfPageElementsRef,
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
   setVisibleLocation: (page: number, positionY: number) => void,
-  totalPages: number | null
+  totalPages: number | null,
+  programmaticPageJumpRef?: ProgrammaticPageJumpRef,
+  onVisiblePageChange?: (page: number) => void
 ) {
   return () => {
     const container = scrollContainerRef.current;
@@ -79,6 +84,10 @@ export function useVisiblePageSync(
       return;
     }
     const visiblePage = resolveVisiblePage(container, pageElementsRef, totalPages);
+    if (shouldSkipVisiblePageSync(programmaticPageJumpRef, visiblePage)) {
+      return;
+    }
+    onVisiblePageChange?.(visiblePage);
     setVisibleLocation(visiblePage, resolveVisiblePositionY(container, pageElementsRef.current[visiblePage]));
   };
 }
@@ -119,16 +128,6 @@ export function useViewportTransformAnchor(
     };
   }, [rotation, scrollContainerRef, zoom]);
 }
-export function PdfDocumentErrorState({ loadError }: { loadError: string }) {
-  return (
-    <div className="flex min-h-[360px] w-full items-center justify-center rounded-md bg-bg-panel/55 p-6">
-      <p className="text-sm text-foreground/70" data-testid="pdf-document-load-error">
-        {loadError}
-      </p>
-    </div>
-  );
-}
-
 interface PdfDocumentViewportContentProps {
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleScroll: () => void;
@@ -158,6 +157,7 @@ interface PdfDocumentViewportContentProps {
   onToolbarInteraction: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  visiblePage: number;
   page: number;
   pageElementsRef: PdfPageElementsRef;
   pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
@@ -255,6 +255,7 @@ function resolveViewportContentBodyProps(
     onToolbarInteraction: props.onToolbarInteraction,
     onZoomIn: props.onZoomIn,
     onZoomOut: props.onZoomOut,
+    visiblePage: props.visiblePage,
     page: props.page,
     pageElementsRef: props.pageElementsRef,
     pdfSelectionLocator: props.pdfSelectionLocator,

@@ -2,6 +2,7 @@ import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfPageControls, PdfSearchControls, PdfZoomControls } from './PdfDocumentToolbarControls';
 
 interface PdfDocumentToolbarProps {
+  displayPage: number;
   isVisible: boolean;
   maxPage: number;
   onClearSearch: () => void;
@@ -19,7 +20,6 @@ interface PdfDocumentToolbarProps {
   onToolbarInteraction: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  page: number;
   searchIndexingHint: string | null;
   searchQuery: string;
   searchStatus: PdfSearchStatus;
@@ -66,12 +66,12 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
         />
         <ToolbarDivider />
         <PdfPageControls
+          displayPage={props.displayPage}
           maxPage={props.maxPage}
           onNextPage={props.onNextPage}
           onPageChange={props.onPageChange}
           onPreviousPage={props.onPreviousPage}
           onToolbarInteraction={props.onToolbarInteraction}
-          page={props.page}
         />
         <ToolbarDivider />
         <PdfSearchControls
