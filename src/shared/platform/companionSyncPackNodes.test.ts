@@ -18,12 +18,16 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     packPath: '/tmp/incoming pack.db'
   }, manager as never)).resolves.toEqual({
     applied: true,
+    applied_blob_count: 0,
     appliedBlobCount: 0,
+    applied_object_count: 0,
     appliedPackBlobCount: 0,
     appliedPackObjectCount: 0,
+    applied_review_op_ids: [],
     appliedObjectCount: 0,
     appliedReviewOpIds: [],
     fromStateSeq: 0,
+    to_state_seq: 4,
     toStateSeq: 4
   });
 

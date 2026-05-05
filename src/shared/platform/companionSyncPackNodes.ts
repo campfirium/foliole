@@ -1,6 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
 import { applySyncPackNodeSurfaceWithDbPort } from '../../../lib/core/sync/syncPackNodeApplyExecutor';
+import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import {
@@ -24,8 +25,15 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
       incomingAlias: INCOMING_PACK_ALIAS
     }).then((result) => ({
       ...result,
+      applied_blob_count: result.appliedBlobCount,
+      applied_object_count: result.appliedObjectCount,
       appliedPackBlobCount: result.appliedBlobCount,
-      appliedPackObjectCount: result.appliedObjectCount
+      appliedPackObjectCount: result.appliedObjectCount,
+      applied_review_op_ids: result.appliedReviewOpIds,
+      to_state_seq: result.toStateSeq
+    } satisfies NativeSyncPackApplyResult & typeof result & {
+      appliedPackBlobCount: number;
+      appliedPackObjectCount: number;
     }));
   } finally {
     await port.run(`DETACH DATABASE ${INCOMING_PACK_ALIAS}`);
