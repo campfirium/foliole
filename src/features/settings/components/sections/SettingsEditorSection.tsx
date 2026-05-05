@@ -20,13 +20,13 @@ export function SettingsEditorSection() {
   return (
     <SettingsSection ariaLabel="Editor settings section" title="Live markdown">
       <SettingsRow
-        description="Download remote markdown images into the app and rewrite them to local links when possible."
-        title="Auto-localize remote images"
+        description="Save remote images into your library so topics keep working offline and stay independent of the original URL."
+        title="Save remote images locally"
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <button
             aria-checked={autoLocalizeRemoteImages}
-            aria-label="Auto-localize remote images"
+            aria-label="Save remote images locally"
             className={settingsSwitchClassName(autoLocalizeRemoteImages)}
             onClick={() => setAutoLocalizeRemoteImages(!autoLocalizeRemoteImages)}
             role="switch"
@@ -40,8 +40,8 @@ export function SettingsEditorSection() {
         </SettingsControlSlot>
       </SettingsRow>
       <SettingsRow
-        description="Show markdown markers on active line, or keep them hidden."
-        title="Markdown syntax visibility"
+        description="Show markdown syntax markers on the active line, or keep them hidden everywhere."
+        title="Show markdown syntax markers"
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <SettingsSegmentedControl

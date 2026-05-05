@@ -1,8 +1,14 @@
+import { Capacitor } from '@capacitor/core';
+
 import { parseAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 
 import { getRuntimeInvoke } from './bridge';
+import {
+  FolioleCompanionSync,
+  isNativeAndroidCompanionRuntime
+} from './companionWorkspaceSyncBridge';
 import { updateImageCacheStats } from './performanceDiagnosticsProbe';
 import { logRuntimeWarning } from './runtimeLogging';
 
@@ -25,6 +31,10 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
   const attachmentId = parseAttachmentId(resourceUrl);
   if (!attachmentId) {
     return null;
+  }
+
+  if (isNativeAndroidCompanionRuntime()) {
+    return resolveAndroidAttachmentResource(attachmentId);
   }
 
   const runtimeInvoke = getRuntimeInvoke();
@@ -69,6 +79,55 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
   attachmentResourceResolutionCache.set(attachmentId, resolutionPromise);
   updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: false });
   return resolutionPromise;
+}
+
+async function resolveAndroidAttachmentResource(attachmentId: string) {
+  const cached = attachmentResourceResolutionCache.get(attachmentId);
+  if (cached) {
+    updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: true });
+    return cached;
+  }
+
+  const resolutionPromise = FolioleCompanionSync.resolveAttachmentResource({ attachment_id: attachmentId })
+    .then((result) => normalizeAndroidAttachmentResolution(result, attachmentId))
+    .catch((error) => {
+      logRuntimeWarning('native Android attachment resource resolve failed', {
+        area: 'bridge',
+        action: 'resolve_attachment_resource',
+        attachment_id: attachmentId,
+        fallback: 'return_null',
+        error
+      });
+      attachmentResourceResolutionCache.delete(attachmentId);
+      return null;
+    });
+
+  attachmentResourceResolutionCache.set(attachmentId, resolutionPromise);
+  updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: false });
+  return resolutionPromise;
+}
+
+function normalizeAndroidAttachmentResolution(
+  result: unknown,
+  attachmentId: string
+): NativeAttachmentResourceResolution | null {
+  if (!isAttachmentResourceResolution(result)) {
+    logRuntimeWarning('native Android attachment resource payload invalid', {
+      area: 'bridge',
+      action: 'resolve_attachment_resource',
+      attachment_id: attachmentId,
+      fallback: 'return_null'
+    });
+    attachmentResourceResolutionCache.delete(attachmentId);
+    return null;
+  }
+  if (result.status !== 'ready') {
+    return result;
+  }
+  return {
+    ...result,
+    resource_url: Capacitor.convertFileSrc(result.resource_url)
+  };
 }
 
 export function readAttachmentResourceCacheStats() {

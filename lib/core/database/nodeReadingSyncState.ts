@@ -35,23 +35,23 @@ function toNodeReadingHash(nodeId: string, reading: NodeReadingSyncPayload) {
 
 function toNodeReadingPayload(nodeId: string, reading: NodeReadingSyncPayload) {
   return {
-    intervalDurationMs: reading.intervalDurationMs,
-    intervalGrowthFactor: reading.intervalGrowthFactor,
-    lastHandledAt: reading.lastHandledAt,
-    nextAt: reading.nextAt,
-    nodeId,
+    interval_duration_ms: reading.intervalDurationMs,
+    interval_growth_factor: reading.intervalGrowthFactor,
+    last_handled_at: reading.lastHandledAt,
+    next_at: reading.nextAt,
+    node_id: nodeId,
     priority: reading.priority,
-    readingPosition: reading.readingPosition,
-    repetitionCount: reading.repetitionCount,
+    reading_position: reading.readingPosition,
+    repetition_count: reading.repetitionCount,
     state: reading.state
   };
 }
 
 function toNodeReadingTombstoneHash(nodeId: string, deletedAt: string) {
   return computeSyncContentHash('node_reading', {
-    deletedAt,
-    nodeId,
-    objectType: 'node_reading'
+    deleted_at: deletedAt,
+    node_id: nodeId,
+    object_type: 'node_reading'
   });
 }
 

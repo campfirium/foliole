@@ -28,8 +28,8 @@ function writeViewStateObject(connection: DatabaseConnection, key: string, paylo
   const deviceId = loadOrCreateDesktopDeviceId(updatedAt);
   const objectId = toViewStateObjectId(deviceId, key);
   const syncPayload = {
-    deviceId,
-    formFactor: FORM_FACTOR,
+    device_id: deviceId,
+    form_factor: FORM_FACTOR,
     key,
     platform: PLATFORM,
     scope: VIEW_STATE_SCOPE,
@@ -53,7 +53,7 @@ export function writeActiveNodeViewStateSync(
   writeViewStateObject(
     connection,
     'active_node',
-    { activeNodeId: input.activeNodeId },
+    { active_node_id: input.activeNodeId },
     input.updatedAt
   );
 }
@@ -63,10 +63,10 @@ export function writeNodeViewStateSync(connection: DatabaseConnection, input: No
     connection,
     `node:${input.nodeId}`,
     {
-      nodeId: input.nodeId,
-      scrollTop: input.scrollTop,
-      selectionFrom: input.selectionFrom,
-      selectionTo: input.selectionTo
+      node_id: input.nodeId,
+      scroll_top: input.scrollTop,
+      selection_from: input.selectionFrom,
+      selection_to: input.selectionTo
     },
     input.updatedAt
   );

@@ -42,9 +42,9 @@ function toPdfPageTextPayload(attachmentId: string, page: PdfPageTextInput) {
 
 function computePdfPageTextTombstoneHash(attachmentId: string, page: number, deletedAt: string) {
   return computeSyncContentHash(PDF_PAGE_TEXT_OBJECT_TYPE, {
-    deletedAt,
-    objectId: toPdfPageTextObjectId(attachmentId, page),
-    objectType: PDF_PAGE_TEXT_OBJECT_TYPE
+    deleted_at: deletedAt,
+    object_id: toPdfPageTextObjectId(attachmentId, page),
+    object_type: PDF_PAGE_TEXT_OBJECT_TYPE
   });
 }
 

@@ -53,9 +53,9 @@ function androidStateRecords(): NativeSyncObjectRecord[] {
     object_id: 'node-1',
     object_type: 'node_reading',
     payload_json: JSON.stringify({
-      lastHandledAt: '2026-04-22T08:10:00.000Z',
-      nextAt: '2026-04-23T08:10:00.000Z',
-      readingPosition: 9,
+      last_handled_at: '2026-04-22T08:10:00.000Z',
+      next_at: '2026-04-23T08:10:00.000Z',
+      reading_position: 9,
       state: 'active'
     }),
     updated_at: '2026-04-22T08:10:00.000Z'
@@ -66,9 +66,9 @@ function androidStateRecords(): NativeSyncObjectRecord[] {
     object_type: 'node_review',
     payload_json: JSON.stringify({
       due: '2026-04-25T08:10:00.000Z',
-      lastReviewAt: '2026-04-22T08:10:00.000Z',
+      last_review_at: '2026-04-22T08:10:00.000Z',
       reps: 4,
-      scheduledDays: 3,
+      scheduled_days: 3,
       state: 2
     }),
     updated_at: '2026-04-22T08:11:00.000Z'
@@ -77,14 +77,14 @@ function androidStateRecords(): NativeSyncObjectRecord[] {
     deleted_at: null,
     object_id: 'session_resume:android:phone:android-test:active_node',
     object_type: 'view_state',
-    payload_json: JSON.stringify({ activeNodeId: 'node-1' }),
+    payload_json: JSON.stringify({ active_node_id: 'node-1' }),
     updated_at: '2026-04-22T08:12:00.000Z'
   }, {
     content_hash: 'hash-node-view-android',
     deleted_at: null,
     object_id: 'session_resume:android:phone:android-test:node:node-1',
     object_type: 'view_state',
-    payload_json: JSON.stringify({ nodeId: 'node-1', scrollTop: 128, selectionFrom: 5, selectionTo: 13 }),
+    payload_json: JSON.stringify({ node_id: 'node-1', scroll_top: 128, selection_from: 5, selection_to: 13 }),
     updated_at: '2026-04-22T08:13:00.000Z'
   }];
 }

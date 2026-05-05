@@ -1,5 +1,5 @@
 const STARTUP_ERROR_TITLE = 'Foliole failed to start';
-const STARTUP_ERROR_HELP = 'Open devtools for details.';
+const STARTUP_ERROR_HELP = 'Try restarting the app. If the error persists, press Ctrl+Shift+I (or Cmd+Option+I on macOS) to open developer tools for details.';
 
 export function renderStartupErrorView(rootElement: HTMLElement, message: string) {
   const section = document.createElement('section');

@@ -17,13 +17,13 @@ final class FolioleCompanionLearningSyncPayload {
         JSONObject payload = payload(record);
         ContentValues values = new ContentValues();
         values.put("node_id", objectId);
-        values.put("interval_duration_ms", payload.optLong("interval_duration_ms", payload.optLong("intervalDurationMs", 0)));
-        values.put("interval_growth_factor", payload.optDouble("interval_growth_factor", payload.optDouble("intervalGrowthFactor", 1)));
-        values.put("last_handled_at", payload.optString("last_handled_at", payload.optString("lastHandledAt", record.optString("updated_at"))));
-        values.put("next_at", payload.optString("next_at", payload.optString("nextAt", record.optString("updated_at"))));
+        values.put("interval_duration_ms", payload.optLong("interval_duration_ms", 0));
+        values.put("interval_growth_factor", payload.optDouble("interval_growth_factor", 1));
+        values.put("last_handled_at", payload.optString("last_handled_at", record.optString("updated_at")));
+        values.put("next_at", payload.optString("next_at", record.optString("updated_at")));
         values.put("priority", payload.optDouble("priority", 0));
-        values.put("reading_position", payload.optLong("reading_position", payload.optLong("readingPosition", 0)));
-        values.put("repetition_count", payload.optInt("repetition_count", payload.optInt("repetitionCount", 0)));
+        values.put("reading_position", payload.optLong("reading_position", 0));
+        values.put("repetition_count", payload.optInt("repetition_count", 0));
         values.put("state", payload.optString("state", "active"));
         database.insertWithOnConflict("node_reading", null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
@@ -37,12 +37,12 @@ final class FolioleCompanionLearningSyncPayload {
         ContentValues values = new ContentValues();
         values.put("node_id", objectId);
         values.put("due", payload.optString("due", record.optString("updated_at")));
-        values.put("last_review_at", nullIfEmpty(payload.optString("last_review_at", payload.optString("lastReviewAt", ""))));
+        values.put("last_review_at", nullIfEmpty(payload.optString("last_review_at", "")));
         values.put("state", payload.optInt("state", 0));
         values.put("stability", payload.optDouble("stability", 0));
         values.put("difficulty", payload.optDouble("difficulty", 0));
-        values.put("elapsed_days", payload.optInt("elapsed_days", payload.optInt("elapsedDays", 0)));
-        values.put("scheduled_days", payload.optInt("scheduled_days", payload.optInt("scheduledDays", 0)));
+        values.put("elapsed_days", payload.optInt("elapsed_days", 0));
+        values.put("scheduled_days", payload.optInt("scheduled_days", 0));
         values.put("reps", payload.optInt("reps", 0));
         values.put("lapses", payload.optInt("lapses", 0));
         database.insertWithOnConflict("node_review", null, values, SQLiteDatabase.CONFLICT_REPLACE);

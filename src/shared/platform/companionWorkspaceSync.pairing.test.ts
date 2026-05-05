@@ -4,6 +4,7 @@ const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'web'),
   isNativePlatform: vi.fn(() => false),
   plugin: {
+    desktopHttpRequest: vi.fn(),
     loadPairingState: vi.fn(),
     savePairingCredentials: vi.fn(),
     signCompanionSyncRequest: vi.fn()
@@ -69,7 +70,15 @@ describe('companionWorkspaceSync pairing', () => {
 it('verifies native pairing credentials are readable after saving', async () => {
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
-  mockApprovedDesktopPairing('android-test-device');
+  capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({
+    body: JSON.stringify({
+      device_id: 'android-test-device',
+      device_secret: 'test-secret',
+      paired_at: '2026-04-22T12:00:00.000Z',
+      peer_id: 'desktop-local'
+    }),
+    status: 200
+  });
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
@@ -91,13 +100,27 @@ it('verifies native pairing credentials are readable after saving', async () => 
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
   })).resolves.toMatchObject({ is_paired: true, device_name: 'Pixel 9' });
+  expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenCalledWith({
+    body: JSON.stringify({ pair_request_id: 'pair-request-1' }),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    url: 'http://10.0.2.2:38641/companion/pair'
+  });
   expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(1);
 });
 
 it('fails native pairing when credentials cannot be read back locally', async () => {
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
-  mockApprovedDesktopPairing('android-test-device');
+  capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({
+    body: JSON.stringify({
+      device_id: 'android-test-device',
+      device_secret: 'test-secret',
+      paired_at: '2026-04-22T12:00:00.000Z',
+      peer_id: 'desktop-local'
+    }),
+    status: 200
+  });
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue({ is_paired: false });
   capacitorMock.plugin.loadPairingState.mockResolvedValue({ is_paired: false });
 

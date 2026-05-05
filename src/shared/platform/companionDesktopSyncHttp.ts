@@ -1,5 +1,9 @@
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
-import { normalizeEndpointUrl } from './companionWorkspaceSyncBridge';
+import {
+  FolioleCompanionSync,
+  isNativeAndroidCompanionRuntime,
+  normalizeEndpointUrl
+} from './companionWorkspaceSyncBridge';
 
 export class DesktopSyncHttpError extends Error {
   body: string;
@@ -17,8 +21,9 @@ export class DesktopSyncHttpError extends Error {
 
 export async function fetchDesktopJson<T>(endpointUrl: string, pathWithQuery: string): Promise<T> {
   const endpoint = normalizeEndpointUrl(endpointUrl);
-  const response = await fetch(`${endpoint}${pathWithQuery}`, {
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery })
+  const response = await requestDesktop(`${endpoint}${pathWithQuery}`, {
+    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+    method: 'GET'
   });
   return await readDesktopJson<T>(response, pathWithQuery, 'source');
 }
@@ -26,7 +31,7 @@ export async function fetchDesktopJson<T>(endpointUrl: string, pathWithQuery: st
 export async function postDesktopJson<T>(endpointUrl: string, pathWithQuery: string, body: unknown): Promise<T> {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const bodyText = JSON.stringify(body);
-  const response = await fetch(`${endpoint}${pathWithQuery}`, {
+  const response = await requestDesktop(`${endpoint}${pathWithQuery}`, {
     body: bodyText,
     headers: {
       'Content-Type': 'application/json',
@@ -35,6 +40,22 @@ export async function postDesktopJson<T>(endpointUrl: string, pathWithQuery: str
     method: 'POST'
   });
   return await readDesktopJson<T>(response, pathWithQuery, 'target');
+}
+
+async function requestDesktop(
+  url: string,
+  init: { body?: string; headers?: Record<string, string>; method: string }
+): Promise<Response> {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return await fetch(url, init);
+  }
+  const payload = await FolioleCompanionSync.desktopHttpRequest({
+    body: init.body,
+    headers: init.headers,
+    method: init.method,
+    url
+  });
+  return new Response(payload.body, { status: payload.status });
 }
 
 async function readDesktopJson<T>(

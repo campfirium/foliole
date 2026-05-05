@@ -211,6 +211,21 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionSyncObjectStore.applySyncObjects(database, objects, deviceId);
     }
 
+    JSObject syncAttachmentResource(String attachmentId, String contentHash, String url, JSONObject headers) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        return FolioleCompanionAttachmentResourceStore.syncResource(context, database, attachmentId, contentHash, url, headers);
+    }
+
+    JSObject resolveAttachmentResource(String attachmentId) {
+        SQLiteDatabase database = getReadableDatabase();
+        return FolioleCompanionAttachmentResourceStore.resolveResource(context, database, attachmentId);
+    }
+
+    JSObject loadPdfPageText(String attachmentId) {
+        SQLiteDatabase database = getReadableDatabase();
+        return FolioleCompanionPdfPageTextStore.loadPageText(database, attachmentId);
+    }
+
     JSObject applySyncNodeVersions(JSONArray nodes) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         return FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes);

@@ -93,15 +93,15 @@ export function writeImportSource(driver: DatabaseDriver, record: PersistedImpor
 
 function toImportSourcePayload(row: ImportSourceRow) {
   return {
-    firstImportedAt: row.first_imported_at ?? '',
-    lastContentFingerprint: row.last_content_fingerprint,
-    lastImportedAt: row.last_imported_at ?? '',
-    latestNodeId: row.latest_node_id,
+    first_imported_at: row.first_imported_at ?? '',
+    last_content_fingerprint: row.last_content_fingerprint,
+    last_imported_at: row.last_imported_at ?? '',
+    latest_node_id: row.latest_node_id,
     provider: row.provider ?? '',
-    sourceFingerprint: row.source_fingerprint ?? '',
-    sourceKind: row.source_kind ?? '',
-    sourceLocator: row.source_locator ?? '',
-    sourceName: row.source_name ?? ''
+    source_fingerprint: row.source_fingerprint ?? '',
+    source_kind: row.source_kind ?? '',
+    source_locator: row.source_locator ?? '',
+    source_name: row.source_name ?? ''
   };
 }
 

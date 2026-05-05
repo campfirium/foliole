@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   NativeSyncChangeCursor,
-  NativeSyncIndexEntry,
   NativeSyncNodeRecord,
   NativeSyncObjectRecord,
   NativeSyncReviewLogRecord,
@@ -20,7 +19,6 @@ const syncBridgeMock = vi.hoisted(() => ({
     objects.map((object) => `${object.object_type}:${object.object_id}`)
   )),
   applyCompanionSyncReviewLog: vi.fn(async (reviews: NativeSyncReviewLogRecord[]) => reviews.map((review) => review.op_id)),
-  loadCompanionSyncIndex: vi.fn(async (): Promise<NativeSyncIndexEntry[]> => []),
   loadCompanionSyncNodeVersionCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncNodeVersionPushCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncNodeVersions: vi.fn(async () => [] as NativeSyncNodeRecord[]),
@@ -44,23 +42,13 @@ const pairingMock = vi.hoisted(() => ({
     'X-Signature': `signed:${pathWithQuery}`
   }))
 }));
+const attachmentResourceMock = vi.hoisted(() => ({
+  syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
+}));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companionWorkspacePairing', () => pairingMock);
-
-function createIndexEntry(
-  objectId: string,
-  objectType: NativeSyncIndexEntry['object_type'],
-  contentHash: string
-): NativeSyncIndexEntry {
-  return {
-    content_hash: contentHash,
-    object_id: objectId,
-    object_type: objectType,
-    sync_version_id: null,
-    updated_at: '2026-04-25T00:00:00.000Z'
-  };
-}
+vi.mock('./companionDesktopAttachmentResources', () => attachmentResourceMock);
 
 function parseBody(init: RequestInit | undefined) {
   return JSON.parse(String(init?.body ?? '{}')) as {
@@ -70,7 +58,7 @@ function parseBody(init: RequestInit | undefined) {
   };
 }
 
-function createFetchMock(remoteIndex: NativeSyncIndexEntry[], remoteObjects: NativeSyncObjectRecord[]) {
+function createFetchMock() {
   return vi.fn(async (url: string, init?: RequestInit) => ({
     json: async () => {
       if (init?.method === 'POST' && url.includes('/companion/sync-node-versions')) {
@@ -98,24 +86,17 @@ function createFetchMock(remoteIndex: NativeSyncIndexEntry[], remoteObjects: Nat
           ? { nodes: [] }
           : url.includes('/companion/sync-review-log')
             ? { reviews: [] }
-        : url.includes('/companion/sync-index')
-          ? { entries: remoteIndex }
-          : { objects: remoteObjects.filter((object) => url.includes(`object_type=${object.object_type}`)) };
+          : { objects: [] };
     },
     ok: true
   }));
 }
 
 function expectPullResult(result: unknown) {
-  expect(result).toEqual({
-    appliedNodeIds: [],
+  expect(result).toMatchObject({
     changedObjectIds: ['changed-setting'],
     appliedObjectIds: ['setting:changed-setting'],
-    appliedReviewOpIds: [],
-    pushedNodeIds: [],
-    pushedObjectIds: [],
-    pushedReviewOpIds: [],
-    requestedObjectIds: []
+    syncedAttachmentIds: []
   });
 }
 
@@ -136,13 +117,7 @@ function expectPullWrites() {
 }
 
 async function testPullsChangedObjects() {
-  const remoteIndex = [
-    createIndexEntry('same-setting', 'setting', 'same-hash'),
-    createIndexEntry('changed-setting', 'setting', 'new-hash'),
-    createIndexEntry('pdf-1', 'pdf_page_text', 'pdf-hash'),
-    createIndexEntry('node-1', 'node', 'node-hash')
-  ];
-  const fetchMock = createFetchMock(remoteIndex, []);
+  const fetchMock = createFetchMock();
   vi.stubGlobal('fetch', fetchMock);
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
@@ -166,7 +141,7 @@ async function testPushesLocalChanges() {
   const localReview = createReviewRecord();
   syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([localChange]);
   syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([localReview]);
-  const fetchMock = createFetchMock([], []);
+  const fetchMock = createFetchMock();
   vi.stubGlobal('fetch', fetchMock);
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
@@ -202,7 +177,7 @@ async function testPushesNodeVersionsBeforeDependentState() {
   };
   syncBridgeMock.loadCompanionSyncNodeVersions.mockResolvedValue([localNode]);
   syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([localReading]);
-  const fetchMock = createFetchMock([], []);
+  const fetchMock = createFetchMock();
   vi.stubGlobal('fetch', fetchMock);
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
@@ -253,10 +228,6 @@ describe('companion desktop sync objects', () => {
     syncBridgeMock.applyCompanionSyncObjects.mockImplementation(async (objects: NativeSyncObjectRecord[]) => (
       objects.map((object) => `${object.object_type}:${object.object_id}`)
     ));
-    syncBridgeMock.loadCompanionSyncIndex.mockResolvedValue([
-      createIndexEntry('same-setting', 'setting', 'same-hash'),
-      createIndexEntry('changed-setting', 'setting', 'new-hash')
-    ]);
     syncBridgeMock.loadCompanionSyncNodeVersionCursor.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncNodeVersionPushCursor.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncNodeVersions.mockResolvedValue([]);
@@ -276,6 +247,7 @@ describe('companion desktop sync objects', () => {
       'X-Device-Id': 'android-test-device',
       'X-Signature': 'signed'
     });
+    attachmentResourceMock.syncCompanionAttachmentResourcesFromDesktop.mockResolvedValue([]);
   });
 
   it('pulls changed generic objects from desktop and applies them locally', testPullsChangedObjects);

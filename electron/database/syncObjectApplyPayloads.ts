@@ -40,16 +40,16 @@ function applyExternalDocument(driver: DatabaseDriver, record: NativeSyncObjectR
        content_hash = excluded.content_hash, title = excluded.title, opening_text = excluded.opening_text,
        content = excluded.content, indexed_at = excluded.indexed_at, is_present = excluded.is_present,
        missing_at = excluded.missing_at, updated_at = excluded.updated_at`,
-    [record.object_id, text(payload.folder_id) ?? text(payload.folderId) ?? '',
-      text(payload.relative_path) ?? text(payload.relativePath) ?? '', text(payload.file_name) ?? text(payload.fileName) ?? '',
-      text(payload.extension) ?? '', integer(payload.source_size_bytes ?? payload.sourceSizeBytes),
-      text(payload.source_modified_at) ?? text(payload.sourceModifiedAt) ?? record.updated_at,
-      integer(payload.source_modified_ms ?? payload.sourceModifiedMs),
-      text(payload.content_hash) ?? text(payload.contentHash) ?? record.content_hash, text(payload.title) ?? '',
-      text(payload.opening_text) ?? text(payload.openingText), text(payload.content) ?? '',
-      text(payload.indexed_at) ?? text(payload.indexedAt) ?? record.updated_at,
-      integer(payload.is_present ?? payload.isPresent) === 0 ? 0 : 1,
-      text(payload.missing_at) ?? text(payload.missingAt), text(payload.created_at) ?? text(payload.createdAt) ?? record.updated_at,
+    [record.object_id, text(payload.folder_id) ?? '',
+      text(payload.relative_path) ?? '', text(payload.file_name) ?? '',
+      text(payload.extension) ?? '', integer(payload.source_size_bytes),
+      text(payload.source_modified_at) ?? record.updated_at,
+      integer(payload.source_modified_ms),
+      text(payload.content_hash) ?? record.content_hash, text(payload.title) ?? '',
+      text(payload.opening_text), text(payload.content) ?? '',
+      text(payload.indexed_at) ?? record.updated_at,
+      integer(payload.is_present) === 0 ? 0 : 1,
+      text(payload.missing_at), text(payload.created_at) ?? record.updated_at,
       record.updated_at]
   );
 }
@@ -70,13 +70,13 @@ function applyExternalFolder(driver: DatabaseDriver, record: NativeSyncObjectRec
        attachment_root_path = excluded.attachment_root_path, excluded_dirs_json = excluded.excluded_dirs_json,
        status = excluded.status, document_count = excluded.document_count, indexed_at = excluded.indexed_at,
        last_error = excluded.last_error, updated_at = excluded.updated_at`,
-    [record.object_id, text(payload.folder_path) ?? text(payload.folderPath) ?? '',
-      text(payload.attachment_mode) ?? text(payload.attachmentMode) ?? 'document_relative_first_then_fixed_root',
-      text(payload.attachment_root_path) ?? text(payload.attachmentRootPath),
-      text(payload.excluded_dirs_json) ?? JSON.stringify(payload.excludedDirs ?? []),
-      text(payload.status) ?? 'idle', integer(payload.document_count ?? payload.documentCount),
-      text(payload.indexed_at) ?? text(payload.indexedAt), text(payload.last_error) ?? text(payload.lastError),
-      text(payload.created_at) ?? text(payload.createdAt) ?? record.updated_at, record.updated_at]
+    [record.object_id, text(payload.folder_path) ?? '',
+      text(payload.attachment_mode) ?? 'document_relative_first_then_fixed_root',
+      text(payload.attachment_root_path),
+      text(payload.excluded_dirs_json) ?? '[]',
+      text(payload.status) ?? 'idle', integer(payload.document_count),
+      text(payload.indexed_at), text(payload.last_error),
+      text(payload.created_at) ?? record.updated_at, record.updated_at]
   );
 }
 
@@ -95,13 +95,13 @@ function applyImportSource(driver: DatabaseDriver, record: NativeSyncObjectRecor
        provider = excluded.provider, source_kind = excluded.source_kind, source_name = excluded.source_name,
        source_locator = excluded.source_locator, last_imported_at = excluded.last_imported_at,
        last_content_fingerprint = excluded.last_content_fingerprint, latest_node_id = excluded.latest_node_id`,
-    [record.object_id, text(payload.provider) ?? 'unknown', text(payload.source_kind) ?? text(payload.sourceKind) ?? 'unknown',
-      text(payload.source_name) ?? text(payload.sourceName) ?? record.object_id,
-      text(payload.source_locator) ?? text(payload.sourceLocator) ?? record.object_id,
-      text(payload.first_imported_at) ?? text(payload.firstImportedAt) ?? record.updated_at,
-      text(payload.last_imported_at) ?? text(payload.lastImportedAt) ?? record.updated_at,
-      text(payload.last_content_fingerprint) ?? text(payload.lastContentFingerprint) ?? record.content_hash,
-      text(payload.latest_node_id) ?? text(payload.latestNodeId)]
+    [record.object_id, text(payload.provider) ?? 'unknown', text(payload.source_kind) ?? 'unknown',
+      text(payload.source_name) ?? record.object_id,
+      text(payload.source_locator) ?? record.object_id,
+      text(payload.first_imported_at) ?? record.updated_at,
+      text(payload.last_imported_at) ?? record.updated_at,
+      text(payload.last_content_fingerprint) ?? record.content_hash,
+      text(payload.latest_node_id)]
   );
 }
 
@@ -121,10 +121,10 @@ function applyNodeReading(driver: DatabaseDriver, record: NativeSyncObjectRecord
        last_handled_at = excluded.last_handled_at, next_at = excluded.next_at, priority = excluded.priority,
        reading_position = excluded.reading_position, repetition_count = excluded.repetition_count, state = excluded.state`,
     [record.object_id, integer(payload.interval_duration_ms), numberOrNull(payload.interval_growth_factor) ?? 1,
-      text(payload.last_handled_at) ?? text(payload.lastHandledAt) ?? record.updated_at,
-      text(payload.next_at) ?? text(payload.nextAt) ?? record.updated_at,
-      numberOrNull(payload.priority) ?? 0, integer(payload.reading_position ?? payload.readingPosition),
-      integer(payload.repetition_count ?? payload.repetitionCount),
+      text(payload.last_handled_at) ?? record.updated_at,
+      text(payload.next_at) ?? record.updated_at,
+      numberOrNull(payload.priority) ?? 0, integer(payload.reading_position),
+      integer(payload.repetition_count),
       text(payload.state) ?? 'active']
   );
 }
@@ -142,10 +142,10 @@ function applyNodeReview(driver: DatabaseDriver, record: NativeSyncObjectRecord)
        due = excluded.due, last_review_at = excluded.last_review_at, state = excluded.state,
        stability = excluded.stability, difficulty = excluded.difficulty, elapsed_days = excluded.elapsed_days,
        scheduled_days = excluded.scheduled_days, reps = excluded.reps, lapses = excluded.lapses`,
-    [record.object_id, text(payload.due) ?? record.updated_at, text(payload.last_review_at) ?? text(payload.lastReviewAt),
+    [record.object_id, text(payload.due) ?? record.updated_at, text(payload.last_review_at),
       integer(payload.state), numberOrNull(payload.stability) ?? 0, numberOrNull(payload.difficulty) ?? 0,
-      integer(payload.elapsed_days ?? payload.elapsedDays),
-      integer(payload.scheduled_days ?? payload.scheduledDays), integer(payload.reps), integer(payload.lapses)]
+      integer(payload.elapsed_days),
+      integer(payload.scheduled_days), integer(payload.reps), integer(payload.lapses)]
   );
 }
 
@@ -210,7 +210,7 @@ function applyViewState(driver: DatabaseDriver, record: NativeSyncObjectRecord) 
     driver.execute(
       `INSERT INTO workspace_meta (key, value, updated_at) VALUES ('active_node_id', ?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-      [text(payload.active_node_id) ?? text(payload.activeNodeId) ?? '', record.updated_at]
+      [text(payload.active_node_id) ?? '', record.updated_at]
     );
     return;
   }
@@ -220,8 +220,8 @@ function applyViewState(driver: DatabaseDriver, record: NativeSyncObjectRecord) 
        VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(node_id) DO UPDATE SET scroll_top = excluded.scroll_top,
          selection_from = excluded.selection_from, selection_to = excluded.selection_to, updated_at = excluded.updated_at`,
-      [key.slice(5), integer(payload.scroll_top ?? payload.scrollTop),
-        numberOrNull(payload.selection_from ?? payload.selectionFrom), numberOrNull(payload.selection_to ?? payload.selectionTo),
+      [key.slice(5), integer(payload.scroll_top),
+        numberOrNull(payload.selection_from), numberOrNull(payload.selection_to),
         record.updated_at]
     );
   }

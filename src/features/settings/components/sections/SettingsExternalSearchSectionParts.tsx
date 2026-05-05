@@ -105,7 +105,7 @@ function ExternalLibraryExcludedInput(props: {
             .filter(Boolean)
         })
       }
-      placeholder=".obsidian, node_modules"
+      placeholder="Folder names to exclude, separated by commas"
       title={props.folder.excludedDirs.length > 0 ? props.folder.excludedDirs.join('\n') : undefined}
       value={excludedFoldersValue(props.folder.excludedDirs)}
     />
@@ -160,7 +160,7 @@ function ExternalLibraryDraftRow(props: { disabled: boolean; onAddFolder: () => 
         onClick={props.onAddFolder}
         path=""
       />
-      <input className={settingsFieldClassName()} disabled placeholder=".obsidian, node_modules" value="" readOnly />
+      <input className={settingsFieldClassName()} disabled placeholder="Folder names to exclude, separated by commas" value="" readOnly />
       <div className="min-w-0 text-sm text-foreground/55">New folder</div>
       <div aria-hidden="true" />
     </div>
@@ -192,7 +192,7 @@ export function ExternalLibraryTable(props: {
   onAddFolder: () => void;
 }) {
   return (
-    <div className={settingsActionTableClassName()} role="table" aria-label="External library folders">
+    <div className={settingsActionTableClassName()} role="table" aria-label="External source folders">
       <ExternalLibraryHeader />
       {props.isDesktopRuntime ? (
         <>

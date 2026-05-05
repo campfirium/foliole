@@ -121,10 +121,10 @@ function upsertExternalSearchFolders(
     );
     recordExternalFolderSync({
       contentHash: computeSyncContentHash('external_folder', {
-        attachmentMode: folder.attachmentMode,
-        attachmentRootPath: folder.attachmentRootPath,
-        excludedDirs: folder.excludedDirs,
-        folderPath: folder.folderPath,
+        attachment_mode: folder.attachmentMode,
+        attachment_root_path: folder.attachmentRootPath,
+        excluded_dirs: folder.excludedDirs,
+        folder_path: folder.folderPath,
         id: folder.id
       }),
       deviceId,
@@ -157,7 +157,7 @@ function tombstoneRemovedExternalFolders(rows: ExternalSearchFolderRow[], keptId
   for (const row of rows) {
     if (keptIds.has(row.id)) continue;
     recordExternalFolderSync({
-      contentHash: computeSyncContentHash('external_folder', { deletedAt: now, folderId: row.id }),
+      contentHash: computeSyncContentHash('external_folder', { deleted_at: now, folder_id: row.id }),
       deletedAt: now,
       deviceId,
       folderId: row.id,

@@ -196,7 +196,7 @@ function buildMobileStateObjectsBody() {
       deleted_at: null,
       object_id: 'node-1',
       object_type: 'node_reading',
-      payload_json: '{"readingPosition":128}',
+      payload_json: '{"reading_position":128}',
       updated_at: '2026-04-25T00:11:00.000Z'
     }, {
       content_hash: 'hash-mobile-review',
@@ -210,7 +210,7 @@ function buildMobileStateObjectsBody() {
       deleted_at: null,
       object_id: 'session_resume:android:phone:android-test-device:node:node-1',
       object_type: 'view_state',
-      payload_json: '{"scrollTop":256}',
+      payload_json: '{"scroll_top":256}',
       updated_at: '2026-04-25T00:13:00.000Z'
     }]
   });

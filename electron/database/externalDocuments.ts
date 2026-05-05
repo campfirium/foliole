@@ -29,16 +29,16 @@ function toExternalDocumentPayload(folder: NativeExternalSearchFolder, document:
   });
   return {
     content: document.content,
-    contentHash: sha256(document.content),
+    content_hash: sha256(document.content),
     extension: document.extension,
-    fileName: document.fileName,
-    folderId: folder.id,
-    indexedAt,
-    openingText: resolveNodeOpeningText(document.content, title),
-    relativePath: document.relativePath,
-    sourceModifiedAt: document.modifiedAt,
-    sourceModifiedMs: document.modifiedMs,
-    sourceSizeBytes: document.sizeBytes,
+    file_name: document.fileName,
+    folder_id: folder.id,
+    indexed_at: indexedAt,
+    opening_text: resolveNodeOpeningText(document.content, title),
+    relative_path: document.relativePath,
+    source_modified_at: document.modifiedAt,
+    source_modified_ms: document.modifiedMs,
+    source_size_bytes: document.sizeBytes,
     title
   };
 }
@@ -62,7 +62,7 @@ function recordExternalDocumentSync(args: {
 
 function tombstoneExternalDocument(documentId: string, deviceId: string, deletedAt: string) {
   const connection = openDatabaseConnection();
-  const contentHash = computeSyncContentHash('external_document', { deletedAt, documentId });
+  const contentHash = computeSyncContentHash('external_document', { deleted_at: deletedAt, document_id: documentId });
   connection.driver.execute(
     `UPDATE external_documents
      SET is_present = 0, missing_at = ?, updated_at = ?
@@ -110,18 +110,18 @@ export function upsertExternalDocuments(folder: NativeExternalSearchFolder, docu
          updated_at = excluded.updated_at`,
       [
         documentId,
-        payload.folderId,
-        payload.relativePath,
-        payload.fileName,
+        payload.folder_id,
+        payload.relative_path,
+        payload.file_name,
         payload.extension,
-        payload.sourceSizeBytes,
-        payload.sourceModifiedAt,
-        payload.sourceModifiedMs,
-        payload.contentHash,
+        payload.source_size_bytes,
+        payload.source_modified_at,
+        payload.source_modified_ms,
+        payload.content_hash,
         payload.title,
-        payload.openingText,
+        payload.opening_text,
         payload.content,
-        payload.indexedAt,
+        payload.indexed_at,
         indexedAt,
         indexedAt
       ]

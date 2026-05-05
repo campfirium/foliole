@@ -62,12 +62,12 @@ export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordI
 
   const recordDeviceId = resolveSettingDeviceId(scope, deviceId);
   const contentHash = computeSyncContentHash('setting', {
-    deviceId: recordDeviceId,
-    formFactor: FORM_FACTOR,
+    device_id: recordDeviceId,
+    form_factor: FORM_FACTOR,
     key: input.key,
     platform: PLATFORM,
     scope,
-    valueJson: input.valueJson
+    value_json: input.valueJson
   });
 
   driver.execute(

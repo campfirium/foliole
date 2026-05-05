@@ -88,7 +88,7 @@ function MirrorLocationRow(props: {
   const isMirrorBusy = props.pendingLocation === 'mirror' || props.isRebuildingMirrorLinks || props.isRebuildingMirrorOutput;
   return (
     <LibraryLocationRow
-      description="Runtime-generated Markdown output. Mirror is read-only, keeps one `.md` per article, and is not a second source of truth."
+      description="A read-only Markdown export Foliole regenerates automatically — one .md file per topic. Edits made here are not read back."
       errorMessage={props.errorMessage}
       isDesktopRuntime={props.isDesktopRuntime}
       isPending={isMirrorBusy}
@@ -184,8 +184,7 @@ export function SettingsImportSection(props: SettingsImportSectionProps) {
     <>
       <SettingsSection
         ariaLabel="Library settings section"
-        description="Defaults usually need no adjustment. Change these folders only when storage needs to live outside Library Home."
-        title="Library paths"
+        title="Library"
       >
         <LibraryPathRows {...props} />
       </SettingsSection>

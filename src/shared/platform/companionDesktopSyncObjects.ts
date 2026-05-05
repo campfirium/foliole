@@ -5,6 +5,7 @@ import type {
   NativeSyncReviewLogRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+import { syncCompanionAttachmentResourcesFromDesktop } from './companionDesktopAttachmentResources';
 import { fetchDesktopJson, postDesktopJson } from './companionDesktopSyncHttp';
 import {
   applyCompanionSyncNodeVersions,
@@ -44,6 +45,7 @@ export interface CompanionDesktopSyncResult {
   pushedObjectIds: string[];
   pushedReviewOpIds: string[];
   requestedObjectIds: string[];
+  syncedAttachmentIds: string[];
 }
 
 const inFlightSyncByEndpoint = new Map<string, Promise<CompanionDesktopSyncResult>>();
@@ -87,6 +89,7 @@ async function pullRemoteStateChanges(endpointUrl: string) {
   let cursor = await loadCompanionSyncStateCursor();
   const appliedObjectIds: string[] = [];
   const changedObjectIds: string[] = [];
+  const syncedAttachmentIds: string[] = [];
   for (let page = 0; page < MAX_CHANGE_PAGES; page += 1) {
     const payload = await fetchDesktopJson<{ objects: Array<NativeSyncObjectRecord & { state_seq: number }> }>(
       endpointUrl,
@@ -94,6 +97,7 @@ async function pullRemoteStateChanges(endpointUrl: string) {
     );
     if (payload.objects.length > 0) {
       appliedObjectIds.push(...await applyCompanionSyncObjects(payload.objects));
+      syncedAttachmentIds.push(...await syncCompanionAttachmentResourcesFromDesktop(endpointUrl, payload.objects));
       changedObjectIds.push(...payload.objects.map((object) => object.object_id));
     }
     const lastObject = payload.objects.at(-1);
@@ -102,7 +106,7 @@ async function pullRemoteStateChanges(endpointUrl: string) {
     await saveCompanionSyncStateCursor(cursor);
     if (payload.objects.length < CHANGE_PAGE_LIMIT) break;
   }
-  return { appliedObjectIds, changedObjectIds };
+  return { appliedObjectIds, changedObjectIds, syncedAttachmentIds };
 }
 
 async function pullRemoteNodeVersions(endpointUrl: string) {
@@ -218,7 +222,8 @@ async function runCompanionObjectsSync(endpointUrl: string): Promise<CompanionDe
     pushedNodeIds: pushedNodes.pushedNodeIds,
     pushedObjectIds: pushed.pushedObjectIds,
     pushedReviewOpIds: pushedReviews.pushedReviewOpIds,
-    requestedObjectIds: []
+    requestedObjectIds: [],
+    syncedAttachmentIds: changes.syncedAttachmentIds
   };
 }
 

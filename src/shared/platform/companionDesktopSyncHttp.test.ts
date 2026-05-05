@@ -4,13 +4,30 @@ const pairingMock = vi.hoisted(() => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' }))
 }));
 
+const capacitorMock = vi.hoisted(() => ({
+  getPlatform: vi.fn(() => 'web'),
+  isNativePlatform: vi.fn(() => false),
+  plugin: {
+    desktopHttpRequest: vi.fn()
+  }
+}));
+
 vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('@capacitor/core', () => ({
+  Capacitor: {
+    getPlatform: capacitorMock.getPlatform,
+    isNativePlatform: capacitorMock.isNativePlatform
+  },
+  registerPlugin: vi.fn(() => capacitorMock.plugin)
+}));
 
 import { DesktopSyncHttpError, fetchDesktopJson, postDesktopJson } from './companionDesktopSyncHttp';
 
 beforeEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  capacitorMock.getPlatform.mockReturnValue('web');
+  capacitorMock.isNativePlatform.mockReturnValue(false);
 });
 
 it('throws fetch errors with path, status, and response body', async () => {
@@ -33,5 +50,25 @@ it('throws post errors with path, status, and response body', async () => {
     body: 'bad payload',
     path: '/companion/sync-objects',
     status: 422
+  });
+});
+
+it('routes desktop HTTP through the native Android bridge', async () => {
+  capacitorMock.getPlatform.mockReturnValue('android');
+  capacitorMock.isNativePlatform.mockReturnValue(true);
+  capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({
+    body: JSON.stringify({ ok: true }),
+    status: 200
+  });
+  vi.stubGlobal('fetch', vi.fn());
+
+  await expect(fetchDesktopJson('http://desktop.local/', '/companion/sync-index')).resolves.toEqual({ ok: true });
+
+  expect(fetch).not.toHaveBeenCalled();
+  expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenCalledWith({
+    body: undefined,
+    headers: { 'X-Signature': 'signed' },
+    method: 'GET',
+    url: 'http://desktop.local/companion/sync-index'
   });
 });

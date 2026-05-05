@@ -48,7 +48,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   },
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
-  { id: APP_COMMAND_IDS.clipboardImport, title: 'Clipboard Import *', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
+  { id: APP_COMMAND_IDS.clipboardImport, title: 'Clipboard Import', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
   {
     id: APP_COMMAND_IDS.openImportManagement,
     title: 'Import Management',
@@ -56,9 +56,9 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     keywords: ['import', 'management', 'sources', 'readwise', 'inbox']
   },
   { id: APP_COMMAND_IDS.resetImportData, title: 'DEV Reset Import Data', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reset', 'clear', 'records'] },
-  { id: APP_COMMAND_IDS.openNotes, title: 'Open Notes', section: 'Workspace' },
+  { id: APP_COMMAND_IDS.openNotes, title: 'Show Topics', section: 'Workspace', keywords: ['notes', 'topics', 'exit', 'trash'] },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
-  { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Article', section: 'Workspace', keywords: ['export', 'article', 'mirror', 'markdown', 'save'] },
+  { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Workspace', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
   {
     id: APP_COMMAND_IDS.mergeHighlightsIntoTopic,
     title: 'Merge Highlights',
@@ -79,8 +79,8 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.goBack, title: 'Go Back', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goForward, title: 'Go Forward', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goToNode, title: 'Go to…', section: 'Navigation', keywords: ['search', 'open', 'node', 'jump', 'folder', 'topic', 'item'] },
-  { id: APP_COMMAND_IDS.moveToNode, title: 'Move to', section: 'Navigation', keywords: ['move', 'reparent', 'node'] },
-  { id: APP_COMMAND_IDS.goParent, title: 'Go Parent', section: 'Navigation' },
+  { id: APP_COMMAND_IDS.moveToNode, title: 'Move to…', section: 'Navigation', keywords: ['move', 'reparent'] },
+  { id: APP_COMMAND_IDS.goParent, title: 'Go to Parent', section: 'Navigation' },
   { id: APP_COMMAND_IDS.findInTopic, title: 'Find in Topic', section: 'Navigation', keywords: ['find', 'search', 'topic', 'document', 'text'] },
   { id: APP_COMMAND_IDS.toggleImmersiveMode, title: 'Toggle Immersive Reading', section: 'Editor', keywords: ['immersive', 'reading', 'focus', 'fullscreen'] },
   { id: APP_COMMAND_IDS.enterPriorityMode, title: 'Set Priority…', section: 'Navigation', keywords: ['priority', 'queue', 'p0', 'p1', 'quick set'] },

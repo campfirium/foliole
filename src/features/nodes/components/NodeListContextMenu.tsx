@@ -118,8 +118,8 @@ function NoteMenuItems({
       {showRootCreateOnly ? null : showReturnAction && onReturnNode ? <AppDropdownMenuItem onSelect={onReturnNode}>Relearn</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDismissAction && onDismissNode ? <AppDropdownMenuItem onSelect={onDismissNode}>Dismiss</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showMergeHighlightsIntoTopicAction ? <AppDropdownMenuItem onSelect={onMergeHighlightsIntoTopic}>Merge Highlights</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showPasteIntoNodeAction ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here *</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showMoveToNodeAction && onMoveToNode ? <AppDropdownMenuItem onSelect={onMoveToNode}>Move to</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showPasteIntoNodeAction ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showMoveToNodeAction && onMoveToNode ? <AppDropdownMenuItem onSelect={onMoveToNode}>Move to…</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDeleteAction ? <AppDropdownMenuItem onSelect={onDeleteNode}>Delete</AppDropdownMenuItem> : null}
     </>
   );

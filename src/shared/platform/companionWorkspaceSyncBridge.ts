@@ -32,6 +32,12 @@ export interface CompanionWorkspaceSyncPlugin {
   applySyncObjects(args: { objects: NativeSyncObjectRecord[] }): Promise<{ applied_object_ids: string[] }>;
   applySyncNodeVersions(args: { nodes: NativeSyncNodeRecord[] }): Promise<{ applied_node_ids: string[] }>;
   applySyncReviewLog(args: { reviews: NativeSyncReviewLogRecord[] }): Promise<{ applied_op_ids: string[] }>;
+  desktopHttpRequest(args: {
+    body?: string;
+    headers?: Record<string, string>;
+    method: string;
+    url: string;
+  }): Promise<{ body: string; status: number }>;
   loadSyncIndex(): Promise<{ entries: NativeSyncIndexEntry[] }>;
   loadSyncObjects(args: {
     object_ids: string[];
@@ -59,6 +65,17 @@ export interface CompanionWorkspaceSyncPlugin {
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
   loadWorkspaceSyncState(): Promise<NativeCompanionWorkspaceSyncState>;
   loadReadableArticle(): Promise<NativeCompanionReadableArticlePayload>;
+  loadPdfPageText(args: {
+    attachment_id: string;
+  }): Promise<{
+    attachment_id: string;
+    pages: Array<{
+      page: number;
+      page_height: number | null;
+      page_width: number | null;
+      text: string;
+    }>;
+  }>;
   removeWorkspaceSyncRememberedTarget(args: { endpoint_url: string }): Promise<NativeCompanionWorkspaceSyncState>;
   recordWorkspaceSyncEvent(args: {
     endpoint_url: string | null;
@@ -104,6 +121,19 @@ export interface CompanionWorkspaceSyncPlugin {
     device_secret: string;
     paired_at: string;
   }): Promise<NativeCompanionPairingState>;
+  resolveAttachmentResource(args: {
+    attachment_id: string;
+  }): Promise<{
+    mime_type?: string | null;
+    resource_url: string | null;
+    status: 'missing_file' | 'not_found' | 'ready';
+  }>;
+  syncAttachmentResource(args: {
+    attachment_id: string;
+    content_hash: string;
+    headers: Record<string, string>;
+    url: string;
+  }): Promise<{ attachment_id: string; availability: string }>;
   saveWorkspaceSyncEndpoint(args: { endpoint_url: string | null }): Promise<NativeCompanionWorkspaceSyncState>;
   signCompanionSyncRequest(args: {
     body_hash: string;

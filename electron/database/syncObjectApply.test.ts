@@ -226,7 +226,7 @@ it('clears derived PDF text when applying an attachment tombstone', () => {
   expect(driver.queryOne('SELECT attachment_id FROM pdf_page_text WHERE attachment_id = ?', ['pdf-1'])).toBeUndefined();
 });
 
-it('applies mobile camelCase learning payloads', () => {
+it('applies mobile snake_case learning payloads', () => {
   insertNode('node-1');
 
   applySyncObjects([{
@@ -237,11 +237,11 @@ it('applies mobile camelCase learning payloads', () => {
     payload_json: JSON.stringify({
       difficulty: 3.4,
       due: '2026-04-25T08:10:00.000Z',
-      elapsedDays: 1,
+      elapsed_days: 1,
       lapses: 0,
-      lastReviewAt: '2026-04-22T08:10:00.000Z',
+      last_review_at: '2026-04-22T08:10:00.000Z',
       reps: 4,
-      scheduledDays: 3,
+      scheduled_days: 3,
       stability: 2.8,
       state: 2
     }),
@@ -268,14 +268,14 @@ it('applies mobile view state payloads', () => {
     deleted_at: null,
     object_id: 'session_resume:android:phone:android-test:active_node',
     object_type: 'view_state',
-    payload_json: JSON.stringify({ activeNodeId: 'node-1' }),
+    payload_json: JSON.stringify({ active_node_id: 'node-1' }),
     updated_at: '2026-04-22T08:10:00.000Z'
   }, {
     content_hash: 'hash-node-view',
     deleted_at: null,
     object_id: 'session_resume:android:phone:android-test:node:node-1',
     object_type: 'view_state',
-    payload_json: JSON.stringify({ nodeId: 'node-1', scrollTop: 128 }),
+    payload_json: JSON.stringify({ node_id: 'node-1', scroll_top: 128 }),
     updated_at: '2026-04-22T08:11:00.000Z'
   }]);
 

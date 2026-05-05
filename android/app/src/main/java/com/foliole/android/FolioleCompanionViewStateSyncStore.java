@@ -8,9 +8,8 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.Iterator;
 
 final class FolioleCompanionViewStateSyncStore {
 
@@ -23,7 +22,7 @@ final class FolioleCompanionViewStateSyncStore {
     static JSObject saveActiveNode(SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
         String nodeId = nullIfEmpty(input.optString("node_id", ""));
         JSONObject payload = new JSONObject();
-        payload.put("activeNodeId", nodeId == null ? JSONObject.NULL : nodeId);
+        payload.put("active_node_id", nodeId == null ? JSONObject.NULL : nodeId);
         String now = Instant.now().toString();
         String objectId = objectId(deviceId, "active_node");
         String contentHash = contentHash(deviceId, "active_node", payload);
@@ -41,16 +40,16 @@ final class FolioleCompanionViewStateSyncStore {
     static JSObject saveNodeViewState(SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
         String nodeId = input.optString("node_id");
         JSONObject payload = new JSONObject();
-        payload.put("nodeId", nodeId);
-        payload.put("scrollTop", Math.max(0, input.optInt("scroll_top", 0)));
-        payload.put("selectionFrom", JSONObject.NULL);
-        payload.put("selectionTo", JSONObject.NULL);
+        payload.put("node_id", nodeId);
+        payload.put("scroll_top", Math.max(0, input.optInt("scroll_top", 0)));
+        payload.put("selection_from", JSONObject.NULL);
+        payload.put("selection_to", JSONObject.NULL);
         String now = Instant.now().toString();
         String objectId = objectId(deviceId, "node:" + nodeId);
         String contentHash = contentHash(deviceId, "node:" + nodeId, payload);
         database.beginTransaction();
         try {
-            upsertNodeViewState(database, nodeId, payload.optInt("scrollTop", 0), now);
+            upsertNodeViewState(database, nodeId, payload.optInt("scroll_top", 0), now);
             writeSyncRows(database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
@@ -68,9 +67,9 @@ final class FolioleCompanionViewStateSyncStore {
         }
         JSONObject payload = payload(record);
         if (key.equals("active_node")) {
-            upsertActiveNode(database, nullIfEmpty(payload.optString("activeNodeId", payload.optString("active_node_id", ""))), record.optString("updated_at"));
+            upsertActiveNode(database, nullIfEmpty(payload.optString("active_node_id", "")), record.optString("updated_at"));
         } else if (key.startsWith("node:")) {
-            upsertNodeViewState(database, key.substring(5), payload.optInt("scrollTop", payload.optInt("scroll_top", 0)), record.optString("updated_at"));
+            upsertNodeViewState(database, key.substring(5), payload.optInt("scroll_top", 0), record.optString("updated_at"));
         }
     }
 
@@ -79,7 +78,7 @@ final class FolioleCompanionViewStateSyncStore {
         JSONObject payload = new JSONObject();
         if (key.equals("active_node")) {
             try (Cursor cursor = database.query("workspace_meta", new String[] { "value", "updated_at" }, "key = ?", new String[] { "active_node_id" }, null, null, null, "1")) {
-                if (cursor.moveToFirst()) payload.put("activeNodeId", nullIfEmpty(cursor.getString(0)));
+                if (cursor.moveToFirst()) payload.put("active_node_id", nullIfEmpty(cursor.getString(0)));
             }
         } else if (key.startsWith("node:")) {
             copyNodeViewState(database, key.substring(5), payload);
@@ -90,10 +89,10 @@ final class FolioleCompanionViewStateSyncStore {
     private static void copyNodeViewState(SQLiteDatabase database, String nodeId, JSONObject payload) throws Exception {
         try (Cursor cursor = database.query("node_view_state", null, "node_id = ?", new String[] { nodeId }, null, null, null, "1")) {
             if (!cursor.moveToFirst()) return;
-            payload.put("nodeId", nodeId);
-            payload.put("scrollTop", cursor.getInt(cursor.getColumnIndexOrThrow("scroll_top")));
-            payload.put("selectionFrom", JSONObject.NULL);
-            payload.put("selectionTo", JSONObject.NULL);
+            payload.put("node_id", nodeId);
+            payload.put("scroll_top", cursor.getInt(cursor.getColumnIndexOrThrow("scroll_top")));
+            payload.put("selection_from", JSONObject.NULL);
+            payload.put("selection_to", JSONObject.NULL);
         }
     }
 
@@ -135,16 +134,17 @@ final class FolioleCompanionViewStateSyncStore {
 
     private static String contentHash(String deviceId, String key, JSONObject payload) throws Exception {
         JSONObject canonical = new JSONObject();
-        canonical.put("deviceId", deviceId);
-        canonical.put("formFactor", FORM_FACTOR);
+        canonical.put("device_id", deviceId);
+        canonical.put("form_factor", FORM_FACTOR);
         canonical.put("key", key);
         canonical.put("platform", PLATFORM);
         canonical.put("scope", SCOPE);
-        canonical.put("payload", payload);
-        byte[] digest = MessageDigest.getInstance("SHA-256").digest(canonical.toString().getBytes(StandardCharsets.UTF_8));
-        StringBuilder builder = new StringBuilder();
-        for (byte value : digest) builder.append(String.format("%02x", value));
-        return builder.toString();
+        Iterator<String> payloadKeys = payload.keys();
+        while (payloadKeys.hasNext()) {
+            String payloadKey = payloadKeys.next();
+            canonical.put(payloadKey, payload.get(payloadKey));
+        }
+        return FolioleCompanionSyncContentHash.hash(canonical);
     }
 
     private static JSObject result(String objectId, String contentHash) {

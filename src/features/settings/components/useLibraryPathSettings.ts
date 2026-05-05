@@ -64,9 +64,9 @@ function formatLocationError(
   error: unknown
 ) {
   if (error instanceof Error && error.message.trim().length > 0) {
-    return `${fallbackMessage} ${error.message}`;
+    console.warn('[library-paths] settings update failed:', error);
   }
-  return fallbackMessage;
+  return `${fallbackMessage} Please retry, or check the folder exists and is writable.`;
 }
 
 function clearLocationError(

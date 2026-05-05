@@ -38,37 +38,37 @@ function normalizeNullableText(value: string | null) {
 function normalizeAttachments(attachments: NodeSyncAttachmentRef[]) {
   return [...attachments]
     .map((attachment) => ({
-      attachmentId: attachment.attachmentId,
+      attachment_id: attachment.attachmentId,
       role: attachment.role
     }))
     .sort((left, right) =>
-      left.attachmentId === right.attachmentId
+      left.attachment_id === right.attachment_id
         ? left.role.localeCompare(right.role)
-        : left.attachmentId.localeCompare(right.attachmentId)
+        : left.attachment_id.localeCompare(right.attachment_id)
     );
 }
 
 export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
   return {
-    anchorLink: normalizeNullableText(input.anchorLink),
+    anchor_link: normalizeNullableText(input.anchorLink),
     attachments: normalizeAttachments(input.attachments),
     content: input.content,
-    createdAt: normalizeIso(input.createdAt),
-    deletedAt: normalizeIso(input.deletedAt),
-    desiredRetention: input.desiredRetention ?? null,
-    hideTitleHeading: input.hideTitleHeading,
+    created_at: normalizeIso(input.createdAt),
+    deleted_at: normalizeIso(input.deletedAt),
+    desired_retention: input.desiredRetention ?? null,
+    hide_title_heading: input.hideTitleHeading,
     id: input.id,
-    imageRegions: normalizeNullableText(input.imageRegions),
-    isTitleManual: input.isTitleManual,
+    image_regions: normalizeNullableText(input.imageRegions),
+    is_title_manual: input.isTitleManual,
     kind: input.kind,
-    openingText: normalizeNullableText(input.openingText),
-    parentId: normalizeNullableText(input.parentId),
+    opening_text: normalizeNullableText(input.openingText),
+    parent_id: normalizeNullableText(input.parentId),
     position: input.position ?? null,
     priority: input.priority ?? null,
     reveal: normalizeNullableText(input.reveal),
     title: input.title,
-    updatedAt: normalizeIso(input.updatedAt),
-    virtualFilter: normalizeNullableText(input.virtualFilter)
+    updated_at: normalizeIso(input.updatedAt),
+    virtual_filter: normalizeNullableText(input.virtualFilter)
   };
 }
 

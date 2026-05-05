@@ -26,14 +26,25 @@ export interface NodeReviewResetContext {
 }
 
 function toNodeReviewHash(nodeId: string, payload: NodeReviewSyncPayload) {
-  return computeSyncContentHash('node_review', { nodeId, ...payload });
+  return computeSyncContentHash('node_review', {
+    difficulty: payload.difficulty,
+    due: payload.due,
+    elapsed_days: payload.elapsedDays,
+    lapses: payload.lapses,
+    last_review_at: payload.lastReviewAt,
+    node_id: nodeId,
+    reps: payload.reps,
+    scheduled_days: payload.scheduledDays,
+    stability: payload.stability,
+    state: payload.state
+  });
 }
 
 function toNodeReviewTombstoneHash(nodeId: string, deletedAt: string) {
   return computeSyncContentHash('node_review', {
-    deletedAt,
-    nodeId,
-    objectType: 'node_review'
+    deleted_at: deletedAt,
+    node_id: nodeId,
+    object_type: 'node_review'
   });
 }
 

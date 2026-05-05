@@ -23,9 +23,9 @@ interface SettingsExternalSearchSectionProps {
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
   return (
     <SettingsSection
-      ariaLabel="External library section"
-      description="Search, preview, and import content from folders that stay outside Foliole until you choose to import it."
-      title="External library"
+      ariaLabel="External sources section"
+      description="Search, preview, and import content from folders that stay outside Foliole until you choose to bring them in."
+      title="External sources"
     >
       <div className="min-w-0 overflow-hidden">
         <ExternalLibraryTable

@@ -39,7 +39,16 @@ export async function saveCompanionSyncNodeReadingRecord(args: {
   }
   return FolioleCompanionSync.saveSyncNodeReadingRecord({
     node_id: args.nodeId,
-    reading_json: JSON.stringify(args.reading)
+    reading_json: JSON.stringify({
+      interval_duration_ms: args.reading.intervalDurationMs,
+      interval_growth_factor: args.reading.intervalGrowthFactor,
+      last_handled_at: args.reading.lastHandledAt,
+      next_at: args.reading.nextAt,
+      priority: args.reading.priority,
+      reading_position: args.reading.readingPosition,
+      repetition_count: args.reading.repetitionCount,
+      state: args.reading.state
+    })
   });
 }
 
@@ -53,7 +62,17 @@ export async function saveCompanionSyncNodeReviewRecord(args: {
   }
   return FolioleCompanionSync.saveSyncNodeReviewRecord({
     node_id: args.nodeId,
-    review_json: JSON.stringify(args.review),
+    review_json: JSON.stringify({
+      difficulty: args.review.difficulty,
+      due: args.review.due,
+      elapsed_days: args.review.elapsedDays,
+      lapses: args.review.lapses,
+      last_review_at: args.review.lastReviewAt,
+      reps: args.review.reps,
+      scheduled_days: args.review.scheduledDays,
+      stability: args.review.stability,
+      state: args.review.state
+    }),
     review_log_json: args.reviewLog ? JSON.stringify(args.reviewLog) : undefined
   });
 }

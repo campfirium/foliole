@@ -18,6 +18,79 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
 
     @PluginMethod
+    public void desktopHttpRequest(PluginCall call) {
+        new Thread(() -> {
+            try {
+                String url = call.getString("url");
+                String method = call.getString("method");
+                if (url == null || url.trim().isEmpty()) {
+                    call.reject("url is required.");
+                    return;
+                }
+                if (method == null || method.trim().isEmpty()) {
+                    call.reject("method is required.");
+                    return;
+                }
+                call.resolve(FolioleCompanionDesktopHttpClient.request(
+                    url,
+                    method,
+                    call.getData().optJSONObject("headers"),
+                    call.getString("body")
+                ));
+            } catch (Exception exception) {
+                call.reject("Desktop HTTP request failed.", exception);
+            }
+        }).start();
+    }
+
+
+    @PluginMethod
+    public void syncAttachmentResource(PluginCall call) {
+        new Thread(() -> {
+            FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+            try {
+                call.resolve(databaseHelper.syncAttachmentResource(
+                    call.getString("attachment_id"),
+                    call.getString("content_hash"),
+                    call.getString("url"),
+                    call.getData().optJSONObject("headers")
+                ));
+            } catch (Exception exception) {
+                call.reject("Failed to sync companion attachment resource.", exception);
+            } finally {
+                databaseHelper.close();
+            }
+        }).start();
+    }
+
+
+    @PluginMethod
+    public void resolveAttachmentResource(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(databaseHelper.resolveAttachmentResource(call.getString("attachment_id")));
+        } catch (Exception exception) {
+            call.reject("Failed to resolve companion attachment resource.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+
+    @PluginMethod
+    public void loadPdfPageText(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(databaseHelper.loadPdfPageText(call.getString("attachment_id")));
+        } catch (Exception exception) {
+            call.reject("Failed to load companion PDF page text.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+
+    @PluginMethod
     public void loadDiscoveryCandidates(PluginCall call) {
         try {
             JSArray endpointUrls = new JSArray();

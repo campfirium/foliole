@@ -37,6 +37,9 @@ const syncBridgeMock = vi.hoisted(() => ({
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
+vi.mock('./companionDesktopAttachmentResources', () => ({
+  syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
+}));
 vi.mock('./companionWorkspacePairing', () => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' }))
 }));

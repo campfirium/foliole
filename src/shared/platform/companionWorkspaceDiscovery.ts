@@ -42,7 +42,7 @@ async function tryLoadCompanionDiscovery(endpointUrl: string): Promise<Companion
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
   const { controller, timeoutId } = createDiscoveryTimeout();
   try {
-    const response = await fetch(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, { signal: controller.signal });
+    const response = await requestDiscovery(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, controller.signal);
     if (!response.ok) {
       return null;
     }
@@ -55,6 +55,14 @@ async function tryLoadCompanionDiscovery(endpointUrl: string): Promise<Companion
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+async function requestDiscovery(url: string, signal: AbortSignal) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return await fetch(url, { signal });
+  }
+  const payload = await FolioleCompanionSync.desktopHttpRequest({ method: 'GET', url });
+  return new Response(payload.body, { status: payload.status });
 }
 
 function getDiscoveryKey(result: CompanionDiscoveryResult) {

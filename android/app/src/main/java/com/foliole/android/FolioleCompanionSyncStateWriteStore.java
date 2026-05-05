@@ -7,8 +7,6 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Instant;
 
 final class FolioleCompanionSyncStateWriteStore {
@@ -24,7 +22,14 @@ final class FolioleCompanionSyncStateWriteStore {
         String deviceId = input.optString("device_id", "*");
         String valueJson = input.optString("value_json", "null");
         String objectId = scope + ":" + platform + ":" + formFactor + ":" + deviceId + ":" + key;
-        String contentHash = sha256(objectId + "\n" + valueJson);
+        JSONObject payload = new JSONObject();
+        payload.put("device_id", deviceId);
+        payload.put("form_factor", formFactor);
+        payload.put("key", key);
+        payload.put("platform", platform);
+        payload.put("scope", scope);
+        payload.put("value_json", valueJson);
+        String contentHash = FolioleCompanionSyncContentHash.hash(payload);
 
         database.beginTransaction();
         try {
@@ -44,7 +49,8 @@ final class FolioleCompanionSyncStateWriteStore {
         String nodeId = input.optString("node_id");
         JSONObject payload = new JSONObject(input.optString("reading_json", "{}"));
         String now = Instant.now().toString();
-        String contentHash = sha256("node_reading\n" + nodeId + "\n" + payload.toString());
+        payload.put("node_id", nodeId);
+        String contentHash = FolioleCompanionSyncContentHash.hash(payload);
         database.beginTransaction();
         try {
             FolioleCompanionLearningSyncPayload.applyReading(database, nodeId, buildRecord("node_reading", nodeId, payload, contentHash, now));
@@ -63,7 +69,8 @@ final class FolioleCompanionSyncStateWriteStore {
             ? new JSONObject(input.optString("review_log_json", "{}"))
             : null;
         String now = Instant.now().toString();
-        String contentHash = sha256("node_review\n" + nodeId + "\n" + payload.toString());
+        payload.put("node_id", nodeId);
+        String contentHash = FolioleCompanionSyncContentHash.hash(payload);
         String opId = null;
         database.beginTransaction();
         try {
@@ -142,14 +149,5 @@ final class FolioleCompanionSyncStateWriteStore {
         result.put("object_id", objectId);
         result.put("content_hash", contentHash);
         return result;
-    }
-
-    private static String sha256(String text) throws Exception {
-        byte[] digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
-        StringBuilder builder = new StringBuilder();
-        for (byte value : digest) {
-            builder.append(String.format("%02x", value));
-        }
-        return builder.toString();
     }
 }

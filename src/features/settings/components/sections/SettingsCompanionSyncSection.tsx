@@ -116,7 +116,7 @@ function DeviceSyncSwitch(props: {
   return (
     <button
       aria-checked={overview.sync_enabled}
-      aria-label="Sync"
+      aria-label="Enable desktop sync"
       className={settingsSwitchClassName(overview.sync_enabled)}
       disabled={disabled}
       onClick={() => void (overview.sync_enabled ? props.state.disableSync() : props.state.enableSync())}
@@ -142,8 +142,8 @@ export function SettingsCompanionSyncSection() {
       title="Sync"
     >
       <SettingsRow
-        description={renderSyncError(overview) ?? "Turn on sync for this desktop."}
-        title="Sync"
+        description={renderSyncError(overview) ?? undefined}
+        title="Enable on this desktop"
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <DeviceSyncSwitch state={state} />

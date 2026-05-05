@@ -3,6 +3,7 @@ import os from 'node:os';
 
 import {
   createLanWorkspaceSyncRequestHandler,
+  ATTACHMENT_RESOURCE_PATH,
   DISCOVERY_ENDPOINT_PATH,
   PAIR_ENDPOINT_PATH,
   PAIR_REQUESTS_ENDPOINT_PATH,
@@ -117,6 +118,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
         SYNC_REVIEW_LOG_PATH,
         SYNC_INDEX_PATH,
         SYNC_OBJECTS_PATH,
+        ATTACHMENT_RESOURCE_PATH,
         WORKSPACE_VERSION_PATH,
         WORKSPACE_SNAPSHOT_PATH
       ],

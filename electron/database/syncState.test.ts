@@ -46,14 +46,14 @@ function openInitializedDriver() {
 
 it('computes stable object hashes independent of payload key order', () => {
   const first = computeSyncContentHash('attachment', {
-    blob: { availability: 'local', contentHash: 'sha256:abc' },
-    originalName: 'paper.pdf',
-    sizeBytes: 42
+    blob: { availability: 'local', content_hash: 'sha256:abc' },
+    original_name: 'paper.pdf',
+    size_bytes: 42
   });
   const second = computeSyncContentHash('attachment', {
-    sizeBytes: 42,
-    originalName: 'paper.pdf',
-    blob: { contentHash: 'sha256:abc', availability: 'local' }
+    size_bytes: 42,
+    original_name: 'paper.pdf',
+    blob: { content_hash: 'sha256:abc', availability: 'local' }
   });
 
   expect(second).toBe(first);
@@ -72,7 +72,7 @@ it('writes sync object state for attachment pdf text setting and view state', ()
   for (const row of rows) {
     upsertSyncObjectState(driver, {
       ...row,
-      contentHash: computeSyncContentHash(row.objectType, { objectId: row.objectId }),
+      contentHash: computeSyncContentHash(row.objectType, { object_id: row.objectId }),
       lastModifiedByDeviceId: 'desktop-1',
       updatedAt,
       syncDirty: true
@@ -107,14 +107,14 @@ it('advances state sequence monotonically and queries by cursor', () => {
   upsertSyncObjectState(driver, {
     objectType: 'attachment',
     objectId: 'att-1',
-    contentHash: computeSyncContentHash('attachment', { attachmentId: 'att-1' }),
+    contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1' }),
     lastModifiedByDeviceId: 'desktop-1',
     updatedAt: '2026-04-24T00:10:00.000Z'
   });
   upsertSyncObjectState(driver, {
     objectType: 'attachment',
     objectId: 'att-1',
-    contentHash: computeSyncContentHash('attachment', { attachmentId: 'att-1', updated: true }),
+    contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1', updated: true }),
     lastModifiedByDeviceId: 'desktop-1',
     updatedAt: '2026-04-24T00:11:00.000Z'
   });

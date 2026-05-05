@@ -18,26 +18,18 @@ export type SettingsCategoryId =
   | 'hotkeys';
 
 export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCategoryId; label: string }> = [
-  { id: 'about', label: 'General', description: 'Version details, diagnostics, and workspace support tools.' },
-  { id: 'appearance', label: 'Appearance', description: 'Control the look and density of the workspace.' },
-  { id: 'editor', label: 'Editor', description: 'Choose how editing, images, and writing surfaces behave.' },
-  { id: 'review', label: 'Review', description: 'Set scheduler defaults and review queue behavior.' },
-  { id: 'hotkeys', label: 'Hotkeys', description: 'Customize keyboard shortcuts for common actions.' },
-  { id: 'mouse-gestures', label: 'Mouse gestures', description: 'Tune gesture actions, thresholds, and trail feedback.' },
-  { id: 'library', label: 'Library', description: 'Point Foliole to your library home, inbox, and mirror paths.' },
-  {
-    id: 'companion-sync',
-    label: 'Sync',
-    description: 'Let another device connect to this desktop and manage local sync availability.'
-  },
-  { id: 'backups', label: 'Backups', description: 'Manage backup location, retention, and recovery tools.' },
-  { id: 'readwise-reader', label: 'Readwise Reader', description: 'Configure Readwise Reader folders and parsing rules.' },
-  { id: 'import', label: 'Watched folders', description: 'Adjust folder sources and intake behavior.' },
-  {
-    id: 'external-search',
-    label: 'External sources',
-    description: 'Search, preview, and import content from your external library.'
-  }
+  { id: 'about', label: 'General', description: 'View version, diagnostics, and support tools.' },
+  { id: 'appearance', label: 'Appearance', description: 'Adjust the look and density of the workspace.' },
+  { id: 'editor', label: 'Editor', description: 'Configure editing and writing behavior.' },
+  { id: 'review', label: 'Review', description: 'Tune the scheduler and review queue.' },
+  { id: 'hotkeys', label: 'Hotkeys', description: 'Customize keyboard shortcuts.' },
+  { id: 'mouse-gestures', label: 'Mouse gestures', description: 'Configure mouse gestures and feedback.' },
+  { id: 'library', label: 'Library', description: 'Set library, assets, inbox, and mirror folders.' },
+  { id: 'companion-sync', label: 'Sync', description: 'Pair other devices and manage local sync.' },
+  { id: 'backups', label: 'Backups', description: 'Manage backup location and retention.' },
+  { id: 'readwise-reader', label: 'Readwise Reader', description: 'Configure Readwise Reader import.' },
+  { id: 'import', label: 'Watched folders', description: 'Configure folders watched for import.' },
+  { id: 'external-search', label: 'External sources', description: 'Search and import from external folders.' }
 ];
 
 export const SETTINGS_CATEGORY_GROUPS: Array<{ categoryIds: SettingsCategoryId[]; label: string }> = [

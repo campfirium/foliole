@@ -142,7 +142,7 @@ export async function createSignedRequestHeaders(args: { bodyText?: string; meth
 
 export async function loadCompanionDiscovery(endpointUrl: string) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
-  const response = await fetch(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`);
+  const response = await requestDesktop(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, { method: 'GET' });
   if (!response.ok) {
     throw new Error(`Desktop discovery failed with ${response.status}.`);
   }
@@ -151,7 +151,7 @@ export async function loadCompanionDiscovery(endpointUrl: string) {
 
 export async function requestCompanionPairing(args: RequestCompanionPairingArgs) {
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
-  const response = await fetch(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
+  const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
     body: JSON.stringify({
       device_id: args.deviceId,
       device_kind: args.deviceKind,
@@ -168,7 +168,7 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
 
 export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArgs) {
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
-  const response = await fetch(`${normalizedEndpointUrl}${PAIR_ENDPOINT_PATH}`, {
+  const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_ENDPOINT_PATH}`, {
     body: JSON.stringify({
       pair_request_id: args.pairRequestId
     }),
@@ -208,4 +208,20 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     throw new Error('Android pairing credentials were not saved.');
   }
   return storedPairingState;
+}
+
+async function requestDesktop(
+  url: string,
+  init: { body?: string; headers?: Record<string, string>; method: string }
+) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return await fetch(url, init);
+  }
+  const payload = await FolioleCompanionSync.desktopHttpRequest({
+    body: init.body,
+    headers: init.headers,
+    method: init.method,
+    url
+  });
+  return new Response(payload.body, { status: payload.status });
 }

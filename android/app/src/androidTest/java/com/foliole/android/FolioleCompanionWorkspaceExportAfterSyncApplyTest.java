@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
@@ -38,17 +39,17 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         FolioleCompanionSyncObjectApply.applyPayload(database, record(
             "node_reading",
             "article-1",
-            "{\"nextAt\":\"2026-04-25T10:00:00.000Z\",\"lastHandledAt\":\"2026-04-25T09:00:00.000Z\",\"state\":\"active\",\"readingPosition\":32}"
+            "{\"next_at\":\"2026-04-25T10:00:00.000Z\",\"last_handled_at\":\"2026-04-25T09:00:00.000Z\",\"state\":\"active\",\"reading_position\":32}"
         ));
         FolioleCompanionSyncObjectApply.applyPayload(database, record(
             "node_review",
             "article-1",
-            "{\"due\":\"2026-04-26T10:00:00.000Z\",\"lastReviewAt\":\"2026-04-25T09:00:00.000Z\",\"state\":2,\"reps\":4}"
+            "{\"due\":\"2026-04-26T10:00:00.000Z\",\"last_review_at\":\"2026-04-25T09:00:00.000Z\",\"state\":2,\"reps\":4}"
         ));
         FolioleCompanionSyncObjectApply.applyPayload(database, record(
             "view_state",
             "session_resume:android:phone:remote-device:active_node",
-            "{\"activeNodeId\":\"article-2\"}"
+            "{\"active_node_id\":\"article-2\"}"
         ));
 
         JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database);
@@ -61,6 +62,53 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         assertEquals("2026-04-26T10:00:00.000Z", article.getJSONObject("review").getString("due"));
         assertEquals("article-2", readable.getJSONObject("readable_article").getString("node_id"));
         assertEquals("Fresh body", readable.getJSONObject("readable_article").getString("content"));
+    }
+
+    @Test
+    public void exportsStateObjectPayloadsWithSnakeCaseWireFields() throws Exception {
+        JSONArray records = new JSONArray()
+            .put(record(
+                "node_reading",
+                "article-1",
+                "{\"next_at\":\"2026-04-25T10:00:00.000Z\",\"last_handled_at\":\"2026-04-25T09:00:00.000Z\",\"state\":\"active\",\"reading_position\":32,\"interval_duration_ms\":1200,\"interval_growth_factor\":1.2,\"priority\":0.5,\"repetition_count\":2}"
+            ))
+            .put(record(
+                "node_review",
+                "article-1",
+                "{\"due\":\"2026-04-26T10:00:00.000Z\",\"last_review_at\":\"2026-04-25T09:00:00.000Z\",\"state\":2,\"reps\":4,\"elapsed_days\":1,\"scheduled_days\":3,\"stability\":2.4,\"difficulty\":4.2,\"lapses\":0}"
+            ))
+            .put(record(
+                "view_state",
+                "session_resume:android:phone:remote-device:active_node",
+                "{\"active_node_id\":\"article-2\"}"
+            ))
+            .put(record(
+                "view_state",
+                "session_resume:android:phone:remote-device:node:article-1",
+                "{\"node_id\":\"article-1\",\"scroll_top\":128,\"selection_from\":5,\"selection_to\":13}"
+            ));
+
+        FolioleCompanionSyncObjectStore.applySyncObjects(database, records, "remote-device");
+        JSObject loaded = FolioleCompanionSyncObjectStore.loadSyncObjects(
+            database,
+            new JSONArray()
+                .put("article-1")
+                .put("session_resume:android:phone:remote-device:active_node")
+                .put("session_resume:android:phone:remote-device:node:article-1"),
+            new JSONArray().put("node_reading").put("node_review").put("view_state")
+        );
+
+        JSONArray objects = loaded.getJSONArray("objects");
+        String payloads = objects.toString();
+        assertEquals(4, objects.length());
+        assertEquals(true, payloads.contains("reading_position"));
+        assertEquals(true, payloads.contains("last_review_at"));
+        assertEquals(true, payloads.contains("active_node_id"));
+        assertEquals(true, payloads.contains("scroll_top"));
+        assertEquals(false, payloads.contains("readingPosition"));
+        assertEquals(false, payloads.contains("lastReviewAt"));
+        assertEquals(false, payloads.contains("activeNodeId"));
+        assertEquals(false, payloads.contains("scrollTop"));
     }
 
     private void createTables() {
@@ -83,6 +131,11 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
         database.execSQL("CREATE TABLE node_view_state (node_id TEXT PRIMARY KEY, scroll_top INTEGER NOT NULL DEFAULT 0, " +
             "selection_from INTEGER, selection_to INTEGER, updated_at TEXT NOT NULL)");
+        database.execSQL("CREATE TABLE sync_object_state (" +
+            "object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL, " +
+            "current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL, " +
+            "updated_at TEXT NOT NULL, deleted_at TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0, " +
+            "PRIMARY KEY (object_type, object_id), UNIQUE (state_seq))");
     }
 
     private void insertNode(String id, String title, String content, String updatedAt) {

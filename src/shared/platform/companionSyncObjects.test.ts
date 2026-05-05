@@ -18,6 +18,10 @@ const capacitorMock = vi.hoisted(() => ({
     loadSyncReviewLogCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncReviewLogPushCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncReviewLog: vi.fn(async () => ({ reviews: [{ op_id: 'op-1' }] })),
+    loadPdfPageText: vi.fn(async () => ({
+      attachment_id: 'att-1',
+      pages: [{ page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }]
+    })),
     saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
     saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
     saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1' })),
@@ -28,7 +32,8 @@ const capacitorMock = vi.hoisted(() => ({
     saveSyncNodeVersionPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncReviewLogCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncReviewLogPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' }))
+    saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' })),
+    syncAttachmentResource: vi.fn(async () => ({ attachment_id: 'att-1', availability: 'cached' }))
   }
 }));
 
@@ -120,6 +125,10 @@ async function testNativePluginBridge() {
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([{ object_id: 'one', object_type: 'setting', state_seq: 1 }]);
   await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([{ object_id: 'node-1' }]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'op-1' }]);
+  await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([
+    { page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }
+  ]);
+  expect(capacitorMock.plugin.loadPdfPageText).toHaveBeenCalledWith({ attachment_id: 'att-1' });
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
   await expectNativeCursorBridge(api);
   await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' }))
@@ -130,6 +139,9 @@ async function testNativePluginBridge() {
     nodeId: 'node-1',
     reading: createReadingProfile()
   })).resolves.toEqual({ content_hash: 'hash-reading', object_id: 'node-1' });
+  expect(capacitorMock.plugin.saveSyncNodeReadingRecord).toHaveBeenCalledWith(expect.objectContaining({
+    reading_json: expect.stringContaining('"reading_position"')
+  }));
   await expect(api.saveCompanionSyncNodeReviewRecord({
     nodeId: 'node-1',
     review: createReviewProfile(),
@@ -143,6 +155,7 @@ async function testNativePluginBridge() {
   })).resolves.toEqual({ content_hash: 'hash-review', object_id: 'node-1' });
   expect(capacitorMock.plugin.saveSyncNodeReviewRecord).toHaveBeenCalledWith(expect.objectContaining({
     node_id: 'node-1',
+    review_json: expect.stringContaining('"last_review_at"'),
     review_log_json: expect.stringContaining('"reviewedAt"')
   }));
   await expect(api.saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42.8 }))
@@ -167,6 +180,7 @@ async function testWebFallbackBridge() {
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([]);
   await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([]);
+  await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([]);
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 0 });
   await expectWebCursorFallback(api);
   await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' })).resolves.toBeNull();

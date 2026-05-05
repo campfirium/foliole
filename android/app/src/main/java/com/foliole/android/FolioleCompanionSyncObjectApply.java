@@ -46,23 +46,23 @@ final class FolioleCompanionSyncObjectApply {
         JSONObject blob = payload.optJSONObject("blob");
         ContentValues attachment = new ContentValues();
         attachment.put("id", objectId);
-        attachment.put("original_name", nullIfEmpty(payload.optString("original_name", payload.optString("originalName", ""))));
-        attachment.put("mime_type", nullIfEmpty(payload.optString("mime_type", payload.optString("mimeType", ""))));
-        attachment.put("size_bytes", payload.optLong("size_bytes", payload.optLong("sizeBytes", 0)));
-        attachment.put("created_at", payload.optString("created_at", payload.optString("createdAt", record.optString("updated_at"))));
+        attachment.put("original_name", nullIfEmpty(payload.optString("original_name", "")));
+        attachment.put("mime_type", nullIfEmpty(payload.optString("mime_type", "")));
+        attachment.put("size_bytes", payload.optLong("size_bytes", 0));
+        attachment.put("created_at", payload.optString("created_at", record.optString("updated_at")));
         database.insertWithOnConflict("attachments", null, attachment, SQLiteDatabase.CONFLICT_REPLACE);
 
         ContentValues manifest = new ContentValues();
         manifest.put("attachment_id", objectId);
-        manifest.put("content_hash", blob == null ? null : nullIfEmpty(blob.optString("content_hash", blob.optString("contentHash", ""))));
-        manifest.put("storage_key", blob == null ? null : nullIfEmpty(blob.optString("storage_key", blob.optString("storageKey", ""))));
-        manifest.put("size_bytes", blob == null ? attachment.getAsLong("size_bytes") : blob.optLong("size_bytes", blob.optLong("sizeBytes", 0)));
-        manifest.put("mime_type", blob == null ? attachment.getAsString("mime_type") : nullIfEmpty(blob.optString("mime_type", blob.optString("mimeType", ""))));
+        manifest.put("content_hash", blob == null ? null : nullIfEmpty(blob.optString("content_hash", "")));
+        manifest.put("storage_key", blob == null ? null : nullIfEmpty(blob.optString("storage_key", "")));
+        manifest.put("size_bytes", blob == null ? attachment.getAsLong("size_bytes") : blob.optLong("size_bytes", 0));
+        manifest.put("mime_type", blob == null ? attachment.getAsString("mime_type") : nullIfEmpty(blob.optString("mime_type", "")));
         manifest.put("availability", resolveAttachmentAvailability(blob));
-        manifest.put("source_device_id", blob == null ? null : nullIfEmpty(blob.optString("source_device_id", blob.optString("sourceDeviceId", ""))));
-        manifest.put("created_at", blob == null ? record.optString("updated_at") : blob.optString("created_at", blob.optString("createdAt", record.optString("updated_at"))));
-        manifest.put("cached_at", blob == null ? null : nullIfEmpty(blob.optString("cached_at", blob.optString("cachedAt", ""))));
-        manifest.put("last_verified_at", blob == null ? null : nullIfEmpty(blob.optString("last_verified_at", blob.optString("lastVerifiedAt", ""))));
+        manifest.put("source_device_id", blob == null ? null : nullIfEmpty(blob.optString("source_device_id", "")));
+        manifest.put("created_at", blob == null ? record.optString("updated_at") : blob.optString("created_at", record.optString("updated_at")));
+        manifest.put("cached_at", blob == null ? null : nullIfEmpty(blob.optString("cached_at", "")));
+        manifest.put("last_verified_at", blob == null ? null : nullIfEmpty(blob.optString("last_verified_at", "")));
         database.insertWithOnConflict("attachment_blobs", null, manifest, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
@@ -88,13 +88,13 @@ final class FolioleCompanionSyncObjectApply {
         ContentValues values = new ContentValues();
         values.put("source_fingerprint", objectId);
         values.put("provider", payload.optString("provider", "unknown"));
-        values.put("source_kind", payload.optString("source_kind", payload.optString("sourceKind", "unknown")));
-        values.put("source_name", payload.optString("source_name", payload.optString("sourceName", objectId)));
-        values.put("source_locator", payload.optString("source_locator", payload.optString("sourceLocator", objectId)));
-        values.put("first_imported_at", payload.optString("first_imported_at", payload.optString("firstImportedAt", record.optString("updated_at"))));
-        values.put("last_imported_at", payload.optString("last_imported_at", payload.optString("lastImportedAt", record.optString("updated_at"))));
-        values.put("last_content_fingerprint", payload.optString("last_content_fingerprint", payload.optString("lastContentFingerprint", record.optString("content_hash"))));
-        values.put("latest_node_id", nullIfEmpty(payload.optString("latest_node_id", payload.optString("latestNodeId", ""))));
+        values.put("source_kind", payload.optString("source_kind", "unknown"));
+        values.put("source_name", payload.optString("source_name", objectId));
+        values.put("source_locator", payload.optString("source_locator", objectId));
+        values.put("first_imported_at", payload.optString("first_imported_at", record.optString("updated_at")));
+        values.put("last_imported_at", payload.optString("last_imported_at", record.optString("updated_at")));
+        values.put("last_content_fingerprint", payload.optString("last_content_fingerprint", record.optString("content_hash")));
+        values.put("latest_node_id", nullIfEmpty(payload.optString("latest_node_id", "")));
         database.insertWithOnConflict("import_sources", null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
@@ -106,15 +106,15 @@ final class FolioleCompanionSyncObjectApply {
         JSONObject payload = payload(record);
         ContentValues values = new ContentValues();
         values.put("id", objectId);
-        values.put("folder_path", payload.optString("folder_path", payload.optString("folderPath", "")));
-        values.put("attachment_mode", payload.optString("attachment_mode", payload.optString("attachmentMode", "document_relative_first_then_fixed_root")));
-        values.put("attachment_root_path", nullIfEmpty(payload.optString("attachment_root_path", payload.optString("attachmentRootPath", ""))));
+        values.put("folder_path", payload.optString("folder_path", ""));
+        values.put("attachment_mode", payload.optString("attachment_mode", "document_relative_first_then_fixed_root"));
+        values.put("attachment_root_path", nullIfEmpty(payload.optString("attachment_root_path", "")));
         values.put("excluded_dirs_json", payload.optString("excluded_dirs_json", "[]"));
         values.put("status", payload.optString("status", "idle"));
-        values.put("document_count", payload.optInt("document_count", payload.optInt("documentCount", 0)));
-        values.put("indexed_at", nullIfEmpty(payload.optString("indexed_at", payload.optString("indexedAt", ""))));
-        values.put("last_error", nullIfEmpty(payload.optString("last_error", payload.optString("lastError", ""))));
-        values.put("created_at", payload.optString("created_at", payload.optString("createdAt", record.optString("updated_at"))));
+        values.put("document_count", payload.optInt("document_count", 0));
+        values.put("indexed_at", nullIfEmpty(payload.optString("indexed_at", "")));
+        values.put("last_error", nullIfEmpty(payload.optString("last_error", "")));
+        values.put("created_at", payload.optString("created_at", record.optString("updated_at")));
         values.put("updated_at", record.optString("updated_at"));
         database.insertWithOnConflict("external_search_folders", null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }

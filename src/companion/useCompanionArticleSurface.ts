@@ -41,7 +41,7 @@ function useCompanionReviewGradeAction(
         snapshot
       });
       if (!result) {
-        throw new Error('The current review card is no longer available.');
+        throw new Error('The current review item is no longer available.');
       }
       await persistCompanionReviewSyncObject({
         itemKind: 'fsrs',

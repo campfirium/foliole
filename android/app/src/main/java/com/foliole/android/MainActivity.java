@@ -14,6 +14,6 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FolioleCompanionBootstrapPlugin.class);
         registerPlugin(FolioleCompanionSyncPlugin.class);
         super.onCreate(savedInstanceState);
-        getBridge().getWebView().getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        getBridge().getWebView().getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
     }
 }
