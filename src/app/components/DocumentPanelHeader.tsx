@@ -88,7 +88,6 @@ function SourceUpdateAction({
 
 function renderHeaderActions(args: {
   editorDisplayMode: ReturnType<typeof useAppearanceSettings>['editorDisplayMode'];
-  folderListToolbar?: JSX.Element | null;
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
   onToggleSourceUpdatePanel: () => void;
@@ -146,32 +145,26 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
       </div>
       <DocumentPanelHeaderCenter
         activeNodeId={args.activeNodeId}
-        folderItemCountLabel={args.folderItemCountLabel}
         isFolderListView={args.isFolderListView}
         nodesById={args.nodesById}
         onSelectBreadcrumbNode={args.onSelectBreadcrumbNode}
         rightSlot={
-          args.isFolderListView ? (
-            args.folderListToolbar
-          ) : (
-            <>
-              <DocumentPanelHeaderBacklinksMenu backlinks={args.backlinks} onSelectNode={args.onSelectBacklinkNode} />
-              <DocumentPriorityControl
-                activeNodeId={args.activeNodeId}
-                defaultPriority={args.reviewSchedulerSettings.pushQueue.defaultPriority}
-                editableNodeId={args.editableNodeId}
-                nodesById={args.nodesById}
-                onPriorityChange={args.onNodePriorityChange}
-                shortcutLabel={args.priorityQuickSetShortcutLabel}
-              />
-            </>
-          )
+          <>
+            <DocumentPanelHeaderBacklinksMenu backlinks={args.backlinks} onSelectNode={args.onSelectBacklinkNode} />
+            <DocumentPriorityControl
+              activeNodeId={args.activeNodeId}
+              defaultPriority={args.reviewSchedulerSettings.pushQueue.defaultPriority}
+              editableNodeId={args.editableNodeId}
+              nodesById={args.nodesById}
+              onPriorityChange={args.onNodePriorityChange}
+              shortcutLabel={args.priorityQuickSetShortcutLabel}
+            />
+          </>
         }
       />
       <div className="flex min-w-0 items-center justify-end">
         {renderHeaderActions({
           editorDisplayMode: args.editorDisplayMode,
-          folderListToolbar: args.folderListToolbar,
           isFolderListView: args.isFolderListView,
           isSourceUpdatePanelOpen: args.isSourceUpdatePanelOpen,
           onToggleSourceUpdatePanel: args.onToggleSourceUpdatePanel,

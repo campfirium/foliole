@@ -74,7 +74,7 @@ it('reuses the shared width resize handles when the document width props are pro
   expect(screen.getByRole('separator', { name: 'Resize document width from right' })).toBeInTheDocument();
 });
 
-it('hides the embedded header when the folder toolbar is rendered elsewhere', () => {
+it('hides the embedded folder header when requested', () => {
   render(
     <FolderListView
       folderNodeId="folder-1"

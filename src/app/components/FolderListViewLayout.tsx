@@ -1,12 +1,13 @@
+import { Search } from 'lucide-react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { AppEmptyState } from '../../shared/ui';
+import { AppEmptyState, AppInput } from '../../shared/ui';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { DocumentWidthResizeHandles } from './DocumentWidthResizeHandles';
-import { FolderListToolbarControls } from './FolderListToolbarControls';
+import { FolderListSortControls } from './FolderListSortControls';
 
 function FolderListHeader({
   folderTitle,
@@ -30,20 +31,25 @@ function FolderListHeader({
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
 }) {
   return (
-    <div className="flex items-center gap-3 border-b border-border/10 pb-3 max-[900px]:flex-wrap">
-      {showCountAndTitle ? (
-        <FolderListHeaderSummary
-          folderTitle={folderTitle}
-          itemCountLabel={itemCountLabel}
-          showCountAndTitle={showCountAndTitle}
-        />
-      ) : null}
-      <div className="min-w-0 flex-1">
-        <FolderListToolbarControls
-          onChangeSearchQuery={onChangeSearchQuery}
+    <div className="flex flex-wrap items-center gap-3 border-b border-border/10 pb-3">
+      {showCountAndTitle ? <FolderListHeaderSummary folderTitle={folderTitle} itemCountLabel={itemCountLabel} /> : null}
+      <div className="w-[248px] max-w-full max-[900px]:w-full max-[900px]:basis-full">
+        <div className="flex h-9 w-full items-center gap-2 rounded-lg bg-bg-subtle px-3">
+          <Search aria-hidden="true" className="shrink-0 text-foreground/38" size={14} strokeWidth={1.8} />
+          <AppInput
+            aria-label="Search folder contents"
+            className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none placeholder:text-foreground/38 focus-visible:ring-0"
+            onChange={(event) => onChangeSearchQuery(event.target.value)}
+            placeholder="Search in this folder"
+            type="search"
+            value={searchQuery}
+          />
+        </div>
+      </div>
+      <div className="ml-auto shrink-0">
+        <FolderListSortControls
           onChangeSortDirection={onChangeSortDirection}
           onChangeSortKey={onChangeSortKey}
-          searchQuery={searchQuery}
           sortDirection={sortDirection}
           sortKey={sortKey}
         />
@@ -54,26 +60,20 @@ function FolderListHeader({
 
 function FolderListHeaderSummary({
   folderTitle,
-  itemCountLabel,
-  showCountAndTitle
+  itemCountLabel
 }: {
   folderTitle: string;
   itemCountLabel: string;
-  showCountAndTitle: boolean;
 }) {
-  if (!showCountAndTitle) {
-    return <div className="min-w-0 flex-1" aria-hidden="true" />;
-  }
-
   return (
-    <div className="flex min-w-0 shrink-0 items-baseline gap-2">
+    <div className="flex min-w-0 items-baseline gap-2">
       <h2 className="truncate text-base font-semibold text-foreground">{folderTitle}</h2>
       <p
         aria-label={`Folder result count ${itemCountLabel}`}
         className="shrink-0 text-sm font-medium text-foreground/58"
         data-testid="folder-list-count"
       >
-        ({itemCountLabel})
+        {itemCountLabel}
       </p>
     </div>
   );

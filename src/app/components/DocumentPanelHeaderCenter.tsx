@@ -10,7 +10,6 @@ import {
 
 interface DocumentPanelHeaderCenterProps {
   activeNodeId: string | null;
-  folderItemCountLabel?: string | null;
   isFolderListView: boolean;
   nodesById: Record<string, Node>;
   onSelectBreadcrumbNode: (nodeId: string) => void;
@@ -19,7 +18,6 @@ interface DocumentPanelHeaderCenterProps {
 
 export function DocumentPanelHeaderCenter({
   activeNodeId,
-  folderItemCountLabel,
   isFolderListView,
   nodesById,
   onSelectBreadcrumbNode,
@@ -36,29 +34,7 @@ export function DocumentPanelHeaderCenter({
   }, [nodesById]);
 
   if (isFolderListView) {
-    const activeNode = activeNodeId ? nodesById[activeNodeId] : null;
-    const folderTitle = activeNode?.title?.trim() || 'Folder';
-    return (
-      <div className="min-w-0">
-        <div className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[auto_minmax(0,1fr)] items-center gap-3 max-[900px]:grid-cols-1">
-          <div className="flex min-w-0 items-baseline gap-2">
-            <h2 className="truncate text-base font-semibold text-foreground" title={folderTitle}>
-              {folderTitle}
-            </h2>
-            {folderItemCountLabel ? (
-              <p
-                aria-label={`Folder result count ${folderItemCountLabel}`}
-                className="shrink-0 text-sm font-medium text-foreground/58"
-                data-testid="folder-list-count"
-              >
-                ({folderItemCountLabel})
-              </p>
-            ) : null}
-          </div>
-          {rightSlot ? <div className="min-w-0">{rightSlot}</div> : null}
-        </div>
-      </div>
-    );
+    return <div aria-hidden="true" className="min-h-9 flex-1 border-b border-border/60" />;
   }
 
   return (
