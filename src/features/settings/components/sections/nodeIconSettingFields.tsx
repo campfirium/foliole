@@ -1,43 +1,45 @@
-import { AppInput } from '../../../../shared/ui';
-import { NODE_ICON_STROKE_STYLE_OPTIONS, type NodeIconStrokeStyle } from '../../../nodes/components/nodeIconAppearanceSettings';
-
-const SETTINGS_SELECT_CLASS_NAME =
-  'w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground';
+import { settingsColorSwatchClassName, settingsFieldClassName } from '../../../../shared/ui';
+import { NODE_ICON_EFFECT_OPTIONS, type NodeIconEffect } from '../../../nodes/components/nodeIconAppearanceSettings';
 
 export function ColorField(props: { label: string; onChange: (value: string) => void; value: string }) {
   return (
-    <label className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border bg-bg-elevated px-2.5 py-1 text-foreground">
-      <span className="sr-only">{props.label}</span>
-      <input
-        aria-label={props.label}
-        className="h-6 w-8 cursor-pointer border-0 bg-transparent p-0"
-        onChange={(event) => props.onChange(event.target.value)}
-        type="color"
-        value={props.value}
-      />
-      <span className="text-[0.84rem] tabular-nums text-foreground/70">{props.value}</span>
+    <label className="grid min-w-[9.5rem] gap-1 text-sm text-foreground/72">
+      <span>{props.label}</span>
+      <span className="inline-flex h-9 items-center gap-2.5">
+        <span className="relative size-9 shrink-0">
+          <span aria-hidden="true" className={settingsColorSwatchClassName('pointer-events-none absolute inset-0 rounded-sm')} style={{ backgroundColor: props.value }} />
+          <input
+            aria-label={props.label}
+            className="absolute inset-0 cursor-pointer opacity-0"
+            onChange={(event) => props.onChange(event.target.value)}
+            type="color"
+            value={props.value}
+          />
+        </span>
+        <span className="text-sm tabular-nums text-foreground/72">{props.value.toUpperCase()}</span>
+      </span>
     </label>
   );
 }
 
-export function StrokeStyleSelect(props: {
+export function EffectSelect(props: {
   compact?: boolean;
   label: string;
-  onChange: (value: NodeIconStrokeStyle) => void;
-  value: NodeIconStrokeStyle;
+  onChange: (value: NodeIconEffect) => void;
+  value: NodeIconEffect;
 }) {
   return (
-    <label className={props.compact ? 'inline-flex w-[132px] max-w-full flex-none' : 'inline-flex max-w-full flex-1'}>
-      <span className="sr-only">{props.label}</span>
+    <label className={props.compact ? 'grid w-[8.25rem] max-w-full gap-1 text-sm text-foreground/72' : 'grid min-w-[8.25rem] max-w-full gap-1 text-sm text-foreground/72'}>
+      <span>{props.label}</span>
       <select
         aria-label={props.label}
-        className={SETTINGS_SELECT_CLASS_NAME}
-        onChange={(event) => props.onChange(event.target.value as NodeIconStrokeStyle)}
+        className={settingsFieldClassName('rounded-sm px-2')}
+        onChange={(event) => props.onChange(event.target.value as NodeIconEffect)}
         value={props.value}
       >
-        {NODE_ICON_STROKE_STYLE_OPTIONS.map((strokeStyle) => (
-          <option key={strokeStyle} value={strokeStyle}>
-            {strokeStyle}
+        {NODE_ICON_EFFECT_OPTIONS.map((effect) => (
+          <option key={effect} value={effect}>
+            {effect}
           </option>
         ))}
       </select>
@@ -53,11 +55,11 @@ export function NumberField(props: {
   value: number;
 }) {
   return (
-    <label className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border bg-bg-elevated px-2.5 py-1 text-foreground">
-      <span className="text-[0.84rem] text-foreground/70">{props.label}</span>
-      <AppInput
+    <label className="grid w-[7.5rem] gap-1 text-sm text-foreground/72">
+      <span>{props.label}</span>
+      <input
         aria-label={props.label}
-        className="h-auto min-h-0 min-w-[72px] border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0"
+        className={settingsFieldClassName('rounded-sm px-2 text-center tabular-nums')}
         disabled={props.disabled}
         min={0}
         onChange={(event) => props.onChange(Number(event.target.value))}
@@ -71,10 +73,10 @@ export function NumberField(props: {
 
 export function CheckboxField(props: { checked: boolean; label: string; onChange: (checked: boolean) => void }) {
   return (
-    <label className="inline-flex items-center gap-2 text-sm text-foreground">
+    <label className="inline-flex items-center gap-2 text-sm text-foreground/82">
       <input
         checked={props.checked}
-        className="h-4 w-4 rounded border border-border"
+        className="size-4 rounded border border-settings-control-border"
         onChange={(event) => props.onChange(event.target.checked)}
         type="checkbox"
       />

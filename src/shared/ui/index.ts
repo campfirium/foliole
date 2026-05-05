@@ -23,6 +23,7 @@ export {
 } from './DropdownMenu';
 export { AppEmptyState, AppErrorState, AppLoadingState } from './EmptyState';
 export { AppIconButton } from './IconButton';
+export { LucideCatalogIcon, LUCIDE_ICON_OPTIONS } from './LucideIconCatalog';
 export { AppInput } from './Input';
 export { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
 export { NodeBrowseList, type NodeBrowseListItem } from './NodeBrowseList';

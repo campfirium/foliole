@@ -7,24 +7,19 @@ import {
   setWhitelistedLocalStorageItem
 } from '../../../../shared/platform/storage';
 import {
-  DEFAULT_NODE_ICON_STATE_APPEARANCE,
+  getDefaultNodeIconStateAppearance,
   getNodeIconStateAppearance,
-  getNodeIconStateAppearanceStorageKeys,
+  getNodeIconKindStateAppearanceStorageKey,
   type NodeIconStateAppearance,
-  type NodeIconStrokeStyle
+  type NodeIconEffect
 } from '../../../nodes/components/nodeIconAppearanceSettings';
-import type { NodeTreeRowIconState } from '../../../nodes/components/NodeTreeRowIconModel';
+import type { NodeTreeRowIconKind, NodeTreeRowIconState } from '../../../nodes/components/NodeTreeRowIconModel';
+
+type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
+type StateStyleMap = Record<NodeTreeRowIconState, Record<EditableIconKind, NodeIconStateAppearance>>;
 
 function saveOptionalString(key: string, value: string) {
   if (value.trim().length === 0) {
-    removeWhitelistedLocalStorageItem(key);
-    return;
-  }
-  setWhitelistedLocalStorageItem(key, value);
-}
-
-function saveOptionalSetting(key: string, value: string, fallback: string) {
-  if (value === fallback) {
     removeWhitelistedLocalStorageItem(key);
     return;
   }
@@ -42,50 +37,97 @@ function useStoredSvgSetting(key: string) {
   };
 }
 
-function createInitialStateStyles(): Record<NodeTreeRowIconState, NodeIconStateAppearance> {
+function useStoredIconSetting(key: string) {
+  const [value, setValue] = useState(() => getWhitelistedLocalStorageItem(key) ?? '');
   return {
-    pending: getNodeIconStateAppearance('pending'),
-    scheduled: getNodeIconStateAppearance('scheduled'),
-    dismissed: getNodeIconStateAppearance('dismissed')
+    set(nextValue: string) {
+      setValue(nextValue);
+      saveOptionalString(key, nextValue);
+    },
+    value
+  };
+}
+
+function createInitialStateStyles(): StateStyleMap {
+  return {
+    pending: {
+      reading: getNodeIconStateAppearance('pending', 'reading'),
+      review: getNodeIconStateAppearance('pending', 'review')
+    },
+    scheduled: {
+      reading: getNodeIconStateAppearance('scheduled', 'reading'),
+      review: getNodeIconStateAppearance('scheduled', 'review')
+    },
+    dismissed: {
+      reading: getNodeIconStateAppearance('dismissed', 'reading'),
+      review: getNodeIconStateAppearance('dismissed', 'review')
+    }
   };
 }
 
 function useNodeIconStateStyleState() {
-  const [stateStyles, setStateStyles] = useState<Record<NodeTreeRowIconState, NodeIconStateAppearance>>(createInitialStateStyles);
+  const [stateStyles, setStateStyles] = useState<StateStyleMap>(createInitialStateStyles);
 
   const updateStateStyle = <K extends keyof NodeIconStateAppearance>(
     state: NodeTreeRowIconState,
+    kind: EditableIconKind,
     field: K,
     value: NodeIconStateAppearance[K]
   ) => {
-    setStateStyles((current) => ({
-      ...current,
-      [state]: {
-        ...current[state],
-        [field]: value
-      }
-    }));
-    const defaults = DEFAULT_NODE_ICON_STATE_APPEARANCE[state];
-    const keys = getNodeIconStateAppearanceStorageKeys(state) as Partial<Record<keyof NodeIconStateAppearance, string>>;
-    const key = keys[field];
-    if (!key) {
-      return;
-    }
-    saveOptionalSetting(key, String(value), String(defaults[field]));
+    setStateStyles((current) => {
+      const nextAppearance = { ...current[state][kind], [field]: value };
+      saveStateKindAppearance(state, kind, nextAppearance);
+      return {
+        ...current,
+        [state]: {
+          ...current[state],
+          [kind]: nextAppearance
+        }
+      };
+    });
   };
 
   return {
     reset() {
-      setStateStyles(DEFAULT_NODE_ICON_STATE_APPEARANCE);
+      setStateStyles({
+        pending: {
+          reading: getDefaultNodeIconStateAppearance('pending'),
+          review: getDefaultNodeIconStateAppearance('pending')
+        },
+        scheduled: {
+          reading: getDefaultNodeIconStateAppearance('scheduled'),
+          review: getDefaultNodeIconStateAppearance('scheduled')
+        },
+        dismissed: {
+          reading: getDefaultNodeIconStateAppearance('dismissed'),
+          review: getDefaultNodeIconStateAppearance('dismissed')
+        }
+      });
     },
     stateStyles,
     updateStateStyle
   };
 }
 
+function isDefaultAppearance(state: NodeTreeRowIconState, kind: EditableIconKind, appearance: NodeIconStateAppearance) {
+  const defaults = getDefaultNodeIconStateAppearance(state);
+  return (Object.keys(defaults) as Array<keyof NodeIconStateAppearance>).every((field) => String(defaults[field]) === String(appearance[field]));
+}
+
+function saveStateKindAppearance(state: NodeTreeRowIconState, kind: EditableIconKind, appearance: NodeIconStateAppearance) {
+  const key = getNodeIconKindStateAppearanceStorageKey(state, kind);
+  if (isDefaultAppearance(state, kind, appearance)) {
+    removeWhitelistedLocalStorageItem(key);
+    return;
+  }
+  setWhitelistedLocalStorageItem(key, JSON.stringify(appearance));
+}
+
 function resetNodeIconSettingsStorage() {
   removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg);
   removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg);
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimaryLucideIcon);
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondaryLucideIcon);
   removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconReviewVariantMode);
   removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPendingStrokeStyle);
   removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledStrokeStyle);
@@ -105,39 +147,46 @@ function resetNodeIconSettingsStorage() {
   removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeEnabled);
   removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeOpacity);
   removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeWholeRow);
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPendingTopicAppearance);
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPendingItemAppearance);
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledTopicAppearance);
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance);
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedTopicAppearance);
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedItemAppearance);
 }
 
 function createStateStyleActions(
   updateStateStyle: <K extends keyof NodeIconStateAppearance>(
     state: NodeTreeRowIconState,
+    kind: EditableIconKind,
     field: K,
     value: NodeIconStateAppearance[K]
   ) => void
 ) {
   return {
-    setStateColor(state: NodeTreeRowIconState, value: string) {
-      updateStateStyle(state, 'color', value);
+    setStateColor(state: NodeTreeRowIconState, kind: EditableIconKind, value: string) {
+      updateStateStyle(state, kind, 'color', value);
     },
-    setStateDashLength(state: NodeTreeRowIconState, value: number) {
-      updateStateStyle(state, 'dashLength', value);
+    setStateDoubleLineDistance(state: NodeTreeRowIconState, kind: EditableIconKind, value: number) {
+      updateStateStyle(state, kind, 'doubleLineDistance', value);
     },
-    setStateGapLength(state: NodeTreeRowIconState, value: number) {
-      updateStateStyle(state, 'gapLength', value);
+    setStateEffect(state: NodeTreeRowIconState, kind: EditableIconKind, value: NodeIconEffect) {
+      updateStateStyle(state, kind, 'effect', value);
     },
-    setStateLineWidth(state: NodeTreeRowIconState, value: number) {
-      updateStateStyle(state, 'lineWidth', value);
+    setStateLineWidth(state: NodeTreeRowIconState, kind: EditableIconKind, value: number) {
+      updateStateStyle(state, kind, 'lineWidth', value);
     },
-    setStateStrokeStyle(state: NodeTreeRowIconState, value: NodeIconStrokeStyle) {
-      updateStateStyle(state, 'strokeStyle', value);
+    setStateSvg(state: NodeTreeRowIconState, kind: EditableIconKind, value: string) {
+      updateStateStyle(state, kind, 'svg', value);
     },
-    setDismissedFadeEnabled(value: boolean) {
-      updateStateStyle('dismissed', 'fadeEnabled', value);
+    setDismissedFadeEnabled(kind: EditableIconKind, value: boolean) {
+      updateStateStyle('dismissed', kind, 'fadeEnabled', value);
     },
-    setDismissedFadeOpacity(value: number) {
-      updateStateStyle('dismissed', 'fadeOpacity', value);
+    setDismissedFadeOpacity(kind: EditableIconKind, value: number) {
+      updateStateStyle('dismissed', kind, 'fadeOpacity', value);
     },
-    setDismissedFadeWholeRow(value: boolean) {
-      updateStateStyle('dismissed', 'fadeWholeRow', value);
+    setDismissedFadeWholeRow(kind: EditableIconKind, value: boolean) {
+      updateStateStyle('dismissed', kind, 'fadeWholeRow', value);
     }
   };
 }
@@ -145,19 +194,27 @@ function createStateStyleActions(
 export function useNodeIconSettingsState() {
   const topicSvg = useStoredSvgSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg);
   const itemSvg = useStoredSvgSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg);
+  const topicIcon = useStoredIconSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimaryLucideIcon);
+  const itemIcon = useStoredIconSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondaryLucideIcon);
   const styleState = useNodeIconStateStyleState();
 
   return {
     handleReset() {
       topicSvg.set('');
       itemSvg.set('');
+      topicIcon.set('');
+      itemIcon.set('');
       styleState.reset();
       resetNodeIconSettingsStorage();
     },
+    itemIcon: itemIcon.value,
     itemSvg: itemSvg.value,
+    setItemIcon: itemIcon.set,
     setItemSvg: itemSvg.set,
+    setTopicIcon: topicIcon.set,
     setTopicSvg: topicSvg.set,
     stateStyles: styleState.stateStyles,
+    topicIcon: topicIcon.value,
     topicSvg: topicSvg.value,
     ...createStateStyleActions(styleState.updateStateStyle)
   };

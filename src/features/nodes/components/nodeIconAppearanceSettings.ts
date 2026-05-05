@@ -1,82 +1,92 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
-import type { NodeTreeRowIconState } from './NodeTreeRowIconModel';
+import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
 
 export const NODE_ICON_SHAPE_OPTIONS = ['hexagon', 'diamond', 'circle', 'square', 'triangle', 'leaf'] as const;
-export const NODE_ICON_STROKE_STYLE_OPTIONS = ['solid', 'dashed'] as const;
+export const NODE_ICON_EFFECT_OPTIONS = ['none', 'double-line'] as const;
 
 export type NodeIconShape = (typeof NODE_ICON_SHAPE_OPTIONS)[number];
-export type NodeIconStrokeStyle = (typeof NODE_ICON_STROKE_STYLE_OPTIONS)[number];
+export type NodeIconEffect = (typeof NODE_ICON_EFFECT_OPTIONS)[number];
 
 export interface NodeIconStateAppearance {
   color: string;
-  dashLength: number;
+  doubleLineDistance: number;
+  effect: NodeIconEffect;
   fadeEnabled: boolean;
   fadeOpacity: number;
   fadeWholeRow: boolean;
-  gapLength: number;
   lineWidth: number;
-  strokeStyle: NodeIconStrokeStyle;
+  svg: string;
 }
 
 export const DEFAULT_NODE_ICON_STATE_APPEARANCE: Record<NodeTreeRowIconState, NodeIconStateAppearance> = {
   pending: {
     color: '#202124',
-    dashLength: 1,
+    doubleLineDistance: 2,
+    effect: 'none',
     fadeEnabled: false,
     fadeOpacity: 1,
     fadeWholeRow: false,
-    gapLength: 2,
     lineWidth: 1.2,
-    strokeStyle: 'dashed'
+    svg: ''
   },
   scheduled: {
     color: '#202124',
-    dashLength: 1,
+    doubleLineDistance: 2,
+    effect: 'double-line',
     fadeEnabled: false,
     fadeOpacity: 1,
     fadeWholeRow: false,
-    gapLength: 2,
     lineWidth: 1.2,
-    strokeStyle: 'solid'
+    svg: ''
   },
   dismissed: {
     color: '#202124',
-    dashLength: 1,
+    doubleLineDistance: 2,
+    effect: 'none',
     fadeEnabled: true,
     fadeOpacity: 0.35,
     fadeWholeRow: true,
-    gapLength: 2,
     lineWidth: 1.2,
-    strokeStyle: 'solid'
+    svg: ''
   }
 };
+
+export function getDefaultNodeIconStateAppearance(state: NodeTreeRowIconState): NodeIconStateAppearance {
+  return DEFAULT_NODE_ICON_STATE_APPEARANCE[state];
+}
 
 const STORAGE_KEYS = {
   pending: {
     color: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingColor,
-    dashLength: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingDashLength,
-    gapLength: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingGapLength,
-    lineWidth: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingLineWidth,
-    strokeStyle: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingStrokeStyle
+    lineWidth: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingLineWidth
   },
   scheduled: {
     color: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledColor,
-    dashLength: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledDashLength,
-    gapLength: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledGapLength,
-    lineWidth: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledLineWidth,
-    strokeStyle: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledStrokeStyle
+    lineWidth: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledLineWidth
   },
   dismissed: {
     color: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedColor,
-    dashLength: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedDashLength,
     fadeEnabled: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeEnabled,
     fadeOpacity: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeOpacity,
     fadeWholeRow: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeWholeRow,
-    gapLength: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedGapLength,
-    lineWidth: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedLineWidth,
-    strokeStyle: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedStrokeStyle
+    lineWidth: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedLineWidth
+  }
+} as const;
+
+const KIND_STORAGE_KEYS = {
+  pending: {
+    reading: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingTopicAppearance,
+    review: APP_SETTINGS_STORAGE_KEYS.nodeIconPendingItemAppearance
+  },
+  scheduled: {
+    reading: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledTopicAppearance,
+    review: APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance
+  },
+  dismissed: {
+    reading: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedTopicAppearance,
+    review: APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedItemAppearance
   }
 } as const;
 
@@ -89,9 +99,9 @@ function normalizeColor(value: string | null, fallback: string): string {
   return match ? `#${match[1].toLowerCase()}` : fallback;
 }
 
-function normalizeStrokeStyle(value: string | null, fallback: NodeIconStrokeStyle): NodeIconStrokeStyle {
-  return NODE_ICON_STROKE_STYLE_OPTIONS.includes(value as NodeIconStrokeStyle)
-    ? (value as NodeIconStrokeStyle)
+function normalizeEffect(value: string | null, fallback: NodeIconEffect): NodeIconEffect {
+  return NODE_ICON_EFFECT_OPTIONS.includes(value as NodeIconEffect)
+    ? (value as NodeIconEffect)
     : fallback;
 }
 
@@ -127,13 +137,41 @@ function normalizeBoolean(value: string | null, fallback: boolean) {
   return fallback;
 }
 
-export function getNodeIconStateAppearance(state: NodeTreeRowIconState): NodeIconStateAppearance {
-  const defaults = DEFAULT_NODE_ICON_STATE_APPEARANCE[state];
+function normalizeAppearanceOverride(
+  value: string | null,
+  fallback: NodeIconStateAppearance
+): NodeIconStateAppearance {
+  if (!value) {
+    return fallback;
+  }
+  try {
+    const parsed = JSON.parse(value) as Partial<Record<keyof NodeIconStateAppearance, unknown>>;
+    return {
+      color: normalizeColor(typeof parsed.color === 'string' ? parsed.color : null, fallback.color),
+      doubleLineDistance: normalizePositiveNumber(String(parsed.doubleLineDistance ?? ''), fallback.doubleLineDistance),
+      effect: normalizeEffect(typeof parsed.effect === 'string' ? parsed.effect : null, fallback.effect),
+      fadeEnabled: typeof parsed.fadeEnabled === 'boolean' ? parsed.fadeEnabled : fallback.fadeEnabled,
+      fadeOpacity: normalizeOpacity(String(parsed.fadeOpacity ?? ''), fallback.fadeOpacity),
+      fadeWholeRow: typeof parsed.fadeWholeRow === 'boolean' ? parsed.fadeWholeRow : fallback.fadeWholeRow,
+      lineWidth: normalizePositiveNumber(String(parsed.lineWidth ?? ''), fallback.lineWidth),
+      svg: typeof parsed.svg === 'string' ? parsed.svg : fallback.svg
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function getNodeIconStateAppearance(
+  state: NodeTreeRowIconState,
+  kind?: Extract<NodeTreeRowIconKind, 'reading' | 'review'>
+): NodeIconStateAppearance {
+  const defaults = getDefaultNodeIconStateAppearance(state);
   const keys = STORAGE_KEYS[state];
   const dismissedKeys = getDismissedStorageKeys();
-  return {
+  const legacyAppearance = {
     color: normalizeColor(getWhitelistedLocalStorageItem(keys.color), defaults.color),
-    dashLength: normalizePositiveNumber(getWhitelistedLocalStorageItem(keys.dashLength), defaults.dashLength),
+    doubleLineDistance: defaults.doubleLineDistance,
+    effect: defaults.effect,
     fadeEnabled:
       state === 'dismissed'
         ? normalizeBoolean(getWhitelistedLocalStorageItem(dismissedKeys.fadeEnabled), defaults.fadeEnabled)
@@ -146,14 +184,21 @@ export function getNodeIconStateAppearance(state: NodeTreeRowIconState): NodeIco
       state === 'dismissed'
         ? normalizeBoolean(getWhitelistedLocalStorageItem(dismissedKeys.fadeWholeRow), defaults.fadeWholeRow)
         : defaults.fadeWholeRow,
-    gapLength: normalizePositiveNumber(getWhitelistedLocalStorageItem(keys.gapLength), defaults.gapLength),
     lineWidth: normalizePositiveNumber(getWhitelistedLocalStorageItem(keys.lineWidth), defaults.lineWidth),
-    strokeStyle: normalizeStrokeStyle(getWhitelistedLocalStorageItem(keys.strokeStyle), defaults.strokeStyle)
+    svg: defaults.svg
   };
+  return kind ? normalizeAppearanceOverride(getWhitelistedLocalStorageItem(KIND_STORAGE_KEYS[state][kind]), legacyAppearance) : legacyAppearance;
 }
 
 export function getNodeIconStateAppearanceStorageKeys(state: NodeTreeRowIconState) {
   return STORAGE_KEYS[state];
+}
+
+export function getNodeIconKindStateAppearanceStorageKey(
+  state: NodeTreeRowIconState,
+  kind: Extract<NodeTreeRowIconKind, 'reading' | 'review'>
+) {
+  return KIND_STORAGE_KEYS[state][kind];
 }
 
 export function shouldFadeDismissedWholeRow() {

@@ -4,14 +4,11 @@ import { getWhitelistedLocalStorageItem } from '../../../shared/platform/storage
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
 
 const STORAGE_KEYS = {
+  primaryIcon: APP_SETTINGS_STORAGE_KEYS.nodeIconPrimaryLucideIcon,
   primarySvg: APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg,
-  secondarySvg: APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg,
-  reviewVariantMode: APP_SETTINGS_STORAGE_KEYS.nodeIconReviewVariantMode
+  secondaryIcon: APP_SETTINGS_STORAGE_KEYS.nodeIconSecondaryLucideIcon,
+  secondarySvg: APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg
 } as const;
-
-export type NodeIconReviewVariantMode = 'svg' | 'flip-x' | 'flip-y';
-
-export const DEFAULT_NODE_ICON_REVIEW_VARIANT_MODE: NodeIconReviewVariantMode = 'flip-y';
 
 const SVG_MIME_TYPE = 'image/svg+xml';
 const MAX_SVG_MARKUP_LENGTH = 12000;
@@ -47,19 +44,10 @@ const CURRENT_COLOR_ATTRIBUTES = new Set(['fill', 'stroke']);
 const SAFE_PAINT_VALUES = new Set(['none', 'currentColor', 'transparent']);
 
 interface NodeTreeRowCustomIconResult {
+  iconId: string | null;
   markup: string | null;
-  slot: 'primary' | 'secondary' | null;
+  slot: 'primary' | 'secondary' | 'state' | null;
   transformMode: 'none' | 'flip-x' | 'flip-y';
-}
-
-export function normalizeNodeIconReviewVariantMode(
-  value: string | null,
-  hasSecondarySvg: boolean
-): NodeIconReviewVariantMode {
-  if (value === 'svg' || value === 'flip-x' || value === 'flip-y') {
-    return value;
-  }
-  return hasSecondarySvg ? 'svg' : DEFAULT_NODE_ICON_REVIEW_VARIANT_MODE;
 }
 
 function sanitizeSvgMarkup(value: string | null): string | null {
@@ -168,20 +156,23 @@ export function resolveNodeTreeRowCustomIcon(args: {
 }): NodeTreeRowCustomIconResult {
   const primarySvg = sanitizeSvgMarkup(getWhitelistedLocalStorageItem(STORAGE_KEYS.primarySvg));
   const secondarySvg = sanitizeSvgMarkup(getWhitelistedLocalStorageItem(STORAGE_KEYS.secondarySvg));
-  const reviewVariantMode = normalizeNodeIconReviewVariantMode(
-    getWhitelistedLocalStorageItem(STORAGE_KEYS.reviewVariantMode),
-    Boolean(secondarySvg)
-  );
-  const usesSecondarySvg = args.kind === 'review' && reviewVariantMode === 'svg' && Boolean(secondarySvg);
-  const markup = usesSecondarySvg ? secondarySvg : primarySvg;
-  const transformMode =
-    args.kind !== 'review' ? 'none' : usesSecondarySvg ? 'none' : reviewVariantMode === 'svg' ? 'flip-y' : reviewVariantMode;
+  const primaryIcon = getWhitelistedLocalStorageItem(STORAGE_KEYS.primaryIcon);
+  const secondaryIcon = getWhitelistedLocalStorageItem(STORAGE_KEYS.secondaryIcon);
+  const usesReview = args.kind === 'review';
+  const markup = usesReview ? secondarySvg : primarySvg;
+  const iconId = !markup ? (usesReview ? secondaryIcon : primaryIcon) : null;
+  const slot = usesReview ? 'secondary' : 'primary';
+
+  if (!markup && !iconId) {
+    return { iconId: null, markup: null, slot: null, transformMode: 'none' };
+  }
 
   if (!markup) {
-    return { markup: null, slot: null, transformMode: 'none' };
+    return { iconId, markup: null, slot, transformMode: 'none' };
   }
 
   return {
+    iconId: null,
     markup: injectSvgAttributes(markup, {
       'aria-hidden': 'true',
       focusable: 'false',
@@ -189,9 +180,34 @@ export function resolveNodeTreeRowCustomIcon(args: {
       width: '100%',
       height: '100%',
       'data-node-custom-svg': 'true',
-      'data-node-custom-slot': usesSecondarySvg ? 'secondary' : 'primary'
+      'data-node-custom-slot': slot
     }),
-    slot: usesSecondarySvg ? 'secondary' : 'primary',
-    transformMode
+    slot,
+    transformMode: 'none'
   };
+}
+
+export function resolveNodeTreeRowIconSource(args: {
+  kind: NodeTreeRowIconKind;
+  state: NodeTreeRowIconState;
+  svg?: string;
+}): NodeTreeRowCustomIconResult {
+  const stateSvg = sanitizeSvgMarkup(args.svg ?? null);
+  if (stateSvg) {
+    return {
+      iconId: null,
+      markup: injectSvgAttributes(stateSvg, {
+        'aria-hidden': 'true',
+        focusable: 'false',
+        preserveAspectRatio: 'xMidYMid meet',
+        width: '100%',
+        height: '100%',
+        'data-node-custom-svg': 'true',
+        'data-node-custom-slot': 'state'
+      }),
+      slot: 'state',
+      transformMode: 'none'
+    };
+  }
+  return resolveNodeTreeRowCustomIcon(args);
 }

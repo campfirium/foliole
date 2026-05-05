@@ -1,7 +1,8 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { NodeTreeRowIcon } from '../../nodes/components/NodeTreeRowIcon';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -9,6 +10,18 @@ import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.tes
 
 vi.mock('../model/systemFonts', () => ({
   listAvailableSystemFonts: vi.fn()
+}));
+
+vi.mock('./sections/SettingsRailIconPicker', () => ({
+  IconGrid: (props: { onSelect: (iconId: string) => void }) => (
+    <button aria-label="Use mocked icon" onClick={() => props.onSelect('BookOpen')} type="button">
+      Book Open
+    </button>
+  ),
+  matchesIconQuery: (values: Array<string | undefined>, query: string) => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return !normalizedQuery || values.some((value) => value?.toLowerCase().includes(normalizedQuery));
+  }
 }));
 
 const mockedListAvailableSystemFonts = vi.mocked(listAvailableSystemFonts);
@@ -20,98 +33,86 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
 
-function openAppearanceAndApplyNodeIconChanges() {
+function openAppearance() {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  fireEvent.change(screen.getByLabelText('Topic SVG'), {
-    target: {
-      value: '<svg viewBox="0 0 16 16"><path d="M2 12L14 4" fill="none" stroke="currentColor"/></svg>'
-    }
-  });
-  fireEvent.change(screen.getByLabelText('Review item SVG'), {
-    target: {
-      value: '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>'
-    }
-  });
-  fireEvent.change(screen.getByLabelText('Pending state stroke style'), { target: { value: 'solid' } });
-  fireEvent.change(screen.getByLabelText('Pending state line width'), { target: { value: '2.4' } });
-  fireEvent.change(screen.getByLabelText('Pending state color'), { target: { value: '#ff6600' } });
-  fireEvent.change(screen.getByLabelText('Scheduled state stroke style'), { target: { value: 'dashed' } });
-  fireEvent.change(screen.getByLabelText('Scheduled state line width'), { target: { value: '1.8' } });
-  fireEvent.change(screen.getByLabelText('Scheduled state dash length'), { target: { value: '2.5' } });
-  fireEvent.change(screen.getByLabelText('Dismissed state line width'), { target: { value: '1.6' } });
-  fireEvent.change(screen.getByLabelText('Dismissed state color'), { target: { value: '#445566' } });
-  fireEvent.change(screen.getByLabelText('Dismissed fade opacity'), { target: { value: '0.5' } });
-  fireEvent.click(screen.getByLabelText('Fade the whole row'));
+}
+
+function editSvg(label: string, value: string) {
+  fireEvent.click(screen.getByRole('button', { name: label }));
+  fireEvent.change(screen.getByLabelText('Search icons'), { target: { value: 'book open' } });
+  fireEvent.change(screen.getByLabelText('SVG'), { target: { value } });
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+}
+
+function editState(label: string) {
+  fireEvent.click(screen.getByRole('button', { name: label }));
+}
+
+function readJsonSetting(key: string) {
+  const value = window.localStorage.getItem(key);
+  expect(value).toBeTruthy();
+  return JSON.parse(value ?? '{}') as Record<string, unknown>;
 }
 
 async function expectStoredNodeIconSettings() {
   await waitFor(() => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg)).toContain('<svg');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg)).toContain('<svg');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPendingStrokeStyle)).toBe('solid');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPendingLineWidth)).toBe('2.4');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPendingColor)).toBe('#ff6600');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledStrokeStyle)).toBe('dashed');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledLineWidth)).toBe('1.8');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledDashLength)).toBe('2.5');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedLineWidth)).toBe('1.6');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedColor)).toBe('#445566');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeEnabled)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeOpacity)).toBe('0.5');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeWholeRow)).toBe('false');
+    expect(readJsonSetting(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance)).toMatchObject({
+      doubleLineDistance: 2.5,
+      effect: 'double-line',
+      lineWidth: 1.8,
+      svg: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>'
+    });
   });
-}
-
-function expectPreviewNodeIconSettings() {
-  const preview = screen.getByLabelText('Icon preview');
-  expect(
-    within(preview)
-      .getByText('Topic pending')
-      .closest('[data-node-icon-preview="reading-pending"]')
-      ?.querySelector('[data-node-icon="leaf"]')
-  ).toHaveAttribute('data-node-icon-pattern', 'normal');
-  expect(
-    within(preview)
-      .getByText('Review item scheduled')
-      .closest('[data-node-icon-preview="review-scheduled"]')
-      ?.querySelector('[data-node-icon="leaf"]')
-  ).toHaveAttribute('data-node-icon-pattern', 'dash');
-  expect(
-    within(preview)
-      .getByText('Review item scheduled')
-      .closest('[data-node-icon-preview="review-scheduled"]')
-      ?.querySelector('[data-node-icon="leaf"]')
-  ).toHaveStyle({ '--node-icon-stroke-width': '1.8' });
-  expect(
-    within(preview)
-      .getByText('Topic dismissed')
-      .closest('[data-node-icon-preview="reading-dismissed"]')
-      ?.querySelector('[data-node-icon="leaf"]')
-  ).toHaveStyle({ opacity: '0.5' });
 }
 
 async function expectNodeIconSettingsReset() {
-  fireEvent.click(screen.getByRole('button', { name: 'Restore default icon settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Reset Item scheduled' }));
   await waitFor(() => {
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPendingStrokeStyle)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPendingLineWidth)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconPendingColor)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledStrokeStyle)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledLineWidth)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledDashLength)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedLineWidth)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedColor)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeEnabled)).toBeNull();
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedFadeOpacity)).toBeNull();
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance)).toBeNull();
   });
 }
 
-it('stores topic and item svg inputs plus per-state icon styling and restores defaults', async () => {
-  openAppearanceAndApplyNodeIconChanges();
+it('stores compact topic and item icon rows plus per-state topic and item icon styling', async () => {
+  openAppearance();
+  editSvg('Edit Topic icon', '<svg viewBox="0 0 16 16"><path d="M2 12L14 4" fill="none" stroke="currentColor"/></svg>');
+  editSvg('Edit Item icon', '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>');
+
+  editState('Edit Item scheduled');
+  fireEvent.change(screen.getByLabelText('Effect'), { target: { value: 'double-line' } });
+  fireEvent.change(screen.getByLabelText('Line width'), { target: { value: '1.8' } });
+  fireEvent.change(screen.getByLabelText('Line distance'), { target: { value: '2.5' } });
+  fireEvent.change(screen.getByLabelText('SVG'), {
+    target: { value: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
   await expectStoredNodeIconSettings();
-  expectPreviewNodeIconSettings();
   await expectNodeIconSettingsReset();
+}, 30000);
+
+it('keeps base icon preview independent from state effects', () => {
+  window.localStorage.setItem(
+    APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg,
+    '<svg viewBox="0 0 16 16"><path d="M2 4L14 12" fill="none" stroke="currentColor"/></svg>'
+  );
+  window.localStorage.setItem(
+    APP_SETTINGS_STORAGE_KEYS.nodeIconScheduledItemAppearance,
+    JSON.stringify({
+      effect: 'double-line',
+      doubleLineDistance: 2.5,
+      svg: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"/></svg>'
+    })
+  );
+
+  const statePreview = render(<NodeTreeRowIcon kind="review" preview state="scheduled" />);
+  expect(statePreview.container.querySelector('svg[data-node-custom-slot="state"]')).not.toBeNull();
+  expect(statePreview.container.querySelector('[data-node-icon-effect="double-line"]')).not.toBeNull();
+  statePreview.unmount();
+
+  const basePreview = render(<NodeTreeRowIcon baseOnly kind="review" preview state="scheduled" />);
+  expect(basePreview.container.querySelector('svg[data-node-custom-slot="secondary"]')).not.toBeNull();
+  expect(basePreview.container.querySelector('[data-node-icon-effect="double-line"]')).toBeNull();
 });

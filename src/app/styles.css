@@ -409,7 +409,7 @@ b {
 }
 
 [data-node-icon='leaf'] {
-  color: color-mix(in srgb, var(--node-icon-custom-color, var(--node-icon-default-color)) 84%, var(--color-foreground));
+  color: color-mix(in srgb, var(--node-icon-custom-color, var(--node-icon-default-color)) 84%, rgb(var(--color-foreground)));
 }
 
 [data-node-icon='leaf'] svg {
@@ -422,11 +422,6 @@ b {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: var(--node-icon-stroke-width, 2);
-}
-
-[data-node-icon='leaf'][data-node-icon-pattern='dash'] svg :is(path, circle, ellipse, line, polygon, polyline, rect) {
-  stroke-dasharray: var(--node-icon-dash-length, 1) var(--node-icon-gap-length, 2);
-  stroke-linecap: butt;
 }
 
 .window-titlebar {

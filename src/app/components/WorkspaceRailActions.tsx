@@ -1,4 +1,4 @@
-import { Check, FileUp, icons, Settings, type LucideIcon } from 'lucide-react';
+import { Check, Settings } from 'lucide-react';
 
 import {
   getWorkspaceRailItemLabel,
@@ -8,6 +8,8 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import {
   AppSelectionDropdownMenu,
   AppSelectionDropdownMenuItem,
+  LucideCatalogIcon,
+  LUCIDE_ICON_OPTIONS,
   ToolbarActionGroup
 } from '../../shared/ui';
 
@@ -16,16 +18,7 @@ import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 const RAIL_BUTTON_CLASS_NAME =
   'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground';
 
-const ICON_BY_ID = icons as Record<string, LucideIcon>;
-
-function iconLabel(id: string) {
-  return id.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-}
-
-export const WORKSPACE_RAIL_ICON_OPTIONS = Object.keys(ICON_BY_ID)
-  .filter((id) => !id.endsWith('Icon'))
-  .sort((left, right) => left.localeCompare(right))
-  .map((id) => ({ id, label: iconLabel(id) }));
+export const WORKSPACE_RAIL_ICON_OPTIONS = LUCIDE_ICON_OPTIONS;
 
 export function RailItemIcon({
   iconId,
@@ -36,9 +29,7 @@ export function RailItemIcon({
   size?: number;
   strokeWidth?: number;
 }) {
-  const props = { 'aria-hidden': true, size, strokeWidth };
-  const Icon = iconId ? ICON_BY_ID[iconId] ?? FileUp : FileUp;
-  return <Icon {...props} />;
+  return <LucideCatalogIcon iconId={iconId} size={size} strokeWidth={strokeWidth} />;
 }
 
 function RailCommandButton({

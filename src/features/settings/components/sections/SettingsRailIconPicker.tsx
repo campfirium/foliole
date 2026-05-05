@@ -1,21 +1,22 @@
 import { ArrowLeft } from 'lucide-react';
 import { useMemo } from 'react';
 
-import { RailItemIcon, WORKSPACE_RAIL_ICON_OPTIONS } from '../../../../app/components/WorkspaceRailActions';
 import {
   AppIconButton,
   AppInput,
+  LucideCatalogIcon,
+  LUCIDE_ICON_OPTIONS,
   settingsResetButtonClassName
 } from '../../../../shared/ui';
 import type { HotkeySettingItem } from '../../model/hotkeySettings';
 
-function matchesQuery(values: Array<string | undefined>, query: string) {
+export function matchesIconQuery(values: Array<string | undefined>, query: string) {
   const normalizedQuery = query.trim().toLowerCase();
   return !normalizedQuery || values.some((value) => value?.toLowerCase().includes(normalizedQuery));
 }
 
-function IconGrid(props: {
-  icons: typeof WORKSPACE_RAIL_ICON_OPTIONS;
+export function IconGrid(props: {
+  icons: typeof LUCIDE_ICON_OPTIONS;
   selectedIconId: string;
   onSelect: (iconId: string) => void;
 }) {
@@ -35,7 +36,7 @@ function IconGrid(props: {
             title={icon.label}
             type="button"
           >
-            <RailItemIcon iconId={icon.id} size={28} strokeWidth={1.85} />
+            <LucideCatalogIcon iconId={icon.id} size={28} strokeWidth={1.85} />
           </button>
         ))}
       </div>
@@ -53,7 +54,7 @@ export function IconPicker(props: {
   onSelect: (iconId: string) => void;
 }) {
   const filteredIcons = useMemo(
-    () => WORKSPACE_RAIL_ICON_OPTIONS.filter((icon) => matchesQuery([icon.id, icon.label], props.query)),
+    () => LUCIDE_ICON_OPTIONS.filter((icon) => matchesIconQuery([icon.id, icon.label], props.query)),
     [props.query]
   );
   return (
