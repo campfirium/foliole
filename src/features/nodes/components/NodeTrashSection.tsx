@@ -82,6 +82,7 @@ export function NodeTrashSection({
               label={row.node.title}
               nodeId={row.node.id}
               rowSpacing={rowSpacing}
+              showIcon={false}
               onContextMenu={onContextMenu}
               onSelect={onSelect}
               onToggleCollapse={NOOP_TOGGLE_COLLAPSE}

@@ -7,6 +7,7 @@ import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { scrollActiveTreeItemIntoView } from './nodeListAutoScroll';
+import { renderDeleteStatusOverlay } from './NodeListFeedbackSurface';
 import { NodeListHeader } from './NodeListHeader';
 import { resolveNodeListRowGap } from './nodeListRowSpacingSettings';
 import { useNodeListDragController } from './NodeListTreeDrag';
@@ -18,6 +19,7 @@ import { NodeListTreeMenu } from './NodeListTreeMenu';
 import { NodeListRows } from './NodeListTreeRows';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { resolveNodeTreeClassName } from './NodeTreeRowStyle';
+import { useNodeListSearchRows } from './useNodeListSearchRows';
 import { useNodeListVisibleDocumentPrefetch } from './useNodeListVisibleDocumentPrefetch';
 
 interface NodeListPanelProps {
@@ -44,10 +46,13 @@ interface NodeListPanelProps {
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   reviewSession: ReviewSessionState;
   rowSpacing: number;
+  searchQuery: string;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
+  showTitleSearch: boolean;
   trashRowIds: string[];
   trashRowsLength: number;
+  onSearchQueryChange: (searchQuery: string) => void;
 }
 
 function renderRootDropHint(isRootDropActive: boolean) {
@@ -137,22 +142,6 @@ function useNodeListPanelEffects(
   });
 }
 
-function renderDeleteStatusOverlay(deleteStatusLabel: string | null) {
-  if (!deleteStatusLabel) {
-    return null;
-  }
-  return (
-    <div
-      aria-live="polite"
-      className="pointer-events-auto absolute inset-0 z-10 flex items-start bg-bg-panel/70 p-3 backdrop-blur-[1px]"
-    >
-      <div className="rounded-md border border-border bg-bg-panel px-3 py-2 text-sm font-medium text-foreground shadow-sm">
-        {deleteStatusLabel}
-      </div>
-    </div>
-  );
-}
-
 function NodeListPanel(props: NodeListPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const drag = useNodeListDragController({
@@ -185,6 +174,9 @@ function NodeListPanel(props: NodeListPanelProps) {
         onEmptyTrash={() => (props.deleteNodesPermanently(props.trashRowIds), props.contextMenu.closeContextMenu())}
         onExpandAll={props.collapse.expandAllNotes}
         onOpenNotesView={props.onOpenNotesView}
+        onSearchQueryChange={props.onSearchQueryChange}
+        searchQuery={props.searchQuery}
+        showTitleSearch={props.showTitleSearch}
         trashCount={props.trashRowsLength}
       />
       <div className="relative min-h-0 flex-1">
@@ -228,16 +220,24 @@ interface NodeListTreeContentProps {
   restoreNode: (nodeId: string) => void;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
+  showTitleSearch: boolean;
   state: NodeListState;
 }
 
 export function NodeListTreeContent(props: NodeListTreeContentProps) {
+  const { filteredActiveRows, searchQuery, setSearchQuery } = useNodeListSearchRows({
+    activeRows: props.activeRows,
+    isTrashViewOpen: props.isTrashViewOpen,
+    isVirtualViewOpen: props.isVirtualViewOpen,
+    noteRowsAll: props.state.noteRowsAll
+  });
+
   return (
     <>
       <NodeListPanel
         activeCollapsedNodeIds={props.activeCollapsedNodeIds}
         activeNodeId={props.activeNodeId}
-        activeRows={props.activeRows}
+        activeRows={filteredActiveRows}
         collapse={props.collapse}
         contextMenu={props.contextMenu}
         createGlobalNode={props.createGlobalNode}
@@ -251,11 +251,14 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         noteRowIds={props.state.noteRowIds}
         onOpenNotesView={props.onOpenNotesView}
         onRenameNode={props.updateNodeTitle}
+        onSearchQueryChange={setSearchQuery}
         onSelect={props.onSelect}
         reviewSession={props.reviewSession}
         rowSpacing={props.rowSpacing}
+        searchQuery={searchQuery}
         selectedNodeIds={props.selectedNodeIds}
         selectedTrashNodeId={props.selectedTrashNodeId}
+        showTitleSearch={props.showTitleSearch}
         trashRowIds={props.state.trashRowIds}
         trashRowsLength={props.state.trashRows.length}
       />

@@ -25,12 +25,12 @@ export function NodeTreeRowExpandToggle(props: {
   onToggleCollapse: (nodeId: string) => void;
 }) {
   if (!props.hasChildren) {
-    return <span aria-hidden="true" className="size-3 flex-none" />;
+    return <span aria-hidden="true" className="mr-2 size-4 flex-none" />;
   }
   return (
     <span
       aria-label={props.isCollapsed ? `Expand ${props.label}` : `Collapse ${props.label}`}
-      className="flex size-3 flex-none items-center justify-center opacity-70"
+      className="mr-2 flex size-4 flex-none items-center justify-center opacity-70"
       onClick={(event) => (event.stopPropagation(), props.onToggleCollapse(props.nodeId))}
       onKeyDown={(event) =>
         event.key === 'Enter' || event.key === ' '
@@ -49,7 +49,7 @@ function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg
       aria-hidden="true"
-      className={cn('h-3 w-3 transition-transform', className)}
+      className={cn('h-4 w-4 transition-transform', className)}
       viewBox="0 0 16 16"
     >
       <path

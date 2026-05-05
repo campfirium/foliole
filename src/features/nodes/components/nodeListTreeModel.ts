@@ -21,6 +21,7 @@ export interface NodeListTreeProps {
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
+  showTitleSearch?: boolean;
 }
 
 export interface NodeListTreeRuntimeState {

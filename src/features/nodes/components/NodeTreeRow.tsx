@@ -28,6 +28,7 @@ interface NodeTreeRowProps {
   mutedOpacity?: number;
   nodeIconKind?: NodeTreeRowIconKind;
   nodeIconState?: NodeTreeRowIconState;
+  showIcon?: boolean;
   isSelected: boolean;
   hasChildren: boolean;
   isDragDisabled?: boolean;
@@ -74,6 +75,7 @@ function renderNodeTreeRowButton(props: {
   mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
+  showIcon: boolean;
   isSelected: boolean;
   label: string;
   nodeId: string;
@@ -114,6 +116,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         mutedOpacity: props.mutedOpacity ?? 1,
         nodeIconKind: props.nodeIconKind ?? 'reading',
         nodeIconState: props.nodeIconState ?? 'scheduled',
+        showIcon: props.showIcon ?? true,
         isSelected: props.isSelected,
         label: props.label,
         nodeId: props.nodeId,
@@ -146,6 +149,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.mutedOpacity === next.mutedOpacity &&
     previous.nodeIconKind === next.nodeIconKind &&
     previous.nodeIconState === next.nodeIconState &&
+    previous.showIcon === next.showIcon &&
     previous.rowSpacing === next.rowSpacing &&
     previous.onContextMenu === next.onContextMenu &&
     previous.onDragEnd === next.onDragEnd &&
@@ -173,6 +177,7 @@ interface NodeTreeRowButtonProps {
   mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
+  showIcon: boolean;
   isSelected: boolean;
   label: string;
   nodeId: string;
@@ -196,6 +201,7 @@ function NodeTreeRowButton({
   mutedOpacity,
   nodeIconKind,
   nodeIconState,
+  showIcon,
   isSelected,
   label,
   nodeId,
@@ -208,9 +214,17 @@ function NodeTreeRowButton({
   style
 }: NodeTreeRowButtonProps) {
   const rename = useRenameState(label, nodeId, onRename);
-  const buttonClassName = resolveNodeRowButtonClassName({ isDerived, isSelected });
+  const buttonClassName = resolveNodeRowButtonClassName({ depth, isDerived, isSelected });
   const treeItemState = resolveNodeTreeItemState(isSelected);
-  const handlers = createNodeTreeRowButtonHandlers(nodeId, onContextMenu, onKeyDown, onSelect, rename);
+  const handlers = createNodeTreeRowButtonHandlers(
+    hasChildren,
+    onToggleCollapse,
+    nodeId,
+    onContextMenu,
+    onKeyDown,
+    onSelect,
+    rename
+  );
   return renderNodeTreeRowButtonSurface({
     buttonClassName,
     depth,
@@ -226,6 +240,7 @@ function NodeTreeRowButton({
     nodeIconKind,
     nodeIconState,
     nodeId,
+    showIcon,
     onToggleCollapse,
     rename,
     rowSpacing,

@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import { VIRTUAL_NODE_COMMAND } from '../../../../lib/core/nodes/virtualNodeCommands';
 import {
@@ -11,6 +13,8 @@ import {
   ToolbarActionGroup
 } from '../../../shared/ui';
 
+import { NodeListSearchOverlay, renderSearchLauncher } from './NodeListSearchOverlay';
+
 interface NodeListHeaderProps {
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
@@ -19,6 +23,9 @@ interface NodeListHeaderProps {
   onEmptyTrash: () => void;
   onCollapseAll: () => void;
   onExpandAll: () => void;
+  onSearchQueryChange: (searchQuery: string) => void;
+  searchQuery: string;
+  showTitleSearch?: boolean;
   trashCount: number;
 }
 
@@ -112,14 +119,35 @@ export function NodeListHeader({
   onEmptyTrash,
   onCollapseAll,
   onExpandAll,
+  onSearchQueryChange,
+  searchQuery,
+  showTitleSearch = true,
   trashCount
 }: NodeListHeaderProps) {
+  const [isSearchOpen, setIsSearchOpen] = useState(Boolean(searchQuery));
+
+  useEffect(() => {
+    if (searchQuery) {
+      setIsSearchOpen(true);
+    }
+  }, [searchQuery]);
+
+  const closeSearch = () => {
+    onSearchQueryChange('');
+    setIsSearchOpen(false);
+  };
+
   return (
-    <AppToolbar as="header" className="min-h-[var(--workspace-top-toolbar-height)] justify-end gap-2 px-4">
+    <AppToolbar as="header" className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4">
       <h2 className="sr-only">Nodes</h2>
       <button className="sr-only" onClick={onOpenNotesView} type="button">
         Nodes
       </button>
+      {showTitleSearch && !isTrashViewOpen && !isVirtualViewOpen ? (
+        renderSearchLauncher(() => setIsSearchOpen(true))
+      ) : (
+        <span aria-hidden="true" className="size-8" />
+      )}
       <ToolbarActionGroup ariaLabel={isTrashViewOpen ? 'Trash actions' : isVirtualViewOpen ? 'Virtual node actions' : 'Node list actions'}>
         {isTrashViewOpen
           ? renderTrashActions(onEmptyTrash, trashCount)
@@ -127,6 +155,13 @@ export function NodeListHeader({
             ? renderVirtualListActions(onCreateCommand)
             : renderNodeListActions(onCollapseAll, onCreateCommand, onExpandAll)}
       </ToolbarActionGroup>
+      {showTitleSearch && !isTrashViewOpen && !isVirtualViewOpen && isSearchOpen ? (
+        <NodeListSearchOverlay
+          onChangeSearchQuery={onSearchQueryChange}
+          onClose={closeSearch}
+          searchQuery={searchQuery}
+        />
+      ) : null}
     </AppToolbar>
   );
 }

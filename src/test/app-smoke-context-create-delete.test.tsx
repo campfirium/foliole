@@ -61,7 +61,7 @@ it('creates highlight node without leaving current node', () => {
   );
 });
 
-it('keeps derived node icons at normal tone while lowering row emphasis', () => {
+it('keeps only top-level rows bold while lowering non-top-level row emphasis', () => {
   render(<App />);
   let createdNodeId: string | null = null;
   act(() => {
@@ -79,14 +79,28 @@ it('keeps derived node icons at normal tone while lowering row emphasis', () => 
   expect(derivedRow).toHaveAttribute('data-node-emphasis', 'secondary');
   expect(regularRow.className).toContain('font-bold');
   expect(derivedRow.className).toContain('font-normal');
-  expect(regularRow.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
-    'data-node-icon-tone',
-    'normal'
-  );
-  expect(derivedRow.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
-    'data-node-icon-tone',
-    'normal'
-  );
+  expect(regularRow.querySelector('[data-node-icon]')).toBeNull();
+  expect(derivedRow.querySelector('[data-node-icon]')).toBeNull();
+});
+
+it('renders ordinary child rows with normal weight', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      ...state.nodesById,
+      'node-2': createNode({ id: 'node-2', parentNodeId: 'node-1', title: 'Child', content: '# Child' })
+    }
+  }));
+
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
+
+  const topLevelRow = screen.getByRole('treeitem', { name: 'Welcome to Foliole' });
+  const childRow = screen.getByRole('treeitem', { name: 'Child' });
+
+  expect(topLevelRow.className).toContain('font-bold');
+  expect(childRow.className).toContain('font-normal');
 });
 
 it('creates cloze node without leaving current node', () => {

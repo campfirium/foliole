@@ -59,6 +59,7 @@ function renderWorkspaceTopicTreeRow(
         kind: node?.kind ?? 'topic'
       })}
       nodeIconState={nodeIconState}
+      showIcon={false}
       onContextMenu={args.onContextMenu}
       rowSpacing={args.rowSpacing}
       onKeyDown={args.onRowKeyDown}

@@ -41,6 +41,7 @@ function buildNodeListTreeContentProps(args: {
   rowSpacing: number;
   runtimeState: NodeListTreeRuntimeState;
   selectedTrashNodeId: string | null;
+  showTitleSearch: boolean;
 }) {
   return {
     activeCollapsedNodeIds: args.collapsedNodeIds,
@@ -68,6 +69,7 @@ function buildNodeListTreeContentProps(args: {
     rowSpacing: args.rowSpacing,
     selectedNodeIds: args.model.state.selectedNodeIds,
     selectedTrashNodeId: args.selectedTrashNodeId,
+    showTitleSearch: args.showTitleSearch,
     state: args.model.state,
     updateNodeTitle: args.model.updateNodeTitle
   };
@@ -83,7 +85,8 @@ function NodeListTreeImpl({
   onOpenNotesView,
   onSelectNode,
   onSelectTrashNode,
-  selectedTrashNodeId
+  selectedTrashNodeId,
+  showTitleSearch = true
 }: NodeListTreeProps) {
   const model = useNodeListTreeModel({
     activeNodeId,
@@ -124,7 +127,8 @@ function NodeListTreeImpl({
     onOpenNotesView,
     rowSpacing,
     runtimeState,
-    selectedTrashNodeId
+    selectedTrashNodeId,
+    showTitleSearch
   });
 
   return <NodeListTreeContent {...contentProps} />;

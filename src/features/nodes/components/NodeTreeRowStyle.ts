@@ -1,14 +1,15 @@
 import { cn } from '../../../shared/lib/utils';
 
 export function resolveNodeRowButtonClassName(args: {
+  depth: number;
   isDerived: boolean;
   isSelected: boolean;
 }) {
   return cn(
     'gap-0 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-3',
     'text-[#111317]',
-    !args.isDerived && 'font-bold',
-    args.isDerived && 'font-normal',
+    !args.isDerived && args.depth === 0 && 'font-bold',
+    (args.isDerived || args.depth > 0) && 'font-normal',
     args.isSelected && 'bg-foreground/[0.05]'
   );
 }

@@ -76,6 +76,7 @@ function renderNodeListRow(
         kind: node?.kind ?? 'topic'
       })}
       nodeIconState={nodeIconState}
+      showIcon={false}
       rowSpacing={props.rowSpacing}
       onContextMenu={props.onContextMenu}
       onDragEnd={props.drag.onDragEnd}

@@ -28,6 +28,7 @@ export function renderNodeTreeRowContent(props: {
   mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
+  showIcon: boolean;
   rename: ReturnType<typeof useRenameState>;
 }) {
   return (
@@ -35,7 +36,7 @@ export function renderNodeTreeRowContent(props: {
       className={resolveNodeRowContentClassName()}
       style={props.isMuted ? { opacity: props.mutedOpacity } : undefined}
     >
-      <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} />
+      {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
       {renderNodeLabel(props.label, props.rename)}
       {props.descendantCount > 0 ? (
         <span aria-hidden="true" className="flex-none text-foreground/55">
@@ -47,6 +48,8 @@ export function renderNodeTreeRowContent(props: {
 }
 
 export function createNodeTreeRowButtonHandlers(
+  hasChildren: boolean,
+  onToggleCollapse: (nodeId: string) => void,
   nodeId: string,
   onContextMenu: ((nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void) | undefined,
   onKeyDown: ((nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void) | undefined,
@@ -54,8 +57,14 @@ export function createNodeTreeRowButtonHandlers(
   rename: ReturnType<typeof useRenameState>
 ) {
   return {
-    onClick: (event: ReactMouseEvent<HTMLButtonElement>) =>
-      onSelect(nodeId, resolveSelectModifiers(event)),
+    onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
+      const modifiers = resolveSelectModifiers(event);
+      onSelect(nodeId, modifiers);
+      if (!hasChildren || modifiers.ctrlKey || modifiers.metaKey || modifiers.shiftKey) {
+        return;
+      }
+      onToggleCollapse(nodeId);
+    },
     onContextMenu: onContextMenu ? (event: ReactMouseEvent<HTMLButtonElement>) => onContextMenu(nodeId, event) : undefined,
     onDoubleClick: (event: ReactMouseEvent<HTMLButtonElement>) => (event.stopPropagation(), rename.beginRename()),
     onKeyDown: onKeyDown ? (event: ReactKeyboardEvent<HTMLButtonElement>) => onKeyDown(nodeId, event) : undefined
@@ -78,6 +87,7 @@ export function renderNodeTreeRowButtonSurface(props: {
   nodeId: string;
   rename: ReturnType<typeof useRenameState>;
   rowSpacing: number;
+  showIcon: boolean;
   style: CSSProperties;
   treeItemState: { 'aria-pressed': boolean; 'aria-selected': boolean };
   mutedOpacity: number;
@@ -129,6 +139,7 @@ function renderNodeTreeRowButtonBody(
         mutedOpacity: props.mutedOpacity,
         nodeIconKind: props.nodeIconKind,
         nodeIconState: props.nodeIconState,
+        showIcon: props.showIcon,
         rename: props.rename
       })}
     </>

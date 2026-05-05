@@ -1,14 +1,27 @@
-import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type MouseEvent as ReactMouseEvent,
+  type SetStateAction
+} from 'react';
 
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
 import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
-import { buildNodeTree, buildVisibleNodeTreeRows, collectNodeAncestorIds } from '../../features/nodes/model/nodeTree';
+import {
+  buildNodeTree,
+  buildVisibleNodeTreeRows,
+  collectNodeAncestorIds,
+  filterNodeTreeRowsByTitle
+} from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { AppEmptyState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+import { WorkspaceTopicTreeHeader } from './WorkspaceTopicTreeHeader';
 import { WorkspaceTopicTreeRows } from './WorkspaceTopicTreeRows';
 
 interface WorkspaceTopicTreeProps {
@@ -133,6 +146,58 @@ function renderWorkspaceTopicTreeBody(args: {
   );
 }
 
+function useWorkspaceTopicTreeCollapse(activeNodeId: string | null, parentById: Record<string, string | null>) {
+  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!activeNodeId || !parentById[activeNodeId]) {
+      return;
+    }
+
+    const ancestorIds = collectNodeAncestorIds(activeNodeId, parentById);
+    setCollapsedNodeIds((current) => {
+      if (ancestorIds.every((nodeId) => !current.has(nodeId))) {
+        return current;
+      }
+      const next = new Set(current);
+      ancestorIds.forEach((nodeId) => next.delete(nodeId));
+      return next;
+    });
+  }, [activeNodeId, parentById]);
+
+  return { collapsedNodeIds, setCollapsedNodeIds };
+}
+
+function useWorkspaceTopicTreeRows(treeRows: ReturnType<typeof buildNodeTree>['rows'], collapsedNodeIds: ReadonlySet<string>) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const filteredRows = useMemo(
+    () => (searchQuery.trim() ? filterNodeTreeRowsByTitle(treeRows, searchQuery) : treeRows),
+    [searchQuery, treeRows]
+  );
+  const visibleRows = useMemo(
+    () => (searchQuery.trim() ? filteredRows : buildVisibleNodeTreeRows(filteredRows, collapsedNodeIds)),
+    [collapsedNodeIds, filteredRows, searchQuery]
+  );
+  const collapsibleNodeIds = useMemo(
+    () => treeRows.filter((row) => row.hasChildren).map((row) => row.node.id),
+    [treeRows]
+  );
+
+  return { collapsibleNodeIds, searchQuery, setSearchQuery, visibleRows };
+}
+
+function toggleCollapsedNode(nodeId: string, setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>) {
+  setCollapsedNodeIds((current) => {
+    const next = new Set(current);
+    if (next.has(nodeId)) {
+      next.delete(nodeId);
+    } else {
+      next.add(nodeId);
+    }
+    return next;
+  });
+}
+
 export function WorkspaceTopicTree({
   activeFolderId,
   activeNodeId,
@@ -142,7 +207,11 @@ export function WorkspaceTopicTree({
   onSelectNode
 }: WorkspaceTopicTreeProps) {
   const tree = useWorkspaceTopicTreeState(itemIds, nodesById);
-  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
+  const { collapsedNodeIds, setCollapsedNodeIds } = useWorkspaceTopicTreeCollapse(activeNodeId, tree.parentById);
+  const { collapsibleNodeIds, searchQuery, setSearchQuery, visibleRows } = useWorkspaceTopicTreeRows(
+    tree.rows,
+    collapsedNodeIds
+  );
   const interaction = useWorkspaceTopicTreeInteraction({
     activeFolderId,
     activeNodeId,
@@ -153,43 +222,21 @@ export function WorkspaceTopicTree({
     onSelectNode
   });
 
-  useEffect(() => {
-    if (!activeNodeId || !tree.parentById[activeNodeId]) {
-      return;
-    }
-
-    const ancestorIds = collectNodeAncestorIds(activeNodeId, tree.parentById);
-    setCollapsedNodeIds((current) => {
-      if (ancestorIds.every((nodeId) => !current.has(nodeId))) {
-        return current;
-      }
-      const next = new Set(current);
-      ancestorIds.forEach((nodeId) => next.delete(nodeId));
-      return next;
-    });
-  }, [activeNodeId, tree.parentById]);
-
-  const visibleRows = useMemo(() => buildVisibleNodeTreeRows(tree.rows, collapsedNodeIds), [collapsedNodeIds, tree.rows]);
-
   return (
     <aside aria-label="Current folder contents" className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground">
-      <div aria-hidden="true" className="min-h-[var(--workspace-top-toolbar-height)] shrink-0" />
+      <WorkspaceTopicTreeHeader
+        onCollapseAll={() => setCollapsedNodeIds(new Set(collapsibleNodeIds))}
+        onExpandAll={() => setCollapsedNodeIds(new Set())}
+        onSearchQueryChange={setSearchQuery}
+        searchQuery={searchQuery}
+      />
       {renderWorkspaceTopicTreeBody({
         activeNodeId,
         collapsedNodeIds,
         contextMenu: interaction.contextMenu,
         nodesById,
         onSelectNode: interaction.handleSelectNode,
-        onToggleCollapse: (nodeId) =>
-          setCollapsedNodeIds((current) => {
-            const next = new Set(current);
-            if (next.has(nodeId)) {
-              next.delete(nodeId);
-            } else {
-              next.add(nodeId);
-            }
-            return next;
-          }),
+        onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, setCollapsedNodeIds),
         visibleRows
       })}
       {interaction.topicTreeMenu}

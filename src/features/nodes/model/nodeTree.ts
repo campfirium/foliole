@@ -167,3 +167,40 @@ export function collectNodeAncestorIds(
 
   return ancestors;
 }
+
+export function filterNodeTreeRowsByTitle(rows: NodeTreeRow[], searchQuery: string): NodeTreeRow[] {
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  if (!normalizedQuery) {
+    return rows;
+  }
+
+  const matchingNodeIds = new Set(
+    rows
+      .filter((row) => row.node.title.toLocaleLowerCase().includes(normalizedQuery))
+      .map((row) => row.node.id)
+  );
+
+  if (matchingNodeIds.size === 0) {
+    return [];
+  }
+
+  const visibleNodeIds = new Set<string>();
+  for (const row of rows) {
+    if (!matchingNodeIds.has(row.node.id)) {
+      continue;
+    }
+
+    visibleNodeIds.add(row.node.id);
+    for (let depth = row.depth - 1; depth >= 0; depth -= 1) {
+      const ancestor = rows
+        .slice(0, rows.indexOf(row))
+        .reverse()
+        .find((candidate) => candidate.depth === depth);
+      if (ancestor) {
+        visibleNodeIds.add(ancestor.node.id);
+      }
+    }
+  }
+
+  return rows.filter((row) => visibleNodeIds.has(row.node.id));
+}

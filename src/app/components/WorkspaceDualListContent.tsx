@@ -118,6 +118,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
           onSelectNode={props.onSelectNode}
           onSelectTrashNode={props.onSelectTrashNode}
           selectedTrashNodeId={props.selectedTrashNodeId}
+          showTitleSearch={false}
         />
       </div>
       <WorkspaceDualListSplitter
