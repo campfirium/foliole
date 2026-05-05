@@ -41,14 +41,14 @@ export function NodeTrashSection({
   return (
     <section aria-label="Trash section" className="-mx-4 mt-auto flex flex-none flex-col data-[open=true]:mt-0" data-open={isOpen}>
       <header
-        className="flex min-h-[52px] cursor-pointer items-center justify-between border-y border-dashed border-border px-4 py-3 transition-colors hover:bg-accent/10 data-[open=false]:border-b-0"
+        className="flex min-h-[52px] cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-foreground/[0.03]"
         data-open={isOpen}
         onClick={handleToggleTrash}
       >
         <button
           aria-label="Trash"
           aria-pressed={isOpen}
-          className="min-h-7 border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-[0.08em] text-foreground/70 hover:text-foreground aria-[pressed=true]:text-foreground"
+          className="min-h-7 border-0 bg-transparent p-0 text-left text-sm font-semibold uppercase tracking-[0.06em] text-foreground/70 hover:text-foreground aria-[pressed=true]:text-foreground"
           onClick={handleToggleTrashButton}
           type="button"
         >

@@ -17,7 +17,7 @@ function renderStartupError(message: string) {
   }
 
   rootElement.innerHTML = `
-    <section style="padding:16px;font-family:Segoe UI,Arial,sans-serif;">
+    <section style="padding:16px;font-family:var(--font-family-interface),Segoe UI,Arial,sans-serif;">
       <h1 style="margin:0 0 8px;font-size:18px;">Foliole failed to start</h1>
       <p style="margin:0;color:#b91c1c;">${message}</p>
       <p style="margin:8px 0 0;color:#475569;">Open devtools for details.</p>
@@ -63,7 +63,7 @@ function mountApp() {
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <Theme accentColor="indigo" appearance="light" grayColor="slate" panelBackground="solid" radius="medium" scaling="100%">
+      <Theme accentColor="gray" appearance="light" grayColor="sand" panelBackground="solid" radius="none" scaling="105%">
         <App />
       </Theme>
     </React.StrictMode>

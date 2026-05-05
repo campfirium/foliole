@@ -74,6 +74,7 @@ export function DocumentPanelSection({
         center={<NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />}
         bodyClassName="flex min-h-0 flex-1 p-4 max-[1080px]:p-2"
         className="h-full min-h-0 flex-1"
+        surfaceClassName="bg-bg-elevated"
         style={documentLayoutStyle}
         title="Content"
       >
@@ -99,7 +100,7 @@ export function DocumentPanelSection({
                 />
               </div>
               {hasAnswerSection ? (
-                <section aria-label="Cloze answer section" className="flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden border-t border-border pt-3">
+                <section aria-label="Cloze answer section" className="flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden pt-3">
                   <MarkdownEditor
                     ariaLabel="Answer editor"
                     className="answer-editor-host min-h-0"
@@ -148,7 +149,7 @@ function DocumentWidthHandle({ ariaLabel, onPointerDown, onResetLayout, side }: 
         aria-label={ariaLabel}
         aria-orientation="vertical"
         className={cn(
-          'absolute top-0 h-full w-2.5 cursor-col-resize before:absolute before:h-full before:border-l before:border-dashed before:border-transparent before:transition-colors hover:before:border-slate-300 focus-visible:before:border-slate-300',
+          'absolute top-0 h-full w-2.5 cursor-col-resize before:absolute before:h-full before:border-l before:border-transparent before:transition-colors hover:before:border-border-strong focus-visible:before:border-border-strong',
           side === 'left' ? 'right-0 before:right-0' : 'left-0 before:left-0'
         )}
         onDoubleClick={onResetLayout}

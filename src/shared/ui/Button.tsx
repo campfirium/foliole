@@ -15,7 +15,7 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'col
 
 function resolveVariant(variant: ButtonVariant) {
   if (variant === 'primary') {
-    return 'solid';
+    return 'ghost';
   }
   if (variant === 'ghost') {
     return 'outline';
@@ -42,8 +42,9 @@ export function AppButton({
     <RadixButton
       className={cn(
         isList && 'w-full justify-start px-3 py-2 text-left text-[13px]',
+        variant === 'primary' && 'border border-border bg-transparent text-foreground hover:bg-foreground/[0.04]',
         variant === 'subtle' && 'text-foreground/70 hover:text-foreground',
-        active && isList && 'border border-border-strong bg-accent/10 text-foreground',
+        active && isList && 'border border-border-strong bg-foreground/[0.05] text-foreground',
         className
       )}
       data-active={active}

@@ -379,7 +379,7 @@ const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-content': {
     fontFamily: 'var(--font-family-sans)',
-    fontSize: 'var(--font-size-16)',
+    fontSize: '1.0625rem',
     padding: '0.72rem 1.1rem 2rem'
   },
   '.cm-widgetBuffer': {

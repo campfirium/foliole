@@ -1,4 +1,4 @@
-import { Box, Card, Heading } from '@radix-ui/themes';
+import { Box, Heading } from '@radix-ui/themes';
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ interface PanelProps<T extends PanelElement = 'section'> {
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  surfaceClassName?: string;
   bodyClassName?: string;
   ariaLabel?: string;
   scrollBody?: boolean;
@@ -28,6 +29,7 @@ export function AppPanel<T extends PanelElement = 'section'>({
   children,
   footer,
   className,
+  surfaceClassName,
   bodyClassName,
   ariaLabel,
   scrollBody = false,
@@ -42,17 +44,17 @@ export function AppPanel<T extends PanelElement = 'section'>({
       className={cn('min-h-0', className)}
       {...rest}
     >
-      <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-bg-panel p-0 text-foreground shadow-[0_1px_0_rgba(255,255,255,0.9),0_18px_32px_-24px_rgba(15,23,42,0.28)]">
+      <Box className={cn('flex h-full min-h-0 flex-col overflow-hidden bg-transparent p-0 text-foreground', surfaceClassName)}>
         <header
           className={cn(
-            'flex min-h-[52px] items-center justify-start gap-3 border-b border-dashed border-border px-4 py-3',
-            onHeaderClick && 'cursor-pointer transition-colors hover:bg-accent/10'
+            'flex min-h-[48px] items-center justify-start gap-3 px-4 py-2',
+            onHeaderClick && 'cursor-pointer transition-colors hover:bg-foreground/[0.03]'
           )}
           onClick={onHeaderClick}
         >
           <div className="min-w-0 shrink-0">
             {useHeading ? (
-              <Heading as="h3" className="m-0 text-xs font-bold uppercase tracking-[0.05em]" size="2">
+              <Heading as="h3" className="m-0 text-sm font-semibold uppercase tracking-[0.04em]" size="2">
                 {title}
               </Heading>
             ) : (
@@ -63,8 +65,8 @@ export function AppPanel<T extends PanelElement = 'section'>({
           <div className="ml-auto shrink-0">{actions}</div>
         </header>
         <Box className={cn('min-h-0 flex-1', scrollBody && 'overflow-auto', bodyClassName)}>{children}</Box>
-        {footer ? <footer className="border-t border-dashed border-border p-3">{footer}</footer> : null}
-      </Card>
+        {footer ? <footer className="p-3">{footer}</footer> : null}
+      </Box>
     </Component>
   );
 }

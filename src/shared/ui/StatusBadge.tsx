@@ -11,7 +11,7 @@ interface StatusBadgeProps {
 
 function toneClass(tone: StatusTone) {
   if (tone === 'info') {
-    return 'border-blue-300 bg-blue-100/70 text-blue-500';
+    return 'border-border-strong bg-foreground/[0.05] text-foreground/80';
   }
   if (tone === 'success') {
     return 'border-emerald-300 bg-emerald-100/70 text-emerald-500';
@@ -27,7 +27,7 @@ function toneClass(tone: StatusTone) {
 
 export function AppStatusBadge({ label, tone = 'neutral' }: StatusBadgeProps) {
   return (
-    <Badge className={cn('min-h-6 rounded-full border px-2 text-xs font-semibold', toneClass(tone))} radius="full">
+    <Badge className={cn('min-h-6 border px-2 text-xs font-semibold', toneClass(tone))} radius="none">
       {label}
     </Badge>
   );

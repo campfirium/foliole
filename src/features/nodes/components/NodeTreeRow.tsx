@@ -39,7 +39,7 @@ export function NodeTreeRow({
       style={style}
       variant="list"
     >
-      <span aria-hidden="true" className={cn('h-px w-3 flex-none border-b border-dashed border-border opacity-0', showBranch && 'opacity-85')} />
+      <span aria-hidden="true" className={cn('h-px w-3 flex-none border-b border-border opacity-0', showBranch && 'opacity-85')} />
       <span className="min-w-0 truncate">{label}</span>
     </AppButton>
   );

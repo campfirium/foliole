@@ -125,12 +125,13 @@ export function WorkspaceLayout({
         canGoBack={canGoBack}
         canGoForward={canGoForward}
         canGoParent={canGoParent}
+        listWidth={listWidth}
         onGoBack={onGoBack}
         onGoForward={onGoForward}
         onGoParent={onGoParent}
       />
       <div
-        className="grid min-h-0 flex-1 gap-2 overflow-hidden px-3 pb-3 pt-2 max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
+        className="grid min-h-0 flex-1 gap-0 overflow-hidden px-3 pb-3 pt-2 max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
         data-resizing={isResizingList}
         style={{ ...workspaceGridStyle, gridTemplateColumns: 'minmax(0, var(--workspace-list-width, 300px)) 4px minmax(0, 1fr)' }}
       >
@@ -152,7 +153,7 @@ export function WorkspaceLayout({
           onSplitterKeyDown={onSplitterKeyDown}
           onSplitterPointerDown={onSplitterPointerDown}
         />
-        <section aria-label="Document and review area" className="flex min-h-0 flex-1 flex-col gap-2">
+        <section aria-label="Document and review area" className="flex min-h-0 flex-1 flex-col gap-0">
           <DocumentPanelSection
             activeNodeId={documentNodeId}
             contextMenu={contextMenu}
@@ -208,7 +209,7 @@ function ListSplitter({
       aria-label="Resize node list"
       aria-orientation="vertical"
       aria-valuenow={Math.round(listWidth)}
-      className="group relative self-stretch rounded-full max-[1080px]:hidden"
+      className="group relative self-stretch max-[1080px]:hidden"
       onDoubleClick={onResetLayout}
       onKeyDown={onSplitterKeyDown}
       onPointerDown={onSplitterPointerDown}
@@ -217,8 +218,8 @@ function ListSplitter({
     >
       <span
         className={cn(
-          'pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 border-l border-dashed border-slate-300 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
-          isResizingList && 'w-1 border-l-2 border-solid border-accent-strong opacity-100'
+          'pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 border-l border-border opacity-50 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
+          isResizingList && 'w-px border-l border-border-strong opacity-100'
         )}
       />
     </div>

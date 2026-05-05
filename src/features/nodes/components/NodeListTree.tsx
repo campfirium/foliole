@@ -211,12 +211,13 @@ export function NodeListTree({
         className="min-h-0"
         onHeaderClick={onOpenNotesView}
         scrollBody
+        surfaceClassName="bg-bg-panel"
         title={
           <h2 className="m-0">
             <button
               aria-label="Nodes"
               aria-pressed={!isTrashViewOpen}
-              className="min-h-7 w-full border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-[0.08em] text-foreground/70 hover:text-foreground aria-[pressed=true]:text-foreground"
+              className="min-h-7 w-full border-0 bg-transparent p-0 text-left text-sm font-semibold uppercase tracking-[0.06em] text-foreground/70 hover:text-foreground aria-[pressed=true]:text-foreground"
               onClick={handleNotesHeaderClick}
               type="button"
             >
