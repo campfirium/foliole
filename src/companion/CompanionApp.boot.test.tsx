@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const useCompanionBootstrap = vi.fn();
 const useCompanionWorkspaceSync = vi.fn();
@@ -60,6 +60,10 @@ function mockCompanionWorkspaceSync() {
 }
 
 describe('CompanionApp bootstrap states', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     vi.resetModules();
     useCompanionBootstrap.mockReset();
