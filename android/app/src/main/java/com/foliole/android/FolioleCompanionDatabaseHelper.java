@@ -16,13 +16,6 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "foliole-companion.db";
     private static final int DATABASE_VERSION = 14;
-    private static final String SYNC_STATE_CURSOR_KEY = "sync_state_cursor";
-    private static final String SYNC_STATE_PUSH_CURSOR_KEY = "sync_state_push_cursor";
-    private static final String SYNC_PACK_CURSOR_KEY = "sync_pack_cursor";
-    private static final String SYNC_NODE_VERSION_CURSOR_KEY = "sync_node_version_cursor";
-    private static final String SYNC_NODE_VERSION_PUSH_CURSOR_KEY = "sync_node_version_push_cursor";
-    private static final String SYNC_REVIEW_LOG_CURSOR_KEY = "sync_review_log_cursor";
-    private static final String SYNC_REVIEW_LOG_PUSH_CURSOR_KEY = "sync_review_log_push_cursor";
     private final Context context;
 
     FolioleCompanionDatabaseHelper(Context context) {
@@ -172,62 +165,6 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     JSObject loadSyncStateChanges(Integer cursor, int limit) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         return FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, cursor == null ? 0 : cursor, limit);
-    }
-
-    JSObject loadSyncStateCursor() throws Exception {
-        return FolioleCompanionMetaRecords.loadNumberCursor(getWritableDatabase(), SYNC_STATE_CURSOR_KEY);
-    }
-
-    JSObject saveSyncStateCursor(Integer cursor) throws Exception {
-        return FolioleCompanionMetaRecords.saveNumberCursor(getWritableDatabase(), SYNC_STATE_CURSOR_KEY, cursor);
-    }
-
-    JSObject loadSyncPackCursor() throws Exception {
-        return FolioleCompanionMetaRecords.loadNumberCursor(getWritableDatabase(), SYNC_PACK_CURSOR_KEY);
-    }
-
-    JSObject saveSyncPackCursor(Integer cursor) throws Exception {
-        return FolioleCompanionMetaRecords.saveNumberCursor(getWritableDatabase(), SYNC_PACK_CURSOR_KEY, cursor);
-    }
-
-    JSObject loadSyncStatePushCursor() throws Exception {
-        return FolioleCompanionMetaRecords.loadNumberCursor(getWritableDatabase(), SYNC_STATE_PUSH_CURSOR_KEY);
-    }
-
-    JSObject saveSyncStatePushCursor(Integer cursor) throws Exception {
-        return FolioleCompanionMetaRecords.saveNumberCursor(getWritableDatabase(), SYNC_STATE_PUSH_CURSOR_KEY, cursor);
-    }
-
-    JSObject loadSyncNodeVersionCursor() throws Exception {
-        return FolioleCompanionMetaRecords.loadJsonCursor(getWritableDatabase(), SYNC_NODE_VERSION_CURSOR_KEY);
-    }
-
-    JSObject saveSyncNodeVersionCursor(JSONObject cursor) throws Exception {
-        return FolioleCompanionMetaRecords.saveJsonCursor(getWritableDatabase(), SYNC_NODE_VERSION_CURSOR_KEY, cursor);
-    }
-
-    JSObject loadSyncNodeVersionPushCursor() throws Exception {
-        return FolioleCompanionMetaRecords.loadJsonCursor(getWritableDatabase(), SYNC_NODE_VERSION_PUSH_CURSOR_KEY);
-    }
-
-    JSObject saveSyncNodeVersionPushCursor(JSONObject cursor) throws Exception {
-        return FolioleCompanionMetaRecords.saveJsonCursor(getWritableDatabase(), SYNC_NODE_VERSION_PUSH_CURSOR_KEY, cursor);
-    }
-
-    JSObject loadSyncReviewLogCursor() throws Exception {
-        return FolioleCompanionMetaRecords.loadJsonCursor(getWritableDatabase(), SYNC_REVIEW_LOG_CURSOR_KEY);
-    }
-
-    JSObject saveSyncReviewLogCursor(JSONObject cursor) throws Exception {
-        return FolioleCompanionMetaRecords.saveJsonCursor(getWritableDatabase(), SYNC_REVIEW_LOG_CURSOR_KEY, cursor);
-    }
-
-    JSObject loadSyncReviewLogPushCursor() throws Exception {
-        return FolioleCompanionMetaRecords.loadJsonCursor(getWritableDatabase(), SYNC_REVIEW_LOG_PUSH_CURSOR_KEY);
-    }
-
-    JSObject saveSyncReviewLogPushCursor(JSONObject cursor) throws Exception {
-        return FolioleCompanionMetaRecords.saveJsonCursor(getWritableDatabase(), SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
     }
 
     JSObject saveSyncPushAcks(JSONArray acks) throws Exception {

@@ -149,7 +149,7 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
 
     @PluginMethod
     public void loadSyncStateCursor(PluginCall call) {
-        database(call, "Failed to load companion sync state cursor.", FolioleCompanionDatabaseHelper::loadSyncStateCursor);
+        database(call, "Failed to load companion sync state cursor.", FolioleCompanionSyncStatePluginActions::loadSyncStateCursor);
     }
 
     @PluginMethod
@@ -159,7 +159,7 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
 
     @PluginMethod
     public void loadSyncPackCursor(PluginCall call) {
-        database(call, "Failed to load companion sync pack cursor.", FolioleCompanionDatabaseHelper::loadSyncPackCursor);
+        database(call, "Failed to load companion sync pack cursor.", FolioleCompanionSyncStatePluginActions::loadSyncPackCursor);
     }
 
     @PluginMethod
@@ -169,7 +169,7 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
 
     @PluginMethod
     public void loadSyncStatePushCursor(PluginCall call) {
-        database(call, "Failed to load companion sync state push cursor.", FolioleCompanionDatabaseHelper::loadSyncStatePushCursor);
+        database(call, "Failed to load companion sync state push cursor.", FolioleCompanionSyncStatePluginActions::loadSyncStatePushCursor);
     }
 
     @PluginMethod
@@ -179,7 +179,7 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
 
     @PluginMethod
     public void loadSyncNodeVersionCursor(PluginCall call) {
-        database(call, "Failed to load companion sync node version cursor.", FolioleCompanionDatabaseHelper::loadSyncNodeVersionCursor);
+        database(call, "Failed to load companion sync node version cursor.", FolioleCompanionSyncStatePluginActions::loadSyncNodeVersionCursor);
     }
 
     @PluginMethod
@@ -189,7 +189,7 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
 
     @PluginMethod
     public void loadSyncNodeVersionPushCursor(PluginCall call) {
-        database(call, "Failed to load companion sync node version push cursor.", FolioleCompanionDatabaseHelper::loadSyncNodeVersionPushCursor);
+        database(call, "Failed to load companion sync node version push cursor.", FolioleCompanionSyncStatePluginActions::loadSyncNodeVersionPushCursor);
     }
 
     @PluginMethod
@@ -199,7 +199,7 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
 
     @PluginMethod
     public void loadSyncReviewLogCursor(PluginCall call) {
-        database(call, "Failed to load companion sync review log cursor.", FolioleCompanionDatabaseHelper::loadSyncReviewLogCursor);
+        database(call, "Failed to load companion sync review log cursor.", FolioleCompanionSyncStatePluginActions::loadSyncReviewLogCursor);
     }
 
     @PluginMethod
@@ -209,7 +209,7 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
 
     @PluginMethod
     public void loadSyncReviewLogPushCursor(PluginCall call) {
-        database(call, "Failed to load companion sync review log push cursor.", FolioleCompanionDatabaseHelper::loadSyncReviewLogPushCursor);
+        database(call, "Failed to load companion sync review log push cursor.", FolioleCompanionSyncStatePluginActions::loadSyncReviewLogPushCursor);
     }
 
     @PluginMethod

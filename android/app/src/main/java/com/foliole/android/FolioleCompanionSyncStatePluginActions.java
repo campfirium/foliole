@@ -4,34 +4,98 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
 
 final class FolioleCompanionSyncStatePluginActions {
+    private static final String SYNC_STATE_CURSOR_KEY = "sync_state_cursor";
+    private static final String SYNC_STATE_PUSH_CURSOR_KEY = "sync_state_push_cursor";
+    private static final String SYNC_PACK_CURSOR_KEY = "sync_pack_cursor";
+    private static final String SYNC_NODE_VERSION_CURSOR_KEY = "sync_node_version_cursor";
+    private static final String SYNC_NODE_VERSION_PUSH_CURSOR_KEY = "sync_node_version_push_cursor";
+    private static final String SYNC_REVIEW_LOG_CURSOR_KEY = "sync_review_log_cursor";
+    private static final String SYNC_REVIEW_LOG_PUSH_CURSOR_KEY = "sync_review_log_push_cursor";
+
     private FolioleCompanionSyncStatePluginActions() {}
 
+    static JSObject loadSyncStateCursor(FolioleCompanionDatabaseHelper databaseHelper) throws Exception {
+        return FolioleCompanionMetaRecords.loadNumberCursor(databaseHelper.getWritableDatabase(), SYNC_STATE_CURSOR_KEY);
+    }
+
     static JSObject saveSyncStateCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncStateCursor(readNullableIntCursor(call));
+        return FolioleCompanionMetaRecords.saveNumberCursor(
+            databaseHelper.getWritableDatabase(),
+            SYNC_STATE_CURSOR_KEY,
+            readNullableIntCursor(call)
+        );
+    }
+
+    static JSObject loadSyncPackCursor(FolioleCompanionDatabaseHelper databaseHelper) throws Exception {
+        return FolioleCompanionMetaRecords.loadNumberCursor(databaseHelper.getWritableDatabase(), SYNC_PACK_CURSOR_KEY);
     }
 
     static JSObject saveSyncPackCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncPackCursor(readNullableIntCursor(call));
+        return FolioleCompanionMetaRecords.saveNumberCursor(
+            databaseHelper.getWritableDatabase(),
+            SYNC_PACK_CURSOR_KEY,
+            readNullableIntCursor(call)
+        );
+    }
+
+    static JSObject loadSyncStatePushCursor(FolioleCompanionDatabaseHelper databaseHelper) throws Exception {
+        return FolioleCompanionMetaRecords.loadNumberCursor(databaseHelper.getWritableDatabase(), SYNC_STATE_PUSH_CURSOR_KEY);
     }
 
     static JSObject saveSyncStatePushCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncStatePushCursor(readNullableIntCursor(call));
+        return FolioleCompanionMetaRecords.saveNumberCursor(
+            databaseHelper.getWritableDatabase(),
+            SYNC_STATE_PUSH_CURSOR_KEY,
+            readNullableIntCursor(call)
+        );
+    }
+
+    static JSObject loadSyncNodeVersionCursor(FolioleCompanionDatabaseHelper databaseHelper) throws Exception {
+        return FolioleCompanionMetaRecords.loadJsonCursor(databaseHelper.getWritableDatabase(), SYNC_NODE_VERSION_CURSOR_KEY);
     }
 
     static JSObject saveSyncNodeVersionCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncNodeVersionCursor(call.getData().optJSONObject("cursor"));
+        return FolioleCompanionMetaRecords.saveJsonCursor(
+            databaseHelper.getWritableDatabase(),
+            SYNC_NODE_VERSION_CURSOR_KEY,
+            call.getData().optJSONObject("cursor")
+        );
+    }
+
+    static JSObject loadSyncNodeVersionPushCursor(FolioleCompanionDatabaseHelper databaseHelper) throws Exception {
+        return FolioleCompanionMetaRecords.loadJsonCursor(databaseHelper.getWritableDatabase(), SYNC_NODE_VERSION_PUSH_CURSOR_KEY);
     }
 
     static JSObject saveSyncNodeVersionPushCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncNodeVersionPushCursor(call.getData().optJSONObject("cursor"));
+        return FolioleCompanionMetaRecords.saveJsonCursor(
+            databaseHelper.getWritableDatabase(),
+            SYNC_NODE_VERSION_PUSH_CURSOR_KEY,
+            call.getData().optJSONObject("cursor")
+        );
+    }
+
+    static JSObject loadSyncReviewLogCursor(FolioleCompanionDatabaseHelper databaseHelper) throws Exception {
+        return FolioleCompanionMetaRecords.loadJsonCursor(databaseHelper.getWritableDatabase(), SYNC_REVIEW_LOG_CURSOR_KEY);
     }
 
     static JSObject saveSyncReviewLogCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncReviewLogCursor(call.getData().optJSONObject("cursor"));
+        return FolioleCompanionMetaRecords.saveJsonCursor(
+            databaseHelper.getWritableDatabase(),
+            SYNC_REVIEW_LOG_CURSOR_KEY,
+            call.getData().optJSONObject("cursor")
+        );
+    }
+
+    static JSObject loadSyncReviewLogPushCursor(FolioleCompanionDatabaseHelper databaseHelper) throws Exception {
+        return FolioleCompanionMetaRecords.loadJsonCursor(databaseHelper.getWritableDatabase(), SYNC_REVIEW_LOG_PUSH_CURSOR_KEY);
     }
 
     static JSObject saveSyncReviewLogPushCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncReviewLogPushCursor(call.getData().optJSONObject("cursor"));
+        return FolioleCompanionMetaRecords.saveJsonCursor(
+            databaseHelper.getWritableDatabase(),
+            SYNC_REVIEW_LOG_PUSH_CURSOR_KEY,
+            call.getData().optJSONObject("cursor")
+        );
     }
 
     static JSObject saveSyncPushAcks(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
