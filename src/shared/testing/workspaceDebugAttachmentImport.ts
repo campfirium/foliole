@@ -1,5 +1,4 @@
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import { getRuntimeInvoke } from '../platform/bridge';
+import { importClipboardImageAttachmentBytes } from '../platform/attachmentImports';
 
 export function createClipboardImportHandler() {
   return async ({ bytesBase64, mimeType, nodeId, originalName }: {
@@ -8,18 +7,12 @@ export function createClipboardImportHandler() {
     nodeId: string;
     originalName?: string;
   }) => {
-    const runtimeInvoke = getRuntimeInvoke();
-    if (!runtimeInvoke) {
-      return null;
-    }
-    const result = await runtimeInvoke(NATIVE_COMMANDS.importClipboardImageAttachment, {
+    const result = await importClipboardImageAttachmentBytes({
       bytesBase64,
       mimeType,
       nodeId,
       originalName: originalName ?? 'debug-image.png'
     });
-    return result && typeof result === 'object' && 'attachment_id' in result && typeof result.attachment_id === 'string'
-      ? result.attachment_id
-      : null;
+    return result?.status === 'imported' ? result.attachment_id : null;
   };
 }

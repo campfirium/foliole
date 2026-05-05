@@ -20,19 +20,28 @@ function encodeBytesToBase64(bytes: Uint8Array) {
   return btoa(binary);
 }
 
-export async function importClipboardImageAttachment(nodeId: string, file: File) {
+export async function importClipboardImageAttachmentBytes(args: {
+  bytesBase64: string;
+  mimeType: string;
+  nodeId: string;
+  originalName?: string;
+}) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
 
+  const result = await runtimeInvoke(NATIVE_COMMANDS.importClipboardImageAttachment, args);
+
+  return isImportResult(result) ? result : null;
+}
+
+export async function importClipboardImageAttachment(nodeId: string, file: File) {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const result = await runtimeInvoke(NATIVE_COMMANDS.importClipboardImageAttachment, {
+  return importClipboardImageAttachmentBytes({
     bytesBase64: encodeBytesToBase64(bytes),
     mimeType: file.type,
     nodeId,
     originalName: file.name
   });
-
-  return isImportResult(result) ? result : null;
 }

@@ -1,22 +1,11 @@
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 import { getRuntimeInvoke } from '../platform/bridge';
 
 import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
+import { type DebugNodeSeed, persistSeedNodes } from './workspaceDebugSeedPersistence';
 import { type WorkspaceSyncDebugApi, createWorkspaceSyncDebugApi } from './workspaceSyncDebugBridge';
-
-interface DebugNodeSeed {
-  anchorLink?: NodeAnchorLink | null;
-  content: string;
-  id: string;
-  imageRegions?: NodeImageRegionGroup[] | null;
-  kind?: 'folder' | 'item' | 'topic';
-  parentNodeId?: string | null;
-  reveal?: string | null;
-  title: string;
-}
 
 interface WorkspaceDebugApi {
   createTextClozeChild: (args: {
@@ -94,45 +83,6 @@ function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode
       }
     ])
   );
-}
-
-async function persistSeedNodes(nodes: DebugNodeSeed[]) {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return;
-  }
-
-  for (let index = 0; index < nodes.length; index += 1) {
-    const node = nodes[index];
-    const basePayload = {
-      anchorLink: node.anchorLink ?? null,
-      content: node.content,
-      createdAt: '2026-04-08T00:00:00.000Z',
-      desiredRetention: null,
-      hideTitleHeading: false,
-      imageRegions: node.imageRegions ?? null,
-      isTitleManual: true,
-      kind: node.kind ?? 'topic',
-      nodeId: node.id,
-      parentNodeId: node.parentNodeId ?? null,
-      position: index,
-      priority: null,
-      reading: null,
-      reveal: node.reveal ?? null,
-      title: node.title,
-      updatedAt: `2026-04-08T00:00:${String(index).padStart(2, '0')}.000Z`,
-      virtualFilter: null
-    };
-    const command =
-      basePayload.kind === 'folder'
-        ? NATIVE_COMMANDS.createFolder
-        : basePayload.kind === 'item'
-          ? NATIVE_COMMANDS.createItem
-          : NATIVE_COMMANDS.createTopic;
-    await runtimeInvoke(command, basePayload);
-  }
-
-  await runtimeInvoke(NATIVE_COMMANDS.replaceNodeOrder, { nodeIds: nodes.map((node) => node.id) });
 }
 
 function getExistingNodeState(nodeId: string) {

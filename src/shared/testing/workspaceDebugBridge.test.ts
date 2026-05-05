@@ -13,6 +13,9 @@ vi.mock('../../store/workspaceNodePreparation', () => ({
 vi.mock('../platform/bridge', () => ({
   getRuntimeInvoke
 }));
+vi.mock('../platform/runtimeInvoke', () => ({
+  getRuntimeInvoke
+}));
 
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -170,7 +173,17 @@ it('reads active node id and saved node view state through the debug bridge', as
 it('persists seeded debug nodes and imports debug attachments through the native runtime when available', async () => {
   const runtimeInvoke = vi.fn(async (command: string) => {
     if (command === 'import_clipboard_image_attachment') {
-      return { attachment_id: 'hash-1' };
+      return {
+        status: 'imported',
+        attachment_id: 'hash-1',
+        attachment_record: 'created',
+        created_at: '2026-04-09T00:00:00.000Z',
+        hash: 'hash-1',
+        mime_type: 'image/png',
+        original_name: 'debug-image.png',
+        size_bytes: 5,
+        stored_file: 'created'
+      };
     }
     return null;
   });
