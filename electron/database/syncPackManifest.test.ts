@@ -5,8 +5,11 @@ import { expect, it } from 'vitest';
 import {
   buildSyncPackManifest,
   isSyncPackObjectType,
+  isSyncPackPayloadObjectType,
+  isSyncPackStateObjectType,
   SYNC_PACK_OBJECT_TYPE_TABLES,
   SYNC_PACK_OBJECT_TYPES,
+  SYNC_PACK_PAYLOAD_OBJECT_TYPES,
   SYNC_PACK_TABLE_NAMES
 } from './syncPackManifest.js';
 
@@ -55,4 +58,22 @@ it('builds the pack manifest from the explicit table map', () => {
     ],
     to_state_seq: 4
   });
+});
+
+it('declares the stage one payload object inventory explicitly', () => {
+  expect([...SYNC_PACK_PAYLOAD_OBJECT_TYPES]).toEqual([
+    'attachment',
+    'external_folder',
+    'import_source',
+    'node_reading',
+    'node_review',
+    'pdf_page_text',
+    'setting',
+    'view_state'
+  ]);
+  expect(isSyncPackPayloadObjectType('node_review')).toBe(true);
+  expect(isSyncPackPayloadObjectType('node_attachments')).toBe(false);
+  expect(isSyncPackStateObjectType('node')).toBe(true);
+  expect(isSyncPackStateObjectType('view_state')).toBe(true);
+  expect(isSyncPackStateObjectType('import_run')).toBe(false);
 });
