@@ -8,7 +8,9 @@ import { appFloatingSurfaceClassName } from './FloatingSurface';
 import { cn } from '@/shared/lib/utils';
 import { onWindowKeydown } from '@/shared/platform/keyboard';
 
-const AppDropdownMenu = DropdownMenuPrimitive.Root;
+function AppDropdownMenu(props: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root>) {
+  return <DropdownMenuPrimitive.Root modal={false} {...props} />;
+}
 const AppDropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 const AppDropdownMenuPortal = DropdownMenuPrimitive.Portal;
 const AppDropdownMenuLabel = DropdownMenuPrimitive.Label;
@@ -26,7 +28,7 @@ type AppSelectionDropdownMenuItemProps = ButtonHTMLAttributes<HTMLButtonElement>
 function dropdownMenuContentClassName(className?: string) {
   return cn(
     appFloatingSurfaceClassName('popover'),
-    'z-50 min-w-[188px] overflow-hidden p-1 text-foreground',
+    'pointer-events-auto z-50 min-w-[188px] overflow-hidden p-1 text-foreground',
     className
   );
 }

@@ -13,6 +13,7 @@ interface AppListSurfaceProps {
     title: string;
   };
   header?: ReactNode;
+  headerSeparated?: boolean;
   isEmpty?: boolean;
 }
 
@@ -35,8 +36,11 @@ interface AppListItemProps {
   className?: string;
   disabled?: boolean;
   interactive?: boolean;
+  metaAfterSummary?: boolean;
   meta?: ReactNode;
   onClick?: () => void;
+  actionsSeparated?: boolean;
+  divided?: boolean;
   summaryClassName?: string;
   summary?: ReactNode;
   title: ReactNode;
@@ -44,13 +48,21 @@ interface AppListItemProps {
   type?: 'button' | 'submit' | 'reset';
 }
 
-export function AppListSurface({ ariaLabel, children, className, emptyState, header, isEmpty = false }: AppListSurfaceProps) {
+export function AppListSurface({
+  ariaLabel,
+  children,
+  className,
+  emptyState,
+  header,
+  headerSeparated = true,
+  isEmpty = false
+}: AppListSurfaceProps) {
   return (
     <section
       aria-label={ariaLabel}
       className={cn('flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-bg-panel', className)}
     >
-      {header ? <div className="border-b border-border px-4 py-3">{header}</div> : null}
+      {header ? <div className={cn('px-4 py-3', headerSeparated && 'border-b border-border')}>{header}</div> : null}
       {isEmpty ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-10">
           {emptyState ? <AppEmptyState description={emptyState.description} title={emptyState.title} /> : null}
@@ -91,8 +103,11 @@ export function AppListItem({
   className,
   disabled = false,
   interactive = true,
+  metaAfterSummary = false,
   meta,
   onClick,
+  actionsSeparated = true,
+  divided = true,
   summaryClassName,
   summary,
   title,
@@ -105,22 +120,28 @@ export function AppListItem({
     <Component
       aria-label={ariaLabel}
       className={cn(
-        'flex w-full flex-col gap-3 border-b border-border/70 px-4 py-4 text-left last:border-b-0',
+        'flex w-full flex-col gap-3 px-4 py-4 text-left',
+        divided && 'border-b border-border/70 last:border-b-0',
         interactive && 'transition-colors hover:bg-bg-elevated/80 focus-visible:bg-bg-elevated/80 focus-visible:outline-none',
         disabled && 'pointer-events-none opacity-50',
         className
       )}
       {...(interactive ? { disabled, onClick, type } : {})}
-    >
+      >
       <div className="flex items-start justify-between gap-5">
         <div className="min-w-0 flex-1">
           <div className="min-w-0 text-sm font-semibold leading-5 text-foreground">{title}</div>
-          {meta ? <div className="mt-1 min-w-0 text-xs leading-5 text-foreground/52">{meta}</div> : null}
+          {meta && !metaAfterSummary ? <div className="mt-1 min-w-0 text-xs leading-5 text-foreground/52">{meta}</div> : null}
           {summary ? <div className={cn('mt-2 min-w-0 text-sm leading-6 text-foreground/68', summaryClassName)}>{summary}</div> : null}
+          {meta && metaAfterSummary ? (
+            <div className={cn('min-w-0 text-xs leading-5 text-foreground/52', metaAfterSummary ? 'mt-3' : 'mt-1')}>
+              {meta}
+            </div>
+          ) : null}
         </div>
         {trailing ? <div className="w-36 shrink-0 text-right text-xs leading-5 text-foreground/56">{trailing}</div> : null}
       </div>
-      {actions ? <div className="mt-1 border-t border-border/50 pt-3">{actions}</div> : null}
+      {actions ? <div className={cn('mt-1 pt-3', actionsSeparated && 'border-t border-border/50')}>{actions}</div> : null}
     </Component>
   );
 }

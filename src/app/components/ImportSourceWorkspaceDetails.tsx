@@ -6,11 +6,12 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppEmptyState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { ImportOverviewPage } from './ImportOverviewPage';
 import { ImportSourceWorkspacePdfPage } from './ImportSourceWorkspacePdfPage';
 import { ImportSourceWorkspaceReadwiseBooksPage } from './ImportSourceWorkspaceReadwiseBooksPage';
 import { InboxImportLanding } from './InboxImportLanding';
 
-type ImportManagementPageId = 'inbox' | 'readwise-books' | 'readwise-articles' | 'pdf';
+type ImportManagementPageId = 'imports' | 'inbox' | 'readwise-books' | 'readwise-articles' | 'pdf';
 
 type ImportSourceWorkspaceDetailsProps = {
   open: boolean;
@@ -19,6 +20,11 @@ type ImportSourceWorkspaceDetailsProps = {
 };
 
 const importManagementPages = [
+  {
+    emptyDescription: 'Combined import content will appear here once the sources are available.',
+    id: 'imports',
+    title: 'Imports'
+  },
   {
     emptyDescription: 'Imported inbox content will appear here once the content view is wired in.',
     id: 'inbox',
@@ -62,14 +68,14 @@ function ImportSourceWorkspaceNavigation(props: {
 }) {
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-border/60 px-3 py-4">
-      <h2 className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.08em] text-foreground/55">Navigation</h2>
+      <h2 className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.08em] text-foreground/55">Imports</h2>
       <nav aria-label="Import management navigation" className="flex flex-col gap-1">
         {importManagementPages.map((page) => (
           <AppButton
             key={page.id}
             active={props.activePageId === page.id}
             aria-pressed={props.activePageId === page.id}
-            className="min-h-9"
+            className={page.id === 'imports' ? 'mb-2 min-h-9' : 'min-h-9 pl-5'}
             onClick={() => props.onSelect(page.id)}
             variant="list"
           >
@@ -93,7 +99,7 @@ function ImportSourceWorkspacePage({
   return (
     <section aria-label={`${page.title} page`} className="flex min-h-0 flex-1 flex-col px-6 pb-5 pt-2">
       {children ? (
-        <div className="app-scrollbar flex min-h-0 flex-1 overflow-auto">{children}</div>
+        <div className="flex min-h-0 flex-1">{children}</div>
       ) : (
         <div className="flex min-h-0 flex-1 items-center justify-center py-2">
           <AppEmptyState description={page.emptyDescription} title={`${page.title} page`} />
@@ -115,6 +121,14 @@ function ImportSourceWorkspacePageContent({
   pageId: ImportManagementPageId;
 }) {
   const nodesById = useWorkspaceStore((state) => state.nodesById);
+
+  if (pageId === 'imports') {
+    return (
+      <ImportSourceWorkspacePage pageId={pageId}>
+        <ImportOverviewPage onOpenChange={onOpenChange} onSelectNode={onSelectNode} open={open} />
+      </ImportSourceWorkspacePage>
+    );
+  }
 
   if (pageId === 'inbox') {
     return (
@@ -146,10 +160,10 @@ function ImportSourceWorkspacePageContent({
 export function ImportSourceWorkspaceDetails({ open, onOpenChange, onSelectNode }: ImportSourceWorkspaceDetailsProps) {
   const [activePageId, setActivePageId] = useState<ImportManagementPageId>(() => {
     const persisted = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.importManagementActivePage);
-    if (persisted === 'inbox' || persisted === 'readwise-books' || persisted === 'readwise-articles' || persisted === 'pdf') {
+    if (persisted === 'imports' || persisted === 'inbox' || persisted === 'readwise-books' || persisted === 'readwise-articles' || persisted === 'pdf') {
       return persisted;
     }
-    return 'inbox';
+    return 'imports';
   });
 
   useEffect(() => {

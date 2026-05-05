@@ -109,12 +109,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('starts on Inbox and marks the active navigation item', () => {
+it('starts on Imports and marks the active navigation item', async () => {
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
-  expect(screen.getByRole('button', { name: 'Inbox' })).toHaveAttribute('aria-pressed', 'true');
+  await waitFor(() => {
+    expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalled();
+    expect(loadRuntimePdfImportsInventory).toHaveBeenCalled();
+  });
+  expect(screen.getByRole('button', { name: 'Imports' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Inbox' })).toHaveAttribute('aria-pressed', 'false');
   expect(screen.getByRole('button', { name: 'Readwise Books' })).toHaveAttribute('aria-pressed', 'false');
-  expect(screen.getByLabelText('Inbox page')).toBeInTheDocument();
+  expect(screen.getByLabelText('Imports page')).toBeInTheDocument();
 });
 
 it('moves between readwise content pages from the left navigation', async () => {
@@ -180,11 +185,11 @@ it('reloads readwise books when reopening the import panel', async () => {
   await waitFor(() => {
     expect(screen.getByText('Book A')).toBeInTheDocument();
   });
-  expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalledTimes(1);
+  expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalledTimes(2);
 
   view.rerender(<ImportSourceWorkspace onOpenChange={() => undefined} open={false} />);
   view.rerender(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
   await waitFor(() => {
-    expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalledTimes(2);
+    expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalledTimes(3);
   });
 });

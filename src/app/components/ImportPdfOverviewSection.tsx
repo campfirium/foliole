@@ -23,7 +23,9 @@ export function PdfImportsInventorySection({
   return (
     <AppListSurface
       ariaLabel="PDF inventory"
+      className="border-0 bg-transparent"
       emptyState={{ description: 'No PDF imports discovered yet.', title: 'PDF inventory is empty' }}
+      headerSeparated={false}
       header={
         <AppListSectionHeader countLabel={`${items.length} items`} description={description} title="PDF inventory" />
       }

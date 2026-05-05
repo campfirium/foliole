@@ -3,7 +3,7 @@ import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImport
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
 import { AppButton, AppListItem, AppStatusBadge } from '../../shared/ui';
 
-import { renderImportDate, renderImportMeta, renderImportOpening } from './ImportNodeListBits';
+import { renderImportDate, renderImportMeta, renderImportOpening, renderImportTitle } from './ImportNodeListBits';
 import {
   buildImportNodePresentation
 } from './importNodePresentation';
@@ -135,6 +135,32 @@ function renderReadwiseBookTitle(input: {
   );
 }
 
+function renderReadwiseBookActions(input: {
+  book: RuntimeReadwiseBooksInventory['books'][number];
+  generatedNodeId: string | null;
+  isResetting: boolean;
+  onResetBookImport?: (input: { nodeId: string; title: string }) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap gap-2">
+        <AppStatusBadge
+          label={formatReadwiseAnnotationStatus(input.book.annotationStatus)}
+          tone={resolveReadwiseAnnotationTone(input.book.annotationStatus)}
+        />
+        <AppStatusBadge label={formatReadwiseImportStatus(input.book)} tone={resolveReadwiseImportTone(input.book)} />
+      </div>
+      <AppButton
+        disabled={!input.generatedNodeId || input.isResetting}
+        onClick={() => input.generatedNodeId && input.onResetBookImport?.({ nodeId: input.generatedNodeId, title: input.book.title })}
+        variant="ghost"
+      >
+        {input.isResetting ? 'Importing…' : 'Import'}
+      </AppButton>
+    </div>
+  );
+}
+
 export function ReadwiseBookInventoryItem({
   book,
   nodesById,
@@ -167,33 +193,23 @@ export function ReadwiseBookInventoryItem({
     title: presentation.title
   });
 
-  const actions = (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex flex-wrap gap-2">
-        <AppStatusBadge
-          label={formatReadwiseAnnotationStatus(book.annotationStatus)}
-          tone={resolveReadwiseAnnotationTone(book.annotationStatus)}
-        />
-        <AppStatusBadge label={formatReadwiseImportStatus(book)} tone={resolveReadwiseImportTone(book)} />
-      </div>
-      <AppButton
-        disabled={!generatedNodeId || isResetting}
-        onClick={() => generatedNodeId && onResetBookImport?.({ nodeId: generatedNodeId, title: book.title })}
-        variant="ghost"
-      >
-        {isResetting ? 'Importing…' : 'Import'}
-      </AppButton>
-    </div>
-  );
-
   return (
     <AppListItem
-      actions={actions}
+      actionsSeparated={false}
+      actions={renderReadwiseBookActions({
+        book,
+        generatedNodeId,
+        isResetting,
+        onResetBookImport
+      })}
+      className="gap-4 py-5"
+      divided={false}
       interactive={false}
+      metaAfterSummary
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
-      title={title}
-      trailing={renderImportDate(presentation.date, generatedNodeId ? 'Updated' : 'Scanned')}
+      title={renderImportTitle(title)}
+      trailing={renderImportDate(presentation.date, generatedNodeId ? 'Date saved' : 'Date imported')}
     />
   );
 }
@@ -219,17 +235,21 @@ export function PdfInventoryItem({
 
   return (
     <AppListItem
+      actionsSeparated={false}
       actions={
-        <div className="flex items-center justify-start gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AppStatusBadge label={formatPdfLoadedStatus(item)} tone={resolvePdfLoadedTone(item)} />
           <AppStatusBadge label={formatPdfRetrievalStatus(item)} tone={resolvePdfRetrievalTone(item)} />
         </div>
       }
+      className="gap-4 py-5"
+      divided={false}
       interactive={false}
+      metaAfterSummary
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
-      title={presentation.title}
-      trailing={renderImportDate(presentation.date, item.latestNodeId ? 'Updated' : 'Imported')}
+      title={renderImportTitle(presentation.title)}
+      trailing={renderImportDate(presentation.date, item.latestNodeId ? 'Date saved' : 'Date imported')}
     />
   );
 }

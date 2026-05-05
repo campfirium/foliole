@@ -1,0 +1,195 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import { loadRuntimePdfImportsInventory, type RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsBridge';
+import {
+  loadRuntimeReadwiseBooksInventory,
+  resetRuntimeReadwiseBookImport,
+  type RuntimeReadwiseBooksInventory
+} from '../../shared/platform/readwiseBooksBridge';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+import { useFormalImport } from '../hooks/useFormalImport';
+
+import { IMPORT_CATALOG_SORT_OPTIONS, type ImportCatalogSortKey } from './importCatalogOrdering';
+import { matchesImportSearch } from './importManagementSearch';
+import { useOverviewSorting } from './importOverviewSorting';
+import { applyResetReadwiseBookImportToWorkspace, selectReadwiseBookNode } from './importSourceWorkspaceReadwiseBooks';
+
+export const overviewSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
+export type OverviewSortKey = ImportCatalogSortKey;
+
+function useOverviewInventories(enabled: boolean) {
+  const [booksInventory, setBooksInventory] = useState<RuntimeReadwiseBooksInventory | null>(null);
+  const [pdfInventory, setPdfInventory] = useState<RuntimePdfImportsInventory | null>(null);
+  const refresh = useCallback(async () => {
+    const [books, pdf] = await Promise.all([loadRuntimeReadwiseBooksInventory(), loadRuntimePdfImportsInventory()]);
+    setBooksInventory(books);
+    setPdfInventory(pdf);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+    void refresh();
+  }, [enabled, refresh]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+    const handleFocus = () => {
+      void refresh();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [enabled, refresh]);
+
+  return { booksInventory, pdfInventory, refresh };
+}
+
+async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
+  const result = await resetRuntimeReadwiseBookImport(input.nodeId);
+  if (!result || result.status !== 'reset' || !result.node_id || result.content === null || !result.updated_at) {
+    throw new Error(`Could not import ${input.title}.`);
+  }
+
+  applyResetReadwiseBookImportToWorkspace({
+    content: result.content,
+    node_id: result.node_id,
+    removed_node_ids: result.removed_node_ids,
+    title: result.title ?? input.title,
+    updated_at: result.updated_at
+  });
+  await useWorkspaceStore.persist.rehydrate();
+  return result.node_id;
+}
+
+function useOverviewFilters(input: {
+  booksInventory: RuntimeReadwiseBooksInventory | null;
+  nodesById: Record<string, { title: string }>;
+  pdfInventory: RuntimePdfImportsInventory | null;
+  query: string;
+  recentRuns: ReturnType<typeof useFormalImport>['overview']['recentRuns'];
+}) {
+  const filteredInboxRuns = useMemo(
+    () =>
+      input.recentRuns.filter((entry) =>
+        matchesImportSearch(input.query, [
+          entry.sourceKind,
+          entry.sourceLocator,
+          entry.sourceName,
+          entry.resultStatus,
+          entry.failureReason,
+          entry.nodeId ? input.nodesById[entry.nodeId]?.title : null
+        ])
+      ),
+    [input.nodesById, input.query, input.recentRuns]
+  );
+  const filteredBooks = useMemo(
+    () =>
+      (input.booksInventory?.books ?? []).filter((book) =>
+        matchesImportSearch(input.query, [book.title, book.bookKey, book.importStatus, book.nodeStatus, book.annotationStatus])
+      ),
+    [input.booksInventory?.books, input.query]
+  );
+  const filteredPdfItems = useMemo(
+    () =>
+      (input.pdfInventory?.items ?? []).filter((item) =>
+        matchesImportSearch(input.query, [item.sourceName, item.sourceLocator, item.nodeStatus, item.pdfIndexStatus])
+      ),
+    [input.pdfInventory?.items, input.query]
+  );
+
+  return { filteredBooks, filteredInboxRuns, filteredPdfItems };
+}
+
+function useReadwiseBookActions(input: {
+  onOpenChange: (open: boolean) => void;
+  onSelectNode?: (nodeId: string) => void;
+  refresh: () => Promise<void>;
+}) {
+  const [resettingNodeId, setResettingNodeId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState('');
+
+  const handleOpenBookNode = useCallback(
+    (nodeId: string) => {
+      selectReadwiseBookNode(nodeId, input.onSelectNode);
+      input.onOpenChange(false);
+    },
+    [input.onOpenChange, input.onSelectNode]
+  );
+  const handleReimportBook = useCallback(
+    async (book: { nodeId: string; title: string }) => {
+      setResettingNodeId(book.nodeId);
+      try {
+        const nodeId = await runReadwiseBookReset(book);
+        setActionMessage('');
+        handleOpenBookNode(nodeId);
+      } catch {
+        setActionMessage(`Could not import ${book.title}.`);
+      } finally {
+        setResettingNodeId(null);
+        await input.refresh();
+      }
+    },
+    [handleOpenBookNode, input]
+  );
+
+  return { actionMessage, handleOpenBookNode, handleReimportBook, resettingNodeId };
+}
+
+export function useImportOverviewState(input: {
+  onOpenChange: (open: boolean) => void;
+  onSelectNode?: (nodeId: string) => void;
+  open: boolean;
+}) {
+  const formalImport = useFormalImport();
+  const nodesById = useWorkspaceStore((state) => state.nodesById);
+  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const { booksInventory, pdfInventory, refresh } = useOverviewInventories(input.open);
+  const [query, setQuery] = useState('');
+  const [sortKey, setSortKey] = useState<OverviewSortKey>('dateSaved');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const filters = useOverviewFilters({
+    booksInventory,
+    nodesById,
+    pdfInventory,
+    query,
+    recentRuns: formalImport.overview.recentRuns
+  });
+  const sorting = useOverviewSorting({
+    booksInventory,
+    filteredBooks: filters.filteredBooks,
+    filteredInboxRuns: filters.filteredInboxRuns,
+    filteredPdfItems: filters.filteredPdfItems,
+    nodeViewById,
+    nodesById,
+    sortDirection,
+    sortKey
+  });
+  const actions = useReadwiseBookActions({
+    onOpenChange: input.onOpenChange,
+    onSelectNode: input.onSelectNode,
+    refresh
+  });
+
+  return {
+    actionMessage: actions.actionMessage,
+    booksInventory,
+    handleOpenBookNode: actions.handleOpenBookNode,
+    handleReimportBook: actions.handleReimportBook,
+    nodesById,
+    query,
+    resettingNodeId: actions.resettingNodeId,
+    setQuery,
+    setSortDirection,
+    setSortKey,
+    sortDirection,
+    sortKey,
+    sortedBooks: sorting.sortedBooks,
+    sortedInboxNodes: sorting.sortedInboxNodes,
+    sortedInboxRuns: sorting.sortedInboxRuns,
+    sortedPdfItems: sorting.sortedPdfItems,
+    totalVisibleCount: sorting.totalVisibleCount
+  };
+}

@@ -4,7 +4,7 @@ import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwi
 import { AppButton, AppListItem, AppListSectionHeader, AppListSurface, AppStatusBadge } from '../../shared/ui';
 
 import { ReadwiseBookInventoryItem } from './ImportInventoryListItems';
-import { renderImportDate, renderImportMeta, renderImportOpening } from './ImportNodeListBits';
+import { renderImportDate, renderImportMeta, renderImportOpening, renderImportTitle } from './ImportNodeListBits';
 import {
   buildImportNodePresentation
 } from './importNodePresentation';
@@ -49,7 +49,7 @@ function resolveDetail(entry: RuntimeTextImportResult) {
   return `${entry.sourceKind} · ${entry.sourceLocator}`;
 }
 
-function collectRecentInboxEntries(entries: RuntimeTextImportResult[]) {
+export function collectRecentInboxEntries(entries: RuntimeTextImportResult[]) {
   const seenNodeIds = new Set<string>();
   return entries.filter((entry) => {
     if (!entry.nodeId || seenNodeIds.has(entry.nodeId)) {
@@ -60,11 +60,25 @@ function collectRecentInboxEntries(entries: RuntimeTextImportResult[]) {
   });
 }
 
-function renderImportTrailing(date: string, prefix: string, status: RuntimeTextImportResult['resultStatus'], tone: ReturnType<typeof resolveTone>) {
+function renderImportActions(input: {
+  canOpenNode?: boolean;
+  nodeId?: string | null;
+  onOpenNode: (nodeId: string) => void;
+  status: RuntimeTextImportResult['resultStatus'];
+  tone: ReturnType<typeof resolveTone>;
+}) {
+  const openNodeId = input.canOpenNode ? (input.nodeId ?? null) : null;
+
   return (
-    <div className="flex flex-col items-end gap-2">
-      {renderImportDate(date, prefix)}
-      <AppStatusBadge label={status} tone={tone} />
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap gap-2">
+        <AppStatusBadge label={input.status} tone={input.tone} />
+      </div>
+      {openNodeId ? (
+        <AppButton onClick={() => input.onOpenNode(openNodeId)} variant="ghost">
+          Open node
+        </AppButton>
+      ) : null}
     </div>
   );
 }
@@ -81,7 +95,7 @@ function buildRunPresentation(entry: RuntimeTextImportResult, nodesById: Record<
   });
 }
 
-function InboxImportedNodeRow({
+export function InboxImportedNodeRow({
   entry,
   nodesById,
   onOpenNode
@@ -98,56 +112,21 @@ function InboxImportedNodeRow({
 
   return (
     <AppListItem
-      actions={
-        <AppButton onClick={() => onOpenNode(entry.nodeId!)} variant="ghost">
-          Open node
-        </AppButton>
-      }
+      actionsSeparated={false}
+      actions={renderImportActions({ canOpenNode: true, nodeId: entry.nodeId, onOpenNode, status: entry.resultStatus, tone: resolveTone(entry) })}
+      className="gap-4 py-5"
+      divided={false}
       interactive={false}
+      metaAfterSummary
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
-      title={presentation.title}
-      trailing={renderImportTrailing(presentation.date, 'Updated', entry.resultStatus, resolveTone(entry))}
+      title={renderImportTitle(presentation.title)}
+      trailing={renderImportDate(presentation.date, 'Date saved')}
     />
   );
 }
 
-export function InboxImportedNodesSection({
-  entries,
-  nodesById,
-  onOpenNode
-}: {
-  entries: RuntimeTextImportResult[];
-  nodesById: Record<string, Node>;
-  onOpenNode: (nodeId: string) => void;
-}) {
-  const recentNodes = collectRecentInboxEntries(entries);
-
-  return (
-    <AppListSurface
-      ariaLabel="Inbox inventory"
-      emptyState={{ description: 'No imported Inbox children yet.', title: 'Inbox inventory is empty' }}
-      header={
-        <AppListSectionHeader
-          countLabel={`${recentNodes.length} items`}
-          description="Recent imports stay reachable from Inbox before you sort them into the main tree."
-          title="Inbox inventory"
-        />
-      }
-      isEmpty={recentNodes.length === 0}
-    >
-      {recentNodes.length > 0 ? (
-        <div className="flex flex-col">
-          {recentNodes.map((entry) => (
-            <InboxImportedNodeRow entry={entry} key={entry.importId} nodesById={nodesById} onOpenNode={onOpenNode} />
-          ))}
-        </div>
-      ) : null}
-    </AppListSurface>
-  );
-}
-
-function InboxRecentRunRow({
+export function InboxRecentRunRow({
   entry,
   nodesById,
   onOpenNode
@@ -161,50 +140,17 @@ function InboxRecentRunRow({
 
   return (
     <AppListItem
-      actions={
-        canOpenNode ? (
-          <AppButton onClick={() => onOpenNode(entry.nodeId!)} variant="ghost">
-            Open node
-          </AppButton>
-        ) : undefined
-      }
+      actionsSeparated={false}
+      actions={renderImportActions({ canOpenNode, nodeId: entry.nodeId, onOpenNode, status: entry.resultStatus, tone: resolveTone(entry) })}
+      className="gap-4 py-5"
+      divided={false}
       interactive={false}
+      metaAfterSummary
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
-      title={presentation.title}
-      trailing={renderImportTrailing(presentation.date, canOpenNode ? 'Updated' : 'Imported', entry.resultStatus, resolveTone(entry))}
+      title={renderImportTitle(presentation.title)}
+      trailing={renderImportDate(presentation.date, canOpenNode ? 'Date saved' : 'Date imported')}
     />
-  );
-}
-
-export function InboxRecentRunsSection({
-  entries,
-  nodesById,
-  onOpenNode
-}: {
-  entries: RuntimeTextImportResult[];
-  nodesById: Record<string, Node>;
-  onOpenNode: (nodeId: string) => void;
-}) {
-  return (
-    <AppListSurface
-      ariaLabel="Recent import runs"
-      emptyState={{ description: 'No import result recorded yet.', title: 'Recent import runs are empty' }}
-      header={
-        <AppListSectionHeader
-          countLabel={`${entries.length} items`}
-          description="The latest import outcomes stay visible here, including failures and reused files."
-          title="Recent import runs"
-        />
-      }
-      isEmpty={entries.length === 0}
-    >
-      <div className="flex flex-col">
-        {entries.map((entry) => (
-          <InboxRecentRunRow entry={entry} key={entry.importId} nodesById={nodesById} onOpenNode={onOpenNode} />
-        ))}
-      </div>
-    </AppListSurface>
   );
 }
 
@@ -229,7 +175,9 @@ export function ReadwiseBooksInventorySection({
   return (
     <AppListSurface
       ariaLabel="Books inventory"
+      className="border-0 bg-transparent"
       emptyState={{ description: 'No books discovered yet.', title: 'Books inventory is empty' }}
+      headerSeparated={false}
       header={
         <AppListSectionHeader countLabel={`${books.length} items`} description={description} title="Books inventory" />
       }
@@ -246,6 +194,45 @@ export function ReadwiseBooksInventorySection({
             scannedAt={formatImportTime(inventory?.scannedAt ?? '')}
             resettingNodeId={resettingNodeId}
           />
+        ))}
+      </div>
+    </AppListSurface>
+  );
+}
+
+export function InboxImportsSection({
+  entries,
+  nodesById,
+  onOpenNode
+}: {
+  entries: RuntimeTextImportResult[];
+  nodesById: Record<string, Node>;
+  onOpenNode: (nodeId: string) => void;
+}) {
+  const recentNodes = collectRecentInboxEntries(entries);
+  const itemCount = recentNodes.length + entries.length;
+
+  return (
+    <AppListSurface
+      ariaLabel="Inbox imports list"
+      className="border-0 bg-transparent"
+      emptyState={{ description: 'No imported Inbox children or recent runs yet.', title: 'Inbox imports are empty' }}
+      headerSeparated={false}
+      header={
+        <AppListSectionHeader
+          countLabel={`${itemCount} items`}
+          description="Imported nodes and recent outcomes stay together here so the latest inbox activity reads as one continuous list."
+          title="Inbox imports"
+        />
+      }
+      isEmpty={itemCount === 0}
+    >
+      <div className="flex flex-col gap-3 px-1 py-1">
+        {recentNodes.map((entry) => (
+          <InboxImportedNodeRow entry={entry} key={`linked-${entry.importId}`} nodesById={nodesById} onOpenNode={onOpenNode} />
+        ))}
+        {entries.map((entry) => (
+          <InboxRecentRunRow entry={entry} key={`run-${entry.importId}`} nodesById={nodesById} onOpenNode={onOpenNode} />
         ))}
       </div>
     </AppListSurface>

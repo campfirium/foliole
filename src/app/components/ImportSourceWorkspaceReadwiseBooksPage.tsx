@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   loadRuntimeReadwiseBooksInventory,
@@ -7,13 +7,11 @@ import {
 } from '../../shared/platform/readwiseBooksBridge';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { ImportCatalogLayout } from './ImportCatalogLayout';
+import { IMPORT_CATALOG_SORT_OPTIONS, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
+import { ReadwiseBookInventoryItem } from './ImportInventoryListItems';
 import { matchesImportSearch } from './importManagementSearch';
-import { ImportManagementSearchBar } from './ImportManagementSearchBar';
-import { ReadwiseBooksInventorySection } from './ImportOverviewSections';
-import {
-  applyResetReadwiseBookImportToWorkspace,
-  selectReadwiseBookNode
-} from './importSourceWorkspaceReadwiseBooks';
+import { applyResetReadwiseBookImportToWorkspace, selectReadwiseBookNode } from './importSourceWorkspaceReadwiseBooks';
 
 function useReadwiseBooksInventoryState(enabled: boolean) {
   const [booksInventory, setBooksInventory] = useState<RuntimeReadwiseBooksInventory | null>(null);
@@ -61,7 +59,10 @@ async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
   return result.node_id;
 }
 
-function filterBooksInventory(query: string, booksInventory: RuntimeReadwiseBooksInventory | null) {
+const readwiseSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
+type ReadwiseSortKey = ImportCatalogSortKey;
+
+export function filterBooksInventory(query: string, booksInventory: RuntimeReadwiseBooksInventory | null) {
   if (!booksInventory) {
     return null;
   }
@@ -80,28 +81,134 @@ function filterBooksInventory(query: string, booksInventory: RuntimeReadwiseBook
   };
 }
 
-export function ImportSourceWorkspaceReadwiseBooksPage({
-  open,
-  onOpenChange,
-  onSelectNode
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSelectNode?: (nodeId: string) => void;
-}) {
-  const { booksInventory, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
-  const nodesById = useWorkspaceStore((state) => state.nodesById);
-  const [resettingNodeId, setResettingNodeId] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState('');
+export function sortBooks(
+  books: RuntimeReadwiseBooksInventory['books'],
+  sortKey: ReadwiseSortKey,
+  sortDirection: 'asc' | 'desc',
+  input: {
+    nodeViewById?: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById'];
+    scannedAt: string;
+  }
+) {
+  return sortImportCatalogItems(
+    books.map((book) => ({
+      book,
+      sortLastOpened: resolveImportLastOpened(book.generatedNodeId, input.nodeViewById ?? {}),
+      sortSaved: input.scannedAt,
+      sortTitle: book.title
+    })),
+    sortKey,
+    sortDirection
+  ).map((entry) => entry.book);
+}
+
+function formatCountLabel(filteredCount: number, totalCount: number) {
+  return filteredCount === totalCount ? String(totalCount) : `${filteredCount} / ${totalCount}`;
+}
+
+function useReadwiseBookCatalogState(
+  booksInventory: RuntimeReadwiseBooksInventory | null,
+  nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
+) {
   const [query, setQuery] = useState('');
-  const handleOpenBookNode = useCallback(
-    (nodeId: string) => {
-      selectReadwiseBookNode(nodeId, onSelectNode);
-      onOpenChange(false);
-    },
-    [onOpenChange, onSelectNode]
+  const [sortKey, setSortKey] = useState<ReadwiseSortKey>('dateSaved');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const filteredInventory = filterBooksInventory(query, booksInventory);
+  const filteredBooks = useMemo(
+    () => sortBooks(filteredInventory?.books ?? [], sortKey, sortDirection, { nodeViewById, scannedAt: booksInventory?.scannedAt ?? '' }),
+    [booksInventory?.scannedAt, filteredInventory?.books, nodeViewById, sortDirection, sortKey]
   );
 
+  return {
+    countLabel: formatCountLabel(filteredBooks.length, booksInventory?.books.length ?? 0),
+    filteredBooks,
+    query,
+    setQuery,
+    setSortDirection,
+    setSortKey,
+    sortDirection,
+    sortKey
+  };
+}
+
+function ReadwiseBooksCatalogBody(props: {
+  books: RuntimeReadwiseBooksInventory['books'];
+  nodesById: ReturnType<typeof useWorkspaceStore.getState>['nodesById'];
+  onOpenBookNode: (nodeId: string) => void;
+  onResetBookImport: (input: { nodeId: string; title: string }) => void;
+  resettingNodeId: string | null;
+  scannedAt: string;
+}) {
+  return props.books.map((book) => (
+    <ReadwiseBookInventoryItem
+      book={book}
+      key={book.bookKey}
+      nodesById={props.nodesById}
+      onOpenBookNode={props.onOpenBookNode}
+      onResetBookImport={props.onResetBookImport}
+      resettingNodeId={props.resettingNodeId}
+      scannedAt={props.scannedAt}
+    />
+  ));
+}
+
+function ReadwiseBooksCatalogPanel(props: {
+  books: RuntimeReadwiseBooksInventory['books'];
+  countLabel: string;
+  nodesById: ReturnType<typeof useWorkspaceStore.getState>['nodesById'];
+  onChangeQuery: (value: string) => void;
+  onChangeSortDirection: (sortDirection: 'asc' | 'desc') => void;
+  onChangeSortKey: (value: string) => void;
+  onOpenBookNode: (nodeId: string) => void;
+  onResetBookImport: (input: { nodeId: string; title: string }) => void;
+  query: string;
+  resettingNodeId: string | null;
+  scannedAt: string;
+  sortDirection: 'asc' | 'desc';
+  sortKey: ReadwiseSortKey;
+}) {
+  return (
+    <ImportCatalogLayout
+      countLabel={props.countLabel}
+      emptyState={{ description: 'No books discovered yet.', title: 'Readwise Books is empty' }}
+      hasItems={props.books.length > 0}
+      onChangeQuery={props.onChangeQuery}
+      onChangeSortDirection={props.onChangeSortDirection}
+      onChangeSortKey={props.onChangeSortKey}
+      query={props.query}
+      searchLabel="Search imported books"
+      searchPlaceholder="Search in this folder"
+      sortDirection={props.sortDirection}
+      sortKey={props.sortKey}
+      sortOptions={[...readwiseSortOptions]}
+      title="Readwise Books"
+    >
+      <ReadwiseBooksCatalogBody
+        books={props.books}
+        nodesById={props.nodesById}
+        onOpenBookNode={props.onOpenBookNode}
+        onResetBookImport={props.onResetBookImport}
+        resettingNodeId={props.resettingNodeId}
+        scannedAt={props.scannedAt}
+      />
+    </ImportCatalogLayout>
+  );
+}
+
+function useReadwiseBookActions(props: {
+  onOpenChange: (open: boolean) => void;
+  onSelectNode?: (nodeId: string) => void;
+  refreshBooksInventory: () => Promise<void>;
+}) {
+  const [resettingNodeId, setResettingNodeId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState('');
+  const handleOpenBookNode = useCallback(
+    (nodeId: string) => {
+      selectReadwiseBookNode(nodeId, props.onSelectNode);
+      props.onOpenChange(false);
+    },
+    [props.onOpenChange, props.onSelectNode]
+  );
   const handleReimportBook = useCallback(
     async (input: { nodeId: string; title: string }) => {
       setResettingNodeId(input.nodeId);
@@ -113,32 +220,52 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
         setActionMessage(`Could not import ${input.title}.`);
       } finally {
         setResettingNodeId(null);
-        await refreshBooksInventory();
+        await props.refreshBooksInventory();
       }
     },
-    [handleOpenBookNode, refreshBooksInventory]
+    [handleOpenBookNode, props.refreshBooksInventory]
   );
-  const filteredInventory = filterBooksInventory(query, booksInventory);
-  const filteredCount = filteredInventory?.books.length ?? 0;
+
+  return { actionMessage, handleOpenBookNode, handleReimportBook, resettingNodeId };
+}
+
+export function ImportSourceWorkspaceReadwiseBooksPage({
+  open,
+  onOpenChange,
+  onSelectNode
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelectNode?: (nodeId: string) => void;
+}) {
+  const { booksInventory, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
+  const nodesById = useWorkspaceStore((state) => state.nodesById);
+  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const catalog = useReadwiseBookCatalogState(booksInventory, nodeViewById);
+  const actions = useReadwiseBookActions({ onOpenChange, onSelectNode, refreshBooksInventory });
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <ImportManagementSearchBar
-        countLabel={`${filteredCount} matches`}
-        onChange={setQuery}
-        placeholder="Search imported books"
-        value={query}
-      />
-      <ReadwiseBooksInventorySection
-        inventory={filteredInventory}
-        nodesById={nodesById}
-        onOpenBookNode={handleOpenBookNode}
-        onResetBookImport={handleReimportBook}
-        resettingNodeId={resettingNodeId}
-      />
-      <p aria-live="polite" className="px-1 text-xs text-foreground/65">
-        {actionMessage}
-      </p>
+    <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
+      <div className="flex w-full flex-col gap-3">
+        <ReadwiseBooksCatalogPanel
+          books={catalog.filteredBooks}
+          countLabel={catalog.countLabel}
+          nodesById={nodesById}
+          onChangeQuery={catalog.setQuery}
+          onChangeSortDirection={catalog.setSortDirection}
+          onChangeSortKey={(value) => catalog.setSortKey(value as ReadwiseSortKey)}
+          onOpenBookNode={actions.handleOpenBookNode}
+          onResetBookImport={actions.handleReimportBook}
+          query={catalog.query}
+          resettingNodeId={actions.resettingNodeId}
+          scannedAt={(booksInventory?.scannedAt ?? '').replace('T', ' ').slice(0, 16)}
+          sortDirection={catalog.sortDirection}
+          sortKey={catalog.sortKey}
+        />
+        <p aria-live="polite" className="px-1 text-xs text-foreground/65">
+          {actions.actionMessage}
+        </p>
+      </div>
     </div>
   );
 }

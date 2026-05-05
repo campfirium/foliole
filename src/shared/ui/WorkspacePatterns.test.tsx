@@ -83,6 +83,13 @@ it('renders list surfaces with shared header, rows, and empty state', () => {
   expect(screen.getByText('Nothing to review yet.')).toBeInTheDocument();
 });
 
+it('renders list item meta after the summary when requested', () => {
+  render(<AppListItem interactive={false} meta="Path meta" metaAfterSummary summary="Opening summary" title="Entry title" />);
+
+  const rowText = screen.getByText('Entry title').parentElement?.parentElement?.textContent ?? '';
+  expect(rowText.indexOf('Opening summary')).toBeLessThan(rowText.indexOf('Path meta'));
+});
+
 it('renders shared list section headers with title, description, count, and toolbar', () => {
   render(
     <AppListSectionHeader countLabel="6 items" description="Shared section description." title="Shared section" toolbar={<span>Toolbar row</span>} />

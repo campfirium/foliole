@@ -95,16 +95,14 @@ beforeEach(() => {
   });
 });
 
-it('keeps Inbox focused on a single inventory page and recent run list', () => {
+it('keeps Inbox focused on a single continuous imports list', () => {
   render(<InboxImportLanding nodesById={{}} onSelectNode={() => undefined} />);
 
-  expect(screen.getByText('Inbox imports')).toBeInTheDocument();
-  expect(screen.getByText('Review imported files, source paths, and recent outcomes here before moving content deeper into the workspace.')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { level: 2, name: 'Inbox inventory' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { level: 2, name: 'Recent import runs' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
+  expect(screen.getByRole('searchbox', { name: 'Search inbox imports' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort imports by Date saved' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Books inventory' })).not.toBeInTheDocument();
-  expect(screen.getByText('No imported Inbox children yet.')).toBeInTheDocument();
-  expect(screen.getByText('No import result recorded yet.')).toBeInTheDocument();
+  expect(screen.getByText('No imported Inbox children or recent runs yet.')).toBeInTheDocument();
 });
 
 it('shows recent inbox items and lets the user open linked nodes from both lists', () => {
@@ -130,6 +128,7 @@ it('shows recent inbox items and lets the user open linked nodes from both lists
   render(<InboxImportLanding nodesById={LINKED_NODES} onSelectNode={onSelectNode} />);
 
   expect(screen.getByText('1 linked nodes · 3 recent runs')).toBeInTheDocument();
+  expect(screen.getByText('4')).toBeInTheDocument();
   expect(screen.getAllByText('Essay node')).toHaveLength(3);
   expect(screen.getAllByText('markdown · /imports/essay.md')).toHaveLength(2);
   expect(screen.getAllByText('Useful body text')).toHaveLength(3);
@@ -165,7 +164,7 @@ it('filters inbox imports through the shared search field', () => {
 
   render(<InboxImportLanding nodesById={LINKED_NODES} onSelectNode={() => undefined} />);
 
-  fireEvent.change(screen.getByRole('textbox', { name: 'Search inbox imports' }), { target: { value: 'failure' } });
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search inbox imports' }), { target: { value: 'failure' } });
 
   expect(screen.getByText('0 linked nodes · 1 recent runs')).toBeInTheDocument();
   expect(screen.queryByText('Essay node')).not.toBeInTheDocument();

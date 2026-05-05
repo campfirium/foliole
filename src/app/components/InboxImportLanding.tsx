@@ -1,11 +1,17 @@
 import { useMemo, useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useFormalImport } from '../hooks/useFormalImport';
 
+import { ImportCatalogLayout } from './ImportCatalogLayout';
+import { IMPORT_CATALOG_SORT_OPTIONS, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
 import { matchesImportSearch } from './importManagementSearch';
-import { ImportManagementSearchBar } from './ImportManagementSearchBar';
-import { InboxImportedNodesSection, InboxRecentRunsSection } from './ImportOverviewSections';
+import {
+  collectRecentInboxEntries,
+  InboxImportedNodeRow,
+  InboxRecentRunRow
+} from './ImportOverviewSections';
 
 function countLinkedNodes(nodeIds: Array<string | null>, nodesById: Record<string, Node>) {
   const linkedNodeIds = new Set<string>();
@@ -30,35 +36,70 @@ function filterRecentRuns(query: string, nodesById: Record<string, Node>, runs: 
   );
 }
 
-function InboxImportsHeader({
-  onChangeQuery,
-  query,
-  recentRunCount,
-  importedNodeCount
-}: {
-  onChangeQuery: (value: string) => void;
-  query: string;
-  recentRunCount: number;
-  importedNodeCount: number;
-}) {
-  return (
-    <section aria-label="Inbox imports overview" className="border-b border-border/70 px-1 pb-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-foreground/52">Import management</p>
-      <h1 className="mt-2 text-lg font-semibold text-foreground">Inbox imports</h1>
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground/68">
-        Review imported files, source paths, and recent outcomes here before moving content deeper into the workspace.
-      </p>
-      <p className="mt-3 text-xs text-foreground/56">{importedNodeCount} linked nodes · {recentRunCount} recent runs</p>
-      <div className="mt-4">
-        <ImportManagementSearchBar
-          countLabel={`${recentRunCount} matches`}
-          onChange={onChangeQuery}
-          placeholder="Search inbox imports"
-          value={query}
-        />
-      </div>
-    </section>
+const inboxSortOptions = IMPORT_CATALOG_SORT_OPTIONS;
+type InboxSortKey = ImportCatalogSortKey;
+
+function formatCountLabel(filteredCount: number, totalCount: number) {
+  return filteredCount === totalCount ? String(totalCount) : `${filteredCount} / ${totalCount}`;
+}
+
+function useInboxCatalogState(nodesById: Record<string, Node>) {
+  const formalImport = useFormalImport();
+  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const [query, setQuery] = useState('');
+  const [sortKey, setSortKey] = useState<InboxSortKey>('dateSaved');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const filteredRecentRuns = useMemo(
+    () => filterRecentRuns(query, nodesById, formalImport.overview.recentRuns),
+    [formalImport.overview.recentRuns, nodesById, query]
   );
+  const recentNodes = useMemo(() => collectRecentInboxEntries(filteredRecentRuns), [filteredRecentRuns]);
+  const visibleItems = useMemo(
+    () =>
+      sortImportCatalogItems(
+        [
+          ...recentNodes.map((entry) => ({
+            entry,
+            key: `linked-${entry.importId}`,
+            kind: 'linked' as const,
+            sortLastOpened: resolveImportLastOpened(entry.nodeId, nodeViewById),
+            sortSaved: entry.importedAt,
+            sortTitle: nodesById[entry.nodeId!]?.title ?? entry.sourceName
+          })),
+          ...filteredRecentRuns.map((entry) => ({
+            entry,
+            key: `run-${entry.importId}`,
+            kind: 'run' as const,
+            sortLastOpened: resolveImportLastOpened(entry.nodeId, nodeViewById),
+            sortSaved: entry.importedAt,
+            sortTitle: entry.nodeId ? nodesById[entry.nodeId]?.title ?? entry.sourceName : entry.sourceName
+          }))
+        ],
+        sortKey,
+        sortDirection
+      ),
+    [filteredRecentRuns, nodeViewById, nodesById, recentNodes, sortDirection, sortKey]
+  );
+
+  return {
+    countLabel: formatCountLabel(
+      visibleItems.length,
+      formalImport.overview.recentRuns.length + collectRecentInboxEntries(formalImport.overview.recentRuns).length
+    ),
+    filteredRecentRuns,
+    query,
+    recentRunCount: filteredRecentRuns.length,
+    setQuery,
+    setSortDirection,
+    setSortKey,
+    sortDirection,
+    sortKey,
+    totalLinkedNodes: countLinkedNodes(
+      filteredRecentRuns.map((entry) => entry.nodeId),
+      nodesById
+    ),
+    visibleItems
+  };
 }
 
 export function InboxImportLanding({
@@ -68,33 +109,34 @@ export function InboxImportLanding({
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
 }) {
-  const formalImport = useFormalImport();
-  const [query, setQuery] = useState('');
-  const filteredRecentRuns = useMemo(
-    () => filterRecentRuns(query, nodesById, formalImport.overview.recentRuns),
-    [formalImport.overview.recentRuns, nodesById, query]
-  );
-  const importedNodeCount = countLinkedNodes(
-    filteredRecentRuns.map((entry) => entry.nodeId),
-    nodesById
-  );
-  const recentRunCount = filteredRecentRuns.length;
+  const state = useInboxCatalogState(nodesById);
 
   return (
-    <div className="app-scrollbar flex min-h-0 flex-1 justify-center overflow-auto">
-      <div className="flex w-full max-w-[min(100%,var(--document-max-width))] flex-col gap-4">
-        <InboxImportsHeader importedNodeCount={importedNodeCount} onChangeQuery={setQuery} query={query} recentRunCount={recentRunCount} />
-        <InboxImportedNodesSection
-          entries={filteredRecentRuns}
-          nodesById={nodesById}
-          onOpenNode={onSelectNode}
-        />
-        <InboxRecentRunsSection
-          entries={filteredRecentRuns}
-          nodesById={nodesById}
-          onOpenNode={onSelectNode}
-        />
-      </div>
+    <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
+      <ImportCatalogLayout
+        countLabel={state.countLabel}
+        emptyState={{ description: 'No imported Inbox children or recent runs yet.', title: 'Inbox imports are empty' }}
+        hasItems={state.visibleItems.length > 0}
+        onChangeQuery={state.setQuery}
+        onChangeSortDirection={state.setSortDirection}
+        onChangeSortKey={(value) => state.setSortKey(value as InboxSortKey)}
+        query={state.query}
+        searchLabel="Search inbox imports"
+        searchPlaceholder="Search in imports"
+        sortDirection={state.sortDirection}
+        sortKey={state.sortKey}
+        sortOptions={[...inboxSortOptions]}
+        title="Inbox"
+      >
+        {state.visibleItems.map((item) =>
+          item.kind === 'linked' ? (
+            <InboxImportedNodeRow entry={item.entry} key={item.key} nodesById={nodesById} onOpenNode={onSelectNode} />
+          ) : (
+            <InboxRecentRunRow entry={item.entry} key={item.key} nodesById={nodesById} onOpenNode={onSelectNode} />
+          )
+        )}
+      </ImportCatalogLayout>
+      <p className="sr-only">{state.totalLinkedNodes} linked nodes · {state.recentRunCount} recent runs</p>
     </div>
   );
 }

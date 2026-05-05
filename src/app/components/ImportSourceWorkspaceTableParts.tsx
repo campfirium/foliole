@@ -1,12 +1,14 @@
 import { Copy, FolderOpen, X } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { importActionOptions } from '../../../lib/core/import/importSourceActions';
 import { AppButton } from '../../shared/ui';
 
-import { importSourceSelectClassName, type DraftImportSource } from './importSourceWorkspaceModel';
-
-export const rowGridClassName =
-  'grid grid-cols-[minmax(118px,0.9fr)_minmax(118px,0.9fr)_92px_110px_minmax(180px,0.72fr)] gap-2';
+import {
+  formatHighlightModeLabel,
+  importSourceSelectClassName,
+  type DraftImportSource
+} from './importSourceWorkspaceModel';
 
 function compactPathLabel(path: string, emptyLabel: string) {
   if (path.trim().length === 0) {
@@ -20,11 +22,40 @@ function resolveFolderPathTooltip(path: string) {
   return path.trim().length > 0 ? path : undefined;
 }
 
-export function ColumnHeader({ title }: { title: string }) {
+function SourceField({
+  children,
+  label
+}: {
+  children: ReactNode;
+  label: string;
+}) {
   return (
-    <div className="flex items-center gap-1 px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45">
-      <span>{title}</span>
-    </div>
+    <label className="flex min-w-0 flex-col gap-2">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/45">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+export function HighlightModeSelect({
+  source,
+  onChange
+}: {
+  source: DraftImportSource;
+  onChange: (sourceId: string, value: string) => void;
+}) {
+  return (
+    <SourceField label="Mode">
+      <select
+        aria-label={`Mode ${source.id}`}
+        className={importSourceSelectClassName}
+        onChange={(event) => onChange(source.id, event.target.value)}
+        value={source.highlightMode}
+      >
+        <option value="merged">{formatHighlightModeLabel('merged')}</option>
+        <option value="split">{formatHighlightModeLabel('split')}</option>
+      </select>
+    </SourceField>
   );
 }
 
@@ -36,18 +67,20 @@ export function HandlingCell({
   onChangeAction: (sourceId: string, value: string) => void;
 }) {
   return (
-    <select
-      aria-label={`Handling ${source.id}`}
-      className={importSourceSelectClassName}
-      onChange={(event) => onChangeAction(source.id, event.target.value)}
-      value={source.actionMode}
-    >
-      {importActionOptions.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <SourceField label="Handling">
+      <select
+        aria-label={`Handling ${source.id}`}
+        className={importSourceSelectClassName}
+        onChange={(event) => onChangeAction(source.id, event.target.value)}
+        value={source.actionMode}
+      >
+        {importActionOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </SourceField>
   );
 }
 
@@ -108,6 +141,44 @@ export function FolderButton({
   );
 }
 
+export function ImportSourceControlGrid({
+  onChangeMode,
+  onChangeAction,
+  onChooseHighlightFolder,
+  onChoosePrimaryFolder,
+  source
+}: {
+  onChangeAction: (sourceId: string, value: string) => void;
+  onChangeMode: (sourceId: string, value: string) => void;
+  onChooseHighlightFolder: (sourceId: string) => void;
+  onChoosePrimaryFolder: (sourceId: string) => void;
+  source: DraftImportSource;
+}) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)_140px_140px]">
+      <SourceField label="Original folder">
+        <FolderButton
+          label={`Original folder ${source.id}`}
+          onClick={() => onChoosePrimaryFolder(source.id)}
+          path={resolveFolderPathLabel(source.primaryPath, 'Choose folder')}
+          tooltip={resolveFolderPathHint(source.primaryPath)}
+        />
+      </SourceField>
+      <SourceField label="Highlight folder">
+        <FolderButton
+          label={`Highlight folder ${source.id}`}
+          disabled={source.highlightMode !== 'split'}
+          onClick={() => onChooseHighlightFolder(source.id)}
+          path={resolveFolderPathLabel(source.highlightPath, source.highlightMode === 'split' ? 'Choose folder' : 'Not used')}
+          tooltip={resolveFolderPathHint(source.highlightPath)}
+        />
+      </SourceField>
+      <HighlightModeSelect onChange={onChangeMode} source={source} />
+      <HandlingCell onChangeAction={onChangeAction} source={source} />
+    </div>
+  );
+}
+
 export function KeepActionCell({
   source,
   onCopy,
@@ -124,30 +195,35 @@ export function KeepActionCell({
   const keepEnabled = source.keepState === 'enabled';
 
   return (
-    <div className="flex h-full items-center justify-end gap-1">
-      {keepEnabled ? (
-        <KeepToggle checked label={`Keep import enabled ${source.id}`} onClick={() => onDisable?.(source.id)} />
-      ) : (
-        <AppButton
-          aria-label={`Preview ${source.id}`}
-          className="h-9 min-w-24 whitespace-nowrap px-3"
-          disabled={!source.primaryPath.trim()}
-          onClick={() => onPreview(source.id)}
-          variant="primary"
-        >
-          Preview
-        </AppButton>
-      )}
-      {onCopy ? (
-        <AppButton aria-label={`Copy ${source.id}`} className="size-8 px-0" onClick={() => onCopy(source.id)} variant="ghost">
-          <Copy aria-hidden="true" size={14} strokeWidth={1.8} />
-        </AppButton>
-      ) : null}
-      {onDelete ? (
-        <AppButton aria-label={`Delete ${source.id}`} className="size-8 px-0" onClick={() => onDelete(source.id)} variant="ghost">
-          <X aria-hidden="true" size={14} strokeWidth={1.8} />
-        </AppButton>
-      ) : null}
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/45">Keep import</span>
+        {keepEnabled ? (
+          <KeepToggle checked label={`Keep import enabled ${source.id}`} onClick={() => onDisable?.(source.id)} />
+        ) : (
+          <AppButton
+            aria-label={`Preview ${source.id}`}
+            className="h-9 min-w-24 whitespace-nowrap px-3"
+            disabled={!source.primaryPath.trim()}
+            onClick={() => onPreview(source.id)}
+            variant="primary"
+          >
+            Preview
+          </AppButton>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        {onCopy ? (
+          <AppButton aria-label={`Copy ${source.id}`} className="size-8 px-0" onClick={() => onCopy(source.id)} variant="ghost">
+            <Copy aria-hidden="true" size={14} strokeWidth={1.8} />
+          </AppButton>
+        ) : null}
+        {onDelete ? (
+          <AppButton aria-label={`Delete ${source.id}`} className="size-8 px-0" onClick={() => onDelete(source.id)} variant="ghost">
+            <X aria-hidden="true" size={14} strokeWidth={1.8} />
+          </AppButton>
+        ) : null}
+      </div>
     </div>
   );
 }

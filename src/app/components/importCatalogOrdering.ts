@@ -1,0 +1,84 @@
+import type { NodeViewState } from '../../store/workspaceStore';
+
+import type { ImportCatalogSortOption } from './ImportCatalogSortControls';
+
+export const IMPORT_CATALOG_SORT_OPTIONS: ImportCatalogSortOption[] = [
+  { ascLabel: 'Old -> Recent', descLabel: 'Recent -> Old', key: 'dateLastOpened', label: 'Date last opened' },
+  { ascLabel: 'Old -> Recent', descLabel: 'Recent -> Old', key: 'dateSaved', label: 'Date saved' },
+  { ascLabel: 'A -> Z', descLabel: 'Z -> A', key: 'title', label: 'Title' }
+];
+
+export type ImportCatalogSortKey = 'dateLastOpened' | 'dateSaved' | 'title';
+
+type SortableImportItem = {
+  sortLastOpened: string | null;
+  sortSaved: string;
+  sortTitle: string;
+};
+
+function compareText(left: string, right: string) {
+  return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+function compareLastOpenedDesc(left: string | null, right: string | null) {
+  if (!left && !right) {
+    return 0;
+  }
+  if (!left) {
+    return 1;
+  }
+  if (!right) {
+    return -1;
+  }
+  return right.localeCompare(left);
+}
+
+function compareSavedDesc(left: string, right: string) {
+  return right.localeCompare(left);
+}
+
+export function resolveImportLastOpened(nodeId: string | null | undefined, nodeViewById: Record<string, NodeViewState | undefined>) {
+  const updatedAt = nodeId ? nodeViewById[nodeId]?.updatedAt?.trim() : null;
+  if (updatedAt && !Number.isNaN(new Date(updatedAt).getTime())) {
+    return updatedAt;
+  }
+  return null;
+}
+
+export function sortImportCatalogItems<T extends SortableImportItem>(
+  items: T[],
+  sortKey: ImportCatalogSortKey,
+  sortDirection: 'asc' | 'desc'
+) {
+  const directionMultiplier = sortDirection === 'asc' ? -1 : 1;
+
+  return [...items].sort((left, right) => {
+    if (sortKey === 'title') {
+      const titleResult = compareText(left.sortTitle, right.sortTitle) * (sortDirection === 'asc' ? 1 : -1);
+      if (titleResult !== 0) {
+        return titleResult;
+      }
+      return compareSavedDesc(left.sortSaved, right.sortSaved);
+    }
+
+    if (sortKey === 'dateSaved') {
+      const savedResult = compareSavedDesc(left.sortSaved, right.sortSaved) * directionMultiplier;
+      if (savedResult !== 0) {
+        return savedResult;
+      }
+      return compareText(left.sortTitle, right.sortTitle);
+    }
+
+    const lastOpenedResult = compareLastOpenedDesc(left.sortLastOpened, right.sortLastOpened) * directionMultiplier;
+    if (lastOpenedResult !== 0) {
+      return lastOpenedResult;
+    }
+
+    const savedResult = compareSavedDesc(left.sortSaved, right.sortSaved);
+    if (savedResult !== 0) {
+      return savedResult;
+    }
+
+    return compareText(left.sortTitle, right.sortTitle);
+  });
+}
