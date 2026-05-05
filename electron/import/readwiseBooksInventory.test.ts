@@ -90,10 +90,10 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
       epubPath: null,
       epubStatus: 'missing',
       fullDocumentMarkdownPath: path.join(fullDocumentDir, 'Annotated Book.md'),
-      generatedNodeId: null,
+      generatedNodeId: expect.any(String),
       highlightMarkdownPath: path.join(highlightDir, 'Annotated Book.md'),
       importStatus: 'pending',
-      nodeStatus: 'missing',
+      nodeStatus: 'generated',
       title: 'Annotated Book'
     },
     {
@@ -102,10 +102,10 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
       epubPath: path.join(fullDocumentDir, 'Epub Only Book.epub'),
       epubStatus: 'received',
       fullDocumentMarkdownPath: null,
-      generatedNodeId: null,
+      generatedNodeId: expect.any(String),
       highlightMarkdownPath: null,
       importStatus: 'pending',
-      nodeStatus: 'missing',
+      nodeStatus: 'generated',
       title: 'Epub Only Book'
     },
     {
@@ -198,10 +198,10 @@ it('loads the books inventory from import manager settings', async () => {
       epubPath: null,
       epubStatus: 'missing',
       fullDocumentMarkdownPath: null,
-      generatedNodeId: null,
+      generatedNodeId: expect.any(String),
       highlightMarkdownPath: path.join(highlightDir, 'Settings Book.md'),
       importStatus: 'pending',
-      nodeStatus: 'missing',
+      nodeStatus: 'generated',
       title: 'Settings Book'
     }
   ]);

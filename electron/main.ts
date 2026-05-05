@@ -17,6 +17,7 @@ import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { startKeepImportMonitor, stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { startManagedInboxMonitor, stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
+import { loadReadwiseBooksInventory } from './import/readwiseBooksInventory.js';
 import { handleInvokeRequest } from './ipc/commands.js';
 import {
   IPC_INVOKE_CHANNEL,
@@ -226,6 +227,9 @@ app.whenReady().then(async () => {
   await migrateLegacyWebviewStorage();
   await startManagedInboxMonitor();
   await startKeepImportMonitor();
+  await loadReadwiseBooksInventory().catch((error) => {
+    console.error('[readwise-books] startup node sync failed', error);
+  });
   await createMainWindow();
 
   app.on('activate', async () => {

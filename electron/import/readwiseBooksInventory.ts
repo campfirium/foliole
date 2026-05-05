@@ -6,6 +6,7 @@ import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderS
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { ensureReadwiseBookNodes } from './readwiseBookNodes.js';
 import { resolveGeneratedNodeId, resolveImportStatus } from './readwiseBooksInventoryDatabase.js';
 import {
   mergePersistedReadwiseBooksInventory,
@@ -167,7 +168,7 @@ export async function scanReadwiseBooksInventory(input: {
     scannedAt
   } satisfies ReadwiseBooksInventory;
   const inventory = mergePersistedReadwiseBooksInventory({
-    currentInventory: scannedInventory,
+    currentInventory: ensureReadwiseBookNodes(scannedInventory),
     restoreMissingBooks: !highlightDirectoryAvailable || !fullDocumentDirectoryAvailable
   });
   savePersistedReadwiseBooksInventory(inventory);
