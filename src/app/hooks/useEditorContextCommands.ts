@@ -30,6 +30,20 @@ interface EditorContextMenuState extends WorkspaceEditorContextMenu {
   payload: SelectionCommandPayload | null;
 }
 
+function refreshSelectionHighlight(adapter: EditorAdapter | null) {
+  if (!adapter) {
+    return;
+  }
+  const selection = adapter.getSelection();
+  if (selection.from === selection.to) {
+    return;
+  }
+  requestAnimationFrame(() => {
+    adapter.setSelection(selection);
+    adapter.focus();
+  });
+}
+
 function createSelectionCommandRunner(
   contextMenu: EditorContextMenuState | null,
   editorRef: MutableRefObject<EditorAdapter | null>,
@@ -81,6 +95,7 @@ export function useEditorContextCommands({
       payload: commandPayload,
       top: position.top
     });
+    refreshSelectionHighlight(editorRef.current);
   };
 
   const syncActiveNodeContentFromEditor = () => {

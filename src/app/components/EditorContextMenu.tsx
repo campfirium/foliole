@@ -1,4 +1,4 @@
-import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '@/shared/ui';
+import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '@/shared/ui';
 
 export interface EditorContextMenuProps {
   canRunCommands: boolean;
@@ -18,28 +18,13 @@ export function EditorContextMenu({
   onCreateCloze
 }: EditorContextMenuProps) {
   return (
-    <AppDropdownMenu onOpenChange={(open) => (open ? undefined : onClose())} open>
-      <AppDropdownMenuTrigger asChild>
-        <button
-          aria-hidden="true"
-          className="pointer-events-none fixed h-0 w-0 opacity-0"
-          style={{ left: `${left}px`, top: `${top}px` }}
-          type="button"
-        />
-      </AppDropdownMenuTrigger>
-      <AppDropdownMenuContent
-        align="start"
-        onCloseAutoFocus={(event) => event.preventDefault()}
-        onContextMenu={(event) => event.preventDefault()}
-        sideOffset={0}
-      >
-        <AppDropdownMenuItem disabled={!canRunCommands} onSelect={onCreateHighlight}>
-          Highlight
-        </AppDropdownMenuItem>
-        <AppDropdownMenuItem disabled={!canRunCommands} onSelect={onCreateCloze}>
-          Cloze
-        </AppDropdownMenuItem>
-      </AppDropdownMenuContent>
-    </AppDropdownMenu>
+    <AppSelectionDropdownMenu left={left} onClose={onClose} top={top}>
+      <AppSelectionDropdownMenuItem disabled={!canRunCommands} onClick={onCreateHighlight}>
+        Highlight
+      </AppSelectionDropdownMenuItem>
+      <AppSelectionDropdownMenuItem disabled={!canRunCommands} onClick={onCreateCloze}>
+        Cloze
+      </AppSelectionDropdownMenuItem>
+    </AppSelectionDropdownMenu>
   );
 }

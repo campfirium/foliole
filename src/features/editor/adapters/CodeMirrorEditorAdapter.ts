@@ -1,7 +1,7 @@
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorState } from '@codemirror/state';
-import { EditorView, highlightActiveLine, keymap } from '@codemirror/view';
+import { drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
 import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 
@@ -31,6 +31,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           anchorStructureGuard,
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
+          drawSelection(),
           EditorView.lineWrapping,
           highlightActiveLine(),
           markdownInputAssist,

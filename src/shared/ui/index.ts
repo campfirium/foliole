@@ -9,7 +9,15 @@ export {
   AppDialogTitle,
   AppDialogTrigger
 } from './Dialog';
-export { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuPortal, AppDropdownMenuTrigger } from './DropdownMenu';
+export {
+  AppDropdownMenu,
+  AppDropdownMenuContent,
+  AppDropdownMenuItem,
+  AppDropdownMenuPortal,
+  AppDropdownMenuTrigger,
+  AppSelectionDropdownMenu,
+  AppSelectionDropdownMenuItem
+} from './DropdownMenu';
 export { AppEmptyState } from './EmptyState';
 export { AppIconButton } from './IconButton';
 export { AppInput } from './Input';
