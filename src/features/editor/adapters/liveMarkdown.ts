@@ -1,7 +1,11 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
-import { collectAnchorTagTokenRanges, collectAnchorTextSegments } from '../model/anchorTagSegments';
+import {
+  collectAnchorTagTokenRanges,
+  collectAnchorTextSegments,
+  type AnchorTextSegment
+} from '../model/anchorTagSegments';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
 const CODE_FENCE_PATTERN = /^\s*`{3,}/;
@@ -199,20 +203,108 @@ function addSemanticMarkDecorations(
 
 function addAnchorTagDecorations(ranges: Range<Decoration>[], content: string) {
   const segments = collectAnchorTextSegments(content);
-  const tokenRanges = collectAnchorTagTokenRanges(content);
+  const tokenRanges = mergeAdjacentRanges(collectAnchorTagTokenRanges(content));
 
   for (const tokenRange of tokenRanges) {
     addReplace(ranges, tokenRange.from, tokenRange.to);
   }
 
-  for (const segment of segments) {
-    if (segment.activeHighlightCount > 0) {
-      addMark(ranges, segment.from, segment.to, 'cm-md-highlight');
-    }
-    if (segment.activeClozeCount > 0) {
-      addMark(ranges, segment.from, segment.to, 'cm-md-cloze');
-    }
+  const highlightBaseRanges = collectMergedSegmentRanges(content, segments, (segment) => segment.activeHighlightCount > 0);
+  const clozeRanges = collectMergedSegmentRanges(content, segments, (segment) => segment.activeClozeCount > 0);
+  const highlightOverlapRanges = collectMergedSegmentRanges(
+    content,
+    segments,
+    (segment) => segment.activeHighlightCount > 1
+  );
+  const mixedOverlapRanges = collectMergedSegmentRanges(
+    content,
+    segments,
+    (segment) => segment.activeHighlightCount + segment.activeClozeCount > 1 && segment.activeHighlightCount <= 1
+  );
+
+  for (const range of highlightBaseRanges) {
+    addMark(ranges, range.from, range.to, 'cm-md-highlight');
   }
+  for (const range of clozeRanges) {
+    addMark(ranges, range.from, range.to, 'cm-md-cloze');
+  }
+  for (const range of highlightOverlapRanges) {
+    addMark(ranges, range.from, range.to, 'cm-md-highlight-overlap');
+  }
+  for (const range of mixedOverlapRanges) {
+    addMark(ranges, range.from, range.to, 'cm-md-anchor-overlap');
+  }
+}
+
+function mergeAdjacentRanges(ranges: Array<{ from: number; to: number }>) {
+  if (ranges.length === 0) {
+    return ranges;
+  }
+
+  const merged: Array<{ from: number; to: number }> = [];
+  let current = { ...ranges[0] };
+
+  for (let index = 1; index < ranges.length; index += 1) {
+    const next = ranges[index];
+    if (next.from <= current.to) {
+      current.to = Math.max(current.to, next.to);
+      continue;
+    }
+    merged.push(current);
+    current = { ...next };
+  }
+
+  merged.push(current);
+  return merged;
+}
+
+function collectMergedSegmentRanges(
+  content: string,
+  segments: ReadonlyArray<AnchorTextSegment>,
+  predicate: (segment: Readonly<AnchorTextSegment>) => boolean
+) {
+  const picked: Array<{ from: number; to: number }> = [];
+  for (const segment of segments) {
+    if (!predicate(segment)) {
+      continue;
+    }
+    picked.push({ from: segment.from, to: segment.to });
+  }
+  return mergeRangesAcrossAnchorTagGaps(content, picked);
+}
+
+function mergeRangesAcrossAnchorTagGaps(content: string, ranges: Array<{ from: number; to: number }>) {
+  if (ranges.length === 0) {
+    return ranges;
+  }
+
+  const merged: Array<{ from: number; to: number }> = [];
+  let current = { ...ranges[0] };
+
+  for (let index = 1; index < ranges.length; index += 1) {
+    const next = ranges[index];
+    const canJoinByTouching = next.from <= current.to;
+    const canJoinByHiddenTags = isAnchorTagGap(content.slice(current.to, next.from));
+
+    if (canJoinByTouching || canJoinByHiddenTags) {
+      current.to = Math.max(current.to, next.to);
+      continue;
+    }
+
+    merged.push(current);
+    current = { ...next };
+  }
+
+  merged.push(current);
+  return merged;
+}
+
+function isAnchorTagGap(value: string) {
+  if (!value.trim()) {
+    return true;
+  }
+  const stripped = value.replace(/<\/?(?:highlight|cloze)\s+id="[^"]+"\s*>/g, '').trim();
+  return stripped.length === 0;
 }
 
 function getCursorLineNumber(view: EditorView) {
@@ -290,6 +382,9 @@ const liveMarkdownTheme = EditorView.theme({
     fontSize: 'var(--font-size-16)',
     padding: '0.72rem 1.1rem 2rem'
   },
+  '.cm-widgetBuffer': {
+    width: '0px'
+  },
   '.cm-line': {
     padding: 0
   },
@@ -351,6 +446,14 @@ const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-md-cloze': {
     backgroundColor: 'rgba(250, 204, 21, 0.32)',
+    borderRadius: '0.25rem'
+  },
+  '.cm-md-anchor-overlap': {
+    backgroundColor: 'rgba(56, 189, 248, 0.32)',
+    borderRadius: '0.25rem'
+  },
+  '.cm-md-highlight-overlap': {
+    backgroundColor: 'rgba(56, 189, 248, 0.2)',
     borderRadius: '0.25rem'
   },
   '.cm-md-cloze-placeholder': {
