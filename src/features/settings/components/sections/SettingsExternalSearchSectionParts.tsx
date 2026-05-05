@@ -96,6 +96,7 @@ function ExternalLibraryExcludedInput(props: {
 }) {
   return (
     <input
+      aria-label={`Excluded folder names for ${props.folder.folderPath}`}
       className={settingsFieldClassName()}
       onChange={(event) =>
         props.onUpdateFolder(props.folder.id, {
@@ -160,7 +161,14 @@ function ExternalLibraryDraftRow(props: { disabled: boolean; onAddFolder: () => 
         onClick={props.onAddFolder}
         path=""
       />
-      <input className={settingsFieldClassName()} disabled placeholder="Folder names to exclude, separated by commas" value="" readOnly />
+      <input
+        aria-label="Excluded folder names"
+        className={settingsFieldClassName()}
+        disabled
+        placeholder="Folder names to exclude, separated by commas"
+        value=""
+        readOnly
+      />
       <div className="min-w-0 text-sm text-foreground/55">New folder</div>
       <div aria-hidden="true" />
     </div>
