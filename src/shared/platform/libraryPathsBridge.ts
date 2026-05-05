@@ -22,6 +22,14 @@ export interface RuntimeMirrorAttachmentLinkRebuildResult {
   updatedAt: string;
 }
 
+export interface RuntimeMirrorOutputRebuildResult {
+  queuedArticleCount: number;
+  rebuiltArticleCount: number;
+  failedArticleCount: number;
+  pendingArticleCount: number;
+  updatedAt: string;
+}
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -76,6 +84,31 @@ function toRuntimeMirrorAttachmentLinkRebuildResult(
     scannedDocumentCount: value.scanned_document_count,
     rewrittenDocumentCount: value.rewritten_document_count,
     rewrittenLinkCount: value.rewritten_link_count,
+    updatedAt: value.updated_at
+  };
+}
+
+function toRuntimeMirrorOutputRebuildResult(payload: unknown): RuntimeMirrorOutputRebuildResult | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null;
+  }
+
+  const value = payload as Record<string, unknown>;
+  if (
+    typeof value.queued_article_count !== 'number' ||
+    typeof value.rebuilt_article_count !== 'number' ||
+    typeof value.failed_article_count !== 'number' ||
+    typeof value.pending_article_count !== 'number' ||
+    !isNonEmptyString(value.updated_at)
+  ) {
+    return null;
+  }
+
+  return {
+    queuedArticleCount: value.queued_article_count,
+    rebuiltArticleCount: value.rebuilt_article_count,
+    failedArticleCount: value.failed_article_count,
+    pendingArticleCount: value.pending_article_count,
     updatedAt: value.updated_at
   };
 }
@@ -137,6 +170,30 @@ export async function updateRuntimeLibraryPathSetting(
       fallback: 'rethrow_to_ui',
       error,
       location
+    });
+    throw error;
+  }
+}
+
+export async function rebuildRuntimeMirrorOutput(): Promise<RuntimeMirrorOutputRebuildResult> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    throw new Error('desktop runtime unavailable');
+  }
+
+  try {
+    const result = toRuntimeMirrorOutputRebuildResult(await runtimeInvoke(NATIVE_COMMANDS.rebuildMirrorOutput));
+    if (!result) {
+      throw new Error('native mirror output rebuild payload invalid');
+    }
+    return result;
+  } catch (error) {
+    logRuntimeWarning('native mirror output rebuild failed', {
+      action: 'rebuild_runtime_mirror_output',
+      area: 'bridge',
+      command: NATIVE_COMMANDS.rebuildMirrorOutput,
+      fallback: 'rethrow_to_ui',
+      error
     });
     throw error;
   }

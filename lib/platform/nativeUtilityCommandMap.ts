@@ -4,6 +4,7 @@ import type {
   NativeExportAttachmentImageResult,
   NativeLibraryPaths,
   NativeMirrorAttachmentLinkRebuildResult,
+  NativeMirrorOutputRebuildResult,
   NativeUpdateLibraryPathSettingArgs
 } from './nativeUtilityContract.js';
 
@@ -23,6 +24,10 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.loadLibraryPathSettings]: {
     args: undefined;
     result: NativeLibraryPaths;
+  };
+  [NATIVE_COMMANDS.rebuildMirrorOutput]: {
+    args: undefined;
+    result: NativeMirrorOutputRebuildResult;
   };
   [NATIVE_COMMANDS.rebuildMirrorAttachmentLinks]: {
     args: undefined;

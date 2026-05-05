@@ -4,6 +4,7 @@ import type { ElectronAPI } from './electronApi';
 import {
   loadRuntimeLibraryPathSettings,
   rebuildRuntimeMirrorAttachmentLinks,
+  rebuildRuntimeMirrorOutput,
   updateRuntimeLibraryPathSetting
 } from './libraryPathsBridge';
 
@@ -82,6 +83,26 @@ it('rebuilds mirror attachment links through the native bridge', async () => {
     updatedAt: '2026-03-30T00:20:00.000Z'
   });
   expect(invoke).toHaveBeenCalledWith('rebuild_mirror_attachment_links');
+});
+
+it('rebuilds mirror output through the native bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    queued_article_count: 4,
+    rebuilt_article_count: 4,
+    failed_article_count: 0,
+    pending_article_count: 0,
+    updated_at: '2026-03-30T00:15:00.000Z'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(rebuildRuntimeMirrorOutput()).resolves.toEqual({
+    queuedArticleCount: 4,
+    rebuiltArticleCount: 4,
+    failedArticleCount: 0,
+    pendingArticleCount: 0,
+    updatedAt: '2026-03-30T00:15:00.000Z'
+  });
+  expect(invoke).toHaveBeenCalledWith('rebuild_mirror_output');
 });
 
 it('returns null when the runtime library path payload is malformed', async () => {

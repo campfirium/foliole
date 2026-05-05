@@ -51,13 +51,17 @@ type SettingsPanelBodyProps = {
   inboxPath: string;
   isDesktopRuntime: boolean;
   isRebuildingMirrorLinks: boolean;
+  isRebuildingMirrorOutput: boolean;
   libraryHomePath: string;
   mirrorLinkRebuildError: string | null;
   mirrorLinkRebuildFeedback: string | null;
+  mirrorOutputRebuildError: string | null;
+  mirrorOutputRebuildFeedback: string | null;
   mirrorPath: string;
   onClose: () => void;
   onChangeLocation: (location: 'inbox' | 'library_home' | 'mirror') => void;
   onRebuildMirrorLinks: () => void;
+  onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'inbox' | 'library_home' | 'mirror') => void;
   pendingLocation: 'inbox' | 'library_home' | 'mirror' | null;
   setActiveCategory: (category: SettingsCategoryId) => void;
@@ -77,12 +81,16 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
     inboxPath: props.inboxPath,
     isDesktopRuntime: props.isDesktopRuntime,
     isRebuildingMirrorLinks: props.isRebuildingMirrorLinks,
+    isRebuildingMirrorOutput: props.isRebuildingMirrorOutput,
     libraryHomePath: props.libraryHomePath,
     mirrorLinkRebuildError: props.mirrorLinkRebuildError,
     mirrorLinkRebuildFeedback: props.mirrorLinkRebuildFeedback,
+    mirrorOutputRebuildError: props.mirrorOutputRebuildError,
+    mirrorOutputRebuildFeedback: props.mirrorOutputRebuildFeedback,
     mirrorPath: props.mirrorPath,
     onChangeLocation: props.onChangeLocation,
     onRebuildMirrorLinks: props.onRebuildMirrorLinks,
+    onRebuildMirrorOutput: props.onRebuildMirrorOutput,
     onRestoreDefault: props.onRestoreDefault,
     pendingLocation: props.pendingLocation
   };

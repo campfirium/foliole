@@ -22,6 +22,14 @@ export interface NativeUpdateLibraryPathSettingArgs {
   path: string | null;
 }
 
+export interface NativeMirrorOutputRebuildResult {
+  queued_article_count: number;
+  rebuilt_article_count: number;
+  failed_article_count: number;
+  pending_article_count: number;
+  updated_at: string;
+}
+
 export interface NativeMirrorAttachmentLinkRebuildResult {
   scanned_document_count: number;
   rewritten_document_count: number;

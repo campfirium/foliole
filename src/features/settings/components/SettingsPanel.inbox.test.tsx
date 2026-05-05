@@ -5,6 +5,7 @@ import { selectRuntimeImportDirectory } from '../../../shared/platform/importBri
 import {
   loadRuntimeLibraryPathSettings,
   rebuildRuntimeMirrorAttachmentLinks,
+  rebuildRuntimeMirrorOutput,
   updateRuntimeLibraryPathSetting
 } from '../../../shared/platform/libraryPathsBridge';
 import { listAvailableSystemFonts } from '../model/systemFonts';
@@ -32,6 +33,7 @@ vi.mock('../../../shared/platform/libraryPathsBridge', async () => {
     ...actual,
     loadRuntimeLibraryPathSettings: vi.fn(),
     rebuildRuntimeMirrorAttachmentLinks: vi.fn(),
+    rebuildRuntimeMirrorOutput: vi.fn(),
     updateRuntimeLibraryPathSetting: vi.fn()
   };
 });
@@ -40,6 +42,7 @@ const mockedListAvailableSystemFonts = vi.mocked(listAvailableSystemFonts);
 const mockedSelectRuntimeImportDirectory = vi.mocked(selectRuntimeImportDirectory);
 const mockedLoadRuntimeLibraryPathSettings = vi.mocked(loadRuntimeLibraryPathSettings);
 const mockedRebuildRuntimeMirrorAttachmentLinks = vi.mocked(rebuildRuntimeMirrorAttachmentLinks);
+const mockedRebuildRuntimeMirrorOutput = vi.mocked(rebuildRuntimeMirrorOutput);
 const mockedUpdateRuntimeLibraryPathSetting = vi.mocked(updateRuntimeLibraryPathSetting);
 
 const defaultLibraryPaths = {
@@ -66,6 +69,12 @@ beforeEach(() => {
     rewrittenLinkCount: 3,
     updatedAt: '2026-03-30T00:20:00.000Z'
   });
+  mockedRebuildRuntimeMirrorOutput.mockReset();
+  mockedRebuildRuntimeMirrorOutput.mockRejectedValue(
+    new Error(
+      'Mirror article rebuild is still being wired. Daily incremental mirror output remains the main path, and startup checks only backfill missing articles.'
+    )
+  );
   mockedUpdateRuntimeLibraryPathSetting.mockReset();
   mockedUpdateRuntimeLibraryPathSetting.mockImplementation(async (location, nextPath) => {
     if (location === 'library_home') {
@@ -144,12 +153,32 @@ it('shows Library Home, Inbox, and Mirror without exposing internal data folders
 
   expect(screen.getByText(/drop folder for incoming files/i)).toBeInTheDocument();
   expect(screen.getByText(/should stay close to empty/i)).toBeInTheDocument();
-  expect(screen.getByText(/read-only markdown mirror/i)).toBeInTheDocument();
-  expect(screen.getByText(/can be rebuilt at any time/i)).toBeInTheDocument();
+  expect(screen.getByText(/runtime-generated markdown output folder/i)).toBeInTheDocument();
+  expect(screen.getByText(/one `.md` per article/i)).toBeInTheDocument();
+  expect(screen.getByText(/daily mirror output is incremental/i)).toBeInTheDocument();
   expect(screen.getByText(/database, data, and assets stay inside library home/i)).toBeInTheDocument();
   expect(screen.queryByText('Database location')).not.toBeInTheDocument();
   expect(screen.queryByText('Assets location')).not.toBeInTheDocument();
   expect(screen.queryByText('Data location')).not.toBeInTheDocument();
+});
+
+it('shows separate mirror output rebuild feedback from mirror link rebuild', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+
+  await waitFor(() => {
+    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Mirror')).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror output *' }));
+
+  await waitFor(() => {
+    expect(screen.getByText(/could not rebuild mirror article output/i)).toBeInTheDocument();
+    expect(screen.getByText(/startup checks only backfill missing articles/i)).toBeInTheDocument();
+  });
+  expect(mockedRebuildRuntimeMirrorOutput).toHaveBeenCalledTimes(1);
+  expect(mockedRebuildRuntimeMirrorAttachmentLinks).not.toHaveBeenCalled();
 });
 
 it('updates Library Home and Mirror through the same runtime interface', async () => {

@@ -22,6 +22,7 @@ export const NATIVE_COMMANDS = {
   exportAttachmentImage: 'export_attachment_image',
   resolveAppPaths: 'resolve_app_paths',
   loadLibraryPathSettings: 'load_library_path_settings',
+  rebuildMirrorOutput: 'rebuild_mirror_output',
   rebuildMirrorAttachmentLinks: 'rebuild_mirror_attachment_links',
   updateLibraryPathSetting: 'update_library_path_setting',
   reviewGrade: 'review_grade',

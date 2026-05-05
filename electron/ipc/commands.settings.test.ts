@@ -60,6 +60,15 @@ vi.mock('../mirror/rebuildAttachmentLinks.js', () => ({
     updated_at: '2026-03-30T00:20:00.000Z'
   })
 }));
+vi.mock('../mirror/rebuildMirrorOutput.js', () => ({
+  rebuildMirrorOutput: vi
+    .fn()
+    .mockRejectedValue(
+      new Error(
+        'Mirror article rebuild is still being wired. Daily incremental mirror output remains the main path, and startup checks only backfill missing articles.'
+      )
+    )
+}));
 vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn().mockReturnValue({
     detailsOpen: true,
@@ -131,6 +140,9 @@ async function expectLibraryPathCommands() {
     inbox: '/library/Inbox',
     mirror: '/library/Mirror'
   });
+  await expect(handleInvokeRequest({ command: 'rebuild_mirror_output' })).rejects.toThrow(
+    'Mirror article rebuild is still being wired. Daily incremental mirror output remains the main path, and startup checks only backfill missing articles.'
+  );
   await expect(handleInvokeRequest({ command: 'rebuild_mirror_attachment_links' })).resolves.toMatchObject({
     scanned_document_count: 2,
     rewritten_document_count: 1,

@@ -3,11 +3,12 @@ import { useEffect, useState } from 'react';
 import { selectRuntimeImportDirectory } from '../../../shared/platform/importBridge';
 import {
   loadRuntimeLibraryPathSettings,
-  rebuildRuntimeMirrorAttachmentLinks,
   updateRuntimeLibraryPathSetting,
   type RuntimeLibraryPathLocation,
   type RuntimeLibraryPaths
 } from '../../../shared/platform/libraryPathsBridge';
+
+import { useMirrorRebuildState } from './useMirrorRebuildState';
 
 type LibraryPathErrorState = Record<RuntimeLibraryPathLocation, string | null>;
 
@@ -61,21 +62,6 @@ function clearLocationError(
   };
 }
 
-function clearMirrorRebuildState(
-  setMirrorLinkRebuildFeedback: (value: string | null) => void,
-  setMirrorLinkRebuildError: (value: string | null) => void
-) {
-  setMirrorLinkRebuildFeedback(null);
-  setMirrorLinkRebuildError(null);
-}
-
-function toMirrorRebuildFeedback(scannedDocumentCount: number, rewrittenDocumentCount: number, rewrittenLinkCount: number) {
-  if (rewrittenLinkCount > 0) {
-    return `Rebuilt ${rewrittenLinkCount} mirror attachment links across ${rewrittenDocumentCount} documents.`;
-  }
-  return `Mirror attachment links are already up to date across ${scannedDocumentCount} documents.`;
-}
-
 async function runLocationUpdate(args: {
   getErrorMessage: (location: RuntimeLibraryPathLocation) => string;
   location: RuntimeLibraryPathLocation;
@@ -121,45 +107,12 @@ function useInitialLibraryPathSettings(
   }, [setIsDesktopRuntime, setPaths]);
 }
 
-function useMirrorLinkRebuildState() {
-  const [isRebuildingMirrorLinks, setIsRebuildingMirrorLinks] = useState(false);
-  const [mirrorLinkRebuildFeedback, setMirrorLinkRebuildFeedback] = useState<string | null>(null);
-  const [mirrorLinkRebuildError, setMirrorLinkRebuildError] = useState<string | null>(null);
-
-  function resetMirrorRebuildState() {
-    clearMirrorRebuildState(setMirrorLinkRebuildFeedback, setMirrorLinkRebuildError);
-  }
-
-  async function rebuildMirrorLinks() {
-    resetMirrorRebuildState();
-    setIsRebuildingMirrorLinks(true);
-    try {
-      const result = await rebuildRuntimeMirrorAttachmentLinks();
-      setMirrorLinkRebuildFeedback(
-        toMirrorRebuildFeedback(result.scannedDocumentCount, result.rewrittenDocumentCount, result.rewrittenLinkCount)
-      );
-    } catch {
-      setMirrorLinkRebuildError('Could not rebuild mirror attachment links.');
-    } finally {
-      setIsRebuildingMirrorLinks(false);
-    }
-  }
-
-  return {
-    isRebuildingMirrorLinks,
-    mirrorLinkRebuildError,
-    mirrorLinkRebuildFeedback,
-    onRebuildMirrorLinks: rebuildMirrorLinks,
-    resetMirrorRebuildState
-  };
-}
-
 export function useLibraryPathSettings() {
   const [paths, setPaths] = useState<RuntimeLibraryPaths>(() => createUnavailablePaths());
   const [errors, setErrors] = useState<LibraryPathErrorState>(() => createEmptyErrors());
   const [isDesktopRuntime, setIsDesktopRuntime] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<RuntimeLibraryPathLocation | null>(null);
-  const mirrorLinkRebuildState = useMirrorLinkRebuildState();
+  const mirrorRebuildState = useMirrorRebuildState();
 
   useInitialLibraryPathSettings(setIsDesktopRuntime, setPaths);
 
@@ -173,7 +126,7 @@ export function useLibraryPathSettings() {
         getErrorMessage: getChangeErrorMessage,
         location,
         performUpdate: () => updateRuntimeLibraryPathSetting(location, selectedPath),
-        resetMirrorRebuildState: mirrorLinkRebuildState.resetMirrorRebuildState,
+        resetMirrorRebuildState: mirrorRebuildState.resetMirrorRebuildState,
         setErrors,
         setPaths,
         setPendingLocation
@@ -191,7 +144,7 @@ export function useLibraryPathSettings() {
       getErrorMessage: getRestoreErrorMessage,
       location,
       performUpdate: () => updateRuntimeLibraryPathSetting(location, null),
-      resetMirrorRebuildState: mirrorLinkRebuildState.resetMirrorRebuildState,
+      resetMirrorRebuildState: mirrorRebuildState.resetMirrorRebuildState,
       setErrors,
       setPaths,
       setPendingLocation
@@ -207,6 +160,6 @@ export function useLibraryPathSettings() {
     inboxPath: paths.inbox,
     onChangeLocation: handleChangeRequest,
     onRestoreDefault: handleRestoreDefault,
-    ...mirrorLinkRebuildState
+    ...mirrorRebuildState
   };
 }
