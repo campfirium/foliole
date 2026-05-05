@@ -62,6 +62,8 @@ final class FolioleCompanionContentBlobStore {
     static JSObject summarizeMissingBodies(SQLiteDatabase database) {
         long count = 0;
         long bytes = 0;
+        long failedCount = 0;
+        long failedBytes = 0;
         try (Cursor cursor = database.rawQuery(
             "WITH body_refs AS (" +
                 "SELECT n.body_blob_hash AS hash FROM nodes n " +
@@ -70,7 +72,7 @@ final class FolioleCompanionContentBlobStore {
                 "SELECT ed.body_blob_hash AS hash FROM external_documents ed " +
                 "WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1" +
             ") " +
-            "SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) FROM content_blobs cb " +
+            "SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0), cb.availability FROM content_blobs cb " +
                 "JOIN body_refs refs ON refs.hash = cb.hash " +
                 "LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash " +
                 "WHERE cb.kind = 'text_body' AND cbd.hash IS NULL",
@@ -78,12 +80,19 @@ final class FolioleCompanionContentBlobStore {
         )) {
             while (cursor.moveToNext()) {
                 count++;
-                bytes += cursor.getLong(1);
+                long sizeBytes = cursor.getLong(1);
+                bytes += sizeBytes;
+                if ("failed".equals(cursor.getString(2))) {
+                    failedCount++;
+                    failedBytes += sizeBytes;
+                }
             }
         }
         JSObject summary = new JSObject();
         summary.put("missing_content_blob_count", count);
         summary.put("missing_content_blob_bytes", bytes);
+        summary.put("failed_content_blob_count", failedCount);
+        summary.put("failed_content_blob_bytes", failedBytes);
         return summary;
     }
 

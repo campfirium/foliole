@@ -42,6 +42,7 @@ export function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       {isAndroid ? <MetricRow label="Changes needing review" value={formatNumber(snapshot.sync_state.push_issue_count ?? 0)} /> : null}
       <MetricRow label="Bodies to download" value={formatNumber(snapshot.content.missing_content_blob_count)} />
       {isAndroid ? <MetricRow label="Body bytes to download" value={formatBytes(snapshot.content.missing_content_blob_bytes ?? 0)} /> : null}
+      {isAndroid ? <MetricRow label="Failed body downloads" value={`${formatNumber(snapshot.content.failed_content_blob_count ?? 0)} · ${formatBytes(snapshot.content.failed_content_blob_bytes ?? 0)}`} /> : null}
       {isAndroid ? <MetricRow label="Current topic body" value={formatNumber(snapshot.content.missing_active_topic_body_count ?? 0)} /> : null}
       {isAndroid ? <MetricRow label="Topic bodies" value={formatNumber(snapshot.content.missing_topic_body_count ?? 0)} /> : null}
       {isAndroid ? <MetricRow label="Top-level topic bodies" value={formatNumber(snapshot.content.missing_top_level_topic_body_count ?? 0)} /> : null}
@@ -50,6 +51,7 @@ export function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       {isAndroid ? <MetricRow label="Review queue bodies" value={formatNumber(snapshot.content.missing_due_review_body_count ?? 0)} /> : null}
       <MetricRow label="Attachments to download" value={formatNumber(snapshot.content.missing_attachment_resource_count ?? 0)} />
       {isAndroid ? <MetricRow label="Attachment bytes to download" value={formatBytes(snapshot.content.missing_attachment_resource_bytes ?? 0)} /> : null}
+      {isAndroid ? <MetricRow label="Failed attachment downloads" value={`${formatNumber(snapshot.content.failed_attachment_resource_count ?? 0)} · ${formatBytes(snapshot.content.failed_attachment_resource_bytes ?? 0)}`} /> : null}
       {isAndroid ? <MetricRow label="Current topic attachments" value={formatNumber(snapshot.content.missing_active_topic_attachment_resource_count ?? 0)} /> : null}
       {isAndroid ? <MetricRow label="Review queue attachments" value={formatNumber(snapshot.content.missing_due_review_attachment_resource_count ?? 0)} /> : null}
       {isAndroid ? <MetricRow label="Image attachments" value={`${formatNumber(snapshot.content.missing_image_attachment_resource_count ?? 0)} · ${formatBytes(snapshot.content.missing_image_attachment_resource_bytes ?? 0)}`} /> : null}

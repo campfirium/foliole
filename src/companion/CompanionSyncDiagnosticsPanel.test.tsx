@@ -25,6 +25,10 @@ const diagnosticResult = {
     connection: { endpoint_url: 'http://10.0.2.2:38641', last_error: null, state: 'ready' },
     content: {
       active_topic: { body_status: 'missing', id: 'topic-1', title: 'Current topic' },
+      failed_attachment_resource_bytes: 524288,
+      failed_attachment_resource_count: 1,
+      failed_content_blob_bytes: 1048576,
+      failed_content_blob_count: 1,
       missing_attachment_resource_bytes: 3145728,
       missing_attachment_resource_count: 2,
       missing_active_topic_attachment_resource_count: 1,
@@ -176,6 +180,8 @@ function expectAndroidDiagnosticRows() {
   expect(screen.getByText('Changes needing review')).toBeInTheDocument();
   expect(screen.getAllByText('Body bytes to download').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Attachment bytes to download').length).toBeGreaterThan(0);
+  expect(screen.getByText('Failed body downloads')).toBeInTheDocument();
+  expect(screen.getByText('Failed attachment downloads')).toBeInTheDocument();
   expect(screen.getByText('Review queue bodies')).toBeInTheDocument();
   expect(screen.getByText('Current topic body')).toBeInTheDocument();
   expect(screen.getByText('Top-level topic bodies')).toBeInTheDocument();

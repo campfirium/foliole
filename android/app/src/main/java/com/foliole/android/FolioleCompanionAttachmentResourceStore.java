@@ -62,6 +62,8 @@ final class FolioleCompanionAttachmentResourceStore {
     static JSObject summarizeMissingResources(Context context, SQLiteDatabase database) {
         long count = 0;
         long bytes = 0;
+        long failedCount = 0;
+        long failedBytes = 0;
         long imageCount = 0;
         long imageBytes = 0;
         long pdfCount = 0;
@@ -95,6 +97,10 @@ final class FolioleCompanionAttachmentResourceStore {
                 String mimeType = cursor.getString(3);
                 count++;
                 bytes += sizeBytes;
+                if ("failed".equals(cursor.getString(0))) {
+                    failedCount++;
+                    failedBytes += sizeBytes;
+                }
                 if (mimeType.startsWith("image/")) {
                     imageCount++;
                     imageBytes += sizeBytes;
@@ -116,6 +122,8 @@ final class FolioleCompanionAttachmentResourceStore {
         JSObject summary = new JSObject();
         summary.put("missing_attachment_resource_count", count);
         summary.put("missing_attachment_resource_bytes", bytes);
+        summary.put("failed_attachment_resource_count", failedCount);
+        summary.put("failed_attachment_resource_bytes", failedBytes);
         summary.put("missing_image_attachment_resource_count", imageCount);
         summary.put("missing_image_attachment_resource_bytes", imageBytes);
         summary.put("missing_pdf_attachment_resource_count", pdfCount);

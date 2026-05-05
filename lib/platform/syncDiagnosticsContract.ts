@@ -77,6 +77,8 @@ export interface SyncDiagnosticContent {
   } | null;
   missing_attachment_resource_count?: number;
   missing_attachment_resource_bytes?: number;
+  failed_attachment_resource_count?: number;
+  failed_attachment_resource_bytes?: number;
   missing_active_topic_attachment_resource_count?: number;
   missing_active_topic_body_count?: number;
   missing_due_review_attachment_resource_count?: number;
@@ -89,6 +91,8 @@ export interface SyncDiagnosticContent {
   missing_pdf_attachment_resource_count?: number;
   missing_content_blob_count: number;
   missing_content_blob_bytes?: number;
+  failed_content_blob_count?: number;
+  failed_content_blob_bytes?: number;
   missing_external_document_body_count?: number;
   missing_nested_topic_body_count?: number;
   missing_top_level_topic_body_count?: number;

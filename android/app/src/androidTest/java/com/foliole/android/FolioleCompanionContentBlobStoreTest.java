@@ -107,6 +107,8 @@ public class FolioleCompanionContentBlobStoreTest {
 
         assertEquals(1, summary.getLong("missing_content_blob_count"));
         assertEquals(19, summary.getLong("missing_content_blob_bytes"));
+        assertEquals(0, summary.getLong("failed_content_blob_count"));
+        assertEquals(0, summary.getLong("failed_content_blob_bytes"));
     }
 
     @Test
@@ -247,6 +249,9 @@ public class FolioleCompanionContentBlobStoreTest {
         assertEquals(hash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
             .getJSONArray("hashes")
             .getString(0));
+        JSObject summary = FolioleCompanionContentBlobStore.summarizeMissingBodies(database);
+        assertEquals(1, summary.getLong("failed_content_blob_count"));
+        assertEquals(17, summary.getLong("failed_content_blob_bytes"));
     }
 
     @Test

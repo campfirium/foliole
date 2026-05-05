@@ -156,11 +156,15 @@ final class FolioleCompanionSyncDiagnostics {
     private static void copyBodySummary(JSObject content, JSObject summary) throws Exception {
         content.put("missing_content_blob_count", summary.optLong("missing_content_blob_count", 0));
         content.put("missing_content_blob_bytes", summary.optLong("missing_content_blob_bytes", 0));
+        content.put("failed_content_blob_count", summary.optLong("failed_content_blob_count", 0));
+        content.put("failed_content_blob_bytes", summary.optLong("failed_content_blob_bytes", 0));
     }
 
     private static void copyAttachmentSummary(JSObject content, JSObject summary) throws Exception {
         content.put("missing_attachment_resource_count", summary.optLong("missing_attachment_resource_count", 0));
         content.put("missing_attachment_resource_bytes", summary.optLong("missing_attachment_resource_bytes", 0));
+        content.put("failed_attachment_resource_count", summary.optLong("failed_attachment_resource_count", 0));
+        content.put("failed_attachment_resource_bytes", summary.optLong("failed_attachment_resource_bytes", 0));
         content.put("missing_active_topic_attachment_resource_count", summary.optLong("missing_active_topic_attachment_resource_count", 0));
         content.put("missing_image_attachment_resource_count", summary.optLong("missing_image_attachment_resource_count", 0));
         content.put("missing_image_attachment_resource_bytes", summary.optLong("missing_image_attachment_resource_bytes", 0));

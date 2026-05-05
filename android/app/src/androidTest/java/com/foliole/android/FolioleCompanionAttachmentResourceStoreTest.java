@@ -152,6 +152,8 @@ public class FolioleCompanionAttachmentResourceStoreTest {
 
         assertEquals(1, summary.getLong("missing_attachment_resource_count"));
         assertEquals(11, summary.getLong("missing_image_attachment_resource_bytes"));
+        assertEquals(0, summary.getLong("failed_attachment_resource_count"));
+        assertEquals(0, summary.getLong("failed_attachment_resource_bytes"));
     }
 
     @Test
@@ -249,6 +251,9 @@ public class FolioleCompanionAttachmentResourceStoreTest {
             .getJSONArray("resources")
             .getJSONObject(1)
             .getString("attachment_id"));
+        JSObject summary = FolioleCompanionAttachmentResourceStore.summarizeMissingResources(context, database);
+        assertEquals(1, summary.getLong("failed_attachment_resource_count"));
+        assertEquals(11, summary.getLong("failed_attachment_resource_bytes"));
     }
 
     @Test
