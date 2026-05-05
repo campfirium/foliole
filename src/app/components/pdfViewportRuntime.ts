@@ -44,6 +44,37 @@ function handleSearchTextLayerRender(args: {
   scheduleSearchReflowRefresh(() => refreshSearchRevision(args.setSearchRevision));
 }
 
+function refreshExistingSearchTextLayers(args: {
+  pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
+  previousSignatures: Record<number, string>;
+  searchQuery: string;
+  searchRequest: PdfSearchRequest | null;
+  searchTarget: PdfSearchTarget | null;
+  setSearchRevision: Dispatch<SetStateAction<number>>;
+  totalPages: number | null;
+}) {
+  if (!args.totalPages) {
+    return;
+  }
+  if (!isPdfSearchRuntimeActive({ searchQuery: args.searchQuery, searchRequest: args.searchRequest, searchTarget: args.searchTarget })) {
+    return;
+  }
+  let refreshed = false;
+  for (let pageNumber = 1; pageNumber <= args.totalPages; pageNumber += 1) {
+    const shell = args.pageElementsRef.current[pageNumber];
+    if (!shouldRefreshTextLayer({ pageNumber, previousSignatures: args.previousSignatures, shell })) {
+      continue;
+    }
+    args.previousSignatures[pageNumber] = resolveTextLayerRefreshSignature(shell) ?? '';
+    refreshed = true;
+  }
+  if (!refreshed) {
+    return;
+  }
+  refreshSearchRevision(args.setSearchRevision);
+  scheduleSearchReflowRefresh(() => refreshSearchRevision(args.setSearchRevision));
+}
+
 function handleSearchTextContentLoad(args: {
   pageNumber: number;
   pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
@@ -80,6 +111,17 @@ export function usePdfViewportRuntime(args: {
   const runtime = usePdfViewportRuntimeState(args.pdfSource);
   usePageJumpEffect(args.pageJumpRequest, runtime.pageElementsRef, runtime.scrollContainerRef, args.totalPages, args.clearPageJumpRequest);
   useViewportTransformAnchor(args.rotation, runtime.scrollContainerRef, args.zoom);
+  useEffect(() => {
+    refreshExistingSearchTextLayers({
+      pageElementsRef: runtime.pageElementsRef,
+      previousSignatures: runtime.textLayerSignatureByPageRef.current,
+      searchQuery: args.searchQuery,
+      searchRequest: args.searchRequest,
+      searchTarget: args.searchTarget,
+      setSearchRevision: runtime.setSearchRevision,
+      totalPages: args.totalPages
+    });
+  }, [args.searchQuery, args.searchRequest, args.searchTarget, args.totalPages, runtime.pageElementsRef, runtime.setSearchRevision, runtime.textLayerSignatureByPageRef]);
   const handleScroll = useVisiblePageSync(args.page, runtime.pageElementsRef, runtime.scrollContainerRef, args.setVisiblePage, args.totalPages);
   return {
     ...runtime,
