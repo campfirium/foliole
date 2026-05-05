@@ -23,15 +23,16 @@ final class FolioleCompanionSyncPushAckStore {
             return result;
         }
         String now = Instant.now().toString();
+        FolioleCompanionSyncPushAckRules rules = FolioleCompanionSyncPushAckRules.load(context);
         database.beginTransaction();
         try {
             for (int index = 0; index < acks.length(); index += 1) {
                 JSONObject ack = acks.optJSONObject(index);
-                if (ack == null || !isKnownStatus(ack)) {
+                if (ack == null || !rules.isKnownStatus(ack)) {
                     continue;
                 }
                 JSONObject identity = ack.optJSONObject("identity");
-                if (!hasRequiredAckFields(ack, identity)) {
+                if (!rules.hasRequiredFields(ack, identity)) {
                     continue;
                 }
                 String clientOpId = ack.optString("client_op_id", ack.optString("clientOpId"));
@@ -65,34 +66,5 @@ final class FolioleCompanionSyncPushAckStore {
         JSObject result = new JSObject();
         result.put("saved_client_op_ids", savedClientOpIds);
         return result;
-    }
-
-    private static boolean isKnownStatus(JSONObject ack) {
-        String status = ack.optString("status");
-        return status.equals("accepted") ||
-            status.equals("already_applied") ||
-            status.equals("conflict") ||
-            status.equals("rejected");
-    }
-
-    private static boolean hasRequiredAckFields(JSONObject ack, JSONObject identity) {
-        if (identity == null) {
-            return false;
-        }
-        String clientOpId = ack.optString("client_op_id", ack.optString("clientOpId")).trim();
-        String objectType = identity.optString("objectType").trim();
-        String objectId = identity.optString("objectId").trim();
-        String status = ack.optString("status");
-        boolean canConfirm = status.equals("accepted") || status.equals("already_applied");
-        if (canConfirm && objectType.equals("review_log")) {
-            return false;
-        }
-        if (canConfirm && objectType.equals("node")) {
-            return !clientOpId.isEmpty() && !objectId.isEmpty();
-        }
-        return !clientOpId.isEmpty() &&
-            !objectType.isEmpty() &&
-            !objectId.isEmpty() &&
-            (!canConfirm || (ack.has("state_seq") && !ack.isNull("state_seq")));
     }
 }

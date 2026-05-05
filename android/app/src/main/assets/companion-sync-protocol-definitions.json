@@ -1,0 +1,20 @@
+{
+  "pushAck": {
+    "confirmingStatuses": [
+      "accepted",
+      "already_applied"
+    ],
+    "stateSeqOptionalObjectTypes": [
+      "node"
+    ],
+    "stateSeqRejectedObjectTypes": [
+      "review_log"
+    ],
+    "statuses": [
+      "accepted",
+      "already_applied",
+      "conflict",
+      "rejected"
+    ]
+  }
+}

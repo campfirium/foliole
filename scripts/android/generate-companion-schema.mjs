@@ -11,6 +11,7 @@ import { ANDROID_COMPANION_MUTATION_DEFINITIONS } from '../../lib/core/database/
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
+import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../..');
@@ -18,6 +19,7 @@ const outputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-co
 const migrationOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-migration-schema.json');
 const mutationOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-mutation-definitions.json');
 const queryOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-query-definitions.json');
+const syncProtocolOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-sync-protocol-definitions.json');
 const statements = [
   ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
   ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
@@ -34,7 +36,9 @@ await fs.writeFile(
 );
 await fs.writeFile(mutationOutputPath, `${JSON.stringify({ statements: ANDROID_COMPANION_MUTATION_DEFINITIONS }, null, 2)}\n`, 'utf8');
 await fs.writeFile(queryOutputPath, `${JSON.stringify({ queries: ANDROID_COMPANION_QUERY_DEFINITIONS }, null, 2)}\n`, 'utf8');
+await fs.writeFile(syncProtocolOutputPath, `${JSON.stringify(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS, null, 2)}\n`, 'utf8');
 console.info('[android-schema] wrote companion schema artifact', outputPath);
 console.info('[android-schema] wrote companion migration schema artifact', migrationOutputPath);
 console.info('[android-schema] wrote companion mutation definitions artifact', mutationOutputPath);
 console.info('[android-schema] wrote companion query definitions artifact', queryOutputPath);
+console.info('[android-schema] wrote companion sync protocol definitions artifact', syncProtocolOutputPath);
