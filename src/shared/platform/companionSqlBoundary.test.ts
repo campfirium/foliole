@@ -7,6 +7,8 @@ const ROOT = process.cwd();
 const SCANNED_DIRS = ['src/companion', 'src/shared/platform', 'lib/platform'];
 const SQLITE_TOUCH_ALLOWED = new Set([
   'src/shared/platform/capacitorSqliteDbPort.ts',
+  'src/shared/platform/companionSyncReviewLogApply.ts',
+  'src/shared/platform/companionSyncStateObjects.ts',
   'src/shared/platform/companionSyncNodeVersions.ts',
   'src/shared/platform/companionSyncPackNodes.ts'
 ]);
