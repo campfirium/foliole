@@ -86,11 +86,18 @@ function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
 }
 
 function buildDiagnosticVerdictChecks(result: CombinedSyncDiagnosticResult) {
-  return [
+  const seen = new Set<string>();
+  const verdicts = [
     ...result.verdicts,
     ...(result.android?.verdicts ?? []),
     ...(result.desktop?.verdicts ?? [])
-  ]
+  ].filter((verdict) => {
+    const key = `${verdict.code}:${verdict.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return verdicts
     .filter((verdict) => verdict.severity === 'error')
     .map((verdict) => check(
       `diagnostic_error_${verdict.code}`,

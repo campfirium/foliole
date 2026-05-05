@@ -79,6 +79,24 @@ describe('buildSyncConvergenceReport', () => {
     ]));
   });
 
+  it('deduplicates merged error diagnostic verdicts', () => {
+    const diagnosticError = {
+      code: 'android_recent_sync_failed',
+      evidence: { message: 'Failed to apply companion desktop sync pack.' },
+      message: 'Recent sync activity failed.',
+      severity: 'error' as const
+    };
+    const report = buildSyncConvergenceReport(result({
+      android: {
+        ...result().android!,
+        verdicts: [diagnosticError]
+      },
+      verdicts: [diagnosticError]
+    }));
+
+    expect(report.checks.filter((item) => item.code === 'diagnostic_error_android_recent_sync_failed')).toHaveLength(1);
+  });
+
   it('blocks pending acks that survive a later finished sync pass', () => {
     const report = buildSyncConvergenceReport(result({
       android: {
