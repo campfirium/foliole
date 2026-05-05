@@ -13,8 +13,28 @@ import { buildHotkeySettings } from './appHotkeySettings';
 import { buildControllerMoveToNodeState } from './appMoveToNodeState';
 import { buildControllerSearchState } from './appSearchState';
 import { useCommandShortcutState } from './reviewHotkeysState';
+import { useAppCommandShortcutDispatcher } from './useAppCommandShortcutDispatcher';
 import { useFormalImport } from './useFormalImport';
 import { useNativeCommandMenu } from './useNativeCommandMenu';
+
+function useAppCommandShortcuts(args: {
+  controller: ReturnType<typeof useWorkspaceControllerState>;
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
+  paletteState: ReturnType<typeof buildControllerPaletteState>;
+}) {
+  useNativeCommandMenu(args.paletteState.items, args.paletteState.onRunCommand);
+  useAppCommandShortcutDispatcher({
+    isCommandSurfaceOpen:
+      args.controller.runtime.isCommandPaletteOpen ||
+      args.controller.runtime.isGoToNodePaletteOpen ||
+      args.controller.runtime.isMoveToNodePaletteOpen ||
+      args.controller.runtime.isSearchPaletteOpen ||
+      args.controller.runtime.isSettingsOpen,
+    items: args.paletteState.items,
+    runCommand: args.paletteState.onRunCommand,
+    shortcutMap: args.hotkeys.shortcutMap
+  });
+}
 
 export function useControllerAuxiliaryState(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
@@ -58,7 +78,7 @@ export function useControllerAuxiliaryState(args: {
     ws: args.ws
   });
 
-  useNativeCommandMenu(paletteState.items, paletteState.onRunCommand);
+  useAppCommandShortcuts({ controller: args.controller, hotkeys: args.hotkeys, paletteState });
   const hotkeySettings = useMemo(
     () => buildHotkeySettings(args.paletteItems, args.hotkeys),
     [args.paletteItems, args.hotkeys]

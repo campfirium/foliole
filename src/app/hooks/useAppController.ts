@@ -15,11 +15,7 @@ import type { AppGoToNodeState } from './appGoToNodeState';
 import type { AppHotkeySettings } from './appHotkeySettings';
 import type { AppSearchState } from './appSearchState';
 import { countDueReviewNodes } from './layoutPropsBuilder';
-import {
-  DOCUMENT_SHORTCUT_COMMAND_IDS,
-  REVIEW_SHORTCUT_COMMAND_IDS,
-  useCommandShortcutState
-} from './reviewHotkeysState';
+import { APP_SHORTCUT_COMMAND_IDS, useCommandShortcutState } from './reviewHotkeysState';
 import { openCompanionSyncSettings } from './settingsOverlayRequest';
 import { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import { useControllerPaletteItems } from './useControllerPaletteItems';
@@ -219,7 +215,7 @@ export function useAppController(args: {
   const controller = useWorkspaceControllerState(ws, isWorkspaceHydrated);
   const formalImport = useFormalImport();
   const { exitStudyMode, isStudyMode, startStudyMode } = controller.study;
-  const hotkeys = useCommandShortcutState([...REVIEW_SHORTCUT_COMMAND_IDS, ...DOCUMENT_SHORTCUT_COMMAND_IDS]);
+  const hotkeys = useCommandShortcutState(APP_SHORTCUT_COMMAND_IDS);
   const priorityQuickSet = useControllerPriorityQuickSet({ hotkeys, runtime: controller.runtime, ws });
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
   const isCurrentReviewItemGradable =
