@@ -227,6 +227,18 @@ describe('companion desktop sync push acknowledgements', () => {
     expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
   });
 
+  it('does not push review_log when its node_review is not ready to push', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
+    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushedReviewOpIds).toEqual([]);
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
+    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
+  });
+
   it('advances accepted review log cursor only after the pulled pack confirms the op id', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
     syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);

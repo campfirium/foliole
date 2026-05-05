@@ -104,7 +104,7 @@ export function CompanionSyncDiagnosticCheckpoint(props: { result: CombinedSyncD
           label="Topics"
           value={`${formatNumber(props.result.android?.storage.active_node_count)} on device / ${formatNumber(props.result.desktop?.storage.active_node_count)} on desktop`}
         />
-        <MetricRow label="Device changes to send" value={formatNumber(props.result.android?.sync_state.local_dirty_count)} />
+        <MetricRow label="Device changes to send" value={formatNumber(props.result.android?.sync_state.ready_dirty_count)} />
         <MetricRow label="Topic bodies to download" value={formatNumber(props.result.android?.content.missing_content_blob_count)} />
         <MetricRow label="Body bytes to download" value={formatBytes(props.result.android?.content.missing_content_blob_bytes)} />
         <MetricRow label="Attachment files to download" value={formatNumber(props.result.android?.content.missing_attachment_resource_count)} />

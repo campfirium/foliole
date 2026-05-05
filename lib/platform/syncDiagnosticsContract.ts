@@ -10,6 +10,7 @@ export interface SyncDiagnosticCountRange {
   object_type: string;
   pending_ack_count?: number;
   push_issue_count?: number;
+  ready_dirty_count?: number;
 }
 
 export interface SyncDiagnosticDirtyObject {
@@ -64,6 +65,7 @@ export interface SyncDiagnosticState {
   pending_acks?: SyncDiagnosticPendingAck[];
   push_issue_count?: number;
   push_issues?: SyncDiagnosticPendingAck[];
+  ready_dirty_count?: number;
   state_counts: SyncDiagnosticCountRange[];
 }
 

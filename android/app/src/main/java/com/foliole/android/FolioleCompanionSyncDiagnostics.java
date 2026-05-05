@@ -85,6 +85,7 @@ final class FolioleCompanionSyncDiagnostics {
         state.put("pack_cursor", cursor <= 0 ? JSONObject.NULL : cursor);
         state.put("max_state_seq", maxStateSeq <= 0 ? JSONObject.NULL : maxStateSeq);
         state.put("local_dirty_count", count(database, "SELECT COUNT(*) FROM sync_object_state WHERE sync_dirty = 1"));
+        state.put("ready_dirty_count", count(database, readyDirtySql("COUNT(*)")));
         state.put("pending_ack_count", count(database,
             "SELECT COUNT(*) FROM sync_push_ack WHERE status IN ('accepted', 'already_applied')"
         ));
@@ -201,7 +202,10 @@ final class FolioleCompanionSyncDiagnostics {
         JSArray items = new JSArray();
         try (Cursor cursor = database.rawQuery(
             "SELECT state.object_type, COUNT(*), SUM(CASE WHEN state.sync_dirty = 1 THEN 1 ELSE 0 END), " +
-                "MIN(state.state_seq), MAX(state.state_seq), COALESCE(pending.count, 0), COALESCE(issues.count, 0) " +
+                "MIN(state.state_seq), MAX(state.state_seq), COALESCE(pending.count, 0), COALESCE(issues.count, 0), " +
+                "SUM(CASE WHEN state.sync_dirty = 1 AND NOT EXISTS (" +
+                "SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type " +
+                "AND ack.object_id = state.object_id) THEN 1 ELSE 0 END) " +
                 "FROM sync_object_state state " +
                 "LEFT JOIN (" +
                 "SELECT object_type, COUNT(*) AS count FROM sync_push_ack " +
@@ -223,6 +227,7 @@ final class FolioleCompanionSyncDiagnostics {
                 row.put("max_state_seq", cursor.isNull(4) ? JSONObject.NULL : cursor.getLong(4));
                 row.put("pending_ack_count", cursor.getLong(5));
                 row.put("push_issue_count", cursor.getLong(6));
+                row.put("ready_dirty_count", cursor.getLong(7));
                 items.put(row);
             }
         }
@@ -234,6 +239,8 @@ final class FolioleCompanionSyncDiagnostics {
         try (Cursor cursor = database.rawQuery(
             "SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash " +
                 "FROM sync_object_state WHERE sync_dirty = 1 " +
+                "AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type " +
+                "AND ack.object_id = sync_object_state.object_id) " +
                 "ORDER BY state_seq DESC LIMIT 50",
             null
         )) {
@@ -369,6 +376,12 @@ final class FolioleCompanionSyncDiagnostics {
             addVerdict(verdicts, "android_ready", "ok", "Android sync state is readable.", storage);
         }
         return verdicts;
+    }
+
+    private static String readyDirtySql(String projection) {
+        return "SELECT " + projection + " FROM sync_object_state state WHERE state.sync_dirty = 1 " +
+            "AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type " +
+            "AND ack.object_id = state.object_id)";
     }
 
     private static boolean hasCompletedEvent(JSArray events) {

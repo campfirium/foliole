@@ -79,6 +79,7 @@ const diagnosticResult = {
         status: 'accepted'
       }],
       push_issue_count: 1,
+      ready_dirty_count: 1,
       push_issues: [{
         acked_at: '2026-04-29T01:26:00.000Z',
         client_op_id: 'node_review:node-2:5',
@@ -95,7 +96,8 @@ const diagnosticResult = {
           min_state_seq: 4,
           object_type: 'node_review',
           pending_ack_count: 1,
-          push_issue_count: 1
+          push_issue_count: 1,
+          ready_dirty_count: 1
         }
       ]
     },
@@ -169,7 +171,7 @@ function expectAndroidDiagnosticRows() {
   expect(screen.getByText('Android')).toBeInTheDocument();
   expect(screen.getAllByText('Object types')).toHaveLength(2);
   expect(screen.getAllByText('node_review')).toHaveLength(4);
-  expect(screen.getByText('1 waiting · 1 confirming · 1 review needed')).toBeInTheDocument();
+  expect(screen.getByText('1 ready to send · 1 confirming · 1 review needed')).toBeInTheDocument();
   expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
   expect(screen.getByText('Changes needing review')).toBeInTheDocument();
   expect(screen.getAllByText('Body bytes to download').length).toBeGreaterThan(0);

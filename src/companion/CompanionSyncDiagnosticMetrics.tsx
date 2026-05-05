@@ -37,6 +37,7 @@ export function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       <MetricRow label="Topics" value={formatNumber(snapshot.storage.active_node_count)} />
       <MetricRow label={isAndroid ? 'Device changes' : 'Desktop changes'} value={formatNumber(snapshot.sync_state.max_state_seq)} />
       {isAndroid ? <MetricRow label="Last desktop sync" value={formatNumber(snapshot.sync_state.pack_cursor)} /> : null}
+      {isAndroid ? <MetricRow label="Ready to send" value={formatNumber(snapshot.sync_state.ready_dirty_count)} /> : null}
       {isAndroid ? <MetricRow label="Waiting for confirmation" value={formatNumber(snapshot.sync_state.pending_ack_count)} /> : null}
       {isAndroid ? <MetricRow label="Changes needing review" value={formatNumber(snapshot.sync_state.push_issue_count ?? 0)} /> : null}
       <MetricRow label="Bodies to download" value={formatNumber(snapshot.content.missing_content_blob_count)} />
