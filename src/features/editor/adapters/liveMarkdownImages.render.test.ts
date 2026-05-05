@@ -6,6 +6,7 @@ import { registerImageClozeEditorPresentation, unregisterImageClozeEditorPresent
 import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
 
 vi.mock('../../../shared/platform/bridge', () => ({
+  getRuntimeInvoke: vi.fn(() => null),
   openExternalUrl: vi.fn()
 }));
 
@@ -166,6 +167,16 @@ describe('live markdown image rendering basics', () => {
     expectBlockAndInlineImageLayout(host);
 
     adapter.destroy();
+  });
+});
+
+describe('live markdown image rendering interactions', () => {
+  beforeEach(() => {
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
   });
 
   it('dispatches a preview request when the block image preview trigger is clicked', async () => {

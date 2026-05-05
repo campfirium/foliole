@@ -1,3 +1,5 @@
+import { resolveRuntimeAttachmentResource } from '../../../shared/platform/attachmentResources';
+import { isNativeAndroidCompanionRuntime } from '../../../shared/platform/companionWorkspaceSyncBridge';
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';
@@ -69,6 +71,28 @@ function createImageStatusElement(status: 'loading' | 'unavailable', display: Ma
   return element;
 }
 
+function appendResolvedAndroidAttachmentImage(
+  wrapper: HTMLElement,
+  imageMatch: MarkdownImageMatch,
+  renderPlan: ReturnType<typeof buildMarkdownImageRenderPlan>,
+  editorNodeId: string | null
+) {
+  wrapper.append(createImageStatusElement('loading', renderPlan.display));
+  void resolveRuntimeAttachmentResource(imageMatch.source).then((resolution) => {
+    if (resolution?.status !== 'ready' || !resolution.resource_url) {
+      wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
+      return;
+    }
+    wrapper.replaceChildren(
+      createImageSurface(imageMatch, resolution.resource_url, editorNodeId, {
+        onError: () => {
+          wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
+        }
+      })
+    );
+  });
+}
+
 export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch, editorNodeId: string | null = null) {
   const renderPlan = buildMarkdownImageRenderPlan(imageMatch);
   const wrapper = document.createElement('span');
@@ -93,6 +117,11 @@ export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch, edi
   const attachmentSrc = renderPlan.attachmentProtocolSrc;
   if (!attachmentSrc) {
     wrapper.append(createImageStatusElement('unavailable', renderPlan.display));
+    return wrapper;
+  }
+
+  if (isNativeAndroidCompanionRuntime()) {
+    appendResolvedAndroidAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId);
     return wrapper;
   }
 
