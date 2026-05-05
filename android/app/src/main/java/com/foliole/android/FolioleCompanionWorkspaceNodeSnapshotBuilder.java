@@ -61,18 +61,18 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
     }
 
     private static void putField(Context context, JSObject target, JSONObject row, JSONObject field, JSONObject nodeRules) throws Exception {
-        String rowKey = field.getString(fieldKey(context, "rowKey"));
-        if (field.optBoolean(fieldKey(context, "omitWhenNull"), false) && row.isNull(rowKey)) return;
-        target.put(field.getString(fieldKey(context, "outputKey")), fieldValue(context, row, field, nodeRules));
+        String rowKey = fieldRowKey(context, field);
+        if (fieldOmitWhenNull(context, field) && row.isNull(rowKey)) return;
+        target.put(fieldOutputKey(context, field), fieldValue(context, row, field, nodeRules));
     }
 
     private static Object fieldValue(Context context, JSONObject row, JSONObject field, JSONObject nodeRules) throws Exception {
-        String rowKey = field.getString(fieldKey(context, "rowKey"));
-        String type = field.getString(fieldKey(context, "type"));
+        String rowKey = fieldRowKey(context, field);
+        String type = fieldTypeKey(context, field);
         if (fieldType(context, "string").equals(type)) return row.getString(rowKey);
         if (fieldType(context, "nullableString").equals(type)) return nullableString(row, rowKey);
-        if (fieldType(context, "long").equals(type)) return row.isNull(rowKey) ? field.optLong(fieldKey(context, "defaultValue"), 0) : row.getLong(rowKey);
-        if (fieldType(context, "double").equals(type)) return row.isNull(rowKey) ? field.optDouble(fieldKey(context, "defaultValue"), 0) : row.getDouble(rowKey);
+        if (fieldType(context, "long").equals(type)) return row.isNull(rowKey) ? fieldDefaultLong(context, field, 0) : row.getLong(rowKey);
+        if (fieldType(context, "double").equals(type)) return row.isNull(rowKey) ? fieldDefaultDouble(context, field, 0) : row.getDouble(rowKey);
         if (fieldType(context, "booleanLong").equals(type)) return row.getLong(rowKey) == 1;
         if (fieldType(context, "json").equals(type)) return FolioleCompanionJsonValueParser.parse(nullableString(row, rowKey));
         if (fieldType(context, "kind").equals(type)) return normalizeKind(nullableString(row, rowKey), nodeRules);
@@ -111,8 +111,28 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
         return snapshotObject(context, groupName).getString(key);
     }
 
-    private static String fieldKey(Context context, String key) throws Exception {
-        return FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key);
+    private static double fieldDefaultDouble(Context context, JSONObject field, double fallback) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldDefaultDouble(context, field, fallback);
+    }
+
+    private static long fieldDefaultLong(Context context, JSONObject field, long fallback) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldDefaultLong(context, field, fallback);
+    }
+
+    private static boolean fieldOmitWhenNull(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldOmitWhenNull(context, field);
+    }
+
+    private static String fieldOutputKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field);
+    }
+
+    private static String fieldRowKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field);
+    }
+
+    private static String fieldTypeKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field);
     }
 
     private static String fieldCollectionKey(Context context, String key) throws Exception {

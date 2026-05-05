@@ -19,6 +19,34 @@ final class FolioleCompanionQueryDefinitionShapeKeys {
         return section(context, "field").getString(key);
     }
 
+    static double fieldDefaultDouble(Context context, JSONObject field, double fallback) throws Exception {
+        return field.optDouble(fieldKey(context, "defaultValue"), fallback);
+    }
+
+    static long fieldDefaultLong(Context context, JSONObject field, long fallback) throws Exception {
+        return field.optLong(fieldKey(context, "defaultValue"), fallback);
+    }
+
+    static String fieldDefaultRuleKey(Context context, JSONObject field) throws Exception {
+        return field.getString(fieldKey(context, "defaultRuleKey"));
+    }
+
+    static boolean fieldOmitWhenNull(Context context, JSONObject field) throws Exception {
+        return field.optBoolean(fieldKey(context, "omitWhenNull"), false);
+    }
+
+    static String fieldOutputKey(Context context, JSONObject field) throws Exception {
+        return field.getString(fieldKey(context, "outputKey"));
+    }
+
+    static String fieldRowKey(Context context, JSONObject field) throws Exception {
+        return field.getString(fieldKey(context, "rowKey"));
+    }
+
+    static String fieldTypeKey(Context context, JSONObject field) throws Exception {
+        return field.getString(fieldKey(context, "type"));
+    }
+
     static String fieldCollectionKey(Context context, String key) throws Exception {
         return section(context, "fieldCollections").getString(key);
     }

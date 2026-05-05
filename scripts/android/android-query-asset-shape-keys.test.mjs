@@ -76,6 +76,9 @@ describe('Android query asset shape keys', () => {
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.routingKey(context, "routes")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.metricRowKey(context, key)');
     expect(shapeKeys).toContain('fieldKey(Context context, String key)');
+    expect(shapeKeys).toContain('fieldOutputKey(Context context, JSONObject field)');
+    expect(shapeKeys).toContain('fieldRowKey(Context context, JSONObject field)');
+    expect(shapeKeys).toContain('fieldTypeKey(Context context, JSONObject field)');
     expect(shapeKeys).toContain('fieldType(Context context, String key)');
     expect(shapeKeys).toContain('diagnosticRowGroupKey(Context context, String key)');
     expect(combinedSource).not.toContain('getString("sql")');

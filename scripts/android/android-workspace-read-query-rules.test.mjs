@@ -72,7 +72,9 @@ describe('Android workspace read query rules', () => {
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key)');
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.viewStateString(context');
     expect(combinedSource).toContain('snapshotObject(context, "outputKeys")');
-    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key)');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "workspaceRead", groupName)');
     expect(combinedSource).not.toContain('field.getString("outputKey")');

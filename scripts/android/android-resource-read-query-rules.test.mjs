@@ -174,7 +174,9 @@ describe('Android resource read query rules', () => {
 
     expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentObject(context, key)');
     expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentArray(context, key)');
-    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key)');
+    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
+    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
+    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
     expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(source).not.toContain('result.put("document"');
     expect(source).not.toContain('entry.put("document_id"');

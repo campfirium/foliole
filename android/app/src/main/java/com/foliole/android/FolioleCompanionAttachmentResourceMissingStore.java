@@ -91,10 +91,10 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         JSONArray resourceFields = FolioleCompanionMissingResourceQueryRules.attachmentArray(context, "resourceFields");
         for (int index = 0; index < resourceFields.length(); index += 1) {
             JSONObject field = resourceFields.getJSONObject(index);
-            String rowKey = rowKeys.getString(field.getString(fieldKey(context, "rowKey")));
-            String type = field.getString(fieldKey(context, "type"));
+            String rowKey = rowKeys.getString(fieldRowKey(context, field));
+            String type = fieldTypeKey(context, field);
             resource.put(
-                field.getString(fieldKey(context, "outputKey")),
+                fieldOutputKey(context, field),
                 fieldType(context, "long").equals(type) ? row.getLong(rowKey) : row.getString(rowKey)
             );
         }
@@ -180,8 +180,16 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         return FolioleCompanionMissingResourceQueryRules.attachmentObject(context, "rowKeys");
     }
 
-    private static String fieldKey(Context context, String key) throws Exception {
-        return FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key);
+    private static String fieldOutputKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field);
+    }
+
+    private static String fieldRowKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field);
+    }
+
+    private static String fieldTypeKey(Context context, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field);
     }
 
     private static String fieldType(Context context, String key) throws Exception {
