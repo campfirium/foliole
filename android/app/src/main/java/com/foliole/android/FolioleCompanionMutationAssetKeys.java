@@ -41,22 +41,30 @@ final class FolioleCompanionMutationAssetKeys {
 
     static String key(Context context, String key) throws Exception {
         JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH));
-        JSONObject assetKeys = payload.optJSONObject("assetKeys");
-        if (assetKeys == null) {
-            throw new IllegalStateException("Companion mutation definitions asset is missing asset keys.");
-        }
-        return assetKeys.getString(key);
+        return assetKey(payload, key);
     }
 
     private static String ruleGroupKey(JSONObject rules, String groupName) throws Exception {
-        JSONObject groupKeys = rules.optJSONObject("groupKeys");
-        if (groupKeys == null) {
-            throw new IllegalStateException("Companion mutation definitions asset is missing rule group keys.");
-        }
-        return groupKeys.getString(groupName);
+        return groupKey(rules, groupName);
     }
 
     private static String appDataClearMutationKey(Context context, String key) throws Exception {
         return shapeKey(context, "appDataClearMutation", key);
+    }
+
+    private static String assetKey(JSONObject payload, String key) throws Exception {
+        return object(payload, "assetKeys", "asset keys").getString(key);
+    }
+
+    private static String groupKey(JSONObject rules, String key) throws Exception {
+        return object(rules, "groupKeys", "rule group keys").getString(key);
+    }
+
+    private static JSONObject object(JSONObject source, String key, String label) {
+        JSONObject object = source.optJSONObject(key);
+        if (object == null) {
+            throw new IllegalStateException("Companion mutation definitions asset is missing " + label + ".");
+        }
+        return object;
     }
 }

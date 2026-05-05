@@ -18,6 +18,7 @@ const REVIEW_LOG_RECORD_RULES = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncReviewLogRecordRules.java'
 );
+const QUERY_ASSET_KEYS = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionQueryAssetKeys.java');
 
 describe('Android query asset shape keys', () => {
   it('generates query definition shape metadata', async () => {
@@ -66,10 +67,13 @@ describe('Android query asset shape keys', () => {
   it('keeps Java query readers off inline query asset field names', async () => {
     const namedQueryStore = await readFile(NAMED_QUERY_STORE, 'utf8');
     const reviewLogRecordRules = await readFile(REVIEW_LOG_RECORD_RULES, 'utf8');
+    const queryAssetKeys = await readFile(QUERY_ASSET_KEYS, 'utf8');
     const shapeKeys = await readFile(SHAPE_KEYS, 'utf8');
     const syncPayloadQueryStore = await readFile(SYNC_PAYLOAD_QUERY_STORE, 'utf8');
     const combinedSource = `${namedQueryStore}\n${reviewLogRecordRules}\n${syncPayloadQueryStore}`;
 
+    expect(queryAssetKeys).toContain('assetKey(payload, key)');
+    expect(queryAssetKeys).toContain('groupKey(rules, groupName)');
     expect(shapeKeys).toContain('FolioleCompanionQueryAssetKeys.section(context, "queryShape")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "resultKey")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "source")');
