@@ -5,6 +5,7 @@ const capacitorMock = vi.hoisted(() => ({
   platform: vi.fn(() => 'android'),
   plugin: {
     applySyncObjects: vi.fn(async () => ({ applied_object_ids: ['setting:one'] })),
+    applyDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 3, applied_object_count: 4, to_state_seq: 11 })),
     applySyncPack: vi.fn(async () => ({ applied_blob_count: 1, applied_object_count: 2, to_state_seq: 9 })),
     applySyncNodeVersions: vi.fn(async () => ({ applied_node_ids: ['node-1'] })),
     applySyncReviewLog: vi.fn(async () => ({ applied_op_ids: ['op-1'] })),
@@ -141,6 +142,14 @@ async function testNativePluginBridge() {
     applied_object_count: 2,
     to_state_seq: 9
   });
+  await expect(api.applyCompanionDesktopSyncPack({
+    headers: { 'X-Device-Id': 'android' },
+    url: 'http://desktop/companion/sync-pack'
+  })).resolves.toEqual({
+    applied_blob_count: 3,
+    applied_object_count: 4,
+    to_state_seq: 11
+  });
   await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([{ object_id: 'node-1' }]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'op-1' }]);
   await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([
@@ -201,6 +210,10 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     updated_at: '2026-04-25T00:00:00.000Z'
   }])).resolves.toEqual(['setting:one']);
   expect(capacitorMock.plugin.applySyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/pack.db' });
+  expect(capacitorMock.plugin.applyDesktopSyncPack).toHaveBeenCalledWith({
+    headers: { 'X-Device-Id': 'android' },
+    url: 'http://desktop/companion/sync-pack'
+  });
   await expect(api.applyCompanionSyncNodeVersions([])).resolves.toEqual(['node-1']);
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual(['op-1']);
 }
@@ -230,6 +243,11 @@ async function testWebFallbackBridge() {
   await expect(api.saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42 })).resolves.toBeNull();
   await expect(api.applyCompanionSyncObjects([])).resolves.toEqual([]);
   await expect(api.applyCompanionSyncPack('/tmp/pack.db')).resolves.toEqual({
+    applied_blob_count: 0,
+    applied_object_count: 0,
+    to_state_seq: 0
+  });
+  await expect(api.applyCompanionDesktopSyncPack({ headers: {}, url: 'http://desktop/pack.db' })).resolves.toEqual({
     applied_blob_count: 0,
     applied_object_count: 0,
     to_state_seq: 0

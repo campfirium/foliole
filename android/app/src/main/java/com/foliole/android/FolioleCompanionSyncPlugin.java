@@ -694,6 +694,28 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void applyDesktopSyncPack(PluginCall call) {
+        new Thread(() -> {
+            FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+            try {
+                String url = call.getString("url");
+                if (url == null || url.trim().isEmpty()) {
+                    call.reject("url is required.");
+                    return;
+                }
+                call.resolve(databaseHelper.applyDesktopSyncPack(
+                    url.trim(),
+                    call.getData().optJSONObject("headers")
+                ));
+            } catch (Exception exception) {
+                call.reject("Failed to apply companion desktop sync pack.", exception);
+            } finally {
+                databaseHelper.close();
+            }
+        }).start();
+    }
+
+    @PluginMethod
     public void loadSyncNodeVersions(PluginCall call) {
         FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
         try {
