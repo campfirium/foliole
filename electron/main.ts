@@ -1,7 +1,10 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import electron, {
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
   type BrowserWindow as ElectronBrowserWindow,
   type BrowserWindowConstructorOptions
 } from 'electron';
@@ -16,9 +19,9 @@ import {
   IPC_WINDOW_TOGGLE_MAXIMIZE_CHANNEL,
   type InvokeRequest
 } from './ipc/contracts.js';
+import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { bindMenuToWindow, installAppMenu } from './ipc/menu.js';
-
-const { app, BrowserWindow, ipcMain } = electron;
+import { migrateLegacyWorkspaceState } from './ipc/storage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,6 +108,8 @@ function installInvokeHandler() {
 app.whenReady().then(async () => {
   installInvokeHandler();
   installAppMenu();
+  await migrateLegacyWorkspaceState('foliole-workspace-v1');
+  await migrateLegacyWebviewStorage();
   await createMainWindow();
 
   app.on('activate', async () => {
