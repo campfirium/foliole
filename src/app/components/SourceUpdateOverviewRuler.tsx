@@ -181,7 +181,7 @@ export function SourceUpdateOverviewRuler({
   return (
     <aside
       aria-label="Comparison overview ruler"
-      className="absolute bottom-4 right-[calc(var(--app-scrollbar-size)+14px)] top-[5.6rem] z-10 flex w-5 flex-col items-center gap-2"
+      className="flex min-h-0 flex-1 flex-col items-center gap-2 px-1 py-3"
       data-testid="source-update-overview-ruler"
     >
       <OverviewNavButton ariaLabel="Jump to previous diff" onClick={moveToPrevious}>

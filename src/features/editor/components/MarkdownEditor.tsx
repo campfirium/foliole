@@ -20,7 +20,6 @@ interface MarkdownEditorProps {
   ariaLabel?: string;
   className?: string;
   contentPaddingBottom?: string;
-  contentPaddingRight?: string;
   debugId?: string;
   hideTitleHeading?: boolean;
   hideScrollbar?: boolean;
@@ -183,7 +182,6 @@ export function MarkdownEditor({
   ariaLabel,
   className,
   contentPaddingBottom,
-  contentPaddingRight,
   debugId,
   hideTitleHeading = false,
   hideScrollbar = false,
@@ -209,8 +207,7 @@ export function MarkdownEditor({
   const handlers = useThumbPointerHandlers(adapterRef, scrollMetrics, scrollbar, syncScrollMetrics);
   const mouseGesture = useEditorMouseGesture(adapterRef, hostRef, bindings, settings);
   const editorStyle = {
-    '--editor-content-padding-bottom': contentPaddingBottom,
-    '--editor-content-padding-right': contentPaddingRight
+    '--editor-content-padding-bottom': contentPaddingBottom
   } as CSSProperties;
   const gestureTrailPath = useMemo(() => buildGestureTrailPath(mouseGesture.trail?.points ?? []), [mouseGesture.trail?.points]);
 

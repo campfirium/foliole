@@ -48,14 +48,12 @@ function PreviewDocumentPane({
   documentMaxWidth,
   editorAppearanceKey,
   editorDiffDecorations,
-  contentPaddingRight,
   hideScrollbar,
   onChange,
   onReady,
   readOnly
 }: {
   content: string;
-  contentPaddingRight?: string;
   currentNodeId: string | null;
   documentMaxWidth: number;
   editorAppearanceKey: string;
@@ -70,7 +68,6 @@ function PreviewDocumentPane({
       documentMaxWidth={documentMaxWidth}
       editorAppearanceKey={editorAppearanceKey}
       editorContent={content}
-      editorContentPaddingRight={contentPaddingRight}
       editorDiffDecorations={editorDiffDecorations}
       editorHideScrollbar={hideScrollbar}
       editorNodeId={currentNodeId}
@@ -92,15 +89,12 @@ function PreviewDocumentPane({
   );
 }
 
-function SourceUpdatePaneSection(props: {
-  description: string;
+function SourceUpdatePaneBody(props: {
   className: string;
   paneProps: ComponentProps<typeof PreviewDocumentPane>;
-  title: string;
 }) {
   return (
     <section className={props.className}>
-      <PanelColumnLabel description={props.description} title={props.title} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <PreviewDocumentPane {...props.paneProps} />
       </div>
@@ -124,7 +118,6 @@ function buildCurrentPaneProps(props: SourceUpdatePanelColumnsProps): ComponentP
 function buildUpdatedPaneProps(props: SourceUpdatePanelColumnsProps): ComponentProps<typeof PreviewDocumentPane> {
   return {
     content: props.props.updatedContent,
-    contentPaddingRight: '5.5rem',
     currentNodeId: null,
     documentMaxWidth: props.props.documentMaxWidth,
     editorAppearanceKey: `${props.props.editorAppearanceKey}-source-update-reference`,
@@ -140,20 +133,27 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
   const updatedPaneProps = buildUpdatedPaneProps(props);
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-2 overflow-hidden">
-      <SourceUpdatePaneSection
-        className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-bg-elevated"
+    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+      <PanelColumnLabel
         description="This side keeps the same reading and editing feel as the main document, stays vertically synced with the updated source, and leaves aligned gaps where the source has extra lines."
-        paneProps={currentPaneProps}
         title="Current"
       />
-      <section className="relative flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40">
-        <SourceUpdatePaneSection
-          className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+      <div className="border-l border-border bg-bg-panel/40">
+        <PanelColumnLabel
         description="This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines."
-        paneProps={updatedPaneProps}
         title="Updated Source"
         />
+      </div>
+      <div aria-hidden="true" className="border-b border-l border-border bg-bg-panel/40" />
+      <SourceUpdatePaneBody
+        className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-bg-elevated"
+        paneProps={currentPaneProps}
+      />
+      <SourceUpdatePaneBody
+        className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40"
+        paneProps={updatedPaneProps}
+      />
+      <section className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40">
         <SourceUpdateOverviewRuler
           currentContent={props.props.currentContent}
           currentEditor={props.currentEditor}

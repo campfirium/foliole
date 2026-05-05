@@ -98,7 +98,6 @@ describe('DocumentSourceUpdatePanel rendering', () => {
     expect(documentPanelBodyMock).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        editorContentPaddingRight: '5.5rem',
         editorAppearanceKey: 'appearance-1-source-update-reference',
         editorContent: 'alpha\ngamma',
         editorNodeId: null,

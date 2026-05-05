@@ -17,7 +17,6 @@ interface DocumentPanelBodyProps {
   editorAppearanceKey: string;
   editorContent: string;
   editorContentPaddingBottom?: string;
-  editorContentPaddingRight?: string;
   editorDiffDecorations?: EditorDiffDecorations | null;
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;
@@ -134,7 +133,6 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
         ariaLabel="Prompt editor"
         className="prompt-editor-host"
         contentPaddingBottom={props.editorContentPaddingBottom}
-        contentPaddingRight={props.editorContentPaddingRight}
         debugId={props.promptEditorDebugId}
         hideScrollbar={props.editorHideScrollbar}
         hideTitleHeading={props.editorHideTitleHeading}
