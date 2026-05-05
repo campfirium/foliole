@@ -14,7 +14,7 @@ export function renderNodeLabel(label: string, rename: ReturnType<typeof useRena
       />
     );
   }
-  return <span className="min-w-0 truncate">{label}</span>;
+  return <span className="block min-w-0 flex-1 truncate">{label}</span>;
 }
 
 export function NodeTreeRowExpandToggle(props: {
@@ -25,12 +25,12 @@ export function NodeTreeRowExpandToggle(props: {
   onToggleCollapse: (nodeId: string) => void;
 }) {
   if (!props.hasChildren) {
-    return <span aria-hidden="true" className="mr-2 size-4 flex-none" />;
+    return <span aria-hidden="true" className="mr-2 size-[1.125rem] flex-none" />;
   }
   return (
     <span
       aria-label={props.isCollapsed ? `Expand ${props.label}` : `Collapse ${props.label}`}
-      className="mr-2 flex size-4 flex-none items-center justify-center opacity-70"
+      className="mr-2 flex size-[1.125rem] flex-none items-center justify-center opacity-70"
       onClick={(event) => (event.stopPropagation(), props.onToggleCollapse(props.nodeId))}
       onKeyDown={(event) =>
         event.key === 'Enter' || event.key === ' '
@@ -49,7 +49,7 @@ function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg
       aria-hidden="true"
-      className={cn('h-4 w-4 transition-transform', className)}
+      className={cn('h-[1.125rem] w-[1.125rem] transition-transform', className)}
       viewBox="0 0 16 16"
     >
       <path

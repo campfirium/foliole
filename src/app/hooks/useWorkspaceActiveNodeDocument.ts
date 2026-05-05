@@ -11,7 +11,14 @@ import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePrepa
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
+interface UseWorkspaceActiveNodeDocumentOptions {
+  keepWarm?: boolean;
+}
+
+export function useWorkspaceActiveNodeDocument(
+  activeNodeId: string | null,
+  options: UseWorkspaceActiveNodeDocumentOptions = {}
+) {
   useEffect(() => {
     const runtimeInvoke = getRuntimeInvoke();
     if (!runtimeInvoke || !activeNodeId) {
@@ -27,6 +34,7 @@ export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
 
     let cancelled = false;
     void ensureWorkspaceNodeDocumentReady(activeNodeId, {
+      keepWarm: options.keepWarm,
       onDocumentMerged: (document) => {
         if (!cancelled) {
           markNodeDocumentMerged(activeNodeId, `content:${document.content.length}`);
@@ -47,5 +55,5 @@ export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [activeNodeId]);
+  }, [activeNodeId, options.keepWarm]);
 }

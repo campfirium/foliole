@@ -24,6 +24,7 @@ export interface WorkspaceListAreaProps {
   nodeOrder: string[];
   onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
   onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
+  onOpenTrashView: WorkspaceLayoutProps['onOpenTrashView'];
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
   reviewCompletedCount: number;
@@ -66,6 +67,7 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
   nodeOrder,
   onOpenMoveToNode,
   onOpenNotesView,
+  onOpenTrashView,
   onSelectNode,
   onSelectTrashNode,
   reviewCompletedCount,
@@ -98,6 +100,7 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
           nodeOrder={nodeOrder}
           onOpenMoveToNode={onOpenMoveToNode}
           onOpenNotesView={onOpenNotesView}
+          onOpenTrashView={onOpenTrashView}
           onSelectNode={onSelectNode}
           onSelectTrashNode={onSelectTrashNode}
           selectedTrashNodeId={selectedTrashNodeId}
@@ -120,7 +123,7 @@ function WorkspaceListLoadingState() {
     <aside
       aria-busy="true"
       aria-label="Loading note list"
-      className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground"
+      className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground"
     >
       <NodeListHeader
         isTrashViewOpen={false}

@@ -125,6 +125,21 @@ export function buildNodeTreeRows(
   return buildNodeTree(nodeOrder, nodesById).rows;
 }
 
+export function buildFlatNodeRows(
+  nodeOrder: string[],
+  nodesById: WorkspaceListNodesById
+): NodeTreeRow[] {
+  return nodeOrder
+    .map((nodeId) => nodesById[nodeId])
+    .filter((node): node is WorkspaceListNode => Boolean(node))
+    .map((node) => ({
+      descendantCount: 0,
+      depth: 0,
+      hasChildren: false,
+      node
+    }));
+}
+
 export function buildVisibleNodeTreeRows(
   rows: NodeTreeRow[],
   collapsedNodeIds: ReadonlySet<string>

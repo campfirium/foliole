@@ -3,7 +3,7 @@ import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as R
 import { AppEmptyState } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
-import { isInboxNode, isVirtualRootNode } from '../model/specialNodes';
+import { isInboxNode, isTrashNode, isVirtualRootNode } from '../model/specialNodes';
 import {
   isFsrsWorkspaceListNode,
   type WorkspaceListNodesById
@@ -15,6 +15,7 @@ import { createNodeListRowKeydownHandler } from './NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
 import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState } from './NodeTreeRowIconModel';
+import { TrashListRows } from './TrashListRows';
 
 interface NodeListRowsProps {
   activeNodeId: string | null;
@@ -41,6 +42,7 @@ function renderNodeListRow(
 ) {
   const node = props.nodesById[row.node.id];
   const isInbox = isInboxNode(node);
+  const isTrashRoot = isTrashNode(node);
   const isVirtualRoot = isVirtualRootNode(node);
   const isDerivedNode = Boolean(node?.anchorLink);
   const isReviewCard = isFsrsWorkspaceListNode(node);
@@ -54,13 +56,13 @@ function renderNodeListRow(
 
   return (
     <NodeTreeRowItem
-      descendantCount={row.descendantCount}
-      depth={row.depth}
-      hasChildren={row.hasChildren}
+      descendantCount={props.isTrashViewOpen ? 0 : row.descendantCount}
+      depth={props.isTrashViewOpen ? 0 : row.depth}
+      hasChildren={props.isTrashViewOpen ? false : row.hasChildren}
       isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
-      isCollapsed={props.collapsedNodeIds.has(row.node.id)}
+      isCollapsed={props.isTrashViewOpen ? false : props.collapsedNodeIds.has(row.node.id)}
       isDerived={isDerivedNode}
-      isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox || isVirtualRoot}
+      isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox || isTrashRoot || isVirtualRoot}
       isDropTarget={props.drag.dropTargetNodeId === row.node.id}
       isMuted={shouldFadeWholeRow}
       mutedOpacity={shouldFadeWholeRow ? getDismissedFadeOpacity() : 1}
@@ -70,8 +72,8 @@ function renderNodeListRow(
       label={row.node.title}
       nodeId={row.node.id}
       nodeIconKind={resolveNodeTreeRowIconKind({
-        hasChildren: row.hasChildren,
-        isCollapsed: props.collapsedNodeIds.has(row.node.id),
+        hasChildren: props.isTrashViewOpen ? false : row.hasChildren,
+        isCollapsed: props.isTrashViewOpen ? false : props.collapsedNodeIds.has(row.node.id),
         isReviewCard,
         kind: node?.kind ?? 'topic'
       })}
@@ -85,7 +87,7 @@ function renderNodeListRow(
       onDragStart={props.drag.onDragStartNode}
       onDrop={props.drag.onDropOnNode}
       onKeyDown={onRowKeyDown}
-      onRename={isInbox || isVirtualRoot ? undefined : props.onRename}
+      onRename={isInbox || isTrashRoot || isVirtualRoot ? undefined : props.onRename}
       onSelect={props.onSelect}
       onToggleCollapse={props.onToggleCollapse}
     />
@@ -113,6 +115,20 @@ export function NodeListRows(props: NodeListRowsProps) {
       }),
     [props.collapsedNodeIds, props.onSelect, props.onToggleCollapse, props.rows]
   );
+
+  if (props.isTrashViewOpen) {
+    return (
+      <TrashListRows
+        activeNodeId={props.selectedTrashNodeId}
+        nodesById={props.nodesById}
+        onContextMenu={props.onContextMenu}
+        onKeyDown={onRowKeyDown}
+        onSelect={props.onSelect}
+        rows={props.rows}
+        selectedNodeIds={props.selectedNodeIds}
+      />
+    );
+  }
 
   return props.rows.map((row) => renderNodeListRow(props, row, onRowKeyDown));
 }

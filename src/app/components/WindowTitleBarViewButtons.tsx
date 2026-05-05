@@ -1,4 +1,4 @@
-import { FileText, FolderTree, Trash2 } from 'lucide-react';
+import { FileText, FolderTree } from 'lucide-react';
 import { memo } from 'react';
 
 const TITLEBAR_ICON_SIZE = 16;
@@ -9,15 +9,13 @@ interface WindowTitleBarViewButtonsProps {
   isVirtualViewOpen: boolean;
   onOpenNotesView: () => void;
   onOpenVirtualView: () => void;
-  onOpenTrashView: () => void;
 }
 
 export const WindowTitleBarViewButtons = memo(function WindowTitleBarViewButtons({
   isTrashViewOpen,
   isVirtualViewOpen,
   onOpenNotesView,
-  onOpenVirtualView,
-  onOpenTrashView
+  onOpenVirtualView
 }: WindowTitleBarViewButtonsProps) {
   return (
     <div className="window-titlebar-leading-actions">
@@ -38,15 +36,6 @@ export const WindowTitleBarViewButtons = memo(function WindowTitleBarViewButtons
         type="button"
       >
         <FolderTree aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-      </button>
-      <button
-        aria-label="Trash"
-        className="window-titlebar-leading-button"
-        data-active={isTrashViewOpen}
-        onClick={onOpenTrashView}
-        type="button"
-      >
-        <Trash2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
       </button>
     </div>
   );

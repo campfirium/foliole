@@ -16,6 +16,12 @@ function HookHarness({ activeNodeId }: { activeNodeId: string | null }) {
   return null;
 }
 
+function DualHookHarness(props: { activeNodeId: string | null; trashNodeId: string | null }) {
+  useWorkspaceActiveNodeDocument(props.activeNodeId);
+  useWorkspaceActiveNodeDocument(props.trashNodeId, { keepWarm: true });
+  return null;
+}
+
 function seedTrimmedWorkspaceState() {
   const initial = createInitialWorkspaceState(new Date('2026-03-29T00:00:00.000Z'));
   useWorkspaceStore.setState({
@@ -215,5 +221,24 @@ it('reopens the same long document without reloading while it is still warm', as
   expect(invoke.mock.calls).toEqual([
     ['load_node_document', { nodeId: 'node-1' }],
     ['load_node_document', { nodeId: 'node-2' }]
+  ]);
+});
+
+it('keeps a selected trash document loaded alongside the active document', async () => {
+  const invoke = createDocumentLoader({
+    'node-1': { content: 'Loaded node 1 body', reveal: null },
+    'node-3': { content: 'Loaded trash node 3 body', reveal: null }
+  });
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  render(<DualHookHarness activeNodeId="node-1" trashNodeId="node-3" />);
+
+  await expectNodeDocument('node-1', 'Loaded node 1 body', null);
+  await expectNodeDocument('node-3', 'Loaded trash node 3 body', null);
+
+  expect(useWorkspaceStore.getState().rendererBoundaryKeepNodeIds).toEqual(['node-3']);
+  expect(invoke.mock.calls).toEqual([
+    ['load_node_document', { nodeId: 'node-1' }],
+    ['load_node_document', { nodeId: 'node-3' }]
   ]);
 });

@@ -155,7 +155,7 @@ function NodeListPanel(props: NodeListPanelProps) {
   useNodeListPanelEffects(props, scrollContainerRef);
 
   return (
-    <aside aria-label="Node list panel" className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground">
+    <aside aria-label="Node list panel" className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground">
       <NodeListHeader
         isTrashViewOpen={props.isTrashViewOpen}
         isVirtualViewOpen={props.isVirtualViewOpen}
@@ -229,7 +229,8 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
     activeRows: props.activeRows,
     isTrashViewOpen: props.isTrashViewOpen,
     isVirtualViewOpen: props.isVirtualViewOpen,
-    noteRowsAll: props.state.noteRowsAll
+    noteRowsAll: props.state.noteRowsAll,
+    trashRowsAll: props.state.trashRowsAll
   });
 
   return (

@@ -1,5 +1,29 @@
-import { INBOX_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import {
+  INBOX_NODE_ID,
+  TRASH_NODE_ID,
+  isInboxNode,
+  isTrashNode,
+  isVirtualNode,
+  isVirtualRootNode
+} from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+
+function createNavigationTrashNode(): WorkspaceListNode {
+  const timestamp = new Date().toISOString();
+  return {
+    createdAt: timestamp,
+    hasContent: false,
+    hasReveal: false,
+    id: TRASH_NODE_ID,
+    kind: 'folder',
+    parentNodeId: null,
+    reading: null,
+    review: null,
+    specialKind: 'trash',
+    title: 'Trash',
+    updatedAt: timestamp
+  };
+}
 
 function isVisibleFolderNode(
   node: WorkspaceListNode | undefined,
@@ -54,7 +78,17 @@ export function buildFolderNavigationNodeOrder(
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: readonly string[]
 ) {
-  return nodeOrder.filter((nodeId) => isVisibleFolderNode(nodesById[nodeId], trashedNodeIds));
+  const visibleFolderIds = nodeOrder.filter((nodeId) => isVisibleFolderNode(nodesById[nodeId], trashedNodeIds));
+  const regularFolderIds = visibleFolderIds.filter((nodeId) => {
+    const node = nodesById[nodeId];
+    return nodeId !== INBOX_NODE_ID && nodeId !== TRASH_NODE_ID && !isInboxNode(node) && !isTrashNode(node);
+  });
+
+  return [
+    ...(isVisibleFolderNode(nodesById[INBOX_NODE_ID], trashedNodeIds) ? [INBOX_NODE_ID] : []),
+    ...regularFolderIds,
+    TRASH_NODE_ID
+  ];
 }
 
 export function buildFolderNavigationNodesById(
@@ -63,8 +97,15 @@ export function buildFolderNavigationNodesById(
   trashedNodeIds: readonly string[]
 ) {
   const visibleFolderIds = new Set(buildFolderNavigationNodeOrder(nodeOrder, nodesById, trashedNodeIds));
+  const folderEntries: Array<[string, WorkspaceListNode | undefined]> = [
+    ...Object.entries(nodesById),
+    [TRASH_NODE_ID, createNavigationTrashNode()]
+  ];
   return Object.fromEntries(
-    Object.entries(nodesById).map(([nodeId, node]) => [nodeId, visibleFolderIds.has(nodeId) ? node : undefined])
+    folderEntries.map(([nodeId, node]) => [
+      nodeId,
+      visibleFolderIds.has(nodeId) ? node : undefined
+    ])
   );
 }
 

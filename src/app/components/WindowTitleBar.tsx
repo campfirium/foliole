@@ -124,7 +124,6 @@ function WindowLeadingActions({
   isVirtualViewOpen,
   onOpenNotesView,
   onOpenVirtualView,
-  onOpenTrashView,
   onToggleListVisibility
 }: WindowTitleBarProps) {
   if (isListCollapsed) {
@@ -149,7 +148,6 @@ function WindowLeadingActions({
             isVirtualViewOpen={isVirtualViewOpen}
             onOpenNotesView={onOpenNotesView}
             onOpenVirtualView={onOpenVirtualView}
-            onOpenTrashView={onOpenTrashView}
           />
           <span aria-label="Current change timestamp" className="window-titlebar-left-timestamp">
             {workspaceChangeTimestamp}

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
+import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
@@ -24,6 +25,7 @@ interface WorkspaceDualListContentProps {
   nodeOrder: string[];
   onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
   onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
+  onOpenTrashView: WorkspaceLayoutProps['onOpenTrashView'];
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
   selectedTrashNodeId: string | null;
@@ -32,23 +34,26 @@ interface WorkspaceDualListContentProps {
 
 function useWorkspaceDualListState(args: WorkspaceDualListContentProps) {
   return useMemo(() => {
-    if (args.isTrashViewOpen || args.isVirtualViewOpen) {
+    if (args.isVirtualViewOpen) {
       return null;
     }
-
-    const activeFolderId = resolveFocusedFolderNodeId(
-      args.activeNodeId,
-      args.nodeOrder,
-      args.listNodesById,
-      args.trashedNodeIds
-    );
-    const activeFolderColumnId = resolveActiveFolderColumnNodeId(
-      args.activeNodeId,
-      args.nodeOrder,
-      args.listNodesById,
-      args.trashedNodeIds
-    );
     const folderNodeOrder = buildFolderNavigationNodeOrder(args.nodeOrder, args.listNodesById, args.trashedNodeIds);
+    const activeFolderId = args.isTrashViewOpen
+      ? TRASH_NODE_ID
+      : resolveFocusedFolderNodeId(
+          args.activeNodeId,
+          args.nodeOrder,
+          args.listNodesById,
+          args.trashedNodeIds
+        );
+    const activeFolderColumnId = args.isTrashViewOpen
+      ? TRASH_NODE_ID
+      : resolveActiveFolderColumnNodeId(
+          args.activeNodeId,
+          args.nodeOrder,
+          args.listNodesById,
+          args.trashedNodeIds
+        );
 
     const topicNodeOrder = collectTopicColumnNodeIds(
       activeFolderColumnId,
@@ -79,17 +84,64 @@ function useWorkspaceDualListState(args: WorkspaceDualListContentProps) {
   ]);
 }
 
-export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
-  const dualListState = useWorkspaceDualListState(props);
-  const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
-  const topicRootId = dualListState?.activeFolderColumnId ?? dualListState?.activeFolderId ?? null;
+function renderSingleListFallback(props: WorkspaceDualListContentProps) {
+  return (
+    <NodeListTree
+      activeNodeId={props.activeNodeId}
+      isTrashViewOpen={props.isTrashViewOpen}
+      isVirtualViewOpen={props.isVirtualViewOpen}
+      nodeOrder={props.nodeOrder}
+      nodesById={props.listNodesById}
+      onOpenMoveToNode={props.onOpenMoveToNode}
+      onOpenNotesView={props.onOpenNotesView}
+      onSelectNode={props.onSelectNode}
+      onSelectTrashNode={props.onSelectTrashNode}
+      selectedTrashNodeId={props.selectedTrashNodeId}
+    />
+  );
+}
 
-  if (!dualListState || !topicRootId) {
+function renderFolderColumn(
+  props: WorkspaceDualListContentProps,
+  dualListState: NonNullable<ReturnType<typeof useWorkspaceDualListState>>
+) {
+  return (
+    <NodeListTree
+      activeNodeId={props.isTrashViewOpen ? TRASH_NODE_ID : dualListState.activeFolderId}
+      isTrashViewOpen={false}
+      isVirtualViewOpen={false}
+      nodeOrder={dualListState.folderNodeOrder}
+      nodesById={dualListState.folderNodesById}
+      onOpenMoveToNode={props.onOpenMoveToNode}
+      onOpenNotesView={props.onOpenNotesView}
+      onSelectNode={(nodeId) => {
+        if (nodeId === TRASH_NODE_ID) {
+          props.onOpenTrashView();
+          return;
+        }
+        if (props.isTrashViewOpen) {
+          props.onOpenNotesView();
+        }
+        props.onSelectNode(nodeId);
+      }}
+      onSelectTrashNode={props.onSelectTrashNode}
+      selectedTrashNodeId={props.selectedTrashNodeId}
+      showTitleSearch={false}
+    />
+  );
+}
+
+function renderContentColumn(
+  props: WorkspaceDualListContentProps,
+  dualListState: NonNullable<ReturnType<typeof useWorkspaceDualListState>>,
+  topicRootId: string
+) {
+  if (props.isTrashViewOpen) {
     return (
       <NodeListTree
-        activeNodeId={props.activeNodeId}
-        isTrashViewOpen={props.isTrashViewOpen}
-        isVirtualViewOpen={props.isVirtualViewOpen}
+        activeNodeId={props.selectedTrashNodeId}
+        isTrashViewOpen
+        isVirtualViewOpen={false}
         nodeOrder={props.nodeOrder}
         nodesById={props.listNodesById}
         onOpenMoveToNode={props.onOpenMoveToNode}
@@ -102,24 +154,33 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   }
 
   return (
+    <WorkspaceTopicTree
+      activeFolderId={topicRootId}
+      activeNodeId={props.activeNodeId}
+      itemIds={dualListState.topicNodeOrder}
+      nodesById={dualListState.topicNodesById}
+      onOpenMoveToNode={props.onOpenMoveToNode}
+      onSelectNode={props.onSelectNode}
+    />
+  );
+}
+
+export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
+  const dualListState = useWorkspaceDualListState(props);
+  const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
+  const topicRootId = dualListState?.activeFolderColumnId ?? dualListState?.activeFolderId ?? null;
+
+  if (!dualListState || !topicRootId) {
+    return renderSingleListFallback(props);
+  }
+
+  return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-bg-panel">
       <div
         className="flex min-h-0 min-w-0 overflow-hidden bg-bg-panel"
         style={{ flex: `0 0 ${folderListResize.width}px` }}
       >
-        <NodeListTree
-          activeNodeId={dualListState.activeFolderId}
-          isTrashViewOpen={props.isTrashViewOpen}
-          isVirtualViewOpen={props.isVirtualViewOpen}
-          nodeOrder={dualListState.folderNodeOrder}
-          nodesById={dualListState.folderNodesById}
-          onOpenMoveToNode={props.onOpenMoveToNode}
-          onOpenNotesView={props.onOpenNotesView}
-          onSelectNode={props.onSelectNode}
-          onSelectTrashNode={props.onSelectTrashNode}
-          selectedTrashNodeId={props.selectedTrashNodeId}
-          showTitleSearch={false}
-        />
+        {renderFolderColumn(props, dualListState)}
       </div>
       <WorkspaceDualListSplitter
         isResizing={folderListResize.isResizing}
@@ -127,14 +188,9 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         onPointerDown={folderListResize.handlePointerDown}
         width={folderListResize.width}
       />
-      <WorkspaceTopicTree
-        activeFolderId={topicRootId}
-        activeNodeId={props.activeNodeId}
-        itemIds={dualListState.topicNodeOrder}
-        nodesById={dualListState.topicNodesById}
-        onOpenMoveToNode={props.onOpenMoveToNode}
-        onSelectNode={props.onSelectNode}
-      />
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-panel">
+        {renderContentColumn(props, dualListState, topicRootId)}
+      </div>
     </div>
   );
 }

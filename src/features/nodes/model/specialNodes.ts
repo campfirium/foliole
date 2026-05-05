@@ -1,6 +1,7 @@
 import type { Node } from './nodeTypes';
 
 export const INBOX_NODE_ID = 'special-inbox';
+export const TRASH_NODE_ID = 'special-trash';
 export const VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
 
 interface WorkspaceNodeSnapshot {
@@ -42,6 +43,22 @@ export function createVirtualRootNode(timestamp: string): Node {
   };
 }
 
+export function createTrashNode(timestamp: string): Node {
+  return {
+    id: TRASH_NODE_ID,
+    parentNodeId: null,
+    kind: 'folder',
+    specialKind: 'trash',
+    title: 'Trash',
+    isTitleManual: true,
+    content: '',
+    reveal: null,
+    review: null,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+}
+
 export function isInboxNode(node: Pick<Node, 'specialKind'> | null | undefined): boolean {
   return node?.specialKind === 'inbox';
 }
@@ -50,17 +67,24 @@ export function isVirtualRootNode(node: Pick<Node, 'specialKind'> | null | undef
   return node?.specialKind === 'virtual-root';
 }
 
+export function isTrashNode(node: Pick<Node, 'specialKind'> | null | undefined): boolean {
+  return node?.specialKind === 'trash';
+}
+
 export function isVirtualNode(node: Pick<Node, 'specialKind'> | null | undefined): boolean {
   return node?.specialKind === 'virtual';
 }
 
 export function isProtectedRootNode(node: Pick<Node, 'specialKind'> | null | undefined): boolean {
-  return isInboxNode(node) || isVirtualRootNode(node);
+  return isInboxNode(node) || isTrashNode(node) || isVirtualRootNode(node);
 }
 
 function resolveNodeSpecialKind(node: Node): Node['specialKind'] | undefined {
   if (node.id === INBOX_NODE_ID) {
     return 'inbox';
+  }
+  if (node.id === TRASH_NODE_ID) {
+    return 'trash';
   }
   if (node.id === VIRTUAL_ROOT_NODE_ID) {
     return 'virtual-root';

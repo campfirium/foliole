@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createSelectNode } from './appControllerTrashViewHandlers';
+import { createSelectNode, createToggleTrashView } from './appControllerTrashViewHandlers';
 
 function createSelectNodeHarness(args: {
   anchorLink: {
@@ -160,5 +160,29 @@ describe('createSelectNode', () => {
       kind: 'highlight',
       locator: { from: 42, originalText: 'Needle', to: 48 }
     });
+  });
+});
+
+describe('createToggleTrashView', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('enters the trash runtime mode when opening trash', () => {
+    const flushPendingEditorDraft = vi.fn();
+    const setIsViewingTrashNode = vi.fn();
+    const openTrashView = vi.fn();
+    const toggleTrashView = createToggleTrashView({
+      runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+      trash: { isTrashViewOpen: false, openTrashView },
+      virtualView: {},
+      ws: {}
+    } as never, vi.fn());
+
+    toggleTrashView();
+
+    expect(flushPendingEditorDraft).toHaveBeenCalledTimes(1);
+    expect(setIsViewingTrashNode).toHaveBeenCalledWith(true);
+    expect(openTrashView).toHaveBeenCalledTimes(1);
   });
 });

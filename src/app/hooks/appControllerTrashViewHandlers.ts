@@ -19,6 +19,7 @@ export function createToggleTrashView(args: BuildControllerLayoutPropsArgs, open
       return;
     }
     args.runtime.flushPendingEditorDraft();
+    args.runtime.setIsViewingTrashNode(true);
     args.trash.openTrashView();
   };
 }

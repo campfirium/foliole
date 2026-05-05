@@ -174,16 +174,17 @@ export function useWorkspaceControllerState(
   ws: ReturnType<typeof useWorkspaceSelectors>,
   isWorkspaceHydrated: boolean
 ) {
-  useWorkspaceActiveNodeDocument(ws.activeNodeId);
-  const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
   const trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
+  useWorkspaceActiveNodeDocument(ws.activeNodeId);
+  useWorkspaceActiveNodeDocument(trash.selectedTrashNodeId, { keepWarm: true });
+  const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
   const virtualView = useVirtualNodeView();
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
+  const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
   const study = useStudyMode({
     activeNodeId: isInboxNode(activeNode) ? null : ws.activeNodeId,
-    isViewingTrashNode: false
+    isViewingTrashNode: runtime.isViewingTrashNode
   });
-  const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);

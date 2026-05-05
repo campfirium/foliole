@@ -73,7 +73,7 @@ export interface NodeAnchorLink {
   locator?: PdfAnchorLocator | ImageAnchorLocator | TextAnchorLocator | TextAnchorLocatorGroup;
 }
 
-export type NodeSpecialKind = 'inbox' | 'virtual-root' | 'virtual';
+export type NodeSpecialKind = 'inbox' | 'trash' | 'virtual-root' | 'virtual';
 
 export interface Node {
   id: string;

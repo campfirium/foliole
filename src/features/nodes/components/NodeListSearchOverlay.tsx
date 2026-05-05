@@ -43,12 +43,12 @@ export function NodeListSearchOverlay(props: {
   }, []);
 
   return (
-    <div className="absolute inset-y-1 left-4 right-4 z-20 flex items-center gap-2 rounded-md border border-border bg-bg-elevated px-2 shadow-sm">
+    <div className="absolute inset-y-1 left-2 right-2 z-20 flex max-w-full items-center gap-2 overflow-hidden rounded-md border border-border bg-bg-elevated px-2 shadow-sm">
       <SearchTitlesIcon />
       <AppInput
         ref={inputRef}
         aria-label="Search node titles"
-        className="h-8 border-0 bg-transparent px-0 text-[14px] focus-visible:ring-0"
+        className="h-8 min-w-0 border-0 bg-transparent px-0 text-[14px] focus-visible:ring-0"
         onChange={(event) => props.onChangeSearchQuery(event.currentTarget.value)}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {

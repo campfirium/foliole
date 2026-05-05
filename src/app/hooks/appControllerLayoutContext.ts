@@ -5,12 +5,15 @@ import { createPdfHighlightHandler } from './appControllerPdfHighlight';
 
 export function resolveEditorBindingArgs(args: BuildControllerLayoutPropsArgs) {
   const isInboxActiveNode = !args.runtime.isViewingTrashNode && isInboxNode(args.activeNode);
+  const trashNodeId = args.selectedTrashNode?.id ?? null;
   return {
-    editorNodeId: args.runtime.isViewingTrashNode || isInboxActiveNode ? null : args.ws.activeNodeId,
+    editorNodeId: args.runtime.isViewingTrashNode ? trashNodeId : isInboxActiveNode ? null : args.ws.activeNodeId,
     editorNodeViewState:
-      !args.runtime.isViewingTrashNode && !isInboxActiveNode && args.ws.activeNodeId
-        ? args.ws.nodeViewById[args.ws.activeNodeId]
-        : undefined
+      args.runtime.isViewingTrashNode
+        ? (trashNodeId ? args.ws.nodeViewById[trashNodeId] : undefined)
+        : !isInboxActiveNode && args.ws.activeNodeId
+          ? args.ws.nodeViewById[args.ws.activeNodeId]
+          : undefined
   };
 }
 

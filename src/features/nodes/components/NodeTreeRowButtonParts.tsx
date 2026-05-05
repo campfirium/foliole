@@ -28,6 +28,7 @@ export function renderNodeTreeRowContent(props: {
   mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
+  secondaryLabel?: string;
   showIcon: boolean;
   rename: ReturnType<typeof useRenameState>;
 }) {
@@ -36,12 +37,17 @@ export function renderNodeTreeRowContent(props: {
       className={resolveNodeRowContentClassName()}
       style={props.isMuted ? { opacity: props.mutedOpacity } : undefined}
     >
-      {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
-      {renderNodeLabel(props.label, props.rename)}
-      {props.descendantCount > 0 ? (
-        <span aria-hidden="true" className="flex-none text-foreground/55">
-          ({props.descendantCount})
-        </span>
+      <span className="flex min-w-0 w-full items-center gap-1.5 overflow-hidden">
+        {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
+        {renderNodeLabel(props.label, props.rename)}
+        {props.descendantCount > 0 ? (
+          <span aria-hidden="true" className="flex-none text-foreground/55">
+            ({props.descendantCount})
+          </span>
+        ) : null}
+      </span>
+      {props.secondaryLabel ? (
+        <span className="min-w-0 truncate text-xs text-foreground/55">{props.secondaryLabel}</span>
       ) : null}
     </span>
   );
@@ -87,6 +93,7 @@ export function renderNodeTreeRowButtonSurface(props: {
   nodeId: string;
   rename: ReturnType<typeof useRenameState>;
   rowSpacing: number;
+  secondaryLabel?: string;
   showIcon: boolean;
   style: CSSProperties;
   treeItemState: { 'aria-pressed': boolean; 'aria-selected': boolean };
@@ -139,6 +146,7 @@ function renderNodeTreeRowButtonBody(
         mutedOpacity: props.mutedOpacity,
         nodeIconKind: props.nodeIconKind,
         nodeIconState: props.nodeIconState,
+        secondaryLabel: props.secondaryLabel,
         showIcon: props.showIcon,
         rename: props.rename
       })}

@@ -138,12 +138,12 @@ export function NodeListHeader({
   };
 
   return (
-    <AppToolbar as="header" className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4">
+    <AppToolbar as="header" className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 overflow-hidden px-4">
       <h2 className="sr-only">Nodes</h2>
       <button className="sr-only" onClick={onOpenNotesView} type="button">
         Nodes
       </button>
-      {showTitleSearch && !isTrashViewOpen && !isVirtualViewOpen ? (
+      {showTitleSearch && !isVirtualViewOpen ? (
         renderSearchLauncher(() => setIsSearchOpen(true))
       ) : (
         <span aria-hidden="true" className="size-8" />
@@ -155,7 +155,7 @@ export function NodeListHeader({
             ? renderVirtualListActions(onCreateCommand)
             : renderNodeListActions(onCollapseAll, onCreateCommand, onExpandAll)}
       </ToolbarActionGroup>
-      {showTitleSearch && !isTrashViewOpen && !isVirtualViewOpen && isSearchOpen ? (
+      {showTitleSearch && !isVirtualViewOpen && isSearchOpen ? (
         <NodeListSearchOverlay
           onChangeSearchQuery={onSearchQueryChange}
           onClose={closeSearch}

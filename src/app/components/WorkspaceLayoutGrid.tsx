@@ -178,6 +178,7 @@ function renderListColumns(args: {
         nodeOrder={args.props.nodeOrder}
         onOpenMoveToNode={args.props.onOpenMoveToNode}
         onOpenNotesView={args.props.onOpenNotesView}
+        onOpenTrashView={args.props.onOpenTrashView}
         onSelectNode={args.onSelectNode}
         onSelectTrashNode={args.props.onSelectTrashNode}
         reviewCompletedCount={args.props.reviewCompletedCount}

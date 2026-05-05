@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 import {
@@ -104,7 +104,23 @@ it('ignores trashed nodes when resolving the folder and topic columns', () => {
     })
   };
 
-  expect(buildFolderNavigationNodeOrder(nodeOrder, nodesById, ['folder-case'])).toEqual([INBOX_NODE_ID]);
+  expect(buildFolderNavigationNodeOrder(nodeOrder, nodesById, ['folder-case'])).toEqual([INBOX_NODE_ID, TRASH_NODE_ID]);
   expect(resolveFocusedFolderNodeId('topic-case-child', nodeOrder, nodesById, ['folder-case'])).toBe(INBOX_NODE_ID);
   expect(collectTopicColumnNodeIds('folder-case', nodeOrder, nodesById, ['topic-case-child'])).toEqual(['topic-case']);
+});
+
+it('pins trash to the end of the folder navigation', () => {
+  const nodeOrder = [INBOX_NODE_ID, 'folder-a', 'folder-b'];
+  const nodesById: WorkspaceListNodesById = {
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
+    'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+    'folder-b': createNode({ id: 'folder-b', kind: 'folder', title: 'Folder B' })
+  };
+
+  expect(buildFolderNavigationNodeOrder(nodeOrder, nodesById, [])).toEqual([
+    INBOX_NODE_ID,
+    'folder-a',
+    'folder-b',
+    TRASH_NODE_ID
+  ]);
 });

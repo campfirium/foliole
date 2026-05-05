@@ -177,15 +177,14 @@ describe('WindowTitleBar view switches', () => {
     expect(screen.queryByRole('button', { name: 'Trash' })).not.toBeInTheDocument();
   });
 
-  it('renders the virtual node switch between notes and trash', () => {
+  it('renders the virtual node switch after notes without a separate trash button', () => {
     renderTitleBar();
 
     const notesButton = screen.getByRole('button', { name: 'Notes' });
     const virtualButton = screen.getByRole('button', { name: 'Virtual Nodes' });
-    const trashButton = screen.getByRole('button', { name: 'Trash' });
 
     expect(notesButton.compareDocumentPosition(virtualButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(virtualButton.compareDocumentPosition(trashButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Trash' })).toBeNull();
   });
 });
 

@@ -37,6 +37,7 @@ interface NodeTreeRowProps {
   label: string;
   nodeId: string;
   rowSpacing: number;
+  secondaryLabel?: string;
   onDragEnd?: () => void;
   onDragEnter?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragOver?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
@@ -80,6 +81,7 @@ function renderNodeTreeRowButton(props: {
   label: string;
   nodeId: string;
   rowSpacing: number;
+  secondaryLabel?: string;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
   onRename?: (nodeId: string, title: string) => void;
@@ -121,6 +123,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         label: props.label,
         nodeId: props.nodeId,
         rowSpacing: props.rowSpacing,
+        secondaryLabel: props.secondaryLabel,
         onContextMenu: props.onContextMenu,
         onKeyDown: props.onKeyDown,
         onRename: props.onRename,
@@ -151,6 +154,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.nodeIconState === next.nodeIconState &&
     previous.showIcon === next.showIcon &&
     previous.rowSpacing === next.rowSpacing &&
+    previous.secondaryLabel === next.secondaryLabel &&
     previous.onContextMenu === next.onContextMenu &&
     previous.onDragEnd === next.onDragEnd &&
     previous.onDragEnter === next.onDragEnter &&
@@ -182,6 +186,7 @@ interface NodeTreeRowButtonProps {
   label: string;
   nodeId: string;
   rowSpacing: number;
+  secondaryLabel?: string;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
   onRename?: (nodeId: string, title: string) => void;
@@ -211,6 +216,7 @@ function NodeTreeRowButton({
   onSelect,
   onToggleCollapse,
   rowSpacing,
+  secondaryLabel,
   style
 }: NodeTreeRowButtonProps) {
   const rename = useRenameState(label, nodeId, onRename);
@@ -240,6 +246,7 @@ function NodeTreeRowButton({
     nodeIconKind,
     nodeIconState,
     nodeId,
+    secondaryLabel,
     showIcon,
     onToggleCollapse,
     rename,
