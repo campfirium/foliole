@@ -221,7 +221,7 @@ final class FolioleCompanionSyncPackApply {
                 "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM " +
                 applyableStateRowsSql(null) + " WHERE object_type IN (" +
                 "'attachment', 'external_folder', 'import_source', 'node', 'external_document', " +
-                "'node_reading', 'node_review', 'setting', 'view_state') ORDER BY state_seq ASC",
+                "'node_reading', 'node_review', 'pdf_page_text', 'setting', 'view_state') ORDER BY state_seq ASC",
             null
         )) {
             while (cursor.moveToNext()) {

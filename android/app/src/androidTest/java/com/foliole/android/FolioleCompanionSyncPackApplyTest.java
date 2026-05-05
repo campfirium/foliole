@@ -223,6 +223,22 @@ public class FolioleCompanionSyncPackApplyTest {
     }
 
     @Test
+    public void appliesPdfPageTextPayloadRowsFromIncomingPack() throws Exception {
+        createIncomingPack();
+        appendIncomingPdfPageTextRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(2, result.getInt("applied_object_count"));
+        assertEquals("page text", selectString(
+            "SELECT text FROM pdf_page_text WHERE attachment_id = 'pdf-1' AND page = 1"
+        ));
+        assertEquals("pdf-page-text-hash", selectString(
+            "SELECT content_hash FROM sync_object_state WHERE object_type = 'pdf_page_text' AND object_id = 'pdf-1:1'"
+        ));
+    }
+
+    @Test
     public void carriesViewStateRowsButOnlyConsumesCurrentAndroidDevicePayloads() throws Exception {
         createIncomingPack();
         appendIncomingViewStateRows();
@@ -467,6 +483,24 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("INSERT INTO sync_object_state (" +
                 "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
                 "'import_source', 'source-1', 2, 'import-source-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
+    private void appendIncomingPdfPageTextRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String now = "2026-04-27T00:11:00.000Z";
+            String payload = "{\"attachment_id\":\"pdf-1\",\"page\":1,\"text\":\"page text\"," +
+                "\"page_width\":612,\"page_height\":792}";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":2}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("INSERT INTO sync_objects (" +
+                "object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (" +
+                "'pdf_page_text', 'pdf-1:1', 'pdf-page-text-hash', '" + payload + "', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'pdf_page_text', 'pdf-1:1', 2, 'pdf-page-text-hash', '" + now + "', NULL)");
         } finally {
             packDatabase.close();
         }
