@@ -6,7 +6,17 @@ export interface SemanticRange {
 }
 
 export interface SemanticMarkRange extends SemanticRange {
-  className: 'cm-md-strong' | 'cm-md-strikethrough';
+  className: 'cm-md-emphasis' | 'cm-md-strong' | 'cm-md-strikethrough';
+}
+
+export function collectEmphasisTextRanges(from: number, text: string, inCodeBlock: boolean): SemanticMarkRange[] {
+  if (inCodeBlock) {
+    return [];
+  }
+
+  return collectMarkdownInlineRanges(text, from)
+    .filter((range) => range.kind === 'emphasis')
+    .map((range) => ({ className: 'cm-md-emphasis', from: range.contentFrom, to: range.contentTo }));
 }
 
 export function collectStrongTextRanges(from: number, text: string, inCodeBlock: boolean): SemanticMarkRange[] {

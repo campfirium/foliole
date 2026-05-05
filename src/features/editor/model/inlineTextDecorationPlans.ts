@@ -1,4 +1,5 @@
 import {
+  collectEmphasisTextRanges,
   collectStrongTextRanges,
   collectStrikethroughTextRanges,
   type SemanticRange
@@ -11,7 +12,7 @@ export interface InlineCodeDelimiterRange extends SemanticRange {
 }
 
 export interface InlineTextMarkRange extends SemanticRange {
-  className: 'cm-md-source-highlight' | 'cm-md-strong' | 'cm-md-strikethrough' | 'cm-md-syntax-visible';
+  className: 'cm-md-emphasis' | 'cm-md-source-highlight' | 'cm-md-strong' | 'cm-md-strikethrough' | 'cm-md-syntax-visible';
 }
 
 export interface InlineTextDecorationPlan {
@@ -41,7 +42,7 @@ export function collectInlineTokenDecorationPlan(
   const replaceRanges: SemanticRange[] = [];
 
   for (const inlineRange of collectMarkdownInlineRanges(text, from)) {
-    if (inlineRange.kind !== 'strong' && inlineRange.kind !== 'strikethrough') {
+    if (inlineRange.kind !== 'emphasis' && inlineRange.kind !== 'strong' && inlineRange.kind !== 'strikethrough') {
       continue;
     }
     for (const syntaxRange of inlineRange.syntaxRanges) {
@@ -78,6 +79,17 @@ export function collectStrongTextDecorationPlan(
 ): InlineTextDecorationPlan {
   return {
     markRanges: collectStrongTextRanges(from, text, inCodeBlock),
+    replaceRanges: []
+  };
+}
+
+export function collectEmphasisTextDecorationPlan(
+  from: number,
+  text: string,
+  inCodeBlock: boolean
+): InlineTextDecorationPlan {
+  return {
+    markRanges: collectEmphasisTextRanges(from, text, inCodeBlock),
     replaceRanges: []
   };
 }

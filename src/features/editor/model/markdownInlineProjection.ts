@@ -1,5 +1,5 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
-import type { MarkdownInlineLinkRange, MarkdownInlineRange, MarkdownInlineToken } from './markdownInlineProjectionTypes';
+import type { MarkdownInlineLinkRange, MarkdownInlineRange, MarkdownInlineRangeKind } from './markdownInlineProjectionTypes';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -8,7 +8,7 @@ interface InlineProjectionCandidate {
   contentFrom: number;
   contentTo: number;
   href?: string;
-  kind: Exclude<MarkdownInlineToken['kind'], 'text'>;
+  kind: MarkdownInlineRangeKind;
   syntaxRanges: Array<{ from: number; to: number }>;
   text: string;
   from: number;
@@ -53,7 +53,7 @@ function sliceWithoutRanges(source: string, from: number, to: number, ranges: Re
 function createMarkedTextCandidate(
   node: MarkdownSyntaxNode,
   source: string,
-  kind: 'strong' | 'strikethrough' | 'sourceHighlight' | 'inlineCode'
+  kind: 'emphasis' | 'inlineCode' | 'sourceHighlight' | 'strikethrough' | 'strong'
 ): InlineProjectionCandidate {
   const markName = resolveMarkNodeName(kind);
   const markRanges = collectChildRanges(node, new Set([markName]));
@@ -70,10 +70,10 @@ function createMarkedTextCandidate(
   };
 }
 
-function resolveMarkNodeName(kind: 'inlineCode' | 'sourceHighlight' | 'strikethrough' | 'strong') {
+function resolveMarkNodeName(kind: 'emphasis' | 'inlineCode' | 'sourceHighlight' | 'strikethrough' | 'strong') {
   if (kind === 'inlineCode') return 'CodeMark';
   if (kind === 'sourceHighlight') return 'SourceHighlightMark';
-  if (kind === 'strong') return 'EmphasisMark';
+  if (kind === 'strong' || kind === 'emphasis') return 'EmphasisMark';
   return 'StrikethroughMark';
 }
 
@@ -103,6 +103,10 @@ function visitInlineCandidates(args: {
 }) {
   if (args.node.name === 'StrongEmphasis') {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'strong'));
+    return;
+  }
+  if (args.node.name === 'Emphasis') {
+    args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'emphasis'));
     return;
   }
   if (args.node.name === 'Strikethrough') {
@@ -211,30 +215,4 @@ export function collectMarkdownInlineLinkRanges(text: string, offset = 0): Markd
     source: text
   });
   return links.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
-}
-
-export function projectMarkdownInlineText(text: string): MarkdownInlineToken[] {
-  const tokens: MarkdownInlineToken[] = [];
-  let cursor = 0;
-
-  for (const candidate of collectInlineCandidates(text)) {
-    if (candidate.from < cursor) continue;
-    if (candidate.from > cursor) tokens.push({ kind: 'text', text: text.slice(cursor, candidate.from) });
-    if (candidate.kind === 'autolink') {
-      tokens.push({
-        href: candidate.href ?? candidate.text,
-        kind: 'autolink',
-        text: candidate.text
-      });
-    } else {
-      tokens.push({
-        kind: candidate.kind,
-        text: candidate.text
-      });
-    }
-    cursor = candidate.to;
-  }
-
-  if (cursor < text.length) tokens.push({ kind: 'text', text: text.slice(cursor) });
-  return tokens;
 }

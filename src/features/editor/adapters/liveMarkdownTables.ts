@@ -1,6 +1,7 @@
 import type { Range, Text } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
+import { buildFootnotePresentation } from '../model/footnotePresentation';
 import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
 import {
   getMarkdownTableCellAnchorClasses,
@@ -15,12 +16,23 @@ import type { EditorTextAnchorDecoration } from './EditorAdapter';
 function appendInlineText(container: HTMLElement, text: string) {
   for (const token of tokenizeMarkdownTableInlineText(text)) {
     if (token.kind === 'text') container.append(document.createTextNode(token.text));
+    if (token.kind === 'emphasis') appendEmphasisElement(container, token.text);
     if (token.kind === 'strong') appendStrongElement(container, token.text);
     if (token.kind === 'strikethrough') appendStrikethroughElement(container, token.text);
     if (token.kind === 'sourceHighlight') appendSourceHighlightElement(container, token.text);
     if (token.kind === 'inlineCode') appendInlineCodeElement(container, token.text);
     if (token.kind === 'autolink') appendAutolinkElement(container, token.text, token.href);
+    if (token.kind === 'footnote') appendFootnoteElement(container, token.label, token.note);
+    if (token.kind === 'link') appendAutolinkElement(container, token.text, token.href);
+    if (token.kind === 'wikiLink') appendWikiLinkElement(container, token.text, token.title);
   }
+}
+
+function appendEmphasisElement(container: HTMLElement, text: string) {
+  const emphasis = document.createElement('span');
+  emphasis.className = 'cm-md-emphasis';
+  emphasis.textContent = text;
+  container.append(emphasis);
 }
 
 function appendStrongElement(container: HTMLElement, text: string) {
@@ -57,6 +69,30 @@ function appendAutolinkElement(container: HTMLElement, linkText: string, href: s
   link.dataset.mdLinkUrl = href;
   link.textContent = linkText;
   container.append(link);
+}
+
+function appendWikiLinkElement(container: HTMLElement, label: string, title: string) {
+  const link = document.createElement('span');
+  link.className = 'cm-md-link-text';
+  link.dataset.mdLinkNodeTitle = title;
+  link.textContent = label;
+  container.append(link);
+}
+
+function appendFootnoteElement(container: HTMLElement, label: string, note: string | null) {
+  const presentation = buildFootnotePresentation({ label, note });
+  const wrapper = document.createElement('span');
+  wrapper.className = 'cm-md-footnote-widget';
+  wrapper.dataset.mdFootnoteLabel = presentation.label;
+  wrapper.dataset.mdFootnoteStatus = presentation.status;
+
+  const marker = document.createElement('span');
+  marker.className = 'cm-md-footnote-marker';
+  marker.textContent = presentation.label;
+  marker.setAttribute('aria-label', presentation.ariaLabel);
+  if (presentation.note) marker.title = presentation.note;
+  wrapper.append(marker);
+  container.append(wrapper);
 }
 
 function createCellElement(

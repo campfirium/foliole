@@ -1,4 +1,5 @@
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
+import { buildFootnotePresentation } from '../model/footnotePresentation';
 import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
 import { getMarkdownTableCellAnchorClasses } from '../model/markdownTablePlans';
 import type { MarkdownTablePreviewRequest } from '../model/markdownTablePreview';
@@ -164,15 +165,29 @@ function resolveCellClassName(
 
 function renderCellInlineContent(text: string) {
   return tokenizeMarkdownTableInlineText(text).map((token, index) => {
+    if (token.kind === 'emphasis') return <em className="cm-md-emphasis" key={index}>{token.text}</em>;
     if (token.kind === 'strong') return <strong className="font-semibold" key={index}>{token.text}</strong>;
     if (token.kind === 'strikethrough') return <s key={index}>{token.text}</s>;
     if (token.kind === 'sourceHighlight') return <mark className="cm-md-source-highlight" key={index}>{token.text}</mark>;
     if (token.kind === 'inlineCode') return <code className="rounded-sm bg-foreground/5 px-1 font-mono text-[0.9em]" key={index}>{token.text}</code>;
-    if (token.kind === 'autolink') {
+    if (token.kind === 'autolink' || token.kind === 'link') {
       return <span className="cursor-pointer text-accent underline" data-md-link-url={token.href} key={index}>{token.text}</span>;
+    }
+    if (token.kind === 'footnote') return renderFootnoteInlineContent(token.label, token.note, index);
+    if (token.kind === 'wikiLink') {
+      return <span className="cursor-pointer text-accent underline" data-md-link-node-title={token.title} key={index}>{token.text}</span>;
     }
     return token.text;
   });
+}
+
+function renderFootnoteInlineContent(label: string, note: string | null, key: number) {
+  const presentation = buildFootnotePresentation({ label, note });
+  return (
+    <span className="cm-md-footnote-widget" data-md-footnote-label={presentation.label} data-md-footnote-status={presentation.status} key={key}>
+      <span className="cm-md-footnote-marker" aria-label={presentation.ariaLabel} title={presentation.note ?? undefined}>{presentation.label}</span>
+    </span>
+  );
 }
 
 export function MarkdownTablePreviewDialog(props: MarkdownTablePreviewDialogProps) {

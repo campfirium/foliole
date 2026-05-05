@@ -1,5 +1,5 @@
-import { projectMarkdownInlineText } from './markdownInlineProjection';
 import type { MarkdownInlineToken } from './markdownInlineProjectionTypes';
+import { projectMarkdownInlineText } from './markdownInlineTextProjection';
 
 export type MarkdownTableInlineToken = MarkdownInlineToken;
 

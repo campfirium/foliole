@@ -110,6 +110,15 @@ describe('live markdown table rendering', () => {
 
     adapter.destroy();
   });
+
+  it('renders emphasis text inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| *Important* |');
+
+    expect(host.querySelector('td.cm-md-table-cell .cm-md-emphasis')?.textContent).toBe('Important');
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Important');
+
+    adapter.destroy();
+  });
 });
 
 describe('live markdown table inline rendering', () => {
@@ -127,6 +136,37 @@ describe('live markdown table inline rendering', () => {
 
     const link = host.querySelector('td.cm-md-table-cell [data-md-link-url="https://example.com"]');
     expect(link?.textContent).toBe('https://example.com');
+
+    adapter.destroy();
+  });
+
+  it('renders GFM inline links inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| [docs](https://example.com) |');
+
+    const link = host.querySelector('td.cm-md-table-cell [data-md-link-url="https://example.com"]');
+    expect(link?.textContent).toBe('docs');
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('docs');
+
+    adapter.destroy();
+  });
+
+  it('renders OB-like wiki links inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| [[Folder/Card]] |');
+
+    const link = host.querySelector('td.cm-md-table-cell [data-md-link-node-title="Folder/Card"]');
+    expect(link?.textContent).toBe('Folder/Card');
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Folder/Card');
+
+    adapter.destroy();
+  });
+
+  it('renders OB-like footnotes inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| Cell ^[1]{note} text |');
+
+    const widget = host.querySelector<HTMLElement>('td.cm-md-table-cell .cm-md-footnote-widget');
+    expect(widget?.dataset.mdFootnoteLabel).toBe('1');
+    expect(widget?.dataset.mdFootnoteStatus).toBe('resolved');
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Cell 1 text');
 
     adapter.destroy();
   });

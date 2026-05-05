@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { collectStrongTextRanges, collectStrikethroughTextRanges } from './inlineSemanticMarks';
+import { collectEmphasisTextRanges, collectStrongTextRanges, collectStrikethroughTextRanges } from './inlineSemanticMarks';
 
 describe('inlineSemanticMarks', () => {
+  it('collects emphasis text ranges', () => {
+    expect(collectEmphasisTextRanges(0, '*Emphasis* text', false)).toEqual([
+      { className: 'cm-md-emphasis', from: 1, to: 9 }
+    ]);
+  });
+
   it('collects strong text ranges', () => {
     expect(collectStrongTextRanges(0, '**Bold** text', false)).toEqual([
       { className: 'cm-md-strong', from: 2, to: 6 }

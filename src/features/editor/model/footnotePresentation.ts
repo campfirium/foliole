@@ -1,5 +1,3 @@
-import type { FootnoteMatch } from './inlineMarkdownMatches';
-
 export interface FootnotePresentation {
   ariaLabel: string;
   hasTooltip: boolean;
@@ -8,7 +6,7 @@ export interface FootnotePresentation {
   status: 'resolved' | 'unresolved';
 }
 
-export function buildFootnotePresentation(footnote: FootnoteMatch): FootnotePresentation {
+export function buildFootnotePresentation(footnote: { label: string; note: string | null }): FootnotePresentation {
   const status = footnote.note ? 'resolved' : 'unresolved';
 
   return {

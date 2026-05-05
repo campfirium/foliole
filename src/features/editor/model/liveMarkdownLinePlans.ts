@@ -9,6 +9,7 @@ import {
 import {
   collectInlineCodeSyntaxDecorationPlan,
   collectInlineTokenDecorationPlan,
+  collectEmphasisTextDecorationPlan,
   collectSourceHighlightDecorationPlan,
   collectStrongTextDecorationPlan,
   collectStrikethroughTextDecorationPlan,
@@ -49,6 +50,7 @@ function collectPreviewTextDecorationPlans(args: {
   const preservedRanges = args.preservedRanges.concat(args.footnoteRanges);
   return [
     collectInlineTokenDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock, args.showSyntaxOnLine, preservedRanges),
+    collectEmphasisTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
     collectStrongTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
     collectStrikethroughTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
     collectSourceHighlightDecorationPlan(

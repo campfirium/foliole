@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { tokenizeMarkdownTableInlineText } from './markdownTableInline';
 
 describe('markdownTableInline', () => {
-  it('tokenizes table cell strong, strikethrough, and autolinks', () => {
-    expect(tokenizeMarkdownTableInlineText('A **bold** and ~~gone~~ https://example.com.')).toEqual([
+  it('tokenizes table cell emphasis, strong, strikethrough, and autolinks', () => {
+    expect(tokenizeMarkdownTableInlineText('A *em* **bold** and ~~gone~~ https://example.com.')).toEqual([
       { kind: 'text', text: 'A ' },
+      { kind: 'emphasis', text: 'em' },
+      { kind: 'text', text: ' ' },
       { kind: 'strong', text: 'bold' },
       { kind: 'text', text: ' and ' },
       { kind: 'strikethrough', text: 'gone' },
@@ -29,6 +31,30 @@ describe('markdownTableInline', () => {
       { kind: 'text', text: 'A ' },
       { kind: 'sourceHighlight', text: 'marked' },
       { kind: 'text', text: ' cell' }
+    ]);
+  });
+
+  it('tokenizes GFM inline links from the shared parser projection', () => {
+    expect(tokenizeMarkdownTableInlineText('See [docs](https://example.com) now')).toEqual([
+      { kind: 'text', text: 'See ' },
+      { href: 'https://example.com', kind: 'link', text: 'docs' },
+      { kind: 'text', text: ' now' }
+    ]);
+  });
+
+  it('tokenizes OB-like wiki links from the shared parser projection', () => {
+    expect(tokenizeMarkdownTableInlineText('See [[Folder/Card]] and ![[Raw]]')).toEqual([
+      { kind: 'text', text: 'See ' },
+      { kind: 'wikiLink', text: 'Folder/Card', title: 'Folder/Card' },
+      { kind: 'text', text: ' and ![[Raw]]' }
+    ]);
+  });
+
+  it('tokenizes OB-like footnotes from the shared parser projection', () => {
+    expect(tokenizeMarkdownTableInlineText('Cell ^[1]{note} text')).toEqual([
+      { kind: 'text', text: 'Cell ' },
+      { kind: 'footnote', label: '1', note: 'note' },
+      { kind: 'text', text: ' text' }
     ]);
   });
 });

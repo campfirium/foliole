@@ -3,19 +3,22 @@ import { describe, expect, it } from 'vitest';
 import {
   collectInlineCodeSyntaxDecorationPlan,
   collectInlineTokenDecorationPlan,
+  collectEmphasisTextDecorationPlan,
   collectSourceHighlightDecorationPlan,
   collectStrikethroughTextDecorationPlan
 } from './inlineTextDecorationPlans';
 
 describe('inlineTextDecorationPlans', () => {
   it('hides markdown inline tokens outside preserved ranges', () => {
-    expect(collectInlineTokenDecorationPlan(0, '**Bold** ~~strike~~', false, false, [])).toEqual({
+    expect(collectInlineTokenDecorationPlan(0, '*em* **Bold** ~~strike~~', false, false, [])).toEqual({
       markRanges: [],
       replaceRanges: [
-        { from: 0, to: 2 },
-        { from: 6, to: 8 },
-        { from: 9, to: 11 },
-        { from: 17, to: 19 }
+        { from: 0, to: 1 },
+        { from: 3, to: 4 },
+        { from: 5, to: 7 },
+        { from: 11, to: 13 },
+        { from: 14, to: 16 },
+        { from: 22, to: 24 }
       ]
     });
   });
@@ -52,9 +55,19 @@ describe('inlineTextDecorationPlans', () => {
     });
   });
 
+});
+
+describe('inline semantic decoration plans', () => {
   it('marks strikethrough content ranges', () => {
     expect(collectStrikethroughTextDecorationPlan(0, 'A ~~gone~~ item', false)).toEqual({
       markRanges: [{ className: 'cm-md-strikethrough', from: 4, to: 8 }],
+      replaceRanges: []
+    });
+  });
+
+  it('marks emphasis content ranges', () => {
+    expect(collectEmphasisTextDecorationPlan(0, 'A *word* item', false)).toEqual({
+      markRanges: [{ className: 'cm-md-emphasis', from: 3, to: 7 }],
       replaceRanges: []
     });
   });
