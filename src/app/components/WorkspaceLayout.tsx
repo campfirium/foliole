@@ -5,6 +5,7 @@ import type { EditorSelection } from '../../features/editor/adapters/EditorAdapt
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -42,6 +43,8 @@ export interface WorkspaceLayoutProps {
   isStudyMode: boolean;
   isImportManagementOpen: boolean;
   isSettingsOpen: boolean;
+  requestedSettingsCategory: SettingsCategoryId | null;
+  requestedSettingsDialog: 'readwise-reader' | null;
   isAnswerRevealed: boolean;
   isCurrentReviewItemGradable: boolean;
   isReviewEditing: boolean;

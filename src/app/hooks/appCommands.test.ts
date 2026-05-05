@@ -22,6 +22,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openImportManagement: () => undefined,
     resetImportData: () => undefined,
     openNotes: () => undefined,
+    openReadwiseReaderSettings: () => undefined,
     openSettings: () => undefined,
     openTrash: () => undefined,
     restartApp: () => undefined,
@@ -67,28 +68,33 @@ function createPaletteOptions(isReviewMode: boolean) {
   };
 }
 
+function expectCorePaletteEntries() {
+  const items = buildAppPaletteItems(createPaletteOptions(false));
+
+  expect(items.length).toBeGreaterThanOrEqual(12);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.createFolder)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.createTopic)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.createItem)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.createVirtualNode)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.goToNode)).toBe(true);
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.goToNode)?.title).toBe('Go to…');
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.openImportManagement)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.openReadwiseReaderSettings)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
+  expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
+}
+
 describe('buildAppPaletteItems', () => {
   it('includes migrated command entries instead of a minimal fallback list', () => {
-    const items = buildAppPaletteItems(createPaletteOptions(false));
-
-    expect(items.length).toBeGreaterThanOrEqual(12);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.createFolder)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.createTopic)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.createItem)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.createVirtualNode)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.goToNode)).toBe(true);
-    expect(items.find((item) => item.id === APP_COMMAND_IDS.goToNode)?.title).toBe('Go to…');
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.openImportManagement)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.exportCurrentArticle)).toBe(true);
-    expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
+    expectCorePaletteEntries();
   });
 
   it('shows review-mode command as exit when already in review mode', () => {
@@ -98,7 +104,7 @@ describe('buildAppPaletteItems', () => {
   });
 });
 
-describe('runAppCommand', () => {
+describe('runAppCommand basics', () => {
   it('runs toggle devtools through the shared command handler', () => {
     const toggleDevTools = vi.fn();
     const importSingleFile = vi.fn();
@@ -144,7 +150,9 @@ describe('runAppCommand', () => {
 
     expect(exportCurrentArticle).toHaveBeenCalledTimes(1);
   });
+});
 
+describe('runAppCommand more actions', () => {
   it('runs create topic through the shared command handler', () => {
     const createTopic = vi.fn();
 
@@ -167,6 +175,14 @@ describe('runAppCommand', () => {
     expectCommandRuns(APP_COMMAND_IDS.restartApp, { restartApp });
 
     expect(restartApp).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs open Readwise Reader settings through the shared command handler', () => {
+    const openReadwiseReaderSettings = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.openReadwiseReaderSettings, { openReadwiseReaderSettings });
+
+    expect(openReadwiseReaderSettings).toHaveBeenCalledTimes(1);
   });
 
   it('lets reset import data cancel without reporting success', () => {

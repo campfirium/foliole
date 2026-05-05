@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 
 import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 
+import { ReadwiseReaderSettingsRow } from './ReadwiseReaderSettingsRow';
+
 type LibraryPathLocation = 'assets_dir' | 'inbox' | 'library_home' | 'mirror';
 
 function LibraryLocationRow(props: {
@@ -168,8 +170,10 @@ type SettingsImportSectionProps = {
   onChangeLocation: (location: LibraryPathLocation) => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
+  onOpenReadwiseReaderSettings?: () => void;
   onRestoreDefault: (location: LibraryPathLocation) => void;
   pendingLocation: LibraryPathLocation | null;
+  readwiseReaderConfigured?: boolean;
 };
 
 function LibraryPathRows(props: SettingsImportSectionProps) {
@@ -233,12 +237,21 @@ function LibraryPathRows(props: SettingsImportSectionProps) {
 
 export function SettingsImportSection(props: SettingsImportSectionProps) {
   return (
-    <SettingsSection
-      ariaLabel="Library settings section"
-      description="Library Home is your main root. Assets stores attachments, Inbox is the drop folder, and Mirror is a runtime-generated Markdown output folder."
-      title="Library paths"
-    >
-      <LibraryPathRows {...props} />
-    </SettingsSection>
+    <div className="space-y-6">
+      <SettingsSection
+        ariaLabel="Library settings section"
+        description="Library Home is your main root. Assets stores attachments, Inbox is the drop folder, and Mirror is a runtime-generated Markdown output folder."
+        title="Library paths"
+      >
+        <LibraryPathRows {...props} />
+      </SettingsSection>
+      <SettingsSection
+        ariaLabel="Import source settings section"
+        description="Source-specific import parameters live here instead of inside import management."
+        title="Import sources"
+      >
+        <ReadwiseReaderSettingsRow configured={props.readwiseReaderConfigured ?? false} onOpen={props.onOpenReadwiseReaderSettings} />
+      </SettingsSection>
+    </div>
   );
 }

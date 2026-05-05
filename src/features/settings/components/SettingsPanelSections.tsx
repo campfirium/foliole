@@ -28,10 +28,12 @@ export interface SettingsCategoryContentProps {
   mirrorOutputRebuildFeedback: string | null;
   mirrorPath: string;
   onChangeLocation: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
+  onOpenReadwiseReaderSettings?: () => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
+  readwiseReaderConfigured?: boolean;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
@@ -93,10 +95,12 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
         mirrorOutputRebuildFeedback={props.mirrorOutputRebuildFeedback}
         mirrorPath={props.mirrorPath}
         onChangeLocation={props.onChangeLocation}
+        onOpenReadwiseReaderSettings={props.onOpenReadwiseReaderSettings}
         onRebuildMirrorLinks={props.onRebuildMirrorLinks}
         onRebuildMirrorOutput={props.onRebuildMirrorOutput}
         onRestoreDefault={props.onRestoreDefault}
         pendingLocation={props.pendingLocation}
+        readwiseReaderConfigured={props.readwiseReaderConfigured}
       />
     );
   }

@@ -58,6 +58,12 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
   { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Workspace', keywords: ['developer', 'inspect'] },
   { id: APP_COMMAND_IDS.openSettings, title: 'Open Settings', section: 'Settings' },
+  {
+    id: APP_COMMAND_IDS.openReadwiseReaderSettings,
+    title: 'Open Readwise Reader Settings',
+    section: 'Settings',
+    keywords: ['settings', 'readwise', 'reader', 'import', 'library']
+  },
   { id: APP_COMMAND_IDS.closeSettings, title: 'Close Settings', section: 'Settings' },
   { id: APP_COMMAND_IDS.goBack, title: 'Go Back', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goForward, title: 'Go Forward', section: 'Navigation' },

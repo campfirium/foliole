@@ -19,6 +19,9 @@ import { useLibraryPathSettings } from './useLibraryPathSettings';
 
 interface SettingsPanelProps {
   onClose: () => void;
+  onOpenReadwiseReaderSettings?: () => void;
+  requestedCategory?: SettingsCategoryId | null;
+  readwiseReaderConfigured?: boolean;
 }
 
 export function SettingsPanel(props: SettingsPanelProps) {
@@ -26,15 +29,20 @@ export function SettingsPanel(props: SettingsPanelProps) {
 }
 
 function SettingsPanelContent(props: SettingsPanelProps) {
-  const state = useSettingsPanelViewState();
+  const state = useSettingsPanelViewState(props.requestedCategory ?? null);
   return <SettingsPanelBody {...props} {...state} />;
 }
 
-function useSettingsPanelViewState() {
-  const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => getInitialSettingsCategory());
+function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null) {
+  const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => requestedCategory ?? getInitialSettingsCategory());
   const libraryPathSettings = useLibraryPathSettings();
 
   useEffect(() => setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory), [activeCategory]);
+  useEffect(() => {
+    if (requestedCategory) {
+      setActiveCategory(requestedCategory);
+    }
+  }, [requestedCategory]);
   const title = SETTINGS_CATEGORIES.find((category) => category.id === activeCategory)?.label ?? 'Settings';
 
   return {
@@ -61,10 +69,12 @@ type SettingsPanelBodyProps = {
   mirrorPath: string;
   onClose: () => void;
   onChangeLocation: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
+  onOpenReadwiseReaderSettings?: () => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
+  readwiseReaderConfigured?: boolean;
   setActiveCategory: (category: SettingsCategoryId) => void;
   title: string;
 };
@@ -91,10 +101,12 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
     mirrorOutputRebuildFeedback: props.mirrorOutputRebuildFeedback,
     mirrorPath: props.mirrorPath,
     onChangeLocation: props.onChangeLocation,
+    onOpenReadwiseReaderSettings: props.onOpenReadwiseReaderSettings,
     onRebuildMirrorLinks: props.onRebuildMirrorLinks,
     onRebuildMirrorOutput: props.onRebuildMirrorOutput,
     onRestoreDefault: props.onRestoreDefault,
-    pendingLocation: props.pendingLocation
+    pendingLocation: props.pendingLocation,
+    readwiseReaderConfigured: props.readwiseReaderConfigured
   };
 
   return (

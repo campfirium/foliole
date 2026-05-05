@@ -17,6 +17,7 @@ import {
 } from './appControllerRuntimeActions';
 import { createOpenNotesView, createSelectNode, createToggleTrashView, createToggleVirtualView } from './appControllerTrashViewHandlers';
 import { buildLayoutProps } from './layoutPropsBuilder';
+import { createCloseSettingsHandler, createOpenSettingsHandler } from './settingsOverlayRequest';
 import type { useAppRuntime } from './useAppRuntime';
 import type { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import type { useEditorContextCommands } from './useEditorContextCommands';
@@ -148,6 +149,8 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     isImportManagementOpen: args.runtime.isImportManagementOpen,
     isListCollapsed: args.ws.isListCollapsed,
     isRightSidebarCollapsed: args.ws.isRightSidebarCollapsed,
+    requestedSettingsCategory: args.runtime.requestedSettingsCategory,
+    requestedSettingsDialog: args.runtime.requestedSettingsDialog,
     isTrashViewOpen: args.trash.isTrashViewOpen,
     isVirtualViewOpen: args.virtualView.isVirtualViewOpen,
     isViewingTrashNode: args.runtime.isViewingTrashNode,
@@ -201,8 +204,8 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),
     onOpenNotesView: openNotesView,
     onOpenMoveToNode: () => args.runtime.setIsMoveToNodePaletteOpen(true),
-    onOpenSettings: () => args.runtime.setIsSettingsOpen(true),
-    onCloseSettings: () => args.runtime.setIsSettingsOpen(false),
+    onOpenSettings: createOpenSettingsHandler(args.runtime),
+    onCloseSettings: createCloseSettingsHandler(args.runtime),
     onOpenImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     onCloseImportManagement: () => args.runtime.setIsImportManagementOpen(false),
     onOpenTrashView: createToggleTrashView(args, openNotesView),
@@ -212,11 +215,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onRunImportFolder: args.runImportDirectory,
     onStartClipboardImport: () => undefined,
     onSelectNode: createSelectNode(args),
-    onSelectTrashNode: (nodeId: string) => {
-      args.runtime.setIsViewingTrashNode(true);
-      args.trash.openTrashView();
-      args.trash.setSelectedTrashNodeId(nodeId);
-    },
+    onSelectTrashNode: createSelectTrashNodeHandler(args),
     onRightSidebarSplitterKeyDown: args.rightSidebarResize.handleRightSidebarSplitterKeyDown,
     onRightSidebarSplitterPointerDown: args.rightSidebarResize.handleRightSidebarSplitterPointerDown,
     onSplitterKeyDown: args.listResize.handleSplitterKeyDown,
@@ -227,6 +226,14 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     completeReviewItem: () => args.ws.completeReviewItem(),
     deferReviewItem: () => args.ws.deferReviewItem(),
     dismissReviewItem: () => args.ws.dismissReviewItem()
+  };
+}
+
+function createSelectTrashNodeHandler(args: BuildControllerLayoutPropsArgs) {
+  return (nodeId: string) => {
+    args.runtime.setIsViewingTrashNode(true);
+    args.trash.openTrashView();
+    args.trash.setSelectedTrashNodeId(nodeId);
   };
 }
 

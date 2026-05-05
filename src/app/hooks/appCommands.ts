@@ -22,6 +22,7 @@ interface RunAppCommandActions {
   resetImportData: () => boolean | void;
   startClipboardImport: () => void;
   openNotes: () => void;
+  openReadwiseReaderSettings: () => void;
   openSettings: () => void;
   openTrash: () => void;
   restartApp: () => void;
@@ -79,6 +80,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,
     [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,
     [APP_COMMAND_IDS.openSettings]: actions.openSettings,
+    [APP_COMMAND_IDS.openReadwiseReaderSettings]: actions.openReadwiseReaderSettings,
     [APP_COMMAND_IDS.closeSettings]: actions.closeSettings,
     [APP_COMMAND_IDS.goBack]: actions.goBack,
     [APP_COMMAND_IDS.goForward]: actions.goForward,

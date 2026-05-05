@@ -66,6 +66,27 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
 
+it('shows the Readwise Reader settings entry inside Library and keeps it actionable', async () => {
+  const onOpenReadwiseReaderSettings = vi.fn();
+
+  renderWithMouseGestureProvider(
+    <SettingsPanel
+      {...createProps()}
+      onOpenReadwiseReaderSettings={onOpenReadwiseReaderSettings}
+      readwiseReaderConfigured
+      requestedCategory="import"
+    />
+  );
+
+  expect(screen.getByRole('heading', { name: 'Library' })).toBeInTheDocument();
+  expect(screen.getByText('Readwise Reader settings')).toBeInTheDocument();
+  expect(screen.getByText('Status: configured')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open Readwise Reader settings' }));
+
+  expect(onOpenReadwiseReaderSettings).toHaveBeenCalledTimes(1);
+});
+
 it('keeps font selects disabled until system fonts are loaded', async () => {
   const deferred = createDeferred<{ fonts: string[]; monospaceFonts: string[] }>();
   mockedListAvailableSystemFonts.mockReturnValue(deferred.promise);

@@ -34,6 +34,7 @@ export const APP_COMMAND_IDS = {
   createItem: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createItem,
   createVirtualNode: VIRTUAL_NODE_APP_COMMAND_ID,
   openSettings: 'workspace.openSettings',
+  openReadwiseReaderSettings: 'workspace.openReadwiseReaderSettings',
   exportCurrentArticle: 'workspace.exportCurrentArticle',
   restartApp: 'workspace.restartApp',
   toggleList: 'workspace.toggleList',

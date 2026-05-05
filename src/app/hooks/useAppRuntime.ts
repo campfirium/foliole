@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
@@ -76,6 +77,41 @@ function useWindowHotkeys(args: {
   );
 }
 
+function useSettingsRequestState() {
+  const [requestedSettingsCategory, setRequestedSettingsCategory] = useState<SettingsCategoryId | null>(null);
+  const [requestedSettingsDialog, setRequestedSettingsDialog] = useState<'readwise-reader' | null>(null);
+  return {
+    requestedSettingsCategory,
+    requestedSettingsDialog,
+    setRequestedSettingsCategory,
+    setRequestedSettingsDialog
+  };
+}
+
+function useRecentHistory() {
+  const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
+  const [recentNodeIds, setRecentNodeIdsState] = useState<string[]>(() => getRecentNodeIds());
+
+  return {
+    recentCommandIds,
+    recentNodeIds,
+    recordRecentCommand(id: string) {
+      setRecentCommandIdsState((current) => {
+        const next = pushRecentCommandId(current, id);
+        setRecentCommandIds(next);
+        return next;
+      });
+    },
+    recordRecentNode(id: string) {
+      setRecentNodeIdsState((current) => {
+        const next = pushRecentNodeId(current, id);
+        setRecentNodeIds(next);
+        return next;
+      });
+    }
+  };
+}
+
 export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
   const editorRef = useRef<EditorAdapter | null>(null);
   const lastExpandedListWidthRef = useRef(initialListWidth);
@@ -87,8 +123,8 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const [isGoToNodePaletteOpen, setIsGoToNodePaletteOpen] = useState(false);
   const [isMoveToNodePaletteOpen, setIsMoveToNodePaletteOpen] = useState(false);
   const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
-  const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
-  const [recentNodeIds, setRecentNodeIdsState] = useState<string[]>(() => getRecentNodeIds());
+  const settingsRequest = useSettingsRequestState();
+  const recentHistory = useRecentHistory();
 
   useWindowHotkeys({
     setIsCommandPaletteOpen,
@@ -96,21 +132,6 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     setIsMoveToNodePaletteOpen,
     setIsSearchPaletteOpen
   });
-
-  const recordRecentCommand = (id: string) => {
-    setRecentCommandIdsState((current) => {
-      const next = pushRecentCommandId(current, id);
-      setRecentCommandIds(next);
-      return next;
-    });
-  };
-  const recordRecentNode = (id: string) => {
-    setRecentNodeIdsState((current) => {
-      const next = pushRecentNodeId(current, id);
-      setRecentNodeIds(next);
-      return next;
-    });
-  };
 
   return {
     editorRef,
@@ -123,16 +144,20 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     isViewingTrashNode,
     lastExpandedListWidthRef,
     lastExpandedRightSidebarWidthRef,
-    recentCommandIds,
-    recentNodeIds,
-    recordRecentCommand,
-    recordRecentNode,
+    recentCommandIds: recentHistory.recentCommandIds,
+    recentNodeIds: recentHistory.recentNodeIds,
+    requestedSettingsCategory: settingsRequest.requestedSettingsCategory,
+    requestedSettingsDialog: settingsRequest.requestedSettingsDialog,
+    recordRecentCommand: recentHistory.recordRecentCommand,
+    recordRecentNode: recentHistory.recordRecentNode,
     setIsCommandPaletteOpen,
     setIsGoToNodePaletteOpen,
     setIsImportManagementOpen,
     setIsMoveToNodePaletteOpen,
     setIsSearchPaletteOpen,
     setIsSettingsOpen,
+    setRequestedSettingsCategory: settingsRequest.setRequestedSettingsCategory,
+    setRequestedSettingsDialog: settingsRequest.setRequestedSettingsDialog,
     setIsViewingTrashNode
   };
 }

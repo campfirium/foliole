@@ -3,6 +3,7 @@ import type { CommandPaletteItem } from '../../shared/commands/types';
 import { runAppCommand, runReviewModeToggle } from './appCommands';
 
 interface PaletteCommandRunnerArgs {
+  clearSettingsRequest: () => void;
   closeTrashView: () => void;
   createFolder: () => void;
   createItem: () => void;
@@ -29,6 +30,7 @@ interface PaletteCommandRunnerArgs {
   onToggleListVisibility: () => void;
   onRestartApp: () => void;
   onToggleDevTools: () => void;
+  openReadwiseReaderSettings: () => void;
   openTrashView: () => void;
   paletteItems: CommandPaletteItem[];
   recordRecentCommand: (id: string) => void;
@@ -45,7 +47,10 @@ interface PaletteCommandRunnerArgs {
 
 function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
   return {
-    closeSettings: () => args.setSettingsOpen(false),
+    closeSettings: () => {
+      args.setSettingsOpen(false);
+      args.clearSettingsRequest();
+    },
     createFolder: args.createFolder,
     createItem: args.createItem,
     createTopic: args.createTopic,
@@ -72,7 +77,11 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
       void args.resetImportData();
     },
     openNotes: args.closeTrashView,
-    openSettings: () => args.setSettingsOpen(true),
+    openReadwiseReaderSettings: args.openReadwiseReaderSettings,
+    openSettings: () => {
+      args.clearSettingsRequest();
+      args.setSettingsOpen(true);
+    },
     openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
     restartApp: args.onRestartApp,
     revealReviewAnswer: args.revealReviewAnswer,
