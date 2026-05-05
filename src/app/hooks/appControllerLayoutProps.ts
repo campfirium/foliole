@@ -74,6 +74,8 @@ interface BuildControllerLayoutPropsArgs {
     documentMaxWidth: number;
     exitReviewSession: () => void;
     gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;
+    completeReviewItem: () => boolean;
+    deferReviewItem: () => boolean;
     isListCollapsed: boolean;
     isRightSidebarCollapsed: boolean;
     listWidth: number;
@@ -168,6 +170,8 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     startReviewSession: args.ws.startReviewSession,
     exitReviewSession: args.ws.exitReviewSession,
     exitStudyMode: args.exitStudyMode,
+    completeReviewItem: args.ws.completeReviewItem,
+    deferReviewItem: args.ws.deferReviewItem,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     nav: {
       onGoBack: args.nav.handleGoBack,
@@ -224,6 +228,8 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onSplitterPointerDown: args.listResize.handleSplitterPointerDown,
     onToggleListVisibility: createToggleListVisibility(args),
     onToggleRightSidebarVisibility: createToggleRightSidebarVisibility(args),
-    updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade)
+    updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade),
+    completeReviewItem: () => args.ws.completeReviewItem(),
+    deferReviewItem: () => args.ws.deferReviewItem()
   };
 }

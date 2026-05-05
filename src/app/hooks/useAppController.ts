@@ -54,15 +54,12 @@ export interface AppPaletteState {
   onRunCommand: (id: string) => void;
 }
 
-export interface AppControllerResult {
-  layoutProps: WorkspaceLayoutProps;
-  paletteState: AppPaletteState;
-}
-
+export interface AppControllerResult { layoutProps: WorkspaceLayoutProps; paletteState: AppPaletteState; }
 const BLOCKED_HOTKEY_UPDATE = (): HotkeyUpdateResult => ({
   status: 'blocked',
   message: 'Hotkey customization is temporarily unavailable.'
 });
+
 function mapPaletteItemsToHotkeyItems(items: CommandPaletteItem[]): HotkeySettingItem[] {
   return items.map((item) => ({
     commandId: item.id,
@@ -84,6 +81,8 @@ function useWorkspaceSelectors() {
     createQANodeFromSelection: useWorkspaceStore((state) => state.createQANodeFromSelection),
     createRootNode: useWorkspaceStore((state) => state.createRootNode),
     documentMaxWidth: useWorkspaceStore((state) => state.layout.documentMaxWidth),
+    completeReviewItem: useWorkspaceStore((state) => state.completeReviewItem),
+    deferReviewItem: useWorkspaceStore((state) => state.deferReviewItem),
     goBack: useWorkspaceStore((state) => state.goBack),
     goForward: useWorkspaceStore((state) => state.goForward),
     goToParent: useWorkspaceStore((state) => state.goToParent),
@@ -218,7 +217,10 @@ export function useAppController(): AppControllerResult {
     ws,
     getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings)
   );
-  const isReviewEditing = useReviewKeyboardShortcuts({ isStudyMode, isCommandPaletteOpen: runtime.isCommandPaletteOpen, isSettingsOpen: runtime.isSettingsOpen, reviewCurrentNodeId: ws.reviewSession.currentNodeId, isAnswerRevealed: ws.reviewSession.isAnswerRevealed, revealReviewAnswer: ws.revealReviewAnswer, gradeReviewCard: ws.gradeReviewCard });
+  const isCurrentReviewItemGradable = Boolean(
+    ws.reviewSession.currentNodeId && ws.nodesById[ws.reviewSession.currentNodeId]?.reveal?.trim().length
+  );
+  const isReviewEditing = useReviewKeyboardShortcuts({ isStudyMode, isCommandPaletteOpen: runtime.isCommandPaletteOpen, isSettingsOpen: runtime.isSettingsOpen, reviewCurrentNodeId: ws.reviewSession.currentNodeId, isAnswerRevealed: ws.reviewSession.isAnswerRevealed, isCurrentItemGradable: isCurrentReviewItemGradable, completeReviewItem: ws.completeReviewItem, revealReviewAnswer: ws.revealReviewAnswer, gradeReviewCard: ws.gradeReviewCard });
   const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso, reviewSettings.reviewSchedulerSettings.pushQueue), [nowIso, reviewSettings.reviewSchedulerSettings.pushQueue, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
   const hasReviewCard = Boolean(ws.reviewSession.currentNodeId);
   const paletteItems = useMemo<CommandPaletteItem[]>(
@@ -227,12 +229,12 @@ export function useAppController(): AppControllerResult {
         canGoBack: nav.canGoBack,
         canGoForward: nav.canGoForward,
         canGoParent: nav.canGoParent,
-        canRevealAnswer: hasReviewCard && !ws.reviewSession.isAnswerRevealed,
+        canRevealAnswer: hasReviewCard && isCurrentReviewItemGradable && !ws.reviewSession.isAnswerRevealed,
         canToggleReviewMode: isStudyMode || study.canStartStudyMode,
-        canGradeReview: hasReviewCard && ws.reviewSession.isAnswerRevealed,
+        canGradeReview: hasReviewCard && isCurrentReviewItemGradable && ws.reviewSession.isAnswerRevealed,
         isReviewMode: isStudyMode
       }),
-    [hasReviewCard, isStudyMode, nav.canGoBack, nav.canGoForward, nav.canGoParent, study.canStartStudyMode, ws.reviewSession.isAnswerRevealed]
+    [hasReviewCard, isCurrentReviewItemGradable, isStudyMode, nav.canGoBack, nav.canGoForward, nav.canGoParent, study.canStartStudyMode, ws.reviewSession.isAnswerRevealed]
   );
   const layoutProps = buildAppControllerLayoutProps({
     activeNode,

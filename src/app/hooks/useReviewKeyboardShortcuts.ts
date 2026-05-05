@@ -8,6 +8,8 @@ interface UseReviewKeyboardShortcutsArgs {
   isSettingsOpen: boolean;
   reviewCurrentNodeId: string | null;
   isAnswerRevealed: boolean;
+  isCurrentItemGradable: boolean;
+  completeReviewItem: () => boolean;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => Promise<boolean>;
 }
@@ -69,8 +71,10 @@ function useReviewHotkeyHandler(
       args.gradeReviewCard,
       args.isAnswerRevealed,
       args.isCommandPaletteOpen,
+      args.isCurrentItemGradable,
       args.isSettingsOpen,
       args.isStudyMode,
+      args.completeReviewItem,
       args.reviewCurrentNodeId,
       args.revealReviewAnswer,
       isReviewEditing
@@ -106,34 +110,46 @@ function handleReviewKeydown(
     return;
   }
   if (event.key === ' ' || event.code === 'Space') {
-    event.preventDefault();
-    if (args.isAnswerRevealed) {
-      void args.gradeReviewCard(3);
-      return;
-    }
-    args.revealReviewAnswer();
+    handleReviewSpace(event, args);
     return;
   }
-  if (!args.isAnswerRevealed) {
+  if (!args.isAnswerRevealed || !args.isCurrentItemGradable) {
     return;
   }
+  handleReviewGradeKey(event, args.gradeReviewCard);
+}
+
+function handleReviewSpace(event: KeyboardEvent, args: UseReviewKeyboardShortcutsArgs) {
+  event.preventDefault();
+  if (!args.isCurrentItemGradable) {
+    args.completeReviewItem();
+    return;
+  }
+  if (args.isAnswerRevealed) {
+    void args.gradeReviewCard(3);
+    return;
+  }
+  args.revealReviewAnswer();
+}
+
+function handleReviewGradeKey(event: KeyboardEvent, gradeReviewCard: UseReviewKeyboardShortcutsArgs['gradeReviewCard']) {
   if (event.key === '1') {
     event.preventDefault();
-    void args.gradeReviewCard(1);
+    void gradeReviewCard(1);
     return;
   }
   if (event.key === '2') {
     event.preventDefault();
-    void args.gradeReviewCard(2);
+    void gradeReviewCard(2);
     return;
   }
   if (event.key === '3') {
     event.preventDefault();
-    void args.gradeReviewCard(3);
+    void gradeReviewCard(3);
     return;
   }
   if (event.key === '4') {
     event.preventDefault();
-    void args.gradeReviewCard(4);
+    void gradeReviewCard(4);
   }
 }

@@ -46,6 +46,8 @@ export interface WorkspaceState {
   startReviewSession: (now?: string) => boolean;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
+  completeReviewItem: (now?: string) => boolean;
+  deferReviewItem: () => boolean;
   exitReviewSession: () => void;
   deleteNode: (nodeId: string) => void;
   restoreNode: (nodeId: string) => void;

@@ -64,3 +64,18 @@ it('shows review grading shortcuts in hotkey settings', () => {
   expect(screen.getByLabelText('Shortcut for Grade Review: Good')).toHaveValue('3 / Space');
   expect(screen.getByLabelText('Shortcut for Grade Review: Easy')).toHaveValue('4');
 });
+
+it('uses Space to complete reading items without exposing grading buttons', async () => {
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+
+  expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
+
+  fireEvent.keyDown(window, { key: ' ', code: 'Space' });
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
+  });
+});

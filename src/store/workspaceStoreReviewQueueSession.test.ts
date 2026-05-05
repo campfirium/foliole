@@ -147,6 +147,8 @@ function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     startReviewSession: () => false,
     revealReviewAnswer: () => undefined,
     gradeReviewCard: async () => false,
+    completeReviewItem: () => false,
+    deferReviewItem: () => false,
     exitReviewSession: () => undefined,
     deleteNode: () => undefined,
     restoreNode: () => undefined,

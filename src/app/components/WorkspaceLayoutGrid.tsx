@@ -126,11 +126,14 @@ function WorkspaceDocumentArea({
       />
       <ReviewModeToolbar
         isAnswerRevealed={props.isAnswerRevealed}
+        isCurrentItemGradable={props.isCurrentReviewItemGradable}
         isReviewEditing={props.isReviewEditing}
         isStudyMode={props.isStudyMode}
         reviewPreview={props.reviewPreview}
         reviewCurrentNodeId={props.reviewCurrentNodeId}
         reviewQueueVisibility={props.reviewQueueVisibility}
+        onCompleteReviewItem={props.onCompleteReviewItem}
+        onDeferReviewItem={props.onDeferReviewItem}
         onExitReviewMode={props.onExitReviewMode}
         onGrade={props.onGradeReview}
         onRevealAnswer={props.onRevealAnswer}

@@ -43,6 +43,7 @@ export interface WorkspaceLayoutProps {
   isStudyMode: boolean;
   isSettingsOpen: boolean;
   isAnswerRevealed: boolean;
+  isCurrentReviewItemGradable: boolean;
   isReviewEditing: boolean;
   reviewCurrentNodeId: string | null;
   reviewQueueVisibility: ReviewQueueVisibility | null;
@@ -117,6 +118,8 @@ export interface WorkspaceLayoutProps {
   onToggleEditorDisplayMode: () => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
+  onCompleteReviewItem: () => boolean;
+  onDeferReviewItem: () => boolean;
   onExitReviewMode: () => void;
   customUiFont: string;
   customInterfaceFont: string;

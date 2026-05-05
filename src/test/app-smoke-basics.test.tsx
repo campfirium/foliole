@@ -80,9 +80,16 @@ it('enters review mode with the reading queue when no FSRS cards are due', async
 
   await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-1']));
   expect(screen.getByText(/Reviewing · 1 left · 0 done · Awaiting answer/i)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Read' }));
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Review complete' }));
   await waitFor(() => {
     expect(screen.queryByLabelText('Review mode toolbar')).not.toBeInTheDocument();
   });
@@ -290,8 +297,6 @@ it('supports inline rename and preserves manual title after content edits', () =
 
   expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Article Title');
 
-  fireEvent.change(screen.getByTestId('editor-value'), {
-    target: { value: '# New Heading\nBody content' }
-  });
+  fireEvent.change(screen.getByTestId('editor-value'), { target: { value: '# New Heading\nBody content' } });
   expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Article Title');
 });

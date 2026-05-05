@@ -116,6 +116,8 @@ interface BuildLayoutPropsArgs {
   exitReviewSession: WorkspaceState['exitReviewSession'];
   exitStudyMode: () => void;
   updateGrade: (grade: ReviewGrade) => Promise<boolean>;
+  completeReviewItem: () => boolean;
+  deferReviewItem: () => boolean;
   revealReviewAnswer: () => void;
 }
 
@@ -197,14 +199,14 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isSettingsOpen: args.isSettingsOpen, isReviewEditing: args.isReviewEditing,
-    isAnswerRevealed: args.reviewSession.isAnswerRevealed, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isViewingTrashNode: args.isViewingTrashNode,
+    isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable: Boolean(args.reviewSession.currentNodeId && args.nodesById[args.reviewSession.currentNodeId]?.reveal?.trim().length), reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isViewingTrashNode: args.isViewingTrashNode,
     isListCollapsed: args.isListCollapsed, isRightSidebarCollapsed: args.isRightSidebarCollapsed, showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange,
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode,
     onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenTrashView: args.onOpenTrashView, onToggleListVisibility: args.onToggleListVisibility,
     onToggleRightSidebarVisibility: args.onToggleRightSidebarVisibility,
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze,
     onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions, ...appearanceActions, ...reviewActions,
-    onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onExitReviewMode: sessionActions.onToggleReviewSession, customUiFont: args.appearance.customUiFont,
+    onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession, customUiFont: args.appearance.customUiFont,
     customInterfaceFont: args.appearance.customInterfaceFont, customMonospaceFont: args.appearance.customMonospaceFont, baseColorMode: args.appearance.baseColorMode,
     accentColorPreset: args.appearance.accentColorPreset, uiFontPreset: args.appearance.uiFontPreset, interfaceFontPreset: args.appearance.interfaceFontPreset,
     interfaceFontSize: args.appearance.interfaceFontSize, reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, markdownSyntaxVisibility: args.appearance.markdownSyntaxVisibility, editorDisplayMode: args.appearance.editorDisplayMode,

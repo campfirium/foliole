@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
+  createReadingNode,
   createQaNode,
   createSchedulerGradeMock,
   createSetStateHarness,
@@ -121,4 +122,46 @@ it('keeps current review card when runtime sync fails', async () => {
     state: 0,
     lastReviewAt: null
   });
+});
+
+it('completes reading items without showing grading and advances the queue', () => {
+  const now = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createReadingNode('reading-1', now), createReadingNode('reading-2', now)])
+  );
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade: createSchedulerGradeMock(), preview: previewStub });
+
+  const started = actions.startReviewSession(now);
+
+  expect(started).toBe(true);
+  expect(harness.getState().reviewSession.currentNodeId).toBe('reading-1');
+
+  const completed = actions.completeReviewItem(now);
+
+  expect(completed).toBe(true);
+  expect(harness.getState().activeNodeId).toBe('reading-2');
+  expect(harness.getState().reviewSession.currentNodeId).toBe('reading-2');
+  expect(harness.getState().reviewSession.queueNodeIds).toEqual(['reading-2']);
+  expect(harness.getState().nodesById['reading-1']?.reading).toMatchObject({
+    lastHandledAt: now,
+    repetitionCount: 2
+  });
+});
+
+it('defers reading items to the end of the current queue without advancing the interval', () => {
+  const now = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createReadingNode('reading-1', now), createReadingNode('reading-2', now)])
+  );
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade: createSchedulerGradeMock(), preview: previewStub });
+
+  actions.startReviewSession(now);
+
+  const deferred = actions.deferReviewItem();
+
+  expect(deferred).toBe(true);
+  expect(harness.getState().activeNodeId).toBe('reading-2');
+  expect(harness.getState().reviewSession.currentNodeId).toBe('reading-2');
+  expect(harness.getState().reviewSession.queueNodeIds).toEqual(['reading-2', 'reading-1']);
+  expect(harness.getState().nodesById['reading-1']?.reading?.lastHandledAt).toBe('2026-03-02T00:00:00.000Z');
 });

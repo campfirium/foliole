@@ -1,6 +1,6 @@
 import { expect, vi } from 'vitest';
 
-import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
+import type { Node, NodeReadingProfile, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
@@ -39,6 +39,33 @@ export function createQaNode(id: string, due: string): Node {
   };
 }
 
+function createReadingProfile(nextAt: string): NodeReadingProfile {
+  return {
+    intervalDurationMs: 24 * 60 * 60 * 1000,
+    intervalGrowthFactor: 1.3,
+    lastHandledAt: '2026-03-02T00:00:00.000Z',
+    nextAt,
+    priority: 5,
+    readingPosition: 0,
+    repetitionCount: 1,
+    state: 'active'
+  };
+}
+
+export function createReadingNode(id: string, nextAt: string): Node {
+  return {
+    id,
+    parentNodeId: null,
+    title: id,
+    content: `${id}-content`,
+    reveal: null,
+    reading: createReadingProfile(nextAt),
+    review: null,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    updatedAt: '2026-03-01T00:00:00.000Z'
+  };
+}
+
 export function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
   const initial = createInitialWorkspaceState(new Date('2026-03-03T00:00:00.000Z'));
   const nodesById = nodes.reduce<Record<string, Node>>((acc, node) => {
@@ -73,6 +100,8 @@ export function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     startReviewSession: () => false,
     revealReviewAnswer: () => undefined,
     gradeReviewCard: async () => false,
+    completeReviewItem: () => false,
+    deferReviewItem: () => false,
     exitReviewSession: () => undefined,
     deleteNode: () => undefined,
     restoreNode: () => undefined,

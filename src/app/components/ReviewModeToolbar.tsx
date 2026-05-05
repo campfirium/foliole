@@ -9,11 +9,14 @@ import { ReviewQueueVisibilityText } from './ReviewQueueVisibilityText';
 interface ReviewModeToolbarProps {
   isStudyMode: boolean;
   isAnswerRevealed: boolean;
+  isCurrentItemGradable: boolean;
   isReviewEditing: boolean;
   reviewPreview: SchedulerPreviewResult | null;
   reviewCurrentNodeId: string | null;
   reviewQueueVisibility: ReviewQueueVisibility | null;
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
+  onCompleteReviewItem: () => boolean;
+  onDeferReviewItem: () => boolean;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
 }
@@ -175,11 +178,14 @@ function ReviewGradeActions({
 export function ReviewModeToolbar({
   isStudyMode,
   isAnswerRevealed,
+  isCurrentItemGradable,
   isReviewEditing,
   reviewPreview,
   reviewCurrentNodeId,
   reviewQueueVisibility,
   onGrade,
+  onCompleteReviewItem,
+  onDeferReviewItem,
   onRevealAnswer,
   onExitReviewMode
 }: ReviewModeToolbarProps) {
@@ -200,7 +206,16 @@ export function ReviewModeToolbar({
       data-mode={isStudyMode ? 'study' : 'edit'}
       data-review-input-mode={isReviewEditing ? 'editing' : 'hotkeys'}
     >
-      {!isAnswerRevealed ? (
+      {!isCurrentItemGradable ? (
+        <div className="flex items-center gap-2">
+          <AppButton aria-label="Later" onClick={onDeferReviewItem} size="sm" variant="ghost">
+            Later
+          </AppButton>
+          <AppButton aria-label="Read" onClick={onCompleteReviewItem} size="sm" variant="primary">
+            Read
+          </AppButton>
+        </div>
+      ) : !isAnswerRevealed ? (
         <div className="flex items-center gap-2">
           <AppButton aria-label="Show Answer" onClick={onRevealAnswer} size="sm" variant="primary">
             Show Answer
