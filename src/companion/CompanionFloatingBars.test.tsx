@@ -22,4 +22,21 @@ describe('CompanionBottomTabBar', () => {
     expect(screen.getByText('Topic body cache')).toBeInTheDocument();
     expect(screen.getByText('128/616')).toBeInTheDocument();
   });
+
+  it('shows attachment resource progress above the bottom tabs', () => {
+    render(
+      <CompanionBottomTabBar
+        activeAction="recent"
+        activeSecondaryDestinationId={null}
+        config={DEFAULT_COMPANION_TAB_CONFIG}
+        onAction={vi.fn()}
+        onSecondaryDestination={vi.fn()}
+        syncProgress={{ completed: 4, phase: 'attachment', total: 12 }}
+        visible
+      />
+    );
+
+    expect(screen.getByText('Attachment files')).toBeInTheDocument();
+    expect(screen.getByText('4/12')).toBeInTheDocument();
+  });
 });

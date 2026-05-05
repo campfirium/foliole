@@ -16,9 +16,18 @@ export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 export type ForegroundAutoSyncOutcome = 'completed' | 'failed' | 'skipped';
 
 function describeSyncPassResult(result: {
+  attachmentResourceError: string | null;
   contentBlobError: string | null;
+  remainingAttachmentResourceCount: number | null;
   remainingContentBlobCount: number | null;
 }) {
+  if (result.attachmentResourceError) {
+    return {
+      message: `Attachment cache failed: ${result.attachmentResourceError}`,
+      outcome: 'failed' as const,
+      status: 'failed' as const
+    };
+  }
   if (result.contentBlobError) {
     return {
       message: `Topic body cache failed: ${result.contentBlobError}`,
@@ -26,16 +35,35 @@ function describeSyncPassResult(result: {
       status: 'failed' as const
     };
   }
-  if (result.remainingContentBlobCount === 0) {
+  const remainingBodies = result.remainingContentBlobCount;
+  const remainingAttachments = result.remainingAttachmentResourceCount;
+  if (remainingBodies === 0 && remainingAttachments === 0) {
     return {
-      message: 'Sync pass finished; topic bodies are cached.',
+      message: 'Sync pass finished; topic bodies and attachment files are cached.',
       outcome: 'skipped' as const,
       status: 'skipped' as const
     };
   }
-  const remaining = result.remainingContentBlobCount === null ? 'some' : String(result.remainingContentBlobCount);
+  if (remainingBodies === 0) {
+    const remaining = remainingAttachments === null ? 'some' : String(remainingAttachments);
+    return {
+      message: `Sync pass finished; ${remaining} attachment files still caching.`,
+      outcome: 'skipped' as const,
+      status: 'skipped' as const
+    };
+  }
+  if (remainingAttachments === 0) {
+    const remaining = remainingBodies === null ? 'some' : String(remainingBodies);
+    return {
+      message: `Sync pass finished; ${remaining} topic bodies still caching.`,
+      outcome: 'skipped' as const,
+      status: 'skipped' as const
+    };
+  }
+  const remainingBodyLabel = remainingBodies === null ? 'some' : String(remainingBodies);
+  const remainingAttachmentLabel = remainingAttachments === null ? 'some' : String(remainingAttachments);
   return {
-    message: `Sync pass finished; ${remaining} topic bodies still caching.`,
+    message: `Sync pass finished; ${remainingBodyLabel} topic bodies and ${remainingAttachmentLabel} attachment files still caching.`,
     outcome: 'skipped' as const,
     status: 'skipped' as const
   };
@@ -76,7 +104,11 @@ export async function runCompanionStreamSync(args: {
   args.setState(completedState);
   args.setReadableArticle(await syncReadableArticle(completedState.workspace_snapshot));
   args.setStatus('idle');
-  if (result.contentBlobError || result.remainingContentBlobCount === 0) {
+  if (
+    result.attachmentResourceError ||
+    result.contentBlobError ||
+    (result.remainingAttachmentResourceCount === 0 && result.remainingContentBlobCount === 0)
+  ) {
     args.setSyncProgress(null);
   }
   return passResult.outcome;

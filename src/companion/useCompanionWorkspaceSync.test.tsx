@@ -8,7 +8,9 @@ import type { CompanionReadableArticle } from '../shared/platform/companionReada
 const syncObjectsMock = vi.hoisted(() => ({
   loadCompanionSyncNodeConflicts: vi.fn<() => Promise<NativeSyncNodeConflictRecord[]>>(async () => []),
   syncCompanionObjectsFromDesktop: vi.fn(async () => ({
+    attachmentResourceError: null,
     contentBlobError: null,
+    remainingAttachmentResourceCount: 0,
     remainingContentBlobCount: 0
   }))
 }));

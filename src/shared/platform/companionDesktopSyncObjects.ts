@@ -28,7 +28,7 @@ export interface CompanionDesktopSyncOptions {
 
 export interface CompanionDesktopSyncProgress {
   completed: number;
-  phase: 'content' | 'structure';
+  phase: 'attachment' | 'content' | 'structure';
   total: number | null;
 }
 
@@ -46,6 +46,7 @@ export interface CompanionDesktopSyncResult {
   syncedAttachmentIds: string[];
   attachmentResourceError: string | null;
   contentBlobError: string | null;
+  remainingAttachmentResourceCount: number | null;
   remainingContentBlobCount: number | null;
   syncedContentBlobHashes: string[];
 }
@@ -93,6 +94,11 @@ async function loadMissingContentBlobCount() {
   return diagnostics?.content.missing_content_blob_count ?? null;
 }
 
+async function loadMissingAttachmentResourceCount() {
+  const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
+  return diagnostics?.content.missing_attachment_resource_count ?? null;
+}
+
 async function pullMissingContentBlobs(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedContentBlobHashes: string[] = [];
@@ -113,7 +119,9 @@ async function pullMissingContentBlobs(endpointUrl: string, onProgress?: Compani
   return { syncedContentBlobHashes };
 }
 
-async function pullMissingAttachmentResources(endpointUrl: string) {
+async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
+  const total = await loadMissingAttachmentResourceCount();
+  onProgress?.({ completed: 0, phase: 'attachment', total });
   const resources = await loadCompanionMissingAttachmentResources(ATTACHMENT_RESOURCE_BATCH_LIMIT);
   const syncedAttachmentIds = await syncCompanionAttachmentResourceRequestsFromDesktop(
     endpointUrl,
@@ -122,6 +130,7 @@ async function pullMissingAttachmentResources(endpointUrl: string) {
       contentHash: resource.content_hash
     }))
   );
+  onProgress?.({ completed: syncedAttachmentIds.length, phase: 'attachment', total });
   return { syncedAttachmentIds };
 }
 
@@ -190,7 +199,7 @@ async function runCompanionObjectsSync(
   let syncedAttachmentIds: string[] = [];
   let syncedContentBlobHashes: string[] = [];
   try {
-    const attachments = await withSyncStepTimeout('fetching attachment resources', pullMissingAttachmentResources(endpointUrl));
+    const attachments = await withSyncStepTimeout('fetching attachment resources', pullMissingAttachmentResources(endpointUrl, options.onProgress));
     syncedAttachmentIds = attachments.syncedAttachmentIds;
   } catch (error) {
     attachmentResourceError = errorMessage(error);
@@ -201,7 +210,10 @@ async function runCompanionObjectsSync(
   } catch (error) {
     contentBlobError = errorMessage(error);
   }
-  const remainingContentBlobCount = await loadMissingContentBlobCount();
+  const [remainingAttachmentResourceCount, remainingContentBlobCount] = await Promise.all([
+    loadMissingAttachmentResourceCount(),
+    loadMissingContentBlobCount()
+  ]);
   return {
     appliedNodeIds: [],
     appliedPackBlobCount: pack.appliedPackBlobCount,
@@ -216,6 +228,7 @@ async function runCompanionObjectsSync(
     syncedAttachmentIds,
     attachmentResourceError,
     contentBlobError,
+    remainingAttachmentResourceCount,
     remainingContentBlobCount,
     syncedContentBlobHashes
   };

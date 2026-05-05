@@ -27,24 +27,49 @@ import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
 import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
 
 function describeManualSyncPassResult(result: {
+  attachmentResourceError: string | null;
   contentBlobError: string | null;
+  remainingAttachmentResourceCount: number | null;
   remainingContentBlobCount: number | null;
 }) {
+  if (result.attachmentResourceError) {
+    return {
+      message: `Attachment cache failed: ${result.attachmentResourceError}`,
+      status: 'failed' as const
+    };
+  }
   if (result.contentBlobError) {
     return {
       message: `Topic body cache failed: ${result.contentBlobError}`,
       status: 'failed' as const
     };
   }
-  if (result.remainingContentBlobCount === 0) {
+  const remainingBodies = result.remainingContentBlobCount;
+  const remainingAttachments = result.remainingAttachmentResourceCount;
+  if (remainingBodies === 0 && remainingAttachments === 0) {
     return {
-      message: 'Sync pass finished; topic bodies are cached.',
+      message: 'Sync pass finished; topic bodies and attachment files are cached.',
       status: 'skipped' as const
     };
   }
-  const remaining = result.remainingContentBlobCount === null ? 'some' : String(result.remainingContentBlobCount);
+  if (remainingBodies === 0) {
+    const remaining = remainingAttachments === null ? 'some' : String(remainingAttachments);
+    return {
+      message: `Sync pass finished; ${remaining} attachment files still caching.`,
+      status: 'skipped' as const
+    };
+  }
+  if (remainingAttachments === 0) {
+    const remaining = remainingBodies === null ? 'some' : String(remainingBodies);
+    return {
+      message: `Sync pass finished; ${remaining} topic bodies still caching.`,
+      status: 'skipped' as const
+    };
+  }
+  const remainingBodyLabel = remainingBodies === null ? 'some' : String(remainingBodies);
+  const remainingAttachmentLabel = remainingAttachments === null ? 'some' : String(remainingAttachments);
   return {
-    message: `Sync pass finished; ${remaining} topic bodies still caching.`,
+    message: `Sync pass finished; ${remainingBodyLabel} topic bodies and ${remainingAttachmentLabel} attachment files still caching.`,
     status: 'skipped' as const
   };
 }
@@ -118,7 +143,11 @@ async function syncDesktopStreams(args: {
   args.setState(nextState);
   args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-  if (result.contentBlobError || result.remainingContentBlobCount === 0) {
+  if (
+    result.attachmentResourceError ||
+    result.contentBlobError ||
+    (result.remainingAttachmentResourceCount === 0 && result.remainingContentBlobCount === 0)
+  ) {
     args.setSyncProgress(null);
   }
   return nextState;

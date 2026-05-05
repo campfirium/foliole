@@ -69,6 +69,7 @@ export interface SyncDiagnosticContent {
     id: string;
     title: string;
   } | null;
+  missing_attachment_resource_count?: number;
   missing_content_blob_count: number;
   recent_topics?: Array<{
     body_blob_hash: string | null;

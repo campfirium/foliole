@@ -20,6 +20,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionSyncReviewLogCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncReviewLogPushCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncReviewLog: vi.fn(async () => [] as NativeSyncReviewLogRecord[]),
+  loadCompanionMissingAttachmentResources: vi.fn(async () => [] as Array<{ attachment_id: string; content_hash: string }>),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncStateChanges: vi.fn(async () => [] as NativeSyncStateObjectRecord[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
@@ -38,6 +39,7 @@ const syncBridgeMock = vi.hoisted(() => ({
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companionDesktopAttachmentResources', () => ({
+  syncCompanionAttachmentResourceRequestsFromDesktop: vi.fn(async () => [] as string[]),
   syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
 }));
 vi.mock('./companionWorkspacePairing', () => ({

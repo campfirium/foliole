@@ -139,6 +139,21 @@ function expectContentBacklogSeparateFromStructure() {
   expect(verdicts).not.toContainEqual(expect.objectContaining({ code: 'sync_android_not_caught_up' }));
 }
 
+function expectAttachmentBacklogSeparateFromStructure() {
+  const verdicts = mergeSyncDiagnosticVerdicts({
+    android: snapshot('android', { content: { missing_attachment_resource_count: 4, missing_content_blob_count: 0 } }),
+    desktop: snapshot('desktop', {})
+  });
+
+  expect(verdicts).toContainEqual(expect.objectContaining({ code: 'sync_structure_aligned' }));
+  expect(verdicts).toContainEqual(expect.objectContaining({
+    code: 'sync_android_attachment_cache_backlog',
+    message: 'Some attachment files are still being cached.',
+    severity: 'info'
+  }));
+  expect(verdicts).not.toContainEqual(expect.objectContaining({ code: 'sync_android_not_caught_up' }));
+}
+
 describe('mergeSyncDiagnosticVerdicts', () => {
   it('reports when Android has not caught up to the desktop state sequence', expectAndroidCursorLagVerdict);
   it('keeps cursor lag visible even when the latest Android sync failed', expectCursorLagWithRecentFailure);
@@ -146,4 +161,5 @@ describe('mergeSyncDiagnosticVerdicts', () => {
   it('identifies desktop object types that are still beyond the Android cursor', expectLaggingDesktopObjectTypes);
   it('reports aligned structure without using progress percentages', expectAlignedStructureWithoutPercentages);
   it('keeps content cache backlog separate from structure alignment', expectContentBacklogSeparateFromStructure);
+  it('keeps attachment cache backlog separate from structure alignment', expectAttachmentBacklogSeparateFromStructure);
 });

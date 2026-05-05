@@ -93,7 +93,8 @@ async function testPullsMissingAttachmentResourcesAfterStructurePack() {
   ]);
 
   const { ATTACHMENT_RESOURCE_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const onProgress = vi.fn();
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
 
   expect(syncBridgeMock.loadCompanionMissingAttachmentResources).toHaveBeenCalledWith(ATTACHMENT_RESOURCE_BATCH_LIMIT);
   expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).toHaveBeenCalledWith(
@@ -101,6 +102,23 @@ async function testPullsMissingAttachmentResourcesAfterStructurePack() {
     [{ attachmentId: 'att-1', contentHash: 'hash-att-1' }]
   );
   expect(result.syncedAttachmentIds).toEqual(['att-1']);
+  expect(onProgress).toHaveBeenCalledWith({ completed: 0, phase: 'attachment', total: null });
+  expect(onProgress).toHaveBeenCalledWith({ completed: 1, phase: 'attachment', total: null });
+}
+
+async function testKeepsStructureSyncSuccessfulWhenAttachmentBatchFails() {
+  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+    { attachment_id: 'att-1', content_hash: 'hash-att-1' }
+  ]);
+  attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockRejectedValueOnce(new Error('attachment unavailable'));
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(result.appliedPackObjectCount).toBe(3);
+  expect(result.attachmentResourceError).toBe('attachment unavailable');
+  expect(result.contentBlobError).toBeNull();
+  expect(result.syncedAttachmentIds).toEqual([]);
 }
 
 async function testRefreshesStructureBeforeContentBatchCompletes() {
@@ -255,6 +273,8 @@ describe('companion desktop sync objects', () => {
   it('pulls the structure pack and missing content blobs from desktop', testPullsStructurePackAndContentBlobs);
 
   it('pulls missing attachment resources from desktop after structure sync', testPullsMissingAttachmentResourcesAfterStructurePack);
+
+  it('keeps structure sync successful when attachment resource caching fails', testKeepsStructureSyncSuccessfulWhenAttachmentBatchFails);
 
   it('refreshes structure before running bounded content blob batches', testRefreshesStructureBeforeContentBatchCompletes);
 

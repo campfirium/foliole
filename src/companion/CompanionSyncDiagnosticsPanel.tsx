@@ -38,6 +38,12 @@ function friendlyVerdict(verdict: SyncDiagnosticVerdict) {
       title: 'Topic bodies are still caching'
     };
   }
+  if (verdict.code === 'sync_android_attachment_cache_backlog' || verdict.code === 'android_missing_attachment_resources') {
+    return {
+      description: 'Attachment files continue caching during sync.',
+      title: 'Attachment files are still caching'
+    };
+  }
   if (verdict.code === 'android_has_local_dirty_state') {
     return {
       description: 'They will be sent to desktop during sync.',
@@ -80,6 +86,7 @@ function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       {isAndroid ? <MetricRow label="Last desktop sync" value={formatNumber(snapshot.sync_state.pack_cursor)} /> : null}
       {isAndroid ? <MetricRow label="Waiting for confirmation" value={formatNumber(snapshot.sync_state.pending_ack_count)} /> : null}
       <MetricRow label="Bodies still caching" value={formatNumber(snapshot.content.missing_content_blob_count)} />
+      <MetricRow label="Attachments still caching" value={formatNumber(snapshot.content.missing_attachment_resource_count ?? 0)} />
     </div>
   );
 }

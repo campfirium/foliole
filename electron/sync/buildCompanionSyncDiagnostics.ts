@@ -136,6 +136,7 @@ export function buildCompanionSyncDiagnostics(args: {
     collected_at: collectedAt,
     connection,
     content: {
+      missing_attachment_resource_count: 0,
       missing_content_blob_count: storage.node_blob_references_missing_rows
     },
     events: [],

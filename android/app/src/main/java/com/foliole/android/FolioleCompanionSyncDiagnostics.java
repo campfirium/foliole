@@ -95,6 +95,10 @@ final class FolioleCompanionSyncDiagnostics {
         content.put("missing_content_blob_count", count(database,
             "SELECT COUNT(*) FROM content_blobs WHERE availability <> 'cached'"
         ));
+        content.put("missing_attachment_resource_count", count(database,
+            "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
+                "AND TRIM(content_hash) != '' AND availability <> 'cached'"
+        ));
         content.put("active_topic", loadActiveTopic(database));
         content.put("recent_topics", loadRecentTopics(database));
         return content;
@@ -242,6 +246,9 @@ final class FolioleCompanionSyncDiagnostics {
         }
         if (content.optLong("missing_content_blob_count", 0) > 0) {
             addVerdict(verdicts, "android_missing_content_blobs", "info", "Some topic bodies are still being cached.", content);
+        }
+        if (content.optLong("missing_attachment_resource_count", 0) > 0) {
+            addVerdict(verdicts, "android_missing_attachment_resources", "info", "Some attachment files are still being cached.", content);
         }
         JSONObject failed = recentFailedEvent(events);
         if (failed != null) {

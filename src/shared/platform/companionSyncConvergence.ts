@@ -62,7 +62,7 @@ export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult)
   }
   checks.push(...buildLocalStateChecks(result));
   checks.push(...buildStructureChecks(result));
-  checks.push(...buildContentChecks(result));
+  checks.push(...buildResourceChecks(result));
   checks.push(...buildCompletedEventChecks(result));
   if (checks.length === 0) {
     checks.push(check('sync_converged', 'ok', 'Sync is converged', 'No dirty changes, pending confirmations, structure lag, or body backlog were found.'));
@@ -93,11 +93,17 @@ function buildStructureChecks(result: CombinedSyncDiagnosticResult) {
     : [];
 }
 
-function buildContentChecks(result: CombinedSyncDiagnosticResult) {
+function buildResourceChecks(result: CombinedSyncDiagnosticResult) {
   const missing = result.android?.content.missing_content_blob_count ?? 0;
-  return missing > 0
-    ? [check('content_backlog_exists', 'info', 'Topic bodies are still caching', `${missing} topic body blob(s) remain uncached.`)]
-    : [];
+  const missingAttachments = result.android?.content.missing_attachment_resource_count ?? 0;
+  const checks: SyncConvergenceCheck[] = [];
+  if (missing > 0) {
+    checks.push(check('content_backlog_exists', 'info', 'Topic bodies are still caching', `${missing} topic body blob(s) remain uncached.`));
+  }
+  if (missingAttachments > 0) {
+    checks.push(check('attachment_backlog_exists', 'info', 'Attachment files are still caching', `${missingAttachments} attachment file(s) remain uncached.`));
+  }
+  return checks;
 }
 
 function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {

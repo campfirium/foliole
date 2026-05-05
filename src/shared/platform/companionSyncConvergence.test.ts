@@ -70,4 +70,18 @@ describe('buildSyncConvergenceReport', () => {
       'structure_lag_exists'
     ]));
   });
+
+  it('keeps attachment backlog as pending work', () => {
+    const report = buildSyncConvergenceReport(result({
+      android: {
+        ...result().android!,
+        content: { missing_attachment_resource_count: 2, missing_content_blob_count: 0 }
+      }
+    }));
+
+    expect(report.status).toBe('pending');
+    expect(report.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'attachment_backlog_exists', severity: 'info' })
+    ]));
+  });
 });

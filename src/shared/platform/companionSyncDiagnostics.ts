@@ -122,12 +122,18 @@ export function mergeSyncDiagnosticVerdicts(args: {
       missing_content_blob_count: args.android.content.missing_content_blob_count
     }));
   }
+  if ((args.android.content.missing_attachment_resource_count ?? 0) > 0) {
+    verdicts.push(infoVerdict('sync_android_attachment_cache_backlog', 'Some attachment files are still being cached.', {
+      missing_attachment_resource_count: args.android.content.missing_attachment_resource_count ?? 0
+    }));
+  }
   if (
     desktopMaxSeq > 0 &&
     desktopMaxSeq === androidCursor &&
     args.android.storage.active_node_count > 0
   ) {
     verdicts.push(okVerdict('sync_structure_aligned', 'Structure sync is aligned.', {
+      missing_attachment_resource_count: args.android.content.missing_attachment_resource_count ?? 0,
       missing_content_blob_count: args.android.content.missing_content_blob_count,
       state_seq: desktopMaxSeq
     }));

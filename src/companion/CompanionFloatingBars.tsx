@@ -17,6 +17,9 @@ function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
   if (progress.phase === 'structure') {
     return 'Structure pack';
   }
+  if (progress.phase === 'attachment') {
+    return 'Attachment files';
+  }
   return 'Topic body cache';
 }
 

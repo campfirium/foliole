@@ -9,7 +9,9 @@ const syncPlatformMock = vi.hoisted(() => ({
 
 const syncObjectsMock = vi.hoisted(() => ({
   syncCompanionObjectsFromDesktop: vi.fn(async () => ({
+    attachmentResourceError: null,
     contentBlobError: null,
+    remainingAttachmentResourceCount: 0,
     remainingContentBlobCount: 0
   }))
 }));
@@ -50,7 +52,7 @@ async function testUsesStreamSyncDirectly() {
   );
   expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync pass finished; topic bodies are cached.',
+    message: 'Sync pass finished; topic bodies and attachment files are cached.',
     status: 'skipped'
   }));
   expect(setState).toHaveBeenCalledWith(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));
@@ -113,7 +115,9 @@ describe('tryForegroundAutoSync', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue({
+      attachmentResourceError: null,
       contentBlobError: null,
+      remainingAttachmentResourceCount: 0,
       remainingContentBlobCount: 0
     });
     syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
