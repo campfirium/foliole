@@ -15,13 +15,16 @@ function ReadwiseConfigDialogSurface(props: {
     <AppDialog onOpenChange={props.onCancel} open>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent aria-describedby={undefined} className="left-1/2 top-1/2 w-[min(920px,calc(100vw-72px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-border/35 bg-bg-panel p-0">
-          <section className="flex max-h-[min(820px,calc(100vh-72px))] min-h-0 flex-col">
-            <header className="border-b border-border/70 px-5 pb-4 pt-5">
-              <AppDialogTitle className="text-base font-semibold">Readwise Reader settings</AppDialogTitle>
-              <p className="mt-1 text-sm text-foreground/65">Choose the Readwise folders, fill the parsing rules, then preview the extracted highlights before enabling this source.</p>
-            </header>
+        <AppDialogContent
+          aria-describedby={undefined}
+          className="left-1/2 top-1/2 w-[min(1040px,calc(100vw-96px))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border-border/35 bg-bg-panel p-0"
+        >
+          <section className="flex max-h-[min(760px,calc(100vh-96px))] min-h-0 flex-col">
             <div className="min-h-0 space-y-5 overflow-auto px-5 py-5">
+              <header>
+                <AppDialogTitle className="text-base font-semibold">Readwise Reader settings</AppDialogTitle>
+                <p className="mt-1 text-sm text-foreground/65">Choose the Readwise folders, fill the parsing rules, then preview the extracted highlights before enabling this source.</p>
+              </header>
               <ReadwiseDirectorySection
                 onChooseFolder={props.draft.chooseFolder}
                 onChooseRootFolder={props.draft.chooseRootFolder}

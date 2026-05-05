@@ -6,8 +6,82 @@ import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { formatReadwiseSourceLabel } from './importSourceWorkspaceModel';
 import { FolderButton, resolveFolderPathHint, resolveFolderPathLabel } from './ImportSourceWorkspaceTableParts';
 
+const readwiseFormRowClassName =
+  'grid gap-3 rounded-lg border border-border bg-bg-panel px-3 py-3 md:grid-cols-[minmax(0,1fr)_340px] md:justify-between md:items-start';
+
 export function getArticlesSource(sources: DraftImportSource[]) {
   return sources.find((source) => source.kind === 'articles') ?? null;
+}
+
+function ReadwiseFolderMatrix(props: {
+  onChooseFolder: (sourceId: string, field: 'highlightPath' | 'primaryPath') => void;
+  sources: Array<{ id: string; label: string; highlightPath: string; primaryPath: string }>;
+}) {
+  return (
+    <div className="hidden gap-2 md:grid" style={{ gridTemplateColumns: `96px repeat(${props.sources.length}, minmax(0, 1fr))` }}>
+      <div aria-hidden="true" />
+      {props.sources.map((source) => (
+        <div className="px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45" key={source.id}>
+          {source.label}
+        </div>
+      ))}
+      <div className="px-1 text-xs font-semibold text-foreground/65">Content</div>
+      {props.sources.map((source) => (
+        <FolderButton
+          key={`${source.id}-content`}
+          label={`Readwise original folder ${source.id}`}
+          onClick={() => props.onChooseFolder(source.id, 'primaryPath')}
+          path={resolveFolderPathLabel(source.primaryPath, source.label)}
+          tooltip={resolveFolderPathHint(source.primaryPath)}
+        />
+      ))}
+      <div className="px-1 text-xs font-semibold text-foreground/65">Highlights</div>
+      {props.sources.map((source) => (
+        <FolderButton
+          key={`${source.id}-highlights`}
+          label={`Readwise highlight folder ${source.id}`}
+          onClick={() => props.onChooseFolder(source.id, 'highlightPath')}
+          path={resolveFolderPathLabel(source.highlightPath, source.label)}
+          tooltip={resolveFolderPathHint(source.highlightPath)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ReadwiseFolderStack(props: {
+  onChooseFolder: (sourceId: string, field: 'highlightPath' | 'primaryPath') => void;
+  sources: Array<{ id: string; label: string; highlightPath: string; primaryPath: string }>;
+}) {
+  return (
+    <div className="space-y-3 md:hidden">
+      {props.sources.map((source) => (
+        <div className="space-y-2 rounded-lg border border-border/80 bg-bg-panel px-3 py-3" key={source.id}>
+          <div className="text-sm font-semibold text-foreground">{source.label}</div>
+          <div className="grid gap-2">
+            <div className="space-y-1">
+              <div className="px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45">Content</div>
+              <FolderButton
+                label={`Readwise original folder ${source.id}`}
+                onClick={() => props.onChooseFolder(source.id, 'primaryPath')}
+                path={resolveFolderPathLabel(source.primaryPath, source.label)}
+                tooltip={resolveFolderPathHint(source.primaryPath)}
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45">Highlights</div>
+              <FolderButton
+                label={`Readwise highlight folder ${source.id}`}
+                onClick={() => props.onChooseFolder(source.id, 'highlightPath')}
+                path={resolveFolderPathLabel(source.highlightPath, source.label)}
+                tooltip={resolveFolderPathHint(source.highlightPath)}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function ReadwiseDirectorySection(props: {
@@ -16,12 +90,21 @@ export function ReadwiseDirectorySection(props: {
   readwiseRootPath: string;
   sources: DraftImportSource[];
 }) {
+  const sourceColumns = props.sources.map((source) => ({
+    id: source.id,
+    label: source.kind ? formatReadwiseSourceLabel(source.kind) : source.id,
+    highlightPath: source.highlightPath,
+    primaryPath: source.primaryPath
+  }));
+
   return (
     <section className="space-y-3">
-      <label className="block">
-        <span className="block text-sm font-semibold text-foreground">Readwise root folder</span>
-        <span className="mt-1 block text-sm text-foreground/65">Choose the root once. The four category folders will be filled in automatically, and you can still adjust them below.</span>
-        <div className="mt-3">
+      <label className={readwiseFormRowClassName}>
+        <div>
+          <span className="block text-sm font-semibold text-foreground">Readwise root folder</span>
+          <span className="mt-1 block text-sm text-foreground/65">Choose the root once. The four category folders will be filled in automatically, and you can still adjust them below.</span>
+        </div>
+        <div className="w-full md:w-[340px]">
           <FolderButton
             label="Readwise root folder"
             onClick={props.onChooseRootFolder}
@@ -30,24 +113,9 @@ export function ReadwiseDirectorySection(props: {
           />
         </div>
       </label>
-      <div className="space-y-3 rounded-lg border border-border bg-bg-elevated px-3 py-3">
-        {props.sources.map((source) => (
-          <div className="grid gap-3 md:grid-cols-[120px_minmax(0,1fr)_minmax(0,1fr)]" key={source.id}>
-            <div className="pt-2 text-sm font-semibold text-foreground">{source.kind ? formatReadwiseSourceLabel(source.kind) : source.id}</div>
-            <FolderButton
-              label={`Readwise original folder ${source.id}`}
-              onClick={() => props.onChooseFolder(source.id, 'primaryPath')}
-              path={resolveFolderPathLabel(source.primaryPath, 'Choose folder')}
-              tooltip={resolveFolderPathHint(source.primaryPath)}
-            />
-            <FolderButton
-              label={`Readwise highlight folder ${source.id}`}
-              onClick={() => props.onChooseFolder(source.id, 'highlightPath')}
-              path={resolveFolderPathLabel(source.highlightPath, 'Choose folder')}
-              tooltip={resolveFolderPathHint(source.highlightPath)}
-            />
-          </div>
-        ))}
+      <div className="rounded-lg border border-border bg-bg-elevated px-3 py-3">
+        <ReadwiseFolderMatrix onChooseFolder={props.onChooseFolder} sources={sourceColumns} />
+        <ReadwiseFolderStack onChooseFolder={props.onChooseFolder} sources={sourceColumns} />
       </div>
     </section>
   );
@@ -68,10 +136,14 @@ export function ReadwiseParserFields(props: {
   return (
     <section className="space-y-3">
       {fields.map((entry) => (
-        <label className="block" key={entry.field}>
-          <span className="block text-sm font-semibold text-foreground">{entry.label}</span>
-          <span className="mt-1 block text-sm text-foreground/65">{entry.description}</span>
-          <AppInput className="mt-3" onChange={(event) => props.onChange(entry.field, event.target.value)} value={props.config[entry.field]} />
+        <label className={readwiseFormRowClassName} key={entry.field}>
+          <div>
+            <span className="block text-sm font-semibold text-foreground">{entry.label}</span>
+            <span className="mt-1 block text-sm text-foreground/65">{entry.description}</span>
+          </div>
+          <div className="w-full md:w-[340px]">
+            <AppInput onChange={(event) => props.onChange(entry.field, event.target.value)} value={props.config[entry.field]} />
+          </div>
         </label>
       ))}
     </section>

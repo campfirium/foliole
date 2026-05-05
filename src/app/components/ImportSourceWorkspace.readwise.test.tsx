@@ -80,9 +80,9 @@ it('shows only the last folder name and keeps the full path in the hover hint', 
   await waitFor(() => {
     expect(screen.getByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
   });
-  expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toHaveTextContent('Articles');
+  expect(screen.getAllByLabelText('Readwise original folder draft-import-source-1')[0]).toHaveTextContent('Articles');
   expect(screen.getByLabelText('Readwise root folder')).toHaveAttribute('title', '/tmp/chosen-folder');
-  expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toHaveAttribute(
+  expect(screen.getAllByLabelText('Readwise original folder draft-import-source-1')[0]).toHaveAttribute(
     'title',
     '/tmp/chosen-folder/Full Document Contents/Articles'
   );
@@ -101,6 +101,20 @@ it('opens the readwise settings panel with all parser fields and keeps preview d
   expect(screen.getByDisplayValue('Tags:')).toBeInTheDocument();
   expect(screen.getByDisplayValue('Note:')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Preview' })).toBeDisabled();
+});
+
+it('shows the readwise folders in a compact content and highlights matrix', async () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open Readwise Reader settings' }));
+
+  expect(await screen.findByRole('heading', { name: 'Readwise Reader settings' })).toBeInTheDocument();
+  expect(screen.getAllByText('Content').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Highlights').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Articles').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Books').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Tweets').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Podcasts').length).toBeGreaterThan(0);
 });
 
 it('saves the readwise reader setup only after preview and enable', async () => {
