@@ -341,6 +341,17 @@ body {
   background-color: var(--app-scrollbar-thumb-color);
 }
 
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .editor-scrollbar-track {
   position: absolute;
   top: 0;

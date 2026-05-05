@@ -136,6 +136,7 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       onGoParent={props.onGoParent}
       onResetLayout={props.onResetLayout}
       onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
+      onRevealDocumentPosition={props.onRevealDocumentPosition}
       onSelectNode={props.onSelectBreadcrumbNode}
       onRevealDocumentSelection={props.onRevealDocumentSelection}
       onStartDocumentResize={props.onStartDocumentResize}

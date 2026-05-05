@@ -65,6 +65,15 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     return this.view.posAtCoords({ x, y: clientY }, false);
   }
 
+  revealPosition(position: number) {
+    const anchor = this.clampPosition(position);
+    this.view.dispatch({
+      effects: EditorView.scrollIntoView(anchor, { y: 'center' })
+    });
+    this.view.focus();
+    this.alignSelectionInViewport(anchor);
+  }
+
   setContent(content: string) {
     const currentContent = this.getContent();
     if (currentContent === content) {
@@ -106,10 +115,14 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   private clampSelection(selection: EditorSelection) {
-    const max = this.view.state.doc.length;
-    const anchor = Math.max(0, Math.min(selection.from, max));
-    const head = Math.max(0, Math.min(selection.to, max));
+    const anchor = this.clampPosition(selection.from);
+    const head = this.clampPosition(selection.to);
     return { anchor, head };
+  }
+
+  private clampPosition(position: number) {
+    const max = this.view.state.doc.length;
+    return Math.max(0, Math.min(position, max));
   }
 
   private alignSelectionInViewport(position: number) {

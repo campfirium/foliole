@@ -69,6 +69,24 @@ export function createRevealDocumentSelection(args: BuildControllerLayoutPropsAr
   };
 }
 
+export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArgs) {
+  return (position: number) => {
+    if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
+      return;
+    }
+    const adapter = args.runtime.editorRef.current;
+    if (!adapter) {
+      return;
+    }
+    const selection = adapter.getSelection();
+    adapter.revealPosition(position);
+    args.ws.setNodeViewState(args.ws.activeNodeId, {
+      scrollTop: adapter.getScrollTop(),
+      selection
+    });
+  };
+}
+
 export function createResolveDocumentPositionAtViewportY(args: BuildControllerLayoutPropsArgs) {
   return (clientY: number) => {
     if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {

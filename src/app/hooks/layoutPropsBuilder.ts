@@ -106,6 +106,7 @@ interface BuildLayoutPropsArgs {
   onResetLayout: () => void;
   onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
   onRevealAnchorInDocument: WorkspaceLayoutProps['onRevealAnchorInDocument'];
+  onRevealDocumentPosition: WorkspaceLayoutProps['onRevealDocumentPosition'];
   onRevealDocumentSelection: WorkspaceLayoutProps['onRevealDocumentSelection'];
   onResolveDocumentPositionAtViewportY: WorkspaceLayoutProps['onResolveDocumentPositionAtViewportY'];
   onRightSidebarSplitterKeyDown: WorkspaceLayoutProps['onRightSidebarSplitterKeyDown'];
@@ -226,6 +227,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     isListCollapsed: args.isListCollapsed, isRightSidebarCollapsed: args.isRightSidebarCollapsed, showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange,
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode,
     onRevealAnchorInDocument: args.onRevealAnchorInDocument,
+    onRevealDocumentPosition: args.onRevealDocumentPosition,
     onRevealDocumentSelection: args.onRevealDocumentSelection,
     onResolveDocumentPositionAtViewportY: args.onResolveDocumentPositionAtViewportY,
     onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenTrashView: args.onOpenTrashView, onToggleListVisibility: args.onToggleListVisibility,

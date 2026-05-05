@@ -25,6 +25,7 @@ it('reapplies the current selection when opening the editor context menu', () =>
     onContentChange: vi.fn(),
     onScroll: vi.fn(),
     replaceSelection: vi.fn(),
+    revealPosition: vi.fn(),
     revealSelection: vi.fn(),
     setContent: vi.fn(),
     setScrollTop: vi.fn(),

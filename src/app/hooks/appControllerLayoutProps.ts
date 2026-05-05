@@ -17,6 +17,7 @@ import type { NodeViewState, ReviewSessionState } from '../../store/workspaceSto
 import type { useCurrentReviewPreview } from './appControllerHelpers';
 import {
   createRevealAnchorInDocument,
+  createRevealDocumentPosition,
   createRevealDocumentSelection,
   createResolveDocumentPositionAtViewportY,
   createToggleListVisibility,
@@ -195,6 +196,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
 function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
   const openNotesView = createOpenNotesView(args);
   const revealAnchorInDocument = createRevealAnchorInDocument(args);
+  const revealDocumentPosition = createRevealDocumentPosition(args);
   const revealDocumentSelection = createRevealDocumentSelection(args);
   const resolveDocumentPositionAtViewportY = createResolveDocumentPositionAtViewportY(args);
 
@@ -218,6 +220,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
       args.runtime.editorRef.current = adapter;
     },
     onRevealAnchorInDocument: revealAnchorInDocument,
+    onRevealDocumentPosition: revealDocumentPosition,
     onRevealDocumentSelection: revealDocumentSelection,
     onResolveDocumentPositionAtViewportY: resolveDocumentPositionAtViewportY,
     onHotkeyUpdate: args.blockedHotkeyUpdate,

@@ -38,6 +38,7 @@ interface DocumentPanelSectionProps {
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
+  onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
@@ -87,6 +88,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onToggleEditorDisplayMode={props.onToggleEditorDisplayMode}
         />
         <DocumentPanelBody
+          documentMaxWidth={props.documentMaxWidth}
           editorAppearanceKey={props.editorAppearanceKey}
           editorContent={props.editorContent}
           editorContentPaddingBottom={editorContentPaddingBottom}
@@ -99,6 +101,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onEditorChange={props.onEditorChange}
           onEditorContextMenu={props.onEditorContextMenu}
           onEditorReady={props.onEditorReady}
+          onRevealDocumentPosition={props.onRevealDocumentPosition}
           onRevealDocumentSelection={props.onRevealDocumentSelection}
           onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
           onResetLayout={props.onResetLayout}

@@ -14,6 +14,7 @@ export interface EditorAdapter {
   focus(): void;
   getContent(): string;
   getDocumentPositionAtViewportY(clientY: number): number | null;
+  revealPosition(position: number): void;
   setContent(content: string): void;
   getSelection(): EditorSelection;
   revealSelection(selection: EditorSelection): void;

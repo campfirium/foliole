@@ -19,6 +19,10 @@ export const mockEditorAdapter: EditorAdapter = {
     mockEditorState.content = content;
   },
   getSelection: () => ({ from: mockEditorState.selectionFrom, to: mockEditorState.selectionTo }),
+  revealPosition: (position) => {
+    mockEditorState.selectionFrom = position;
+    mockEditorState.selectionTo = position;
+  },
   revealSelection: (selection) => {
     mockEditorState.selectionFrom = selection.from;
     mockEditorState.selectionTo = selection.to;

@@ -11,6 +11,7 @@ import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 import { DocumentOutlineLayer } from './DocumentOutlineLayer';
 
 interface DocumentPanelBodyProps {
+  documentMaxWidth: number;
   editorAppearanceKey: string;
   editorContent: string;
   editorContentPaddingBottom?: string;
@@ -27,6 +28,7 @@ interface DocumentPanelBodyProps {
   onEditorChange: (content: string) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
+  onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
@@ -148,12 +150,13 @@ function renderDocumentOutline(props: DocumentPanelBodyProps) {
   }
 
   return (
-      <DocumentOutlineLayer
-        content={props.editorContent}
-        onRevealSelection={props.onRevealDocumentSelection}
-        onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
-      />
-    );
+    <DocumentOutlineLayer
+      content={props.editorContent}
+      documentMaxWidth={props.documentMaxWidth}
+      onRevealPosition={props.onRevealDocumentPosition}
+      onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
+    />
+  );
 }
 
 function renderDocumentBodyLayout(props: DocumentPanelBodyProps) {
@@ -181,6 +184,7 @@ function renderDocumentBodyLayout(props: DocumentPanelBodyProps) {
 }
 
 export function DocumentPanelBody({
+  documentMaxWidth,
   editorAppearanceKey,
   editorContent,
   editorContentPaddingBottom,
@@ -195,12 +199,14 @@ export function DocumentPanelBody({
   onEditorContextMenu,
   onEditorReady,
   onRevealDocumentSelection,
+  onRevealDocumentPosition,
   onResolveDocumentPositionAtViewportY,
   onResetLayout,
   onStartDocumentResize,
   reveal
 }: DocumentPanelBodyProps) {
   const bodyProps: DocumentPanelBodyProps = {
+    documentMaxWidth,
     editorAppearanceKey,
     editorContent,
     editorContentPaddingBottom,
@@ -215,6 +221,7 @@ export function DocumentPanelBody({
     onEditorContextMenu,
     onEditorReady,
     onRevealDocumentSelection,
+    onRevealDocumentPosition,
     onResolveDocumentPositionAtViewportY,
     onResetLayout,
     onStartDocumentResize,
