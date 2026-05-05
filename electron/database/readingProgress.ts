@@ -64,7 +64,7 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
        updated_at = excluded.updated_at`
   );
 
-  withTransaction(connection.sqlite, () => {
+  withTransaction(connection.driver, () => {
     upsertMetaStatement.run(ACTIVE_NODE_META_KEY, input.activeNodeId ?? '', input.updatedAt);
     for (const state of input.nodeViewStates) {
       upsertNodeViewStateStatement.run(

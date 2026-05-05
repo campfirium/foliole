@@ -104,7 +104,7 @@ export function applyReviewGrade(input: ApplyReviewGradeInput): void {
   const insertReviewLogStatement = connection.sqlite.prepare(INSERT_REVIEW_LOG_SQL);
   const opId = randomUUID();
   const logId = randomUUID();
-  withTransaction(connection.sqlite, () => {
+  withTransaction(connection.driver, () => {
     upsertNodeReviewStatement.run(...toNodeReviewParams(input));
     insertReviewLogStatement.run(...toReviewLogParams(input, opId, logId));
   });

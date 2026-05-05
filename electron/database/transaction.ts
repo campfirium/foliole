@@ -1,5 +1,5 @@
-import type { SqliteDatabase } from './connection.js';
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 
-export function withTransaction<T>(sqlite: SqliteDatabase, execute: () => T): T {
-  return sqlite.transaction(execute)();
+export function withTransaction<T>(driver: DatabaseDriver, execute: () => T): T {
+  return driver.transaction(() => execute());
 }

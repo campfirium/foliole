@@ -67,7 +67,7 @@ export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
      VALUES (?, ?)
      ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`
   );
-  withTransaction(connection.sqlite, () => {
+  withTransaction(connection.driver, () => {
     upsertNodeStatement.run(
       input.nodeId,
       input.parentNodeId,
@@ -91,7 +91,7 @@ export function replaceNodeOrder(nodeIds: string[]): void {
   const insertOrderStatement = connection.sqlite.prepare(
     'INSERT INTO node_order (node_id, position) VALUES (?, ?)'
   );
-  withTransaction(connection.sqlite, () => {
+  withTransaction(connection.driver, () => {
     deleteOrderStatement.run();
     for (let index = 0; index < nodeIds.length; index += 1) {
       insertOrderStatement.run(nodeIds[index], index);
@@ -109,7 +109,7 @@ export function softDeleteNodes(input: SoftDeleteNodesInput): void {
   const setDeletedAtStatement = connection.sqlite.prepare(
     'UPDATE nodes SET deleted_at = ?, updated_at = ? WHERE id = ?'
   );
-  withTransaction(connection.sqlite, () => {
+  withTransaction(connection.driver, () => {
     for (const nodeId of input.nodeIds) {
       setDeletedAtStatement.run(input.deletedAt, input.deletedAt, nodeId);
     }
@@ -122,7 +122,7 @@ export function restoreNodes(input: RestoreNodesInput): void {
   const clearDeletedAtStatement = connection.sqlite.prepare(
     'UPDATE nodes SET deleted_at = NULL, updated_at = ? WHERE id = ?'
   );
-  withTransaction(connection.sqlite, () => {
+  withTransaction(connection.driver, () => {
     for (const nodeId of input.nodeIds) {
       clearDeletedAtStatement.run(restoredAt, nodeId);
     }
@@ -140,7 +140,7 @@ export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): void
     'INSERT INTO node_order (node_id, position) VALUES (?, ?)'
   );
 
-  withTransaction(connection.sqlite, () => {
+  withTransaction(connection.driver, () => {
     for (const nodeId of input.nodeIds) {
       deleteReviewLogStatement.run(nodeId);
       deleteNodeReviewStatement.run(nodeId);
