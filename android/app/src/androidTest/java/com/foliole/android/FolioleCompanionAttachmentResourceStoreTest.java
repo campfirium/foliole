@@ -43,6 +43,7 @@ public class FolioleCompanionAttachmentResourceStoreTest {
             "created_at TEXT NOT NULL, cached_at TEXT, last_verified_at TEXT)");
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
         database.execSQL("CREATE TABLE nodes (id TEXT PRIMARY KEY, updated_at TEXT NOT NULL, deleted_at TEXT)");
+        database.execSQL("CREATE TABLE node_review (node_id TEXT PRIMARY KEY, due TEXT NOT NULL)");
         database.execSQL("CREATE TABLE node_attachments (node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL)");
     }
 
@@ -121,6 +122,33 @@ public class FolioleCompanionAttachmentResourceStoreTest {
             .getString("attachment_id"));
     }
 
+    @Test
+    public void ordersDueReviewResourcesBeforeOrdinaryRecentTopicLinks() throws Exception {
+        insertAttachmentManifest("due-review-att", "hash-due-review", "2026-04-25T00:00:00.000Z");
+        insertAttachmentManifest("recent-att", "hash-recent", "2026-04-25T00:00:00.000Z");
+        insertAttachmentManifest("old-att", "hash-old", "2026-04-25T00:00:00.000Z");
+        insertNode("due-review-node", "2026-04-26T00:00:00.000Z");
+        insertNode("recent-node", "2026-04-30T00:00:00.000Z");
+        insertNode("old-node", "2026-04-25T00:00:00.000Z");
+        insertNodeAttachment("due-review-node", "due-review-att");
+        insertNodeAttachment("recent-node", "recent-att");
+        insertNodeAttachment("old-node", "old-att");
+        insertReviewDue("due-review-node", "2026-04-20T00:00:00.000Z");
+
+        assertEquals("due-review-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(0)
+            .getString("attachment_id"));
+        assertEquals("recent-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(1)
+            .getString("attachment_id"));
+        assertEquals("old-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+            .getJSONArray("resources")
+            .getJSONObject(2)
+            .getString("attachment_id"));
+    }
+
     private JSONObject attachmentRecord() throws Exception {
         JSONObject blob = new JSONObject()
             .put("content_hash", "hash-android-1")
@@ -158,6 +186,10 @@ public class FolioleCompanionAttachmentResourceStoreTest {
     private void insertNodeAttachment(String nodeId, String attachmentId) {
         database.execSQL("INSERT INTO node_attachments (node_id, attachment_id, role) VALUES " +
             "('" + nodeId + "', '" + attachmentId + "', 'inline')");
+    }
+
+    private void insertReviewDue(String nodeId, String due) {
+        database.execSQL("INSERT INTO node_review (node_id, due) VALUES ('" + nodeId + "', '" + due + "')");
     }
 
     private void deleteAttachmentFile(String storageKey) {

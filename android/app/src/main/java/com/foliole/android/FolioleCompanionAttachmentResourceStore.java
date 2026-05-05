@@ -23,9 +23,13 @@ final class FolioleCompanionAttachmentResourceStore {
         try (Cursor cursor = database.rawQuery(
             "WITH attachment_refs AS (" +
                 "SELECT na.attachment_id AS attachment_id, " +
-                    "CASE WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 ELSE 1 END AS priority, " +
+                    "CASE " +
+                        "WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 " +
+                        "WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 " +
+                        "ELSE 2 END AS priority, " +
                     "n.updated_at AS updated_at " +
                 "FROM node_attachments na JOIN nodes n ON n.id = na.node_id " +
+                "LEFT JOIN node_review nr ON nr.node_id = n.id " +
                 "WHERE n.deleted_at IS NULL" +
             "), ranked_refs AS (" +
                 "SELECT attachment_id, MIN(priority) AS priority, MAX(updated_at) AS updated_at " +
@@ -35,7 +39,7 @@ final class FolioleCompanionAttachmentResourceStore {
                 "LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id " +
                 "WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
                 "AND b.availability != 'cached' " +
-                "ORDER BY COALESCE(refs.priority, 2) ASC, refs.updated_at DESC, b.created_at ASC LIMIT ?",
+                "ORDER BY COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC LIMIT ?",
             new String[] { String.valueOf(Math.max(1, limit)) }
         )) {
             while (cursor.moveToNext()) {
