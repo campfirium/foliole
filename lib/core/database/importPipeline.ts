@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto';
 
-import type {
-  ImportDuplicateSemantic,
-  PersistedImportRecord,
-  PreparedImportRecord
-} from '../import/contract.js';
+import type { PersistedImportRecord, PreparedImportRecord } from '../import/contract.js';
 
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
+import {
+  buildImportRecord,
+  resolveDuplicateSemantic,
+  writeImportEvent,
+  writeImportSource
+} from './importPipelineRecords.js';
+import { resolveReadwiseHighlightUpdate } from './importReadwiseHighlightUpdates.js';
 
 const INBOX_NODE_ID = 'special-inbox';
 
@@ -20,6 +23,7 @@ interface ImportSourceRow {
 
 interface ExistingNodeRow {
   [column: string]: unknown;
+  content: string;
   created_at: string;
   deleted_at: string | null;
   id: string;
@@ -27,32 +31,14 @@ interface ExistingNodeRow {
   position: number | null;
 }
 
+interface ExistingChildHighlightRow {
+  [column: string]: unknown;
+  content: string;
+}
+
 interface ExistingInboxRow {
   [column: string]: unknown;
   id: string;
-}
-
-function buildImportRecord(
-  prepared: PreparedImportRecord,
-  resultStatus: PersistedImportRecord['resultStatus'],
-  duplicateSemantic: ImportDuplicateSemantic,
-  options: Pick<PersistedImportRecord, 'degradedReason' | 'failureReason' | 'nodeId'>
-): PersistedImportRecord {
-  return {
-    contentFingerprint: prepared.contentFingerprint,
-    degradedReason: options.degradedReason,
-    duplicateSemantic,
-    failureReason: options.failureReason,
-    importId: `import-${randomUUID()}`,
-    importedAt: prepared.importedAt,
-    nodeId: options.nodeId,
-    provider: prepared.provider,
-    resultStatus,
-    sourceFingerprint: prepared.sourceFingerprint,
-    sourceKind: prepared.sourceKind,
-    sourceLocator: prepared.sourceLocator,
-    sourceName: prepared.sourceName
-  };
 }
 
 function readExistingSource(driver: DatabaseDriver, sourceFingerprint: string) {
@@ -69,12 +55,21 @@ function readExistingSource(driver: DatabaseDriver, sourceFingerprint: string) {
 function readExistingNode(driver: DatabaseDriver, nodeId: string) {
   return (
     driver.queryOne<ExistingNodeRow>(
-      `SELECT n.id, n.parent_id, n.created_at, n.deleted_at, o.position
+      `SELECT n.id, n.parent_id, n.content, n.created_at, n.deleted_at, o.position
        FROM nodes n
        LEFT JOIN node_order o ON o.node_id = n.id
        WHERE n.id = ?`,
       [nodeId]
     ) ?? null
+  );
+}
+
+function readExistingChildHighlights(driver: DatabaseDriver, parentNodeId: string) {
+  return driver.queryAll<ExistingChildHighlightRow>(
+    `SELECT content
+     FROM nodes
+     WHERE parent_id = ? AND deleted_at IS NULL`,
+    [parentNodeId]
   );
 }
 
@@ -94,58 +89,6 @@ function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
        content, reveal, anchor_link, created_at, updated_at, deleted_at
      ) VALUES (?, NULL, NULL, NULL, 'Inbox', 1, '', NULL, NULL, ?, ?, NULL)`,
     [INBOX_NODE_ID, importedAt, importedAt]
-  );
-}
-
-function writeImportSource(driver: DatabaseDriver, record: PersistedImportRecord) {
-  driver.execute(
-    `INSERT INTO import_sources (
-       source_fingerprint, provider, source_kind, source_name, source_locator,
-       first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(source_fingerprint) DO UPDATE SET
-       source_name = excluded.source_name,
-       source_locator = excluded.source_locator,
-       source_kind = excluded.source_kind,
-       last_imported_at = excluded.last_imported_at,
-       last_content_fingerprint = excluded.last_content_fingerprint,
-       latest_node_id = excluded.latest_node_id`,
-    [
-      record.sourceFingerprint,
-      record.provider,
-      record.sourceKind,
-      record.sourceName,
-      record.sourceLocator,
-      record.importedAt,
-      record.importedAt,
-      record.contentFingerprint,
-      record.nodeId
-    ]
-  );
-}
-
-function writeImportEvent(driver: DatabaseDriver, record: PersistedImportRecord) {
-  driver.execute(
-    `INSERT INTO import_runs (
-       id, source_fingerprint, provider, source_kind, source_name, source_locator,
-       content_fingerprint, duplicate_semantic, result_status, node_id,
-       imported_at, degraded_reason, failure_reason
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      record.importId,
-      record.sourceFingerprint,
-      record.provider,
-      record.sourceKind,
-      record.sourceName,
-      record.sourceLocator,
-      record.contentFingerprint,
-      record.duplicateSemantic,
-      record.resultStatus,
-      record.nodeId,
-      record.importedAt,
-      record.degradedReason,
-      record.failureReason
-    ]
   );
 }
 
@@ -177,11 +120,28 @@ function updateExistingNode(driver: DatabaseDriver, existingNode: ExistingNodeRo
   return existingNode.id;
 }
 
-function resolveDuplicateSemantic(existingSource: ImportSourceRow | null, contentFingerprint: string) {
-  if (!existingSource) {
-    return 'new';
+function updateExistingReadwiseNode(
+  driver: DatabaseDriver,
+  existingNode: ExistingNodeRow,
+  prepared: PreparedImportRecord,
+  record: PersistedImportRecord
+) {
+  const readwiseUpdate = resolveReadwiseHighlightUpdate({
+    existingChildContents: readExistingChildHighlights(driver, existingNode.id).map((row) => row.content),
+    existingContent: existingNode.content,
+    prepared
+  });
+  const nodeId = updateExistingNode(driver, existingNode, record, readwiseUpdate.content);
+  if (readwiseUpdate.highlights.length > 0) {
+    insertImportedHighlightNodes({
+      driver,
+      highlights: readwiseUpdate.highlights,
+      importedAt: record.importedAt,
+      parentNodeId: nodeId,
+      startPosition: readNextNodePosition(driver)
+    });
   }
-  return existingSource.last_content_fingerprint === contentFingerprint ? 'duplicate' : 'updated';
+  return nodeId;
 }
 
 export function runPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord): PersistedImportRecord {
@@ -216,8 +176,13 @@ export function runPreparedImport(driver: DatabaseDriver, prepared: PreparedImpo
     });
     const existingNode = existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null;
     const nodeId =
-      duplicateSemantic === 'updated' && existingNode && !existingNode.deleted_at
-        ? updateExistingNode(driver, existingNode, baseRecord, anchoredImport.content)
+      duplicateSemantic === 'updated' &&
+      existingNode &&
+      !existingNode.deleted_at &&
+      prepared.sourceProfile === 'body_with_highlight_sidecar'
+        ? updateExistingReadwiseNode(driver, existingNode, prepared, baseRecord)
+        : duplicateSemantic === 'updated' && existingNode && !existingNode.deleted_at
+          ? updateExistingNode(driver, existingNode, baseRecord, anchoredImport.content)
         : writeNewNode(driver, baseRecord, anchoredImport.content);
     if (duplicateSemantic === 'new') {
       insertImportedHighlightNodes({

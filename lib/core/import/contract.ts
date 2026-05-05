@@ -10,6 +10,8 @@ export type ImportDuplicateSemantic = 'new' | 'updated' | 'duplicate';
 
 export type ImportResultStatus = 'imported' | 'degraded' | 'failed';
 
+export type PreparedImportSourceProfile = 'default' | 'epub' | 'body_with_highlight_sidecar';
+
 export interface PreparedImportHighlightRecord {
   content: string;
   label: string | null;
@@ -26,6 +28,7 @@ export interface PreparedImportRecord {
   matchedHighlights?: PreparedImportHighlightRecord[];
   degradedReason: string | null;
   importedAt: string;
+  sourceProfile?: PreparedImportSourceProfile;
 }
 
 export interface PersistedImportRecord {

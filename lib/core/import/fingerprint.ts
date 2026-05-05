@@ -4,7 +4,8 @@ import {
   IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
   type ImportHighlightPolicy,
   type ImportSourceKind,
-  type PreparedImportRecord
+  type PreparedImportRecord,
+  type PreparedImportSourceProfile
 } from './contract.js';
 import {
   applyControlledImportContext,
@@ -64,6 +65,7 @@ export function createPreparedDesktopTextImport(
       label: highlight.label?.trim() || null
     })),
     provider: IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
+    sourceProfile: (input.sourceProfile ?? 'default') as PreparedImportSourceProfile,
     sourceFingerprint: hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, input.filePath),
     sourceKind: input.kind,
     sourceLocator: input.filePath,
