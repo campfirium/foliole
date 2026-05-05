@@ -4,6 +4,10 @@ import {
   type CompanionSyncPushResult
 } from './companionSyncPushApply.js';
 import { applyNodeVersionPushAsync } from './companionSyncPushNodeVersionApply.js';
+import {
+  applyStateObjectPushAsync,
+  isStateObjectPush
+} from './companionSyncPushStateObjectAsyncApply.js';
 
 export type { CompanionSyncPushPayload } from './companionSyncPushApply.js';
 
@@ -23,10 +27,14 @@ export async function applyCompanionSyncPushAsync(
 ): Promise<CompanionSyncPushResult> {
   const result = emptyPushResult();
   for (const item of items) {
-    const itemResult = item.identity.objectType === 'node'
-      ? await applyNodeVersionPushAsync(item)
-      : applyCompanionSyncPush([item]);
+    const itemResult = await applySinglePushItemAsync(item);
     appendPushResult(result, itemResult);
   }
   return result;
+}
+
+async function applySinglePushItemAsync(item: CompanionSyncPushPayload) {
+  if (item.identity.objectType === 'node') return await applyNodeVersionPushAsync(item);
+  if (isStateObjectPush(item)) return await applyStateObjectPushAsync(item);
+  return applyCompanionSyncPush([item]);
 }
