@@ -16,6 +16,12 @@ function renderOutline(content: string) {
   );
 }
 
+it('renders no content when the current topic has no outline', () => {
+  const { container } = renderOutline('Plain body without headings.');
+
+  expect(container).toBeEmptyDOMElement();
+});
+
 it('keeps all outline entries at normal font weight', () => {
   renderOutline('# Title\n\n## First section\n\n### Detail');
 

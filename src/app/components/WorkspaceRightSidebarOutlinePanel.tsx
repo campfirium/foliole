@@ -2,7 +2,6 @@ import { ChevronDown } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 
 import { cn } from '../../shared/lib/utils';
-import { AppEmptyState } from '../../shared/ui';
 
 import { mayHaveOutline, resolveActiveIndex, resolveDisplayItems } from './DocumentOutlineLayerModel';
 
@@ -113,12 +112,7 @@ export function WorkspaceRightSidebarOutlinePanel({
   }, [activeIndex]);
 
   if (outlineItems.length === 0) {
-    return (
-      <AppEmptyState
-        description="Headings in the current topic will appear here."
-        title="No outline"
-      />
-    );
+    return null;
   }
 
   return (

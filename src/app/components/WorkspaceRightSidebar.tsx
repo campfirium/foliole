@@ -14,28 +14,6 @@ import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarRe
 import { WorkspaceRightSidebarSourcePanel } from './WorkspaceRightSidebarSourcePanel';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-function getPanelTitle(panelId: WorkspaceRightPanelId) {
-  if (panelId === 'dev') {
-    return 'Dev panel';
-  }
-  if (panelId === 'performance') {
-    return 'Flow diagnostics';
-  }
-  if (panelId === 'source-info') {
-    return 'Source info';
-  }
-  if (panelId === 'highlights') {
-    return 'Highlights';
-  }
-  if (panelId === 'outline') {
-    return 'Outline';
-  }
-  if (panelId === 'backlinks') {
-    return 'Backlinks';
-  }
-  return 'Review queue';
-}
-
 type WorkspaceRightSidebarNodesById = Record<string, Node>;
 
 interface WorkspaceRightSidebarPanelProps {
@@ -233,8 +211,8 @@ export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
       as="aside"
       bodyClassName="app-scrollbar overflow-y-auto px-3 py-3"
       className="workspace-region-main-sidebar hidden min-h-0 h-full flex-col overflow-hidden text-foreground xl:flex"
-      headerClassName="min-h-[var(--workspace-top-toolbar-height)] px-4 py-2"
-      title={<span className="text-sm font-semibold uppercase tracking-[0.04em]">{getPanelTitle(props.activePanelId)}</span>}
+      headerClassName="hidden"
+      title={null}
     >
       {renderPanel(panelProps)}
     </AppPanel>

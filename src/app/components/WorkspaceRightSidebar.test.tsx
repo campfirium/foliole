@@ -269,7 +269,8 @@ it('renders the outline panel from active topic headings', () => {
 
   fireEvent.click(screen.getByRole('button', { name: /first section/i }));
 
-  expect(screen.getByText('Outline')).toBeInTheDocument();
+  expect(screen.getByRole('navigation', { name: 'Document outline' })).toBeInTheDocument();
+  expect(screen.queryByText('Outline')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: /detail/i })).toHaveAttribute('aria-current', 'location');
   expect(screen.getByRole('button', { name: /detail/i })).toHaveClass('font-normal');
   expect(onRevealDocumentPosition).toHaveBeenCalledWith(activeNode.content.indexOf('First section'));
