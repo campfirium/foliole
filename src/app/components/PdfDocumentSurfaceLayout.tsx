@@ -14,6 +14,7 @@ interface PdfDocumentSurfaceLayoutProps {
   maxPage: number;
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
+  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSelectionContextMenu: JSX.Element;
   pdfSource: string;
   reportLoadError: (message: string) => void;
@@ -56,6 +57,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       onZoomOut={props.zoomOut}
       page={props.page}
       pageJumpRequest={props.pageJumpRequest}
+      pdfSelectionLocator={props.pdfSelectionLocator}
       pdfSource={props.pdfSource}
       rotation={props.rotation}
       searchQuery={props.searchQuery}

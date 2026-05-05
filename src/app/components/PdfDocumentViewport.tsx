@@ -31,6 +31,7 @@ interface PdfDocumentViewportProps {
   onZoomOut: () => void;
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
+  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
   searchQuery: string;
@@ -68,6 +69,7 @@ function renderPdfViewportContent(args: {
       onZoomOut={args.onZoomOut}
       page={args.page}
       pageElementsRef={args.pageElementsRef}
+      pdfSelectionLocator={args.pdfSelectionLocator}
       pdfSource={args.pdfSource}
       rotation={args.rotation}
       scrollContainerRef={args.scrollContainerRef}

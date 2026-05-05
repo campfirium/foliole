@@ -375,7 +375,7 @@ body {
 }
 
 .pdf-document-surface .textLayer :is(span, br)::selection {
-  background: rgba(56, 118, 255, 0.7);
+  background: rgba(56, 118, 255, 0.28);
   color: transparent;
   -webkit-text-fill-color: transparent;
 }

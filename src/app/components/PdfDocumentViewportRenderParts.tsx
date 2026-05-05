@@ -3,6 +3,7 @@ import { Document, Page } from 'react-pdf';
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfDocumentToolbar } from './PdfDocumentToolbar';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
+import { renderPdfOverlayMarker, renderPdfOverlayRects, resolvePdfOverlayMarkerSize } from './pdfOverlayRender';
 
 const PDF_PAGE_MIN = 1;
 
@@ -57,6 +58,7 @@ interface PdfViewportDocumentProps {
   onLoadSuccess: (numPages: number) => void;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
+  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
   totalPages: number | null;
@@ -82,6 +84,7 @@ export function PdfViewportDocument(props: PdfViewportDocumentProps) {
         highlightLocators={props.highlightLocators}
         onTextLayerRender={props.onTextLayerRender}
         pageElementsRef={props.pageElementsRef}
+        pdfSelectionLocator={props.pdfSelectionLocator}
         rotation={props.rotation}
         totalPages={props.totalPages}
         zoom={props.zoom}
@@ -113,57 +116,11 @@ function resolvePageHighlightLocators(
   return highlightLocators.filter((locator) => locator.page === page);
 }
 
-function resolveMarkerSize(zoom: number) {
-  return Math.max(10, Math.round((zoom / 100) * 12));
-}
-
-function renderPageHighlightMarker(locator: { id: string; x: number | null; y: number | null }, markerSize: number) {
-  if (typeof locator.x !== 'number' || typeof locator.y !== 'number') {
-    return null;
-  }
-  const markerTop = `${Math.max(0, Math.min(100, locator.y * 100))}%`;
-  const markerLeft = `${Math.max(0, Math.min(100, locator.x * 100))}%`;
-  return (
-    <span
-      aria-hidden="true"
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/50 shadow-sm ring-1 ring-accent/30"
-      data-testid="pdf-highlight-marker"
-      key={locator.id}
-      style={{ height: markerSize, left: markerLeft, top: markerTop, width: markerSize }}
-    />
-  );
-}
-
-function renderHighlightRects(locator: {
-  id: string;
-  rects?: Array<{ height: number; width: number; x: number; y: number }>;
-  x: number | null;
-  y: number | null;
-}) {
-  const rects = Array.isArray(locator.rects) ? locator.rects : [];
-  if (rects.length === 0) {
-    return null;
-  }
-  return rects.map((rect, index) => (
-    <span
-      aria-hidden="true"
-      className="pointer-events-none absolute z-10 rounded-[2px] bg-accent/35 ring-1 ring-accent/20"
-      data-testid="pdf-highlight-rect"
-      key={`${locator.id}:${index}`}
-      style={{
-        height: `${Math.max(0, Math.min(100, rect.height * 100))}%`,
-        left: `${Math.max(0, Math.min(100, rect.x * 100))}%`,
-        top: `${Math.max(0, Math.min(100, rect.y * 100))}%`,
-        width: `${Math.max(0, Math.min(100, rect.width * 100))}%`
-      }}
-    />
-  ));
-}
-
 function PdfDocumentPages({
   highlightLocators,
   onTextLayerRender,
   pageElementsRef,
+  pdfSelectionLocator,
   rotation,
   totalPages,
   zoom
@@ -177,6 +134,7 @@ function PdfDocumentPages({
   }>;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
+  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   rotation: number;
   totalPages: number | null;
   zoom: number;
@@ -191,10 +149,48 @@ function PdfDocumentPages({
       onTextLayerRender,
       pageElementsRef,
       pageNumber,
+      pdfSelectionLocator,
       rotation,
       zoom
     });
   });
+}
+
+function renderStoredHighlights(
+  pageHighlights: Array<{
+    id: string;
+    rects?: Array<{ height: number; width: number; x: number; y: number }>;
+    x: number | null;
+    y: number | null;
+  }>,
+  markerSize: number
+) {
+  return pageHighlights.map((locator) => {
+    const highlightRects = renderPdfOverlayRects(locator);
+    return highlightRects ?? renderPdfOverlayMarker(locator, markerSize);
+  });
+}
+
+function renderSelectionOverlay(
+  selectionLocator: { id: string; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | null,
+  markerSize: number
+) {
+  if (!selectionLocator) {
+    return null;
+  }
+  return (
+    renderPdfOverlayRects(
+      selectionLocator,
+      'pointer-events-none absolute z-20 rounded-[3px] bg-accent/30 ring-1 ring-accent/45',
+      'pdf-selection-rect'
+    ) ??
+    renderPdfOverlayMarker(
+      selectionLocator,
+      markerSize,
+      'pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/30 shadow-sm ring-1 ring-accent/60',
+      'pdf-selection-marker'
+    )
+  );
 }
 
 function renderPdfPage({
@@ -202,6 +198,7 @@ function renderPdfPage({
   onTextLayerRender,
   pageElementsRef,
   pageNumber,
+  pdfSelectionLocator,
   rotation,
   zoom
 }: {
@@ -215,11 +212,13 @@ function renderPdfPage({
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
   pageNumber: number;
+  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   rotation: number;
   zoom: number;
 }) {
   const pageHighlights = resolvePageHighlightLocators(highlightLocators, pageNumber);
-  const markerSize = resolveMarkerSize(zoom);
+  const markerSize = resolvePdfOverlayMarkerSize(zoom);
+  const selectionLocator = pdfSelectionLocator?.page === pageNumber ? { ...pdfSelectionLocator, id: 'pdf-selection-overlay' } : null;
   return (
     <div
       className="relative flex w-full justify-center px-4"
@@ -244,10 +243,8 @@ function renderPdfPage({
           rotate={rotation}
           scale={zoom / 100}
         />
-        {pageHighlights.map((locator) => {
-          const highlightRects = renderHighlightRects(locator);
-          return highlightRects ?? renderPageHighlightMarker(locator, markerSize);
-        })}
+        {renderStoredHighlights(pageHighlights, markerSize)}
+        {renderSelectionOverlay(selectionLocator, markerSize)}
       </div>
     </div>
   );

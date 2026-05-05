@@ -142,6 +142,7 @@ interface PdfDocumentViewportContentProps {
   onZoomOut: () => void;
   page: number;
   pageElementsRef: PdfPageElementsRef;
+  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
@@ -187,6 +188,7 @@ export function PdfDocumentViewportContent({
   onZoomOut,
   page,
   pageElementsRef,
+  pdfSelectionLocator,
   pdfSource,
   rotation,
   scrollContainerRef,
@@ -198,32 +200,35 @@ export function PdfDocumentViewportContent({
   zoom
 }: PdfDocumentViewportContentProps) {
   usePdfSearchRuntime({ onSearchStatusChange, pageElementsRef, scrollContainerRef, searchQuery, searchRequest, searchRevision, totalPages });
-  return (
-    <PdfDocumentViewportContentBody
-      handleContextMenu={handleContextMenu}
-      handleScroll={handleScroll}
-      highlightLocators={highlightLocators}
-      maxPage={maxPage}
-      onLoadError={onLoadError}
-      onLoadSuccess={onLoadSuccess}
-      onNextPage={onNextPage}
-      onPageChange={onPageChange}
-      onPreviousPage={onPreviousPage}
-      onRotateClockwise={onRotateClockwise}
-      onSearchQueryChange={onSearchQueryChange}
-      onSearchRequest={onSearchRequest}
-      onZoomIn={onZoomIn}
-      onZoomOut={onZoomOut}
-      page={page}
-      pageElementsRef={pageElementsRef}
-      pdfSource={pdfSource}
-      rotation={rotation}
-      scrollContainerRef={scrollContainerRef}
-      searchQuery={searchQuery}
-      searchStatus={searchStatus}
-      totalPages={totalPages}
-      onTextLayerRender={onTextLayerRender}
-      zoom={zoom}
-    />
-  );
+  return renderPdfViewportContentBody({
+    handleContextMenu,
+    handleScroll,
+    highlightLocators,
+    maxPage,
+    onLoadError,
+    onLoadSuccess,
+    onNextPage,
+    onPageChange,
+    onPreviousPage,
+    onRotateClockwise,
+    onSearchQueryChange,
+    onSearchRequest,
+    onTextLayerRender,
+    onZoomIn,
+    onZoomOut,
+    page,
+    pageElementsRef,
+    pdfSelectionLocator,
+    pdfSource,
+    rotation,
+    scrollContainerRef,
+    searchQuery,
+    searchStatus,
+    totalPages,
+    zoom
+  });
+}
+
+function renderPdfViewportContentBody(props: Omit<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'searchRequest' | 'searchRevision'>) {
+  return <PdfDocumentViewportContentBody {...props} />;
 }

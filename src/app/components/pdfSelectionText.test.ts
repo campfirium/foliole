@@ -138,4 +138,41 @@ describe('resolvePdfSelectionLocator', () => {
   it('uses pdf page frame instead of outer page shell to avoid horizontal offset', () => {
     runResolveLocatorWithPageFrameTest();
   });
+
+  it('merges neighboring rects on the same line into one highlight band', () => {
+    const container = document.createElement('div');
+    const pageShell = document.createElement('div');
+    pageShell.dataset.pdfPageNumber = '2';
+    const textNode = document.createTextNode('Merged text');
+    pageShell.appendChild(textNode);
+    container.appendChild(pageShell);
+    document.body.appendChild(container);
+
+    Object.defineProperty(pageShell, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 260, height: 200, left: 10, right: 210, top: 60, width: 200, x: 10, y: 60, toJSON: () => ({}) })
+    });
+    const selection = createSelectionForNode(textNode);
+    const range = selection?.getRangeAt(0);
+    Object.defineProperty(range as Range, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 130, height: 20, left: 60, right: 144, top: 110, width: 84, x: 60, y: 110, toJSON: () => ({}) })
+    });
+    Object.defineProperty(range as Range, 'getClientRects', {
+      configurable: true,
+      value: () =>
+        [
+          { bottom: 130, height: 20, left: 60, right: 96, top: 110, width: 36, x: 60, y: 110, toJSON: () => ({}) },
+          { bottom: 130, height: 20, left: 100, right: 144, top: 110, width: 44, x: 100, y: 110, toJSON: () => ({}) }
+        ] as unknown as DOMRectList
+    });
+
+    const locator = resolvePdfSelectionLocator(container, selection);
+    expect(locator?.rects).toHaveLength(1);
+    expect(locator?.rects?.[0]?.x).toBe(0.25);
+    expect(locator?.rects?.[0]?.width ?? 0).toBeCloseTo(0.42, 6);
+
+    selection?.removeAllRanges();
+    container.remove();
+  });
 });

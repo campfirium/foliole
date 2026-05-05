@@ -22,6 +22,7 @@ interface PdfDocumentViewportContentBodyProps {
   onZoomOut: () => void;
   page: number;
   pageElementsRef: PdfPageElementsRef;
+  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
@@ -61,6 +62,7 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
         onLoadSuccess={props.onLoadSuccess}
         onTextLayerRender={props.onTextLayerRender}
         pageElementsRef={props.pageElementsRef}
+        pdfSelectionLocator={props.pdfSelectionLocator}
         pdfSource={props.pdfSource}
         rotation={props.rotation}
         totalPages={props.totalPages}

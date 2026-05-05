@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -37,6 +37,77 @@ interface PdfDocumentSurfaceProps {
   nodeViewState?: NodeViewState;
 }
 
+const CONTEXT_MENU_SELECTION_FALLBACK_WINDOW_MS = 1000;
+
+interface PdfSelectionSnapshot {
+  capturedAt: number;
+  locator: NodeAnchorLink['locator'];
+  selectionText: string;
+}
+
+function resolvePdfSelectionSnapshot(surface: HTMLElement | null): PdfSelectionSnapshot | null {
+  const selection = window.getSelection();
+  if (!selection) {
+    return null;
+  }
+  const selectionText = resolvePdfSelectionText(surface, selection);
+  if (!selectionText) {
+    return null;
+  }
+  return {
+    capturedAt: Date.now(),
+    locator: resolvePdfSelectionLocator(surface, selection),
+    selectionText
+  };
+}
+
+function resolveFallbackSelection(snapshot: PdfSelectionSnapshot | null) {
+  if (!snapshot) {
+    return null;
+  }
+  return Date.now() - snapshot.capturedAt <= CONTEXT_MENU_SELECTION_FALLBACK_WINDOW_MS ? snapshot : null;
+}
+
+function resolveContextMenuSelection(surface: HTMLElement | null, preservedSelection: PdfSelectionSnapshot | null) {
+  return resolvePdfSelectionSnapshot(surface) ?? resolveFallbackSelection(preservedSelection);
+}
+
+function useTrackPdfSelection(
+  surfaceRef: MutableRefObject<HTMLElement | null>,
+  preservedSelectionRef: MutableRefObject<PdfSelectionSnapshot | null>
+) {
+  useEffect(() => {
+    const surface = surfaceRef.current;
+    if (!surface) {
+      return;
+    }
+
+    const syncSelectionSnapshot = () => {
+      const snapshot = resolvePdfSelectionSnapshot(surface);
+      if (snapshot) {
+        preservedSelectionRef.current = snapshot;
+      }
+    };
+
+    const captureRightClickSelection = (event: MouseEvent) => {
+      if (event.button === 2) {
+        syncSelectionSnapshot();
+      }
+    };
+
+    document.addEventListener('selectionchange', syncSelectionSnapshot);
+    surface.addEventListener('mouseup', syncSelectionSnapshot, true);
+    surface.addEventListener('keyup', syncSelectionSnapshot, true);
+    surface.addEventListener('mousedown', captureRightClickSelection, true);
+    return () => {
+      document.removeEventListener('selectionchange', syncSelectionSnapshot);
+      surface.removeEventListener('mouseup', syncSelectionSnapshot, true);
+      surface.removeEventListener('keyup', syncSelectionSnapshot, true);
+      surface.removeEventListener('mousedown', captureRightClickSelection, true);
+    };
+  }, [preservedSelectionRef, surfaceRef]);
+}
+
 function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean) {
   const [selectionMenuState, setSelectionMenuState] = useState<{
     left: number;
@@ -44,26 +115,32 @@ function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionT
     selectionText: string;
     locator: NodeAnchorLink['locator'];
   } | null>(null);
+  const [selectionOverlayLocator, setSelectionOverlayLocator] = useState<NodeAnchorLink['locator']>(undefined);
   const surfaceRef = useRef<HTMLElement | null>(null);
+  const preservedSelectionRef = useRef<PdfSelectionSnapshot | null>(null);
+  useTrackPdfSelection(surfaceRef, preservedSelectionRef);
 
   const handleContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
-    const selectionText = resolvePdfSelectionText(surfaceRef.current, window.getSelection());
-    if (!selectionText) {
+    const fallbackSelection = resolveContextMenuSelection(surfaceRef.current, preservedSelectionRef.current);
+    if (!fallbackSelection?.selectionText) {
       setSelectionMenuState(null);
+      setSelectionOverlayLocator(undefined);
       return;
     }
     event.preventDefault();
     const position = normalizeContextMenuPosition(event.clientX, event.clientY);
     setSelectionMenuState({
       left: position.left,
-      locator: resolvePdfSelectionLocator(surfaceRef.current, window.getSelection()),
+      locator: fallbackSelection.locator,
       top: position.top,
-      selectionText
+      selectionText: fallbackSelection.selectionText
     });
+    setSelectionOverlayLocator(fallbackSelection.locator);
   };
 
   const closeSelectionMenu = () => {
     setSelectionMenuState(null);
+    setSelectionOverlayLocator(undefined);
   };
 
   const handleCreateHighlight = () => {
@@ -79,6 +156,7 @@ function usePdfSelectionContextMenu(onCreateHighlightFromSelection?: (selectionT
     closeSelectionMenu,
     handleContextMenu,
     handleCreateHighlight,
+    selectionOverlayLocator,
     selectionMenuState,
     surfaceRef
   };
@@ -149,7 +227,7 @@ export function PdfDocumentSurface({ highlightLocators, nodeId, nodeViewState, o
     },
     state: { loadError, maxPage, page, pageJumpRequest, pdfSource, rotation, totalPages, zoom }
   } = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint);
-  const { closeSelectionMenu, handleContextMenu, handleCreateHighlight, selectionMenuState, surfaceRef } = usePdfSelectionContextMenu(
+  const { closeSelectionMenu, handleContextMenu, handleCreateHighlight, selectionMenuState, selectionOverlayLocator, surfaceRef } = usePdfSelectionContextMenu(
     onCreateHighlightFromSelection
   );
   useRegisterPdfSurface(nodeId, requestAnchorJump);
@@ -165,6 +243,7 @@ export function PdfDocumentSurface({ highlightLocators, nodeId, nodeViewState, o
       maxPage={maxPage}
       page={page}
       pageJumpRequest={pageJumpRequest}
+      pdfSelectionLocator={selectionOverlayLocator}
       pdfSelectionContextMenu={
         <PdfSelectionContextMenu onClose={closeSelectionMenu} onCreateHighlight={handleCreateHighlight} state={selectionMenuState} />
       }
