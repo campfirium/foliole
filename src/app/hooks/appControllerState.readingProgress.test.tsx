@@ -220,6 +220,60 @@ function runImmersiveReadingSelectionPriorityTest() {
   });
 }
 
+function runReadingProgressSyncStateWiringTest() {
+  const ws = createWorkspaceState();
+
+  render(<Harness ws={ws} />);
+
+  expect(useReadingProgressSyncMock).toHaveBeenCalledTimes(1);
+  const options = useReadingProgressSyncMock.mock.calls[0][0];
+  expect(options.getReadingPositionSelection()).toEqual({ from: 12, to: 12 });
+  expect(options.getReadingPositionSyncState()).toEqual({
+    reason: 'editor-restore-selection',
+    startedAt: 123,
+    targetSelection: { from: 12, to: 12 }
+  });
+}
+
+function runImmersiveModePersistenceWiringTest() {
+  runtimeState.isImmersiveMode = true;
+  const ws = createWorkspaceState();
+  render(<Harness ws={ws} />);
+
+  expect(useReadingProgressSyncMock.mock.calls[0][0].isImmersiveMode).toBe(true);
+}
+
+function runAnchorReadingPositionWiringTest() {
+  const ws = createWorkspaceState();
+
+  render(<Harness ws={ws} />);
+
+  const navigationArgs = getNavigationArgs();
+  navigationArgs.applyNavigationReadingPosition({
+    nodeId: 'node-2',
+    focusAnchor: {
+      id: 'hl-1',
+      kind: 'highlight',
+      locator: { from: 88, originalText: 'needle', to: 94 }
+    }
+  });
+
+  expect(runtimeRefs.readingPositionRef.current).toEqual({
+    nodeId: 'node-2',
+    selection: { from: 88, to: 88 }
+  });
+  expect(runtimeRefs.readingPositionSyncRef.current).toEqual({
+    nodeId: 'node-2',
+    state: {
+      reason: 'anchor-navigation',
+      startedAt: expect.any(Number),
+      targetSelection: { from: 88, to: 88 },
+      targetViewportMode: 'center'
+    }
+  });
+  expect(ws.setNodeViewState).not.toHaveBeenCalled();
+}
+
 describe('useWorkspaceControllerState reading progress wiring', () => {
   beforeEach(() => {
     useReadingProgressSyncMock.mockClear();
@@ -245,48 +299,14 @@ describe('useWorkspaceControllerState reading progress wiring', () => {
   });
 
   it('passes restore sync state through to reading progress persistence', () => {
-    const ws = createWorkspaceState();
+    runReadingProgressSyncStateWiringTest();
+  });
 
-    render(<Harness ws={ws} />);
-
-    expect(useReadingProgressSyncMock).toHaveBeenCalledTimes(1);
-    const options = useReadingProgressSyncMock.mock.calls[0][0];
-    expect(options.getReadingPositionSelection()).toEqual({ from: 12, to: 12 });
-    expect(options.getReadingPositionSyncState()).toEqual({
-      reason: 'editor-restore-selection',
-      startedAt: 123,
-      targetSelection: { from: 12, to: 12 }
-    });
+  it('passes immersive mode through to continuous reading progress persistence', () => {
+    runImmersiveModePersistenceWiringTest();
   });
 
   it('updates the shared reading position value when navigation applies an anchor target', () => {
-    const ws = createWorkspaceState();
-
-    render(<Harness ws={ws} />);
-
-    const navigationArgs = getNavigationArgs();
-    navigationArgs.applyNavigationReadingPosition({
-      nodeId: 'node-2',
-      focusAnchor: {
-        id: 'hl-1',
-        kind: 'highlight',
-        locator: { from: 88, originalText: 'needle', to: 94 }
-      }
-    });
-
-    expect(runtimeRefs.readingPositionRef.current).toEqual({
-      nodeId: 'node-2',
-      selection: { from: 88, to: 88 }
-    });
-    expect(runtimeRefs.readingPositionSyncRef.current).toEqual({
-      nodeId: 'node-2',
-      state: {
-        reason: 'anchor-navigation',
-        startedAt: expect.any(Number),
-        targetSelection: { from: 88, to: 88 },
-        targetViewportMode: 'center'
-      }
-    });
-    expect(ws.setNodeViewState).not.toHaveBeenCalled();
+    runAnchorReadingPositionWiringTest();
   });
 });

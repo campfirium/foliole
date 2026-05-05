@@ -86,6 +86,7 @@ export function useNowIso(tickMs = 15_000) {
 function useWorkspaceReadingProgressPersistence(args: {
   activeNodeId: string | null;
   editorRef: ReturnType<typeof useAppRuntime>['editorRef'];
+  isImmersiveMode: boolean;
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'];
@@ -100,7 +101,7 @@ function useWorkspaceReadingProgressPersistence(args: {
       args.readingPositionRef.current.nodeId === args.activeNodeId ? args.readingPositionRef.current.selection : null,
     getReadingPositionSyncState: () =>
       args.readingPositionSyncRef.current.nodeId === args.activeNodeId ? args.readingPositionSyncRef.current.state : null,
-    isImmersiveMode: false,
+    isImmersiveMode: args.isImmersiveMode,
     isViewingTrashNode: args.isViewingTrashNode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     nodeViewById: args.nodeViewById,
@@ -204,6 +205,7 @@ export function useWorkspaceControllerState(
   useWorkspaceReadingProgressPersistence({
     activeNodeId: ws.activeNodeId,
     editorRef: runtime.editorRef,
+    isImmersiveMode: runtime.isImmersiveMode,
     isViewingTrashNode: runtime.isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById: ws.nodeViewById,
