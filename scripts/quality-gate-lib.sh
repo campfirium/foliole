@@ -6,6 +6,10 @@ DEFAULT_QUALITY_GATE_FAILURE_HEAD_LINES=20
 DEFAULT_QUALITY_GATE_FAILURE_TAIL_LINES=120
 DEFAULT_QUALITY_GATE_SUCCESS_TAIL_LINES=25
 DEFAULT_QUALITY_GATE_LOG_RETENTION_RUNS=3
+DEFAULT_QUALITY_GATE_TIMEOUT_SECONDS=600
+DEFAULT_ANDROID_SYNC_TIMEOUT_SECONDS=1200
+DEFAULT_ANDROID_HOST_TIMEOUT_SECONDS=1200
+DEFAULT_ANDROID_HOST_DEVICE_TEST_TIMEOUT_SECONDS=1800
 
 resolve_package_manager() {
   local resolved_pm="npm"
@@ -128,6 +132,11 @@ create_quality_gate_log_file() {
   printf '%s/%s' "${run_dir}" "${file_name}"
 }
 
+create_quality_gate_failed_file() {
+  ensure_quality_gate_run_dir
+  printf '%s/failed.txt' "${QUALITY_GATE_RUN_DIR}"
+}
+
 terminate_process_group() {
   local pgid="$1"
 
@@ -211,10 +220,11 @@ run_command_with_limits() {
   done
 
   local exit_code=0
-  set +e
-  wait "${child_pid}"
-  exit_code=$?
-  set -e
+  if wait "${child_pid}"; then
+    exit_code=0
+  else
+    exit_code=$?
+  fi
 
   if [[ "${exit_code}" -ne 0 ]]; then
     echo "[${prefix}] peak ${command_label} memory: ${peak_rss_kb} KiB"
@@ -234,7 +244,7 @@ resolve_quality_gate_limit() {
   case "${metric}" in
     timeout_seconds)
       env_name="QUALITY_GATE_${normalized}_TIMEOUT_SECONDS"
-      fallback="${QUALITY_GATE_TIMEOUT_SECONDS:-600}"
+      fallback="$(resolve_quality_gate_timeout_fallback "${script_name}")"
       ;;
     max_rss_kb)
       env_name="QUALITY_GATE_${normalized}_MAX_RSS_KB"
@@ -249,6 +259,88 @@ resolve_quality_gate_limit() {
   printf '%s' "${!env_name:-${fallback}}"
 }
 
+resolve_quality_gate_timeout_fallback() {
+  local script_name="$1"
+  case "${script_name}" in
+    android:sync)
+      printf '%s' "${QUALITY_GATE_TIMEOUT_SECONDS:-${DEFAULT_ANDROID_SYNC_TIMEOUT_SECONDS}}"
+      ;;
+    android:host:device-test)
+      printf '%s' "${QUALITY_GATE_TIMEOUT_SECONDS:-${DEFAULT_ANDROID_HOST_DEVICE_TEST_TIMEOUT_SECONDS}}"
+      ;;
+    android:host:lint|android:host:test)
+      printf '%s' "${QUALITY_GATE_TIMEOUT_SECONDS:-${DEFAULT_ANDROID_HOST_TIMEOUT_SECONDS}}"
+      ;;
+    *)
+      printf '%s' "${QUALITY_GATE_TIMEOUT_SECONDS:-${DEFAULT_QUALITY_GATE_TIMEOUT_SECONDS}}"
+      ;;
+  esac
+}
+
+quote_quality_gate_command() {
+  local arg quoted=()
+  for arg in "$@"; do
+    printf -v arg '%q' "${arg}"
+    quoted+=("${arg}")
+  done
+  printf '%s' "${quoted[*]}"
+}
+
+collect_failed_test_files() {
+  local output_file="$1"
+  grep -Eo '([[:alnum:]_./-]+\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs))' "${output_file}" 2>/dev/null | sort -u || true
+}
+
+resolve_quality_gate_rerun_command() {
+  local script_name="$1"
+  local output_file="$2"
+  shift 2
+
+  local failed_tests command_text
+  command_text="$(quote_quality_gate_command "$@")"
+
+  if [[ "${script_name}" == test* ]]; then
+    failed_tests="$(collect_failed_test_files "${output_file}")"
+    if [[ -n "${failed_tests}" ]]; then
+      local -a failed_test_array
+      mapfile -t failed_test_array <<< "${failed_tests}"
+      printf 'npx vitest run --pool=threads --maxWorkers=2'
+      printf ' %q' "${failed_test_array[@]}"
+      return 0
+    fi
+  fi
+
+  printf '%s' "${command_text}"
+}
+
+record_quality_gate_failure() {
+  local prefix="$1"
+  local script_name="$2"
+  local display_name="$3"
+  local output_file="$4"
+  local rerun_command="$5"
+  local failed_file failed_tests
+
+  failed_file="$(create_quality_gate_failed_file)"
+  {
+    printf 'script=%s\n' "${script_name}"
+    printf 'display=%s\n' "${display_name}"
+    printf 'log=%s\n' "${output_file}"
+    printf 'rerun=%s\n' "${rerun_command}"
+    failed_tests="$(collect_failed_test_files "${output_file}")"
+    if [[ -n "${failed_tests}" ]]; then
+      while IFS= read -r failed_test; do
+        [[ -z "${failed_test}" ]] && continue
+        printf 'failed-test=%s\n' "${failed_test}"
+      done <<< "${failed_tests}"
+    fi
+    printf '\n'
+  } >>"${failed_file}"
+
+  echo "[${prefix}] failed summary: ${failed_file}"
+  echo "[${prefix}] rerun: ${rerun_command}"
+}
+
 run_quality_gate_command() {
   local prefix="$1"
   local script_name="$2"
@@ -256,7 +348,7 @@ run_quality_gate_command() {
   shift 3
 
   local mode
-  local timeout_seconds max_rss_kb output_file exit_code
+  local timeout_seconds max_rss_kb output_file exit_code rerun_command
   mode="$(resolve_quality_gate_log_mode)"
   timeout_seconds="$(resolve_quality_gate_limit "${script_name}" timeout_seconds)"
   max_rss_kb="$(resolve_quality_gate_limit "${script_name}" max_rss_kb)"
@@ -275,6 +367,8 @@ run_quality_gate_command() {
   fi
 
   if [[ "${exit_code}" -ne 0 ]]; then
+    rerun_command="$(resolve_quality_gate_rerun_command "${script_name}" "${output_file}" "$@")"
+    record_quality_gate_failure "${prefix}" "${script_name}" "${display_name}" "${output_file}" "${rerun_command}"
     echo "[${prefix}] failed: ${display_name}"
     echo "[${prefix}] full log: ${output_file}"
     print_quality_gate_failure_excerpt "${prefix}" "${display_name}" "${output_file}"

@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -83,6 +83,71 @@ describe('quality-gate-lib.sh', () => {
       const [firstLog, secondLog] = result.stdout.trim().split('\n');
       await expect(readFile(firstLog, 'utf8')).resolves.toContain('lint ok');
       await expect(readFile(secondLog, 'utf8')).resolves.toContain('test ok');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('uses longer default timeouts for android host tasks', async () => {
+    const result = await runBash(
+      [
+        `source "${QUALITY_GATE_LIB}"`,
+        'printf "%s\\n" "$(resolve_quality_gate_limit android:sync timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit android:host:lint timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit android:host:test timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit android:host:device-test timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit test timeout_seconds)"'
+      ].join('\n'),
+      REPO_ROOT
+    );
+
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim().split('\n')).toEqual(['1200', '1200', '1200', '1800', '600']);
+  });
+
+  it('keeps explicit timeout overrides for android host tasks', async () => {
+    const result = await runBash(
+      [
+        `source "${QUALITY_GATE_LIB}"`,
+        'printf "%s\\n" "$(resolve_quality_gate_limit android:host:test timeout_seconds)"'
+      ].join('\n'),
+      REPO_ROOT,
+      {
+        QUALITY_GATE_ANDROID_HOST_TEST_TIMEOUT_SECONDS: '42'
+      }
+    );
+
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe('42');
+  });
+
+  it('records failed tests and prints a targeted vitest rerun command', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-lib-'));
+    const failedSummary = path.join(tempRoot, 'test-run', 'failed.txt');
+    try {
+      const result = await runBash(
+        [
+          `source "${QUALITY_GATE_LIB}"`,
+          'set +e',
+          'run_quality_gate_command "quality-gate:test" "test:desktop" "test:desktop" bash -lc \'echo "FAIL src/app/Foo.test.tsx"; exit 1\'',
+          'exit_code=$?',
+          'set -e',
+          'printf "exit=%s\\n" "$exit_code"'
+        ].join('\n'),
+        REPO_ROOT,
+        {
+          QUALITY_GATE_LOG_ROOT: tempRoot,
+          QUALITY_GATE_RUN_ID: 'test-run'
+        }
+      );
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('exit=1');
+      expect(result.stdout).toContain(`failed summary: ${failedSummary}`);
+      expect(result.stdout).toContain(
+        'rerun: npx vitest run --pool=threads --maxWorkers=2 src/app/Foo.test.tsx'
+      );
+      await expect(readFile(failedSummary, 'utf8')).resolves.toContain('failed-test=src/app/Foo.test.tsx');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
