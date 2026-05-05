@@ -67,6 +67,20 @@ export interface NativeReviewPreviewResult {
   Easy: NativeReviewGradeResult;
 }
 
+export interface NativeSqliteBackupResult {
+  sourcePath: string;
+  destinationPath: string;
+  totalPages: number;
+  remainingPages: number;
+}
+
+export interface NativeSqliteRestoreResult {
+  sourcePath: string;
+  targetPath: string;
+  totalPages: number;
+  remainingPages: number;
+}
+
 export type NativeCommandMap = {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
@@ -150,6 +164,14 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.saveReadingProgress]: {
     args: NativeSaveReadingProgressArgs;
     result: null;
+  };
+  [NATIVE_COMMANDS.backupSqliteDatabase]: {
+    args: { destinationPath?: string };
+    result: NativeSqliteBackupResult;
+  };
+  [NATIVE_COMMANDS.restoreSqliteDatabase]: {
+    args: { sourcePath: string };
+    result: NativeSqliteRestoreResult;
   };
   [NATIVE_COMMANDS.updateNodeContent]: {
     args: NativeNodeSnapshotArgs;

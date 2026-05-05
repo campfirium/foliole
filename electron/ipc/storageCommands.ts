@@ -1,5 +1,9 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
+  createApplicationDatabaseBackup,
+  restoreApplicationDatabaseBackup
+} from '../database/backupRestore.js';
+import {
   deleteNodesPermanently,
   replaceNodeOrder,
   restoreNodes,
@@ -16,6 +20,7 @@ import {
 
 import {
   asNullableString,
+  asString,
   asStringArray,
   asTimestamp,
   parseNodeSnapshotArgs,
@@ -36,10 +41,56 @@ function readSettingsObject(settings: unknown) {
   return settings as Record<string, unknown>;
 }
 
+function handleSqliteMaintenanceCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.backupSqliteDatabase) {
+    return createApplicationDatabaseBackup({
+      destinationPath: asNullableString(args.destinationPath, 'destinationPath') ?? undefined
+    });
+  }
+  if (command === NATIVE_COMMANDS.restoreSqliteDatabase) {
+    return restoreApplicationDatabaseBackup({
+      sourcePath: asString(args.sourcePath, 'sourcePath')
+    });
+  }
+  return undefined;
+}
+
+function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
+    upsertNodeSnapshot(parseNodeSnapshotArgs(args));
+    return null;
+  }
+  if (command === NATIVE_COMMANDS.replaceNodeOrder) {
+    replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));
+    return null;
+  }
+  if (command === NATIVE_COMMANDS.softDeleteNodes) {
+    softDeleteNodes(parseSoftDeleteNodesArgs(args));
+    return null;
+  }
+  if (command === NATIVE_COMMANDS.restoreNodes) {
+    restoreNodes(parseRestoreNodesArgs(args));
+    return null;
+  }
+  if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
+    deleteNodesPermanently(parseDeleteNodesPermanentlyArgs(args));
+    return null;
+  }
+  return undefined;
+}
+
 export async function handleStorageCommand(
   command: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
+  const nodeMutationResult = handleNodeMutationCommand(command, args);
+  if (nodeMutationResult !== undefined) {
+    return nodeMutationResult;
+  }
+  const sqliteMaintenanceResult = handleSqliteMaintenanceCommand(command, args);
+  if (sqliteMaintenanceResult !== undefined) {
+    return sqliteMaintenanceResult;
+  }
   if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
     return loadWorkspaceSnapshot();
   }
@@ -65,26 +116,6 @@ export async function handleStorageCommand(
       nodeViewStates: parseNodeViewStatePayloadArray(args.nodeViewStates, 'nodeViewStates'),
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
     });
-    return null;
-  }
-  if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
-    upsertNodeSnapshot(parseNodeSnapshotArgs(args));
-    return null;
-  }
-  if (command === NATIVE_COMMANDS.replaceNodeOrder) {
-    replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));
-    return null;
-  }
-  if (command === NATIVE_COMMANDS.softDeleteNodes) {
-    softDeleteNodes(parseSoftDeleteNodesArgs(args));
-    return null;
-  }
-  if (command === NATIVE_COMMANDS.restoreNodes) {
-    restoreNodes(parseRestoreNodesArgs(args));
-    return null;
-  }
-  if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
-    deleteNodesPermanently(parseDeleteNodesPermanentlyArgs(args));
     return null;
   }
   if (command === NATIVE_COMMANDS.applyReviewGrade) {

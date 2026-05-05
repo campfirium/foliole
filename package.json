@@ -23,6 +23,8 @@
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
     "workspace:migrate": "node scripts/migrate-workspace-data.mjs",
+    "sqlite:backup": "node --experimental-strip-types scripts/sqlite-maintenance.ts backup",
+    "sqlite:restore": "node --experimental-strip-types scripts/sqlite-maintenance.ts restore",
     "agent:codex": "bash scripts/codex/run-task.sh",
     "agent:codex:dry-run": "bash scripts/codex/run-task.sh --dry-run",
     "agent:loop": "bash scripts/codex/run-loop.sh",
