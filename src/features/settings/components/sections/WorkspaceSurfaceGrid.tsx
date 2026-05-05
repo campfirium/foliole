@@ -35,8 +35,8 @@ export function WorkspaceSurfaceGrid(props: {
   paintRegion: (regionId: WorkspaceSurfaceRegionId) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-sm border border-settings-divider/30 bg-settings-divider/30">
-      <div className="grid gap-px bg-settings-divider/30 p-px" style={{ aspectRatio: '1180 / 516', gridTemplateColumns: GRID_TEMPLATE_COLUMNS, gridTemplateRows: GRID_TEMPLATE_ROWS }}>
+    <div className="overflow-hidden rounded-sm border border-settings-divider bg-settings-divider">
+      <div className="grid gap-px bg-settings-divider p-px" style={{ aspectRatio: '1180 / 516', gridTemplateColumns: GRID_TEMPLATE_COLUMNS, gridTemplateRows: GRID_TEMPLATE_ROWS }}>
         {GRID_CELLS.map((cell) => {
           const swatchIndex = props.appearance.workspaceSurfaceAssignments[cell.id];
           const backgroundColor = props.appearance.workspaceSurfacePalette[swatchIndex] ?? props.appearance.workspaceSurfacePalette[0];

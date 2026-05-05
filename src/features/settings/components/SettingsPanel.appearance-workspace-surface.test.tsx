@@ -291,6 +291,21 @@ it('restores workspace surface generator preferences and active mode from storag
   });
 });
 
+it('keeps the workspace surface preview dividers on the standard settings divider tone', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+
+  await waitFor(() => {
+    const mainDocumentCell = screen.getByRole('button', { name: 'Main doc' });
+    const gridFrame = mainDocumentCell.parentElement?.parentElement;
+    expect(gridFrame).toBeInstanceOf(HTMLDivElement);
+    expect(gridFrame).toHaveClass('border-settings-divider', 'bg-settings-divider');
+    expect(gridFrame?.getAttribute('class')).not.toContain('border-settings-divider/30');
+    expect(gridFrame?.getAttribute('class')).not.toContain('bg-settings-divider/30');
+  });
+});
+
 it('hides settings while preview mode is active and restores it on escape', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
