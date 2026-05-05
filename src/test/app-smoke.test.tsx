@@ -1,15 +1,12 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
 import { App } from '../app/App';
-import type { EditorAdapter, EditorSelection } from '../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
 
-const mockEditorState: { content: string; selection: EditorSelection } = {
-  content: '',
-  selection: { from: 0, to: 0 }
-};
+const mockEditorState: { content: string } = { content: '' };
 
 const mockEditorAdapter: EditorAdapter = {
   destroy: () => undefined,
@@ -18,7 +15,7 @@ const mockEditorAdapter: EditorAdapter = {
   setContent: (content: string) => {
     mockEditorState.content = content;
   },
-  getSelection: () => mockEditorState.selection,
+  getSelection: () => ({ from: 0, to: 0 }),
   replaceSelection: () => undefined,
   onContentChange: () => () => undefined
 };
@@ -55,14 +52,14 @@ describe('App', () => {
     localStorage.clear();
     useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
     mockEditorState.content = '# Welcome to Foliole\n\nStart writing markdown here.';
-    mockEditorState.selection = { from: 0, to: 0 };
   });
 
-  it('renders three-pane layout placeholders', () => {
+  it('renders note list and single document panel', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: 'Nodes' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Editor' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Review' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Document' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Review' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create QA Node' })).not.toBeInTheDocument();
   });
 
   it('loads selected node content into editor', () => {
@@ -95,41 +92,21 @@ describe('App', () => {
     expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [[...]]');
   });
 
-  it('supports create -> edit -> derive key path', () => {
+  it('updates active node content from editor changes', () => {
     render(<App />);
 
     fireEvent.change(screen.getByTestId('editor-value'), {
       target: { value: 'Alpha Beta Gamma' }
     });
-    mockEditorState.selection = { from: 6, to: 10 };
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create QA Node' }));
-
-    const state = useWorkspaceStore.getState();
-    const createdNodeId = state.nodeOrder[1];
-    const createdNode = createdNodeId ? state.nodesById[createdNodeId] : null;
-    expect(createdNode).not.toBeNull();
-    expect(createdNode?.content).toBe('Alpha [[...]] Gamma');
-    expect(createdNode?.reveal).toBe('Beta');
+    expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Alpha Beta Gamma');
   });
 
-  it('shows save feedback while editing', () => {
-    vi.useFakeTimers();
-    try {
-      render(<App />);
+  it('does not render save badge in document header', () => {
+    render(<App />);
 
-      expect(screen.getByText('Not saved yet.')).toBeInTheDocument();
-      fireEvent.change(screen.getByTestId('editor-value'), {
-        target: { value: 'New content' }
-      });
-      expect(screen.getByText('Saving...')).toBeInTheDocument();
-
-      act(() => {
-        vi.advanceTimersByTime(200);
-      });
-      expect(screen.getByText('Saved.')).toBeInTheDocument();
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(screen.queryByText('Not saved yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Saving...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Saved.')).not.toBeInTheDocument();
   });
 });

@@ -36,7 +36,7 @@ export function MarkdownEditor({ value, onChange, onReady }: MarkdownEditorProps
       adapter.destroy();
       adapterRef.current = null;
     };
-  }, [value]);
+  }, []);
 
   useEffect(() => {
     adapterRef.current?.setContent(value);

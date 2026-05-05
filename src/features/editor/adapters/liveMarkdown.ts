@@ -43,6 +43,13 @@ function addMark(builder: RangeSetBuilder<Decoration>, from: number, to: number,
   );
 }
 
+function addReplace(builder: RangeSetBuilder<Decoration>, from: number, to: number) {
+  if (to <= from) {
+    return;
+  }
+  builder.add(from, to, Decoration.replace({}));
+}
+
 function addPrefixDecoration(
   builder: RangeSetBuilder<Decoration>,
   from: number,
@@ -55,8 +62,11 @@ function addPrefixDecoration(
   }
 
   const prefixLength = prefixMatch[0].length;
-  const className = isCursorLine ? 'cm-md-prefix cm-md-prefix-visible' : 'cm-md-prefix';
-  addMark(builder, from, from + prefixLength, className);
+  if (isCursorLine) {
+    addMark(builder, from, from + prefixLength, 'cm-md-syntax-visible');
+    return;
+  }
+  addReplace(builder, from, from + prefixLength);
 }
 
 function addInlineTokenDecorations(
@@ -70,12 +80,15 @@ function addInlineTokenDecorations(
     return;
   }
 
-  const className = isCursorLine ? 'cm-md-token cm-md-token-visible' : 'cm-md-token';
   let tokenMatch = INLINE_TOKEN_PATTERN.exec(text);
 
   while (tokenMatch) {
     const tokenFrom = from + tokenMatch.index;
-    addMark(builder, tokenFrom, tokenFrom + tokenMatch[0].length, className);
+    if (isCursorLine) {
+      addMark(builder, tokenFrom, tokenFrom + tokenMatch[0].length, 'cm-md-syntax-visible');
+    } else {
+      addReplace(builder, tokenFrom, tokenFrom + tokenMatch[0].length);
+    }
     tokenMatch = INLINE_TOKEN_PATTERN.exec(text);
   }
 
@@ -190,21 +203,9 @@ const liveMarkdownTheme = EditorView.theme({
     fontSize: '0.86rem',
     padding: '0.04rem 0.5rem'
   },
-  '.cm-md-prefix': {
+  '.cm-md-syntax-visible': {
     color: 'var(--color-text-secondary)',
-    opacity: 0,
-    transition: 'opacity 0.12s ease'
-  },
-  '.cm-md-prefix-visible': {
-    opacity: '0.66'
-  },
-  '.cm-md-token': {
-    color: 'var(--color-text-secondary)',
-    opacity: 0,
-    transition: 'opacity 0.12s ease'
-  },
-  '.cm-md-token-visible': {
-    opacity: '0.52'
+    opacity: '0.58'
   },
   '.cm-activeLine': {
     backgroundColor: 'rgba(125, 211, 252, 0.1)'
