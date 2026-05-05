@@ -94,23 +94,6 @@ public class FolioleCompanionSyncPackContractApplyTest {
         assertEquals(0, countRows("sync_object_state"));
     }
 
-    @Test
-    public void databaseHelperAdvancesPackCursorOnlyAfterSuccessfulApply() throws Exception {
-        context.deleteDatabase(FolioleCompanionDatabaseHelper.DATABASE_NAME);
-        copyTestAsset("sync-pack-contract.syncpack", packFile);
-        FolioleCompanionDatabaseHelper helper = new FolioleCompanionDatabaseHelper(context);
-        try {
-            JSObject first = helper.applySyncPack(packFile.getAbsolutePath());
-            JSObject second = helper.applySyncPack(packFile.getAbsolutePath());
-
-            assertEquals(3, first.getInt("applied_object_count"));
-            assertEquals(0, second.getInt("applied_object_count"));
-            assertEquals(3, helper.loadSyncPackCursor().getInt("cursor"));
-        } finally {
-            helper.close();
-        }
-    }
-
     private void createMainSchema() {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +

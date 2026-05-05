@@ -99,25 +99,6 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionSyncObjectStore.applySyncObjects(database, objects, deviceId);
     }
 
-    JSObject applySyncPack(String packPath) throws Exception {
-        SQLiteDatabase database = getWritableDatabase();
-        String now = Instant.now().toString();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, now);
-        File backupFile = FolioleCompanionDatabaseBackup.createPreSyncBackup(context, database, "pack");
-        JSObject result = FolioleCompanionSyncPackApply.applyPack(
-            database,
-            new File(packPath),
-            deviceId,
-            FolioleCompanionMetaRecords.loadNumberCursorValue(database, SYNC_PACK_CURSOR_KEY)
-        );
-        int toStateSeq = result.optInt("to_state_seq", 0);
-        if (toStateSeq > 0) {
-            FolioleCompanionMetaRecords.saveNumberCursorValue(database, SYNC_PACK_CURSOR_KEY, toStateSeq);
-        }
-        result.put("pre_sync_backup_path", backupFile.getAbsolutePath());
-        return result;
-    }
-
     JSObject syncAttachmentResource(String attachmentId, String contentHash, String url, JSONObject headers) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         return FolioleCompanionAttachmentResourceStore.syncResource(context, database, attachmentId, contentHash, url, headers);
