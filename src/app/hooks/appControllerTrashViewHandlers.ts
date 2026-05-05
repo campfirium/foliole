@@ -12,14 +12,11 @@ export function createOpenNotesView(args: BuildControllerLayoutPropsArgs) {
   };
 }
 
-export function createToggleTrashView(args: BuildControllerLayoutPropsArgs, openNotesView: () => void) {
+export function createToggleTrashView(args: BuildControllerLayoutPropsArgs) {
   return () => {
-    if (args.trash.isTrashViewOpen) {
-      openNotesView();
-      return;
-    }
     args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(true);
+    args.virtualView.closeVirtualView();
     args.trash.openTrashView();
   };
 }
@@ -39,22 +36,19 @@ export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
       focusAnchor,
       nodeId
     });
-    if (args.ws.nodesById[nodeId]?.specialKind !== 'virtual') {
+    const specialKind = args.ws.nodesById[nodeId]?.specialKind;
+    if (specialKind !== 'virtual' && specialKind !== 'virtual-root') {
       args.virtualView.closeVirtualView();
     }
     args.nav.handleSelectNode(nodeId, effectiveFocusAnchor);
   };
 }
 
-export function createToggleVirtualView(args: BuildControllerLayoutPropsArgs, openNotesView: () => void) {
-  return () => {
-    if (args.virtualView.isVirtualViewOpen) {
-      openNotesView();
-      return;
-    }
+export function createToggleVirtualView(args: BuildControllerLayoutPropsArgs) {
+  return (nodeId?: string) => {
     args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
     args.trash.closeTrashView();
-    args.virtualView.openVirtualView();
+    args.virtualView.openVirtualView(nodeId);
   };
 }

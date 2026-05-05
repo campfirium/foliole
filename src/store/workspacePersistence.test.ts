@@ -140,7 +140,7 @@ it('keeps the virtual root and saved virtual nodes after rehydrate', async () =>
   await Promise.resolve();
 
   const persisted = readPersistedWorkspacePayload()?.state;
-  expect(persisted?.nodesById[VIRTUAL_ROOT_NODE_ID]?.title).toBe('Virtual Nodes');
+  expect(persisted?.nodesById[VIRTUAL_ROOT_NODE_ID]?.title).toBe('Virtual');
   expect(persisted?.nodesById[virtualNodeId]).toMatchObject({
     parentNodeId: VIRTUAL_ROOT_NODE_ID,
     title: 'Saved virtual node',
@@ -158,7 +158,7 @@ it('keeps the virtual root and saved virtual nodes after rehydrate', async () =>
   await rehydrateWorkspaceFromLocalStorage(persisted);
 
   expect(useWorkspaceStore.getState().nodesById[VIRTUAL_ROOT_NODE_ID]).toMatchObject({
-    title: 'Virtual Nodes',
+    title: 'Virtual',
     specialKind: 'virtual-root'
   });
   expect(useWorkspaceStore.getState().nodesById[virtualNodeId]).toMatchObject({

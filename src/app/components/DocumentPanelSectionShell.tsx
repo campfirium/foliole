@@ -173,6 +173,7 @@ function renderDocumentPanelContent(args: {
       onOpenExternalLink={args.onOpenExternalLink}
       onPersistPdfViewState={args.props.onPersistPdfViewState}
       onSelectNode={args.props.onSelectNode}
+      onSelectNodeInVirtualView={args.props.onSelectNodeInVirtualView ?? args.props.onSelectNode}
       linkPanels={args.linkPanels}
       onCloseExternalLink={args.onCloseExternalLink}
       onLinkPanelStateChange={args.onLinkPanelStateChange}

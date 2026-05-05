@@ -2,7 +2,7 @@ import type { DatabaseDriver } from './driver.js';
 
 const SPECIAL_ROOT_NODE_RECORDS = {
   'special-inbox': { title: 'Inbox' },
-  'special-virtual-root': { title: 'Virtual Nodes' }
+  'special-virtual-root': { title: 'Virtual' }
 } as const;
 
 type SpecialRootNodeId = keyof typeof SPECIAL_ROOT_NODE_RECORDS;

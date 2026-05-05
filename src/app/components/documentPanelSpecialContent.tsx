@@ -2,10 +2,9 @@ import type { ComponentProps, ReactNode, RefObject } from 'react';
 
 import { ImageClozeCardView } from '../../features/image-cloze/components/ImageClozeCardView';
 import { isLegacyImageClozeNode } from '../../features/image-cloze/model/imageCloze';
-import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { isVirtualNode } from '../../features/nodes/model/specialNodes';
+import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -15,6 +14,7 @@ import { FolderListView } from './FolderListView';
 import { LinkPanelStack } from './LinkPanelStack';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
+import { VirtualDocumentSurface } from './VirtualDocumentSurface';
 
 function renderPdfLoadingSurface() {
   return (
@@ -33,21 +33,6 @@ function renderDocumentBody(activeNodeId: string | null, bodyProps: ComponentPro
     <div className="flex min-h-0 flex-1 flex-col" data-testid="document-panel-content-body">
       <DocumentPanelBody {...bodyProps} />
     </div>
-  );
-}
-
-function renderVirtualContent(
-  activeNode: Node,
-  nodesById: Record<string, Node>,
-  onNodeContentChange: (nodeId: string, content: string) => void,
-  onSelectNode: (nodeId: string) => void,
-  pdfCache: JSX.Element
-) {
-  return (
-    <>
-      {pdfCache}
-      <VirtualNodeDetailView node={activeNode} nodesById={nodesById} onSelectNode={onSelectNode} onUpdateFilter={onNodeContentChange} />
-    </>
   );
 }
 
@@ -193,10 +178,12 @@ export function resolveDocumentPanelContentBody(args: {
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
+  onSelectNodeInVirtualView: (nodeId: string) => void;
   pdfCache: JSX.Element;
   pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
   pdfHighlightLocators: PdfHighlightLocator[];
   shouldHideEditorBodyDuringSourceLoad: boolean;
+  trashedNodeIds: string[];
 }) {
   const specialContent = resolveSpecialDocumentContent(args);
   if (specialContent) {
@@ -222,13 +209,18 @@ export function resolveDocumentPanelContentBody(args: {
 }
 
 function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPanelContentBody>[0]) {
-  if (args.activeNode && isVirtualNode(args.activeNode)) {
-    return renderVirtualContent(
-      args.activeNode,
-      args.nodesById,
-      args.onNodeContentChange,
-      args.onSelectNode,
-      args.pdfCache
+  if (args.activeNode && (isVirtualNode(args.activeNode) || isVirtualRootNode(args.activeNode))) {
+    return (
+      <VirtualDocumentSurface
+        activeNode={args.activeNode}
+        nodeOrder={args.nodeOrder}
+        nodesById={args.nodesById}
+        onNodeContentChange={args.onNodeContentChange}
+        onSelectNode={args.onSelectNodeInVirtualView}
+        onSelectNodePath={args.onSelectNode}
+        pdfCache={args.pdfCache}
+        trashedNodeIds={args.trashedNodeIds}
+      />
     );
   }
   if (args.isFolderListView && args.activeNodeId) {

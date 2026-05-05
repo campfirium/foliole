@@ -81,6 +81,7 @@ export function buildDocumentSectionProps(
     onResetLayout: props.onResetLayout,
     onSelectBreadcrumbNode: props.onSelectBreadcrumbNode,
     onSelectNode: props.onSelectNode,
+    onSelectNodeInVirtualView: props.onSelectNodeInVirtualView,
     trashedNodeIds: props.trashedNodeIds
   };
 }

@@ -66,6 +66,7 @@ export interface DocumentPanelSectionProps {
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
+  onSelectNodeInVirtualView?: (nodeId: string) => void;
   onStartDocumentResize: (
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>

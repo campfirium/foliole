@@ -25,12 +25,10 @@ interface WindowTitleBarProps {
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
   isTrashViewOpen: boolean;
-  isVirtualViewOpen: boolean;
   listWidth: number;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onToggleRightSidebarVisibility: () => void;
   onOpenNotesView: () => void;
-  onOpenVirtualView: () => void;
   onOpenTrashView: () => void;
   onToggleListVisibility: () => void;
   rightSidebarWidth: number;
@@ -121,9 +119,7 @@ function SidebarToggleButton({
 function WindowLeadingActions({
   isListCollapsed,
   isTrashViewOpen,
-  isVirtualViewOpen,
   onOpenNotesView,
-  onOpenVirtualView,
   onToggleListVisibility
 }: WindowTitleBarProps) {
   if (isListCollapsed) {
@@ -145,9 +141,7 @@ function WindowLeadingActions({
         <div className="window-titlebar-leading-secondary">
           <WindowTitleBarViewButtons
             isTrashViewOpen={isTrashViewOpen}
-            isVirtualViewOpen={isVirtualViewOpen}
             onOpenNotesView={onOpenNotesView}
-            onOpenVirtualView={onOpenVirtualView}
           />
           <span aria-label="Current change timestamp" className="window-titlebar-left-timestamp">
             {workspaceChangeTimestamp}

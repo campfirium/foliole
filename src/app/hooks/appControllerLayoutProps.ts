@@ -27,7 +27,12 @@ import {
   createToggleListVisibility,
   createToggleRightSidebarVisibility
 } from './appControllerRuntimeActions';
-import { createOpenNotesView, createSelectNode, createToggleTrashView, createToggleVirtualView } from './appControllerTrashViewHandlers';
+import {
+  createOpenNotesView,
+  createSelectNode,
+  createToggleTrashView,
+  createToggleVirtualView
+} from './appControllerTrashViewHandlers';
 import { buildLayoutProps } from './layoutPropsBuilder';
 import { createCloseSettingsHandler, createOpenSettingsHandler } from './settingsOverlayRequest';
 import type { useAppRuntime } from './useAppRuntime';
@@ -153,6 +158,7 @@ function createLayoutDataArgs(
     requestedSettingsDialog: args.runtime.requestedSettingsDialog,
     isTrashViewOpen: args.trash.isTrashViewOpen,
     isVirtualViewOpen: args.virtualView.isVirtualViewOpen,
+    activeVirtualNodeId: args.virtualView.activeVirtualNodeId,
     isViewingTrashNode: args.runtime.isViewingTrashNode,
     listWidth: args.ws.listWidth,
     nowIso: args.nowIso,
@@ -217,8 +223,8 @@ function createLayoutHandlerArgs(
     onEnterImmersiveEdit: () => undefined,
     onEnterImmersiveMode: () => args.runtime.setIsImmersiveMode(true),
     onExitImmersiveMode: () => args.runtime.setIsImmersiveMode(false),
-    onOpenTrashView: createToggleTrashView(args, openNotesView),
-    onOpenVirtualView: createToggleVirtualView(args, openNotesView),
+    onOpenTrashView: createToggleTrashView(args),
+    onOpenVirtualView: createToggleVirtualView(args),
     onResetLayout: args.ws.resetLayout,
     onRunImportFile: args.runImportFile,
     onRunImportFolder: args.runImportDirectory,

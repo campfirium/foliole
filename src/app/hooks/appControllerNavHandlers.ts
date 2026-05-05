@@ -25,6 +25,12 @@ export function createLayoutNav(
       onSelectNode(nodeId, ancestorTarget.focusAnchor);
     },
     onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => onSelectNode(nodeId, focusAnchor),
+    onSelectNodeInVirtualView: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => {
+      args.runtime.flushPendingEditorDraft();
+      args.runtime.setIsViewingTrashNode(false);
+      args.trash.closeTrashView();
+      args.nav.handleSelectNode(nodeId, focusAnchor ?? null);
+    },
     shouldSuppressNavigationSelectionRestore: args.nav.shouldSuppressSelectionRestore
   };
 }

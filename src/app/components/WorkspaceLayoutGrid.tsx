@@ -170,16 +170,20 @@ function renderListColumns(args: {
     <div aria-hidden={args.isCollapsed} className="flex min-w-0 flex-col overflow-hidden" key="list">
       <WorkspaceListArea
         activeNodeId={args.props.activeNodeId}
+        activeVirtualNodeId={args.props.activeVirtualNodeId ?? null}
         isStudyMode={args.props.isStudyMode}
         isTrashViewOpen={args.props.isTrashViewOpen}
         isVirtualViewOpen={args.props.isVirtualViewOpen}
         isWorkspaceHydrated={args.props.isWorkspaceHydrated}
         listNodesById={args.listNodesById}
+        nodesById={args.props.nodesById}
         nodeOrder={args.props.nodeOrder}
         onOpenMoveToNode={args.props.onOpenMoveToNode}
         onOpenNotesView={args.props.onOpenNotesView}
         onOpenTrashView={args.props.onOpenTrashView}
+        onOpenVirtualView={args.props.onOpenVirtualView}
         onSelectNode={args.onSelectNode}
+        onSelectNodeInVirtualView={args.props.onSelectNodeInVirtualView}
         onSelectTrashNode={args.props.onSelectTrashNode}
         reviewCompletedCount={args.props.reviewCompletedCount}
         reviewDueCount={args.props.reviewDueCount}

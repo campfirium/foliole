@@ -258,6 +258,7 @@ it('saves the virtual node keyword through the detail form', () => {
   expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'reader');
 });
 
+
 it('shows a loading state before workspace hydration finishes', () => {
   renderSectionWithProps({
     activeNodeId: null,

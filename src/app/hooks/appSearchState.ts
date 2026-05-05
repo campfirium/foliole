@@ -16,6 +16,9 @@ interface SearchStateArgs {
   trash: {
     closeTrashView: () => void;
   };
+  virtualView?: {
+    closeVirtualView: () => void;
+  };
   ws: {
     nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'];
     nodeOrder: string[];
@@ -44,6 +47,7 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
     () => args.runtime.setIsSearchPaletteOpen(false),
     (result) => {
       args.trash.closeTrashView();
+      args.virtualView?.closeVirtualView();
       if (result.kind === 'node' && result.nodeMatch) {
         const existingViewState = args.ws.nodeViewById[result.id];
         args.ws.setNodeViewState(result.id, {

@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { onWindowKeydown } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
 import { buildNodeTree } from '../model/nodeTree';
-import { INBOX_NODE_ID, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
+import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { useCollapsedNodeState } from './NodeListCollapseState';
@@ -12,6 +12,7 @@ import { useNodeListState, useNodeSelectionHandler } from './NodeListTreeState';
 
 export interface NodeListTreeProps {
   activeNodeId: string | null;
+  isSelectionScopeActive?: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   nodeOrder: string[];
@@ -21,6 +22,7 @@ export interface NodeListTreeProps {
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
+  showVirtualCreateAction?: boolean;
   showTitleSearch?: boolean;
 }
 
@@ -66,7 +68,12 @@ function useNodeListTreeData(
   trashedNodeIds: string[]
 ): NodeListTreeData {
   const virtualNodeOrder = useMemo(
-    () => nodeOrder.filter((id) => !trashedNodeIds.includes(id) && isVirtualNode(nodesById[id])),
+    () =>
+      nodeOrder.filter(
+        (id) =>
+          id === VIRTUAL_ROOT_NODE_ID ||
+          (!trashedNodeIds.includes(id) && isVirtualNode(nodesById[id]))
+      ),
     [nodeOrder, nodesById, trashedNodeIds]
   );
   const visibleNodeOrder = useMemo(
@@ -95,6 +102,7 @@ function useNodeListTreeData(
 function useNodeListTreeControllers(args: {
   activeNodeId: string | null;
   collapsedState: ReturnType<typeof useCollapsedNodeState>;
+  isSelectionScopeActive: boolean;
   nodesById: WorkspaceListNodesById;
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
@@ -114,6 +122,7 @@ function useNodeListTreeControllers(args: {
   });
   const handleSelectNode = useNodeSelectionHandler({
     activeNodeId: args.activeNodeId,
+    isSelectionScopeActive: args.isSelectionScopeActive,
     nodesById: args.nodesById,
     onSelectNode: args.onSelectNode,
     onSelectTrashNode: args.onSelectTrashNode,
@@ -129,6 +138,7 @@ function useNodeListTreeControllers(args: {
 
 export function useNodeListTreeModel({
   activeNodeId,
+  isSelectionScopeActive = true,
   nodeOrder,
   nodesById,
   onSelectNode,
@@ -146,15 +156,16 @@ export function useNodeListTreeModel({
   });
   const state = useNodeListState(
     activeNodeId,
+    isSelectionScopeActive,
     nodeOrder,
     nodesById,
     selectedTrashNodeId,
-    collapsedState.collapsedNoteNodeIds,
-    collapsedState.collapsedTrashNodeIds
+    collapsedState.collapsedNoteNodeIds
   );
   const controllers = useNodeListTreeControllers({
     activeNodeId,
     collapsedState,
+    isSelectionScopeActive,
     nodesById,
     onSelectNode,
     onSelectTrashNode,
@@ -164,6 +175,16 @@ export function useNodeListTreeModel({
     trashRowsAll: state.trashRowsAll
   });
 
+  return buildNodeListTreeModelResult(workspace, treeData, controllers, collapsedState, state);
+}
+
+function buildNodeListTreeModelResult(
+  workspace: ReturnType<typeof useNodeWorkspaceActions>,
+  treeData: NodeListTreeData,
+  controllers: ReturnType<typeof useNodeListTreeControllers>,
+  collapsedState: ReturnType<typeof useCollapsedNodeState>,
+  state: ReturnType<typeof useNodeListState>
+) {
   return {
     collapse: controllers.collapse,
     collapsedState,

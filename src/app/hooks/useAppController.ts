@@ -9,23 +9,19 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import { useCurrentReviewPreview } from './appControllerHelpers';
 import { measureSelectionComputation } from './appControllerInstrumentation';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
-import { buildControllerPaletteState } from './appControllerPaletteState';
 import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
-import { buildControllerGoToNodeState } from './appGoToNodeState';
 import type { AppGoToNodeState } from './appGoToNodeState';
-import { buildHotkeySettings, type AppHotkeySettings } from './appHotkeySettings';
-import { buildControllerMoveToNodeState } from './appMoveToNodeState';
+import type { AppHotkeySettings } from './appHotkeySettings';
 import type { AppSearchState } from './appSearchState';
-import { buildControllerSearchState } from './appSearchState';
 import { countDueReviewNodes } from './layoutPropsBuilder';
 import {
   DOCUMENT_SHORTCUT_COMMAND_IDS,
   REVIEW_SHORTCUT_COMMAND_IDS,
   useCommandShortcutState
 } from './reviewHotkeysState';
+import { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import { useControllerPaletteItems } from './useControllerPaletteItems';
 import { useFormalImport } from './useFormalImport';
-import { useNativeCommandMenu } from './useNativeCommandMenu';
 import { usePriorityQuickSet } from './usePriorityQuickSet';
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
@@ -202,9 +198,15 @@ export function useAppController(): AppControllerResult {
   const hotkeys = useCommandShortcutState([...REVIEW_SHORTCUT_COMMAND_IDS, ...DOCUMENT_SHORTCUT_COMMAND_IDS]);
   const priorityQuickSet = useControllerPriorityQuickSet({ hotkeys, runtime: controller.runtime, ws });
   const reviewPreview = useCurrentReviewPreview(isStudyMode, ws, getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings));
-  const currentReviewNode = ws.reviewSession.currentNodeId ? ws.nodesById[ws.reviewSession.currentNodeId] : undefined;
-  const isCurrentReviewItemGradable = getReviewItemKind(currentReviewNode) === 'fsrs';
-  const isReviewEditing = useReviewEditingState({ hotkeys, isCurrentReviewItemGradable, isStudyMode, runtime: controller.runtime, ws });
+  const isCurrentReviewItemGradable =
+    (ws.reviewSession.currentNodeId ? getReviewItemKind(ws.nodesById[ws.reviewSession.currentNodeId]) : null) === 'fsrs';
+  const isReviewEditing = useReviewEditingState({
+    hotkeys,
+    isCurrentReviewItemGradable,
+    isStudyMode,
+    runtime: controller.runtime,
+    ws
+  });
   const { layoutProps, paletteItems } = useDerivedControllerState({
     controller,
     exitStudyMode,
@@ -221,30 +223,23 @@ export function useAppController(): AppControllerResult {
     startStudyMode,
     ws
   });
-  const paletteState = buildControllerPaletteState({
+  const auxiliaryState = useControllerAuxiliaryState({
     appearance,
+    controller,
     formalImport,
+    hotkeys,
     isStudyMode,
     layoutProps,
-    nav: controller.nav,
     paletteItems,
-    runtime: controller.runtime,
-    study: controller.study,
-    trash: controller.trash,
     ws
   });
-  const goToNodeState = buildControllerGoToNodeState({ nav: controller.nav, runtime: controller.runtime, trash: controller.trash, ws });
-  const moveToNodeState = buildControllerMoveToNodeState({ runtime: controller.runtime, ws });
-  const searchState = buildControllerSearchState({ nav: controller.nav, runtime: controller.runtime, trash: controller.trash, ws });
-
-  useNativeCommandMenu(paletteState.items, paletteState.onRunCommand);
 
   return {
-    hotkeySettings: buildHotkeySettings(paletteItems, hotkeys),
-    goToNodeState,
-    moveToNodeState,
+    hotkeySettings: auxiliaryState.hotkeySettings,
+    goToNodeState: auxiliaryState.goToNodeState,
+    moveToNodeState: auxiliaryState.moveToNodeState,
     layoutProps,
-    paletteState,
-    searchState
+    paletteState: auxiliaryState.paletteState,
+    searchState: auxiliaryState.searchState
   };
 }

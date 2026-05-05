@@ -99,7 +99,7 @@ export function NodeListRows(props: NodeListRowsProps) {
     return props.isTrashViewOpen ? (
       <AppEmptyState description="Deleted nodes will appear here." title="Trash is empty" />
     ) : props.isVirtualViewOpen ? (
-      <AppEmptyState description="Create a virtual node to save a reusable filtered view." title="No virtual nodes" />
+      <AppEmptyState description="Create a virtual folder to save a reusable filtered view." title="No virtual folders" />
     ) : (
       <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
     );

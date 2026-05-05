@@ -9,7 +9,7 @@ export interface VirtualNodeCommandDefinition {
 
 export const VIRTUAL_NODE_COMMAND: VirtualNodeCommandDefinition = {
   appCommandId: VIRTUAL_NODE_APP_COMMAND_ID,
-  listLabel: 'Create Virtual Node',
-  menuLabel: 'Create Virtual Node',
-  paletteTitle: 'Create Virtual Node'
+  listLabel: 'Create Virtual Folder',
+  menuLabel: 'Create Virtual Folder',
+  paletteTitle: 'Create Virtual Folder'
 };

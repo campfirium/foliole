@@ -28,10 +28,8 @@ function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>
       isListCollapsed={false}
       isRightSidebarCollapsed={false}
       isTrashViewOpen={false}
-      isVirtualViewOpen={false}
       listWidth={320}
       onOpenNotesView={() => undefined}
-      onOpenVirtualView={() => undefined}
       onOpenTrashView={() => undefined}
       onSelectRightPanel={() => undefined}
       onToggleListVisibility={() => undefined}
@@ -173,17 +171,15 @@ describe('WindowTitleBar view switches', () => {
 
     expect(screen.getByRole('button', { name: 'Toggle left panel' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Notes' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Virtual Nodes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Virtual' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trash' })).not.toBeInTheDocument();
   });
 
-  it('renders the virtual node switch after notes without a separate trash button', () => {
+  it('keeps notes as the only left-side view switch and does not add a trash button', () => {
     renderTitleBar();
 
-    const notesButton = screen.getByRole('button', { name: 'Notes' });
-    const virtualButton = screen.getByRole('button', { name: 'Virtual Nodes' });
-
-    expect(notesButton.compareDocumentPosition(virtualButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Virtual' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Trash' })).toBeNull();
   });
 });

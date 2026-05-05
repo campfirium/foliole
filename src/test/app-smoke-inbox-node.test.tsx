@@ -7,7 +7,11 @@ import { App } from '../app/App';
 import type { ElectronAPI } from '../shared/platform/electronApi';
 
 async function getNodeListPanel() {
-  return screen.findByRole('complementary', { name: 'Node list panel' });
+  return (await screen.findAllByRole('complementary', { name: 'Node list panel' }))[0];
+}
+
+async function getVirtualListPanel() {
+  return (await screen.findAllByRole('complementary', { name: 'Node list panel' }))[1];
 }
 
 function createImportedWorkspaceSnapshot(title = 'Imported note') {
@@ -139,15 +143,15 @@ it('shows Inbox in the node tree and opens the folder list surface', async () =>
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
 });
 
-it('keeps virtual nodes out of the main tree and opens the virtual list from the titlebar switch', async () => {
+it('keeps virtual folders out of the main tree and shows a separate lower Virtual section', async () => {
   render(<App />);
 
-  expect(within(await getNodeListPanel()).queryByRole('treeitem', { name: 'Virtual Nodes' })).not.toBeInTheDocument();
+  expect(within(await getNodeListPanel()).queryByRole('treeitem', { name: 'Virtual' })).not.toBeInTheDocument();
+  fireEvent.click(within(await getVirtualListPanel()).getByRole('treeitem', { name: 'Virtual' }));
 
-  fireEvent.click(screen.getByRole('button', { name: 'Virtual Nodes' }));
-
-  expect(screen.getByText('No virtual nodes')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Create Virtual Node' })).toBeInTheDocument();
+  expect(within(await getVirtualListPanel()).getByRole('treeitem', { name: 'Virtual' })).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toHaveTextContent('No virtual folders yet');
+  expect(screen.queryByRole('button', { name: 'Create Virtual Folder' })).not.toBeInTheDocument();
 });
 
 it('opens import management from the left toolbar instead of replacing Inbox', async () => {

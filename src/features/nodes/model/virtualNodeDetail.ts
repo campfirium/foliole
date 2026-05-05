@@ -1,6 +1,7 @@
 import { VIRTUAL_NODE_FILTER_VERSION, type VirtualNodeFilter } from '../../../../lib/core/nodes/virtualNodeFilter';
 
 import type { Node } from './nodeTypes';
+import { VIRTUAL_ROOT_NODE_ID, isVirtualNode } from './specialNodes';
 
 function normalizeSearchText(value: string) {
   return value.trim().toLocaleLowerCase();
@@ -88,4 +89,45 @@ export function getVirtualNodeResultNodes(
   filter: VirtualNodeFilter | null | undefined
 ) {
   return resolveVirtualNodeResultNodes(getVirtualNodeResultReferences(activeNodeId, nodesById, filter), nodesById);
+}
+
+export function getOrderedVirtualNodeResultNodes(
+  activeNodeId: string,
+  nodeOrder: string[],
+  nodesById: Record<string, Node>,
+  filter: VirtualNodeFilter | null | undefined
+) {
+  const resultIds = new Set(
+    getVirtualNodeResultReferences(activeNodeId, nodesById, filter).map((reference) => reference.sourceNodeId)
+  );
+
+  return nodeOrder
+    .map((nodeId) => nodesById[nodeId])
+    .filter((node): node is Node => Boolean(node && resultIds.has(node.id)));
+}
+
+export function getVirtualRootResultNodes(
+  nodeOrder: string[],
+  nodesById: Record<string, Node>,
+  trashedNodeIds: string[] = []
+) {
+  const resultIds = new Set<string>();
+
+  nodeOrder.forEach((nodeId) => {
+    if (trashedNodeIds.includes(nodeId)) {
+      return;
+    }
+    const node = nodesById[nodeId];
+    if (!isVirtualNode(node) || node.parentNodeId !== VIRTUAL_ROOT_NODE_ID) {
+      return;
+    }
+
+    getVirtualNodeResultReferences(node.id, nodesById, node.virtualFilter).forEach((reference) => {
+      resultIds.add(reference.sourceNodeId);
+    });
+  });
+
+  return nodeOrder
+    .map((nodeId) => nodesById[nodeId])
+    .filter((node): node is Node => Boolean(node && !trashedNodeIds.includes(node.id) && resultIds.has(node.id)));
 }

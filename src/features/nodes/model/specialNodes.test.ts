@@ -40,7 +40,7 @@ describe('ensureInboxNodeInSnapshot', () => {
     expect(isInboxNode(snapshot.nodesById[INBOX_NODE_ID])).toBe(true);
     expect(isVirtualRootNode(snapshot.nodesById[VIRTUAL_ROOT_NODE_ID])).toBe(true);
     expect(snapshot.nodesById[INBOX_NODE_ID]?.title).toBe('Inbox');
-    expect(snapshot.nodesById[VIRTUAL_ROOT_NODE_ID]?.title).toBe('Virtual Nodes');
+    expect(snapshot.nodesById[VIRTUAL_ROOT_NODE_ID]?.title).toBe('Virtual');
     expect(snapshot.trashedNodeIds).toEqual([]);
   });
 });

@@ -1,31 +1,35 @@
 import { memo } from 'react';
 
-import { NodeListHeader } from '../../features/nodes/components/NodeListHeader';
+import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
-import { AppEmptyState } from '../../shared/ui';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+import { WorkspaceListEmptyState, WorkspaceListLoadingState } from './WorkspaceListStates';
 import { WorkspaceListStudyStatusBar } from './WorkspaceListStudyStatusBar';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
 export interface WorkspaceListAreaProps {
   activeNodeId: string | null;
+  activeVirtualNodeId: string | null;
   isStudyMode: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   isWorkspaceHydrated?: boolean;
   listNodesById: WorkspaceListNodesById;
+  nodesById: Record<string, Node>;
   nodeOrder: string[];
   onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
   onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
   onOpenTrashView: WorkspaceLayoutProps['onOpenTrashView'];
+  onOpenVirtualView: WorkspaceLayoutProps['onOpenVirtualView'];
   onSelectNode: (nodeId: string) => void;
+  onSelectNodeInVirtualView: (nodeId: string) => void;
   onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
   reviewCompletedCount: number;
   reviewDueCount: number;
@@ -50,25 +54,31 @@ function shouldShowWorkspaceEmptyState(args: {
   );
 
   return (
-    args.isWorkspaceHydrated &&
-    !args.isTrashViewOpen &&
-    !args.isVirtualViewOpen &&
-    !hasVisibleWorkspaceNodes
+    Boolean(
+      args.isWorkspaceHydrated &&
+      !args.isTrashViewOpen &&
+      !args.isVirtualViewOpen &&
+      !hasVisibleWorkspaceNodes
+    )
   );
 }
 
 export const WorkspaceListArea = memo(function WorkspaceListArea({
   activeNodeId,
+  activeVirtualNodeId,
   isStudyMode,
   isTrashViewOpen,
   isVirtualViewOpen,
   isWorkspaceHydrated,
   listNodesById,
+  nodesById,
   nodeOrder,
   onOpenMoveToNode,
   onOpenNotesView,
   onOpenTrashView,
+  onOpenVirtualView,
   onSelectNode,
+  onSelectNodeInVirtualView,
   onSelectTrashNode,
   reviewCompletedCount,
   reviewDueCount,
@@ -77,36 +87,30 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
   selectedTrashNodeId,
   trashedNodeIds
 }: WorkspaceListAreaProps) {
-  const shouldShowEmptyState = shouldShowWorkspaceEmptyState({
-    isTrashViewOpen,
-    isVirtualViewOpen,
-    isWorkspaceHydrated,
-    nodeOrder,
-    trashedNodeIds
-  });
+  const shouldShowEmptyState = shouldShowWorkspaceEmptyState({ isTrashViewOpen, isVirtualViewOpen, isWorkspaceHydrated, nodeOrder, trashedNodeIds });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg-panel text-foreground">
-      {!isWorkspaceHydrated ? (
-        <WorkspaceListLoadingState />
-      ) : shouldShowEmptyState ? (
-        <WorkspaceListEmptyState />
-      ) : (
-        <WorkspaceDualListContent
-          activeNodeId={activeNodeId}
-          isTrashViewOpen={isTrashViewOpen}
-          isVirtualViewOpen={isVirtualViewOpen}
-          listNodesById={listNodesById}
-          nodeOrder={nodeOrder}
-          onOpenMoveToNode={onOpenMoveToNode}
-          onOpenNotesView={onOpenNotesView}
-          onOpenTrashView={onOpenTrashView}
-          onSelectNode={onSelectNode}
-          onSelectTrashNode={onSelectTrashNode}
-          selectedTrashNodeId={selectedTrashNodeId}
-          trashedNodeIds={trashedNodeIds}
-        />
-      )}
+      {renderWorkspaceListBody({
+        activeNodeId,
+        activeVirtualNodeId,
+        isTrashViewOpen,
+        isVirtualViewOpen,
+        isWorkspaceHydrated,
+        listNodesById,
+        nodesById,
+        nodeOrder,
+        onOpenMoveToNode,
+        onOpenNotesView,
+        onOpenTrashView,
+        onOpenVirtualView,
+        onSelectNode,
+        onSelectNodeInVirtualView,
+        onSelectTrashNode,
+        selectedTrashNodeId,
+        shouldShowEmptyState,
+        trashedNodeIds
+      })}
       <WorkspaceListStudyStatusBar
         isStudyMode={isStudyMode}
         reviewCompletedCount={reviewCompletedCount}
@@ -118,51 +122,53 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
   );
 });
 
-function WorkspaceListLoadingState() {
+function renderWorkspaceListBody(
+  props: Pick<
+    WorkspaceListAreaProps,
+    | 'activeNodeId'
+    | 'activeVirtualNodeId'
+    | 'isTrashViewOpen'
+    | 'isVirtualViewOpen'
+    | 'isWorkspaceHydrated'
+    | 'listNodesById'
+    | 'nodesById'
+    | 'nodeOrder'
+    | 'onOpenMoveToNode'
+    | 'onOpenNotesView'
+    | 'onOpenTrashView'
+    | 'onOpenVirtualView'
+    | 'onSelectNode'
+    | 'onSelectNodeInVirtualView'
+    | 'onSelectTrashNode'
+    | 'selectedTrashNodeId'
+    | 'trashedNodeIds'
+  > & { shouldShowEmptyState: boolean }
+) {
+  if (!props.isWorkspaceHydrated) {
+    return <WorkspaceListLoadingState />;
+  }
+  if (props.shouldShowEmptyState) {
+    return <WorkspaceListEmptyState />;
+  }
   return (
-    <aside
-      aria-busy="true"
-      aria-label="Loading note list"
-      className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground"
-    >
-      <NodeListHeader
-        isTrashViewOpen={false}
-        isVirtualViewOpen={false}
-        onCollapseAll={() => undefined}
-        onCreateCommand={() => undefined}
-        onEmptyTrash={() => undefined}
-        onExpandAll={() => undefined}
-        onOpenNotesView={() => undefined}
-        onSearchQueryChange={() => undefined}
-        searchQuery=""
-        trashCount={0}
-      />
-      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div
-            aria-label="Loading note list indicator"
-            className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-foreground/55"
-          />
-          <p className="m-0 text-sm text-foreground/65">Loading notes</p>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-function WorkspaceListEmptyState() {
-  return (
-    <aside aria-label="Node list panel" className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground">
-      <div className="flex min-h-[40px] items-center justify-end gap-2 px-3">
-        <div className="h-8 w-8 rounded-sm bg-foreground/[0.05]" />
-      </div>
-      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-8">
-        <AppEmptyState
-          description="Create your first note from the list toolbar to start writing."
-          title="No notes yet"
-        />
-      </div>
-    </aside>
+    <WorkspaceDualListContent
+      activeNodeId={props.activeNodeId}
+      activeVirtualNodeId={props.activeVirtualNodeId}
+      isTrashViewOpen={props.isTrashViewOpen}
+      isVirtualViewOpen={props.isVirtualViewOpen}
+      listNodesById={props.listNodesById}
+      nodesById={props.nodesById}
+      nodeOrder={props.nodeOrder}
+      onOpenMoveToNode={props.onOpenMoveToNode}
+      onOpenNotesView={props.onOpenNotesView}
+      onOpenTrashView={props.onOpenTrashView}
+      onOpenVirtualView={props.onOpenVirtualView}
+      onSelectNode={props.onSelectNode}
+      onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
+      onSelectTrashNode={props.onSelectTrashNode}
+      selectedTrashNodeId={props.selectedTrashNodeId}
+      trashedNodeIds={props.trashedNodeIds}
+    />
   );
 }
 

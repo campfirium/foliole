@@ -53,7 +53,10 @@ function useScopedNodeOrders(nodeOrder: string[], nodesById: WorkspaceListNodesB
     [nodeOrder, nodesById, trashedNodeIds]
   );
   const virtualNodeOrder = useMemo(
-    () => nodeOrder.filter((id) => !trashedNodeIds.includes(id) && isVirtualNode(nodesById[id])),
+    () =>
+      nodeOrder.filter(
+        (id) => !trashedNodeIds.includes(id) && (isVirtualRootNode(nodesById[id]) || isVirtualNode(nodesById[id]))
+      ),
     [nodeOrder, nodesById, trashedNodeIds]
   );
   const trashedNodeOrder = useMemo(
@@ -86,11 +89,11 @@ function useScopedNodeTrees(
 
 export function useNodeListState(
   activeNodeId: string | null,
+  isSelectionScopeActive: boolean,
   nodeOrder: string[],
   nodesById: WorkspaceListNodesById,
   selectedTrashNodeId: string | null,
-  collapsedNoteNodeIds: ReadonlySet<string>,
-  collapsedTrashNodeIds: ReadonlySet<string>
+  collapsedNoteNodeIds: ReadonlySet<string>
 ): NodeListState {
   const trashedNodeIds = useWorkspaceStore((state) => state.trashedNodeIds);
   const scopedNodeOrder = useScopedNodeOrders(nodeOrder, nodesById, trashedNodeIds);
@@ -109,6 +112,7 @@ export function useNodeListState(
   );
   const selectionState = useNodeListSelection(
     activeNodeId,
+    isSelectionScopeActive,
     nodesById,
     selectedTrashNodeId,
     trashedNodeIds
@@ -131,6 +135,7 @@ export function useNodeListState(
 
 function useNodeListSelection(
   activeNodeId: string | null,
+  isSelectionScopeActive: boolean,
   nodesById: WorkspaceListNodesById,
   selectedTrashNodeId: string | null,
   trashedNodeIds: string[]
@@ -139,6 +144,14 @@ function useNodeListSelection(
     activeNodeId ? [activeNodeId] : []
   );
   const [selectionAnchorNodeId, setSelectionAnchorNodeId] = useState<string | null>(activeNodeId);
+
+  useEffect(() => {
+    if (isSelectionScopeActive) {
+      return;
+    }
+    setSelectedNodeIds([]);
+    setSelectionAnchorNodeId(null);
+  }, [isSelectionScopeActive]);
 
   useEffect(() => {
     setSelectedNodeIds((prev) => prev.filter((id) => Boolean(nodesById[id])));
@@ -157,7 +170,12 @@ function useNodeListSelection(
     setSelectionAnchorNodeId(activeNodeId);
   }, [activeNodeId, trashedNodeIds]);
 
-  return { selectedNodeIds, setSelectedNodeIds, selectionAnchorNodeId, setSelectionAnchorNodeId };
+  return {
+    selectedNodeIds: isSelectionScopeActive ? selectedNodeIds : [],
+    setSelectedNodeIds,
+    selectionAnchorNodeId: isSelectionScopeActive ? selectionAnchorNodeId : null,
+    setSelectionAnchorNodeId
+  };
 }
 
 export function handleToggleSelection(
@@ -183,6 +201,7 @@ export function handleToggleSelection(
 
 export function useNodeSelectionHandler({
   activeNodeId,
+  isSelectionScopeActive,
   nodesById,
   onSelectNode,
   onSelectTrashNode,
@@ -191,6 +210,7 @@ export function useNodeSelectionHandler({
   trashedNodeIds
 }: {
   activeNodeId: string | null;
+  isSelectionScopeActive: boolean;
   nodesById: WorkspaceListNodesById;
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
@@ -200,10 +220,14 @@ export function useNodeSelectionHandler({
 }) {
   return useCallback((nodeId: string, modifiers?: NodeSelectModifiers) => {
     const isTrashNode = trashedNodeIds.includes(nodeId);
-    const isVirtualListNode = isVirtualNode(nodesById[nodeId]);
+    const isVirtualListNode = isVirtualRootNode(nodesById[nodeId]) || isVirtualNode(nodesById[nodeId]);
     const scopeIds = isTrashNode ? state.trashRowIds : isVirtualListNode ? state.virtualRowIds : state.noteRowIds;
     const scoped = state.selectedNodeIds.filter((id) =>
-      isTrashNode ? trashedNodeIds.includes(id) : isVirtualListNode ? isVirtualNode(nodesById[id]) : !trashedNodeIds.includes(id)
+      isTrashNode
+        ? trashedNodeIds.includes(id)
+        : isVirtualListNode
+          ? isVirtualRootNode(nodesById[id]) || isVirtualNode(nodesById[id])
+          : !trashedNodeIds.includes(id)
     );
     const notify = isTrashNode ? onSelectTrashNode : onSelectNode;
     const fallbackAnchor = isTrashNode ? (selectedTrashNodeId ?? nodeId) : (activeNodeId ?? nodeId);
@@ -227,5 +251,5 @@ export function useNodeSelectionHandler({
     state.setSelectedNodeIds([nodeId]);
     state.setSelectionAnchorNodeId(nodeId);
     notify(nodeId);
-  }, [activeNodeId, nodesById, onSelectNode, onSelectTrashNode, selectedTrashNodeId, state, trashedNodeIds]);
+  }, [activeNodeId, isSelectionScopeActive, nodesById, onSelectNode, onSelectTrashNode, selectedTrashNodeId, state, trashedNodeIds]);
 }

@@ -49,6 +49,7 @@ interface NodeListPanelProps {
   searchQuery: string;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
+  showVirtualCreateAction: boolean;
   showTitleSearch: boolean;
   trashRowIds: string[];
   trashRowsLength: number;
@@ -91,9 +92,7 @@ function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeo
       role="tree"
       style={{ gap: `${resolveNodeListRowGap(props.rowSpacing)}px` }}
       onContextMenu={handleBlankAreaContextMenu}
-      onDoubleClick={(event) =>
-        event.target === event.currentTarget && (props.isVirtualViewOpen ? props.createVirtualNode() : props.createGlobalNode(''))
-      }
+      onDoubleClick={(event) => event.target === event.currentTarget && !props.isVirtualViewOpen && props.createGlobalNode('')}
       onDragOver={(event) => event.target === event.currentTarget && drag.onDragOverRoot(event)}
       onDrop={(event) => event.target === event.currentTarget && drag.onDropRoot(event)}
     >
@@ -159,6 +158,7 @@ function NodeListPanel(props: NodeListPanelProps) {
       <NodeListHeader
         isTrashViewOpen={props.isTrashViewOpen}
         isVirtualViewOpen={props.isVirtualViewOpen}
+        showVirtualCreateAction={props.showVirtualCreateAction}
         onCollapseAll={props.collapse.collapseAllNotes}
         onCreateCommand={(commandId) => {
           if (commandId === VIRTUAL_NODE_APP_COMMAND_ID) {
@@ -220,6 +220,7 @@ interface NodeListTreeContentProps {
   restoreNode: (nodeId: string) => void;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
+  showVirtualCreateAction?: boolean;
   showTitleSearch: boolean;
   state: NodeListState;
 }
@@ -259,6 +260,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         searchQuery={searchQuery}
         selectedNodeIds={props.selectedNodeIds}
         selectedTrashNodeId={props.selectedTrashNodeId}
+        showVirtualCreateAction={props.showVirtualCreateAction ?? true}
         showTitleSearch={props.showTitleSearch}
         trashRowIds={props.state.trashRowIds}
         trashRowsLength={props.state.trashRows.length}

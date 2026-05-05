@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createSelectNode, createToggleTrashView } from './appControllerTrashViewHandlers';
+import { createSelectNode, createToggleTrashView, createToggleVirtualView } from './appControllerTrashViewHandlers';
 
 function createSelectNodeHarness(args: {
   anchorLink: {
@@ -169,20 +169,52 @@ describe('createToggleTrashView', () => {
   });
 
   it('enters the trash runtime mode when opening trash', () => {
+    const closeVirtualView = vi.fn();
     const flushPendingEditorDraft = vi.fn();
     const setIsViewingTrashNode = vi.fn();
     const openTrashView = vi.fn();
     const toggleTrashView = createToggleTrashView({
       runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
       trash: { isTrashViewOpen: false, openTrashView },
-      virtualView: {},
+      virtualView: { closeVirtualView },
       ws: {}
-    } as never, vi.fn());
+    } as never);
 
     toggleTrashView();
 
     expect(flushPendingEditorDraft).toHaveBeenCalledTimes(1);
     expect(setIsViewingTrashNode).toHaveBeenCalledWith(true);
+    expect(closeVirtualView).toHaveBeenCalledTimes(1);
     expect(openTrashView).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('createToggleVirtualView', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('always switches into virtual view instead of toggling back out when selecting the current virtual folder', () => {
+    const closeTrashView = vi.fn();
+    const flushPendingEditorDraft = vi.fn();
+    const openVirtualView = vi.fn();
+    const setIsViewingTrashNode = vi.fn();
+    const openVirtual = createToggleVirtualView({
+      runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+      trash: { closeTrashView },
+      virtualView: {
+        activeVirtualNodeId: 'virtual-a',
+        isVirtualViewOpen: true,
+        openVirtualView
+      },
+      ws: {}
+    } as never);
+
+    openVirtual('virtual-a');
+
+    expect(flushPendingEditorDraft).toHaveBeenCalledTimes(1);
+    expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
+    expect(closeTrashView).toHaveBeenCalledTimes(1);
+    expect(openVirtualView).toHaveBeenCalledWith('virtual-a');
   });
 });

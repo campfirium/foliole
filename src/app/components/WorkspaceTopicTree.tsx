@@ -27,6 +27,8 @@ import { WorkspaceTopicTreeRows } from './WorkspaceTopicTreeRows';
 interface WorkspaceTopicTreeProps {
   activeFolderId: string;
   activeNodeId: string | null;
+  emptyStateDescription?: string;
+  emptyStateTitle?: string;
   itemIds: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
@@ -61,14 +63,15 @@ function useWorkspaceTopicTreeInteraction(args: {
   const actions = useWorkspaceTopicTreeActions();
   const topicTreeState = useNodeListState(
     args.activeNodeId,
+    true,
     args.itemIds,
     args.nodesById,
     null,
-    args.collapsedNodeIds,
-    new Set()
+    args.collapsedNodeIds
   );
   const handleSelectNode = useNodeSelectionHandler({
     activeNodeId: args.activeNodeId,
+    isSelectionScopeActive: true,
     nodesById: args.nodesById,
     onSelectNode: args.onSelectNode,
     onSelectTrashNode: () => undefined,
@@ -108,6 +111,8 @@ function renderWorkspaceTopicTreeBody(args: {
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
   contextMenu: ReturnType<typeof useNodeListContextMenu>;
+  emptyStateDescription: string;
+  emptyStateTitle: string;
   nodesById: WorkspaceListNodesById;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
   onToggleCollapse: (nodeId: string) => void;
@@ -127,8 +132,8 @@ function renderWorkspaceTopicTreeBody(args: {
       {args.visibleRows.length === 0 ? (
         <div className="flex min-h-full items-center justify-center px-3 py-6">
           <AppEmptyState
-            description="Select a folder with topics, or add a topic inside the current folder."
-            title="No topics in this folder"
+            description={args.emptyStateDescription}
+            title={args.emptyStateTitle}
           />
         </div>
       ) : (
@@ -201,6 +206,8 @@ function toggleCollapsedNode(nodeId: string, setCollapsedNodeIds: Dispatch<SetSt
 export function WorkspaceTopicTree({
   activeFolderId,
   activeNodeId,
+  emptyStateDescription = 'Select a folder with items, or add an item inside the current folder.',
+  emptyStateTitle = 'No items in this folder',
   itemIds,
   nodesById,
   onOpenMoveToNode,
@@ -234,6 +241,8 @@ export function WorkspaceTopicTree({
         activeNodeId,
         collapsedNodeIds,
         contextMenu: interaction.contextMenu,
+        emptyStateDescription,
+        emptyStateTitle,
         nodesById,
         onSelectNode: interaction.handleSelectNode,
         onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, setCollapsedNodeIds),

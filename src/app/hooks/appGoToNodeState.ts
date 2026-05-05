@@ -16,6 +16,9 @@ interface GoToNodeStateArgs {
   trash: {
     closeTrashView: () => void;
   };
+  virtualView?: {
+    closeVirtualView: () => void;
+  };
   ws: {
     nodeOrder: string[];
     nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById'];
@@ -45,6 +48,7 @@ export function buildControllerGoToNodeState(args: GoToNodeStateArgs): AppGoToNo
     (nodeId) => {
       args.runtime.recordRecentNode(nodeId);
       args.trash.closeTrashView();
+      args.virtualView?.closeVirtualView();
       args.nav.handleSelectNode(nodeId);
       args.runtime.setIsGoToNodePaletteOpen(false);
     }

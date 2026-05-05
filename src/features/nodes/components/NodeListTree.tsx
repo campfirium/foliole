@@ -41,6 +41,7 @@ function buildNodeListTreeContentProps(args: {
   rowSpacing: number;
   runtimeState: NodeListTreeRuntimeState;
   selectedTrashNodeId: string | null;
+  showVirtualCreateAction: boolean;
   showTitleSearch: boolean;
 }) {
   return {
@@ -69,6 +70,7 @@ function buildNodeListTreeContentProps(args: {
     rowSpacing: args.rowSpacing,
     selectedNodeIds: args.model.state.selectedNodeIds,
     selectedTrashNodeId: args.selectedTrashNodeId,
+    showVirtualCreateAction: args.showVirtualCreateAction,
     showTitleSearch: args.showTitleSearch,
     state: args.model.state,
     updateNodeTitle: args.model.updateNodeTitle
@@ -77,6 +79,7 @@ function buildNodeListTreeContentProps(args: {
 
 function NodeListTreeImpl({
   activeNodeId,
+  isSelectionScopeActive = true,
   isTrashViewOpen,
   isVirtualViewOpen,
   nodeOrder,
@@ -86,10 +89,12 @@ function NodeListTreeImpl({
   onSelectNode,
   onSelectTrashNode,
   selectedTrashNodeId,
+  showVirtualCreateAction = true,
   showTitleSearch = true
 }: NodeListTreeProps) {
   const model = useNodeListTreeModel({
     activeNodeId,
+    isSelectionScopeActive,
     nodeOrder,
     nodesById,
     onSelectNode,
@@ -128,6 +133,7 @@ function NodeListTreeImpl({
     rowSpacing,
     runtimeState,
     selectedTrashNodeId,
+    showVirtualCreateAction,
     showTitleSearch
   });
 

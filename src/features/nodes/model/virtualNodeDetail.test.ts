@@ -3,6 +3,8 @@ import { expect, it } from 'vitest';
 import type { Node } from './nodeTypes';
 import {
   createVirtualNodeFilterFromKeyword,
+  getOrderedVirtualNodeResultNodes,
+  getVirtualRootResultNodes,
   getVirtualNodeResultReferences,
   resolveVirtualNodeResultNodes
 } from './virtualNodeDetail';
@@ -104,4 +106,79 @@ it('ignores stale references when resolving result nodes', () => {
         }
       )
     ).toEqual([{ ...baseNode, id: 'article-1', title: 'Reader article', content: 'Reader body' }]);
+});
+
+it('preserves workspace order when returning virtual node result nodes', () => {
+  expect(
+    getOrderedVirtualNodeResultNodes(
+      'virtual-1',
+      ['article-2', 'virtual-1', 'article-1'],
+      {
+        'virtual-1': {
+          ...baseNode,
+          id: 'virtual-1',
+          kind: 'folder',
+          specialKind: 'virtual'
+        },
+        'article-1': {
+          ...baseNode,
+          id: 'article-1',
+          title: 'Reader later',
+          content: 'reader'
+        },
+        'article-2': {
+          ...baseNode,
+          id: 'article-2',
+          title: 'Reader first',
+          content: 'reader'
+        }
+      },
+      createVirtualNodeFilterFromKeyword('reader')
+    ).map((node) => node.id)
+  ).toEqual(['article-2', 'article-1']);
+});
+
+it('returns the combined results for the Virtual root', () => {
+  expect(
+    getVirtualRootResultNodes(
+      ['special-virtual-root', 'virtual-1', 'virtual-2', 'article-1', 'article-2'],
+      {
+        'special-virtual-root': {
+          ...baseNode,
+          id: 'special-virtual-root',
+          kind: 'folder',
+          specialKind: 'virtual-root',
+          title: 'Virtual'
+        },
+        'virtual-1': {
+          ...baseNode,
+          id: 'virtual-1',
+          kind: 'folder',
+          parentNodeId: 'special-virtual-root',
+          specialKind: 'virtual',
+          virtualFilter: createVirtualNodeFilterFromKeyword('alpha')
+        },
+        'virtual-2': {
+          ...baseNode,
+          id: 'virtual-2',
+          kind: 'folder',
+          parentNodeId: 'special-virtual-root',
+          specialKind: 'virtual',
+          virtualFilter: createVirtualNodeFilterFromKeyword('beta')
+        },
+        'article-1': {
+          ...baseNode,
+          id: 'article-1',
+          title: 'Alpha article',
+          content: 'alpha body'
+        },
+        'article-2': {
+          ...baseNode,
+          id: 'article-2',
+          title: 'Beta article',
+          content: 'beta body'
+        }
+      }
+    ).map((node) => node.id)
+  ).toEqual(['article-1', 'article-2']);
 });

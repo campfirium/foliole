@@ -32,6 +32,7 @@ interface DocumentPanelContentProps {
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
+  onSelectNodeInVirtualView?: (nodeId: string) => void;
   linkPanels: LinkPanelRecord[];
   onCloseExternalLink: (panelId: string) => void;
   onLinkPanelStateChange: (
@@ -207,12 +208,14 @@ function buildDocumentPanelContentBodyArgs(
     isActivePdfCachedVisible: derived.isActivePdfCachedVisible,
     isFolderListView: props.isFolderListView,
     nodeOrder: props.nodeOrder,
+    trashedNodeIds: props.trashedNodeIds,
     nodesById: props.nodesById,
     onCreatePdfHighlight: props.onCreatePdfHighlight,
     onNodeContentChange: props.onNodeContentChange,
     onOpenExternalLink: props.onOpenExternalLink,
     onPersistPdfViewState: props.onPersistPdfViewState,
     onSelectNode: props.onSelectNode,
+    onSelectNodeInVirtualView: props.onSelectNodeInVirtualView ?? props.onSelectNode,
     linkPanels: props.linkPanels,
     onCloseExternalLink: props.onCloseExternalLink,
     onLinkPanelStateChange: props.onLinkPanelStateChange,

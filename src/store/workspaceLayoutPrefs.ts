@@ -80,6 +80,14 @@ export function saveDualListWidthPreference(value: number) {
   writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.dualListWidth, value);
 }
 
+export function loadVirtualSectionHeightPreference(fallback: number) {
+  return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.virtualSectionHeight, fallback);
+}
+
+export function saveVirtualSectionHeightPreference(value: number) {
+  writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.virtualSectionHeight, value);
+}
+
 export function loadDocumentWidthPreference(fallback: number) {
   return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.documentWidth, fallback);
 }

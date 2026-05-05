@@ -18,6 +18,7 @@ import { NodeListSearchOverlay, renderSearchLauncher } from './NodeListSearchOve
 interface NodeListHeaderProps {
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
+  showVirtualCreateAction?: boolean;
   onOpenNotesView: () => void;
   onCreateCommand: (commandId: string) => void;
   onEmptyTrash: () => void;
@@ -80,7 +81,7 @@ function renderNodeListActions(
 function renderVirtualListActions(onCreateCommand: (commandId: string) => void) {
   return (
     <AppButton
-      aria-label="Create Virtual Node"
+      aria-label="Create Virtual Folder"
       className="text-foreground/70 hover:text-foreground"
       onClick={() => onCreateCommand(VIRTUAL_NODE_COMMAND.appCommandId)}
       size="sm"
@@ -114,6 +115,7 @@ function renderTrashActions(onEmptyTrash: () => void, trashCount: number) {
 export function NodeListHeader({
   isTrashViewOpen,
   isVirtualViewOpen,
+  showVirtualCreateAction = true,
   onOpenNotesView,
   onCreateCommand,
   onEmptyTrash,
@@ -148,11 +150,13 @@ export function NodeListHeader({
       ) : (
         <span aria-hidden="true" className="size-8" />
       )}
-      <ToolbarActionGroup ariaLabel={isTrashViewOpen ? 'Trash actions' : isVirtualViewOpen ? 'Virtual node actions' : 'Node list actions'}>
+      <ToolbarActionGroup ariaLabel={isTrashViewOpen ? 'Trash actions' : isVirtualViewOpen ? 'Virtual folder actions' : 'Node list actions'}>
         {isTrashViewOpen
           ? renderTrashActions(onEmptyTrash, trashCount)
           : isVirtualViewOpen
-            ? renderVirtualListActions(onCreateCommand)
+            ? showVirtualCreateAction
+              ? renderVirtualListActions(onCreateCommand)
+              : null
             : renderNodeListActions(onCollapseAll, onCreateCommand, onExpandAll)}
       </ToolbarActionGroup>
       {showTitleSearch && !isVirtualViewOpen && isSearchOpen ? (

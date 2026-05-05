@@ -124,6 +124,7 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
     onRevealDocumentSelection: () => undefined,
     onSelectBreadcrumbNode: () => undefined,
     onSelectNode: () => undefined,
+    onSelectNodeInVirtualView: () => undefined,
     onStartDocumentResize: () => undefined,
     showAnswerSection: false,
     ...overrides

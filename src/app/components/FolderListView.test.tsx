@@ -258,4 +258,39 @@ describe('FolderListView interactions', () => {
     expect(screen.getByRole('button', { name: 'Open Beta note' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1 / 2');
   });
+
+  it('shows the real path on a second line for virtual results and splits title/path actions', () => {
+    const onSelectNode = vi.fn();
+    const onSelectNodePath = vi.fn();
+    const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
+    const childFolder = createNode({ id: 'topic-folder', kind: 'folder', parentNodeId: 'folder-1', title: 'Reading' });
+    const articleNode = createNode({
+      id: 'node-9',
+      parentNodeId: 'topic-folder',
+      title: 'Small and Beautiful',
+      content: 'A calm opening paragraph.'
+    });
+    const nodesById = Object.fromEntries([folderNode, childFolder, articleNode].map((node) => [node.id, node]));
+
+    render(
+      <FolderListView
+        itemLayout="virtual-result"
+        nodes={[articleNode]}
+        nodesById={nodesById}
+        onSelectNode={onSelectNode}
+        onSelectNodePath={onSelectNodePath}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Open Small and Beautiful' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open real location for Small and Beautiful' })).toHaveTextContent(
+      'Library root / Reading'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Small and Beautiful' }));
+    expect(onSelectNode).toHaveBeenCalledWith('node-9');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open real location for Small and Beautiful' }));
+    expect(onSelectNodePath).toHaveBeenCalledWith('node-9');
+  });
 });
