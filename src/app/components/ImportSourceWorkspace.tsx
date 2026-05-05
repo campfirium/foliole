@@ -85,6 +85,7 @@ function useImportSourceDrafts() {
     handleChangeAction,
     handleChangeSource,
     handleChooseFolder,
+    handleChooseMoveFolder,
     handleCopySource,
     handleDeleteSource,
     handleRunNow,

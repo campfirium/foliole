@@ -53,7 +53,7 @@ export default {
       },
       boxShadow: {
         popover: '0 18px 40px rgba(15, 17, 19, 0.12)',
-        panel: '0 22px 56px rgba(15, 17, 19, 0.16)'
+        panel: '0 10px 24px rgba(15, 17, 19, 0.08)'
       },
       borderRadius: {
         sm: '4px',

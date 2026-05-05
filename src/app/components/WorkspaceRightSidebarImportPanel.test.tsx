@@ -153,8 +153,10 @@ it('imports the selected Markdown file into Inbox', async () => {
   });
 
   expect(screen.getAllByText(/Imported imported-note\.md/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText('2026-03-22 10:00').length).toBeGreaterThan(0);
   expect(screen.getByText('Inbox child created from imported-note.md')).toBeInTheDocument();
   expect(screen.getByText('markdown · /tmp/imported-note.md')).toBeInTheDocument();
   expect(screen.getByText('Failed failed-note.md')).toBeInTheDocument();
   expect(screen.getByText('disk failed')).toBeInTheDocument();
+  expect(screen.queryByText('Imported at')).not.toBeInTheDocument();
 });

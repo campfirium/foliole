@@ -18,7 +18,12 @@ export type DraftImportSourceField = keyof DraftImportSource;
 export const importSourceSelectClassName =
   'h-10 w-full rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong';
 
-export const importFrequencyOptions = ['5 min', '15 min', '30 min', '1 hour'];
+export const importFrequencyOptions = ['5 min', '15 min', '30 min', '1 hour', '4 hours', '24 hours'];
+export const importActionOptions = [
+  { label: 'Keep', value: 'keep' },
+  { label: 'Delete', value: 'delete' },
+  { label: 'Move', value: 'move' }
+] as const;
 
 function createImportSourceId(index: number) {
   return `draft-import-source-${index}`;
@@ -33,7 +38,7 @@ export function createDraftImportSource(index: number): DraftImportSource {
     highlightPath: '',
     id: createImportSourceId(index),
     primaryPath: '',
-    triggerMode: 'manual'
+    triggerMode: 'scheduled'
   };
 }
 
@@ -50,16 +55,6 @@ export function formatHighlightModeLabel(mode: ImportHighlightMode) {
 
 export function formatTriggerModeLabel(mode: ImportTriggerMode) {
   return mode === 'scheduled' ? 'Scheduled' : 'Manual';
-}
-
-export function formatSourceActionLabel(mode: ImportSourceAction, archivePath: string) {
-  if (mode === 'move') {
-    return archivePath.trim().length > 0 ? `Move to ${archivePath}` : 'Move to...';
-  }
-  if (mode === 'delete') {
-    return 'Delete';
-  }
-  return 'Keep';
 }
 
 export function updateDraftImportSource(

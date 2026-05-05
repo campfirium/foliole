@@ -118,23 +118,25 @@ it('imports markdown and HTML directories through the shared normalization and p
     source_adapter: 'external_directory'
   });
   expect(runPreparedImport).toHaveBeenCalledTimes(2);
-  expect(runPreparedImport).toHaveBeenNthCalledWith(
-    1,
-    expect.objectContaining({
-      content: 'Use <highlight id="1">important</highlight id="1"> text',
-      degradedReason: null,
-      sourceKind: 'markdown',
-      sourceName: 'a-note.md'
-    })
-  );
-  expect(runPreparedImport).toHaveBeenNthCalledWith(
-    2,
-    expect.objectContaining({
-      content: '[Table degraded]\nName | Value\nAlpha | Beta',
-      degradedReason: 'HTML conversion degraded: table',
-      sourceKind: 'html',
-      sourceName: path.join('b-web', 'embed.html')
-    })
+  expect(runPreparedImport.mock.calls).toEqual(
+    expect.arrayContaining([
+      [
+        expect.objectContaining({
+          content: 'Use <highlight id="1">important</highlight id="1"> text',
+          degradedReason: null,
+          sourceKind: 'markdown',
+          sourceName: 'a-note.md'
+        })
+      ],
+      [
+        expect.objectContaining({
+          content: '[Table degraded]\nName | Value\nAlpha | Beta',
+          degradedReason: 'HTML conversion degraded: table',
+          sourceKind: 'html',
+          sourceName: path.join('b-web', 'embed.html')
+        })
+      ]
+    ])
   );
   expect(recordPreparedImportFailure).not.toHaveBeenCalled();
 });

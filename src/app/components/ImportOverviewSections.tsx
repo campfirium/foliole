@@ -58,7 +58,8 @@ export function ImportRunSection({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">{formatImportOutcome(entry)}</p>
-              <p className="mt-1 break-all text-sm text-foreground/65">{resolveDetail(entry)}</p>
+              <p className="mt-1 text-xs text-foreground/50">{formatImportTime(entry.importedAt)}</p>
+              <p className="mt-2 break-all text-sm text-foreground/65">{resolveDetail(entry)}</p>
             </div>
             <AppStatusBadge label={entry.resultStatus} tone={resolveTone(entry)} />
           </div>
@@ -66,10 +67,6 @@ export function ImportRunSection({
             <div className="flex items-start justify-between gap-3">
               <dt className="text-foreground/45">Source</dt>
               <dd className="text-right">{entry.sourceName}</dd>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <dt className="text-foreground/45">Imported at</dt>
-              <dd className="text-right">{formatImportTime(entry.importedAt)}</dd>
             </div>
           </dl>
         </div>
@@ -120,12 +117,12 @@ export function InboxImportedNodesSection({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground">{node.title}</p>
-                    <p className="mt-1 break-all text-sm text-foreground/65">{entry.sourceKind} · {entry.sourceLocator}</p>
+                    <p className="mt-1 text-xs text-foreground/50">{formatImportTime(entry.importedAt)}</p>
+                    <p className="mt-2 break-all text-sm text-foreground/65">{entry.sourceKind} · {entry.sourceLocator}</p>
                   </div>
                   <AppStatusBadge label={entry.resultStatus} tone={resolveTone(entry)} />
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="text-sm text-foreground/70">{formatImportTime(entry.importedAt)}</p>
+                <div className="mt-3 flex items-center justify-end gap-3">
                   <AppButton onClick={() => onOpenNode(entry.nodeId!)} variant="ghost">
                     Open node
                   </AppButton>
