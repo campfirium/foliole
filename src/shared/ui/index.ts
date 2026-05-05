@@ -41,6 +41,9 @@ export { ToolbarActionGroup } from './ToolbarActionGroup';
 export { AppTooltip, AppTooltipContent, AppTooltipPortal, AppTooltipProvider, AppTooltipTrigger } from './Tooltip';
 export { appFloatingSurfaceClassName } from './FloatingSurface';
 export {
+  SETTINGS_BUTTON_WIDTH_CLASS_NAME,
+  SETTINGS_INPUT_WIDTH_CLASS_NAME,
+  SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsGroup,
   SettingsRow,

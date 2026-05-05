@@ -19,9 +19,13 @@ interface SettingsRowProps {
   title: string;
 }
 
+export const SETTINGS_BUTTON_WIDTH_CLASS_NAME = 'min-w-[136px]';
+export const SETTINGS_INPUT_WIDTH_CLASS_NAME = 'flex-[0_0_160px] max-w-full';
+export const SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME = 'flex-[0_0_320px] max-w-full';
+
 export function settingsFieldClassName(className?: string) {
   return cn(
-    'h-9 w-full min-w-0 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground',
+    'h-9 w-full min-w-0 rounded-md border border-border bg-settings-control px-3 text-sm text-foreground',
     'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong',
     className
   );
@@ -29,8 +33,8 @@ export function settingsFieldClassName(className?: string) {
 
 export function settingsButtonClassName(className?: string) {
   return cn(
-    'inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground/78 transition-colors',
-    'hover:bg-foreground/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    'inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-border bg-settings-control px-3 text-sm text-foreground/88 transition-colors',
+    'hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
     'disabled:pointer-events-none disabled:opacity-50',
     className
   );
@@ -42,14 +46,14 @@ export function settingsIconButtonClassName(className?: string) {
 
 export function settingsColorFieldClassName(className?: string) {
   return cn(
-    'h-9 w-14 rounded-md border border-border bg-bg-elevated p-1',
+    'h-9 w-14 rounded-md border border-border bg-settings-control p-1',
     'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong',
     className
   );
 }
 
 export function settingsValueBoxClassName(className?: string) {
-  return cn('rounded-md bg-bg-elevated px-3 py-2 text-sm text-foreground/75', className);
+  return cn('rounded-md bg-settings-control px-3 py-2 text-sm text-foreground/75', className);
 }
 
 export function SettingsSection({
@@ -75,7 +79,7 @@ export function SettingsSection({
       ) : null}
       <div
         className={cn(
-          'overflow-hidden rounded-lg bg-settings-group',
+          'overflow-hidden rounded-md bg-settings-group',
           '[&>[data-settings-row]+[data-settings-row]]:before:block'
         )}
       >

@@ -1,22 +1,28 @@
+import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 
 import {
   AppInput,
+  ObjectConfigPathButton,
+  SETTINGS_BUTTON_WIDTH_CLASS_NAME,
+  SETTINGS_INPUT_WIDTH_CLASS_NAME,
+  SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
   settingsButtonClassName,
-  settingsValueBoxClassName
+  settingsIconButtonClassName
 } from '../../../../shared/ui';
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
-const BACKUP_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
+const BACKUP_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   dateStyle: 'medium',
-  timeStyle: 'short'
+  timeStyle: 'short',
+  hour12: false
 });
 
-export const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName('min-w-[112px]');
+export const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_BUTTON_WIDTH_CLASS_NAME);
 
 const SETTINGS_BUTTON_CLASS_NAME = settingsButtonClassName();
 
@@ -55,7 +61,7 @@ function NumberRuleRow(props: {
 }) {
   return (
     <SettingsRow description={props.description} title={props.title}>
-      <SettingsControlSlot className="max-w-[160px]">
+      <SettingsControlSlot className={SETTINGS_INPUT_WIDTH_CLASS_NAME}>
         <AppInput
           className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           disabled={props.disabled}
@@ -79,14 +85,24 @@ export function BackupPathRow(props: {
 }) {
   return (
     <SettingsRow description="Backups, auto backups, and safety snapshots are all stored in this folder." title="Backup location">
-      <SettingsControlSlot className="flex-col items-stretch gap-2">
-        <div className={settingsValueBoxClassName()}>
-          <span className="break-all">{props.backupPath || 'Loading…'}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button className={SETTINGS_BUTTON_CLASS_NAME} disabled={!props.isDesktopRuntime} onClick={props.onChangePath} type="button">Change location</button>
-          <button className={SETTINGS_BUTTON_CLASS_NAME} disabled={!props.isDesktopRuntime} onClick={props.onRestoreDefault} type="button">Restore default</button>
-        </div>
+      <SettingsControlSlot className={`${SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME} items-start gap-2 max-[1080px]:flex-auto`}>
+        <button
+          aria-label="Restore default"
+          className={settingsIconButtonClassName('size-10 border-transparent bg-transparent text-foreground/68 hover:bg-settings-control hover:text-foreground')}
+          disabled={!props.isDesktopRuntime}
+          onClick={props.onRestoreDefault}
+          title="Restore default"
+          type="button"
+        >
+          <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
+        </button>
+        <ObjectConfigPathButton
+          disabled={!props.isDesktopRuntime}
+          emptyLabel="Backups"
+          label="Change location"
+          onClick={props.onChangePath}
+          path={props.backupPath}
+        />
         {props.errorMessage ? <p className="text-sm text-red-700">{props.errorMessage}</p> : null}
       </SettingsControlSlot>
     </SettingsRow>
@@ -107,7 +123,7 @@ export function BackupRulesSection(props: {
       <NumberRuleRow description="Manual backups keep the newest entries only." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('manual_max_count', value)} title="Manual backups kept" value={String(props.draft.manual_max_count)} />
       <NumberRuleRow description="Safety snapshots are created before restore and upgrade." disabled={!props.isDesktopRuntime} onChange={(value) => props.onChangeField('snapshot_max_count', value)} title="Safety snapshots kept" value={String(props.draft.snapshot_max_count)} />
       <SettingsRow description="When backups grow past this size, the oldest backup is deleted first." title="Total backup size limit (GB)">
-        <SettingsControlSlot className="max-w-[160px]">
+        <SettingsControlSlot className={SETTINGS_INPUT_WIDTH_CLASS_NAME}>
           <AppInput
             className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             disabled={!props.isDesktopRuntime}

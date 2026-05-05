@@ -107,7 +107,7 @@ it('shows backup settings and backup list in the backups section', async () => {
     expect(screen.getByDisplayValue('24')).toBeInTheDocument();
   });
 
-  expect(screen.getByText('/app/Backups')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Change location' })).toHaveTextContent('Backups');
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
   expect(screen.getByText(/Auto backup · daily/)).toBeInTheDocument();
 });

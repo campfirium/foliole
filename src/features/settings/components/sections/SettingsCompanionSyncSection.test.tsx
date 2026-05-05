@@ -48,22 +48,19 @@ beforeEach(() => {
   });
 });
 
-it('renders device sync actions with user-facing labels', async () => {
+it('renders compact sync controls', async () => {
   render(<SettingsCompanionSyncSection />);
 
-  expect(screen.getByText('Pixel 9')).toBeInTheDocument();
-  expect(screen.getByText('Device sync is on. Paired devices can reconnect quietly while this desktop is running.')).toBeInTheDocument();
+  expect(screen.getByText('Connected devices')).toBeInTheDocument();
+  expect(screen.getByText('1')).toBeInTheDocument();
+  expect(screen.queryByText('Pixel 9')).not.toBeInTheDocument();
+  expect(screen.queryByText('Waiting devices')).not.toBeInTheDocument();
+  expect(screen.queryByText('Enabled')).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Allow' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Forget connected devices' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Turn off device sync' }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Sync' }));
 
   const hookState = pairingHookMocks.useDesktopCompanionPairingRequests.mock.results[0]?.value;
   await waitFor(() => {
-    expect(hookState.approveRequest).toHaveBeenCalledWith('pair-request-1');
-    expect(hookState.rejectRequest).toHaveBeenCalledWith('pair-request-1');
-    expect(hookState.clearPairedDevices).toHaveBeenCalled();
     expect(hookState.disableSync).toHaveBeenCalled();
   });
 });

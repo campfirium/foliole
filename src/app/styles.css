@@ -55,9 +55,12 @@
   --app-inspector-section-bg: #fbfbfb;
   --app-inspector-section-elevated-bg: #ffffff;
   --app-inspector-section-shadow-color: rgb(15 23 42 / 0.03);
-  --app-settings-shell-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 18%, rgb(var(--color-canvas)) 82%);
-  --app-settings-sidebar-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 32%, rgb(var(--color-canvas)) 68%);
-  --app-settings-group-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 24%, rgb(var(--color-canvas)) 76%);
+  --app-settings-shell-bg: var(--workspace-region-main-document-bg);
+  --app-settings-sidebar-bg: var(--workspace-region-main-topic-bg);
+  --app-settings-group-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 24%, var(--workspace-region-main-document-bg) 76%);
+  --app-settings-selected-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 58%, var(--workspace-region-main-document-bg) 42%);
+  --app-settings-control-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 30%, var(--workspace-region-main-document-bg) 70%);
+  --app-settings-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 38%, var(--workspace-region-main-document-bg) 62%);
   --pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-background)) 58%, rgb(var(--color-bg-panel)) 42%);
   --pdf-reading-inverted-page-color: color-mix(in srgb, rgb(var(--color-background)) 68%, rgb(var(--color-canvas)) 32%);
   --pdf-reading-warm-surface-color: color-mix(in srgb, rgb(var(--color-canvas)) 84%, rgb(var(--app-cloze-color-rgb)) 16%);
@@ -127,9 +130,12 @@
   --app-control-border-color: rgb(var(--color-foreground) / 0.34);
   --app-control-border-hover-color: rgb(var(--color-foreground) / 0.5);
   --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.06);
-  --app-settings-shell-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 30%, rgb(var(--color-canvas)) 70%);
-  --app-settings-sidebar-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 48%, rgb(var(--color-canvas)) 52%);
-  --app-settings-group-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 38%, rgb(var(--color-canvas)) 62%);
+  --app-settings-shell-bg: var(--workspace-region-main-document-bg);
+  --app-settings-sidebar-bg: var(--workspace-region-main-topic-bg);
+  --app-settings-group-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 36%, var(--workspace-region-main-document-bg) 64%);
+  --app-settings-selected-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 62%, var(--workspace-region-main-document-bg) 38%);
+  --app-settings-control-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 34%, var(--workspace-region-main-document-bg) 66%);
+  --app-settings-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 42%, var(--workspace-region-main-document-bg) 58%);
   color-scheme: dark;
 }
 

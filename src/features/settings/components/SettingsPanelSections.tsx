@@ -69,18 +69,18 @@ export function SettingsSidebar(props: {
       ariaLabel="Settings categories"
       bodyClassName="px-4 pb-5"
       headerClassName="px-9 pb-4 pt-6"
-      surfaceClassName="bg-settings-sidebar border-r border-settings-outline"
+      surfaceClassName="bg-settings-sidebar"
       title="Settings"
     >
       <nav aria-label="Settings navigation" className="flex flex-col gap-1">
         {SETTINGS_CATEGORIES.map((category) => (
           <AppButton
-            active={category.id === props.activeCategory}
+            aria-current={category.id === props.activeCategory ? 'page' : undefined}
             className={cn(
               'min-h-0 rounded-md px-5 py-[10px] text-[0.98rem]',
               category.id === props.activeCategory
-                ? 'bg-settings-selected font-semibold'
-                : 'border-transparent bg-transparent text-foreground/72 hover:bg-settings-selected/70'
+                ? 'bg-settings-selected font-medium text-foreground'
+                : 'border-transparent bg-transparent text-foreground/72 hover:bg-settings-selected'
             )}
             key={category.id}
             onClick={() => props.setActiveCategory(category.id)}

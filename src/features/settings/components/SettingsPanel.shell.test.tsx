@@ -18,12 +18,11 @@ it('uses the unified settings shell surfaces for sidebar and content area', () =
 
   expect(sidebarSurface).not.toBeNull();
   expect(sidebarSurface?.className).toContain('bg-settings-sidebar');
-  expect(sidebarSurface?.className).toContain('border-r');
-  expect(sidebarSurface?.className).toContain('border-settings-outline');
+  expect(sidebarSurface?.className).not.toContain('border-r');
   expect(dialog.className).toContain('bg-settings-shell');
   expect(dialog.className).toContain('border-settings-outline');
   expect(dialog.className).toContain('shadow-settings');
-  expect(dialog.className).toContain('rounded-xl');
+  expect(dialog.className).toContain('rounded-lg');
   expect(screen.getByText('Control the look and density of the workspace.').className).toContain('sr-only');
   expect(screen.getByRole('heading', { level: 3, name: 'Settings' })).toBeInTheDocument();
 });

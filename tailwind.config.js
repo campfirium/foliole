@@ -33,7 +33,9 @@ export default {
         'settings-shell': 'var(--app-settings-shell-bg)',
         'settings-sidebar': 'var(--app-settings-sidebar-bg)',
         'settings-group': 'var(--app-settings-group-bg)',
-        'settings-selected': 'rgb(var(--color-secondary) / <alpha-value>)',
+        'settings-selected': 'var(--app-settings-selected-bg)',
+        'settings-control': 'var(--app-settings-control-bg)',
+        'settings-control-hover': 'var(--app-settings-control-hover-bg)',
         'settings-divider': 'rgb(var(--color-settings-divider) / <alpha-value>)',
         'settings-outline': 'rgb(var(--color-foreground) / 0.14)',
         border: {

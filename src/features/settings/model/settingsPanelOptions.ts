@@ -22,7 +22,7 @@ export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCateg
   { id: 'backups', label: 'Backups', description: 'Manage backup location, retention, and recovery tools.' },
   {
     id: 'companion-sync',
-    label: 'Device sync',
+    label: 'Sync',
     description: 'Let another device connect to this desktop and manage local sync availability.'
   },
   { id: 'editor', label: 'Editor', description: 'Choose how editing, images, and writing surfaces behave.' },

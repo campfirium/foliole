@@ -175,7 +175,7 @@ function SettingsPanelDialog(props: {
       <AppDialogPortal>
         <AppDialogOverlay aria-label="Settings" className={props.isPreviewActive ? 'bg-transparent' : undefined} onClick={props.isPreviewActive ? undefined : props.onClose} role="presentation" />
         {props.isPreviewActive ? <div className="fixed inset-0 z-[80]" /> : null}
-        <AppDialogContent aria-label="Settings dialog" aria-describedby={undefined} className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[300px_minmax(0,1fr)] overflow-hidden rounded-xl border-settings-outline bg-settings-shell shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}>
+        <AppDialogContent aria-label="Settings dialog" aria-describedby={undefined} className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[300px_minmax(0,1fr)] overflow-hidden rounded-lg border-settings-outline bg-settings-shell shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}>
           <SettingsSidebar activeCategory={props.activeCategory} setActiveCategory={props.setActiveCategory} />
           <div className="app-scrollbar overflow-auto bg-settings-shell px-7 py-7">
             <AppDialogTitle className="sr-only">Settings dialog</AppDialogTitle>
