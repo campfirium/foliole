@@ -54,17 +54,38 @@ describe('convertHtmlToMarkdownCompatible', () => {
     expect(result.content).toBe('# Chapter One\n\nHello world.');
     expect(result.warnings).toEqual([]);
   });
+});
 
-  it('keeps imported footnotes readable as superscript markers with hover-ready note text', () => {
+describe('convertHtmlToMarkdownCompatible footnotes', () => {
+  it('keeps pure superscript footnote markers visible instead of flattening them into body text', () => {
     const result = convertHtmlToMarkdownCompatible(`
       <p>Weight<sup class="calibre8">1</sup> matters.</p>
-      <p>Editors also add <a href="part0010.html#note9">[1]</a> style footnotes.</p>
-      <p><a href="part0010.html#ref9">[1]</a>1 pound is about 0.454 kilograms. — Editor note</p>
     `);
 
     expect(result.content).toContain('Weight^[1] matters.');
-    expect(result.content).toContain('Editors also add ^[1]{1 pound is about 0.454 kilograms. — Editor note} style footnotes.');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('pairs href and id based epub footnote references with their note body', () => {
+    const result = convertHtmlToMarkdownCompatible(`
+      <p>Weight<sup><a href="part0010.html#ref9" id="annot9">1</a></sup> matters.</p>
+      <p><a href="part0007.html#annot9" id="ref9">1</a>1 pound is about 0.454 kilograms. — Editor note</p>
+    `);
+
+    expect(result.content).toContain('Weight^[1]{1 pound is about 0.454 kilograms. — Editor note} matters.');
     expect(result.content).toContain('^[1] 1 pound is about 0.454 kilograms. — Editor note');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('keeps unmatched footnote-like references readable while leaving ordinary links alone', () => {
+    const result = convertHtmlToMarkdownCompatible(`
+      <p>Weight<a href="part0010.html#missing-note" id="annot9">1</a> still reads clearly.</p>
+      <p>Chapter jump <a href="chapter.xhtml#c1">1</a> stays a normal link.</p>
+    `);
+
+    expect(result.content).toContain('Weight^[1] still reads clearly.');
+    expect(result.content).toContain('Chapter jump [1](chapter.xhtml#c1) stays a normal link.');
+    expect(result.content).not.toContain('Chapter jump ^[1]');
     expect(result.warnings).toEqual([]);
   });
 });

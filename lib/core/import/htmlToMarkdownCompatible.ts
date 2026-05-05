@@ -158,14 +158,22 @@ function renderInlineNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>, 
   if (node.tagName === 'br') return '  \n';
   if (node.tagName === 'code') return wrapCode(normalizeInline(getTextContent(node, true)));
   if (node.tagName === 'img') return buildImageMarkdown(node);
-  const superscriptFootnote = renderInlineSuperscriptFootnote(node);
-  if (superscriptFootnote) return superscriptFootnote;
   if (EMBEDDED_TAGS.has(node.tagName)) {
     warnings.add('embedded_content_replaced');
     return buildEmbedPlaceholder(node);
   }
 
   const inline = renderInlineNodes(node.childNodes, warnings, footnoteDefinitions);
+  if (node.tagName === 'sup') {
+    if (/^\^\[[^\]\n]+\](?:\{.*\})?$/.test(inline)) {
+      return inline;
+    }
+    const superscriptFootnote = renderInlineSuperscriptFootnote(node);
+    if (superscriptFootnote) return superscriptFootnote;
+    if (inline) {
+      return inline;
+    }
+  }
   if (node.tagName === 'a') {
     const footnoteReference = renderInlineFootnoteReference(node, footnoteDefinitions);
     if (footnoteReference) return footnoteReference;
@@ -173,6 +181,8 @@ function renderInlineNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>, 
     const label = normalizeInline(inline) || href || 'link';
     return href ? `[${label}](${href})` : label;
   }
+  const superscriptFootnote = renderInlineSuperscriptFootnote(node);
+  if (superscriptFootnote) return superscriptFootnote;
   return applyInlineFormatting(node, inline);
 }
 
