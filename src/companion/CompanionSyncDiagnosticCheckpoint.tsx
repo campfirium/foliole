@@ -35,6 +35,11 @@ function formatStructureStatus(result: CombinedSyncDiagnosticResult) {
   return Math.max(0, desktopSeq - cursor) === 0 ? 'Up to date' : 'New changes available';
 }
 
+function formatBacklogStage(count: number | null | undefined) {
+  if (typeof count !== 'number') return 'Missing data';
+  return count === 0 ? 'Done' : `${count} remaining`;
+}
+
 function formatActiveTopicBodyStatus(result: CombinedSyncDiagnosticResult) {
   const activeTopic = result.android?.content.active_topic;
   if (!activeTopic) return 'None';
@@ -68,6 +73,10 @@ export function CompanionSyncDiagnosticCheckpoint(props: { result: CombinedSyncD
       <h3 className="text-sm font-semibold text-foreground">Sync status</h3>
       <div className="border-t border-companion-divider">
         <MetricRow label="Topic list" value={formatStructureStatus(props.result)} />
+        <MetricRow label="Stage 1 · Library index" value={formatStructureStatus(props.result)} />
+        <MetricRow label="Stage 2 · FSRS priority" value="Not tracked yet" />
+        <MetricRow label="Stage 3 · Topic bodies" value={formatBacklogStage(props.result.android?.content.missing_content_blob_count)} />
+        <MetricRow label="Stage 4 · Attachments" value={formatBacklogStage(props.result.android?.content.missing_attachment_resource_count)} />
         <MetricRow label="New desktop changes" value={formatLag(props.result)} />
         <MetricRow
           label="Topics"

@@ -129,6 +129,13 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getByText('Foliole will bring them in on the next sync.')).toBeInTheDocument();
     expect(screen.getByText('Sync status')).toBeInTheDocument();
     expect(screen.getByText('Topic list')).toBeInTheDocument();
+    expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
+    expect(screen.getByText('Stage 2 · FSRS priority')).toBeInTheDocument();
+    expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
+    expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
+    expect(screen.getByText('Not tracked yet')).toBeInTheDocument();
+    expect(screen.getByText('5 remaining')).toBeInTheDocument();
+    expect(screen.getByText('2 remaining')).toBeInTheDocument();
     expect(screen.getByText('New desktop changes')).toBeInTheDocument();
     expect(screen.getByText('Topic bodies still caching')).toBeInTheDocument();
     expect(screen.getByText('Current topic')).toBeInTheDocument();
