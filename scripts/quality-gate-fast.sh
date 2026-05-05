@@ -111,7 +111,7 @@ else
 
     # Pass test files as positional filters to vitest
     mapfile -t test_array <<< "${test_files}"
-    npx vitest run --pool=threads "${test_array[@]}"
+    npx vitest run --pool=threads --maxWorkers=10 "${test_array[@]}"
 
     if quality_gate_should_print_step; then
       echo "[quality-gate-fast] passed: test (related)"
