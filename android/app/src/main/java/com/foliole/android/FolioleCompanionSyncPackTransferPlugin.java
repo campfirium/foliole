@@ -15,7 +15,7 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
     public void downloadDesktopSyncPack(PluginCall call) {
         new Thread(() -> {
             try {
-                String urlKey = requestKey("url");
+                String urlKey = FolioleCompanionBridgeContractDefinitions.syncPackTransferUrlRequestKey(getContext());
                 String url = call.getString(urlKey);
                 if (url == null || url.trim().isEmpty()) {
                     call.reject(urlKey + " is required.");
@@ -24,10 +24,15 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
                 File packFile = FolioleCompanionSyncPackTransfer.downloadToCache(
                     getContext(),
                     url.trim(),
-                    call.getData().optJSONObject(requestKey("headers"))
+                    call.getData().optJSONObject(
+                        FolioleCompanionBridgeContractDefinitions.syncPackTransferHeadersRequestKey(getContext())
+                    )
                 );
                 JSObject result = new JSObject();
-                result.put(responseKey("packPath"), packFile.getAbsolutePath());
+                result.put(
+                    FolioleCompanionBridgeContractDefinitions.syncPackTransferPackPathResponseKey(getContext()),
+                    packFile.getAbsolutePath()
+                );
                 call.resolve(result);
             } catch (Exception exception) {
                 call.reject("Failed to download companion desktop sync pack.", exception);
@@ -38,25 +43,21 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
     @PluginMethod
     public void deleteDownloadedSyncPack(PluginCall call) {
         try {
-            String packPathKey = requestKey("packPath");
+            String packPathKey = FolioleCompanionBridgeContractDefinitions.syncPackTransferPackPathRequestKey(getContext());
             String packPath = call.getString(packPathKey);
             if (packPath == null || packPath.trim().isEmpty()) {
                 call.reject(packPathKey + " is required.");
                 return;
             }
             JSObject result = new JSObject();
-            result.put(responseKey("deleted"), FolioleCompanionSyncPackTransfer.deleteCachedPack(getContext(), packPath.trim()));
+            result.put(
+                FolioleCompanionBridgeContractDefinitions.syncPackTransferDeletedResponseKey(getContext()),
+                FolioleCompanionSyncPackTransfer.deleteCachedPack(getContext(), packPath.trim())
+            );
             call.resolve(result);
         } catch (Exception exception) {
             call.reject("Failed to delete companion desktop sync pack.", exception);
         }
     }
 
-    private String requestKey(String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.syncPackTransferRequestKey(getContext(), key);
-    }
-
-    private String responseKey(String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.syncPackTransferResponseKey(getContext(), key);
-    }
 }

@@ -17,11 +17,11 @@ final class FolioleCompanionPairingPluginActions {
 
     static void savePairingCredentials(Context context, PluginCall call) {
         try {
-            String deviceIdKey = credentialRequestKey(context, "deviceId");
-            String deviceKindKey = credentialRequestKey(context, "deviceKind");
-            String deviceNameKey = credentialRequestKey(context, "deviceName");
-            String deviceSecretKey = credentialRequestKey(context, "deviceSecret");
-            String pairedAtKey = credentialRequestKey(context, "pairedAt");
+            String deviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceIdCredentialRequestKey(context);
+            String deviceKindKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceKindCredentialRequestKey(context);
+            String deviceNameKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceNameCredentialRequestKey(context);
+            String deviceSecretKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretCredentialRequestKey(context);
+            String pairedAtKey = FolioleCompanionBridgeContractDefinitions.pairingPairedAtCredentialRequestKey(context);
             String deviceId = call.getString(deviceIdKey);
             String deviceKind = call.getString(deviceKindKey);
             String deviceName = call.getString(deviceNameKey);
@@ -51,11 +51,11 @@ final class FolioleCompanionPairingPluginActions {
 
     static void signCompanionSyncRequest(Context context, PluginCall call) {
         try {
-            String methodKey = signatureRequestKey(context, "method");
-            String pathWithQueryKey = signatureRequestKey(context, "pathWithQuery");
-            String timestampKey = signatureRequestKey(context, "timestamp");
-            String nonceKey = signatureRequestKey(context, "nonce");
-            String bodyHashKey = signatureRequestKey(context, "bodyHash");
+            String methodKey = FolioleCompanionBridgeContractDefinitions.pairingMethodSignatureRequestKey(context);
+            String pathWithQueryKey = FolioleCompanionBridgeContractDefinitions.pairingPathWithQuerySignatureRequestKey(context);
+            String timestampKey = FolioleCompanionBridgeContractDefinitions.pairingTimestampSignatureRequestKey(context);
+            String nonceKey = FolioleCompanionBridgeContractDefinitions.pairingNonceSignatureRequestKey(context);
+            String bodyHashKey = FolioleCompanionBridgeContractDefinitions.pairingBodyHashSignatureRequestKey(context);
             String method = call.getString(methodKey);
             String pathWithQuery = call.getString(pathWithQueryKey);
             String timestamp = call.getString(timestampKey);
@@ -91,11 +91,4 @@ final class FolioleCompanionPairingPluginActions {
         return false;
     }
 
-    private static String credentialRequestKey(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.pairingCredentialRequestKey(context, key);
-    }
-
-    private static String signatureRequestKey(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.pairingSignatureRequestKey(context, key);
-    }
 }

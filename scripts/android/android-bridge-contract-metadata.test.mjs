@@ -22,6 +22,10 @@ const RESOURCE_PLUGIN_ACTIONS = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionResourcePluginActions.java'
 );
+const BRIDGE_CONTRACT_READER = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionBridgeContractDefinitions.java'
+);
 const PAIRING_PLUGIN_ACTIONS = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingPluginActions.java'
@@ -129,9 +133,13 @@ describe('Android bridge contract metadata', () => {
 
   it('keeps resource plugin actions wired to generated bridge contract keys', async () => {
     const source = await readFile(RESOURCE_PLUGIN_ACTIONS, 'utf8');
+    const bridgeSource = await readFile(BRIDGE_CONTRACT_READER, 'utf8');
 
-    expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceRequestKey(context, key)');
-    expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceDefault(context, key)');
+    expect(bridgeSource).toContain('resourceRequestKey(context, "attachmentId")');
+    expect(bridgeSource).toContain('resourceDefault(context, "missingResourceLimit")');
+    expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey');
+    expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey');
+    expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceMissingResourceLimitDefault(context)');
     expect(source).not.toContain('getString("attachment_id"');
     expect(source).not.toContain('getString("content_hash"');
     expect(source).not.toContain('getString("document_id"');
@@ -149,13 +157,16 @@ describe('Android bridge contract metadata', () => {
       await readFile(PAIRING_PLUGIN_ACTIONS, 'utf8'),
       await readFile(PAIRING_STORE, 'utf8')
     ].join('\n');
+    const bridgeSource = await readFile(BRIDGE_CONTRACT_READER, 'utf8');
 
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingCredentialRequestKey(context, key)');
+    expect(bridgeSource).toContain('pairingCredentialRequestKey(context, "deviceId")');
+    expect(bridgeSource).toContain('pairingSignatureRequestKey(context, "method")');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingPreferenceKey(context, key)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingSignatureHeaderKey(context, key)');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingSignatureRequestKey(context, key)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingSignatureResponseKey(context, key)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingStateKey(context, key)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdCredentialRequestKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingMethodSignatureRequestKey(context)');
     expect(combinedSource).not.toContain('getString("device_id"');
     expect(combinedSource).not.toContain('getString("device_kind"');
     expect(combinedSource).not.toContain('getString("device_name"');
@@ -182,14 +193,17 @@ describe('Android bridge contract metadata', () => {
       await readFile(NETWORK_PLUGIN_ACTIONS, 'utf8'),
       await readFile(SYNC_PACK_TRANSFER_PLUGIN, 'utf8')
     ].join('\n');
+    const bridgeSource = await readFile(BRIDGE_CONTRACT_READER, 'utf8');
 
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.bootstrapOutputKey(context, key)');
+    expect(bridgeSource).toContain('bootstrapOutputKey(context, "bootedAt")');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.bootstrapRuntimeKind(context)');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.networkDiscoveryResponseKey(context, key)');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.networkRequestKey(context, key)');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.networkResponseKey(context, key)');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.syncPackTransferRequestKey(getContext(), key)');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.syncPackTransferResponseKey(getContext(), key)');
+    expect(bridgeSource).toContain('networkRequestKey(context, "url")');
+    expect(bridgeSource).toContain('networkResponseKey(context, "status")');
+    expect(bridgeSource).toContain('syncPackTransferRequestKey(context, "url")');
+    expect(bridgeSource).toContain('syncPackTransferResponseKey(context, "packPath")');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.bootstrapBootedAtOutputKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.networkUrlRequestKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.syncPackTransferUrlRequestKey(getContext())');
     expect(combinedSource).not.toContain('put("booted_at"');
     expect(combinedSource).not.toContain('put("database_path"');
     expect(combinedSource).not.toContain('put("database_ready"');

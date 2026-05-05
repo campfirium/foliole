@@ -9,92 +9,102 @@ final class FolioleCompanionResourcePluginActions {
     static JSObject syncAttachmentResource(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         android.content.Context context = databaseHelper.hostContext();
         return databaseHelper.syncAttachmentResource(
-            call.getString(requestKey(context, "attachmentId")),
-            call.getString(requestKey(context, "contentHash")),
-            call.getString(requestKey(context, "url")),
-            call.getData().optJSONObject(requestKey(context, "headers"))
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(context)),
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context)),
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
+            call.getData().optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context))
         );
     }
 
     static JSObject syncAttachmentResources(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.syncAttachmentResources(
-            call.getData().optJSONArray(requestKey(databaseHelper.hostContext(), "resources"))
+            call.getData().optJSONArray(
+                FolioleCompanionBridgeContractDefinitions.resourceResourcesRequestKey(databaseHelper.hostContext())
+            )
         );
     }
 
     static JSObject loadMissingAttachmentResources(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         android.content.Context context = databaseHelper.hostContext();
         return databaseHelper.loadMissingAttachmentResources(
-            call.getInt(requestKey(context, "limit"), defaultLimit(context, "missingResourceLimit"))
+            call.getInt(
+                FolioleCompanionBridgeContractDefinitions.resourceLimitRequestKey(context),
+                FolioleCompanionBridgeContractDefinitions.resourceMissingResourceLimitDefault(context)
+            )
         );
     }
 
     static JSObject loadMissingAttachmentResource(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.loadMissingAttachmentResource(
-            call.getString(requestKey(databaseHelper.hostContext(), "attachmentId"))
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(databaseHelper.hostContext()))
         );
     }
 
     static JSObject loadMissingContentBlobHashes(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         android.content.Context context = databaseHelper.hostContext();
         return databaseHelper.loadMissingContentBlobHashes(
-            call.getInt(requestKey(context, "limit"), defaultLimit(context, "missingResourceLimit"))
+            call.getInt(
+                FolioleCompanionBridgeContractDefinitions.resourceLimitRequestKey(context),
+                FolioleCompanionBridgeContractDefinitions.resourceMissingResourceLimitDefault(context)
+            )
         );
     }
 
     static JSObject syncContentBlob(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         android.content.Context context = databaseHelper.hostContext();
         return databaseHelper.syncContentBlob(
-            call.getString(requestKey(context, "hash")),
-            call.getString(requestKey(context, "url")),
-            call.getData().optJSONObject(requestKey(context, "headers"))
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)),
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
+            call.getData().optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context))
         );
     }
 
     static JSObject syncContentBlobs(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         android.content.Context context = databaseHelper.hostContext();
         return databaseHelper.syncContentBlobs(
-            call.getString(requestKey(context, "url")),
-            call.getData().optJSONObject(requestKey(context, "headers")),
-            call.getString(requestKey(context, "body"))
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
+            call.getData().optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)),
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceBodyRequestKey(context))
         );
     }
 
     static JSObject resolveAttachmentResource(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.resolveAttachmentResource(
-            call.getString(requestKey(databaseHelper.hostContext(), "attachmentId"))
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(databaseHelper.hostContext()))
         );
     }
 
     static JSObject loadPdfPageText(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.loadPdfPageText(call.getString(requestKey(databaseHelper.hostContext(), "attachmentId")));
+        return databaseHelper.loadPdfPageText(
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(databaseHelper.hostContext()))
+        );
     }
 
     static JSObject searchPdfPageText(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         android.content.Context context = databaseHelper.hostContext();
         return databaseHelper.searchPdfPageText(
-            call.getString(requestKey(context, "query")),
-            call.getInt(requestKey(context, "limit"), defaultLimit(context, "pdfPageTextSearchLimit"))
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceQueryRequestKey(context)),
+            call.getInt(
+                FolioleCompanionBridgeContractDefinitions.resourceLimitRequestKey(context),
+                FolioleCompanionBridgeContractDefinitions.resourcePdfPageTextSearchLimitDefault(context)
+            )
         );
     }
 
     static JSObject loadExternalDocument(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.loadExternalDocument(call.getString(requestKey(databaseHelper.hostContext(), "documentId")));
+        return databaseHelper.loadExternalDocument(
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceDocumentIdRequestKey(databaseHelper.hostContext()))
+        );
     }
 
     static JSObject searchExternalDocuments(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         android.content.Context context = databaseHelper.hostContext();
         return databaseHelper.searchExternalDocuments(
-            call.getString(requestKey(context, "query")),
-            call.getInt(requestKey(context, "limit"), defaultLimit(context, "externalDocumentSearchLimit"))
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceQueryRequestKey(context)),
+            call.getInt(
+                FolioleCompanionBridgeContractDefinitions.resourceLimitRequestKey(context),
+                FolioleCompanionBridgeContractDefinitions.resourceExternalDocumentSearchLimitDefault(context)
+            )
         );
-    }
-
-    private static int defaultLimit(android.content.Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.resourceDefault(context, key);
-    }
-
-    private static String requestKey(android.content.Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.resourceRequestKey(context, key);
     }
 }

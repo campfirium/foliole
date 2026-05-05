@@ -12,8 +12,8 @@ final class FolioleCompanionNetworkPluginActions {
     static void desktopHttpRequest(Context context, PluginCall call) {
         new Thread(() -> {
             try {
-                String urlKey = requestKey(context, "url");
-                String methodKey = requestKey(context, "method");
+                String urlKey = FolioleCompanionBridgeContractDefinitions.networkUrlRequestKey(context);
+                String methodKey = FolioleCompanionBridgeContractDefinitions.networkMethodRequestKey(context);
                 String url = call.getString(urlKey);
                 String method = call.getString(methodKey);
                 if (url == null || url.trim().isEmpty()) {
@@ -28,8 +28,8 @@ final class FolioleCompanionNetworkPluginActions {
                     context,
                     url,
                     method,
-                    call.getData().optJSONObject(requestKey(context, "headers")),
-                    call.getString(requestKey(context, "body"))
+                    call.getData().optJSONObject(FolioleCompanionBridgeContractDefinitions.networkHeadersRequestKey(context)),
+                    call.getString(FolioleCompanionBridgeContractDefinitions.networkBodyRequestKey(context))
                 ));
             } catch (Exception exception) {
                 call.reject("Desktop HTTP request failed.", exception);
@@ -46,7 +46,7 @@ final class FolioleCompanionNetworkPluginActions {
                     endpointUrls.put(endpointUrl);
                 }
                 JSObject result = new JSObject();
-                result.put(discoveryResponseKey(context, "endpointUrls"), endpointUrls);
+                result.put(FolioleCompanionBridgeContractDefinitions.networkEndpointUrlsResponseKey(context), endpointUrls);
                 call.resolve(result);
             } catch (Exception exception) {
                 call.reject("Failed to load companion discovery candidates.", exception);
@@ -58,11 +58,4 @@ final class FolioleCompanionNetworkPluginActions {
         endpointUrls.put("http://" + hostAddress + ":38641");
     }
 
-    private static String discoveryResponseKey(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.networkDiscoveryResponseKey(context, key);
-    }
-
-    private static String requestKey(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.networkRequestKey(context, key);
-    }
 }

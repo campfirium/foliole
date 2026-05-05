@@ -50,8 +50,8 @@ final class FolioleCompanionDesktopHttpClient {
         }
         int status = connection.getResponseCode();
         JSObject result = new JSObject();
-        result.put(responseKey(context, "status"), status);
-        result.put(responseKey(context, "body"), readBody(connection, status));
+        result.put(FolioleCompanionBridgeContractDefinitions.networkStatusResponseKey(context), status);
+        result.put(FolioleCompanionBridgeContractDefinitions.networkBodyResponseKey(context), readBody(connection, status));
         return result;
     }
 
@@ -116,10 +116,6 @@ final class FolioleCompanionDesktopHttpClient {
                 connection.setRequestProperty(key, (String) value);
             }
         }
-    }
-
-    private static String responseKey(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.networkResponseKey(context, key);
     }
 
     private static String readBody(HttpURLConnection connection, int status) throws Exception {
