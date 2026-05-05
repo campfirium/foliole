@@ -1,4 +1,4 @@
-import { integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { blob, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const nodes = sqliteTable('nodes', {
   id: text('id').primaryKey(),
@@ -263,6 +263,11 @@ export const contentBlobs = sqliteTable('content_blobs', {
   createdAt: text('created_at').notNull(),
   cachedAt: text('cached_at'),
   lastVerifiedAt: text('last_verified_at')
+});
+
+export const contentBlobData = sqliteTable('content_blob_data', {
+  hash: text('hash').primaryKey(),
+  data: blob('data').notNull()
 });
 
 export const settingRecords = sqliteTable(

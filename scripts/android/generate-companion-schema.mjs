@@ -153,6 +153,10 @@ const statements = [
     ON content_blobs (availability)`,
   `CREATE INDEX IF NOT EXISTS idx_content_blobs_kind
     ON content_blobs (kind)`,
+  `CREATE TABLE IF NOT EXISTS content_blob_data (
+    hash TEXT PRIMARY KEY,
+    data BLOB NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS pdf_page_text (
     attachment_id TEXT NOT NULL,
     page INTEGER NOT NULL,

@@ -52,6 +52,25 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         updatedAtColumn: 'updated_at'
       });
     }
+  },
+  {
+    version: 30,
+    migrate: (sqlite) => {
+      sqlite.exec(`CREATE TABLE IF NOT EXISTS content_blob_data (
+        hash TEXT PRIMARY KEY REFERENCES content_blobs(hash) ON DELETE CASCADE,
+        data BLOB NOT NULL
+      )`);
+      backfillTextBodyBlobData(sqlite, {
+        bodyHashColumn: 'body_blob_hash',
+        contentColumn: 'content',
+        tableName: 'nodes'
+      });
+      backfillTextBodyBlobData(sqlite, {
+        bodyHashColumn: 'body_blob_hash',
+        contentColumn: 'content',
+        tableName: 'external_documents'
+      });
+    }
   }
 ];
 
@@ -159,5 +178,29 @@ function backfillTextBodyBlobHashes(sqlite: DatabaseMigrationTarget, args: {
     const timestamp = row.updated_at;
     insertBlob.run(hash, `text/${hash}`, args.kind, size, size, hash, hash, timestamp, timestamp, timestamp);
     updateOwner.run(hash, row.id);
+  }
+}
+
+function backfillTextBodyBlobData(sqlite: DatabaseMigrationTarget, args: {
+  bodyHashColumn: string;
+  contentColumn: string;
+  tableName: string;
+}) {
+  if (!tableExists(sqlite, args.tableName)) return;
+  const rows = sqlite
+    .prepare(
+      `SELECT ${args.bodyHashColumn} AS hash, ${args.contentColumn} AS content
+       FROM ${args.tableName}
+       WHERE ${args.bodyHashColumn} IS NOT NULL AND ${args.contentColumn} IS NOT NULL`
+    )
+    .all() as Array<{ content: string; hash: string }>;
+  const insertData = sqlite.prepare(
+    `INSERT INTO content_blob_data (hash, data)
+     VALUES (?, ?)
+     ON CONFLICT(hash) DO NOTHING`
+  );
+
+  for (const row of rows) {
+    insertData.run(row.hash, Buffer.from(row.content, 'utf8'));
   }
 }

@@ -28,8 +28,9 @@ public class FolioleCompanionExternalDocumentStoreTest {
             "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +
             "file_name TEXT NOT NULL, extension TEXT NOT NULL, source_size_bytes INTEGER NOT NULL, " +
             "source_modified_at TEXT NOT NULL, source_modified_ms INTEGER NOT NULL, content_hash TEXT NOT NULL, " +
-            "title TEXT NOT NULL, opening_text TEXT, content TEXT NOT NULL, indexed_at TEXT NOT NULL, " +
+            "title TEXT NOT NULL, opening_text TEXT, body_blob_hash TEXT, content TEXT NOT NULL, indexed_at TEXT NOT NULL, " +
             "is_present INTEGER NOT NULL DEFAULT 1, missing_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
+        database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
         database.execSQL("CREATE TABLE sync_object_state (" +
             "object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL, " +
             "current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL, " +
@@ -68,6 +69,26 @@ public class FolioleCompanionExternalDocumentStoreTest {
         assertEquals(1, results.length());
         assertEquals("folder-1:beta.md", results.getJSONObject(0).getString("document_id"));
         assertEquals("cached beta body", results.getJSONObject(0).getString("excerpt"));
+    }
+
+    @Test
+    public void loadsExternalDocumentContentFromBodyBlobData() throws Exception {
+        database.execSQL(
+            "INSERT INTO external_documents (" +
+                "document_id, folder_id, relative_path, file_name, extension, source_size_bytes, " +
+                "source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, " +
+                "content, indexed_at, created_at, updated_at" +
+                ") VALUES ('folder-1:blob.md', 'folder-1', 'blob.md', 'blob.md', 'md', 12, " +
+                "'2026-04-26T00:00:00.000Z', 1777, 'hash', 'Blob Doc', 'blob text', 'blob-hash', " +
+                "'inline fallback', '2026-04-26T01:00:00.000Z', '2026-04-26T01:00:00.000Z', '2026-04-26T01:00:00.000Z')"
+        );
+        database.execSQL(
+            "INSERT INTO content_blob_data (hash, data) VALUES ('blob-hash', CAST('blob text body' AS BLOB))"
+        );
+
+        JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:blob.md");
+
+        assertEquals("blob text body", loaded.getJSONObject("document").getString("content"));
     }
 
     @Test

@@ -108,6 +108,13 @@ function getContentBlobRow(hash: string) {
     .get(hash) as { availability: string; hash: string; kind: string; mime_type: string } | undefined;
 }
 
+function getContentBlobData(hash: string) {
+  const connection = openDatabaseConnection();
+  return connection.sqlite
+    .prepare('SELECT data FROM content_blob_data WHERE hash = ?')
+    .get(hash) as { data: Uint8Array } | undefined;
+}
+
 function seedDismissedReadingNode(nodeId: string, parentNodeId: string | null, position: number) {
   upsertNodeSnapshot({
     nodeId,
@@ -194,6 +201,7 @@ it('writes node body blob metadata when storing node content', () => {
     kind: 'text_body',
     mime_type: 'text/plain'
   });
+  expect(Buffer.from(getContentBlobData(row?.body_blob_hash ?? '')?.data ?? []).toString('utf8')).toBe('# node-root');
 });
 
 it('deletes subtree nodes and rewrites node_order while clearing review side tables', () => {

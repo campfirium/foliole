@@ -95,6 +95,26 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
     }
 
     @Test
+    public void loadsReadableArticleContentFromBodyBlobData() throws Exception {
+        database.execSQL(
+            "UPDATE nodes SET content = '', body_blob_hash = 'blob-article-2' WHERE id = 'article-2'"
+        );
+        database.execSQL(
+            "INSERT INTO content_blob_data (hash, data) VALUES ('blob-article-2', CAST('Blob article body' AS BLOB))"
+        );
+        FolioleCompanionSyncObjectApply.applyPayload(database, record(
+            "view_state",
+            "session_resume:android:phone:remote-device:active_node",
+            "{\"active_node_id\":\"article-2\"}"
+        ));
+
+        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+
+        assertEquals("Blob article body", readable.getJSONObject("readable_article").getString("content"));
+    }
+
+
+    @Test
     public void exportsStateObjectPayloadsWithSnakeCaseWireFields() throws Exception {
         JSONArray records = new JSONArray()
             .put(record(
@@ -145,7 +165,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         database.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', priority INTEGER, " +
             "desired_retention REAL, title TEXT NOT NULL, is_title_manual INTEGER NOT NULL DEFAULT 0, " +
-            "hide_title_heading INTEGER NOT NULL DEFAULT 0, content TEXT NOT NULL DEFAULT '', opening_text TEXT, " +
+            "hide_title_heading INTEGER NOT NULL DEFAULT 0, content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, opening_text TEXT, " +
             "virtual_filter TEXT, reveal TEXT, anchor_link TEXT, image_regions TEXT, position INTEGER, " +
             "current_version_id TEXT, last_modified_by_device_id TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0, " +
             "created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");
@@ -158,6 +178,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "priority REAL NOT NULL DEFAULT 0, reading_position INTEGER NOT NULL DEFAULT 0, " +
             "repetition_count INTEGER NOT NULL DEFAULT 0, state TEXT NOT NULL DEFAULT 'active')");
         database.execSQL("CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL)");
+        database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
         database.execSQL("CREATE TABLE attachments (" +
             "id TEXT PRIMARY KEY, original_name TEXT, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL DEFAULT 0, " +
             "created_at TEXT NOT NULL, storage_key TEXT, cached_at TEXT, pdf_index_status TEXT, " +

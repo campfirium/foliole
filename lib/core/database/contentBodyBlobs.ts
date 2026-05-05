@@ -17,5 +17,21 @@ export function upsertTextBodyBlob(driver: DatabaseDriver, content: string, now:
      ON CONFLICT(hash) DO NOTHING`,
     [hash, `text/${hash}`, size, size, hash, hash, now, now, now]
   );
+  driver.execute(
+    `INSERT INTO content_blob_data (hash, data)
+     VALUES (?, ?)
+     ON CONFLICT(hash) DO NOTHING`,
+    [hash, Buffer.from(content, 'utf8')]
+  );
   return hash;
+}
+
+export function decodeTextBodyBlobData(data: unknown) {
+  if (data instanceof Uint8Array) {
+    return Buffer.from(data).toString('utf8');
+  }
+  if (typeof data === 'string') {
+    return data;
+  }
+  return null;
 }

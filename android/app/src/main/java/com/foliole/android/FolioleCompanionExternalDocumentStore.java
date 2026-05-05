@@ -21,15 +21,13 @@ final class FolioleCompanionExternalDocumentStore {
         if (documentId == null || documentId.trim().isEmpty()) {
             return result;
         }
-        try (Cursor cursor = database.query(
-            "external_documents",
-            documentColumns(),
-            "document_id = ? AND is_present = 1",
-            new String[] { documentId.trim() },
-            null,
-            null,
-            null,
-            "1"
+        try (Cursor cursor = database.rawQuery(
+            "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, " +
+                "COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, updated_at " +
+                "FROM external_documents ed " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash " +
+                "WHERE document_id = ? AND is_present = 1 LIMIT 1",
+            new String[] { documentId.trim() }
         )) {
             if (cursor.moveToFirst()) {
                 result.put("document", toDocument(cursor));
@@ -49,11 +47,14 @@ final class FolioleCompanionExternalDocumentStore {
         }
         try (Cursor cursor = database.rawQuery(
             "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, " +
-                "content, updated_at, instr(lower(content), ?) AS match_index " +
-                "FROM external_documents WHERE is_present = 1 " +
+                "COALESCE(CAST(cbd.data AS TEXT), ed.content) AS content, updated_at, " +
+                "instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) AS match_index " +
+                "FROM external_documents ed " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash " +
+                "WHERE is_present = 1 " +
                 "AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 " +
                 "OR instr(lower(relative_path), ?) > 0 OR instr(lower(coalesce(opening_text, '')), ?) > 0 " +
-                "OR instr(lower(content), ?) > 0) " +
+                "OR instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) > 0) " +
                 "ORDER BY updated_at DESC LIMIT ?",
             new String[] {
                 normalizedQuery,
@@ -70,13 +71,6 @@ final class FolioleCompanionExternalDocumentStore {
             }
         }
         return result;
-    }
-
-    private static String[] documentColumns() {
-        return new String[] {
-            "document_id", "folder_id", "relative_path", "file_name", "extension", "title",
-            "opening_text", "content", "updated_at"
-        };
     }
 
     private static JSObject toDocument(Cursor cursor) {

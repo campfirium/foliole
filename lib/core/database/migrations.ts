@@ -5,7 +5,7 @@ import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
 import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 29;
+export const DATABASE_SCHEMA_VERSION = 30;
 
 const CREATE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -205,6 +205,10 @@ const CREATE_SCHEMA_STATEMENTS = [
     ON content_blobs (availability)`,
   `CREATE INDEX IF NOT EXISTS idx_content_blobs_kind
     ON content_blobs (kind)`,
+  `CREATE TABLE IF NOT EXISTS content_blob_data (
+    hash TEXT PRIMARY KEY REFERENCES content_blobs(hash) ON DELETE CASCADE,
+    data BLOB NOT NULL
+  )`,
   ...SYNC_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS pdf_page_text (
     attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,

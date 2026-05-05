@@ -23,10 +23,11 @@ final class FolioleCompanionReadableArticleQuery {
         }
 
         try (Cursor cursor = database.rawQuery(
-            "SELECT n.id, n.title, n.content " +
+            "SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content " +
                 "FROM nodes n " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
                 "LEFT JOIN node_order no ON no.node_id = n.id " +
-                "WHERE TRIM(COALESCE(n.content, '')) <> '' " +
+                "WHERE TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content, '')) <> '' " +
                 "ORDER BY COALESCE(no.position, 2147483647) ASC, n.created_at ASC",
             null
         )) {
@@ -56,15 +57,11 @@ final class FolioleCompanionReadableArticleQuery {
     }
 
     private static JSObject loadArticleByNodeId(SQLiteDatabase database, String nodeId) {
-        try (Cursor cursor = database.query(
-            "nodes",
-            new String[] { "id", "title", "content" },
-            "id = ? AND TRIM(COALESCE(content, '')) <> ''",
-            new String[] { nodeId },
-            null,
-            null,
-            null,
-            "1"
+        try (Cursor cursor = database.rawQuery(
+            "SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content " +
+                "FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
+                "WHERE n.id = ? AND TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content, '')) <> '' LIMIT 1",
+            new String[] { nodeId }
         )) {
             if (!cursor.moveToFirst()) {
                 return null;
