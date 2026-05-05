@@ -1,4 +1,4 @@
-import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 import {
   type NodeIconStateAppearance,
   type NodeIconStrokeStyle
@@ -10,9 +10,6 @@ import { CheckboxField, ColorField, NumberField, StrokeStyleSelect } from './nod
 import { useNodeIconSettingsState } from './nodeIconSettingsState';
 
 const SAMPLE_SVG = '<svg viewBox="0 0 16 16"><path d="M2 12C5 10 8 6 14 3" fill="none" stroke="currentColor"/></svg>';
-const ACTION_BUTTON_CLASS_NAME =
-  'inline-flex min-w-[112px] items-center justify-center rounded-md border border-border bg-background px-3 py-[7px] text-sm text-foreground disabled:cursor-default disabled:opacity-55';
-
 function PreviewIcon(props: {
   kind: NodeTreeRowIconKind;
   label: string;
@@ -20,12 +17,15 @@ function PreviewIcon(props: {
   state: NodeTreeRowIconState;
 }) {
   return (
-    <div className="settings-node-icon-preview-item" data-node-icon-preview={`${props.kind}-${props.state}`}>
+    <div
+      className="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-border bg-bg-elevated px-2 py-1 text-foreground"
+      data-node-icon-preview={`${props.kind}-${props.state}`}
+    >
       <span
-        className="settings-node-icon-preview-content"
+        className="inline-flex items-center gap-1.5"
         style={props.contentOpacity !== undefined ? { opacity: props.contentOpacity } : undefined}
       >
-        <span className="settings-node-icon-preview-badge">
+        <span className="inline-flex h-[18px] w-[18px] items-center justify-center">
           <NodeTreeRowIcon kind={props.kind} state={props.state} />
         </span>
         <span>{props.label}</span>
@@ -38,11 +38,11 @@ function SvgRow(props: { description: string; label: string; onChange: (value: s
   return (
     <SettingsRow className="items-start" description={props.description} title={props.label}>
       <SettingsControlSlot className="flex-[0_0_360px] flex-col items-stretch">
-        <label className="settings-node-icon-field">
+        <label className="flex w-full">
           <span className="sr-only">{props.label}</span>
           <textarea
             aria-label={props.label}
-            className="settings-node-icon-textarea"
+            className="min-h-[92px] w-full rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong disabled:cursor-not-allowed disabled:opacity-45"
             onChange={(event) => props.onChange(event.target.value)}
             placeholder={SAMPLE_SVG}
             rows={4}
@@ -78,23 +78,23 @@ function StateStyleRow(props: {
       title={props.label}
     >
       <SettingsControlSlot className="flex-[0_0_360px] flex-col items-stretch">
-        <div className="settings-node-icon-inline-controls">
+        <div className="flex flex-wrap gap-2">
           <StrokeStyleSelect compact label={`${props.label} stroke style`} onChange={props.onStrokeStyleChange} value={props.appearance.strokeStyle} />
           <NumberField label={`${props.label} line width`} onChange={props.onLineWidthChange} step={0.05} value={props.appearance.lineWidth} />
           <ColorField label={`${props.label} color`} onChange={props.onColorChange} value={props.appearance.color} />
         </div>
         {showDashControls ? (
-          <div className="settings-node-icon-inline-controls">
+          <div className="flex flex-wrap gap-2">
             <NumberField label={`${props.label} dash length`} onChange={props.onDashLengthChange} step={0.25} value={props.appearance.dashLength} />
             <NumberField label={`${props.label} gap length`} onChange={props.onGapLengthChange} step={0.25} value={props.appearance.gapLength} />
           </div>
         ) : null}
         {fadeOptions ? (
-          <div className="settings-node-icon-fade-group">
+          <div className="flex flex-col gap-2">
             <CheckboxField checked={props.appearance.fadeEnabled} label="Enable dismissed fade" onChange={fadeOptions.onFadeEnabledChange} />
             {props.appearance.fadeEnabled ? (
               <>
-                <div className="settings-node-icon-inline-controls">
+                <div className="flex flex-wrap gap-2">
                   <NumberField label="Dismissed fade opacity" onChange={fadeOptions.onFadeOpacityChange} step={0.05} value={props.appearance.fadeOpacity} />
                 </div>
                 <CheckboxField checked={props.appearance.fadeWholeRow} label="Fade the whole row" onChange={fadeOptions.onFadeWholeRowChange} />
@@ -119,7 +119,7 @@ function PreviewRow(props: {
       title="Preview"
     >
       <SettingsControlSlot className="flex-[0_0_360px] flex-col items-stretch">
-        <div aria-label="Node icon preview" className="settings-node-icon-preview">
+        <div aria-label="Node icon preview" className="flex flex-wrap items-center gap-2.5">
           <PreviewIcon kind="reading" label="Topic pending" state="pending" />
           <PreviewIcon kind="review" label="Item pending" state="pending" />
           <PreviewIcon kind="reading" label="Topic scheduled" state="scheduled" />
@@ -137,9 +137,9 @@ function PreviewRow(props: {
             state="dismissed"
           />
         </div>
-        <button className={ACTION_BUTTON_CLASS_NAME} onClick={props.onReset} type="button">
+        <AppButton className="self-start" onClick={props.onReset} variant="primary">
           Restore default node icon settings
-        </button>
+        </AppButton>
       </SettingsControlSlot>
     </SettingsRow>
   );

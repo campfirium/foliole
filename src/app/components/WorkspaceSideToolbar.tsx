@@ -86,7 +86,7 @@ export function WorkspaceSideToolbar({
   return (
     <AppToolbar
       aria-label="Workspace side toolbar"
-      className="flex h-full w-[40px] flex-col items-center border-r border-[#d9d9d6] bg-[#f6f6f6] pb-0 pt-2"
+      className="flex h-full w-[40px] flex-col items-center border-r border-border bg-background pb-0 pt-2"
     >
       <ImportActions
         isImportManagementOpen={isImportManagementOpen}
@@ -98,7 +98,7 @@ export function WorkspaceSideToolbar({
       <SettingsAction isSettingsOpen={isSettingsOpen} onOpenSettings={onOpenSettings} />
       <ToolbarActionGroup
         ariaLabel="Workspace study actions"
-        className={`h-[56px] bg-[#f6f6f6]${
+        className={`h-[56px] bg-background${
           isStudyMode ? ' border-t border-border' : ''
         }`}
         fullWidth

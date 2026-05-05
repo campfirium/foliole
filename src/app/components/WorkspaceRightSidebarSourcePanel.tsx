@@ -79,16 +79,16 @@ function SourceSummarySection({ entries }: { entries: RuntimeTextImportResult[] 
   return (
     <InspectorSection title="Import summary">
       <dl className="mt-3 grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-md bg-[#eef2f8] px-2 py-2">
-          <dt className="text-[11px] uppercase tracking-[0.12em] text-foreground/45">Imported</dt>
+        <div className="rounded-md bg-bg-elevated px-2 py-2">
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Imported</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{importedCount}</dd>
         </div>
-        <div className="rounded-md bg-[#f5f1e8] px-2 py-2">
-          <dt className="text-[11px] uppercase tracking-[0.12em] text-foreground/45">Issues</dt>
+        <div className="rounded-md bg-bg-elevated px-2 py-2">
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Issues</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{degradedCount}</dd>
         </div>
-        <div className="rounded-md bg-[#f8ece9] px-2 py-2">
-          <dt className="text-[11px] uppercase tracking-[0.12em] text-foreground/45">Failed</dt>
+        <div className="rounded-md bg-bg-elevated px-2 py-2">
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Failed</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{failedCount}</dd>
         </div>
       </dl>

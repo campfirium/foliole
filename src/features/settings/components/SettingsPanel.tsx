@@ -116,11 +116,11 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
         <AppDialogContent
           aria-label="Settings dialog"
           aria-describedby={undefined}
-          className="grid h-[min(800px,calc(100dvh-36px))] w-[min(1180px,calc(100vw-36px))] max-w-none overflow-hidden grid-cols-[260px_minmax(0,1fr)]"
+          className="grid h-[min(800px,calc(100dvh-36px))] w-[min(1180px,calc(100vw-36px))] max-w-none overflow-hidden grid-cols-[260px_minmax(0,1fr)] rounded-lg shadow-panel"
         >
           <SettingsSidebar activeCategory={props.activeCategory} setActiveCategory={props.setActiveCategory} />
-          <div className="app-scrollbar overflow-auto p-4 pb-5">
-            <header className="mb-2">
+          <div className="app-scrollbar overflow-auto bg-background p-4 pb-5">
+            <header className="mb-2 min-h-[48px] px-1 py-2">
               <AppDialogTitle className="sr-only">Settings dialog</AppDialogTitle>
               <h2 className="text-[1.16rem] font-semibold text-foreground">{props.title}</h2>
             </header>

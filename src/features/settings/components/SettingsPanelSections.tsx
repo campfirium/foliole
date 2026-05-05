@@ -13,6 +13,7 @@ import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSe
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
 
 import { cn } from '@/shared/lib/utils';
+import { AppButton, AppPanel } from '@/shared/ui';
 
 export interface SettingsCategoryContentProps {
   activeCategory: SettingsCategoryId;
@@ -46,24 +47,30 @@ export function SettingsSidebar(props: {
   setActiveCategory: (category: SettingsCategoryId) => void;
 }) {
   return (
-    <aside aria-label="Settings categories" className="flex flex-col border-r border-border bg-bg-subtle px-2.5 py-3.5">
-      <p className="mb-2.5 px-2.5 text-[0.9rem] font-semibold text-foreground/50">Options</p>
+    <AppPanel
+      as="aside"
+      ariaLabel="Settings categories"
+      bodyClassName="px-2.5 pb-3.5"
+      className="border-r border-border bg-bg-subtle"
+      title={<span className="text-foreground/50">Options</span>}
+    >
       <nav aria-label="Settings navigation" className="flex flex-col gap-0.5">
         {SETTINGS_CATEGORIES.map((category) => (
-          <button
+          <AppButton
+            active={category.id === props.activeCategory}
             className={cn(
-              'rounded-md px-2.5 py-[7px] text-left text-[0.96rem] text-foreground/80 transition-colors hover:bg-foreground/[0.05]',
-              category.id === props.activeCategory && 'bg-foreground/[0.08] font-semibold text-foreground'
+              'min-h-0 rounded-md px-2.5 py-[7px] text-[0.96rem]',
+              category.id !== props.activeCategory && 'border-transparent'
             )}
             key={category.id}
             onClick={() => props.setActiveCategory(category.id)}
-            type="button"
+            variant="list"
           >
             {category.label}
-          </button>
+          </AppButton>
         ))}
       </nav>
-    </aside>
+    </AppPanel>
   );
 }
 

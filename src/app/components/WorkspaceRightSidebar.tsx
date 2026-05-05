@@ -2,6 +2,7 @@ import { memo } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
+import { AppPanel } from '../../shared/ui';
 
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceRightSidebarBacklinksPanel } from './WorkspaceRightSidebarBacklinksPanel';
@@ -206,17 +207,14 @@ export function WorkspaceRightSidebar(props: Pick<
 }) {
   recordComponentRender('rightSidebar');
   return (
-    <aside
+    <AppPanel
       aria-label="Inspector"
+      as="aside"
+      bodyClassName="app-scrollbar overflow-y-auto px-3 py-3"
       className="hidden min-h-0 flex-col overflow-hidden border-l border-border bg-bg-panel text-foreground xl:flex xl:[width:var(--workspace-right-sidebar-width,320px)]"
+      title={<span className="text-sm font-semibold uppercase tracking-[0.04em]">{getPanelTitle(props.activePanelId)}</span>}
     >
-      <header className="px-4 pt-4">
-        <div className="px-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/40">Inspector</p>
-          <h2 className="text-sm font-semibold text-foreground">{getPanelTitle(props.activePanelId)}</h2>
-        </div>
-      </header>
-      <div className="app-scrollbar flex-1 overflow-y-auto px-3 py-3">{renderPanel(props)}</div>
-    </aside>
+      {renderPanel(props)}
+    </AppPanel>
   );
 }
