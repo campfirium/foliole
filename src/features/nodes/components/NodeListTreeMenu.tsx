@@ -22,6 +22,7 @@ interface NodeListTreeMenuProps {
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   dismissNode: (nodeId: string, now?: string) => boolean;
+  isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
@@ -52,7 +53,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     showMoveToNodeAction: isSingleNodeTarget && canNodeBeMoved(primaryTarget),
     showNodeImportActions:
       isSingleNodeTarget && !primaryTarget?.anchorLink && !isVirtualRootNode(primaryTarget) && !isVirtualNode(primaryTarget),
-    showVirtualCreateOnly: isSingleNodeTarget && isVirtualRootNode(primaryTarget)
+    showVirtualCreateOnly: props.isVirtualViewOpen || (isSingleNodeTarget && isVirtualRootNode(primaryTarget))
   };
 }
 

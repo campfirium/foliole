@@ -15,7 +15,7 @@ import {
   createToggleListVisibility,
   createToggleRightSidebarVisibility
 } from './appControllerRuntimeActions';
-import { createOpenNotesView, createSelectNode, createToggleTrashView } from './appControllerTrashViewHandlers';
+import { createOpenNotesView, createSelectNode, createToggleTrashView, createToggleVirtualView } from './appControllerTrashViewHandlers';
 import { buildLayoutProps } from './layoutPropsBuilder';
 import type { useAppRuntime } from './useAppRuntime';
 import type { useDocumentWidthResizer } from './useDocumentWidthResizer';
@@ -23,6 +23,7 @@ import type { useEditorContextCommands } from './useEditorContextCommands';
 import type { useListResizer } from './useListResizer';
 import type { useRightSidebarResizer } from './useRightSidebarResizer';
 import type { useTrashView } from './useTrashView';
+import type { useVirtualNodeView } from './useVirtualNodeView';
 import type { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
 export interface BuildControllerLayoutPropsArgs {
@@ -44,6 +45,7 @@ export interface BuildControllerLayoutPropsArgs {
   selectedTrashNode: Node | undefined;
   startStudyMode: () => void;
   trash: ReturnType<typeof useTrashView>;
+  virtualView: ReturnType<typeof useVirtualNodeView>;
   ws: {
     activeNodeId: string | null;
     createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
@@ -147,6 +149,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     isListCollapsed: args.ws.isListCollapsed,
     isRightSidebarCollapsed: args.ws.isRightSidebarCollapsed,
     isTrashViewOpen: args.trash.isTrashViewOpen,
+    isVirtualViewOpen: args.virtualView.isVirtualViewOpen,
     isViewingTrashNode: args.runtime.isViewingTrashNode,
     listWidth: args.ws.listWidth,
     nowIso: args.nowIso,
@@ -203,6 +206,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onOpenImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     onCloseImportManagement: () => args.runtime.setIsImportManagementOpen(false),
     onOpenTrashView: createToggleTrashView(args, openNotesView),
+    onOpenVirtualView: createToggleVirtualView(args, openNotesView),
     onResetLayout: args.ws.resetLayout,
     onRunImportFile: args.runImportFile,
     onRunImportFolder: args.runImportDirectory,

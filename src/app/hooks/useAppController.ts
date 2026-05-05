@@ -152,6 +152,7 @@ function buildControllerLayoutState(args: {
     selectedTrashNode: args.controller.selectedTrashNode,
     startStudyMode: args.startStudyMode,
     trash: args.controller.trash,
+    virtualView: args.controller.virtualView,
     ws: args.ws
   });
 }

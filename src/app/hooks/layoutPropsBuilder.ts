@@ -45,6 +45,7 @@ interface BuildLayoutPropsArgs {
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
   isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
   isViewingTrashNode: boolean;
   listWidth: number;
   nowIso: string;
@@ -65,6 +66,7 @@ interface BuildLayoutPropsArgs {
   onCloseSettings: () => void;
   onCloseImportManagement: () => void;
   onOpenTrashView: () => void;
+  onOpenVirtualView: () => void;
   onResetLayout: () => void;
   onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
   onRevealAnchorInDocument: WorkspaceLayoutProps['onRevealAnchorInDocument'];
@@ -162,14 +164,14 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', isEditorReadOnly: args.activeNodeId ? !activeNode || !isNodeDocumentLoaded(activeNode) || isNodeContentLocked(args.activeNodeId, args.nodeOrder, args.nodesById, new Set(args.trashedNodeIds)) : false, editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, isReviewEditing: args.isReviewEditing,
-    isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewPanelQueueNodeIds, reviewQueueNodeIds: args.reviewSession.queueNodeIds, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isViewingTrashNode: args.isViewingTrashNode,
+    isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewPanelQueueNodeIds, reviewQueueNodeIds: args.reviewSession.queueNodeIds, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isVirtualViewOpen: args.isVirtualViewOpen, isViewingTrashNode: args.isViewingTrashNode,
     isListCollapsed: args.isListCollapsed, isRightSidebarCollapsed: args.isRightSidebarCollapsed, showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange, onNodeContentChange: args.onNodeContentChange,
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode,
     onRevealAnchorInDocument: args.onRevealAnchorInDocument,
     onRevealDocumentPosition: args.onRevealDocumentPosition,
     onRevealDocumentSelection: args.onRevealDocumentSelection,
     onResolveDocumentPositionAtViewportY: args.onResolveDocumentPositionAtViewportY,
-    onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenMoveToNode: args.onOpenMoveToNode, onOpenTrashView: args.onOpenTrashView, onToggleListVisibility: args.onToggleListVisibility,
+    onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenMoveToNode: args.onOpenMoveToNode, onOpenTrashView: args.onOpenTrashView, onOpenVirtualView: args.onOpenVirtualView, onToggleListVisibility: args.onToggleListVisibility,
     onToggleRightSidebarVisibility: args.onToggleRightSidebarVisibility,
     onOpenImportManagement: args.onOpenImportManagement,
     onCloseImportManagement: args.onCloseImportManagement,

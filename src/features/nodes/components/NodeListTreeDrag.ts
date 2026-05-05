@@ -9,6 +9,7 @@ type DropIntent = 'before' | 'after' | 'child';
 type MoveIntent = DropIntent | 'root';
 
 interface UseNodeListDragControllerInput {
+  disableRootDrop: boolean;
   isTrashViewOpen: boolean;
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean;
   nodesById: WorkspaceListNodesById;
@@ -114,14 +115,14 @@ function createNodeDropHandler(
 }
 
 function createRootDropHandler(
-  isTrashViewOpen: boolean,
+  disableRootDrop: boolean,
   sourceNodeIds: string[],
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean,
   setState: (next: DragState) => void
 ) {
   return (event: ReactDragEvent<HTMLElement>) => {
     event.preventDefault();
-    if (isTrashViewOpen || sourceNodeIds.length === 0) {
+    if (disableRootDrop || sourceNodeIds.length === 0) {
       setState(createInitialDragState());
       return;
     }
@@ -183,12 +184,12 @@ function createDragStartHandler(
 }
 
 function createDragOverRootHandler(
-  isTrashViewOpen: boolean,
+  disableRootDrop: boolean,
   sourceNodeIds: string[],
   setState: (updater: (prev: DragState) => DragState) => void
 ) {
   return (event: ReactDragEvent<HTMLElement>) => {
-    if (isTrashViewOpen || sourceNodeIds.length === 0) {
+    if (disableRootDrop || sourceNodeIds.length === 0) {
       return;
     }
     event.preventDefault();
@@ -203,6 +204,7 @@ function createDragOverRootHandler(
 }
 
 export function useNodeListDragController({
+  disableRootDrop,
   isTrashViewOpen,
   moveNodes,
   nodesById,
@@ -224,12 +226,12 @@ export function useNodeListDragController({
     [isTrashViewOpen, moveNodes, state]
   );
   const onDragOverRoot = useMemo(
-    () => createDragOverRootHandler(isTrashViewOpen, state.sourceNodeIds, setState),
-    [isTrashViewOpen, state.sourceNodeIds]
+    () => createDragOverRootHandler(disableRootDrop, state.sourceNodeIds, setState),
+    [disableRootDrop, state.sourceNodeIds]
   );
   const onDropRoot = useMemo(
-    () => createRootDropHandler(isTrashViewOpen, state.sourceNodeIds, moveNodes, setState),
-    [isTrashViewOpen, moveNodes, state.sourceNodeIds]
+    () => createRootDropHandler(disableRootDrop, state.sourceNodeIds, moveNodes, setState),
+    [disableRootDrop, moveNodes, state.sourceNodeIds]
   );
 
   return {

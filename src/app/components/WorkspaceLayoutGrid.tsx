@@ -34,6 +34,7 @@ function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: str
       <NodeListTree
         activeNodeId={props.activeNodeId}
         isTrashViewOpen={props.isTrashViewOpen}
+        isVirtualViewOpen={props.isVirtualViewOpen}
         nodeOrder={props.nodeOrder}
         nodesById={listNodesById}
         onOpenMoveToNode={props.onOpenMoveToNode}

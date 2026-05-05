@@ -21,6 +21,7 @@ interface NodeListRowsProps {
   collapsedNodeIds: ReadonlySet<string>;
   drag: ReturnType<typeof useNodeListDragController>;
   isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
@@ -94,6 +95,8 @@ export function NodeListRows(props: NodeListRowsProps) {
   if (props.rows.length === 0) {
     return props.isTrashViewOpen ? (
       <AppEmptyState description="Deleted nodes will appear here." title="Trash is empty" />
+    ) : props.isVirtualViewOpen ? (
+      <AppEmptyState description="Create a virtual node to save a reusable filtered view." title="No virtual nodes" />
     ) : (
       <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
     );

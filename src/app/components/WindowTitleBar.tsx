@@ -1,4 +1,4 @@
-import { Copy, FileText, Minus, PanelLeft, PanelRight, Square, Trash2, X } from 'lucide-react';
+import { Copy, Minus, PanelLeft, PanelRight, Square, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { workspaceChangeTimestamp } from 'virtual:workspace-change-timestamp';
 
@@ -13,6 +13,7 @@ import {
 } from '../../shared/platform/windowControls';
 
 import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
+import { WindowTitleBarViewButtons } from './WindowTitleBarViewButtons';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 const TITLEBAR_ICON_SIZE = 16;
@@ -23,10 +24,12 @@ interface WindowTitleBarProps {
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
   isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
   listWidth: number;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onToggleRightSidebarVisibility: () => void;
   onOpenNotesView: () => void;
+  onOpenVirtualView: () => void;
   onOpenTrashView: () => void;
   onToggleListVisibility: () => void;
   rightSidebarWidth: number;
@@ -75,7 +78,6 @@ function useWindowControlState() {
       .catch((error) => {
         console.error('[window-titlebar] failed to subscribe resize listener', error);
       });
-
     return () => {
       unlisten?.();
     };
@@ -87,7 +89,6 @@ function useWindowControlState() {
     syncMaximizedState
   };
 }
-
 function SidebarToggleButton({
   active,
   label,
@@ -119,7 +120,9 @@ function SidebarToggleButton({
 function WindowLeadingActions({
   isListCollapsed,
   isTrashViewOpen,
+  isVirtualViewOpen,
   onOpenNotesView,
+  onOpenVirtualView,
   onOpenTrashView,
   onToggleListVisibility
 }: WindowTitleBarProps) {
@@ -140,26 +143,13 @@ function WindowLeadingActions({
           <SidebarToggleButton active={!isListCollapsed} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
         </div>
         <div className="window-titlebar-leading-secondary">
-          <div className="window-titlebar-leading-actions">
-            <button
-              aria-label="Notes"
-              className="window-titlebar-leading-button"
-              data-active={!isTrashViewOpen}
-              onClick={onOpenNotesView}
-              type="button"
-            >
-              <FileText aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-            </button>
-            <button
-              aria-label="Trash"
-              className="window-titlebar-leading-button"
-              data-active={isTrashViewOpen}
-              onClick={onOpenTrashView}
-              type="button"
-            >
-              <Trash2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-            </button>
-          </div>
+          <WindowTitleBarViewButtons
+            isTrashViewOpen={isTrashViewOpen}
+            isVirtualViewOpen={isVirtualViewOpen}
+            onOpenNotesView={onOpenNotesView}
+            onOpenVirtualView={onOpenVirtualView}
+            onOpenTrashView={onOpenTrashView}
+          />
           <span aria-label="Current change timestamp" className="window-titlebar-left-timestamp">
             {workspaceChangeTimestamp}
           </span>

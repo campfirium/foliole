@@ -27,8 +27,10 @@ function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>
       isListCollapsed={false}
       isRightSidebarCollapsed={false}
       isTrashViewOpen={false}
+      isVirtualViewOpen={false}
       listWidth={320}
       onOpenNotesView={() => undefined}
+      onOpenVirtualView={() => undefined}
       onOpenTrashView={() => undefined}
       onSelectRightPanel={() => undefined}
       onToggleListVisibility={() => undefined}
@@ -116,7 +118,9 @@ describe('WindowTitleBar', () => {
       expect(screen.getByRole('button', { name: 'Minimize' })).toBeEnabled();
     }, { timeout: 1_000 });
   });
+});
 
+describe('WindowTitleBar view switches', () => {
   it('renders right sidebar toggle beside window controls when sidebar is collapsed', () => {
     renderTitleBar({ isRightSidebarCollapsed: true });
 
@@ -132,7 +136,19 @@ describe('WindowTitleBar', () => {
 
     expect(screen.getByRole('button', { name: 'Toggle left panel' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Notes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Virtual Nodes' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trash' })).not.toBeInTheDocument();
+  });
+
+  it('renders the virtual node switch between notes and trash', () => {
+    renderTitleBar();
+
+    const notesButton = screen.getByRole('button', { name: 'Notes' });
+    const virtualButton = screen.getByRole('button', { name: 'Virtual Nodes' });
+    const trashButton = screen.getByRole('button', { name: 'Trash' });
+
+    expect(notesButton.compareDocumentPosition(virtualButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(virtualButton.compareDocumentPosition(trashButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 

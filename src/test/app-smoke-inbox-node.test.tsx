@@ -130,17 +130,15 @@ it('shows Inbox in the node tree and opens its empty state landing', () => {
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
 });
 
-it('shows the fixed virtual root in the node tree and opens its saved-node shell', () => {
+it('keeps virtual nodes out of the main tree and opens the virtual list from the titlebar switch', () => {
   render(<App />);
 
-  const virtualRootItem = within(getNodeListPanel()).getByRole('treeitem', { name: 'Virtual Nodes' });
-  expect(virtualRootItem).toBeInTheDocument();
+  expect(within(getNodeListPanel()).queryByRole('treeitem', { name: 'Virtual Nodes' })).not.toBeInTheDocument();
 
-  fireEvent.click(virtualRootItem);
+  fireEvent.click(screen.getByRole('button', { name: 'Virtual Nodes' }));
 
-  expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
-  expect(screen.getByText('0 items')).toBeInTheDocument();
-  expect(screen.getByText('This folder is empty')).toBeInTheDocument();
+  expect(screen.getByText('No virtual nodes')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Create Virtual Node' })).toBeInTheDocument();
 });
 
 it('opens import management from the left toolbar instead of replacing Inbox', () => {

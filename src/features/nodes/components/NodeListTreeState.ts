@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTree, buildVisibleNodeTreeRows, type NodeTreeRow } from '../model/nodeTree';
+import { isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 export interface NodeSelectModifiers {
@@ -16,8 +17,11 @@ export interface NodeListState {
   noteParentById: Record<string, string | null>;
   trashRows: NodeTreeRow[];
   trashRowsAll: NodeTreeRow[];
+  virtualRows: NodeTreeRow[];
+  virtualRowsAll: NodeTreeRow[];
   noteRowIds: string[];
   trashRowIds: string[];
+  virtualRowIds: string[];
   selectedNodeIds: string[];
   setSelectedNodeIds: Dispatch<SetStateAction<string[]>>;
   selectionAnchorNodeId: string | null;
@@ -35,6 +39,46 @@ export function collectRangeNodeIds(nodeIds: string[], anchorNodeId: string, tar
   return nodeIds.slice(start, end + 1);
 }
 
+function useScopedNodeOrders(nodeOrder: string[], nodesById: WorkspaceListNodesById, trashedNodeIds: string[]) {
+  const noteNodeOrder = useMemo(
+    () =>
+      nodeOrder.filter(
+        (id) => !trashedNodeIds.includes(id) && !isVirtualRootNode(nodesById[id]) && !isVirtualNode(nodesById[id])
+      ),
+    [nodeOrder, nodesById, trashedNodeIds]
+  );
+  const virtualNodeOrder = useMemo(
+    () => nodeOrder.filter((id) => !trashedNodeIds.includes(id) && isVirtualNode(nodesById[id])),
+    [nodeOrder, nodesById, trashedNodeIds]
+  );
+  const trashedNodeOrder = useMemo(
+    () => nodeOrder.filter((id) => trashedNodeIds.includes(id)),
+    [nodeOrder, trashedNodeIds]
+  );
+
+  return { noteNodeOrder, trashedNodeOrder, virtualNodeOrder };
+}
+
+function useScopedNodeTrees(
+  scopedNodeOrder: ReturnType<typeof useScopedNodeOrders>,
+  nodesById: WorkspaceListNodesById
+) {
+  const noteTree = useMemo(
+    () => buildNodeTree(scopedNodeOrder.noteNodeOrder, nodesById),
+    [scopedNodeOrder.noteNodeOrder, nodesById]
+  );
+  const trashTree = useMemo(
+    () => buildNodeTree(scopedNodeOrder.trashedNodeOrder, nodesById),
+    [scopedNodeOrder.trashedNodeOrder, nodesById]
+  );
+  const virtualTree = useMemo(
+    () => buildNodeTree(scopedNodeOrder.virtualNodeOrder, nodesById),
+    [scopedNodeOrder.virtualNodeOrder, nodesById]
+  );
+
+  return { noteTree, trashTree, virtualTree };
+}
+
 export function useNodeListState(
   activeNodeId: string | null,
   nodeOrder: string[],
@@ -44,22 +88,8 @@ export function useNodeListState(
   collapsedTrashNodeIds: ReadonlySet<string>
 ): NodeListState {
   const trashedNodeIds = useWorkspaceStore((state) => state.trashedNodeIds);
-  const visibleNodeOrder = useMemo(
-    () => nodeOrder.filter((id) => !trashedNodeIds.includes(id)),
-    [nodeOrder, trashedNodeIds]
-  );
-  const trashedNodeOrder = useMemo(
-    () => nodeOrder.filter((id) => trashedNodeIds.includes(id)),
-    [nodeOrder, trashedNodeIds]
-  );
-  const noteTree = useMemo(
-    () => buildNodeTree(visibleNodeOrder, nodesById),
-    [visibleNodeOrder, nodesById]
-  );
-  const trashTree = useMemo(
-    () => buildNodeTree(trashedNodeOrder, nodesById),
-    [trashedNodeOrder, nodesById]
-  );
+  const scopedNodeOrder = useScopedNodeOrders(nodeOrder, nodesById, trashedNodeIds);
+  const { noteTree, trashTree, virtualTree } = useScopedNodeTrees(scopedNodeOrder, nodesById);
   const noteRows = useMemo(
     () => buildVisibleNodeTreeRows(noteTree.rows, collapsedNoteNodeIds),
     [noteTree.rows, collapsedNoteNodeIds]
@@ -67,6 +97,10 @@ export function useNodeListState(
   const trashRows = useMemo(
     () => buildVisibleNodeTreeRows(trashTree.rows, collapsedTrashNodeIds),
     [trashTree.rows, collapsedTrashNodeIds]
+  );
+  const virtualRows = useMemo(
+    () => buildVisibleNodeTreeRows(virtualTree.rows, collapsedNoteNodeIds),
+    [virtualTree.rows, collapsedNoteNodeIds]
   );
   const selectionState = useNodeListSelection(
     activeNodeId,
@@ -81,8 +115,11 @@ export function useNodeListState(
     noteParentById: noteTree.parentById,
     trashRows,
     trashRowsAll: trashTree.rows,
+    virtualRows,
+    virtualRowsAll: virtualTree.rows,
     noteRowIds: noteRows.map((row) => row.node.id),
     trashRowIds: trashRows.map((row) => row.node.id),
+    virtualRowIds: virtualRows.map((row) => row.node.id),
     ...selectionState
   };
 }
@@ -141,6 +178,7 @@ export function handleToggleSelection(
 
 export function useNodeSelectionHandler({
   activeNodeId,
+  nodesById,
   onSelectNode,
   onSelectTrashNode,
   selectedTrashNodeId,
@@ -148,6 +186,7 @@ export function useNodeSelectionHandler({
   trashedNodeIds
 }: {
   activeNodeId: string | null;
+  nodesById: WorkspaceListNodesById;
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
@@ -156,9 +195,10 @@ export function useNodeSelectionHandler({
 }) {
   return (nodeId: string, modifiers?: NodeSelectModifiers) => {
     const isTrashNode = trashedNodeIds.includes(nodeId);
-    const scopeIds = isTrashNode ? state.trashRowIds : state.noteRowIds;
+    const isVirtualListNode = isVirtualNode(nodesById[nodeId]);
+    const scopeIds = isTrashNode ? state.trashRowIds : isVirtualListNode ? state.virtualRowIds : state.noteRowIds;
     const scoped = state.selectedNodeIds.filter((id) =>
-      isTrashNode ? trashedNodeIds.includes(id) : !trashedNodeIds.includes(id)
+      isTrashNode ? trashedNodeIds.includes(id) : isVirtualListNode ? isVirtualNode(nodesById[id]) : !trashedNodeIds.includes(id)
     );
     const notify = isTrashNode ? onSelectTrashNode : onSelectNode;
     const fallbackAnchor = isTrashNode ? (selectedTrashNodeId ?? nodeId) : (activeNodeId ?? nodeId);

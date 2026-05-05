@@ -56,6 +56,7 @@ export interface WorkspaceLayoutProps {
   isResizingList: boolean;
   isResizingRightSidebar: boolean;
   isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
   isViewingTrashNode: boolean;
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
@@ -85,6 +86,7 @@ export interface WorkspaceLayoutProps {
   onOpenMoveToNode: () => void;
   onOpenImportManagement: () => void;
   onOpenTrashView: () => void;
+  onOpenVirtualView: () => void;
   onCloseImportManagement: () => void;
   onToggleListVisibility: () => void;
   onToggleRightSidebarVisibility: () => void;

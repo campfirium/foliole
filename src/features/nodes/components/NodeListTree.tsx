@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { onWindowKeydown } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
 import { buildNodeTree } from '../model/nodeTree';
-import { INBOX_NODE_ID } from '../model/specialNodes';
+import { INBOX_NODE_ID, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { useCollapsedNodeState } from './NodeListCollapseState';
@@ -16,6 +16,7 @@ import { useNodeBulkDeleteFeedback } from './useNodeBulkDeleteFeedback';
 interface NodeListTreeProps {
   activeNodeId: string | null;
   isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
@@ -33,6 +34,7 @@ interface NodeListTreeData {
   noteParentById: Record<string, string | null>;
   noteRowsAll: ReturnType<typeof buildNodeTree>['rows'];
   trashRowsAll: ReturnType<typeof buildNodeTree>['rows'];
+  virtualRowsAll: ReturnType<typeof buildNodeTree>['rows'];
 }
 
 function useNodeWorkspaceActions() {
@@ -57,9 +59,16 @@ function useNodeListTreeData(
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: string[]
 ): NodeListTreeData {
+  const virtualNodeOrder = useMemo(
+    () => nodeOrder.filter((id) => !trashedNodeIds.includes(id) && isVirtualNode(nodesById[id])),
+    [nodeOrder, nodesById, trashedNodeIds]
+  );
   const visibleNodeOrder = useMemo(
-    () => nodeOrder.filter((id) => !trashedNodeIds.includes(id)),
-    [nodeOrder, trashedNodeIds]
+    () =>
+      nodeOrder.filter(
+        (id) => !trashedNodeIds.includes(id) && !isVirtualRootNode(nodesById[id]) && !isVirtualNode(nodesById[id])
+      ),
+    [nodeOrder, nodesById, trashedNodeIds]
   );
   const trashedNodeOrder = useMemo(
     () => nodeOrder.filter((id) => trashedNodeIds.includes(id)),
@@ -73,17 +82,23 @@ function useNodeListTreeData(
     () => buildNodeTree(trashedNodeOrder, nodesById),
     [trashedNodeOrder, nodesById]
   );
+  const virtualTree = useMemo(
+    () => buildNodeTree(virtualNodeOrder, nodesById),
+    [virtualNodeOrder, nodesById]
+  );
 
   return {
     noteParentById: noteTree.parentById,
     noteRowsAll: noteTree.rows,
-    trashRowsAll: trashTree.rows
+    trashRowsAll: trashTree.rows,
+    virtualRowsAll: virtualTree.rows
   };
 }
 
 function useNodeListTreeControllers(args: {
   activeNodeId: string | null;
   collapsedState: ReturnType<typeof useCollapsedNodeState>;
+  nodesById: WorkspaceListNodesById;
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
@@ -102,6 +117,7 @@ function useNodeListTreeControllers(args: {
   });
   const handleSelectNode = useNodeSelectionHandler({
     activeNodeId: args.activeNodeId,
+    nodesById: args.nodesById,
     onSelectNode: args.onSelectNode,
     onSelectTrashNode: args.onSelectTrashNode,
     selectedTrashNodeId: args.selectedTrashNodeId,
@@ -124,7 +140,7 @@ function useNodeListTreeModel({
   onSelectNode,
   onSelectTrashNode,
   selectedTrashNodeId
-}: Omit<NodeListTreeProps, 'isTrashViewOpen' | 'onOpenMoveToNode' | 'onOpenNotesView'>) {
+}: Omit<NodeListTreeProps, 'isTrashViewOpen' | 'isVirtualViewOpen' | 'onOpenMoveToNode' | 'onOpenNotesView'>) {
   const workspace = useNodeWorkspaceActions();
   const treeData = useNodeListTreeData(nodeOrder, nodesById, workspace.trashedNodeIds);
   const collapsedState = useCollapsedNodeState({
@@ -145,6 +161,7 @@ function useNodeListTreeModel({
   const controllers = useNodeListTreeControllers({
     activeNodeId,
     collapsedState,
+    nodesById,
     onSelectNode,
     onSelectTrashNode,
     selectedTrashNodeId,
@@ -177,6 +194,7 @@ function useNodeListTreeModel({
 export function NodeListTree({
   activeNodeId,
   isTrashViewOpen,
+  isVirtualViewOpen,
   nodeOrder,
   nodesById,
   onOpenMoveToNode,
@@ -200,7 +218,7 @@ export function NodeListTree({
   const collapsedNodeIds = isTrashViewOpen
     ? model.collapsedState.collapsedTrashNodeIds
     : model.collapsedState.collapsedNoteNodeIds;
-  const activeRows = isTrashViewOpen ? state.trashRows : state.noteRows;
+  const activeRows = isTrashViewOpen ? state.trashRows : isVirtualViewOpen ? state.virtualRows : state.noteRows;
 
   return (
     <NodeListTreeContent
@@ -217,6 +235,7 @@ export function NodeListTree({
       deleteNodesPermanently={deleteFeedback.runDeleteNodesPermanently}
       dismissNode={model.dismissNode}
       isTrashViewOpen={isTrashViewOpen}
+      isVirtualViewOpen={isVirtualViewOpen}
       moveNodes={model.moveNodes}
       nodesById={nodesById}
       onOpenMoveToNode={onOpenMoveToNode}

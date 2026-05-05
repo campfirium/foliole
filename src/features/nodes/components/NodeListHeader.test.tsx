@@ -9,6 +9,7 @@ it('renders node list actions inside the shared toolbar group', () => {
   render(
     <NodeListHeader
       isTrashViewOpen={false}
+      isVirtualViewOpen={false}
       onCollapseAll={vi.fn()}
       onCreateCommand={onCreateCommand}
       onEmptyTrash={vi.fn()}

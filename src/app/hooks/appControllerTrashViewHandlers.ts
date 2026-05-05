@@ -4,6 +4,7 @@ export function createOpenNotesView(args: BuildControllerLayoutPropsArgs) {
   return () => {
     args.runtime.setIsViewingTrashNode(false);
     args.trash.closeTrashView();
+    args.virtualView.closeVirtualView();
   };
 }
 
@@ -20,6 +21,21 @@ export function createToggleTrashView(args: BuildControllerLayoutPropsArgs, open
 export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string) => {
     args.runtime.setIsViewingTrashNode(false);
+    if (args.ws.nodesById[nodeId]?.specialKind !== 'virtual') {
+      args.virtualView.closeVirtualView();
+    }
     args.nav.handleSelectNode(nodeId);
+  };
+}
+
+export function createToggleVirtualView(args: BuildControllerLayoutPropsArgs, openNotesView: () => void) {
+  return () => {
+    if (args.virtualView.isVirtualViewOpen) {
+      openNotesView();
+      return;
+    }
+    args.runtime.setIsViewingTrashNode(false);
+    args.trash.closeTrashView();
+    args.virtualView.openVirtualView();
   };
 }

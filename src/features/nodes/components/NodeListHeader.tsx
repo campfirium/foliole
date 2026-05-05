@@ -13,6 +13,7 @@ import {
 
 interface NodeListHeaderProps {
   isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
   onOpenNotesView: () => void;
   onCreateCommand: (commandId: string) => void;
   onEmptyTrash: () => void;
@@ -69,6 +70,20 @@ function renderNodeListActions(
   );
 }
 
+function renderVirtualListActions(onCreateCommand: (commandId: string) => void) {
+  return (
+    <AppButton
+      aria-label="Create Virtual Node"
+      className="text-foreground/70 hover:text-foreground"
+      onClick={() => onCreateCommand(VIRTUAL_NODE_COMMAND.appCommandId)}
+      size="sm"
+      variant="subtle"
+    >
+      {VIRTUAL_NODE_COMMAND.listLabel}
+    </AppButton>
+  );
+}
+
 function renderTrashActions(onEmptyTrash: () => void, trashCount: number) {
   return (
     <>
@@ -91,6 +106,7 @@ function renderTrashActions(onEmptyTrash: () => void, trashCount: number) {
 
 export function NodeListHeader({
   isTrashViewOpen,
+  isVirtualViewOpen,
   onOpenNotesView,
   onCreateCommand,
   onEmptyTrash,
@@ -104,10 +120,12 @@ export function NodeListHeader({
       <button className="sr-only" onClick={onOpenNotesView} type="button">
         Nodes
       </button>
-      <ToolbarActionGroup ariaLabel={isTrashViewOpen ? 'Trash actions' : 'Node list actions'}>
+      <ToolbarActionGroup ariaLabel={isTrashViewOpen ? 'Trash actions' : isVirtualViewOpen ? 'Virtual node actions' : 'Node list actions'}>
         {isTrashViewOpen
           ? renderTrashActions(onEmptyTrash, trashCount)
-          : renderNodeListActions(onCollapseAll, onCreateCommand, onExpandAll)}
+          : isVirtualViewOpen
+            ? renderVirtualListActions(onCreateCommand)
+            : renderNodeListActions(onCollapseAll, onCreateCommand, onExpandAll)}
       </ToolbarActionGroup>
     </AppToolbar>
   );

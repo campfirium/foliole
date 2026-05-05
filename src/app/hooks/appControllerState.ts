@@ -11,6 +11,7 @@ import { useReadingProgressSync } from './useReadingProgressSync';
 import { useRightSidebarResizer } from './useRightSidebarResizer';
 import { useStudyMode } from './useStudyMode';
 import { useTrashView } from './useTrashView';
+import { useVirtualNodeView } from './useVirtualNodeView';
 import { useWorkspaceActiveNodeDocument } from './useWorkspaceActiveNodeDocument';
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
@@ -77,6 +78,7 @@ export function useWorkspaceControllerState(
   useWorkspaceActiveNodeDocument(ws.activeNodeId);
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
   const trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
+  const virtualView = useVirtualNodeView();
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const study = useStudyMode({
     activeNodeId: isInboxNode(activeNode) ? null : ws.activeNodeId,
@@ -95,5 +97,17 @@ export function useWorkspaceControllerState(
   const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, closeContextMenu: () => undefined, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, openNode: ws.openNode, saveActiveNodeView });
   const editorCtx = useEditorContextCommands({ activeNode, activeNodeId: ws.activeNodeId, createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection, createQANodeFromSelection: ws.createQANodeFromSelection, editorRef: runtime.editorRef, isTrashViewOpen: runtime.isViewingTrashNode, updateNodeContent: ws.updateNodeContent });
   useReadingProgressSync({ activeNodeId: ws.activeNodeId, editorRef: runtime.editorRef, isViewingTrashNode: runtime.isViewingTrashNode, isWorkspaceHydrated, nodeViewById: ws.nodeViewById, setNodeViewState: ws.setNodeViewState });
-  return { activeNode, documentResize, editorCtx, listResize, nav, rightSidebarResize, runtime, selectedTrashNode, study, trash };
+  return {
+    activeNode,
+    documentResize,
+    editorCtx,
+    listResize,
+    nav,
+    rightSidebarResize,
+    runtime,
+    selectedTrashNode,
+    study,
+    trash,
+    virtualView
+  };
 }

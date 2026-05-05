@@ -13,6 +13,10 @@ function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
     props.onCloseImportManagement();
     props.onOpenNotesView();
   };
+  const handleOpenVirtualView = () => {
+    props.onCloseImportManagement();
+    props.onOpenVirtualView();
+  };
   const handleOpenTrashView = () => {
     props.onCloseImportManagement();
     props.onOpenTrashView();
@@ -23,6 +27,7 @@ function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
   };
   return {
     handleOpenNotesView,
+    handleOpenVirtualView,
     handleOpenTrashView,
     handleSelectNode
   };
@@ -30,7 +35,7 @@ function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>('dev');
-  const { handleOpenNotesView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(props);
+  const { handleOpenNotesView, handleOpenVirtualView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(props);
   const workspaceGridStyle = {
     '--workspace-list-width': `${props.listWidth}px`,
     '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px`
@@ -48,6 +53,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
       <WorkspaceMainChrome
         activeRightPanelId={activeRightPanelId}
         onOpenNotesView={handleOpenNotesView}
+        onOpenVirtualView={handleOpenVirtualView}
         onOpenTrashView={handleOpenTrashView}
         isImportManagementOpen={props.isImportManagementOpen}
         onSelectRightPanel={handleSelectRightPanel}
@@ -86,6 +92,7 @@ function WorkspaceMainChrome({
   isImportManagementOpen,
   onOpenImportManagement,
   onOpenNotesView,
+  onOpenVirtualView,
   onOpenTrashView,
   onSelectNode,
   onSelectRightPanel,
@@ -98,6 +105,7 @@ function WorkspaceMainChrome({
   isImportManagementOpen: boolean;
   onOpenImportManagement: () => void;
   onOpenNotesView: () => void;
+  onOpenVirtualView: () => void;
   onOpenTrashView: () => void;
   onSelectNode: (nodeId: string) => void;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
@@ -113,8 +121,10 @@ function WorkspaceMainChrome({
         isListCollapsed={props.isListCollapsed}
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
         isTrashViewOpen={props.isTrashViewOpen}
+        isVirtualViewOpen={props.isVirtualViewOpen}
         listWidth={props.listWidth}
         onOpenNotesView={onOpenNotesView}
+        onOpenVirtualView={onOpenVirtualView}
         onOpenTrashView={onOpenTrashView}
         onSelectRightPanel={onSelectRightPanel}
         onToggleListVisibility={props.onToggleListVisibility}

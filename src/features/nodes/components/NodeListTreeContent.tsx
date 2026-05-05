@@ -29,6 +29,7 @@ interface NodeListPanelProps {
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
   isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
   moveNodes: (
     nodeIds: string[],
     targetNodeId: string | null,
@@ -83,7 +84,9 @@ function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeo
       role="tree"
       style={{ gap: `${resolveNodeListRowGap(props.rowSpacing)}px` }}
       onContextMenu={handleBlankAreaContextMenu}
-      onDoubleClick={(event) => event.target === event.currentTarget && props.createGlobalNode('')}
+      onDoubleClick={(event) =>
+        event.target === event.currentTarget && (props.isVirtualViewOpen ? props.createVirtualNode() : props.createGlobalNode(''))
+      }
       onDragOver={(event) => event.target === event.currentTarget && drag.onDragOverRoot(event)}
       onDrop={(event) => event.target === event.currentTarget && drag.onDropRoot(event)}
     >
@@ -93,6 +96,7 @@ function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeo
         collapsedNodeIds={props.activeCollapsedNodeIds}
         drag={drag}
         isTrashViewOpen={props.isTrashViewOpen}
+        isVirtualViewOpen={props.isVirtualViewOpen}
         nodesById={props.nodesById}
         onContextMenu={props.contextMenu.openContextMenu}
         onRename={props.onRenameNode}
@@ -110,6 +114,7 @@ function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeo
 
 function NodeListPanel(props: NodeListPanelProps) {
   const drag = useNodeListDragController({
+    disableRootDrop: props.isTrashViewOpen || props.isVirtualViewOpen,
     isTrashViewOpen: props.isTrashViewOpen,
     moveNodes: props.moveNodes,
     nodesById: props.nodesById,
@@ -120,6 +125,7 @@ function NodeListPanel(props: NodeListPanelProps) {
     <aside aria-label="Node list panel" className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground">
       <NodeListHeader
         isTrashViewOpen={props.isTrashViewOpen}
+        isVirtualViewOpen={props.isVirtualViewOpen}
         onCollapseAll={props.collapse.collapseAllNotes}
         onCreateCommand={(commandId) => {
           if (commandId === VIRTUAL_NODE_APP_COMMAND_ID) {
@@ -170,6 +176,7 @@ interface NodeListTreeContentProps {
   deleteStatusLabel: string | null;
   dismissNode: (nodeId: string, now?: string) => boolean;
   isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
   moveNodes: (
     nodeIds: string[],
     targetNodeId: string | null,
@@ -203,6 +210,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         deleteNodesPermanently={props.deleteNodesPermanently}
         deleteStatusLabel={props.deleteStatusLabel}
         isTrashViewOpen={props.isTrashViewOpen}
+        isVirtualViewOpen={props.isVirtualViewOpen}
         moveNodes={props.moveNodes}
         nodesById={props.nodesById}
         noteRowIds={props.state.noteRowIds}
