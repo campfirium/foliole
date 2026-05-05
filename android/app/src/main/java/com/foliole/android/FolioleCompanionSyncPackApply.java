@@ -71,8 +71,15 @@ final class FolioleCompanionSyncPackApply {
                 "hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
                 "original_sha256, stored_sha256, availability, source_device_id, created_at, cached_at, last_verified_at) " +
                 "SELECT hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
-                "original_sha256, stored_sha256, availability, source_device_id, created_at, cached_at, last_verified_at " +
-                "FROM inc.content_blobs"
+                "original_sha256, stored_sha256, " +
+                "CASE WHEN EXISTS (SELECT 1 FROM main.content_blob_data data WHERE data.hash = incoming.hash) " +
+                "THEN 'cached' ELSE 'missing' END, " +
+                "source_device_id, created_at, " +
+                "CASE WHEN EXISTS (SELECT 1 FROM main.content_blob_data data WHERE data.hash = incoming.hash) " +
+                "THEN incoming.cached_at ELSE NULL END, " +
+                "CASE WHEN EXISTS (SELECT 1 FROM main.content_blob_data data WHERE data.hash = incoming.hash) " +
+                "THEN incoming.last_verified_at ELSE NULL END " +
+                "FROM inc.content_blobs incoming"
         );
         return changedRows(database);
     }

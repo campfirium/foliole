@@ -6,6 +6,10 @@ import {
   ATTACHMENT_RESOURCE_PATH,
   loadCompanionAttachmentResource
 } from './companionLanAttachmentResources.js';
+import {
+  CONTENT_BLOB_RESOURCE_PATH,
+  loadCompanionContentBlobResource
+} from './companionLanContentBlobs.js';
 import { handlePairRequest, handlePairRequestCreate } from './companionLanPairingEndpoints.js';
 import {
   buildDiscoveryPayload,
@@ -45,6 +49,7 @@ export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 export {
   ATTACHMENT_RESOURCE_PATH,
+  CONTENT_BLOB_RESOURCE_PATH,
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
@@ -173,6 +178,15 @@ async function handleAuthenticatedGet(
       parsedRequestUrl.searchParams.get('attachment_id'),
       parsedRequestUrl.searchParams.get('content_hash')
     );
+    if (resource.status === 'ready') {
+      writeBinary(response, 200, resource.body, resource.mimeType);
+    } else {
+      writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
+    }
+    return;
+  }
+  if (parsedRequestUrl.pathname === CONTENT_BLOB_RESOURCE_PATH) {
+    const resource = await loadCompanionContentBlobResource(parsedRequestUrl.searchParams.get('hash'));
     if (resource.status === 'ready') {
       writeBinary(response, 200, resource.body, resource.mimeType);
     } else {

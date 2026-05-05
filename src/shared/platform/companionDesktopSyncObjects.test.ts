@@ -26,6 +26,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionSyncReviewLogCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncReviewLogPushCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncReviewLog: vi.fn(async () => [] as NativeSyncReviewLogRecord[]),
+  loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncStateChanges: vi.fn(async () => [] as NativeSyncStateObjectRecord[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncStateCursor: vi.fn(async (): Promise<number | null> => null),
@@ -36,7 +37,8 @@ const syncBridgeMock = vi.hoisted(() => ({
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
-  saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor)
+  saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor),
+  syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
 }));
 
 const pairingMock = vi.hoisted(() => ({
@@ -127,6 +129,28 @@ function expectPullWrites() {
   ]);
   expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8);
   expect(syncBridgeMock.saveCompanionSyncStateCursor).toHaveBeenCalledWith(1);
+}
+
+async function testPullsMissingContentBlobs() {
+  const bodyHash = 'a'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobHashes
+    .mockResolvedValueOnce([bodyHash])
+    .mockResolvedValueOnce([]);
+  const fetchMock = createFetchMock();
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(result.syncedContentBlobHashes).toEqual([bodyHash]);
+  expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledWith({
+    hash: bodyHash,
+    headers: {
+      'X-Device-Id': 'android-test-device',
+      'X-Signature': 'signed'
+    },
+    url: `http://10.0.2.2:38641/companion/content-blob?hash=${bodyHash}`
+  });
 }
 
 async function testPullsChangedObjects() {
@@ -247,6 +271,7 @@ describe('companion desktop sync objects', () => {
     syncBridgeMock.loadCompanionSyncReviewLogCursor.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncReviewLogPushCursor.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([]);
+    syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValue([]);
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
     syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncStateCursor.mockResolvedValue(null);
@@ -258,6 +283,10 @@ describe('companion desktop sync objects', () => {
     syncBridgeMock.saveCompanionSyncPackCursor.mockImplementation(async (cursor: number | null) => cursor);
     syncBridgeMock.saveCompanionSyncStateCursor.mockImplementation(async (cursor: number | null) => cursor);
     syncBridgeMock.saveCompanionSyncStatePushCursor.mockImplementation(async (cursor: number | null) => cursor);
+    syncBridgeMock.syncCompanionContentBlob.mockImplementation(async ({ hash }: { hash: string }) => ({
+      availability: 'cached',
+      hash
+    }));
     pairingMock.createSignedRequestHeaders.mockResolvedValue({
       'X-Device-Id': 'android-test-device',
       'X-Signature': 'signed'
@@ -266,6 +295,8 @@ describe('companion desktop sync objects', () => {
   });
 
   it('pulls changed generic objects from desktop and applies them locally', testPullsChangedObjects);
+
+  it('pulls missing content blobs after applying the structure pack', testPullsMissingContentBlobs);
 
   it('pulls node versions and review log from their dedicated streams', testPullsNodeVersionsAndReviewLog);
 

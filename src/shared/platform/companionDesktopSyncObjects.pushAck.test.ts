@@ -20,6 +20,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionSyncReviewLogCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncReviewLogPushCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncReviewLog: vi.fn(async () => [] as NativeSyncReviewLogRecord[]),
+  loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncStateChanges: vi.fn(async () => [] as NativeSyncStateObjectRecord[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncStateCursor: vi.fn(async (): Promise<number | null> => null),
@@ -30,7 +31,8 @@ const syncBridgeMock = vi.hoisted(() => ({
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
-  saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor)
+  saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor),
+  syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);

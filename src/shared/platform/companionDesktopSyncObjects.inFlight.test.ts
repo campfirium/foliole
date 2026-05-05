@@ -11,6 +11,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionSyncReviewLogCursor: vi.fn(async () => null),
   loadCompanionSyncReviewLogPushCursor: vi.fn(async () => null),
   loadCompanionSyncReviewLog: vi.fn(async () => []),
+  loadCompanionMissingContentBlobHashes: vi.fn(async () => []),
   loadCompanionSyncStateChanges: vi.fn(async () => []),
   loadCompanionSyncPackCursor: vi.fn(async () => null),
   loadCompanionSyncStateCursor: vi.fn(async () => null),
@@ -21,7 +22,8 @@ const syncBridgeMock = vi.hoisted(() => ({
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor) => cursor),
   saveCompanionSyncPackCursor: vi.fn(async (cursor) => cursor),
   saveCompanionSyncStateCursor: vi.fn(async (cursor) => cursor),
-  saveCompanionSyncStatePushCursor: vi.fn(async (cursor) => cursor)
+  saveCompanionSyncStatePushCursor: vi.fn(async (cursor) => cursor),
+  syncCompanionContentBlob: vi.fn(async ({ hash }) => ({ availability: 'cached', hash }))
 }));
 
 const pairingMock = vi.hoisted(() => ({

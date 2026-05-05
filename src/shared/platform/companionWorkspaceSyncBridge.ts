@@ -53,6 +53,9 @@ export interface CompanionWorkspaceSyncPlugin {
     cursor: number | null;
     limit?: number;
   }): Promise<{ objects: NativeSyncStateObjectRecord[] }>;
+  loadMissingContentBlobHashes(args: {
+    limit?: number;
+  }): Promise<{ hashes: string[] }>;
   loadSyncStateCursor(): Promise<{ cursor: number | null }>;
   loadSyncPackCursor(): Promise<{ cursor: number | null }>;
   loadSyncStatePushCursor(): Promise<{ cursor: number | null }>;
@@ -191,6 +194,11 @@ export interface CompanionWorkspaceSyncPlugin {
     headers: Record<string, string>;
     url: string;
   }): Promise<{ attachment_id: string; availability: string }>;
+  syncContentBlob(args: {
+    hash: string;
+    headers: Record<string, string>;
+    url: string;
+  }): Promise<{ availability: string; hash: string }>;
   saveWorkspaceSyncEndpoint(args: { endpoint_url: string | null }): Promise<NativeCompanionWorkspaceSyncState>;
   signCompanionSyncRequest(args: {
     body_hash: string;

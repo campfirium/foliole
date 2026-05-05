@@ -81,6 +81,24 @@ export async function applyCompanionDesktopSyncPack(args: {
   return FolioleCompanionSync.applyDesktopSyncPack(args);
 }
 
+export async function loadCompanionMissingContentBlobHashes(limit = 50) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return [] as string[];
+  }
+  return (await FolioleCompanionSync.loadMissingContentBlobHashes({ limit })).hashes;
+}
+
+export async function syncCompanionContentBlob(args: {
+  hash: string;
+  headers: Record<string, string>;
+  url: string;
+}) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return { availability: 'missing', hash: args.hash };
+  }
+  return FolioleCompanionSync.syncContentBlob(args);
+}
+
 export async function applyCompanionSyncNodeVersions(nodes: NativeSyncNodeRecord[]) {
   if (!isNativeAndroidCompanionRuntime()) {
     return [];

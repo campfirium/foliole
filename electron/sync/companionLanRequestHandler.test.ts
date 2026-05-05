@@ -16,6 +16,13 @@ const attachmentResourceMock = vi.hoisted(() => ({
     status: 'ready'
   }))
 }));
+const contentBlobResourceMock = vi.hoisted(() => ({
+  loadCompanionContentBlobResource: vi.fn(async (): Promise<unknown> => ({
+    body: Buffer.from('body-bytes'),
+    mimeType: 'text/plain',
+    status: 'ready'
+  }))
+}));
 const syncPackMock = vi.hoisted(() => ({
   buildCompanionSyncPackResource: vi.fn(async (): Promise<unknown> => ({
     body: Buffer.from('sqlite-pack'),
@@ -37,6 +44,10 @@ vi.mock('./companionLanAttachmentResources.js', () => ({
   ATTACHMENT_RESOURCE_PATH: '/companion/attachment-resource',
   loadCompanionAttachmentResource: attachmentResourceMock.loadCompanionAttachmentResource
 }));
+vi.mock('./companionLanContentBlobs.js', () => ({
+  CONTENT_BLOB_RESOURCE_PATH: '/companion/content-blob',
+  loadCompanionContentBlobResource: contentBlobResourceMock.loadCompanionContentBlobResource
+}));
 vi.mock('./companionLanSyncPack.js', () => ({
   SYNC_PACK_PATH: '/companion/sync-pack',
   buildCompanionSyncPackResource: syncPackMock.buildCompanionSyncPackResource
@@ -44,6 +55,7 @@ vi.mock('./companionLanSyncPack.js', () => ({
 
 import {
   ATTACHMENT_RESOURCE_PATH,
+  CONTENT_BLOB_RESOURCE_PATH,
   createLanWorkspaceSyncRequestHandler,
   SYNC_PACK_PATH,
   WORKSPACE_VERSION_PATH,
@@ -55,6 +67,11 @@ beforeEach(() => {
   attachmentResourceMock.loadCompanionAttachmentResource.mockResolvedValue({
     body: Buffer.from('attachment-bytes'),
     mimeType: 'image/png',
+    status: 'ready'
+  });
+  contentBlobResourceMock.loadCompanionContentBlobResource.mockResolvedValue({
+    body: Buffer.from('body-bytes'),
+    mimeType: 'text/plain',
     status: 'ready'
   });
   syncPackMock.buildCompanionSyncPackResource.mockResolvedValue({
@@ -141,6 +158,23 @@ it('returns attachment resource errors as json', async () => {
     'Content-Type': 'application/json; charset=utf-8'
   }));
   expect(response.end).toHaveBeenCalledWith(JSON.stringify({ error: 'content_hash_mismatch' }));
+});
+
+it('serves signed content body blobs without loading the workspace snapshot', async () => {
+  const response = createResponse();
+  await createHandler()({
+    headers: {},
+    method: 'GET',
+    url: `${CONTENT_BLOB_RESOURCE_PATH}?hash=abc`
+  } as http.IncomingMessage, response);
+
+  expect(response.writeHead).toHaveBeenCalledWith(200, {
+    'Content-Length': Buffer.byteLength('body-bytes'),
+    'Content-Type': 'text/plain'
+  });
+  expect(response.end).toHaveBeenCalledWith(Buffer.from('body-bytes'));
+  expect(contentBlobResourceMock.loadCompanionContentBlobResource).toHaveBeenCalledWith('abc');
+  expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });
 
 it('serves signed sqlite sync packs without loading the workspace snapshot', async () => {

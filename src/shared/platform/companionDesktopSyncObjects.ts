@@ -13,6 +13,7 @@ import {
   applyCompanionSyncNodeVersions,
   applyCompanionSyncObjects,
   applyCompanionSyncReviewLog,
+  loadCompanionMissingContentBlobHashes,
   loadCompanionSyncPackCursor,
   loadCompanionSyncNodeVersionCursor,
   loadCompanionSyncNodeVersionPushCursor,
@@ -29,10 +30,12 @@ import {
   saveCompanionSyncReviewLogCursor,
   saveCompanionSyncReviewLogPushCursor,
   saveCompanionSyncStateCursor,
-  saveCompanionSyncStatePushCursor
+  saveCompanionSyncStatePushCursor,
+  syncCompanionContentBlob
 } from './companionSyncObjects';
 export { bootstrapCompanionFromDesktopState } from './companionDesktopSyncBootstrap';
 
+const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';
 const SYNC_NODE_VERSIONS_PATH = '/companion/sync-node-versions';
 const SYNC_OBJECTS_PATH = '/companion/sync-objects';
 const SYNC_PACK_PATH = '/companion/sync-pack';
@@ -53,6 +56,7 @@ export interface CompanionDesktopSyncResult {
   pushedReviewOpIds: string[];
   requestedObjectIds: string[];
   syncedAttachmentIds: string[];
+  syncedContentBlobHashes: string[];
 }
 
 const inFlightSyncByEndpoint = new Map<string, Promise<CompanionDesktopSyncResult>>();
@@ -68,6 +72,12 @@ function buildPackPath(cursor: number | null) {
   const params = new URLSearchParams();
   params.set('after_state_seq', String(cursor ?? 0));
   return `${SYNC_PACK_PATH}?${params.toString()}`;
+}
+
+function buildContentBlobPath(hash: string) {
+  const params = new URLSearchParams();
+  params.set('hash', hash);
+  return `${CONTENT_BLOB_RESOURCE_PATH}?${params.toString()}`;
 }
 
 function normalizeEndpointUrl(endpointUrl: string) {
@@ -140,6 +150,28 @@ async function pullRemoteStructurePack(endpointUrl: string) {
     appliedPackBlobCount: result.applied_blob_count,
     appliedPackObjectCount: result.applied_object_count
   };
+}
+
+async function pullMissingContentBlobs(endpointUrl: string) {
+  const endpoint = normalizeEndpointUrl(endpointUrl);
+  const syncedContentBlobHashes: string[] = [];
+  for (let page = 0; page < MAX_CHANGE_PAGES; page += 1) {
+    const hashes = await loadCompanionMissingContentBlobHashes(CHANGE_PAGE_LIMIT);
+    if (hashes.length === 0) break;
+    for (const hash of hashes) {
+      const pathWithQuery = buildContentBlobPath(hash);
+      const result = await syncCompanionContentBlob({
+        hash,
+        headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+        url: `${endpoint}${pathWithQuery}`
+      });
+      if (result.availability === 'cached') {
+        syncedContentBlobHashes.push(result.hash);
+      }
+    }
+    if (hashes.length < CHANGE_PAGE_LIMIT) break;
+  }
+  return { syncedContentBlobHashes };
 }
 
 async function pullRemoteNodeVersions(endpointUrl: string) {
@@ -245,6 +277,7 @@ async function runCompanionObjectsSync(endpointUrl: string): Promise<CompanionDe
   const pushed = await pushLocalStateChanges(endpointUrl);
   const pushedReviews = await pushLocalReviewLog(endpointUrl);
   const pack = await pullRemoteStructurePack(endpointUrl);
+  const blobs = await pullMissingContentBlobs(endpointUrl);
   const nodes = await pullRemoteNodeVersions(endpointUrl);
   const reviews = await pullRemoteReviewLog(endpointUrl);
   const changes = await pullRemoteStateChanges(endpointUrl);
@@ -259,7 +292,8 @@ async function runCompanionObjectsSync(endpointUrl: string): Promise<CompanionDe
     pushedObjectIds: pushed.pushedObjectIds,
     pushedReviewOpIds: pushedReviews.pushedReviewOpIds,
     requestedObjectIds: [],
-    syncedAttachmentIds: changes.syncedAttachmentIds
+    syncedAttachmentIds: changes.syncedAttachmentIds,
+    syncedContentBlobHashes: blobs.syncedContentBlobHashes
   };
 }
 

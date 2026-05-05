@@ -261,6 +261,16 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionAttachmentResourceStore.syncResource(context, database, attachmentId, contentHash, url, headers);
     }
 
+    JSObject loadMissingContentBlobHashes(int limit) {
+        SQLiteDatabase database = getReadableDatabase();
+        return FolioleCompanionContentBlobStore.loadMissingHashes(database, limit);
+    }
+
+    JSObject syncContentBlob(String hash, String url, JSONObject headers) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        return FolioleCompanionContentBlobStore.syncBlob(database, hash, url, headers);
+    }
+
     JSObject resolveAttachmentResource(String attachmentId) {
         SQLiteDatabase database = getReadableDatabase();
         return FolioleCompanionAttachmentResourceStore.resolveResource(context, database, attachmentId);

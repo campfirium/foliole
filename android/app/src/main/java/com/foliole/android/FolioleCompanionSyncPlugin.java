@@ -65,6 +65,38 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
 
     @PluginMethod
+    public void loadMissingContentBlobHashes(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(databaseHelper.loadMissingContentBlobHashes(call.getInt("limit", 50)));
+        } catch (Exception exception) {
+            call.reject("Failed to load missing companion content blobs.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+
+    @PluginMethod
+    public void syncContentBlob(PluginCall call) {
+        new Thread(() -> {
+            FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+            try {
+                call.resolve(databaseHelper.syncContentBlob(
+                    call.getString("hash"),
+                    call.getString("url"),
+                    call.getData().optJSONObject("headers")
+                ));
+            } catch (Exception exception) {
+                call.reject("Failed to sync companion content blob.", exception);
+            } finally {
+                databaseHelper.close();
+            }
+        }).start();
+    }
+
+
+    @PluginMethod
     public void resolveAttachmentResource(PluginCall call) {
         FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
         try {

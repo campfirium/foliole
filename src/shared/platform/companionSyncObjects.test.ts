@@ -12,6 +12,7 @@ const capacitorMock = vi.hoisted(() => ({
     loadSyncIndex: vi.fn(async () => ({ entries: [{ object_id: 'one', object_type: 'setting' }] })),
     loadSyncObjects: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting' }] })),
     loadSyncStateChanges: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting', state_seq: 1 }] })),
+    loadMissingContentBlobHashes: vi.fn(async () => ({ hashes: ['a'.repeat(64)] })),
     loadSyncStateCursor: vi.fn(async () => ({ cursor: 2 })),
     loadSyncPackCursor: vi.fn(async () => ({ cursor: 4 })),
     loadSyncStatePushCursor: vi.fn(async () => ({ cursor: null })),
@@ -49,6 +50,7 @@ const capacitorMock = vi.hoisted(() => ({
     saveSyncReviewLogCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncReviewLogPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' })),
+    syncContentBlob: vi.fn(async ({ hash }) => ({ availability: 'cached', hash })),
     syncAttachmentResource: vi.fn(async () => ({ attachment_id: 'att-1', availability: 'cached' }))
   }
 }));
@@ -144,6 +146,18 @@ async function testNativePluginBridge() {
   await expect(api.loadCompanionSyncIndex()).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
   await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([{ object_id: 'one', object_type: 'setting', state_seq: 1 }]);
+  await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
+  expect(capacitorMock.plugin.loadMissingContentBlobHashes).toHaveBeenCalledWith({ limit: 3 });
+  await expect(api.syncCompanionContentBlob({
+    hash: 'a'.repeat(64),
+    headers: { 'X-Device-Id': 'android' },
+    url: 'http://desktop/companion/content-blob?hash=a'
+  })).resolves.toEqual({ availability: 'cached', hash: 'a'.repeat(64) });
+  expect(capacitorMock.plugin.syncContentBlob).toHaveBeenCalledWith({
+    hash: 'a'.repeat(64),
+    headers: { 'X-Device-Id': 'android' },
+    url: 'http://desktop/companion/content-blob?hash=a'
+  });
   await expect(api.applyCompanionSyncPack('/tmp/pack.db')).resolves.toEqual({
     applied_blob_count: 1,
     applied_object_count: 2,
@@ -231,6 +245,12 @@ async function testWebFallbackBridge() {
   await expect(api.loadCompanionSyncIndex()).resolves.toEqual([]);
   await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([]);
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([]);
+  await expect(api.loadCompanionMissingContentBlobHashes()).resolves.toEqual([]);
+  await expect(api.syncCompanionContentBlob({
+    hash: 'a'.repeat(64),
+    headers: {},
+    url: 'http://desktop/companion/content-blob?hash=a'
+  })).resolves.toEqual({ availability: 'missing', hash: 'a'.repeat(64) });
   await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([]);
   await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([]);
