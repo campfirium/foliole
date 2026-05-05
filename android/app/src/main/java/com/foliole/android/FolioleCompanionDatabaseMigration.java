@@ -71,17 +71,17 @@ final class FolioleCompanionDatabaseMigration {
 
     private static void migrateSyncObjectStateSequence(Context context, SQLiteDatabase database) {
         if (
-            !FolioleCompanionSqliteRuntime.tableExists(database, "sync_object_state") ||
-            FolioleCompanionSqliteRuntime.columnExists(database, "sync_object_state", "state_seq")
+            !FolioleCompanionSqliteRuntime.tableExists(database, syncObjectStateTable(context)) ||
+            FolioleCompanionSqliteRuntime.columnExists(database, syncObjectStateTable(context), syncObjectStateSeqColumn(context))
         ) {
             return;
         }
         database.beginTransaction();
         try {
-            installMigrationStatement(context, database, "syncObjectStateNextTable", "Failed to create sync object state repair table.");
+            installMigrationStatement(context, database, repairValue(context, "createNextStatementName"), repairValue(context, "createNextErrorMessage"));
             copyLegacySyncObjectStateRows(context, database);
-            installMigrationStatement(context, database, "syncObjectStateDropLegacyTable", "Failed to drop legacy sync object state table.");
-            installMigrationStatement(context, database, "syncObjectStateRenameNextTable", "Failed to rename sync object state repair table.");
+            installMigrationStatement(context, database, repairValue(context, "dropLegacyStatementName"), repairValue(context, "dropLegacyErrorMessage"));
+            installMigrationStatement(context, database, repairValue(context, "renameNextStatementName"), repairValue(context, "renameNextErrorMessage"));
             createSyncObjectStateIndexes(context, database);
             database.setTransactionSuccessful();
         } finally {
@@ -91,31 +91,33 @@ final class FolioleCompanionDatabaseMigration {
 
     private static void copyLegacySyncObjectStateRows(Context context, SQLiteDatabase database) {
         try {
-            JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "migrationLegacySyncObjectStateRows").getJSONArray("rows");
+            JSONArray rows = FolioleCompanionNamedQueryStore
+                .loadArray(context, database, repairValue(context, "legacyRowsQueryName"))
+                .getJSONArray(repairValue(context, "legacyRowsResultKey"));
             for (int index = 0; index < rows.length(); index += 1) {
                 insertLegacySyncObjectStateRow(context, database, rows.getJSONObject(index), index + 1);
             }
         } catch (Exception exception) {
-            throw new IllegalStateException("Failed to load legacy sync object state rows.", exception);
+            throw new IllegalStateException(repairValue(context, "legacyRowsErrorMessage"), exception);
         }
     }
 
     private static void insertLegacySyncObjectStateRow(Context context, SQLiteDatabase database, JSONObject row, int stateSeq) {
         try {
-            FolioleCompanionNamedMutationStore.execute(context, database, "migrationSyncObjectStateNextInsert", new Object[] {
-                row.getString("object_type"),
-                row.getString("object_id"),
+            FolioleCompanionNamedMutationStore.execute(context, database, repairValue(context, "nextInsertMutationName"), new Object[] {
+                row.getString(rowKey(context, "objectType")),
+                row.getString(rowKey(context, "objectId")),
                 stateSeq,
-                nullableString(row, "current_version_id"),
-                row.getString("content_hash"),
-                row.getString("last_modified_by_device_id"),
-                row.getString("updated_at"),
-                nullableString(row, "deleted_at"),
-                row.getInt("sync_dirty"),
+                nullableString(row, rowKey(context, "currentVersionId")),
+                row.getString(rowKey(context, "contentHash")),
+                row.getString(rowKey(context, "lastModifiedByDeviceId")),
+                row.getString(rowKey(context, "updatedAt")),
+                nullableString(row, rowKey(context, "deletedAt")),
+                row.getInt(rowKey(context, "syncDirty")),
                 null
             });
         } catch (Exception exception) {
-            throw new IllegalStateException("Failed to copy legacy sync object state row.", exception);
+            throw new IllegalStateException(repairValue(context, "nextInsertErrorMessage"), exception);
         }
     }
 
@@ -124,22 +126,28 @@ final class FolioleCompanionDatabaseMigration {
     }
 
     private static void addSyncBaseContentHashIfMissing(Context context, SQLiteDatabase database) {
-        if (FolioleCompanionSqliteRuntime.columnExists(database, "sync_object_state", "base_content_hash")) {
+        if (FolioleCompanionSqliteRuntime.columnExists(database, repairRuleValue(context, "syncBaseContentHash", "tableName"), repairRuleValue(context, "syncBaseContentHash", "columnName"))) {
             return;
         }
-        installMigrationStatement(context, database, "syncObjectStateBaseContentHashColumn", "Failed to add sync base content hash column.");
+        installMigrationStatement(context, database, repairRuleValue(context, "syncBaseContentHash", "statementName"), repairRuleValue(context, "syncBaseContentHash", "errorMessage"));
     }
 
     private static void addNodeViewStateSourceIfMissing(Context context, SQLiteDatabase database) {
-        if (FolioleCompanionSqliteRuntime.columnExists(database, "node_view_state", "source")) {
+        if (FolioleCompanionSqliteRuntime.columnExists(database, repairRuleValue(context, "nodeViewStateSource", "tableName"), repairRuleValue(context, "nodeViewStateSource", "columnName"))) {
             return;
         }
-        installMigrationStatement(context, database, "nodeViewStateSourceColumn", "Failed to add node view state source column.");
+        installMigrationStatement(context, database, repairRuleValue(context, "nodeViewStateSource", "statementName"), repairRuleValue(context, "nodeViewStateSource", "errorMessage"));
     }
 
     private static void createSyncObjectStateIndexes(Context context, SQLiteDatabase database) {
-        installMigrationStatement(context, database, "syncObjectStateSeqIndex", "Failed to create sync object state sequence index.");
-        installMigrationStatement(context, database, "syncObjectStateTypeSeqIndex", "Failed to create sync object state type sequence index.");
+        try {
+            JSONArray statements = FolioleCompanionMigrationRules.stringArray(context, "syncObjectStateSequence", "indexStatementNames");
+            for (int index = 0; index < statements.length(); index += 1) {
+                installMigrationStatement(context, database, statements.getString(index), "Failed to create sync object state index.");
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Failed to create sync object state indexes.", exception);
+        }
     }
 
     private static void installMigrationStatement(
@@ -153,6 +161,30 @@ final class FolioleCompanionDatabaseMigration {
         } catch (Exception exception) {
             throw new IllegalStateException(errorMessage, exception);
         }
+    }
+
+    private static String syncObjectStateTable(Context context) {
+        return repairValue(context, "tableName");
+    }
+
+    private static String syncObjectStateSeqColumn(Context context) {
+        return repairValue(context, "stateSeqColumnName");
+    }
+
+    private static String repairValue(Context context, String key) {
+        return repairRuleValue(context, "syncObjectStateSequence", key);
+    }
+
+    private static String repairRuleValue(Context context, String groupName, String key) {
+        try {
+            return FolioleCompanionMigrationRules.stringValue(context, groupName, key);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Companion migration repair rule is missing: " + groupName + "." + key, exception);
+        }
+    }
+
+    private static String rowKey(Context context, String key) throws Exception {
+        return FolioleCompanionMigrationRules.rowKey(context, key);
     }
 
 }

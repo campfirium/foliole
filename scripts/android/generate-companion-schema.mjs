@@ -8,6 +8,7 @@ import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/databas
 import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
 import {
   ANDROID_COMPANION_MIGRATION_PLAN,
+  ANDROID_COMPANION_MIGRATION_REPAIR_RULES,
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS
 } from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
 import {
@@ -44,6 +45,7 @@ await fs.writeFile(
   migrationOutputPath,
   `${JSON.stringify({
     plan: ANDROID_COMPANION_MIGRATION_PLAN,
+    repairRules: ANDROID_COMPANION_MIGRATION_REPAIR_RULES,
     statementsByName: ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS
   }, null, 2)}\n`,
   'utf8'

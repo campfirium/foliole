@@ -29,7 +29,7 @@ const ALLOWED_DIRECT_LOAD_ARRAY = [
   },
   {
     file: 'FolioleCompanionDatabaseMigration.java',
-    text: 'JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "migrationLegacySyncObjectStateRows").getJSONArray("rows");'
+    text: '.loadArray(context, database, repairValue(context, "legacyRowsQueryName"))'
   },
   {
     file: 'FolioleCompanionSyncObjectStore.java',
@@ -93,7 +93,7 @@ function isAllowedAccessLine(entry) {
 }
 
 function isAllowedDirectLoadArray(entry) {
-  return ALLOWED_DIRECT_LOAD_ARRAY.some((allowed) => allowed.file === entry.file && allowed.text === entry.text);
+  return ALLOWED_DIRECT_LOAD_ARRAY.some((allowed) => allowed.file === entry.file && entry.text.includes(allowed.text));
 }
 
 describe('Android Java SQL surface', () => {

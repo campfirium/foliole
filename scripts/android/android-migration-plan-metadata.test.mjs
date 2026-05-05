@@ -32,12 +32,30 @@ const SCHEMA_INSTALLER = path.join(
   'android',
   'FolioleCompanionSchemaInstaller.java'
 );
+const MIGRATION_RULES = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionMigrationRules.java'
+);
 
 describe('Android migration plan metadata', () => {
   it('generates versioned migration actions in the migration schema asset', async () => {
     const schema = JSON.parse(await readFile(MIGRATION_SCHEMA, 'utf8'));
 
     expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+    expect(schema.repairRules.syncObjectStateSequence).toMatchObject({
+      legacyRowsQueryName: 'migrationLegacySyncObjectStateRows',
+      nextInsertMutationName: 'migrationSyncObjectStateNextInsert',
+      stateSeqColumnName: 'state_seq',
+      tableName: 'sync_object_state'
+    });
     expect(schema.plan).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -65,12 +83,16 @@ describe('Android migration plan metadata', () => {
   it('keeps Android Java migration version orchestration driven by the generated plan', async () => {
     const migrationSource = await readFile(DATABASE_MIGRATION, 'utf8');
     const installerSource = await readFile(SCHEMA_INSTALLER, 'utf8');
+    const rulesSource = await readFile(MIGRATION_RULES, 'utf8');
 
     expect(installerSource).toContain('static JSONArray migrationPlan(Context context)');
+    expect(rulesSource).toContain('optJSONObject("repairRules")');
     expect(migrationSource).toContain('FolioleCompanionSchemaInstaller.migrationPlan(context)');
+    expect(migrationSource).toContain('FolioleCompanionMigrationRules.stringValue');
     expect(migrationSource).toContain('oldVersion < step.getInt("beforeVersion")');
     expect(migrationSource).not.toContain('oldVersion < 4');
     expect(migrationSource).not.toContain('oldVersion < 14');
+    expect(migrationSource).not.toContain('"migrationLegacySyncObjectStateRows"');
     expect(migrationSource).not.toContain('Failed to upgrade companion push ack schema.');
   });
 });
