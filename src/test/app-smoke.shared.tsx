@@ -6,6 +6,7 @@ import './reactPdfMock';
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { resetPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
+import { resetWorkspaceNodeDocumentPrefetchForTest } from '../store/workspaceNodeDocumentPrefetch';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
 
 export const mockEditorState: { content: string; selectionFrom: number; selectionTo: number } = {
@@ -122,6 +123,7 @@ export function resetAppSmokeState() {
   window.history.pushState({}, '', '/');
   localStorage.clear();
   resetPerformanceDiagnosticsProbe();
+  resetWorkspaceNodeDocumentPrefetchForTest();
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date(FIXED_TIMESTAMP)));
   mockEditorState.content = '# Welcome to Foliole\n\nStart writing markdown here.';
   mockEditorState.selectionFrom = 0;

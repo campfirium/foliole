@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
 import { findFolderTopicItemCommandByAppCommandId } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
@@ -18,6 +18,7 @@ import { NodeListTreeMenu } from './NodeListTreeMenu';
 import { NodeListRows } from './NodeListTreeRows';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { resolveNodeTreeClassName } from './NodeTreeRowStyle';
+import { useNodeListVisibleDocumentPrefetch } from './useNodeListVisibleDocumentPrefetch';
 
 interface NodeListPanelProps {
   activeCollapsedNodeIds: ReadonlySet<string>;
@@ -113,6 +114,45 @@ function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeo
   );
 }
 
+function useNodeListPanelEffects(
+  props: Pick<NodeListPanelProps, 'activeNodeId' | 'activeRows' | 'isTrashViewOpen' | 'isVirtualViewOpen'>,
+  scrollContainerRef: RefObject<HTMLDivElement | null>
+) {
+  useEffect(() => {
+    if (!props.activeNodeId || props.isTrashViewOpen) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      scrollActiveTreeItemIntoView(scrollContainerRef.current, props.activeNodeId);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [props.activeNodeId, props.isTrashViewOpen, props.isVirtualViewOpen, scrollContainerRef]);
+
+  useNodeListVisibleDocumentPrefetch({
+    activeNodeId: props.activeNodeId,
+    activeRows: props.activeRows,
+    isTrashViewOpen: props.isTrashViewOpen,
+    isVirtualViewOpen: props.isVirtualViewOpen,
+    scrollContainerRef
+  });
+}
+
+function renderDeleteStatusOverlay(deleteStatusLabel: string | null) {
+  if (!deleteStatusLabel) {
+    return null;
+  }
+  return (
+    <div
+      aria-live="polite"
+      className="pointer-events-auto absolute inset-0 z-10 flex items-start bg-bg-panel/70 p-3 backdrop-blur-[1px]"
+    >
+      <div className="rounded-md border border-border bg-bg-panel px-3 py-2 text-sm font-medium text-foreground shadow-sm">
+        {deleteStatusLabel}
+      </div>
+    </div>
+  );
+}
+
 function NodeListPanel(props: NodeListPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const drag = useNodeListDragController({
@@ -123,16 +163,7 @@ function NodeListPanel(props: NodeListPanelProps) {
     noteRowIds: props.noteRowIds,
     selectedNodeIds: props.selectedNodeIds
   });
-
-  useEffect(() => {
-    if (!props.activeNodeId || props.isTrashViewOpen) {
-      return;
-    }
-    const frame = window.requestAnimationFrame(() => {
-      scrollActiveTreeItemIntoView(scrollContainerRef.current, props.activeNodeId);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [props.activeNodeId, props.isTrashViewOpen, props.isVirtualViewOpen]);
+  useNodeListPanelEffects(props, scrollContainerRef);
 
   return (
     <aside aria-label="Node list panel" className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground">
@@ -157,16 +188,7 @@ function NodeListPanel(props: NodeListPanelProps) {
         trashCount={props.trashRowsLength}
       />
       <div className="relative min-h-0 flex-1">
-        {props.deleteStatusLabel ? (
-          <div
-            aria-live="polite"
-            className="pointer-events-auto absolute inset-0 z-10 flex items-start bg-bg-panel/70 p-3 backdrop-blur-[1px]"
-          >
-            <div className="rounded-md border border-border bg-bg-panel px-3 py-2 text-sm font-medium text-foreground shadow-sm">
-              {props.deleteStatusLabel}
-            </div>
-          </div>
-        ) : null}
+        {renderDeleteStatusOverlay(props.deleteStatusLabel)}
         <div className="app-scrollbar flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden px-4 py-2" ref={scrollContainerRef}>
           {renderNodeTreeSection(props, drag)}
         </div>

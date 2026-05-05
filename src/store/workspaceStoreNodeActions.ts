@@ -6,6 +6,7 @@ import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
+import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import {
@@ -91,6 +92,7 @@ function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceNodeActions['u
       };
     });
     if (nextNodeForSync) {
+      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
       syncNodeContentToRuntime(nextNodeForSync);
     }
   };
@@ -127,6 +129,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
       };
     });
     if (nextNodeForSync) {
+      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
       syncNodeContentToRuntime(nextNodeForSync);
     }
   };
@@ -156,6 +159,7 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
       };
     });
     if (nextNodeForSync) {
+      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
       syncNodeRevealToRuntime(nextNodeForSync);
     }
   };

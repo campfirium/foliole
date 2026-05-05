@@ -1,8 +1,8 @@
-import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
-import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
 
 import { pushNavigationHistory } from './workspaceNavigation';
+import { writeCachedWorkspaceNodeDocument } from './workspaceNodeDocumentCache';
+import { loadWorkspaceNodeDocument, shouldSkipNodeDocumentPreparation } from './workspaceNodeDocumentLoader';
 import type { WorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { RECENT_RENDERER_BOUNDARY_NODE_LIMIT } from './workspaceRendererBoundaryKeepNodeIds';
@@ -16,48 +16,6 @@ interface EnsureWorkspaceNodeDocumentReadyOptions {
   onLoadStarted?: () => void;
   preloadedDocument?: WorkspaceNodeDocument | null;
   shouldApply?: () => boolean;
-}
-
-const pendingNodeDocumentLoadById = new Map<string, Promise<WorkspaceNodeDocument | null>>();
-
-function shouldSkipNodePreparation(nodeId: string) {
-  const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
-  return !targetNode || isNodeDocumentLoaded(targetNode);
-}
-
-async function loadWorkspaceNodeDocument(
-  nodeId: string,
-  options: EnsureWorkspaceNodeDocumentReadyOptions
-) {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke && !options.preloadedDocument) {
-    return null;
-  }
-
-  let document = options.preloadedDocument ?? null;
-  if (!document) {
-    const pendingLoad = pendingNodeDocumentLoadById.get(nodeId);
-    if (pendingLoad) {
-      document = await pendingLoad;
-    } else {
-      options.onLoadStarted?.();
-      const loadPromise =
-        runtimeInvoke?.(NATIVE_COMMANDS.loadNodeDocument, { nodeId })?.then((loadedDocument) => loadedDocument ?? null) ??
-        Promise.resolve(null);
-      pendingNodeDocumentLoadById.set(nodeId, loadPromise);
-      try {
-        document = await loadPromise;
-      } finally {
-        pendingNodeDocumentLoadById.delete(nodeId);
-      }
-      if (document) {
-        options.onLoadResolved?.(document);
-      }
-    }
-  } else {
-    options.onLoadResolved?.(document);
-  }
-  return document;
 }
 
 function mergePreparedNodeDocument(
@@ -86,6 +44,7 @@ function mergePreparedNodeDocument(
         : {})
     };
   });
+  writeCachedWorkspaceNodeDocument(nodeId, document);
   options.onDocumentMerged?.(document);
 }
 
@@ -162,7 +121,7 @@ export async function ensureWorkspaceNodeDocumentReady(
   nodeId: string,
   options: EnsureWorkspaceNodeDocumentReadyOptions = {}
 ) {
-  if (shouldSkipNodePreparation(nodeId)) {
+  if (shouldSkipNodeDocumentPreparation(nodeId)) {
     return null;
   }
 
@@ -179,7 +138,7 @@ export async function openWorkspaceNodeWithPreparedDocument(
   nodeId: string,
   options: EnsureWorkspaceNodeDocumentReadyOptions = {}
 ) {
-  const document = shouldSkipNodePreparation(nodeId)
+  const document = shouldSkipNodeDocumentPreparation(nodeId)
     ? options.preloadedDocument ?? null
     : await loadWorkspaceNodeDocument(nodeId, options);
   if (options.shouldApply && !options.shouldApply()) {
@@ -187,6 +146,7 @@ export async function openWorkspaceNodeWithPreparedDocument(
   }
   useWorkspaceStore.setState((state) => buildPreparedOpenState(state, nodeId, document));
   if (document) {
+    writeCachedWorkspaceNodeDocument(nodeId, document);
     options.onDocumentMerged?.(document);
   }
   return { focusAnchor: null, nodeId };

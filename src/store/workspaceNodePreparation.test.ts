@@ -6,7 +6,15 @@ vi.mock('../shared/platform/bridge', () => ({
 
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 
-import { ensureWorkspaceNodeDocumentReady, openWorkspaceNodeWithPreparedDocument } from './workspaceNodePreparation';
+import {
+  requestWorkspaceNodeDocumentPreload,
+  resetWorkspaceNodeDocumentPrefetchForTest,
+  setVisibleWorkspaceNodeDocumentPrefetchIds
+} from './workspaceNodeDocumentPrefetch';
+import {
+  ensureWorkspaceNodeDocumentReady,
+  openWorkspaceNodeWithPreparedDocument
+} from './workspaceNodePreparation';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 function seedTrimmedNodeState() {
@@ -43,6 +51,7 @@ function seedTrimmedNodeState() {
 beforeEach(() => {
   window.localStorage.clear();
   vi.clearAllMocks();
+  resetWorkspaceNodeDocumentPrefetchForTest();
   seedTrimmedNodeState();
 });
 
@@ -145,4 +154,110 @@ it('skips applying a prepared open when a newer navigation request supersedes it
     content: '',
     hasContent: true
   });
+});
+
+it('reopens a trimmed node from the renderer cache without invoking the runtime again', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    content: 'Loaded node 2 body',
+    hideTitleHeading: false,
+    kind: 'topic',
+    reveal: null,
+    virtualFilter: null
+  });
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  await ensureWorkspaceNodeDocumentReady('node-2');
+  useWorkspaceStore.setState((state) => ({
+    nodesById: {
+      ...state.nodesById,
+      'node-2': {
+        ...state.nodesById['node-2'],
+        content: '',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false
+      }
+    }
+  }));
+
+  await openWorkspaceNodeWithPreparedDocument('node-2');
+
+  expect(invoke).toHaveBeenCalledTimes(1);
+  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+    content: 'Loaded node 2 body',
+    hasContent: true
+  });
+});
+
+it('preloads recent history, active neighbors, and visible rows without merging them into the store', async () => {
+  const invoke = vi.fn().mockImplementation((command: string, payload?: { nodeId?: string }) => {
+    if (command !== 'load_node_document' || !payload?.nodeId) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve({
+      content: `Loaded ${payload.nodeId} body`,
+      hideTitleHeading: false,
+      kind: 'topic',
+      reveal: null,
+      virtualFilter: null
+    });
+  });
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4', 'node-5'],
+    navigation: {
+      backStack: ['node-1'],
+      forwardStack: []
+    },
+    nodesById: {
+      ...state.nodesById,
+      'node-1': { ...state.nodesById['node-1'], id: 'node-1', title: 'Node 1', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-2': { ...state.nodesById['node-1'], id: 'node-2', title: 'Node 2', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-3': { ...state.nodesById['node-1'], id: 'node-3', title: 'Node 3', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-4': { ...state.nodesById['node-1'], id: 'node-4', title: 'Node 4', parentNodeId: 'node-2', content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-5': { ...state.nodesById['node-1'], id: 'node-5', title: 'Node 5', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false }
+    }
+  }));
+  setVisibleWorkspaceNodeDocumentPrefetchIds(['node-5']);
+
+  requestWorkspaceNodeDocumentPreload();
+  await vi.waitFor(() => {
+    expect(invoke.mock.calls.map(([, payload]) => payload?.nodeId)).toEqual(['node-1', 'node-3', 'node-5', 'node-4']);
+  });
+  expect(useWorkspaceStore.getState().nodesById['node-3']).toMatchObject({ content: '' });
+  expect(useWorkspaceStore.getState().nodesById['node-4']).toMatchObject({ content: '' });
+  expect(useWorkspaceStore.getState().nodesById['node-5']).toMatchObject({ content: '' });
+});
+
+it('skips caching oversized documents and falls back to the runtime on reopen', async () => {
+  const oversizedContent = 'x'.repeat(210 * 1024);
+  const invoke = vi.fn().mockResolvedValue({
+    content: oversizedContent,
+    hideTitleHeading: false,
+    kind: 'topic',
+    reveal: null,
+    virtualFilter: null
+  });
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  await ensureWorkspaceNodeDocumentReady('node-2');
+  useWorkspaceStore.setState((state) => ({
+    nodesById: {
+      ...state.nodesById,
+      'node-2': {
+        ...state.nodesById['node-2'],
+        content: '',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false
+      }
+    }
+  }));
+
+  await openWorkspaceNodeWithPreparedDocument('node-2');
+
+  expect(invoke).toHaveBeenCalledTimes(2);
 });

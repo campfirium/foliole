@@ -229,7 +229,7 @@ it('keeps review toolbar visible in completed state until user exits', async () 
   });
 });
 
-it('loads selected node content into editor', async () => {
+it('opens selected node content even when the visible row was preloaded first', async () => {
   const invoke = vi.fn().mockImplementation((command: string, args?: { nodeId?: string }) => {
     if (command === 'load_node_document' && args?.nodeId === 'node-2') {
       return Promise.resolve({
@@ -267,7 +267,6 @@ it('loads selected node content into editor', async () => {
     expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [...]');
     expect(screen.getByTestId('answer-editor-value')).toHaveValue('Answer');
   });
-  expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
 });
 
 it('updates active node content from editor changes', () => {

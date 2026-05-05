@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -79,7 +79,7 @@ it('increments Untitled titles when creating multiple empty notes', () => {
   expect(titles).toEqual(expect.arrayContaining(['Untitled', 'Untitled 1']));
 });
 
-it('keeps first note content unchanged when editing a newly created note', () => {
+it('keeps first note content unchanged when editing a newly created note', async () => {
   keepOnlyInboxWithoutActiveNode();
   render(<App />);
   createTopicFromHeaderMenu();
@@ -95,6 +95,11 @@ it('keeps first note content unchanged when editing a newly created note', () =>
   if (!newNodeId) {
     throw new Error('expected new active node');
   }
+
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().activeNodeId).toBe(newNodeId);
+    expect(screen.getByTestId('editor-value')).toHaveValue('');
+  });
 
   fireEvent.change(screen.getByTestId('editor-value'), {
     target: { value: 'My second note content' }

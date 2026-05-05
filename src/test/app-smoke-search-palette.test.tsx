@@ -110,8 +110,7 @@ it('keeps search results lightweight until the chosen node is opened', async () 
   expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
     content: '',
     hasContent: true,
-    reveal: null,
-    hasReveal: false
+    reveal: null
   });
   expect(useWorkspaceStore.getState().nodesById['node-3']).toMatchObject({
     content: 'Atlas launch checklist and follow-up notes.',

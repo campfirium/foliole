@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
+import { resetWorkspaceNodeDocumentPrefetchForTest } from '../../store/workspaceNodeDocumentPrefetch';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
@@ -122,6 +123,7 @@ async function expectPreparedNavigationResult(args: {
 describe('useWorkspaceNavigation navigation hydration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetWorkspaceNodeDocumentPrefetchForTest();
     resetWorkspaceNavigationTestState();
     vi.mocked(getRuntimeInvoke).mockReturnValue(null);
   });

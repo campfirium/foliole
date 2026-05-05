@@ -1,5 +1,6 @@
 import { VIRTUAL_NODE_FILTER_VERSION, type VirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 
+import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -38,6 +39,7 @@ export function createUpdateVirtualNodeFilterAction(set: WorkspaceSet): Workspac
       };
     });
     if (nextNodeForSync) {
+      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
       syncNodeContentToRuntime(nextNodeForSync);
     }
   };

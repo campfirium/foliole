@@ -2,6 +2,7 @@ import { render, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { resetWorkspaceNodeDocumentPrefetchForTest } from '../../store/workspaceNodeDocumentPrefetch';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useWorkspaceActiveNodeDocument } from './useWorkspaceActiveNodeDocument';
@@ -82,6 +83,7 @@ async function reopenLongDocument(view: ReturnType<typeof render>, longDocument:
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
+  resetWorkspaceNodeDocumentPrefetchForTest();
   seedTrimmedWorkspaceState();
 });
 
