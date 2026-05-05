@@ -2,7 +2,17 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.editorDisplayMode,
-  APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility
+  APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility,
+  APP_SETTINGS_STORAGE_KEYS.settingsActiveCategory,
+  APP_SETTINGS_STORAGE_KEYS.uiFont,
+  APP_SETTINGS_STORAGE_KEYS.customUiFont,
+  APP_SETTINGS_STORAGE_KEYS.interfaceFont,
+  APP_SETTINGS_STORAGE_KEYS.monospaceFont,
+  APP_SETTINGS_STORAGE_KEYS.baseColor,
+  APP_SETTINGS_STORAGE_KEYS.accentColor,
+  APP_SETTINGS_STORAGE_KEYS.interfaceFontSize,
+  APP_SETTINGS_STORAGE_KEYS.customInterfaceFont,
+  APP_SETTINGS_STORAGE_KEYS.customMonospaceFont
 ]);
 
 function assertLocalStorageWhitelist(key: string) {

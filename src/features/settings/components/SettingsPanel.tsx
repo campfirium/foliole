@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
@@ -47,7 +49,7 @@ const SETTINGS_CATEGORIES: Array<{ id: SettingsCategoryId; label: string }> = [
   { id: 'hotkeys', label: 'Hotkeys' }
 ];
 
-const SETTINGS_CATEGORY_STORAGE_KEY = 'foliole-settings-active-category';
+const SETTINGS_CATEGORY_STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.settingsActiveCategory;
 const INTERFACE_PRESET_OPTION_VALUES: InterfaceFontPreset[] = ['default', 'inter', 'system', 'source-sans', 'serif', 'rounded'];
 const MONOSPACE_PRESET_OPTION_VALUES: MonospaceFontPreset[] = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa'];
 
@@ -56,10 +58,7 @@ function isSettingsCategoryId(value: string): value is SettingsCategoryId {
 }
 
 function getInitialSettingsCategory(): SettingsCategoryId {
-  if (typeof window === 'undefined') {
-    return 'editor';
-  }
-  const raw = window.localStorage.getItem(SETTINGS_CATEGORY_STORAGE_KEY);
+  const raw = getWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY);
   return raw && isSettingsCategoryId(raw) ? raw : 'editor';
 }
 
@@ -193,10 +192,7 @@ export function SettingsPanel({
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    window.localStorage.setItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory);
+    setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory);
   }, [activeCategory]);
 
   const handleCategoryChange = (category: SettingsCategoryId) => {

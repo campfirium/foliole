@@ -6,6 +6,7 @@ import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
 import { normalizeWidth } from './workspaceHelpers';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
+import { workspacePersistStorage } from './workspacePersistStorage';
 import { createInitialWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
@@ -155,7 +156,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     }),
     {
       name: WORKSPACE_STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => workspacePersistStorage),
       partialize: (state): WorkspacePersistedState => ({
         activeNodeId: state.activeNodeId,
         layout: state.layout,

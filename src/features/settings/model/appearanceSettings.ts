@@ -1,3 +1,6 @@
+import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
+
 export const INTERFACE_FONT_OPTIONS = ['default', 'inter', 'system', 'source-sans', 'serif', 'rounded', 'custom'] as const;
 export const MONOSPACE_FONT_OPTIONS = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa', 'custom'] as const;
 export const BASE_COLOR_OPTIONS = ['light'] as const;
@@ -13,15 +16,15 @@ export const INTERFACE_FONT_SIZE_MAX = 36;
 export const INTERFACE_FONT_SIZE_DEFAULT = 17;
 
 const STORAGE_KEYS = {
-  uiFont: 'foliole-ui-font-preset',
-  customUiFont: 'foliole-custom-ui-font-family',
-  interfaceFont: 'foliole-interface-font-preset',
-  monospaceFont: 'foliole-monospace-font-preset',
-  baseColor: 'foliole-base-color',
-  accentColor: 'foliole-accent-color',
-  interfaceFontSize: 'foliole-interface-font-size',
-  customInterfaceFont: 'foliole-custom-interface-font-family',
-  customMonospaceFont: 'foliole-custom-monospace-font-family'
+  uiFont: APP_SETTINGS_STORAGE_KEYS.uiFont,
+  customUiFont: APP_SETTINGS_STORAGE_KEYS.customUiFont,
+  interfaceFont: APP_SETTINGS_STORAGE_KEYS.interfaceFont,
+  monospaceFont: APP_SETTINGS_STORAGE_KEYS.monospaceFont,
+  baseColor: APP_SETTINGS_STORAGE_KEYS.baseColor,
+  accentColor: APP_SETTINGS_STORAGE_KEYS.accentColor,
+  interfaceFontSize: APP_SETTINGS_STORAGE_KEYS.interfaceFontSize,
+  customInterfaceFont: APP_SETTINGS_STORAGE_KEYS.customInterfaceFont,
+  customMonospaceFont: APP_SETTINGS_STORAGE_KEYS.customMonospaceFont
 } as const;
 
 const SYSTEM_FONT_FALLBACK =
@@ -102,139 +105,85 @@ function applyEditorTypographyScale(root: HTMLElement, baseFontSize: number) {
 }
 
 export function getInterfaceFontPreset(): InterfaceFontPreset {
-  if (typeof window === 'undefined') {
-    return 'default';
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEYS.interfaceFont);
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFont);
   return raw && isInterfaceFontPreset(raw) ? raw : 'default';
 }
 
 export function getUiFontPreset(): InterfaceFontPreset {
-  if (typeof window === 'undefined') {
-    return 'default';
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEYS.uiFont);
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.uiFont);
   return raw && isInterfaceFontPreset(raw) ? raw : 'default';
 }
 
 export function setUiFontPreset(value: InterfaceFontPreset) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.uiFont, value);
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.uiFont, value);
 }
 
 export function setInterfaceFontPreset(value: InterfaceFontPreset) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.interfaceFont, value);
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFont, value);
 }
 
 export function getCustomUiFont() {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEYS.customUiFont);
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.customUiFont);
   return raw ? sanitizeFontFamily(raw) : '';
 }
 
 export function setCustomUiFont(value: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.customUiFont, sanitizeFontFamily(value));
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.customUiFont, sanitizeFontFamily(value));
 }
 
 export function getCustomInterfaceFont() {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEYS.customInterfaceFont);
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.customInterfaceFont);
   return raw ? sanitizeFontFamily(raw) : '';
 }
 
 export function setCustomInterfaceFont(value: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.customInterfaceFont, sanitizeFontFamily(value));
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.customInterfaceFont, sanitizeFontFamily(value));
 }
 
 export function getCustomMonospaceFont() {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEYS.customMonospaceFont);
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.customMonospaceFont);
   return raw ? sanitizeFontFamily(raw) : '';
 }
 
 export function setCustomMonospaceFont(value: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.customMonospaceFont, sanitizeFontFamily(value));
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.customMonospaceFont, sanitizeFontFamily(value));
 }
 
 export function getMonospaceFontPreset(): MonospaceFontPreset {
-  if (typeof window === 'undefined') {
-    return 'default';
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEYS.monospaceFont);
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.monospaceFont);
   return raw && isMonospaceFontPreset(raw) ? raw : 'default';
 }
 
 export function setMonospaceFontPreset(value: MonospaceFontPreset) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.monospaceFont, value);
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.monospaceFont, value);
 }
 
 export function getBaseColorMode(): BaseColorMode {
-  if (typeof window === 'undefined') {
-    return 'light';
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEYS.baseColor);
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.baseColor);
   return raw && isBaseColorMode(raw) ? raw : 'light';
 }
 
 export function setBaseColorMode(value: BaseColorMode) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.baseColor, value);
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.baseColor, value);
 }
 
 export function getAccentColorPreset(): AccentColorPreset {
-  if (typeof window === 'undefined') {
-    return DEFAULT_ACCENT_COLOR_PRESET;
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEYS.accentColor);
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.accentColor);
   return raw ? normalizeAccentColor(raw) : DEFAULT_ACCENT_COLOR_PRESET;
 }
 
 export function setAccentColorPreset(value: AccentColorPreset) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.accentColor, normalizeAccentColor(value));
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.accentColor, normalizeAccentColor(value));
 }
 
 export function getInterfaceFontSize() {
-  if (typeof window === 'undefined') {
-    return INTERFACE_FONT_SIZE_DEFAULT;
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEYS.interfaceFontSize);
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFontSize);
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? clampFontSize(parsed) : INTERFACE_FONT_SIZE_DEFAULT;
 }
 
 export function setInterfaceFontSize(value: number) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.interfaceFontSize, String(clampFontSize(value)));
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFontSize, String(clampFontSize(value)));
 }
 
 interface ApplyAppearanceSettingsInput {
