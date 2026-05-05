@@ -21,16 +21,28 @@ function decodeSeparator(value: string) {
   return value.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
 }
 
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function normalizeText(value: string) {
   return compactWhitespace(stripMarkdown(normalizeLineEndings(value)));
 }
 
-function trimHighlightMetadata(block: string) {
-  return block
-    .replace(/\s+\[\.\.\.]\s*\([^)]+\)/g, '')
-    .replace(/\s+\([^()\n]+\)\s*$/g, '')
-    .replace(/\s+Tags:\s[\s\S]*$/g, '')
-    .replace(/\s+Note:\s[\s\S]*$/g, '')
+function trimHighlightMetadata(block: string, tagKeyword: string, noteKeyword: string) {
+  const metadataKeywords = [tagKeyword, noteKeyword].filter((value) => value.trim().length > 0);
+  return metadataKeywords
+    .reduce(
+      (current, keyword) =>
+        current
+          .replace(new RegExp(`\\s+${escapeRegex(keyword)}\\s*[\\s\\S]*$`, 'i'), '')
+          .replace(new RegExp(`(^|\\n)\\s*${escapeRegex(keyword)}\\s*[\\s\\S]*$`, 'i'), '$1')
+          .trim(),
+      block
+        .replace(/\s+\[\.\.\.]\s*\([^)]+\)/g, '')
+        .replace(/\s+\([^()\n]+\)\s*$/g, '')
+        .trim()
+    )
     .trim();
 }
 
@@ -43,13 +55,27 @@ function splitHighlightBlocks(content: string, separator: string) {
     .filter(Boolean);
 }
 
-function extractHighlightsSection(markdown: string) {
+function extractHighlightsSection(markdown: string, headings: string[]) {
   const normalized = normalizeLineEndings(markdown);
-  const headingMatch = normalized.match(/^## (?:New )?highlights[^\n]*$/im);
-  if (headingMatch?.index === undefined) {
+  const headingMatches = headings
+    .filter((heading) => heading.trim().length > 0)
+    .map((heading) => {
+      const match = new RegExp(`^${escapeRegex(normalizeLineEndings(heading))}\\s*$`, 'im').exec(normalized);
+      return match?.index ?? Number.POSITIVE_INFINITY;
+    });
+  const headingIndex = Math.min(...headingMatches, Number.POSITIVE_INFINITY);
+  if (!Number.isFinite(headingIndex)) {
     return normalized.trim();
   }
-  const section = normalized.slice(headingMatch.index + headingMatch[0].length).replace(/^\n+/, '');
+  const matchedHeading = headings.find((heading) => {
+    if (!heading.trim()) {
+      return false;
+    }
+    return new RegExp(`^${escapeRegex(normalizeLineEndings(heading))}\\s*$`, 'im').exec(normalized)?.index === headingIndex;
+  });
+  const section = normalized
+    .slice(headingIndex + (matchedHeading ? normalizeLineEndings(matchedHeading).length : 0))
+    .replace(/^\n+/, '');
   const nextHeadingIndex = section.search(/^## /m);
   return (nextHeadingIndex >= 0 ? section.slice(0, nextHeadingIndex) : section).trim();
 }
@@ -66,8 +92,14 @@ function extractFullDocument(markdown: string) {
   return (nextHeadingIndex >= 0 ? section.slice(0, nextHeadingIndex) : section).trim();
 }
 
-function createSample(sourceName: string, highlightText: string, fullDocument: string): NativeReadwiseDetectionSample {
-  const normalizedHighlight = normalizeText(trimHighlightMetadata(highlightText));
+function createSample(
+  sourceName: string,
+  highlightText: string,
+  fullDocument: string,
+  tagKeyword: string,
+  noteKeyword: string
+): NativeReadwiseDetectionSample {
+  const normalizedHighlight = normalizeText(trimHighlightMetadata(highlightText, tagKeyword, noteKeyword));
   const normalizedDocument = normalizeText(fullDocument);
   const matchIndex = normalizedHighlight ? normalizedDocument.indexOf(normalizedHighlight) : -1;
   const excerptStart = Math.max(0, matchIndex - 40);
@@ -84,13 +116,20 @@ function createSample(sourceName: string, highlightText: string, fullDocument: s
 export function probeReadwiseArticleContent(input: {
   articleMarkdown: string;
   fullDocumentMarkdown: string;
-  separator: string;
+  highlightsHeading: string;
+  highlightSeparator: string;
+  newHighlightsHeading: string;
+  noteKeyword: string;
   sourceName: string;
+  tagKeyword: string;
 }): NativeReadwiseDetectionResult {
-  const highlightBlocks = splitHighlightBlocks(extractHighlightsSection(input.articleMarkdown), input.separator);
+  const highlightBlocks = splitHighlightBlocks(
+    extractHighlightsSection(input.articleMarkdown, [input.highlightsHeading, input.newHighlightsHeading]),
+    input.highlightSeparator
+  );
   const fullDocument = extractFullDocument(input.fullDocumentMarkdown);
   const samples = highlightBlocks
-    .map((block) => createSample(input.sourceName, block, fullDocument))
+    .map((block) => createSample(input.sourceName, block, fullDocument, input.tagKeyword, input.noteKeyword))
     .filter((sample) => sample.highlightText.length > 0)
     .slice(0, 3);
   const matchedHighlightCount = samples.filter((sample) => sample.matched).length;

@@ -74,19 +74,15 @@ it('shows keep-focused controls and removes trigger handling controls', async ()
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
   expect(screen.getByRole('heading', { name: 'Import management' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Readwise Reader for Obsidian' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Readwise Reader for Obsidian settings' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open Readwise Reader settings' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Trigger draft-import-source-1')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Handling draft-import-source-1')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Every draft-import-source-1')).not.toBeInTheDocument();
   expect(screen.queryByText('Enable')).not.toBeInTheDocument();
   expect(screen.queryByText('Status')).not.toBeInTheDocument();
   expect(screen.queryByText('Actions')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Preview draft-import-source-1' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Preview draft-import-source-101' })).toBeDisabled();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Hide details' }));
-  expect(screen.getByRole('button', { name: 'Detailed settings' })).toBeInTheDocument();
 });
 
 it('fills readwise folders from the selected root path', () => {
@@ -105,25 +101,6 @@ it('keeps readwise auto-filled paths platform aware', () => {
 
   expect(updated[0].primaryPath).toBe('D:\\Dropbox\\obs\\clip\\Full Document Contents\\Articles');
   expect(updated[0].highlightPath).toBe('D:\\Dropbox\\obs\\clip\\Articles');
-});
-
-it('shows only the last folder name and keeps the full path in the hover hint', async () => {
-  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
-
-  fireEvent.click(screen.getByLabelText('Readwise root folder'));
-  fireEvent.click(screen.getByLabelText('Original folder draft-import-source-101'));
-
-  await waitFor(() => {
-    expect(screen.getByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
-  });
-  await waitFor(() => {
-    expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toHaveTextContent('Articles');
-  });
-  expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toHaveAttribute(
-    'title',
-    '/tmp/chosen-folder/Full Document Contents/Articles'
-  );
-  expect(screen.getByLabelText('Original folder draft-import-source-101')).toHaveAttribute('title', '/tmp/chosen-folder');
 });
 
 it('opens a preview dialog and only enables after confirmation', async () => {
@@ -180,14 +157,12 @@ it('persists import manager settings after the panel remounts', async () => {
   });
   fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
   fireEvent.click(screen.getByRole('button', { name: 'Copy draft-import-source-101' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Hide details' }));
 
   await waitFor(() => {
     expect(window.electronAPI?.invoke).toHaveBeenLastCalledWith(
       'save_import_manager_settings',
       expect.objectContaining({
         settings: expect.objectContaining({
-          detailsOpen: false,
           sources: expect.arrayContaining([
             expect.objectContaining({
               id: 'draft-import-source-101',
@@ -203,8 +178,6 @@ it('persists import manager settings after the panel remounts', async () => {
   unmount();
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
-  expect(await screen.findByRole('button', { name: 'Detailed settings' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Detailed settings' }));
   expect(await screen.findByLabelText('Original folder draft-import-source-101')).toHaveTextContent('chosen-folder');
   expect(screen.getByRole('switch', { name: 'Keep import enabled draft-import-source-101' })).toHaveAttribute('aria-checked', 'true');
   expect(screen.getByLabelText('Original folder draft-import-source-103')).toBeInTheDocument();
@@ -243,50 +216,4 @@ it('asks for confirmation before turning an enabled keep import off', async () =
   });
 
   expect(screen.getByRole('button', { name: 'Preview draft-import-source-101' })).toBeInTheDocument();
-});
-
-it('blocks the readwise settings entry until the root folder is chosen', () => {
-  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Open Readwise Reader settings' }));
-
-  expect(screen.getByText('Choose the Readwise root folder first, then open the Readwise settings.')).toBeInTheDocument();
-  expect(screen.queryByRole('heading', { name: 'Readwise Reader settings' })).not.toBeInTheDocument();
-});
-
-it('requires detection and confirmation before saving the readwise reader setup', async () => {
-  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
-
-  fireEvent.click(screen.getByLabelText('Readwise root folder'));
-  await waitFor(() => {
-    expect(screen.getByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Open Readwise Reader settings' }));
-
-  expect(await screen.findByRole('heading', { name: 'Readwise Reader settings' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Detect' }));
-  expect(await screen.findByText('Checked 1 article sample successfully.')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
-
-  fireEvent.click(screen.getByRole('checkbox'));
-  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-
-  await waitFor(() => {
-    expect(window.electronAPI?.invoke).toHaveBeenCalledWith(
-      'save_import_manager_settings',
-      expect.objectContaining({
-        settings: expect.objectContaining({
-          readwiseReaderConfig: expect.objectContaining({
-            highlightSeparator: '\\n\\n',
-            validatedAt: expect.any(String)
-          }),
-          readwiseRootPath: '/tmp/chosen-folder'
-        })
-      })
-    );
-  });
-
-  expect(screen.getByText('Configured')).toBeInTheDocument();
 });

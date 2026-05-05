@@ -91,8 +91,13 @@ export type NativeCommandMap = {
   };
   [NATIVE_COMMANDS.inspectReadwiseReaderSetup]: {
     args: {
+      articleDirectoryPath: string;
+      fullDocumentDirectoryPath: string;
+      highlightsHeading: string;
       highlightSeparator: string;
-      readwiseRootPath: string;
+      newHighlightsHeading: string;
+      noteKeyword: string;
+      tagKeyword: string;
     };
     result: NativeReadwiseDetectionResult;
   };

@@ -50,8 +50,13 @@ it('reads sampled article files and returns matched detection samples', async ()
   const root = await createReadwiseSampleRoot();
 
   const result = await inspectReadwiseReaderSetup({
+    articleDirectoryPath: path.join(root, 'Articles'),
+    fullDocumentDirectoryPath: path.join(root, 'Full Document Contents', 'Articles'),
+    highlightsHeading: '## Highlights',
     highlightSeparator: '\n\n',
-    readwiseRootPath: root
+    newHighlightsHeading: '## New highlights added',
+    noteKeyword: 'Note:',
+    tagKeyword: 'Tags:'
   });
 
   expect(result.success).toBe(true);

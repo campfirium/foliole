@@ -17,27 +17,22 @@ type ImportSourceWorkspaceProps = {
 };
 
 type ImportSourceWorkspaceContentProps = {
-  detailsOpen: boolean;
   keepPreviewDialog: KeepPreviewDialogState | null;
   keepDisableDialog: KeepDisableDialogState | null;
   onChange: ReturnType<typeof useImportSourceWorkspaceState>['handleChangeSource'];
-  onChangeReadwise: ReturnType<typeof useImportSourceWorkspaceState>['handleChangeReadwiseSource'];
   onChooseFolder: ReturnType<typeof useImportSourceWorkspaceState>['handleChooseFolder'];
-  onChooseReadwiseFolder: ReturnType<typeof useImportSourceWorkspaceState>['handleChooseReadwiseFolder'];
-  onChooseReadwiseRootFolder: ReturnType<typeof useImportSourceWorkspaceState>['handleChooseReadwiseRootFolder'];
   onConfirmKeepDisable: () => void;
   onConfirmKeepPreview: () => void;
   onCopySource: ReturnType<typeof useImportSourceWorkspaceState>['handleCopySource'];
   onDeleteSource: ReturnType<typeof useImportSourceWorkspaceState>['handleDeleteSource'];
-  onDisableKeepImport: (sourceId: string, scope: 'readwiseSources' | 'sources') => void;
+  onDisableKeepImport: (sourceId: string, scope: 'sources') => void;
   onKeepDisableOpenChange: (open: boolean) => void;
   onKeepPreviewOpenChange: (open: boolean) => void;
   onOpenChange: (open: boolean) => void;
-  onOpenKeepPreview: (sourceId: string, scope: 'readwiseSources' | 'sources') => Promise<void>;
+  onOpenKeepPreview: (sourceId: string, scope: 'sources') => Promise<void>;
   onOpenReadwiseConfig: () => void;
-  onSaveReadwiseReaderConfig: ReturnType<typeof useImportSourceWorkspaceState>['handleSaveReadwiseReaderConfig'];
+  onSaveReadwiseReaderSetup: ReturnType<typeof useImportSourceWorkspaceState>['handleSaveReadwiseReaderSetup'];
   disableSourceLabel: string;
-  onToggleDetails: () => void;
   open: boolean;
   previewSourceLabel: string;
   readwiseConfigDialogOpen: boolean;
@@ -51,25 +46,18 @@ type ImportSourceWorkspaceContentProps = {
 function ImportSourceWorkspacePanel(props: ImportSourceWorkspaceContentProps) {
   return (
     <ImportSourceWorkspaceDetails
-      detailsOpen={props.detailsOpen}
       onChange={props.onChange}
-      onChangeReadwise={props.onChangeReadwise}
       onChooseHighlightFolder={(sourceId) => void props.onChooseFolder(sourceId, 'highlightPath')}
       onChoosePrimaryFolder={(sourceId) => void props.onChooseFolder(sourceId, 'primaryPath')}
-      onChooseReadwiseHighlightFolder={(sourceId) => void props.onChooseReadwiseFolder(sourceId, 'highlightPath')}
-      onChooseReadwisePrimaryFolder={(sourceId) => void props.onChooseReadwiseFolder(sourceId, 'primaryPath')}
-      onChooseReadwiseRootFolder={() => void props.onChooseReadwiseRootFolder()}
       onDisableKeepImport={props.onDisableKeepImport}
       onCopySource={props.onCopySource}
       onDeleteSource={props.onDeleteSource}
       onOpenChange={props.onOpenChange}
       onOpenReadwiseConfig={props.onOpenReadwiseConfig}
       onPreviewKeepImport={props.onOpenKeepPreview}
-      onToggleDetails={props.onToggleDetails}
       open={props.open}
       readwiseReaderConfig={props.readwiseReaderConfig}
       readwiseRootPath={props.readwiseRootPath}
-      readwiseSources={props.readwiseSources}
       sources={props.sources}
     />
   );
@@ -81,9 +69,10 @@ function ImportSourceWorkspaceDialogs(props: ImportSourceWorkspaceContentProps) 
       <ReadwiseReaderConfigDialogHost
         configDialogOpen={props.readwiseConfigDialogOpen}
         onOpenChange={props.setReadwiseConfigDialogOpen}
-        onSave={props.onSaveReadwiseReaderConfig}
+        onSave={props.onSaveReadwiseReaderSetup}
         readwiseReaderConfig={props.readwiseReaderConfig}
         readwiseRootPath={props.readwiseRootPath}
+        readwiseSources={props.readwiseSources}
       />
       <KeepImportPreviewDialog
         onConfirm={props.onConfirmKeepPreview}
@@ -119,15 +108,11 @@ function createImportSourceWorkspaceViewModel(
   setReadwiseConfigDialogOpen: (open: boolean) => void
 ) {
   return {
-    detailsOpen: base.detailsOpen,
     disableSourceLabel: dialogState.disableSource?.primaryPath || 'Selected keep source',
     keepDisableDialog: dialogState.keepDisableDialog,
     keepPreviewDialog: dialogState.keepPreviewDialog,
     onChange: base.handleChangeSource,
-    onChangeReadwise: base.handleChangeReadwiseSource,
     onChooseFolder: base.handleChooseFolder,
-    onChooseReadwiseFolder: base.handleChooseReadwiseFolder,
-    onChooseReadwiseRootFolder: base.handleChooseReadwiseRootFolder,
     onConfirmKeepDisable: dialogState.handleConfirmKeepDisable,
     onConfirmKeepPreview: dialogState.handleConfirmKeepPreview,
     onCopySource: base.handleCopySource,
@@ -138,8 +123,7 @@ function createImportSourceWorkspaceViewModel(
     onOpenChange,
     onOpenKeepPreview: dialogState.handleOpenKeepPreview,
     onOpenReadwiseConfig: () => setReadwiseConfigDialogOpen(true),
-    onSaveReadwiseReaderConfig: base.handleSaveReadwiseReaderConfig,
-    onToggleDetails: () => base.setDetailsOpen((current) => !current),
+    onSaveReadwiseReaderSetup: base.handleSaveReadwiseReaderSetup,
     previewSourceLabel: dialogState.previewSource?.primaryPath || 'Selected keep source',
     readwiseConfigDialogOpen,
     readwiseReaderConfig: base.readwiseReaderConfig,

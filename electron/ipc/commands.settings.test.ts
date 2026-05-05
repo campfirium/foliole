@@ -36,7 +36,11 @@ vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn().mockReturnValue({
     detailsOpen: true,
     readwiseReaderConfig: {
+      highlightsHeading: '## Highlights',
       highlightSeparator: '\\n\\n',
+      newHighlightsHeading: '## New highlights added',
+      noteKeyword: 'Note:',
+      tagKeyword: 'Tags:',
       validatedAt: ''
     },
     readwiseRootPath: '/tmp/readwise',
@@ -121,7 +125,11 @@ async function expectAppAndImportSettingsCommands() {
         settings: {
           detailsOpen: false,
           readwiseReaderConfig: {
+            highlightsHeading: '## Highlights',
             highlightSeparator: '\\n\\n',
+            newHighlightsHeading: '## New highlights added',
+            noteKeyword: 'Note:',
+            tagKeyword: 'Tags:',
             validatedAt: '2026-03-25T00:02:00.000Z'
           },
           readwiseRootPath: '/tmp/readwise-next',
@@ -133,7 +141,11 @@ async function expectAppAndImportSettingsCommands() {
   ).resolves.toMatchObject({
     detailsOpen: false,
     readwiseReaderConfig: {
+      highlightsHeading: '## Highlights',
       highlightSeparator: '\\n\\n',
+      newHighlightsHeading: '## New highlights added',
+      noteKeyword: 'Note:',
+      tagKeyword: 'Tags:',
       validatedAt: '2026-03-25T00:02:00.000Z'
     },
     readwiseRootPath: '/tmp/readwise-next',

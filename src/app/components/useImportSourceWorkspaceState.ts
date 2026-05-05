@@ -203,6 +203,18 @@ function createWorkspaceMetaActions(setSettings: SetSettings) {
         readwiseReaderConfig: config
       }));
     },
+    handleSaveReadwiseReaderSetup(input: {
+      config: ReadwiseReaderConfig;
+      readwiseRootPath: string;
+      readwiseSources: DraftImportSource[];
+    }) {
+      setSettings((current) => ({
+        ...current,
+        readwiseReaderConfig: input.config,
+        readwiseRootPath: input.readwiseRootPath,
+        readwiseSources: input.readwiseSources
+      }));
+    },
     setDetailsOpen(updater: (current: boolean) => boolean) {
       setSettings((current) => ({
         ...current,

@@ -26,8 +26,12 @@ it('matches sampled highlights back to the full document content', () => {
   const result = probeReadwiseArticleContent({
     articleMarkdown: ARTICLE_MARKDOWN,
     fullDocumentMarkdown: FULL_DOCUMENT_MARKDOWN,
-    separator: '\n\n',
-    sourceName: 'Sample Article'
+    highlightsHeading: '## Highlights',
+    highlightSeparator: '\n\n',
+    newHighlightsHeading: '## New highlights added',
+    noteKeyword: 'Note:',
+    sourceName: 'Sample Article',
+    tagKeyword: 'Tags:'
   });
 
   expect(result.success).toBe(true);
@@ -43,8 +47,12 @@ it('fails when the separator does not split the highlights correctly', () => {
   const result = probeReadwiseArticleContent({
     articleMarkdown: ARTICLE_MARKDOWN,
     fullDocumentMarkdown: FULL_DOCUMENT_MARKDOWN,
-    separator: '---',
-    sourceName: 'Sample Article'
+    highlightsHeading: '## Highlights',
+    highlightSeparator: '---',
+    newHighlightsHeading: '## New highlights added',
+    noteKeyword: 'Note:',
+    sourceName: 'Sample Article',
+    tagKeyword: 'Tags:'
   });
 
   expect(result.success).toBe(false);

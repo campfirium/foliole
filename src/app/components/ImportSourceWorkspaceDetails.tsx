@@ -8,26 +8,19 @@ import { ImportSourceWorkspaceReadwiseSection } from './ImportSourceWorkspaceRea
 import { ImportSourceTable } from './ImportSourceWorkspaceTable';
 
 type ImportSourceWorkspaceDetailsProps = {
-  detailsOpen: boolean;
   open: boolean;
   readwiseReaderConfig: ReadwiseReaderConfig;
   readwiseRootPath: string;
-  readwiseSources: DraftImportSource[];
   sources: DraftImportSource[];
-  onChooseReadwiseRootFolder: () => void;
   onOpenChange: (open: boolean) => void;
   onOpenReadwiseConfig: () => void;
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
-  onChangeReadwise: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
-  onChooseReadwisePrimaryFolder: (sourceId: string) => void;
-  onChooseReadwiseHighlightFolder: (sourceId: string) => void;
-  onDisableKeepImport: (sourceId: string, scope: 'readwiseSources' | 'sources') => void;
+  onDisableKeepImport: (sourceId: string, scope: 'sources') => void;
   onCopySource: (sourceId: string) => void;
   onDeleteSource: (sourceId: string) => void;
-  onPreviewKeepImport: (sourceId: string, scope: 'readwiseSources' | 'sources') => void;
-  onToggleDetails: () => void;
+  onPreviewKeepImport: (sourceId: string, scope: 'sources') => void;
 };
 
 function ImportSourceWorkspaceHeader({ onClose }: { onClose: () => void }) {
@@ -50,18 +43,9 @@ function ImportSourceWorkspaceBody(props: Omit<ImportSourceWorkspaceDetailsProps
   return (
     <div className="min-h-0 flex-1 overflow-auto px-6 pb-6">
       <ImportSourceWorkspaceReadwiseSection
-        detailsOpen={props.detailsOpen}
-        onChange={props.onChangeReadwise}
-        onChooseRootFolder={props.onChooseReadwiseRootFolder}
-        onChooseHighlightFolder={props.onChooseReadwiseHighlightFolder}
-        onChoosePrimaryFolder={props.onChooseReadwisePrimaryFolder}
-        onDisableKeepImport={(sourceId) => props.onDisableKeepImport(sourceId, 'readwiseSources')}
         onOpenReadwiseConfig={props.onOpenReadwiseConfig}
-        onPreviewKeepImport={(sourceId) => void props.onPreviewKeepImport(sourceId, 'readwiseSources')}
-        onToggleDetails={props.onToggleDetails}
         readwiseReaderConfig={props.readwiseReaderConfig}
         readwiseRootPath={props.readwiseRootPath}
-        sources={props.readwiseSources}
       />
       <div className="overflow-auto">
         <ImportSourceTable
@@ -80,26 +64,19 @@ function ImportSourceWorkspaceBody(props: Omit<ImportSourceWorkspaceDetailsProps
 }
 
 export function ImportSourceWorkspaceDetails({
-  detailsOpen,
   open,
   readwiseRootPath,
   readwiseReaderConfig,
-  readwiseSources,
   sources,
-  onChooseReadwiseRootFolder,
   onOpenChange,
   onOpenReadwiseConfig,
   onChange,
-  onChangeReadwise,
   onChoosePrimaryFolder,
   onChooseHighlightFolder,
-  onChooseReadwisePrimaryFolder,
-  onChooseReadwiseHighlightFolder,
   onDisableKeepImport,
   onCopySource,
   onDeleteSource,
-  onPreviewKeepImport,
-  onToggleDetails,
+  onPreviewKeepImport
 }: ImportSourceWorkspaceDetailsProps) {
   return (
     <AppDialog onOpenChange={onOpenChange} open={open}>
@@ -112,23 +89,16 @@ export function ImportSourceWorkspaceDetails({
           <section aria-label="Import management" className="flex h-full min-h-0 flex-col">
             <ImportSourceWorkspaceHeader onClose={() => onOpenChange(false)} />
             <ImportSourceWorkspaceBody
-              detailsOpen={detailsOpen}
               onChange={onChange}
-              onChangeReadwise={onChangeReadwise}
               onChooseHighlightFolder={onChooseHighlightFolder}
               onChoosePrimaryFolder={onChoosePrimaryFolder}
-              onChooseReadwiseHighlightFolder={onChooseReadwiseHighlightFolder}
-              onChooseReadwisePrimaryFolder={onChooseReadwisePrimaryFolder}
-              onChooseReadwiseRootFolder={onChooseReadwiseRootFolder}
               onDisableKeepImport={onDisableKeepImport}
               onCopySource={onCopySource}
               onDeleteSource={onDeleteSource}
               onOpenReadwiseConfig={onOpenReadwiseConfig}
               onPreviewKeepImport={onPreviewKeepImport}
-              onToggleDetails={onToggleDetails}
               readwiseReaderConfig={readwiseReaderConfig}
               readwiseRootPath={readwiseRootPath}
-              readwiseSources={readwiseSources}
               sources={sources}
             />
           </section>

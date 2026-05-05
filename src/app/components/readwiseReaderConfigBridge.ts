@@ -4,8 +4,9 @@ import type { NativeReadwiseDetectionResult } from '../../../lib/platform/native
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
 
 export async function inspectReadwiseReaderSetup(input: {
+  articleDirectoryPath: string;
   config: ReadwiseReaderConfig;
-  readwiseRootPath: string;
+  fullDocumentDirectoryPath: string;
 }): Promise<NativeReadwiseDetectionResult> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -20,7 +21,12 @@ export async function inspectReadwiseReaderSetup(input: {
   }
 
   return runtimeInvoke(NATIVE_COMMANDS.inspectReadwiseReaderSetup, {
+    articleDirectoryPath: input.articleDirectoryPath,
+    fullDocumentDirectoryPath: input.fullDocumentDirectoryPath,
+    highlightsHeading: input.config.highlightsHeading,
     highlightSeparator: input.config.highlightSeparator,
-    readwiseRootPath: input.readwiseRootPath
+    newHighlightsHeading: input.config.newHighlightsHeading,
+    noteKeyword: input.config.noteKeyword,
+    tagKeyword: input.config.tagKeyword
   });
 }

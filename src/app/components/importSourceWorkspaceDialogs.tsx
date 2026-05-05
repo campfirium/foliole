@@ -24,16 +24,24 @@ export function ReadwiseReaderConfigDialogHost(props: {
   onOpenChange: (open: boolean) => void;
   readwiseReaderConfig: ReturnType<typeof useImportSourceWorkspaceState>['readwiseReaderConfig'];
   readwiseRootPath: string;
-  onSave: ReturnType<typeof useImportSourceWorkspaceState>['handleSaveReadwiseReaderConfig'];
+  readwiseSources: ReturnType<typeof useImportSourceWorkspaceState>['readwiseSources'];
+  onSave: ReturnType<typeof useImportSourceWorkspaceState>['handleSaveReadwiseReaderSetup'];
 }) {
   return (
     <ReadwiseReaderConfigDialog
       config={props.readwiseReaderConfig}
-      onDetect={(config) => inspectReadwiseReaderSetup({ config, readwiseRootPath: props.readwiseRootPath })}
+      onPreview={(input) =>
+        inspectReadwiseReaderSetup({
+          articleDirectoryPath: input.articleDirectoryPath,
+          config: input.config,
+          fullDocumentDirectoryPath: input.fullDocumentDirectoryPath
+        })
+      }
       onOpenChange={props.onOpenChange}
       onSave={props.onSave}
       open={props.configDialogOpen}
       readwiseRootPath={props.readwiseRootPath}
+      readwiseSources={props.readwiseSources}
     />
   );
 }
