@@ -19,20 +19,15 @@ import {
   isTocLikeChapter,
   normalizePageTitle
 } from './epubImportChapterHeuristics.js';
+import { buildBookNodes, type RawBookNode } from './epubImportTree.js';
+import { readEpubToc } from './epubToc.js';
 import { type ImportSourceDescriptor } from './importSourcePipeline.js';
 
 type HtmlNode = DefaultTreeAdapterTypes.Node;
 type HtmlElement = DefaultTreeAdapterTypes.Element;
 
-export interface RawChapter {
-  content: string;
-  degradedReason: string | null;
-  key: string;
-  title: string;
-}
-
 export interface RawEpubBook {
-  chapters: RawChapter[];
+  nodes: RawBookNode[];
   title: string;
 }
 
@@ -159,6 +154,105 @@ function buildChapterMarkdown(html: string, fallbackTitle: string) {
   };
 }
 
+function readBookTitle(opfXml: string, sourceName: string) {
+  const titleMatch = opfXml.match(/<(?:dc:title|title)\b[^>]*>([\s\S]*?)<\/(?:dc:title|title)>/i);
+  return titleMatch?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || path.basename(sourceName, '.epub');
+}
+
+function buildSpineChapterNode(input: {
+  entries: ReadonlyMap<string, Uint8Array>;
+  fallbackTitle: string;
+  guideCoverPaths: ReadonlySet<string>;
+  href: string;
+  index: number;
+  mediaType: string | null;
+  properties: string[];
+}) {
+  if (input.properties.includes('nav')) {
+    return null;
+  }
+  if (input.mediaType && !['application/xhtml+xml', 'text/html'].includes(input.mediaType)) {
+    return {
+      content: buildRetainedDegradedImportContent({
+        reason: `EPUB chapter unsupported media type: ${input.mediaType}`,
+        sourceKind: 'epub',
+        sourceName: input.fallbackTitle
+      }),
+      degradedReason: `EPUB chapter unsupported media type: ${input.mediaType}`,
+      href: input.href,
+      key: `${input.index}-${input.href}`,
+      parentKey: null,
+      title: input.fallbackTitle
+    };
+  }
+  const htmlBytes = input.entries.get(input.href);
+  if (!htmlBytes) {
+    return {
+      content: buildRetainedDegradedImportContent({
+        reason: `EPUB chapter missing entry: ${input.href}`,
+        sourceKind: 'epub',
+        sourceName: input.fallbackTitle
+      }),
+      degradedReason: `EPUB chapter missing entry: ${input.href}`,
+      href: input.href,
+      key: `${input.index}-${input.href}`,
+      parentKey: null,
+      title: input.fallbackTitle
+    };
+  }
+  const chapter = buildChapterMarkdown(decodeText(htmlBytes), input.fallbackTitle);
+  if (isCoverLikeChapter({ content: chapter.content, title: chapter.title }, input.href, input.guideCoverPaths)) {
+    return null;
+  }
+  if (isTocLikeChapter({ content: chapter.content, title: chapter.title })) {
+    return null;
+  }
+  return {
+    content: chapter.content,
+    degradedReason: chapter.degradedReason,
+    href: input.href,
+    key: `${input.index}-${input.href}`,
+    parentKey: null,
+    title: chapter.title
+  };
+}
+
+function buildSpineChapterNodes(input: {
+  entries: ReadonlyMap<string, Uint8Array>;
+  guideCoverPaths: ReadonlySet<string>;
+  manifest: ReturnType<typeof parseManifest>;
+  spine: string[];
+}) {
+  return input.spine.flatMap((idref, index) => {
+    const item = input.manifest.get(idref);
+    const fallbackTitle = `Chapter ${index + 1}`;
+    if (!item) {
+      return [{
+        content: buildRetainedDegradedImportContent({
+          reason: `EPUB chapter missing manifest entry: ${idref}`,
+          sourceKind: 'epub',
+          sourceName: fallbackTitle
+        }),
+        degradedReason: `EPUB chapter missing manifest entry: ${idref}`,
+        href: `${idref}.xhtml`,
+        key: `${index}-${idref}`,
+        parentKey: null,
+        title: fallbackTitle
+      }];
+    }
+    const chapter = buildSpineChapterNode({
+      entries: input.entries,
+      fallbackTitle,
+      guideCoverPaths: input.guideCoverPaths,
+      href: item.href,
+      index,
+      mediaType: item.mediaType,
+      properties: item.properties
+    });
+    return chapter ? [chapter] : [];
+  });
+}
+
 export async function readRawEpubBook(source: ImportSourceDescriptor): Promise<RawEpubBook> {
   const entries = readEpubArchiveEntries(await fs.readFile(source.filePath));
   const mimetype = entries.get('mimetype');
@@ -175,49 +269,9 @@ export async function readRawEpubBook(source: ImportSourceDescriptor): Promise<R
   if (spine.length === 0) {
     throw new Error('EPUB import failed: package document does not declare any spine chapters');
   }
+  const title = readBookTitle(opfXml, source.sourceName);
+  const chapters = buildSpineChapterNodes({ entries, guideCoverPaths, manifest, spine });
+  const toc = readEpubToc({ entries, manifest, opfDirectory, opfXml });
 
-  const titleMatch = opfXml.match(/<(?:dc:title|title)\b[^>]*>([\s\S]*?)<\/(?:dc:title|title)>/i);
-  const title = titleMatch?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || path.basename(source.sourceName, '.epub');
-  const chapters = spine.flatMap((idref, index) => {
-    const item = manifest.get(idref);
-    const fallbackTitle = `Chapter ${index + 1}`;
-    if (!item) {
-      return [{
-        content: buildRetainedDegradedImportContent({ reason: `EPUB chapter missing manifest entry: ${idref}`, sourceKind: 'epub', sourceName: fallbackTitle }),
-        degradedReason: `EPUB chapter missing manifest entry: ${idref}`,
-        key: `${index}-${idref}`,
-        title: fallbackTitle
-      } satisfies RawChapter];
-    }
-    if (item.properties.includes('nav')) {
-      return [];
-    }
-    if (item.mediaType && !['application/xhtml+xml', 'text/html'].includes(item.mediaType)) {
-      return [{
-        content: buildRetainedDegradedImportContent({ reason: `EPUB chapter unsupported media type: ${item.mediaType}`, sourceKind: 'epub', sourceName: fallbackTitle }),
-        degradedReason: `EPUB chapter unsupported media type: ${item.mediaType}`,
-        key: `${index}-${item.href}`,
-        title: fallbackTitle
-      } satisfies RawChapter];
-    }
-    const htmlBytes = entries.get(item.href);
-    if (!htmlBytes) {
-      return [{
-        content: buildRetainedDegradedImportContent({ reason: `EPUB chapter missing entry: ${item.href}`, sourceKind: 'epub', sourceName: fallbackTitle }),
-        degradedReason: `EPUB chapter missing entry: ${item.href}`,
-        key: `${index}-${item.href}`,
-        title: fallbackTitle
-      } satisfies RawChapter];
-    }
-    const chapter = buildChapterMarkdown(decodeText(htmlBytes), fallbackTitle);
-    if (isCoverLikeChapter({ content: chapter.content, title: chapter.title }, item.href, guideCoverPaths)) {
-      return [];
-    }
-    if (isTocLikeChapter({ content: chapter.content, title: chapter.title })) {
-      return [];
-    }
-    return [{ content: chapter.content, degradedReason: chapter.degradedReason, key: `${index}-${item.href}`, title: chapter.title } satisfies RawChapter];
-  });
-
-  return { chapters, title };
+  return { nodes: buildBookNodes({ chapters, toc }), title };
 }

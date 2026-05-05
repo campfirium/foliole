@@ -6,14 +6,16 @@ import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerpri
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 
-import { type RawChapter, readRawEpubBook } from './epubImportBook.js';
+import { readRawEpubBook } from './epubImportBook.js';
+import { type RawBookNode } from './epubImportTree.js';
 import { type ImportSourceDescriptor } from './importSourcePipeline.js';
 
-interface PreparedChapter {
+interface PreparedBookNode {
   content: string;
   degradedReason: string | null;
   hideTitleHeading: boolean;
   key: string;
+  parentKey: string | null;
   title: string;
 }
 
@@ -27,12 +29,12 @@ function createChapterNodeId(sourceFingerprint: string, chapterKey: string) {
   return `node-epub-${createHash('sha256').update(`${sourceFingerprint}\u001f${chapterKey}`).digest('hex').slice(0, 24)}`;
 }
 
-function prepareChapter(chapter: RawChapter, index: number, importedAt: string) {
+function prepareBookNode(node: RawBookNode, index: number, importedAt: string) {
   const prepared = createPreparedDesktopTextImport({
-    content: chapter.content,
-    degradedReason: chapter.degradedReason,
+    content: node.content,
+    degradedReason: node.degradedReason,
     fileName: `chapter-${index + 1}.xhtml`,
-    filePath: `epub-chapter#${chapter.key}`,
+    filePath: `epub-chapter#${node.key}`,
     importedAt,
     kind: 'epub',
     sourceProfile: 'epub',
@@ -42,29 +44,33 @@ function prepareChapter(chapter: RawChapter, index: number, importedAt: string) 
     content: prepared.content,
     degradedReason: prepared.degradedReason,
     hideTitleHeading: prepared.hideTitleHeading,
-    key: chapter.key,
-    title: chapter.title
-  } satisfies PreparedChapter;
+    key: node.key,
+    parentKey: node.parentKey,
+    title: node.title
+  } satisfies PreparedBookNode;
 }
 
-function syncChapterNodes(parentNodeId: string, sourceFingerprint: string, importedAt: string, chapters: PreparedChapter[]) {
+function syncBookNodes(parentNodeId: string, sourceFingerprint: string, importedAt: string, nodes: PreparedBookNode[]) {
   const connection = openDatabaseConnection();
   const firstPosition = (connection.driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order')?.position ?? -1) + 1;
+  const nodeIdsByKey = new Map<string, string>();
 
   connection.driver.transaction((driver) => {
-    chapters.forEach((chapter, index) => {
+    nodes.forEach((node, index) => {
+      const nodeId = createChapterNodeId(sourceFingerprint, node.key);
+      nodeIdsByKey.set(node.key, nodeId);
       upsertNodeSnapshot(driver, {
         anchorLink: null,
-        content: chapter.content,
+        content: node.content,
         createdAt: importedAt,
-        hideTitleHeading: chapter.hideTitleHeading,
+        hideTitleHeading: node.hideTitleHeading,
         isTitleManual: true,
         kind: 'topic',
-        nodeId: createChapterNodeId(sourceFingerprint, chapter.key),
-        parentNodeId,
+        nodeId,
+        parentNodeId: node.parentKey ? (nodeIdsByKey.get(node.parentKey) ?? parentNodeId) : parentNodeId,
         position: firstPosition + index,
         reveal: null,
-        title: chapter.title,
+        title: node.title,
         updatedAt: importedAt
       });
     });
@@ -85,15 +91,15 @@ function applyAggregateDegrade(record: PersistedImportRecord, degradedReason: st
 export async function loadEpubPreview(source: ImportSourceDescriptor) {
   const book = await readRawEpubBook(source);
   const importedAt = new Date().toISOString();
-  const chapters = book.chapters.map((chapter, index) => prepareChapter(chapter, index, importedAt));
-  return ['# ' + book.title, ...chapters.flatMap((chapter) => ['', chapter.content])].join('\n').trim();
+  const nodes = book.nodes.map((node, index) => prepareBookNode(node, index, importedAt));
+  return ['# ' + book.title, ...nodes.flatMap((node) => ['', node.content])].join('\n').trim();
 }
 
 export async function runEpubImport(source: ImportSourceDescriptor, importedAt: string) {
   const book = await readRawEpubBook(source);
-  const chapters = book.chapters.map((chapter, index) => prepareChapter(chapter, index, importedAt));
+  const nodes = book.nodes.map((node, index) => prepareBookNode(node, index, importedAt));
   const summary = createPreparedDesktopTextImport({
-    content: ['# ' + book.title, '', ...chapters.map((chapter) => `- ${chapter.title}`)].join('\n'),
+    content: ['# ' + book.title, '', ...nodes.map((node) => `- ${node.title}`)].join('\n'),
     fileName: source.sourceName,
     filePath: source.filePath,
     importedAt,
@@ -106,7 +112,7 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
     throw new Error('EPUB import failed: parent node was not created');
   }
 
-  syncChapterNodes(imported.nodeId, imported.sourceFingerprint, importedAt, chapters);
-  const aggregateReason = chapters.reduce<string | null>((reason, chapter) => appendReason(reason, chapter.degradedReason), imported.degradedReason);
+  syncBookNodes(imported.nodeId, imported.sourceFingerprint, importedAt, nodes);
+  const aggregateReason = nodes.reduce<string | null>((reason, node) => appendReason(reason, node.degradedReason), imported.degradedReason);
   return applyAggregateDegrade(imported, aggregateReason);
 }
