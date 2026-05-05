@@ -23,6 +23,19 @@ export function isNodeDocumentLoaded(node: Node | null | undefined) {
   return contentLoaded && revealLoaded;
 }
 
+function listActiveFolderChildNodeIds(activeNodeId: string | null, nodesById: Record<string, Node>) {
+  if (!activeNodeId) {
+    return [];
+  }
+  const activeNode = nodesById[activeNodeId];
+  if (!activeNode || activeNode.kind !== 'folder' || activeNode.specialKind === 'inbox') {
+    return [];
+  }
+  return Object.values(nodesById)
+    .filter((node) => node.parentNodeId === activeNodeId)
+    .map((node) => node.id);
+}
+
 export function toRendererBoundaryNode(node: Node, keepDocument: boolean): Node {
   const nextHasContent = hasNodeContent(node);
   const nextHasReveal = hasNodeReveal(node);
@@ -59,10 +72,15 @@ export function trimWorkspaceNodesForRendererBoundary(
   nodesById: Record<string, Node>,
   keepNodeIds: ReadonlySet<string> = new Set()
 ) {
+  const nextKeepNodeIds = new Set(keepNodeIds);
+  for (const nodeId of listActiveFolderChildNodeIds(activeNodeId, nodesById)) {
+    nextKeepNodeIds.add(nodeId);
+  }
+
   return Object.fromEntries(
     Object.entries(nodesById).map(([nodeId, node]) => [
       nodeId,
-      toRendererBoundaryNode(node, nodeId === activeNodeId || keepNodeIds.has(nodeId))
+      toRendererBoundaryNode(node, nodeId === activeNodeId || nextKeepNodeIds.has(nodeId))
     ])
   );
 }
