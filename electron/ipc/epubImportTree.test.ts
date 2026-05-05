@@ -32,7 +32,7 @@ it('moves chapter intro content into the first child section when the chapter ha
 
   expect(nodes).toEqual([
     {
-      content: '',
+      content: '**第三章 越少越好**',
       degradedReason: null,
       embeddedImages: [],
       key: 'chapter-3',

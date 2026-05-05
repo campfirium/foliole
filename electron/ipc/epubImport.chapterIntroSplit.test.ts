@@ -101,7 +101,7 @@ it('splits chapter intro content into the first child section when toc chapter a
   const imported = await runEpubImport(source(filePath), '2026-04-04T12:00:00.000Z');
   const chapterRows = readChildren(imported.nodeId as string);
   expect(chapterRows.map((node) => node.title)).toEqual(['第三章 越少越好']);
-  expect(chapterRows[0]?.content).toBe('');
+  expect(chapterRows[0]?.content).toBe('**第三章 越少越好**');
 
   const sectionRows = readChildren(chapterRows[0]!.id);
   expect(sectionRows.map((node) => node.title)).toEqual(['越少越好', '从流程开始', '最后创建']);

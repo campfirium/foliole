@@ -70,13 +70,14 @@ function appendTocNode(
 ) {
   const { chapter, entry, key, parentKey } = input;
   const splitChapterBody = Boolean(chapter && entry.children.length > 0 && chapter.content.trim());
+  const title = entry.title || chapter?.title || `Chapter ${nodes.length + 1}`;
   nodes.push({
-    content: splitChapterBody ? '' : (chapter?.content ?? ''),
+    content: splitChapterBody ? `**${title}**` : (chapter?.content ?? ''),
     degradedReason: splitChapterBody ? null : (chapter?.degradedReason ?? null),
     embeddedImages: splitChapterBody ? [] : (chapter?.embeddedImages ?? []),
     key,
     parentKey,
-    title: entry.title || chapter?.title || `Chapter ${nodes.length + 1}`
+    title
   });
   if (splitChapterBody && chapter) {
     nodes.push({
