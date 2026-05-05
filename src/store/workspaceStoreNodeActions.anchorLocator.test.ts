@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { syncNodeContentToRuntime, syncNodeOrderToRuntime } from './workspaceRuntimeSync';
+import { syncNodeContentToRuntime, syncNodeContentWithAnchorsToRuntime, syncNodeOrderToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -11,6 +11,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
+  syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
   syncNodeRevealToRuntime: vi.fn(),
   syncRestoreNodesToRuntime: vi.fn(),
@@ -113,53 +114,6 @@ function createHarnessWithActions(content: string) {
   return { actions, fixture, harness };
 }
 
-function expectHighlightRuntimeSync(callIndex: number, nodeId: string, locator: ReturnType<typeof expectShiftedBetaLocator>) {
-  expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
-    callIndex,
-    expect.objectContaining({
-      id: nodeId,
-      anchorLink: {
-        id: 'hl-1',
-        kind: 'highlight',
-        locator
-      }
-    })
-  );
-}
-
-function expectRefreshedHighlightRuntimeSync() {
-  expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
-    2,
-    expect.objectContaining({
-      id: 'node-highlight',
-      content: 'Better',
-      title: 'Better',
-      anchorLink: {
-        id: 'hl-1',
-        kind: 'highlight',
-        locator: expectUpdatedBetaLocator()
-      }
-    })
-  );
-}
-
-function expectRefreshedClozeRuntimeSync() {
-  expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
-    3,
-    expect.objectContaining({
-      id: 'node-cloze',
-      content: 'Alpha [...] Gamma',
-      reveal: 'Better',
-      title: 'Alpha [...] Gamma',
-      anchorLink: {
-        id: 'cloze-1',
-        kind: 'cloze',
-        locator: expectUpdatedBetaLocator()
-      }
-    })
-  );
-}
-
 function runCreateHighlightLocatorCase() {
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
@@ -213,8 +167,15 @@ function runParentShiftLocatorCase() {
       }
     })
   );
-  expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(2);
-  expectHighlightRuntimeSync(2, 'node-2', expectShiftedBetaLocator());
+  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'node-1', content: 'Start Alpha Beta Gamma' }),
+    [expect.objectContaining({
+      id: 'node-2',
+      anchorLink: { id: 'hl-1', kind: 'highlight', locator: expectShiftedBetaLocator() }
+    })],
+    expect.any(Array)
+  );
 }
 
 function runRefreshedChildPayloadsCase() {
@@ -225,9 +186,26 @@ function runRefreshedChildPayloadsCase() {
 
   actions.updateNodeContent('node-1', 'Alpha Better Gamma');
 
-  expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(3);
-  expectRefreshedHighlightRuntimeSync();
-  expectRefreshedClozeRuntimeSync();
+  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'node-1', content: 'Alpha Better Gamma' }),
+    [
+      expect.objectContaining({
+        id: 'node-highlight',
+        content: 'Beta',
+        title: 'Beta',
+        anchorLink: { id: 'hl-1', kind: 'highlight', locator: expectUpdatedBetaLocator() }
+      }),
+      expect.objectContaining({
+        id: 'node-cloze',
+        content: 'Alpha [...] Gamma',
+        reveal: 'Beta',
+        title: 'Alpha [...] Gamma',
+        anchorLink: { id: 'cloze-1', kind: 'cloze', locator: expectUpdatedBetaLocator() }
+      })
+    ],
+    expect.any(Array)
+  );
 }
 
 function runDeletedAnchorTextNoSyncCase() {
@@ -237,17 +215,10 @@ function runDeletedAnchorTextNoSyncCase() {
 
   actions.updateNodeContent('node-1', 'Alpha  Gamma');
 
-  expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(2);
-  expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
-    1,
-    expect.objectContaining({
-      id: 'node-1',
-      content: 'Alpha  Gamma'
-    })
-  );
-  expect(syncNodeContentToRuntime).toHaveBeenNthCalledWith(
-    2,
-    expect.objectContaining({
+  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'node-1', content: 'Alpha  Gamma' }),
+    [expect.objectContaining({
       id: 'node-highlight',
       content: 'Beta',
       title: 'Beta',
@@ -260,7 +231,8 @@ function runDeletedAnchorTextNoSyncCase() {
           to: 6
         }
       }
-    })
+    })],
+    expect.any(Array)
   );
 }
 

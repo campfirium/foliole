@@ -28,7 +28,8 @@ vi.mock('../database/nodeMutations.js', () => ({
   replaceNodeOrder: vi.fn(),
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
-  upsertNodeSnapshot: vi.fn()
+  upsertNodeSnapshot: vi.fn(),
+  upsertNodeSnapshots: vi.fn()
 }));
 vi.mock('../database/reviewMutations.js', () => ({
   applyReviewGrade: vi.fn()

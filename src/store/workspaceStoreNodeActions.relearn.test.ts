@@ -9,6 +9,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
+  syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
   syncNodeRevealToRuntime: vi.fn(),
   syncRelearnNodeToRuntime: vi.fn(),

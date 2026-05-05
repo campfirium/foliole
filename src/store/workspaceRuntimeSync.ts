@@ -22,6 +22,7 @@ type FireAndForgetRuntimeCommand = Extract<
   | typeof NATIVE_COMMANDS.createTopic
   | typeof NATIVE_COMMANDS.createItem
   | typeof NATIVE_COMMANDS.updateNodeContent
+  | typeof NATIVE_COMMANDS.updateNodeContentWithAnchors
   | typeof NATIVE_COMMANDS.updateNodeReveal
   | typeof NATIVE_COMMANDS.relearnNode
   | typeof NATIVE_COMMANDS.replaceNodeOrder
@@ -47,7 +48,7 @@ function toNodeSnapshotPayload(node: Node, position?: number): NativeNodeSnapsho
     anchorLink: node.anchorLink ?? null,
     imageRegions: node.imageRegions ?? null,
     reading: node.reading ?? null,
-    position: typeof position === 'number' ? position : null,
+    position: typeof position === 'number' && position >= 0 ? position : null,
     createdAt: node.createdAt,
     updatedAt: node.updatedAt
   };
@@ -134,6 +135,44 @@ function runFireAndForgetNodeSnapshotRuntimeSync(
 
 export function syncNodeContentToRuntime(node: Node, position?: number) {
   runFireAndForgetNodeSnapshotRuntimeSync(NATIVE_COMMANDS.updateNodeContent, node, position, 'sync_node_content');
+}
+
+export function syncNodeContentWithAnchorsToRuntime(parentNode: Node, affectedAnchorNodes: Node[], nodeOrder: string[]) {
+  if (affectedAnchorNodes.length === 0) {
+    syncNodeContentToRuntime(parentNode, nodeOrder.indexOf(parentNode.id));
+    return;
+  }
+
+  const runtimeInvoke = getRuntimeInvoke();
+  const parentPayload = toNodeSnapshotPayload(parentNode, nodeOrder.indexOf(parentNode.id));
+  const anchorPayloads = affectedAnchorNodes.map((node) => toNodeSnapshotPayload(node, nodeOrder.indexOf(node.id)));
+
+  [...anchorPayloads, parentPayload].forEach((payload) => {
+    stagePendingNodeSync(payload);
+  });
+  if (!runtimeInvoke) {
+    return;
+  }
+
+  void runtimeInvoke(NATIVE_COMMANDS.updateNodeContentWithAnchors, {
+    parent: parentPayload,
+    affectedAnchors: anchorPayloads
+  }).then(
+    () => {
+      [parentPayload, ...anchorPayloads].forEach((payload) => {
+        resolvePendingNodeSync(payload.nodeId, payload.updatedAt);
+      });
+    },
+    (error) => {
+      logRuntimeError('runtime sync failed', {
+        area: 'native',
+        action: 'sync_node_content_with_anchors',
+        command: NATIVE_COMMANDS.updateNodeContentWithAnchors,
+        fallback: 'skip_sync',
+        error
+      });
+    }
+  );
 }
 
 export function syncCreateNodeToRuntime(node: Node, position?: number) {

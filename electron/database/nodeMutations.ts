@@ -14,6 +14,7 @@ import type {
 } from '../../lib/core/database/nodeMutations.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { withTransaction } from './transaction.js';
 
 export type {
   DeleteNodesPermanentlyInput,
@@ -24,6 +25,15 @@ export type {
 
 export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
   upsertNodeSnapshotViaDriver(openDatabaseConnection().driver, input);
+}
+
+export function upsertNodeSnapshots(inputs: UpsertNodeSnapshotInput[]): void {
+  const connection = openDatabaseConnection();
+  withTransaction(connection.driver, () => {
+    inputs.forEach((input) => {
+      upsertNodeSnapshotViaDriver(connection.driver, input);
+    });
+  });
 }
 
 export function replaceNodeOrder(nodeIds: string[]): void {

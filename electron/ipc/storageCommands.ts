@@ -13,7 +13,8 @@ import {
   replaceNodeOrder,
   restoreNodes,
   softDeleteNodes,
-  upsertNodeSnapshot
+  upsertNodeSnapshot,
+  upsertNodeSnapshots
 } from '../database/nodeMutations.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
@@ -34,6 +35,7 @@ import {
   asNullableString,
   asString,
   asStringArray,
+  parseNodeSnapshotPayloadArray,
   parseNodeCreationArgs,
   parseNodeSnapshotArgs
 } from './commandParsers.js';
@@ -56,6 +58,13 @@ function readSettingsObject(settings: unknown) {
     throw new Error('invalid argument: settings');
   }
   return settings as Record<string, unknown>;
+}
+
+function readObjectArg(value: unknown, field: string) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value as Record<string, unknown>;
 }
 function handleSqliteMaintenanceCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.listSqliteBackups) {
@@ -96,6 +105,13 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
     const parsed = parseNodeSnapshotArgs(args);
     upsertNodeSnapshot(parsed);
     scheduleMirrorSync([parsed.nodeId]);
+    return null;
+  }
+  if (command === NATIVE_COMMANDS.updateNodeContentWithAnchors) {
+    const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
+    const affectedAnchors = parseNodeSnapshotPayloadArray(args.affectedAnchors, 'affectedAnchors');
+    upsertNodeSnapshots([parent, ...affectedAnchors]);
+    scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
     return null;
   }
   if (command === NATIVE_COMMANDS.replaceNodeOrder) {

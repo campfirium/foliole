@@ -1,3 +1,6 @@
+import { parseNodeSnapshotArgs } from './commandParserNodeSnapshot.js';
+import { asNullableInteger, asString } from './commandParserPrimitives.js';
+
 export {
   asBoolean,
   asNullableString,
@@ -6,8 +9,6 @@ export {
   asTimestamp
 } from './commandParserPrimitives.js';
 export { parseNodeCreationArgs, parseNodeSnapshotArgs } from './commandParserNodeSnapshot.js';
-
-import { asNullableInteger, asString } from './commandParserPrimitives.js';
 
 interface NodeViewStatePayload {
   nodeId: string;
@@ -37,4 +38,16 @@ export function parseNodeViewStatePayloadArray(
     throw new Error(`invalid argument: ${field}`);
   }
   return value.map((item, index) => parseNodeViewStatePayload(item, `${field}[${index}]`));
+}
+
+export function parseNodeSnapshotPayloadArray(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error(`invalid argument: ${field}[${index}]`);
+    }
+    return parseNodeSnapshotArgs(item as Record<string, unknown>);
+  });
 }

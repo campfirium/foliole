@@ -1,15 +1,8 @@
 // @vitest-environment node
-
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
-import {
-  deleteNodesPermanently,
-  replaceNodeOrder,
-  restoreNodes,
-  softDeleteNodes,
-  upsertNodeSnapshot
-} from '../database/nodeMutations.js';
+import { deleteNodesPermanently, replaceNodeOrder, restoreNodes, softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -33,14 +26,7 @@ const { defaultReviewSchedulerSettings, openExternal, syncAppMenuState } = vi.ho
   syncAppMenuState: vi.fn()
 }));
 
-const mockWindow = {
-  close: vi.fn(),
-  isMaximized: vi.fn(() => false),
-  maximize: vi.fn(),
-  minimize: vi.fn(),
-  unmaximize: vi.fn()
-};
-
+const mockWindow = { close: vi.fn(), isMaximized: vi.fn(() => false), maximize: vi.fn(), minimize: vi.fn(), unmaximize: vi.fn() };
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => mockWindow),
@@ -64,7 +50,8 @@ vi.mock('../database/nodeMutations.js', () => ({
   replaceNodeOrder: vi.fn(),
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
-  upsertNodeSnapshot: vi.fn()
+  upsertNodeSnapshot: vi.fn(),
+  upsertNodeSnapshots: vi.fn()
 }));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
@@ -88,7 +75,6 @@ vi.mock('../mirror/rebuildMirrorOutput.js', () => ({
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({
   scheduleMirrorSync: vi.fn()
 }));
-
 beforeEach(() => {
   vi.clearAllMocks();
   mockWindow.isMaximized.mockReturnValue(false);
@@ -114,7 +100,6 @@ it('handles node mutation commands', async () => {
       }
     })
   ).resolves.toBeNull();
-
   expect(upsertNodeSnapshot).toHaveBeenNthCalledWith(1, {
     nodeId: 'node-1',
     parentNodeId: null,
@@ -134,7 +119,6 @@ it('handles node mutation commands', async () => {
     createdAt: '2026-03-06T00:00:00.000Z',
     updatedAt: '2026-03-06T00:00:01.000Z'
   });
-
 });
 
 it('handles node reveal mutation command', async () => {
@@ -156,7 +140,6 @@ it('handles node reveal mutation command', async () => {
       }
     })
   ).resolves.toBeNull();
-
   expect(upsertNodeSnapshot).toHaveBeenCalledWith({
     nodeId: 'node-2',
     parentNodeId: 'node-1',
@@ -176,8 +159,8 @@ it('handles node reveal mutation command', async () => {
     createdAt: '2026-03-06T00:00:00.000Z',
     updatedAt: '2026-03-06T00:00:02.000Z'
   });
-
 });
+
 
 it('handles node order replacement command', async () => {
   await expect(

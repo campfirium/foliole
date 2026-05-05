@@ -13,6 +13,7 @@ import {
   syncCreateNodeToRuntime,
   syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
+  syncNodeContentWithAnchorsToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime,
   syncRestoreNodesToRuntime,
@@ -104,6 +105,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
   return (nodeId, content) => {
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     let locatorUpdatedNodesForSync: WorkspaceState['nodesById'][string][] = [];
+    let nodeOrderForSync: string[] = [];
     set((state) => {
       const node = state.nodesById[nodeId];
       if (
@@ -137,18 +139,16 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
       });
       nextNodeForSync = nextNode;
       locatorUpdatedNodesForSync = locatorSync.updatedNodes;
+      nodeOrderForSync = state.nodeOrder;
       return {
         nodesById: locatorSync.nextNodesById
       };
     });
     if (nextNodeForSync) {
       syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
-      syncNodeContentToRuntime(nextNodeForSync);
+      locatorUpdatedNodesForSync.forEach(syncWorkspaceNodeDocumentCacheFromNode);
+      syncNodeContentWithAnchorsToRuntime(nextNodeForSync, locatorUpdatedNodesForSync, nodeOrderForSync);
     }
-    locatorUpdatedNodesForSync.forEach((updatedNode) => {
-      syncWorkspaceNodeDocumentCacheFromNode(updatedNode);
-      syncNodeContentToRuntime(updatedNode);
-    });
   };
 }
 

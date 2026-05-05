@@ -43,18 +43,18 @@ describe('textAnchorLocatorResolution selection', () => {
   });
 });
 
-describe('textAnchorLocatorResolution remap', () => {
-  it('keeps locator positions when there is no previous content context', () => {
+describe('textAnchorLocatorResolution remap with edit context', () => {
+  it('keeps locator positions when there is no previous content context and the stored text still matches', () => {
     expect(
       remapTextAnchorLocator('Start Alpha Beta Gamma', {
-        from: 6,
+        from: 12,
         originalText: 'Beta',
-        to: 10
+        to: 16
       })
     ).toEqual({
-      from: 6,
+      from: 12,
       originalText: 'Beta',
-      to: 10
+      to: 16
     });
   });
 
@@ -85,8 +85,24 @@ describe('textAnchorLocatorResolution remap', () => {
       to: 6
     });
   });
+});
 
-  it('clamps locators when the current content is shorter and there is no edit context', () => {
+describe('textAnchorLocatorResolution remap without edit context', () => {
+  it('repositions locators by exact text when there is one unique match and no edit context', () => {
+    expect(
+      remapTextAnchorLocator('Start Alpha Beta Gamma', {
+        from: 6,
+        originalText: 'Beta',
+        to: 10
+      })
+    ).toEqual({
+      from: 12,
+      originalText: 'Beta',
+      to: 16
+    });
+  });
+
+  it('falls back to a zero-width locator when there is no edit context and the text is gone', () => {
     expect(
       remapTextAnchorLocator('Beta', {
         from: 6,
@@ -94,7 +110,7 @@ describe('textAnchorLocatorResolution remap', () => {
         to: 10
       })
     ).toEqual({
-      from: 4,
+      from: 0,
       originalText: 'Beta',
       to: 4
     });

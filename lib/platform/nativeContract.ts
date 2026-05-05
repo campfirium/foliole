@@ -31,6 +31,10 @@ type NativeNodeSnapshotMutationSpec = {
   args: NativeNodeSnapshotArgs;
   result: null;
 };
+type NativeNodeSnapshotBatchMutationSpec = {
+  args: { parent: NativeNodeSnapshotArgs; affectedAnchors: NativeNodeSnapshotArgs[] };
+  result: null;
+};
 
 export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
@@ -217,6 +221,7 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
   [NATIVE_COMMANDS.createTopic]: NativeNodeSnapshotMutationSpec;
   [NATIVE_COMMANDS.createItem]: NativeNodeSnapshotMutationSpec;
   [NATIVE_COMMANDS.updateNodeContent]: NativeNodeSnapshotMutationSpec;
+  [NATIVE_COMMANDS.updateNodeContentWithAnchors]: NativeNodeSnapshotBatchMutationSpec;
   [NATIVE_COMMANDS.updateNodeReveal]: NativeNodeSnapshotMutationSpec;
   [NATIVE_COMMANDS.relearnNode]: {
     args: NativeRelearnNodeArgs;

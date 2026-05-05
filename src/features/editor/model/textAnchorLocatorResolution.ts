@@ -7,6 +7,28 @@ function clampTextAnchorSelection(content: string, locator: TextAnchorLocator): 
   return { from, to };
 }
 
+function toUnresolvedSelection(content: string, locator: TextAnchorLocator): EditorSelection {
+  const clamped = clampTextAnchorSelection(content, locator);
+  return { from: clamped.from, to: clamped.from };
+}
+
+function findUniqueTextSelection(content: string, originalText: string): EditorSelection | null {
+  if (originalText.length === 0) {
+    return null;
+  }
+  const firstMatchIndex = content.indexOf(originalText);
+  if (firstMatchIndex < 0) {
+    return null;
+  }
+  if (content.indexOf(originalText, firstMatchIndex + 1) >= 0) {
+    return null;
+  }
+  return {
+    from: firstMatchIndex,
+    to: firstMatchIndex + originalText.length
+  };
+}
+
 function resolveTextAnchorSelectionInPlainText(
   content: string,
   locator: TextAnchorLocator
@@ -114,7 +136,11 @@ export function remapTextAnchorLocator(
   if (typeof previousContent === 'string') {
     return remapTextAnchorLocatorThroughContentChange(previousContent, content, locator);
   }
-  const selection = resolveTextAnchorSelectionInPlainText(content, locator);
+  const clampedSelection = clampTextAnchorSelection(content, locator);
+  const selection =
+    content.slice(clampedSelection.from, clampedSelection.to) === locator.originalText
+      ? clampedSelection
+      : findUniqueTextSelection(content, locator.originalText) ?? toUnresolvedSelection(content, locator);
   return {
     from: selection.from,
     originalText: locator.originalText,

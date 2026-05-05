@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { syncNodeContentToRuntime, syncNodeOrderToRuntime } from './workspaceRuntimeSync';
+import { syncNodeContentToRuntime, syncNodeContentWithAnchorsToRuntime, syncNodeOrderToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -11,6 +11,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
+  syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
   syncNodeRevealToRuntime: vi.fn(),
   syncRestoreNodesToRuntime: vi.fn(),
@@ -36,12 +37,14 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
 
     actions.updateNodeContent('node-1', '# Updated title\n\nBody');
 
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
+    expect(syncNodeContentWithAnchorsToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'node-1',
         hideTitleHeading: false,
         title: 'Updated title'
-      })
+      }),
+      [],
+      expect.any(Array)
     );
   });
 
@@ -72,6 +75,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
       hasReveal: true
     });
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+    expect(syncNodeContentWithAnchorsToRuntime).not.toHaveBeenCalled();
   });
 });
 

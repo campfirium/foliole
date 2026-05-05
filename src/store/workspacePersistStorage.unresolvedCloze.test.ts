@@ -142,7 +142,7 @@ describe('workspacePersistStorage unresolved cloze anchors pending replay', () =
 });
 
 describe('workspacePersistStorage hydrated cloze anchors edited-word recovery', () => {
-  it('refreshes hydrated child clozes when the loaded parent text expands the anchored word in place', async () => {
+  it('marks hydrated child clozes unresolved when the loaded parent text no longer contains the stored text', async () => {
     const invoke = createHydrateInvoke(createChangedParentSnapshot(), 'Alpha Better Gamma');
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
@@ -150,32 +150,20 @@ describe('workspacePersistStorage hydrated cloze anchors edited-word recovery', 
 
     expect(state?.nodesById['node-cloze']).toMatchObject({
       title: 'Alpha [...] Gamma',
-      content: 'Alpha [...] Gamma',
-      reveal: 'Better',
+      content: '',
+      reveal: null,
       anchorLink: {
         id: 'cloze-1',
         kind: 'cloze',
         locator: {
           from: 6,
-          originalText: 'Better',
-          to: 12
+          originalText: 'Beta',
+          to: 6
         }
       }
     });
-    expect(invoke).toHaveBeenCalledWith('update_node_content', expect.objectContaining({
-      nodeId: 'node-cloze',
-      title: 'Alpha [...] Gamma',
-      content: 'Alpha [...] Gamma',
-      reveal: 'Better',
-      anchorLink: {
-        id: 'cloze-1',
-        kind: 'cloze',
-        locator: {
-          from: 6,
-          originalText: 'Better',
-          to: 12
-        }
-      }
+    expect(invoke).not.toHaveBeenCalledWith('update_node_content', expect.objectContaining({
+      nodeId: 'node-cloze'
     }));
   });
 });

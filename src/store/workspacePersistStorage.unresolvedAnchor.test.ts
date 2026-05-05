@@ -150,7 +150,7 @@ describe('workspacePersistStorage unresolved text anchors pending replay', () =>
 });
 
 describe('workspacePersistStorage hydrated text anchors edited-word recovery', () => {
-  it('updates hydrated child highlight locators without rewriting child text when the loaded parent text expands the anchored word in place', async () => {
+  it('marks hydrated child highlights unresolved when the loaded parent text no longer contains the stored text', async () => {
     const invoke = createHydrateInvoke(createChangedParentSnapshot(), 'Alpha Better Gamma');
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
@@ -166,7 +166,7 @@ describe('workspacePersistStorage hydrated text anchors edited-word recovery', (
         locator: {
           from: 6,
           originalText: 'Beta',
-          to: 10
+          to: 6
         }
       }
     });

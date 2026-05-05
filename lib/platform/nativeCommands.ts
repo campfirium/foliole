@@ -65,6 +65,7 @@ export const NATIVE_COMMANDS = {
   createTopic: 'create_topic',
   createItem: 'create_item',
   updateNodeContent: 'update_node_content',
+  updateNodeContentWithAnchors: 'update_node_content_with_anchors',
   updateNodeReveal: 'update_node_reveal',
   relearnNode: 'relearn_node',
   replaceNodeOrder: 'replace_node_order',
