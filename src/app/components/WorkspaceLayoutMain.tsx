@@ -9,8 +9,8 @@ import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
-import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
 import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
+import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
 import {
   loadWorkspaceRightPanelPreference,
   saveWorkspaceRightPanelPreference
