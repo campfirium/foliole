@@ -673,6 +673,12 @@ body {
   background: transparent;
 }
 
+.markdown-editor-host .cm-scroller::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
 .markdown-editor-host .cm-scroller::-webkit-scrollbar-thumb {
   border: var(--app-scrollbar-thumb-inset) solid transparent;
   border-radius: 999px;
@@ -933,6 +939,12 @@ body {
 
 .app-scrollbar::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.app-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
 }
 
 .app-scrollbar::-webkit-scrollbar-thumb {

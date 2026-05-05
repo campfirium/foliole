@@ -1,8 +1,15 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
-import { appFloatingSurfaceClassName } from '../../shared/ui';
+import {
+  appFloatingEmptyStateClassName,
+  appFloatingItemClassName,
+  appFloatingListClassName,
+  appFloatingOverlayClassName,
+  appFloatingSurfaceClassName
+} from '../../shared/ui';
 
+import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { buildNodeSearchResults } from './workspaceNodeSearch';
 
 interface GoToNodePaletteProps {
@@ -21,46 +28,6 @@ interface GoToNodePaletteProps {
   trashedNodeIds: string[];
 }
 
-interface GoToNodeInputProps {
-  inputRef: RefObject<HTMLInputElement>;
-  inputLabel: string;
-  onClose: () => void;
-  onOpenActive: () => void;
-  onSetActiveIndex: (update: (current: number) => number) => void;
-  onSetQuery: (value: string) => void;
-  placeholder: string;
-  query: string;
-  totalItems: number;
-}
-
-function handleInputKeyDown(
-  event: ReactKeyboardEvent<HTMLInputElement>,
-  totalItems: number,
-  onClose: () => void,
-  onOpenActive: () => void,
-  onSetActiveIndex: (update: (current: number) => number) => void
-) {
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    onClose();
-    return;
-  }
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    onSetActiveIndex((current) => Math.min(current + 1, Math.max(0, totalItems - 1)));
-    return;
-  }
-  if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    onSetActiveIndex((current) => Math.max(current - 1, 0));
-    return;
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    onOpenActive();
-  }
-}
-
 export function GoToNodePalette({
   dialogLabel = 'Go to',
   emptyLabel = 'Search folders, topics, and items',
@@ -77,7 +44,7 @@ export function GoToNodePalette({
   trashedNodeIds
 }: GoToNodePaletteProps) {
   const handleSelectNode = onSelectNode ?? onOpenNode;
-  const { activeIndex, inputRef, query, results, setActiveIndex, setQuery } = useGoToNodePaletteState({
+  const { activeIndex, query, results, setActiveIndex, setQuery } = useGoToNodePaletteState({
     isOpen,
     nodeOrder,
     nodesById,
@@ -102,7 +69,6 @@ export function GoToNodePalette({
     emptyLabel,
     handleSelectNode,
     inputLabel,
-    inputRef,
     noResultsLabel,
     onClose,
     openActiveNode,
@@ -120,7 +86,6 @@ function renderGoToNodeDialog(args: {
   emptyLabel: string;
   handleSelectNode?: (nodeId: string) => void;
   inputLabel: string;
-  inputRef: RefObject<HTMLInputElement>;
   noResultsLabel: string;
   onClose: () => void;
   openActiveNode: () => void;
@@ -133,7 +98,7 @@ function renderGoToNodeDialog(args: {
   return (
     <div
       aria-label={args.dialogLabel}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/20 px-4 pt-[12vh]"
+      className={appFloatingOverlayClassName()}
       onClick={args.onClose}
       role="dialog"
     >
@@ -141,13 +106,12 @@ function renderGoToNodeDialog(args: {
         className={appFloatingSurfaceClassName('panel', 'w-full max-w-2xl overflow-hidden')}
         onClick={(event) => event.stopPropagation()}
       >
-        <GoToNodeInput
-          inputRef={args.inputRef}
+        <FloatingPaletteInput
           inputLabel={args.inputLabel}
           onClose={args.onClose}
-          onOpenActive={args.openActiveNode}
+          onQueryChange={args.setQuery}
+          onRunActive={args.openActiveNode}
           onSetActiveIndex={args.setActiveIndex}
-          onSetQuery={args.setQuery}
           placeholder={args.placeholder}
           query={args.query}
           totalItems={args.results.length}
@@ -165,12 +129,23 @@ function renderGoToNodeDialog(args: {
   );
 }
 
-function useGoToNodePaletteState(args: Pick<GoToNodePaletteProps, 'isOpen' | 'nodeOrder' | 'nodesById' | 'recentNodeIds' | 'trashedNodeIds'>) {
-  const inputRef = useRef<HTMLInputElement>(null);
+function useGoToNodePaletteState(
+  args: Pick<
+    GoToNodePaletteProps,
+    'isOpen' | 'nodeOrder' | 'nodesById' | 'recentNodeIds' | 'trashedNodeIds'
+  >
+) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const results = useMemo(
-    () => buildNodeSearchResults(args.nodeOrder, args.nodesById, args.recentNodeIds, args.trashedNodeIds, query),
+    () =>
+      buildNodeSearchResults(
+        args.nodeOrder,
+        args.nodesById,
+        args.recentNodeIds,
+        args.trashedNodeIds,
+        query
+      ),
     [args.nodeOrder, args.nodesById, args.recentNodeIds, args.trashedNodeIds, query]
   );
 
@@ -180,7 +155,6 @@ function useGoToNodePaletteState(args: Pick<GoToNodePaletteProps, 'isOpen' | 'no
       setActiveIndex(0);
       return;
     }
-    inputRef.current?.focus();
   }, [args.isOpen]);
 
   useEffect(() => {
@@ -193,32 +167,7 @@ function useGoToNodePaletteState(args: Pick<GoToNodePaletteProps, 'isOpen' | 'no
     }
   }, [activeIndex, results]);
 
-  return { activeIndex, inputRef, query, results, setActiveIndex, setQuery };
-}
-
-function GoToNodeInput({
-  inputRef,
-  inputLabel,
-  onClose,
-  onOpenActive,
-  onSetActiveIndex,
-  onSetQuery,
-  placeholder,
-  query,
-  totalItems
-}: GoToNodeInputProps) {
-  return (
-    <input
-      aria-label={inputLabel}
-      className="w-full border-b border-border bg-bg-elevated px-4 py-3 text-sm outline-none"
-      onChange={(event) => onSetQuery(event.target.value)}
-      onKeyDown={(event) => handleInputKeyDown(event, totalItems, onClose, onOpenActive, onSetActiveIndex)}
-      placeholder={placeholder}
-      ref={inputRef}
-      type="text"
-      value={query}
-    />
-  );
+  return { activeIndex, query, results, setActiveIndex, setQuery };
 }
 
 function GoToNodeResults({
@@ -238,8 +187,8 @@ function GoToNodeResults({
 }) {
   if (!results.length) {
     return (
-      <ul className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
-        <li className="px-3 py-8 text-center text-sm text-foreground/55">
+      <ul className={appFloatingListClassName()}>
+        <li className={appFloatingEmptyStateClassName()}>
           {query.trim() ? noResultsLabel : emptyLabel}
         </li>
       </ul>
@@ -247,11 +196,11 @@ function GoToNodeResults({
   }
 
   return (
-    <ul aria-label="Search results" className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
+    <ul aria-label="Search results" className={appFloatingListClassName()}>
       {results.map((item, index) => (
         <li key={item.id}>
           <button
-            className="flex w-full flex-col gap-1 rounded-md px-3 py-2 text-left hover:bg-bg-subtle data-[active=true]:bg-bg-subtle"
+            className={appFloatingItemClassName('flex flex-col gap-1')}
             data-active={index === activeIndex}
             onClick={() => onSelectNode(item.id)}
             type="button"

@@ -8,6 +8,7 @@ import {
   workspaceSurfaceColorFromHsl,
   workspaceSurfaceColorToHsl
 } from './workspaceSurfaceColor';
+import { deriveScrollbarThumbColor } from './workspaceSurfaceScrollbars';
 
 export const WORKSPACE_SURFACE_REGION_IDS = [
   'titlebar-rail',
@@ -79,8 +80,6 @@ const LIGHT_SIDEBAR_PANEL_LIGHTNESS_OFFSET = -1;
 const LIGHT_SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET = 1;
 const DARK_SIDEBAR_PANEL_LIGHTNESS_OFFSET = 6;
 const DARK_SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET = 10;
-const LIGHT_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET = 8;
-const DARK_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET = 12;
 
 function clampAssignment(value: number, paletteLength: number) {
   if (paletteLength <= 0) {
@@ -158,18 +157,6 @@ function shiftSurfaceLightness(color: string, offset: number) {
   );
 }
 
-function deriveScrollbarThumbColor(color: string) {
-  const parsed = parseWorkspaceSurfaceColor(color);
-  if (!parsed) {
-    return color;
-  }
-  const lightness = workspaceSurfaceColorToHsl(parsed).l;
-  const offset = lightness >= LIGHT_SURFACE_THRESHOLD
-    ? -LIGHT_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET
-    : DARK_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET;
-  return shiftSurfaceLightness(color, offset);
-}
-
 function derivePanelSurfaceColor(color: string, lightOffset: number, darkOffset: number) {
   const parsed = parseWorkspaceSurfaceColor(color);
   if (!parsed) {
@@ -228,7 +215,7 @@ export function applyWorkspaceSurfaceSettings(
     );
     root.style.setProperty(
       `--workspace-region-${regionId}-scrollbar-thumb-color`,
-      deriveScrollbarThumbColor(color)
+      deriveScrollbarThumbColor(regionId, color, palette, assignments)
     );
   });
   WORKSPACE_FOLDER_TOPIC_DIVIDER_ROWS.forEach((row) => {

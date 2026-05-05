@@ -61,6 +61,61 @@ it('derives sidebar panel and scrollbar colors from the assigned workspace surfa
   expect(root.style.getPropertyValue('--workspace-region-main-sidebar-panel-elevated-bg')).toBe('#696969');
 });
 
+it('keeps scrollbar thumbs in the assigned surface hue when the surface is chromatic', () => {
+  const root = document.documentElement;
+
+  applyWorkspaceSurfaceSettings(root, {
+    assignments: {
+      'titlebar-rail': 0,
+      'titlebar-folder': 0,
+      'titlebar-topic': 0,
+      'titlebar-document': 0,
+      'titlebar-sidebar': 0,
+      'main-rail': 0,
+      'main-folder': 0,
+      'main-topic': 0,
+      'main-document': 0,
+      'main-sidebar': 1,
+      'footer-rail': 0,
+      'footer-folder': 0,
+      'footer-topic': 0,
+      'footer-document': 0,
+      'footer-sidebar': 0
+    },
+    palette: ['#dce8f6', '#364a66']
+  });
+
+  expect(root.style.getPropertyValue('--workspace-region-main-rail-scrollbar-thumb-color')).toBe('#b7d2f0');
+  expect(root.style.getPropertyValue('--workspace-region-main-sidebar-scrollbar-thumb-color')).toBe('#456796');
+});
+
+it('borrows row surface hue for neutral document scrollbars', () => {
+  const root = document.documentElement;
+
+  applyWorkspaceSurfaceSettings(root, {
+    assignments: {
+      'titlebar-rail': 0,
+      'titlebar-folder': 0,
+      'titlebar-topic': 0,
+      'titlebar-document': 0,
+      'titlebar-sidebar': 0,
+      'main-rail': 0,
+      'main-folder': 0,
+      'main-topic': 1,
+      'main-document': 0,
+      'main-sidebar': 1,
+      'footer-rail': 0,
+      'footer-folder': 0,
+      'footer-topic': 0,
+      'footer-document': 0,
+      'footer-sidebar': 0
+    },
+    palette: ['#ffffff', '#f3ecd8']
+  });
+
+  expect(root.style.getPropertyValue('--workspace-region-main-document-scrollbar-thumb-color')).toBe('#f7f0df');
+});
+
 it('derives divider direction per workspace surface instead of per base theme', () => {
   const root = document.documentElement;
 

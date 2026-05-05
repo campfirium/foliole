@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import { appFloatingMetaBadgeClassName } from '../../shared/ui';
 
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
@@ -36,7 +37,11 @@ function buildSegments(text: string, query: string) {
 export function renderSearchResultText(text: string, query: string) {
   return buildSegments(text, query).map((segment, index) =>
     segment.matched ? (
-      <span className="font-medium" key={`${segment.text}-${index}`} style={{ color: 'var(--app-accent-color)' }}>
+      <span
+        className="font-semibold"
+        key={`${segment.text}-${index}`}
+        style={{ color: 'var(--app-accent-color)' }}
+      >
         {segment.text}
       </span>
     ) : (
@@ -45,7 +50,10 @@ export function renderSearchResultText(text: string, query: string) {
   );
 }
 
-function buildAncestorTitles(nodeId: string, nodesById: Record<string, WorkspaceListNode | undefined>) {
+function buildAncestorTitles(
+  nodeId: string,
+  nodesById: Record<string, WorkspaceListNode | undefined>
+) {
   const titles: string[] = [];
   let currentNode = nodesById[nodeId];
   while (currentNode?.parentNodeId) {
@@ -59,7 +67,10 @@ function buildAncestorTitles(nodeId: string, nodesById: Record<string, Workspace
   return titles;
 }
 
-export function resolveSearchResultPathLabel(result: WorkspaceSearchResult, nodesById: Record<string, WorkspaceListNode | undefined>) {
+export function resolveSearchResultPathLabel(
+  result: WorkspaceSearchResult,
+  nodesById: Record<string, WorkspaceListNode | undefined>
+) {
   if (result.kind === 'external' && result.externalMatch) {
     return result.externalMatch.relativePath;
   }
@@ -98,7 +109,9 @@ function resolveWatchedFolderFallback(details: RuntimeNodeSourceDetails) {
   return segments[segments.length - 1] ?? pathValue;
 }
 
-export function resolveSearchResultSourceLabel(details: RuntimeNodeSourceDetails | null | undefined) {
+export function resolveSearchResultSourceLabel(
+  details: RuntimeNodeSourceDetails | null | undefined
+) {
   if (!details) {
     return null;
   }
@@ -111,27 +124,21 @@ export function resolveSearchResultSourceLabel(details: RuntimeNodeSourceDetails
   return null;
 }
 
-export function renderSearchResultSourceLabel(details: RuntimeNodeSourceDetails | null | undefined): ReactNode {
+export function renderSearchResultSourceLabel(
+  details: RuntimeNodeSourceDetails | null | undefined
+): ReactNode {
   const label = resolveSearchResultSourceLabel(details);
   if (!label) {
     return null;
   }
-  return (
-    <span className="truncate rounded-full border border-border bg-bg-subtle px-2 py-0.5 text-[11px] font-medium text-foreground/65">
-      {label}
-    </span>
-  );
+  return <span className={appFloatingMetaBadgeClassName('text-[11px]')}>{label}</span>;
 }
 
 export function renderSearchResultMetaBadge(label: string | null): ReactNode {
   if (!label) {
     return null;
   }
-  return (
-    <span className="truncate rounded-full border border-border bg-bg-subtle px-2 py-0.5 text-[11px] font-medium text-foreground/65">
-      {label}
-    </span>
-  );
+  return <span className={appFloatingMetaBadgeClassName('text-[11px]')}>{label}</span>;
 }
 
 export function resolveExternalFolderLabel(result: WorkspaceSearchResult) {

@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
-import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
-import { appFloatingSurfaceClassName } from '../../shared/ui';
+import {
+  loadRuntimeNodeSourceDetails,
+  type RuntimeNodeSourceDetails
+} from '../../shared/platform/nodeSourceBridge';
+import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
+import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useExternalSectionStatus } from './searchPaletteExternalStatus';
 import { SearchPaletteEmptyState, SearchPaletteList } from './SearchPaletteResults';
 import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
@@ -19,67 +23,13 @@ interface SearchPaletteProps {
   onOpenResult: (result: WorkspaceSearchResult) => void;
 }
 
-interface SearchInputProps {
-  onClose: () => void;
-  onOpenActive: () => void;
-  onQueryChange: (value: string) => void;
-  onSetActiveIndex: (update: (current: number) => number) => void;
-  query: string;
-  totalItems: number;
-}
-
-function handleInputKeyDown(
-  event: ReactKeyboardEvent<HTMLInputElement>,
-  totalItems: number,
-  onClose: () => void,
-  onOpenActive: () => void,
-  onSetActiveIndex: (update: (current: number) => number) => void
+function useSearchResults(
+  props: Pick<SearchPaletteProps, 'isOpen' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>,
+  query: string
 ) {
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    onClose();
-    return;
-  }
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    onSetActiveIndex((current) => Math.min(current + 1, Math.max(0, totalItems - 1)));
-    return;
-  }
-  if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    onSetActiveIndex((current) => Math.max(current - 1, 0));
-    return;
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    onOpenActive();
-  }
-}
-
-function SearchInput(props: SearchInputProps) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  return (
-    <input
-      aria-label="Search workspace"
-      className="w-full border-b border-border bg-bg-elevated px-4 py-3 text-sm outline-none"
-      onChange={(event) => props.onQueryChange(event.target.value)}
-      onKeyDown={(event) => handleInputKeyDown(event, props.totalItems, props.onClose, props.onOpenActive, props.onSetActiveIndex)}
-      placeholder="Search titles and content..."
-      ref={inputRef}
-      type="text"
-      value={props.query}
-    />
-  );
-}
-
-function useSearchResults(props: Pick<SearchPaletteProps, 'isOpen' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>, query: string) {
   const localResults = useMemo(
-    () => buildWorkspaceSearchResults(props.nodeOrder, props.nodesById, props.trashedNodeIds, query),
+    () =>
+      buildWorkspaceSearchResults(props.nodeOrder, props.nodesById, props.trashedNodeIds, query),
     [props.nodeOrder, props.nodesById, props.trashedNodeIds, query]
   );
   const [runtimeResults, setRuntimeResults] = useState<WorkspaceSearchResult[]>([]);
@@ -108,26 +58,42 @@ function useSearchResults(props: Pick<SearchPaletteProps, 'isOpen' | 'nodeOrder'
 }
 
 function useSearchResultSourceDetails(results: WorkspaceSearchResult[]) {
-  const [sourceDetailsByNodeId, setSourceDetailsByNodeId] = useState<Record<string, RuntimeNodeSourceDetails | null | undefined>>({});
+  const [sourceDetailsByNodeId, setSourceDetailsByNodeId] = useState<
+    Record<string, RuntimeNodeSourceDetails | null | undefined>
+  >({});
   const cacheRef = useRef<Record<string, RuntimeNodeSourceDetails | null>>({});
 
   useEffect(() => {
-    const nodeIds = [...new Set(results.filter((result) => result.kind !== 'external').map((result) => result.id).filter(Boolean))];
+    const nodeIds = [
+      ...new Set(
+        results
+          .filter((result) => result.kind !== 'external')
+          .map((result) => result.id)
+          .filter(Boolean)
+      )
+    ];
     if (nodeIds.length === 0) {
       setSourceDetailsByNodeId({});
       return;
     }
 
     setSourceDetailsByNodeId((current) => {
-      const nextEntries = Object.fromEntries(nodeIds.map((nodeId) => [nodeId, cacheRef.current[nodeId]]));
+      const nextEntries = Object.fromEntries(
+        nodeIds.map((nodeId) => [nodeId, cacheRef.current[nodeId]])
+      );
       const currentKeys = Object.keys(current);
-      if (currentKeys.length === nodeIds.length && nodeIds.every((nodeId) => current[nodeId] === nextEntries[nodeId])) {
+      if (
+        currentKeys.length === nodeIds.length &&
+        nodeIds.every((nodeId) => current[nodeId] === nextEntries[nodeId])
+      ) {
         return current;
       }
       return nextEntries;
     });
 
-    const missingNodeIds = nodeIds.filter((nodeId) => !Object.prototype.hasOwnProperty.call(cacheRef.current, nodeId));
+    const missingNodeIds = nodeIds.filter(
+      (nodeId) => !Object.prototype.hasOwnProperty.call(cacheRef.current, nodeId)
+    );
     if (missingNodeIds.length === 0) {
       return;
     }
@@ -139,7 +105,9 @@ function useSearchResultSourceDetails(results: WorkspaceSearchResult[]) {
           return;
         }
         cacheRef.current[nodeId] = details;
-        setSourceDetailsByNodeId((current) => (current[nodeId] === details ? current : { ...current, [nodeId]: details }));
+        setSourceDetailsByNodeId((current) =>
+          current[nodeId] === details ? current : { ...current, [nodeId]: details }
+        );
       });
     });
 
@@ -151,7 +119,10 @@ function useSearchResultSourceDetails(results: WorkspaceSearchResult[]) {
   return sourceDetailsByNodeId;
 }
 
-function useOrderedSearchResults(results: WorkspaceSearchResult[], nodesById: WorkspaceListNodesById) {
+function useOrderedSearchResults(
+  results: WorkspaceSearchResult[],
+  nodesById: WorkspaceListNodesById
+) {
   return useMemo(() => {
     const externalResults: WorkspaceSearchResult[] = [];
     const regularResults: WorkspaceSearchResult[] = [];
@@ -192,13 +163,23 @@ export function SearchPalette(props: SearchPaletteProps) {
   };
 
   return (
-    <div aria-label="Workspace search" className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/20 px-4 pt-[12vh]" onClick={props.onClose} role="dialog">
-      <div className={appFloatingSurfaceClassName('panel', 'w-full max-w-2xl overflow-hidden')} onClick={(event) => event.stopPropagation()}>
-        <SearchInput
+    <div
+      aria-label="Workspace search"
+      className={appFloatingOverlayClassName()}
+      onClick={props.onClose}
+      role="dialog"
+    >
+      <div
+        className={appFloatingSurfaceClassName('panel', 'w-full max-w-2xl overflow-hidden')}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <FloatingPaletteInput
+          inputLabel="Search workspace"
           onClose={props.onClose}
-          onOpenActive={openActiveNode}
           onQueryChange={setQuery}
+          onRunActive={openActiveNode}
           onSetActiveIndex={setActiveIndex}
+          placeholder="Search titles and content..."
           query={query}
           totalItems={results.length}
         />
