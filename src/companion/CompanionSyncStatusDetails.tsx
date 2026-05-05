@@ -82,6 +82,7 @@ function resolveLastSyncRow(props: {
   syncEvents: NativeCompanionSyncEvent[];
 }) {
   const latestEvent = props.syncEvents[0] ?? null;
+  const latestCompletedEvent = props.syncEvents.find((event) => event.status === 'completed') ?? null;
   if (props.status === 'syncing') {
     return {
       detail: 'Pulling changes now.',
@@ -104,10 +105,14 @@ function resolveLastSyncRow(props: {
     };
   }
   return {
-    detail: props.lastSyncedAt ? 'Completed automatically' : 'No completed sync yet',
+    detail: props.lastSyncedAt ? formatLastCompletedDetail(latestCompletedEvent) : 'No completed sync yet',
     value: formatClock(props.lastSyncedAt),
     valueTone: props.lastSyncedAt ? 'success' as const : 'default' as const
   };
+}
+
+function formatLastCompletedDetail(event: NativeCompanionSyncEvent | null) {
+  return event?.message === 'Auto sync completed.' ? 'Completed automatically' : 'Completed';
 }
 
 function formatEventStatus(status: NativeCompanionSyncEvent['status']) {

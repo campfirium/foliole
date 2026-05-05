@@ -100,6 +100,27 @@ describe('CompanionSyncPanel connected state', () => {
     expect(props.onOpenSettingsPage).toHaveBeenCalledWith('syncActivity');
   });
 
+  it('does not call manual sync completion automatic', () => {
+    render(
+      <CompanionSyncPanel
+        {...createConnectedProps()}
+        lastSyncedAt="2026-04-29T02:24:44.000Z"
+        syncEvents={[
+          {
+            endpoint_url: 'http://10.0.2.2:38641',
+            id: 'manual-completed-event',
+            message: 'Sync completed.',
+            occurred_at: '2026-04-29T02:24:44.000Z',
+            status: 'completed'
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Completed')).toBeInTheDocument();
+    expect(screen.queryByText('Completed automatically')).not.toBeInTheDocument();
+  });
+
   it('shows older failures as neutral history after a later completed sync', () => {
     const props = createConnectedProps();
     render(
