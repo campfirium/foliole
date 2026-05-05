@@ -109,6 +109,71 @@ const diagnosticResult = {
   }]
 };
 
+function expectDiagnosticSummary() {
+  expect(screen.getByText('What this means')).toBeInTheDocument();
+  expect(screen.queryByText('sync_android_not_caught_up')).not.toBeInTheDocument();
+  expect(screen.getByText('Foliole will bring them in on the next sync.')).toBeInTheDocument();
+  expect(screen.getByText('Sync status')).toBeInTheDocument();
+  expect(screen.getByText('Convergence check')).toBeInTheDocument();
+  expect(screen.getByText('Blocked')).toBeInTheDocument();
+  expect(screen.getByText('Latest completed event is not fully converged')).toBeInTheDocument();
+  expect(screen.getByText('Completed was recorded while 1 dirty change(s), 1 pending ack(s), 5 body blob(s), 2 attachment file(s), and 3 structure change(s) remain.')).toBeInTheDocument();
+}
+
+function expectStageCheckpoint() {
+  expect(screen.getByText('Topic list')).toBeInTheDocument();
+  expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
+  expect(screen.getByText('Stage 2 · FSRS priority')).toBeInTheDocument();
+  expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
+  expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
+  expect(screen.getByText('2 bodies, 1 attachment remaining')).toBeInTheDocument();
+  expect(screen.queryByText('Not tracked yet')).not.toBeInTheDocument();
+  expect(screen.getByText('5 remaining')).toBeInTheDocument();
+  expect(screen.getByText('2 remaining')).toBeInTheDocument();
+  expect(screen.getByText('New desktop changes')).toBeInTheDocument();
+  expect(screen.getByText('Topic bodies still caching')).toBeInTheDocument();
+}
+
+function expectCheckpointDetails() {
+  expect(screen.getByText('Current topic')).toBeInTheDocument();
+  expect(screen.getByText('Caching: Current topic')).toBeInTheDocument();
+  expect(screen.getByText('Finished pass')).toBeInTheDocument();
+  expect(screen.queryByText('Completed')).not.toBeInTheDocument();
+  expect(screen.getByText('3 changes')).toBeInTheDocument();
+  expect(screen.queryByText('Lagging object types')).not.toBeInTheDocument();
+  expect(screen.getByText('2 on device / 2 on desktop')).toBeInTheDocument();
+  expect(screen.queryByText('failed: Failed to apply companion desktop sync pack.')).not.toBeInTheDocument();
+  expect(screen.queryByText('A completed event exists, but the Android cursor is still behind desktop.')).not.toBeInTheDocument();
+}
+
+function expectAndroidDiagnosticRows() {
+  expect(screen.getByText('Android')).toBeInTheDocument();
+  expect(screen.getAllByText('Object types')).toHaveLength(2);
+  expect(screen.getAllByText('node_review')).toHaveLength(3);
+  expect(screen.getByText('1 waiting')).toBeInTheDocument();
+  expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
+  expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Attachment bytes still caching').length).toBeGreaterThan(0);
+  expect(screen.getByText('Due review bodies')).toBeInTheDocument();
+  expect(screen.getByText('Top-level topic bodies')).toBeInTheDocument();
+  expect(screen.getByText('Nested topic bodies')).toBeInTheDocument();
+  expect(screen.getByText('Due review attachments')).toBeInTheDocument();
+  expect(screen.getByText('Image attachments')).toBeInTheDocument();
+  expect(screen.getByText('PDF attachments')).toBeInTheDocument();
+  expect(screen.getByText('Other attachments')).toBeInTheDocument();
+}
+
+function expectDiagnosticTables() {
+  expect(screen.getAllByText('5.0 MB').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('3.0 MB').length).toBeGreaterThan(0);
+  expect(screen.getByText('Desktop confirmations waiting')).toBeInTheDocument();
+  expect(screen.getByText('accepted')).toBeInTheDocument();
+  expect(screen.getByText('seq 7')).toBeInTheDocument();
+  expect(screen.getAllByText('node-1').length).toBeGreaterThan(0);
+  expect(screen.getByText('seq 4')).toBeInTheDocument();
+  expect(screen.getByText('Desktop')).toBeInTheDocument();
+}
+
 describe('CompanionSyncDiagnosticsPanel', () => {
   beforeEach(() => {
     diagnosticsMock.runCombinedSyncDiagnostics.mockReset();
@@ -134,55 +199,11 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run sync diagnostic' }));
 
     await waitFor(() => expect(screen.getByText('New desktop changes are available')).toBeInTheDocument());
-    expect(screen.getByText('What this means')).toBeInTheDocument();
-    expect(screen.queryByText('sync_android_not_caught_up')).not.toBeInTheDocument();
-    expect(screen.getByText('Foliole will bring them in on the next sync.')).toBeInTheDocument();
-    expect(screen.getByText('Sync status')).toBeInTheDocument();
-    expect(screen.getByText('Convergence check')).toBeInTheDocument();
-    expect(screen.getByText('Blocked')).toBeInTheDocument();
-    expect(screen.getByText('Latest completed event is not fully converged')).toBeInTheDocument();
-    expect(screen.getByText('Completed was recorded while 1 dirty change(s), 1 pending ack(s), 5 body blob(s), 2 attachment file(s), and 3 structure change(s) remain.')).toBeInTheDocument();
-    expect(screen.getByText('Topic list')).toBeInTheDocument();
-    expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
-    expect(screen.getByText('Stage 2 · FSRS priority')).toBeInTheDocument();
-    expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
-    expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
-    expect(screen.getByText('Not tracked yet')).toBeInTheDocument();
-    expect(screen.getByText('5 remaining')).toBeInTheDocument();
-    expect(screen.getByText('2 remaining')).toBeInTheDocument();
-    expect(screen.getByText('New desktop changes')).toBeInTheDocument();
-    expect(screen.getByText('Topic bodies still caching')).toBeInTheDocument();
-    expect(screen.getByText('Current topic')).toBeInTheDocument();
-    expect(screen.getByText('Caching: Current topic')).toBeInTheDocument();
-    expect(screen.getByText('Finished pass')).toBeInTheDocument();
-    expect(screen.queryByText('Completed')).not.toBeInTheDocument();
-    expect(screen.getByText('3 changes')).toBeInTheDocument();
-    expect(screen.queryByText('Lagging object types')).not.toBeInTheDocument();
-    expect(screen.getByText('2 on device / 2 on desktop')).toBeInTheDocument();
-    expect(screen.queryByText('failed: Failed to apply companion desktop sync pack.')).not.toBeInTheDocument();
-    expect(screen.queryByText('A completed event exists, but the Android cursor is still behind desktop.')).not.toBeInTheDocument();
-    expect(screen.getByText('Android')).toBeInTheDocument();
-    expect(screen.getAllByText('Object types')).toHaveLength(2);
-    expect(screen.getAllByText('node_review')).toHaveLength(3);
-    expect(screen.getByText('1 waiting')).toBeInTheDocument();
-    expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
-    expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Attachment bytes still caching').length).toBeGreaterThan(0);
-    expect(screen.getByText('Due review bodies')).toBeInTheDocument();
-    expect(screen.getByText('Top-level topic bodies')).toBeInTheDocument();
-    expect(screen.getByText('Nested topic bodies')).toBeInTheDocument();
-    expect(screen.getByText('Due review attachments')).toBeInTheDocument();
-    expect(screen.getByText('Image attachments')).toBeInTheDocument();
-    expect(screen.getByText('PDF attachments')).toBeInTheDocument();
-    expect(screen.getByText('Other attachments')).toBeInTheDocument();
-    expect(screen.getAllByText('5.0 MB').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('3.0 MB').length).toBeGreaterThan(0);
-    expect(screen.getByText('Desktop confirmations waiting')).toBeInTheDocument();
-    expect(screen.getByText('accepted')).toBeInTheDocument();
-    expect(screen.getByText('seq 7')).toBeInTheDocument();
-    expect(screen.getAllByText('node-1').length).toBeGreaterThan(0);
-    expect(screen.getByText('seq 4')).toBeInTheDocument();
-    expect(screen.getByText('Desktop')).toBeInTheDocument();
+    expectDiagnosticSummary();
+    expectStageCheckpoint();
+    expectCheckpointDetails();
+    expectAndroidDiagnosticRows();
+    expectDiagnosticTables();
     expect(diagnosticsMock.runCombinedSyncDiagnostics).toHaveBeenCalledWith('http://10.0.2.2:38641');
     expect(convergenceMock.runSyncConvergenceCheck).not.toHaveBeenCalled();
   });

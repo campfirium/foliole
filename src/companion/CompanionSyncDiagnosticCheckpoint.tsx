@@ -40,6 +40,17 @@ function formatBacklogStage(count: number | null | undefined) {
   return count === 0 ? 'Done' : `${count} remaining`;
 }
 
+function formatFsrsPriorityStatus(result: CombinedSyncDiagnosticResult) {
+  const bodies = result.android?.content.missing_due_review_body_count;
+  const attachments = result.android?.content.missing_due_review_attachment_resource_count;
+  if (typeof bodies !== 'number' || typeof attachments !== 'number') return 'Missing data';
+  if (bodies === 0 && attachments === 0) return 'Done';
+  const segments = [];
+  if (bodies > 0) segments.push(`${bodies} ${bodies === 1 ? 'body' : 'bodies'}`);
+  if (attachments > 0) segments.push(`${attachments} ${attachments === 1 ? 'attachment' : 'attachments'}`);
+  return `${segments.join(', ')} remaining`;
+}
+
 function formatActiveTopicBodyStatus(result: CombinedSyncDiagnosticResult) {
   const activeTopic = result.android?.content.active_topic;
   if (!activeTopic) return 'None';
@@ -74,7 +85,7 @@ export function CompanionSyncDiagnosticCheckpoint(props: { result: CombinedSyncD
       <div className="border-t border-companion-divider">
         <MetricRow label="Topic list" value={formatStructureStatus(props.result)} />
         <MetricRow label="Stage 1 · Library index" value={formatStructureStatus(props.result)} />
-        <MetricRow label="Stage 2 · FSRS priority" value="Not tracked yet" />
+        <MetricRow label="Stage 2 · FSRS priority" value={formatFsrsPriorityStatus(props.result)} />
         <MetricRow label="Stage 3 · Topic bodies" value={formatBacklogStage(props.result.android?.content.missing_content_blob_count)} />
         <MetricRow label="Stage 4 · Attachments" value={formatBacklogStage(props.result.android?.content.missing_attachment_resource_count)} />
         <MetricRow label="New desktop changes" value={formatLag(props.result)} />
