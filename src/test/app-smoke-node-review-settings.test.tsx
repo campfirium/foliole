@@ -13,7 +13,9 @@ import { createNode } from './app-smoke.shared';
 it('shows default desired retention and priority fallbacks on nodes without overrides', () => {
   render(<App />);
 
-  expect(screen.getByText('Node review settings')).toBeInTheDocument();
+  expect(screen.getByLabelText('Inspector')).toBeInTheDocument();
+  expect(screen.getByText('Node info')).toBeInTheDocument();
+  expect(screen.getByText('Review scheduling')).toBeInTheDocument();
   expect(screen.getByText('Default · 0.90 from review settings')).toBeInTheDocument();
   expect(screen.getByText('Default · P5 from push queue fallback')).toBeInTheDocument();
   expect(screen.getByText(/desired retention.*memory target/i)).toBeInTheDocument();

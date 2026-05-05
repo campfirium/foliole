@@ -137,10 +137,10 @@ export function DocumentPanelNodeReviewSettings({
   const isEditable = editableNodeId === activeNodeId;
 
   return (
-    <section aria-label="Node review settings" className="border-b border-border px-3 py-3">
-      <div className="mx-auto flex w-full flex-col gap-3 [width:min(100%,var(--document-max-width))]">
+    <section aria-label="Node review settings" className="rounded-xl border border-border bg-bg-panel p-4">
+      <div className="flex w-full flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-semibold text-foreground">Node review settings</h3>
+          <h3 className="text-sm font-semibold text-foreground">Review scheduling</h3>
           <p className="text-xs text-foreground/70">
             `desired retention` is the memory target. `priority` is the queue scheduler. `P0` is absolute privilege and, if due, always surfaces first.
           </p>
