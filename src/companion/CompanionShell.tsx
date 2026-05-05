@@ -65,7 +65,12 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
     isReviewTaskActive
   );
   const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);
-  const topBarProps = resolveCompanionTopBarProps(surface, settingsPage, () => setSettingsPage('list'));
+  const topBarProps = resolveCompanionTopBarProps(
+    surface,
+    settingsPage,
+    () => setSettingsPage('list'),
+    () => setSettingsPage('sync')
+  );
   const handleNavigationAction = (action: CompanionTabAction) => {
     if (action === 'capture') {
       setIsCaptureSheetOpen(true);
@@ -115,6 +120,7 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
               {
                 hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
                 onBackToSettingsList: () => model.setSettingsPage('list'),
+                onOpenSyncSettingsPage: model.setSettingsPage,
                 onOpenSyncSettings: () => model.setSettingsPage('sync'),
                 onSelectReviewBreadcrumbItem: model.surface.handleSelectBrowseNode,
                 reviewBreadcrumbItems: model.reviewBreadcrumbItems,

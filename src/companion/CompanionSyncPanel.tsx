@@ -7,6 +7,7 @@ import type { CompanionHandoffReminderSettings } from './companionHandoffReminde
 import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
 import { CompanionSyncDiscoveryDialog } from './CompanionSyncDiscoveryDialog';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
+import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
 type CompanionSyncPanelProps = {
@@ -18,6 +19,7 @@ type CompanionSyncPanelProps = {
   handoffReminderSettings: CompanionHandoffReminderSettings;
   lastSyncedAt: string | null;
   rememberedTargets: string[];
+  syncedTopicCount: number;
   syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
   onCancelPairing(): void;
@@ -29,6 +31,8 @@ type CompanionSyncPanelProps = {
   onRemoveRememberedTarget(endpointUrl: string): Promise<unknown>;
   onRequestPairing(endpointUrl: string): Promise<unknown>;
   onSaveEndpoint(endpointUrl: string): Promise<unknown>;
+  onOpenSettingsPage(page: CompanionSettingsPage): void;
+  page: CompanionSettingsPage;
   pairingRequest: {
     endpointUrl: string;
     expiresAt: string;
@@ -80,24 +84,21 @@ function SyncStatusCard(props: {
   );
 }
 
-function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents'> & {
+function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onOpenSettingsPage' | 'page' | 'pairingState' | 'status' | 'syncedTopicCount' | 'syncConflictCount' | 'syncEvents'> & {
   endpointUrl: string;
 }) {
-  const isSyncing = props.status === 'syncing';
   return (
-    <SyncStatusCard
-      detail={isSyncing ? 'Sync is running now.' : 'This device is connected and ready to sync.'}
-      title="Device sync"
-    >
-      <CompanionSyncStatusDetails
-        endpointUrl={props.endpointUrl}
-        lastSyncedAt={props.lastSyncedAt}
-        pairingState={props.pairingState}
-        status={props.status}
-        syncConflictCount={props.syncConflictCount}
-        syncEvents={props.syncEvents}
-      />
-    </SyncStatusCard>
+    <CompanionSyncStatusDetails
+      endpointUrl={props.endpointUrl}
+      lastSyncedAt={props.lastSyncedAt}
+      pairingState={props.pairingState}
+      status={props.status}
+      syncedTopicCount={props.syncedTopicCount}
+      syncConflictCount={props.syncConflictCount}
+      syncEvents={props.syncEvents}
+      page={props.page}
+      onOpenPage={props.onOpenSettingsPage}
+    />
   );
 }
 
@@ -198,14 +199,19 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
     <section className="mb-8 px-5 py-5">
       <div className="flex flex-col gap-5">
         {hasPairing ? (
-          <ConnectedState
-            endpointUrl={endpointUrl}
-            lastSyncedAt={props.lastSyncedAt}
-            pairingState={props.pairingState}
-            status={props.status}
-            syncConflictCount={props.syncConflictCount}
-            syncEvents={props.syncEvents}
-          />
+          props.page === 'syncHandoff' ? null : (
+            <ConnectedState
+              endpointUrl={endpointUrl}
+              lastSyncedAt={props.lastSyncedAt}
+              pairingState={props.pairingState}
+              status={props.status}
+              syncedTopicCount={props.syncedTopicCount}
+              syncConflictCount={props.syncConflictCount}
+              syncEvents={props.syncEvents}
+              page={props.page}
+              onOpenSettingsPage={props.onOpenSettingsPage}
+            />
+          )
         ) : props.pairingRequest ? (
           <AwaitingApprovalState
             expiresAt={props.pairingRequest.expiresAt}
@@ -215,10 +221,12 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
           <EmptyDiscoveryState disabled={isBusy} onTryAgain={() => void handleTryAgain()} />
         )}
         {props.error ? <p className="text-sm text-error">{props.error}</p> : null}
-        {hasPairing ? (
+        {hasPairing && (props.page === 'sync' || props.page === 'syncHandoff') ? (
           <CompanionHandoffReminderSettingsPanel
+            page={props.page}
             settings={props.handoffReminderSettings}
             onChange={props.onChangeHandoffReminderSettings}
+            onOpenPage={props.onOpenSettingsPage}
           />
         ) : null}
         <CompanionSyncDiscoveryDialog

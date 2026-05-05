@@ -78,9 +78,9 @@ describe('CompanionSyncContent', () => {
       paired_at: '2026-04-24T10:03:00.000Z'
     };
 
-    render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+    render(<CompanionSyncContent page="syncHandoff" workspaceSync={workspaceSync} />);
 
-    expect(screen.getByText('Handoff reminders')).toBeInTheDocument();
+    expect(screen.getByText('Enable reminders')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Short reminder'), { target: { value: '5' } });
     fireEvent.change(screen.getByLabelText('Daily reminder'), { target: { value: '21:00' } });
 
@@ -133,11 +133,10 @@ describe('CompanionSyncContent paired flow', () => {
 
     render(<CompanionSyncContent workspaceSync={workspaceSync} />);
 
-    expect(screen.getByText('Device sync')).toBeInTheDocument();
     expect(screen.getByText('Last sync')).toBeInTheDocument();
-    expect(screen.getByText('Android Emulator (Android)')).toBeInTheDocument();
-    expect(screen.getByText('Sync log')).toBeInTheDocument();
-    expect(screen.getByText('Sync completed.')).toBeInTheDocument();
+    expect(screen.getByText('Android Emulator')).toBeInTheDocument();
+    expect(screen.getByText('Activity')).toBeInTheDocument();
+    expect(screen.getByText(/^Completed \d/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 

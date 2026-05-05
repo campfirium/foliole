@@ -1,10 +1,12 @@
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 
-function formatSyncTimestamp(timestamp: string | null) {
+import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
+
+function formatClock(timestamp: string | null) {
   if (!timestamp) {
-    return 'Never synced';
+    return 'Never';
   }
-  return new Date(timestamp).toLocaleString();
+  return new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 function formatDeviceKind(deviceKind: string | null) {
@@ -19,18 +21,90 @@ function formatPairedDevice(pairingState: NativeCompanionPairingState) {
   return `${name} (${formatDeviceKind(pairingState.device_kind)})`;
 }
 
-function SyncInfoRow(props: { label: string; value: string }) {
+function formatDeviceName(pairingState: NativeCompanionPairingState) {
+  return pairingState.device_name?.trim() || 'This device';
+}
+
+function SettingsRow(props: {
+  detail?: string;
+  label: string;
+  value: string;
+  valueTone?: 'default' | 'error' | 'success';
+}) {
+  const valueClass = props.valueTone === 'error'
+    ? 'text-error'
+    : props.valueTone === 'success'
+      ? 'text-companion-accent'
+      : 'text-foreground';
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-companion-divider py-3 last:border-b-0">
-      <span className="text-sm text-companion-text-secondary">{props.label}</span>
-      <span className="max-w-64 text-right text-sm font-medium text-foreground">{props.value}</span>
+    <div className="flex items-start justify-between gap-4 border-b border-companion-divider py-4 last:border-b-0">
+      <span>
+        <span className="block text-sm font-medium text-foreground">{props.label}</span>
+        {props.detail ? <span className="mt-1 block text-xs leading-5 text-companion-text-secondary">{props.detail}</span> : null}
+      </span>
+      <span className={`max-w-44 shrink-0 text-right text-sm font-medium ${valueClass}`}>{props.value}</span>
     </div>
   );
 }
 
+function ChevronIcon() {
+  return <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>;
+}
+
+function SettingsLinkRow(props: {
+  detail?: string;
+  label: string;
+  onClick(): void;
+  value: string;
+}) {
+  return (
+    <button
+      className="flex w-full items-start justify-between gap-4 border-b border-companion-divider py-4 text-left"
+      onClick={props.onClick}
+      type="button"
+    >
+      <span>
+        <span className="block text-sm font-medium text-foreground">{props.label}</span>
+        {props.detail ? <span className="mt-1 block text-xs leading-5 text-companion-text-secondary">{props.detail}</span> : null}
+      </span>
+      <span className="flex max-w-44 shrink-0 items-center gap-2 text-right text-sm font-medium text-foreground">
+        <span>{props.value}</span>
+        <span className="text-companion-text-secondary"><ChevronIcon /></span>
+      </span>
+    </button>
+  );
+}
+
+function resolveLastSyncRow(props: {
+  lastSyncedAt: string | null;
+  status: 'idle' | 'loading' | 'syncing';
+  syncEvents: NativeCompanionSyncEvent[];
+}) {
+  const latestEvent = props.syncEvents[0] ?? null;
+  if (props.status === 'syncing') {
+    return {
+      detail: 'Pulling changes now.',
+      value: 'Syncing',
+      valueTone: 'default' as const
+    };
+  }
+  if (latestEvent?.status === 'failed') {
+    return {
+      detail: latestEvent.message,
+      value: 'Failed',
+      valueTone: 'error' as const
+    };
+  }
+  return {
+    detail: props.lastSyncedAt ? 'Completed automatically' : 'No completed sync yet',
+    value: formatClock(props.lastSyncedAt),
+    valueTone: props.lastSyncedAt ? 'success' as const : 'default' as const
+  };
+}
+
 function formatEventStatus(status: NativeCompanionSyncEvent['status']) {
   if (status === 'completed') {
-    return 'Done';
+    return 'Completed';
   }
   if (status === 'failed') {
     return 'Failed';
@@ -41,24 +115,85 @@ function formatEventStatus(status: NativeCompanionSyncEvent['status']) {
   return 'Started';
 }
 
-function SyncActivityList(props: { events: NativeCompanionSyncEvent[] }) {
+function formatActivityMessage(event: NativeCompanionSyncEvent) {
+  if (event.status === 'completed' && event.message === 'Auto sync completed.') {
+    return 'Completed auto sync';
+  }
+  if (event.status === 'completed') {
+    return 'Completed sync';
+  }
+  if (event.status === 'started' && event.message === 'Auto sync started.') {
+    return 'Started auto sync';
+  }
+  if (event.status === 'failed') {
+    return event.message.replace(/^Desktop sync /, 'Failed ');
+  }
+  return `${formatEventStatus(event.status)} ${event.message}`;
+}
+
+function statusClass(status: NativeCompanionSyncEvent['status']) {
+  if (status === 'failed') {
+    return 'text-error';
+  }
+  if (status === 'completed') {
+    return 'text-companion-accent';
+  }
+  return 'text-foreground';
+}
+
+function SyncActivitySummary(props: {
+  events: NativeCompanionSyncEvent[];
+  onOpen(): void;
+}) {
+  const latestEvent = props.events[0] ?? null;
+  const summary = latestEvent
+    ? `${formatEventStatus(latestEvent.status)} ${formatClock(latestEvent.occurred_at)}`
+    : 'No activity';
   return (
-    <div className="mt-5 border-t border-companion-divider pt-4">
-      <h4 className="text-sm font-medium text-foreground">Sync log</h4>
-      <div className="mt-3 space-y-3">
-        {props.events.length === 0 ? (
-          <p className="text-sm leading-6 text-companion-text-secondary">No sync records yet.</p>
-        ) : props.events.slice(0, 8).map((event) => (
-          <div className="text-sm leading-5" key={event.id}>
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-medium text-foreground">{formatEventStatus(event.status)}</span>
-              <span className="text-xs text-companion-text-secondary">{formatSyncTimestamp(event.occurred_at)}</span>
-            </div>
-            <p className="mt-1 text-companion-text-secondary">{event.message}</p>
-          </div>
-        ))}
-      </div>
-    </div>
+    <SettingsLinkRow detail="Sync history" label="Activity" onClick={props.onOpen} value={summary} />
+  );
+}
+
+function ActivityPage(props: { events: NativeCompanionSyncEvent[] }) {
+  return (
+    <section className="border-t border-companion-divider">
+      {props.events.length === 0 ? (
+        <p className="border-b border-companion-divider py-4 text-sm leading-6 text-companion-text-secondary">
+          No sync activity yet.
+        </p>
+      ) : props.events.slice(0, 20).map((event) => (
+        <div className="grid grid-cols-[4.5rem_1fr] gap-3 border-b border-companion-divider py-3 text-sm leading-5" key={event.id}>
+          <span className="text-xs text-companion-text-secondary">{formatClock(event.occurred_at)}</span>
+          <span className={statusClass(event.status)}>{formatActivityMessage(event)}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function ConnectionSummary(props: {
+  onOpen(): void;
+  pairingState: NativeCompanionPairingState;
+}) {
+  return (
+    <SettingsLinkRow
+      detail="Paired desktop details"
+      label="Connection"
+      onClick={props.onOpen}
+      value={formatDeviceName(props.pairingState)}
+    />
+  );
+}
+
+function ConnectionPage(props: {
+  endpointUrl: string;
+  pairingState: NativeCompanionPairingState;
+}) {
+  return (
+    <section className="border-t border-companion-divider">
+      <SettingsRow label="Paired device" value={formatPairedDevice(props.pairingState)} />
+      <SettingsRow label="Desktop address" value={props.endpointUrl} />
+    </section>
   );
 }
 
@@ -66,24 +201,41 @@ export function CompanionSyncStatusDetails(props: {
   endpointUrl: string;
   lastSyncedAt: string | null;
   pairingState: NativeCompanionPairingState;
+  syncedTopicCount: number;
   syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
   status: 'idle' | 'loading' | 'syncing';
+  page: CompanionSettingsPage;
+  onOpenPage(page: CompanionSettingsPage): void;
 }) {
-  const isSyncing = props.status === 'syncing';
-  const conflictValue = props.syncConflictCount > 0
-    ? `${props.syncConflictCount} pending`
-    : 'None';
+  if (props.page === 'syncActivity') {
+    return <ActivityPage events={props.syncEvents} />;
+  }
+  if (props.page === 'syncConnection') {
+    return <ConnectionPage endpointUrl={props.endpointUrl} pairingState={props.pairingState} />;
+  }
+
+  const lastSync = resolveLastSyncRow(props);
+  const topicValue = props.syncedTopicCount > 0
+    ? `${props.syncedTopicCount}`
+    : 'No topics synced';
   return (
-    <>
-      <div>
-        <SyncInfoRow label="Status" value={isSyncing ? 'Syncing' : 'Connected'} />
-        <SyncInfoRow label="Last sync" value={formatSyncTimestamp(props.lastSyncedAt)} />
-        <SyncInfoRow label="Conflicts" value={conflictValue} />
-        <SyncInfoRow label="Device" value={formatPairedDevice(props.pairingState)} />
-        <SyncInfoRow label="Sync address" value={props.endpointUrl} />
-      </div>
-      <SyncActivityList events={props.syncEvents} />
-    </>
+    <div className="border-t border-companion-divider">
+      <SettingsRow
+        detail={lastSync.detail}
+        label="Last sync"
+        value={lastSync.value}
+        valueTone={lastSync.valueTone}
+      />
+      <SettingsRow label="Topics on this device" value={topicValue} />
+      {props.syncConflictCount > 0 ? (
+        <SettingsRow label="Issues to resolve" value={`${props.syncConflictCount}`} valueTone="error" />
+      ) : null}
+      <ConnectionSummary
+        pairingState={props.pairingState}
+        onOpen={() => props.onOpenPage('syncConnection')}
+      />
+      <SyncActivitySummary events={props.syncEvents} onOpen={() => props.onOpenPage('syncActivity')} />
+    </div>
   );
 }

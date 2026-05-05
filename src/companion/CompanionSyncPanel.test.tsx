@@ -22,6 +22,7 @@ function createProps() {
     },
     lastSyncedAt: null,
     rememberedTargets: [],
+    syncedTopicCount: 0,
     syncConflictCount: 0,
     syncEvents: [],
     onCancelPairing: vi.fn(),
@@ -33,6 +34,8 @@ function createProps() {
     onRemoveRememberedTarget: vi.fn(async () => undefined),
     onRequestPairing: vi.fn(async () => undefined),
     onSaveEndpoint: vi.fn(async () => undefined),
+    onOpenSettingsPage: vi.fn(),
+    page: 'sync' as const,
     pairingRequest: null,
     pairingState: {
       device_id: null,
@@ -227,45 +230,5 @@ describe('CompanionSyncPanel approval states', () => {
     render(<CompanionSyncPanel {...props} />);
 
     expect(screen.getByText(/Request expired/i)).toBeInTheDocument();
-  });
-});
-
-describe('CompanionSyncPanel connected state', () => {
-  it('shows a paired state without setup controls', () => {
-    const props = {
-      ...createProps(),
-      pairingState: {
-        device_id: 'android-test-device',
-        device_kind: 'android-capacitor',
-        device_name: 'Android companion',
-        is_paired: true,
-        paired_at: '2026-04-22T09:00:00.000Z'
-      }
-    };
-
-    render(<CompanionSyncPanel {...props} />);
-
-    expect(screen.getByText('Connected')).toBeInTheDocument();
-    expect(screen.getByText('Handoff reminders')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
-  });
-
-  it('shows pending sync conflicts when the local database has them', () => {
-    const props = {
-      ...createProps(),
-      pairingState: {
-        device_id: 'android-test-device',
-        device_kind: 'android-capacitor',
-        device_name: 'Android companion',
-        is_paired: true,
-        paired_at: '2026-04-22T09:00:00.000Z'
-      },
-      syncConflictCount: 2
-    };
-
-    render(<CompanionSyncPanel {...props} />);
-
-    expect(screen.getByText('Conflicts')).toBeInTheDocument();
-    expect(screen.getByText('2 pending')).toBeInTheDocument();
   });
 });

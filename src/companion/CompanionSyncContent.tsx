@@ -3,13 +3,65 @@ import { useEffect } from 'react';
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 import { useCompanionHandoffReminderScheduler } from './useCompanionHandoffReminderScheduler';
 import { useCompanionHandoffReminderSettings } from './useCompanionHandoffReminderSettings';
+import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 const PAIRING_APPROVAL_POLL_MS = 1_500;
 
-export function CompanionSyncContent(props: { workspaceSync: ReturnType<typeof useCompanionWorkspaceSync> }) {
+function countSyncedTopics(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) {
+  const snapshot = workspaceSync.state.workspace_snapshot;
+  if (!snapshot) {
+    return 0;
+  }
+  return snapshot.nodeOrder.filter((nodeId) => {
+    const node = snapshot.nodesById[nodeId];
+    return node?.kind === 'topic' && !snapshot.trashedNodeIds.includes(nodeId);
+  }).length;
+}
+
+function buildSyncPanelProps(args: {
+  handoffReminders: ReturnType<typeof useCompanionHandoffReminderSettings>;
+  onOpenSettingsPage?: (page: CompanionSettingsPage) => void;
+  page: CompanionSettingsPage;
+  workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
+}) {
+  const { handoffReminders, workspaceSync } = args;
+  return {
+    bootstrapState: workspaceSync.bootstrapState,
+    desktopDiscoveries: workspaceSync.desktopDiscoveries ?? [],
+    desktopDiscovery: workspaceSync.desktopDiscovery,
+    endpointUrl: workspaceSync.state.endpoint_url,
+    error: workspaceSync.error,
+    handoffReminderSettings: handoffReminders.settings,
+    lastSyncedAt: workspaceSync.state.last_synced_at,
+    rememberedTargets: workspaceSync.state.remembered_targets,
+    syncedTopicCount: countSyncedTopics(workspaceSync),
+    syncConflictCount: workspaceSync.syncConflictCount,
+    syncEvents: workspaceSync.state.sync_events,
+    onCancelPairing: workspaceSync.cancelPairing,
+    onChangeHandoffReminderSettings: handoffReminders.updateSettings,
+    onCheckDesktop: workspaceSync.checkDesktop,
+    onClearError: workspaceSync.clearError,
+    onCompletePairing: workspaceSync.completePairing,
+    onOpenSettingsPage: args.onOpenSettingsPage ?? (() => undefined),
+    onPull: workspaceSync.pullFromDesktop,
+    onRemoveRememberedTarget: workspaceSync.removeRememberedTarget,
+    onRequestPairing: workspaceSync.requestPairing,
+    onSaveEndpoint: workspaceSync.saveEndpoint,
+    page: args.page,
+    pairingRequest: workspaceSync.pendingPairRequest,
+    pairingState: workspaceSync.pairingState,
+    pairingStatus: workspaceSync.pairingStatus,
+    status: workspaceSync.status
+  };
+}
+
+export function CompanionSyncContent(props: {
+  page?: CompanionSettingsPage;
+  workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
+  onOpenSettingsPage?: (page: CompanionSettingsPage) => void;
+}) {
   const { workspaceSync } = props;
-  const desktopDiscoveries = workspaceSync.desktopDiscoveries ?? [];
   const handoffReminders = useCompanionHandoffReminderSettings();
   useCompanionHandoffReminderScheduler({ settings: handoffReminders.settings, workspaceSync });
 
@@ -41,30 +93,11 @@ export function CompanionSyncContent(props: { workspaceSync: ReturnType<typeof u
   ]);
 
   return (
-    <CompanionSyncPanel
-      bootstrapState={workspaceSync.bootstrapState}
-      desktopDiscoveries={desktopDiscoveries}
-      desktopDiscovery={workspaceSync.desktopDiscovery}
-      endpointUrl={workspaceSync.state.endpoint_url}
-      error={workspaceSync.error}
-      handoffReminderSettings={handoffReminders.settings}
-      lastSyncedAt={workspaceSync.state.last_synced_at}
-      rememberedTargets={workspaceSync.state.remembered_targets}
-      syncConflictCount={workspaceSync.syncConflictCount}
-      syncEvents={workspaceSync.state.sync_events}
-      onCancelPairing={workspaceSync.cancelPairing}
-      onChangeHandoffReminderSettings={handoffReminders.updateSettings}
-      onCheckDesktop={workspaceSync.checkDesktop}
-      onClearError={workspaceSync.clearError}
-      onCompletePairing={workspaceSync.completePairing}
-      onPull={workspaceSync.pullFromDesktop}
-      onRemoveRememberedTarget={workspaceSync.removeRememberedTarget}
-      onRequestPairing={workspaceSync.requestPairing}
-      onSaveEndpoint={workspaceSync.saveEndpoint}
-      pairingRequest={workspaceSync.pendingPairRequest}
-      pairingState={workspaceSync.pairingState}
-      pairingStatus={workspaceSync.pairingStatus}
-      status={workspaceSync.status}
-    />
+    <CompanionSyncPanel {...buildSyncPanelProps({
+      handoffReminders,
+      onOpenSettingsPage: props.onOpenSettingsPage,
+      page: props.page ?? 'sync',
+      workspaceSync
+    })} />
   );
 }

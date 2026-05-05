@@ -6,6 +6,7 @@ import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCar
 import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSettingsContent';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
@@ -14,6 +15,7 @@ import { AppButton, NodeBrowseList } from '@/shared/ui';
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 type ReviewBreadcrumbItem = { id: string; isCurrent?: boolean; label: string; targetNodeId: string };
+type ReadableArticle = NonNullable<Surface['readableArticle']>;
 
 function formatDueLabel(timestamp: string | null) {
   return timestamp ? new Date(timestamp).toLocaleString() : null;
@@ -43,9 +45,9 @@ function ReviewFallback(props: {
         </>
       ) : (
         <>
-          <p>No article has been synced to this device yet.</p>
+          <p>No topics have been synced to this device yet.</p>
           <p className="mt-3">
-            Connect this device with desktop, then reopen the app to sync automatically.
+            Connect this device with desktop and keep both devices on the same network.
           </p>
         </>
       )}
@@ -54,8 +56,45 @@ function ReviewFallback(props: {
   );
 }
 
+function ReadableArticleBodyStatusFallback(props: {
+  bodyStatus: ReadableArticle['bodyStatus'];
+}) {
+  if (props.bodyStatus === 'missing') {
+    return (
+      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+        <p>Topic content is still syncing.</p>
+        <p className="mt-3">Keep this device connected to desktop and try again shortly.</p>
+      </section>
+    );
+  }
+  if (props.bodyStatus === 'fetching') {
+    return (
+      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+        <p>Topic content is downloading.</p>
+        <p className="mt-3">Keep this device connected to desktop.</p>
+      </section>
+    );
+  }
+  if (props.bodyStatus === 'failed') {
+    return (
+      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+        <p>Topic content could not be synced.</p>
+        <p className="mt-3">Reconnect this device to desktop to retry.</p>
+      </section>
+    );
+  }
+  if (props.bodyStatus === 'empty') {
+    return (
+      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+        <p>This topic is empty.</p>
+      </section>
+    );
+  }
+  return null;
+}
+
 function ReadableArticleDocument(props: {
-  readableArticle: NonNullable<Surface['readableArticle']>;
+  readableArticle: ReadableArticle;
 }) {
   const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
@@ -69,37 +108,8 @@ function ReadableArticleDocument(props: {
       />
     );
   }
-
-  if (props.readableArticle.bodyStatus === 'missing') {
-    return (
-      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-        <p>Topic content is still syncing.</p>
-        <p className="mt-3">Keep this device connected to desktop and try again shortly.</p>
-      </section>
-    );
-  }
-  if (props.readableArticle.bodyStatus === 'fetching') {
-    return (
-      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-        <p>Topic content is downloading.</p>
-        <p className="mt-3">Keep this device connected to desktop.</p>
-      </section>
-    );
-  }
-  if (props.readableArticle.bodyStatus === 'failed') {
-    return (
-      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-        <p>Topic content could not be synced.</p>
-        <p className="mt-3">Reconnect this device to desktop to retry.</p>
-      </section>
-    );
-  }
-  if (props.readableArticle.bodyStatus === 'empty') {
-    return (
-      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
-        <p>This topic is empty.</p>
-      </section>
-    );
+  if (props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
+    return <ReadableArticleBodyStatusFallback bodyStatus={props.readableArticle.bodyStatus} />;
   }
 
   return (
@@ -127,7 +137,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
     return (
       <NodeBrowseList
         currentNodeId={props.surface.selectedBrowseNodeId}
-        emptyLabel="This folder does not have any synced children yet."
+        emptyLabel="This folder does not have any synced topics or folders yet."
         items={props.surface.browsedFolder.items}
         onSelectNode={props.surface.handleSelectBrowseNode}
       />
@@ -185,13 +195,24 @@ function ReadableArticleOrFallback(props: {
 
 export function resolveCompanionTopBarProps(
   surface: Surface,
-  settingsPage: 'list' | 'sync',
-  onBackToSettingsList: () => void
+  settingsPage: CompanionSettingsPage,
+  onBackToSettingsList: () => void,
+  onBackToSyncSettings: () => void
 ) {
   if (surface.activeAction === 'more') {
-    return settingsPage === 'sync'
-      ? { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Device sync' }
-      : { title: 'Settings' };
+    if (settingsPage === 'sync') {
+      return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Device sync' };
+    }
+    if (settingsPage === 'syncActivity') {
+      return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Activity' };
+    }
+    if (settingsPage === 'syncConnection') {
+      return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Connection' };
+    }
+    if (settingsPage === 'syncHandoff') {
+      return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Handoff reminders' };
+    }
+    return { title: 'Settings' };
   }
   if (surface.activeAction === 'recent') {
     return { title: 'Recent' };
@@ -208,18 +229,23 @@ export function resolveCompanionTopBarProps(
 export function renderCompanionShellContent(props: {
   hasSnapshot: boolean;
   onBackToSettingsList: () => void;
+  onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   onOpenSyncSettings: () => void;
   onSelectReviewBreadcrumbItem: (id: string) => void;
   reviewBreadcrumbItems: ReviewBreadcrumbItem[];
-  settingsPage: 'list' | 'sync';
+  settingsPage: CompanionSettingsPage;
   surface: Surface;
   workspaceError: string | null;
   workspaceSync: WorkspaceSync;
 }) {
   if (props.surface.activeAction === 'more') {
-    return props.settingsPage === 'sync' ? (
+    return props.settingsPage !== 'list' ? (
       <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="sync" title="Device sync">
-        <CompanionSyncContent workspaceSync={props.workspaceSync} />
+        <CompanionSyncContent
+          page={props.settingsPage}
+          workspaceSync={props.workspaceSync}
+          onOpenSettingsPage={props.onOpenSyncSettingsPage}
+        />
       </CompanionSettingsDetail>
     ) : (
       <CompanionSettingsList onOpenSync={props.onOpenSyncSettings} />
