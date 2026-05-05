@@ -98,12 +98,7 @@ final class FolioleCompanionSyncDiagnostics {
 
     private static JSObject loadContent(Context context, SQLiteDatabase database) throws Exception {
         JSObject content = new JSObject();
-        content.put("missing_content_blob_count", count(database,
-            "SELECT COUNT(*) FROM content_blobs WHERE availability <> 'cached'"
-        ));
-        content.put("missing_content_blob_bytes", count(database,
-            "SELECT COALESCE(SUM(stored_size_bytes), 0) FROM content_blobs WHERE availability <> 'cached'"
-        ));
+        copyBodySummary(content, FolioleCompanionContentBlobStore.summarizeMissingBodies(database));
         content.put("missing_topic_body_count", count(database,
             "SELECT COUNT(DISTINCT n.body_blob_hash) FROM nodes n " +
                 "JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
@@ -145,6 +140,11 @@ final class FolioleCompanionSyncDiagnostics {
         content.put("active_topic", loadActiveTopic(database));
         content.put("recent_topics", loadRecentTopics(database));
         return content;
+    }
+
+    private static void copyBodySummary(JSObject content, JSObject summary) throws Exception {
+        content.put("missing_content_blob_count", summary.optLong("missing_content_blob_count", 0));
+        content.put("missing_content_blob_bytes", summary.optLong("missing_content_blob_bytes", 0));
     }
 
     private static void copyAttachmentSummary(JSObject content, JSObject summary) throws Exception {

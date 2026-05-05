@@ -58,6 +58,34 @@ final class FolioleCompanionContentBlobStore {
         return result;
     }
 
+    static JSObject summarizeMissingBodies(SQLiteDatabase database) {
+        long count = 0;
+        long bytes = 0;
+        try (Cursor cursor = database.rawQuery(
+            "WITH body_refs AS (" +
+                "SELECT n.body_blob_hash AS hash FROM nodes n " +
+                "WHERE n.body_blob_hash IS NOT NULL AND n.deleted_at IS NULL " +
+                "UNION " +
+                "SELECT ed.body_blob_hash AS hash FROM external_documents ed " +
+                "WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1" +
+            ") " +
+            "SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) FROM content_blobs cb " +
+                "JOIN body_refs refs ON refs.hash = cb.hash " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash " +
+                "WHERE cb.kind = 'text_body' AND cbd.hash IS NULL",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                count++;
+                bytes += cursor.getLong(1);
+            }
+        }
+        JSObject summary = new JSObject();
+        summary.put("missing_content_blob_count", count);
+        summary.put("missing_content_blob_bytes", bytes);
+        return summary;
+    }
+
     static JSObject syncBlob(SQLiteDatabase database, String hash, String url, JSONObject headers) throws Exception {
         String normalizedHash = requireHash(hash);
         if (hasCachedBlobData(database, normalizedHash)) {

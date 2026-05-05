@@ -91,6 +91,25 @@ public class FolioleCompanionContentBlobStoreTest {
     }
 
     @Test
+    public void summarizesReferencedCachedManifestWithoutBodyDataAsMissing() throws Exception {
+        String staleCachedHash = sha256("stale cached body");
+        String readyCachedHash = sha256("ready cached body");
+        String unreferencedHash = sha256("unreferenced cached body");
+        insertMissingBlob(staleCachedHash, 19);
+        insertMissingBlob(readyCachedHash, 23);
+        insertMissingBlob(unreferencedHash, 29);
+        database.execSQL("UPDATE content_blobs SET availability = 'cached'");
+        insertNodeRef("stale-node", staleCachedHash, "2026-04-27T00:00:00.000Z");
+        insertNodeRef("ready-node", readyCachedHash, "2026-04-27T00:00:00.000Z");
+        database.execSQL("INSERT INTO content_blob_data (hash, data) VALUES ('" + readyCachedHash + "', CAST('ready cached body' AS BLOB))");
+
+        JSObject summary = FolioleCompanionContentBlobStore.summarizeMissingBodies(database);
+
+        assertEquals(1, summary.getLong("missing_content_blob_count"));
+        assertEquals(19, summary.getLong("missing_content_blob_bytes"));
+    }
+
+    @Test
     public void ordersMissingBodyHashesByActiveTopicThenRecentStructure() throws Exception {
         String oldNodeHash = sha256("old node body");
         String activeNodeHash = sha256("active node body");
