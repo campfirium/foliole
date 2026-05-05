@@ -1,6 +1,7 @@
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import {
@@ -17,6 +18,11 @@ import {
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import {
+  markNodeBodyPainted,
+  markNodeBodyReady,
+  updateNodeImageState
+} from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -89,12 +95,16 @@ function getDocumentPanelState(
   const emptyState = resolveInboxEmptyState(activeNode);
   const reveal = activeNode?.reveal ?? '';
   const shouldPadDocumentTail = editorDisplayMode === 'preview' && activeNode?.kind !== 'item';
-  const shouldConstrainItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection);
+  const hasPromptImage = Boolean(activeNode?.content && collectMarkdownImageReferences(activeNode.content).length > 0);
+  const hasAnswerImage = Boolean(activeNode?.reveal && collectMarkdownImageReferences(activeNode.reveal).length > 0);
+  const shouldFitItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection) && (hasPromptImage || hasAnswerImage);
+  const answerSectionMode: 'balanced' | 'fixed' = shouldFitItemImages ? 'balanced' : 'fixed';
 
   return {
+    answerSectionMode,
     editorContentPaddingBottom: shouldPadDocumentTail ? 'min(68dvh, 36rem)' : undefined,
-    editorImageMaxWidth: shouldConstrainItemImages ? '50%' : undefined,
     emptyState,
+    fitBlockImagesToViewport: shouldFitItemImages,
     hasAnswerSection: Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && showAnswerSection),
     reveal
   };
@@ -102,29 +112,36 @@ function getDocumentPanelState(
 
 function getDocumentPanelBodyProps(
   props: DocumentPanelSectionProps,
+  answerSectionMode: 'balanced' | 'fixed',
   editorContentPaddingBottom: string | undefined,
-  editorImageMaxWidth: string | undefined,
   emptyState: ReturnType<typeof resolveInboxEmptyState>,
+  fitBlockImagesToViewport: boolean,
   hasAnswerSection: boolean,
-  reveal: string,
-  imageClozePresentationRefreshToken: number
+  reveal: string
 ) {
   return {
+    answerSectionMode,
     documentMaxWidth: props.documentMaxWidth,
-    editorAppearanceKey: `${props.editorAppearanceKey}:image-cloze:${imageClozePresentationRefreshToken}`,
+    editorAppearanceKey: props.editorAppearanceKey,
     editorContent: props.editorContent,
     editorContentPaddingBottom,
-    editorImageMaxWidth,
     editorHideTitleHeading: props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false,
     editorNodeId: props.editorNodeId,
     editorNodeViewState: props.editorNodeViewState,
     emptyState,
+    fitBlockImagesToViewport,
     hasAnswerSection,
     isDocumentResizing: props.isDocumentResizing,
     onAnswerChange: props.onAnswerChange,
     onEditorChange: props.onEditorChange,
     onEditorContextMenu: props.onEditorContextMenu,
     onEditorReady: props.onEditorReady,
+    onPromptImageLoadStateChange: (state: { loadedCount: number; totalCount: number }) => {
+      if (!props.editorNodeId) {
+        return;
+      }
+      updateNodeImageState(props.editorNodeId, state.totalCount, state.loadedCount);
+    },
     onRevealDocumentPosition: props.onRevealDocumentPosition,
     onRevealDocumentSelection: props.onRevealDocumentSelection,
     onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
@@ -137,11 +154,10 @@ function getDocumentPanelBodyProps(
 
 function getDocumentPanelView(
   props: DocumentPanelSectionProps,
-  editorDisplayMode: 'preview' | 'source',
-  imageClozePresentationRefreshToken: number
+  editorDisplayMode: 'preview' | 'source'
 ) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const { editorContentPaddingBottom, editorImageMaxWidth, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(
+  const { answerSectionMode, editorContentPaddingBottom, emptyState, fitBlockImagesToViewport, hasAnswerSection, reveal } = getDocumentPanelState(
     activeNode,
     editorDisplayMode,
     props.showAnswerSection
@@ -150,12 +166,12 @@ function getDocumentPanelView(
   return {
     bodyProps: getDocumentPanelBodyProps(
       props,
+      answerSectionMode,
       editorContentPaddingBottom,
-      editorImageMaxWidth,
       emptyState,
+      fitBlockImagesToViewport,
       hasAnswerSection,
-      reveal,
-      imageClozePresentationRefreshToken
+      reveal
     ),
     documentLayoutStyle: { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties,
     isFolderListView: Boolean(
@@ -235,12 +251,7 @@ function useSourceUpdatePanelState(props: DocumentPanelSectionProps) {
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const [imageClozePresentationRefreshToken, setImageClozePresentationRefreshToken] = useState(0);
-  const { bodyProps, documentLayoutStyle, isFolderListView } = getDocumentPanelView(
-    props,
-    editorDisplayMode,
-    imageClozePresentationRefreshToken
-  );
+  const { bodyProps, documentLayoutStyle, isFolderListView } = getDocumentPanelView(props, editorDisplayMode);
   const {
     currentSourceUpdateContent,
     handleSourceUpdateDraftChange,
@@ -248,6 +259,20 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
     isSourceUpdatePanelOpen,
     sourceUpdatePreview
   } = useSourceUpdatePanelState(props);
+
+  useEffect(() => {
+    const editorNodeId = props.editorNodeId;
+    if (!editorNodeId || bodyProps.emptyState) {
+      return;
+    }
+    const frameId = window.requestAnimationFrame(() => {
+      markNodeBodyPainted(editorNodeId);
+      window.requestAnimationFrame(() => {
+        markNodeBodyReady(editorNodeId);
+      });
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [bodyProps.emptyState, bodyProps.reveal, props.editorContent, props.editorNodeId]);
 
   useLayoutEffect(() => {
     if (!props.editorNodeId || !activeNode) {
@@ -275,7 +300,6 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         outlinedRegionIds: parentRegions.map((region) => region.id),
         regions: parentRegions
       });
-      setImageClozePresentationRefreshToken((value) => value + 1);
       return () => {
         unregisterImageClozeEditorPresentation(promptNodeId);
       };
@@ -302,7 +326,6 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         regions: [{ ...locator, id: currentRegionId }]
       });
     }
-    setImageClozePresentationRefreshToken((value) => value + 1);
     return () => {
       unregisterImageClozeEditorPresentation(promptNodeId);
       if (answerNodeId) {

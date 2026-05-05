@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import { updateSourceDetailsCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
 
 interface NodeSourceDetailsState {
   isLoading: boolean;
@@ -30,8 +31,13 @@ export function useNodeSourceDetails(nodeId: string | null) {
 
     let isDisposed = false;
     let refreshTimer: number | null = null;
-    const cachedValue = Object.prototype.hasOwnProperty.call(cacheRef.current, nodeId) ? cacheRef.current[nodeId] ?? null : null;
-    setState({ isLoading: !Object.prototype.hasOwnProperty.call(cacheRef.current, nodeId), value: cachedValue });
+    const hasCachedValue = Object.prototype.hasOwnProperty.call(cacheRef.current, nodeId);
+    const cachedValue = hasCachedValue ? cacheRef.current[nodeId] ?? null : null;
+    updateSourceDetailsCacheStats({
+      entries: Object.keys(cacheRef.current).length,
+      hit: hasCachedValue
+    });
+    setState({ isLoading: !hasCachedValue, value: cachedValue });
 
     const refresh = () =>
       loadRuntimeNodeSourceDetails(nodeId).then((value) => {
@@ -39,6 +45,10 @@ export function useNodeSourceDetails(nodeId: string | null) {
           return;
         }
         cacheRef.current[nodeId] = value;
+        updateSourceDetailsCacheStats({
+          entries: Object.keys(cacheRef.current).length,
+          hit: true
+        });
         setState({ isLoading: false, value });
         if (shouldPollPdfIndexStatus(value)) {
           refreshTimer = window.setTimeout(refresh, REFRESH_INTERVAL_MS);

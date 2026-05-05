@@ -5,6 +5,10 @@ export interface NativeResolvedAppPaths {
   app_log_dir: string;
 }
 
+export interface NativePerformanceMemorySnapshot {
+  main_process_rss_bytes: number;
+}
+
 export type NativeLibraryPathLocation = 'library_home' | 'assets_dir' | 'inbox' | 'mirror';
 
 export interface NativeLibraryPaths {

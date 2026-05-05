@@ -5,6 +5,7 @@ import './reactPdfMock';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { resetPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
 
 export const mockEditorState: { content: string; selectionFrom: number; selectionTo: number } = {
@@ -62,18 +63,21 @@ vi.mock('../features/editor/components/MarkdownEditor', () => ({
     ariaLabel,
     value,
     onChange,
+    onImageLoadStateChange,
     onReady
   }: {
     ariaLabel?: string;
     value: string;
     onChange: (value: string) => void;
+    onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
     onReady?: (adapter: EditorAdapter | null) => void;
   }) => {
     mockEditorState.content = value;
     useEffect(() => {
+      onImageLoadStateChange?.({ loadedCount: 0, totalCount: 0 });
       onReady?.(mockEditorAdapter);
       return () => onReady?.(null);
-    }, [onReady]);
+    }, [onImageLoadStateChange, onReady]);
     return (
       <textarea
         aria-label={ariaLabel ?? 'Mock editor'}
@@ -113,6 +117,7 @@ export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 
 export function resetAppSmokeState() {
   window.history.pushState({}, '', '/');
   localStorage.clear();
+  resetPerformanceDiagnosticsProbe();
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date(FIXED_TIMESTAMP)));
   mockEditorState.content = '# Welcome to Foliole\n\nStart writing markdown here.';
   mockEditorState.selectionFrom = 0;

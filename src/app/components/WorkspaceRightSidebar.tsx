@@ -4,6 +4,7 @@ import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceRightSidebarDevPanel } from './WorkspaceRightSidebarDevPanel';
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
+import { WorkspaceRightSidebarPerformancePanel } from './WorkspaceRightSidebarPerformancePanel';
 import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
 import { WorkspaceRightSidebarSourcePanel } from './WorkspaceRightSidebarSourcePanel';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -11,6 +12,9 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 function getPanelTitle(panelId: WorkspaceRightPanelId) {
   if (panelId === 'dev') {
     return 'Dev panel';
+  }
+  if (panelId === 'performance') {
+    return 'Flow diagnostics';
   }
   if (panelId === 'source-info') {
     return 'Source info';
@@ -45,6 +49,9 @@ function renderPanel(
         reviewSchedulerSettings={props.reviewSchedulerSettings}
       />
     );
+  }
+  if (props.activePanelId === 'performance') {
+    return <WorkspaceRightSidebarPerformancePanel activeNodeId={props.activeNodeId} nodesById={props.nodesById} />;
   }
   if (props.activePanelId === 'source-info') {
     return <WorkspaceRightSidebarSourcePanel activeNodeId={props.activeNodeId} nodesById={props.nodesById} />;

@@ -1,3 +1,4 @@
+import { markNodePositionRequested } from '../../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeAnchorLink } from '../../nodes/model/nodeTypes';
 
 import type { PdfSystemExternalApi } from './pdfSystemApi';
@@ -35,6 +36,7 @@ export function unregisterPdfSystem(nodeId: string) {
 }
 
 export function requestPdfAnchorJump(nodeId: string, locator: NonNullable<NodeAnchorLink['locator']>) {
+  markNodePositionRequested(nodeId);
   const actions = activePdfSystems.get(nodeId);
   if (!actions) {
     pendingAnchorJumps.set(nodeId, locator);

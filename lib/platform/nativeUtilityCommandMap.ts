@@ -7,6 +7,7 @@ import type {
   NativeLibraryPaths,
   NativeMirrorAttachmentLinkRebuildResult,
   NativeMirrorOutputRebuildResult,
+  NativePerformanceMemorySnapshot,
   NativeSqliteBackupEntry,
   NativeSqliteBackupResult,
   NativeSqliteRestoreResult,
@@ -39,6 +40,10 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.loadBackupSettings]: {
     args: undefined;
     result: NativeBackupSettings;
+  };
+  [NATIVE_COMMANDS.loadPerformanceMemorySnapshot]: {
+    args: undefined;
+    result: NativePerformanceMemorySnapshot;
   };
   [NATIVE_COMMANDS.listSqliteBackups]: {
     args: undefined;

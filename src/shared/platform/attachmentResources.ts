@@ -3,6 +3,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 
 import { getRuntimeInvoke } from './bridge';
+import { updateImageCacheStats } from './performanceDiagnosticsProbe';
 import { logRuntimeWarning } from './runtimeLogging';
 
 function isAttachmentResourceResolution(value: unknown): value is NativeAttachmentResourceResolution {
@@ -13,6 +14,8 @@ function isAttachmentResourceResolution(value: unknown): value is NativeAttachme
   const candidate = value as Record<string, unknown>;
   return candidate.status === 'ready' || candidate.status === 'not_found' || candidate.status === 'missing_file';
 }
+
+const attachmentResourceResolutionCache = new Map<string, Promise<NativeAttachmentResourceResolution | null>>();
 
 export function parseAttachmentId(resourceUrl: string) {
   return parseAssetMarkdownUrl(resourceUrl);
@@ -29,28 +32,47 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
     return null;
   }
 
-  try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.resolveAttachmentResource, { attachment_id: attachmentId });
-    if (!isAttachmentResourceResolution(result)) {
-      logRuntimeWarning('native attachment resource payload invalid', {
+  const cached = attachmentResourceResolutionCache.get(attachmentId);
+  if (cached) {
+    updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: true });
+    return cached;
+  }
+
+  const resolutionPromise = runtimeInvoke(NATIVE_COMMANDS.resolveAttachmentResource, { attachment_id: attachmentId })
+    .then((result) => {
+      if (!isAttachmentResourceResolution(result)) {
+        logRuntimeWarning('native attachment resource payload invalid', {
+          area: 'bridge',
+          action: 'resolve_attachment_resource',
+          command: NATIVE_COMMANDS.resolveAttachmentResource,
+          attachment_id: attachmentId,
+          fallback: 'return_null'
+        });
+        attachmentResourceResolutionCache.delete(attachmentId);
+        return null;
+      }
+      return result;
+    })
+    .catch((error) => {
+      logRuntimeWarning('native attachment resource resolve failed', {
         area: 'bridge',
         action: 'resolve_attachment_resource',
         command: NATIVE_COMMANDS.resolveAttachmentResource,
         attachment_id: attachmentId,
-        fallback: 'return_null'
+        fallback: 'return_null',
+        error
       });
+      attachmentResourceResolutionCache.delete(attachmentId);
       return null;
-    }
-    return result;
-  } catch (error) {
-    logRuntimeWarning('native attachment resource resolve failed', {
-      area: 'bridge',
-      action: 'resolve_attachment_resource',
-      command: NATIVE_COMMANDS.resolveAttachmentResource,
-      attachment_id: attachmentId,
-      fallback: 'return_null',
-      error
     });
-    return null;
-  }
+
+  attachmentResourceResolutionCache.set(attachmentId, resolutionPromise);
+  updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: false });
+  return resolutionPromise;
+}
+
+export function readAttachmentResourceCacheStats() {
+  return {
+    entries: attachmentResourceResolutionCache.size
+  };
 }

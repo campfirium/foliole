@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { updatePdfSurfaceCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { PdfDocumentSurface } from './PdfDocumentSurface';
@@ -88,6 +89,10 @@ export function PdfDocumentSurfaceCache(props: {
     props.activeSourceHint,
     props.editorNodeId
   );
+
+  useEffect(() => {
+    updatePdfSurfaceCacheStats({ entries: renderEntries.length });
+  }, [renderEntries.length]);
 
   useEffect(() => {
     const visible = renderEntries.some((entry) =>

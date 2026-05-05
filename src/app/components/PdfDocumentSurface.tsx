@@ -6,6 +6,7 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
+import { markNodePositionReady } from '../../shared/platform/performanceDiagnosticsProbe';
 import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import { normalizeContextMenuPosition } from '../contextCommands';
@@ -140,7 +141,7 @@ export function PdfDocumentSurface({
     : null;
 
   const layoutProps = {
-    ...buildPdfSurfaceLayoutProps(highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint),
+    ...buildPdfSurfaceLayoutProps(nodeId, highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint),
     persistedPageCount,
     persistedPageDimensions
   };
@@ -151,6 +152,7 @@ export function PdfDocumentSurface({
 }
 
 function buildPdfSurfaceLayoutProps(
+  nodeId: string | null,
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>,
   pdfSystem: ReturnType<typeof usePdfSystemController>,
   selectionState: ReturnType<typeof usePdfSelectionContextMenu>,
@@ -166,7 +168,12 @@ function buildPdfSurfaceLayoutProps(
   );
 
   return {
-    clearPageJumpRequest: pdfSystem.actions.clearPageJumpRequest,
+    clearPageJumpRequest: (requestId: number) => {
+      pdfSystem.actions.clearPageJumpRequest(requestId);
+      if (nodeId) {
+        markNodePositionReady(nodeId);
+      }
+    },
     handleContextMenu: selectionState.handleContextMenu,
     handleSearchRequest: searchState.handleSearchRequest,
     handleSearchRequestHandled: searchState.handleSearchRequestHandled,

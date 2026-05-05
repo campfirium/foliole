@@ -1,4 +1,4 @@
-import { FileSearch, Highlighter, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
+import { FileSearch, Gauge, Highlighter, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -57,6 +57,7 @@ export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSideb
   const isReviewQueuePanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'review-queue';
   const isSourceInfoPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'source-info';
   const isHighlightsPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'highlights';
+  const isPerformancePanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'performance';
   const isDevPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'dev';
 
   if (props.isRightSidebarCollapsed) {
@@ -94,6 +95,12 @@ export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSideb
             ariaLabel="Highlights panel"
             icon={<Highlighter aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
             onClick={() => props.onSelectRightPanel('highlights')}
+          />
+          <RightSidebarPanelButton
+            active={isPerformancePanelActive}
+            ariaLabel="Performance panel"
+            icon={<Gauge aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
+            onClick={() => props.onSelectRightPanel('performance')}
           />
           <RightSidebarPanelButton
             active={isDevPanelActive}

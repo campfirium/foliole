@@ -1,4 +1,13 @@
-import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
+import {
+  type CSSProperties,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type MutableRefObject
+} from 'react';
 
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
 import { IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../image-cloze/model/imageClozePresentation';
@@ -19,9 +28,10 @@ interface EditorViewState {
 
 interface MarkdownEditorProps {
   ariaLabel?: string;
+  blockImageMaxHeightOverride?: number;
   className?: string;
   contentPaddingBottom?: string;
-  imageMaxWidth?: string;
+  fitBlockImagesToViewport?: boolean;
   debugId?: string;
   hideTitleHeading?: boolean;
   hideScrollbar?: boolean;
@@ -31,7 +41,9 @@ interface MarkdownEditorProps {
   readOnly?: boolean;
   value: string;
   onChange: (value: string) => void;
+  onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number } | null) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
 }
 
@@ -223,9 +235,10 @@ function GestureTrailOverlay({
 
 export function MarkdownEditor({
   ariaLabel,
+  blockImageMaxHeightOverride,
   className,
   contentPaddingBottom,
-  imageMaxWidth,
+  fitBlockImagesToViewport = false,
   debugId,
   hideTitleHeading = false,
   hideScrollbar = false,
@@ -235,13 +248,17 @@ export function MarkdownEditor({
   readOnly,
   value,
   onChange,
+  onImageLoadStateChange,
   onContextMenu,
+  onFitBlockImageMetricsChange,
   onReady
 }: MarkdownEditorProps) {
   const { bindings, settings } = useMouseGestureSettings();
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value, hideTitleHeading, readOnly);
   const { scrollMetrics, syncScrollMetrics } = useEditorScrollbarMetrics(adapterRef);
+  const [imageMaxHeight, setImageMaxHeight] = useState<string | undefined>(undefined);
 
   useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value, hideTitleHeading, lineDiffDecorations);
   useEditorAppearanceEffects(adapterRef, hideTitleHeading, nodeId);
@@ -253,18 +270,113 @@ export function MarkdownEditor({
   const mouseGesture = useEditorMouseGesture(adapterRef, hostRef, bindings, settings);
   const editorStyle = {
     '--editor-content-padding-bottom': contentPaddingBottom,
-    '--editor-image-max-width': imageMaxWidth
+    '--editor-image-max-height':
+      typeof blockImageMaxHeightOverride === 'number' ? `${blockImageMaxHeightOverride}px` : imageMaxHeight
   } as CSSProperties;
   const gestureTrailPath = useMemo(() => buildGestureTrailPath(mouseGesture.trail?.points ?? []), [mouseGesture.trail?.points]);
+
+  useLayoutEffect(() => {
+    if (!fitBlockImagesToViewport || !rootRef.current) {
+      setImageMaxHeight(undefined);
+      onFitBlockImageMetricsChange?.(null);
+      return;
+    }
+    const element = rootRef.current;
+    const host = hostRef.current;
+    let frameId = 0;
+    const updateHeight = () => {
+      const scroller = element.querySelector('.cm-scroller') as HTMLElement | null;
+      const imageElements = Array.from(element.querySelectorAll('.cm-md-image-element-block')) as HTMLElement[];
+      if (!scroller || imageElements.length === 0) {
+        setImageMaxHeight(undefined);
+        onFitBlockImageMetricsChange?.(null);
+        return;
+      }
+      const totalImageHeight = imageElements.reduce((sum, image) => sum + image.getBoundingClientRect().height, 0);
+      const nonImageHeight = Math.max(0, scroller.scrollHeight - totalImageHeight);
+      const nextHeight = Math.max(120, Math.floor((scroller.clientHeight - nonImageHeight - 8) / imageElements.length));
+      onFitBlockImageMetricsChange?.({
+        imageCount: imageElements.length,
+        nonImageHeight
+      });
+      setImageMaxHeight((current) => {
+        const nextValue = `${nextHeight}px`;
+        return current === nextValue ? current : nextValue;
+      });
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(updateHeight);
+    };
+    const handleImageLoad = (event: Event) => {
+      if (event.target instanceof HTMLImageElement && event.target.classList.contains('cm-md-image-element-block')) {
+        schedule();
+      }
+    };
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(schedule) : null;
+    resizeObserver?.observe(element);
+    if (host) {
+      resizeObserver?.observe(host);
+    }
+    element.addEventListener('load', handleImageLoad, true);
+    schedule();
+    return () => {
+      cancelAnimationFrame(frameId);
+      element.removeEventListener('load', handleImageLoad, true);
+      resizeObserver?.disconnect();
+    };
+  }, [fitBlockImagesToViewport, nodeId, onFitBlockImageMetricsChange, value]);
+
+  useEffect(() => {
+    if (!rootRef.current) {
+      onImageLoadStateChange?.({ loadedCount: 0, totalCount: 0 });
+      return;
+    }
+
+    const element = rootRef.current;
+    let frameId = 0;
+    const reportState = () => {
+      const images = Array.from(element.querySelectorAll('.cm-md-image-element-block')) as HTMLImageElement[];
+      onImageLoadStateChange?.({
+        loadedCount: images.filter((image) => image.complete).length,
+        totalCount: images.length
+      });
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(reportState);
+    };
+    const handleImageEvent = (event: Event) => {
+      if (event.target instanceof HTMLImageElement && event.target.classList.contains('cm-md-image-element-block')) {
+        schedule();
+      }
+    };
+
+    schedule();
+    element.addEventListener('error', handleImageEvent, true);
+    element.addEventListener('load', handleImageEvent, true);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      element.removeEventListener('error', handleImageEvent, true);
+      element.removeEventListener('load', handleImageEvent, true);
+    };
+  }, [nodeId, onImageLoadStateChange, value]);
 
   return (
     <div
       className="relative h-full w-full"
       onContextMenu={(event) => mouseGesture.handleContextMenu(event, onContextMenu)}
       onMouseDownCapture={mouseGesture.handleMouseDownCapture}
+      ref={rootRef}
       style={editorStyle}
     >
-      <div aria-label={ariaLabel} className={className ? `markdown-editor-host ${className}` : 'markdown-editor-host'} ref={hostRef} />
+      <div
+        aria-label={ariaLabel}
+        className={className ? `markdown-editor-host ${className}` : 'markdown-editor-host'}
+        data-fit-block-images={fitBlockImagesToViewport ? 'true' : 'false'}
+        ref={hostRef}
+      />
       <GestureTrailOverlay path={gestureTrailPath} trail={mouseGesture.trail} />
       {scrollbar.showScrollbar && !hideScrollbar ? (
         <div aria-hidden="true" className="editor-scrollbar-track" onPointerDown={onTrackPointerDown}>

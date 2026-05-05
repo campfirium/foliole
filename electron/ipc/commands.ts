@@ -150,6 +150,11 @@ function handleUtilityCommand(request: InvokeRequest) {
   if (isTypedRequest(request, NATIVE_COMMANDS.listSystemFonts)) {
     return listSystemFonts();
   }
+  if (isTypedRequest(request, NATIVE_COMMANDS.loadPerformanceMemorySnapshot)) {
+    return {
+      main_process_rss_bytes: process.memoryUsage().rss
+    };
+  }
   if (isTypedRequest(request, NATIVE_COMMANDS.syncAppMenuState)) {
     syncAppMenuState(asStringArray(request.args.enabledCommandIds, 'enabledCommandIds'));
     return null;

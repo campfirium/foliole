@@ -2,6 +2,7 @@ export const NATIVE_COMMANDS = {
   appGetVersion: 'app_get_version',
   bootReport: 'boot_report',
   listSystemFonts: 'list_system_fonts',
+  loadPerformanceMemorySnapshot: 'load_performance_memory_snapshot',
   openExternalUrl: 'open_external_url',
   openLocalPath: 'open_local_path',
   inspectReadwiseReaderSetup: 'inspect_readwise_reader_setup',
