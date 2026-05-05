@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { BrowserWindow } from 'electron';
 
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { insertImportedHighlightNodes } from '../../lib/core/database/importDerivedHighlights.js';
 import { collectAnchoredImportedHighlights } from '../../lib/core/database/importHighlightAnchors.js';
@@ -142,8 +143,10 @@ function persistMergedHighlights(input: {
 }) {
   const connection = openDatabaseConnection();
   connection.driver.transaction(() => {
-    connection.driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
+    const bodyBlobHash = upsertTextBodyBlob(connection.driver, input.update.content, input.importedAt);
+    connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
       input.update.content,
+      bodyBlobHash,
       resolveNodeOpeningText(input.update.content, input.sourceTitle),
       input.importedAt,
       input.nodeId

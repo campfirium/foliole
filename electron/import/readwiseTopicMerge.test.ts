@@ -57,7 +57,14 @@ async function writeHighlightFile(fileName: string, content: string) {
 
 function readMergedState(nodeId: string) {
   const connection = openDatabaseConnection();
-  const node = connection.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get(nodeId) as { content: string } | undefined;
+  const node = connection.sqlite
+    .prepare(
+      `SELECT n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
+       FROM nodes n
+       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+       WHERE n.id = ?`
+    )
+    .get(nodeId) as { body_blob_data: string; body_blob_hash: string; content: string } | undefined;
   const children = connection.sqlite
     .prepare('SELECT content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
     .all(nodeId) as Array<{ anchor_link: string | null; content: string }>;
@@ -93,6 +100,8 @@ it('merges selected highlight files into an existing topic and appends newly add
   expect(firstState.children).toHaveLength(1);
   const firstAnchorLink = parseAnchorLink(firstState.children[0]!.anchor_link);
   expect(firstState.node?.content).toBe(['# Article', '', 'Alpha sentence.', '', 'Beta sentence.'].join('\n'));
+  expect(firstState.node?.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
+  expect(firstState.node?.body_blob_data).toBe(firstState.node?.content);
   expect(firstAnchorLink).toEqual(expect.objectContaining({
     kind: 'highlight',
     locator: expect.objectContaining({ originalText: 'Alpha sentence.' })
