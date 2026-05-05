@@ -31,6 +31,10 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   openDatabaseConnection().driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+     VALUES ('node-1', 'item', 'Node 1', '', '2026-04-30T00:00:00.000Z', '2026-04-30T00:00:00.000Z')`
+  );
+  openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('setting', 'device:android:phone:*:app_settings', 1, 'desktop-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
@@ -62,6 +66,29 @@ function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPa
   };
 }
 
+function createReviewLogPush(opId = 'op-1'): SyncPushPayload {
+  return {
+    base: { kind: 'op_id', opId },
+    clientOpId: `review_log:${opId}`,
+    identity: { objectId: opId, objectType: 'review_log', scope: 'workspace' },
+    payloadJson: JSON.stringify({
+      device_id: 'android-device',
+      difficulty_after: 3,
+      difficulty_before: 2,
+      due_after: '2026-05-01T00:00:00.000Z',
+      due_before: '2026-04-30T00:00:00.000Z',
+      grade: 3,
+      id: `review-${opId}`,
+      node_id: 'node-1',
+      op_id: opId,
+      reviewed_at: '2026-04-30T01:00:00.000Z',
+      scheduler_version: 'ts-fsrs@4',
+      stability_after: 4,
+      stability_before: 3
+    })
+  };
+}
+
 describe('companion sync push async apply', () => {
   it('accepts state object pushes through the shared async executor', async () => {
     const result = await applyCompanionSyncPushAsync([createSettingPush()]);
@@ -83,5 +110,22 @@ describe('companion sync push async apply', () => {
     expect(openDatabaseConnection().driver.queryOne(
       `SELECT value_json FROM setting_records WHERE key = 'app_settings'`
     )).toBeUndefined();
+  });
+
+  it('accepts and deduplicates review log pushes through the async executor', async () => {
+    const first = createReviewLogPush('op-async-1');
+    const duplicate = createReviewLogPush('op-async-1');
+
+    await expect(applyCompanionSyncPushAsync([first])).resolves.toMatchObject({
+      acks: [{ status: 'accepted' }],
+      appliedReviewOpIds: ['op-async-1']
+    });
+    await expect(applyCompanionSyncPushAsync([duplicate])).resolves.toMatchObject({
+      acks: [{ status: 'already_applied' }],
+      appliedReviewOpIds: []
+    });
+    expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
+      `SELECT COUNT(*) AS count FROM review_log WHERE op_id = 'op-async-1'`
+    )).toEqual({ count: 1 });
   });
 });
