@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DocumentSourceUpdatePanel } from './DocumentSourceUpdatePanel';
@@ -20,6 +20,28 @@ vi.mock('./DocumentPanelBody', () => ({
 interface PanelBodyCall {
   editorDiffDecorations?: unknown;
   onEditorReady?: (adapter: unknown) => void;
+}
+
+function createScrollAdapter(options?: {
+  getScrollTop?: () => number;
+  onScroll?: (listener: () => void) => () => void;
+  revealPosition?: ReturnType<typeof vi.fn>;
+  scrollTop?: number;
+  setScrollTop?: (scrollTop: number) => void;
+}) {
+  let scrollTop = options?.scrollTop ?? 0;
+
+  return {
+    getLineBlockHeight: () => 24,
+    getScrollMetrics: () => ({ clientHeight: 300, scrollHeight: 1200, scrollTop: options?.getScrollTop?.() ?? scrollTop }),
+    getScrollTop: () => options?.getScrollTop?.() ?? scrollTop,
+    onScroll: options?.onScroll ?? (() => () => undefined),
+    revealPosition: options?.revealPosition ?? vi.fn(),
+    setScrollTop: vi.fn((nextScrollTop: number) => {
+      scrollTop = nextScrollTop;
+      options?.setScrollTop?.(nextScrollTop);
+    })
+  };
 }
 
 function renderPanel(currentContent: string, updatedContent: string) {
@@ -58,6 +80,7 @@ describe('DocumentSourceUpdatePanel rendering', () => {
       expect.objectContaining({
         editorAppearanceKey: 'appearance-1-source-update-current',
         editorContent: 'alpha\nbeta',
+        editorHideScrollbar: true,
         editorNodeId: 'node-1',
         readOnly: undefined
       })
@@ -65,6 +88,7 @@ describe('DocumentSourceUpdatePanel rendering', () => {
     expect(documentPanelBodyMock).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
+        editorContentPaddingRight: '5.5rem',
         editorAppearanceKey: 'appearance-1-source-update-reference',
         editorContent: 'alpha\ngamma',
         editorNodeId: null,
@@ -87,6 +111,7 @@ describe('DocumentSourceUpdatePanel rendering', () => {
         'This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines.'
       )
     ).toBeInTheDocument();
+    expect(screen.getByLabelText('Comparison overview ruler')).toBeInTheDocument();
   });
 
 });
@@ -146,7 +171,6 @@ describe('DocumentSourceUpdatePanel scroll sync', () => {
 
   it('syncs vertical scrolling between the two editors', () => {
     const currentScrollListeners: Array<() => void> = [];
-    const updatedScrollListeners: Array<() => void> = [];
     let currentScrollTop = 120;
     let updatedScrollTop = 0;
 
@@ -155,26 +179,24 @@ describe('DocumentSourceUpdatePanel scroll sync', () => {
     const currentReady = getPanelBodyCall(0).onEditorReady;
     const updatedReady = getPanelBodyCall(1).onEditorReady;
 
-    const currentAdapter = {
-      getLineBlockHeight: () => 24,
+    const currentAdapter = createScrollAdapter({
       getScrollTop: () => currentScrollTop,
       onScroll: (listener: () => void) => {
         currentScrollListeners.push(listener);
         return () => undefined;
       },
-      setScrollTop: vi.fn()
-    };
-    const updatedAdapter = {
-      getLineBlockHeight: () => 24,
-      getScrollTop: () => updatedScrollTop,
-      onScroll: (listener: () => void) => {
-        updatedScrollListeners.push(listener);
-        return () => undefined;
-      },
-      setScrollTop: vi.fn((scrollTop: number) => {
+      scrollTop: currentScrollTop,
+      setScrollTop: (scrollTop: number) => {
+        currentScrollTop = scrollTop;
+      }
+    });
+    const updatedAdapter = createScrollAdapter({
+      onScroll: () => () => undefined,
+      scrollTop: updatedScrollTop,
+      setScrollTop: (scrollTop: number) => {
         updatedScrollTop = scrollTop;
-      })
-    };
+      }
+    });
 
     act(() => {
       currentReady?.(currentAdapter as never);
@@ -185,9 +207,31 @@ describe('DocumentSourceUpdatePanel scroll sync', () => {
 
     act(() => {
       currentScrollTop = 260;
-      currentScrollListeners[0]?.();
+      currentScrollListeners.forEach((listener) => listener());
     });
 
     expect(updatedAdapter.setScrollTop).toHaveBeenLastCalledWith(260);
+  });
+
+  it('renders overview markers and jumps to the clicked diff segment', () => {
+    renderPanel('title\nsame\nleft only\nend', 'title\nsame\nright only\nend');
+
+    const currentReady = getPanelBodyCall(0).onEditorReady;
+    const updatedReady = getPanelBodyCall(1).onEditorReady;
+    const currentAdapter = createScrollAdapter();
+    const updatedAdapter = createScrollAdapter();
+
+    act(() => {
+      currentReady?.(currentAdapter as never);
+      updatedReady?.(updatedAdapter as never);
+    });
+
+    const markers = screen.getAllByTestId('source-update-overview-marker');
+    expect(markers).toHaveLength(1);
+
+    fireEvent.click(markers[0]!);
+
+    expect(currentAdapter.revealPosition).toHaveBeenCalledWith(11);
+    expect(updatedAdapter.revealPosition).toHaveBeenCalledWith(11);
   });
 });

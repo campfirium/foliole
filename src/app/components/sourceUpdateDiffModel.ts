@@ -8,8 +8,21 @@ interface SourceUpdateSideDiff {
   decorations: EditorDiffDecorations;
 }
 
+export type SourceUpdateOverviewKind = 'changed' | 'current-only' | 'updated-only';
+
+export interface SourceUpdateOverviewSegment {
+  currentLineNumber: number | null;
+  endRow: number;
+  id: string;
+  kind: SourceUpdateOverviewKind;
+  row: number;
+  updatedLineNumber: number | null;
+}
+
 export interface SourceUpdateDiffModel {
   current: SourceUpdateSideDiff;
+  overviewSegments: SourceUpdateOverviewSegment[];
+  totalRows: number;
   updated: SourceUpdateSideDiff;
 }
 
@@ -96,6 +109,60 @@ function buildUnifiedAlignedRows(currentContent: string, updatedContent: string)
   return rows;
 }
 
+function getOverviewKind(row: UnifiedAlignedRow): SourceUpdateOverviewKind | null {
+  if (row.currentLine !== null && row.updatedLine !== null) {
+    return row.currentLine === row.updatedLine ? null : 'changed';
+  }
+  if (row.currentLine !== null) {
+    return 'current-only';
+  }
+  if (row.updatedLine !== null) {
+    return 'updated-only';
+  }
+  return null;
+}
+
+function buildOverviewSegments(alignedRows: UnifiedAlignedRow[]): SourceUpdateOverviewSegment[] {
+  const segments: SourceUpdateOverviewSegment[] = [];
+  let pending: SourceUpdateOverviewSegment | null = null;
+
+  const flushPending = () => {
+    if (!pending) {
+      return;
+    }
+    segments.push(pending);
+    pending = null;
+  };
+
+  alignedRows.forEach((row, index) => {
+    const kind = getOverviewKind(row);
+    const rowNumber = index + 1;
+
+    if (!kind) {
+      flushPending();
+      return;
+    }
+
+    if (pending && pending.kind === kind && pending.endRow === rowNumber - 1) {
+      pending.endRow = rowNumber;
+      return;
+    }
+
+    flushPending();
+    pending = {
+      currentLineNumber: row.currentLineNumber,
+      endRow: rowNumber,
+      id: `${kind}-${rowNumber}`,
+      kind,
+      row: rowNumber,
+      updatedLineNumber: row.updatedLineNumber
+    };
+  });
+
+  flushPending();
+  return segments;
+}
+
 export function buildSourceUpdateDiffModel(currentContent: string, updatedContent: string): SourceUpdateDiffModel {
   const alignedRows = buildUnifiedAlignedRows(currentContent, updatedContent);
   const currentProfiles = buildLineClassProfiles(currentContent.split('\n'));
@@ -143,6 +210,8 @@ export function buildSourceUpdateDiffModel(currentContent: string, updatedConten
 
   return {
     current: { decorations: currentDecorations },
+    overviewSegments: buildOverviewSegments(alignedRows),
+    totalRows: Math.max(alignedRows.length, 1),
     updated: { decorations: updatedDecorations }
   };
 }

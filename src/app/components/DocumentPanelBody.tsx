@@ -17,7 +17,9 @@ interface DocumentPanelBodyProps {
   editorAppearanceKey: string;
   editorContent: string;
   editorContentPaddingBottom?: string;
+  editorContentPaddingRight?: string;
   editorDiffDecorations?: EditorDiffDecorations | null;
+  editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;
   emptyContent?: ReactNode;
   editorNodeId: string | null;
@@ -132,7 +134,9 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
         ariaLabel="Prompt editor"
         className="prompt-editor-host"
         contentPaddingBottom={props.editorContentPaddingBottom}
+        contentPaddingRight={props.editorContentPaddingRight}
         debugId={props.promptEditorDebugId}
+        hideScrollbar={props.editorHideScrollbar}
         hideTitleHeading={props.editorHideTitleHeading}
         key={`prompt-${props.editorAppearanceKey}`}
         lineDiffDecorations={props.editorDiffDecorations}
@@ -223,7 +227,7 @@ export function DocumentPanelBody({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 pl-4 pr-0 pt-4 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0">
+    <div className={cn('flex min-h-0 flex-1 pl-4 pr-0 pt-4 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0')}>
       {renderDocumentBodyLayout(bodyProps)}
     </div>
   );

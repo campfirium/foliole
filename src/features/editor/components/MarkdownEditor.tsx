@@ -20,8 +20,10 @@ interface MarkdownEditorProps {
   ariaLabel?: string;
   className?: string;
   contentPaddingBottom?: string;
+  contentPaddingRight?: string;
   debugId?: string;
   hideTitleHeading?: boolean;
+  hideScrollbar?: boolean;
   lineDiffDecorations?: EditorDiffDecorations | null;
   nodeId: string | null;
   nodeViewState?: EditorViewState;
@@ -181,8 +183,10 @@ export function MarkdownEditor({
   ariaLabel,
   className,
   contentPaddingBottom,
+  contentPaddingRight,
   debugId,
   hideTitleHeading = false,
+  hideScrollbar = false,
   lineDiffDecorations,
   nodeId,
   nodeViewState,
@@ -204,7 +208,10 @@ export function MarkdownEditor({
   const onTrackPointerDown = useTrackPointerHandler(adapterRef, hostRef, scrollbar, syncScrollMetrics);
   const handlers = useThumbPointerHandlers(adapterRef, scrollMetrics, scrollbar, syncScrollMetrics);
   const mouseGesture = useEditorMouseGesture(adapterRef, hostRef, bindings, settings);
-  const editorStyle = { '--editor-content-padding-bottom': contentPaddingBottom } as CSSProperties;
+  const editorStyle = {
+    '--editor-content-padding-bottom': contentPaddingBottom,
+    '--editor-content-padding-right': contentPaddingRight
+  } as CSSProperties;
   const gestureTrailPath = useMemo(() => buildGestureTrailPath(mouseGesture.trail?.points ?? []), [mouseGesture.trail?.points]);
 
   return (
@@ -216,7 +223,7 @@ export function MarkdownEditor({
     >
       <div aria-label={ariaLabel} className={className ? `markdown-editor-host ${className}` : 'markdown-editor-host'} ref={hostRef} />
       <GestureTrailOverlay path={gestureTrailPath} trail={mouseGesture.trail} />
-      {scrollbar.showScrollbar ? (
+      {scrollbar.showScrollbar && !hideScrollbar ? (
         <div aria-hidden="true" className="editor-scrollbar-track" onPointerDown={onTrackPointerDown}>
           <div
             className="editor-scrollbar-thumb"
