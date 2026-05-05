@@ -33,8 +33,8 @@ type DesktopFixtures = {
 };
 
 export const test = base.extend<DesktopFixtures>({
-  desktopSession: async (fixtureContext, use) => {
-    void fixtureContext;
+  desktopSession: async ({ browserName }, use) => {
+    void browserName;
     const session = (await launchDesktopSession()) as DesktopSession;
 
     try {
