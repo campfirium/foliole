@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import { extractReadwiseSidecarHighlights, transformReadwiseFullDocument } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { buildPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -8,6 +9,11 @@ import { buildPreparedImportRecord, type DirectoryImportSourceDescriptor } from 
 export interface ReadwiseSourceSignature {
   highlight: { mtimeMs: number; sizeBytes: number } | null;
   primary: { mtimeMs: number; sizeBytes: number };
+}
+
+function buildReadwiseSourceIdentity(kind: ReadwiseSourceKind, sourceName: string) {
+  const normalizedSourceName = sourceName.replace(/\\/g, '/');
+  return `readwise/${kind}/${normalizedSourceName}`;
 }
 
 export async function resolveReadwiseSourceSignature(
@@ -63,10 +69,12 @@ export async function loadPreparedReadwiseImportRecord(
     highlightDirectoryPath: string;
     highlightPolicy: 'adopt' | 'reference_only';
     importedAt: string;
+    kind: ReadwiseSourceKind;
     readwiseConfig: ReadwiseReaderConfig;
   }
 ) {
   const articlePath = path.join(options.highlightDirectoryPath, source.sourceName);
+  const sourceIdentity = buildReadwiseSourceIdentity(options.kind, source.sourceName);
   try {
     const [articleMarkdown, fullDocumentMarkdown] = await Promise.all([
       fs.readFile(articlePath, 'utf8'),
@@ -77,6 +85,8 @@ export async function loadPreparedReadwiseImportRecord(
       highlightPolicy: options.highlightPolicy,
       highlightSidecar: extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig),
       importedAt: options.importedAt,
+      sourceIdentity,
+      sourceLocator: source.filePath,
       sourceProfile: 'body_with_highlight_sidecar'
     });
   } catch {
@@ -84,7 +94,9 @@ export async function loadPreparedReadwiseImportRecord(
     return buildPreparedImportRecord(source, {
       content: transformReadwiseFullDocument(fullDocumentMarkdown),
       highlightPolicy: options.highlightPolicy,
-      importedAt: options.importedAt
+      importedAt: options.importedAt,
+      sourceIdentity,
+      sourceLocator: source.filePath
     });
   }
 }

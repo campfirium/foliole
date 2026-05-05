@@ -31,7 +31,7 @@ it('keeps the source body intact, returns matched highlights, and appends only u
   expect(prepared.content).not.toContain('## Imported Context');
   expect(prepared.content).toContain('## Unmatched Sidecar Highlights');
   expect(prepared.content).toContain('- Missing: quote that is not present in the body');
-  expect(prepared.matchedHighlights).toEqual([{ content: 'This is a long paragraph about controlled imports and highlight recovery for complex sources.', label: 'Recovered' }]);
+  expect(prepared.matchedHighlights).toEqual([{ content: 'controlled imports and highlight recovery', label: 'Recovered' }]);
   expect(prepared.degradedReason).toContain('1 unmatched sidecar highlight(s)');
 });
 

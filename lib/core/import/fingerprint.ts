@@ -25,6 +25,8 @@ interface CreatePreparedDesktopTextImportInput {
   highlightPolicy?: ImportHighlightPolicy;
   importedAt: string;
   kind: ImportSourceKind;
+  sourceIdentity?: string;
+  sourceLocator?: string;
   sourceProfile?: ImportSourceProfile;
 }
 
@@ -80,9 +82,9 @@ export function createPreparedDesktopTextImport(
     })),
     provider: IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
     sourceProfile: (input.sourceProfile ?? 'default') as PreparedImportSourceProfile,
-    sourceFingerprint: hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, input.filePath),
+    sourceFingerprint: hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, input.sourceIdentity ?? input.filePath),
     sourceKind: input.kind,
-    sourceLocator: input.filePath,
+    sourceLocator: input.sourceLocator ?? input.filePath,
     sourceName: input.fileName
   };
 }

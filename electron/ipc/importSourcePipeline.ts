@@ -106,6 +106,8 @@ export function buildPreparedImportRecord(
     highlightSidecar?: ImportSidecarHighlight[];
     highlightPolicy?: ImportHighlightPolicy;
     importedAt: string;
+    sourceIdentity?: string;
+    sourceLocator?: string;
     sourceProfile?: ImportSourceProfile;
   }
 ): PreparedImportRecord {
@@ -119,6 +121,8 @@ export function buildPreparedImportRecord(
     highlightPolicy: input.highlightPolicy,
     importedAt: input.importedAt,
     kind: source.kind,
+    sourceIdentity: input.sourceIdentity,
+    sourceLocator: input.sourceLocator,
     sourceProfile: input.sourceProfile
   });
 }

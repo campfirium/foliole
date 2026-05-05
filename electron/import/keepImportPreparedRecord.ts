@@ -31,11 +31,12 @@ export async function loadPreparedKeepImportRecord(
   if (config.sourceType === 'readwise') {
     const settings = loadImportManagerSettings();
     const readwiseSource = settings.readwiseSources.find((entry) => entry.id === config.ruleId);
-    if (readwiseSource?.highlightPath.trim()) {
+    if (readwiseSource?.highlightPath.trim() && readwiseSource.kind) {
       return loadPreparedReadwiseImportRecord(source, {
         highlightDirectoryPath: readwiseSource.highlightPath.trim(),
         highlightPolicy: config.highlightPolicy,
         importedAt,
+        kind: readwiseSource.kind,
         readwiseConfig: settings.readwiseReaderConfig
       });
     }

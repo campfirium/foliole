@@ -49,6 +49,7 @@ it('keeps the readwise article title as a level-one heading in imported content'
       highlightDirectoryPath,
       highlightPolicy: 'reference_only',
       importedAt: '2026-03-26T01:00:00.000Z',
+      kind: 'articles',
       readwiseConfig: createDefaultReadwiseReaderConfig()
     }
   );
@@ -102,6 +103,7 @@ it('splits default readwise bullet highlights without requiring a custom starter
       highlightDirectoryPath,
       highlightPolicy: 'reference_only',
       importedAt: '2026-03-27T13:10:00.000Z',
+      kind: 'articles',
       readwiseConfig: createDefaultReadwiseReaderConfig()
     }
   );

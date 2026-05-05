@@ -25,10 +25,12 @@ vi.mock('./managedInboxEvents.js', () => ({
 }));
 
 import { closeDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import {
   readImportedChildRows,
+  readImportedReadwiseSourceRow,
   saveReadwiseKeepImportSettings,
   seedReadwiseArticleFixture
 } from './keepImportReadwiseTestSupport.js';
@@ -131,4 +133,49 @@ it('refreshes the node when only the readwise highlight file changes', async () 
     content: 'After the quote.',
     title: 'After the quote.'
   });
+});
+
+it('keeps the same imported source after the readwise root folder moves', async () => {
+  const fixture = await seedReadwiseArticleFixture(tempRoot);
+  saveReadwiseKeepImportSettings(fixture);
+  await runReadwiseKeepImport(fixture.fullDocumentDir);
+
+  const firstSource = readImportedReadwiseSourceRow();
+  const movedRoot = path.join(tempRoot, 'readwise-moved');
+  await fs.rename(path.join(tempRoot, 'readwise'), movedRoot);
+
+  const movedFixture = {
+    fullDocumentDir: path.join(movedRoot, 'Full Document Contents', 'Articles'),
+    highlightDir: path.join(movedRoot, 'Articles'),
+    readwiseRoot: movedRoot
+  };
+  saveReadwiseKeepImportSettings(movedFixture);
+
+  await fs.writeFile(
+    path.join(movedFixture.highlightDir, 'Sample Article.md'),
+    [
+      '# Sample Article',
+      '',
+      '## Highlights',
+      'This is the highlighted sentence. [...] (https://example.com)',
+      '',
+      'Another matching excerpt. Tags: [[tag-a]] [[tag-b]]',
+      '',
+      'After moving the folder.'
+    ].join('\n'),
+    'utf8'
+  );
+
+  await runReadwiseKeepImport(movedFixture.fullDocumentDir);
+
+  const secondSource = readImportedReadwiseSourceRow();
+  const sourceCount = openDatabaseConnection().sqlite
+    .prepare(`SELECT COUNT(*) AS count FROM import_sources WHERE source_name = 'Sample Article.md'`)
+    .get() as { count: number };
+
+  expect(secondSource.source_fingerprint).toBe(firstSource.source_fingerprint);
+  expect(secondSource.latest_node_id).toBe(firstSource.latest_node_id);
+  expect(secondSource.source_locator).toBe(path.join(movedFixture.fullDocumentDir, 'Sample Article.md'));
+  expect(secondSource.source_locator).not.toBe(firstSource.source_locator);
+  expect(sourceCount.count).toBe(1);
 });

@@ -114,3 +114,20 @@ export function readImportedChildRows() {
     .all(importedNode.latest_node_id) as Array<{ anchor_link: string | null; content: string; title: string }>;
   return { childRows, parentRow };
 }
+
+export function readImportedReadwiseSourceRow() {
+  const connection = openDatabaseConnection();
+  return connection.sqlite
+    .prepare(
+      `SELECT source_fingerprint, source_locator, source_name, latest_node_id, last_content_fingerprint
+       FROM import_sources
+       WHERE source_name = 'Sample Article.md'`
+    )
+    .get() as {
+      last_content_fingerprint: string;
+      latest_node_id: string;
+      source_fingerprint: string;
+      source_locator: string;
+      source_name: string;
+    };
+}
