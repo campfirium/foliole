@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 import {
   buildSyncPackApplyableRowsSql,
   buildSyncPackContentBlobUpsertSql,
+  buildSyncPackExternalDocumentUpsertSql,
   buildSyncPackNodeAttachmentDeleteSql,
   buildSyncPackNodeAttachmentInsertSql,
   buildSyncPackNodeUpsertSql
@@ -18,6 +19,14 @@ it('builds the applyable row filter used by sync pack apply', () => {
   expect(buildSyncPackApplyableRowsSql({ objectType: 'node' })).toContain(
     "AND incoming.object_type = 'node'"
   );
+});
+
+it('builds external document pack apply statement', () => {
+  const sql = buildSyncPackExternalDocumentUpsertSql({ incomingAlias: 'incoming' });
+
+  expect(sql).toContain('INSERT OR REPLACE INTO main.external_documents');
+  expect(sql).toContain('FROM incoming.external_documents');
+  expect(sql).toContain("incoming.object_type = 'external_document'");
 });
 
 it('builds content blob metadata upsert for referenced body blobs', () => {

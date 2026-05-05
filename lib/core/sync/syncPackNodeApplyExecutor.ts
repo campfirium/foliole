@@ -10,6 +10,7 @@ import {
   assertContiguousSyncPackCursor,
   readSyncPackCursorWithDbPort
 } from './syncPackCursor.js';
+import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocumentsExecutor.js';
 import { clearConfirmedSyncPushAcksWithDbPort } from './syncPackPushAcksExecutor.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 
@@ -38,6 +39,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   if (shouldApply) {
     appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
     await applySyncPackNodesWithDbPort(port, options);
+    await applySyncPackExternalDocumentsWithDbPort(port, options);
     appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, options);
   }
   await clearConfirmedSyncPushAcksWithDbPort(port, {

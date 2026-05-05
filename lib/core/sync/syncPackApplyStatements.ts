@@ -78,3 +78,16 @@ export function buildSyncPackContentBlobUpsertSql(options: SyncPackApplyableRows
       objectType: 'external_document'
     })}))`;
 }
+
+export function buildSyncPackExternalDocumentUpsertSql(options: SyncPackApplyableRowsOptions = {}) {
+  const alias = incomingAlias(options);
+  return `INSERT OR REPLACE INTO main.external_documents (` +
+    `document_id, folder_id, relative_path, file_name, extension, source_size_bytes, ` +
+    `source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, ` +
+    `content, indexed_at, is_present, missing_at, created_at, updated_at) ` +
+    `SELECT document_id, folder_id, relative_path, file_name, extension, source_size_bytes, ` +
+    `source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, ` +
+    `content, indexed_at, is_present, missing_at, created_at, updated_at FROM ${alias}.external_documents ` +
+    `WHERE document_id IN (` +
+    `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'external_document' })})`;
+}
