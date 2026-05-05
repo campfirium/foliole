@@ -10,6 +10,7 @@ describe('markdownLineSyntax', () => {
     expect(createLineClass('- Item', false)).toBe('cm-line-list-unordered');
     expect(createLineClass('- [x] Item', false)).toBe('cm-line-list-unordered cm-line-task-list');
     expect(createLineClass('1. Item', false)).toBe('cm-line-list');
+    expect(createLineClass('#tag/sample', false)).toBeNull();
     expect(createLineClass('plain', true)).toBe('cm-line-code');
   });
 });

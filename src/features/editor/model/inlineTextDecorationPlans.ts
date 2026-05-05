@@ -1,12 +1,11 @@
 import {
-  collectClozePlaceholderRanges,
-  collectSemanticMarkPlan,
   collectStrongTextRanges,
   collectStrikethroughTextRanges,
   type SemanticRange
 } from './inlineSemanticMarks';
 
 const INLINE_TOKEN_PATTERN = /(\*\*|__|~~)/g;
+const SOURCE_HIGHLIGHT_PATTERN = /==(.+?)==/g;
 
 export interface InlineCodeDelimiterRange extends SemanticRange {
   contentFrom: number;
@@ -14,13 +13,7 @@ export interface InlineCodeDelimiterRange extends SemanticRange {
 }
 
 export interface InlineTextMarkRange extends SemanticRange {
-  className:
-    | 'cm-md-cloze'
-    | 'cm-md-cloze-placeholder'
-    | 'cm-md-highlight'
-    | 'cm-md-strong'
-    | 'cm-md-strikethrough'
-    | 'cm-md-syntax-visible';
+  className: 'cm-md-source-highlight' | 'cm-md-strong' | 'cm-md-strikethrough' | 'cm-md-syntax-visible';
 }
 
 export interface InlineTextDecorationPlan {
@@ -99,21 +92,39 @@ export function collectStrikethroughTextDecorationPlan(
   };
 }
 
-export function collectSemanticTextDecorationPlan(
+export function collectSourceHighlightDecorationPlan(
   from: number,
   text: string,
-  inCodeBlock: boolean
+  inCodeBlock: boolean,
+  showSyntax: boolean,
+  preservedRanges: ReadonlyArray<SemanticRange>
 ): InlineTextDecorationPlan {
-  return collectSemanticMarkPlan(from, text, inCodeBlock);
-}
+  if (inCodeBlock) {
+    return { markRanges: [], replaceRanges: [] };
+  }
 
-export function collectClozePlaceholderDecorationPlan(from: number, text: string): InlineTextDecorationPlan {
-  return {
-    markRanges: collectClozePlaceholderRanges(from, text).map((range) => ({
-      className: 'cm-md-cloze-placeholder',
-      from: range.from,
-      to: range.to
-    })),
-    replaceRanges: []
-  };
+  const markRanges: InlineTextMarkRange[] = [];
+  const replaceRanges: SemanticRange[] = [];
+  let match = SOURCE_HIGHLIGHT_PATTERN.exec(text);
+
+  while (match) {
+    const start = from + match.index;
+    const end = start + match[0].length;
+    if (!isWithinRanges(start, end, preservedRanges)) {
+      const contentFrom = start + 2;
+      const contentTo = end - 2;
+      markRanges.push({ className: 'cm-md-source-highlight', from: contentFrom, to: contentTo });
+      if (showSyntax) {
+        markRanges.push({ className: 'cm-md-syntax-visible', from: start, to: contentFrom });
+        markRanges.push({ className: 'cm-md-syntax-visible', from: contentTo, to: end });
+      } else {
+        replaceRanges.push({ from: start, to: contentFrom });
+        replaceRanges.push({ from: contentTo, to: end });
+      }
+    }
+    match = SOURCE_HIGHLIGHT_PATTERN.exec(text);
+  }
+
+  SOURCE_HIGHLIGHT_PATTERN.lastIndex = 0;
+  return { markRanges, replaceRanges };
 }

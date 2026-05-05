@@ -72,7 +72,7 @@ describe('liveMarkdown source line plans', () => {
 
     expect(plan.footnoteMatches).toEqual([]);
     expect(plan.inlinePresentationPlans).toHaveLength(3);
-    expect(plan.textDecorationPlans).toHaveLength(3);
+    expect(plan.textDecorationPlans).toHaveLength(2);
     expect(plan.nextInCodeBlock).toBe(false);
   });
 });

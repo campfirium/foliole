@@ -43,6 +43,7 @@ it('uses dedicated selection, highlight, and cloze color tokens', () => {
   expect(cssText).toContain('var(--app-diff-added-surface-color)');
   expect(cssText).toContain('var(--app-diff-removed-surface-color)');
   expect(cssText).toContain('var(--app-accent-color)');
+  expect(cssText).toContain('.cm-md-source-highlight');
   expect(cssText).toContain('.cm-md-strong');
   expect(cssText).toContain('font-weight: 600;');
   expect(cssText).toContain('.cm-md-strikethrough');

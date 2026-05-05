@@ -57,6 +57,9 @@ export const liveMarkdownTheme = EditorView.theme({
     margin: '0.48rem 0 0.32rem',
     textAlign: 'center'
   },
+  '.cm-md-heading-syntax-hidden': {
+    display: 'none'
+  },
   '.cm-md-strong': { fontWeight: '600' },
   '.cm-md-strikethrough': { textDecoration: 'line-through' },
   '.cm-md-inline-code': { backgroundColor: 'rgb(var(--color-foreground) / 0.08)', borderRadius: '0.25rem', fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 0.15rem' },
@@ -91,6 +94,10 @@ export const liveMarkdownTheme = EditorView.theme({
     zIndex: '30'
   },
   '.cm-md-link-text': { color: 'var(--app-accent-color)', cursor: 'pointer', textDecoration: 'underline' },
+  '.cm-md-source-highlight': {
+    backgroundColor: 'rgb(245 194 83 / 0.34)',
+    borderRadius: '0.2rem'
+  },
   '.cm-md-highlight': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: '0.25rem' },
   '.cm-md-cloze': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: '0.25rem' },
   '.cm-md-anchor-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: '0.25rem' },
@@ -105,29 +112,30 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list': { color: 'var(--color-text-secondary)', fontWeight: '500', opacity: '0.95' },
   '.cm-md-prefix-task-list': { display: 'inline-flex', alignItems: 'center', height: '1em', marginRight: '0.1rem', verticalAlign: '-0.08em' },
   '.cm-md-task-checkbox': {
-    border: '1px solid color-mix(in srgb, var(--color-border-strong) 72%, transparent)',
+    border: '1px solid rgb(var(--color-border-strong) / 0.72)',
     borderRadius: '0.2rem',
     boxSizing: 'border-box',
     display: 'inline-block',
-    height: '0.82em',
+    height: '0.86em',
     position: 'relative',
-    width: '0.82em'
+    width: '0.86em'
   },
   '.cm-md-task-checkbox[data-md-task-checked="true"]': {
     backgroundColor: 'var(--app-accent-color)',
     borderColor: 'var(--app-accent-color)'
   },
   '.cm-md-task-checkbox[data-md-task-checked="true"]::after': {
-    borderBottom: '1.5px solid var(--color-bg-elevated)',
-    borderRight: '1.5px solid var(--color-bg-elevated)',
+    borderBottom: '1.5px solid rgb(var(--color-bg-elevated))',
+    borderRight: '1.5px solid rgb(var(--color-bg-elevated))',
     content: '""',
     height: '0.42em',
-    left: '0.25em',
+    left: '0.27em',
     position: 'absolute',
-    top: '0.1em',
+    top: '0.08em',
     transform: 'rotate(42deg)',
     width: '0.22em'
   },
+  '.cm-md-callout-title': { color: 'var(--app-accent-color)', fontWeight: '650' },
   '.cm-md-table-widget': {
     boxSizing: 'border-box',
     marginBottom: '0.45rem',
@@ -136,7 +144,10 @@ export const liveMarkdownTheme = EditorView.theme({
     overflowX: 'auto'
   },
   '.cm-md-table': {
-    borderCollapse: 'collapse',
+    borderBottom: '1.5px solid rgb(var(--color-border-strong) / 0.62)',
+    borderCollapse: 'separate',
+    borderSpacing: '0',
+    borderTop: '1.5px solid rgb(var(--color-border-strong) / 0.62)',
     fontSize: '0.94em',
     lineHeight: '1.45',
     minWidth: '100%',
@@ -144,17 +155,20 @@ export const liveMarkdownTheme = EditorView.theme({
     width: 'max-content'
   },
   '.cm-md-table-cell': {
-    border: '1px solid color-mix(in srgb, var(--color-border-strong) 42%, transparent)',
+    border: '0',
+    borderBottom: '1px solid rgb(var(--color-border) / 0.42)',
     maxWidth: '24rem',
-    padding: '0.34rem 0.52rem',
+    padding: '0.38rem 0.58rem',
     textAlign: 'left',
     verticalAlign: 'top',
     whiteSpace: 'normal'
   },
   '.cm-md-table-row-header .cm-md-table-cell': {
     backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--color-bg-subtle)) 84%, var(--color-foreground) 6%)',
+    borderBottom: '1.5px solid rgb(var(--color-border-strong) / 0.62)',
     fontWeight: '650'
   },
+  '.cm-md-table-row:last-child .cm-md-table-cell': { borderBottom: '0' },
   '.cm-md-image-widget': { maxWidth: '100%' },
   '.cm-md-image-widget-block': {
     display: 'flex',

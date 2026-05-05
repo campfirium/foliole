@@ -5,17 +5,14 @@ import {
   collectInlineLinkMatches,
   collectWikiLinkMatches,
   type AutolinkMatch,
-  toRangeBounds,
   type FootnoteMatch,
   type InlineCodeMatch,
   type InlineLinkMatch,
   type RangeBounds,
   type WikiLinkMatch
 } from './inlineMarkdownMatches';
-import { collectClozePlaceholderRanges } from './inlineSemanticMarks';
 
 export interface MarkdownLineMatchState {
-  clozePlaceholderRanges: RangeBounds[];
   footnoteRanges: RangeBounds[];
   imageMatches: RangeBounds[];
   autolinkMatches: AutolinkMatch[];
@@ -32,10 +29,9 @@ export function collectPreviewLineMatchState(
   inCodeBlock: boolean,
   imageMatches: RangeBounds[]
 ): MarkdownLineMatchState {
-  const clozePlaceholderRanges = toRangeBounds(collectClozePlaceholderRanges(lineFrom, lineText));
   const inlineCodeMatches = inCodeBlock ? [] : collectInlineCodeMatches(lineFrom, lineText);
   const inlineCodeRanges = inlineCodeMatches.map((match) => ({ from: match.from, to: match.to }));
-  const preservedRanges = clozePlaceholderRanges.concat(imageMatches, inlineCodeRanges);
+  const preservedRanges = imageMatches.concat(inlineCodeRanges);
   const footnoteMatches = inCodeBlock ? [] : collectFootnoteMatches(lineFrom, lineText, preservedRanges);
   const footnoteRanges = footnoteMatches.map((match) => ({ from: match.from, to: match.to }));
   const linkPreservedRanges = preservedRanges.concat(footnoteRanges);
@@ -48,7 +44,6 @@ export function collectPreviewLineMatchState(
 
   return {
     autolinkMatches,
-    clozePlaceholderRanges,
     footnoteRanges,
     imageMatches,
     inlineCodeMatches,
@@ -64,9 +59,8 @@ export function collectSourceLineMatchState(
   lineText: string,
   inCodeBlock: boolean
 ): MarkdownLineMatchState {
-  const clozePlaceholderRanges = toRangeBounds(collectClozePlaceholderRanges(lineFrom, lineText));
   const inlineCodeMatches = inCodeBlock ? [] : collectInlineCodeMatches(lineFrom, lineText);
-  const preservedRanges = clozePlaceholderRanges.concat(inlineCodeMatches.map((match) => ({ from: match.from, to: match.to })));
+  const preservedRanges = inlineCodeMatches.map((match) => ({ from: match.from, to: match.to }));
   const footnoteMatches = inCodeBlock ? [] : collectFootnoteMatches(lineFrom, lineText, preservedRanges);
   const footnoteRanges = footnoteMatches.map((match) => ({ from: match.from, to: match.to }));
   const linkPreservedRanges = preservedRanges.concat(footnoteRanges);
@@ -79,7 +73,6 @@ export function collectSourceLineMatchState(
 
   return {
     autolinkMatches,
-    clozePlaceholderRanges,
     footnoteRanges,
     imageMatches: [],
     inlineCodeMatches,

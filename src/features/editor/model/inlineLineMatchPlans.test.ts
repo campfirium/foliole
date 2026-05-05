@@ -9,7 +9,6 @@ describe('inlineLineMatchPlans', () => {
     ]);
 
     expect(state.preservedRanges).toEqual([
-      { from: 45, to: 50 },
       { from: 0, to: 11 },
       { from: 12, to: 18 }
     ]);
@@ -20,13 +19,13 @@ describe('inlineLineMatchPlans', () => {
 
   it('skips inline-only collectors inside code blocks in source mode', () => {
     expect(collectSourceLineMatchState(0, '`x` ^[1] [a](b) [[Node]] [...]', true)).toEqual({
-      clozePlaceholderRanges: [{ from: 25, to: 30 }],
+      autolinkMatches: [],
       footnoteRanges: [],
       imageMatches: [],
       inlineCodeMatches: [],
       inlineLinkMatches: [],
       wikiLinkMatches: [],
-      preservedRanges: [{ from: 25, to: 30 }],
+      preservedRanges: [],
       footnoteMatches: []
     });
   });

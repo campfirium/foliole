@@ -60,7 +60,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const startLine = view.state.doc.line(startLineNumber);
   const endLine = view.state.doc.line(endLineNumber);
   const tablePlans = collectMarkdownTablePlans({
-    activePosition: context.activePosition,
+    activePosition: null,
     anchorDecorations: getTextAnchorDecorations(view),
     from: startLine.from,
     text: view.state.sliceDoc(startLine.from, endLine.to)
@@ -84,7 +84,9 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
       addImageDecorations(ranges, plan.imageMatches, false, context.nodeId, context.imageClozePresentationVersion);
     }
 
-    if (plan.prefixVisible) addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine);
+    if (plan.prefixVisible) {
+      addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, { forceHideHeadingSyntax: true });
+    }
     addCodeFenceDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine);
     addFootnoteDecorations(ranges, plan.footnoteMatches);
     for (const inlinePlan of plan.inlinePresentationPlans) applyInlinePresentationPlan(ranges, inlinePlan);

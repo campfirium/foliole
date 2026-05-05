@@ -46,7 +46,9 @@ describe('inlineMarkdownMatches', () => {
       { from: 28, href: 'https://ok.test', to: 43 }
     ]);
   });
+});
 
+describe('wiki and footnote markdown matches', () => {
   it('collects wiki links with trimmed titles', () => {
     expect(collectWikiLinkMatches(10, '[[ Alpha ]]', [])).toEqual([
       {
@@ -61,6 +63,26 @@ describe('inlineMarkdownMatches', () => {
         title: 'Alpha'
       }
     ]);
+  });
+
+  it('collects wiki links with aliases as the visible label', () => {
+    expect(collectWikiLinkMatches(0, '[[Folder/Beta note|Beta alias]]', [])).toEqual([
+      {
+        from: 0,
+        to: 31,
+        hiddenRanges: [
+          { from: 0, to: 19 },
+          { from: 29, to: 31 }
+        ],
+        labelFrom: 19,
+        labelTo: 29,
+        title: 'Folder/Beta note'
+      }
+    ]);
+  });
+
+  it('does not collect Obsidian embeds as wiki links', () => {
+    expect(collectWikiLinkMatches(0, '![[image.png]]', [])).toEqual([]);
   });
 
   it('collects and unescapes footnotes outside preserved ranges', () => {

@@ -58,6 +58,19 @@ describe('liveMarkdown inline rendering', () => {
     adapter.destroy();
   });
 
+  it('renders source highlight separately from Foliole anchor decorations', () => {
+    const host = createHost();
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: '==highlight== {{cloze}} [...]' });
+
+    expect(host.querySelector('.cm-md-source-highlight')?.textContent).toBe('highlight');
+    expect(host.querySelector('.cm-md-highlight')).toBeNull();
+    expect(host.querySelector('.cm-md-cloze')).toBeNull();
+    expect(host.querySelector('.cm-md-cloze-placeholder')).toBeNull();
+    expect(host.querySelector('.cm-content')?.textContent).toBe('highlight {{cloze}} [...]');
+
+    adapter.destroy();
+  });
+
   it('routes GFM autolinks through the in-app link handler', () => {
     const host = createHost();
     const onOpenExternalLink = vi.fn();
@@ -88,6 +101,37 @@ describe('liveMarkdown inline rendering', () => {
     expect(host.querySelectorAll('.cm-md-task-checkbox[data-md-task-checked="true"]')).toHaveLength(1);
     expect(host.querySelector('.cm-content')?.textContent).toContain('Done');
     expect(host.querySelector('.cm-content')?.textContent).not.toContain('[x]');
+
+    adapter.destroy();
+  });
+});
+
+describe('liveMarkdown block rendering', () => {
+  it('hides heading markers in preview even on the cursor line', () => {
+    setMarkdownSyntaxVisibility('visible');
+    const host = createHost();
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: '# Title\n\n## Section' });
+
+    adapter.setSelection({ from: 1, to: 1 });
+
+    expect(host.querySelectorAll('.cm-md-heading-syntax-hidden')).toHaveLength(2);
+    expect(host.querySelector('.cm-line-h1 .cm-md-heading-syntax-hidden')?.textContent).toBe('# ');
+    expect(host.querySelector('.cm-line-h2 .cm-md-heading-syntax-hidden')?.textContent).toBe('## ');
+
+    adapter.destroy();
+  });
+
+  it('renders wiki aliases, callout labels, and plain Obsidian tags', () => {
+    const host = createHost();
+    const adapter = new CodeMirrorEditorAdapter(host, {
+      initialContent: '[[Folder/Beta note|Beta alias]]\n\n> [!note]\n> Callout body.\n\n#tag/sample'
+    });
+
+    expect(host.querySelector('[data-md-link-node-title="Folder/Beta note"]')?.textContent).toBe('Beta alias');
+    expect(host.querySelector('.cm-md-callout-title')?.textContent).toBe('Note');
+    expect(host.querySelector('.cm-content')?.textContent).not.toContain('[!note]');
+    expect(host.querySelector('.cm-content')?.textContent).toContain('#tag/sample');
+    expect(host.querySelector('.cm-line-h1')?.textContent ?? '').not.toContain('#tag/sample');
 
     adapter.destroy();
   });

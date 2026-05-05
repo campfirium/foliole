@@ -5,11 +5,12 @@ import { CODE_FENCE_PATTERN } from '../model/markdownLineSyntax';
 
 const HEADING_PREFIX_PATTERN = /^\s*#{1,6}(?:\s+|$)/;
 const QUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
+const CALLOUT_PREFIX_PATTERN = /^(\[!([A-Za-z][\w-]*)\]\s*)/;
 const TASK_LIST_PREFIX_PATTERN = /^(\s*[-*+]\s+\[)([ xX])(\]\s+)/;
 const UNORDERED_LIST_PREFIX_PATTERN = /^(\s*[-*+]\s+)/;
 const ORDERED_LIST_PREFIX_PATTERN = /^(\s*)(\d+)([.)])(\s+)/;
 
-type PrefixWidgetKind = 'quote' | 'unordered-list' | 'ordered-list' | 'task-list';
+type PrefixWidgetKind = 'quote' | 'unordered-list' | 'ordered-list' | 'task-list' | 'callout';
 
 interface PrefixWidgetMatch {
   checked?: boolean;
@@ -43,16 +44,17 @@ export function addPrefixDecoration(
   ranges: Range<Decoration>[],
   from: number,
   text: string,
-  showSyntax: boolean
+  showSyntax: boolean,
+  options: { forceHideHeadingSyntax?: boolean } = {}
 ) {
   const headingPrefixMatch = text.match(HEADING_PREFIX_PATTERN);
   if (headingPrefixMatch) {
     const prefixLength = headingPrefixMatch[0].length;
-    if (showSyntax) {
+    if (showSyntax && options.forceHideHeadingSyntax !== true) {
       addMark(ranges, from, from + prefixLength, 'cm-md-syntax-visible');
       return;
     }
-    addReplace(ranges, from, from + prefixLength);
+    addMark(ranges, from, from + prefixLength, 'cm-md-heading-syntax-hidden');
     return;
   }
 
@@ -66,6 +68,16 @@ export function addPrefixDecoration(
 
   const innerFrom = from + quotePrefixLength;
   const innerText = text.slice(quotePrefixLength);
+  const calloutPrefixMatch = collectCalloutPrefixMatch(innerFrom, innerText);
+  if (calloutPrefixMatch) {
+    if (showSyntax) {
+      addMark(ranges, calloutPrefixMatch.from, calloutPrefixMatch.to, 'cm-md-syntax-visible');
+    } else {
+      addPrefixWidget(ranges, calloutPrefixMatch);
+    }
+    return;
+  }
+
   const widgetPrefixMatch = collectPrefixWidgetMatch(innerFrom, innerText);
   if (!widgetPrefixMatch) return;
   if (showSyntax) {
@@ -73,6 +85,14 @@ export function addPrefixDecoration(
     return;
   }
   addPrefixWidget(ranges, widgetPrefixMatch);
+}
+
+function collectCalloutPrefixMatch(from: number, text: string): PrefixWidgetMatch | null {
+  const match = text.match(CALLOUT_PREFIX_PATTERN);
+  if (!match) return null;
+  const prefix = match[1] ?? '';
+  const kind = match[2] ?? 'note';
+  return { from, to: from + prefix.length, kind: 'callout', markerText: formatCalloutLabel(kind) };
 }
 
 export function addCodeFenceDecoration(
@@ -142,6 +162,9 @@ class PrefixWidget extends WidgetType {
       marker.append(createTaskCheckboxElement(this.checked), document.createTextNode(' '));
       return marker;
     }
+    if (this.kind === 'callout') {
+      marker.classList.add('cm-md-callout-title');
+    }
     marker.textContent = this.markerText;
     return marker;
   }
@@ -161,4 +184,8 @@ function createTaskCheckboxElement(checked: boolean) {
   checkbox.className = 'cm-md-task-checkbox';
   checkbox.dataset.mdTaskChecked = checked ? 'true' : 'false';
   return checkbox;
+}
+
+function formatCalloutLabel(kind: string) {
+  return `${kind.slice(0, 1).toUpperCase()}${kind.slice(1).toLowerCase()}`;
 }

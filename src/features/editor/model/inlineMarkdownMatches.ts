@@ -162,21 +162,22 @@ export function collectWikiLinkMatches(
   let match = WIKI_LINK_PATTERN.exec(text);
   while (match) {
     const start = from + match.index;
-    const title = (match[1] ?? '').trim();
+    const rawTitle = match[1] ?? '';
+    const aliasDelimiterIndex = rawTitle.indexOf('|');
+    const title = (aliasDelimiterIndex >= 0 ? rawTitle.slice(0, aliasDelimiterIndex) : rawTitle).trim();
     const linkTo = start + (match[0]?.length ?? 0);
-    const labelFrom = start + 2;
-    const labelTo = linkTo - 2;
+    const labelBounds = resolveWikiLinkLabelBounds(start + 2, rawTitle, aliasDelimiterIndex, linkTo - 2);
 
     if (title && !isWithinRanges(start, linkTo, preservedRanges)) {
       matches.push({
         from: start,
         to: linkTo,
         hiddenRanges: [
-          { from: start, to: start + 2 },
+          { from: start, to: labelBounds.from },
           { from: linkTo - 2, to: linkTo }
         ],
-        labelFrom,
-        labelTo,
+        labelFrom: labelBounds.from,
+        labelTo: labelBounds.to,
         title
       });
     }
@@ -184,6 +185,21 @@ export function collectWikiLinkMatches(
   }
   WIKI_LINK_PATTERN.lastIndex = 0;
   return matches;
+}
+
+function resolveWikiLinkLabelBounds(innerFrom: number, rawTitle: string, aliasDelimiterIndex: number, fallbackTo: number) {
+  if (aliasDelimiterIndex < 0) {
+    return { from: innerFrom, to: fallbackTo };
+  }
+
+  const rawAlias = rawTitle.slice(aliasDelimiterIndex + 1);
+  const leadingWhitespace = rawAlias.length - rawAlias.trimStart().length;
+  const trailingWhitespace = rawAlias.length - rawAlias.trimEnd().length;
+  const labelFrom = innerFrom + aliasDelimiterIndex + 1 + leadingWhitespace;
+  return {
+    from: labelFrom,
+    to: Math.max(labelFrom, fallbackTo - trailingWhitespace)
+  };
 }
 
 export function collectFootnoteMatches(

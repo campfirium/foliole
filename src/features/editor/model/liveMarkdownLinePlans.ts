@@ -7,10 +7,9 @@ import {
   type InlinePresentationPlan
 } from './inlinePresentationPlans';
 import {
-  collectClozePlaceholderDecorationPlan,
   collectInlineCodeSyntaxDecorationPlan,
   collectInlineTokenDecorationPlan,
-  collectSemanticTextDecorationPlan,
+  collectSourceHighlightDecorationPlan,
   collectStrongTextDecorationPlan,
   collectStrikethroughTextDecorationPlan,
   type InlineTextDecorationPlan
@@ -36,6 +35,29 @@ export interface SourceLineDecorationPlan {
   inlinePresentationPlans: InlinePresentationPlan[];
   nextInCodeBlock: boolean;
   textDecorationPlans: InlineTextDecorationPlan[];
+}
+
+function collectPreviewTextDecorationPlans(args: {
+  footnoteRanges: ReturnType<typeof collectPreviewLineMatchState>['footnoteRanges'];
+  inCodeBlock: boolean;
+  lineFrom: number;
+  lineText: string;
+  preservedRanges: ReturnType<typeof collectPreviewLineMatchState>['preservedRanges'];
+  showSyntaxOnLine: boolean;
+}): InlineTextDecorationPlan[] {
+  const preservedRanges = args.preservedRanges.concat(args.footnoteRanges);
+  return [
+    collectInlineTokenDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock, args.showSyntaxOnLine, preservedRanges),
+    collectStrongTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
+    collectStrikethroughTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
+    collectSourceHighlightDecorationPlan(
+      args.lineFrom,
+      args.lineText,
+      args.inCodeBlock,
+      args.showSyntaxOnLine,
+      preservedRanges
+    )
+  ];
 }
 
 export function collectPreviewLineDecorationPlan(args: {
@@ -82,19 +104,14 @@ export function collectPreviewLineDecorationPlan(args: {
     nextInCodeBlock: isCodeFenceLine ? !args.inCodeBlock : args.inCodeBlock,
     prefixVisible: !args.inCodeBlock || isCodeFenceLine,
     showSyntaxOnLine,
-    textDecorationPlans: [
-      collectInlineTokenDecorationPlan(
-        args.lineFrom,
-        args.lineText,
-        args.inCodeBlock,
-        showSyntaxOnLine,
-        preservedRanges.concat(footnoteRanges)
-      ),
-      collectStrongTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
-      collectStrikethroughTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
-      collectSemanticTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
-      collectClozePlaceholderDecorationPlan(args.lineFrom, args.lineText)
-    ]
+    textDecorationPlans: collectPreviewTextDecorationPlans({
+      footnoteRanges,
+      inCodeBlock: args.inCodeBlock,
+      lineFrom: args.lineFrom,
+      lineText: args.lineText,
+      preservedRanges,
+      showSyntaxOnLine
+    })
   };
 }
 
@@ -124,8 +141,7 @@ export function collectSourceLineDecorationPlan(args: {
     nextInCodeBlock: isCodeFenceLine ? !args.inCodeBlock : args.inCodeBlock,
     textDecorationPlans: [
       collectInlineCodeSyntaxDecorationPlan(inlineCodeMatches),
-      collectInlineTokenDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock, true, preservedRanges.concat(footnoteRanges)),
-      collectClozePlaceholderDecorationPlan(args.lineFrom, args.lineText)
+      collectInlineTokenDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock, true, preservedRanges.concat(footnoteRanges))
     ]
   };
 }

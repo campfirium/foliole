@@ -37,6 +37,20 @@ function createWikiLinkMatch() {
   };
 }
 
+function createAliasedWikiLinkMatch() {
+  return {
+    from: 0,
+    to: 31,
+    labelFrom: 19,
+    labelTo: 29,
+    hiddenRanges: [
+      { from: 0, to: 19 },
+      { from: 29, to: 31 }
+    ],
+    title: 'Folder/Beta note'
+  };
+}
+
 describe('inlinePresentationPlans', () => {
   it('builds inline code marks and hidden delimiters', () => {
     expect(
@@ -67,7 +81,9 @@ describe('inlinePresentationPlans', () => {
       replaceRanges: []
     });
   });
+});
 
+describe('wiki and autolink presentation plans', () => {
   it('builds wiki link label marks with node title attributes', () => {
     expect(collectWikiLinkPresentationPlan([createWikiLinkMatch()], false)).toEqual({
       markRanges: [
@@ -81,6 +97,23 @@ describe('inlinePresentationPlans', () => {
       replaceRanges: [
         { from: 2, to: 4 },
         { from: 8, to: 10 }
+      ]
+    });
+  });
+
+  it('builds aliased wiki links with only the alias visible', () => {
+    expect(collectWikiLinkPresentationPlan([createAliasedWikiLinkMatch()], false)).toEqual({
+      markRanges: [
+        {
+          className: 'cm-md-link-text',
+          from: 19,
+          to: 29,
+          attributes: { 'data-md-link-node-title': 'Folder/Beta note' }
+        }
+      ],
+      replaceRanges: [
+        { from: 0, to: 19 },
+        { from: 29, to: 31 }
       ]
     });
   });

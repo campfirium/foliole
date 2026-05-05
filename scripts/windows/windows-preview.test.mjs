@@ -324,6 +324,44 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
+  it('chooses full restart when committed runtime changes and renderer source changes are both pending', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "full-restart" ]; then',
+          '  echo "[windows-restart-client] status: RESTARTED mode=full-shell-restart shell_pid=101 runtime_pid=202"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/features/editor/adapters/liveMarkdownTheme.ts',
+        WINDOWS_PREVIEW_COMMITTED_ELECTRON_CHANGES: '1',
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('reason: Class D: runtime behind committed electron changes with renderer changes');
+      expect(result.stdout).toContain('selected action: full-restart');
+      expect(result.stdout).toContain('status: STARTED');
+      expect(await readActions(actionLog)).toEqual(['status', 'full-restart']);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('chooses restart-intent for Class B working tree electron changes', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'restart');
@@ -402,7 +440,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
-        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx',
+        WINDOWS_PREVIEW_CHANGED_FILES: 'electron/ipc/commands.test.ts',
         WINDOWS_PREVIEW_CURRENT_HEAD: 'new-head',
         WINDOWS_PREVIEW_COMMITTED_ELECTRON_CHANGES: 'electron/main.ts'
       });

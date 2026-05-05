@@ -275,6 +275,27 @@ has_runtime_code_changes() {
   return 1
 }
 
+is_renderer_source_file() {
+  local file="$1"
+  if ! echo "${file}" | grep -qE '^(src/app/|src/features/|src/shared/|src/store/)'; then
+    return 1
+  fi
+  if echo "${file}" | grep -qE '\.(test|spec)\.(ts|tsx|mjs|js)$'; then
+    return 1
+  fi
+  return 0
+}
+
+has_renderer_source_changes() {
+  local changed_files="$1"
+  while IFS= read -r file; do
+    if is_renderer_source_file "${file}"; then
+      return 0
+    fi
+  done <<< "${changed_files}"
+  return 1
+}
+
 ensure_fresh_electron_dist() {
   local freshness_output=""
   local freshness_exit=0
@@ -365,11 +386,21 @@ select_update_action() {
       return 0
     fi
     if has_runtime_code_changes "${changed_files}"; then
+      if has_renderer_source_changes "${changed_files}"; then
+        SELECTED_ACTION="full-restart"
+        SELECTED_REASON="Class D: working tree runtime and renderer changes require shell restart"
+        return 0
+      fi
       SELECTED_ACTION="restart-intent"
       SELECTED_REASON="Class B: working tree electron changes detected"
       return 0
     fi
     if has_committed_electron_changes_since "${runtime_head}"; then
+      if has_renderer_source_changes "${changed_files}"; then
+        SELECTED_ACTION="full-restart"
+        SELECTED_REASON="Class D: runtime behind committed electron changes with renderer changes"
+        return 0
+      fi
       SELECTED_ACTION="restart-intent"
       SELECTED_REASON="Class B: runtime behind committed electron changes"
       return 0

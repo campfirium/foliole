@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  collectClozePlaceholderDecorationPlan,
   collectInlineCodeSyntaxDecorationPlan,
   collectInlineTokenDecorationPlan,
+  collectSourceHighlightDecorationPlan,
   collectStrikethroughTextDecorationPlan
 } from './inlineTextDecorationPlans';
 
@@ -42,17 +42,20 @@ describe('inlineTextDecorationPlans', () => {
     });
   });
 
-  it('maps cloze placeholders into mark ranges', () => {
-    expect(collectClozePlaceholderDecorationPlan(5, 'A [...] B')).toEqual({
-      markRanges: [{ className: 'cm-md-cloze-placeholder', from: 7, to: 12 }],
-      replaceRanges: []
-    });
-  });
-
   it('marks strikethrough content ranges', () => {
     expect(collectStrikethroughTextDecorationPlan(0, 'A ~~gone~~ item', false)).toEqual({
       markRanges: [{ className: 'cm-md-strikethrough', from: 4, to: 8 }],
       replaceRanges: []
+    });
+  });
+
+  it('marks source highlight with separate preview styling', () => {
+    expect(collectSourceHighlightDecorationPlan(0, 'A ==marked== word', false, false, [])).toEqual({
+      markRanges: [{ className: 'cm-md-source-highlight', from: 4, to: 10 }],
+      replaceRanges: [
+        { from: 2, to: 4 },
+        { from: 10, to: 12 }
+      ]
     });
   });
 });

@@ -32,14 +32,14 @@ describe('live markdown table rendering', () => {
     adapter.destroy();
   });
 
-  it('returns the active table block to markdown source editing', () => {
+  it('keeps the table preview visible when the cursor is inside the table', () => {
     const { adapter, host } = createAdapterHost('| A | B |\n| --- | --- |\n| 1 | 2 |');
 
     adapter.focus();
     adapter.setSelection({ from: 2, to: 2 });
 
-    expect(host.querySelector('.cm-md-table-widget')).toBeNull();
-    expect(host.querySelector('.cm-content')?.textContent).toContain('| --- | --- |');
+    expect(host.querySelector('.cm-md-table-widget')).not.toBeNull();
+    expect(host.querySelector('.cm-content')?.textContent).not.toContain('| --- | --- |');
 
     adapter.destroy();
   });
