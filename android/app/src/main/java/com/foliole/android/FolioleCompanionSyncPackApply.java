@@ -43,7 +43,7 @@ final class FolioleCompanionSyncPackApply {
                     upsertNodes(database);
                     replaceNodeAttachments(database);
                     upsertExternalDocuments(database);
-                    upsertSyncObjects(database);
+                    upsertSyncObjects(database, deviceId);
                     appliedObjects = upsertStateRows(database, deviceId);
                     clearConfirmedPushAcks(database);
                 }
@@ -147,7 +147,7 @@ final class FolioleCompanionSyncPackApply {
         );
     }
 
-    private static void upsertSyncObjects(SQLiteDatabase database) throws Exception {
+    private static void upsertSyncObjects(SQLiteDatabase database, String deviceId) throws Exception {
         try (Cursor cursor = database.rawQuery(
             "SELECT object_type, object_id, content_hash, payload_json, updated_at, deleted_at FROM inc.sync_objects incoming " +
                 "WHERE EXISTS (SELECT 1 FROM " + applyableStateRowsSql(null) + " state " +
@@ -163,7 +163,9 @@ final class FolioleCompanionSyncPackApply {
                 record.put("payload_json", cursor.isNull(3) ? JSONObject.NULL : cursor.getString(3));
                 record.put("updated_at", cursor.getString(4));
                 record.put("deleted_at", cursor.isNull(5) ? JSONObject.NULL : cursor.getString(5));
-                FolioleCompanionSyncObjectApply.applyPayload(database, record);
+                if (isConsumableSyncObject(cursor.getString(0), cursor.getString(1), deviceId)) {
+                    FolioleCompanionSyncObjectApply.applyPayload(database, record);
+                }
             }
         }
     }
@@ -171,10 +173,10 @@ final class FolioleCompanionSyncPackApply {
     private static int upsertStateRows(SQLiteDatabase database, String deviceId) {
         int count = 0;
         try (Cursor cursor = database.rawQuery(
-            "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM " +
+                "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM " +
                 applyableStateRowsSql(null) + " WHERE object_type IN (" +
                 "'attachment', 'external_folder', 'import_source', 'node', 'external_document', " +
-                "'node_reading', 'node_review', 'setting') ORDER BY state_seq ASC",
+                "'node_reading', 'node_review', 'setting', 'view_state') ORDER BY state_seq ASC",
             null
         )) {
             while (cursor.moveToNext()) {
@@ -193,6 +195,14 @@ final class FolioleCompanionSyncPackApply {
             }
         }
         return count;
+    }
+
+    private static boolean isConsumableSyncObject(String objectType, String objectId, String deviceId) {
+        if (!objectType.equals("view_state")) {
+            return true;
+        }
+        String[] parts = objectId.split(":", 5);
+        return parts.length == 5 && parts[1].equals("android") && parts[3].equals(deviceId);
     }
 
     private static void clearConfirmedPushAcks(SQLiteDatabase database) {

@@ -186,6 +186,25 @@ public class FolioleCompanionSyncPackApplyTest {
         ));
     }
 
+    @Test
+    public void carriesViewStateRowsButOnlyConsumesCurrentAndroidDevicePayloads() throws Exception {
+        createIncomingPack();
+        appendIncomingViewStateRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(3, result.getInt("applied_object_count"));
+        assertEquals("node-1", selectString("SELECT value FROM workspace_meta WHERE key = 'active_node_id'"));
+        assertEquals("view-android-hash", selectString(
+            "SELECT content_hash FROM sync_object_state " +
+            "WHERE object_type = 'view_state' AND object_id = 'session_resume:android:phone:android-test:active_node'"
+        ));
+        assertEquals("view-windows-hash", selectString(
+            "SELECT content_hash FROM sync_object_state " +
+            "WHERE object_type = 'view_state' AND object_id = 'session_resume:windows:desktop:desktop-test:active_node'"
+        ));
+    }
+
     private void createMainSchema() {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
@@ -241,6 +260,12 @@ public class FolioleCompanionSyncPackApplyTest {
             "source_fingerprint TEXT PRIMARY KEY, provider TEXT NOT NULL, source_kind TEXT NOT NULL, " +
             "source_name TEXT NOT NULL, source_locator TEXT NOT NULL, first_imported_at TEXT NOT NULL, " +
             "last_imported_at TEXT NOT NULL, last_content_fingerprint TEXT NOT NULL, latest_node_id TEXT)");
+        mainDatabase.execSQL("CREATE TABLE workspace_meta (" +
+            "key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL)");
+        mainDatabase.execSQL("CREATE TABLE node_view_state (" +
+            "node_id TEXT NOT NULL, device_id TEXT NOT NULL, scroll_top INTEGER NOT NULL DEFAULT 0, " +
+            "selection_from INTEGER, selection_to INTEGER, source TEXT NOT NULL DEFAULT 'restore', " +
+            "updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
     }
 
     private void createIncomingPack() {
@@ -401,6 +426,32 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("INSERT INTO sync_object_state (" +
                 "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
                 "'import_source', 'source-1', 2, 'import-source-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
+    private void appendIncomingViewStateRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String now = "2026-04-27T00:10:00.000Z";
+            String androidObjectId = "session_resume:android:phone:android-test:active_node";
+            String windowsObjectId = "session_resume:windows:desktop:desktop-test:active_node";
+            String androidPayload = "{\"active_node_id\":\"node-1\"}";
+            String windowsPayload = "{\"active_node_id\":\"node-windows\"}";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":3}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("INSERT INTO sync_objects (" +
+                "object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (" +
+                "'view_state', '" + androidObjectId + "', 'view-android-hash', '" + androidPayload + "', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_objects (" +
+                "object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (" +
+                "'view_state', '" + windowsObjectId + "', 'view-windows-hash', '" + windowsPayload + "', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'view_state', '" + androidObjectId + "', 2, 'view-android-hash', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'view_state', '" + windowsObjectId + "', 3, 'view-windows-hash', '" + now + "', NULL)");
         } finally {
             packDatabase.close();
         }

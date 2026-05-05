@@ -32,7 +32,8 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'import_source',
   'node_reading',
   'node_review',
-  'setting'
+  'setting',
+  'view_state'
 ]);
 
 export function isSyncPackObjectType(value: string): value is SyncPackObjectType {
