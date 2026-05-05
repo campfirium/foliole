@@ -64,7 +64,7 @@ function interestingAccessLines(filePath) {
     .readFileSync(filePath, 'utf8')
     .split(/\r?\n/)
     .map((line, index) => ({ file: relativeFile(filePath), line: index + 1, text: line.trim() }))
-    .filter((entry) => /\bdatabase\.(?:rawQuery|query)\(|\.compileStatement\(/.test(entry.text));
+    .filter((entry) => /\bdatabase\.(?:rawQuery|query|execSQL)\(|\.compileStatement\(/.test(entry.text));
 }
 
 function directNamedQueryLines(filePath) {
@@ -90,7 +90,11 @@ function isAllowedAccessLine(entry) {
     return entry.text.includes('database.rawQuery(sql, args)');
   }
   if (entry.file === 'FolioleCompanionNamedMutationStore.java') {
-    return entry.text.includes('database.compileStatement(statement(context, statementName))');
+    return entry.text.includes('database.compileStatement(statement(context, statementName))') ||
+      entry.text.includes('database.execSQL(statement(context,');
+  }
+  if (entry.file === 'FolioleCompanionSchemaInstaller.java') {
+    return entry.text.includes('database.execSQL(statement)');
   }
   return entry.file === 'FolioleCompanionSqliteRuntime.java';
 }
