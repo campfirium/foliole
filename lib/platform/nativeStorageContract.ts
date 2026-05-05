@@ -1,3 +1,5 @@
+import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
+
 import type { NativeSchedulerCard } from './nativeContract.js';
 
 export interface NativeWorkspaceAnchorLink {
@@ -43,6 +45,7 @@ export interface NativeReviewSchedulerSettings {
   maximumIntervalDays: number;
   enableFuzz: boolean;
   enableShortTerm: boolean;
+  pushQueue: UnifiedPushQueueRules;
   updatedAt: string;
 }
 

@@ -211,3 +211,39 @@ it('preserves previously loaded values during partial saves', async () => {
     })
   );
 });
+
+it('rehydrates persisted push queue rules after saving and restarting settings state', async () => {
+  const persistedSettings = createExpectedSavedSettings({
+    desiredRetention: 0.81,
+    pushQueue: {
+      defaultPriority: 4,
+      priorityRatio: 8,
+      queueMixRatio: { reading: 2, fsrs: 3 },
+      readingInitialIntervalMs: 2 * 24 * 60 * 60 * 1000,
+      readingIntervalGrowthFactorRange: { min: 1.12, max: 1.41 }
+    },
+    updatedAt: '2026-03-14T03:00:00.000Z'
+  });
+  const invoke = createInvokeSequence(
+    createSettings({
+      updatedAt: '2026-03-14T02:00:00.000Z'
+    }),
+    persistedSettings,
+    persistedSettings
+  );
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  await saveReviewSchedulerSettings({
+    desiredRetention: 0.81,
+    pushQueue: {
+      defaultPriority: 4,
+      priorityRatio: 8,
+      queueMixRatio: { reading: 2, fsrs: 3 },
+      readingInitialIntervalMs: 2 * 24 * 60 * 60 * 1000,
+      readingIntervalGrowthFactorRange: { min: 1.12, max: 1.41 }
+    }
+  });
+
+  await expect(loadReviewSchedulerSettings()).resolves.toEqual(persistedSettings);
+  expect(getCurrentReviewSchedulerSettings()).toEqual(persistedSettings);
+});
