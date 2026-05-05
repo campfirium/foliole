@@ -16,6 +16,7 @@ vi.mock('../../shared/platform/bridge', () => ({
 
 const mockSetSelection = vi.fn();
 const mockRevealSelection = vi.fn();
+const mockRestoreSelection = vi.fn();
 
 vi.mock('../../features/editor/adapters/CodeMirrorEditorAdapter', () => ({
   CodeMirrorEditorAdapter: class {
@@ -38,6 +39,9 @@ vi.mock('../../features/editor/adapters/CodeMirrorEditorAdapter', () => ({
     }
     setSelection(selection: { from: number; to: number }) {
       mockSetSelection(selection);
+    }
+    restoreSelection(selection: { from: number; to: number }) {
+      mockRestoreSelection(selection);
     }
     revealSelection(selection: { from: number; to: number }) {
       mockRevealSelection(selection);
@@ -151,6 +155,7 @@ beforeEach(() => {
   window.localStorage.clear();
   mockSetSelection.mockClear();
   mockRevealSelection.mockClear();
+  mockRestoreSelection.mockClear();
   seedTrimmedWorkspaceState();
 });
 
@@ -234,5 +239,6 @@ it('restores a mid-document reading position after the recent cache is eventuall
   );
 
   expect(mockSetSelection).not.toHaveBeenCalled();
-  expect(mockRevealSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_024 });
+  expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_024 });
+  expect(mockRevealSelection).not.toHaveBeenCalled();
 });

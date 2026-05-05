@@ -87,7 +87,7 @@ function useEditorSelectionRestore(
       return;
     }
     markNodePositionRequested(nodeId);
-    adapter.revealSelection(nodeViewState.selection);
+    adapter.restoreSelection(nodeViewState.selection);
     lastRestoredSelectionKeyRef.current = selectionKey;
     requestAnimationFrame(() => {
       markNodePositionReady(nodeId);

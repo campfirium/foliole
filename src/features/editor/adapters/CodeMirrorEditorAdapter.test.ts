@@ -119,6 +119,33 @@ function resetEditorMocks() {
   mockEditableOf.mockClear();
 }
 
+function createAdapterWithStubbedView() {
+  const adapter = new CodeMirrorEditorAdapter(document.createElement('div'), {
+    initialContent: 'abc'
+  });
+  const dispatch = vi.fn();
+  const focus = vi.fn();
+
+  Object.assign(adapter as object, {
+    view: {
+      state: { doc: { length: 20 } },
+      scrollDOM: {
+        addEventListener: () => undefined,
+        clientHeight: 200,
+        removeEventListener: () => undefined,
+        scrollHeight: 500,
+        scrollTop: 0
+      },
+      lineBlockAt: vi.fn(() => ({ height: 24 })),
+      coordsAtPos: vi.fn(() => null),
+      dispatch,
+      focus
+    }
+  });
+
+  return { adapter, dispatch, focus };
+}
+
 describe('CodeMirrorEditorAdapter', () => {
   beforeEach(() => {
     resetEditorMocks();
@@ -145,34 +172,25 @@ describe('CodeMirrorEditorAdapter', () => {
   });
 
   it('can reveal a document position without changing selection', () => {
-    const adapter = new CodeMirrorEditorAdapter(document.createElement('div'), {
-      initialContent: 'abc'
-    });
-    const dispatch = vi.fn();
-    const focus = vi.fn();
-
-    Object.assign(adapter as object, {
-      view: {
-        state: { doc: { length: 20 } },
-        scrollDOM: {
-          addEventListener: () => undefined,
-          clientHeight: 200,
-          removeEventListener: () => undefined,
-          scrollHeight: 500,
-          scrollTop: 0
-        },
-        lineBlockAt: vi.fn(() => ({ height: 24 })),
-        coordsAtPos: vi.fn(() => null),
-        dispatch,
-        focus
-      }
-    });
+    const { adapter, dispatch, focus } = createAdapterWithStubbedView();
 
     adapter.revealPosition(8);
 
     expect(mockScrollIntoView).toHaveBeenCalledWith(8, { y: 'center' });
     expect(dispatch).toHaveBeenCalledWith({ effects: 'scroll-into-view-effect' });
     expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('can restore selection without forcing focus alignment work', () => {
+    const { adapter, dispatch, focus } = createAdapterWithStubbedView();
+
+    adapter.restoreSelection({ from: 8, to: 10 });
+
+    expect(dispatch).toHaveBeenCalledWith({
+      scrollIntoView: true,
+      selection: { anchor: 8, head: 10 }
+    });
+    expect(focus).not.toHaveBeenCalled();
   });
 
   it('refreshes line decorations when focus changes so cursor-line image previews can update', () => {

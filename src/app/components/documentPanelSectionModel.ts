@@ -25,9 +25,14 @@ function getDocumentPanelState(
   const emptyState = resolveInboxEmptyState(activeNode);
   const reveal = activeNode?.reveal ?? '';
   const shouldPadDocumentTail = editorDisplayMode === 'preview' && activeNode?.kind !== 'item';
-  const hasPromptImage = Boolean(activeNode?.content && collectMarkdownImageReferences(activeNode.content).length > 0);
-  const hasAnswerImage = Boolean(activeNode?.reveal && collectMarkdownImageReferences(activeNode.reveal).length > 0);
-  const shouldFitItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection) && (hasPromptImage || hasAnswerImage);
+  const shouldCheckItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection);
+  const hasPromptImage = shouldCheckItemImages
+    ? Boolean(activeNode?.content && collectMarkdownImageReferences(activeNode.content).length > 0)
+    : false;
+  const hasAnswerImage = shouldCheckItemImages
+    ? Boolean(activeNode?.reveal && collectMarkdownImageReferences(activeNode.reveal).length > 0)
+    : false;
+  const shouldFitItemImages = shouldCheckItemImages && (hasPromptImage || hasAnswerImage);
 
   return {
     answerSectionMode: shouldFitItemImages ? 'balanced' : 'fixed',

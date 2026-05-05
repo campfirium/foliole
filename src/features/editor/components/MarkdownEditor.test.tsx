@@ -60,6 +60,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     setSelection(selection: { from: number; to: number }) {
       mockSetSelection(selection);
     }
+    restoreSelection() {}
     revealSelection() {}
     getScrollTop() {
       return 0;

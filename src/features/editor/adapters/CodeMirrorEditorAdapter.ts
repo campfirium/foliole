@@ -175,6 +175,14 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.alignSelectionInViewport(anchor);
   }
 
+  restoreSelection(selection: EditorSelection) {
+    const { anchor, head } = this.clampSelection(selection);
+    this.view.dispatch({
+      selection: { anchor, head },
+      scrollIntoView: true
+    });
+  }
+
   private clampSelection(selection: EditorSelection) {
     const anchor = this.clampPosition(selection.from);
     const head = this.clampPosition(selection.to);

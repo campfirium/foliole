@@ -11,6 +11,7 @@ const mockSetDiffDecorations = vi.fn();
 const mockSetHideTitleHeading = vi.fn();
 const mockSetSelection = vi.fn();
 const mockRevealSelection = vi.fn();
+const mockRestoreSelection = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
 
 vi.mock('../../../shared/platform/performanceDiagnosticsProbe', () => ({
@@ -49,6 +50,9 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     }
     setSelection(selection: { from: number; to: number }) {
       mockSetSelection(selection);
+    }
+    restoreSelection(selection: { from: number; to: number }) {
+      mockRestoreSelection(selection);
     }
     revealSelection(selection: { from: number; to: number }) {
       mockRevealSelection(selection);
@@ -92,6 +96,7 @@ beforeEach(() => {
   mockSetHideTitleHeading.mockClear();
   mockSetSelection.mockClear();
   mockRevealSelection.mockClear();
+  mockRestoreSelection.mockClear();
   mockOnScroll.mockClear();
 });
 
@@ -112,7 +117,8 @@ it('restores mid-document selection and scroll when reopening a long document', 
   );
 
   expect(mockSetSelection).not.toHaveBeenCalled();
-  expect(mockRevealSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  expect(mockRestoreSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  expect(mockRevealSelection).not.toHaveBeenCalled();
   expect(mockMarkNodePositionRequested).toHaveBeenLastCalledWith('node-1');
   await waitFor(() => {
     expect(mockMarkNodePositionReady).toHaveBeenLastCalledWith('node-1');
@@ -139,7 +145,8 @@ it('waits for on-demand content to load before restoring a saved mid-document po
   view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
 
   expect(mockSetSelection).not.toHaveBeenCalled();
-  expect(mockRevealSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  expect(mockRestoreSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  expect(mockRevealSelection).not.toHaveBeenCalled();
   expect(mockMarkNodePositionRequested).toHaveBeenLastCalledWith('node-1');
   await waitFor(() => {
     expect(mockMarkNodePositionReady).toHaveBeenLastCalledWith('node-1');
@@ -156,7 +163,8 @@ it('does not reapply a saved selection while typing in the same node', async () 
     <MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />
   );
 
-  expect(mockRevealSelection).toHaveBeenCalledTimes(1);
+  expect(mockRestoreSelection).toHaveBeenCalledTimes(1);
+  expect(mockRevealSelection).not.toHaveBeenCalled();
   expect(mockMarkNodePositionRequested).toHaveBeenCalledTimes(1);
   await waitFor(() => {
     expect(mockMarkNodePositionReady).toHaveBeenCalledTimes(1);
@@ -171,7 +179,8 @@ it('does not reapply a saved selection while typing in the same node', async () 
     />
   );
 
-  expect(mockRevealSelection).toHaveBeenCalledTimes(1);
+  expect(mockRestoreSelection).toHaveBeenCalledTimes(1);
+  expect(mockRevealSelection).not.toHaveBeenCalled();
   expect(mockMarkNodePositionRequested).toHaveBeenCalledTimes(1);
   expect(mockMarkNodePositionReady).toHaveBeenCalledTimes(1);
 });
