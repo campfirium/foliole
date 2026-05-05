@@ -1,0 +1,28 @@
+import { useAppPaletteItems } from './useAppPaletteItems';
+import { useFormalImport } from './useFormalImport';
+import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { useCommandShortcutState } from './reviewHotkeysState';
+
+export function useControllerPaletteItems(args: {
+  controller: ReturnType<typeof useWorkspaceControllerState>;
+  formalImport: ReturnType<typeof useFormalImport>;
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
+  isCurrentReviewItemGradable: boolean;
+  isStudyMode: boolean;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return useAppPaletteItems({
+    activeNodeId: args.ws.activeNodeId,
+    formalImportAvailable: args.formalImport.isAvailable && !args.formalImport.isImporting,
+    hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
+    hotkeys: args.hotkeys,
+    isImmersiveMode: args.controller.runtime.isImmersiveMode,
+    isViewingTrashNode: args.controller.runtime.isViewingTrashNode,
+    isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,
+    isStudyMode: args.isStudyMode,
+    nav: args.controller.nav,
+    reviewSession: args.ws.reviewSession,
+    study: args.controller.study,
+    ws: args.ws
+  });
+}

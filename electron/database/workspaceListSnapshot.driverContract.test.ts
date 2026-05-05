@@ -155,6 +155,22 @@ it('uses indexed pdf text as the opening when the node body only contains the pd
   expect(loadWorkspaceListSnapshot(driver)?.nodesById['node-1']?.openingText).toBe('The actual PDF body starts here. More text follows.');
 });
 
+it('can skip pdf page opening backfill for lightweight startup snapshots', () => {
+  queryAllSpy
+    .mockReturnValueOnce([
+      {
+        ...workspaceListRow,
+        opening_text: null,
+        title: 'paper'
+      }
+    ])
+    .mockReturnValueOnce([{ node_id: 'node-1' }]);
+  queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
+
+  expect(loadWorkspaceListSnapshot(driver, { includePdfOpenings: false })?.nodesById['node-1']?.openingText).toBeNull();
+  expect(queryAllSpy).toHaveBeenCalledTimes(2);
+});
+
 it('falls back to the first nested child opening when the parent body is only a cover', () => {
   queryAllSpy
     .mockReturnValueOnce([

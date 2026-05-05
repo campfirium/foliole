@@ -23,7 +23,7 @@ import {
   REVIEW_SHORTCUT_COMMAND_IDS,
   useCommandShortcutState
 } from './reviewHotkeysState';
-import { useAppPaletteItems } from './useAppPaletteItems';
+import { useControllerPaletteItems } from './useControllerPaletteItems';
 import { useFormalImport } from './useFormalImport';
 import { useNativeCommandMenu } from './useNativeCommandMenu';
 import { usePriorityQuickSet } from './usePriorityQuickSet';
@@ -74,6 +74,7 @@ function useDerivedControllerState(args: {
   isCurrentReviewItemGradable: boolean;
   isReviewEditing: boolean;
   isStudyMode: boolean;
+  isWorkspaceHydrated: boolean;
   nowIso: string;
   priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
@@ -94,20 +95,7 @@ function useDerivedControllerState(args: {
         args.reviewSettings.reviewSchedulerSettings.pushQueue
       )
   );
-  const paletteItems = useAppPaletteItems({
-    activeNodeId: args.ws.activeNodeId,
-    formalImportAvailable: args.formalImport.isAvailable && !args.formalImport.isImporting,
-    hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
-    hotkeys: args.hotkeys,
-    isImmersiveMode: args.controller.runtime.isImmersiveMode,
-    isViewingTrashNode: args.controller.runtime.isViewingTrashNode,
-    isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,
-    isStudyMode: args.isStudyMode,
-    nav: args.controller.nav,
-    reviewSession: args.ws.reviewSession,
-    study: args.controller.study,
-    ws: args.ws
-  });
+  const paletteItems = useControllerPaletteItems(args);
   const layoutProps = measureSelectionComputation(args.ws.activeNodeId, args.ws.nodeOrder.length, 'layout_props', () =>
     buildControllerLayoutState({
       controller: args.controller,
@@ -115,6 +103,7 @@ function useDerivedControllerState(args: {
       formalImport: args.formalImport,
       isReviewEditing: args.isReviewEditing,
       isStudyMode: args.isStudyMode,
+      isWorkspaceHydrated: args.isWorkspaceHydrated,
       nowIso: args.nowIso,
       priorityQuickSet: args.priorityQuickSet,
       reviewDueCount,
@@ -164,6 +153,7 @@ function buildControllerLayoutState(args: {
   formalImport: ReturnType<typeof useFormalImport>;
   isReviewEditing: boolean;
   isStudyMode: boolean;
+  isWorkspaceHydrated: boolean;
   nowIso: string;
   priorityQuickSet: ReturnType<typeof usePriorityQuickSet>;
   reviewDueCount: number;
@@ -178,6 +168,7 @@ function buildControllerLayoutState(args: {
     documentResize: args.controller.documentResize,
     editorCtx: args.controller.editorCtx,
     exitStudyMode: args.exitStudyMode,
+    isWorkspaceHydrated: args.isWorkspaceHydrated,
     isReviewEditing: args.isReviewEditing,
     isStudyMode: args.isStudyMode,
     listResize: args.controller.listResize,
@@ -222,6 +213,7 @@ export function useAppController(): AppControllerResult {
     isCurrentReviewItemGradable,
     isReviewEditing,
     isStudyMode,
+    isWorkspaceHydrated,
     nowIso,
     priorityQuickSet,
     reviewPreview,

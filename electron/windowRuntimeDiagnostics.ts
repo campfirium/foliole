@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import type { BrowserWindow } from 'electron';
 
+import { appendBootEvent } from './ipc/boot.js';
+
 const LOG_DIR = path.join(process.cwd(), 'logs', 'windows');
 const LOG_PATH = path.join(LOG_DIR, 'renderer-state.ndjson');
 
@@ -17,6 +19,9 @@ function appendRendererStateLog(label: string, snapshot: unknown) {
 
 function appendRuntimeEventLog(label: string, payload: Record<string, unknown> = {}) {
   appendRendererStateLog(`event:${label}`, payload);
+  void appendBootEvent(`window_${label}`, payload).catch((error) => {
+    console.error(`[electron-main] boot log failed: window_${label}`, error);
+  });
 }
 
 function logRendererStateSnapshot(window: BrowserWindow, label: string) {
@@ -136,5 +141,7 @@ export function bindWindowRuntimeDiagnostics(window: BrowserWindow) {
     logBridgeSnapshot(window);
     logRendererStateSnapshot(window, 'did-finish-load');
     scheduleRendererSnapshot(window, 'after-1000ms', 1000);
+    scheduleRendererSnapshot(window, 'after-5000ms', 5000);
+    scheduleRendererSnapshot(window, 'after-15000ms', 15000);
   });
 }

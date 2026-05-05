@@ -51,7 +51,22 @@ function createPendingTaskHarness() {
 it('mounts immediately and keeps settings sync and bridge reporting non-blocking after mount', async () => {
   const harness = createPendingTaskHarness();
 
-  expect(harness.recorder.events).toEqual(['boot_start', 'mount']);
+  expect(harness.recorder.events).toEqual([
+    'boot_start',
+    'mount_start',
+    'mount'
+  ]);
+
+  await flushBootstrapWork();
+
+  expect(harness.recorder.events).toEqual([
+    'boot_start',
+    'mount_start',
+    'mount',
+    'mount_complete',
+    'settings_sync_failed_started',
+    'bridge_ready_report_failed_started'
+  ]);
 
   const releaseSettingsFn = harness.pending.releaseSettings;
   const releaseBridgeFn = harness.pending.releaseBridge;
@@ -60,14 +75,31 @@ it('mounts immediately and keeps settings sync and bridge reporting non-blocking
   }
   await flushBootstrapWork();
 
-  expect(harness.recorder.events).toEqual(['boot_start', 'mount']);
+  expect(harness.recorder.events).toEqual([
+    'boot_start',
+    'mount_start',
+    'mount',
+    'mount_complete',
+    'settings_sync_failed_started',
+    'bridge_ready_report_failed_started',
+    'settings_sync_failed_completed'
+  ]);
 
   if (typeof releaseBridgeFn === 'function') {
     releaseBridgeFn();
   }
   await flushBootstrapWork();
 
-  expect(harness.recorder.events).toEqual(['boot_start', 'mount']);
+  expect(harness.recorder.events).toEqual([
+    'boot_start',
+    'mount_start',
+    'mount',
+    'mount_complete',
+    'settings_sync_failed_started',
+    'bridge_ready_report_failed_started',
+    'settings_sync_failed_completed',
+    'bridge_ready_report_failed_completed'
+  ]);
 });
 
 it('still mounts when settings sync fails', async () => {
@@ -85,7 +117,16 @@ it('still mounts when settings sync fails', async () => {
 
   await flushBootstrapWork();
 
-  expect(recorder.events).toEqual(['boot_start', 'mount', 'settings_sync_failed']);
+  expect(recorder.events).toEqual([
+    'boot_start',
+    'mount_start',
+    'mount',
+    'mount_complete',
+    'settings_sync_failed_started',
+    'bridge_ready_report_failed_started',
+    'settings_sync_failed',
+    'bridge_ready_report_failed_completed'
+  ]);
 });
 
 it('renders the startup error when mounting throws', async () => {
@@ -105,7 +146,8 @@ it('renders the startup error when mounting throws', async () => {
   await flushBootstrapWork();
 
   expect(reportBootStage).toHaveBeenNthCalledWith(1, 'boot_start');
-  expect(reportBootStage).toHaveBeenNthCalledWith(2, 'fatal_bootstrap_error', {
+  expect(reportBootStage).toHaveBeenNthCalledWith(2, 'mount_start');
+  expect(reportBootStage).toHaveBeenNthCalledWith(3, 'fatal_bootstrap_error', {
     message: 'mount failed'
   });
   expect(renderStartupError).toHaveBeenCalledWith('mount failed');

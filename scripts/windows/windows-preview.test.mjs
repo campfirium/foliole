@@ -344,14 +344,16 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: REQUESTED nonce=1');
       expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
-      expect(result.stdout).toContain('status: RESTART_REQUESTED');
+      expect(result.stdout).toContain('restart markers updated');
+      expect(result.stdout).toContain('restart status:');
+      expect(result.stdout).toContain('status: STARTED');
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         requestedBy: 'wsl-windows-preview',
         target: 'electron-dev',
         reason: 'Class B: working tree electron changes detected'
       });
-      expect(await readActions(actionLog)).toEqual(['status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -395,13 +397,15 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: REQUESTED nonce=1');
       expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
-      expect(result.stdout).toContain('status: RESTART_REQUESTED');
+      expect(result.stdout).toContain('restart markers updated');
+      expect(result.stdout).toContain('restart status:');
+      expect(result.stdout).toContain('status: STARTED');
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         head: 'new-head',
         reason: 'Class B: runtime behind committed electron changes'
       });
-      expect(await readActions(actionLog)).toEqual(['status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -643,19 +647,21 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('renderer reload delivery timed out nonce=1');
       expect(result.stdout).toContain('renderer reload delivery missing; falling back to restart-intent');
       expect(result.stdout).toContain('selected action: restart-intent');
-      expect(result.stdout).toContain('status: RESTART_REQUESTED');
+      expect(result.stdout).toContain('restart markers updated');
+      expect(result.stdout).toContain('restart status:');
+      expect(result.stdout).toContain('status: STARTED');
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         target: 'electron-dev'
       });
-      expect(await readActions(actionLog)).toEqual(['status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
 
-  it('finishes once restart delivery is acknowledged even if ready markers never arrive', async () => {
+  it('falls back to direct restart when restart delivery is acknowledged but fresh ready markers never arrive', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = spawn(
       process.execPath,
@@ -713,6 +719,10 @@ const timer = setInterval(() => {
           '  echo "[windows-restart-client] status: RUNNING head=old-head"',
           '  exit 0',
           'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "restart" ]; then',
+          '  echo "[windows-restart-client] status: RESTARTED mode=runtime-only old_runtime_pid=401 runtime_pid=501 renderer_url=http://127.0.0.1:24600"',
+          '  exit 0',
+          'fi',
           'exit 1'
         ].join('\n')
       );
@@ -732,15 +742,60 @@ const timer = setInterval(() => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
-      expect(result.stdout).toContain('status: RESTART_REQUESTED');
-      expect(result.stdout).not.toContain('restart markers timed out');
+      expect(result.stdout).toContain('restart markers timed out');
+      expect(result.stdout).toContain('restart markers missing after intent delivery; falling back to direct restart');
+      expect(result.stdout).toContain('selected action: direct-restart');
+      expect(result.stdout).toContain('status: RESTARTED');
+      expect(result.stdout).toContain('status: STARTED');
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         target: 'electron-dev'
       });
-      expect(await readActions(actionLog)).toEqual(['status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'restart']);
     } finally {
       consumer.kill('SIGTERM');
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('falls back to direct restart when restart delivery never arrives', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "restart" ]; then',
+          '  echo "[windows-restart-client] status: RESTARTED mode=runtime-only old_runtime_pid=401 runtime_pid=501 renderer_url=http://127.0.0.1:24600"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_RESTART_INTENT_ROOT: tempRoot,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '5'
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('selected action: restart-intent');
+      expect(result.stdout).toContain('restart delivery timed out nonce=1');
+      expect(result.stdout).toContain('restart delivery missing after intent request; falling back to direct restart');
+      expect(result.stdout).toContain('selected action: direct-restart');
+      expect(result.stdout).toContain('status: RESTARTED');
+      expect(result.stdout).toContain('status: STARTED');
+      expect(await readActions(actionLog)).toEqual(['status', 'restart']);
+    } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });

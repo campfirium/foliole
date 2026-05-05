@@ -236,9 +236,13 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
       className="window-titlebar"
       data-window-maximized={isMaximized}
       style={{
-        '--window-titlebar-left-width': `${props.isListCollapsed ? 40 : props.listWidth + 41}px`,
+        '--window-titlebar-left-width': props.isListCollapsed
+          ? 'var(--workspace-rail-width)'
+          : `calc(var(--workspace-rail-width) + ${props.listWidth + 1}px)`,
         '--window-titlebar-controls-width': `${WINDOW_CONTROLS_WIDTH}px`,
-        '--window-titlebar-right-width': `${props.isRightSidebarCollapsed ? WINDOW_CONTROLS_WIDTH + 40 : props.rightSidebarWidth}px`,
+        '--window-titlebar-right-width': props.isRightSidebarCollapsed
+          ? `${WINDOW_CONTROLS_WIDTH + 40}px`
+          : `${props.rightSidebarWidth}px`,
         '--workspace-list-width': `${props.listWidth}px`
       } as CSSProperties}
     >

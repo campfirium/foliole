@@ -33,6 +33,10 @@
   --font-family-mono:
     'JetBrains Mono', 'Cascadia Code', 'Sarasa Mono SC', 'SFMono-Regular', Menlo, Consolas,
     'Noto Sans Mono CJK SC', monospace;
+  --workspace-rail-width: 40px;
+  --workspace-top-toolbar-height: 40px;
+  --workspace-bottom-toolbar-height: 56px;
+  --workspace-toolbar-inline-padding: 16px;
 }
 
 html,
@@ -86,7 +90,7 @@ body {
   display: grid;
   grid-template-columns: var(--window-titlebar-left-width, 40px) minmax(0, 1fr) var(--window-titlebar-right-width, 40px);
   flex: 0 0 auto;
-  min-height: 38px;
+  min-height: var(--workspace-top-toolbar-height);
   padding-inline: 0;
   position: relative;
   user-select: none;
@@ -132,7 +136,7 @@ body {
   align-items: center;
   display: grid;
   grid-template-columns: 40px auto;
-  min-height: 38px;
+  min-height: var(--workspace-top-toolbar-height);
   width: 100%;
 }
 
@@ -145,7 +149,7 @@ body {
   align-items: center;
   display: inline-flex;
   justify-content: center;
-  min-height: 38px;
+  min-height: var(--workspace-top-toolbar-height);
   width: 40px;
   -webkit-app-region: no-drag;
 }
@@ -173,9 +177,9 @@ body {
   color: #5f6368;
   cursor: pointer;
   display: inline-flex;
-  height: 30px;
+  height: 32px;
   justify-content: center;
-  width: 30px;
+  width: 32px;
   -webkit-app-region: no-drag;
 }
 
@@ -290,7 +294,7 @@ body {
   color: #5f6368;
   cursor: pointer;
   display: inline-flex;
-  height: 38px;
+  height: var(--workspace-top-toolbar-height);
   justify-content: center;
   min-width: 46px;
   transition: background-color 140ms, color 140ms;

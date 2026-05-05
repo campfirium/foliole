@@ -1,6 +1,13 @@
+/* global process */
+
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  collectPreviewDiagnostics,
   extractWindowsPreviewStatus,
   runTaskFinish
 } from './task-finish.mjs';
@@ -26,15 +33,76 @@ describe('task-finish helpers', () => {
     });
 
     const result = await runTaskFinish({
+      collectDiagnostics: vi.fn(),
       runWindowsPreview
     });
 
     expect(runWindowsPreview).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({
+      attemptCount: 1,
       executed: true,
       exitCode: 0,
       previewStatus: 'STARTED',
       status: 'EXECUTED'
+    });
+  });
+
+  it('retries preview when the first run only requests restart', async () => {
+    const runWindowsPreview = vi
+      .fn()
+      .mockResolvedValueOnce({
+        code: 0,
+        stderr: '',
+        stdout: '[windows-preview] status: RESTART_REQUESTED\n'
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        stderr: '',
+        stdout: '[windows-preview] status: SYNCED\n'
+      });
+
+    const result = await runTaskFinish({
+      collectDiagnostics: vi.fn(),
+      runWindowsPreview
+    });
+
+    expect(runWindowsPreview).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({
+      attemptCount: 2,
+      executed: true,
+      exitCode: 0,
+      previewStatus: 'SYNCED',
+      status: 'EXECUTED'
+    });
+  });
+
+  it('returns failure with diagnostics when preview never reaches a stable success state', async () => {
+    const runWindowsPreview = vi.fn().mockResolvedValue({
+      code: 0,
+      stderr: '',
+      stdout: '[windows-preview] status: RESTART_REQUESTED\n'
+    });
+    const collectDiagnosticsMock = vi.fn().mockResolvedValue({
+      latestBootEvent: { stage: 'app_ready_timeout' },
+      latestRendererState: { label: 'did-finish-load', snapshot: { readyState: 'interactive', rootPresent: true } }
+    });
+
+    const result = await runTaskFinish({
+      collectDiagnostics: collectDiagnosticsMock,
+      runWindowsPreview
+    });
+
+    expect(runWindowsPreview).toHaveBeenCalledTimes(2);
+    expect(collectDiagnosticsMock).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      attemptCount: 2,
+      diagnostics: {
+        latestBootEvent: { stage: 'app_ready_timeout' }
+      },
+      executed: true,
+      exitCode: 1,
+      previewStatus: 'RESTART_REQUESTED',
+      status: 'FAILED'
     });
   });
 
@@ -44,16 +112,98 @@ describe('task-finish helpers', () => {
       stderr: 'preview failed',
       stdout: ''
     });
+    const collectDiagnosticsMock = vi.fn().mockResolvedValue({ latestBootEvent: { stage: 'missing' } });
 
     const result = await runTaskFinish({
+      collectDiagnostics: collectDiagnosticsMock,
       runWindowsPreview
     });
 
     expect(result).toMatchObject({
+      attemptCount: 1,
+      diagnostics: {
+        latestBootEvent: { stage: 'missing' }
+      },
       executed: true,
       exitCode: 1,
       previewStatus: null,
       status: 'FAILED'
+    });
+  });
+
+  it('collects preview diagnostics from boot and renderer logs', async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-preview-diagnostics-'));
+
+    await fs.mkdir(path.join(repoRoot, 'logs', 'windows'), { recursive: true });
+    await fs.writeFile(
+      path.join(repoRoot, '.windows-native-boot-ready.json'),
+      JSON.stringify({ stage: 'app_ready' }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(repoRoot, '.windows-native-bridge-ready.json'),
+      JSON.stringify({ stage: 'bridge_ready' }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(repoRoot, 'logs', 'windows', 'native-boot-events.ndjson'),
+      `${JSON.stringify({ stage: 'mount_complete' })}\n${JSON.stringify({ stage: 'app_ready_timeout' })}\n`,
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(repoRoot, 'logs', 'windows', 'renderer-state.ndjson'),
+      `${JSON.stringify({ label: 'did-finish-load', snapshot: { href: 'http://localhost:5173', readyState: 'interactive', rootPresent: true } })}\n`,
+      'utf8'
+    );
+
+    const diagnostics = await collectPreviewDiagnostics({ cwd: repoRoot });
+
+    expect(diagnostics).toMatchObject({
+      bootReadyMarker: { stage: 'app_ready' },
+      bridgeReadyMarker: { stage: 'bridge_ready' },
+      latestBootEvent: { stage: 'app_ready_timeout' },
+      latestRendererState: {
+        label: 'did-finish-load',
+        snapshot: {
+          href: 'http://localhost:5173',
+          readyState: 'interactive',
+          rootPresent: true
+        }
+      }
+    });
+  });
+
+  it('prefers Windows mirror diagnostics when current run logs are not in the repo root', async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-preview-diagnostics-repo-'));
+    const windowsRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-preview-diagnostics-win-'));
+
+    await fs.mkdir(path.join(repoRoot, 'logs', 'windows'), { recursive: true });
+    await fs.mkdir(path.join(windowsRoot, 'logs', 'windows'), { recursive: true });
+    await fs.writeFile(
+      path.join(repoRoot, 'logs', 'windows', 'native-boot-events.ndjson'),
+      `${JSON.stringify({ stage: 'stale_repo_event' })}\n`,
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(windowsRoot, '.windows-native-boot-ready.json'),
+      JSON.stringify({ stage: 'app_ready' }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(windowsRoot, 'logs', 'windows', 'native-boot-events.ndjson'),
+      `${JSON.stringify({ stage: 'current_windows_event' })}\n`,
+      'utf8'
+    );
+
+    const diagnostics = await collectPreviewDiagnostics({
+      cwd: repoRoot,
+      env: { ...process.env, WINDOWS_RESTART_INTENT_ROOT: windowsRoot }
+    });
+
+    expect(diagnostics).toMatchObject({
+      bootReadyMarker: { stage: 'app_ready' },
+      latestBootEvent: { stage: 'current_windows_event' },
+      stateRoot: windowsRoot
     });
   });
 });

@@ -19,7 +19,9 @@ export function handleWorkspaceReadCommand(command: string, args: Record<string,
     return loadWorkspaceSnapshot();
   }
   if (command === NATIVE_COMMANDS.loadWorkspaceListSnapshot) {
-    return loadWorkspaceListSnapshot();
+    return loadWorkspaceListSnapshot({
+      includePdfOpenings: args.includePdfOpenings !== false
+    });
   }
   if (command === NATIVE_COMMANDS.loadNodeDocument) {
     return loadWorkspaceNodeDocument(asString(args.nodeId, 'nodeId'));

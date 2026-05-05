@@ -66,6 +66,10 @@ process.stdout.write(String(value));
 ' "${file_path}" "${field_name}"
 }
 
+iso_now() {
+  node -e 'process.stdout.write(new Date().toISOString())'
+}
+
 iso_timestamp_gte() {
   local left="$1"
   local right="$2"
@@ -471,6 +475,7 @@ run_restart_intent() {
   local restart_exit=0
   local restart_intent_root=""
   local restart_nonce=""
+  local requested_at=""
   echo "[windows-preview] selected action: restart-intent"
   restart_intent_root="$(resolve_restart_intent_root)"
   set +e
@@ -490,8 +495,27 @@ run_restart_intent() {
       echo "[windows-preview] restart intent missing nonce"
       return 1
     fi
-    wait_for_delivery_nonce "$(resolve_restart_delivery_path)" "${restart_nonce}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" "restart" || return 1
-    echo "[windows-preview] status: RESTART_REQUESTED"
+    if ! wait_for_delivery_nonce "$(resolve_restart_delivery_path)" "${restart_nonce}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" "restart"; then
+      echo "[windows-preview] restart delivery missing after intent request; falling back to direct restart"
+      run_direct_restart
+      return $?
+    fi
+    requested_at="$(read_json_field "$(resolve_restart_delivery_path)" requestedAt 2>/dev/null || true)"
+    if [ -z "${requested_at}" ]; then
+      echo "[windows-preview] restart delivery missing requestedAt nonce=${restart_nonce}"
+      return 1
+    fi
+    if ! wait_for_restart_ready_markers "${requested_at}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}"; then
+      echo "[windows-preview] restart markers missing after intent delivery; falling back to direct restart"
+      run_direct_restart
+      return $?
+    fi
+    if ! wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" "restart status"; then
+      echo "[windows-preview] restart status check failed after intent delivery; falling back to direct restart"
+      run_direct_restart
+      return $?
+    fi
+    echo "[windows-preview] status: STARTED"
     return 0
   fi
   echo "[windows-preview] restart intent failed"
@@ -516,6 +540,34 @@ run_fallback_start() {
   echo "[windows-preview] fallback start failed"
   if [ -n "${start_output}" ]; then
     echo "${start_output}"
+  fi
+  return 1
+}
+
+run_direct_restart() {
+  local restart_output=""
+  local restart_exit=0
+  local requested_at=""
+  requested_at="$(iso_now)"
+  echo "[windows-preview] selected action: direct-restart"
+  set +e
+  restart_output="$(run_windows_client_action restart)"
+  restart_exit=$?
+  set -e
+  if [ "${restart_exit}" -eq 0 ] && echo "${restart_output}" | grep -qE 'status:\s*RESTARTED'; then
+    echo "${restart_output}"
+    echo "[windows-preview] status: STARTED"
+    return 0
+  fi
+  echo "[windows-preview] direct restart failed"
+  if [ -n "${restart_output}" ]; then
+    echo "${restart_output}"
+  fi
+  if wait_for_restart_ready_markers "${requested_at}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" &&
+    wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" "direct restart status"; then
+    echo "[windows-preview] direct restart recovered via fresh startup markers"
+    echo "[windows-preview] status: STARTED"
+    return 0
   fi
   return 1
 }

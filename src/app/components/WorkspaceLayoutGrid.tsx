@@ -47,7 +47,11 @@ export function WorkspaceLayoutGrid({
   return (
     <div
       className="grid min-h-0 flex-1 overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
-      style={{ gridTemplateColumns: props.isImmersiveMode ? 'minmax(0, 1fr)' : '40px minmax(0, 1fr)' }}
+      style={{
+        gridTemplateColumns: props.isImmersiveMode
+          ? 'minmax(0, 1fr)'
+          : 'var(--workspace-rail-width) minmax(0, 1fr)'
+      }}
     >
       {props.isImmersiveMode ? null : (
         <WorkspaceLeftRail

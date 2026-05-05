@@ -10,6 +10,7 @@ import {
 
 interface DocumentPanelHeaderCenterProps {
   activeNodeId: string | null;
+  folderItemCountLabel?: string | null;
   isFolderListView: boolean;
   nodesById: Record<string, Node>;
   onSelectBreadcrumbNode: (nodeId: string) => void;
@@ -18,6 +19,7 @@ interface DocumentPanelHeaderCenterProps {
 
 export function DocumentPanelHeaderCenter({
   activeNodeId,
+  folderItemCountLabel,
   isFolderListView,
   nodesById,
   onSelectBreadcrumbNode,
@@ -34,7 +36,26 @@ export function DocumentPanelHeaderCenter({
   }, [nodesById]);
 
   if (isFolderListView) {
-    return <div aria-hidden="true" className="min-h-9 flex-1 border-b border-border/60" />;
+    const activeNode = activeNodeId ? nodesById[activeNodeId] : null;
+    const folderTitle = activeNode?.title?.trim() || 'Folder';
+    return (
+      <div className="min-w-0">
+        <div className="mx-auto flex w-full max-w-[var(--document-max-width)] items-baseline gap-2">
+          <h2 className="truncate text-base font-semibold text-foreground" title={folderTitle}>
+            {folderTitle}
+          </h2>
+          {folderItemCountLabel ? (
+            <p
+              aria-label={`Folder result count ${folderItemCountLabel}`}
+              className="shrink-0 text-sm font-medium text-foreground/58"
+              data-testid="folder-list-count"
+            >
+              {folderItemCountLabel}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
   }
 
   return (

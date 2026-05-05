@@ -51,6 +51,7 @@ function registerBootDiagnostics() {
 }
 
 function registerAppReadySignals(signalAppReady: (source: string) => void) {
+  reportRuntimeBootStage('app_ready_signal_registration');
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       signalAppReady('double_raf');
@@ -68,6 +69,19 @@ function registerAppReadySignals(signalAppReady: (source: string) => void) {
   setTimeout(() => {
     signalAppReady('timeout_1500ms');
   }, 1500);
+}
+
+function registerStartupWatchdog() {
+  setTimeout(() => {
+    if (window.__FOLIOLE_APP_READY_REPORTED__) {
+      return;
+    }
+    reportRuntimeBootStage('app_ready_timeout', {
+      href: window.location.href,
+      readyState: document.readyState,
+      rootPresent: Boolean(document.getElementById(ROOT_ID))
+    });
+  }, 5000);
 }
 
 function mountApp() {
@@ -103,6 +117,10 @@ function mountApp() {
       return;
     }
     appReadySignaled = true;
+    reportRuntimeBootStage('app_ready_signal_received', {
+      readyState: document.readyState,
+      source
+    });
     reportRuntimeAppReady({
       href: window.location.href,
       readyState: document.readyState,
@@ -110,6 +128,7 @@ function mountApp() {
     });
   };
 
+  registerStartupWatchdog();
   registerAppReadySignals(signalAppReady);
 }
 

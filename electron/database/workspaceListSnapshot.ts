@@ -2,6 +2,6 @@ import { loadWorkspaceListSnapshot as loadWorkspaceListSnapshotViaDriver } from 
 
 import { openDatabaseConnection } from './connection.js';
 
-export function loadWorkspaceListSnapshot() {
-  return loadWorkspaceListSnapshotViaDriver(openDatabaseConnection().driver);
+export function loadWorkspaceListSnapshot(options?: { includePdfOpenings?: boolean }) {
+  return loadWorkspaceListSnapshotViaDriver(openDatabaseConnection().driver, options);
 }

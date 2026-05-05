@@ -2,6 +2,7 @@ import type { EditorSelection, EditorViewportMode } from '../../features/editor/
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
+import { LIST_WIDTH_DEFAULT, RIGHT_SIDEBAR_WIDTH_DEFAULT } from '../../store/workspaceStore';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 import { requestReadingPositionApply } from './readingPositionRequests';
@@ -50,7 +51,9 @@ function applyReadingPositionToActiveEditor(
 export function createToggleListVisibility(args: BuildControllerLayoutPropsArgs) {
   return () => {
     if (args.ws.isListCollapsed) {
-      args.ws.setListWidth(Math.max(220, args.runtime.lastExpandedListWidthRef.current || args.ws.listWidth || 300));
+      args.ws.setListWidth(
+        Math.max(LIST_WIDTH_DEFAULT, args.runtime.lastExpandedListWidthRef.current || args.ws.listWidth || LIST_WIDTH_DEFAULT)
+      );
       return;
     }
     args.runtime.lastExpandedListWidthRef.current = args.ws.listWidth;
@@ -62,7 +65,12 @@ export function createToggleRightSidebarVisibility(args: BuildControllerLayoutPr
   return () => {
     if (args.ws.isRightSidebarCollapsed) {
       args.ws.setRightSidebarWidth(
-        Math.max(240, args.runtime.lastExpandedRightSidebarWidthRef.current || args.ws.rightSidebarWidth || 320)
+        Math.max(
+          RIGHT_SIDEBAR_WIDTH_DEFAULT,
+          args.runtime.lastExpandedRightSidebarWidthRef.current ||
+            args.ws.rightSidebarWidth ||
+            RIGHT_SIDEBAR_WIDTH_DEFAULT
+        )
       );
       return;
     }

@@ -171,7 +171,7 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
     result: null;
   };
   [NATIVE_COMMANDS.loadWorkspaceListSnapshot]: {
-    args: undefined;
+    args: { includePdfOpenings?: boolean } | undefined;
     result: NativeWorkspaceSnapshot;
   };
   [NATIVE_COMMANDS.loadNodeDocument]: {

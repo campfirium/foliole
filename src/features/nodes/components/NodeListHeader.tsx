@@ -115,7 +115,7 @@ export function NodeListHeader({
   trashCount
 }: NodeListHeaderProps) {
   return (
-    <AppToolbar as="header" className="min-h-[40px] justify-end gap-2 px-3">
+    <AppToolbar as="header" className="min-h-[var(--workspace-top-toolbar-height)] justify-end gap-2 px-4">
       <h2 className="sr-only">Nodes</h2>
       <button className="sr-only" onClick={onOpenNotesView} type="button">
         Nodes

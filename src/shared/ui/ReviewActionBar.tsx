@@ -26,7 +26,7 @@ export function ReviewActionBar({
   return (
     <div
       aria-label={ariaLabel}
-      className={cn('flex min-h-[56px] w-full flex-none flex-col justify-center gap-1 border-t border-border bg-bg-elevated px-4 py-1', className)}
+      className={cn('flex h-[var(--workspace-bottom-toolbar-height)] w-full flex-none flex-col justify-center gap-1 border-t border-border bg-bg-elevated px-4 py-1', className)}
       data-mode={mode}
       data-review-input-mode={reviewInputMode}
       data-review-item-kind={reviewItemKind}

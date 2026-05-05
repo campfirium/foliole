@@ -196,7 +196,9 @@ it('keeps the initial workspace hydrate on the fixed route: lightweight list, se
   });
   expect(parsed?.state.nodesById['node-2']?.content).toBe(longDocument);
   expect(parsed?.state.nodesById['node-2']?.content.length).toBeGreaterThan(100_000);
-  expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot');
+  expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot', {
+    includePdfOpenings: false
+  });
   expect(invoke).toHaveBeenCalledWith('load_reading_progress');
   expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
     ['load_node_document', { nodeId: 'node-2' }]

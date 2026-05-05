@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 
+import {
+  loadDualListWidthPreference,
+  saveDualListWidthPreference
+} from '../../store/workspaceLayoutPrefs';
+
 const MAX_WIDTH = 420;
 const MIN_WIDTH = 100;
 const STEP = 16;
+export const DUAL_LIST_WIDTH_DEFAULT = 180;
 
 interface ResizeStartState {
   startWidth: number;
@@ -13,10 +19,14 @@ function clampWidth(width: number) {
   return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(width)));
 }
 
-export function useDualListResizer(initialWidth = 320) {
+export function useDualListResizer(initialWidth = DUAL_LIST_WIDTH_DEFAULT) {
   const [isResizing, setIsResizing] = useState(false);
-  const [width, setWidth] = useState(clampWidth(initialWidth));
+  const [width, setWidth] = useState(() => clampWidth(loadDualListWidthPreference(initialWidth)));
   const resizeStartRef = useRef<ResizeStartState | null>(null);
+
+  useEffect(() => {
+    saveDualListWidthPreference(width);
+  }, [width]);
 
   useEffect(() => {
     if (!isResizing) {

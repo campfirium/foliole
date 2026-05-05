@@ -53,6 +53,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   nodeTrashManualCollapsed: 'foliole-node-trash-manual-collapsed',
   listCollapsed: 'foliole-workspace-list-collapsed',
   listWidth: 'foliole-workspace-list-width',
+  dualListWidth: 'foliole-workspace-dual-list-width',
   documentWidth: 'foliole-workspace-document-width',
   linkPanelSize: 'foliole-link-panel-size',
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',

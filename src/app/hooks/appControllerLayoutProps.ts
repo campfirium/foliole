@@ -45,6 +45,7 @@ export interface BuildControllerLayoutPropsArgs {
   documentResize: ReturnType<typeof useDocumentWidthResizer>;
   editorCtx: ReturnType<typeof useEditorContextCommands>;
   exitStudyMode: () => void;
+  isWorkspaceHydrated: boolean;
   isReviewEditing: boolean;
   isStudyMode: boolean;
   priorityQuickSet: {
@@ -126,7 +127,7 @@ function createLayoutDataArgs(
   const nav = createLayoutNav(args, onSelectNode);
   return {
     activeNodeId: args.ws.activeNodeId,
-    isWorkspaceHydrated: args.ws.isHydrated,
+    isWorkspaceHydrated: args.isWorkspaceHydrated,
     reviewSettings: args.reviewSettings,
     canGoBack: args.nav.canGoBack,
     canGoForward: args.nav.canGoForward,

@@ -20,6 +20,7 @@ import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { startKeepImportMonitor, stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { startManagedInboxMonitor, stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { loadReadwiseBooksInventory } from './import/readwiseBooksInventory.js';
+import { appendBootEvent } from './ipc/boot.js';
 import { handleInvokeRequest } from './ipc/commands.js';
 import {
   IPC_INVOKE_CHANNEL,
@@ -43,6 +44,7 @@ import {
   formatRuntimeDiagnosticsSnapshot
 } from './runtimeIdentity.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
+import { runStartupTask } from './startupTasks.js';
 import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
 import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
@@ -61,6 +63,12 @@ const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({
 console.info('[electron-main] app identity configured', configuredIdentity);
 console.info('[electron-main] runtime diagnostics', formatRuntimeDiagnosticsSnapshot(runtimeDiagnostics));
 registerAttachmentProtocolScheme();
+void appendBootEvent('main_process_start', {
+  appName: configuredIdentity.appName,
+  runtimeMode
+}).catch((error) => {
+  console.error('[electron-main] boot log failed: main_process_start', error);
+});
 
 function createWindowOptions(): BrowserWindowConstructorOptions {
   return {
@@ -142,7 +150,9 @@ function bindWindowIpc(window: ElectronBrowserWindow) {
 }
 
 async function createMainWindow() {
+  await appendBootEvent('main_window_create_start');
   const restoredWindowState = await loadWindowState();
+  await appendBootEvent('window_state_loaded', restoredWindowState);
   logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
   const options = applyWindowStateToOptions(createWindowOptions(), restoredWindowState);
   logWindowStateRestoreDecision('window-options-applied', restoredWindowState, {
@@ -155,6 +165,10 @@ async function createMainWindow() {
     }
   });
   const window = new BrowserWindow(options);
+  await appendBootEvent('browser_window_created', {
+    bounds: window.getBounds(),
+    show: window.isVisible()
+  });
   logWindowStateLifecycleEvent('window-created', window);
   if (restoredWindowState?.isFullScreen) {
     window.setFullScreen(true);
@@ -168,7 +182,11 @@ async function createMainWindow() {
   bindWindowStatePersistence(window);
   bindMenuToWindow(window);
   bindWindowRuntimeDiagnostics(window);
+  await appendBootEvent('renderer_load_start');
   await loadRenderer(window, __dirname);
+  await appendBootEvent('renderer_load_complete', {
+    url: window.webContents.getURL()
+  });
   logActiveRuntimeDiagnostics(window, __dirname, runtimeDiagnostics);
 }
 
@@ -228,33 +246,26 @@ app.on('before-quit', (event) => {
 
 app.whenReady().then(async () => {
   installRuntimeDiagnostics();
+  await appendBootEvent('app_when_ready');
   app.on('web-contents-created', (_, contents) => {
     bindEmbeddedLinkPanels(contents);
   });
+  await appendBootEvent('database_init_start');
   initializeDatabase();
+  await appendBootEvent('database_init_complete');
   registerAttachmentProtocol();
   installInvokeHandler();
   installAppMenu();
   await createMainWindow();
-  void reconcileAutomaticDatabaseBackups().catch((error) => {
-    console.error('[backup] automatic backup reconcile failed', error);
-  });
-  void backfillMissingMirrorOutput().catch((error) => {
-    console.error('[mirror] startup backfill failed', error);
-  });
-  void migrateLegacyWebviewStorage().catch((error) => {
-    console.error('[storage] legacy webview migration failed', error);
-  });
+  await appendBootEvent('main_window_ready');
+  void runStartupTask('[backup] automatic backup reconcile failed', reconcileAutomaticDatabaseBackups);
+  void runStartupTask('[mirror] startup backfill failed', backfillMissingMirrorOutput);
+  void runStartupTask('[storage] legacy webview migration failed', migrateLegacyWebviewStorage);
   resumePendingPdfAttachmentIndexing();
-  void startManagedInboxMonitor().catch((error) => {
-    console.error('[managed-inbox] startup monitor failed', error);
-  });
-  void startKeepImportMonitor().catch((error) => {
-    console.error('[keep-import] startup monitor failed', error);
-  });
-  void loadReadwiseBooksInventory().catch((error) => {
-    console.error('[readwise-books] startup node sync failed', error);
-  });
+  await appendBootEvent('startup_followup_tasks_started');
+  void runStartupTask('[managed-inbox] startup monitor failed', startManagedInboxMonitor);
+  void runStartupTask('[keep-import] startup monitor failed', startKeepImportMonitor);
+  void runStartupTask('[readwise-books] startup node sync failed', loadReadwiseBooksInventory);
 
   app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {

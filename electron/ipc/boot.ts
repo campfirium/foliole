@@ -4,6 +4,7 @@ import path from 'node:path';
 const BOOT_EVENT_LOG = path.join('logs', 'windows', 'native-boot-events.ndjson');
 const READY_MARKER_FILE = '.windows-native-boot-ready.json';
 const BRIDGE_READY_MARKER_FILE = '.windows-native-bridge-ready.json';
+type BootEventSource = 'main' | 'renderer';
 
 function resolveRepoRoot() {
   const envRoot = process.env.FOLIOLE_WORKDIR;
@@ -23,33 +24,50 @@ async function writeJson(filePath: string, payload: unknown) {
   await fs.writeFile(filePath, JSON.stringify(payload, null, 2), 'utf8');
 }
 
-export async function bootReport(stage: string, payload: unknown = null) {
-  const repoRoot = resolveRepoRoot();
-  const eventLogPath = path.join(repoRoot, BOOT_EVENT_LOG);
-  const readyMarkerPath = path.join(repoRoot, READY_MARKER_FILE);
-  const bridgeReadyMarkerPath = path.join(repoRoot, BRIDGE_READY_MARKER_FILE);
-
-  const event = {
+function createBootEvent(stage: string, payload: unknown, source: BootEventSource) {
+  return {
     head: process.env.FOLIOLE_RUNTIME_HEAD ?? null,
-    timestamp: new Date().toISOString(),
-    stage,
+    payload,
     pid: process.pid,
     session: process.env.FOLIOLE_BOOT_SESSION ?? null,
-    payload
+    source,
+    stage,
+    timestamp: new Date().toISOString()
   };
+}
 
+export function resolveBootArtifactPaths(repoRoot = resolveRepoRoot()) {
+  return {
+    bridgeReadyMarkerPath: path.join(repoRoot, BRIDGE_READY_MARKER_FILE),
+    eventLogPath: path.join(repoRoot, BOOT_EVENT_LOG),
+    readyMarkerPath: path.join(repoRoot, READY_MARKER_FILE),
+    repoRoot
+  };
+}
+
+async function persistBootEvent(event: ReturnType<typeof createBootEvent>) {
+  const paths = resolveBootArtifactPaths();
   console.info('[boot-report]', {
-    eventLogPath,
+    eventLogPath: paths.eventLogPath,
     pid: event.pid,
-    readyMarkerPath,
-    repoRoot,
-    stage
+    readyMarkerPath: paths.readyMarkerPath,
+    repoRoot: paths.repoRoot,
+    source: event.source,
+    stage: event.stage
   });
-  await appendJsonLine(eventLogPath, event);
-  if (stage === 'app_ready') {
-    await writeJson(readyMarkerPath, event);
+  await appendJsonLine(paths.eventLogPath, event);
+  if (event.stage === 'app_ready') {
+    await writeJson(paths.readyMarkerPath, event);
   }
-  if (stage === 'bridge_ready') {
-    await writeJson(bridgeReadyMarkerPath, event);
+  if (event.stage === 'bridge_ready') {
+    await writeJson(paths.bridgeReadyMarkerPath, event);
   }
+}
+
+export async function appendBootEvent(stage: string, payload: unknown = null, source: BootEventSource = 'main') {
+  await persistBootEvent(createBootEvent(stage, payload, source));
+}
+
+export async function bootReport(stage: string, payload: unknown = null) {
+  await persistBootEvent(createBootEvent(stage, payload, 'renderer'));
 }

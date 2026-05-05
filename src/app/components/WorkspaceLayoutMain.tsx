@@ -128,7 +128,7 @@ function WorkspaceListDivider({ isListCollapsed }: { isListCollapsed: boolean })
     <span
       aria-hidden="true"
       className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border max-[1080px]:hidden"
-      style={{ left: 'calc(40px + var(--workspace-list-width, 300px))' }}
+      style={{ left: 'calc(var(--workspace-rail-width) + var(--workspace-list-width, 300px))' }}
     />
   );
 }

@@ -17,8 +17,10 @@ async function runBackgroundTask(
   reportBootStage: BootStageReporter,
   stage: string
 ) {
+  reportBootStage(`${stage}_started`);
   try {
     await task();
+    reportBootStage(`${stage}_completed`);
   } catch (error) {
     console.error(`[startup] ${stage}`, error);
     reportBootStage(stage, {
@@ -32,7 +34,9 @@ export function bootstrapApp(args: StartupBootstrapArgs) {
     args.reportBootStage('boot_start');
 
     try {
+      args.reportBootStage('mount_start');
       await args.mountApp();
+      args.reportBootStage('mount_complete');
     } catch (error) {
       console.error('[startup] fatal bootstrap error', error);
       args.reportBootStage('fatal_bootstrap_error', {

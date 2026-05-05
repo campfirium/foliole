@@ -80,6 +80,7 @@ function renderFolderContent(
         onResetLayout={onResetLayout}
         onSelectNode={onSelectNode}
         onStartDocumentResize={onStartDocumentResize}
+        showEmbeddedHeader={false}
         sortDirection={folderListSortDirection}
         sortKey={folderListSortKey}
       />

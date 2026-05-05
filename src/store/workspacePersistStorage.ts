@@ -11,6 +11,16 @@ import {
   mergePendingNodeSyncIntoSnapshot,
   replayPendingNodeSync
 } from './workspacePendingNodeSync';
+import {
+  readFallbackWorkspaceState,
+  removeFallbackWorkspaceState,
+  writeFallbackWorkspaceState
+} from './workspacePersistStorageFallback';
+import {
+  appendWorkspaceHydrateCompletedLog,
+  appendWorkspaceHydrateFailedLog,
+  appendWorkspaceHydrateStartedLog
+} from './workspacePersistStorageHydrateLogging';
 import { syncHydratedTextAnchorChildrenForActiveNode } from './workspacePersistStorageTextAnchorHydrate';
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
 import {
@@ -19,13 +29,6 @@ import {
   trimWorkspaceNodesForRendererBoundary
 } from './workspaceRendererBoundary';
 
-function getLocalFallbackStorage(): Storage | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  return window.localStorage;
-}
-
 function toPersistedStatePayload(value: unknown): string | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -33,44 +36,14 @@ function toPersistedStatePayload(value: unknown): string | null {
   return JSON.stringify({ state: value, version: 0 });
 }
 
-function trimPersistedWorkspaceStatePayload(value: string) {
-  try {
-    const parsed = JSON.parse(value) as {
-      state?: {
-        activeNodeId?: string | null;
-        nodesById?: Record<string, Node>;
-      };
-      version?: number;
-    };
-    if (!parsed || typeof parsed !== 'object' || !parsed.state || typeof parsed.state !== 'object') {
-      return value;
-    }
-    if (!parsed.state.nodesById || typeof parsed.state.nodesById !== 'object') {
-      return value;
-    }
-
-    return JSON.stringify({
-      ...parsed,
-      state: {
-        ...parsed.state,
-        nodesById: trimWorkspaceNodesForRendererBoundary(
-          typeof parsed.state.activeNodeId === 'string' ? parsed.state.activeNodeId : null,
-          parsed.state.nodesById,
-          new Set(listPendingNodeSyncNodeIds())
-        )
-      }
-    });
-  } catch {
-    return value;
-  }
-}
-
 async function loadReadingProgressForHydrate(name: string) {
+  const startedAt = Date.now();
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.loadReadingProgress).then((result) => {
     appendReadingPositionTraceLog({
       event: 'reading-progress.hydrate-load',
       payload: {
         activeNodeId: result?.activeNodeId ?? null,
+        durationMs: Date.now() - startedAt,
         nodeViewStateCount:
           result && typeof result === 'object' && result.nodeViewStateById && typeof result.nodeViewStateById === 'object'
             ? Object.keys(result.nodeViewStateById).length
@@ -107,6 +80,7 @@ async function hydrateActiveNodeDocument(name: string, snapshot: Record<string, 
     return snapshot;
   }
 
+  const startedAt = Date.now();
   const activeDocument = await runtimeInvoke(NATIVE_COMMANDS.loadNodeDocument, { nodeId: activeNodeId }).catch((error) => {
     logRuntimeWarning('active node document load failed during workspace hydrate', {
       area: 'persistence',
@@ -125,6 +99,15 @@ async function hydrateActiveNodeDocument(name: string, snapshot: Record<string, 
   }
 
   const mergedActiveNode = mergeWorkspaceNodeDocument(activeNode, activeDocument);
+  appendReadingPositionTraceLog({
+    event: 'workspace.hydrate-active-document',
+    payload: {
+      durationMs: Date.now() - startedAt,
+      nodeId: activeNodeId,
+      storageKey: name
+    },
+    timestamp: Date.now()
+  });
   const timestamp = new Date().toISOString();
   const syncedNodesById = syncHydratedTextAnchorChildrenForActiveNode({
     activeNode: mergedActiveNode,
@@ -173,14 +156,30 @@ function countSnapshotNodeViewStates(snapshot: unknown) {
   return Object.keys(nodeViewById as Record<string, unknown>).length;
 }
 
+function replayPendingNodeSyncAfterHydrate(name: string, runtimeInvoke: NonNullable<ReturnType<typeof getRuntimeInvoke>>) {
+  void replayPendingNodeSync(runtimeInvoke).catch((error) => {
+    logRuntimeWarning('pending node sync replay failed during workspace hydrate', {
+      area: 'persistence',
+      action: 'replay_pending_node_sync',
+      command: NATIVE_COMMANDS.updateNodeContent,
+      fallback: 'keep_pending_snapshot',
+      storageKey: name,
+      error
+    });
+  });
+}
+
 async function loadRuntimeWorkspaceState(name: string) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
 
+  const snapshotStartedAt = Date.now();
   const [snapshot, readingProgress] = await Promise.all([
-    runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceListSnapshot),
+    runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceListSnapshot, {
+      includePdfOpenings: false
+    }),
     loadReadingProgressForHydrate(name)
   ]);
   const mergedSnapshot = trimRuntimeWorkspaceSnapshot(
@@ -189,6 +188,7 @@ async function loadRuntimeWorkspaceState(name: string) {
   appendReadingPositionTraceLog({
     event: 'reading-progress.hydrate-merge',
     payload: {
+      durationMs: Date.now() - snapshotStartedAt,
       runtimeActiveNodeId: snapshot?.activeNodeId ?? null,
       readingActiveNodeId:
         readingProgress && typeof readingProgress === 'object' && 'activeNodeId' in readingProgress
@@ -206,58 +206,48 @@ async function loadRuntimeWorkspaceState(name: string) {
   return hydrateActiveNodeDocument(name, mergedSnapshot as unknown as Record<string, unknown>);
 }
 
+async function getRuntimeWorkspaceState(name: string, runtimeInvoke: NonNullable<ReturnType<typeof getRuntimeInvoke>>) {
+  const startedAt = Date.now();
+  appendWorkspaceHydrateStartedLog(name);
+
+  try {
+    const mergedSnapshot = await loadRuntimeWorkspaceState(name);
+    replayPendingNodeSyncAfterHydrate(name, runtimeInvoke);
+    appendWorkspaceHydrateCompletedLog(name, startedAt, mergedSnapshot);
+    return toPersistedStatePayload(mergedSnapshot);
+  } catch (error) {
+    appendWorkspaceHydrateFailedLog(name, startedAt, error);
+    logRuntimeError('workspace hydrate failed', {
+      area: 'persistence',
+      action: 'hydrate_workspace_state',
+      command: NATIVE_COMMANDS.loadWorkspaceListSnapshot,
+      relatedCommand: NATIVE_COMMANDS.loadReadingProgress,
+      fallback: 'return_null',
+      storageKey: name,
+      error
+    });
+    return null;
+  }
+}
+
 export const workspacePersistStorage: StateStorage = {
   async getItem(name) {
     const runtimeInvoke = getRuntimeInvoke();
     if (runtimeInvoke) {
-      try {
-        const mergedSnapshot = await loadRuntimeWorkspaceState(name);
-        void replayPendingNodeSync(runtimeInvoke).catch((error) => {
-          logRuntimeWarning('pending node sync replay failed during workspace hydrate', {
-            area: 'persistence',
-            action: 'replay_pending_node_sync',
-            command: NATIVE_COMMANDS.updateNodeContent,
-            fallback: 'keep_pending_snapshot',
-            storageKey: name,
-            error
-          });
-        });
-        return toPersistedStatePayload(mergedSnapshot);
-      } catch (error) {
-        logRuntimeError('workspace hydrate failed', {
-          area: 'persistence',
-          action: 'hydrate_workspace_state',
-          command: NATIVE_COMMANDS.loadWorkspaceListSnapshot,
-          relatedCommand: NATIVE_COMMANDS.loadReadingProgress,
-          fallback: 'return_null',
-          storageKey: name,
-          error
-        });
-        return null;
-      }
+      return getRuntimeWorkspaceState(name, runtimeInvoke);
     }
-    const fallbackStorage = getLocalFallbackStorage();
-    const persistedValue = fallbackStorage?.getItem(name) ?? null;
-    if (!persistedValue) {
-      return null;
-    }
-
-    const trimmedValue = trimPersistedWorkspaceStatePayload(persistedValue);
-    if (trimmedValue !== persistedValue) {
-      fallbackStorage?.setItem(name, trimmedValue);
-    }
-    return trimmedValue;
+    return readFallbackWorkspaceState(name);
   },
   setItem(name, value) {
     if (getRuntimeInvoke()) {
       return;
     }
-    getLocalFallbackStorage()?.setItem(name, value);
+    writeFallbackWorkspaceState(name, value);
   },
   removeItem(name) {
     if (getRuntimeInvoke()) {
       return;
     }
-    getLocalFallbackStorage()?.removeItem(name);
+    removeFallbackWorkspaceState(name);
   }
 };

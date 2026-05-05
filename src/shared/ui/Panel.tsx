@@ -13,6 +13,7 @@ interface PanelProps<T extends PanelElement = 'section'> {
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  headerClassName?: string;
   surfaceClassName?: string;
   bodyClassName?: string;
   ariaLabel?: string;
@@ -28,6 +29,7 @@ export function AppPanel<T extends PanelElement = 'section'>({
   children,
   footer,
   className,
+  headerClassName,
   surfaceClassName,
   bodyClassName,
   ariaLabel,
@@ -47,6 +49,7 @@ export function AppPanel<T extends PanelElement = 'section'>({
         <header
           className={cn(
             'flex min-h-[48px] items-center justify-start gap-3 px-4 py-2',
+            headerClassName,
             onHeaderClick && 'cursor-pointer transition-colors hover:bg-foreground/[0.03]'
           )}
           onClick={onHeaderClick}

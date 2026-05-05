@@ -24,6 +24,7 @@ interface DocumentPanelHeaderProps {
   canGoForward: boolean;
   canGoParent: boolean;
   editableNodeId: string | null;
+  folderItemCountLabel?: string | null;
   folderListToolbar?: JSX.Element | null;
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
@@ -145,6 +146,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
       </div>
       <DocumentPanelHeaderCenter
         activeNodeId={args.activeNodeId}
+        folderItemCountLabel={args.folderItemCountLabel}
         isFolderListView={args.isFolderListView}
         nodesById={args.nodesById}
         onSelectBreadcrumbNode={args.onSelectBreadcrumbNode}
@@ -184,6 +186,7 @@ export function DocumentPanelHeader({
   canGoForward,
   canGoParent,
   editableNodeId,
+  folderItemCountLabel,
   folderListToolbar,
   isFolderListView,
   isSourceUpdatePanelOpen,
@@ -202,7 +205,7 @@ export function DocumentPanelHeader({
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
 
   return (
-    <AppToolbar as="header" className="min-h-[40px] px-4">
+    <AppToolbar as="header" className="min-h-[var(--workspace-top-toolbar-height)] px-4">
       <h2 className="sr-only">Content</h2>
       {renderDocumentHeaderContent({
         activeNodeId,
@@ -211,6 +214,7 @@ export function DocumentPanelHeader({
         canGoForward,
         canGoParent,
         editableNodeId,
+        folderItemCountLabel,
         editorDisplayMode,
         folderListToolbar,
         isFolderListView,

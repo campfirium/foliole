@@ -212,6 +212,7 @@ export function WorkspaceRightSidebar(props: Pick<
       as="aside"
       bodyClassName="app-scrollbar overflow-y-auto px-3 py-3"
       className="hidden min-h-0 h-full flex-col overflow-hidden border-l border-border bg-bg-panel text-foreground xl:flex"
+      headerClassName="min-h-[var(--workspace-top-toolbar-height)] px-4 py-2"
       title={<span className="text-sm font-semibold uppercase tracking-[0.04em]">{getPanelTitle(props.activePanelId)}</span>}
     >
       {renderPanel(props)}

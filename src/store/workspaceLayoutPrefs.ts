@@ -72,6 +72,14 @@ export function saveListWidthPreference(value: number) {
   writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.listWidth, value);
 }
 
+export function loadDualListWidthPreference(fallback: number) {
+  return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.dualListWidth, fallback);
+}
+
+export function saveDualListWidthPreference(value: number) {
+  writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.dualListWidth, value);
+}
+
 export function loadDocumentWidthPreference(fallback: number) {
   return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.documentWidth, fallback);
 }

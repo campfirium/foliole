@@ -173,7 +173,7 @@ function useResolvedFolderListState(props: FolderListViewProps) {
 
 export function FolderListView(props: FolderListViewProps) {
   const { nodeViewById, resolvedEmptyState, resolvedFolderTitle, state } = useResolvedFolderListState(props);
-  const showEmbeddedHeader = props.showEmbeddedHeader ?? true;
+  const headerMode = props.showEmbeddedHeader === false ? 'search-only' : 'full';
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
@@ -183,6 +183,7 @@ export function FolderListView(props: FolderListViewProps) {
           documentMaxWidth={props.documentMaxWidth}
           filteredNodes={state.filteredNodes}
           folderTitle={resolvedFolderTitle}
+          headerMode={headerMode}
           itemCountLabel={state.itemCountLabel}
           onChangeSearchQuery={state.setSearchQuery}
           onChangeSortDirection={state.updateSortDirection}
@@ -199,7 +200,6 @@ export function FolderListView(props: FolderListViewProps) {
           onResetLayout={props.onResetLayout}
           onStartDocumentResize={props.onStartDocumentResize}
           searchQuery={state.searchQuery}
-          showEmbeddedHeader={showEmbeddedHeader}
           sortDirection={state.sortDirection}
           sortKey={state.sortKey}
         />

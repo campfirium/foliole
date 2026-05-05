@@ -235,13 +235,18 @@ function resolveActiveNodeId(
   );
 }
 
-export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
+export function loadWorkspaceListSnapshot(
+  driver: DatabaseDriver,
+  options?: { includePdfOpenings?: boolean }
+) {
   const rows = queryWorkspaceRows(driver);
   if (rows.length === 0) {
     return null;
   }
   const { directOpeningById, nodesById, trashedNodeIds } = buildNodesById(rows);
-  const pdfOpeningById = buildPdfOpeningById(queryPdfOpeningRows(driver), nodesById);
+  const pdfOpeningById = options?.includePdfOpenings === false
+    ? new Map<string, string>()
+    : buildPdfOpeningById(queryPdfOpeningRows(driver), nodesById);
   const nodeOrder = buildNodeOrder(driver, rows, nodesById);
   applyResolvedOpenings({ directOpeningById, nodeOrder, nodesById, pdfOpeningById });
   const activeNodeId = resolveActiveNodeId(driver, nodeOrder, nodesById, trashedNodeIds);

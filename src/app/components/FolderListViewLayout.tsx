@@ -14,32 +14,35 @@ function FolderListHeader({
   itemCountLabel,
   onChangeSearchQuery,
   onChangeSortDirection,
+  onChangeSortKey,
   searchQuery,
+  showCountAndTitle,
+  showSortControls,
   sortDirection,
-  sortKey,
-  onChangeSortKey
+  sortKey
 }: {
   folderTitle: string;
   itemCountLabel: string;
   searchQuery: string;
+  showCountAndTitle: boolean;
+  showSortControls: boolean;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
   onChangeSearchQuery: (value: string) => void;
   onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
 }) {
+  const shouldShowSearchRow = showCountAndTitle || showSortControls;
+
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-border/10 pb-3">
-      <div className="flex min-w-0 items-baseline gap-2">
-        <h2 className="truncate text-base font-semibold text-foreground">{folderTitle}</h2>
-        <p
-          aria-label={`Folder result count ${itemCountLabel}`}
-          className="shrink-0 text-sm font-medium text-foreground/58"
-          data-testid="folder-list-count"
-        >
-          {itemCountLabel}
-        </p>
-      </div>
+      {shouldShowSearchRow ? (
+        <FolderListHeaderSummary
+          folderTitle={folderTitle}
+          itemCountLabel={itemCountLabel}
+          showCountAndTitle={showCountAndTitle}
+        />
+      ) : null}
       <div className="w-[248px] max-w-full max-[900px]:w-full max-[900px]:basis-full">
         <div className="flex h-9 w-full items-center gap-2 rounded-lg bg-bg-subtle px-3">
           <Search aria-hidden="true" className="shrink-0 text-foreground/38" size={14} strokeWidth={1.8} />
@@ -53,14 +56,43 @@ function FolderListHeader({
           />
         </div>
       </div>
-      <div className="ml-auto shrink-0">
-        <FolderListSortControls
-          onChangeSortDirection={onChangeSortDirection}
-          onChangeSortKey={onChangeSortKey}
-          sortDirection={sortDirection}
-          sortKey={sortKey}
-        />
-      </div>
+      {showSortControls ? (
+        <div className="ml-auto shrink-0">
+          <FolderListSortControls
+            onChangeSortDirection={onChangeSortDirection}
+            onChangeSortKey={onChangeSortKey}
+            sortDirection={sortDirection}
+            sortKey={sortKey}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function FolderListHeaderSummary({
+  folderTitle,
+  itemCountLabel,
+  showCountAndTitle
+}: {
+  folderTitle: string;
+  itemCountLabel: string;
+  showCountAndTitle: boolean;
+}) {
+  if (!showCountAndTitle) {
+    return <div className="min-w-0 flex-1" aria-hidden="true" />;
+  }
+
+  return (
+    <div className="flex min-w-0 items-baseline gap-2">
+      <h2 className="truncate text-base font-semibold text-foreground">{folderTitle}</h2>
+      <p
+        aria-label={`Folder result count ${itemCountLabel}`}
+        className="shrink-0 text-sm font-medium text-foreground/58"
+        data-testid="folder-list-count"
+      >
+        {itemCountLabel}
+      </p>
     </div>
   );
 }
@@ -137,7 +169,7 @@ export function FolderListViewLayout(props: {
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
   searchQuery: string;
-  showEmbeddedHeader: boolean;
+  headerMode: 'full' | 'search-only' | 'hidden';
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
@@ -148,7 +180,7 @@ export function FolderListViewLayout(props: {
       onStartDocumentResize={props.onStartDocumentResize}
     >
       <section aria-label="Folder list body" className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
-        {props.showEmbeddedHeader ? (
+        {props.headerMode === 'hidden' ? null : (
           <FolderListHeader
             folderTitle={props.folderTitle}
             itemCountLabel={props.itemCountLabel}
@@ -156,10 +188,12 @@ export function FolderListViewLayout(props: {
             onChangeSortDirection={props.onChangeSortDirection}
             onChangeSortKey={props.onChangeSortKey}
             searchQuery={props.searchQuery}
+            showCountAndTitle={props.headerMode === 'full'}
+            showSortControls={props.headerMode === 'full'}
             sortDirection={props.sortDirection}
             sortKey={props.sortKey}
           />
-        ) : null}
+        )}
         <FolderListBody
           currentEmptyState={props.currentEmptyState}
           filteredNodes={props.filteredNodes}
