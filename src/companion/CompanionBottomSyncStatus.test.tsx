@@ -57,8 +57,29 @@ function expectReviewQueueAttachmentProgressAfterActiveTopic() {
   expect(screen.queryByText('2/3')).not.toBeInTheDocument();
 }
 
+function expectRemainingBodyBacklogLabel() {
+  render(
+    <CompanionBottomSyncStatus
+      progress={{
+        completed: 0,
+        completedBytes: 0,
+        mode: 'remaining',
+        phase: 'content',
+        total: 5,
+        totalBytes: 5242880
+      }}
+    />
+  );
+
+  expect(screen.getByText('Topic bodies')).toBeInTheDocument();
+  expect(screen.getByText('5 left - 0 B/5.0 MB')).toBeInTheDocument();
+  expect(screen.queryByText('0/5 - 0 B/5.0 MB')).not.toBeInTheDocument();
+}
+
 describe('CompanionBottomSyncStatus priority counts', () => {
   it('subtracts current topic bodies before showing review queue body progress', expectReviewQueueBodyProgressAfterActiveTopic);
 
   it('subtracts current topic attachments before showing review queue attachment progress', expectReviewQueueAttachmentProgressAfterActiveTopic);
+
+  it('labels idle remaining body backlog as left to download', expectRemainingBodyBacklogLabel);
 });

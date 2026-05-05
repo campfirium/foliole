@@ -133,6 +133,7 @@ async function testKeepsProgressVisibleWhenStructureLagRemains() {
   expect(setSyncProgress).not.toHaveBeenCalledWith(null);
   expect(setSyncProgress).toHaveBeenCalledWith({
     completed: 0,
+    mode: 'remaining',
     phase: 'structure',
     total: 4
   });

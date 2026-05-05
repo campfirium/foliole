@@ -105,6 +105,7 @@ async function testKeepsResourceErrorsVisibleWithoutFastRetry() {
     contentBreakdown: undefined,
     failedBytes: undefined,
     failedCount: 0,
+    mode: 'remaining',
     phase: 'content',
     total: 5,
     totalBytes: null
@@ -156,6 +157,7 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
     },
     failedBytes: undefined,
     failedCount: 0,
+    mode: 'remaining',
     phase: 'content',
     total: 5,
     totalBytes: null

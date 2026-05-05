@@ -27,6 +27,7 @@ export interface CompanionDesktopSyncProgress {
     topLevelTopicBodies?: number;
     topicBodies?: number;
   };
+  mode?: 'active' | 'remaining';
   phase: 'attachment' | 'content' | 'structure';
   total: number | null;
   totalBytes?: number | null;

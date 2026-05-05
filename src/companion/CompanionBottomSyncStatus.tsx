@@ -94,6 +94,7 @@ function displayTotal(progress: CompanionDesktopSyncProgress) {
 }
 
 function progressCountLabel(progress: CompanionDesktopSyncProgress, completed: number, total: number) {
+  if (progress.mode === 'remaining' && progress.total !== null) return `${total} left`;
   return progress.total === null ? 'Checking' : `${completed}/${total}`;
 }
 

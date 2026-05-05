@@ -41,6 +41,7 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
       contentBreakdown: result.remainingContentBreakdown,
       failedBytes: knownNumber(result.remainingFailedContentBlobBytes),
       failedCount: knownNumber(result.remainingFailedContentBlobCount),
+      mode: 'remaining',
       phase: 'content',
       total: result.remainingContentBlobCount,
       totalBytes: result.remainingContentBlobBytes ?? null
@@ -56,6 +57,7 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
       completedBytes: 0,
       failedBytes: knownNumber(result.remainingFailedAttachmentResourceBytes),
       failedCount: knownNumber(result.remainingFailedAttachmentResourceCount),
+      mode: 'remaining',
       phase: 'attachment',
       total: result.remainingAttachmentResourceCount,
       totalBytes: result.remainingAttachmentResourceBytes ?? null
@@ -67,6 +69,7 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
   }
   return {
     completed: 0,
+    mode: 'remaining',
     phase: 'structure',
     total: remaining
   };
