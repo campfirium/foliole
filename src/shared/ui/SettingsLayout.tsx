@@ -28,7 +28,7 @@ export function SettingsSection({
   title
 }: SettingsSectionProps) {
   return (
-    <section aria-label={ariaLabel} className={cn('mb-5 space-y-2.5 last:mb-0', className)}>
+    <section aria-label={ariaLabel} className={cn('mb-7 space-y-3 last:mb-0', className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base font-semibold text-foreground">{title}</h3>
@@ -45,8 +45,8 @@ export function SettingsRow({ children, className, description, readonly = false
   return (
     <div
       className={cn(
-        'flex min-h-[70px] items-center justify-between gap-3 rounded-lg border px-3 py-2.5 max-[1080px]:flex-col max-[1080px]:items-start',
-        readonly ? 'border-border/80 bg-bg-elevated' : 'border-border bg-bg-panel',
+        'flex min-h-[64px] items-start justify-between gap-4 py-2 max-[1080px]:flex-col max-[1080px]:items-start',
+        readonly && 'text-foreground/80',
         className
       )}
     >
