@@ -14,7 +14,7 @@ final class FolioleCompanionSyncDiagnosticContent {
 
     static JSObject load(Context context, SQLiteDatabase database) throws Exception {
         JSObject content = new JSObject();
-        copyBodySummary(content, FolioleCompanionContentBlobStore.summarizeMissingBodies(database));
+        copyBodySummary(content, FolioleCompanionContentBlobStore.summarizeMissingBodies(context, database));
         content.put("missing_topic_body_count", count(database,
             "SELECT COUNT(DISTINCT n.body_blob_hash) FROM nodes n " +
                 "JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +

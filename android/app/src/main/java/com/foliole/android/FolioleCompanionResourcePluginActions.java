@@ -27,7 +27,7 @@ final class FolioleCompanionResourcePluginActions {
         return databaseHelper.loadMissingAttachmentResource(call.getString("attachment_id"));
     }
 
-    static JSObject loadMissingContentBlobHashes(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) {
+    static JSObject loadMissingContentBlobHashes(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.loadMissingContentBlobHashes(call.getInt("limit", 50));
     }
 

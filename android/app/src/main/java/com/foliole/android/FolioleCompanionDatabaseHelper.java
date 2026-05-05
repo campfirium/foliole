@@ -109,9 +109,9 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionAttachmentResourceStore.loadMissingResource(context, database, attachmentId);
     }
 
-    JSObject loadMissingContentBlobHashes(int limit) {
+    JSObject loadMissingContentBlobHashes(int limit) throws Exception {
         SQLiteDatabase database = getReadableDatabase();
-        return FolioleCompanionContentBlobStore.loadMissingHashes(database, limit);
+        return FolioleCompanionContentBlobStore.loadMissingHashes(context, database, limit);
     }
 
     JSObject syncContentBlob(String hash, String url, JSONObject headers) throws Exception {

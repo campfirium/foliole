@@ -14,12 +14,12 @@ import java.time.Instant;
 final class FolioleCompanionContentBlobStore {
     private FolioleCompanionContentBlobStore() {}
 
-    static JSObject loadMissingHashes(SQLiteDatabase database, int limit) {
-        return FolioleCompanionContentBlobMissingStore.loadMissingHashes(database, limit);
+    static JSObject loadMissingHashes(Context context, SQLiteDatabase database, int limit) throws Exception {
+        return FolioleCompanionContentBlobMissingStore.loadMissingHashes(context, database, limit);
     }
 
-    static JSObject summarizeMissingBodies(SQLiteDatabase database) {
-        return FolioleCompanionContentBlobMissingStore.summarizeMissingBodies(database);
+    static JSObject summarizeMissingBodies(Context context, SQLiteDatabase database) throws Exception {
+        return FolioleCompanionContentBlobMissingStore.summarizeMissingBodies(context, database);
     }
 
     static JSObject syncBlob(Context context, SQLiteDatabase database, String hash, String url, JSONObject headers) throws Exception {
