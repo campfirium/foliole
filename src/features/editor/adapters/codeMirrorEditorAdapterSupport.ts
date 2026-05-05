@@ -4,7 +4,10 @@ import { Decoration, EditorView } from '@codemirror/view';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
-import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
+import {
+  requestRemoteImageLocalizationConsent,
+  shouldAutoLocalizeRemoteImages
+} from '../model/remoteImageLocalizationSetting';
 
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
 import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
@@ -123,12 +126,15 @@ export class RemoteImageLocalizationController {
   schedule() {
     this.destroy();
     const nodeId = this.args.getNodeId();
-    if (!nodeId || !shouldAutoLocalizeRemoteImages()) {
+    if (!nodeId) {
       return;
     }
 
     const currentContent = this.args.getContent();
     if (!/!\[[^\]]*\]\((?:<)?https?:\/\//i.test(currentContent)) {
+      return;
+    }
+    if (!shouldAutoLocalizeRemoteImages() && !requestRemoteImageLocalizationConsent()) {
       return;
     }
 

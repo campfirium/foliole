@@ -20,7 +20,7 @@ export function SettingsEditorSection() {
   return (
     <SettingsSection ariaLabel="Editor settings section" title="Live markdown">
       <SettingsRow
-        description="Save remote images into your library so topics keep working offline and stay independent of the original URL."
+        description="Copy pictures from their original websites into your local library so topics stay readable offline."
         title="Save remote images locally"
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
