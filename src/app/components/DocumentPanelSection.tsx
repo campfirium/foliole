@@ -1,10 +1,10 @@
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { useEffect, useLayoutEffect, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
-import { collectDocumentTextAnchorPresentation } from '../../features/editor/model/documentTextAnchorDecorations';
+import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
@@ -94,16 +94,31 @@ export interface DocumentPanelSectionProps {
 }
 
 function useDocumentPanelTextAnchorState(props: DocumentPanelSectionProps) {
-  return useMemo(
-    () =>
-      collectDocumentTextAnchorPresentation({
-        activeNodeId: props.activeNodeId,
-        nodesById: props.nodesById,
-        parentContent: props.editorContent,
-        trashedNodeIds: props.trashedNodeIds
-      }),
-    [props.activeNodeId, props.editorContent, props.nodesById, props.trashedNodeIds]
-  );
+  const previousDecorationsRef = useRef<ReturnType<typeof collectDocumentTextAnchorDecorations>>([]);
+  return useMemo(() => {
+    const nextDecorations = collectDocumentTextAnchorDecorations({
+      activeNodeId: props.activeNodeId,
+      nodesById: props.nodesById,
+      parentContent: props.editorContent,
+      trashedNodeIds: props.trashedNodeIds
+    });
+    const previousDecorations = previousDecorationsRef.current;
+    const isSame =
+      previousDecorations.length === nextDecorations.length &&
+      previousDecorations.every((previousDecoration, index) => {
+        const nextDecoration = nextDecorations[index];
+        return (
+          previousDecoration?.from === nextDecoration?.from &&
+          previousDecoration?.to === nextDecoration?.to &&
+          previousDecoration?.kind === nextDecoration?.kind
+        );
+      });
+    if (isSame) {
+      return previousDecorations;
+    }
+    previousDecorationsRef.current = nextDecorations;
+    return nextDecorations;
+  }, [props.activeNodeId, props.editorContent, props.nodesById, props.trashedNodeIds]);
 }
 
 function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
@@ -115,7 +130,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   );
   const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
   const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
-  const textAnchorPresentation = useDocumentPanelTextAnchorState(props);
+  const textAnchorState = useDocumentPanelTextAnchorState(props);
   const {
     currentSourceUpdateContent,
     handleSourceUpdateDraftChange,
@@ -143,7 +158,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     bodyProps,
     documentLayoutStyle,
     emptyContent,
-    textAnchorPresentation,
+    textAnchorState,
     isFolderListView,
     isSourceUpdatePanelOpen,
     currentSourceUpdateContent,
@@ -197,7 +212,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         bodyProps={{
           ...model.bodyProps,
           onEditorReady: interactions.handleEditorReady,
-          textAnchorPresentation: model.textAnchorPresentation,
+          textAnchorDecorations: model.textAnchorState,
           emptyContent: model.emptyContent,
           onOpenNodeLink: interactions.handleOpenNodeLink
         }}

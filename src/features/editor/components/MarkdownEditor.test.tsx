@@ -9,7 +9,7 @@ const mockGetContent = vi.fn(() => '');
 const mockSetContent = vi.fn();
 const mockSetDiffDecorations = vi.fn();
 const mockSetSearchDecorations = vi.fn();
-const mockSetTextAnchorPresentation = vi.fn();
+const mockSetTextAnchorDecorations = vi.fn();
 const mockSetHideTitleHeading = vi.fn();
 const mockSetNodeId = vi.fn();
 const mockRefreshImageClozePresentation = vi.fn();
@@ -33,7 +33,7 @@ function createMockCodeMirrorEditorAdapterClass() {
     setContent(content: string) { mockSetContent(content); }
     setDiffDecorations(diffDecorations: unknown) { mockSetDiffDecorations(diffDecorations); }
     setSearchDecorations(searchDecorations: unknown) { mockSetSearchDecorations(searchDecorations); }
-    setTextAnchorPresentation(textAnchorPresentation: unknown) { mockSetTextAnchorPresentation(textAnchorPresentation); }
+    setTextAnchorDecorations(textAnchorDecorations: unknown) { mockSetTextAnchorDecorations(textAnchorDecorations); }
     setHideTitleHeading(value: boolean) { mockSetHideTitleHeading(value); }
     setNodeId(nodeId: string | null) { mockSetNodeId(nodeId); }
     refreshImageClozePresentation() { mockRefreshImageClozePresentation(); }
@@ -81,7 +81,7 @@ function resetMocks() {
     mockSetContent.mockClear();
     mockSetDiffDecorations.mockClear();
     mockSetSearchDecorations.mockClear();
-    mockSetTextAnchorPresentation.mockClear();
+    mockSetTextAnchorDecorations.mockClear();
     mockSetHideTitleHeading.mockClear();
     mockSetNodeId.mockClear();
     mockRefreshImageClozePresentation.mockClear();
@@ -152,10 +152,7 @@ function registerEditorPresentationUpdateTests() {
       <MarkdownEditor
         nodeId="node-1"
         onChange={onChange}
-        textAnchorPresentation={{
-          inlineAnchorCompatibility: { hiddenKeys: [] },
-          textAnchorDecorations: [{ from: 1, kind: 'highlight', to: 4 }]
-        }}
+        textAnchorDecorations={[{ from: 1, kind: 'highlight', to: 4 }]}
         value="Alpha"
       />
     );
@@ -164,19 +161,38 @@ function registerEditorPresentationUpdateTests() {
       <MarkdownEditor
         nodeId="node-1"
         onChange={onChange}
-        textAnchorPresentation={{
-          inlineAnchorCompatibility: { hiddenKeys: [] },
-          textAnchorDecorations: [{ from: 6, kind: 'cloze', to: 10 }]
-        }}
+        textAnchorDecorations={[{ from: 6, kind: 'cloze', to: 10 }]}
         value="Alpha Beta"
       />
     );
 
     expect(mockCtor).toHaveBeenCalledTimes(1);
-    expect(mockSetTextAnchorPresentation).toHaveBeenCalledWith({
-      inlineAnchorCompatibility: { hiddenKeys: [] },
-      textAnchorDecorations: [{ from: 6, kind: 'cloze', to: 10 }]
-    });
+    expect(mockSetTextAnchorDecorations).toHaveBeenCalledWith([{ from: 6, kind: 'cloze', to: 10 }]);
+  });
+
+  it('does not resend unchanged text anchor decorations on rerender', () => {
+    const onChange = vi.fn();
+    const view = renderWithMouseGestureProvider(
+      <MarkdownEditor
+        nodeId="node-1"
+        onChange={onChange}
+        textAnchorDecorations={[{ from: 1, kind: 'highlight', to: 4 }]}
+        value="Alpha"
+      />
+    );
+
+    mockSetTextAnchorDecorations.mockClear();
+
+    view.rerender(
+      <MarkdownEditor
+        nodeId="node-1"
+        onChange={onChange}
+        textAnchorDecorations={[{ from: 1, kind: 'highlight', to: 4 }]}
+        value="Alpha"
+      />
+    );
+
+    expect(mockSetTextAnchorDecorations).not.toHaveBeenCalled();
   });
 }
 

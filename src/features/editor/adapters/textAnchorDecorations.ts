@@ -1,5 +1,5 @@
 import { RangeSetBuilder } from '@codemirror/state';
-import { Decoration, type DecorationSet, type EditorView } from '@codemirror/view';
+import { Decoration, type DecorationSet } from '@codemirror/view';
 
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
 
@@ -9,6 +9,13 @@ interface TextAnchorCoverageSegment {
   from: number;
   to: number;
 }
+
+const DECORATION_BY_CLASS = {
+  'cm-md-anchor-overlap': Decoration.mark({ class: 'cm-md-anchor-overlap' }),
+  'cm-md-cloze': Decoration.mark({ class: 'cm-md-cloze' }),
+  'cm-md-highlight': Decoration.mark({ class: 'cm-md-highlight' }),
+  'cm-md-highlight-overlap': Decoration.mark({ class: 'cm-md-highlight-overlap' })
+} as const;
 
 function collectTextAnchorSegments(
   decorations: readonly EditorTextAnchorDecoration[],
@@ -54,23 +61,23 @@ function addDecoration(
   builder: RangeSetBuilder<Decoration>,
   from: number,
   to: number,
-  className: string
+  className: keyof typeof DECORATION_BY_CLASS
 ) {
   if (to <= from) {
     return;
   }
-  builder.add(from, to, Decoration.mark({ class: className }));
+  builder.add(from, to, DECORATION_BY_CLASS[className]);
 }
 
 export function buildEditorTextAnchorDecorations(
-  view: EditorView,
+  docLength: number,
   decorations: readonly EditorTextAnchorDecoration[] | null | undefined
 ): DecorationSet {
   if (!decorations || decorations.length === 0) {
     return Decoration.none;
   }
 
-  const segments = collectTextAnchorSegments(decorations, view.state.doc.length);
+  const segments = collectTextAnchorSegments(decorations, docLength);
   if (segments.length === 0) {
     return Decoration.none;
   }

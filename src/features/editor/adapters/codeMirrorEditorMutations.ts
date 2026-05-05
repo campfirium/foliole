@@ -6,7 +6,7 @@ import type { EditorSearchDecorations } from './EditorAdapter';
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
 import { buildEditorDiffDecorations, type EditorDiffDecorations } from './lineDiffDecorations';
 import { buildEditorSearchDecorations } from './searchDecorations';
-import { buildEditorTextAnchorDecorations } from './textAnchorDecorations';
+import { updateTextAnchorDecorations } from './codeMirrorTextAnchorState';
 
 export function applyExternalEditorContent(args: {
   content: string;
@@ -61,11 +61,8 @@ export function applyTextAnchorDecorations(args: {
   textAnchorDecorations: readonly EditorTextAnchorDecoration[] | null;
   view: EditorView;
 }) {
-  reconfigureDecorationCompartment({
-    buildDecorations: () =>
-      EditorView.decorations.of(buildEditorTextAnchorDecorations(args.view, args.textAnchorDecorations)),
-    compartment: args.compartment,
-    fallbackLabel: '[editor] failed to apply text anchor decorations, falling back to plain view',
+  updateTextAnchorDecorations({
+    textAnchorDecorations: args.textAnchorDecorations ?? [],
     view: args.view
   });
 }

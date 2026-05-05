@@ -9,13 +9,14 @@ import {
   createReadOnlyExtensions,
   createLiveMarkdownReconfigureEffect
 } from './codeMirrorEditorAdapterSupport';
+import { createTextAnchorDecorationsExtension } from './codeMirrorTextAnchorState';
 import { createLiveMarkdownExtensions } from './liveMarkdown';
 import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
 import { markdownInputAssist } from './markdownInputAssist';
 
 export function createCodeMirrorEditorExtensions(args: {
   diffDecorationsCompartment: import('@codemirror/state').Compartment;
-  textAnchorPresentation: import('./EditorAdapter').EditorTextAnchorPresentation;
+  textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   liveMarkdownCompartment: import('@codemirror/state').Compartment;
@@ -42,11 +43,11 @@ export function createCodeMirrorEditorExtensions(args: {
     args.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.paragraphMarkerCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.searchDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
-    args.textAnchorDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
+    args.textAnchorDecorationsCompartment.of(createTextAnchorDecorationsExtension(args.textAnchorDecorations)),
     args.liveMarkdownCompartment.of(createLiveMarkdownExtensions()),
     args.liveMarkdownStateCompartment.of(
       createLiveMarkdownStateExtensions({
-        textAnchorPresentation: args.textAnchorPresentation,
+        textAnchorDecorations: args.textAnchorDecorations,
         hideTitleHeading: args.hideTitleHeading,
         imageClozePresentationVersion: args.imageClozePresentationVersion,
         nodeId: args.nodeId,
@@ -71,7 +72,7 @@ export function createCodeMirrorEditorExtensions(args: {
 
 export function createLiveMarkdownEffect(args: {
   compartment: import('@codemirror/state').Compartment;
-  textAnchorPresentation: import('./EditorAdapter').EditorTextAnchorPresentation;
+  textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
