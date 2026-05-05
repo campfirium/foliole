@@ -91,6 +91,29 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('blocks upper production code from importing bridge-named runtime modules', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/app/hooks/usePdfImports.ts', `
+      import { loadRuntimePdfImportsInventory } from '../../shared/platform/pdfImportsBridge';
+    `);
+    await writeFixtureFile(repoRoot, 'src/features/review/reviewRuntime.ts', `
+      import type { RuntimeReviewGradePayload } from '../../shared/platform/reviewBridge';
+    `);
+    await writeFixtureFile(repoRoot, 'src/companion/companionRuntime.ts', `
+      import { isNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceSyncBridge';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        { file: 'src/app/hooks/usePdfImports.ts', line: 1, kind: 'runtime-bridge-import' },
+        { file: 'src/features/review/reviewRuntime.ts', line: 1, kind: 'runtime-bridge-import' },
+        { file: 'src/companion/companionRuntime.ts', line: 1, kind: 'runtime-bridge-import' }
+      ])
+    );
+  });
+
   it('blocks shared testing debug helpers from importing runtime command details', async () => {
     const repoRoot = await createFixtureRoot();
     await writeFixtureFile(repoRoot, 'src/shared/testing/debugRuntime.ts', `

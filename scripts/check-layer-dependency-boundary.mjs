@@ -14,6 +14,7 @@ const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/app/', 'src/companion/', 'src/store/
 const IMPORT_STATEMENT_PATTERN = /\bimport(?:\s+type)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
 const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = /(?:^|\/)lib\/platform\/(?:nativeCommands|nativeContract)$/;
 const RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/(?:bridge|runtimeInvoke)$/;
+const RUNTIME_BRIDGE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/[^/]*Bridge$/;
 const CORE_PLATFORM_IMPORT_SOURCE_PATTERN = /^platform\/(?:nativeCommands|nativeContract)(?:\.[cm]?[jt]s)?$/;
 
 function resolveRepoRoot() {
@@ -50,6 +51,11 @@ function isRuntimeCommandBoundaryImport(imports, source) {
   return RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN.test(normalizedSource) && /\bgetRuntimeInvoke\b/.test(imports);
 }
 
+function isRuntimeBridgeBoundaryImport(source) {
+  const normalizedSource = source.replace(/\\/g, '/').replace(/^(?:\.\.\/)+/, '');
+  return RUNTIME_BRIDGE_IMPORT_SOURCE_PATTERN.test(normalizedSource);
+}
+
 function isCorePlatformImport(source) {
   const normalizedSource = source.replace(/\\/g, '/').replace(/^(?:\.\.\/)+/, '');
   return CORE_PLATFORM_IMPORT_SOURCE_PATTERN.test(normalizedSource);
@@ -76,6 +82,9 @@ function inspectFile(filePath, repoRoot) {
     for (const match of contents.matchAll(IMPORT_STATEMENT_PATTERN)) {
       if (isRuntimeCommandBoundaryImport(match[1] ?? '', match[2] ?? '')) {
         violations.push({ file: relativeFile, line: toLineNumber(contents, match.index ?? 0), kind: 'runtime-command-import' });
+      }
+      if (isRuntimeBridgeBoundaryImport(match[2] ?? '')) {
+        violations.push({ file: relativeFile, line: toLineNumber(contents, match.index ?? 0), kind: 'runtime-bridge-import' });
       }
     }
   }
