@@ -37,7 +37,10 @@ describe('Android learning sync payload metadata', () => {
       nodeIdPayloadKey: 'node_id',
       recordDeletedAtKey: 'deleted_at',
       recordUpdatedAtKey: 'updated_at',
-      reviewLogInputPayloadKey: 'review_log_json'
+      reviewLogInputPayloadKey: 'review_log_json',
+      reviewLogCardAfterInputKey: 'cardAfter',
+      reviewLogGradeInputKey: 'grade',
+      reviewLogReviewedAtInputKey: 'reviewedAt'
     });
   });
 

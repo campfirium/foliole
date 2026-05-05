@@ -46,11 +46,18 @@ describe('Android sync stream query rules', () => {
     expect(nodeVersionSource).toContain('FolioleCompanionSyncStreamQueryRules.nodeVersionParentQueryName(context)');
     expect(reviewLogSource).toContain('FolioleCompanionSyncStreamQueryRules.reviewLogQueryName(context)');
     expect(reviewLogSource).toContain('FolioleCompanionSyncReviewLogRecordRules.string(context, queryName, record, key, fallback)');
+    expect(reviewLogSource).toContain('FolioleCompanionSyncReviewLogRecordRules.key(context, queryName, key)');
+    expect(reviewLogSource).toContain('FolioleCompanionSyncPayloadQueryStore.metadata(context');
     expect(reviewLogRulesSource).toContain('column.getString("source")');
     expect(rulesSource).toContain('optJSONObject("syncStreamRead")');
     expect(nodeVersionSource).not.toContain('"syncNodeVersions"');
     expect(nodeVersionSource).not.toContain('"syncNodeVersionParent"');
     expect(reviewLogSource).not.toContain('"syncReviewLog"');
+    expect(reviewLogSource).not.toContain('draft.getJSONObject("cardBefore")');
+    expect(reviewLogSource).not.toContain('draft.getInt("grade")');
+    expect(reviewLogSource).not.toContain('draft.optString("schedulerVersion"');
+    expect(reviewLogSource).not.toContain('cardBefore.getString("due")');
+    expect(reviewLogSource).not.toContain('record.put("op_id"');
     expect(reviewLogSource).not.toContain('record.optString("op_id"');
     expect(reviewLogSource).not.toContain('record.optInt("grade"');
     expect(`${nodeVersionSource}\n${reviewLogSource}`).not.toContain('Math.max(1, Math.min(1000');

@@ -22,6 +22,10 @@ final class FolioleCompanionSyncReviewLogRecordRules {
         return record.optDouble(columnSource(context, queryName, key), fallback);
     }
 
+    static String key(Context context, String queryName, String key) throws Exception {
+        return columnSource(context, queryName, key);
+    }
+
     private static String columnSource(Context context, String queryName, String key) throws Exception {
         JSONArray columns = query(context, queryName).getJSONArray("columns");
         for (int index = 0; index < columns.length(); index += 1) {
