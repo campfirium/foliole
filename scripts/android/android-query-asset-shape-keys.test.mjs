@@ -56,7 +56,9 @@ describe('Android query asset shape keys', () => {
         string: 'string',
         title: 'title'
       },
+      metricRow: { metricKey: 'metricKey', resultKey: 'resultKey', valueKey: 'valueKey' },
       query: { columns: 'columns', resultKey: 'resultKey', sql: 'sql', syncPayload: 'syncPayload' },
+      diagnosticRowGroup: { outputKey: 'outputKey', queryKey: 'queryKey' },
       routing: { routes: 'routes' }
     });
   });
@@ -72,8 +74,10 @@ describe('Android query asset shape keys', () => {
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "resultKey")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "source")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.routingKey(context, "routes")');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.metricRowKey(context, key)');
     expect(shapeKeys).toContain('fieldKey(Context context, String key)');
     expect(shapeKeys).toContain('fieldType(Context context, String key)');
+    expect(shapeKeys).toContain('diagnosticRowGroupKey(Context context, String key)');
     expect(combinedSource).not.toContain('getString("sql")');
     expect(combinedSource).not.toContain('getJSONArray("columns")');
     expect(combinedSource).not.toContain('getString("source")');

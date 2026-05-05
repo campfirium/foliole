@@ -32,7 +32,10 @@ final class FolioleCompanionSyncDiagnosticState {
         JSONArray rowGroups = FolioleCompanionSyncDiagnosticQueryRules.array(context, "stateRowGroups");
         for (int index = 0; index < rowGroups.length(); index += 1) {
             JSONObject rowGroup = rowGroups.getJSONObject(index);
-            state.put(stateKeys.getString(rowGroup.getString("outputKey")), loadRows(context, database, rowGroup.getString("queryKey")));
+            state.put(
+                stateKeys.getString(rowGroup.getString(diagnosticRowGroupKey(context, "outputKey"))),
+                loadRows(context, database, rowGroup.getString(diagnosticRowGroupKey(context, "queryKey")))
+            );
         }
         return state;
     }
@@ -53,5 +56,9 @@ final class FolioleCompanionSyncDiagnosticState {
 
     private static JSONObject diagnosticObject(Context context, String key) throws Exception {
         return FolioleCompanionSyncProtocolDefinitions.objectValue(context, "syncDiagnostics", key);
+    }
+
+    private static String diagnosticRowGroupKey(Context context, String key) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.diagnosticRowGroupKey(context, key);
     }
 }

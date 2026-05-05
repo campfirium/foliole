@@ -94,6 +94,8 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys")');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "metricRows")');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.array(context, "stateRowGroups")');
+    expect(combined).toContain('FolioleCompanionQueryDefinitionShapeKeys.metricRowKey(context, key)');
+    expect(combined).toContain('FolioleCompanionQueryDefinitionShapeKeys.diagnosticRowGroupKey(context, key)');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "verdictMetricKeys")');
     expect(combined).toContain('FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys")');
     expect(combined).toContain('FolioleCompanionQueryAssetKeys.section(context, "diagnosticRead")');
@@ -116,6 +118,10 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).not.toContain('getJSONArray("metrics"');
     expect(combined).not.toContain('getString("metric"');
     expect(combined).not.toContain('getLong("value"');
+    expect(combined).not.toContain('getString("metricKey"');
+    expect(combined).not.toContain('getString("valueKey"');
+    expect(combined).not.toContain('getString("outputKey"');
+    expect(combined).not.toContain('getString("queryKey"');
     expect(combined).not.toContain('loadRows(context, database, "dirtyObjects"');
     expect(combined).not.toContain('loadRows(context, database, "pendingAcks"');
   });

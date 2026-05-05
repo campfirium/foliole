@@ -27,8 +27,16 @@ final class FolioleCompanionQueryDefinitionShapeKeys {
         return section(context, "fieldTypes").getString(key);
     }
 
+    static String metricRowKey(Context context, String key) throws Exception {
+        return section(context, "metricRow").getString(key);
+    }
+
     static String queryKey(Context context, String key) throws Exception {
         return section(context, "query").getString(key);
+    }
+
+    static String diagnosticRowGroupKey(Context context, String key) throws Exception {
+        return section(context, "diagnosticRowGroup").getString(key);
     }
 
     static String routingKey(Context context, String key) throws Exception {

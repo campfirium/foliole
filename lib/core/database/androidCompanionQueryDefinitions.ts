@@ -68,11 +68,20 @@ export const ANDROID_COMPANION_QUERY_SHAPE_KEYS = {
     string: 'string',
     title: 'title'
   },
+  metricRow: {
+    metricKey: 'metricKey',
+    resultKey: 'resultKey',
+    valueKey: 'valueKey'
+  },
   query: {
     columns: 'columns',
     resultKey: 'resultKey',
     sql: 'sql',
     syncPayload: 'syncPayload'
+  },
+  diagnosticRowGroup: {
+    outputKey: 'outputKey',
+    queryKey: 'queryKey'
   },
   routing: {
     routes: 'routes'
