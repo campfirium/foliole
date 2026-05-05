@@ -158,7 +158,7 @@ describe('workspacePersistStorage hydrated cloze anchors edited-word recovery', 
         locator: {
           from: 6,
           originalText: 'Beta',
-          to: 6
+          to: 10
         }
       }
     });

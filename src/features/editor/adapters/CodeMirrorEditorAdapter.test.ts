@@ -16,7 +16,9 @@ const {
   mockEditableOf,
   mockAllowMultipleSelectionsOf,
   mockRangeSetBuilder,
-  mockFacetDefine
+  mockFacetDefine,
+  mockStateEffectDefine,
+  mockStateFieldDefine
 } = vi.hoisted(() => ({
   mockCompartmentReconfigure: vi.fn((value: unknown) => value),
   mockDrawSelection: vi.fn(() => 'draw-selection-extension'),
@@ -36,6 +38,10 @@ const {
     facet: 'mock-facet',
     of: vi.fn((value) => value)
   })),
+  mockStateEffectDefine: vi.fn(() => ({
+    of: vi.fn((value) => value)
+  })),
+  mockStateFieldDefine: vi.fn((value) => value),
   mockRangeSetBuilder: vi.fn().mockImplementation(() => ({
     add: vi.fn(),
     finish: vi.fn(() => 'paragraph-marker-decorations')
@@ -64,6 +70,12 @@ vi.mock('@codemirror/state', () => ({
   Facet: {
     define: mockFacetDefine
   },
+  StateEffect: {
+    define: mockStateEffectDefine
+  },
+  StateField: {
+    define: mockStateFieldDefine
+  },
   EditorState: {
     create: mockEditorStateCreate,
     allowMultipleSelections: {
@@ -79,6 +91,7 @@ vi.mock('@codemirror/state', () => ({
 vi.mock('@codemirror/view', () => ({
   Decoration: {
     line: vi.fn((value) => value),
+    mark: vi.fn((value) => value),
     none: 'decoration-none'
   },
   drawSelection: mockDrawSelection,
@@ -96,6 +109,7 @@ vi.mock('@codemirror/view', () => ({
         of: mockEditableOf
       },
       decorations: {
+        from: vi.fn((field, value) => ({ field, value })),
         of: mockDecorationsOf
       },
       domEventHandlers: mockDomEventHandlers,
@@ -147,6 +161,7 @@ function createAdapterWithStubbedView() {
 
   Object.assign(adapter as object, {
     view: {
+      requestMeasure: vi.fn(),
       state: { doc: { length: 20 } },
       scrollDOM: {
         addEventListener: () => undefined,

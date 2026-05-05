@@ -9,6 +9,7 @@ import { restartMainWindowApp } from '../../shared/platform/windowControls';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
 import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
 import type { NodeViewState } from '../../store/workspaceStore';
+
 import { resolvePersistedViewStateSelection } from './persistedViewStateSelection';
 
 interface RestartWithReadingProgressArgs {

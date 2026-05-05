@@ -14,7 +14,7 @@ describe('applyImportedHighlightAnchors', () => {
 
     expect(anchored).toEqual({
       content: 'Alpha Beta Gamma',
-      highlights: [{ anchorId, content: 'Beta', from: 6, kind: 'highlight', label: null, to: 10 }]
+      highlights: [{ anchorId, content: 'Beta', from: 6, kind: 'highlight', label: null, locatorText: 'Beta', to: 10 }]
     });
   });
 
@@ -27,8 +27,8 @@ describe('applyImportedHighlightAnchors', () => {
     expect(anchored).toEqual({
       content: 'Alpha Beta Gamma',
       highlights: [
-        { anchorId: 'h1', content: 'Beta', from: 6, kind: 'highlight', label: null, to: 10 },
-        { anchorId: 'c1', content: 'Gamma', from: 11, kind: 'cloze', label: null, to: 16 }
+        { anchorId: 'h1', content: 'Beta', from: 6, kind: 'highlight', label: null, locatorText: 'Beta', to: 10 },
+        { anchorId: 'c1', content: 'Gamma', from: 11, kind: 'cloze', label: null, locatorText: 'Gamma', to: 16 }
       ]
     });
   });
@@ -43,8 +43,8 @@ describe('applyImportedHighlightAnchors', () => {
     expect(anchored).toEqual({
       content: 'X123456Y',
       highlights: [
-        { anchorId: 'h1', content: '1234', from: 1, kind: 'highlight', label: null, to: 5 },
-        { anchorId: 'h2', content: '3456', from: 3, kind: 'highlight', label: null, to: 7 }
+        { anchorId: 'h1', content: '1234', from: 1, kind: 'highlight', label: null, locatorText: '1234', to: 5 },
+        { anchorId: 'h2', content: '3456', from: 3, kind: 'highlight', label: null, locatorText: '3456', to: 7 }
       ]
     });
   });

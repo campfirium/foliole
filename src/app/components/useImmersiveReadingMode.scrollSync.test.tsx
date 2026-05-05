@@ -4,6 +4,8 @@ import { expect, it, vi } from 'vitest';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { buildImageScrollProps, buildProps, mountViewportHost } from './useImmersiveReadingMode.scrollSync.testSupport';
 
+type ImmersiveProps = Parameters<typeof useImmersiveReadingMode>[0];
+
 it('keeps the current scene when entering immersive reading by applying the pending selection', async () => {
   const { adapter, props, triggerScroll } = buildProps();
   const beginApplyingReadingPosition = vi.fn();

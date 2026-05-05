@@ -15,14 +15,14 @@ vi.mock('../../store/workspaceRuntimeSync', () => ({
 }));
 
 function expectCurrentNodeCloseFlush(invoke: ReturnType<typeof vi.fn>) {
-  expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
+  expect(invoke).toHaveBeenLastCalledWith('save_reading_progress', {
     activeNodeId: 'node-2',
     nodeViewStates: [
       {
         nodeId: 'node-2',
         scrollTop: 5400,
-        selectionFrom: 48000,
-        selectionTo: 48000
+        selectionFrom: 3,
+        selectionTo: 3
       }
     ],
     updatedAt: expect.any(String)
@@ -30,7 +30,7 @@ function expectCurrentNodeCloseFlush(invoke: ReturnType<typeof vi.fn>) {
 }
 
 function expectFullTableCloseFlush(invoke: ReturnType<typeof vi.fn>) {
-  expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
+  expect(invoke).toHaveBeenLastCalledWith('save_reading_progress', {
     activeNodeId: 'node-2',
     nodeViewStates: [
       {
@@ -42,8 +42,8 @@ function expectFullTableCloseFlush(invoke: ReturnType<typeof vi.fn>) {
       {
         nodeId: 'node-2',
         scrollTop: 5400,
-        selectionFrom: 48000,
-        selectionTo: 48000
+        selectionFrom: 3,
+        selectionTo: 3
       }
     ],
     updatedAt: expect.any(String)

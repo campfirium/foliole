@@ -25,15 +25,13 @@ run_step() {
 main() {
   cd "${REPO_ROOT}"
 
+  local validate_command
   local finish_command
+  validate_command="$(resolve_command "${VERIFY_PREVIEW_VALIDATE_COMMAND:-}" "npm run quality:fast")"
   finish_command="$(resolve_command "${VERIFY_PREVIEW_FINISH_COMMAND:-}" "${DEFAULT_FINISH_COMMAND}")"
 
-  # Preview now assumes the caller already ran the relevant checks for the current change.
-  # Keep the old validate hook commented in place so we can restore the guard quickly if needed.
-  # local validate_command
-  # validate_command="$(resolve_command "${VERIFY_PREVIEW_VALIDATE_COMMAND:-}" "npm run quality:fast")"
-  # run_step "step 1/2 verify" "${validate_command}"
-  run_step "step 1/1 preview" "${finish_command}"
+  run_step "step 1/2 verify" "${validate_command}"
+  run_step "step 2/2 preview" "${finish_command}"
   echo "[verify-preview] done"
 }
 

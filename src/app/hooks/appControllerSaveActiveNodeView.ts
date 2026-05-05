@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
-import { useAppRuntime } from './useAppRuntime';
 import { resolvePersistedViewStateSelection } from './persistedViewStateSelection';
+import { useAppRuntime } from './useAppRuntime';
 
 interface SaveActiveNodeViewWorkspaceState {
   activeNodeId: string | null;

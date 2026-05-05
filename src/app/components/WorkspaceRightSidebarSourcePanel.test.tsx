@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimeTextImportResult } from '../../shared/platform/importBridge';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
 
@@ -14,20 +13,6 @@ const { loadRuntimeNodeSourceDetails } = vi.hoisted(() => ({
 vi.mock('../../shared/platform/nodeSourceBridge', () => ({
   loadRuntimeNodeSourceDetails
 }));
-
-const BASE_NODE: Node = {
-  kind: 'topic',
-  content: 'Node body',
-  createdAt: '2026-03-24T08:00:00.000Z',
-  id: 'node-1',
-  parentNodeId: null,
-  priority: null,
-  desiredRetention: null,
-  reveal: null,
-  review: null,
-  title: 'Imported note',
-  updatedAt: '2026-03-25T09:00:00.000Z'
-};
 
 function createImportResult(overrides: Partial<RuntimeTextImportResult> = {}): RuntimeTextImportResult {
   return {

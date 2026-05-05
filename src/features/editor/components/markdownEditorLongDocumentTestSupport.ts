@@ -10,7 +10,7 @@ export const mockSetHideTitleHeading = vi.fn();
 export const mockSetSelection = vi.fn();
 export const mockRevealSelection = vi.fn();
 export const mockRevealSelectionAtViewportRatio = vi.fn();
-export const mockIsPositionNearViewportRatio = vi.fn(() => true);
+export const mockIsPositionNearViewportRatio = vi.fn<(position: number, ratio: number) => boolean>(() => true);
 export const mockRestoreSelection = vi.fn();
 export const mockSetScrollTop = vi.fn();
 export const mockOnScroll = vi.fn(() => () => undefined);
@@ -38,6 +38,7 @@ export function resetLongDocumentEditorMocks() {
 
 export function createMockCodeMirrorEditorAdapterClass() {
   return class {
+    constructor(...args: unknown[]) { void args; }
     destroy() { mockDestroy(); }
     focus() {}
     getContent() { return ''; }

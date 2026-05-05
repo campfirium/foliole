@@ -1,3 +1,5 @@
+/* global console, document */
+
 import process from 'node:process';
 
 import { launchDesktopSession } from './playwright-desktop-harness.mjs';

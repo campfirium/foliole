@@ -12,14 +12,14 @@ import type { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
 interface CodeMirrorEditorAdapterRuntimeArgs {
   diffDecorationsCompartment: Compartment;
   getContent: () => string;
+  getNodeId: () => string | null;
+  getOnChange: () => ((content: string) => void) | undefined;
   host: HTMLElement;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   isApplyingExternalContent: () => boolean;
   liveMarkdownCompartment: Compartment;
   liveMarkdownStateCompartment: Compartment;
-  nodeId: string | null;
-  onChange?: (content: string) => void;
   onOpenNodeLink: ((title: string) => void) | null;
   onPastedAnchors: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
   onSetContent: (content: string) => void;
@@ -35,16 +35,17 @@ function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
   const controllers = createCodeMirrorEditorControllers({
     applyLocalizedContent: (localized) => {
       args.onSetContent(localized);
-      args.onChange?.(localized);
+      args.getOnChange()?.(localized);
     },
     getContent: args.getContent,
-    getNodeId: () => args.nodeId,
+    getNodeId: args.getNodeId,
     isApplyingExternalContent: args.isApplyingExternalContent,
     onFlush: (content) => {
-      if (!args.onChange) {
+      const onChange = args.getOnChange();
+      if (!onChange) {
         return;
       }
-      args.onChange(content);
+      onChange(content);
       controllers.remoteImageLocalization.schedule();
     }
   });
@@ -65,10 +66,10 @@ function createEditorViewRuntime(
     imageClozePresentationVersion: args.imageClozePresentationVersion,
     liveMarkdownCompartment: args.liveMarkdownCompartment,
     liveMarkdownStateCompartment: args.liveMarkdownStateCompartment,
-    nodeId: args.nodeId,
+    nodeId: args.getNodeId(),
     onCompositionEnd: () => externalChangeBuffer.handleCompositionEnd(),
     onDocChanged: (content, meta) => {
-      if (!args.onChange || args.isApplyingExternalContent()) {
+      if (!args.getOnChange() || args.isApplyingExternalContent()) {
         return;
       }
       externalChangeBuffer.handleDocumentChange(content, meta);

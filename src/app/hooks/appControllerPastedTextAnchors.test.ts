@@ -27,6 +27,8 @@ function expectSortedPastedAnchorPayloads(args: {
     clozeContent: 'Start [...] Gamma',
     entries: [
       expect.objectContaining({
+        anchorId: expect.any(String),
+        clozeContent: 'Start [...] Gamma',
         locator: {
           from: 6,
           originalText: 'Alpha Beta',
@@ -39,6 +41,7 @@ function expectSortedPastedAnchorPayloads(args: {
         selectionText: 'Alpha Beta'
       })
     ],
+    imageRegions: null,
     parentNodeId: 'node-1',
     selectionText: 'Alpha Beta'
   });
@@ -47,6 +50,8 @@ function expectSortedPastedAnchorPayloads(args: {
     clozeContent: 'Start Alpha Beta [...]',
     entries: [
       expect.objectContaining({
+        anchorId: expect.any(String),
+        clozeContent: 'Start Alpha Beta [...]',
         locator: {
           from: 17,
           originalText: 'Gamma',
@@ -59,6 +64,7 @@ function expectSortedPastedAnchorPayloads(args: {
         selectionText: 'Gamma'
       })
     ],
+    imageRegions: null,
     parentNodeId: 'node-1',
     selectionText: 'Gamma'
   });

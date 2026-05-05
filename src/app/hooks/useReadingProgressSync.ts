@@ -1,22 +1,20 @@
 import { useCallback, useRef, type MutableRefObject } from 'react';
 
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
-import { pushDebugTrace } from '../../shared/testing/debugBridge';
-import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ReadingPositionSyncState } from './useAppRuntime';
 import { useCloseBridgeRegistration, useDebouncedReadingProgressPersistence, useImmediateReadingProgressCapture, useReadingProgressLifecycle } from './useReadingProgressSyncEffects';
 import {
+  flushReadingProgressToCloseBridge,
+  flushReadingProgressToRuntime,
+  type ReadingProgressPersistenceArgs
+} from './useReadingProgressSyncPersistence';
+import {
   captureEditorNodeViewState,
-  createReadingProgressPayload,
-  createReadingProgressSignature,
   mergePendingNodeViewStates,
   type PendingNodeViewStateMap,
-  type ResolvedReadingProgressState,
-  updateCapturedNodeViewState
+  type ResolvedReadingProgressState
 } from './useReadingProgressSyncSupport';
 
 export interface ReadingProgressSyncOptions {
@@ -109,123 +107,29 @@ function useReadingProgressFlushCallbacks(args: {
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }) {
   const lastSyncedSignatureRef = useRef<string | null>(null);
+  const persistence: ReadingProgressPersistenceArgs = args;
 
   const flushReadingProgress = useCallback(
     (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) =>
       flushReadingProgressToRuntime({
         activeNodeIdOverride,
-        args,
         captureNodeIdOverride,
-        lastSyncedSignatureRef
+        lastSyncedSignatureRef,
+        persistence
       }),
-    [args]
+    [persistence]
   );
 
   const flushReadingProgressImmediately = useCallback(
     () =>
       flushReadingProgressToCloseBridge({
-        args,
-        lastSyncedSignatureRef
+        lastSyncedSignatureRef,
+        persistence
       }),
-    [args]
+    [persistence]
   );
 
   return { flushReadingProgress, flushReadingProgressImmediately };
-}
-function flushReadingProgressToRuntime(args: {
-  activeNodeIdOverride?: string | null;
-  args: {
-    getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
-    nodeViewById: Record<string, NodeViewState | undefined>;
-    pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
-    resolveCapturedReadingProgress: (
-      activeNodeIdOverride?: string | null,
-      captureNodeIdOverride?: string | null
-    ) => ResolvedReadingProgressState | null;
-    setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
-  };
-  captureNodeIdOverride?: string | null;
-  lastSyncedSignatureRef: MutableRefObject<string | null>;
-}) {
-  const resolved = args.args.resolveCapturedReadingProgress(
-    args.activeNodeIdOverride,
-    args.captureNodeIdOverride
-  );
-  if (!resolved) {
-    return;
-  }
-  updateCapturedNodeViewState({
-    captured: resolved.captured,
-    nodeViewById: args.args.nodeViewById,
-    pendingNodeViewByIdRef: args.args.pendingNodeViewByIdRef,
-    setNodeViewState: args.args.setNodeViewState
-  });
-  pushDebugTrace('reading-progress.flush-runtime', {
-    activeNodeId: resolved.resolvedActiveNodeId,
-    capturedNodeId: resolved.captured?.nodeId ?? null,
-    nodeViewStateCount: Object.keys(resolved.mergedNodeViewById).length,
-    reason: args.captureNodeIdOverride === null ? 'node-switch' : 'periodic'
-  });
-  if (args.captureNodeIdOverride === null && args.args.getReadingPositionSyncState?.()) {
-    pushDebugTrace('reading-progress.flush-runtime-skipped', {
-      activeNodeId: resolved.resolvedActiveNodeId,
-      reason: 'node-switch-during-restore'
-    });
-    return;
-  }
-  const signature = createReadingProgressSignature(
-    resolved.resolvedActiveNodeId,
-    resolved.mergedNodeViewById
-  );
-  if (args.lastSyncedSignatureRef.current === signature) {
-    return;
-  }
-  args.lastSyncedSignatureRef.current = signature;
-  syncReadingProgressToRuntime(
-    createReadingProgressPayload(resolved.resolvedActiveNodeId, resolved.mergedNodeViewById)
-  );
-}
-async function flushReadingProgressToCloseBridge(args: {
-  args: {
-    isWorkspaceHydrated: boolean;
-    nodeViewById: Record<string, NodeViewState | undefined>;
-    pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
-    resolveCapturedReadingProgress: (
-      activeNodeIdOverride?: string | null,
-      captureNodeIdOverride?: string | null
-    ) => ResolvedReadingProgressState | null;
-    setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
-  };
-  lastSyncedSignatureRef: MutableRefObject<string | null>;
-}) {
-  if (!args.args.isWorkspaceHydrated) {
-    return false;
-  }
-  const resolved = args.args.resolveCapturedReadingProgress();
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!resolved || !runtimeInvoke) {
-    return false;
-  }
-  updateCapturedNodeViewState({
-    captured: resolved.captured,
-    nodeViewById: args.args.nodeViewById,
-    pendingNodeViewByIdRef: args.args.pendingNodeViewByIdRef,
-    setNodeViewState: args.args.setNodeViewState
-  });
-  pushDebugTrace('reading-progress.flush-close-bridge', {
-    activeNodeId: resolved.resolvedActiveNodeId,
-    capturedNodeId: resolved.captured?.nodeId ?? null,
-    nodeViewStateCount: Object.keys(resolved.mergedNodeViewById).length
-  });
-  await runtimeInvoke(
-    NATIVE_COMMANDS.saveReadingProgress,
-    createReadingProgressPayload(resolved.resolvedActiveNodeId, resolved.mergedNodeViewById)
-  );
-  args.lastSyncedSignatureRef.current = createReadingProgressSignature(
-    resolved.resolvedActiveNodeId,
-    resolved.mergedNodeViewById
-  );
-  return true;
 }
 
 export function useReadingProgressSync({

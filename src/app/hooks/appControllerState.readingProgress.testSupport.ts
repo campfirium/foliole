@@ -14,6 +14,15 @@ function createWorkspaceNode() {
   };
 }
 
+function createWorkspaceReviewSession() {
+  return {
+    currentNodeId: null,
+    isAnswerRevealed: false,
+    queueNodeIds: [],
+    totalNodeCount: 0
+  };
+}
+
 export function createWorkspaceState() {
   return {
     activeNodeId: 'node-1',
@@ -53,12 +62,7 @@ export function createWorkspaceState() {
     openNode: vi.fn(),
     resetLayout: vi.fn(),
     revealReviewAnswer: vi.fn(),
-    reviewSession: {
-      currentNodeId: null,
-      isAnswerRevealed: false,
-      queueNodeIds: [],
-      totalNodeCount: 0
-    },
+    reviewSession: createWorkspaceReviewSession(),
     rightSidebarWidth: 320,
     setDocumentMaxWidth: vi.fn(),
     setListCollapsed: vi.fn(),

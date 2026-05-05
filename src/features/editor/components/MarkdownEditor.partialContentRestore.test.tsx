@@ -91,7 +91,7 @@ it('waits for a short placeholder body to expand before restoring a saved mid-do
 
   view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
 
-  expect(mockRestoreSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_000 });
   await waitFor(() => {
     expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
   });

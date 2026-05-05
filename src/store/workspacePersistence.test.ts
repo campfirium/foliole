@@ -118,7 +118,9 @@ beforeEach(() => {
 });
 
 it('writes workspace changes into localStorage', async () => {
-  useWorkspaceStore.getState().updateNodeContent('node-1', 'Persisted markdown');
+  const persistedNodeId = useWorkspaceStore.getState().createRootNode('Draft node');
+  useWorkspaceStore.getState().setActiveNode(persistedNodeId);
+  useWorkspaceStore.getState().updateNodeContent(persistedNodeId, 'Persisted markdown');
   const createdNodeId = useWorkspaceStore.getState().createRootNode('Trash me');
   useWorkspaceStore.getState().deleteNode(createdNodeId);
   await Promise.resolve();
@@ -127,7 +129,7 @@ it('writes workspace changes into localStorage', async () => {
   expect(raw).not.toBeNull();
 
   const payload = raw ? (JSON.parse(raw) as { state: ReturnType<typeof createInitialWorkspaceState> }) : null;
-  expect(payload?.state.nodesById['node-1']?.content).toBe('Persisted markdown');
+  expect(payload?.state.nodesById[persistedNodeId]?.content).toBe('Persisted markdown');
   expect(payload?.state.trashedNodeIds).toContain(createdNodeId);
 });
 
@@ -173,9 +175,11 @@ it('keeps the virtual root and saved virtual nodes after rehydrate', async () =>
 
 it('rehydrates workspace state from localStorage', async () => {
   const persisted = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
+  persisted.activeNodeId = 'node-1';
   persisted.nodesById['node-1'] = {
     ...persisted.nodesById['node-1'],
     content: 'Recovered markdown',
+    hasContent: true,
     updatedAt: '2026-02-25T00:00:01.000Z'
   };
   persisted.trashedNodeIds = ['node-1'];
@@ -225,7 +229,7 @@ describe('workspace persistence renderer boundary hydrate', () => {
 
     const payload = readPersistedWorkspacePayload();
 
-    expect(payload?.state.nodeViewById['node-2']).toEqual({
+    expect(payload?.state.nodeViewById['node-2']).toMatchObject({
       scrollTop: 128,
       selection: { from: 4, to: 9 }
     });

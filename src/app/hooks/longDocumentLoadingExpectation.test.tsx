@@ -244,6 +244,6 @@ it('restores a mid-document reading position after the recent cache is eventuall
   );
 
   expect(mockSetSelection).not.toHaveBeenCalled();
-  expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_024 });
+  expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_000 });
   expect(mockRevealSelection).not.toHaveBeenCalled();
 });

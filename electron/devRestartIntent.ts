@@ -1,6 +1,10 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
+import {
+  createNodeFileSystem,
+  isMissingFileError,
+  type RestartIntentFileSystem
+} from './devRestartIntentSupport.js';
 import { saveWindowStateNow } from './ipc/windowState.js';
 import { allowWindowCloseWithoutReadingProgressFlush, flushReadingProgressForWindows } from './readingProgressWindowFlush.js';
 
@@ -32,14 +36,6 @@ interface RestartIntentWindow {
   };
 }
 
-interface RestartIntentFileSystem {
-  deleteIntentFile(filePath: string): void;
-  readIntentFile(filePath: string): string;
-  unwatchIntentFile(filePath: string, listener: () => void): void;
-  watchIntentFile(filePath: string, listener: () => void): void;
-  writeDeliveryFile(filePath: string, content: string): void;
-}
-
 interface RestartIntentLogger {
   error(message: string, meta?: unknown): void;
   info(message: string, meta?: unknown): void;
@@ -49,30 +45,6 @@ export interface DevRestartIntentWatcher {
   checkNow(): void;
   close(): void;
   intentPath: string;
-}
-
-function createNodeFileSystem(): RestartIntentFileSystem {
-  return {
-    deleteIntentFile(filePath) {
-      fs.unlinkSync(filePath);
-    },
-    readIntentFile(filePath) {
-      return fs.readFileSync(filePath, 'utf8');
-    },
-    unwatchIntentFile(filePath, listener) {
-      fs.unwatchFile(filePath, listener);
-    },
-    watchIntentFile(filePath, listener) {
-      fs.watchFile(filePath, { interval: 250 }, listener);
-    },
-    writeDeliveryFile(filePath, content) {
-      fs.writeFileSync(filePath, content, 'utf8');
-    }
-  };
-}
-
-function isMissingFileError(error: unknown) {
-  return Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT');
 }
 
 export function isDevRestartIntentEnabled(env: NodeJS.ProcessEnv = process.env) {
@@ -141,20 +113,7 @@ function writeDevRestartDeliveryMarker(args: {
   try {
     args.fileSystem.writeDeliveryFile(
       resolveDevRestartDeliveryPath(path.dirname(args.intentPath)),
-      `${JSON.stringify(
-        {
-          deliveredAt: new Date().toISOString(),
-          head: args.intent.head,
-          kind: DEV_RESTART_DELIVERY_KIND,
-          nonce: args.intent.nonce,
-          reason: args.intent.reason,
-          requestedAt: args.intent.requestedAt,
-          requestedBy: args.intent.requestedBy,
-          target: args.intent.target
-        },
-        null,
-        2
-      )}\n`
+      `${JSON.stringify(createDevRestartDeliveryPayload(args.intent), null, 2)}\n`
     );
   } catch (error) {
     args.logger.error('[electron-main] failed to write dev restart delivery marker', {
@@ -163,6 +122,19 @@ function writeDevRestartDeliveryMarker(args: {
       nonce: args.intent.nonce
     });
   }
+}
+
+function createDevRestartDeliveryPayload(intent: RestartIntent) {
+  return {
+    deliveredAt: new Date().toISOString(),
+    head: intent.head,
+    kind: DEV_RESTART_DELIVERY_KIND,
+    nonce: intent.nonce,
+    reason: intent.reason,
+    requestedAt: intent.requestedAt,
+    requestedBy: intent.requestedBy,
+    target: intent.target
+  };
 }
 
 function applyRuntimeHeadForRelaunch(intent: RestartIntent) {

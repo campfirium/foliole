@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
 import type { NodeViewState } from '../../store/workspaceStore';
+
 import { resolvePersistedViewStateSelection } from './persistedViewStateSelection';
 
 export interface CapturedNodeViewState {

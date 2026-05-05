@@ -8,6 +8,7 @@ vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
   requestPdfAnchorJump
 }));
 
+import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 import {
   createPersistPdfViewState,
   createRevealDocumentPosition,
@@ -35,7 +36,7 @@ function createRevealDocumentPositionArgs(args: {
   restoreSelection?: ReturnType<typeof vi.fn>;
   setSelection?: ReturnType<typeof vi.fn>;
   setNodeViewState: ReturnType<typeof vi.fn>;
-}) {
+}): BuildControllerLayoutPropsArgs {
   return {
     runtime: {
       editorRef: {
@@ -62,7 +63,7 @@ function createRevealDocumentPositionArgs(args: {
       },
       setNodeViewState: args.setNodeViewState
     }
-  };
+  } as unknown as BuildControllerLayoutPropsArgs;
 }
 
 function expectNearestReadingRequest(args: {
@@ -93,7 +94,7 @@ it('updates the stored reading position before applying the reading anchor reque
     revealPosition,
     setNodeViewState,
     setSelection
-  }) as never;
+  });
   const revealDocumentPosition = createRevealDocumentPosition(args);
 
   revealDocumentPosition(48000);
@@ -133,7 +134,7 @@ it('still stores selection when editor adapter is unavailable', () => {
       },
       setNodeViewState
     }
-  } as never);
+  } as unknown as BuildControllerLayoutPropsArgs);
 
   revealDocumentSelection({ from: 3, to: 125 });
 
@@ -149,7 +150,7 @@ it('applies nearest selection reveal through the shared reading request path', (
   const runtimeArgs = createRevealDocumentPositionArgs({
     restoreSelection,
     setNodeViewState,
-  }) as never;
+  });
 
   const revealDocumentSelection = createRevealDocumentSelection(runtimeArgs);
   revealDocumentSelection({ from: 3, to: 125 }, 'nearest');
@@ -173,7 +174,7 @@ describe('createPersistPdfViewState', () => {
       ws: {
         setNodeViewState
       }
-    } as never);
+    } as unknown as BuildControllerLayoutPropsArgs);
 
     persistPdfViewState('node-7', {
       scrollTop: 7,
@@ -197,7 +198,7 @@ describe('createPersistPdfViewState', () => {
       ws: {
         setNodeViewState
       }
-    } as never);
+    } as unknown as BuildControllerLayoutPropsArgs);
 
     persistPdfViewState('node-1', {
       scrollTop: 2,

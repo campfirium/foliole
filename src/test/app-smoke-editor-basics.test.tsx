@@ -111,9 +111,11 @@ it('keeps first note content unchanged when editing a newly created note', async
     target: { value: 'My second note content' }
   });
 
-  const workspaceAfterEdit = useWorkspaceStore.getState();
-  expect(workspaceAfterEdit.nodesById[firstNodeId]?.content).toBe('');
-  expect(workspaceAfterEdit.nodesById[newNodeId]?.content).toBe('My second note content');
+  await waitFor(() => {
+    const workspaceAfterEdit = useWorkspaceStore.getState();
+    expect(workspaceAfterEdit.nodesById[firstNodeId]?.content).toBe('');
+    expect(workspaceAfterEdit.nodesById[newNodeId]?.content).toBe('My second note content');
+  });
 });
 
 it('supports inline rename and preserves manual title after content edits', () => {

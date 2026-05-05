@@ -70,7 +70,7 @@ describe('verify-preview.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it('stops before preview when verification fails', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'verify-preview-'));
@@ -98,5 +98,5 @@ describe('verify-preview.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 });

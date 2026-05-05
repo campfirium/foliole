@@ -1,6 +1,6 @@
-import { getTextAnchorLocators, isTextAnchorLocator } from '../../nodes/model/nodeTypes';
-import type { NodeAnchorLink, TextAnchorLocator } from '../../nodes/model/nodeTypes';
+import { getTextAnchorLocators, isTextAnchorLocator, type NodeAnchorLink, type TextAnchorLocator } from '../../nodes/model/nodeTypes';
 import type { EditorSelection } from '../adapters/EditorAdapter';
+
 import { resolveTextAnchorLocatorSelection } from './textAnchorLocatorResolution';
 
 export type AnchorNavigationTarget = Pick<NodeAnchorLink, 'id' | 'kind' | 'locator'>;

@@ -52,17 +52,8 @@ function buildTraceSignature(entry: DebugTraceEntry) {
   });
 }
 
-function ensureDebugApi() {
-  if (!isDebugApiAvailable()) {
-    return null;
-  }
-
-  const targetWindow = window as FolioleWindow;
-  if (targetWindow.__folioleDebug) {
-    return targetWindow.__folioleDebug;
-  }
-
-  const api: FolioleDebugApi = {
+function createDebugApi(): FolioleDebugApi {
+  return {
     clearEditor: (id) => {
       editorMap.delete(id);
     },
@@ -114,9 +105,19 @@ function ensureDebugApi() {
       return true;
     }
   };
+}
 
-  targetWindow.__folioleDebug = api;
-  return api;
+function ensureDebugApi() {
+  if (!isDebugApiAvailable()) {
+    return null;
+  }
+
+  const targetWindow = window as FolioleWindow;
+  if (targetWindow.__folioleDebug) {
+    return targetWindow.__folioleDebug;
+  }
+  targetWindow.__folioleDebug = createDebugApi();
+  return targetWindow.__folioleDebug;
 }
 
 function isDebugApiAvailable() {

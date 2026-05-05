@@ -5,13 +5,13 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 
 const mockComplete = vi.fn();
-const mockIsPositionNearViewportRatio = vi.fn(() => true);
+const mockIsPositionNearViewportRatio = vi.fn<(position: number, ratio: number) => boolean>(() => true);
 const mockRestoreSelection = vi.fn();
 const mockRevealSelectionAtViewportRatio = vi.fn();
 
 vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
   CodeMirrorEditorAdapter: class {
-    constructor() {}
+    constructor(...args: unknown[]) { void args; }
     destroy() {}
     focus() {}
     getContent() { return ''; }

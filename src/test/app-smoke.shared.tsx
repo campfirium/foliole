@@ -93,6 +93,7 @@ export const mockEditorAdapter: EditorAdapter = {
 vi.mock('../features/editor/components/MarkdownEditor', () => ({
   MarkdownEditor: ({
     ariaLabel,
+    readingSelection,
     nodeViewState,
     value,
     onChange,
@@ -100,6 +101,7 @@ vi.mock('../features/editor/components/MarkdownEditor', () => ({
     onReady
   }: {
     ariaLabel?: string;
+    readingSelection?: { from: number; to: number } | null;
     nodeViewState?: { selection: { from: number; to: number } };
     value: string;
     onChange: (value: string) => void;
@@ -112,6 +114,11 @@ vi.mock('../features/editor/components/MarkdownEditor', () => ({
       onReady?.(mockEditorAdapter);
       return () => onReady?.(null);
     }, [onImageLoadStateChange, onReady]);
+    useEffect(() => {
+      if (readingSelection) {
+        mockEditorAdapter.restoreSelection(readingSelection);
+      }
+    }, [readingSelection]);
     useEffect(() => {
       if (!nodeViewState) {
         return;

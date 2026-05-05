@@ -12,19 +12,29 @@ beforeEach(() => {
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
 });
 
-function createMeasuredView<T extends { scrollDOM: { scrollTop: number } }>(view: T) {
+function createMeasuredView(view: {
+  scrollDOM: { scrollTop: number; [key: string]: unknown };
+  [key: string]: unknown;
+}) {
+  type MeasuredView = typeof view & {
+    requestMeasure: (spec: {
+      read: (measuredView: MeasuredView) => unknown;
+      write: (measure: unknown, measuredView: MeasuredView) => void;
+    }) => void;
+  };
   const measuredView = {
     ...view,
     requestMeasure: (spec: {
-      read: (measuredView: T) => unknown;
-      write: (measure: unknown, measuredView: T) => void;
+      read: (measuredView: MeasuredView) => unknown;
+      write: (measure: unknown, measuredView: MeasuredView) => void;
     }) => {
       window.setTimeout(() => {
-        const measure = spec.read(measuredView as T);
-        spec.write(measure, measuredView as T);
+        const typedView = measuredView as MeasuredView;
+        const measure = spec.read(typedView);
+        spec.write(measure, typedView);
       }, 0);
     }
-  };
+  } as MeasuredView;
   return measuredView;
 }
 

@@ -1,15 +1,20 @@
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
-import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
 
+import {
+  createAnswerChangeHandler,
+  createEditorChangeHandler,
+  createEditorReadyHandler,
+  createNodeContentChangeHandler,
+  type SelectNodeHandler
+} from './appControllerEditorHandlers';
 import type { useCurrentReviewPreview } from './appControllerHelpers';
-import { createLayoutEditorCtx, isVirtualEditorNode, resolveEditorBindingArgs } from './appControllerLayoutContext';
+import { createLayoutEditorCtx, resolveEditorBindingArgs } from './appControllerLayoutContext';
 import { createLayoutNav, createSelectTrashNodeHandler } from './appControllerNavHandlers';
 import { createPastedTextAnchorsHandler } from './appControllerPastedTextAnchors';
 import { createReadingPositionHandlers } from './appControllerReadingPosition';
@@ -115,7 +120,7 @@ export function buildAppControllerLayoutProps(args: BuildControllerLayoutPropsAr
 
 function createLayoutDataArgs(
   args: BuildControllerLayoutPropsArgs,
-  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void
+  onSelectNode: SelectNodeHandler
 ) {
   const editorCtx = createLayoutEditorCtx(args);
   const nav = createLayoutNav(args, onSelectNode);
@@ -173,36 +178,9 @@ function createLayoutDataArgs(
   };
 }
 
-function createAnswerChangeHandler(args: BuildControllerLayoutPropsArgs) {
-  return (answer: string) => {
-    if (args.ws.activeNodeId && !args.runtime.isViewingTrashNode) {
-      args.ws.updateNodeReveal(args.ws.activeNodeId, answer);
-    }
-  };
-}
-
-function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) {
-  return (content: string) => {
-    if (args.runtime.isViewingTrashNode) {
-      return;
-    }
-    if (args.ws.activeNodeId) {
-      args.ws.updateNodeContent(args.ws.activeNodeId, content);
-      return;
-    }
-    args.ws.createChildNode(INBOX_NODE_ID, content);
-  };
-}
-
-function createEditorReadyHandler(args: BuildControllerLayoutPropsArgs) {
-  return (adapter: EditorAdapter | null) => {
-    args.runtime.editorRef.current = adapter;
-  };
-}
-
 function createLayoutHandlerArgs(
   args: BuildControllerLayoutPropsArgs,
-  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void
+  onSelectNode: SelectNodeHandler
 ) {
   const openNotesView = createOpenNotesView(args);
   const pastedTextAnchors = createPastedTextAnchorsHandler(args);
@@ -216,9 +194,7 @@ function createLayoutHandlerArgs(
     onAnswerChange: createAnswerChangeHandler(args),
     onEditorChange: createEditorChangeHandler(args),
     onRegisterEditorDraftFlush: args.runtime.registerPendingEditorDraftFlush,
-    onEnterPriorityQuickSet: () => {
-      args.priorityQuickSet.enter();
-    },
+    onEnterPriorityQuickSet: args.priorityQuickSet.enter,
     onNodeContentChange: createNodeContentChangeHandler(args),
     setNodeViewState: args.ws.setNodeViewState,
     onEditorReady: createEditorReadyHandler(args),
@@ -260,18 +236,5 @@ function createLayoutHandlerArgs(
     deferReviewItem: () => args.ws.deferReviewItem(),
     dismissReviewItem: () => args.ws.dismissReviewItem(),
     priorityQuickSetShortcutLabel: args.priorityQuickSet.shortcutLabel
-  };
-}
-
-function createNodeContentChangeHandler(args: BuildControllerLayoutPropsArgs) {
-  return (nodeId: string, content: string) => {
-    if (args.runtime.isViewingTrashNode) {
-      return;
-    }
-    if (isVirtualEditorNode(args, nodeId)) {
-      args.ws.updateVirtualNodeFilter(nodeId, content);
-      return;
-    }
-    args.ws.updateNodeContent(nodeId, content);
   };
 }

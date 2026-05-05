@@ -14,7 +14,7 @@ vi.mock('../shared/platform/bridge', async (importOriginal) => {
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode } from './app-smoke.shared';
+import { createNode, resetAppSmokeState } from './app-smoke.shared';
 
 const { App } = await import('../app/App');
 
@@ -61,10 +61,13 @@ it('opens selected node content even when the visible row was preloaded first', 
   });
 });
 
-it('updates active node content from editor changes', () => {
+it('updates active node content from editor changes', async () => {
+  resetAppSmokeState();
   render(<App />);
   fireEvent.change(screen.getByTestId('editor-value'), {
     target: { value: 'Alpha Beta Gamma' }
   });
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Alpha Beta Gamma');
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Alpha Beta Gamma');
+  });
 });

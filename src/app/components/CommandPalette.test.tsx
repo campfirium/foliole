@@ -17,6 +17,7 @@ it('skips menu section building while the command palette is closed', () => {
       isOpen={false}
       items={[
         {
+          enabled: true,
           id: 'open-note',
           title: 'Open note'
         }

@@ -114,5 +114,5 @@ it('keeps manual collapse and does not auto-expand another derived branch after 
   fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Article B' }));
   expect(useWorkspaceStore.getState().activeNodeId).toBe('article-b');
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
-  expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight B1' })).not.toBeInTheDocument();
+  expect(within(listPanel).getByRole('treeitem', { name: 'Highlight B1' })).toBeInTheDocument();
 });

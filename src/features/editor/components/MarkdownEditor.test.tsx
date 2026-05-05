@@ -255,7 +255,7 @@ function registerRenderingSurfaceTests() {
 
     view.rerender(<MarkdownEditor fitBlockImagesToViewport nodeId="node-1" onChange={onChange} value="plain text only updated" />);
 
-    expect(mockResizeObserver).toHaveBeenCalledTimes(1);
+    expect(mockResizeObserver).not.toHaveBeenCalled();
   });
 }
 

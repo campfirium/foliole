@@ -44,7 +44,7 @@ beforeEach(() => {
   resetWorkspaceStore();
 });
 
-it('keeps the previous active node warm on direct active-node patches', () => {
+it('trims the previous active node on direct active-node patches', () => {
   useWorkspaceStore.setState({
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
@@ -55,9 +55,9 @@ it('keeps the previous active node warm on direct active-node patches', () => {
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-2');
   expect(state.nodesById['node-1']).toMatchObject({
-    content: 'First node body',
+    content: '',
     hasContent: true,
-    reveal: 'First answer',
+    reveal: null,
     hasReveal: true
   });
   expect(state.nodesById['node-2']).toMatchObject({
@@ -66,7 +66,7 @@ it('keeps the previous active node warm on direct active-node patches', () => {
     reveal: 'Second answer',
     hasReveal: true
   });
-  expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-1']);
+  expect(state.rendererBoundaryKeepNodeIds).toEqual([]);
 });
 
 it('reuses unaffected node references when only the active node changes', () => {
@@ -162,7 +162,7 @@ it('keeps the previously active node warm when navigation opens another node', a
   expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-2']);
 });
 
-it('preserves the warm inactive document across direct nodesById patches', () => {
+it('keeps direct nodesById patches trimmed against the active-node boundary', () => {
   useWorkspaceStore.setState({
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
@@ -190,9 +190,9 @@ it('preserves the warm inactive document across direct nodesById patches', () =>
 
   const state = useWorkspaceStore.getState();
   expect(state.nodesById['node-1']).toMatchObject({
-    content: 'First node body',
+    content: '',
     hasContent: true,
-    reveal: 'First answer',
+    reveal: null,
     hasReveal: true
   });
   expect(state.nodesById['node-2']).toMatchObject({

@@ -21,7 +21,6 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
-import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
 import {
@@ -30,6 +29,12 @@ import {
   renderArticleMirrorMarkdown,
   resolveArticleIdFromNodeId
 } from './exportArticleMirror.js';
+import {
+  seedArticleWithAdjacentLocatorHighlights,
+  seedArticleWithLocatorHighlight,
+  seedArticleWithOverlappingLocatorHighlights,
+  seedArticleWithUnresolvedLocatorHighlight
+} from './exportArticleMirror.testSupport.js';
 
 let tempRoot = '';
 
@@ -45,206 +50,6 @@ afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
-
-function seedArticleWithLocatorHighlight() {
-  upsertNodeSnapshot({
-    nodeId: 'node-article',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Mirror Export Demo',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'Keep bright text here.',
-    reveal: null,
-    anchorLink: null,
-    position: 0,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-  upsertNodeSnapshot({
-    nodeId: 'node-highlight',
-    parentNodeId: 'node-article',
-    kind: 'topic',
-    title: 'bright text',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'bright text',
-    reveal: null,
-    anchorLink: {
-      id: 'hl-1',
-      kind: 'highlight',
-      locator: {
-        from: 5,
-        to: 16,
-        originalText: 'bright text'
-      }
-    },
-    position: 1,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-}
-
-function seedArticleWithOverlappingLocatorHighlights() {
-  upsertNodeSnapshot({
-    nodeId: 'node-article-overlap',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Mirror Export Overlap Demo',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'ABCDE',
-    reveal: null,
-    anchorLink: null,
-    position: 0,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-  upsertNodeSnapshot({
-    nodeId: 'node-highlight-overlap-1',
-    parentNodeId: 'node-article-overlap',
-    kind: 'topic',
-    title: 'ABC',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'ABC',
-    reveal: null,
-    anchorLink: {
-      id: 'hl-1',
-      kind: 'highlight',
-      locator: {
-        from: 0,
-        to: 3,
-        originalText: 'ABC'
-      }
-    },
-    position: 1,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-  upsertNodeSnapshot({
-    nodeId: 'node-highlight-overlap-2',
-    parentNodeId: 'node-article-overlap',
-    kind: 'topic',
-    title: 'CDE',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'CDE',
-    reveal: null,
-    anchorLink: {
-      id: 'hl-2',
-      kind: 'highlight',
-      locator: {
-        from: 2,
-        to: 5,
-        originalText: 'CDE'
-      }
-    },
-    position: 2,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-}
-
-function seedArticleWithAdjacentLocatorHighlights() {
-  upsertNodeSnapshot({
-    nodeId: 'node-article-adjacent',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Mirror Export Adjacent Demo',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'ABCDE',
-    reveal: null,
-    anchorLink: null,
-    position: 0,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-  upsertNodeSnapshot({
-    nodeId: 'node-highlight-adjacent-1',
-    parentNodeId: 'node-article-adjacent',
-    kind: 'topic',
-    title: 'AB',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'AB',
-    reveal: null,
-    anchorLink: {
-      id: 'hl-1',
-      kind: 'highlight',
-      locator: {
-        from: 0,
-        to: 2,
-        originalText: 'AB'
-      }
-    },
-    position: 1,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-  upsertNodeSnapshot({
-    nodeId: 'node-highlight-adjacent-2',
-    parentNodeId: 'node-article-adjacent',
-    kind: 'topic',
-    title: 'CD',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'CD',
-    reveal: null,
-    anchorLink: {
-      id: 'hl-2',
-      kind: 'highlight',
-      locator: {
-        from: 2,
-        to: 4,
-        originalText: 'CD'
-      }
-    },
-    position: 2,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-}
-
-function seedArticleWithUnresolvedLocatorHighlight() {
-  upsertNodeSnapshot({
-    nodeId: 'node-article-unresolved',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Mirror Export Unresolved Demo',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'Keep  here.',
-    reveal: null,
-    anchorLink: null,
-    position: 0,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-  upsertNodeSnapshot({
-    nodeId: 'node-unresolved-highlight',
-    parentNodeId: 'node-article-unresolved',
-    kind: 'topic',
-    title: 'bright text',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'bright text',
-    reveal: null,
-    anchorLink: {
-      id: 'hl-missing',
-      kind: 'highlight',
-      locator: {
-        from: 5,
-        to: 5,
-        originalText: 'bright text'
-      }
-    },
-    position: 1,
-    createdAt: '2026-04-14T00:00:00.000Z',
-    updatedAt: '2026-04-14T00:00:00.000Z'
-  });
-}
 
 it('renders article markdown when derived children use text locator payloads', () => {
   seedArticleWithLocatorHighlight();

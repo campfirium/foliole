@@ -133,14 +133,12 @@ function createSourceInfoSidebarElement(node: Node) {
       activePanelId="source-info"
       nodeOrder={['node-1']}
       nodesById={{ 'node-1': node }}
-      nodeViewById={{}}
       onRevealAnchorInDocument={vi.fn()}
       onSelectBreadcrumbNode={STABLE_NOOP}
       onSelectNode={vi.fn()}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
       reviewSchedulerSettings={{} as never}
-      setNodeViewState={vi.fn()}
       trashedNodeIds={[]}
     />
   );
@@ -157,14 +155,12 @@ function createReviewQueueSidebarElement(node: Node) {
       activePanelId="review-queue"
       nodeOrder={['node-1']}
       nodesById={{ 'node-1': node }}
-      nodeViewById={{}}
       onRevealAnchorInDocument={vi.fn()}
       onSelectBreadcrumbNode={STABLE_NOOP}
       onSelectNode={vi.fn()}
       reviewCurrentNodeId="node-1"
       reviewQueueNodeIds={['node-1']}
       reviewSchedulerSettings={{} as never}
-      setNodeViewState={vi.fn()}
       trashedNodeIds={[]}
     />
   );

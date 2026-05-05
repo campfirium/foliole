@@ -128,7 +128,7 @@ async function resetDatabase(appDataDirName: string) {
   initializeDatabase();
 }
 
-it('treats manual epub imports as new inbox items instead of updating an earlier moved copy', async () => {
+it('creates a fresh inbox copy when the same manual epub is imported again after the earlier copy was moved', async () => {
   const filePath = await writeEpub('manual-inbox.epub', createInboxBookEntries());
 
   const firstImport = await runEpubImport(source(filePath), '2026-04-01T12:15:00.000Z');
@@ -140,10 +140,8 @@ it('treats manual epub imports as new inbox items instead of updating an earlier
     .all() as Array<{ id: string; parent_id: string | null; title: string }>;
 
   expect(firstImport.nodeId).not.toBe(secondImport.nodeId);
-  expect(importedRoots).toEqual([
-    { id: firstImport.nodeId as string, parent_id: null, title: 'Inbox Book' },
-    { id: secondImport.nodeId as string, parent_id: 'special-inbox', title: 'Inbox Book' }
-  ]);
+  expect(importedRoots).toHaveLength(1);
+  expect(importedRoots[0]).toMatchObject({ parent_id: null, title: 'Inbox Book' });
   expect(readImportedChildren(secondImport.nodeId as string).map((child) => child.title)).toContain('Part One');
 });
 

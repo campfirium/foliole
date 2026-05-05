@@ -224,14 +224,12 @@ function renderRightSidebarColumns(args: {
       nodeOrder={args.props.nodeOrder}
       trashedNodeIds={args.props.trashedNodeIds}
       nodesById={args.props.nodesById}
-      nodeViewById={args.props.nodeViewById}
       onRevealAnchorInDocument={args.props.onRevealAnchorInDocument}
       onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
       onSelectNode={args.onSelectNode}
       reviewCurrentNodeId={args.props.reviewCurrentNodeId}
       reviewQueueNodeIds={args.props.reviewPanelQueueNodeIds}
       reviewSchedulerSettings={args.props.reviewSchedulerSettings}
-      setNodeViewState={args.props.setNodeViewState}
     />
   ];
 }

@@ -6,6 +6,7 @@ import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 vi.mock('../shared/platform/bridge', () => ({
+  appendReadingPositionTraceLog: vi.fn(),
   getRuntimeInvoke: vi.fn()
 }));
 
