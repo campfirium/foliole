@@ -18,6 +18,7 @@ describe('Android sync conflict query rules', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.syncConflictRead).toEqual(ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES);
+    expect(definitions.syncConflictRead.groupKeys).toEqual({ nodeConflicts: 'nodeConflicts' });
     expect(definitions.syncConflictRead.nodeConflicts).toEqual({ queryName: 'nodeConflicts' });
   });
 
@@ -27,8 +28,9 @@ describe('Android sync conflict query rules', () => {
 
     expect(helperSource).toContain('FolioleCompanionSyncConflictQueryRules.nodeConflictsQueryName(context)');
     expect(helperSource).not.toContain('"nodeConflicts"');
-    expect(conflictRulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "syncConflictRead")');
+    expect(conflictRulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "syncConflictRead", "nodeConflicts")');
     expect(conflictRulesSource).toContain('nodeConflictsQueryName(Context context)');
+    expect(conflictRulesSource).not.toContain('optJSONObject("nodeConflicts")');
     expect(conflictRulesSource).not.toContain('database, "nodeConflicts"');
   });
 });

@@ -27,10 +27,12 @@ final class FolioleCompanionSyncReviewLogRecordRules {
     }
 
     private static String columnSource(Context context, String queryName, String key) throws Exception {
-        JSONArray columns = query(context, queryName).getJSONArray("columns");
+        JSONArray columns = query(context, queryName).getJSONArray(FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "columns"));
         for (int index = 0; index < columns.length(); index += 1) {
             JSONObject column = columns.getJSONObject(index);
-            if (key.equals(column.optString("key"))) return column.getString("source");
+            if (key.equals(column.optString(FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "key")))) {
+                return column.getString(FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "source"));
+            }
         }
         throw new IllegalStateException("Companion query definitions asset is missing sync review log column: " + key);
     }

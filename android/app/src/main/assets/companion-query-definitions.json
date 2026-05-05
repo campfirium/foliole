@@ -2164,6 +2164,9 @@
     }
   },
   "syncConflictRead": {
+    "groupKeys": {
+      "nodeConflicts": "nodeConflicts"
+    },
     "nodeConflicts": {
       "queryName": "nodeConflicts"
     }

@@ -52,13 +52,17 @@ describe('Android sync stream query rules', () => {
     expect(reviewLogSource).toContain('FolioleCompanionSyncReviewLogRecordRules.string(context, queryName, record, key, fallback)');
     expect(reviewLogSource).toContain('FolioleCompanionSyncReviewLogRecordRules.key(context, queryName, key)');
     expect(reviewLogSource).toContain('FolioleCompanionSyncPayloadQueryStore.metadata(context');
-    expect(reviewLogRulesSource).toContain('column.getString("source")');
+    expect(reviewLogRulesSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "columns")');
+    expect(reviewLogRulesSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "source")');
+    expect(reviewLogRulesSource).not.toContain('column.getString("source")');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "syncStreamRead", streamName)');
     expect(nodeVersionSource).not.toContain('"syncNodeVersions"');
     expect(nodeVersionSource).not.toContain('"syncNodeVersionParent"');
     expect(reviewLogSource).not.toContain('"syncReviewLog"');
     expect(reviewLogRulesSource).toContain('FolioleCompanionQueryAssetKeys.key(context, "queries")');
     expect(reviewLogRulesSource).not.toContain('optJSONObject("queries")');
+    expect(reviewLogRulesSource).not.toContain('getJSONArray("columns")');
+    expect(reviewLogRulesSource).not.toContain('getString("source")');
     expect(reviewLogSource).not.toContain('draft.getJSONObject("cardBefore")');
     expect(reviewLogSource).not.toContain('draft.getInt("grade")');
     expect(reviewLogSource).not.toContain('draft.optString("schedulerVersion"');

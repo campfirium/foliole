@@ -187,6 +187,9 @@ export const ANDROID_COMPANION_SYNC_STREAM_READ_RULES = {
 };
 
 export const ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES = {
+  groupKeys: {
+    nodeConflicts: 'nodeConflicts'
+  },
   nodeConflicts: {
     queryName: 'nodeConflicts'
   }

@@ -5,8 +5,6 @@ import android.content.Context;
 import org.json.JSONObject;
 
 final class FolioleCompanionSyncPayloadJson {
-    private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
-
     private FolioleCompanionSyncPayloadJson() {}
 
     static JSONObject payload(Context context, JSONObject record) throws Exception {
@@ -22,11 +20,6 @@ final class FolioleCompanionSyncPayloadJson {
     }
 
     private static String payloadJsonKey(Context context) throws Exception {
-        JSONObject routing = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH))
-            .optJSONObject(FolioleCompanionQueryAssetKeys.key(context, "syncPayloadRouting"));
-        if (routing == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing sync payload routing.");
-        }
-        return routing.getString("payloadJsonKey");
+        return FolioleCompanionSyncPayloadRoutingRules.string(context, "payloadJsonKey");
     }
 }
