@@ -25,7 +25,10 @@ const diagnosticResult = {
     connection: { endpoint_url: 'http://10.0.2.2:38641', last_error: null, state: 'ready' },
     content: {
       active_topic: { body_status: 'missing', id: 'topic-1', title: 'Current topic' },
-      missing_content_blob_count: 5
+      missing_attachment_resource_count: 2,
+      missing_content_blob_count: 5,
+      missing_external_document_body_count: 1,
+      missing_topic_body_count: 4
     },
     events: [{
       endpoint_url: 'http://10.0.2.2:38641',

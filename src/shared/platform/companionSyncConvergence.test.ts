@@ -59,12 +59,22 @@ describe('buildSyncConvergenceReport', () => {
     const report = buildSyncConvergenceReport(result({
       android: {
         ...result().android!,
-        content: { missing_content_blob_count: 3 },
+        content: {
+          missing_content_blob_count: 3,
+          missing_external_document_body_count: 1,
+          missing_topic_body_count: 2
+        },
         sync_state: { ...result().android!.sync_state, pack_cursor: 8 }
       }
     }));
 
     expect(report.status).toBe('pending');
+    expect(report.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'content_backlog_exists',
+        detail: '3 body blob(s) remain uncached: 2 topic, 1 external document.'
+      })
+    ]));
     expect(report.checks.map((item) => item.code)).toEqual(expect.arrayContaining([
       'content_backlog_exists',
       'structure_lag_exists'

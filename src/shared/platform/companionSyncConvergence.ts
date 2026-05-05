@@ -98,7 +98,14 @@ function buildResourceChecks(result: CombinedSyncDiagnosticResult) {
   const missingAttachments = result.android?.content.missing_attachment_resource_count ?? 0;
   const checks: SyncConvergenceCheck[] = [];
   if (missing > 0) {
-    checks.push(check('content_backlog_exists', 'info', 'Topic bodies are still caching', `${missing} topic body blob(s) remain uncached.`));
+    const topicBodies = result.android?.content.missing_topic_body_count ?? 0;
+    const externalBodies = result.android?.content.missing_external_document_body_count ?? 0;
+    checks.push(check(
+      'content_backlog_exists',
+      'info',
+      'Topic bodies are still caching',
+      `${missing} body blob(s) remain uncached: ${topicBodies} topic, ${externalBodies} external document.`
+    ));
   }
   if (missingAttachments > 0) {
     checks.push(check('attachment_backlog_exists', 'info', 'Attachment files are still caching', `${missingAttachments} attachment file(s) remain uncached.`));

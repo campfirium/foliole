@@ -95,6 +95,20 @@ final class FolioleCompanionSyncDiagnostics {
         content.put("missing_content_blob_count", count(database,
             "SELECT COUNT(*) FROM content_blobs WHERE availability <> 'cached'"
         ));
+        content.put("missing_topic_body_count", count(database,
+            "SELECT COUNT(DISTINCT n.body_blob_hash) FROM nodes n " +
+                "JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
+                "WHERE n.deleted_at IS NULL AND n.body_blob_hash IS NOT NULL " +
+                "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
+        ));
+        content.put("missing_external_document_body_count", count(database,
+            "SELECT COUNT(DISTINCT ed.body_blob_hash) FROM external_documents ed " +
+                "JOIN content_blobs cb ON cb.hash = ed.body_blob_hash " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash " +
+                "WHERE ed.is_present = 1 AND ed.body_blob_hash IS NOT NULL " +
+                "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
+        ));
         content.put("missing_attachment_resource_count", count(database,
             "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
                 "AND TRIM(content_hash) != '' AND availability <> 'cached'"

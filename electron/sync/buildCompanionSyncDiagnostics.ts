@@ -137,7 +137,9 @@ export function buildCompanionSyncDiagnostics(args: {
     connection,
     content: {
       missing_attachment_resource_count: 0,
-      missing_content_blob_count: storage.node_blob_references_missing_rows
+      missing_content_blob_count: storage.node_blob_references_missing_rows,
+      missing_external_document_body_count: 0,
+      missing_topic_body_count: 0
     },
     events: [],
     host: 'desktop',

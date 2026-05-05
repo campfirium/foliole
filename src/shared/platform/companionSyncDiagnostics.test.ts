@@ -126,13 +126,23 @@ function expectAlignedStructureWithoutPercentages() {
 
 function expectContentBacklogSeparateFromStructure() {
   const verdicts = mergeSyncDiagnosticVerdicts({
-    android: snapshot('android', { content: { missing_content_blob_count: 12 } }),
+    android: snapshot('android', {
+      content: {
+        missing_content_blob_count: 12,
+        missing_external_document_body_count: 3,
+        missing_topic_body_count: 9
+      }
+    }),
     desktop: snapshot('desktop', {})
   });
 
   expect(verdicts).toContainEqual(expect.objectContaining({ code: 'sync_structure_aligned' }));
   expect(verdicts).toContainEqual(expect.objectContaining({
     code: 'sync_android_content_cache_backlog',
+    evidence: expect.objectContaining({
+      missing_external_document_body_count: 3,
+      missing_topic_body_count: 9
+    }),
     message: 'Some topic bodies are still being cached.',
     severity: 'info'
   }));
