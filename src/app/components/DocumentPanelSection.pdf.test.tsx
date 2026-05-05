@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -162,9 +162,30 @@ it('renders the pdf reading container for linked pdf nodes', () => {
   renderSection();
 
   expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
-  expect(screen.getByTestId('pdf-document-state-ready')).toBeInTheDocument();
-  expect(screen.getByText('PDF reader*')).toBeInTheDocument();
+  expect(screen.getByTestId('pdf-document-iframe')).toBeInTheDocument();
+  expect(screen.getByText('sample.pdf')).toBeInTheDocument();
+  expect(screen.queryByText(/highlight/i)).not.toBeInTheDocument();
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
+});
+
+it('supports pdf page turning and zoom controls', () => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
+
+  renderSection();
+
+  const iframe = screen.getByTestId('pdf-document-iframe');
+  expect(iframe).toHaveAttribute('src', 'file:///tmp/sample.pdf#page=1&zoom=100');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  expect(iframe).toHaveAttribute('src', 'file:///tmp/sample.pdf#page=2&zoom=100');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+  expect(iframe).toHaveAttribute('src', 'file:///tmp/sample.pdf#page=2&zoom=110');
+
+  fireEvent.change(screen.getByRole('spinbutton', { name: 'PDF page' }), {
+    target: { value: '5' }
+  });
+  expect(iframe).toHaveAttribute('src', 'file:///tmp/sample.pdf#page=5&zoom=110');
 });
 
 it('shows a loading state while a pdf node source is refreshing', () => {
@@ -173,7 +194,7 @@ it('shows a loading state while a pdf node source is refreshing', () => {
   renderSection();
 
   expect(screen.getByTestId('pdf-document-state-loading')).toBeInTheDocument();
-  expect(screen.getByText('Loading PDF reader*')).toBeInTheDocument();
+  expect(screen.getByText('Loading PDF reader')).toBeInTheDocument();
 });
 
 it('shows a failed state when the linked pdf source is marked failed', () => {

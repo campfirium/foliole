@@ -58,12 +58,13 @@ export function createRevealDocumentSelection(args: BuildControllerLayoutPropsAr
       return;
     }
     const adapter = args.runtime.editorRef.current;
-    if (!adapter) {
-      return;
+    if (adapter) {
+      adapter.revealSelection(selection);
     }
-    adapter.revealSelection(selection);
+
+    const existingViewState = args.ws.nodeViewById[args.ws.activeNodeId];
     args.ws.setNodeViewState(args.ws.activeNodeId, {
-      scrollTop: adapter.getScrollTop(),
+      scrollTop: adapter?.getScrollTop() ?? existingViewState?.scrollTop ?? 0,
       selection
     });
   };
@@ -75,12 +76,13 @@ export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArg
       return;
     }
     const adapter = args.runtime.editorRef.current;
-    if (!adapter) {
-      return;
+    if (adapter) {
+      adapter.revealPosition(position);
     }
-    adapter.revealPosition(position);
+
+    const existingViewState = args.ws.nodeViewById[args.ws.activeNodeId];
     args.ws.setNodeViewState(args.ws.activeNodeId, {
-      scrollTop: adapter.getScrollTop(),
+      scrollTop: adapter?.getScrollTop() ?? existingViewState?.scrollTop ?? 0,
       selection: {
         from: position,
         to: position
