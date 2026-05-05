@@ -12,6 +12,7 @@
 - 启动时只读 `AGENTS.md`。
 - 仅当用户在新会话首条有效指令明确说“继续”时，读取 `.lab/agent/TODO.md`；必要时补读 `.lab/agent/DONE.md`、`git log --oneline -n 5` 与 `.lab/agent/current-phase.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
+- 任务涉及新增/重写 spec、整理文档结构、拆分长文档时，按需读取 `.lab/specs/38-document-structure-governance-v1.md`。
 - 任务涉及执行细则时，读取 `.lab/agent/workflow.md`。
 - 仅在判断验证或停车策略时读取 `.lab/agent/windows-preview.flag` 与 `.lab/agent/park.flag`。
 
@@ -61,11 +62,16 @@
 ## 语言、文档与提交
 - 代码、注释、提交信息、UI 文案、配置键名统一使用英文；对外沟通与执行汇报默认中文。
 - `.lab/specs/**` 文件名使用英文 slug，正文默认中文；其他落库文档默认中文，除非用户明确要求英文。
+- 新增 spec 默认采用“主题分组 + 组内小文件”，避免继续新增超长单文档。
+- 旧 spec 不做全量回拆；仅在当前任务直接涉及且单文档维护成本已明显过高时，允许局部拆分。
+- TODO、台账与任务说明默认引用主题入口文档，不直接罗列大量碎文件。
+- 文档拆分目标是降低修改成本与歧义，不以原子化本身为目标。
 - 重要边界决策与异常处理结论写入 `.lab/specs/**` 或迭代日志；不要只停留在口头汇报。
 - `.lab/**` 全部视为本地工作文档，默认全忽略、不提交；仅当用户在当次会话中明确要求时，才单独调整。
 - 用户要求“提交”“commit”“执行提交指令”时，必须使用 `commit-note` skill。
 
 ## 细则入口
 - agent 执行细则：`.lab/agent/workflow.md`
+- 文档结构与 spec 拆分细则：`.lab/specs/38-document-structure-governance-v1.md`
 - UI 规范：`.lab/specs/ui.md`、`.lab/specs/18-ui-design-system-execution-v1.md`
 - Windows Native 开发与启动排障：`.lab/specs/17-windows-native-dev-loop-v1.md`、`.lab/specs/19-webview2-startup-diagnosis-playbook-v1.md`
