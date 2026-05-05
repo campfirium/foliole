@@ -1,6 +1,4 @@
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-
-import { getRuntimeInvoke } from './bridge';
+import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from './appSettingsState';
 import { getLocalStorageWhitelist } from './storage';
 
 function getBrowserLocalStorage() {
@@ -54,26 +52,13 @@ function writeWhitelistedLocalSettings(settings: Record<string, string>) {
 }
 
 export async function syncAppSettingsWithRuntime() {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return;
-  }
-
   const localSnapshot = readWhitelistedLocalSettings();
-  let runtimeSnapshot: Record<string, string> = {};
-
-  try {
-    runtimeSnapshot = normalizeSettingsPayload(await runtimeInvoke(NATIVE_COMMANDS.loadAppSettingsState));
-  } catch {
+  const runtimeSnapshot = await loadRuntimeAppSettingsState();
+  if (!runtimeSnapshot) {
     return;
   }
 
-  const merged = { ...localSnapshot, ...runtimeSnapshot };
+  const merged = { ...localSnapshot, ...normalizeSettingsPayload(runtimeSnapshot) };
   writeWhitelistedLocalSettings(merged);
-
-  try {
-    await runtimeInvoke(NATIVE_COMMANDS.saveAppSettingsState, { settings: merged });
-  } catch {
-    // Keep local snapshot even when native write fails.
-  }
+  await saveRuntimeAppSettingsState(merged);
 }
