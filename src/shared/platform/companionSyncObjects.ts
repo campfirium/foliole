@@ -77,8 +77,7 @@ export {
   loadCompanionMissingAttachmentResources
 } from './companionAttachmentResourceSync';
 export {
-  applyCompanionDesktopSyncPack,
-  applyCompanionSyncPack
+  applyCompanionDesktopSyncPack
 } from './companionSyncPackApply';
 export {
   loadCompanionPendingSyncSummary,

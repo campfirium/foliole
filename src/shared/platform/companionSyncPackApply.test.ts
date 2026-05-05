@@ -4,7 +4,6 @@ const capacitorMock = vi.hoisted(() => ({
   isNative: vi.fn(() => true),
   platform: vi.fn(() => 'android'),
   plugin: {
-    applySyncPack: vi.fn(async () => ({ applied_blob_count: 1, applied_object_count: 2, to_state_seq: 9 })),
     deleteDownloadedSyncPack: vi.fn(async () => ({ deleted: true })),
     downloadDesktopSyncPack: vi.fn(async () => ({ pack_path: '/tmp/downloaded-pack.db' })),
     loadBootstrap: vi.fn(async () => ({
@@ -41,18 +40,6 @@ beforeEach(() => {
   capacitorMock.platform.mockReturnValue('android');
 });
 
-it('applies a local pack through the native plugin bridge', async () => {
-  const api = await import('./companionSyncPackApply');
-
-  await expect(api.applyCompanionSyncPack('/tmp/pack.db')).resolves.toEqual({
-    applied_blob_count: 1,
-    applied_object_count: 2,
-    to_state_seq: 9
-  });
-
-  expect(capacitorMock.plugin.applySyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/pack.db' });
-});
-
 it('downloads desktop packs before applying them through the shared TS core', async () => {
   const api = await import('./companionSyncPackApply');
 
@@ -81,11 +68,6 @@ it('keeps pack apply inert outside native Android', async () => {
   capacitorMock.platform.mockReturnValue('web');
   const api = await import('./companionSyncPackApply');
 
-  await expect(api.applyCompanionSyncPack('/tmp/pack.db')).resolves.toEqual({
-    applied_blob_count: 0,
-    applied_object_count: 0,
-    to_state_seq: 0
-  });
   await expect(api.applyCompanionDesktopSyncPack({ headers: {}, url: 'http://desktop/pack.db' })).resolves.toEqual({
     applied_blob_count: 0,
     applied_object_count: 0,

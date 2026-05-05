@@ -95,11 +95,6 @@ describe('companion sync objects web fallback', () => {
     })).resolves.toBeNull();
     await expect(api.saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42 })).resolves.toBeNull();
     await expect(api.applyCompanionSyncObjects([])).resolves.toEqual([]);
-    await expect(api.applyCompanionSyncPack('/tmp/pack.db')).resolves.toEqual({
-      applied_blob_count: 0,
-      applied_object_count: 0,
-      to_state_seq: 0
-    });
     await expect(api.applyCompanionDesktopSyncPack({ headers: {}, url: 'http://desktop/pack.db' })).resolves.toEqual({
       applied_blob_count: 0,
       applied_object_count: 0,

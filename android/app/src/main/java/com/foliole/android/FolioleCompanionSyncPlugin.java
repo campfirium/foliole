@@ -664,21 +664,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void applySyncPack(PluginCall call) {
-        resolveWithDatabase(
-            call,
-            "Failed to apply companion sync pack.",
-            databaseHelper -> {
-                String packPath = call.getString("pack_path");
-                if (packPath == null || packPath.trim().isEmpty()) {
-                    throw new IllegalArgumentException("pack_path is required.");
-                }
-                return databaseHelper.applySyncPack(packPath.trim());
-            }
-        );
-    }
-
-    @PluginMethod
     public void loadSyncNodeVersions(PluginCall call) {
         resolveWithDatabase(
             call,

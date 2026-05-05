@@ -10,7 +10,6 @@ import type {
   NativeSyncNodeConflictRecord,
   NativeSyncNodeRecord,
   NativeSyncObjectRecord,
-  NativeSyncPackApplyResult,
   NativeSyncReviewLogRecord,
   NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
@@ -24,7 +23,6 @@ export interface CompanionDiscoveryCandidatesPayload {
 
 export interface CompanionWorkspaceSyncPlugin {
   applySyncObjects(args: { objects: NativeSyncObjectRecord[] }): Promise<{ applied_object_ids: string[] }>;
-  applySyncPack(args: { pack_path: string }): Promise<NativeSyncPackApplyResult>;
   applySyncNodeVersions(args: { nodes: NativeSyncNodeRecord[] }): Promise<{ applied_node_ids: string[] }>;
   applySyncReviewLog(args: { reviews: NativeSyncReviewLogRecord[] }): Promise<{ applied_op_ids: string[] }>;
   desktopHttpRequest(args: {

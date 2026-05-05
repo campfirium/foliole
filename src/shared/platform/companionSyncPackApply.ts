@@ -11,13 +11,6 @@ import {
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceSyncBridge';
 
-export async function applyCompanionSyncPack(packPath: string): Promise<NativeSyncPackApplyResult> {
-  if (!isNativeAndroidCompanionRuntime()) {
-    return { applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 };
-  }
-  return FolioleCompanionSync.applySyncPack({ pack_path: packPath });
-}
-
 export async function applyCompanionDesktopSyncPack(args: {
   headers: Record<string, string>;
   url: string;
