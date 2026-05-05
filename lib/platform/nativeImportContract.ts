@@ -92,6 +92,22 @@ export interface NativeImportOverview {
   recent_runs: NativeTextImportResult[];
 }
 
+export interface NativePdfImportInventoryItem {
+  last_imported_at: string;
+  latest_node_id: string | null;
+  node_status: 'deleted' | 'generated' | 'missing';
+  pdf_index_status: 'failed' | 'indexing' | 'pending' | 'ready' | null;
+  pdf_indexed_at: string | null;
+  source_fingerprint: string;
+  source_locator: string;
+  source_name: string;
+}
+
+export interface NativePdfImportsInventory {
+  items: NativePdfImportInventoryItem[];
+  scanned_at: string;
+}
+
 export interface NativeNodeImportSource {
   first_imported_at: string;
   last_content_fingerprint: string;

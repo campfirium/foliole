@@ -8,6 +8,9 @@ const { loadImportOverview } = vi.hoisted(() => ({
 const { loadReadwiseBooksInventory } = vi.hoisted(() => ({
   loadReadwiseBooksInventory: vi.fn()
 }));
+const { loadPdfImportsInventory } = vi.hoisted(() => ({
+  loadPdfImportsInventory: vi.fn()
+}));
 const { resetImportData } = vi.hoisted(() => ({
   resetImportData: vi.fn()
 }));
@@ -120,8 +123,38 @@ const READWISE_BOOKS_INVENTORY_PAYLOAD = {
   scanned_at: '2026-04-03T10:00:00.000Z'
 };
 
+const PDF_IMPORTS_INVENTORY_RECORD = [
+  {
+    lastImportedAt: '2026-04-04T01:00:00.000Z',
+    latestNodeId: 'node-book-a',
+    nodeStatus: 'generated',
+    pdfIndexedAt: '2026-04-04T01:05:00.000Z',
+    pdfIndexStatus: 'ready',
+    sourceFingerprint: 'pdf-source-1',
+    sourceLocator: '/tmp/Book A.pdf',
+    sourceName: 'Book A.pdf'
+  }
+];
+
+const PDF_IMPORTS_INVENTORY_PAYLOAD = {
+  items: [
+    {
+      last_imported_at: '2026-04-04T01:00:00.000Z',
+      latest_node_id: 'node-book-a',
+      node_status: 'generated',
+      pdf_indexed_at: '2026-04-04T01:05:00.000Z',
+      pdf_index_status: 'ready',
+      source_fingerprint: 'pdf-source-1',
+      source_locator: '/tmp/Book A.pdf',
+      source_name: 'Book A.pdf'
+    }
+  ],
+  scanned_at: expect.any(String)
+};
+
 vi.mock('../database/importOverview.js', () => ({ loadImportOverview }));
 vi.mock('../import/readwiseBooksInventory.js', () => ({ loadReadwiseBooksInventory }));
+vi.mock('../database/pdfImportsInventory.js', () => ({ loadPdfImportsInventory }));
 vi.mock('../database/importMaintenance.js', () => ({ resetImportData }));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
@@ -169,6 +202,12 @@ it('serializes readwise books inventory to native payload', async () => {
   loadReadwiseBooksInventory.mockResolvedValue(READWISE_BOOKS_INVENTORY_RECORD);
 
   await expect(handleStorageCommand('load_readwise_books_inventory', {})).resolves.toEqual(READWISE_BOOKS_INVENTORY_PAYLOAD);
+});
+
+it('serializes pdf imports inventory to native payload', async () => {
+  loadPdfImportsInventory.mockReturnValue(PDF_IMPORTS_INVENTORY_RECORD);
+
+  await expect(handleStorageCommand('load_pdf_imports_inventory', {})).resolves.toEqual(PDF_IMPORTS_INVENTORY_PAYLOAD);
 });
 
 it('dispatches import reset through storage commands', async () => {

@@ -13,6 +13,7 @@ export const NATIVE_COMMANDS = {
   loadNodeSourceUpdatePreview: 'load_node_source_update_preview',
   previewKeepImportRule: 'preview_keep_import_rule',
   loadImportOverview: 'load_import_overview',
+  loadPdfImportsInventory: 'load_pdf_imports_inventory',
   loadImportManagerSettings: 'load_import_manager_settings',
   runDirectoryImport: 'run_directory_import',
   runTextFileImport: 'run_text_file_import',

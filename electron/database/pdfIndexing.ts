@@ -27,6 +27,10 @@ interface PdfIndexAttemptRow extends DatabaseRow {
 const queuedAttachmentIds = new Set<string>();
 let isWorkerRunning = false;
 
+export function toPdfDocumentData(bytes: Uint8Array) {
+  return new Uint8Array(bytes);
+}
+
 function isPdfAttachment(attachmentId: string) {
   const row = openDatabaseConnection().driver.queryOne<{ id: string }>(
     `SELECT id
@@ -110,7 +114,7 @@ async function extractPdfPageText(attachmentId: string) {
 
   const bytes = fs.readFileSync(resolved.filePath);
   const loadingTask = getDocument({
-    data: bytes,
+    data: toPdfDocumentData(bytes),
     isEvalSupported: false,
     useWorkerFetch: false
   });

@@ -5,14 +5,18 @@ import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/work
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 
-const { loadRuntimeReadwiseBooksInventory, resetRuntimeReadwiseBookImport } = vi.hoisted(() => ({
+const { loadRuntimeReadwiseBooksInventory, resetRuntimeReadwiseBookImport, loadRuntimePdfImportsInventory } = vi.hoisted(() => ({
   loadRuntimeReadwiseBooksInventory: vi.fn(),
-  resetRuntimeReadwiseBookImport: vi.fn()
+  resetRuntimeReadwiseBookImport: vi.fn(),
+  loadRuntimePdfImportsInventory: vi.fn()
 }));
 
 vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
   loadRuntimeReadwiseBooksInventory,
   resetRuntimeReadwiseBookImport
+}));
+vi.mock('../../shared/platform/pdfImportsBridge', () => ({
+  loadRuntimePdfImportsInventory
 }));
 
 function seedResetResult() {
@@ -91,6 +95,11 @@ beforeEach(() => {
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-04-04T00:00:00.000Z')));
   loadRuntimeReadwiseBooksInventory.mockReset();
   resetRuntimeReadwiseBookImport.mockReset();
+  loadRuntimePdfImportsInventory.mockReset();
+  loadRuntimePdfImportsInventory.mockResolvedValue({
+    items: [],
+    scannedAt: '2026-04-04T10:00:00.000Z'
+  });
   seedResetResult();
   seedBooksInventory();
   seedWorkspaceTree();

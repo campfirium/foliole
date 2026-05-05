@@ -1,23 +1,14 @@
 import { X } from 'lucide-react';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
-import {
-  loadRuntimeReadwiseBooksInventory,
-  resetRuntimeReadwiseBookImport,
-  type RuntimeReadwiseBooksInventory
-} from '../../shared/platform/readwiseBooksBridge';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppEmptyState } from '../../shared/ui';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { ReadwiseBooksInventorySection } from './ImportOverviewSections';
-import {
-  applyResetReadwiseBookImportToWorkspace,
-  selectReadwiseBookNode
-} from './importSourceWorkspaceReadwiseBooks';
+import { ImportSourceWorkspacePdfPage } from './ImportSourceWorkspacePdfPage';
+import { ImportSourceWorkspaceReadwiseBooksPage } from './ImportSourceWorkspaceReadwiseBooksPage';
 
-type ImportManagementPageId = 'inbox' | 'readwise-books' | 'readwise-articles';
+type ImportManagementPageId = 'inbox' | 'readwise-books' | 'readwise-articles' | 'pdf';
 
 type ImportSourceWorkspaceDetailsProps = {
   open: boolean;
@@ -40,6 +31,11 @@ const importManagementPages = [
     emptyDescription: 'Readwise article content will appear here once the list view is ready.',
     id: 'readwise-articles',
     title: 'Readwise Articles'
+  },
+  {
+    emptyDescription: 'PDF import content will appear here once the list view is ready.',
+    id: 'pdf',
+    title: 'PDF'
   }
 ] as const satisfies ReadonlyArray<{
   emptyDescription: string;
@@ -105,104 +101,6 @@ function ImportSourceWorkspacePage({
   );
 }
 
-function useReadwiseBooksInventoryState(enabled: boolean) {
-  const [booksInventory, setBooksInventory] = useState<RuntimeReadwiseBooksInventory | null>(null);
-  const refreshBooksInventory = useCallback(async () => {
-    setBooksInventory(await loadRuntimeReadwiseBooksInventory());
-  }, []);
-
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    void refreshBooksInventory();
-  }, [enabled, refreshBooksInventory]);
-
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    const handleFocus = () => {
-      void refreshBooksInventory();
-    };
-    window.addEventListener('focus', handleFocus);
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [enabled, refreshBooksInventory]);
-
-  return { booksInventory, refreshBooksInventory };
-}
-
-async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
-  const result = await resetRuntimeReadwiseBookImport(input.nodeId);
-  if (!result || result.status !== 'reset' || !result.node_id || result.content === null || !result.updated_at) {
-    throw new Error(`Could not import ${input.title}.`);
-  }
-
-  applyResetReadwiseBookImportToWorkspace({
-    content: result.content,
-    node_id: result.node_id,
-    removed_node_ids: result.removed_node_ids,
-    title: result.title ?? input.title,
-    updated_at: result.updated_at
-  });
-  await useWorkspaceStore.persist.rehydrate();
-  return result.node_id;
-}
-
-function ReadwiseBooksPage({
-  open,
-  onOpenChange,
-  onSelectNode
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSelectNode?: (nodeId: string) => void;
-}) {
-  const { booksInventory, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
-  const [resettingNodeId, setResettingNodeId] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState('');
-  const handleOpenBookNode = useCallback(
-    (nodeId: string) => {
-      selectReadwiseBookNode(nodeId, onSelectNode);
-      onOpenChange(false);
-    },
-    [onOpenChange, onSelectNode]
-  );
-
-  const handleReimportBook = useCallback(
-    async (input: { nodeId: string; title: string }) => {
-      setResettingNodeId(input.nodeId);
-      try {
-        const nodeId = await runReadwiseBookReset(input);
-        setActionMessage('');
-        handleOpenBookNode(nodeId);
-      } catch {
-        setActionMessage(`Could not import ${input.title}.`);
-      } finally {
-        setResettingNodeId(null);
-        await refreshBooksInventory();
-      }
-    },
-    [handleOpenBookNode, refreshBooksInventory]
-  );
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <ReadwiseBooksInventorySection
-        inventory={booksInventory}
-        onOpenBookNode={handleOpenBookNode}
-        onResetBookImport={handleReimportBook}
-        resettingNodeId={resettingNodeId}
-      />
-      <p aria-live="polite" className="px-1 text-xs text-foreground/65">
-        {actionMessage}
-      </p>
-    </div>
-  );
-}
-
 function ImportSourceWorkspacePageContent({
   open,
   onOpenChange,
@@ -217,7 +115,15 @@ function ImportSourceWorkspacePageContent({
   if (pageId === 'readwise-books') {
     return (
       <ImportSourceWorkspacePage pageId={pageId}>
-        <ReadwiseBooksPage onOpenChange={onOpenChange} onSelectNode={onSelectNode} open={open} />
+        <ImportSourceWorkspaceReadwiseBooksPage onOpenChange={onOpenChange} onSelectNode={onSelectNode} open={open} />
+      </ImportSourceWorkspacePage>
+    );
+  }
+
+  if (pageId === 'pdf') {
+    return (
+      <ImportSourceWorkspacePage pageId={pageId}>
+        <ImportSourceWorkspacePdfPage open={open} />
       </ImportSourceWorkspacePage>
     );
   }
@@ -228,7 +134,7 @@ function ImportSourceWorkspacePageContent({
 export function ImportSourceWorkspaceDetails({ open, onOpenChange, onSelectNode }: ImportSourceWorkspaceDetailsProps) {
   const [activePageId, setActivePageId] = useState<ImportManagementPageId>(() => {
     const persisted = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.importManagementActivePage);
-    if (persisted === 'inbox' || persisted === 'readwise-books' || persisted === 'readwise-articles') {
+    if (persisted === 'inbox' || persisted === 'readwise-books' || persisted === 'readwise-articles' || persisted === 'pdf') {
       return persisted;
     }
     return 'inbox';

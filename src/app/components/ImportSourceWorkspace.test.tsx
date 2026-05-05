@@ -5,20 +5,28 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 
-const { loadRuntimeReadwiseBookEpub, loadRuntimeReadwiseBooksInventory } = vi.hoisted(() => ({
+const { loadRuntimeReadwiseBookEpub, loadRuntimeReadwiseBooksInventory, resetRuntimeReadwiseBookImport, loadRuntimePdfImportsInventory } = vi.hoisted(() => ({
   loadRuntimeReadwiseBookEpub: vi.fn(),
-  loadRuntimeReadwiseBooksInventory: vi.fn()
+  loadRuntimeReadwiseBooksInventory: vi.fn(),
+  resetRuntimeReadwiseBookImport: vi.fn(),
+  loadRuntimePdfImportsInventory: vi.fn()
 }));
 
 vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
   loadRuntimeReadwiseBookEpub,
-  loadRuntimeReadwiseBooksInventory
+  loadRuntimeReadwiseBooksInventory,
+  resetRuntimeReadwiseBookImport
+}));
+vi.mock('../../shared/platform/pdfImportsBridge', () => ({
+  loadRuntimePdfImportsInventory
 }));
 
 beforeEach(() => {
   window.localStorage.clear();
   loadRuntimeReadwiseBookEpub.mockReset();
   loadRuntimeReadwiseBooksInventory.mockReset();
+  resetRuntimeReadwiseBookImport.mockReset();
+  loadRuntimePdfImportsInventory.mockReset();
   loadRuntimeReadwiseBookEpub.mockResolvedValue({
     book_key: 'book-a',
     epub_path: '/tmp/Book A.epub',
@@ -44,6 +52,21 @@ beforeEach(() => {
     highlightDirectoryPath: '/tmp/highlights',
     scannedAt: '2026-04-03T10:00:00.000Z'
   });
+  loadRuntimePdfImportsInventory.mockResolvedValue({
+    items: [
+      {
+        lastImportedAt: '2026-04-04T01:00:00.000Z',
+        latestNodeId: 'node-book-a',
+        nodeStatus: 'generated',
+        pdfIndexedAt: '2026-04-04T01:05:00.000Z',
+        pdfIndexStatus: 'ready',
+        sourceFingerprint: 'pdf-source-1',
+        sourceLocator: '/tmp/Book A.pdf',
+        sourceName: 'Book A.pdf'
+      }
+    ],
+    scannedAt: '2026-04-04T01:06:00.000Z'
+  });
 });
 
 it('shows the import management navigation shell without readwise settings controls', () => {
@@ -53,6 +76,7 @@ it('shows the import management navigation shell without readwise settings contr
   expect(screen.getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Books' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Articles' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'PDF' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Inbox' })).not.toBeInTheDocument();
   expect(screen.queryByText('Readwise Reader settings')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Open Readwise Reader settings' })).not.toBeInTheDocument();
@@ -68,6 +92,51 @@ it('switches the content container when a navigation item is selected', async ()
 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Articles' }));
   expect(screen.getByText('Readwise article content will appear here once the list view is ready.')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
+  await waitFor(() => {
+    expect(screen.getByText('Book A.pdf')).toBeInTheDocument();
+  });
+  expect(screen.getByText('Loaded')).toBeInTheDocument();
+  expect(screen.getByText('Indexed')).toBeInTheDocument();
+});
+
+it('shows deleted and pending-index states in pdf inventory', async () => {
+  loadRuntimePdfImportsInventory.mockResolvedValue({
+    items: [
+      {
+        lastImportedAt: '2026-04-04T01:00:00.000Z',
+        latestNodeId: 'node-deleted',
+        nodeStatus: 'deleted',
+        pdfIndexedAt: null,
+        pdfIndexStatus: null,
+        sourceFingerprint: 'pdf-source-2',
+        sourceLocator: '/tmp/Deleted.pdf',
+        sourceName: 'Deleted.pdf'
+      },
+      {
+        lastImportedAt: '2026-04-04T02:00:00.000Z',
+        latestNodeId: 'node-new',
+        nodeStatus: 'generated',
+        pdfIndexedAt: null,
+        pdfIndexStatus: null,
+        sourceFingerprint: 'pdf-source-3',
+        sourceLocator: '/tmp/New.pdf',
+        sourceName: 'New.pdf'
+      }
+    ],
+    scannedAt: '2026-04-04T02:06:00.000Z'
+  });
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
+  await waitFor(() => {
+    expect(screen.getByText('Deleted.pdf')).toBeInTheDocument();
+  });
+
+  expect(screen.getByText('Deleted')).toBeInTheDocument();
+  expect(screen.getByText('Not indexed')).toBeInTheDocument();
+  expect(screen.getByText('Pending index')).toBeInTheDocument();
 });
 
 it('restores the last active import management page from persistent settings', async () => {
