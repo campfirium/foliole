@@ -3,7 +3,7 @@ import { pushDebugTrace } from '../../shared/testing/debugBridge';
 import { isImmersiveEditableElement, isImmersiveEscapeKey } from './immersiveReadingKeyboard';
 import { blurImmersiveActiveElement, clearParagraphMarker } from './immersiveReadingMarker';
 import { resolveCurrentParagraphSelection, resolveParagraphSelection } from './immersiveReadingModel';
-import { openNextReadableNode } from './immersiveReadingNodes';
+import { openAdjacentReadableNode } from './immersiveReadingNodes';
 import { resolveImmersiveSelectionPayload } from './immersiveReadingSelectionPayload';
 import { revealSelectionForImmersiveBand, shouldRevealSelectionInImmersiveBand } from './immersiveReadingViewportBand';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
@@ -69,11 +69,8 @@ function selectParagraph(args: {
     return true;
   }
   editor.setParagraphMarker?.(null);
-  if (args.direction === 'forward') {
-    openNextReadableNode(args.props, args.readableNodeIds);
-    return true;
-  }
-  return false;
+  openAdjacentReadableNode(args.props, args.readableNodeIds, args.direction);
+  return true;
 }
 
 function runImmersiveSelectionAction(args: {

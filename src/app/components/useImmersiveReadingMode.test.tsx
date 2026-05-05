@@ -1,4 +1,4 @@
-import { act, fireEvent, renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -129,38 +129,6 @@ function buildProps() {
   };
 }
 
-function buildImageProps() {
-  const content = 'Alpha\n\n![Cover](asset://hash-1.png)\n\nGamma';
-  const { adapter } = buildAdapter(content);
-
-  return {
-    adapter,
-    props: {
-      activeNodeId: 'node-1',
-      editorAdapterRef: { current: adapter },
-      editorNodeViewState: undefined,
-      isImmersiveMode: true,
-      isStudyMode: false,
-      nodeOrder: ['node-1'],
-      nodesById: { 'node-1': createNode('node-1') },
-      onCreateSelectionHighlight: vi.fn(),
-      onToggleSelectionHighlight: vi.fn(() => 'created' as const),
-      onCreateSelectionNote: vi.fn(),
-      onExitImmersiveMode: vi.fn(),
-      onRevealDocumentSelection: vi.fn((nextSelection: EditorSelection) => {
-        adapter.revealSelection(nextSelection);
-      }),
-      beginApplyingReadingPosition: vi.fn(),
-      completeApplyingReadingPosition: vi.fn(),
-      getReadingPositionSelection: () => null,
-      getReadingPositionSyncState: () => null,
-      setReadingPositionSelection: vi.fn(),
-      onSelectNode: vi.fn(),
-      onToggleImmersiveMode: vi.fn(),
-      trashedNodeIds: []
-    } as unknown as ImmersiveProps
-  };
-}
 it('moves paragraph selection with space and opens the next readable note at the end', () => {
   const { onSelectNode, props } = buildProps();
   renderHook(() => useImmersiveReadingMode(props));
@@ -249,45 +217,6 @@ it('moves the paragraph marker with arrow keys', () => {
   expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(2, { from: 0, to: 5 });
 });
 
-it('stops on a standalone image block before moving to the following text', () => {
-  const { adapter, props } = buildImageProps();
-  renderHook(() => useImmersiveReadingMode(props));
-  vi.mocked(adapter.setParagraphMarker).mockClear();
-
-  act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
-  });
-
-  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(1, { from: 7, to: 35 });
-  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(2, { from: 37, to: 42 });
-});
-
-it('toggles highlight for a standalone image block from the reading position', () => {
-  const { adapter, props } = buildImageProps();
-  renderHook(() => useImmersiveReadingMode(props));
-
-  act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
-  });
-
-  expect(adapter.setSelection).toHaveBeenCalledWith({ from: 7, to: 35 });
-  expect(adapter.setSelectionRanges).toHaveBeenCalledWith([{ from: 7, to: 35 }]);
-  expect(props.onToggleSelectionHighlight).toHaveBeenCalledWith(
-    expect.objectContaining({
-      imageRegions: [
-        {
-          attachmentId: 'hash-1',
-          regions: [expect.objectContaining({ height: 1, width: 1, x: 0, y: 0 })]
-        }
-      ],
-      parentNodeId: 'node-1',
-      selectionText: '![Cover](asset://hash-1.png)'
-    })
-  );
-});
-
 it('starts the paragraph marker from the persisted reading position', () => {
   const { adapter, props } = buildProps();
   (props as { editorNodeViewState?: { scrollTop: number; selection: EditorSelection } }).editorNodeViewState = {
@@ -302,55 +231,5 @@ it('starts the paragraph marker from the persisted reading position', () => {
   });
 
   expect(adapter.setParagraphMarker).toHaveBeenCalledWith({ from: 0, to: 5 });
-  expect(adapter.revealSelection).not.toHaveBeenCalled();
-});
-it('toggles the shortcuts overlay with question mark', () => {
-  const { props } = buildProps();
-  const { result } = renderHook(() => useImmersiveReadingMode(props));
-
-  act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', shiftKey: true }));
-  });
-
-  expect(result.current.isShortcutsOverlayOpen).toBe(true);
-});
-
-it('exits immersive editing when Escape comes from the editor element', () => {
-  const { props } = buildProps();
-  const { result } = renderHook(() => useImmersiveReadingMode(props));
-  const textarea = document.createElement('textarea');
-  document.body.append(textarea);
-
-  act(() => {
-    result.current.enterImmersiveEdit();
-  });
-
-  expect(result.current.isImmersiveEditing).toBe(true);
-
-  act(() => {
-    fireEvent.keyDown(textarea, { key: 'Escape' });
-  });
-
-  expect(result.current.isImmersiveEditing).toBe(false);
-  expect(props.onExitImmersiveMode).not.toHaveBeenCalled();
-
-  textarea.remove();
-});
-
-it('captures the viewport reading position and starts an applying lock when entering immersive mode', () => {
-  const { adapter, props } = buildProps();
-  props.isImmersiveMode = false;
-  const beginApplyingReadingPosition = vi.fn();
-  props.beginApplyingReadingPosition = beginApplyingReadingPosition;
-  vi.mocked(adapter.getPrimaryVisiblePosition).mockReturnValue(7);
-  renderHook(() => useImmersiveReadingMode(props));
-
-  act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' }));
-  });
-
-  expect(props.onToggleImmersiveMode).toHaveBeenCalledTimes(1);
-  expect(props.getReadingPositionSelection()).toEqual({ from: 7, to: 7 });
-  expect(beginApplyingReadingPosition).toHaveBeenCalledWith({ from: 7, to: 7 }, 'enter-immersive');
   expect(adapter.revealSelection).not.toHaveBeenCalled();
 });

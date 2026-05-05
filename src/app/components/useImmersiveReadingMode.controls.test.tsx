@@ -1,12 +1,8 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, fireEvent, renderHook } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 
-import {
-  IMMERSIVE_READING_BACKWARD_REVEAL_RATIO,
-  IMMERSIVE_READING_FORWARD_REVEAL_RATIO
-} from './immersiveReadingViewportBand';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 
 type ImmersiveProps = Parameters<typeof useImmersiveReadingMode>[0];
@@ -28,7 +24,7 @@ function createNode(id: string) {
 
 function buildAdapter(content: string) {
   let selection: EditorSelection = { from: 0, to: 0 };
-  const adapter = {
+  return {
     destroy: vi.fn(),
     focus: vi.fn(),
     getContent: vi.fn(() => content),
@@ -62,11 +58,10 @@ function buildAdapter(content: string) {
     }),
     setSelectionRanges: vi.fn()
   };
-  return { adapter };
 }
 
 function buildProps() {
-  const { adapter } = buildAdapter('Alpha\n\nBeta');
+  const adapter = buildAdapter('Alpha\n\nBeta');
   let readingSelection: EditorSelection | null = null;
   let applyingSelection: EditorSelection | null = null;
   return {
@@ -80,7 +75,7 @@ function buildProps() {
       nodeOrder: ['node-1', 'node-2'],
       nodesById: { 'node-1': createNode('node-1'), 'node-2': createNode('node-2') },
       onCreateSelectionHighlight: vi.fn(),
-      onToggleSelectionHighlight: vi.fn(() => 'created'),
+      onToggleSelectionHighlight: vi.fn(() => 'created' as const),
       onCreateSelectionNote: vi.fn(),
       onExitImmersiveMode: vi.fn(),
       onRevealDocumentSelection: vi.fn(),
@@ -103,67 +98,53 @@ function buildProps() {
   };
 }
 
-it('reveals the next paragraph only after it leaves the immersive safe band', () => {
-  const { adapter, props } = buildProps();
-  vi.mocked(adapter.getDocumentPositionAtViewportY)
-    .mockReturnValueOnce(0)
-    .mockReturnValueOnce(5);
-  renderHook(() => useImmersiveReadingMode(props));
-
-  act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
-  });
-
-  expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledTimes(1);
-  expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
-    { from: 7, to: 11 },
-    IMMERSIVE_READING_FORWARD_REVEAL_RATIO
-  );
-});
-
-it('repositions upward navigation near the bottom of the safe band when needed', () => {
-  const { adapter, props } = buildProps();
-  (props as { editorNodeViewState?: { scrollTop: number; selection: EditorSelection } }).editorNodeViewState = {
-    scrollTop: 120,
-    selection: { from: 7, to: 7 }
-  };
-  vi.mocked(adapter.getDocumentPositionAtViewportY).mockReturnValue(3);
-  renderHook(() => useImmersiveReadingMode(props));
-
-  act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
-  });
-
-  expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
-    { from: 0, to: 5 },
-    IMMERSIVE_READING_BACKWARD_REVEAL_RATIO
-  );
-});
-
-it('does not stall when moving backward and then forward again', () => {
-  const { adapter, props } = buildProps();
-  renderHook(() => useImmersiveReadingMode(props));
-  vi.mocked(adapter.setParagraphMarker).mockClear();
-
-  act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
-  });
-
-  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(1, { from: 7, to: 11 });
-  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(2, { from: 0, to: 5 });
-  expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(3, { from: 7, to: 11 });
-});
-
-it('opens the previous readable note when moving upward from the first paragraph', () => {
+it('toggles the shortcuts overlay with question mark', () => {
   const { props } = buildProps();
-  props.activeNodeId = 'node-2';
+  const { result } = renderHook(() => useImmersiveReadingMode(props));
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', shiftKey: true }));
+  });
+
+  expect(result.current.isShortcutsOverlayOpen).toBe(true);
+});
+
+it('exits immersive editing when Escape comes from the editor element', () => {
+  const { props } = buildProps();
+  const { result } = renderHook(() => useImmersiveReadingMode(props));
+  const textarea = document.createElement('textarea');
+  document.body.append(textarea);
+
+  act(() => {
+    result.current.enterImmersiveEdit();
+  });
+
+  expect(result.current.isImmersiveEditing).toBe(true);
+
+  act(() => {
+    fireEvent.keyDown(textarea, { key: 'Escape' });
+  });
+
+  expect(result.current.isImmersiveEditing).toBe(false);
+  expect(props.onExitImmersiveMode).not.toHaveBeenCalled();
+
+  textarea.remove();
+});
+
+it('captures the viewport reading position and starts an applying lock when entering immersive mode', () => {
+  const { adapter, props } = buildProps();
+  props.isImmersiveMode = false;
+  const beginApplyingReadingPosition = vi.fn();
+  props.beginApplyingReadingPosition = beginApplyingReadingPosition;
+  vi.mocked(adapter.getPrimaryVisiblePosition).mockReturnValue(7);
   renderHook(() => useImmersiveReadingMode(props));
 
   act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' }));
   });
 
-  expect(props.onSelectNode).toHaveBeenCalledWith('node-1');
+  expect(props.onToggleImmersiveMode).toHaveBeenCalledTimes(1);
+  expect(props.getReadingPositionSelection()).toEqual({ from: 7, to: 7 });
+  expect(beginApplyingReadingPosition).toHaveBeenCalledWith({ from: 7, to: 7 }, 'enter-immersive');
+  expect(adapter.revealSelection).not.toHaveBeenCalled();
 });

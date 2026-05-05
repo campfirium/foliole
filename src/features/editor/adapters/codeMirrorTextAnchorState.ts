@@ -20,6 +20,26 @@ interface TextAnchorDecorationFieldValue {
   source: readonly EditorTextAnchorDecoration[];
 }
 
+function normalizeTextAnchorDecoration(
+  decoration: EditorTextAnchorDecoration,
+  docLength: number
+): EditorTextAnchorDecoration {
+  const from = Math.max(0, Math.min(decoration.from, docLength));
+  const to = Math.max(from, Math.min(decoration.to, docLength));
+  return {
+    from,
+    kind: decoration.kind,
+    to
+  };
+}
+
+function normalizeTextAnchorDecorations(
+  decorations: readonly EditorTextAnchorDecoration[],
+  docLength: number
+): readonly EditorTextAnchorDecoration[] {
+  return decorations.map((decoration) => normalizeTextAnchorDecoration(decoration, docLength));
+}
+
 function mapTextAnchorDecorationThroughChanges(
   decoration: EditorTextAnchorDecoration,
   changes: ChangeDesc
@@ -67,27 +87,30 @@ function createTextAnchorDecorationField(
 ) {
   return StateField.define<TextAnchorDecorationFieldValue>({
     create(state) {
+      const normalizedInitialDecorations = normalizeTextAnchorDecorations(initialDecorations, state.doc.length);
       return {
-        decorations: buildEditorTextAnchorDecorations(state.doc.length, initialDecorations),
-        source: initialDecorations
+        decorations: buildEditorTextAnchorDecorations(state.doc.length, normalizedInitialDecorations),
+        source: normalizedInitialDecorations
       };
     },
     update(value, transaction) {
+      const normalizedCurrentSource = normalizeTextAnchorDecorations(value.source, transaction.startState.doc.length);
       const mappedSource = transaction.docChanged
-        ? mapTextAnchorDecorationsThroughChanges(value.source, transaction.changes)
-        : value.source;
+        ? mapTextAnchorDecorationsThroughChanges(normalizedCurrentSource, transaction.changes)
+        : normalizedCurrentSource;
       let nextValue: TextAnchorDecorationFieldValue = {
         decorations: value.decorations.map(transaction.changes),
         source: mappedSource
       };
       for (const effect of transaction.effects) {
         if (effect.is(setTextAnchorDecorationsEffect)) {
-          if (areTextAnchorDecorationsEqual(nextValue.source, effect.value)) {
+          const normalizedEffectValue = normalizeTextAnchorDecorations(effect.value, transaction.state.doc.length);
+          if (areTextAnchorDecorationsEqual(nextValue.source, normalizedEffectValue)) {
             continue;
           }
           nextValue = {
-            decorations: buildEditorTextAnchorDecorations(transaction.state.doc.length, effect.value),
-            source: effect.value
+            decorations: buildEditorTextAnchorDecorations(transaction.state.doc.length, normalizedEffectValue),
+            source: normalizedEffectValue
           };
         }
       }

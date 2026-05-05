@@ -77,6 +77,7 @@ export interface DocumentPanelBodyLayoutProps {
 
 function AnswerSection(props: DocumentPanelBodyLayoutProps) {
   const answerNodeId = getImageClozeAnswerEditorNodeId(props.editorNodeId);
+  const answerEditorKey = `answer-${props.editorAppearanceKey}-${answerNodeId ?? 'none'}`;
 
   return (
     <section
@@ -93,7 +94,7 @@ function AnswerSection(props: DocumentPanelBodyLayoutProps) {
         debugId={props.answerEditorDebugId}
         fitBlockImagesToViewport={props.fitBlockImagesToViewport}
         hideTitleHeading={false}
-        key={`answer-${props.editorAppearanceKey}`}
+        key={answerEditorKey}
         nodeId={answerNodeId}
         onChange={props.onAnswerChange}
         onFitBlockImageMetricsChange={props.onAnswerImageMetricsChange}
@@ -121,6 +122,8 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
     );
   }
 
+  const promptEditorKey = `prompt-${props.editorAppearanceKey}-${props.editorNodeId ?? 'none'}`;
+
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
       <MarkdownEditor
@@ -133,7 +136,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         hideScrollbar={props.editorHideScrollbar}
         hideTitleHeading={props.editorHideTitleHeading}
         immersiveEditing={props.immersiveEditing}
-        key={`prompt-${props.editorAppearanceKey}`}
+        key={promptEditorKey}
         lineDiffDecorations={props.editorDiffDecorations}
         nodeId={props.editorNodeId}
         readingSelection={props.editorReadingSelection}

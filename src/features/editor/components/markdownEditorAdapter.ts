@@ -68,6 +68,10 @@ function useTextAnchorPresentationSync(
       applyTextAnchorDecorations();
       return;
     }
+    if (!areTextAnchorDecorationsEqual(lastAppliedTextAnchorDecorationsRef.current, EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS)) {
+      lastAppliedTextAnchorDecorationsRef.current = EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
+      adapter.setTextAnchorDecorations?.(EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS);
+    }
     if (deferredApplyFrameRef.current !== null) {
       cancelAnimationFrame(deferredApplyFrameRef.current);
     }
