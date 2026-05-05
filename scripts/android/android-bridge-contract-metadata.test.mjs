@@ -112,12 +112,20 @@ describe('Android bridge contract metadata', () => {
 
     expect(bridgeSource).toContain('pairingCredentialRequestKey(context, "deviceId")');
     expect(bridgeSource).toContain('pairingSignatureRequestKey(context, "method")');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingPreferenceKey(context, key)');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingSignatureHeaderKey(context, key)');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingSignatureResponseKey(context, key)');
-    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingStateKey(context, key)');
+    expect(bridgeSource).toContain('pairingPreferenceKey(context, "deviceId")');
+    expect(bridgeSource).toContain('pairingStateKey(context, "deviceId")');
+    expect(bridgeSource).toContain('pairingSignatureHeaderKey(context, "deviceId")');
+    expect(bridgeSource).toContain('pairingSignatureResponseKey(context, "headers")');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdCredentialRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingMethodSignatureRequestKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdStateKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdSignatureHeaderKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingHeadersSignatureResponseKey(context)');
+    expect(combinedSource).not.toContain('preferenceKey(context, "');
+    expect(combinedSource).not.toContain('stateKey(context, "');
+    expect(combinedSource).not.toContain('signatureHeaderKey(context, "');
+    expect(combinedSource).not.toContain('signatureResponseKey(context, "');
     expect(combinedSource).not.toContain('getString("device_id"');
     expect(combinedSource).not.toContain('getString("device_kind"');
     expect(combinedSource).not.toContain('getString("device_name"');

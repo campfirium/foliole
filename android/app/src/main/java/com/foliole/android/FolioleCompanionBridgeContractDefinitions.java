@@ -53,8 +53,48 @@ final class FolioleCompanionBridgeContractDefinitions {
         return string(context, "pairingPlugin", "preferenceKeys", key);
     }
 
+    static String pairingDeviceIdPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "deviceId");
+    }
+
+    static String pairingDeviceKindPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "deviceKind");
+    }
+
+    static String pairingDeviceNamePreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "deviceName");
+    }
+
+    static String pairingDeviceSecretPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "deviceSecret");
+    }
+
+    static String pairingDeviceSecretIvPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "deviceSecretIv");
+    }
+
+    static String pairingPairedAtPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "pairedAt");
+    }
+
     static String pairingSignatureHeaderKey(Context context, String key) throws Exception {
         return pairingSignatureString(context, "headerKeys", key);
+    }
+
+    static String pairingDeviceIdSignatureHeaderKey(Context context) throws Exception {
+        return pairingSignatureHeaderKey(context, "deviceId");
+    }
+
+    static String pairingNonceSignatureHeaderKey(Context context) throws Exception {
+        return pairingSignatureHeaderKey(context, "nonce");
+    }
+
+    static String pairingSignatureSignatureHeaderKey(Context context) throws Exception {
+        return pairingSignatureHeaderKey(context, "signature");
+    }
+
+    static String pairingTimestampSignatureHeaderKey(Context context) throws Exception {
+        return pairingSignatureHeaderKey(context, "timestamp");
     }
 
     static String pairingSignatureRequestKey(Context context, String key) throws Exception {
@@ -85,8 +125,32 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingSignatureString(context, "responseKeys", key);
     }
 
+    static String pairingHeadersSignatureResponseKey(Context context) throws Exception {
+        return pairingSignatureResponseKey(context, "headers");
+    }
+
     static String pairingStateKey(Context context, String key) throws Exception {
         return string(context, "pairingPlugin", "stateKeys", key);
+    }
+
+    static String pairingDeviceIdStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "deviceId");
+    }
+
+    static String pairingDeviceKindStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "deviceKind");
+    }
+
+    static String pairingDeviceNameStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "deviceName");
+    }
+
+    static String pairingIsPairedStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "isPaired");
+    }
+
+    static String pairingPairedAtStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "pairedAt");
     }
 
     static String resourceRequestKey(Context context, String key) throws Exception {
