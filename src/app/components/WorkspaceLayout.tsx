@@ -100,6 +100,7 @@ export interface WorkspaceLayoutProps {
   completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => void;
   getReadingPositionSelection: () => EditorSelection | null;
   getReadingPositionSyncState: () => ReadingPositionSyncState | null;
+  getReadingPositionTargetViewportMode: () => 'center' | null;
   getReadingPositionTargetViewportRatio: () => number | null;
   setReadingPositionSelection: (selection: EditorSelection) => void;
   onSelectTrashNode: (nodeId: string) => void;

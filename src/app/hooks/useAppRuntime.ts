@@ -20,6 +20,7 @@ export interface ReadingPositionSyncState {
   reason: string;
   startedAt: number;
   targetSelection: EditorSelection;
+  targetViewportMode?: 'center';
   targetViewportRatio?: number;
 }
 

@@ -6,7 +6,7 @@ import { updateNodeImageState } from '../../shared/platform/performanceDiagnosti
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 import { hasCachedMarkdownImageReference } from './documentPanelImageReferenceCache';
-import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 
 function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNode: Node | undefined) {
   if (props.isWorkspaceHydrated === false) {
@@ -87,6 +87,7 @@ function getDocumentPanelBodyProps(
     immersiveEditing: props.isImmersiveMode && props.isImmersiveEditing,
     editorNodeId: props.editorNodeId,
     editorReadingSelection: props.editorReadingSelection,
+    editorReadingTargetViewportMode: props.editorReadingTargetViewportMode,
     editorReadingTargetViewportRatio: props.editorReadingTargetViewportRatio,
     editorNodeViewState: props.editorNodeViewState,
     onBeginApplyingReadingPosition: props.onBeginApplyingReadingPosition,

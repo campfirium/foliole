@@ -1,13 +1,7 @@
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
-import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
-import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import {
   markDocumentPanelBound,
   markNodeBodyPainted,
@@ -15,8 +9,6 @@ import {
   recordComponentRender
 } from '../../shared/platform/performanceDiagnosticsProbe';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
-import type { NodeViewState } from '../../store/workspaceStore';
-import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
@@ -28,73 +20,12 @@ import {
   buildTopicBacklinks,
   useDocumentPanelInteractions
 } from './documentPanelSectionSupport';
+import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
 import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
 import { useNodeBacklinks } from './useNodeBacklinks';
-import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
-export interface DocumentPanelSectionProps {
-  activeNodeId: string | null;
-  isWorkspaceHydrated?: boolean;
-  editableNodeId: string | null;
-  canGoBack: boolean;
-  canGoForward: boolean;
-  canGoParent: boolean;
-  contextMenu: WorkspaceEditorContextMenu | null;
-  documentMaxWidth: number;
-  editorContent: string;
-  editorAppearanceKey: string;
-  isEditorReadOnly: boolean;
-  isImmersiveEditing?: boolean;
-  isImmersiveMode?: boolean;
-  onEnterImmersiveEdit?: () => void;
-  isPriorityQuickSetActive?: boolean;
-  editorNodeId: string | null;
-  editorReadingSelection?: EditorSelection | null;
-  editorReadingTargetViewportRatio?: number | null;
-  editorNodeViewState?: NodeViewState;
-  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
-  onCompleteApplyingReadingPosition?: (reason: string) => void;
-  isDocumentResizing: boolean;
-  showAnswerSection: boolean;
-  onAnswerChange: (answer: string) => void;
-  onEditorChange: (content: string) => void;
-  onRegisterEditorDraftFlush?: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
-  onNodeContentChange: (nodeId: string, content: string) => void;
-  onNodePriorityChange?: (nodeId: string, priority: number | null) => void;
-  onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
-  onEditorReady: (adapter: EditorAdapter | null) => void;
-  onShouldSuppressSelectionRestore?: () => boolean;
-  onSetReadingPositionSelection?: (selection: EditorSelection) => void;
-  onCloseContextMenu: () => void;
-  onCopyImage: () => void;
-  onCreateHighlight: () => void;
-  onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
-  onCreateCloze: () => void;
-  onCutImage: () => void;
-  onDeleteImage: () => void;
-  onExportImage: () => void;
-  onGoBack: () => void;
-  onGoForward: () => void;
-  onGoParent: () => void;
-  onSelectBreadcrumbNode: (nodeId: string) => void;
-  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
-  onRevealDocumentPosition: (position: number) => void;
-  onRevealDocumentSelection: (selection: EditorSelection) => void;
-  onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
-  onResetLayout: () => void;
-  onSelectNode: (nodeId: string) => void;
-  onStartDocumentResize: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
-  priorityQuickSetShortcutLabel?: string;
-  reviewSchedulerSettings?: ReviewSchedulerSettings;
-  nodeOrder: string[];
-  trashedNodeIds: string[];
-  nodesById: Record<string, Node>;
-}
+export type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 
 function useDocumentPanelTextAnchorState(props: DocumentPanelSectionProps) {
   const previousDecorationsRef = useRef<ReturnType<typeof collectDocumentTextAnchorDecorations>>([]);

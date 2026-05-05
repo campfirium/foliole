@@ -34,6 +34,7 @@ export interface EditorAdapter {
   isPositionNearViewportRatio?(position: number, ratio: number, toleranceRatio?: number): boolean;
   getViewportRect?(): DOMRect | null;
   revealPosition(position: number): void;
+  revealSelectionCentered?(selection: EditorSelection): void;
   revealSelectionAtViewportRatio?(selection: EditorSelection, ratio: number): void;
   setParagraphMarker?(selection: EditorSelection | null): void;
   restoreSelection(selection: EditorSelection): void;

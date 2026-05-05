@@ -28,7 +28,11 @@ import {
 import { clampEditorPosition } from './codeMirrorEditorPosition';
 import { getEditorLineBlockHeight, setEditorScrollTop } from './codeMirrorEditorViewport';
 import { applyParagraphMarkerState } from './codeMirrorParagraphMarkerState';
-import { restoreEditorSelection, revealEditorSelection } from './codeMirrorSelectionActions';
+import {
+  restoreEditorSelection,
+  revealEditorSelection,
+  revealEditorSelectionCentered
+} from './codeMirrorSelectionActions';
 import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
 import { resolvePrimaryVisiblePosition } from './codeMirrorVisiblePosition';
 import {
@@ -174,6 +178,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
   revealSelection(selection: EditorSelection) {
     revealEditorSelection(this.view, selection, (position) => this.clampPosition(position));
+  }
+  revealSelectionCentered(selection: EditorSelection) {
+    revealEditorSelectionCentered(this.view, selection, (position) => this.clampPosition(position));
   }
   revealSelectionAtViewportRatio(selection: EditorSelection, ratio: number) {
     revealEditorSelection(this.view, selection, (position) => this.clampPosition(position), ratio);

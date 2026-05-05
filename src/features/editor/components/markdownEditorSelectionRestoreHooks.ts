@@ -12,12 +12,14 @@ export function usePendingRestoreKey(args: {
   previousNodeIdRef: MutableRefObject<string | null>;
   previousReadingSelectionRef: MutableRefObject<EditorViewState['selection'] | null | undefined>;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingTargetViewportMode: 'center' | null | undefined;
 }) {
   useLayoutEffect(() => {
     const nextPendingRestoreSelectionKey = createPendingRestoreSelectionKey(
       args.nodeId,
       args.readingSelection,
-      args.nodeViewState
+      args.nodeViewState,
+      args.readingTargetViewportMode
     );
     const nodeChanged = args.previousNodeIdRef.current !== args.nodeId;
     const readingSelectionChanged =

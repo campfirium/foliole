@@ -119,6 +119,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     adapterRef,
     props.nodeId,
     props.readingSelection,
+    props.readingTargetViewportMode,
     props.readingTargetViewportRatio,
     props.nodeViewState,
     props.onBeginApplyingReadingPosition,

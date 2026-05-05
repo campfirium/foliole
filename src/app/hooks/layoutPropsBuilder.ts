@@ -101,6 +101,7 @@ interface BuildLayoutPropsArgs {
   completeApplyingReadingPosition: WorkspaceLayoutProps['completeApplyingReadingPosition'];
   getReadingPositionSelection: WorkspaceLayoutProps['getReadingPositionSelection'];
   getReadingPositionSyncState: WorkspaceLayoutProps['getReadingPositionSyncState'];
+  getReadingPositionTargetViewportMode: WorkspaceLayoutProps['getReadingPositionTargetViewportMode'];
   getReadingPositionTargetViewportRatio: WorkspaceLayoutProps['getReadingPositionTargetViewportRatio'];
   setReadingPositionSelection: WorkspaceLayoutProps['setReadingPositionSelection'];
   onRightSidebarSplitterKeyDown: WorkspaceLayoutProps['onRightSidebarSplitterKeyDown'];
@@ -208,6 +209,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
     getReadingPositionSelection: args.getReadingPositionSelection,
     getReadingPositionSyncState: args.getReadingPositionSyncState,
+    getReadingPositionTargetViewportMode: args.getReadingPositionTargetViewportMode,
     getReadingPositionTargetViewportRatio: args.getReadingPositionTargetViewportRatio,
     setReadingPositionSelection: args.setReadingPositionSelection,
     onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenMoveToNode: args.onOpenMoveToNode, onOpenTrashView: args.onOpenTrashView, onOpenVirtualView: args.onOpenVirtualView, onEnterImmersiveEdit: args.onEnterImmersiveEdit, onEnterImmersiveMode: args.onEnterImmersiveMode, onExitImmersiveMode: args.onExitImmersiveMode, onToggleListVisibility: args.onToggleListVisibility,

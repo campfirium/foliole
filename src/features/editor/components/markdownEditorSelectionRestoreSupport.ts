@@ -21,6 +21,7 @@ export function handleSelectionRestore(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingTargetViewportMode: 'center' | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
@@ -30,20 +31,14 @@ export function handleSelectionRestore(args: {
   valueLength: number;
 }) {
   if (!args.restoreTarget) {
-    if (!args.nodeId || !(args.readingSelection ?? args.nodeViewState?.selection)) {
-      args.lastRestoredSelectionKeyRef.current = null;
-      args.pendingRestoreSelectionKeyRef.current = null;
-    }
+    clearRestoreTrackingWhenEmpty(args);
     return;
   }
   if (args.shouldSuppressSelectionRestore?.()) {
-    if (typeof args.restoreTarget.targetViewportRatio !== 'number') {
-      args.lastRestoredSelectionKeyRef.current = args.restoreTarget.selectionKey;
-      args.pendingRestoreSelectionKeyRef.current = null;
-    }
-    pushDebugTrace('editor.restore-selection.suppressed', {
-      nodeId: args.restoreTarget.nodeId,
-      selection: args.restoreTarget.selection
+    markSuppressedRestore({
+      lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
+      pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
+      restoreTarget: args.restoreTarget
     });
     return;
   }
@@ -60,11 +55,45 @@ export function handleSelectionRestore(args: {
     restoreCompletionFrameRef: args.restoreCompletionFrameRef,
     restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
     restoreScrollTop:
-      typeof args.restoreTarget.targetViewportRatio === 'number' ? undefined : args.nodeViewState?.scrollTop,
+      args.restoreTarget.targetViewportMode === 'center' || typeof args.restoreTarget.targetViewportRatio === 'number'
+        ? undefined
+        : args.nodeViewState?.scrollTop,
     selectionKey: args.restoreTarget.selectionKey,
     selection: args.restoreTarget.selection,
+    targetViewportMode: args.restoreTarget.targetViewportMode,
     targetViewportRatio: args.restoreTarget.targetViewportRatio,
     valueLength: args.valueLength
+  });
+}
+
+function clearRestoreTrackingWhenEmpty(args: {
+  lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
+  nodeId: string | null;
+  nodeViewState: EditorViewState | undefined;
+  pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
+  readingSelection: EditorViewState['selection'] | null | undefined;
+}) {
+  if (!args.nodeId || !(args.readingSelection ?? args.nodeViewState?.selection)) {
+    args.lastRestoredSelectionKeyRef.current = null;
+    args.pendingRestoreSelectionKeyRef.current = null;
+  }
+}
+
+function markSuppressedRestore(args: {
+  lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
+  pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
+  restoreTarget: NonNullable<ReturnType<typeof resolveRestoreTarget>>;
+}) {
+  if (
+    args.restoreTarget.targetViewportMode !== 'center' &&
+    typeof args.restoreTarget.targetViewportRatio !== 'number'
+  ) {
+    args.lastRestoredSelectionKeyRef.current = args.restoreTarget.selectionKey;
+    args.pendingRestoreSelectionKeyRef.current = null;
+  }
+  pushDebugTrace('editor.restore-selection.suppressed', {
+    nodeId: args.restoreTarget.nodeId,
+    selection: args.restoreTarget.selection
   });
 }
 
@@ -77,6 +106,7 @@ export function resolveRestoreTarget(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKey: string | null;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingTargetViewportMode: 'center' | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   value: string;
 }) {
@@ -95,7 +125,7 @@ export function resolveRestoreTarget(args: {
   ) {
     return null;
   }
-  const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop ?? 'auto'}`;
+  const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop ?? 'auto'}:${args.readingTargetViewportMode ?? 'default'}`;
   if (args.pendingRestoreSelectionKey !== selectionKey) {
     return null;
   }
@@ -112,6 +142,7 @@ export function resolveRestoreTarget(args: {
     adapter: args.adapter,
     nodeId: args.nodeId,
     selection,
+    targetViewportMode: args.readingTargetViewportMode,
     selectionKey,
     targetViewportRatio: args.readingTargetViewportRatio
   };
@@ -164,6 +195,7 @@ function restoreEditorSelection(args: {
   restoreScrollTop: number | undefined;
   selectionKey: string;
   selection: EditorViewState['selection'];
+  targetViewportMode: 'center' | null | undefined;
   targetViewportRatio: number | null | undefined;
   valueLength: number;
 }) {
@@ -171,6 +203,7 @@ function restoreEditorSelection(args: {
   pushDebugTrace('editor.restore-selection', {
     nodeId: args.nodeId,
     selection: args.selection,
+    targetViewportMode: args.targetViewportMode ?? null,
     targetViewportRatio: args.targetViewportRatio ?? null
   });
   beginRestoreSelection({
@@ -191,6 +224,7 @@ function restoreEditorSelection(args: {
     restoreScrollTop: args.restoreScrollTop,
     selection: args.selection,
     selectionKey: args.selectionKey,
+    targetViewportMode: args.targetViewportMode,
     targetViewportRatio: args.targetViewportRatio,
     valueLength: args.valueLength
   });

@@ -6,8 +6,6 @@ import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 import { requestReadingPositionApply } from './readingPositionRequests';
 
-const HIGHLIGHT_JUMP_VIEWPORT_RATIO = 0.24;
-
 function writeNodeReadingPosition(args: BuildControllerLayoutPropsArgs, selection: EditorSelection) {
   if (!args.ws.activeNodeId) {
     return;
@@ -22,6 +20,7 @@ function writeNodeReadingPosition(args: BuildControllerLayoutPropsArgs, selectio
 function applyReadingPositionToActiveEditor(
   args: BuildControllerLayoutPropsArgs,
   selection: EditorSelection,
+  targetViewportMode?: 'center',
   targetViewportRatio?: number
 ) {
   const adapter = args.runtime.editorRef.current;
@@ -29,6 +28,10 @@ function applyReadingPositionToActiveEditor(
     return;
   }
   adapter.setSelection(selection);
+  if (targetViewportMode === 'center' && adapter.revealSelectionCentered) {
+    adapter.revealSelectionCentered(selection);
+    return;
+  }
   if (typeof targetViewportRatio === 'number' && adapter.revealSelectionAtViewportRatio) {
     adapter.revealSelectionAtViewportRatio(selection, targetViewportRatio);
     return;
@@ -96,7 +99,7 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
       reason: 'reveal-anchor',
       runtime: args.runtime,
       selection: caretSelection,
-      targetViewportRatio: HIGHLIGHT_JUMP_VIEWPORT_RATIO
+      targetViewportMode: 'center'
     });
   };
 }

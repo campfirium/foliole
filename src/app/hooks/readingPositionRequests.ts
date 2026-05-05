@@ -24,12 +24,14 @@ export function requestReadingPositionApply(args: {
   reason: string;
   runtime: ReadingPositionRuntimeLike;
   selection: EditorSelection;
+  targetViewportMode?: 'center';
   targetViewportRatio?: number;
 }) {
   pushDebugTrace('runtime.reading-position.requested', {
     nodeId: args.nodeId,
     reason: args.reason,
     selection: args.selection,
+    targetViewportMode: args.targetViewportMode ?? null,
     targetViewportRatio: args.targetViewportRatio ?? null
   });
   args.runtime.readingPositionRef.current = {
@@ -42,6 +44,7 @@ export function requestReadingPositionApply(args: {
       reason: args.reason,
       startedAt: Date.now(),
       targetSelection: args.selection,
+      targetViewportMode: args.targetViewportMode,
       targetViewportRatio: args.targetViewportRatio
     }
   };

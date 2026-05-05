@@ -40,12 +40,13 @@ export function shouldCollapseSelectionAfterRestore(selection: EditorViewState['
 export function createPendingRestoreSelectionKey(
   nodeId: string | null,
   readingSelection: EditorViewState['selection'] | null | undefined,
-  nodeViewState: EditorViewState | undefined
+  nodeViewState: EditorViewState | undefined,
+  targetViewportMode?: 'center' | null
 ) {
   const selectionSource = readingSelection ?? nodeViewState?.selection;
   const selection = selectionSource ? normalizeRestoreSelection(selectionSource) : null;
   if (!nodeId || !selection) {
     return null;
   }
-  return `${nodeId}:${selection.from}:${selection.to}:${resolveRestoreScrollTop(readingSelection, nodeViewState) ?? 'auto'}`;
+  return `${nodeId}:${selection.from}:${selection.to}:${resolveRestoreScrollTop(readingSelection, nodeViewState) ?? 'auto'}:${targetViewportMode ?? 'default'}`;
 }

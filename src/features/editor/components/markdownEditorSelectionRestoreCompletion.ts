@@ -66,6 +66,7 @@ export function beginRestoreSelection(args: {
   restoreScrollTop: number | undefined;
   selection: EditorViewState['selection'];
   selectionKey: string;
+  targetViewportMode: 'center' | null | undefined;
   targetViewportRatio: number | null | undefined;
   valueLength: number;
 }) {
@@ -73,6 +74,11 @@ export function beginRestoreSelection(args: {
   args.isRestoreApplyingActiveRef.current = true;
   args.activeRestoreSelectionKeyRef.current = args.selectionKey;
   args.activeRestoreValueLengthRef.current = args.valueLength;
+  if (args.targetViewportMode === 'center' && args.adapter.revealSelectionCentered) {
+    args.adapter.setSelection(args.selection);
+    args.adapter.revealSelectionCentered(args.selection);
+    return;
+  }
   if (typeof args.targetViewportRatio === 'number' && args.adapter.revealSelectionAtViewportRatio) {
     args.adapter.setSelection(args.selection);
     args.adapter.revealSelectionAtViewportRatio(args.selection, args.targetViewportRatio);
@@ -96,9 +102,10 @@ export function scheduleRestoreSelectionCompletion(args: {
   restoreScrollTop: number | undefined;
   selection: EditorViewState['selection'];
   selectionKey: string;
+  targetViewportMode: 'center' | null | undefined;
   targetViewportRatio: number | null | undefined;
 }) {
-  if (typeof args.targetViewportRatio !== 'number') {
+  if (args.targetViewportMode === 'center' || typeof args.targetViewportRatio !== 'number') {
     scheduleNonRatioCompletion(args);
     return;
   }

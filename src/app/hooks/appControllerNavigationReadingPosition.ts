@@ -8,8 +8,6 @@ import type { useWorkspaceSelectors } from './appControllerState';
 import { requestReadingPositionApply } from './readingPositionRequests';
 import type { useAppRuntime } from './useAppRuntime';
 
-const HIGHLIGHT_JUMP_VIEWPORT_RATIO = 0.24;
-
 export function useNavigationReadingPosition(
   runtime: ReturnType<typeof useAppRuntime>,
   nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'],
@@ -40,7 +38,7 @@ export function useNavigationReadingPosition(
           from: nextViewState.selection.from,
           to: nextViewState.selection.from
         },
-        targetViewportRatio: result.focusAnchor ? HIGHLIGHT_JUMP_VIEWPORT_RATIO : undefined
+        targetViewportMode: result.focusAnchor ? 'center' : undefined
       });
       return true;
     },

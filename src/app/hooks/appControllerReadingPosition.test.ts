@@ -18,6 +18,7 @@ function createHarness() {
             reason: string;
             startedAt: number;
             targetSelection: { from: number; to: number };
+            targetViewportMode?: 'center';
             targetViewportRatio?: number;
           }
     }
@@ -46,7 +47,7 @@ describe('createReadingPositionHandlers', () => {
 
     handlers.beginAnchorNavigationRestore('node-1', { from: 42, to: 42 });
     readingPositionRef.current.selection = { from: 42, to: 42 };
-    handlers.getReadingPositionSyncState()!.targetViewportRatio = 0.24;
+    handlers.getReadingPositionSyncState()!.targetViewportMode = 'center';
 
     handlers.completeApplyingReadingPosition('editor-restore-selection-settled', { from: 42, to: 42 });
 
@@ -58,14 +59,14 @@ describe('createReadingPositionHandlers', () => {
     const { handlers } = createHarness();
 
     handlers.beginAnchorNavigationRestore('node-1', { from: 88, to: 88 });
-    handlers.getReadingPositionSyncState()!.targetViewportRatio = 0.24;
+    handlers.getReadingPositionSyncState()!.targetViewportMode = 'center';
 
     handlers.completeApplyingReadingPosition('editor-restore-selection-cancelled', { from: 21, to: 21 });
 
     expect(handlers.getReadingPositionSyncState()).toMatchObject({
       reason: 'anchor-navigation',
       targetSelection: { from: 88, to: 88 },
-      targetViewportRatio: 0.24
+      targetViewportMode: 'center'
     });
   });
 

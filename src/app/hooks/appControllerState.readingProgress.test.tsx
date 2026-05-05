@@ -284,7 +284,7 @@ describe('useWorkspaceControllerState reading progress wiring', () => {
         reason: 'anchor-navigation',
         startedAt: expect.any(Number),
         targetSelection: { from: 88, to: 88 },
-        targetViewportRatio: 0.24
+        targetViewportMode: 'center'
       }
     });
     expect(ws.setNodeViewState).not.toHaveBeenCalled();

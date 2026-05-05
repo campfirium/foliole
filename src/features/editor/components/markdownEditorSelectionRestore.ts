@@ -38,6 +38,7 @@ function useSelectionRestoreExecution(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingTargetViewportMode: 'center' | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
@@ -57,6 +58,7 @@ function useSelectionRestoreExecution(args: {
       nodeViewState: args.nodeViewState,
       pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
       readingSelection: args.readingSelection,
+      readingTargetViewportMode: args.readingTargetViewportMode,
       readingTargetViewportRatio: args.readingTargetViewportRatio,
       restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
       restoreCompletionFrameRef: args.restoreCompletionFrameRef,
@@ -71,6 +73,7 @@ export function useEditorSelectionRestore(
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
   nodeId: string | null,
   readingSelection: EditorViewState['selection'] | null | undefined,
+  readingTargetViewportMode: 'center' | null | undefined,
   readingTargetViewportRatio: number | null | undefined,
   nodeViewState: EditorViewState | undefined,
   _beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined,
@@ -91,6 +94,7 @@ export function useEditorSelectionRestore(
     previousNodeIdRef: restoreRefs.previousNodeIdRef,
     previousReadingSelectionRef: restoreRefs.previousReadingSelectionRef,
     readingSelection,
+    readingTargetViewportMode,
     restoreCompletionFrame2Ref: restoreRefs.restoreCompletionFrame2Ref,
     restoreCompletionFrameRef: restoreRefs.restoreCompletionFrameRef,
     restoreCompletionTimeoutRef: restoreRefs.restoreCompletionTimeoutRef
@@ -106,6 +110,7 @@ export function useEditorSelectionRestore(
     nodeViewState,
     pendingRestoreSelectionKeyRef: restoreRefs.pendingRestoreSelectionKeyRef,
     readingSelection,
+    readingTargetViewportMode,
     readingTargetViewportRatio,
     restoreCompletionFrame2Ref: restoreRefs.restoreCompletionFrame2Ref,
     restoreCompletionFrameRef: restoreRefs.restoreCompletionFrameRef,
@@ -126,6 +131,7 @@ function useSelectionRestorePreparation(args: {
   previousNodeIdRef: MutableRefObject<string | null>;
   previousReadingSelectionRef: MutableRefObject<EditorViewState['selection'] | null | undefined>;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingTargetViewportMode: 'center' | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
@@ -138,7 +144,10 @@ function useSelectionRestorePreparation(args: {
     restoreCompletionFrameRef: args.restoreCompletionFrameRef,
     restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef
   });
-  usePendingRestoreKey(args);
+  usePendingRestoreKey({
+    ...args,
+    readingTargetViewportMode: args.readingTargetViewportMode
+  });
 }
 
 function runSelectionRestore(args: {
@@ -152,6 +161,7 @@ function runSelectionRestore(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingTargetViewportMode: 'center' | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
@@ -168,6 +178,7 @@ function runSelectionRestore(args: {
     nodeViewState: args.nodeViewState,
     pendingRestoreSelectionKey: args.pendingRestoreSelectionKeyRef.current,
     readingSelection: args.readingSelection,
+    readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,
     value: args.value
   });
@@ -181,6 +192,7 @@ function runSelectionRestore(args: {
     nodeViewState: args.nodeViewState,
     pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
     readingSelection: args.readingSelection,
+    readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,
     restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
     restoreCompletionFrameRef: args.restoreCompletionFrameRef,

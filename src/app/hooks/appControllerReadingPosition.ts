@@ -31,6 +31,10 @@ function getActiveReadingViewportRatio(args: BuildControllerLayoutPropsArgs) {
   return getActiveReadingSyncState(args)?.targetViewportRatio ?? null;
 }
 
+function getActiveReadingViewportMode(args: BuildControllerLayoutPropsArgs) {
+  return getActiveReadingSyncState(args)?.targetViewportMode ?? null;
+}
+
 function setReadingSyncState(
   args: BuildControllerLayoutPropsArgs,
   nodeId: string | null,
@@ -78,6 +82,7 @@ function createReadingPositionAccessors(args: BuildControllerLayoutPropsArgs) {
   return {
     getReadingPositionSelection: () => getActiveReadingSelection(args),
     getReadingPositionSyncState: () => getActiveReadingSyncState(args),
+    getReadingPositionTargetViewportMode: () => getActiveReadingViewportMode(args),
     getReadingPositionTargetViewportRatio: () => getActiveReadingViewportRatio(args)
   };
 }
@@ -93,56 +98,68 @@ function setReadingPositionSelection(args: BuildControllerLayoutPropsArgs, selec
   });
 }
 
+function beginReadingPositionApply(
+  args: BuildControllerLayoutPropsArgs,
+  nodeId: string | null,
+  selection: EditorSelection,
+  reason: string
+) {
+  setReadingSyncState(args, nodeId, {
+    reason,
+    startedAt: Date.now(),
+    targetSelection: selection
+  });
+}
+
+function completeAnchorNavigationRestore(
+  args: BuildControllerLayoutPropsArgs,
+  nodeId: string,
+  reason: string
+) {
+  const current = args.runtime.readingPositionSyncRef.current;
+  if (current.nodeId !== nodeId || current.state?.reason !== 'anchor-navigation') {
+    return;
+  }
+  if (
+    args.runtime.readingPositionRef.current.nodeId === nodeId &&
+    args.runtime.readingPositionRef.current.selection &&
+    isSameSelection(args.runtime.readingPositionRef.current.selection, current.state.targetSelection)
+  ) {
+    args.runtime.readingPositionRef.current = {
+      nodeId,
+      selection: null
+    };
+  }
+  args.runtime.readingPositionSyncRef.current = {
+    nodeId,
+    state: null
+  };
+  pushDebugTrace('runtime.anchor-navigation.applying-complete', {
+    nodeId,
+    reason,
+    selection: current.state?.targetSelection ?? null
+  });
+}
+
 function createReadingPositionMutations(args: BuildControllerLayoutPropsArgs) {
   return {
     beginAnchorNavigationRestore: (nodeId: string, selection: EditorSelection) => {
-      setReadingSyncState(args, nodeId, {
-        reason: 'anchor-navigation',
-        startedAt: Date.now(),
-        targetSelection: selection
-      });
+      beginReadingPositionApply(args, nodeId, selection, 'anchor-navigation');
       pushDebugTrace('runtime.anchor-navigation.applying-begin', {
         nodeId,
         selection
       });
     },
     beginApplyingReadingPosition: (selection: EditorSelection, reason: string) => {
-      setReadingSyncState(args, args.ws.activeNodeId, {
-        reason,
-        startedAt: Date.now(),
-        targetSelection: selection
-      });
+      beginReadingPositionApply(args, args.ws.activeNodeId, selection, reason);
       pushDebugTrace('runtime.reading-position.applying-begin', {
         activeNodeId: args.ws.activeNodeId,
         reason,
         selection
       });
     },
-    completeAnchorNavigationRestore: (nodeId: string, reason: string) => {
-      const current = args.runtime.readingPositionSyncRef.current;
-      if (current.nodeId !== nodeId || current.state?.reason !== 'anchor-navigation') {
-        return;
-      }
-      if (
-        args.runtime.readingPositionRef.current.nodeId === nodeId &&
-        args.runtime.readingPositionRef.current.selection &&
-        isSameSelection(args.runtime.readingPositionRef.current.selection, current.state.targetSelection)
-      ) {
-        args.runtime.readingPositionRef.current = {
-          nodeId,
-          selection: null
-        };
-      }
-      args.runtime.readingPositionSyncRef.current = {
-        nodeId,
-        state: null
-      };
-      pushDebugTrace('runtime.anchor-navigation.applying-complete', {
-        nodeId,
-        reason,
-        selection: current.state?.targetSelection ?? null
-      });
-    },
+    completeAnchorNavigationRestore: (nodeId: string, reason: string) =>
+      completeAnchorNavigationRestore(args, nodeId, reason),
     completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => {
       completeReadingSyncState({
         activeNodeId: args.ws.activeNodeId,

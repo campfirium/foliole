@@ -1,9 +1,10 @@
-import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
 function buildReadingPositionProps(props: WorkspaceLayoutProps) {
   return {
     editorReadingSelection: props.getReadingPositionSelection(),
+    editorReadingTargetViewportMode: props.getReadingPositionTargetViewportMode(),
     editorReadingTargetViewportRatio: props.getReadingPositionTargetViewportRatio(),
     editorNodeViewState: props.editorNodeViewState,
     onBeginApplyingReadingPosition: props.beginApplyingReadingPosition,
