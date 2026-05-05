@@ -20,6 +20,14 @@ import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncE
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'skipped';
 
+function isKnownBacklog(count: number | null) {
+  return typeof count === 'number' && count > 0;
+}
+
+function madeResourceProgress(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
+  return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
+}
+
 export function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
   const remainingStructure = result.remainingStructureChangeCount ?? 0;
   const waitingLocalChanges =
@@ -29,8 +37,9 @@ export function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionOb
     (result.pushIssueCount ?? 0) === 0 &&
     ((result.localDirtyCount ?? 0) > 0 || (result.pendingAckCount ?? 0) > 0);
   return (
-    result.remainingContentBlobCount !== 0 ||
-    result.remainingAttachmentResourceCount !== 0 ||
+    isKnownBacklog(result.remainingContentBlobCount) ||
+    isKnownBacklog(result.remainingAttachmentResourceCount) ||
+    madeResourceProgress(result) ||
     remainingStructure > 0 ||
     waitingLocalChanges
   );

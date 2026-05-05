@@ -60,6 +60,17 @@ describe('describeCompanionSyncPassResult', () => {
     });
   });
 
+  it('keeps unknown resource counts from claiming backlog or completion', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      remainingAttachmentResourceCount: null,
+      remainingContentBlobCount: null
+    }))).toEqual({
+      message: 'Sync checked',
+      outcome: 'skipped',
+      status: 'skipped'
+    });
+  });
+
   it('records progress and remaining backlog together', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingContentBlobBytes: 5242880,
@@ -74,6 +85,9 @@ describe('describeCompanionSyncPassResult', () => {
     });
   });
 
+});
+
+describe('describeCompanionSyncPassResult errors', () => {
   it('keeps a body download error on the backlog retry path when bodies remain', () => {
     expect(describeCompanionSyncPassResult(passInput({
       contentBlobError: 'Topic body batch could not download any requested body.',
@@ -105,7 +119,9 @@ describe('describeCompanionSyncPassResult', () => {
       status: 'failed'
     });
   });
+});
 
+describe('describeCompanionSyncPassResult local changes', () => {
   it('keeps local dirty and pending ack work out of completed events', () => {
     expect(describeCompanionSyncPassResult(passInput({
       localDirtyCount: 1,
@@ -149,7 +165,9 @@ describe('describeCompanionSyncPassResult', () => {
       status: 'skipped'
     });
   });
+});
 
+describe('describeCompanionSyncPassResult structure lag', () => {
   it('keeps structure lag out of completed events', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingStructureChangeCount: 4

@@ -113,11 +113,11 @@ function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
   } else if (remainingStructure === null) {
     suffixes.push('topic list confirmation is still pending');
   }
-  if (remainingBodies !== 0 && remainingAttachments !== 0) {
+  if (isKnownBacklog(remainingBodies) && isKnownBacklog(remainingAttachments)) {
     suffixes.push(`${bodyLabel} and ${attachmentLabel} still downloading`);
-  } else if (remainingBodies !== 0) {
+  } else if (isKnownBacklog(remainingBodies)) {
     suffixes.push(`${bodyLabel} still downloading`);
-  } else if (remainingAttachments !== 0) {
+  } else if (isKnownBacklog(remainingAttachments)) {
     suffixes.push(`${attachmentLabel} still downloading`);
   }
   return suffixes.length === 0 ? prefix : joinBacklogSuffix(prefix, `${suffixes.join(', and ')}.`);
@@ -128,7 +128,11 @@ function createPassResult(message: string, status: CompanionSyncPassResult['stat
 }
 
 function hasRemainingResourceBacklog(result: CompanionSyncPassInput) {
-  return result.remainingContentBlobCount !== 0 || result.remainingAttachmentResourceCount !== 0;
+  return isKnownBacklog(result.remainingContentBlobCount) || isKnownBacklog(result.remainingAttachmentResourceCount);
+}
+
+function isKnownBacklog(count: number | null) {
+  return typeof count === 'number' && count > 0;
 }
 
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {

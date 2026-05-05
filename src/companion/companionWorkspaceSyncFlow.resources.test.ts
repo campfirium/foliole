@@ -174,6 +174,58 @@ async function testClearsProgressWhenBacklogIsDone() {
   expect(setSyncProgress).toHaveBeenCalledWith(null);
 }
 
+async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    remainingAttachmentResourceCount: null,
+    remainingContentBlobCount: null
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setSyncProgress = vi.fn();
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress,
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('skipped');
+  expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'content' }));
+  expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'attachment' }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync checked',
+    status: 'skipped'
+  }));
+}
+
+async function testProgressWithUnknownResourceCountsContinuesBacklogRetry() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    remainingAttachmentResourceCount: null,
+    remainingContentBlobCount: null,
+    syncedContentBlobHashes: ['hash-1']
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('backlog');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync made progress; downloaded 1 topic body in this sync',
+    status: 'skipped'
+  }));
+}
+
 describe('tryForegroundAutoSync resource progress', () => {
   beforeEach(resetCompanionWorkspaceSyncFlowMocks);
 
@@ -186,4 +238,8 @@ describe('tryForegroundAutoSync resource progress', () => {
   it('keeps sync progress visible when a pass leaves resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
 
   it('clears sync progress when the resource backlog is done', testClearsProgressWhenBacklogIsDone);
+
+  it('does not use unknown resource counts as fast backlog retry evidence', testUnknownResourceCountsDoNotDriveFastBacklogRetry);
+
+  it('continues quickly when resources moved but remaining counts are unavailable', testProgressWithUnknownResourceCountsContinuesBacklogRetry);
 });

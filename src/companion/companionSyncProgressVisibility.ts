@@ -3,7 +3,11 @@ import type { CompanionDesktopSyncProgress } from '../shared/platform/companionD
 import type { CompanionSyncPassInput } from './companionSyncPassResult';
 
 function hasRemainingResourceBacklog(result: CompanionSyncPassInput) {
-  return result.remainingAttachmentResourceCount !== 0 || result.remainingContentBlobCount !== 0;
+  return isKnownBacklog(result.remainingAttachmentResourceCount) || isKnownBacklog(result.remainingContentBlobCount);
+}
+
+function isKnownBacklog(count: number | null) {
+  return typeof count === 'number' && count > 0;
 }
 
 function hasContentProgress(result: CompanionSyncPassInput) {
@@ -23,7 +27,7 @@ export function shouldClearCompanionSyncProgress(result: CompanionSyncPassInput)
 }
 
 export function buildRemainingSyncProgress(result: CompanionSyncPassInput): CompanionDesktopSyncProgress | null {
-  if (result.remainingContentBlobCount !== 0) {
+  if (isKnownBacklog(result.remainingContentBlobCount)) {
     if (hasContentProgress(result)) {
       return null;
     }
@@ -36,7 +40,7 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
       totalBytes: result.remainingContentBlobBytes ?? null
     };
   }
-  if (result.remainingAttachmentResourceCount !== 0) {
+  if (isKnownBacklog(result.remainingAttachmentResourceCount)) {
     if (hasAttachmentProgress(result)) {
       return null;
     }
