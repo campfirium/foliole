@@ -74,6 +74,19 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'updated_at', source: 'updated_at', type: 'string' },
       { key: 'source', source: 'source', type: 'nullableString' }
     ]
+  },
+  nodeAttachmentBackfillSnapshots: {
+    resultKey: 'snapshots',
+    sql:
+      'SELECT n.id, v.snapshot_json FROM nodes n ' +
+      'INNER JOIN node_sync_versions v ON v.version_id = COALESCE(n.current_version_id, (' +
+      'SELECT latest.version_id FROM node_sync_versions latest ' +
+      'WHERE latest.object_id = n.id ORDER BY latest.created_at DESC, latest.version_id DESC LIMIT 1' +
+      '))',
+    columns: [
+      { key: 'id', source: 'id', type: 'string' },
+      { key: 'snapshot_json', source: 'snapshot_json', type: 'string' }
+    ]
   }
 };
 

@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import org.json.JSONArray;
@@ -12,18 +11,12 @@ final class FolioleCompanionNodeAttachmentStore {
     private FolioleCompanionNodeAttachmentStore() {}
 
     static void backfillNodeAttachmentsFromVersions(Context context, SQLiteDatabase database) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT n.id, v.snapshot_json " +
-                "FROM nodes n " +
-                "INNER JOIN node_sync_versions v ON v.version_id = COALESCE(n.current_version_id, (" +
-                    "SELECT latest.version_id FROM node_sync_versions latest " +
-                    "WHERE latest.object_id = n.id ORDER BY latest.created_at DESC, latest.version_id DESC LIMIT 1" +
-                "))",
-            null
-        )) {
-            while (cursor.moveToNext()) {
-                JSONObject snapshot = new JSONObject(cursor.getString(1));
-                replaceNodeAttachments(context, database, cursor.getString(0), snapshot.optJSONArray("attachments"));
+        try {
+            JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "nodeAttachmentBackfillSnapshots").getJSONArray("snapshots");
+            for (int index = 0; index < rows.length(); index += 1) {
+                JSONObject row = rows.getJSONObject(index);
+                JSONObject snapshot = new JSONObject(row.getString("snapshot_json"));
+                replaceNodeAttachments(context, database, row.getString("id"), snapshot.optJSONArray("attachments"));
             }
         } catch (Exception ignored) {
             // Best-effort compatibility repair for pre-link-schema Android databases.
