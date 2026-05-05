@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type MutableRefObject,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent
 } from 'react';
@@ -30,6 +31,49 @@ function getWidthDelta(side: ResizeSide, startX: number, currentX: number) {
   return currentX - startX;
 }
 
+function updateDocumentWidthFromX(
+  currentX: number,
+  resizeStartRef: MutableRefObject<ResizeStartState | null>,
+  setDocumentMaxWidth: (width: number) => void
+) {
+  const resizeStart = resizeStartRef.current;
+  if (!resizeStart) {
+    return;
+  }
+  const delta = getWidthDelta(resizeStart.side, resizeStart.startX, currentX);
+  setDocumentMaxWidth(resizeStart.startWidth + delta);
+}
+
+function attachDocumentResizeListeners(
+  resizeStartRef: MutableRefObject<ResizeStartState | null>,
+  setDocumentMaxWidth: (width: number) => void,
+  onStopResize: () => void
+) {
+  const onPointerMove = (event: PointerEvent) => {
+    updateDocumentWidthFromX(event.clientX, resizeStartRef, setDocumentMaxWidth);
+  };
+
+  const onMouseMove = (event: MouseEvent) => {
+    updateDocumentWidthFromX(event.clientX, resizeStartRef, setDocumentMaxWidth);
+  };
+
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('pointerup', onStopResize);
+  window.addEventListener('pointercancel', onStopResize);
+  window.addEventListener('mouseup', onStopResize);
+  document.body.classList.add('workspace-resizing');
+
+  return () => {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('pointerup', onStopResize);
+    window.removeEventListener('pointercancel', onStopResize);
+    window.removeEventListener('mouseup', onStopResize);
+    document.body.classList.remove('workspace-resizing');
+  };
+}
+
 export function useDocumentWidthResizer(
   documentMaxWidth: number,
   setDocumentMaxWidth: (width: number) => void
@@ -42,44 +86,12 @@ export function useDocumentWidthResizer(
       return undefined;
     }
 
-    const onPointerMove = (event: PointerEvent) => {
-      const resizeStart = resizeStartRef.current;
-      if (!resizeStart) {
-        return;
-      }
-      const delta = getWidthDelta(resizeStart.side, resizeStart.startX, event.clientX);
-      setDocumentMaxWidth(resizeStart.startWidth + delta);
-    };
-
-    const onMouseMove = (event: MouseEvent) => {
-      const resizeStart = resizeStartRef.current;
-      if (!resizeStart) {
-        return;
-      }
-      const delta = getWidthDelta(resizeStart.side, resizeStart.startX, event.clientX);
-      setDocumentMaxWidth(resizeStart.startWidth + delta);
-    };
-
     const stopResize = () => {
       resizeStartRef.current = null;
       setActiveSide(null);
     };
 
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('pointerup', stopResize);
-    window.addEventListener('pointercancel', stopResize);
-    window.addEventListener('mouseup', stopResize);
-    document.body.classList.add('workspace-resizing');
-
-    return () => {
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('pointerup', stopResize);
-      window.removeEventListener('pointercancel', stopResize);
-      window.removeEventListener('mouseup', stopResize);
-      document.body.classList.remove('workspace-resizing');
-    };
+    return attachDocumentResizeListeners(resizeStartRef, setDocumentMaxWidth, stopResize);
   }, [activeSide, setDocumentMaxWidth]);
 
   const startResize = (

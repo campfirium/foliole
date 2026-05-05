@@ -30,6 +30,23 @@ export default [
     rules: {
       ...tsEslintPlugin.configs.recommended.rules,
       'no-undef': 'off',
+      'max-lines': [
+        'error',
+        {
+          max: 260,
+          skipBlankLines: true,
+          skipComments: true
+        }
+      ],
+      'max-lines-per-function': [
+        'error',
+        {
+          max: 60,
+          skipBlankLines: true,
+          skipComments: true,
+          IIFEs: true
+        }
+      ],
       'import/order': [
         'error',
         {

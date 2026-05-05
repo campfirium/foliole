@@ -26,13 +26,7 @@ function renderStartupError(message: string) {
   `;
 }
 
-function mountApp() {
-  const rootElement = document.getElementById(ROOT_ID);
-  if (!rootElement) {
-    renderStartupError('Missing #root element in index.html.');
-    return;
-  }
-
+function registerBootDiagnostics() {
   window.addEventListener('error', (event) => {
     console.error('[startup] uncaught error', event.error);
     reportNativeBootStage('window_error', {
@@ -48,6 +42,36 @@ function mountApp() {
       reason: String(event.reason)
     });
   });
+}
+
+function registerAppReadySignals(signalAppReady: (source: string) => void) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      signalAppReady('double_raf');
+    });
+  });
+
+  window.addEventListener(
+    'load',
+    () => {
+      signalAppReady('window_load');
+    },
+    { once: true }
+  );
+
+  setTimeout(() => {
+    signalAppReady('timeout_1500ms');
+  }, 1500);
+}
+
+function mountApp() {
+  const rootElement = document.getElementById(ROOT_ID);
+  if (!rootElement) {
+    renderStartupError('Missing #root element in index.html.');
+    return;
+  }
+
+  registerBootDiagnostics();
 
   const bootContext = {
     href: window.location.href,
@@ -82,23 +106,7 @@ function mountApp() {
     });
   };
 
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      signalAppReady('double_raf');
-    });
-  });
-
-  window.addEventListener(
-    'load',
-    () => {
-      signalAppReady('window_load');
-    },
-    { once: true }
-  );
-
-  setTimeout(() => {
-    signalAppReady('timeout_1500ms');
-  }, 1500);
+  registerAppReadySignals(signalAppReady);
 }
 
 try {

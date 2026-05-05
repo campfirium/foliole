@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCommandRegistry } from './registry';
 import { matchesShortcut } from './shortcuts';
 
-describe('command registry', () => {
+describe('command registry shortcut execution', () => {
   it('matches shortcut only when modifiers exactly match', () => {
     const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true });
     const matched = matchesShortcut(event, { key: 'ArrowLeft', altKey: true });
@@ -60,6 +60,9 @@ describe('command registry', () => {
     expect(secondExecute).toHaveBeenCalledTimes(1);
   });
 
+});
+
+describe('command registry run by id', () => {
   it('runs command by id and blocks disabled commands', () => {
     const execute = vi.fn();
     const registry = createCommandRegistry([
@@ -82,6 +85,9 @@ describe('command registry', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
+});
+
+describe('command registry palette state', () => {
   it('returns palette items with filtering and enabled state', () => {
     const registry = createCommandRegistry([
       {

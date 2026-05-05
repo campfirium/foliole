@@ -4,9 +4,13 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 import { getCommandShortcutOverrides, resolveCommandShortcutMap } from './keymap';
 
-describe('command keymap', () => {
+function clearStorage() {
+  window.localStorage.clear();
+}
+
+describe('command keymap overrides', () => {
   beforeEach(() => {
-    window.localStorage.clear();
+    clearStorage();
   });
 
   it('reads valid overrides from storage and ignores invalid entries', () => {
@@ -56,6 +60,12 @@ describe('command keymap', () => {
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.commandShortcutOverrides, '{broken');
 
     expect(getCommandShortcutOverrides()).toEqual({});
+  });
+});
+
+describe('command keymap parsing', () => {
+  beforeEach(() => {
+    clearStorage();
   });
 
   it('parses lowercase shortcut labels from storage', () => {

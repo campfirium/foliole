@@ -16,133 +16,133 @@ interface WorkspaceNavigationActions {
   openNode: (nodeId: string) => NodeNavigationResult | null;
 }
 
+function isAvailableNode(state: WorkspaceState, nodeId: string) {
+  return Boolean(state.nodesById[nodeId]) && !state.trashedNodeIds.includes(nodeId);
+}
+
+function createOpenNodeAction(set: WorkspaceSet) {
+  return (nodeId: string) => {
+    let nextResult: NodeNavigationResult | null = null;
+    set((state) => {
+      if (!isAvailableNode(state, nodeId) || state.activeNodeId === nodeId) {
+        return state;
+      }
+      nextResult = { focusAnchor: null, nodeId };
+      return {
+        activeNodeId: nodeId,
+        navigation: state.activeNodeId
+          ? {
+              backStack: pushNavigationHistory(state.navigation.backStack, state.activeNodeId),
+              forwardStack: []
+            }
+          : { ...state.navigation, forwardStack: [] }
+      };
+    });
+    return nextResult;
+  };
+}
+
+function createGoBackAction(set: WorkspaceSet) {
+  return () => {
+    let nextResult: NodeNavigationResult | null = null;
+    set((state) => {
+      const currentNodeId = state.activeNodeId;
+      const targetNodeId = state.navigation.backStack[state.navigation.backStack.length - 1];
+      if (!currentNodeId || !targetNodeId || !isAvailableNode(state, targetNodeId)) {
+        return state;
+      }
+      nextResult = { focusAnchor: null, nodeId: targetNodeId };
+      return {
+        activeNodeId: targetNodeId,
+        navigation: {
+          backStack: state.navigation.backStack.slice(0, -1),
+          forwardStack: [currentNodeId, ...state.navigation.forwardStack]
+        }
+      };
+    });
+    return nextResult;
+  };
+}
+
+function createGoForwardAction(set: WorkspaceSet) {
+  return () => {
+    let nextResult: NodeNavigationResult | null = null;
+    set((state) => {
+      const currentNodeId = state.activeNodeId;
+      const targetNodeId = state.navigation.forwardStack[0];
+      if (!currentNodeId || !targetNodeId || !isAvailableNode(state, targetNodeId)) {
+        return state;
+      }
+      nextResult = { focusAnchor: null, nodeId: targetNodeId };
+      return {
+        activeNodeId: targetNodeId,
+        navigation: {
+          backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
+          forwardStack: state.navigation.forwardStack.slice(1)
+        }
+      };
+    });
+    return nextResult;
+  };
+}
+
+function createGoToParentAction(set: WorkspaceSet) {
+  return () => {
+    let nextResult: NodeNavigationResult | null = null;
+    set((state) => {
+      const currentNodeId = state.activeNodeId;
+      if (!currentNodeId) {
+        return state;
+      }
+      const currentNode = state.nodesById[currentNodeId];
+      const parentNodeId = currentNode?.parentNodeId;
+      if (!currentNode || !parentNodeId || !isAvailableNode(state, parentNodeId)) {
+        return state;
+      }
+      nextResult = { focusAnchor: currentNode.anchorLink ?? null, nodeId: parentNodeId };
+      return {
+        activeNodeId: parentNodeId,
+        navigation: {
+          backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
+          forwardStack: []
+        }
+      };
+    });
+    return nextResult;
+  };
+}
+
+function createJumpToAncestorAction(set: WorkspaceSet) {
+  return (ancestorNodeId: string) => {
+    let nextResult: NodeNavigationResult | null = null;
+    set((state) => {
+      const currentNodeId = state.activeNodeId;
+      if (!currentNodeId || currentNodeId === ancestorNodeId || !isAvailableNode(state, ancestorNodeId)) {
+        return state;
+      }
+      const ancestorTarget = resolveAncestorAnchorLink(currentNodeId, ancestorNodeId, state.nodesById);
+      if (!ancestorTarget.isAncestor) {
+        return state;
+      }
+      nextResult = { focusAnchor: ancestorTarget.focusAnchor, nodeId: ancestorNodeId };
+      return {
+        activeNodeId: ancestorNodeId,
+        navigation: {
+          backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
+          forwardStack: []
+        }
+      };
+    });
+    return nextResult;
+  };
+}
+
 export function createWorkspaceNavigationActions(set: WorkspaceSet): WorkspaceNavigationActions {
-  const isAvailableNode = (state: WorkspaceState, nodeId: string) =>
-    Boolean(state.nodesById[nodeId]) && !state.trashedNodeIds.includes(nodeId);
-
   return {
-    openNode: (nodeId) => {
-      let nextResult: NodeNavigationResult | null = null;
-      set((state) => {
-        if (!isAvailableNode(state, nodeId) || state.activeNodeId === nodeId) {
-          return state;
-        }
-
-        nextResult = {
-          focusAnchor: null,
-          nodeId
-        };
-        return {
-          activeNodeId: nodeId,
-          navigation: state.activeNodeId
-            ? {
-                backStack: pushNavigationHistory(state.navigation.backStack, state.activeNodeId),
-                forwardStack: []
-              }
-            : { ...state.navigation, forwardStack: [] }
-        };
-      });
-      return nextResult;
-    },
-    goBack: () => {
-      let nextResult: NodeNavigationResult | null = null;
-      set((state) => {
-        const currentNodeId = state.activeNodeId;
-        const targetNodeId = state.navigation.backStack[state.navigation.backStack.length - 1];
-        if (!currentNodeId || !targetNodeId || !isAvailableNode(state, targetNodeId)) {
-          return state;
-        }
-
-        nextResult = {
-          focusAnchor: null,
-          nodeId: targetNodeId
-        };
-        return {
-          activeNodeId: targetNodeId,
-          navigation: {
-            backStack: state.navigation.backStack.slice(0, -1),
-            forwardStack: [currentNodeId, ...state.navigation.forwardStack]
-          }
-        };
-      });
-      return nextResult;
-    },
-    goForward: () => {
-      let nextResult: NodeNavigationResult | null = null;
-      set((state) => {
-        const currentNodeId = state.activeNodeId;
-        const targetNodeId = state.navigation.forwardStack[0];
-        if (!currentNodeId || !targetNodeId || !isAvailableNode(state, targetNodeId)) {
-          return state;
-        }
-
-        nextResult = {
-          focusAnchor: null,
-          nodeId: targetNodeId
-        };
-        return {
-          activeNodeId: targetNodeId,
-          navigation: {
-            backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
-            forwardStack: state.navigation.forwardStack.slice(1)
-          }
-        };
-      });
-      return nextResult;
-    },
-    goToParent: () => {
-      let nextResult: NodeNavigationResult | null = null;
-      set((state) => {
-        const currentNodeId = state.activeNodeId;
-        if (!currentNodeId) {
-          return state;
-        }
-        const currentNode = state.nodesById[currentNodeId];
-        const parentNodeId = currentNode?.parentNodeId;
-        if (!currentNode || !parentNodeId || !isAvailableNode(state, parentNodeId)) {
-          return state;
-        }
-
-        nextResult = {
-          focusAnchor: currentNode.anchorLink ?? null,
-          nodeId: parentNodeId
-        };
-        return {
-          activeNodeId: parentNodeId,
-          navigation: {
-            backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
-            forwardStack: []
-          }
-        };
-      });
-      return nextResult;
-    },
-    jumpToAncestorNode: (ancestorNodeId) => {
-      let nextResult: NodeNavigationResult | null = null;
-      set((state) => {
-        const currentNodeId = state.activeNodeId;
-        if (!currentNodeId || currentNodeId === ancestorNodeId || !isAvailableNode(state, ancestorNodeId)) {
-          return state;
-        }
-
-        const ancestorTarget = resolveAncestorAnchorLink(currentNodeId, ancestorNodeId, state.nodesById);
-        if (!ancestorTarget.isAncestor) {
-          return state;
-        }
-
-        nextResult = {
-          focusAnchor: ancestorTarget.focusAnchor,
-          nodeId: ancestorNodeId
-        };
-        return {
-          activeNodeId: ancestorNodeId,
-          navigation: {
-            backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
-            forwardStack: []
-          }
-        };
-      });
-      return nextResult;
-    }
+    openNode: createOpenNodeAction(set),
+    goBack: createGoBackAction(set),
+    goForward: createGoForwardAction(set),
+    goToParent: createGoToParentAction(set),
+    jumpToAncestorNode: createJumpToAncestorAction(set)
   };
 }

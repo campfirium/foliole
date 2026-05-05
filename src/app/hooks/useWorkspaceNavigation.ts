@@ -31,6 +31,71 @@ interface WorkspaceNavigationHandlers {
   handleSelectNode: (nodeId: string) => void;
 }
 
+type PendingAnchor = { id: string; kind: 'highlight' | 'cloze' };
+
+function usePendingAnchorNavigation(
+  activeNodeContent: string | null,
+  activeNodeId: string | null,
+  editorRef: MutableRefObject<EditorAdapter | null>
+) {
+  const [pendingAnchorNodeId, setPendingAnchorNodeId] = useState<string | null>(null);
+  const [pendingAnchor, setPendingAnchor] = useState<PendingAnchor | null>(null);
+
+  const clearPendingAnchor = useCallback(() => {
+    setPendingAnchorNodeId(null);
+    setPendingAnchor(null);
+  }, []);
+
+  const applyNavigationResult = useCallback((result: NodeNavigationResult | null) => {
+    if (!result) {
+      return;
+    }
+    setPendingAnchorNodeId(result.nodeId);
+    setPendingAnchor(result.focusAnchor);
+  }, []);
+
+  useEffect(() => {
+    if (!activeNodeId || !pendingAnchorNodeId || !pendingAnchor || pendingAnchorNodeId !== activeNodeId || !activeNodeContent) {
+      return;
+    }
+    const selection = findAnchorSelection(activeNodeContent, pendingAnchor);
+    const adapter = editorRef.current;
+    if (!selection || !adapter) {
+      clearPendingAnchor();
+      return;
+    }
+    adapter.revealSelection(selection);
+    clearPendingAnchor();
+  }, [activeNodeContent, activeNodeId, clearPendingAnchor, editorRef, pendingAnchor, pendingAnchorNodeId]);
+
+  useEffect(() => {
+    if (!pendingAnchorNodeId || pendingAnchorNodeId === activeNodeId) {
+      return;
+    }
+    clearPendingAnchor();
+  }, [activeNodeId, clearPendingAnchor, pendingAnchorNodeId]);
+
+  return applyNavigationResult;
+}
+
+function useNavigationAction(action: () => NodeNavigationResult | null, finalize: (result: NodeNavigationResult | null) => void) {
+  return useCallback(() => {
+    finalize(action());
+  }, [action, finalize]);
+}
+
+function useSelectNodeAction(
+  action: (nodeId: string) => NodeNavigationResult | null,
+  finalize: (result: NodeNavigationResult | null) => void
+) {
+  return useCallback(
+    (nodeId: string) => {
+      finalize(action(nodeId));
+    },
+    [action, finalize]
+  );
+}
+
 export function useWorkspaceNavigation({
   activeNodeContent,
   activeNodeId,
@@ -46,88 +111,30 @@ export function useWorkspaceNavigation({
   openNode,
   saveActiveNodeView
 }: WorkspaceNavigationDependencies): WorkspaceNavigationHandlers {
-  const [pendingAnchorNodeId, setPendingAnchorNodeId] = useState<string | null>(null);
-  const [pendingAnchor, setPendingAnchor] = useState<{ id: string; kind: 'highlight' | 'cloze' } | null>(null);
+  const applyNavigationResult = usePendingAnchorNavigation(activeNodeContent, activeNodeId, editorRef);
 
-  const applyNavigationResult = useCallback((result: NodeNavigationResult | null) => {
-    if (!result) {
-      return;
-    }
-    setPendingAnchorNodeId(result.nodeId);
-    setPendingAnchor(result.focusAnchor);
-  }, []);
-
-  const handleSelectNode = useCallback(
-    (nodeId: string) => {
+  const finalizeNavigation = useCallback(
+    (result: NodeNavigationResult | null) => {
       closeContextMenu();
       saveActiveNodeView();
-      applyNavigationResult(openNode(nodeId));
+      applyNavigationResult(result);
     },
-    [applyNavigationResult, closeContextMenu, openNode, saveActiveNodeView]
+    [applyNavigationResult, closeContextMenu, saveActiveNodeView]
   );
 
-  const handleSelectBreadcrumbNode = useCallback(
-    (nodeId: string) => {
-      closeContextMenu();
-      saveActiveNodeView();
-      applyNavigationResult(jumpToAncestorNode(nodeId) ?? openNode(nodeId));
-    },
-    [applyNavigationResult, closeContextMenu, jumpToAncestorNode, openNode, saveActiveNodeView]
+  const handleSelectNode = useSelectNodeAction(openNode, finalizeNavigation);
+  const handleSelectBreadcrumbNode = useSelectNodeAction(
+    (nodeId) => jumpToAncestorNode(nodeId) ?? openNode(nodeId),
+    finalizeNavigation
   );
-
-  const handleGoBack = useCallback(() => {
-    closeContextMenu();
-    saveActiveNodeView();
-    applyNavigationResult(goBack());
-  }, [applyNavigationResult, closeContextMenu, goBack, saveActiveNodeView]);
-
-  const handleGoForward = useCallback(() => {
-    closeContextMenu();
-    saveActiveNodeView();
-    applyNavigationResult(goForward());
-  }, [applyNavigationResult, closeContextMenu, goForward, saveActiveNodeView]);
-
-  const handleGoParent = useCallback(() => {
-    closeContextMenu();
-    saveActiveNodeView();
-    applyNavigationResult(goToParent());
-  }, [applyNavigationResult, closeContextMenu, goToParent, saveActiveNodeView]);
-
-  useEffect(() => {
-    if (!activeNodeId || !pendingAnchorNodeId || !pendingAnchor || pendingAnchorNodeId !== activeNodeId || !activeNodeContent) {
-      return;
-    }
-    const adapter = editorRef.current;
-    if (!adapter) {
-      return;
-    }
-
-    const selection = findAnchorSelection(activeNodeContent, pendingAnchor);
-    if (!selection) {
-      setPendingAnchorNodeId(null);
-      setPendingAnchor(null);
-      return;
-    }
-    adapter.revealSelection(selection);
-    setPendingAnchorNodeId(null);
-    setPendingAnchor(null);
-  }, [activeNodeContent, activeNodeId, editorRef, pendingAnchor, pendingAnchorNodeId]);
-
-  useEffect(() => {
-    if (!pendingAnchorNodeId || pendingAnchorNodeId === activeNodeId) {
-      return;
-    }
-    setPendingAnchorNodeId(null);
-    setPendingAnchor(null);
-  }, [activeNodeId, pendingAnchorNodeId]);
 
   return {
     canGoBack: backStackSize > 0,
     canGoForward: forwardStackSize > 0,
     canGoParent: Boolean(activeNodeParentId),
-    handleGoBack,
-    handleGoForward,
-    handleGoParent,
+    handleGoBack: useNavigationAction(goBack, finalizeNavigation),
+    handleGoForward: useNavigationAction(goForward, finalizeNavigation),
+    handleGoParent: useNavigationAction(goToParent, finalizeNavigation),
     handleSelectBreadcrumbNode,
     handleSelectNode
   };

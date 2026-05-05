@@ -30,6 +30,28 @@ interface EditorContextMenuState extends WorkspaceEditorContextMenu {
   payload: SelectionCommandPayload | null;
 }
 
+function createSelectionCommandRunner(
+  contextMenu: EditorContextMenuState | null,
+  editorRef: MutableRefObject<EditorAdapter | null>,
+  closeContextMenu: () => void,
+  syncActiveNodeContentFromEditor: () => void
+) {
+  return (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => {
+    const payload = contextMenu?.payload;
+    if (!payload) {
+      return;
+    }
+    const applied = applySelectionMarkup(editorRef.current, anchorKind, payload.anchorId);
+    if (!applied) {
+      closeContextMenu();
+      return;
+    }
+    syncActiveNodeContentFromEditor();
+    onApplied(payload);
+    closeContextMenu();
+  };
+}
+
 export function useEditorContextCommands({
   activeNode,
   activeNodeId,
@@ -68,34 +90,23 @@ export function useEditorContextCommands({
     updateNodeContent(activeNodeId, editorRef.current.getContent());
   };
 
+  const runSelectionCommand = createSelectionCommandRunner(
+    contextMenu,
+    editorRef,
+    closeContextMenu,
+    syncActiveNodeContentFromEditor
+  );
+
   const handleCreateHighlight = () => {
-    const payload = contextMenu?.payload;
-    if (!payload) {
-      return;
-    }
-    const applied = applySelectionMarkup(editorRef.current, 'highlight', payload.anchorId);
-    if (!applied) {
-      closeContextMenu();
-      return;
-    }
-    syncActiveNodeContentFromEditor();
-    createHighlightNodeFromSelection(payload.parentNodeId, payload.selectionText, payload.anchorId);
-    closeContextMenu();
+    runSelectionCommand((payload) => {
+      createHighlightNodeFromSelection(payload.parentNodeId, payload.selectionText, payload.anchorId);
+    }, 'highlight');
   };
 
   const handleCreateCloze = () => {
-    const payload = contextMenu?.payload;
-    if (!payload) {
-      return;
-    }
-    const applied = applySelectionMarkup(editorRef.current, 'cloze', payload.anchorId);
-    if (!applied) {
-      closeContextMenu();
-      return;
-    }
-    syncActiveNodeContentFromEditor();
-    createQANodeFromSelection(payload.parentNodeId, payload.clozeContent, payload.selectionText, payload.anchorId);
-    closeContextMenu();
+    runSelectionCommand((payload) => {
+      createQANodeFromSelection(payload.parentNodeId, payload.clozeContent, payload.selectionText, payload.anchorId);
+    }, 'cloze');
   };
 
   return {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 
@@ -9,8 +9,16 @@ interface HotkeySettingsSectionProps {
   onResetAll: () => void;
 }
 
-export function HotkeySettingsSection({ items, onUpdate, onReset, onResetAll }: HotkeySettingsSectionProps) {
-  const [query, setQuery] = useState('');
+interface HotkeyRowProps {
+  draft: string;
+  item: HotkeySettingItem;
+  message: string | undefined;
+  onCommit: (commandId: string) => void;
+  onReset: (commandId: string) => void;
+  onSetDraft: (commandId: string, value: string) => void;
+}
+
+function useHotkeyDraftState(items: HotkeySettingItem[]) {
   const [draftById, setDraftById] = useState<Record<string, string>>({});
   const [messageById, setMessageById] = useState<Record<string, string>>({});
 
@@ -21,6 +29,18 @@ export function HotkeySettingsSection({ items, onUpdate, onReset, onResetAll }: 
     }
     setDraftById(nextDrafts);
   }, [items]);
+
+  return {
+    draftById,
+    messageById,
+    setDraftById,
+    setMessageById
+  };
+}
+
+function useHotkeySectionModel(items: HotkeySettingItem[], onUpdate: HotkeySettingsSectionProps['onUpdate']) {
+  const [query, setQuery] = useState('');
+  const { draftById, messageById, setDraftById, setMessageById } = useHotkeyDraftState(items);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -35,31 +55,102 @@ export function HotkeySettingsSection({ items, onUpdate, onReset, onResetAll }: 
 
   const updateDraft = (commandId: string, value: string) => {
     setDraftById((current) => ({ ...current, [commandId]: value }));
+    setMessageById((current) => {
+      const next = { ...current };
+      delete next[commandId];
+      return next;
+    });
   };
 
   const commit = (commandId: string) => {
-    const currentDraft = draftById[commandId] ?? '';
-    const result = onUpdate(commandId, currentDraft);
-
-    if (result.status === 'applied') {
-      setMessageById((current) => {
-        const next = { ...current };
-        if (!result.message) {
-          delete next[commandId];
-        } else {
-          next[commandId] = result.message;
-        }
-        return next;
-      });
-      if (result.normalizedShortcutLabel) {
-        const normalizedLabel = result.normalizedShortcutLabel;
-        setDraftById((current) => ({ ...current, [commandId]: normalizedLabel }));
-      }
+    const result = onUpdate(commandId, draftById[commandId] ?? '');
+    if (result.status !== 'applied') {
+      setMessageById((current) => ({ ...current, [commandId]: result.message ?? 'Shortcut is invalid.' }));
       return;
     }
-
-    setMessageById((current) => ({ ...current, [commandId]: result.message ?? 'Shortcut is invalid.' }));
+    if (result.normalizedShortcutLabel) {
+      setDraftById((current) => ({ ...current, [commandId]: result.normalizedShortcutLabel! }));
+    }
+    setMessageById((current) => {
+      const next = { ...current };
+      if (result.message) {
+        next[commandId] = result.message;
+      } else {
+        delete next[commandId];
+      }
+      return next;
+    });
   };
+
+  return { query, setQuery, filteredItems, draftById, messageById, updateDraft, commit };
+}
+
+function conflictDisplay(item: HotkeySettingItem) {
+  if (item.conflictSeverity === 'error') {
+    return {
+      badgeClass: 'settings-hotkey-badge settings-hotkey-badge-error',
+      badgeText: 'Blocked'
+    };
+  }
+  if (item.conflictSeverity === 'warning') {
+    return {
+      badgeClass: 'settings-hotkey-badge settings-hotkey-badge-warning',
+      badgeText: 'Warning'
+    };
+  }
+  return {
+    badgeClass: null,
+    badgeText: null
+  };
+}
+
+function HotkeyRow({ draft, item, message, onCommit, onReset, onSetDraft }: HotkeyRowProps) {
+  const { badgeClass, badgeText } = conflictDisplay(item);
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onCommit(item.commandId);
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onSetDraft(item.commandId, item.shortcutLabel);
+    }
+  };
+
+  return (
+    <div className="settings-hotkey-row" key={item.commandId} role="listitem">
+      <div className="settings-row-copy">
+        <h4>{item.title}</h4>
+        <p>{item.section ?? 'Other'}</p>
+        {item.conflictMessage ? <p className="settings-hotkey-hint">{item.conflictMessage}</p> : null}
+        {message ? <p className="settings-hotkey-error">{message}</p> : null}
+      </div>
+      <div className="settings-hotkey-controls">
+        <input
+          aria-label={`Shortcut for ${item.title}`}
+          className="settings-hotkey-input"
+          onBlur={() => onCommit(item.commandId)}
+          onChange={(event) => onSetDraft(item.commandId, event.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ctrl+K"
+          type="text"
+          value={draft}
+        />
+        <button className="settings-reset" onClick={() => onReset(item.commandId)} type="button">
+          ↺
+        </button>
+        {item.isCustomized ? <span className="settings-hotkey-chip">Custom</span> : null}
+        {badgeClass ? <span className={badgeClass}>{badgeText}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+export function HotkeySettingsSection({ items, onUpdate, onReset, onResetAll }: HotkeySettingsSectionProps) {
+  const { query, setQuery, filteredItems, draftById, messageById, updateDraft, commit } = useHotkeySectionModel(
+    items,
+    onUpdate
+  );
 
   return (
     <section aria-label="Hotkeys settings section" className="settings-group">
@@ -80,60 +171,18 @@ export function HotkeySettingsSection({ items, onUpdate, onReset, onResetAll }: 
           value={query}
         />
       </div>
-      <div className="settings-hotkey-list" role="list" aria-label="Command shortcut list">
-        {filteredItems.map((item) => {
-          const draft = draftById[item.commandId] ?? item.shortcutLabel;
-          const extraMessage = messageById[item.commandId];
-          const conflictClass =
-            item.conflictSeverity === 'error'
-              ? 'settings-hotkey-badge settings-hotkey-badge-error'
-              : item.conflictSeverity === 'warning'
-                ? 'settings-hotkey-badge settings-hotkey-badge-warning'
-                : null;
-          const conflictText = item.conflictSeverity === 'error' ? 'Blocked' : item.conflictSeverity === 'warning' ? 'Warning' : null;
-
-          return (
-            <div className="settings-hotkey-row" key={item.commandId} role="listitem">
-              <div className="settings-row-copy">
-                <h4>{item.title}</h4>
-                <p>{item.section ?? 'Other'}</p>
-                {item.conflictMessage ? <p className="settings-hotkey-hint">{item.conflictMessage}</p> : null}
-                {extraMessage ? <p className="settings-hotkey-error">{extraMessage}</p> : null}
-              </div>
-              <div className="settings-hotkey-controls">
-                <input
-                  aria-label={`Shortcut for ${item.title}`}
-                  className="settings-hotkey-input"
-                  onBlur={() => commit(item.commandId)}
-                  onChange={(event) => updateDraft(item.commandId, event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      commit(item.commandId);
-                    }
-                    if (event.key === 'Escape') {
-                      event.preventDefault();
-                      setDraftById((current) => ({ ...current, [item.commandId]: item.shortcutLabel }));
-                      setMessageById((current) => {
-                        const next = { ...current };
-                        delete next[item.commandId];
-                        return next;
-                      });
-                    }
-                  }}
-                  placeholder="Ctrl+K"
-                  type="text"
-                  value={draft}
-                />
-                <button className="settings-reset" onClick={() => onReset(item.commandId)} type="button">
-                  ↺
-                </button>
-                {item.isCustomized ? <span className="settings-hotkey-chip">Custom</span> : null}
-                {conflictClass ? <span className={conflictClass}>{conflictText}</span> : null}
-              </div>
-            </div>
-          );
-        })}
+      <div aria-label="Command shortcut list" className="settings-hotkey-list" role="list">
+        {filteredItems.map((item) => (
+          <HotkeyRow
+            draft={draftById[item.commandId] ?? item.shortcutLabel}
+            item={item}
+            key={item.commandId}
+            message={messageById[item.commandId]}
+            onCommit={commit}
+            onReset={onReset}
+            onSetDraft={updateDraft}
+          />
+        ))}
         {!filteredItems.length ? <p className="settings-hotkey-empty">No matching commands.</p> : null}
       </div>
     </section>

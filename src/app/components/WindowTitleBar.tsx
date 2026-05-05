@@ -13,12 +13,6 @@ import {
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
 
-function runWindowAction(action: () => Promise<void>) {
-  void action().catch((error) => {
-    console.error('[window-titlebar] window action failed', error);
-  });
-}
-
 interface WindowTitleBarProps {
   isListHidden: boolean;
   isTrashViewOpen: boolean;
@@ -28,14 +22,21 @@ interface WindowTitleBarProps {
   onToggleListVisibility: () => void;
 }
 
-export function WindowTitleBar({
-  isListHidden,
-  isTrashViewOpen,
-  listWidth,
-  onOpenNotesView,
-  onOpenTrashView,
-  onToggleListVisibility
-}: WindowTitleBarProps) {
+interface WindowControlButtonsProps {
+  controlsEnabled: boolean;
+  isMaximized: boolean;
+  onClose: () => void;
+  onMinimize: () => void;
+  onToggleMaximize: () => void;
+}
+
+function runWindowAction(action: () => Promise<void>) {
+  void action().catch((error) => {
+    console.error('[window-titlebar] window action failed', error);
+  });
+}
+
+function useWindowControlState() {
   const controlsEnabled = isWindowControlsAvailable();
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -44,8 +45,7 @@ export function WindowTitleBar({
       setIsMaximized(false);
       return;
     }
-    const maximized = await queryMainWindowMaximized();
-    setIsMaximized(maximized);
+    setIsMaximized(await queryMainWindowMaximized());
   }, [controlsEnabled]);
 
   useEffect(() => {
@@ -57,8 +57,8 @@ export function WindowTitleBar({
     void syncMaximizedState();
     let unlisten: (() => void) | undefined;
     void onMainWindowResized(() => {
-        void syncMaximizedState();
-      })
+      void syncMaximizedState();
+    })
       .then((dispose) => {
         unlisten = dispose ?? undefined;
       })
@@ -70,6 +70,88 @@ export function WindowTitleBar({
       unlisten?.();
     };
   }, [controlsEnabled, syncMaximizedState]);
+
+  return {
+    controlsEnabled,
+    isMaximized,
+    syncMaximizedState
+  };
+}
+
+function WindowLeadingActions({ isListHidden, isTrashViewOpen, onOpenNotesView, onOpenTrashView, onToggleListVisibility }: WindowTitleBarProps) {
+  return (
+    <div className="window-titlebar-left-zone">
+      <div className="window-titlebar-leading">
+        <div className="window-titlebar-leading-primary">
+          <button
+            aria-label="Toggle left panel"
+            className="window-titlebar-leading-button"
+            data-active={isListHidden}
+            onClick={onToggleListVisibility}
+            type="button"
+          >
+            <PanelLeft aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+          </button>
+        </div>
+        <div className="window-titlebar-leading-secondary">
+          <button
+            aria-label="Notes"
+            className="window-titlebar-leading-button"
+            data-active={!isTrashViewOpen}
+            onClick={onOpenNotesView}
+            type="button"
+          >
+            <FileText aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+          </button>
+          <button
+            aria-label="Trash"
+            className="window-titlebar-leading-button"
+            data-active={isTrashViewOpen}
+            onClick={onOpenTrashView}
+            type="button"
+          >
+            <Trash2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WindowControlButtons({ controlsEnabled, isMaximized, onClose, onMinimize, onToggleMaximize }: WindowControlButtonsProps) {
+  return (
+    <div className="window-titlebar-controls">
+      <button aria-label="Minimize" className="window-titlebar-button" disabled={!controlsEnabled} onClick={onMinimize} type="button">
+        <Minus aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+      </button>
+      <button
+        aria-label={isMaximized ? 'Restore' : 'Maximize'}
+        className="window-titlebar-button"
+        disabled={!controlsEnabled}
+        onClick={onToggleMaximize}
+        type="button"
+      >
+        {isMaximized ? (
+          <Copy aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+        ) : (
+          <Square aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+        )}
+      </button>
+      <button
+        aria-label="Close"
+        className="window-titlebar-button window-titlebar-button-close"
+        disabled={!controlsEnabled}
+        onClick={onClose}
+        type="button"
+      >
+        <X aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+      </button>
+    </div>
+  );
+}
+
+export function WindowTitleBar(props: WindowTitleBarProps) {
+  const { controlsEnabled, isMaximized, syncMaximizedState } = useWindowControlState();
 
   const handleMinimize = useCallback(() => {
     if (!controlsEnabled) {
@@ -96,76 +178,16 @@ export function WindowTitleBar({
   }, [controlsEnabled]);
 
   return (
-    <header className="window-titlebar" data-window-maximized={isMaximized} style={{ '--workspace-list-width': `${listWidth}px` } as CSSProperties}>
-      <div className="window-titlebar-left-zone">
-        <div className="window-titlebar-leading">
-          <div className="window-titlebar-leading-primary">
-            <button
-              aria-label="Toggle left panel"
-              className="window-titlebar-leading-button"
-              data-active={isListHidden}
-              onClick={onToggleListVisibility}
-              type="button"
-            >
-              <PanelLeft aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-            </button>
-          </div>
-          <div className="window-titlebar-leading-secondary">
-            <button
-              aria-label="Notes"
-              className="window-titlebar-leading-button"
-              data-active={!isTrashViewOpen}
-              onClick={onOpenNotesView}
-              type="button"
-            >
-              <FileText aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-            </button>
-            <button
-              aria-label="Trash"
-              className="window-titlebar-leading-button"
-              data-active={isTrashViewOpen}
-              onClick={onOpenTrashView}
-              type="button"
-            >
-              <Trash2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-            </button>
-          </div>
-        </div>
-      </div>
+    <header className="window-titlebar" data-window-maximized={isMaximized} style={{ '--workspace-list-width': `${props.listWidth}px` } as CSSProperties}>
+      <WindowLeadingActions {...props} />
       <div className="window-titlebar-drag-fill" data-tauri-drag-region onDoubleClick={handleToggleMaximize} />
-      <div className="window-titlebar-controls">
-        <button
-          aria-label="Minimize"
-          className="window-titlebar-button"
-          disabled={!controlsEnabled}
-          onClick={handleMinimize}
-          type="button"
-        >
-          <Minus aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-        </button>
-        <button
-          aria-label={isMaximized ? 'Restore' : 'Maximize'}
-          className="window-titlebar-button"
-          disabled={!controlsEnabled}
-          onClick={handleToggleMaximize}
-          type="button"
-        >
-          {isMaximized ? (
-            <Copy aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-          ) : (
-            <Square aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-          )}
-        </button>
-        <button
-          aria-label="Close"
-          className="window-titlebar-button window-titlebar-button-close"
-          disabled={!controlsEnabled}
-          onClick={handleClose}
-          type="button"
-        >
-          <X aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-        </button>
-      </div>
+      <WindowControlButtons
+        controlsEnabled={controlsEnabled}
+        isMaximized={isMaximized}
+        onClose={handleClose}
+        onMinimize={handleMinimize}
+        onToggleMaximize={handleToggleMaximize}
+      />
     </header>
   );
 }

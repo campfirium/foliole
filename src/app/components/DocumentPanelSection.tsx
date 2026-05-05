@@ -1,15 +1,13 @@
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
-import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { cn } from '../../lib/utils';
-import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger, AppIconButton } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
+import { DocumentPanelBody } from './DocumentPanelBody';
+import { DocumentPanelHeader } from './DocumentPanelHeader';
 import { EditorContextMenu } from './EditorContextMenu';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
@@ -47,213 +45,54 @@ interface DocumentPanelSectionProps {
   nodesById: Record<string, Node>;
 }
 
-export function DocumentPanelSection({
-  activeNodeId,
-  canGoBack,
-  canGoForward,
-  canGoParent,
-  contextMenu,
-  documentMaxWidth,
-  editorContent,
-  editorDisplayMode,
-  editorAppearanceKey,
-  editorNodeId,
-  editorNodeViewState,
-  isDocumentResizing,
-  showAnswerSection,
-  onAnswerChange,
-  onEditorChange,
-  onEditorContextMenu,
-  onEditorReady,
-  onCloseContextMenu,
-  onCreateHighlight,
-  onCreateCloze,
-  onGoBack,
-  onGoForward,
-  onGoParent,
-  onResetLayout,
-  onSelectNode,
-  onToggleEditorDisplayMode,
-  onStartDocumentResize,
-  nodesById
-}: DocumentPanelSectionProps) {
-  const documentLayoutStyle = {
-    '--document-max-width': `${documentMaxWidth}px`
-  } as CSSProperties;
-
-  const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
+export function DocumentPanelSection(props: DocumentPanelSectionProps) {
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const reveal = activeNode?.reveal ?? '';
-  const hasAnswerContent = Boolean(activeNode?.reveal && activeNode.reveal.trim().length > 0);
-  const hasAnswerSection = hasAnswerContent && showAnswerSection;
+  const hasAnswerSection = Boolean(activeNode?.reveal && activeNode.reveal.trim().length > 0 && props.showAnswerSection);
+  const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
       <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
-        <header className="flex min-h-[40px] items-center gap-2 px-3">
-          <h2 className="sr-only">Content</h2>
-          <div className="flex shrink-0 items-center gap-1">
-            <AppIconButton
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-              disabled={!canGoBack}
-              icon={<ArrowLeftIcon />}
-              label="Go back"
-              onClick={onGoBack}
-            />
-            <AppIconButton
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-              disabled={!canGoForward}
-              icon={<ArrowRightIcon />}
-              label="Go forward"
-              onClick={onGoForward}
-            />
-            <button aria-label="Go to parent node" className="sr-only" disabled={!canGoParent} onClick={onGoParent} type="button">
-              Go to parent node
-            </button>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
-              <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
-            </div>
-          </div>
-          <div className="shrink-0">
-            <AppDropdownMenu>
-              <AppDropdownMenuTrigger asChild>
-                <button
-                  aria-label="More editor options"
-                  className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
-                  type="button"
-                >
-                  <MoreOptionsIcon />
-                </button>
-              </AppDropdownMenuTrigger>
-              <AppDropdownMenuContent align="end" sideOffset={6}>
-                <AppDropdownMenuItem onSelect={onToggleEditorDisplayMode}>
-                  {editorDisplayMode === 'preview' ? 'Switch to Source mode' : 'Switch to Live Preview mode'}
-                </AppDropdownMenuItem>
-              </AppDropdownMenuContent>
-            </AppDropdownMenu>
-          </div>
-        </header>
-
-        <div className="flex min-h-0 flex-1 pl-4 pr-0 pt-4 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0">
-          <div className="relative flex h-full min-h-0 w-full" data-resizing={isDocumentResizing}>
-            <div className="flex h-full min-h-0 w-full flex-1 flex-col">
-              <div className="min-h-0 w-full flex-1" onContextMenu={onEditorContextMenu}>
-                <MarkdownEditor
-                  ariaLabel="Prompt editor"
-                  className="prompt-editor-host"
-                  debugId="prompt-editor"
-                  key={`prompt-${editorAppearanceKey}`}
-                  nodeId={editorNodeId}
-                  nodeViewState={editorNodeViewState}
-                  onChange={onEditorChange}
-                  onReady={onEditorReady}
-                  value={editorContent}
-                />
-              </div>
-              {hasAnswerSection ? (
-                <section
-                  aria-label="Cloze answer section"
-                  className="flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden border-t border-border pt-3"
-                >
-                  <MarkdownEditor
-                    ariaLabel="Answer editor"
-                    className="answer-editor-host min-h-0"
-                    debugId="answer-editor"
-                    key={`answer-${editorAppearanceKey}`}
-                    nodeId={editorNodeId}
-                    onChange={onAnswerChange}
-                    value={reveal}
-                  />
-                </section>
-              ) : null}
-            </div>
-            <DocumentWidthHandle
-              ariaLabel="Resize document width from left"
-              onPointerDown={(event) => onStartDocumentResize('left', event)}
-              onResetLayout={onResetLayout}
-              side="left"
-            />
-            <DocumentWidthHandle
-              ariaLabel="Resize document width from right"
-              onPointerDown={(event) => onStartDocumentResize('right', event)}
-              onResetLayout={onResetLayout}
-              side="right"
-            />
-          </div>
-        </div>
+        <DocumentPanelHeader
+          activeNodeId={props.activeNodeId}
+          canGoBack={props.canGoBack}
+          canGoForward={props.canGoForward}
+          canGoParent={props.canGoParent}
+          editorDisplayMode={props.editorDisplayMode}
+          nodesById={props.nodesById}
+          onGoBack={props.onGoBack}
+          onGoForward={props.onGoForward}
+          onGoParent={props.onGoParent}
+          onSelectNode={props.onSelectNode}
+          onToggleEditorDisplayMode={props.onToggleEditorDisplayMode}
+        />
+        <DocumentPanelBody
+          editorAppearanceKey={props.editorAppearanceKey}
+          editorContent={props.editorContent}
+          editorNodeId={props.editorNodeId}
+          editorNodeViewState={props.editorNodeViewState}
+          hasAnswerSection={hasAnswerSection}
+          isDocumentResizing={props.isDocumentResizing}
+          onAnswerChange={props.onAnswerChange}
+          onEditorChange={props.onEditorChange}
+          onEditorContextMenu={props.onEditorContextMenu}
+          onEditorReady={props.onEditorReady}
+          onResetLayout={props.onResetLayout}
+          onStartDocumentResize={props.onStartDocumentResize}
+          reveal={reveal}
+        />
       </section>
-
-      {contextMenu ? (
+      {props.contextMenu ? (
         <EditorContextMenu
-          canRunCommands={contextMenu.canRunCommands}
-          left={contextMenu.left}
-          onClose={onCloseContextMenu}
-          onCreateCloze={onCreateCloze}
-          onCreateHighlight={onCreateHighlight}
-          top={contextMenu.top}
+          canRunCommands={props.contextMenu.canRunCommands}
+          left={props.contextMenu.left}
+          onClose={props.onCloseContextMenu}
+          onCreateCloze={props.onCreateCloze}
+          onCreateHighlight={props.onCreateHighlight}
+          top={props.contextMenu.top}
         />
       ) : null}
     </section>
-  );
-}
-
-function MoreOptionsIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <circle cx="4" cy="8" r="1.1" fill="currentColor" />
-      <circle cx="8" cy="8" r="1.1" fill="currentColor" />
-      <circle cx="12" cy="8" r="1.1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function ArrowLeftIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <path d="M12.4 8H4.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-      <path d="M7.6 5.2 4.8 8l2.8 2.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.05" />
-    </svg>
-  );
-}
-
-function ArrowRightIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <path d="M3.6 8h7.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-      <path d="m8.4 5.2 2.8 2.8-2.8 2.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.05" />
-    </svg>
-  );
-}
-
-interface DocumentWidthHandleProps {
-  ariaLabel: string;
-  onPointerDown: (event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>) => void;
-  onResetLayout: () => void;
-  side: ResizeSide;
-}
-
-function DocumentWidthHandle({ ariaLabel, onPointerDown, onResetLayout, side }: DocumentWidthHandleProps) {
-  const style =
-    side === 'left'
-      ? { left: 'max(0px, calc((100% - min(100%, var(--document-max-width))) / 2 - 5px))' }
-      : { right: 'max(0px, calc((100% - min(100%, var(--document-max-width))) / 2 - 5px))' };
-
-  return (
-    <div className="pointer-events-none absolute top-0 h-full w-3 max-[1080px]:hidden" data-side={side} style={style}>
-      <div
-        aria-label={ariaLabel}
-        aria-orientation="vertical"
-        className={cn(
-          'pointer-events-auto absolute top-0 h-full w-2.5 cursor-col-resize before:absolute before:h-full before:border-l before:border-transparent before:transition-colors hover:before:border-border-strong focus-visible:before:border-border-strong',
-          side === 'left' ? 'left-0 before:right-0' : 'right-0 before:left-0'
-        )}
-        onDoubleClick={onResetLayout}
-        onMouseDown={onPointerDown}
-        onPointerDown={onPointerDown}
-        role="separator"
-        tabIndex={0}
-      />
-    </div>
   );
 }

@@ -9,7 +9,7 @@ import {
   stripAnchorBlocks
 } from './anchorBlocks';
 
-describe('anchorBlocks', () => {
+describe('anchorBlocks parse', () => {
   it('serializes and parses compact anchor block pairs', () => {
     const block = serializeAnchorBlock({
       id: '12',
@@ -70,6 +70,9 @@ describe('anchorBlocks', () => {
     expect(duplicateResult.invalidTokens.some((token) => token.reason === 'duplicate-open')).toBe(true);
   });
 
+});
+
+describe('anchorBlocks append', () => {
   it('appends block pair with expected newline behavior', () => {
     const payload = {
       id: '3',

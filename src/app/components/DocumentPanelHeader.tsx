@@ -1,0 +1,138 @@
+import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
+import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
+import type { Node } from '../../features/nodes/model/nodeTypes';
+import {
+  AppDropdownMenu,
+  AppDropdownMenuContent,
+  AppDropdownMenuItem,
+  AppDropdownMenuTrigger,
+  AppIconButton
+} from '../../shared/ui';
+
+interface DocumentPanelHeaderProps {
+  activeNodeId: string | null;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  canGoParent: boolean;
+  editorDisplayMode: EditorDisplayMode;
+  nodesById: Record<string, Node>;
+  onGoBack: () => void;
+  onGoForward: () => void;
+  onGoParent: () => void;
+  onSelectNode: (nodeId: string) => void;
+  onToggleEditorDisplayMode: () => void;
+}
+
+interface NavigationButtonsProps {
+  canGoBack: boolean;
+  canGoForward: boolean;
+  canGoParent: boolean;
+  onGoBack: () => void;
+  onGoForward: () => void;
+  onGoParent: () => void;
+}
+
+function NavigationButtons({ canGoBack, canGoForward, canGoParent, onGoBack, onGoForward, onGoParent }: NavigationButtonsProps) {
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <AppIconButton className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground" disabled={!canGoBack} icon={<ArrowLeftIcon />} label="Go back" onClick={onGoBack} />
+      <AppIconButton className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground" disabled={!canGoForward} icon={<ArrowRightIcon />} label="Go forward" onClick={onGoForward} />
+      <button aria-label="Go to parent node" className="sr-only" disabled={!canGoParent} onClick={onGoParent} type="button">
+        Go to parent node
+      </button>
+    </div>
+  );
+}
+
+export function DocumentPanelHeader({
+  activeNodeId,
+  canGoBack,
+  canGoForward,
+  canGoParent,
+  editorDisplayMode,
+  nodesById,
+  onGoBack,
+  onGoForward,
+  onGoParent,
+  onSelectNode,
+  onToggleEditorDisplayMode
+}: DocumentPanelHeaderProps) {
+  return (
+    <header className="flex min-h-[40px] items-center gap-2 px-3">
+      <h2 className="sr-only">Content</h2>
+      <NavigationButtons
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
+        canGoParent={canGoParent}
+        onGoBack={onGoBack}
+        onGoForward={onGoForward}
+        onGoParent={onGoParent}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
+          <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
+        </div>
+      </div>
+      <div className="shrink-0">
+        <AppDropdownMenu>
+          <AppDropdownMenuTrigger asChild>
+            <button
+              aria-label="More editor options"
+              className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+              type="button"
+            >
+              <MoreOptionsIcon />
+            </button>
+          </AppDropdownMenuTrigger>
+          <AppDropdownMenuContent align="end" sideOffset={6}>
+            <AppDropdownMenuItem onSelect={onToggleEditorDisplayMode}>
+              {editorDisplayMode === 'preview' ? 'Switch to Source mode' : 'Switch to Live Preview mode'}
+            </AppDropdownMenuItem>
+          </AppDropdownMenuContent>
+        </AppDropdownMenu>
+      </div>
+    </header>
+  );
+}
+
+function MoreOptionsIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <circle cx="4" cy="8" r="1.1" fill="currentColor" />
+      <circle cx="8" cy="8" r="1.1" fill="currentColor" />
+      <circle cx="12" cy="8" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ArrowLeftIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <path d="M12.4 8H4.8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
+      <path
+        d="M7.6 5.2 4.8 8l2.8 2.8"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.05"
+      />
+    </svg>
+  );
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
+      <path d="M3.6 8h7.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
+      <path
+        d="m8.4 5.2 2.8 2.8-2.8 2.8"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.05"
+      />
+    </svg>
+  );
+}
