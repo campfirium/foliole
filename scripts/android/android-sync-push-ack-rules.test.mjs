@@ -209,7 +209,10 @@ describe('Android sync push ack protocol rules', () => {
       objectIds: 'object_ids',
       objectTypes: 'object_types'
     });
-    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(databaseHelper.hostContext(), "syncPluginRequestKeys", key)');
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.syncPluginCursorRequestKey(databaseHelper.hostContext())');
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.syncPluginAcksRequestKey(databaseHelper.hostContext())');
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.syncPluginObjectIdsRequestKey(databaseHelper.hostContext())');
+    expect(source).not.toContain('stringValue(databaseHelper.hostContext(), "syncPluginRequestKeys", key)');
     expect(source).not.toContain('optJSONArray("acks"');
     expect(source).not.toContain('optJSONArray("object_ids"');
     expect(source).not.toContain('optJSONObject("cursor"');

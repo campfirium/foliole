@@ -54,7 +54,7 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "nodeVersion"),
-            call.getData().optJSONObject(requestKey(databaseHelper, "cursor"))
+            call.getData().optJSONObject(cursorRequestKey(databaseHelper))
         );
     }
 
@@ -67,7 +67,7 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "nodeVersionPush"),
-            call.getData().optJSONObject(requestKey(databaseHelper, "cursor"))
+            call.getData().optJSONObject(cursorRequestKey(databaseHelper))
         );
     }
 
@@ -80,7 +80,7 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "reviewLog"),
-            call.getData().optJSONObject(requestKey(databaseHelper, "cursor"))
+            call.getData().optJSONObject(cursorRequestKey(databaseHelper))
         );
     }
 
@@ -93,12 +93,12 @@ final class FolioleCompanionSyncStatePluginActions {
             databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             cursorKey(databaseHelper, "reviewLogPush"),
-            call.getData().optJSONObject(requestKey(databaseHelper, "cursor"))
+            call.getData().optJSONObject(cursorRequestKey(databaseHelper))
         );
     }
 
     static JSObject saveSyncPushAcks(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncPushAcks(call.getData().optJSONArray(requestKey(databaseHelper, "acks")));
+        return databaseHelper.saveSyncPushAcks(call.getData().optJSONArray(acksRequestKey(databaseHelper)));
     }
 
     static JSObject saveSyncSettingRecord(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
@@ -122,7 +122,7 @@ final class FolioleCompanionSyncStatePluginActions {
     }
 
     private static Integer readNullableIntCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        String key = requestKey(databaseHelper, "cursor");
+        String key = cursorRequestKey(databaseHelper);
         return call.getData().has(key) && !call.getData().isNull(key)
             ? call.getData().getInt(key)
             : null;
@@ -132,7 +132,11 @@ final class FolioleCompanionSyncStatePluginActions {
         return FolioleCompanionSyncProtocolDefinitions.stringValue(databaseHelper.hostContext(), "syncMetaCursors", key);
     }
 
-    private static String requestKey(FolioleCompanionDatabaseHelper databaseHelper, String key) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.stringValue(databaseHelper.hostContext(), "syncPluginRequestKeys", key);
+    private static String acksRequestKey(FolioleCompanionDatabaseHelper databaseHelper) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncPluginAcksRequestKey(databaseHelper.hostContext());
+    }
+
+    private static String cursorRequestKey(FolioleCompanionDatabaseHelper databaseHelper) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.syncPluginCursorRequestKey(databaseHelper.hostContext());
     }
 }

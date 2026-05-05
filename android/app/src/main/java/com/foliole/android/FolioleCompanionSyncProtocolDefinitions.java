@@ -45,6 +45,30 @@ final class FolioleCompanionSyncProtocolDefinitions {
         return verdict;
     }
 
+    static String syncPluginAcksRequestKey(Context context) throws Exception {
+        return syncPluginRequestKey(context, "acks");
+    }
+
+    static String syncPluginCursorRequestKey(Context context) throws Exception {
+        return syncPluginRequestKey(context, "cursor");
+    }
+
+    static String syncPluginLimitRequestKey(Context context) throws Exception {
+        return syncPluginRequestKey(context, "limit");
+    }
+
+    static String syncPluginObjectIdsRequestKey(Context context) throws Exception {
+        return syncPluginRequestKey(context, "objectIds");
+    }
+
+    static String syncPluginObjectTypesRequestKey(Context context) throws Exception {
+        return syncPluginRequestKey(context, "objectTypes");
+    }
+
+    private static String syncPluginRequestKey(Context context, String key) throws Exception {
+        return stringValue(context, "syncPluginRequestKeys", key);
+    }
+
     static Set<String> stringSet(Context context, String sectionName, String key) throws Exception {
         return stringSet(section(context, sectionName), key);
     }
