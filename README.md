@@ -43,10 +43,7 @@ Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Codi
 3. In `rust-only`, grading throws when desktop invoke is unavailable.
 
 ## Windows Native Dev Loop From WSL
-1. After code changes in WSL, run `npm run windows:deliver`.
-2. `windows:deliver` executes `lint -> typecheck -> test -> build`, then syncs code to `C:\dev\foliole`.
-3. Client startup is manual: run `npm run electron:dev` in your original Windows console.
-4. `windows:deliver` does not auto-restart desktop client.
-5. Optional one-shot sync only: `npm run windows:sync`.
-6. Manual client helpers: `npm run windows:client:status`, `npm run windows:client:start`, `npm run windows:client:stop`.
-7. `npm run windows:client:start` starts `electron:dev` in a Windows shell process.
+1. After code changes in WSL, run `bash scripts/quality-gate-fast.sh`.
+2. When `.lab/agent/windows-preview.flag` is `ON`, continue with `npm run windows:preview`.
+3. `windows:preview` checks whether `electron-dist` is fresh, syncs the Windows mirror, and then reports `status: SYNCED`, `RESTART_REQUESTED`, or `STARTED`.
+4. Use `npm run electron:dev` only for direct desktop runtime debugging. It is not the default Windows verification command.
