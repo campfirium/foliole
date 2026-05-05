@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
+import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
+import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
+
 const { windowTitleBarRender, workspaceLayoutGridRender } = vi.hoisted(() => ({
   windowTitleBarRender: vi.fn(),
   workspaceLayoutGridRender: vi.fn()
@@ -82,14 +85,14 @@ function createDeferred<T>() {
   return { promise, resolve };
 }
 
-function createProps(overrides: Partial<ComponentProps<typeof WorkspaceLayoutMain>> = {}) {
+function createProps(overrides: Partial<WorkspaceLayoutFlatProps> = {}) {
   const onCloseImportManagement = vi.fn();
   const onOpenNotesView = vi.fn();
   const onOpenVirtualView = vi.fn();
   const onOpenTrashView = vi.fn();
   const onSelectNode = vi.fn();
   const onToggleRightSidebarVisibility = vi.fn();
-  return {
+  const flatProps = {
     activeNodeId: 'node-1',
     editorContent: 'Version 1',
     externalEntriesByFolderId: {},
@@ -121,7 +124,8 @@ function createProps(overrides: Partial<ComponentProps<typeof WorkspaceLayoutMai
     selectedTrashNodeId: null,
     shouldSuppressNavigationSelectionRestore: () => false,
     ...overrides
-  } as ComponentProps<typeof WorkspaceLayoutMain>;
+  } as WorkspaceLayoutFlatProps;
+  return groupWorkspaceLayoutProps(flatProps) as ComponentProps<typeof WorkspaceLayoutMain>;
 }
 
 beforeEach(() => {
@@ -139,7 +143,7 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
     rerender(
       <WorkspaceLayoutMain
         {...props}
-        editorContent="Version 2"
+        document={{ ...props.document, editorContent: 'Version 2' }}
       />
     );
 

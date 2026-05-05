@@ -7,6 +7,8 @@ import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
+import { flattenWorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
+import type { WorkspaceLayoutFlatProps } from '../components/workspaceLayoutProps';
 
 import { buildPaletteState } from './appControllerHelpers';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -106,7 +108,7 @@ function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
   isStudyMode: boolean;
-  layoutProps: WorkspaceLayoutProps;
+  layoutProps: WorkspaceLayoutFlatProps;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   paletteItems: CommandPaletteItem[];
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
@@ -171,7 +173,10 @@ export function buildControllerPaletteState(args: {
   trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
-  const runPaletteCommand = createPaletteCommandRunner(createPaletteRunnerArgs(args));
+  const runPaletteCommand = createPaletteCommandRunner(createPaletteRunnerArgs({
+    ...args,
+    layoutProps: flattenWorkspaceLayoutProps(args.layoutProps)
+  }));
 
   return buildPaletteState(
     args.runtime.isCommandPaletteOpen,

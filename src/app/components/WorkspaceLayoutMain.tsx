@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { getFormalImportFailureMessage } from '../hooks/useFormalImport';
@@ -8,9 +8,9 @@ import { ClipboardImportNotice, type ClipboardImportNoticeTone } from './Clipboa
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
 import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
+import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import {
   loadWorkspaceRightPanelPreference,
   saveWorkspaceRightPanelPreference
@@ -79,24 +79,25 @@ function useClipboardImportNotice(onStartClipboardImport: () => boolean | Promis
 }
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
+  const flatProps = useMemo(() => flattenWorkspaceLayoutProps(props), [props]);
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
     loadWorkspaceRightPanelPreference()
   );
-  const immersive = useImmersiveReadingMode(props);
-  const clipboardImportNotice = useClipboardImportNotice(props.onStartClipboardImport);
-  const { handleOpenNotesView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(props);
+  const immersive = useImmersiveReadingMode(flatProps);
+  const clipboardImportNotice = useClipboardImportNotice(flatProps.onStartClipboardImport);
+  const { handleOpenNotesView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(flatProps);
   const workspaceGridStyle = {
-    '--workspace-list-width': `${props.listWidth}px`,
-    '--workspace-list-folder-current-width': props.isListCollapsed
+    '--workspace-list-width': `${flatProps.listWidth}px`,
+    '--workspace-list-folder-current-width': flatProps.isListCollapsed
       ? '0px'
       : 'min(var(--workspace-folder-column-width), var(--workspace-list-width))',
-    '--workspace-list-current-width': props.isListCollapsed ? '0px' : `${props.listWidth}px`,
-    '--workspace-list-splitter-width': props.isListCollapsed ? '0px' : '1px',
-    '--workspace-right-sidebar-current-width': props.isRightSidebarCollapsed ? '0px' : `${props.rightSidebarWidth}px`,
-    '--workspace-right-sidebar-splitter-width': props.isRightSidebarCollapsed ? '0px' : '1px',
-    '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px`
+    '--workspace-list-current-width': flatProps.isListCollapsed ? '0px' : `${flatProps.listWidth}px`,
+    '--workspace-list-splitter-width': flatProps.isListCollapsed ? '0px' : '1px',
+    '--workspace-right-sidebar-current-width': flatProps.isRightSidebarCollapsed ? '0px' : `${flatProps.rightSidebarWidth}px`,
+    '--workspace-right-sidebar-splitter-width': flatProps.isRightSidebarCollapsed ? '0px' : '1px',
+    '--workspace-right-sidebar-width': `${flatProps.rightSidebarWidth}px`
   } as CSSProperties;
-  const documentNodeId = props.isViewingTrashNode ? props.selectedTrashNodeId : props.activeNodeId;
+  const documentNodeId = flatProps.isViewingTrashNode ? flatProps.selectedTrashNodeId : flatProps.activeNodeId;
 
   useEffect(() => {
     saveWorkspaceRightPanelPreference(activeRightPanelId);
@@ -104,10 +105,10 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
 
   const handleSelectRightPanel = useCallback((panelId: WorkspaceRightPanelId) => {
     setActiveRightPanelId(panelId);
-    if (props.isRightSidebarCollapsed) {
-      props.onToggleRightSidebarVisibility();
+    if (flatProps.isRightSidebarCollapsed) {
+      flatProps.onToggleRightSidebarVisibility();
     }
-  }, [props.isRightSidebarCollapsed, props.onToggleRightSidebarVisibility]);
+  }, [flatProps.isRightSidebarCollapsed, flatProps.onToggleRightSidebarVisibility]);
 
   return (
     <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
@@ -115,25 +116,25 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         activeRightPanelId={activeRightPanelId}
         onOpenNotesView={handleOpenNotesView}
         onOpenTrashView={handleOpenTrashView}
-        isImportManagementOpen={props.isImportManagementOpen}
+        isImportManagementOpen={flatProps.isImportManagementOpen}
         onSelectRightPanel={handleSelectRightPanel}
         documentNodeId={documentNodeId}
-        onOpenImportManagement={props.onOpenImportManagement}
+        onOpenImportManagement={flatProps.onOpenImportManagement}
         onStartClipboardImport={clipboardImportNotice.startClipboardImport}
-        onStartImport={() => void props.onRunImportFile()}
+        onStartImport={() => void flatProps.onRunImportFile()}
         onSelectNode={handleSelectNode}
         immersive={immersive}
-        gridProps={props}
+        gridProps={flatProps}
         titleBarProps={props}
       />
       {clipboardImportNotice.notice ? <ClipboardImportNotice message={clipboardImportNotice.notice.message} tone={clipboardImportNotice.notice.tone} /> : null}
-      <ImmersiveShortcutsOverlay visible={props.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
+      <ImmersiveShortcutsOverlay visible={flatProps.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
       <ImportSourceWorkspace
-        onOpenChange={(open) => (open ? props.onOpenImportManagement() : props.onCloseImportManagement())}
+        onOpenChange={(open) => (open ? flatProps.onOpenImportManagement() : flatProps.onCloseImportManagement())}
         onSelectNode={handleSelectNode}
-        open={props.isImportManagementOpen}
+        open={flatProps.isImportManagementOpen}
       />
-      <WorkspaceSettingsOverlay {...selectWorkspaceSettingsOverlayProps(props)} />
+      <WorkspaceSettingsOverlay {...selectWorkspaceSettingsOverlayProps(flatProps)} />
     </main>
   );
 }

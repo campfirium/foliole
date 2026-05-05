@@ -67,6 +67,13 @@ vi.mock('../shared/testing/workspaceDebugBridge', () => ({
   installWorkspaceDebugBridge: () => undefined
 }));
 
+function createLayoutProps(isWorkspaceHydrated = false) {
+  return {
+    layoutChrome: { isWorkspaceHydrated },
+    settings: {}
+  };
+}
+
 beforeEach(() => {
   useAppController.mockReset();
   ensureWorkspaceHydrated.mockClear();
@@ -81,7 +88,7 @@ it('renders the workspace chrome immediately without a boot-only shell', async (
     hotkeySettings: {},
     goToNodeState: {},
     moveToNodeState: {},
-    layoutProps: {},
+    layoutProps: createLayoutProps(),
     paletteState: {},
     searchState: {}
   });
@@ -104,7 +111,7 @@ it('reports app ready only after the hydrated workspace has painted', async () =
     hotkeySettings: {},
     goToNodeState: {},
     moveToNodeState: {},
-    layoutProps: { isWorkspaceHydrated: true },
+    layoutProps: createLayoutProps(true),
     paletteState: {},
     searchState: {}
   });
@@ -127,7 +134,7 @@ it('reports app ready without waiting for animation frames while the window is h
     hotkeySettings: {},
     goToNodeState: {},
     moveToNodeState: {},
-    layoutProps: { isWorkspaceHydrated: true },
+    layoutProps: createLayoutProps(true),
     paletteState: {},
     searchState: {}
   });

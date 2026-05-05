@@ -2,26 +2,14 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimeExternalSearchBrowseEntry } from '../../shared/platform/externalSearchRuntimeRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WindowTitleBar } from './WindowTitleBar';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-export interface WorkspaceTitleBarSource {
-  activeNodeId: string | null;
-  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
-  externalSelection: ExternalLibrarySelection;
-  isExternalViewOpen: boolean;
-  isImmersiveMode: boolean;
-  isListCollapsed: boolean;
-  isRightSidebarCollapsed: boolean;
-  isTrashViewOpen: boolean;
-  isViewingTrashNode: boolean;
-  listWidth: number;
-  nodesById: Record<string, Node>;
-  onToggleListVisibility: () => void;
-  onToggleRightSidebarVisibility: () => void;
-  rightSidebarWidth: number;
-  selectedTrashNodeId: string | null;
-}
+export type WorkspaceTitleBarSource = Pick<
+  WorkspaceLayoutProps,
+  'externalLibrary' | 'layoutChrome' | 'navigation' | 'nodeList' | 'trash'
+>;
 
 function resolveExternalTitleBarTitle(props: {
   externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
@@ -74,28 +62,29 @@ export function WorkspaceMainTitleBar({
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   props: WorkspaceTitleBarSource;
 }) {
-  if (props.isImmersiveMode) {
+  const { externalLibrary, layoutChrome, navigation, nodeList, trash } = props;
+  if (layoutChrome.isImmersiveMode) {
     return null;
   }
-  const externalTitle = resolveExternalTitleBarTitle(props);
+  const externalTitle = resolveExternalTitleBarTitle(externalLibrary);
   return (
     <WindowTitleBar
       activeRightPanelId={activeRightPanelId}
       centerTitle={externalTitle ?? resolveWindowTitleBarTitle(
-        props.isViewingTrashNode ? props.selectedTrashNodeId : props.activeNodeId,
-        props.nodesById
+        trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId,
+        nodeList.nodesById
       )}
       centerTitleIcon={externalTitle ? 'external' : undefined}
-      isListCollapsed={props.isListCollapsed}
-      isRightSidebarCollapsed={props.isRightSidebarCollapsed}
-      isTrashViewOpen={props.isTrashViewOpen}
-      listWidth={props.listWidth}
+      isListCollapsed={layoutChrome.isListCollapsed}
+      isRightSidebarCollapsed={layoutChrome.isRightSidebarCollapsed}
+      isTrashViewOpen={trash.isTrashViewOpen}
+      listWidth={layoutChrome.listWidth}
       onOpenNotesView={onOpenNotesView}
       onOpenTrashView={onOpenTrashView}
       onSelectRightPanel={onSelectRightPanel}
-      onToggleListVisibility={props.onToggleListVisibility}
-      onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
-      rightSidebarWidth={props.rightSidebarWidth}
+      onToggleListVisibility={layoutChrome.onToggleListVisibility}
+      onToggleRightSidebarVisibility={layoutChrome.onToggleRightSidebarVisibility}
+      rightSidebarWidth={layoutChrome.rightSidebarWidth}
     />
   );
 }

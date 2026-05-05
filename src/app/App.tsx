@@ -5,8 +5,8 @@ import { HotkeySettingsProvider } from '../features/settings/context/HotkeySetti
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 import { WorkspaceRailSettingsProvider } from '../features/settings/context/WorkspaceRailSettingsProvider';
-import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
+import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
 import { installWorkspaceDebugBridge } from '../shared/testing/workspaceDebugBridge';
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
@@ -36,15 +36,20 @@ function AppContent() {
     installWorkspaceDebugBridge();
     readPerformanceDiagnosticsProbe();
   }, []);
-  useReportAppReadyWhenHydrated(controller.layoutProps.isWorkspaceHydrated);
+  useReportAppReadyWhenHydrated(controller.layoutProps.layoutChrome.isWorkspaceHydrated);
+
+  const workspaceLayoutProps = {
+    ...controller.layoutProps,
+    settings: {
+      ...controller.layoutProps.settings,
+      onRunRailAction: controller.paletteState.onRunCommand
+    }
+  };
 
   return (
     <HotkeySettingsProvider {...controller.hotkeySettings}>
       <>
-        <WorkspaceLayout
-          {...controller.layoutProps}
-          onRunRailAction={controller.paletteState.onRunCommand}
-        />
+        <WorkspaceLayout {...workspaceLayoutProps} />
         <AppOverlays
           controller={controller}
           externalPreviewRequest={externalPreviewRequest}
@@ -127,12 +132,12 @@ function AppOverlays({
         onClose={onCloseExternalPreview}
         onOpenImportedNode={(result) => {
           if (result.node_id) {
-            controller.layoutProps.onSelectNode(result.node_id);
+            controller.layoutProps.navigation.onSelectNode(result.node_id);
           }
           onCloseExternalPreview();
         }}
         onOpenInExternalLibrary={(request) => {
-          controller.layoutProps.onOpenExternalSelection({
+          controller.layoutProps.externalLibrary.onOpenExternalSelection({
             absolutePath: request.absolutePath,
             folderId: request.folderId,
             kind: 'document'
