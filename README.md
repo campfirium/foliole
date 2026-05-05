@@ -3,12 +3,12 @@
 Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Coding** 工作流推进。
 
 ## 快速开始（Agent 协作）
-1. 阅读产品规范：`.lab/specs/`
-2. 读取 Agent 约定：`AGENTS.md`
-3. 用户说“继续”时读取：`.lab/agent/handoffs/LATEST.md`
-4. 用任务模板执行：`.lab/agent/task-template.md`
-5. 完成后记录：`.lab/agent/iteration-log/entries/*.md` 并更新 `.lab/agent/iteration-log.md`
-6. 提交前执行：`scripts/quality-gate.sh`
+1. 读取入口规则：`AGENTS.md`
+2. 阅读产品 / 架构规范：`.lab/specs/`
+3. 用户说“继续”时读取：`.lab/agent/TODO.md`，必要时补 `.lab/agent/DONE.md` 与 `.lab/agent/current-phase.md`
+4. 任务涉及执行细则时读取：`.lab/agent/workflow.md`
+5. 用任务模板执行：`.lab/agent/task-template.md`
+6. 提交前执行：`scripts/quality-gate-fast.sh`
 
 ## 当前里程碑
 - M1：三栏编辑加工链路可用（节点列表 + Markdown 编辑 + 测试区占位 + 派生 + 持久化）
