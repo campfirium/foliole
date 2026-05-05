@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { RuntimeExternalSearchFolder } from '../../../../shared/platform/externalSearchBridge';
+import type { RuntimeExternalSearchFolder } from '../../../../shared/platform/externalSearchRuntimeRepository';
 import { clearLinkPanelBrowsingData } from '../../../../shared/platform/linkPanelBrowsingData';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,

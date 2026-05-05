@@ -5,7 +5,7 @@ import type { NodeTreeRow as NodeTreeRowModel } from '../../features/nodes/model
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 
 import {
   buildExternalLibraryFolderBrowseState,

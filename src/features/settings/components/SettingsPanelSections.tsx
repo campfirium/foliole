@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { RuntimeExternalSearchFolder } from '../../../shared/platform/externalSearchBridge';
+import type { RuntimeExternalSearchFolder } from '../../../shared/platform/externalSearchRuntimeRepository';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 import {
   getSettingsCategoryOption,

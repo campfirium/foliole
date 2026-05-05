@@ -1,4 +1,4 @@
-import type { RuntimeExternalSearchFolder } from './externalSearchBridge';
+import type { RuntimeExternalSearchFolder } from './externalSearchRuntimeRepository';
 
 export function resolveExternalSearchStatusLabel(folder: Pick<RuntimeExternalSearchFolder, 'lastError' | 'status'>) {
   if (folder.status === 'error' || Boolean(folder.lastError)) {

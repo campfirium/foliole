@@ -1,4 +1,4 @@
-import type { RuntimeExternalSearchFolder } from '../../shared/platform/externalSearchBridge';
+import type { RuntimeExternalSearchFolder } from '../../shared/platform/externalSearchRuntimeRepository';
 
 import { resolveExternalFolderLabel, type ExternalLibrarySelection } from './externalLibraryBrowseModel';
 

@@ -16,7 +16,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';

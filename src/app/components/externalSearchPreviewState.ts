@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   loadRuntimeExternalSearchPreview,
   type RuntimeExternalSearchPreview
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 
 export function useExternalSearchPreviewDocument(absolutePath: string | null) {
   const [error, setError] = useState<string | null>(null);

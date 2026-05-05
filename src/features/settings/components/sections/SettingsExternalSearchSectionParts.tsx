@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { RuntimeExternalSearchFolder } from '../../../../shared/platform/externalSearchBridge';
+import type { RuntimeExternalSearchFolder } from '../../../../shared/platform/externalSearchRuntimeRepository';
 import { resolveExternalSearchStatusLabel } from '../../../../shared/platform/externalSearchStatus';
 import {
   AppStatusBadge,

@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
-import type { RuntimeExternalSearchPreview } from '../../shared/platform/externalSearchBridge';
+import type { RuntimeExternalSearchPreview } from '../../shared/platform/externalSearchRuntimeRepository';
 import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';

@@ -6,7 +6,7 @@ import {
   subscribeRuntimeExternalSearchFolders,
   type RuntimeExternalSearchBrowseEntry,
   type RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 import type { ExternalLibrarySelection } from '../components/externalLibraryBrowseModel';
 
 export function useExternalLibraryView() {

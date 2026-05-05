@@ -6,7 +6,7 @@ import type { ReviewSchedulerSettings } from '../../features/settings/model/revi
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';

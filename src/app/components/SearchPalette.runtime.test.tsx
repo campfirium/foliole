@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/bridge', () => ({ getRuntimeInvoke: vi.fn() }));
 vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({ loadRuntimeNodeSourceDetails: vi.fn().mockResolvedValue(null) }));
-vi.mock('../../shared/platform/externalSearchBridge', () => ({ loadRuntimeExternalSearchFolders: vi.fn().mockResolvedValue([]) }));
+vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({ loadRuntimeExternalSearchFolders: vi.fn().mockResolvedValue([]) }));
 
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
 

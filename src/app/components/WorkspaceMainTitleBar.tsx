@@ -1,5 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { RuntimeExternalSearchBrowseEntry } from '../../shared/platform/externalSearchBridge';
+import type { RuntimeExternalSearchBrowseEntry } from '../../shared/platform/externalSearchRuntimeRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { WindowTitleBar } from './WindowTitleBar';

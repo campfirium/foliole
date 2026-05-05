@@ -5,7 +5,7 @@ import { ExternalDocumentPreviewPanel } from './ExternalDocumentPreviewPanel';
 
 const loadRuntimeExternalSearchPreview = vi.fn();
 
-vi.mock('../../shared/platform/externalSearchBridge', () => ({
+vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
   importRuntimeExternalSearchDocument: vi.fn(),
   loadRuntimeExternalSearchPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
 }));

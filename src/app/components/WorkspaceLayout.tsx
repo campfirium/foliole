@@ -12,7 +12,7 @@ import type { SettingsCategoryId } from '../../features/settings/model/settingsP
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';

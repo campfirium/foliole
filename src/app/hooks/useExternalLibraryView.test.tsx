@@ -6,7 +6,7 @@ import type { ElectronAPI } from '../../shared/platform/electronApi';
 import {
   rebuildRuntimeExternalSearchIndex,
   saveRuntimeExternalSearchFolders
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 
 import { useExternalLibraryView } from './useExternalLibraryView';
 

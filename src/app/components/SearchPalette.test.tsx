@@ -4,16 +4,16 @@ import { expect, it, vi } from 'vitest';
 vi.mock('../../shared/platform/bridge', () => ({
   getRuntimeInvoke: vi.fn()
 }));
-vi.mock('../../shared/platform/nodeSourceBridge', () => ({
+vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
   loadRuntimeNodeSourceDetails: vi.fn()
 }));
-vi.mock('../../shared/platform/externalSearchBridge', () => ({
+vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
   loadRuntimeExternalSearchFolders: vi.fn()
 }));
 
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
-import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchBridge';
-import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
+import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { SearchPalette } from './SearchPalette';

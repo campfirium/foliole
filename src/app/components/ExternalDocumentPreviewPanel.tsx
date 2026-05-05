@@ -8,7 +8,7 @@ import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLink
 import {
   importRuntimeExternalSearchDocument,
   type RuntimeExternalSearchPreview
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 import { AppButton, AppErrorState, AppIconButton, AppLoadingState, appFloatingSurfaceClassName } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 

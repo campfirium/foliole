@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchBridge';
+import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
 import { resolveExternalSectionStatusLabel } from '../../shared/platform/externalSearchStatus';
 
 export function useExternalSectionStatus(isOpen: boolean) {

@@ -7,7 +7,7 @@ import {
   type RuntimeExternalSearchBrowseEntry,
   type RuntimeExternalSearchFolder,
   type RuntimeExternalSearchPreview
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 

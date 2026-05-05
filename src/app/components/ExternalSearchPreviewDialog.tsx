@@ -5,7 +5,7 @@ import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor'
 import {
   importRuntimeExternalSearchDocument,
   type RuntimeExternalSearchPreview
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppErrorState, AppLoadingState } from '../../shared/ui';
 
 import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';

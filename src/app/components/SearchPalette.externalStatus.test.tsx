@@ -7,12 +7,12 @@ vi.mock('../../shared/platform/bridge', () => ({
 vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
   loadRuntimeNodeSourceDetails: vi.fn().mockResolvedValue(null)
 }));
-vi.mock('../../shared/platform/externalSearchBridge', () => ({
+vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
   loadRuntimeExternalSearchFolders: vi.fn()
 }));
 
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
-import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchBridge';
+import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
 
 import { SearchPalette } from './SearchPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';

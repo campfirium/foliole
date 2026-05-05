@@ -5,7 +5,7 @@ import {
   rebuildRuntimeExternalSearchIndex,
   saveRuntimeExternalSearchFolders,
   type RuntimeExternalSearchFolder
-} from '../../../shared/platform/externalSearchBridge';
+} from '../../../shared/platform/externalSearchRuntimeRepository';
 import { selectRuntimeImportDirectory } from '../../../shared/platform/importDirectoryRuntimeRepository';
 
 function createDraftFolder(folderPath: string): RuntimeExternalSearchFolder {

@@ -6,7 +6,7 @@ import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 import { AppEmptyState, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 

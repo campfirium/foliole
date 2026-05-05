@@ -4,7 +4,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchBridge';
+} from '../../shared/platform/externalSearchRuntimeRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibrarySection } from './ExternalLibrarySection';
