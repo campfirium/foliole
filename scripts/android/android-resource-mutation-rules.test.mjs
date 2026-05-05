@@ -21,6 +21,10 @@ describe('Android resource mutation rules', () => {
     const definitions = JSON.parse(await readFile(MUTATION_DEFINITIONS, 'utf8'));
 
     expect(definitions.resourceMutations).toEqual(ANDROID_COMPANION_RESOURCE_MUTATION_RULES);
+    expect(definitions.resourceMutations.groupKeys).toEqual({
+      attachmentResources: 'attachmentResources',
+      contentBlobs: 'contentBlobs'
+    });
     expect(definitions.resourceMutations.attachmentResources).toMatchObject({
       markCachedMutationName: 'attachmentResourceMarkCached',
       markFailedMutationName: 'attachmentResourceMarkFailed'
@@ -44,7 +48,7 @@ describe('Android resource mutation rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionResourceMutationRules.contentBlobString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceMutationRules.attachmentString(context, key)');
-    expect(rulesSource).toContain('FolioleCompanionMutationAssetKeys.key(context, "resourceMutations")');
+    expect(rulesSource).toContain('FolioleCompanionMutationAssetKeys.ruleGroup(context, "resourceMutations", groupName)');
     expect(rulesSource).not.toContain('optJSONObject("resourceMutations")');
     expect(combinedStoreSource).not.toContain('"contentBlobDataReplace"');
     expect(combinedStoreSource).not.toContain('"contentBlobMarkCached"');

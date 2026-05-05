@@ -145,6 +145,7 @@ export const ANDROID_COMPANION_MUTATION_ASSET_KEYS = {
 } as const;
 
 export const ANDROID_COMPANION_RESOURCE_MUTATION_RULES = {
+  groupKeys: { attachmentResources: 'attachmentResources', contentBlobs: 'contentBlobs' },
   attachmentResources: {
     markCachedMutationName: 'attachmentResourceMarkCached',
     markFailedMutationName: 'attachmentResourceMarkFailed'
@@ -158,6 +159,7 @@ export const ANDROID_COMPANION_RESOURCE_MUTATION_RULES = {
 } as const;
 
 export const ANDROID_COMPANION_RUNTIME_MUTATION_RULES = {
+  groupKeys: { syncPushAck: 'syncPushAck', syncState: 'syncState' },
   syncPushAck: {
     deleteByObjectMutationName: 'syncPushAckDeleteByObject',
     tableName: 'sync_push_ack'
@@ -168,6 +170,7 @@ export const ANDROID_COMPANION_RUNTIME_MUTATION_RULES = {
 } as const;
 
 export const ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES = {
+  groupKeys: { appData: 'appData', companionMeta: 'companionMeta', nodeAttachments: 'nodeAttachments', textBodyBlobs: 'textBodyBlobs' },
   appData: {
     deleteMetaExceptDeviceMutationName: 'companionMetaDeleteExceptDeviceId'
   },
@@ -186,6 +189,7 @@ export const ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES = {
 } as const;
 
 export const ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES = {
+  groupKeys: { documents: 'documents', learning: 'learning', pushAck: 'pushAck', reviewLog: 'reviewLog', settings: 'settings', viewState: 'viewState' },
   documents: {
     markMissingMutationName: 'syncExternalDocumentMarkMissing',
     upsertMutationName: 'syncExternalDocumentUpsert'

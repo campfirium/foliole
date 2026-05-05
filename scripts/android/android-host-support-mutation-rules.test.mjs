@@ -23,6 +23,12 @@ describe('Android host support mutation rules', () => {
     const definitions = JSON.parse(await readFile(MUTATION_DEFINITIONS, 'utf8'));
 
     expect(definitions.hostSupportMutations).toEqual(ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES);
+    expect(definitions.hostSupportMutations.groupKeys).toEqual({
+      appData: 'appData',
+      companionMeta: 'companionMeta',
+      nodeAttachments: 'nodeAttachments',
+      textBodyBlobs: 'textBodyBlobs'
+    });
     expect(definitions.hostSupportMutations.nodeAttachments).toMatchObject({
       deleteByNodeMutationName: 'nodeAttachmentDeleteByNode',
       upsertMutationName: 'nodeAttachmentUpsert'
@@ -35,7 +41,7 @@ describe('Android host support mutation rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionHostSupportMutationRules.companionMetaString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionHostSupportMutationRules.nodeAttachmentString(context, key)');
-    expect(rulesSource).toContain('FolioleCompanionMutationAssetKeys.key(context, "hostSupportMutations")');
+    expect(rulesSource).toContain('FolioleCompanionMutationAssetKeys.ruleGroup(context, "hostSupportMutations", groupName)');
     expect(rulesSource).not.toContain('optJSONObject("hostSupportMutations")');
     for (const mutationName of [
       'companionMetaDeleteByKey',
