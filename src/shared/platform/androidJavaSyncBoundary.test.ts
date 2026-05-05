@@ -8,7 +8,8 @@ const ANDROID_MAIN_JAVA = 'android/app/src/main/java/com/foliole/android';
 const FORBIDDEN_MAIN_PATTERNS = [
   /\bclass\s+FolioleCompanionSyncPackApply\b/,
   /\bapplyDesktopSyncPack\s*\(/,
-  /\bapplySyncPack\s*\(/
+  /\bapplySyncPack\s*\(/,
+  /\bapplySyncNodeVersions\s*\(/
 ];
 
 function listJavaFiles(dir: string): string[] {

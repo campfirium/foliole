@@ -35,10 +35,6 @@ final class FolioleCompanionSyncDataPluginActions {
         );
     }
 
-    static JSObject applySyncNodeVersions(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.applySyncNodeVersions(call.getData().optJSONArray("nodes"));
-    }
-
     static JSObject applySyncReviewLog(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.applySyncReviewLog(call.getData().optJSONArray("reviews"));
     }

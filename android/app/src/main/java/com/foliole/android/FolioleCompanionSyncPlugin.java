@@ -452,15 +452,6 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     }
 
     @PluginMethod
-    public void applySyncNodeVersions(PluginCall call) {
-        resolveWithDatabase(
-            call,
-            "Failed to apply companion sync node versions.",
-            databaseHelper -> FolioleCompanionSyncDataPluginActions.applySyncNodeVersions(databaseHelper, call)
-        );
-    }
-
-    @PluginMethod
     public void applySyncReviewLog(PluginCall call) {
         resolveWithDatabase(
             call,
