@@ -10,7 +10,6 @@ import {
 } from '../../model/appearanceSettings';
 import { useSettingsFontOptions } from '../useSettingsFontOptions';
 
-import { NodeIconSettingsSection } from './NodeIconSettingsSection';
 import { NodeListRowSpacingSection } from './NodeListRowSpacingSection';
 import {
   AccentColorRow,
@@ -134,7 +133,6 @@ function AppearanceSupportingSections(props: ReturnType<typeof useAppearanceSect
 
   return (
     <>
-      <NodeIconSettingsSection />
       <NodeListRowSpacingSection />
       <SettingsAppearanceFontSection
         {...fontOptions}
