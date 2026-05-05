@@ -109,24 +109,20 @@ final class FolioleCompanionDatabaseMigration {
     private static void insertLegacySyncObjectStateRow(Context context, SQLiteDatabase database, JSONObject row, int stateSeq) {
         try {
             FolioleCompanionGeneratedMutationRunner.execute(context, database, repairValue(context, "nextInsertMutationName"), new Object[] {
-                row.getString(rowKey(context, "objectType")),
-                row.getString(rowKey(context, "objectId")),
+                rowString(context, row, "objectType"),
+                rowString(context, row, "objectId"),
                 stateSeq,
-                nullableString(row, rowKey(context, "currentVersionId")),
-                row.getString(rowKey(context, "contentHash")),
-                row.getString(rowKey(context, "lastModifiedByDeviceId")),
-                row.getString(rowKey(context, "updatedAt")),
-                nullableString(row, rowKey(context, "deletedAt")),
-                row.getInt(rowKey(context, "syncDirty")),
+                rowNullableString(context, row, "currentVersionId"),
+                rowString(context, row, "contentHash"),
+                rowString(context, row, "lastModifiedByDeviceId"),
+                rowString(context, row, "updatedAt"),
+                rowNullableString(context, row, "deletedAt"),
+                rowInt(context, row, "syncDirty"),
                 null
             });
         } catch (Exception exception) {
             throw new IllegalStateException(repairValue(context, "nextInsertErrorMessage"), exception);
         }
-    }
-
-    private static String nullableString(JSONObject row, String key) {
-        return row.isNull(key) ? null : row.optString(key, null);
     }
 
     private static void addSyncBaseContentHashIfMissing(Context context, SQLiteDatabase database) {
@@ -203,8 +199,16 @@ final class FolioleCompanionDatabaseMigration {
         }
     }
 
-    private static String rowKey(Context context, String key) throws Exception {
-        return FolioleCompanionMigrationRules.rowKey(context, key);
+    private static int rowInt(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionMigrationRules.rowInt(context, row, key);
+    }
+
+    private static String rowNullableString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionMigrationRules.rowNullableString(context, row, key);
+    }
+
+    private static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionMigrationRules.rowString(context, row, key);
     }
 
     private static String actionType(Context context, String key) {

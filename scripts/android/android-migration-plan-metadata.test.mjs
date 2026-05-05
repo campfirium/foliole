@@ -118,6 +118,9 @@ describe('Android migration plan metadata', () => {
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.repairStatementName(context, groupName)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.repairTableName(context, groupName)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.stringValue');
+    expect(migrationSource).toContain('FolioleCompanionMigrationRules.rowString(context, row, key)');
+    expect(migrationSource).toContain('FolioleCompanionMigrationRules.rowNullableString(context, row, key)');
+    expect(migrationSource).toContain('FolioleCompanionMigrationRules.rowInt(context, row, key)');
     expect(migrationSource).toContain('oldVersion < step.getInt(planKey(context, "beforeVersion"))');
     expect(migrationSource).toContain('step.getJSONArray(planKey(context, "actions"))');
     expect(migrationSource).not.toContain('"installSchema".equals(type)');
@@ -133,6 +136,8 @@ describe('Android migration plan metadata', () => {
     expect(migrationSource).not.toContain('oldVersion < 4');
     expect(migrationSource).not.toContain('oldVersion < 14');
     expect(migrationSource).not.toContain('"migrationLegacySyncObjectStateRows"');
+    expect(migrationSource).not.toContain('row.getString(rowKey(context');
+    expect(migrationSource).not.toContain('row.getInt(rowKey(context');
     expect(migrationSource).not.toContain('Failed to upgrade companion push ack schema.');
   });
 });

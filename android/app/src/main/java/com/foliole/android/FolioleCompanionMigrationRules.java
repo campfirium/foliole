@@ -62,6 +62,19 @@ final class FolioleCompanionMigrationRules {
         return group(context, "syncObjectStateSequence").getJSONObject("rowKeys").getString(key);
     }
 
+    static int rowInt(Context context, JSONObject row, String key) throws Exception {
+        return row.getInt(rowKey(context, key));
+    }
+
+    static String rowNullableString(Context context, JSONObject row, String key) throws Exception {
+        String rowKey = rowKey(context, key);
+        return row.isNull(rowKey) ? null : row.optString(rowKey, null);
+    }
+
+    static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(rowKey(context, key));
+    }
+
     private static JSONObject section(Context context, String key) throws Exception {
         JSONObject section = new JSONObject(FolioleCompanionAssetReader.read(context, MIGRATION_SCHEMA_ASSET_PATH)).optJSONObject(key);
         if (section == null) {
