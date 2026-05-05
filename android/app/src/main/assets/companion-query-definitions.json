@@ -1838,5 +1838,24 @@
         "queryName": "syncPayloadViewNodeState"
       }
     ]
+  },
+  "workspaceRead": {
+    "snapshot": {
+      "bodyStatusExpressionToken": "__BODY_STATUS_EXPRESSION__",
+      "contentBlobJoinToken": "__CONTENT_BLOB_JOIN__",
+      "contentExpressionToken": "__CONTENT_EXPRESSION__",
+      "metaValueQueryName": "workspaceMetaValue",
+      "metaValueResultKey": "rows",
+      "nodesQueryName": "workspaceSnapshotNodes",
+      "nodesResultKey": "nodes",
+      "orderedNodeIdsQueryName": "workspaceOrderedNodeIds",
+      "orderedNodeIdsResultKey": "nodes",
+      "untitledSequenceMetaKey": "untitled_sequence_by_parent"
+    },
+    "viewState": {
+      "defaultSource": "user-scroll",
+      "queryName": "nodeViewStatesByDevice",
+      "resultKey": "states"
+    }
   }
 }

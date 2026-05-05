@@ -57,3 +57,23 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
     untitledTitle: 'Untitled'
   }
 } as const;
+
+export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
+  snapshot: {
+    bodyStatusExpressionToken: '__BODY_STATUS_EXPRESSION__',
+    contentBlobJoinToken: '__CONTENT_BLOB_JOIN__',
+    contentExpressionToken: '__CONTENT_EXPRESSION__',
+    metaValueQueryName: 'workspaceMetaValue',
+    metaValueResultKey: 'rows',
+    nodesQueryName: 'workspaceSnapshotNodes',
+    nodesResultKey: 'nodes',
+    orderedNodeIdsQueryName: 'workspaceOrderedNodeIds',
+    orderedNodeIdsResultKey: 'nodes',
+    untitledSequenceMetaKey: 'untitled_sequence_by_parent'
+  },
+  viewState: {
+    defaultSource: 'user-scroll',
+    queryName: 'nodeViewStatesByDevice',
+    resultKey: 'states'
+  }
+} as const;

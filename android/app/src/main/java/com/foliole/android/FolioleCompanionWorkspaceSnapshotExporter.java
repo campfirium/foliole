@@ -12,9 +12,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 final class FolioleCompanionWorkspaceSnapshotExporter {
-
-    private static final String UNTITLED_SEQUENCE_META_KEY = "untitled_sequence_by_parent";
-
     private FolioleCompanionWorkspaceSnapshotExporter() {}
 
     static JSObject loadWorkspaceSnapshot(Context context, SQLiteDatabase database, String deviceId) throws Exception {
@@ -36,9 +33,9 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         JSONArray nodes = FolioleCompanionNamedQueryStore.loadRows(
             context,
             database,
-            "workspaceSnapshotNodes",
-            "nodes",
-            snapshotQueryReplacements(contentExpression, contentBlobJoin, bodyStatusExpression),
+            snapshotRule(context, "nodesQueryName"),
+            snapshotRule(context, "nodesResultKey"),
+            snapshotQueryReplacements(context, contentExpression, contentBlobJoin, bodyStatusExpression),
             new String[] { deviceId }
         );
         for (int index = 0; index < nodes.length(); index += 1) {
@@ -68,14 +65,15 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
     }
 
     private static Map<String, String> snapshotQueryReplacements(
+        Context context,
         String contentExpression,
         String contentBlobJoin,
         String bodyStatusExpression
-    ) {
+    ) throws Exception {
         Map<String, String> replacements = new HashMap<>();
-        replacements.put("__CONTENT_EXPRESSION__", contentExpression);
-        replacements.put("__CONTENT_BLOB_JOIN__", contentBlobJoin);
-        replacements.put("__BODY_STATUS_EXPRESSION__", bodyStatusExpression);
+        replacements.put(snapshotRule(context, "contentExpressionToken"), contentExpression);
+        replacements.put(snapshotRule(context, "contentBlobJoinToken"), contentBlobJoin);
+        replacements.put(snapshotRule(context, "bodyStatusExpressionToken"), bodyStatusExpression);
         return replacements;
     }
 
@@ -107,7 +105,12 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
 
     private static JSONArray loadOrderedNodeIds(Context context, SQLiteDatabase database) throws Exception {
         JSONArray result = new JSONArray();
-        JSONArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "workspaceOrderedNodeIds", "nodes");
+        JSONArray rows = FolioleCompanionNamedQueryStore.loadRows(
+            context,
+            database,
+            snapshotRule(context, "orderedNodeIdsQueryName"),
+            snapshotRule(context, "orderedNodeIdsResultKey")
+        );
         for (int index = 0; index < rows.length(); index += 1) {
             result.put(rows.getJSONObject(index).getString("id"));
         }
@@ -129,7 +132,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
     }
 
     private static JSObject loadUntitledSequenceByParent(Context context, SQLiteDatabase database) throws Exception {
-        String rawValue = loadWorkspaceMetaValue(context, database, UNTITLED_SEQUENCE_META_KEY);
+        String rawValue = loadWorkspaceMetaValue(context, database, snapshotRule(context, "untitledSequenceMetaKey"));
         if (rawValue == null || rawValue.trim().isEmpty()) {
             return new JSObject();
         }
@@ -138,7 +141,12 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
     }
 
     private static String loadWorkspaceMetaValue(Context context, SQLiteDatabase database, String key) throws Exception {
-        String value = FolioleCompanionNamedQueryStore.loadString(context, database, "workspaceMetaValue", new String[] { key });
+        String value = FolioleCompanionNamedQueryStore.loadString(
+            context,
+            database,
+            snapshotRule(context, "metaValueQueryName"),
+            new String[] { key }
+        );
         return value == null || value.trim().isEmpty() ? null : value;
     }
 
@@ -149,6 +157,10 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
             }
         }
         return false;
+    }
+
+    private static String snapshotRule(Context context, String key) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key);
     }
 
 }
