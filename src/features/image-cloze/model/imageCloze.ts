@@ -7,6 +7,8 @@ import {
   type NodeImageRegionGroup
 } from '../../nodes/model/nodeTypes';
 
+import { appendUniqueRegions, collectChildRegionIds, collectNodePresentedRegions } from './imageClozeRegionGroups';
+
 export type ImageClozeLocator = ImageAnchorLocator;
 
 export interface ImageClozeSourcePayload {
@@ -140,44 +142,21 @@ export function deriveImageClozeRegionsFromChildren(args: {
 }) {
   const groupsByAttachmentId = new Map<string, NodeImageRegionGroup>();
   const trashedNodeIdSet = new Set(args.trashedNodeIds ?? []);
-  const appendGroupRegions = (attachmentId: string, regions: NodeImageRegionGroup['regions']) => {
-    const group = groupsByAttachmentId.get(attachmentId) ?? {
-      attachmentId,
-      regions: []
-    };
-    if (!groupsByAttachmentId.has(attachmentId)) {
-      groupsByAttachmentId.set(attachmentId, group);
-    }
-    const regionIds = new Set(group.regions.map((region) => region.id));
-    for (const region of regions) {
-      if (regionIds.has(region.id)) {
-        continue;
-      }
-      regionIds.add(region.id);
-      group.regions.push(region);
-    }
-  };
+  const visibleNodes = Object.values(args.nodesById).filter((node) => !trashedNodeIdSet.has(node.id));
+  const childNodes = visibleNodes.filter((node) => node.parentNodeId === args.nodeId);
 
-  for (const node of Object.values(args.nodesById)) {
-    if (node.parentNodeId !== args.nodeId || trashedNodeIdSet.has(node.id)) {
-      continue;
+  for (const node of childNodes) {
+    const directChildRegionsByAttachmentId = collectNodePresentedRegions(node);
+    const directGrandchildRegionIdsByAttachmentId = collectChildRegionIds(visibleNodes, node.id);
+
+    for (const [attachmentId, group] of directChildRegionsByAttachmentId.entries()) {
+      const grandchildRegionIds = directGrandchildRegionIdsByAttachmentId.get(attachmentId) ?? new Set<string>();
+      appendUniqueRegions(
+        groupsByAttachmentId,
+        attachmentId,
+        group.regions.filter((region) => !grandchildRegionIds.has(region.id))
+      );
     }
-    for (const group of node.imageRegions ?? []) {
-      appendGroupRegions(group.attachmentId, group.regions);
-    }
-    const locator = getImageClozeLocator(node.anchorLink);
-    if (!locator) {
-      continue;
-    }
-    appendGroupRegions(locator.attachmentId, [
-      {
-        id: node.anchorLink?.id ?? `legacy-${node.id}`,
-        height: locator.height,
-        width: locator.width,
-        x: locator.x,
-        y: locator.y
-      }
-    ]);
   }
 
   return [...groupsByAttachmentId.values()];
