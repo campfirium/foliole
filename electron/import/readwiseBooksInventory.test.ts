@@ -92,6 +92,7 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
       fullDocumentMarkdownPath: path.join(fullDocumentDir, 'Annotated Book.md'),
       generatedNodeId: null,
       highlightMarkdownPath: path.join(highlightDir, 'Annotated Book.md'),
+      importStatus: 'pending',
       nodeStatus: 'missing',
       title: 'Annotated Book'
     },
@@ -103,6 +104,7 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
       fullDocumentMarkdownPath: null,
       generatedNodeId: null,
       highlightMarkdownPath: null,
+      importStatus: 'pending',
       nodeStatus: 'missing',
       title: 'Epub Only Book'
     },
@@ -114,10 +116,52 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
       fullDocumentMarkdownPath: path.join(fullDocumentDir, 'Plain Book.md'),
       generatedNodeId: expect.any(String),
       highlightMarkdownPath: path.join(highlightDir, 'Plain Book.md'),
+      importStatus: 'pending',
       nodeStatus: 'generated',
       title: 'Plain Book'
     }
   ]);
+});
+
+it('restores persisted books inventory after restart when directories are temporarily unavailable', async () => {
+  const { fullDocumentDir, highlightDir } = await seedReadwiseBooksFixture();
+  const importedAt = '2026-04-03T12:05:00.000Z';
+  const epubPath = path.join(fullDocumentDir, 'Plain Book.epub');
+
+  runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: '# Plain Book\n\nImported from epub.\n',
+      fileName: 'Plain Book.epub',
+      filePath: epubPath,
+      importedAt,
+      kind: 'epub',
+      sourceLocator: epubPath,
+      sourceTrackingMode: 'untracked'
+    })
+  );
+
+  const firstInventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+
+  expect(firstInventory.books.find((book) => book.bookKey === 'plain book')).toMatchObject({
+    epubPath,
+    importStatus: 'completed',
+    nodeStatus: 'generated'
+  });
+
+  await fs.rename(path.join(tempRoot, 'Readwise'), path.join(tempRoot, 'Readwise-hidden'));
+  closeDatabaseConnection();
+
+  const restoredInventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+
+  expect(restoredInventory.books).toEqual(firstInventory.books);
 });
 
 it('loads the books inventory from import manager settings', async () => {
@@ -156,6 +200,7 @@ it('loads the books inventory from import manager settings', async () => {
       fullDocumentMarkdownPath: null,
       generatedNodeId: null,
       highlightMarkdownPath: path.join(highlightDir, 'Settings Book.md'),
+      importStatus: 'pending',
       nodeStatus: 'missing',
       title: 'Settings Book'
     }

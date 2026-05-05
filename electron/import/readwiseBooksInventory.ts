@@ -1,19 +1,21 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { openDatabaseConnection } from '../database/connection.js';
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
-
-const DEFAULT_IMPORTED_AT = '1970-01-01T00:00:00.000Z';
+import { resolveGeneratedNodeId, resolveImportStatus } from './readwiseBooksInventoryDatabase.js';
+import {
+  mergePersistedReadwiseBooksInventory,
+  savePersistedReadwiseBooksInventory
+} from './readwiseBooksInventoryState.js';
 
 export type ReadwiseBookAnnotationStatus = 'has_highlights' | 'no_highlights';
 export type ReadwiseBookNodeStatus = 'generated' | 'missing';
 export type ReadwiseBookEpubStatus = 'received' | 'missing';
+export type ReadwiseBookImportStatus = 'completed' | 'pending';
 
 export interface ReadwiseBookInventoryItem {
   annotationStatus: ReadwiseBookAnnotationStatus;
@@ -23,6 +25,7 @@ export interface ReadwiseBookInventoryItem {
   fullDocumentMarkdownPath: string | null;
   generatedNodeId: string | null;
   highlightMarkdownPath: string | null;
+  importStatus: ReadwiseBookImportStatus;
   nodeStatus: ReadwiseBookNodeStatus;
   title: string;
 }
@@ -51,10 +54,6 @@ function createBookKey(sourceName: string) {
   return stripExtension(sourceName).replace(/\\/g, '/').trim().toLowerCase();
 }
 
-function buildReadwiseBookSourceIdentity(sourceName: string) {
-  return `readwise/books/${sourceName.replace(/\\/g, '/')}`;
-}
-
 function createBucket(sourceName: string): ReadwiseBookSourceBucket {
   return {
     epubPath: null,
@@ -74,6 +73,17 @@ async function discoverSources(rootDir: string, supportedKinds: Array<'epub' | '
     return await discoverDirectoryImportSources(rootDir, { supportedKinds });
   } catch {
     return [];
+  }
+}
+
+async function isDirectoryAvailable(rootDir: string) {
+  if (!rootDir.trim()) {
+    return false;
+  }
+  try {
+    return (await fs.stat(rootDir)).isDirectory();
+  } catch {
+    return false;
   }
 }
 
@@ -121,75 +131,20 @@ async function resolveAnnotationStatus(bucket: ReadwiseBookSourceBucket, readwis
   }
 }
 
-function resolveTrackedSourceName(bucket: ReadwiseBookSourceBucket) {
-  if (bucket.fullDocumentMarkdownPath) {
-    return `${stripExtension(bucket.sourceName)}.md`;
-  }
-  if (bucket.highlightMarkdownPath) {
-    return `${stripExtension(bucket.sourceName)}.md`;
-  }
-  if (bucket.epubPath) {
-    return `${stripExtension(bucket.sourceName)}.md`;
-  }
-  return null;
-}
-
-function resolveGeneratedNodeId(bucket: ReadwiseBookSourceBucket) {
-  const trackedSourceName = resolveTrackedSourceName(bucket);
-  if (!trackedSourceName) {
-    return null;
-  }
-
-  const trackedFingerprint = createPreparedDesktopTextImport({
-    content: '',
-    fileName: path.basename(trackedSourceName),
-    filePath: bucket.fullDocumentMarkdownPath ?? bucket.highlightMarkdownPath ?? bucket.epubPath ?? trackedSourceName,
-    importedAt: DEFAULT_IMPORTED_AT,
-    kind: 'markdown',
-    sourceIdentity: buildReadwiseBookSourceIdentity(trackedSourceName)
-  }).sourceFingerprint;
-  const connection = openDatabaseConnection();
-  const trackedRow = connection.sqlite
-    .prepare(
-      `SELECT latest_node_id
-       FROM import_sources
-       WHERE source_fingerprint = ? AND latest_node_id IS NOT NULL`
-    )
-    .get(trackedFingerprint) as { latest_node_id: string } | undefined;
-  if (trackedRow?.latest_node_id) {
-    return trackedRow.latest_node_id;
-  }
-
-  const fallbackLocators = [bucket.fullDocumentMarkdownPath, bucket.highlightMarkdownPath].filter(
-    (value): value is string => Boolean(value)
-  );
-  if (fallbackLocators.length === 0) {
-    return null;
-  }
-  const placeholder = fallbackLocators.map(() => '?').join(', ');
-  const fallbackRow = connection.sqlite
-    .prepare(
-      `SELECT latest_node_id
-       FROM import_sources
-       WHERE latest_node_id IS NOT NULL AND source_locator IN (${placeholder})
-       ORDER BY last_imported_at DESC
-       LIMIT 1`
-    )
-    .get(...fallbackLocators) as { latest_node_id: string } | undefined;
-  return fallbackRow?.latest_node_id ?? null;
-}
-
 export async function scanReadwiseBooksInventory(input: {
   fullDocumentDirectoryPath: string;
   highlightDirectoryPath: string;
   readwiseConfig: ReadwiseReaderConfig;
 }): Promise<ReadwiseBooksInventory> {
   const scannedAt = new Date().toISOString();
-  const [highlightSources, fullDocumentSources] = await Promise.all([
+  const [highlightDirectoryAvailable, fullDocumentDirectoryAvailable, highlightSources, fullDocumentSources] = await Promise.all([
+    isDirectoryAvailable(input.highlightDirectoryPath),
+    isDirectoryAvailable(input.fullDocumentDirectoryPath),
     discoverSources(input.highlightDirectoryPath, ['markdown']),
     discoverSources(input.fullDocumentDirectoryPath, ['epub', 'markdown'])
   ]);
-  const books = await Promise.all(
+  const scannedInventory = {
+    books: await Promise.all(
     collectBooksByKey(highlightSources, fullDocumentSources).map(async (bucket) => {
       const annotationStatus = await resolveAnnotationStatus(bucket, input.readwiseConfig);
       const generatedNodeId = resolveGeneratedNodeId(bucket);
@@ -201,17 +156,22 @@ export async function scanReadwiseBooksInventory(input: {
         fullDocumentMarkdownPath: bucket.fullDocumentMarkdownPath,
         generatedNodeId,
         highlightMarkdownPath: bucket.highlightMarkdownPath,
+        importStatus: resolveImportStatus(bucket),
         nodeStatus: generatedNodeId ? 'generated' : 'missing',
         title: bucket.title
       } satisfies ReadwiseBookInventoryItem;
     })
-  );
-  return {
-    books,
+  ),
     fullDocumentDirectoryPath: input.fullDocumentDirectoryPath,
     highlightDirectoryPath: input.highlightDirectoryPath,
     scannedAt
-  };
+  } satisfies ReadwiseBooksInventory;
+  const inventory = mergePersistedReadwiseBooksInventory({
+    currentInventory: scannedInventory,
+    restoreMissingBooks: !highlightDirectoryAvailable || !fullDocumentDirectoryAvailable
+  });
+  savePersistedReadwiseBooksInventory(inventory);
+  return inventory;
 }
 
 export async function loadReadwiseBooksInventory() {
