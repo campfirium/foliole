@@ -1,7 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ImportHighlightPolicy, ImportSourceKind, PreparedImportRecord } from '../../lib/core/import/contract.js';
+import type {
+  ImportHighlightPolicy,
+  ImportSourceKind,
+  ImportSourceTrackingMode,
+  PreparedImportRecord
+} from '../../lib/core/import/contract.js';
 import {
   buildRetainedDegradedImportContent,
   type ImportContextPolicy,
@@ -114,6 +119,7 @@ export function buildPreparedImportRecord(
     sourceIdentity?: string;
     sourceLocator?: string;
     sourceProfile?: ImportSourceProfile;
+    sourceTrackingMode?: ImportSourceTrackingMode;
     titleStrategy?: ImportNodeTitleStrategy;
   }
 ): PreparedImportRecord {
@@ -130,6 +136,7 @@ export function buildPreparedImportRecord(
     sourceIdentity: input.sourceIdentity,
     sourceLocator: input.sourceLocator,
     sourceProfile: input.sourceProfile,
+    sourceTrackingMode: input.sourceTrackingMode,
     titleStrategy: input.titleStrategy
   });
 }
@@ -142,6 +149,7 @@ export async function loadPreparedImportRecord(
     highlightPolicy?: ImportHighlightPolicy;
     importedAt: string;
     sourceProfile?: ImportSourceProfile;
+    sourceTrackingMode?: ImportSourceTrackingMode;
     titleStrategy?: ImportNodeTitleStrategy;
   }
 ) {

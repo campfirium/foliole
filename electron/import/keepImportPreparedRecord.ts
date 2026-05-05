@@ -45,6 +45,7 @@ export async function loadPreparedKeepImportRecord(
   return loadPreparedImportRecord(source, {
     highlightPolicy: config.highlightPolicy,
     importedAt,
+    sourceTrackingMode: 'tracked',
     titleStrategy: loadImportManagerSettings().titleStrategy
   });
 }

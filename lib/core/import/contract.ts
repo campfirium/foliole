@@ -12,6 +12,8 @@ export type ImportResultStatus = 'imported' | 'degraded' | 'failed';
 
 export type PreparedImportSourceProfile = 'default' | 'epub' | 'body_with_highlight_sidecar';
 
+export type ImportSourceTrackingMode = 'tracked' | 'untracked';
+
 export interface PreparedImportHighlightRecord {
   content: string;
   label: string | null;
@@ -31,6 +33,7 @@ export interface PreparedImportRecord {
   degradedReason: string | null;
   importedAt: string;
   sourceProfile?: PreparedImportSourceProfile;
+  sourceTrackingMode?: ImportSourceTrackingMode;
 }
 
 export interface PersistedImportRecord {

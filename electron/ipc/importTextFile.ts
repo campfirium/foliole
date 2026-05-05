@@ -72,12 +72,28 @@ async function runImportForFilePath(filePath: string, args?: NativeTextImportArg
       return toNativeTextImportResult(await runEpubImport(source, importedAt));
     }
     return toNativeTextImportResult(
-      runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt, titleStrategy }))
+      runPreparedImport(
+        await loadPreparedImportRecord(source, {
+          highlightPolicy,
+          importedAt,
+          sourceTrackingMode: 'untracked',
+          titleStrategy
+        })
+      )
     );
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
     return toNativeTextImportResult(
-      recordPreparedImportFailure(buildPreparedImportRecord(source, { content: '', highlightPolicy, importedAt, titleStrategy }), failureReason)
+      recordPreparedImportFailure(
+        buildPreparedImportRecord(source, {
+          content: '',
+          highlightPolicy,
+          importedAt,
+          sourceTrackingMode: 'untracked',
+          titleStrategy
+        }),
+        failureReason
+      )
     );
   }
 }

@@ -55,13 +55,29 @@ async function runSingleDirectoryImport(
   try {
     return toNativeDirectoryImportEntry(
       source.adapterId,
-      runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt, titleStrategy }))
+      runPreparedImport(
+        await loadPreparedImportRecord(source, {
+          highlightPolicy,
+          importedAt,
+          sourceTrackingMode: 'untracked',
+          titleStrategy
+        })
+      )
     );
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
     return toNativeDirectoryImportEntry(
       source.adapterId,
-      recordPreparedImportFailure(buildPreparedImportRecord(source, { content: '', highlightPolicy, importedAt, titleStrategy }), failureReason)
+      recordPreparedImportFailure(
+        buildPreparedImportRecord(source, {
+          content: '',
+          highlightPolicy,
+          importedAt,
+          sourceTrackingMode: 'untracked',
+          titleStrategy
+        }),
+        failureReason
+      )
     );
   }
 }

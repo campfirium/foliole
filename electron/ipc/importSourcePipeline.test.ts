@@ -89,3 +89,34 @@ it('recovers list-heavy and flattened highlights from the source body before mar
   ]);
   expect(prepared.degradedReason).toBeNull();
 });
+
+it('uses fresh source fingerprints for untracked imports from the same file path', () => {
+  const first = buildPreparedImportRecord(
+    {
+      filePath: '/tmp/chapter.md',
+      kind: 'markdown',
+      sourceName: 'chapter.md'
+    },
+    {
+      content: '# Chapter',
+      importedAt: '2026-03-22T12:00:00.000Z',
+      sourceTrackingMode: 'untracked'
+    }
+  );
+  const second = buildPreparedImportRecord(
+    {
+      filePath: '/tmp/chapter.md',
+      kind: 'markdown',
+      sourceName: 'chapter.md'
+    },
+    {
+      content: '# Chapter',
+      importedAt: '2026-03-22T12:05:00.000Z',
+      sourceTrackingMode: 'untracked'
+    }
+  );
+
+  expect(first.sourceLocator).toBe('/tmp/chapter.md');
+  expect(second.sourceLocator).toBe('/tmp/chapter.md');
+  expect(first.sourceFingerprint).not.toBe(second.sourceFingerprint);
+});

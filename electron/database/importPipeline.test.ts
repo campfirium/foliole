@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { softDeleteNodes } from '../../lib/core/database/nodeMutations.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -44,6 +45,18 @@ function createImport(content: string, importedAt: string) {
     filePath: '/tmp/note.md',
     importedAt,
     kind: 'markdown'
+  });
+}
+
+function createUntrackedImport(content: string, importedAt: string) {
+  return createPreparedDesktopTextImport({
+    content,
+    degradedReason: null,
+    fileName: 'note.md',
+    filePath: '/tmp/note.md',
+    importedAt,
+    kind: 'markdown',
+    sourceTrackingMode: 'untracked'
   });
 }
 
@@ -137,7 +150,7 @@ it('persists new, duplicate, updated and degraded import semantics with traceabi
     }
   ]);
   expect(nodeRow).toEqual({
-    content: '# Imported\nUpdated body',
+    content: '## Imported\nUpdated body',
     hide_title_heading: 1,
     parent_id: 'special-inbox',
     title: 'note'
@@ -176,7 +189,7 @@ it('persists explicit degraded reasons while still writing converted content', (
     }
   ]);
   expect(nodeRow).toEqual({
-    content: '# Imported\n\n[Table degraded]\nName | Value',
+    content: '## Imported\n\n[Table degraded]\nName | Value',
     hide_title_heading: 1,
     parent_id: 'special-inbox',
     title: 'note'
@@ -198,7 +211,7 @@ it('adopts markdown highlight markers into Foliole highlight anchors when config
   const { childRows, nodeRow } = readPersistedImportState(adopted.sourceFingerprint, adopted.nodeId);
 
   expect(nodeRow).toEqual({
-    content: '# Imported\nUse <highlight id="1">important</highlight id="1"> text',
+    content: '## Imported\nUse <highlight id="1">important</highlight id="1"> text',
     hide_title_heading: 1,
     parent_id: 'special-inbox',
     title: 'note'
@@ -230,4 +243,42 @@ it('keeps the newest inbox import at the top of inbox children', () => {
     { title: 'second' },
     { title: 'note' }
   ]);
+});
+
+it('treats untracked imports from the same path as separate inbox items', () => {
+  const first = runPreparedImport(createUntrackedImport('# Imported\nBody', '2026-03-22T10:00:00.000Z'));
+  const second = runPreparedImport(createUntrackedImport('# Imported\nBody', '2026-03-22T10:05:00.000Z'));
+
+  const connection = openDatabaseConnection();
+  const nodeRows = connection.sqlite
+    .prepare(`SELECT id, deleted_at FROM nodes WHERE title = 'note' ORDER BY created_at ASC`)
+    .all() as Array<{ deleted_at: string | null; id: string }>;
+
+  expect(first.duplicateSemantic).toBe('new');
+  expect(second.duplicateSemantic).toBe('new');
+  expect(second.nodeId).not.toBe(first.nodeId);
+  expect(second.sourceFingerprint).not.toBe(first.sourceFingerprint);
+  expect(nodeRows).toHaveLength(2);
+  expect(nodeRows.every((row) => row.deleted_at === null)).toBe(true);
+});
+
+it('lets untracked imports re-enter after the earlier inbox item was deleted', () => {
+  const first = runPreparedImport(createUntrackedImport('# Imported\nBody', '2026-03-22T10:00:00.000Z'));
+
+  softDeleteNodes(openDatabaseConnection().driver, {
+    deletedAt: '2026-03-22T10:01:00.000Z',
+    nodeIds: [first.nodeId!]
+  });
+
+  const second = runPreparedImport(createUntrackedImport('# Imported\nBody', '2026-03-22T10:05:00.000Z'));
+  const connection = openDatabaseConnection();
+  const nodeRows = connection.sqlite
+    .prepare(`SELECT id, deleted_at FROM nodes WHERE title = 'note' ORDER BY created_at ASC`)
+    .all() as Array<{ deleted_at: string | null; id: string }>;
+
+  expect(second.duplicateSemantic).toBe('new');
+  expect(second.nodeId).not.toBe(first.nodeId);
+  expect(nodeRows).toHaveLength(2);
+  expect(nodeRows[0]?.deleted_at).toBe('2026-03-22T10:01:00.000Z');
+  expect(nodeRows[1]?.deleted_at).toBeNull();
 });

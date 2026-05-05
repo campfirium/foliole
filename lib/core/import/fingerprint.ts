@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import {
   IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
   type ImportHighlightPolicy,
+  type ImportSourceTrackingMode,
   type ImportSourceKind,
   type PreparedImportRecord,
   type PreparedImportSourceProfile
@@ -35,11 +36,19 @@ interface CreatePreparedDesktopTextImportInput {
   sourceIdentity?: string;
   sourceLocator?: string;
   sourceProfile?: ImportSourceProfile;
+  sourceTrackingMode?: ImportSourceTrackingMode;
   titleStrategy?: ImportNodeTitleStrategy;
 }
 
 function hashFingerprint(...parts: string[]) {
   return createHash('sha256').update(parts.join('\u001F'), 'utf8').digest('hex');
+}
+
+function resolveSourceFingerprint(input: Pick<CreatePreparedDesktopTextImportInput, 'filePath' | 'importedAt' | 'sourceIdentity' | 'sourceTrackingMode'>) {
+  if (input.sourceTrackingMode === 'untracked') {
+    return hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, 'untracked', input.sourceIdentity ?? input.filePath, input.importedAt);
+  }
+  return hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, input.sourceIdentity ?? input.filePath);
 }
 
 function normalizeImportedContent(content: string) {
@@ -135,7 +144,7 @@ export function createPreparedDesktopTextImport(
     }),
     provider: IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
     sourceProfile: (input.sourceProfile ?? 'default') as PreparedImportSourceProfile,
-    sourceFingerprint: hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, input.sourceIdentity ?? input.filePath),
+    sourceFingerprint: resolveSourceFingerprint(input),
     sourceKind: input.kind,
     sourceLocator: input.sourceLocator ?? input.filePath,
     sourceName: input.fileName
