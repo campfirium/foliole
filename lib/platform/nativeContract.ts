@@ -6,7 +6,12 @@ import type {
 import type { NativeReadwiseDetectionResult } from './nativeReadwiseContract.js';
 import type {
   NativeApplyReviewGradeArgs, NativeRelearnNodeArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
-  NativeResetImportDataResult, NativeReviewSchedulerSettings, NativeSaveReadingProgressArgs, NativeWorkspaceSnapshot
+  NativeResetImportDataResult,
+  NativeReviewSchedulerSettings,
+  NativeSaveReadingProgressArgs,
+  NativeWorkspaceNodeDocument,
+  NativeWorkspaceSearchResult,
+  NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
 import type {
   NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult,
@@ -14,7 +19,12 @@ import type {
 } from './nativeUtilityContract.js';
 export type {
   NativeApplyReviewGradeArgs, NativeRelearnNodeArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
-  NativeResetImportDataResult, NativeReviewSchedulerSettings, NativeSaveReadingProgressArgs, NativeWorkspaceSnapshot
+  NativeResetImportDataResult,
+  NativeReviewSchedulerSettings,
+  NativeSaveReadingProgressArgs,
+  NativeWorkspaceNodeDocument,
+  NativeWorkspaceSearchResult,
+  NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
 export type {
   NativeDirectoryImportArgs, NativeDirectoryImportConsumePolicy, NativeDirectoryImportEntry, NativeDirectoryImportResult,
@@ -138,6 +148,18 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.windowToggleMaximize]: {
     args: undefined;
     result: null;
+  };
+  [NATIVE_COMMANDS.loadWorkspaceListSnapshot]: {
+    args: undefined;
+    result: NativeWorkspaceSnapshot;
+  };
+  [NATIVE_COMMANDS.loadNodeDocument]: {
+    args: { nodeId: string };
+    result: NativeWorkspaceNodeDocument | null;
+  };
+  [NATIVE_COMMANDS.searchWorkspace]: {
+    args: { query: string };
+    result: NativeWorkspaceSearchResult[];
   };
   [NATIVE_COMMANDS.loadWorkspaceSnapshot]: {
     args: undefined;

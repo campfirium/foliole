@@ -20,6 +20,30 @@ interface RuntimeSyncHandlers {
   syncNodeOrder: (nodeOrder: string[]) => void;
 }
 
+function createQANodeRecord(args: {
+  anchorId?: string;
+  answerContent: string;
+  nodeId: string;
+  parentNodeId: string;
+  promptContent: string;
+  timestamp: string;
+  title: string;
+}) {
+  return {
+    id: args.nodeId,
+    parentNodeId: args.parentNodeId,
+    title: args.title,
+    hasContent: args.promptContent.length > 0,
+    content: args.promptContent,
+    anchorLink: args.anchorId ? { id: args.anchorId, kind: 'cloze' as const } : null,
+    hasReveal: true,
+    reveal: args.answerContent,
+    review: createDefaultReviewProfile(args.timestamp),
+    createdAt: args.timestamp,
+    updatedAt: args.timestamp
+  };
+}
+
 export function createRootNodeAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
@@ -31,8 +55,10 @@ export function createRootNodeAction(
       id: nodeId,
       parentNodeId: null,
       title: deriveNodeTitleFromContent(content),
+      hasContent: content.trim().length > 0,
       content,
       anchorLink: null,
+      hasReveal: false,
       reveal: null,
       review: null,
       createdAt: timestamp,
@@ -104,8 +130,10 @@ export function createHighlightFromSelectionAction(
         id: childNodeId,
         parentNodeId,
         title: untitledState.title,
+        hasContent: normalizedContent.length > 0,
         content: normalizedContent,
         anchorLink: anchorId ? { id: anchorId, kind: 'highlight' } : null,
+        hasReveal: false,
         reveal: null,
         review: null,
         createdAt: timestamp,
@@ -162,17 +190,15 @@ export function createQAFromSelectionAction(
         parentNodeId,
         state
       );
-      createdNode = {
-        id: childNodeId,
+      createdNode = createQANodeRecord({
+        anchorId,
+        answerContent: normalizedAnswer,
+        nodeId: childNodeId,
         parentNodeId,
-        title: untitledState.title,
-        content: normalizedPrompt,
-        anchorLink: anchorId ? { id: anchorId, kind: 'cloze' } : null,
-        reveal: normalizedAnswer,
-        review: createDefaultReviewProfile(timestamp),
-        createdAt: timestamp,
-        updatedAt: timestamp
-      };
+        promptContent: normalizedPrompt,
+        timestamp,
+        title: untitledState.title
+      });
       nextNodeOrder = [...state.nodeOrder, childNodeId];
       const nextNodesById = {
         ...state.nodesById,

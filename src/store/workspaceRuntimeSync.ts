@@ -13,6 +13,7 @@ import { isDesktopRuntime } from '../shared/platform/runtime';
 import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
 import { resolvePendingNodeSync, stagePendingNodeSync } from './workspacePendingNodeSync';
+import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 
 type FireAndForgetRuntimeCommand = Extract<
   NativeCommandName,
@@ -67,44 +68,64 @@ function runFireAndForgetRuntimeSync<T extends FireAndForgetRuntimeCommand>(
 
 function runFireAndForgetNodeSnapshotRuntimeSync(
   command: typeof NATIVE_COMMANDS.updateNodeContent | typeof NATIVE_COMMANDS.updateNodeReveal,
-  payload: NativeNodeSnapshotArgs,
+  node: Node,
+  position: number | undefined,
   action: string
 ) {
-  stagePendingNodeSync(payload);
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
+    stagePendingNodeSync(toNodeSnapshotPayload(node, position));
     return;
   }
-  void runtimeInvoke(command, payload).then(
-    () => {
-      resolvePendingNodeSync(payload.nodeId, payload.updatedAt);
-    },
-    (error) => {
+  void (async () => {
+    const documentLoadedPayload =
+      isNodeDocumentLoaded(node)
+        ? toNodeSnapshotPayload(node, position)
+        : await runtimeInvoke(NATIVE_COMMANDS.loadNodeDocument, { nodeId: node.id })
+            .then((document) => {
+              if (!document) {
+                return null;
+              }
+              return toNodeSnapshotPayload(mergeWorkspaceNodeDocument(node, document), position);
+            })
+            .catch(() => null);
+
+    if (!documentLoadedPayload) {
       logRuntimeError('runtime sync failed', {
         area: 'native',
         action,
         command,
         fallback: 'skip_sync',
-        error
+        error: new Error(`missing loaded document for ${node.id}`)
       });
+      return;
     }
-  );
+
+    stagePendingNodeSync(documentLoadedPayload);
+
+    return runtimeInvoke(command, documentLoadedPayload).then(
+      () => {
+        resolvePendingNodeSync(documentLoadedPayload.nodeId, documentLoadedPayload.updatedAt);
+      },
+      (error) => {
+        logRuntimeError('runtime sync failed', {
+          area: 'native',
+          action,
+          command,
+          fallback: 'skip_sync',
+          error
+        });
+      }
+    );
+  })();
 }
 
 export function syncNodeContentToRuntime(node: Node, position?: number) {
-  runFireAndForgetNodeSnapshotRuntimeSync(
-    NATIVE_COMMANDS.updateNodeContent,
-    toNodeSnapshotPayload(node, position),
-    'sync_node_content'
-  );
+  runFireAndForgetNodeSnapshotRuntimeSync(NATIVE_COMMANDS.updateNodeContent, node, position, 'sync_node_content');
 }
 
 export function syncNodeRevealToRuntime(node: Node, position?: number) {
-  runFireAndForgetNodeSnapshotRuntimeSync(
-    NATIVE_COMMANDS.updateNodeReveal,
-    toNodeSnapshotPayload(node, position),
-    'sync_node_reveal'
-  );
+  runFireAndForgetNodeSnapshotRuntimeSync(NATIVE_COMMANDS.updateNodeReveal, node, position, 'sync_node_reveal');
 }
 
 export function syncNodeOrderToRuntime(nodeOrder: string[]) {

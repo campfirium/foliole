@@ -1,4 +1,5 @@
 import type { Node } from './nodeTypes';
+import { hasNodeContent } from './nodeTypes';
 import { isInboxNode } from './specialNodes';
 
 function isVisibleNode(
@@ -21,8 +22,8 @@ export function hasChildNodes(
   );
 }
 
-export function isNodeContentEmpty(node: Pick<Node, 'content'> | null | undefined) {
-  return (node?.content ?? '').trim().length === 0;
+export function isNodeContentEmpty(node: Pick<Node, 'content' | 'hasContent'> | null | undefined) {
+  return !hasNodeContent(node);
 }
 
 export function canNodeAcceptMovedChildren(

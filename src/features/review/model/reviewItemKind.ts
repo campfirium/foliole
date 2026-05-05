@@ -1,4 +1,5 @@
 import type { Node } from '../../nodes/model/nodeTypes';
+import { hasNodeReveal } from '../../nodes/model/nodeTypes';
 
 export type ReviewItemKind = 'none' | 'reading' | 'fsrs';
 
@@ -12,7 +13,7 @@ export function getReviewItemKind(node: Node | null | undefined): ReviewItemKind
   if (node.anchorLink?.kind === 'cloze') {
     return 'fsrs';
   }
-  if (node.reveal !== null) {
+  if (hasNodeReveal(node)) {
     return 'fsrs';
   }
   return 'reading';

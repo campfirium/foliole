@@ -1,26 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
-import { buildWorkspaceSearchResults } from './workspaceSearch';
+import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
 
 interface SearchPaletteProps {
   isOpen: boolean;
   nodeOrder: string[];
-  nodesById: Record<string, Node | undefined>;
+  nodesById: WorkspaceListNodesById;
   trashedNodeIds: string[];
   onClose: () => void;
   onOpenNode: (nodeId: string) => void;
-}
-
-interface SearchPaletteState {
-  activeIndex: number;
-  openActiveNode: () => void;
-  query: string;
-  results: ReturnType<typeof buildWorkspaceSearchResults>;
-  setActiveIndex: (update: (current: number) => number) => void;
-  setQuery: (value: string) => void;
 }
 
 interface SearchInputProps {
@@ -60,14 +53,7 @@ function handleInputKeyDown(
   }
 }
 
-function SearchInput({
-  onClose,
-  onOpenActive,
-  onQueryChange,
-  onSetActiveIndex,
-  query,
-  totalItems
-}: SearchInputProps) {
+function SearchInput(props: SearchInputProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -78,12 +64,12 @@ function SearchInput({
     <input
       aria-label="Search workspace"
       className="w-full border-b border-border bg-bg-elevated px-4 py-3 text-sm outline-none"
-      onChange={(event) => onQueryChange(event.target.value)}
-      onKeyDown={(event) => handleInputKeyDown(event, totalItems, onClose, onOpenActive, onSetActiveIndex)}
+      onChange={(event) => props.onQueryChange(event.target.value)}
+      onKeyDown={(event) => handleInputKeyDown(event, props.totalItems, props.onClose, props.onOpenActive, props.onSetActiveIndex)}
       placeholder="Search titles and content..."
       ref={inputRef}
       type="text"
-      value={query}
+      value={props.query}
     />
   );
 }
@@ -97,27 +83,19 @@ function SearchPaletteEmptyState({ query }: { query: string }) {
   );
 }
 
-function SearchPaletteList({
-  activeIndex,
-  onOpenNode,
-  results
-}: {
-  activeIndex: number;
-  onOpenNode: (nodeId: string) => void;
-  results: ReturnType<typeof buildWorkspaceSearchResults>;
-}) {
-  if (!results.length) {
+function SearchPaletteList(props: { activeIndex: number; onOpenNode: (nodeId: string) => void; results: WorkspaceSearchResult[] }) {
+  if (!props.results.length) {
     return null;
   }
 
   return (
     <ul aria-label="Workspace search results" className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
-      {results.map((item, index) => (
+      {props.results.map((item, index) => (
         <li key={item.id}>
           <button
             className="flex w-full flex-col gap-1 rounded-md px-3 py-2 text-left hover:bg-bg-subtle data-[active=true]:bg-bg-subtle"
-            data-active={index === activeIndex}
-            onClick={() => onOpenNode(item.id)}
+            data-active={index === props.activeIndex}
+            onClick={() => props.onOpenNode(item.id)}
             type="button"
           >
             <span className="truncate text-sm font-medium text-foreground">{item.title}</span>
@@ -129,13 +107,39 @@ function SearchPaletteList({
   );
 }
 
-function useSearchPaletteState(props: Pick<SearchPaletteProps, 'isOpen' | 'nodeOrder' | 'nodesById' | 'onOpenNode' | 'trashedNodeIds'>): SearchPaletteState {
-  const [query, setQuery] = useState('');
-  const [activeIndex, setActiveIndex] = useState(0);
-  const results = useMemo(
+function useSearchResults(props: Pick<SearchPaletteProps, 'isOpen' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>, query: string) {
+  const localResults = useMemo(
     () => buildWorkspaceSearchResults(props.nodeOrder, props.nodesById, props.trashedNodeIds, query),
     [props.nodeOrder, props.nodesById, props.trashedNodeIds, query]
   );
+  const [runtimeResults, setRuntimeResults] = useState<WorkspaceSearchResult[]>([]);
+
+  useEffect(() => {
+    const runtimeInvoke = getRuntimeInvoke();
+    if (!props.isOpen || !runtimeInvoke || !query.trim()) {
+      setRuntimeResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    void runtimeInvoke(NATIVE_COMMANDS.searchWorkspace, { query }).then((results) => {
+      if (!cancelled) {
+        setRuntimeResults(results);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [props.isOpen, query]);
+
+  return getRuntimeInvoke() ? runtimeResults : localResults;
+}
+
+export function SearchPalette(props: SearchPaletteProps) {
+  const [query, setQuery] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
+  const results = useSearchResults(props, query);
 
   useEffect(() => {
     if (!props.isOpen) {
@@ -154,58 +158,32 @@ function useSearchPaletteState(props: Pick<SearchPaletteProps, 'isOpen' | 'nodeO
     }
   }, [activeIndex, results]);
 
-  return {
-    activeIndex,
-    openActiveNode: () => {
-      const result = results[activeIndex];
-      if (result) {
-        props.onOpenNode(result.id);
-      }
-    },
-    query,
-    results,
-    setActiveIndex,
-    setQuery
-  };
-}
-
-export function SearchPalette({
-  isOpen,
-  nodeOrder,
-  nodesById,
-  onClose,
-  onOpenNode,
-  trashedNodeIds
-}: SearchPaletteProps) {
-  const state = useSearchPaletteState({ isOpen, nodeOrder, nodesById, onOpenNode, trashedNodeIds });
-
-  if (!isOpen) {
+  if (!props.isOpen) {
     return null;
   }
 
+  const openActiveNode = () => {
+    const result = results[activeIndex];
+    if (result) {
+      props.onOpenNode(result.id);
+    }
+  };
+
   return (
-    <div
-      aria-label="Workspace search"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/20 px-4 pt-[12vh]"
-      onClick={onClose}
-      role="dialog"
-    >
-      <div
-        className={appFloatingSurfaceClassName('panel', 'w-full max-w-2xl overflow-hidden')}
-        onClick={(event) => event.stopPropagation()}
-      >
+    <div aria-label="Workspace search" className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/20 px-4 pt-[12vh]" onClick={props.onClose} role="dialog">
+      <div className={appFloatingSurfaceClassName('panel', 'w-full max-w-2xl overflow-hidden')} onClick={(event) => event.stopPropagation()}>
         <SearchInput
-          onClose={onClose}
-          onOpenActive={state.openActiveNode}
-          onQueryChange={state.setQuery}
-          onSetActiveIndex={state.setActiveIndex}
-          query={state.query}
-          totalItems={state.results.length}
+          onClose={props.onClose}
+          onOpenActive={openActiveNode}
+          onQueryChange={setQuery}
+          onSetActiveIndex={setActiveIndex}
+          query={query}
+          totalItems={results.length}
         />
-        {state.results.length ? (
-          <SearchPaletteList activeIndex={state.activeIndex} onOpenNode={onOpenNode} results={state.results} />
+        {results.length ? (
+          <SearchPaletteList activeIndex={activeIndex} onOpenNode={props.onOpenNode} results={results} />
         ) : (
-          <SearchPaletteEmptyState query={state.query} />
+          <SearchPaletteEmptyState query={query} />
         )}
       </div>
     </div>

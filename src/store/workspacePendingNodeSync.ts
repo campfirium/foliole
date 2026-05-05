@@ -88,6 +88,10 @@ export function resolvePendingNodeSync(nodeId: string, updatedAt: string) {
   writePendingSnapshot(snapshot);
 }
 
+export function hasPendingNodeSync(nodeId: string) {
+  return Boolean(readPendingSnapshot().nodesById[nodeId]);
+}
+
 export function mergePendingNodeSyncIntoSnapshot(
   snapshot: NativeWorkspaceSnapshot | null
 ): NativeWorkspaceSnapshot | null {

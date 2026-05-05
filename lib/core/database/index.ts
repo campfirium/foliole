@@ -6,3 +6,6 @@ export * from './nodeMutations.js';
 export * from './reviewMutations.js';
 export * from './schema.js';
 export * from './workspaceSnapshot.js';
+export * from './workspaceListSnapshot.js';
+export * from './workspaceNodeDocument.js';
+export * from './workspaceSearch.js';

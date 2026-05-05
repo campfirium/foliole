@@ -5,6 +5,7 @@ import type {
   NodeReviewProfile,
   NodeSpecialKind
 } from './nodeTypes';
+import { hasNodeContent, hasNodeReveal } from './nodeTypes';
 
 export interface WorkspaceListNode {
   anchorLink?: NodeAnchorLink | null;
@@ -29,8 +30,8 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     anchorLink: node.anchorLink ?? null,
     createdAt: node.createdAt,
     desiredRetention: node.desiredRetention ?? null,
-    hasContent: node.content.trim().length > 0,
-    hasReveal: node.reveal !== null,
+    hasContent: hasNodeContent(node),
+    hasReveal: hasNodeReveal(node),
     id: node.id,
     parentNodeId: node.parentNodeId,
     priority: node.priority ?? null,

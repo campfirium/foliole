@@ -19,6 +19,9 @@ import {
 } from '../database/nodeMutations.js';
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
 import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
+import { loadWorkspaceListSnapshot } from '../database/workspaceListSnapshot.js';
+import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
+import { searchWorkspace } from '../database/workspaceSearch.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
@@ -187,6 +190,15 @@ export async function handleStorageCommand(
   }
   if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
     return loadWorkspaceSnapshot();
+  }
+  if (command === NATIVE_COMMANDS.loadWorkspaceListSnapshot) {
+    return loadWorkspaceListSnapshot();
+  }
+  if (command === NATIVE_COMMANDS.loadNodeDocument) {
+    return loadWorkspaceNodeDocument(asString(args.nodeId, 'nodeId'));
+  }
+  if (command === NATIVE_COMMANDS.searchWorkspace) {
+    return searchWorkspace(asString(args.query, 'query'));
   }
   if (command === NATIVE_COMMANDS.loadImportOverview) {
     return toNativeImportOverview();

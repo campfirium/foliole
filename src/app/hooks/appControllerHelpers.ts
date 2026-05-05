@@ -1,5 +1,6 @@
 import type { NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
 import type { useWorkspaceSelectors } from './appControllerState';
@@ -21,12 +22,16 @@ export function buildPaletteState(
 export function buildSearchState(
   isOpen: boolean,
   nodeOrder: string[],
-  nodesById: AppSearchState['nodesById'],
+  nodesById: WorkspaceListNodesById,
   trashedNodeIds: string[],
   onClose: () => void,
   onOpenNode: (nodeId: string) => void
 ): AppSearchState {
   return { isOpen, nodeOrder, nodesById, onClose, onOpenNode, trashedNodeIds };
+}
+
+export function toSearchNodesById(nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById']) {
+  return toWorkspaceListNodesById(nodesById);
 }
 
 export function buildGoToNodeState(

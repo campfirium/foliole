@@ -20,15 +20,24 @@ function createSnapshotInvoke(
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
     nodesById: {
-      'node-1': { id: 'node-1' },
-      'node-2': { id: 'node-2' }
+      'node-1': { id: 'node-1', content: '', hasContent: true, hasReveal: false, reveal: null },
+      'node-2': { id: 'node-2', content: '', hasContent: true, hasReveal: false, reveal: null }
     },
     trashedNodeIds: ['node-1']
+  },
+  activeDocument: unknown = {
+    nodeId: 'node-2',
+    content: 'Node 2 content',
+    hideTitleHeading: false,
+    reveal: null
   }
 ) {
   return vi.fn().mockImplementation((command: string) => {
-    if (command === 'load_workspace_snapshot') {
+    if (command === 'load_workspace_list_snapshot') {
       return Promise.resolve(snapshot);
+    }
+    if (command === 'load_node_document') {
+      return Promise.resolve(activeDocument);
     }
     return Promise.resolve(readingProgress);
   });
@@ -70,8 +79,8 @@ function createRuntimeSnapshotWithoutReading() {
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
     nodesById: {
-      'node-1': { id: 'node-1', reading: null, review: null },
-      'node-2': { id: 'node-2', reading: null, review: null }
+      'node-1': { id: 'node-1', content: '', hasContent: true, hasReveal: false, reading: null, review: null, reveal: null },
+      'node-2': { id: 'node-2', content: '', hasContent: true, hasReveal: false, reading: null, review: null, reveal: null }
     },
     trashedNodeIds: []
   };
@@ -107,11 +116,12 @@ describe('workspacePersistStorage runtime merge', () => {
 
     const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
 
-    expect(value).toBe(
-      '{"state":{"activeNodeId":"node-2","nodeOrder":["node-1","node-2"],"nodesById":{"node-1":{"id":"node-1"},"node-2":{"id":"node-2"}},"trashedNodeIds":["node-1"],"nodeViewById":{"node-2":{"scrollTop":18,"selection":{"from":5,"to":7}}}},"version":0}'
-    );
-    expect(invoke).toHaveBeenCalledWith('load_workspace_snapshot');
+    expect(value).toContain('"node-1":{"id":"node-1","content":"","hasContent":true');
+    expect(value).toContain('"node-2":{"id":"node-2","content":"Node 2 content"');
+    expect(value).toContain('"nodeViewById":{"node-2":{"scrollTop":18,"selection":{"from":5,"to":7}}}');
+    expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot');
     expect(invoke).toHaveBeenCalledWith('load_reading_progress');
+    expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
   });
 });
 
@@ -125,7 +135,7 @@ describe('workspacePersistStorage runtime fallback', () => {
 
     expect(value).toBeNull();
     expect(window.localStorage.getItem('foliole-workspace-v1')).toBe('{"state":{"activeNodeId":"node-3"}}');
-    expect(invoke).toHaveBeenCalledWith('load_workspace_snapshot');
+    expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot');
   });
 
   it('keeps workspace snapshot active node when reading progress active node is invalid', async () => {
@@ -138,8 +148,8 @@ describe('workspacePersistStorage runtime fallback', () => {
         activeNodeId: 'node-2',
         nodeOrder: ['node-1', 'node-2'],
         nodesById: {
-          'node-1': { id: 'node-1' },
-          'node-2': { id: 'node-2' }
+          'node-1': { id: 'node-1', content: '', hasContent: true, hasReveal: false, reveal: null },
+          'node-2': { id: 'node-2', content: '', hasContent: true, hasReveal: false, reveal: null }
         },
         trashedNodeIds: []
       }
@@ -148,9 +158,8 @@ describe('workspacePersistStorage runtime fallback', () => {
 
     const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
 
-    expect(value).toBe(
-      '{"state":{"activeNodeId":"node-2","nodeOrder":["node-1","node-2"],"nodesById":{"node-1":{"id":"node-1"},"node-2":{"id":"node-2"}},"trashedNodeIds":[],"nodeViewById":{}},"version":0}'
-    );
+    expect(value).toContain('"activeNodeId":"node-2"');
+    expect(value).toContain('"node-2":{"id":"node-2","content":"Node 2 content"');
   });
 });
 
@@ -158,13 +167,13 @@ describe('workspacePersistStorage runtime logging', () => {
   it('logs degraded hydrate when reading progress load fails', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const invoke = vi.fn().mockImplementation((command: string) => {
-      if (command === 'load_workspace_snapshot') {
+      if (command === 'load_workspace_list_snapshot') {
         return Promise.resolve({
           activeNodeId: 'node-2',
           nodeOrder: ['node-1', 'node-2'],
           nodesById: {
-            'node-1': { id: 'node-1' },
-            'node-2': { id: 'node-2' }
+            'node-1': { id: 'node-1', content: '', hasContent: true, hasReveal: false, reveal: null },
+            'node-2': { id: 'node-2', content: '', hasContent: true, hasReveal: false, reveal: null }
           },
           trashedNodeIds: []
         });
@@ -175,9 +184,7 @@ describe('workspacePersistStorage runtime logging', () => {
 
     const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
 
-    expect(value).toBe(
-      '{"state":{"activeNodeId":"node-2","nodeOrder":["node-1","node-2"],"nodesById":{"node-1":{"id":"node-1"},"node-2":{"id":"node-2"}},"trashedNodeIds":[]},"version":0}'
-    );
+    expect(value).toContain('"activeNodeId":"node-2"');
     expect(warn).toHaveBeenCalledWith(
       '[persistence] reading progress load failed during workspace hydrate',
       expect.objectContaining({

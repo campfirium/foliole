@@ -1,6 +1,7 @@
 import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 import { isNodeContentLocked } from '../features/nodes/model/nodeContainers';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { hasNodeContent } from '../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../features/nodes/model/specialNodes';
 import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
@@ -98,6 +99,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
       const nextNode = {
         ...node,
         content,
+        hasContent: content.trim().length > 0,
         hideTitleHeading: false,
         title: node.isTitleManual ? node.title : derivedTitle,
         updatedAt: new Date().toISOString()
@@ -126,6 +128,7 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
       }
       const nextNode = {
         ...node,
+        hasReveal: reveal !== null,
         reveal,
         updatedAt: new Date().toISOString()
       };
@@ -152,7 +155,7 @@ function createDismissNodeAction(set: WorkspaceSet): WorkspaceNodeActions['dismi
       if (
         !node ||
         isInboxNode(node) ||
-        node.content.trim().length === 0 ||
+        !hasNodeContent(node) ||
         isFsrsReviewItemNode(node) ||
         node.reading?.state === 'dismissed'
       ) {
@@ -196,7 +199,7 @@ function createRelearnNodeAction(set: WorkspaceSet): WorkspaceNodeActions['relea
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || isInboxNode(node) || node.content.trim().length === 0) {
+      if (!node || isInboxNode(node) || !hasNodeContent(node)) {
         return state;
       }
       if (!isFsrsReviewItemNode(node) && node.reading === null) {

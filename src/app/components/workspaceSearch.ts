@@ -1,4 +1,5 @@
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import { buildNodeBreadcrumbs } from '../../features/nodes/model/nodeBreadcrumbs';
+import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 
 export interface WorkspaceSearchResult {
   excerpt: string;
@@ -7,43 +8,22 @@ export interface WorkspaceSearchResult {
 }
 
 const MAX_RESULTS = 40;
-const EXCERPT_PADDING = 36;
-const EXCERPT_LENGTH = 96;
 
 function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-function matchesWorkspaceNode(node: Node, normalizedQuery: string) {
-  const normalizedTitle = node.title.trim().toLowerCase();
-  if (normalizedTitle.includes(normalizedQuery)) {
-    return true;
+function buildPathLabel(node: WorkspaceListNode, nodesById: Record<string, WorkspaceListNode>) {
+  const breadcrumbItems = buildNodeBreadcrumbs(node.parentNodeId, nodesById);
+  if (!breadcrumbItems.length) {
+    return 'Top level';
   }
-  return node.content.toLowerCase().includes(normalizedQuery);
-}
-
-function buildExcerpt(content: string, query: string) {
-  const normalizedContent = normalizeWhitespace(content);
-  if (!normalizedContent) {
-    return 'No content preview';
-  }
-
-  const normalizedQuery = query.trim().toLowerCase();
-  const matchIndex = normalizedContent.toLowerCase().indexOf(normalizedQuery);
-  if (matchIndex === -1) {
-    return normalizedContent.slice(0, EXCERPT_LENGTH);
-  }
-
-  const start = Math.max(0, matchIndex - EXCERPT_PADDING);
-  const end = Math.min(normalizedContent.length, matchIndex + normalizedQuery.length + EXCERPT_PADDING);
-  const prefix = start > 0 ? '...' : '';
-  const suffix = end < normalizedContent.length ? '...' : '';
-  return `${prefix}${normalizedContent.slice(start, end)}${suffix}`;
+  return breadcrumbItems.map((item) => item.title.trim() || 'Untitled').join(' / ');
 }
 
 export function buildWorkspaceSearchResults(
   nodeOrder: string[],
-  nodesById: Record<string, Node | undefined>,
+  nodesById: Record<string, WorkspaceListNode | undefined>,
   trashedNodeIds: string[],
   query: string
 ): WorkspaceSearchResult[] {
@@ -52,35 +32,35 @@ export function buildWorkspaceSearchResults(
     return [];
   }
 
+  const availableNodesById = Object.fromEntries(
+    Object.entries(nodesById).filter((entry): entry is [string, WorkspaceListNode] => Boolean(entry[1]))
+  );
   const trashedNodeSet = new Set(trashedNodeIds);
-  const titleMatches: WorkspaceSearchResult[] = [];
-  const contentMatches: WorkspaceSearchResult[] = [];
+  const results: WorkspaceSearchResult[] = [];
 
   for (const nodeId of nodeOrder) {
     if (trashedNodeSet.has(nodeId)) {
       continue;
     }
     const node = nodesById[nodeId];
-    if (!node || !matchesWorkspaceNode(node, normalizedQuery)) {
+    if (!node) {
       continue;
     }
-
-    const result = {
-      excerpt: buildExcerpt(node.content, normalizedQuery),
-      id: node.id,
-      title: node.title.trim() || 'Untitled'
-    };
-
-    if (node.title.trim().toLowerCase().includes(normalizedQuery)) {
-      titleMatches.push(result);
-    } else {
-      contentMatches.push(result);
+    const title = normalizeWhitespace(node.title) || 'Untitled';
+    const path = buildPathLabel(node, availableNodesById);
+    const haystack = `${title}\n${path}`.toLowerCase();
+    if (!haystack.includes(normalizedQuery)) {
+      continue;
     }
-
-    if (titleMatches.length + contentMatches.length >= MAX_RESULTS) {
+    results.push({
+      excerpt: path,
+      id: node.id,
+      title
+    });
+    if (results.length >= MAX_RESULTS) {
       break;
     }
   }
 
-  return [...titleMatches, ...contentMatches].slice(0, MAX_RESULTS);
+  return results;
 }

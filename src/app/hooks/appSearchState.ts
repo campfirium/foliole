@@ -1,10 +1,12 @@
-import { buildSearchState } from './appControllerHelpers';
+import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+
+import { buildSearchState, toSearchNodesById } from './appControllerHelpers';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 
 export interface AppSearchState {
   isOpen: boolean;
   nodeOrder: string[];
-  nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById'];
+  nodesById: WorkspaceListNodesById;
   onClose: () => void;
   onOpenNode: (nodeId: string) => void;
   trashedNodeIds: string[];
@@ -18,7 +20,7 @@ export function buildControllerSearchState(args: {
   return buildSearchState(
     args.runtime.isSearchPaletteOpen,
     args.ws.nodeOrder,
-    args.ws.nodesById,
+    toSearchNodesById(args.ws.nodesById),
     args.ws.trashedNodeIds,
     () => args.runtime.setIsSearchPaletteOpen(false),
     (nodeId) => {

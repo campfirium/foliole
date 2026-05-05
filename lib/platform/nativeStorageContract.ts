@@ -38,6 +38,8 @@ export interface NativeWorkspaceNodeSnapshot {
   title: string;
   isTitleManual: boolean;
   hideTitleHeading?: boolean;
+  hasContent?: boolean;
+  hasReveal?: boolean;
   content: string;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
@@ -52,6 +54,19 @@ export interface NativeWorkspaceSnapshot {
   nodeOrder: string[];
   nodesById: Record<string, NativeWorkspaceNodeSnapshot>;
   trashedNodeIds: string[];
+}
+
+export interface NativeWorkspaceNodeDocument {
+  content: string;
+  hideTitleHeading: boolean;
+  nodeId: string;
+  reveal: string | null;
+}
+
+export interface NativeWorkspaceSearchResult {
+  excerpt: string;
+  id: string;
+  title: string;
 }
 
 export interface NativeReviewSchedulerSettings {

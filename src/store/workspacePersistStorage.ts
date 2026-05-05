@@ -1,11 +1,13 @@
 import type { StateStorage } from 'zustand/middleware';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
+import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLogging';
 
 import { mergePendingNodeSyncIntoSnapshot, replayPendingNodeSync } from './workspacePendingNodeSync';
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
+import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 
 function getLocalFallbackStorage(): Storage | null {
   if (typeof window === 'undefined') {
@@ -21,29 +23,83 @@ function toPersistedStatePayload(value: unknown): string | null {
   return JSON.stringify({ state: value, version: 0 });
 }
 
+async function loadReadingProgressForHydrate(name: string) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.loadReadingProgress).catch((error) => {
+    logRuntimeWarning('reading progress load failed during workspace hydrate', {
+      area: 'persistence',
+      action: 'hydrate_workspace_state',
+      command: NATIVE_COMMANDS.loadReadingProgress,
+      fallback: 'merge_snapshot_without_reading_progress',
+      storageKey: name,
+      error
+    });
+    return null;
+  });
+}
+
+async function hydrateActiveNodeDocument(name: string, snapshot: Record<string, unknown>) {
+  const runtimeInvoke = getRuntimeInvoke();
+  const activeNodeId = snapshot.activeNodeId;
+  if (!runtimeInvoke || typeof activeNodeId !== 'string') {
+    return snapshot;
+  }
+
+  const activeNode = snapshot.nodesById && typeof snapshot.nodesById === 'object'
+    ? (snapshot.nodesById as Record<string, Node | undefined>)[activeNodeId]
+    : undefined;
+  if (!activeNode || isNodeDocumentLoaded(activeNode)) {
+    return snapshot;
+  }
+
+  const activeDocument = await runtimeInvoke(NATIVE_COMMANDS.loadNodeDocument, { nodeId: activeNodeId }).catch((error) => {
+    logRuntimeWarning('active node document load failed during workspace hydrate', {
+      area: 'persistence',
+      action: 'hydrate_active_node_document',
+      command: NATIVE_COMMANDS.loadNodeDocument,
+      fallback: 'keep_lightweight_node',
+      storageKey: name,
+      nodeId: activeNodeId,
+      error
+    });
+    return null;
+  });
+
+  if (!activeDocument || !snapshot.nodesById || typeof snapshot.nodesById !== 'object') {
+    return snapshot;
+  }
+
+  return {
+    ...snapshot,
+    nodesById: {
+      ...(snapshot.nodesById as Record<string, Node | undefined>),
+      [activeNodeId]: mergeWorkspaceNodeDocument(activeNode, activeDocument)
+    }
+  };
+}
+
+async function loadRuntimeWorkspaceState(name: string) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+
+  const [snapshot, readingProgress] = await Promise.all([
+    runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceListSnapshot),
+    loadReadingProgressForHydrate(name)
+  ]);
+  const mergedSnapshot = mergeWorkspaceSnapshotWithReadingProgress(mergePendingNodeSyncIntoSnapshot(snapshot), readingProgress);
+  if (!mergedSnapshot) {
+    return null;
+  }
+  return hydrateActiveNodeDocument(name, mergedSnapshot as unknown as Record<string, unknown>);
+}
+
 export const workspacePersistStorage: StateStorage = {
   async getItem(name) {
     const runtimeInvoke = getRuntimeInvoke();
     if (runtimeInvoke) {
       try {
-        const [snapshot, readingProgress] = await Promise.all([
-          runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceSnapshot),
-          runtimeInvoke(NATIVE_COMMANDS.loadReadingProgress).catch((error) => {
-            logRuntimeWarning('reading progress load failed during workspace hydrate', {
-              area: 'persistence',
-              action: 'hydrate_workspace_state',
-              command: NATIVE_COMMANDS.loadReadingProgress,
-              fallback: 'merge_snapshot_without_reading_progress',
-              storageKey: name,
-              error
-            });
-            return null;
-          })
-        ]);
-        const mergedSnapshot = mergeWorkspaceSnapshotWithReadingProgress(
-          mergePendingNodeSyncIntoSnapshot(snapshot),
-          readingProgress
-        );
+        const mergedSnapshot = await loadRuntimeWorkspaceState(name);
         void replayPendingNodeSync(runtimeInvoke).catch((error) => {
           logRuntimeWarning('pending node sync replay failed during workspace hydrate', {
             area: 'persistence',
@@ -59,7 +115,7 @@ export const workspacePersistStorage: StateStorage = {
         logRuntimeError('workspace hydrate failed', {
           area: 'persistence',
           action: 'hydrate_workspace_state',
-          command: NATIVE_COMMANDS.loadWorkspaceSnapshot,
+          command: NATIVE_COMMANDS.loadWorkspaceListSnapshot,
           relatedCommand: NATIVE_COMMANDS.loadReadingProgress,
           fallback: 'return_null',
           storageKey: name,

@@ -20,11 +20,7 @@ function getQueueItemTitle(node: Node | undefined) {
   if (title.length > 0) {
     return title;
   }
-  const firstLine = node.content
-    .split('\n')
-    .map((line) => line.trim())
-    .find((line) => line.length > 0);
-  return firstLine ?? 'Untitled node';
+  return 'Untitled node';
 }
 
 function formatShortDateTime(value: string | null | undefined) {

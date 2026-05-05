@@ -11,6 +11,7 @@ import { useReadingProgressSync } from './useReadingProgressSync';
 import { useRightSidebarResizer } from './useRightSidebarResizer';
 import { useStudyMode } from './useStudyMode';
 import { useTrashView } from './useTrashView';
+import { useWorkspaceActiveNodeDocument } from './useWorkspaceActiveNodeDocument';
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
 export function useWorkspaceSelectors() {
@@ -70,6 +71,7 @@ export function useWorkspaceControllerState(
   ws: ReturnType<typeof useWorkspaceSelectors>,
   isWorkspaceHydrated: boolean
 ) {
+  useWorkspaceActiveNodeDocument(ws.activeNodeId);
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
   const trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
