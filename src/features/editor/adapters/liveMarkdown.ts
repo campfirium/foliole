@@ -1,5 +1,5 @@
 import type { Range } from '@codemirror/state';
-import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 
 import {
   collectAnchorTagTokenRanges,
@@ -9,12 +9,28 @@ import {
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
 const CODE_FENCE_PATTERN = /^\s*`{3,}/;
-const PREFIX_PATTERN = /^\s*(#{1,6}\s*|[-*+]\s+|\d+\.\s+|>\s?)/;
+const HEADING_PREFIX_PATTERN = /^\s*#{1,6}(?:\s+|$)/;
+const QUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
+const UNORDERED_LIST_PREFIX_PATTERN = /^(\s*[-*+]\s+)/;
+const ORDERED_LIST_PREFIX_PATTERN = /^(\s*)(\d+)([.)])(\s+)/;
 const INLINE_TOKEN_PATTERN = /(\*\*|__|~~|`+|!\[|\[|\]\(|\]|\(|\))/g;
 const INLINE_STRONG_PATTERN = /(\*\*|__)(.+?)\1/g;
 const INLINE_HIGHLIGHT_PATTERN = /==(.+?)==/g;
 const INLINE_CLOZE_PATTERN = /\{\{(.+?)\}\}/g;
 const INLINE_CLOZE_PLACEHOLDER_PATTERN = /\[\.\.\.\]/g;
+const INLINE_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+
+interface MarkdownImageMatch extends RangeBounds {
+  alt: string;
+  source: string;
+}
+
+type PrefixWidgetKind = 'quote' | 'unordered-list' | 'ordered-list';
+
+interface PrefixWidgetMatch extends RangeBounds {
+  kind: PrefixWidgetKind;
+  markerText: string;
+}
 
 function createLineClass(text: string, inCodeBlock: boolean) {
   if (CODE_FENCE_PATTERN.test(text)) {
@@ -32,10 +48,13 @@ function createLineClass(text: string, inCodeBlock: boolean) {
   if (/^#{1}\s*/.test(text)) {
     return 'cm-line-h1';
   }
-  if (/^\s*>\s?/.test(text)) {
+  if (/^\s*(?:>\s*)+/.test(text)) {
     return 'cm-line-quote';
   }
-  if (/^\s*([-*+]\s+|\d+\.\s+)/.test(text)) {
+  if (/^\s*[-*+]\s+/.test(text)) {
+    return 'cm-line-list-unordered';
+  }
+  if (/^\s*\d+[.)]\s+/.test(text)) {
     return 'cm-line-list';
   }
   return null;
@@ -71,17 +90,171 @@ function addPrefixDecoration(
   text: string,
   showSyntax: boolean
 ) {
-  const prefixMatch = text.match(PREFIX_PATTERN);
-  if (!prefixMatch) {
+  const headingPrefixMatch = text.match(HEADING_PREFIX_PATTERN);
+  if (headingPrefixMatch) {
+    const prefixLength = headingPrefixMatch[0].length;
+    if (showSyntax) {
+      addMark(ranges, from, from + prefixLength, 'cm-md-syntax-visible');
+      return;
+    }
+    addReplace(ranges, from, from + prefixLength);
     return;
   }
 
-  const prefixLength = prefixMatch[0].length;
-  if (showSyntax) {
-    addMark(ranges, from, from + prefixLength, 'cm-md-syntax-visible');
+  const quotePrefixLength = text.match(QUOTE_PREFIX_PATTERN)?.[0].length ?? 0;
+  if (quotePrefixLength > 0) {
+    const quoteFrom = from;
+    const quoteTo = from + quotePrefixLength;
+    if (showSyntax) {
+      addMark(ranges, quoteFrom, quoteTo, 'cm-md-syntax-visible');
+    } else {
+      addReplace(ranges, quoteFrom, quoteTo);
+    }
+  }
+
+  const innerFrom = from + quotePrefixLength;
+  const innerText = text.slice(quotePrefixLength);
+  const widgetPrefixMatch = collectPrefixWidgetMatch(innerFrom, innerText);
+  if (!widgetPrefixMatch) {
     return;
   }
-  addReplace(ranges, from, from + prefixLength);
+  if (showSyntax) {
+    addMark(ranges, widgetPrefixMatch.from, widgetPrefixMatch.to, 'cm-md-syntax-visible');
+    return;
+  }
+  addPrefixWidget(ranges, widgetPrefixMatch);
+}
+
+function collectPrefixWidgetMatch(from: number, text: string): PrefixWidgetMatch | null {
+  const unorderedListMatch = text.match(UNORDERED_LIST_PREFIX_PATTERN);
+  if (unorderedListMatch) {
+    const prefix = unorderedListMatch[0] ?? '';
+    return {
+      from,
+      to: from + prefix.length,
+      kind: 'unordered-list',
+      markerText: '• '
+    };
+  }
+
+  const orderedListMatch = text.match(ORDERED_LIST_PREFIX_PATTERN);
+  if (!orderedListMatch) {
+    return null;
+  }
+
+  const indent = orderedListMatch[1] ?? '';
+  const numberText = orderedListMatch[2] ?? '1';
+  const delimiter = orderedListMatch[3] ?? '.';
+  const trailingWhitespace = orderedListMatch[4] ?? ' ';
+  const prefixLength = indent.length + numberText.length + delimiter.length + trailingWhitespace.length;
+  return {
+    from,
+    to: from + prefixLength,
+    kind: 'ordered-list',
+    markerText: `${numberText}${delimiter} `
+  };
+}
+
+class PrefixWidget extends WidgetType {
+  readonly kind: PrefixWidgetKind;
+  readonly markerText: string;
+
+  constructor(kind: PrefixWidgetKind, markerText: string) {
+    super();
+    this.kind = kind;
+    this.markerText = markerText;
+  }
+
+  eq(other: PrefixWidget) {
+    return this.kind === other.kind && this.markerText === other.markerText;
+  }
+
+  toDOM() {
+    const marker = document.createElement('span');
+    marker.className = `cm-md-prefix-widget cm-md-prefix-${this.kind}`;
+    marker.textContent = this.markerText;
+    return marker;
+  }
+}
+
+function addPrefixWidget(ranges: Range<Decoration>[], match: PrefixWidgetMatch) {
+  ranges.push(
+    Decoration.replace({
+      widget: new PrefixWidget(match.kind, match.markerText),
+      inclusive: false
+    }).range(match.from, match.to)
+  );
+}
+
+class MarkdownImageWidget extends WidgetType {
+  readonly alt: string;
+  readonly source: string;
+
+  constructor(alt: string, source: string) {
+    super();
+    this.alt = alt;
+    this.source = source;
+  }
+
+  eq(other: MarkdownImageWidget) {
+    return this.alt === other.alt && this.source === other.source;
+  }
+
+  toDOM() {
+    const wrapper = document.createElement('span');
+    wrapper.className = 'cm-md-image-widget';
+
+    const image = document.createElement('img');
+    image.alt = this.alt || 'Markdown image';
+    image.src = this.source;
+    image.loading = 'lazy';
+    image.referrerPolicy = 'no-referrer';
+    image.decoding = 'async';
+    image.className = 'cm-md-image-element';
+
+    wrapper.append(image);
+    return wrapper;
+  }
+}
+
+function isSafeImageSource(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function collectImageMatches(from: number, text: string): MarkdownImageMatch[] {
+  const matches: MarkdownImageMatch[] = [];
+  let match = INLINE_IMAGE_PATTERN.exec(text);
+  while (match) {
+    const source = match[2] ?? '';
+    if (isSafeImageSource(source)) {
+      const start = from + match.index;
+      matches.push({
+        from: start,
+        to: start + match[0].length,
+        alt: match[1] ?? '',
+        source
+      });
+    }
+    match = INLINE_IMAGE_PATTERN.exec(text);
+  }
+  INLINE_IMAGE_PATTERN.lastIndex = 0;
+  return matches;
+}
+
+function addImageDecorations(ranges: Range<Decoration>[], imageMatches: ReadonlyArray<MarkdownImageMatch>) {
+  for (const imageMatch of imageMatches) {
+    ranges.push(
+      Decoration.replace({
+        widget: new MarkdownImageWidget(imageMatch.alt, imageMatch.source),
+        inclusive: false
+      }).range(imageMatch.from, imageMatch.to)
+    );
+  }
 }
 
 function addInlineTokenDecorations(
@@ -330,13 +503,20 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     const isCursorLine = cursorLineNumber !== null && lineNumber === cursorLineNumber;
     const showSyntaxOnLine = showMarkdownSyntax && isCursorLine;
     const clozePlaceholderRanges = collectClozePlaceholderRanges(line.from, line.text);
+    const imageMatches = collectImageMatches(line.from, line.text);
+    const imageRanges = imageMatches.map((imageMatch) => ({ from: imageMatch.from, to: imageMatch.to }));
+    const preservedRanges = clozePlaceholderRanges.concat(imageRanges);
 
     if (lineClass) {
       addLine(ranges, line.from, lineClass);
     }
 
+    if (!showSyntaxOnLine && !isCursorLine && !inCodeBlock) {
+      addImageDecorations(ranges, imageMatches);
+    }
+
     addPrefixDecoration(ranges, line.from, line.text, showSyntaxOnLine);
-    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, showSyntaxOnLine, clozePlaceholderRanges);
+    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, showSyntaxOnLine, preservedRanges);
     addStrongTextDecorations(ranges, line.from, line.text, inCodeBlock);
     addSemanticMarkDecorations(ranges, line.from, line.text, inCodeBlock);
     addClozePlaceholderDecorations(ranges, clozePlaceholderRanges);
@@ -410,22 +590,12 @@ const liveMarkdownTheme = EditorView.theme({
     fontWeight: '650',
     paddingTop: '0.5rem'
   },
-  '.cm-line.cm-line-list': {
-    paddingLeft: '1.1rem',
-    position: 'relative'
-  },
-  '.cm-line.cm-line-list::before': {
-    color: 'var(--color-text-secondary)',
-    content: '"•"',
-    left: '0.05rem',
-    position: 'absolute'
-  },
-  '.cm-line.cm-line-list.cm-activeLine::before': {
-    display: 'none'
+  '.cm-line.cm-line-list, .cm-line.cm-line-list-unordered': {
+    paddingLeft: '0.2rem'
   },
   '.cm-line.cm-line-quote': {
-    borderLeft: '3px solid var(--color-border-strong)',
-    color: 'var(--color-text-secondary)',
+    borderLeft: '2px solid #8b5cf6',
+    color: 'var(--color-text-primary)',
     paddingBottom: '0.15rem',
     paddingTop: '0.15rem',
     paddingLeft: '0.75rem'
@@ -463,6 +633,31 @@ const liveMarkdownTheme = EditorView.theme({
   '.cm-md-cloze-placeholder': {
     backgroundColor: 'rgba(251, 113, 133, 0.24)',
     borderRadius: '0.25rem'
+  },
+  '.cm-md-prefix-widget': {
+    color: 'var(--color-text-secondary)',
+    display: 'inline-block',
+    whiteSpace: 'pre'
+  },
+  '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list': {
+    color: '#a0a5ad',
+    fontWeight: '500',
+    opacity: '0.95'
+  },
+  '.cm-md-image-widget': {
+    display: 'block',
+    marginBottom: '0.24rem',
+    marginTop: '0.24rem',
+    maxWidth: '100%'
+  },
+  '.cm-md-image-element': {
+    border: '1px solid color-mix(in srgb, var(--color-border-strong) 36%, transparent)',
+    borderRadius: '0.45rem',
+    display: 'block',
+    height: 'auto',
+    maxWidth: '100%',
+    width: 'auto',
+    objectFit: 'contain'
   },
   '.cm-activeLine': {
     backgroundColor: 'transparent'
