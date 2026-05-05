@@ -66,12 +66,13 @@ final class FolioleCompanionSyncObjectStore {
     private static Map<String, String> syncObjectQueryReplacements(int idCount, int typeCount) {
         Map<String, String> replacements = new HashMap<>();
         replacements.put(":objectIds", placeholders(idCount));
-        replacements.put(":objectTypeFilter", typeCount > 0 ? " AND object_type IN (" + placeholders(typeCount) + ")" : "");
+        replacements.put(":objectTypes", typeCount > 0 ? placeholders(typeCount) : "NULL");
         return replacements;
     }
 
     private static String[] syncObjectQueryArgs(List<String> ids, List<String> types) {
         List<String> args = new ArrayList<>(ids);
+        args.add(String.valueOf(types.size()));
         args.addAll(types);
         return args.toArray(new String[0]);
     }

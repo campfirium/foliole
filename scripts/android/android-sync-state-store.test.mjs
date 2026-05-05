@@ -94,6 +94,8 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(source).toContain('FolioleCompanionNamedQueryStore.loadArray(context, database, "syncIndex")');
     expect(loadBody).toContain('"syncObjects"');
     expect(loadBody).toContain('syncObjectQueryReplacements');
+    expect(source).not.toContain('objectTypeFilter');
+    expect(queryDefinitions.queries.syncObjects.sql).toContain('? = 0 OR object_type IN (:objectTypes)');
     expect(source).toContain('FolioleCompanionSyncObjectPayloadReader.readPayloadJson');
     expect(queryDefinitions.queries.syncPayloadAttachment.syncPayload).toEqual({
       argMode: 'object_id',
