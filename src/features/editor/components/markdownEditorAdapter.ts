@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type MutableRefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react';
 
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
@@ -36,17 +36,49 @@ function areTextAnchorDecorationsEqual(
 
 function useTextAnchorPresentationSync(
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
-  textAnchorDecorations: ReturnType<typeof resolveTextAnchorDecorations>
+  textAnchorDecorations: ReturnType<typeof resolveTextAnchorDecorations>,
+  value: string
 ) {
   const lastAppliedTextAnchorDecorationsRef = useRef(textAnchorDecorations);
+  const deferredApplyFrameRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (deferredApplyFrameRef.current !== null) {
+        cancelAnimationFrame(deferredApplyFrameRef.current);
+      }
+    },
+    []
+  );
 
   useLayoutEffect(() => {
+    const adapter = adapterRef.current;
     if (areTextAnchorDecorationsEqual(lastAppliedTextAnchorDecorationsRef.current, textAnchorDecorations)) {
       return;
     }
-    lastAppliedTextAnchorDecorationsRef.current = textAnchorDecorations;
-    adapterRef.current?.setTextAnchorDecorations?.(textAnchorDecorations);
-  }, [adapterRef, textAnchorDecorations]);
+    const applyTextAnchorDecorations = () => {
+      lastAppliedTextAnchorDecorationsRef.current = textAnchorDecorations;
+      adapterRef.current?.setTextAnchorDecorations?.(textAnchorDecorations);
+    };
+    if (!adapter || adapter.getContent() === value) {
+      if (deferredApplyFrameRef.current !== null) {
+        cancelAnimationFrame(deferredApplyFrameRef.current);
+        deferredApplyFrameRef.current = null;
+      }
+      applyTextAnchorDecorations();
+      return;
+    }
+    if (deferredApplyFrameRef.current !== null) {
+      cancelAnimationFrame(deferredApplyFrameRef.current);
+    }
+    deferredApplyFrameRef.current = requestAnimationFrame(() => {
+      deferredApplyFrameRef.current = null;
+      if (adapterRef.current?.getContent() !== value) {
+        return;
+      }
+      applyTextAnchorDecorations();
+    });
+  }, [adapterRef, textAnchorDecorations, value]);
 }
 
 function createEditorAdapter(args: {
@@ -191,7 +223,7 @@ export function useEditorAdapter(
 
   useEditorAdapterLifecycle({ adapterRef, debugId, hostRef, inputs });
 
-  useTextAnchorPresentationSync(adapterRef, inputs.resolvedTextAnchorDecorations);
+  useTextAnchorPresentationSync(adapterRef, inputs.resolvedTextAnchorDecorations, initialValue);
 
   useLayoutEffect(() => {
     adapterRef.current?.setReadOnly?.(readOnly === true);

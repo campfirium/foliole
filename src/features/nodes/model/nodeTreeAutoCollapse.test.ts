@@ -94,6 +94,6 @@ describe('collectAutoExpandedNodeIds', () => {
         parentById: tree.parentById,
         rows: tree.rows
       })]
-    ).toEqual(['folder']);
+    ).toEqual(['folder', 'article']);
   });
 });

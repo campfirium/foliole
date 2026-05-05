@@ -42,11 +42,15 @@ export function collectAutoExpandedNodeIds({
   const expandedNodeIds = new Set(
     collectNodeAncestorIds(activeNodeId, parentById).filter((nodeId) => !nodesById[nodeId]?.anchorLink)
   );
-  if (hasNonDerivedChildren(activeNodeId, rows, nodesById)) {
+  if (hasChildren(activeNodeId, rows)) {
     expandedNodeIds.add(activeNodeId);
   }
 
   return expandedNodeIds;
+}
+
+function hasChildren(nodeId: string, rows: NodeTreeRow[]) {
+  return rows.some((row) => row.node.parentNodeId === nodeId);
 }
 
 function hasDerivedChildren(

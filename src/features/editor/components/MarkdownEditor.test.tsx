@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
@@ -19,18 +19,20 @@ const mockOnScroll = vi.fn(() => () => undefined);
 const mockResizeObserver = vi.fn();
 
 const mockCtor = vi.fn();
+let currentContent = '';
 
 function createMockCodeMirrorEditorAdapterClass() {
   return class {
     constructor(host: HTMLElement, options: { initialContent: string; onChange?: (content: string) => void }) {
+      currentContent = options.initialContent;
       mockCtor(host, options);
     }
     destroy() { mockDestroy(); }
     focus() {}
-    getContent() { return mockGetContent(); }
+    getContent() { return mockGetContent() || currentContent; }
     getDocumentPositionAtViewportY() { return 0; }
     getLineBlockHeight() { return 24; }
-    setContent(content: string) { mockSetContent(content); }
+    setContent(content: string) { currentContent = content; mockSetContent(content); }
     setDiffDecorations(diffDecorations: unknown) { mockSetDiffDecorations(diffDecorations); }
     setSearchDecorations(searchDecorations: unknown) { mockSetSearchDecorations(searchDecorations); }
     setTextAnchorDecorations(textAnchorDecorations: unknown) { mockSetTextAnchorDecorations(textAnchorDecorations); }
@@ -75,6 +77,7 @@ function mockResizeObserverFactory() {
 
 function resetMocks() {
   beforeEach(() => {
+    currentContent = '';
     mockCtor.mockClear();
     mockDestroy.mockClear();
     mockGetContent.mockClear();
@@ -147,27 +150,46 @@ function registerEditorLifecycleStabilityTests() {
 
 function registerEditorPresentationUpdateTests() {
   it('updates text anchor decorations without recreating editor adapter', () => {
+    vi.useFakeTimers();
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    const cancelAnimationFrameSpy = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation((handle: number) => window.clearTimeout(handle));
     const onChange = vi.fn();
-    const view = renderWithMouseGestureProvider(
-      <MarkdownEditor
-        nodeId="node-1"
-        onChange={onChange}
-        textAnchorDecorations={[{ from: 1, kind: 'highlight', to: 4 }]}
-        value="Alpha"
-      />
-    );
+    try {
+      const view = renderWithMouseGestureProvider(
+        <MarkdownEditor
+          nodeId="node-1"
+          onChange={onChange}
+          textAnchorDecorations={[{ from: 1, kind: 'highlight', to: 4 }]}
+          value="Alpha"
+        />
+      );
 
-    view.rerender(
-      <MarkdownEditor
-        nodeId="node-1"
-        onChange={onChange}
-        textAnchorDecorations={[{ from: 6, kind: 'cloze', to: 10 }]}
-        value="Alpha Beta"
-      />
-    );
+      act(() => {
+        view.rerender(
+          <MarkdownEditor
+            nodeId="node-1"
+            onChange={onChange}
+            textAnchorDecorations={[{ from: 6, kind: 'cloze', to: 10 }]}
+            value="Alpha Beta"
+          />
+        );
+      });
 
-    expect(mockCtor).toHaveBeenCalledTimes(1);
-    expect(mockSetTextAnchorDecorations).toHaveBeenCalledWith([{ from: 6, kind: 'cloze', to: 10 }]);
+      act(() => {
+        vi.runAllTimers();
+      });
+
+      expect(mockCtor).toHaveBeenCalledTimes(1);
+      expect(mockSetTextAnchorDecorations).toHaveBeenCalledWith([{ from: 6, kind: 'cloze', to: 10 }]);
+    } finally {
+      requestAnimationFrameSpy.mockRestore();
+      cancelAnimationFrameSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it('does not resend unchanged text anchor decorations on rerender', () => {
@@ -193,6 +215,55 @@ function registerEditorPresentationUpdateTests() {
     );
 
     expect(mockSetTextAnchorDecorations).not.toHaveBeenCalled();
+  });
+
+  it('applies node-switch text anchor decorations only after the new content is in place', () => {
+    vi.useFakeTimers();
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    const cancelAnimationFrameSpy = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation((handle: number) => window.clearTimeout(handle));
+
+    try {
+      const onChange = vi.fn();
+      const view = renderWithMouseGestureProvider(
+        <MarkdownEditor
+          nodeId="node-child"
+          onChange={onChange}
+          textAnchorDecorations={[]}
+          value="Beta"
+        />
+      );
+
+      mockSetContent.mockClear();
+      mockSetTextAnchorDecorations.mockClear();
+
+      act(() => {
+        view.rerender(
+          <MarkdownEditor
+            nodeId="node-parent"
+            onChange={onChange}
+            textAnchorDecorations={[{ from: 6, kind: 'highlight', to: 10 }]}
+            value="Alpha Beta Gamma"
+          />
+        );
+      });
+
+      expect(mockSetContent).toHaveBeenCalledWith('Alpha Beta Gamma');
+      expect(mockSetTextAnchorDecorations).not.toHaveBeenCalled();
+
+      act(() => {
+        vi.runAllTimers();
+      });
+
+      expect(mockSetTextAnchorDecorations).toHaveBeenCalledWith([{ from: 6, kind: 'highlight', to: 10 }]);
+    } finally {
+      requestAnimationFrameSpy.mockRestore();
+      cancelAnimationFrameSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 }
 

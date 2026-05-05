@@ -157,6 +157,7 @@ export function installWorkspaceDebugBridge() {
       useWorkspaceStore.setState({
         ...initial,
         activeNodeId: firstNodeId,
+        isHydrated: true,
         nodeOrder: nodes.map((node) => node.id),
         nodesById: seededNodesById,
         trashedNodeIds: []
