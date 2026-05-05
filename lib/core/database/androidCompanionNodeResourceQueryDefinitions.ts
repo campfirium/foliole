@@ -37,5 +37,50 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'page_height', source: 'page_height', type: 'double' },
       { key: 'match_index', source: 'match_index', type: 'long' }
     ]
+  },
+  readableArticleActiveNodeId: {
+    resultKey: 'rows',
+    sql: "SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1",
+    columns: [{ key: 'value', source: 'value', type: 'nullableString' }]
+  },
+  readableArticleByNodeId: {
+    resultKey: 'articles',
+    sql: readableArticleSql("WHERE n.id = ? LIMIT 1"),
+    columns: readableArticleColumns()
+  },
+  readableArticleFirstNode: {
+    resultKey: 'articles',
+    sql:
+      readableArticleSql("WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> ''") +
+      ' ORDER BY COALESCE(no.position, 2147483647) ASC, n.created_at ASC LIMIT 1',
+    columns: readableArticleColumns()
+  },
+  readableArticleReferencePdfAttachment: {
+    resultKey: 'attachments',
+    sql:
+      'SELECT na.attachment_id FROM node_attachments na ' +
+      "INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' " +
+      "WHERE na.node_id = ? AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1",
+    columns: [{ key: 'attachment_id', source: 'attachment_id', type: 'string' }]
   }
 };
+
+function readableArticleSql(whereClause: string) {
+  return (
+    'SELECT n.id, n.title, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability ' +
+    'FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
+    'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash LEFT JOIN node_order no ON no.node_id = n.id ' +
+    whereClause
+  );
+}
+
+function readableArticleColumns() {
+  return [
+    { key: 'id', source: 'id', type: 'string' },
+    { key: 'title', source: 'title', type: 'nullableString' },
+    { key: 'content', source: 'content', type: 'nullableString' },
+    { key: 'body_blob_hash', source: 'body_blob_hash', type: 'nullableString' },
+    { key: 'body_blob_data', source: 'body_blob_data', type: 'nullableString' },
+    { key: 'availability', source: 'availability', type: 'nullableString' }
+  ];
+}

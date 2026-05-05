@@ -1,118 +1,77 @@
 package com.foliole.android;
 
-import android.database.Cursor;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 final class FolioleCompanionReadableArticleQuery {
 
-    private static final String ACTIVE_NODE_META_KEY = "active_node_id";
     private static final String PDF_READER_PLACEHOLDER_TEXT = "Linked PDF source ready for the reader surface.";
 
     private FolioleCompanionReadableArticleQuery() {}
 
-    static JSObject loadReadableArticle(SQLiteDatabase database) {
-        String activeNodeId = loadActiveNodeId(database);
+    static JSObject loadReadableArticle(Context context, SQLiteDatabase database) throws Exception {
+        String activeNodeId = loadActiveNodeId(context, database);
 
         if (activeNodeId != null) {
-            JSObject activeArticle = loadArticleByNodeId(database, activeNodeId);
+            JSObject activeArticle = loadArticleByNodeId(context, database, activeNodeId);
             if (activeArticle != null) {
                 return wrap(activeArticle);
             }
         }
 
-        try (Cursor cursor = database.rawQuery(
-            "SELECT n.id, n.title, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability " +
-                "FROM nodes n " +
-                "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
-                "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
-                "LEFT JOIN node_order no ON no.node_id = n.id " +
-                "WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> '' " +
-                "ORDER BY COALESCE(no.position, 2147483647) ASC, n.created_at ASC",
-            null
-        )) {
-            if (!cursor.moveToFirst()) {
-                return wrap(null);
-            }
-            return wrap(buildArticle(database, cursor));
+        JSONArray articles = FolioleCompanionNamedQueryStore.loadArray(context, database, "readableArticleFirstNode").getJSONArray("articles");
+        if (articles.length() <= 0) {
+            return wrap(null);
         }
+        return wrap(buildArticle(context, database, articles.getJSONObject(0)));
     }
 
-    private static String loadActiveNodeId(SQLiteDatabase database) {
-        try (Cursor cursor = database.query(
-            "workspace_meta",
-            new String[] { "value" },
-            "key = ?",
-            new String[] { ACTIVE_NODE_META_KEY },
-            null,
-            null,
-            null
-        )) {
-            if (!cursor.moveToFirst()) {
-                return null;
-            }
-            String value = cursor.getString(0);
-            return value == null || value.trim().isEmpty() ? null : value;
-        }
+    private static String loadActiveNodeId(Context context, SQLiteDatabase database) throws Exception {
+        String value = FolioleCompanionNamedQueryStore.loadString(context, database, "readableArticleActiveNodeId", null);
+        return value == null || value.trim().isEmpty() ? null : value;
     }
 
-    private static JSObject loadArticleByNodeId(SQLiteDatabase database, String nodeId) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT n.id, n.title, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability " +
-                "FROM nodes n " +
-                "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
-                "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
-                "WHERE n.id = ? LIMIT 1",
+    private static JSObject loadArticleByNodeId(Context context, SQLiteDatabase database, String nodeId) throws Exception {
+        JSONArray articles = FolioleCompanionNamedQueryStore
+            .loadArray(context, database, "readableArticleByNodeId", new String[] { nodeId })
+            .getJSONArray("articles");
+        if (articles.length() <= 0) {
+            return null;
+        }
+        return buildArticle(context, database, articles.getJSONObject(0));
+    }
+
+    private static String loadReferencePdfAttachmentId(Context context, SQLiteDatabase database, String nodeId) throws Exception {
+        return FolioleCompanionNamedQueryStore.loadString(
+            context,
+            database,
+            "readableArticleReferencePdfAttachment",
             new String[] { nodeId }
-        )) {
-            if (!cursor.moveToFirst()) {
-                return null;
-            }
-            return buildArticle(database, cursor);
-        }
+        );
     }
 
-    private static String loadReferencePdfAttachmentId(SQLiteDatabase database, String nodeId) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT na.attachment_id " +
-                "FROM node_attachments na " +
-                "INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' " +
-                "WHERE na.node_id = ? AND na.role = 'reference' " +
-                "ORDER BY na.attachment_id ASC LIMIT 1",
-            new String[] { nodeId }
-        )) {
-            if (!cursor.moveToFirst()) {
-                return null;
-            }
-            return cursor.getString(0);
-        }
-    }
-
-    private static String loadPdfPageText(SQLiteDatabase database, String attachmentId) {
+    private static String loadPdfPageText(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
         if (attachmentId == null || attachmentId.trim().isEmpty()) {
             return null;
         }
         StringBuilder builder = new StringBuilder();
-        try (Cursor cursor = database.query(
-            "pdf_page_text",
-            new String[] { "text" },
-            "attachment_id = ? AND TRIM(COALESCE(text, '')) <> ''",
-            new String[] { attachmentId.trim() },
-            null,
-            null,
-            "page ASC"
-        )) {
-            while (cursor.moveToNext()) {
-                String text = cursor.getString(0);
-                if (text == null || text.trim().isEmpty()) {
-                    continue;
-                }
-                if (builder.length() > 0) {
-                    builder.append("\n\n");
-                }
-                builder.append(text.trim());
+        JSONArray pages = FolioleCompanionNamedQueryStore
+            .loadArray(context, database, "pdfPageTextPages", new String[] { attachmentId.trim() })
+            .getJSONArray("pages");
+        for (int index = 0; index < pages.length(); index += 1) {
+            String text = pages.getJSONObject(index).optString("text", null);
+            if (text == null || text.trim().isEmpty()) {
+                continue;
             }
+            if (builder.length() > 0) {
+                builder.append("\n\n");
+            }
+            builder.append(text.trim());
         }
         return builder.length() == 0 ? null : builder.toString();
     }
@@ -121,8 +80,8 @@ final class FolioleCompanionReadableArticleQuery {
         return content != null && content.contains(PDF_READER_PLACEHOLDER_TEXT);
     }
 
-    private static String resolveArticleContent(SQLiteDatabase database, String title, String content, String pdfAttachmentId) {
-        String pdfText = isPdfPlaceholderContent(content) ? loadPdfPageText(database, pdfAttachmentId) : null;
+    private static String resolveArticleContent(Context context, SQLiteDatabase database, String title, String content, String pdfAttachmentId) throws Exception {
+        String pdfText = isPdfPlaceholderContent(content) ? loadPdfPageText(context, database, pdfAttachmentId) : null;
         if (pdfText == null) {
             return content;
         }
@@ -146,23 +105,27 @@ final class FolioleCompanionReadableArticleQuery {
         return bodyBlobData == null ? inlineContent : bodyBlobData;
     }
 
-    private static JSObject buildArticle(SQLiteDatabase database, Cursor cursor) {
-        String nodeId = cursor.getString(0);
-        String title = normalizeTitle(cursor.getString(1));
-        String inlineContent = cursor.getString(2);
-        String bodyBlobHash = cursor.isNull(3) ? null : cursor.getString(3);
-        String bodyBlobData = cursor.isNull(4) ? null : cursor.getString(4);
-        String availability = cursor.isNull(5) ? null : cursor.getString(5);
+    private static JSObject buildArticle(Context context, SQLiteDatabase database, JSONObject row) throws Exception {
+        String nodeId = row.getString("id");
+        String title = normalizeTitle(nullableString(row, "title"));
+        String inlineContent = nullableString(row, "content");
+        String bodyBlobHash = nullableString(row, "body_blob_hash");
+        String bodyBlobData = nullableString(row, "body_blob_data");
+        String availability = nullableString(row, "availability");
         String content = resolveContent(inlineContent, bodyBlobData);
-        String pdfAttachmentId = loadReferencePdfAttachmentId(database, nodeId);
+        String pdfAttachmentId = loadReferencePdfAttachmentId(context, database, nodeId);
         JSObject article = new JSObject();
         article.put("node_id", nodeId);
         article.put("title", title);
         article.put("body_blob_hash", bodyBlobHash);
-        article.put("content", resolveArticleContent(database, title, content, pdfAttachmentId));
+        article.put("content", resolveArticleContent(context, database, title, content, pdfAttachmentId));
         article.put("content_status", resolveContentStatus(inlineContent, bodyBlobHash, bodyBlobData, availability));
         article.put("pdf_attachment_id", pdfAttachmentId);
         return article;
+    }
+
+    private static String nullableString(JSONObject row, String key) {
+        return row.isNull(key) ? null : row.optString(key, null);
     }
 
     private static String normalizeTitle(String title) {

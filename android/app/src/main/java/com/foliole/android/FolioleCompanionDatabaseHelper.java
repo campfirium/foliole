@@ -206,8 +206,8 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionViewStateSyncStore.saveNodeViewState(context, database, record, deviceId);
     }
 
-    JSObject loadReadableArticle() {
+    JSObject loadReadableArticle() throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+        return FolioleCompanionReadableArticleQuery.loadReadableArticle(context, database);
     }
 }
