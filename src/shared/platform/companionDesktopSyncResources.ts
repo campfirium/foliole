@@ -23,7 +23,7 @@ type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;
 
 async function ackContentBlobs(endpointUrl: string, hashes: string[]) {
   if (hashes.length === 0) return;
-  await postDesktopJson(endpointUrl, CONTENT_BLOB_ACK_PATH, { hashes });
+  await postDesktopJson(endpointUrl, CONTENT_BLOB_ACK_PATH, { hashes }).catch(() => undefined);
 }
 
 function normalizeEndpointUrl(endpointUrl: string) {

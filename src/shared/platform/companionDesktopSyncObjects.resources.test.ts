@@ -165,6 +165,23 @@ async function testAcknowledgesContentBodyBatchOnce() {
   expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ hashes: [firstHash, secondHash] });
 }
 
+async function testKeepsDownloadedContentWhenAckFails() {
+  const bodyHash = '3'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
+    .mockResolvedValueOnce([]);
+  vi.stubGlobal('fetch', vi.fn(async () => {
+    throw new Error('Desktop ack failed.');
+  }));
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(result.contentBlobError).toBeNull();
+  expect(result.syncedContentBlobHashes).toEqual([bodyHash]);
+  expect(result.syncedContentBlobBytes).toBe(1024);
+}
+
 async function testFailsContentStageWhenWholeBodyBatchFails() {
   const failedHash = 'f'.repeat(64);
   syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValueOnce([{ hash: failedHash, size_bytes: 1024 }]);
@@ -277,6 +294,8 @@ describe('companion desktop sync resources', () => {
   it('continues a content body batch after one body fails', testContinuesContentBatchAfterSingleBodyFailure);
 
   it('acknowledges a content body batch with one desktop request', testAcknowledgesContentBodyBatchOnce);
+
+  it('keeps downloaded content bodies when the ack request fails', testKeepsDownloadedContentWhenAckFails);
 
   it('fails the content body stage when a whole batch cannot cache anything', testFailsContentStageWhenWholeBodyBatchFails);
 
