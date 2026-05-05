@@ -81,6 +81,7 @@ export interface WorkspaceLayoutProps {
   nodesById: Record<string, Node>;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
+  onRegisterEditorDraftFlush: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;

@@ -14,6 +14,42 @@ vi.mock('../../store/workspaceRuntimeSync', () => ({
   syncReadingProgressToRuntime: vi.fn()
 }));
 
+function expectCurrentNodeCloseFlush(invoke: ReturnType<typeof vi.fn>) {
+  expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
+    activeNodeId: 'node-2',
+    nodeViewStates: [
+      {
+        nodeId: 'node-2',
+        scrollTop: 5400,
+        selectionFrom: 48000,
+        selectionTo: 48000
+      }
+    ],
+    updatedAt: expect.any(String)
+  });
+}
+
+function expectFullTableCloseFlush(invoke: ReturnType<typeof vi.fn>) {
+  expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
+    activeNodeId: 'node-2',
+    nodeViewStates: [
+      {
+        nodeId: 'node-1',
+        scrollTop: 1200,
+        selectionFrom: 88,
+        selectionTo: 88
+      },
+      {
+        nodeId: 'node-2',
+        scrollTop: 5400,
+        selectionFrom: 48000,
+        selectionTo: 48000
+      }
+    ],
+    updatedAt: expect.any(String)
+  });
+}
+
 describe('useReadingProgressSync close flush', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -39,18 +75,30 @@ describe('useReadingProgressSync close flush', () => {
     );
 
     await expect(window.__folioleFlushReadingProgressBeforeClose?.()).resolves.toBe(true);
-    expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
-      activeNodeId: 'node-2',
-      nodeViewStates: [
-        {
-          nodeId: 'node-2',
-          scrollTop: 5400,
-          selectionFrom: 48000,
-          selectionTo: 48000
-        }
-      ],
-      updatedAt: expect.any(String)
-    });
+    expectCurrentNodeCloseFlush(invoke);
+  });
+
+  it('flushes the full node position table through the close bridge handler', async () => {
+    const invoke = vi.fn(() => Promise.resolve(null));
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+    render(
+      <HookHarness
+        activeNodeId="node-2"
+        isWorkspaceHydrated={true}
+        nodeViewById={{
+          'node-1': {
+            scrollTop: 1200,
+            selection: { from: 88, to: 88 }
+          }
+        }}
+        readingSelection={{ from: 48000, to: 48000 }}
+        scrollTop={5400}
+        selection={{ from: 3, to: 8 }}
+      />
+    );
+
+    await expect(window.__folioleFlushReadingProgressBeforeClose?.()).resolves.toBe(true);
+    expectFullTableCloseFlush(invoke);
   });
 
   it('does not flush again from effect cleanup during unmount', () => {

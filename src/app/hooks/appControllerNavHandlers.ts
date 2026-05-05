@@ -13,6 +13,7 @@ export function createLayoutNav(args: BuildControllerLayoutPropsArgs) {
 
 export function createSelectTrashNodeHandler(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string) => {
+    args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(true);
     args.trash.openTrashView();
     args.trash.setSelectedTrashNodeId(nodeId);

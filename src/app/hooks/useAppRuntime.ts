@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -122,6 +122,8 @@ function useRecentHistory() {
 function createRuntimeRefs(initialListWidth: number, initialRightSidebarWidth: number) {
   return {
     editorRef: useRef<EditorAdapter | null>(null),
+    editorDraftCloseFlushRef: useRef<(() => Promise<boolean>) | null>(null),
+    editorDraftFlushRef: useRef<(() => boolean) | null>(null),
     readingPositionRef: useRef<{ nodeId: string | null; selection: EditorSelection | null }>({
       nodeId: null,
       selection: null
@@ -186,6 +188,22 @@ function buildRuntimeState(args: {
   };
 }
 
+function useEditorDraftFlushRegistry(refs: ReturnType<typeof createRuntimeRefs>) {
+  const flushPendingEditorDraft = useCallback(() => refs.editorDraftFlushRef.current?.() ?? false, [refs.editorDraftFlushRef]);
+  const flushPendingEditorDraftImmediately = useCallback(
+    async () => (await refs.editorDraftCloseFlushRef.current?.()) ?? true,
+    [refs.editorDraftCloseFlushRef]
+  );
+  const registerPendingEditorDraftFlush = useCallback(
+    (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => {
+      refs.editorDraftFlushRef.current = flush;
+      refs.editorDraftCloseFlushRef.current = closeFlush;
+    },
+    [refs.editorDraftCloseFlushRef, refs.editorDraftFlushRef]
+  );
+  return { flushPendingEditorDraft, flushPendingEditorDraftImmediately, registerPendingEditorDraftFlush };
+}
+
 export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
   const refs = createRuntimeRefs(initialListWidth, initialRightSidebarWidth);
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
@@ -206,30 +224,35 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     setIsSearchPaletteOpen
   });
 
-  return buildRuntimeState({
-    recentHistory,
-    refs,
-    requestedSettingsCategory: settingsRequest.requestedSettingsCategory,
-    requestedSettingsDialog: settingsRequest.requestedSettingsDialog,
-    setIsCommandPaletteOpen,
-    setIsGoToNodePaletteOpen,
-    setIsImportManagementOpen,
-    setIsImmersiveMode,
-    setIsMoveToNodePaletteOpen,
-    setIsSearchPaletteOpen,
-    setIsSettingsOpen,
-    setIsViewingTrashNode,
-    setRequestedSettingsCategory: settingsRequest.setRequestedSettingsCategory,
-    setRequestedSettingsDialog: settingsRequest.setRequestedSettingsDialog,
-    state: {
-      isCommandPaletteOpen,
-      isGoToNodePaletteOpen,
-      isImmersiveMode,
-      isImportManagementOpen,
-      isMoveToNodePaletteOpen,
-      isSearchPaletteOpen,
-      isSettingsOpen,
-      isViewingTrashNode
-    }
-  });
+  const editorDraftFlush = useEditorDraftFlushRegistry(refs);
+
+  return {
+    ...buildRuntimeState({
+      recentHistory,
+      refs,
+      requestedSettingsCategory: settingsRequest.requestedSettingsCategory,
+      requestedSettingsDialog: settingsRequest.requestedSettingsDialog,
+      setIsCommandPaletteOpen,
+      setIsGoToNodePaletteOpen,
+      setIsImportManagementOpen,
+      setIsImmersiveMode,
+      setIsMoveToNodePaletteOpen,
+      setIsSearchPaletteOpen,
+      setIsSettingsOpen,
+      setIsViewingTrashNode,
+      setRequestedSettingsCategory: settingsRequest.setRequestedSettingsCategory,
+      setRequestedSettingsDialog: settingsRequest.setRequestedSettingsDialog,
+      state: {
+        isCommandPaletteOpen,
+        isGoToNodePaletteOpen,
+        isImmersiveMode,
+        isImportManagementOpen,
+        isMoveToNodePaletteOpen,
+        isSearchPaletteOpen,
+        isSettingsOpen,
+        isViewingTrashNode
+      }
+    }),
+    ...editorDraftFlush
+  };
 }

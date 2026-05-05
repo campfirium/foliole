@@ -29,6 +29,7 @@ function renderTextLocatorNavigationHook(args: {
 }) {
   const revealPosition = args.revealPosition ?? vi.fn();
   const saveActiveNodeView = args.saveActiveNodeView ?? vi.fn();
+  const flushPendingEditorDraft = vi.fn();
   const jumpToAncestorNode = args.jumpToAncestorNode ?? vi.fn(() => null);
   const openNode = args.openNode ?? vi.fn(() => null);
 
@@ -48,6 +49,7 @@ function renderTextLocatorNavigationHook(args: {
             revealPosition
           } as unknown as EditorAdapter
         },
+        flushPendingEditorDraft,
         forwardStackSize: 0,
         goBack: vi.fn(() => null),
         goForward: vi.fn(() => null),
@@ -220,6 +222,7 @@ async function runRevealAfterEditorReadyCase() {
           closeContextMenu: vi.fn(),
           completeAnchorNavigationRestore: vi.fn(),
           editorRef,
+          flushPendingEditorDraft: vi.fn(),
           forwardStackSize: 0,
           goBack: vi.fn(() => null),
           goForward: vi.fn(() => null),

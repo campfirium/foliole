@@ -7,6 +7,7 @@ import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { logRuntimeWarning } from '../../shared/platform/runtimeLogging';
 import { restartMainWindowApp } from '../../shared/platform/windowControls';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 interface RestartWithReadingProgressArgs {
@@ -56,9 +57,23 @@ function captureReadingProgressForRestart(args: RestartWithReadingProgressArgs) 
   };
 }
 
+function mergeRestartNodeViewState(
+  captured: ReturnType<typeof captureReadingProgressForRestart>,
+  nodeViewById: Record<string, NodeViewState | undefined>
+) {
+  if (!captured) {
+    return nodeViewById;
+  }
+  return {
+    ...nodeViewById,
+    [captured.nodeId]: captured.viewState
+  };
+}
+
 export async function restartAppWithReadingProgress(args: RestartWithReadingProgressArgs) {
   const captured = captureReadingProgressForRestart(args);
   const runtimeInvoke = getRuntimeInvoke();
+  const mergedNodeViewById = mergeRestartNodeViewState(captured, args.nodeViewById);
   pushDebugTrace('reading-progress.restart-begin', {
     activeNodeId: args.activeNodeId,
     capturedNodeId: captured?.nodeId ?? null,
@@ -69,14 +84,7 @@ export async function restartAppWithReadingProgress(args: RestartWithReadingProg
     try {
       await runtimeInvoke(NATIVE_COMMANDS.saveReadingProgress, {
         activeNodeId: captured.nodeId,
-        nodeViewStates: [
-          {
-            nodeId: captured.nodeId,
-            scrollTop: captured.viewState.scrollTop,
-            selectionFrom: captured.viewState.selection.from,
-            selectionTo: captured.viewState.selection.to
-          }
-        ],
+        nodeViewStates: toRuntimeNodeViewStates(mergedNodeViewById),
         updatedAt: new Date().toISOString()
       });
       pushDebugTrace('reading-progress.restart-saved', {

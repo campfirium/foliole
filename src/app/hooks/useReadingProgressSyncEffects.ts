@@ -9,6 +9,12 @@ import { captureEditorNodeViewState, isSameNodeViewState } from './useReadingPro
 const READING_PROGRESS_SYNC_INTERVAL_MS = 1500;
 const READING_PROGRESS_DEBOUNCE_MS = 400;
 
+declare global {
+  interface Window {
+    __folioleFlushReadingProgressBeforeClose?: () => Promise<boolean>;
+  }
+}
+
 interface ReadingProgressEffectsOptions {
   activeNodeId: string | null;
   flushReadingProgress: () => void;

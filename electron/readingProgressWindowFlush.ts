@@ -18,7 +18,7 @@ export async function flushWindowReadingProgress(window: FlushableWindow | null 
   }
   try {
     return (await window.webContents.executeJavaScript(
-      'globalThis.__folioleFlushReadingProgressBeforeClose?.() ?? false',
+      'Promise.all([globalThis.__folioleFlushReadingProgressBeforeClose?.() ?? true, globalThis.__folioleFlushPendingEditorDraftBeforeClose?.() ?? true]).then((results) => results.every(Boolean))',
       true
     )) === true;
   } catch (error) {

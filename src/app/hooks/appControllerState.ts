@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
+import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -135,7 +136,8 @@ function useAnchorNavigationReadingPosition(runtime: ReturnType<typeof useAppRun
   );
 
   const completeAnchorNavigationRestore = useCallback(
-    (nodeId: string, _reason: string) => {
+    (nodeId: string, reason: string) => {
+      void reason;
       const current = runtime.readingPositionSyncRef.current;
       if (current.nodeId !== nodeId || current.state?.reason !== 'anchor-navigation') {
         return;
@@ -152,6 +154,69 @@ function useAnchorNavigationReadingPosition(runtime: ReturnType<typeof useAppRun
     beginAnchorNavigationRestore,
     completeAnchorNavigationRestore
   };
+}
+
+function useWorkspaceEditorController(
+  ws: ReturnType<typeof useWorkspaceSelectors>,
+  runtime: ReturnType<typeof useAppRuntime>,
+  activeNode: Node | undefined,
+  saveActiveNodeView: ReturnType<typeof useSaveActiveNodeView>,
+  anchorNavigationReadingPosition: ReturnType<typeof useAnchorNavigationReadingPosition>
+) {
+  const nav = useWorkspaceNavigation({
+    activeNodeContent: activeNode?.content ?? null,
+    activeNodeId: ws.activeNodeId,
+    activeNodeParentId: activeNode?.parentNodeId ?? null,
+    backStackSize: ws.navigation.backStack.length,
+    beginAnchorNavigationRestore: anchorNavigationReadingPosition.beginAnchorNavigationRestore,
+    closeContextMenu: () => undefined,
+    completeAnchorNavigationRestore: anchorNavigationReadingPosition.completeAnchorNavigationRestore,
+    editorRef: runtime.editorRef,
+    flushPendingEditorDraft: runtime.flushPendingEditorDraft,
+    forwardStackSize: ws.navigation.forwardStack.length,
+    goBack: ws.goBack,
+    goForward: ws.goForward,
+    goToParent: ws.goToParent,
+    jumpToAncestorNode: ws.jumpToAncestorNode,
+    nodesById: ws.nodesById,
+    openNode: ws.openNode,
+    saveActiveNodeView
+  });
+  const editorCtx = useEditorContextCommands({
+    activeNode,
+    activeNodeId: ws.activeNodeId,
+    createChildNode: ws.createChildNode,
+    createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection,
+    createImageClozeNodes: ws.createImageClozeNodes,
+    createQANodeFromSelection: ws.createQANodeFromSelection,
+    deleteNodePermanently: ws.deleteNodePermanently,
+    deleteImageClozeRegion: ws.deleteImageClozeRegion,
+    editorRef: runtime.editorRef,
+    isTrashViewOpen: runtime.isViewingTrashNode,
+    trashedNodeIds: ws.trashedNodeIds,
+    nodesById: ws.nodesById,
+    onExitImmersiveMode: () => runtime.setIsImmersiveMode(false),
+    onSelectNode: (nodeId) => nav.handleSelectNode(nodeId),
+    updateNodeContent: ws.updateNodeContent
+  });
+  return { editorCtx, nav };
+}
+
+function useEditorDraftCloseBridge(
+  isWorkspaceHydrated: boolean,
+  flushPendingEditorDraftImmediately: () => Promise<boolean>
+) {
+  useEffect(() => {
+    if (!isWorkspaceHydrated) {
+      return;
+    }
+    window.__folioleFlushPendingEditorDraftBeforeClose = flushPendingEditorDraftImmediately;
+    return () => {
+      if (window.__folioleFlushPendingEditorDraftBeforeClose === flushPendingEditorDraftImmediately) {
+        delete window.__folioleFlushPendingEditorDraftBeforeClose;
+      }
+    };
+  }, [flushPendingEditorDraftImmediately, isWorkspaceHydrated]);
 }
 
 export function useWorkspaceControllerState(
@@ -173,24 +238,14 @@ export function useWorkspaceControllerState(
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
   const anchorNavigationReadingPosition = useAnchorNavigationReadingPosition(runtime);
   const saveActiveNodeView = useSaveActiveNodeView(runtime, ws);
-  const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, beginAnchorNavigationRestore: anchorNavigationReadingPosition.beginAnchorNavigationRestore, closeContextMenu: () => undefined, completeAnchorNavigationRestore: anchorNavigationReadingPosition.completeAnchorNavigationRestore, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, nodesById: ws.nodesById, openNode: ws.openNode, saveActiveNodeView });
-  const editorCtx = useEditorContextCommands({
+  const { editorCtx, nav } = useWorkspaceEditorController(
+    ws,
+    runtime,
     activeNode,
-    activeNodeId: ws.activeNodeId,
-    createChildNode: ws.createChildNode,
-    createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection,
-    createImageClozeNodes: ws.createImageClozeNodes,
-    createQANodeFromSelection: ws.createQANodeFromSelection,
-    deleteNodePermanently: ws.deleteNodePermanently,
-    deleteImageClozeRegion: ws.deleteImageClozeRegion,
-    editorRef: runtime.editorRef,
-    isTrashViewOpen: runtime.isViewingTrashNode,
-    trashedNodeIds: ws.trashedNodeIds,
-    nodesById: ws.nodesById,
-    onExitImmersiveMode: () => runtime.setIsImmersiveMode(false),
-    onSelectNode: (nodeId) => nav.handleSelectNode(nodeId),
-    updateNodeContent: ws.updateNodeContent
-  });
+    saveActiveNodeView,
+    anchorNavigationReadingPosition
+  );
+  useEditorDraftCloseBridge(isWorkspaceHydrated, runtime.flushPendingEditorDraftImmediately);
   useWorkspaceReadingProgressPersistence({
     activeNodeId: ws.activeNodeId,
     editorRef: runtime.editorRef,

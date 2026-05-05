@@ -8,21 +8,10 @@ import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ReadingPositionSyncState } from './useAppRuntime';
-import {
-  useCloseBridgeRegistration,
-  useDebouncedReadingProgressPersistence,
-  useImmediateReadingProgressCapture,
-  useReadingProgressLifecycle
-} from './useReadingProgressSyncEffects';
-import {
-  captureEditorNodeViewState,
-  createReadingProgressPayload,
-  createReadingProgressSignature,
-  type ResolvedReadingProgressState,
-  updateCapturedNodeViewState
-} from './useReadingProgressSyncSupport';
+import { useCloseBridgeRegistration, useDebouncedReadingProgressPersistence, useImmediateReadingProgressCapture, useReadingProgressLifecycle } from './useReadingProgressSyncEffects';
+import { captureEditorNodeViewState, createReadingProgressPayload, createReadingProgressSignature, type ResolvedReadingProgressState, updateCapturedNodeViewState } from './useReadingProgressSyncSupport';
 
-interface ReadingProgressSyncOptions {
+export interface ReadingProgressSyncOptions {
   activeNodeId: string | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
   getReadingPositionSelection?: () => { from: number; to: number } | null;
@@ -33,21 +22,39 @@ interface ReadingProgressSyncOptions {
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }
 
-declare global {
-  interface Window {
-    __folioleFlushReadingProgressBeforeClose?: () => Promise<boolean>;
-  }
+function useLatestReadingProgressState(args: ReadingProgressSyncOptions) {
+  const activeNodeIdRef = useRef(args.activeNodeId);
+  const isWorkspaceHydratedRef = useRef(args.isWorkspaceHydrated);
+  const nodeViewByIdRef = useRef(args.nodeViewById);
+
+  activeNodeIdRef.current = args.activeNodeId;
+  isWorkspaceHydratedRef.current = args.isWorkspaceHydrated;
+  nodeViewByIdRef.current = args.nodeViewById;
+
+  return {
+    activeNodeIdRef,
+    isWorkspaceHydratedRef,
+    nodeViewByIdRef
+  };
+}
+function createReadingProgressOptions(args: ReadingProgressSyncOptions): ReadingProgressSyncOptions {
+  return args;
 }
 
-function useResolvedReadingProgressState(args: ReadingProgressSyncOptions) {
+function useResolvedReadingProgressState(
+  args: ReadingProgressSyncOptions,
+  latest: ReturnType<typeof useLatestReadingProgressState>
+) {
   return useCallback(
     (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null): ResolvedReadingProgressState | null => {
-      if (!args.isWorkspaceHydrated) {
+      if (!latest.isWorkspaceHydratedRef.current) {
         return null;
       }
       const shouldCaptureEditorState = captureNodeIdOverride !== null;
       const captureNodeId =
-        typeof captureNodeIdOverride === 'undefined' ? args.activeNodeId : captureNodeIdOverride;
+        typeof captureNodeIdOverride === 'undefined'
+          ? latest.activeNodeIdRef.current
+          : captureNodeIdOverride;
       const captured = shouldCaptureEditorState
         ? captureEditorNodeViewState(
             captureNodeId,
@@ -60,15 +67,17 @@ function useResolvedReadingProgressState(args: ReadingProgressSyncOptions) {
         captured,
         mergedNodeViewById: captured
           ? {
-              ...args.nodeViewById,
+              ...latest.nodeViewByIdRef.current,
               [captured.nodeId]: captured.viewState
             }
-          : args.nodeViewById,
+          : latest.nodeViewByIdRef.current,
         resolvedActiveNodeId:
-          typeof activeNodeIdOverride === 'undefined' ? args.activeNodeId : activeNodeIdOverride
+          typeof activeNodeIdOverride === 'undefined'
+            ? latest.activeNodeIdRef.current
+            : activeNodeIdOverride
       };
     },
-    [args]
+    [args, latest]
   );
 }
 
@@ -106,7 +115,6 @@ function useReadingProgressFlushCallbacks(args: {
 
   return { flushReadingProgress, flushReadingProgressImmediately };
 }
-
 function flushReadingProgressToRuntime(args: {
   activeNodeIdOverride?: string | null;
   args: {
@@ -158,7 +166,6 @@ function flushReadingProgressToRuntime(args: {
     createReadingProgressPayload(resolved.resolvedActiveNodeId, resolved.mergedNodeViewById)
   );
 }
-
 async function flushReadingProgressToCloseBridge(args: {
   args: {
     isWorkspaceHydrated: boolean;
@@ -210,15 +217,18 @@ export function useReadingProgressSync({
   nodeViewById,
   setNodeViewState
 }: ReadingProgressSyncOptions) {
-  const resolveCapturedReadingProgress = useResolvedReadingProgressState({
+  const options = createReadingProgressOptions({
     activeNodeId,
     editorRef,
     getReadingPositionSelection,
+    getReadingPositionSyncState,
     isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById,
     setNodeViewState
   });
+  const latest = useLatestReadingProgressState(options);
+  const resolveCapturedReadingProgress = useResolvedReadingProgressState(options, latest);
   const { flushReadingProgress, flushReadingProgressImmediately } = useReadingProgressFlushCallbacks({
     getReadingPositionSyncState,
     isWorkspaceHydrated,
@@ -226,7 +236,6 @@ export function useReadingProgressSync({
     resolveCapturedReadingProgress,
     setNodeViewState
   });
-
   useCloseBridgeRegistration(isWorkspaceHydrated, flushReadingProgressImmediately);
   useReadingProgressLifecycle({
     activeNodeId,

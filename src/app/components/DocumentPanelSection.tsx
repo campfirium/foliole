@@ -1,5 +1,5 @@
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -17,6 +17,7 @@ import {
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
+import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
 import { getDocumentPanelView } from './documentPanelSectionModel';
@@ -57,6 +58,7 @@ export interface DocumentPanelSectionProps {
   showAnswerSection: boolean;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
+  onRegisterEditorDraftFlush?: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
   onNodePriorityChange?: (nodeId: string, priority: number | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -196,15 +198,40 @@ function useDocumentPanelPerformanceMarkers(
   }, [isEditorDocumentLoaded, isEmptyState, props.editorContent, props.editorNodeId]);
 }
 
+function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
+  const commitEditorContent = useCallback((content: string) => {
+    if (props.editorNodeId) {
+      props.onNodeContentChange(props.editorNodeId, content);
+      return;
+    }
+    props.onEditorChange(content);
+  }, [props]);
+  const editorDraft = useEditorDraftSync({
+    committedContent: props.editorContent,
+    nodeId: props.editorNodeId,
+    onCommit: commitEditorContent,
+    onRegisterFlush: props.onRegisterEditorDraftFlush
+  });
+  return useMemo(
+    () => ({
+      ...props,
+      editorContent: editorDraft.editorContent,
+      onEditorChange: editorDraft.handleEditorChange
+    }),
+    [editorDraft.editorContent, editorDraft.handleEditorChange, props]
+  );
+}
+
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
-  const model = useDocumentPanelSectionModel(props);
-  const interactions = useDocumentPanelInteractions(props);
-  const resolvedProps = buildResolvedDocumentPanelProps(props);
+  const draftProps = useDocumentPanelDraftProps(props);
+  const model = useDocumentPanelSectionModel(draftProps);
+  const interactions = useDocumentPanelInteractions(draftProps);
+  const resolvedProps = buildResolvedDocumentPanelProps(draftProps);
   const topicBacklinks = buildTopicBacklinks({
-    activeNodeId: props.activeNodeId,
+    activeNodeId: draftProps.activeNodeId,
     backlinks: model.backlinks,
-    nodesById: props.nodesById
+    nodesById: draftProps.nodesById
   });
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={model.documentLayoutStyle}>
@@ -235,7 +262,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         handleSourceUpdateDraftChange={model.handleSourceUpdateDraftChange}
         handleSourceUpdatePanelOpenChange={model.handleSourceUpdatePanelOpenChange}
         isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}
-        props={props}
+        props={draftProps}
         sourceUpdatePreview={model.sourceUpdatePreview}
       />
     </section>

@@ -176,6 +176,19 @@ function createAnswerChangeHandler(args: BuildControllerLayoutPropsArgs) {
   };
 }
 
+function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) {
+  return (content: string) => {
+    if (args.runtime.isViewingTrashNode) {
+      return;
+    }
+    if (args.ws.activeNodeId) {
+      args.ws.updateNodeContent(args.ws.activeNodeId, content);
+      return;
+    }
+    args.ws.createChildNode(INBOX_NODE_ID, content);
+  };
+}
+
 function createEditorReadyHandler(args: BuildControllerLayoutPropsArgs) {
   return (adapter: EditorAdapter | null) => {
     args.runtime.editorRef.current = adapter;
@@ -194,6 +207,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
   return {
     onAnswerChange: createAnswerChangeHandler(args),
     onEditorChange: createEditorChangeHandler(args),
+    onRegisterEditorDraftFlush: args.runtime.registerPendingEditorDraftFlush,
     onEnterPriorityQuickSet: () => {
       args.priorityQuickSet.enter();
     },
@@ -240,18 +254,6 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
   };
 }
 
-function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) {
-  return (content: string) => {
-    if (args.runtime.isViewingTrashNode) {
-      return;
-    }
-    if (args.ws.activeNodeId) {
-      args.ws.updateNodeContent(args.ws.activeNodeId, content);
-      return;
-    }
-    args.ws.createChildNode(INBOX_NODE_ID, content);
-  };
-}
 function createNodeContentChangeHandler(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string, content: string) => {
     if (args.runtime.isViewingTrashNode) {

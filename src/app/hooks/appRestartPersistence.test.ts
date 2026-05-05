@@ -114,3 +114,41 @@ it('normalizes scroll and selection before flushing on restart', async () => {
     updatedAt: expect.any(String)
   });
 });
+
+it('preserves previously saved node positions when restarting from another node', async () => {
+  const invoke = vi.fn(() => Promise.resolve(null));
+  mocks.getRuntimeInvoke.mockReturnValue(invoke);
+
+  await restartAppWithReadingProgress({
+    activeNodeId: 'node-2',
+    editorRef: createEditorRef(5400, { from: 48000, to: 48000 }),
+    getReadingPositionSelection: () => ({ from: 48000, to: 48000 }),
+    isViewingTrashNode: false,
+    nodeViewById: {
+      'node-1': {
+        scrollTop: 1200,
+        selection: { from: 88, to: 88 }
+      }
+    },
+    setNodeViewState: vi.fn()
+  });
+
+  expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
+    activeNodeId: 'node-2',
+    nodeViewStates: [
+      {
+        nodeId: 'node-1',
+        scrollTop: 1200,
+        selectionFrom: 88,
+        selectionTo: 88
+      },
+      {
+        nodeId: 'node-2',
+        scrollTop: 5400,
+        selectionFrom: 48000,
+        selectionTo: 48000
+      }
+    ],
+    updatedAt: expect.any(String)
+  });
+});

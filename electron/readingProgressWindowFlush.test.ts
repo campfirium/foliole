@@ -40,7 +40,7 @@ it('executes the renderer close flush when available', async () => {
 
   await expect(flushWindowReadingProgress(window as never)).resolves.toBe(true);
   expect(window.webContents.executeJavaScript).toHaveBeenCalledWith(
-    'globalThis.__folioleFlushReadingProgressBeforeClose?.() ?? false',
+    'Promise.all([globalThis.__folioleFlushReadingProgressBeforeClose?.() ?? true, globalThis.__folioleFlushPendingEditorDraftBeforeClose?.() ?? true]).then((results) => results.every(Boolean))',
     true
   );
 });

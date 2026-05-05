@@ -13,7 +13,8 @@ import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 export function usePreparedOpenNodeAction(
-  beforeNavigate: () => void,
+  flushPendingEditorDraft: () => void,
+  prepareForNavigation: (nodeIdOverride?: string | null) => void,
   finalize: (result: NodeNavigationResult | null) => void,
   markRequested: (nodeId: string) => void
 ) {
@@ -22,7 +23,8 @@ export function usePreparedOpenNodeAction(
   return useCallback(
     async (nodeId: string, focusAnchor: NodeNavigationResult['focusAnchor'] = null) => {
       markRequested(nodeId);
-      beforeNavigate();
+      flushPendingEditorDraft();
+      prepareForNavigation();
 
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
       if (!targetNode || isNodeDocumentLoaded(targetNode) || !getRuntimeInvoke()) {
@@ -58,7 +60,7 @@ export function usePreparedOpenNodeAction(
 
       finalize({ ...result, focusAnchor });
     },
-    [beforeNavigate, finalize, markRequested]
+    [finalize, flushPendingEditorDraft, markRequested, prepareForNavigation]
   );
 }
 
@@ -67,7 +69,8 @@ export function useBreadcrumbSelectionAction(
   nodesById: Record<string, Node>,
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null,
   openNode: (nodeId: string) => NodeNavigationResult | null,
-  saveActiveNodeView: (nodeIdOverride?: string | null) => void,
+  flushPendingEditorDraft: () => void,
+  prepareForNavigation: (nodeIdOverride?: string | null) => void,
   finalizeNavigation: (result: NodeNavigationResult | null) => void,
   markSelectionRequested: (nodeId: string) => void,
   ensureNodeReady: (nodeId: string) => Promise<void>,
@@ -91,8 +94,9 @@ export function useBreadcrumbSelectionAction(
       }
 
       markSelectionRequested(nodeId);
+      flushPendingEditorDraft();
+      prepareForNavigation(activeNodeId);
       const result = jumpToAncestorNode(nodeId) ?? openNode(nodeId);
-      saveActiveNodeView(activeNodeId);
       finalizeNavigation(result);
       void ensureNodeReady(nodeId);
     },
@@ -105,7 +109,8 @@ export function useBreadcrumbSelectionAction(
       nodesById,
       openNode,
       openPreparedNode,
-      saveActiveNodeView
+      prepareForNavigation,
+      flushPendingEditorDraft,
     ]
   );
 }

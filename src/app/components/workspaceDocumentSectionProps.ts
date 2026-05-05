@@ -11,6 +11,38 @@ function buildReadingPositionProps(props: WorkspaceLayoutProps) {
   };
 }
 
+function buildDocumentEditorProps(
+  isImmersiveEditing: boolean,
+  onShouldSuppressSelectionRestore: () => boolean,
+  props: WorkspaceLayoutProps
+) {
+  return {
+    editorNodeId: props.editorNodeId,
+    ...buildReadingPositionProps(props),
+    isDocumentResizing: props.isDocumentResizing,
+    isEditorReadOnly: props.isEditorReadOnly,
+    isImmersiveEditing,
+    isImmersiveMode: props.isImmersiveMode,
+    isPriorityQuickSetActive: props.isPriorityQuickSetActive,
+    onAnswerChange: props.onAnswerChange,
+    onEditorChange: props.onEditorChange,
+    onEditorContextMenu: props.onEditorContextMenu,
+    onEditorReady: props.onEditorReady,
+    onRegisterEditorDraftFlush: props.onRegisterEditorDraftFlush,
+    onShouldSuppressSelectionRestore,
+    onNodeContentChange: props.onNodeContentChange,
+    onNodePriorityChange: props.onNodePriorityChange,
+    onPersistPdfViewState: props.onPersistPdfViewState,
+    onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
+    onRevealDocumentPosition: props.onRevealDocumentPosition,
+    onRevealDocumentSelection: props.onRevealDocumentSelection,
+    onStartDocumentResize: props.onStartDocumentResize,
+    priorityQuickSetShortcutLabel: props.priorityQuickSetShortcutLabel,
+    reviewSchedulerSettings: props.reviewSchedulerSettings,
+    showAnswerSection: props.showAnswerSection
+  };
+}
+
 export function buildDocumentSectionProps(
   documentNodeId: string | null,
   editorAppearanceKey: string,
@@ -29,16 +61,9 @@ export function buildDocumentSectionProps(
     editableNodeId: props.editorNodeId,
     editorAppearanceKey,
     editorContent: props.editorContent,
-    editorNodeId: props.editorNodeId,
-    ...buildReadingPositionProps(props),
-    isDocumentResizing: props.isDocumentResizing,
-    isEditorReadOnly: props.isEditorReadOnly,
-    isImmersiveEditing,
-    isImmersiveMode: props.isImmersiveMode,
-    isPriorityQuickSetActive: props.isPriorityQuickSetActive,
+    ...buildDocumentEditorProps(isImmersiveEditing, onShouldSuppressSelectionRestore, props),
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,
-    onAnswerChange: props.onAnswerChange,
     onCloseContextMenu: props.onCloseContextMenu,
     onCopyImage: props.onCopyImage,
     onCreateCloze: props.onCreateCloze,
@@ -47,27 +72,13 @@ export function buildDocumentSectionProps(
     onCreatePdfHighlight: props.onCreatePdfHighlight,
     onCutImage: props.onCutImage,
     onDeleteImage: props.onDeleteImage,
-    onEditorChange: props.onEditorChange,
-    onEditorContextMenu: props.onEditorContextMenu,
-    onEditorReady: props.onEditorReady,
-    onShouldSuppressSelectionRestore,
     onExportImage: props.onExportImage,
     onGoBack: props.onGoBack,
     onGoForward: props.onGoForward,
     onGoParent: props.onGoParent,
-    onNodeContentChange: props.onNodeContentChange,
-    onNodePriorityChange: props.onNodePriorityChange,
-    onPersistPdfViewState: props.onPersistPdfViewState,
     onResetLayout: props.onResetLayout,
-    onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
-    onRevealDocumentPosition: props.onRevealDocumentPosition,
-    onRevealDocumentSelection: props.onRevealDocumentSelection,
     onSelectBreadcrumbNode: props.onSelectBreadcrumbNode,
     onSelectNode: props.onSelectNode,
-    onStartDocumentResize: props.onStartDocumentResize,
-    priorityQuickSetShortcutLabel: props.priorityQuickSetShortcutLabel,
-    reviewSchedulerSettings: props.reviewSchedulerSettings,
-    showAnswerSection: props.showAnswerSection,
     trashedNodeIds: props.trashedNodeIds
   };
 }

@@ -5,6 +5,7 @@ import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps'
 
 export function createOpenNotesView(args: BuildControllerLayoutPropsArgs) {
   return () => {
+    args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
     args.trash.closeTrashView();
     args.virtualView.closeVirtualView();
@@ -17,12 +18,14 @@ export function createToggleTrashView(args: BuildControllerLayoutPropsArgs, open
       openNotesView();
       return;
     }
+    args.runtime.flushPendingEditorDraft();
     args.trash.openTrashView();
   };
 }
 
 export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string) => {
+    args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
     const selectedNode = args.ws.nodesById[nodeId];
     if (
@@ -51,6 +54,7 @@ export function createToggleVirtualView(args: BuildControllerLayoutPropsArgs, op
       openNotesView();
       return;
     }
+    args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
     args.trash.closeTrashView();
     args.virtualView.openVirtualView();

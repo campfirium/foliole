@@ -71,18 +71,20 @@ function createRestartAppCommand(args: {
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
-  return () =>
+  return () => {
+    const latestWorkspaceState = useWorkspaceStore.getState();
     restartAppWithReadingProgress({
-      activeNodeId: args.ws.activeNodeId,
+      activeNodeId: latestWorkspaceState.activeNodeId,
       editorRef: args.runtime.editorRef,
       getReadingPositionSelection: () =>
-        args.runtime.readingPositionRef.current.nodeId === args.ws.activeNodeId
+        args.runtime.readingPositionRef.current.nodeId === latestWorkspaceState.activeNodeId
           ? args.runtime.readingPositionRef.current.selection
           : null,
       isViewingTrashNode: args.runtime.isViewingTrashNode,
-      nodeViewById: args.ws.nodeViewById,
-      setNodeViewState: args.ws.setNodeViewState
+      nodeViewById: latestWorkspaceState.nodeViewById,
+      setNodeViewState: latestWorkspaceState.setNodeViewState
     });
+  };
 }
 
 function createPaletteRunnerArgs(args: {

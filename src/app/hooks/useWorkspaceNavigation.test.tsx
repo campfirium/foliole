@@ -48,6 +48,7 @@ vi.mock('../../shared/platform/performanceDiagnosticsProbe', () => ({
 
 async function runPdfBreadcrumbJumpTest() {
   const saveActiveNodeView = vi.fn();
+  const flushPendingEditorDraft = vi.fn();
   const jumpToAncestorNode = vi.fn(() => ({
     focusAnchor: {
       id: 'pdf-hl-1',
@@ -68,6 +69,7 @@ async function runPdfBreadcrumbJumpTest() {
         closeContextMenu: vi.fn(),
         completeAnchorNavigationRestore: vi.fn(),
         editorRef: { current: null },
+        flushPendingEditorDraft,
         forwardStackSize: 0,
         goBack: vi.fn(() => null),
         goForward: vi.fn(() => null),
@@ -90,6 +92,7 @@ async function runPdfBreadcrumbJumpTest() {
 
 async function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
   const saveActiveNodeView = vi.fn();
+  const flushPendingEditorDraft = vi.fn();
   const jumpToAncestorNode = vi.fn(() => ({
     focusAnchor: {
       id: 'pdf-hl-2',
@@ -112,6 +115,7 @@ async function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
         closeContextMenu: vi.fn(),
         completeAnchorNavigationRestore: vi.fn(),
         editorRef: { current: editorAdapter },
+        flushPendingEditorDraft,
         forwardStackSize: 0,
         goBack: vi.fn(() => null),
         goForward: vi.fn(() => null),
@@ -138,6 +142,9 @@ async function runBreadcrumbSelectionOrderTest() {
   const saveActiveNodeView = vi.fn(() => {
     callOrder.push('save-view');
   });
+  const flushPendingEditorDraft = vi.fn(() => {
+    callOrder.push('flush-draft');
+  });
   const jumpToAncestorNode = vi.fn(() => {
     callOrder.push('jump-node');
     return { focusAnchor: null, nodeId: 'node-1' };
@@ -156,6 +163,7 @@ async function runBreadcrumbSelectionOrderTest() {
       closeContextMenu: vi.fn(),
       completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
+      flushPendingEditorDraft,
       forwardStackSize: 0,
       goBack: vi.fn(() => null),
       goForward: vi.fn(() => null),
@@ -171,10 +179,9 @@ async function runBreadcrumbSelectionOrderTest() {
     await result.current.handleSelectBreadcrumbNode('node-1');
   });
 
-  expect(callOrder).toEqual(['selection-requested', 'jump-node', 'save-view']);
+  expect(callOrder).toEqual(['selection-requested', 'flush-draft', 'save-view', 'jump-node']);
   expect(saveActiveNodeView).toHaveBeenCalledWith('node-2');
 }
-
 
 async function runSavePositionBeforeNodeSelectionTest() {
   const callOrder: string[] = [];
@@ -184,6 +191,9 @@ async function runSavePositionBeforeNodeSelectionTest() {
   });
   const saveActiveNodeView = vi.fn(() => {
     callOrder.push('save-view');
+  });
+  const flushPendingEditorDraft = vi.fn(() => {
+    callOrder.push('flush-draft');
   });
   markNodeSelectionRequested.mockImplementation(() => {
     callOrder.push('selection-requested');
@@ -199,6 +209,7 @@ async function runSavePositionBeforeNodeSelectionTest() {
       closeContextMenu: vi.fn(),
       completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
+      flushPendingEditorDraft,
       forwardStackSize: 0,
       goBack: vi.fn(() => null),
       goForward: vi.fn(() => null),
@@ -214,7 +225,7 @@ async function runSavePositionBeforeNodeSelectionTest() {
     await result.current.handleSelectNode('node-2');
   });
 
-  expect(callOrder).toEqual(['selection-requested', 'save-view', 'open-node']);
+  expect(callOrder).toEqual(['selection-requested', 'flush-draft', 'save-view', 'open-node']);
   expect(markNodeSelectionRequested).toHaveBeenCalledWith('node-2', navigationTestNodes);
 }
 
@@ -227,6 +238,9 @@ function createPrefetchHookHarness(callOrder: string[]) {
   const saveActiveNodeView = vi.fn(() => {
     callOrder.push('save-view');
   });
+  const flushPendingEditorDraft = vi.fn(() => {
+    callOrder.push('flush-draft');
+  });
 
   const view = renderHook(() =>
     useWorkspaceNavigation({
@@ -238,6 +252,7 @@ function createPrefetchHookHarness(callOrder: string[]) {
       closeContextMenu: vi.fn(),
       completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
+      flushPendingEditorDraft,
       forwardStackSize: 0,
       goBack: vi.fn(() => null),
       goForward: vi.fn(() => null),
@@ -270,6 +285,7 @@ async function runPrefetchBeforeNodeSelectionTest() {
 
   expect(callOrder).toEqual([
     'selection-requested',
+    'flush-draft',
     'save-view',
     'load-started',
     'load-resolved',
