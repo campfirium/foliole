@@ -17,6 +17,7 @@ import {
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
 import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import {
   loadReviewSchedulerSettings,
@@ -135,6 +136,9 @@ export async function handleStorageCommand(
   if (command === NATIVE_COMMANDS.loadImportOverview) {
     return toNativeImportOverview();
   }
+  if (command === NATIVE_COMMANDS.loadImportManagerSettings) {
+    return loadImportManagerSettings();
+  }
   if (command === NATIVE_COMMANDS.loadAppSettingsState) {
     return loadAppSettingsState();
   }
@@ -142,6 +146,9 @@ export async function handleStorageCommand(
     await saveAppSettingsState(readSettingsObject(args.settings));
     await refreshManagedInboxMonitorFromSettings();
     return null;
+  }
+  if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
+    return saveImportManagerSettings(readSettingsObject(args.settings));
   }
   if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) {
     return loadReviewSchedulerSettings();

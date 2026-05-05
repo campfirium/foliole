@@ -1,19 +1,34 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { applyReadwiseRootPath, createReadwiseImportSources } from './importSourceWorkspaceModel';
+
 vi.mock('../../shared/platform/importBridge', () => ({
   selectRuntimeImportDirectory: vi.fn(async () => '/tmp/chosen-folder')
 }));
 
-beforeEach(() => {
-  window.electronAPI = {
-    invoke: vi.fn(async () => null),
+function createMockElectronApi() {
+  let persistedSettings: Record<string, unknown> | null = null;
+  return {
+    invoke: vi.fn(async (command: string, args?: { settings?: Record<string, unknown> }) => {
+      if (command === 'load_import_manager_settings') {
+        return persistedSettings;
+      }
+      if (command === 'save_import_manager_settings') {
+        persistedSettings = args?.settings ?? null;
+        return persistedSettings;
+      }
+      return null;
+    }),
     onManagedInboxUpdated: () => () => undefined,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   };
+}
+
+beforeEach(() => {
+  window.electronAPI = createMockElectronApi();
 });
 
 it('shows readwise defaults for the four readwise source groups', async () => {
@@ -84,13 +99,47 @@ it('shows only the last folder name and keeps the full path in the hover hint', 
   fireEvent.click(screen.getByLabelText('Readwise root folder'));
   fireEvent.click(screen.getByLabelText('Original folder draft-import-source-101'));
 
-  expect(await screen.findByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
+  await waitFor(() => {
+    expect(screen.getByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
+  });
   expect(screen.queryByText('/tmp/chosen-folder')).not.toBeInTheDocument();
-  expect(await screen.findByLabelText('Readwise original folder draft-import-source-1')).toHaveTextContent('Articles');
+  await waitFor(() => {
+    expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toHaveTextContent('Articles');
+  });
   expect(screen.queryByText('/tmp/chosen-folder/Full Document Contents/Articles')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toHaveAttribute(
     'title',
     '/tmp/chosen-folder/Full Document Contents/Articles'
   );
   expect(screen.getByLabelText('Original folder draft-import-source-101')).toHaveAttribute('title', '/tmp/chosen-folder');
+});
+
+it('persists import manager settings after the panel remounts', async () => {
+  const { unmount } = render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByLabelText('Readwise root folder'));
+  fireEvent.change(screen.getByLabelText('Trigger draft-import-source-1'), { target: { value: 'manual' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Copy draft-import-source-101' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Hide details' }));
+
+  await waitFor(() => {
+    expect(window.electronAPI?.invoke).toHaveBeenLastCalledWith(
+      'save_import_manager_settings',
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          detailsOpen: false,
+          readwiseRootPath: '/tmp/chosen-folder'
+        })
+      })
+    );
+  });
+
+  unmount();
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  expect(await screen.findByRole('button', { name: 'Detailed settings' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Detailed settings' }));
+  expect(await screen.findByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
+  expect(screen.getByLabelText('Trigger draft-import-source-1')).toHaveValue('manual');
+  expect(screen.getByLabelText('Original folder draft-import-source-103')).toBeInTheDocument();
 });
