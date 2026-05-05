@@ -5,20 +5,17 @@ import type {
   MouseEvent as ReactMouseEvent
 } from 'react';
 
-import { AppButton } from '../../../shared/ui';
-
 import type { NodeSelectModifiers } from './NodeListTreeState';
-import { NodeTreeRowFrame } from './NodeTreeRowFrame';
-import { NodeTreeRowIcon } from './NodeTreeRowIcon';
-import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
-import { NodeTreeRowExpandToggle, renderNodeLabel } from './NodeTreeRowParts';
-import { useRenameState } from './NodeTreeRowRename';
 import {
-  resolveNodeRowButtonClassName,
-  resolveNodeRowContentClassName,
-  resolveNodeVisibilityValue
-} from './NodeTreeRowStyle';
+  createNodeTreeRowButtonHandlers,
+  renderNodeTreeRowButtonSurface
+} from './NodeTreeRowButtonParts';
+import { NodeTreeRowFrame } from './NodeTreeRowFrame';
+import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
+import { useRenameState } from './NodeTreeRowRename';
+import { resolveNodeRowButtonClassName } from './NodeTreeRowStyle';
 interface NodeTreeRowProps {
+  descendantCount?: number;
   depth: number;
   isActive: boolean;
   isCollapsed: boolean;
@@ -47,14 +44,6 @@ interface NodeTreeRowProps {
   onToggleCollapse: (nodeId: string) => void;
 }
 
-function resolveSelectModifiers(event: ReactMouseEvent<HTMLButtonElement>): NodeSelectModifiers {
-  return {
-    ctrlKey: event.ctrlKey,
-    metaKey: event.metaKey,
-    shiftKey: event.shiftKey
-  };
-}
-
 function resolveNodeRowStyle(depth: number, rowSpacing: number) {
   return {
     '--node-depth': depth,
@@ -71,6 +60,7 @@ function resolveNodeTreeItemState(isSelected: boolean) {
 }
 
 function renderNodeTreeRowButton(props: {
+  descendantCount: number;
   depth: number;
   hasChildren: boolean;
   isActive: boolean;
@@ -109,6 +99,7 @@ export function NodeTreeRow(props: NodeTreeRowProps) {
       onDrop={props.onDrop}
     >
       {renderNodeTreeRowButton({
+        descendantCount: props.descendantCount ?? 0,
         depth: props.depth,
         hasChildren: props.hasChildren,
         isActive: props.isActive,
@@ -133,6 +124,7 @@ export function NodeTreeRow(props: NodeTreeRowProps) {
   );
 }
 interface NodeTreeRowButtonProps {
+  descendantCount: number;
   depth: number;
   hasChildren: boolean;
   isActive: boolean;
@@ -154,26 +146,8 @@ interface NodeTreeRowButtonProps {
   style: CSSProperties;
 }
 
-function renderNodeTreeRowContent(props: {
-  isMuted: boolean;
-  label: string;
-  mutedOpacity: number;
-  nodeIconKind: NodeTreeRowIconKind;
-  nodeIconState: NodeTreeRowIconState;
-  rename: ReturnType<typeof useRenameState>;
-}) {
-  return (
-    <span
-      className={resolveNodeRowContentClassName()}
-      style={props.isMuted ? { opacity: props.mutedOpacity } : undefined}
-    >
-      <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} />
-      {renderNodeLabel(props.label, props.rename)}
-    </span>
-  );
-}
-
 function NodeTreeRowButton({
+  descendantCount,
   depth,
   hasChildren,
   isActive,
@@ -197,36 +171,26 @@ function NodeTreeRowButton({
   const rename = useRenameState(label, nodeId, onRename);
   const buttonClassName = resolveNodeRowButtonClassName({ isDerived, isSelected });
   const treeItemState = resolveNodeTreeItemState(isSelected);
-  return (
-    <AppButton
-      active={false}
-      aria-current={isActive ? 'page' : undefined}
-      aria-expanded={hasChildren ? !isCollapsed : undefined}
-      aria-level={depth + 1}
-      {...treeItemState}
-      className={buttonClassName}
-      data-node-derived={isDerived ? 'true' : 'false'}
-      data-node-emphasis={isDerived ? 'secondary' : 'primary'}
-      data-node-id={nodeId}
-      data-node-row-spacing={String(rowSpacing)}
-      data-node-visibility={resolveNodeVisibilityValue(isMuted)}
-      id={`node-treeitem-${nodeId}`}
-      onContextMenu={onContextMenu ? (event) => onContextMenu(nodeId, event) : undefined}
-      onKeyDown={onKeyDown ? (event) => onKeyDown(nodeId, event) : undefined}
-      onClick={(event) => onSelect(nodeId, resolveSelectModifiers(event))}
-      onDoubleClick={(event) => (event.stopPropagation(), rename.beginRename())}
-      role="treeitem"
-      style={style}
-      variant="list"
-    >
-      <NodeTreeRowExpandToggle
-        hasChildren={hasChildren}
-        isCollapsed={isCollapsed}
-        label={label}
-        nodeId={nodeId}
-        onToggleCollapse={onToggleCollapse}
-      />
-      {renderNodeTreeRowContent({ isMuted, label, mutedOpacity, nodeIconKind, nodeIconState, rename })}
-    </AppButton>
-  );
+  const handlers = createNodeTreeRowButtonHandlers(nodeId, onContextMenu, onKeyDown, onSelect, rename);
+  return renderNodeTreeRowButtonSurface({
+    buttonClassName,
+    depth,
+    descendantCount,
+    handlers,
+    hasChildren,
+    isActive,
+    isCollapsed,
+    isDerived,
+    isMuted,
+    label,
+    mutedOpacity,
+    nodeIconKind,
+    nodeIconState,
+    nodeId,
+    onToggleCollapse,
+    rename,
+    rowSpacing,
+    style,
+    treeItemState
+  });
 }

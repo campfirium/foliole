@@ -1,6 +1,7 @@
 import type { Node } from './nodeTypes';
 
 export interface NodeTreeRow {
+  descendantCount: number;
   depth: number;
   hasChildren: boolean;
   node: Node;
@@ -11,7 +12,7 @@ export interface NodeTreeModel {
   rows: NodeTreeRow[];
 }
 
-export function buildNodeTree(nodeOrder: string[], nodesById: Record<string, Node>): NodeTreeModel {
+function buildNodeRelationships(nodeOrder: string[], nodesById: Record<string, Node>) {
   const knownIds = new Set(nodeOrder.filter((nodeId) => Boolean(nodesById[nodeId])));
   const childrenByParent = new Map<string | null, string[]>();
   const parentById: Record<string, string | null> = {};
@@ -33,8 +34,50 @@ export function buildNodeTree(nodeOrder: string[], nodesById: Record<string, Nod
     childrenByParent.set(parentId, [nodeId]);
   }
 
+  return { childrenByParent, parentById };
+}
+
+function createDescendantCounter(childrenByParent: Map<string | null, string[]>) {
+  const descendantCountById = new Map<string, number>();
+
+  const countDescendants = (nodeId: string) => {
+    const cached = descendantCountById.get(nodeId);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const children = childrenByParent.get(nodeId) ?? [];
+    let count = children.length;
+    for (const childId of children) {
+      count += countDescendants(childId);
+    }
+
+    descendantCountById.set(nodeId, count);
+    return count;
+  };
+
+  return countDescendants;
+}
+
+function createTreeRow(
+  depth: number,
+  node: Node,
+  childrenByParent: Map<string | null, string[]>,
+  countDescendants: (nodeId: string) => number
+): NodeTreeRow {
+  return {
+    descendantCount: countDescendants(node.id),
+    depth,
+    hasChildren: (childrenByParent.get(node.id)?.length ?? 0) > 0,
+    node
+  };
+}
+
+export function buildNodeTree(nodeOrder: string[], nodesById: Record<string, Node>): NodeTreeModel {
+  const { childrenByParent, parentById } = buildNodeRelationships(nodeOrder, nodesById);
   const rows: NodeTreeRow[] = [];
   const visited = new Set<string>();
+  const countDescendants = createDescendantCounter(childrenByParent);
 
   const walk = (parentId: string | null, depth: number) => {
     const children = childrenByParent.get(parentId) ?? [];
@@ -49,11 +92,7 @@ export function buildNodeTree(nodeOrder: string[], nodesById: Record<string, Nod
       }
 
       visited.add(childId);
-      rows.push({
-        depth,
-        hasChildren: (childrenByParent.get(childId)?.length ?? 0) > 0,
-        node
-      });
+      rows.push(createTreeRow(depth, node, childrenByParent, countDescendants));
 
       walk(childId, depth + 1);
     }
@@ -70,11 +109,7 @@ export function buildNodeTree(nodeOrder: string[], nodesById: Record<string, Nod
       continue;
     }
 
-    rows.push({
-      depth: 0,
-      hasChildren: (childrenByParent.get(nodeId)?.length ?? 0) > 0,
-      node
-    });
+    rows.push(createTreeRow(0, node, childrenByParent, countDescendants));
   }
 
   return { parentById, rows };

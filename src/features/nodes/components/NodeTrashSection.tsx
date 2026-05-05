@@ -72,6 +72,7 @@ export function NodeTrashSection({
         ) : (
           rows.map((row) => (
             <NodeTreeRow
+              descendantCount={row.descendantCount}
               depth={row.depth}
               hasChildren={row.hasChildren}
               isActive={false}

@@ -43,6 +43,23 @@ describe('buildNodeTreeRows', () => {
     expect(rows.find((row) => row.node.id === 'child-1')?.hasChildren).toBe(false);
   });
 
+  it('counts all descendants for each row', () => {
+    const nodeOrder = ['root', 'child-1', 'grandchild-1', 'child-2'];
+    const nodesById: Record<string, Node> = {
+      root: createNode('root', 'Root', null),
+      'child-1': createNode('child-1', 'Child 1', 'root'),
+      'grandchild-1': createNode('grandchild-1', 'Grandchild 1', 'child-1'),
+      'child-2': createNode('child-2', 'Child 2', 'root')
+    };
+
+    const rows = buildNodeTreeRows(nodeOrder, nodesById);
+
+    expect(rows.find((row) => row.node.id === 'root')?.descendantCount).toBe(3);
+    expect(rows.find((row) => row.node.id === 'child-1')?.descendantCount).toBe(1);
+    expect(rows.find((row) => row.node.id === 'grandchild-1')?.descendantCount).toBe(0);
+    expect(rows.find((row) => row.node.id === 'child-2')?.descendantCount).toBe(0);
+  });
+
   it('treats missing parent references as root nodes', () => {
     const nodeOrder = ['orphan', 'root'];
     const nodesById: Record<string, Node> = {

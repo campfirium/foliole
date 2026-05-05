@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 
 import { AppEmptyState } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
@@ -31,6 +31,57 @@ interface NodeListRowsProps {
   selectedTrashNodeId: string | null;
 }
 
+function renderNodeListRow(
+  props: NodeListRowsProps,
+  row: NodeTreeRow,
+  onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void
+) {
+  const node = props.nodesById[row.node.id];
+  const isInbox = isInboxNode(node);
+  const isDerivedNode = Boolean(node?.anchorLink);
+  const isReviewCard = isFsrsReviewItemNode(node);
+  const nodeIconState = resolveNodeTreeRowIconState({
+    isDismissed: node?.reading?.state === 'dismissed',
+    hasEnteredSchedule: isReviewCard
+      ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
+      : (node?.reading?.repetitionCount ?? 0) > 0
+  });
+  const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow();
+
+  return (
+    <NodeTreeRowItem
+      descendantCount={row.descendantCount}
+      depth={row.depth}
+      hasChildren={row.hasChildren}
+      isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
+      isCollapsed={props.collapsedNodeIds.has(row.node.id)}
+      isDerived={isDerivedNode}
+      isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox}
+      isDropTarget={props.drag.dropTargetNodeId === row.node.id}
+      isMuted={shouldFadeWholeRow}
+      mutedOpacity={shouldFadeWholeRow ? getDismissedFadeOpacity() : 1}
+      dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
+      isSelected={props.selectedNodeIds.includes(row.node.id)}
+      key={row.node.id}
+      label={row.node.title}
+      nodeId={row.node.id}
+      nodeIconKind={resolveNodeTreeRowIconKind(isReviewCard)}
+      nodeIconState={nodeIconState}
+      rowSpacing={props.rowSpacing}
+      onContextMenu={isInbox ? undefined : props.onContextMenu}
+      onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
+      onDragEnter={props.drag.onDragEnterNode}
+      onDragOver={props.drag.onDragOverNode}
+      onDragStart={props.drag.onDragStartNode}
+      onDrop={props.drag.onDropOnNode}
+      onKeyDown={onRowKeyDown}
+      onRename={isInbox ? undefined : props.onRename}
+      onSelect={props.onSelect}
+      onToggleCollapse={props.onToggleCollapse}
+    />
+  );
+}
+
 export function NodeListRows(props: NodeListRowsProps) {
   if (props.rows.length === 0) {
     return props.isTrashViewOpen ? (
@@ -47,50 +98,5 @@ export function NodeListRows(props: NodeListRowsProps) {
     rows: props.rows
   });
 
-  return props.rows.map((row) => {
-    const node = props.nodesById[row.node.id];
-    const isInbox = isInboxNode(node);
-    const isDerivedNode = Boolean(node?.anchorLink);
-    const isReviewCard = isFsrsReviewItemNode(node);
-    const nodeIconState = resolveNodeTreeRowIconState({
-      isDismissed: node?.reading?.state === 'dismissed',
-      hasEnteredSchedule: isReviewCard
-        ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
-        : (node?.reading?.repetitionCount ?? 0) > 0
-    });
-
-    return (
-      <NodeTreeRowItem
-        depth={row.depth}
-        hasChildren={row.hasChildren}
-        isActive={
-          (props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id
-        }
-        isCollapsed={props.collapsedNodeIds.has(row.node.id)}
-        isDerived={isDerivedNode}
-        isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox}
-        isDropTarget={props.drag.dropTargetNodeId === row.node.id}
-        isMuted={nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow()}
-        mutedOpacity={nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow() ? getDismissedFadeOpacity() : 1}
-        dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
-        isSelected={props.selectedNodeIds.includes(row.node.id)}
-        key={row.node.id}
-        label={row.node.title}
-        nodeId={row.node.id}
-        nodeIconKind={resolveNodeTreeRowIconKind(isReviewCard)}
-        nodeIconState={nodeIconState}
-        rowSpacing={props.rowSpacing}
-        onContextMenu={isInbox ? undefined : props.onContextMenu}
-        onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
-        onDragEnter={props.drag.onDragEnterNode}
-        onDragOver={props.drag.onDragOverNode}
-        onDragStart={props.drag.onDragStartNode}
-        onDrop={props.drag.onDropOnNode}
-        onKeyDown={onRowKeyDown}
-        onRename={isInbox ? undefined : props.onRename}
-        onSelect={props.onSelect}
-        onToggleCollapse={props.onToggleCollapse}
-      />
-    );
-  });
+  return props.rows.map((row) => renderNodeListRow(props, row, onRowKeyDown));
 }
