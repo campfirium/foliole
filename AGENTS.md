@@ -10,9 +10,10 @@
 
 ## 文档读取顺序
 - 启动时只读 `AGENTS.md`。
-- 仅当用户在新会话首条有效指令明确说“继续”时，先读取 `.lab/agent/todo.md`；必要时按需补读 `.lab/agent/verify.md`、`.lab/agent/optional.md`、`.lab/agent/notes.md`、`.lab/agent/done.md`、`git log --oneline -n 5` 与 `.lab/agent/current-phase.md`。
+- 仅当用户在新会话首条有效指令明确说“继续”时，先读取 `.lab/agent/todo.md`；必要时按需补读 `.lab/agent/verify.md`、`.lab/agent/optional.md`、`.lab/agent/notes.md`、`.lab/agent/done.md` 与 `git log --oneline -n 5`。
+- 任务涉及 renderer UI 改动（`src/app/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
-- 任务涉及新增/重写 spec、整理文档结构、拆分长文档时，按需读取 `.lab/specs/38-document-structure-governance-v1.md`。
+- 任务涉及新增/重写 spec、整理文档结构、拆分长文档时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
 - 任务涉及执行细则时，读取 `.lab/agent/workflow.md`。
 - 仅在判断验证或停车策略时读取 `.lab/agent/windows-preview.flag` 与 `.lab/agent/park.flag`。
 
@@ -85,6 +86,6 @@
 
 ## 细则入口
 - agent 执行细则：`.lab/agent/workflow.md`
-- 文档结构与 spec 拆分细则：`.lab/specs/38-document-structure-governance-v1.md`
-- UI 规范：`.lab/specs/ui.md`、`.lab/specs/app/design-tokens.md`、`.lab/specs/shared/ui/primitives.md`、`.lab/specs/desktop/workspace/shell-layout.md`
+- 文档结构与 spec 拆分细则：`.lab/specs/_governance/spec-organization.md`、`.lab/specs/_governance/doc-organization-expectation.md`
+- UI 规范：`.lab/specs/app/design-tokens.md`、`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`、`.lab/specs/desktop/workspace/shell-layout.md`
 - Windows Native 开发与启动排障：`.lab/specs/17-windows-native-dev-loop-v1.md`、`.lab/specs/19-webview2-startup-diagnosis-playbook-v1.md`
