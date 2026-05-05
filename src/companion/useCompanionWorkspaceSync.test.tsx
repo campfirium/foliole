@@ -2,10 +2,11 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type { NativeSyncNodeConflictRecord } from '../../lib/platform/nativeSyncContract';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
 const syncObjectsMock = vi.hoisted(() => ({
-  loadCompanionSyncNodeConflicts: vi.fn(async () => []),
+  loadCompanionSyncNodeConflicts: vi.fn<() => Promise<NativeSyncNodeConflictRecord[]>>(async () => []),
   syncCompanionObjectsFromDesktop: vi.fn(async () => undefined)
 }));
 const workspaceSyncMock = vi.hoisted(() => ({
@@ -87,6 +88,30 @@ function createSyncState(snapshot: WorkspaceSnapshot | null) {
   };
 }
 
+function createConflictSnapshot(title: string): NativeSyncNodeConflictRecord['snapshot'] {
+  return {
+    anchor_link: null,
+    attachments: [],
+    content: '',
+    created_at: '2026-04-25T09:00:00.000Z',
+    deleted_at: null,
+    desired_retention: null,
+    hide_title_heading: false,
+    id: title.toLowerCase(),
+    image_regions: null,
+    is_title_manual: false,
+    kind: 'topic',
+    opening_text: null,
+    parent_id: null,
+    position: null,
+    priority: null,
+    reveal: null,
+    title,
+    updated_at: '2026-04-25T09:06:00.000Z',
+    virtual_filter: null
+  };
+}
+
 describe('useCompanionWorkspaceSync', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -130,8 +155,24 @@ describe('useCompanionWorkspaceSync', () => {
     syncObjectsMock.loadCompanionSyncNodeConflicts
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
-        { conflict_version_id: 'phone#1', object_id: 'topic-1', snapshot: {} },
-        { conflict_version_id: 'phone#2', object_id: 'topic-2', snapshot: {} }
+        {
+          conflict_version_id: 'phone#1',
+          content_hash: null,
+          device_id: 'android-test-device',
+          object_id: 'topic-1',
+          parent_version_id: null,
+          snapshot: createConflictSnapshot('Topic 1'),
+          updated_at: '2026-04-25T09:06:00.000Z'
+        },
+        {
+          conflict_version_id: 'phone#2',
+          content_hash: null,
+          device_id: 'android-test-device',
+          object_id: 'topic-2',
+          parent_version_id: null,
+          snapshot: createConflictSnapshot('Topic 2'),
+          updated_at: '2026-04-25T09:06:00.000Z'
+        }
       ]);
     const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
     const { result } = renderHook(() => useCompanionWorkspaceSync({

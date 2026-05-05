@@ -88,6 +88,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot) {
       sync_onboarding_status: 'completed' as const,
       workspace_snapshot: snapshot
     },
+    syncConflictCount: 0,
     status: 'idle' as const
   };
 }

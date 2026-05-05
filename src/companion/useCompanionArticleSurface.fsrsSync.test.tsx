@@ -96,6 +96,7 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
     saveEndpoint: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(async () => state),
     state,
+    syncConflictCount: 0,
     status: 'idle' as const
   };
 }
