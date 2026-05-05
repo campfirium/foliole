@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const closeMainWindow = vi.fn().mockResolvedValue(undefined);
@@ -19,6 +20,23 @@ vi.mock('../../shared/platform/windowControls', () => ({
 
 import { WindowTitleBar } from './WindowTitleBar';
 
+function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>> = {}) {
+  return render(
+    <WindowTitleBar
+      isListCollapsed={false}
+      isRightSidebarCollapsed={false}
+      isTrashViewOpen={false}
+      listWidth={320}
+      onOpenNotesView={() => undefined}
+      onOpenTrashView={() => undefined}
+      onToggleListVisibility={() => undefined}
+      onToggleRightSidebarVisibility={() => undefined}
+      rightSidebarWidth={320}
+      {...overrides}
+    />
+  );
+}
+
 describe('WindowTitleBar', () => {
   beforeEach(() => {
     closeMainWindow.mockClear();
@@ -31,16 +49,7 @@ describe('WindowTitleBar', () => {
   });
 
   it('triggers desktop window controls from titlebar buttons', () => {
-    const { container } = render(
-      <WindowTitleBar
-        isListHidden={false}
-        isTrashViewOpen={false}
-        listWidth={320}
-        onOpenNotesView={() => undefined}
-        onOpenTrashView={() => undefined}
-        onToggleListVisibility={() => undefined}
-      />
-    );
+    const { container } = renderTitleBar();
 
     fireEvent.click(screen.getByRole('button', { name: 'Minimize' }));
     fireEvent.click(screen.getByRole('button', { name: 'Maximize' }));
@@ -59,16 +68,7 @@ describe('WindowTitleBar', () => {
   it('enables titlebar controls after desktop bridge becomes available post-mount', async () => {
     isWindowControlsAvailable.mockReturnValue(false);
 
-    render(
-      <WindowTitleBar
-        isListHidden={false}
-        isTrashViewOpen={false}
-        listWidth={320}
-        onOpenNotesView={() => undefined}
-        onOpenTrashView={() => undefined}
-        onToggleListVisibility={() => undefined}
-      />
-    );
+    renderTitleBar({ isRightSidebarCollapsed: true });
 
     expect(screen.getByRole('button', { name: 'Minimize' })).toBeDisabled();
 
@@ -79,5 +79,11 @@ describe('WindowTitleBar', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Minimize' })).toBeEnabled();
     }, { timeout: 1_000 });
+  });
+
+  it('renders right sidebar toggle beside window controls when sidebar is collapsed', () => {
+    renderTitleBar({ isRightSidebarCollapsed: true });
+
+    expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();
   });
 });

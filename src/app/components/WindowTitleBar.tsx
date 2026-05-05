@@ -1,4 +1,4 @@
-import { Copy, FileText, Minus, PanelLeft, Square, Trash2, X } from 'lucide-react';
+import { Copy, FileText, Minus, PanelLeft, PanelRight, Square, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 
 import { useRuntimeAvailability } from '../../shared/platform/runtimeAvailability';
@@ -15,12 +15,15 @@ const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
 
 interface WindowTitleBarProps {
-  isListHidden: boolean;
+  isListCollapsed: boolean;
+  isRightSidebarCollapsed: boolean;
   isTrashViewOpen: boolean;
   listWidth: number;
+  onToggleRightSidebarVisibility: () => void;
   onOpenNotesView: () => void;
   onOpenTrashView: () => void;
   onToggleListVisibility: () => void;
+  rightSidebarWidth: number;
 }
 
 interface WindowControlButtonsProps {
@@ -79,20 +82,46 @@ function useWindowControlState() {
   };
 }
 
-function WindowLeadingActions({ isListHidden, isTrashViewOpen, onOpenNotesView, onOpenTrashView, onToggleListVisibility }: WindowTitleBarProps) {
+function SidebarToggleButton({
+  active,
+  label,
+  onClick,
+  side
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+  side: 'left' | 'right';
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="window-titlebar-leading-button"
+      data-active={active}
+      onClick={onClick}
+      type="button"
+    >
+      {side === 'left' ? (
+        <PanelLeft aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+      ) : (
+        <PanelRight aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+      )}
+    </button>
+  );
+}
+
+function WindowLeadingActions({
+  isListCollapsed,
+  isTrashViewOpen,
+  onOpenNotesView,
+  onOpenTrashView,
+  onToggleListVisibility
+}: WindowTitleBarProps) {
   return (
     <div className="window-titlebar-left-zone">
       <div className="window-titlebar-leading">
         <div className="window-titlebar-leading-primary">
-          <button
-            aria-label="Toggle left panel"
-            className="window-titlebar-leading-button"
-            data-active={isListHidden}
-            onClick={onToggleListVisibility}
-            type="button"
-          >
-            <PanelLeft aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-          </button>
+          <SidebarToggleButton active={!isListCollapsed} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
         </div>
         <div className="window-titlebar-leading-secondary">
           <button
@@ -114,6 +143,24 @@ function WindowLeadingActions({ isListHidden, isTrashViewOpen, onOpenNotesView, 
             <Trash2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function WindowRightSidebarAnchor({
+  isRightSidebarCollapsed,
+  onToggleRightSidebarVisibility,
+  rightSidebarWidth
+}: Pick<WindowTitleBarProps, 'isRightSidebarCollapsed' | 'onToggleRightSidebarVisibility' | 'rightSidebarWidth'>) {
+  if (isRightSidebarCollapsed) {
+    return null;
+  }
+
+  return (
+    <div className="window-titlebar-right-zone" style={{ '--workspace-right-sidebar-width': `${rightSidebarWidth}px` } as CSSProperties}>
+      <div className="window-titlebar-right-anchor">
+        <SidebarToggleButton active label="Toggle right sidebar" onClick={onToggleRightSidebarVisibility} side="right" />
       </div>
     </div>
   );
@@ -182,6 +229,16 @@ export function WindowTitleBar(props: WindowTitleBarProps) {
     <header className="window-titlebar" data-window-maximized={isMaximized} style={{ '--workspace-list-width': `${props.listWidth}px` } as CSSProperties}>
       <WindowLeadingActions {...props} />
       <div className="window-titlebar-drag-fill" onDoubleClick={handleToggleMaximize} />
+      <WindowRightSidebarAnchor
+        isRightSidebarCollapsed={props.isRightSidebarCollapsed}
+        onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
+        rightSidebarWidth={props.rightSidebarWidth}
+      />
+      {props.isRightSidebarCollapsed ? (
+        <div className="window-titlebar-collapsed-sidebar-action">
+          <SidebarToggleButton active={false} label="Toggle right sidebar" onClick={props.onToggleRightSidebarVisibility} side="right" />
+        </div>
+      ) : null}
       <WindowControlButtons
         controlsEnabled={controlsEnabled}
         isMaximized={isMaximized}

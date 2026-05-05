@@ -79,6 +79,8 @@ interface BuildLayoutPropsArgs {
   isSettingsOpen: boolean;
   isStudyMode: boolean;
   isReviewEditing: boolean;
+  isListCollapsed: boolean;
+  isRightSidebarCollapsed: boolean;
   isTrashViewOpen: boolean;
   isViewingTrashNode: boolean;
   listWidth: number;
@@ -103,6 +105,7 @@ interface BuildLayoutPropsArgs {
   onSplitterKeyDown: WorkspaceLayoutProps['onSplitterKeyDown'];
   onSplitterPointerDown: WorkspaceLayoutProps['onSplitterPointerDown'];
   onToggleListVisibility: () => void;
+  onToggleRightSidebarVisibility: () => void;
   reviewDueCount: number;
   reviewPreview: SchedulerPreviewResult | null;
   reviewSession: WorkspaceState['reviewSession'];
@@ -195,9 +198,10 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isSettingsOpen: args.isSettingsOpen, isReviewEditing: args.isReviewEditing,
     isAnswerRevealed: args.reviewSession.isAnswerRevealed, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isViewingTrashNode: args.isViewingTrashNode,
-    showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange,
+    isListCollapsed: args.isListCollapsed, isRightSidebarCollapsed: args.isRightSidebarCollapsed, showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange,
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode,
     onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenTrashView: args.onOpenTrashView, onToggleListVisibility: args.onToggleListVisibility,
+    onToggleRightSidebarVisibility: args.onToggleRightSidebarVisibility,
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze,
     onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions, ...appearanceActions, ...reviewActions,
     onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onExitReviewMode: sessionActions.onToggleReviewSession, customUiFont: args.appearance.customUiFont,

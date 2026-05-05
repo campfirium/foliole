@@ -134,6 +134,29 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.window-titlebar-right-zone {
+  display: flex;
+  flex: 0 0 var(--workspace-right-sidebar-width, 320px);
+  justify-content: flex-start;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+.window-titlebar-right-anchor {
+  align-items: center;
+  border-left: 1px solid #d9d9d6;
+  display: inline-flex;
+  min-height: 38px;
+  padding-left: 8px;
+}
+
+.window-titlebar-collapsed-sidebar-action {
+  align-items: center;
+  display: inline-flex;
+  padding-right: 4px;
+  -webkit-app-region: no-drag;
+}
+
 .window-titlebar-button {
   align-items: center;
   background: transparent;

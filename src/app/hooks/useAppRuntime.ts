@@ -21,9 +21,10 @@ export function isCommandPaletteToggleShortcut(event: CommandPaletteToggleShortc
   );
 }
 
-export function useAppRuntime(initialListWidth: number) {
+export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
   const editorRef = useRef<EditorAdapter | null>(null);
   const lastExpandedListWidthRef = useRef(initialListWidth);
+  const lastExpandedRightSidebarWidthRef = useRef(initialRightSidebarWidth);
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -54,6 +55,7 @@ export function useAppRuntime(initialListWidth: number) {
     isSettingsOpen,
     isViewingTrashNode,
     lastExpandedListWidthRef,
+    lastExpandedRightSidebarWidthRef,
     recentCommandIds,
     recordRecentCommand,
     setIsCommandPaletteOpen,

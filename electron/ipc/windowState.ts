@@ -45,7 +45,7 @@ export async function loadWindowState(): Promise<PersistedWindowState | null> {
 }
 
 function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {
-  const bounds = window.getBounds();
+  const bounds = window.isMaximized() ? window.getNormalBounds() : window.getBounds();
   return {
     x: bounds.x,
     y: bounds.y,

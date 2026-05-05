@@ -4,10 +4,14 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
-import { normalizeWidth } from './workspaceHelpers';
+import {
+  loadListCollapsedPreference,
+  loadRightSidebarCollapsedPreference,
+} from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { createInitialWorkspaceSnapshot } from './workspaceSeed';
+import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
@@ -30,7 +34,9 @@ export interface WorkspaceState {
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
   setDocumentMaxWidth: (width: number) => void;
   setListWidth: (width: number) => void;
+  setListCollapsed: (collapsed: boolean) => void;
   setRightSidebarWidth: (width: number) => void;
+  setRightSidebarCollapsed: (collapsed: boolean) => void;
   setActiveNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, title: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
@@ -72,6 +78,8 @@ interface WorkspacePersistedState {
 
 export interface WorkspaceLayoutState {
   documentMaxWidth: number;
+  isListCollapsed: boolean;
+  isRightSidebarCollapsed: boolean;
   listWidth: number;
   rightSidebarWidth: number;
 }
@@ -98,6 +106,8 @@ export const RIGHT_SIDEBAR_WIDTH_DEFAULT = 320;
 
 const defaultLayoutState: WorkspaceLayoutState = {
   documentMaxWidth: DOCUMENT_WIDTH_DEFAULT,
+  isListCollapsed: false,
+  isRightSidebarCollapsed: false,
   listWidth: LIST_WIDTH_DEFAULT,
   rightSidebarWidth: RIGHT_SIDEBAR_WIDTH_DEFAULT
 };
@@ -114,7 +124,11 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'trashedNodeIds'
 > {
   return {
-    ...createInitialWorkspaceSnapshot(now, defaultLayoutState),
+    ...createInitialWorkspaceSnapshot(now, {
+      ...defaultLayoutState,
+      isListCollapsed: loadListCollapsedPreference(),
+      isRightSidebarCollapsed: loadRightSidebarCollapsedPreference()
+    }),
     navigation: { ...INITIAL_WORKSPACE_NAVIGATION_STATE },
     reviewSession: {
       currentNodeId: null,
@@ -131,45 +145,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
     (set, get) => ({
       ...initialState,
-      resetLayout: () => {
-        set({ layout: { ...defaultLayoutState } });
-      },
-      setDocumentMaxWidth: (width) => {
-        const normalizedWidth = normalizeWidth(width);
-        if (!normalizedWidth) {
-          return;
-        }
-        set((state) => ({
-          layout: {
-            ...state.layout,
-            documentMaxWidth: normalizedWidth
-          }
-        }));
-      },
-      setListWidth: (width) => {
-        const normalizedWidth = normalizeWidth(width);
-        if (!normalizedWidth) {
-          return;
-        }
-        set((state) => ({
-          layout: {
-            ...state.layout,
-            listWidth: normalizedWidth
-          }
-        }));
-      },
-      setRightSidebarWidth: (width) => {
-        const normalizedWidth = normalizeWidth(width);
-        if (!normalizedWidth) {
-          return;
-        }
-        set((state) => ({
-          layout: {
-            ...state.layout,
-            rightSidebarWidth: normalizedWidth
-          }
-        }));
-      },
+      ...createWorkspaceLayoutActions(set, defaultLayoutState),
       setActiveNode: (nodeId) => {
         set((state) => {
           if (!state.nodesById[nodeId] || state.trashedNodeIds.includes(nodeId)) {

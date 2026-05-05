@@ -29,9 +29,11 @@ import type { CommandPaletteItem } from '../../shared/commands/types';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
-import { buildAppPaletteItems, runAppCommand, runReviewModeToggle } from './appCommands';
+import { buildAppPaletteItems } from './appCommands';
 import { buildPaletteState, useCurrentReviewPreview } from './appControllerHelpers';
-import { buildLayoutProps, countDueReviewNodes } from './layoutPropsBuilder';
+import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
+import { createPaletteCommandRunner } from './appPaletteCommandRunner';
+import { countDueReviewNodes } from './layoutPropsBuilder';
 import { useAppRuntime } from './useAppRuntime';
 import { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import { useEditorContextCommands } from './useEditorContextCommands';
@@ -87,6 +89,8 @@ function useWorkspaceSelectors() {
     goToParent: useWorkspaceStore((state) => state.goToParent),
     gradeReviewCard: useWorkspaceStore((state) => state.gradeReviewCard),
     jumpToAncestorNode: useWorkspaceStore((state) => state.jumpToAncestorNode),
+    isListCollapsed: useWorkspaceStore((state) => state.layout.isListCollapsed),
+    isRightSidebarCollapsed: useWorkspaceStore((state) => state.layout.isRightSidebarCollapsed),
     listWidth: useWorkspaceStore((state) => state.layout.listWidth),
     navigation: useWorkspaceStore((state) => state.navigation),
     nodesById: useWorkspaceStore((state) => state.nodesById),
@@ -96,8 +100,10 @@ function useWorkspaceSelectors() {
     revealReviewAnswer: useWorkspaceStore((state) => state.revealReviewAnswer),
     reviewSession: useWorkspaceStore((state) => state.reviewSession),
     resetLayout: useWorkspaceStore((state) => state.resetLayout),
+    setListCollapsed: useWorkspaceStore((state) => state.setListCollapsed),
     setDocumentMaxWidth: useWorkspaceStore((state) => state.setDocumentMaxWidth),
     setListWidth: useWorkspaceStore((state) => state.setListWidth),
+    setRightSidebarCollapsed: useWorkspaceStore((state) => state.setRightSidebarCollapsed),
     setRightSidebarWidth: useWorkspaceStore((state) => state.setRightSidebarWidth),
     setNodeViewState: useWorkspaceStore((state) => state.setNodeViewState),
     startReviewSession: useWorkspaceStore((state) => state.startReviewSession),
@@ -141,76 +147,71 @@ function useNowIso(tickMs = 15_000) {
   }, [tickMs]);
   return nowIso;
 }
-interface PaletteCommandRunnerArgs {
-  isReviewMode: boolean;
-  gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
-  exitReviewSession: () => void;
-  exitStudyMode: () => void;
-  onToggleEditorDisplayMode: () => void;
-  onToggleListVisibility: () => void;
-  openTrashView: () => void;
-  paletteItems: CommandPaletteItem[];
-  recordRecentCommand: (id: string) => void;
-  revealReviewAnswer: () => void;
-  setCommandPaletteOpen: (open: boolean) => void;
-  setSettingsOpen: (open: boolean) => void;
-  startReviewSession: () => boolean;
-  startStudyMode: () => void;
-  trashViewOpen: boolean;
-  closeTrashView: () => void;
-  goBack: () => void;
-  goForward: () => void;
-  goParent: () => void;
-}
-function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
-  const toggleReviewMode = () =>
-    runReviewModeToggle(args.isReviewMode, {
-      enterReviewMode: () => args.startReviewSession() && args.startStudyMode(),
-      exitReviewMode: () => {
-        args.exitReviewSession();
-        args.exitStudyMode();
-      }
-    });
 
-  return (id: string) => {
-    const canRun = args.paletteItems.some((item) => item.id === id && item.enabled);
-    if (!canRun) {
-      return;
-    }
-    const handled = runAppCommand(id, {
-      closeSettings: () => args.setSettingsOpen(false),
-      goBack: args.goBack,
-      goForward: args.goForward,
-      goParent: args.goParent,
-      openNotes: args.closeTrashView,
-      openSettings: () => args.setSettingsOpen(true),
-      openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
-      revealReviewAnswer: args.revealReviewAnswer,
-      toggleReviewMode,
-      toggleEditorDisplayMode: args.onToggleEditorDisplayMode,
-      toggleList: args.onToggleListVisibility,
-      gradeReviewAgain: () => args.gradeReviewCard(1),
-      gradeReviewHard: () => args.gradeReviewCard(2),
-      gradeReviewGood: () => args.gradeReviewCard(3),
-      gradeReviewEasy: () => args.gradeReviewCard(4)
-    });
-    if (!handled) {
-      return;
-    }
-    args.recordRecentCommand(id);
-    args.setCommandPaletteOpen(false);
-  };
-}
-export function useAppController(): AppControllerResult {
-  const ws = useWorkspaceSelectors(), appearance = useAppearanceState(), reviewSettings = useReviewSchedulerSettingsState(), trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds }), nowIso = useNowIso();
-  const isWorkspaceHydrated = useWorkspaceHydration();
-  const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined, selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
-  const study = useStudyMode({ activeNodeId: ws.activeNodeId, isViewingTrashNode: false }), runtime = useAppRuntime(ws.listWidth);
-  const listResize = useListResizer(ws.listWidth, ws.setListWidth), documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth), rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
+function useWorkspaceControllerState(
+  ws: ReturnType<typeof useWorkspaceSelectors>,
+  isWorkspaceHydrated: boolean
+) {
+  const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
+  const trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
+  const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
+  const study = useStudyMode({ activeNodeId: ws.activeNodeId, isViewingTrashNode: false });
+  const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
+  const listResize = useListResizer(ws.listWidth, ws.setListWidth);
+  const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
+  const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
   const saveActiveNodeView = useCallback(() => { if (runtime.isViewingTrashNode || !ws.activeNodeId || !runtime.editorRef.current) return; ws.setNodeViewState(ws.activeNodeId, { scrollTop: runtime.editorRef.current.getScrollTop(), selection: runtime.editorRef.current.getSelection() }); }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
   const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, closeContextMenu: () => undefined, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, openNode: ws.openNode, saveActiveNodeView });
   const editorCtx = useEditorContextCommands({ activeNode, activeNodeId: ws.activeNodeId, createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection, createQANodeFromSelection: ws.createQANodeFromSelection, editorRef: runtime.editorRef, isTrashViewOpen: runtime.isViewingTrashNode, updateNodeContent: ws.updateNodeContent });
   useReadingProgressSync({ activeNodeId: ws.activeNodeId, editorRef: runtime.editorRef, isViewingTrashNode: runtime.isViewingTrashNode, isWorkspaceHydrated, nodeViewById: ws.nodeViewById, setNodeViewState: ws.setNodeViewState });
+  return { activeNode, documentResize, editorCtx, listResize, nav, rightSidebarResize, runtime, selectedTrashNode, study, trash };
+}
+
+function buildControllerPaletteState(args: {
+  isStudyMode: boolean;
+  layoutProps: WorkspaceLayoutProps;
+  nav: ReturnType<typeof useWorkspaceNavigation>;
+  paletteItems: CommandPaletteItem[];
+  runtime: ReturnType<typeof useAppRuntime>;
+  study: ReturnType<typeof useStudyMode>;
+  trash: ReturnType<typeof useTrashView>;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  const runPaletteCommand = createPaletteCommandRunner({
+    closeTrashView: args.trash.closeTrashView,
+    exitReviewSession: args.ws.exitReviewSession,
+    exitStudyMode: args.study.exitStudyMode,
+    goBack: args.nav.handleGoBack,
+    goForward: args.nav.handleGoForward,
+    goParent: args.nav.handleGoParent,
+    gradeReviewCard: args.ws.gradeReviewCard,
+    isReviewMode: args.isStudyMode,
+    onToggleEditorDisplayMode: args.layoutProps.onToggleEditorDisplayMode,
+    onToggleListVisibility: args.layoutProps.onToggleListVisibility,
+    openTrashView: args.trash.openTrashView,
+    paletteItems: args.paletteItems,
+    recordRecentCommand: args.runtime.recordRecentCommand,
+    revealReviewAnswer: args.ws.revealReviewAnswer,
+    setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,
+    setSettingsOpen: args.runtime.setIsSettingsOpen,
+    startReviewSession: args.ws.startReviewSession,
+    startStudyMode: args.study.startStudyMode,
+    trashViewOpen: args.trash.isTrashViewOpen
+  });
+
+  return buildPaletteState(
+    args.runtime.isCommandPaletteOpen,
+    args.paletteItems,
+    args.runtime.recentCommandIds,
+    () => args.runtime.setIsCommandPaletteOpen(false),
+    runPaletteCommand
+  );
+}
+
+export function useAppController(): AppControllerResult {
+  const ws = useWorkspaceSelectors(), appearance = useAppearanceState(), reviewSettings = useReviewSchedulerSettingsState(), nowIso = useNowIso();
+  const isWorkspaceHydrated = useWorkspaceHydration();
+  const { activeNode, documentResize, editorCtx, listResize, nav, rightSidebarResize, runtime, selectedTrashNode, study, trash } = useWorkspaceControllerState(ws, isWorkspaceHydrated);
   const { exitStudyMode, isStudyMode, startStudyMode } = study;
   const reviewPreview = useCurrentReviewPreview(
     isStudyMode,
@@ -233,30 +234,32 @@ export function useAppController(): AppControllerResult {
       }),
     [hasReviewCard, isStudyMode, nav.canGoBack, nav.canGoForward, nav.canGoParent, study.canStartStudyMode, ws.reviewSession.isAnswerRevealed]
   );
-  const layoutProps = buildLayoutProps({ activeNodeId: ws.activeNodeId, appearance, reviewSettings, canGoBack: nav.canGoBack, canGoForward: nav.canGoForward, canGoParent: nav.canGoParent, canStartStudyMode: study.canStartStudyMode, contextMenu: editorCtx.contextMenu, documentMaxWidth: ws.documentMaxWidth, documentNode: runtime.isViewingTrashNode ? selectedTrashNode : activeNode, documentResize, editorNodeId: runtime.isViewingTrashNode ? null : ws.activeNodeId, editorNodeViewState: !runtime.isViewingTrashNode && ws.activeNodeId ? ws.nodeViewById[ws.activeNodeId] : undefined, hotkeyItems: mapPaletteItemsToHotkeyItems(paletteItems), isResizingList: listResize.isResizingList, isResizingRightSidebar: rightSidebarResize.isResizingRightSidebar, isSettingsOpen: runtime.isSettingsOpen, isStudyMode, isReviewEditing, isTrashViewOpen: trash.isTrashViewOpen, isViewingTrashNode: runtime.isViewingTrashNode, listWidth: ws.listWidth, rightSidebarWidth: ws.rightSidebarWidth, nodeOrder: ws.nodeOrder, nodesById: ws.nodesById, onAnswerChange: (answer) => ws.activeNodeId && !runtime.isViewingTrashNode && ws.updateNodeReveal(ws.activeNodeId, answer), onEditorChange: (content) => !runtime.isViewingTrashNode && (ws.activeNodeId ? ws.updateNodeContent(ws.activeNodeId, content) : ws.createRootNode(content)), onEditorReady: (adapter) => { runtime.editorRef.current = adapter; }, onHotkeyUpdate: BLOCKED_HOTKEY_UPDATE, onNodeDesiredRetentionChange: (nodeId, desiredRetention) => ws.updateNodeDesiredRetention(nodeId, desiredRetention), onNodePriorityChange: (nodeId, priority) => ws.updateNodePriority(nodeId, priority), onOpenNotesView: trash.closeTrashView, onOpenSettings: () => runtime.setIsSettingsOpen(true), onCloseSettings: () => runtime.setIsSettingsOpen(false), onOpenTrashView: () => (trash.isTrashViewOpen ? trash.closeTrashView() : trash.openTrashView()), onResetLayout: ws.resetLayout, onSelectTrashNode: (nodeId) => (runtime.setIsViewingTrashNode(true), trash.openTrashView(), trash.setSelectedTrashNodeId(nodeId)), onRightSidebarSplitterKeyDown: rightSidebarResize.handleRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: rightSidebarResize.handleRightSidebarSplitterPointerDown, onSplitterKeyDown: listResize.handleSplitterKeyDown, onSplitterPointerDown: listResize.handleSplitterPointerDown, onToggleListVisibility: () => (ws.listWidth <= 0 ? ws.setListWidth(Math.max(220, runtime.lastExpandedListWidthRef.current || 300)) : (runtime.lastExpandedListWidthRef.current = ws.listWidth, ws.setListWidth(0))), reviewDueCount, reviewPreview, reviewSession: ws.reviewSession, showAnswerSection: !isStudyMode || ws.reviewSession.isAnswerRevealed, selectedTrashNodeId: trash.selectedTrashNodeId, startStudyMode, startReviewSession: ws.startReviewSession, exitReviewSession: ws.exitReviewSession, exitStudyMode, updateGrade: (grade) => ws.gradeReviewCard(grade), revealReviewAnswer: ws.revealReviewAnswer, nav: { onGoBack: nav.handleGoBack, onGoForward: nav.handleGoForward, onGoParent: nav.handleGoParent, onSelectBreadcrumbNode: nav.handleSelectBreadcrumbNode, onSelectNode: nav.handleSelectNode }, editorCtx: { onCloseContextMenu: editorCtx.closeContextMenu, onCreateCloze: editorCtx.handleCreateCloze, onCreateHighlight: editorCtx.handleCreateHighlight, onEditorContextMenu: editorCtx.handleEditorContextMenu } });
-  const runPaletteCommand = createPaletteCommandRunner({
-    closeTrashView: trash.closeTrashView,
-    exitReviewSession: ws.exitReviewSession,
+  const layoutProps = buildAppControllerLayoutProps({
+    activeNode,
+    appearance,
+    blockedHotkeyUpdate: BLOCKED_HOTKEY_UPDATE,
+    canStartStudyMode: study.canStartStudyMode,
+    documentResize,
+    editorCtx,
     exitStudyMode,
-    goBack: nav.handleGoBack,
-    goForward: nav.handleGoForward,
-    goParent: nav.handleGoParent,
-    gradeReviewCard: ws.gradeReviewCard,
-    isReviewMode: isStudyMode,
-    onToggleEditorDisplayMode: layoutProps.onToggleEditorDisplayMode,
-    onToggleListVisibility: layoutProps.onToggleListVisibility,
-    openTrashView: trash.openTrashView,
-    paletteItems,
-    recordRecentCommand: runtime.recordRecentCommand,
-    revealReviewAnswer: ws.revealReviewAnswer,
-    setCommandPaletteOpen: runtime.setIsCommandPaletteOpen,
-    setSettingsOpen: runtime.setIsSettingsOpen,
-    startReviewSession: ws.startReviewSession,
-    startStudyMode: study.startStudyMode,
-    trashViewOpen: trash.isTrashViewOpen
+    hotkeyItems: paletteItems,
+    isReviewEditing,
+    isStudyMode,
+    listResize,
+    mapPaletteItemsToHotkeyItems,
+    nav,
+    reviewDueCount,
+    reviewPreview,
+    reviewSettings,
+    rightSidebarResize,
+    runtime,
+    selectedTrashNode,
+    startStudyMode,
+    trash,
+    ws
   });
   return {
     layoutProps,
-    paletteState: buildPaletteState(runtime.isCommandPaletteOpen, paletteItems, runtime.recentCommandIds, () => runtime.setIsCommandPaletteOpen(false), runPaletteCommand)
+    paletteState: buildControllerPaletteState({ isStudyMode, layoutProps, nav, paletteItems, runtime, study, trash, ws })
   };
 }

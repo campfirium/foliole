@@ -54,6 +54,8 @@ export interface WorkspaceLayoutProps {
   isResizingRightSidebar: boolean;
   isTrashViewOpen: boolean;
   isViewingTrashNode: boolean;
+  isListCollapsed: boolean;
+  isRightSidebarCollapsed: boolean;
   showAnswerSection: boolean;
   listWidth: number;
   rightSidebarWidth: number;
@@ -74,6 +76,7 @@ export interface WorkspaceLayoutProps {
   onOpenNotesView: () => void;
   onOpenTrashView: () => void;
   onToggleListVisibility: () => void;
+  onToggleRightSidebarVisibility: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;

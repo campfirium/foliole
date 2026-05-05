@@ -38,6 +38,12 @@ afterEach(async () => {
 it('persists and loads maximized window state', async () => {
   const window = {
     getBounds: () => ({
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080
+    }),
+    getNormalBounds: () => ({
       x: 120,
       y: 80,
       width: 1500,

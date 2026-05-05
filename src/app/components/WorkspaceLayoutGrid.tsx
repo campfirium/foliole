@@ -8,6 +8,19 @@ import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
 import { WorkspaceRightSidebarSplitter } from './WorkspaceRightSidebarSplitter';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
+function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
+  if (props.isListCollapsed && props.isRightSidebarCollapsed) {
+    return 'grid-cols-1 xl:grid-cols-1';
+  }
+  if (props.isListCollapsed) {
+    return 'grid-cols-1 xl:[grid-template-columns:minmax(0,1fr)_1px_minmax(0,var(--workspace-right-sidebar-width,320px))]';
+  }
+  if (props.isRightSidebarCollapsed) {
+    return '[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)]';
+  }
+  return '[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)_1px_minmax(0,var(--workspace-right-sidebar-width,320px))]';
+}
+
 function getReviewStatusLabel(status: WorkspaceLayoutProps['reviewStatus']) {
   if (status === 'awaiting-answer') {
     return 'Awaiting answer';
@@ -146,33 +159,39 @@ export function WorkspaceLayoutGrid({
       </div>
       <div className="col-start-2 min-h-0 min-w-0 overflow-hidden max-[1080px]:col-start-1">
         <div
-          className="grid h-full min-h-0 gap-0 overflow-hidden [grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)_1px_minmax(0,var(--workspace-right-sidebar-width,320px))] max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
+          className={`grid h-full min-h-0 gap-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]`}
           data-resizing={props.isResizingList || props.isResizingRightSidebar}
         >
-          <WorkspaceListArea props={props} />
-          <WorkspaceListSplitter
-            isResizingList={props.isResizingList}
-            listWidth={props.listWidth}
-            onResetLayout={props.onResetLayout}
-            onSplitterKeyDown={props.onSplitterKeyDown}
-            onSplitterPointerDown={props.onSplitterPointerDown}
-          />
+          {!props.isListCollapsed ? <WorkspaceListArea props={props} /> : null}
+          {!props.isListCollapsed ? (
+            <WorkspaceListSplitter
+              isResizingList={props.isResizingList}
+              listWidth={props.listWidth}
+              onResetLayout={props.onResetLayout}
+              onSplitterKeyDown={props.onSplitterKeyDown}
+              onSplitterPointerDown={props.onSplitterPointerDown}
+            />
+          ) : null}
           <WorkspaceDocumentArea documentNodeId={documentNodeId} props={props} />
-          <WorkspaceRightSidebarSplitter
-            isResizingRightSidebar={props.isResizingRightSidebar}
-            onResetLayout={props.onResetLayout}
-            onRightSidebarSplitterKeyDown={props.onRightSidebarSplitterKeyDown}
-            onRightSidebarSplitterPointerDown={props.onRightSidebarSplitterPointerDown}
-            rightSidebarWidth={props.rightSidebarWidth}
-          />
-          <WorkspaceRightSidebar
-            activeNodeId={documentNodeId}
-            editorNodeId={props.editorNodeId}
-            nodesById={props.nodesById}
-            onNodeDesiredRetentionChange={props.onNodeDesiredRetentionChange}
-            onNodePriorityChange={props.onNodePriorityChange}
-            reviewSchedulerSettings={props.reviewSchedulerSettings}
-          />
+          {!props.isRightSidebarCollapsed ? (
+            <WorkspaceRightSidebarSplitter
+              isResizingRightSidebar={props.isResizingRightSidebar}
+              onResetLayout={props.onResetLayout}
+              onRightSidebarSplitterKeyDown={props.onRightSidebarSplitterKeyDown}
+              onRightSidebarSplitterPointerDown={props.onRightSidebarSplitterPointerDown}
+              rightSidebarWidth={props.rightSidebarWidth}
+            />
+          ) : null}
+          {!props.isRightSidebarCollapsed ? (
+            <WorkspaceRightSidebar
+              activeNodeId={documentNodeId}
+              editorNodeId={props.editorNodeId}
+              nodesById={props.nodesById}
+              onNodeDesiredRetentionChange={props.onNodeDesiredRetentionChange}
+              onNodePriorityChange={props.onNodePriorityChange}
+              reviewSchedulerSettings={props.reviewSchedulerSettings}
+            />
+          ) : null}
         </div>
       </div>
     </div>

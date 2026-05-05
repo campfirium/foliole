@@ -75,18 +75,23 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
 
   return (
     <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border max-[1080px]:hidden"
-        style={{ left: 'calc(40px + var(--workspace-list-width, 300px))' }}
-      />
+      {!props.isListCollapsed ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border max-[1080px]:hidden"
+          style={{ left: 'calc(40px + var(--workspace-list-width, 300px))' }}
+        />
+      ) : null}
       <WindowTitleBar
-        isListHidden={props.listWidth <= 0}
+        isListCollapsed={props.isListCollapsed}
+        isRightSidebarCollapsed={props.isRightSidebarCollapsed}
         isTrashViewOpen={props.isTrashViewOpen}
         listWidth={props.listWidth}
         onOpenNotesView={props.onOpenNotesView}
         onOpenTrashView={props.onOpenTrashView}
         onToggleListVisibility={props.onToggleListVisibility}
+        onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
+        rightSidebarWidth={props.rightSidebarWidth}
       />
       <section aria-label="Workspace top toolbar" className="sr-only" />
       <WorkspaceLayoutGrid documentNodeId={documentNodeId} props={props} />
