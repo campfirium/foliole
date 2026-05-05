@@ -10,7 +10,8 @@ describe('restart-electron-dev script', () => {
   it('matches the nested electron main entry command line used by Windows dev runtime', async () => {
     const script = await readFile(SCRIPT_PATH, 'utf8');
 
-    expect(script).toContain("electron-dist(?:[\\\\/]+electron)?[\\\\/]+main\\.js");
+    expect(script).toContain('Get-Process -Name "electron" -ErrorAction SilentlyContinue');
+    expect(script).toContain('Test-ProcessMatchesExpectedRuntime -Process $candidate -ExpectedRuntimePath $expectedRuntimePath');
   });
 
   it('reports structured trust status for running and stopped client states', async () => {

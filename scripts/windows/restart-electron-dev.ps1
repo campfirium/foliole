@@ -517,20 +517,15 @@ function Get-ElectronRuntimeCandidates {
   param([string]$WorkDir = "")
 
   $expectedRuntimePath = Resolve-ExpectedRuntimePath -WorkDir $WorkDir
+  if ([string]::IsNullOrWhiteSpace($expectedRuntimePath)) {
+    return @()
+  }
 
   $matched = @()
-  $mainCandidates = @(Get-CimInstance Win32_Process -Filter "Name='electron.exe'" -ErrorAction SilentlyContinue)
-  foreach ($candidate in $mainCandidates) {
-    $commandLine = $candidate.CommandLine
-    if ([string]::IsNullOrWhiteSpace($commandLine)) {
-      continue
-    }
-    if ($commandLine -notmatch 'electron-dist(?:[\\/]+electron)?[\\/]+main\.js') {
-      continue
-    }
-    $mainProc = Get-ProcessById -ProcessId ([int]$candidate.ProcessId)
-    if ($null -ne $mainProc -and (Test-ProcessMatchesExpectedRuntime -Process $mainProc -ExpectedRuntimePath $expectedRuntimePath)) {
-      $matched += $mainProc
+  $runtimeProcesses = @(Get-Process -Name "electron" -ErrorAction SilentlyContinue)
+  foreach ($candidate in $runtimeProcesses) {
+    if (Test-ProcessMatchesExpectedRuntime -Process $candidate -ExpectedRuntimePath $expectedRuntimePath) {
+      $matched += $candidate
     }
   }
 
