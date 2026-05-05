@@ -21,6 +21,10 @@ final class FolioleCompanionContentReadQueryRules {
         return group(context, "readableArticle").getString(key);
     }
 
+    static JSONObject readableArticleObject(Context context, String key) throws Exception {
+        return group(context, "readableArticle").getJSONObject(key);
+    }
+
     private static JSONObject group(Context context, String groupName) throws Exception {
         JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("contentRead");
         if (rules == null) {

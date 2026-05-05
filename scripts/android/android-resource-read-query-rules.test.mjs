@@ -6,7 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { ANDROID_COMPANION_RESOURCE_READ_RULES } from '../../lib/core/database/androidCompanionResourceQueryDefinitions.ts';
+import {
+  ANDROID_COMPANION_CONTENT_READ_RULES,
+  ANDROID_COMPANION_RESOURCE_READ_RULES
+} from '../../lib/core/database/androidCompanionResourceQueryDefinitions.ts';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
@@ -19,6 +22,7 @@ const ATTACHMENT_RESOURCE_MISSING_STORE = path.join(REPO_ROOT, 'android/app/src/
 const APP_DATA_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionAppDataStore.java');
 const PDF_PAGE_TEXT_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionPdfPageTextStore.java');
 const RESOURCE_RULES = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionResourceReadQueryRules.java');
+const READABLE_ARTICLE_QUERY = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionReadableArticleQuery.java');
 
 describe('Android resource read query rules', () => {
   it('generates content blob, attachment resource, and PDF text read metadata', async () => {
@@ -45,6 +49,17 @@ describe('Android resource read query rules', () => {
       searchQueryName: 'pdfPageTextSearch',
       searchResultKey: 'results'
     });
+    expect(definitions.contentRead.readableArticle).toMatchObject({
+      rowKeys: {
+        bodyBlobHash: 'body_blob_hash',
+        id: 'id'
+      },
+      outputKeys: {
+        contentStatus: 'content_status',
+        nodeId: 'node_id'
+      }
+    });
+    expect(definitions.contentRead).toEqual(ANDROID_COMPANION_CONTENT_READ_RULES);
   });
 
   it('keeps resource Java stores wired to generated read rules', async () => {
@@ -74,5 +89,16 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).not.toContain('"pdfPageTextSearch"');
     expect(combinedStoreSource).not.toContain('DEFAULT_SEARCH_LIMIT');
     expect(combinedStoreSource).not.toContain('EXCERPT_RADIUS');
+  });
+
+  it('keeps readable article Java shape wired to generated content rules', async () => {
+    const source = await readFile(READABLE_ARTICLE_QUERY, 'utf8');
+
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleObject(context, key)');
+    expect(source).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, "textKey")');
+    expect(source).not.toContain('article.put("node_id"');
+    expect(source).not.toContain('article.put("content_status"');
+    expect(source).not.toContain('row.getString("id"');
+    expect(source).not.toContain('optString("text"');
   });
 });

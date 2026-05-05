@@ -38,7 +38,23 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
     pdfPagesResultKey: 'pages',
     pdfPlaceholderText: 'Linked PDF source ready for the reader surface.',
     referencePdfAttachmentQueryName: 'readableArticleReferencePdfAttachment',
-    untitledTitle: 'Untitled'
+    untitledTitle: 'Untitled',
+    rowKeys: {
+      availability: 'availability',
+      bodyBlobData: 'body_blob_data',
+      bodyBlobHash: 'body_blob_hash',
+      content: 'content',
+      id: 'id',
+      title: 'title'
+    },
+    outputKeys: {
+      bodyBlobHash: 'body_blob_hash',
+      content: 'content',
+      contentStatus: 'content_status',
+      nodeId: 'node_id',
+      pdfAttachmentId: 'pdf_attachment_id',
+      title: 'title'
+    }
   }
 } as const;
 
