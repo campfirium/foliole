@@ -4,7 +4,7 @@ import process from 'node:process';
 
 import { runCodexTask } from './codex-task.mjs';
 import { buildCommitMessage, commitTrackedChanges, readGitStatus, runCommand } from './git-state.mjs';
-import { REPO_ROOT, completePauseTask, isGateEntry, readTodoEntry } from './todo-ledger.mjs';
+import { REPO_ROOT, completePauseTask, isGateEntry, readPrimaryTodoEntry, readTodoEntry } from './todo-ledger.mjs';
 import { buildFailureSignature, buildNextRoundTask, buildRepairTask, createExhaustedRepairError, EXHAUSTED_REPAIR_CODE, normalizeFailureMessage } from './codex-loop-shared.mjs';
 
 const REPAIR_ATTEMPT_LIMIT = 2;
@@ -156,9 +156,9 @@ export async function reconcileDirtyWorkspace(task, options, dependencies) {
 }
 
 async function resolveGate(options, dependencies) {
-  const firstEntry = await dependencies.readTodoEntryFn();
+  const firstEntry = await dependencies.readPrimaryTodoEntryFn();
   if (!options.completeGate) {
-    return firstEntry;
+    return dependencies.readTodoEntryFn();
   }
   if (!dependencies.isGateEntryFn(firstEntry)) {
     throw new Error('complete-gate requires the first pending TODO item to be a pause task');
@@ -175,6 +175,7 @@ async function runLoop(options, overrides = {}) {
     commitTrackedChangesFn: commitTrackedChanges,
     completePauseTaskFn: completePauseTask,
     isGateEntryFn: isGateEntry,
+    readPrimaryTodoEntryFn: readPrimaryTodoEntry,
     readGitStatusFn: readGitStatus,
     readTodoEntryFn: readTodoEntry,
     runCodexTaskFn: runCodexTask,

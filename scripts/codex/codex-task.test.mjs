@@ -14,7 +14,7 @@ describe('codex-task helpers', () => {
       '- [ ] [gate] second task',
       '',
       '## 待验证',
-      '- [ ] later task'
+      '- [ ] [auto] later task'
     ].join('\n');
 
     expect(parseFirstTodoTask(markdown)).toBe('first task');

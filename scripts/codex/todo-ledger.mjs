@@ -11,6 +11,7 @@ const DEFAULT_PAUSE_PATTERNS = [
   /^执行 Windows 客户端集成验收/,
   /^验收 Phase \d+ 退出标志/
 ];
+const TODO_SECTIONS = new Set(['待办', '待验证', '可选']);
 
 const TASK_MODE_PREFIX = /^\[(auto|gate)\]\s*/i;
 const BRACKET_PREFIX = /^\[[^\]]+\]\s*/;
@@ -42,20 +43,17 @@ function parsePendingTask(line, patterns = DEFAULT_PAUSE_PATTERNS) {
 
 export function validateTodoEntries(markdown) {
   const lines = markdown.split('\n');
-  let insideTodoSection = false;
+  let currentSection = '';
   const issues = [];
 
   lines.forEach((line, index) => {
     const trimmed = line.trim();
-    if (trimmed === '## 待办') {
-      insideTodoSection = true;
+    if (trimmed.startsWith('## ')) {
+      const sectionName = trimmed.slice(3).trim();
+      currentSection = TODO_SECTIONS.has(sectionName) ? sectionName : '';
       return;
     }
-    if (insideTodoSection && trimmed.startsWith('## ')) {
-      insideTodoSection = false;
-      return;
-    }
-    if (!insideTodoSection) {
+    if (!currentSection) {
       return;
     }
     const match = trimmed.match(/^- \[ \] (.+)$/);
@@ -87,30 +85,32 @@ function assertValidTodoEntries(markdown) {
   }
 }
 
-export function parseTodoEntries(markdown, patterns = DEFAULT_PAUSE_PATTERNS) {
+export function parseTodoEntriesBySection(markdown, sectionName, patterns = DEFAULT_PAUSE_PATTERNS) {
   const lines = markdown.split('\n');
-  let insideTodoSection = false;
+  let currentSection = '';
   const entries = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed === '## 待办') {
-      insideTodoSection = true;
+    if (trimmed.startsWith('## ')) {
+      const nextSectionName = trimmed.slice(3).trim();
+      currentSection = TODO_SECTIONS.has(nextSectionName) ? nextSectionName : '';
       continue;
     }
-    if (insideTodoSection && trimmed.startsWith('## ')) {
-      break;
-    }
-    if (!insideTodoSection) {
+    if (currentSection !== sectionName) {
       continue;
     }
     const entry = parsePendingTask(trimmed, patterns);
     if (entry) {
-      entries.push(entry);
+      entries.push({ ...entry, section: sectionName });
     }
   }
 
   return entries;
+}
+
+export function parseTodoEntries(markdown, patterns = DEFAULT_PAUSE_PATTERNS) {
+  return parseTodoEntriesBySection(markdown, '待办', patterns);
 }
 
 export function parseFirstTodoTask(markdown) {
@@ -122,6 +122,20 @@ export function selectNextTodoTask(markdown) {
   return parseTodoEntries(markdown)[0] ?? null;
 }
 
+export function selectNextExecutableTodoTask(markdown) {
+  const mainlineEntry = selectNextTodoTask(markdown);
+  const optionalAutoEntry =
+    parseTodoEntriesBySection(markdown, '可选').find((entry) => entry.mode === 'auto') ?? null;
+
+  if (!mainlineEntry) {
+    return optionalAutoEntry;
+  }
+  if (!isGateEntry(mainlineEntry)) {
+    return mainlineEntry;
+  }
+  return optionalAutoEntry ?? mainlineEntry;
+}
+
 export function isPauseTask(task, patterns = DEFAULT_PAUSE_PATTERNS) {
   return patterns.some((pattern) => pattern.test(task));
 }
@@ -131,6 +145,12 @@ export function isGateEntry(entry) {
 }
 
 export async function readTodoEntry() {
+  const content = await readFile(TODO_PATH, 'utf8');
+  assertValidTodoEntries(content);
+  return selectNextExecutableTodoTask(content);
+}
+
+export async function readPrimaryTodoEntry() {
   const content = await readFile(TODO_PATH, 'utf8');
   assertValidTodoEntries(content);
   return selectNextTodoTask(content);

@@ -71,6 +71,7 @@ describe('codex-loop helpers', () => {
       {
         buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
         commitTrackedChangesFn,
+        readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
         readGitStatusFn,
         readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry, null),
         isGateEntryFn: (entry) => entry?.mode === 'gate',
@@ -92,15 +93,14 @@ describe('codex-loop helpers', () => {
   it('waits when the first pending item is an explicit gate task', async () => {
     const writes = [];
     const runCodexTaskFn = vi.fn().mockResolvedValue(undefined);
+    const gateEntry = { raw: '[gate] windows acceptance', task: 'windows acceptance', mode: 'gate', section: '待办' };
 
     const exitCode = await runLoop(
       { completeGate: false, dryRun: false, maxIterations: 2, model: '' },
       {
         readGitStatusFn: vi.fn().mockResolvedValue(''),
-        readTodoEntryFn: vi
-          .fn()
-          .mockResolvedValueOnce({ raw: '[gate] windows acceptance', task: 'windows acceptance', mode: 'gate' })
-          .mockResolvedValueOnce({ raw: '[gate] windows acceptance', task: 'windows acceptance', mode: 'gate' }),
+        readPrimaryTodoEntryFn: vi.fn().mockResolvedValue(gateEntry),
+        readTodoEntryFn: vi.fn().mockResolvedValueOnce(gateEntry).mockResolvedValueOnce(gateEntry),
         runCodexTaskFn,
         runQualityGateFn: vi.fn().mockResolvedValue(undefined),
         commitTrackedChangesFn: vi.fn().mockResolvedValue(false),
@@ -113,6 +113,29 @@ describe('codex-loop helpers', () => {
     expect(exitCode).toBe(20);
     expect(runCodexTaskFn).not.toHaveBeenCalled();
     expect(writes.join('')).toContain('waiting-for-gate: windows acceptance');
+  });
+
+  it('executes the first optional auto task when the mainline is blocked by a gate', async () => {
+    const writes = [];
+    const optionalEntry = { raw: '[auto] import fixtures', task: 'import fixtures', mode: 'auto', section: '可选' };
+
+    const exitCode = await runLoop(
+      { completeGate: false, dryRun: false, maxIterations: 2, model: '' },
+      {
+        buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
+        commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+        readGitStatusFn: vi.fn().mockResolvedValue(''),
+        readPrimaryTodoEntryFn: vi.fn().mockResolvedValue({ raw: '[gate] windows acceptance', task: 'windows acceptance', mode: 'gate', section: '待办' }),
+        readTodoEntryFn: createReadMock(optionalEntry, optionalEntry, null),
+        isGateEntryFn: (entry) => entry?.mode === 'gate',
+        runCodexTaskFn: vi.fn().mockResolvedValue(undefined),
+        runQualityGateFn: vi.fn().mockResolvedValue(undefined),
+        stdout: { write: (value) => writes.push(value) }
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(writes.join('')).toContain('iteration 1, round 1/3: import fixtures');
   });
 
   it('reopens the same task in a fresh round after repair budget exhaustion', async () => {
@@ -142,6 +165,7 @@ describe('codex-loop helpers', () => {
         appendLoopFailureRecordFn,
         buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
         commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+        readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
         readGitStatusFn: createReadMock('', ' M scripts/codex/codex-loop.mjs', ' M scripts/codex/codex-loop.mjs'),
         readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry, null),
         isGateEntryFn: (entry) => entry?.mode === 'gate',
@@ -172,6 +196,7 @@ describe('codex-loop helpers', () => {
           appendLoopFailureRecordFn,
           buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
           commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+          readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
           readGitStatusFn: createReadMock('', ' M scripts/codex/codex-loop.mjs', ' M scripts/codex/codex-loop.mjs'),
           readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry),
           isGateEntryFn: (entry) => entry?.mode === 'gate',
@@ -191,6 +216,7 @@ describe('codex-loop helpers', () => {
         appendLoopFailureRecordFn: vi.fn().mockResolvedValue(undefined),
         buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
         commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+        readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
         readGitStatusFn: createReadMock('', ' M scripts/codex/codex-loop.mjs', ' M scripts/codex/codex-loop.mjs'),
         readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry),
         isGateEntryFn: (entry) => entry?.mode === 'gate',

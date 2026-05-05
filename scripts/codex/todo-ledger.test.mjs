@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { isGateEntry, isPauseTask, parseFirstTodoTask, parseTodoEntries, selectNextTodoTask, validateTodoEntries } from './todo-ledger.mjs';
+import {
+  isGateEntry,
+  isPauseTask,
+  parseFirstTodoTask,
+  parseTodoEntries,
+  parseTodoEntriesBySection,
+  selectNextExecutableTodoTask,
+  selectNextTodoTask,
+  validateTodoEntries
+} from './todo-ledger.mjs';
 
 describe('todo-ledger helpers', () => {
   it('parses the first pending todo item', () => {
@@ -11,8 +20,8 @@ describe('todo-ledger helpers', () => {
   it('parses explicit task modes from todo items', () => {
     const markdown = ['# TODO', '', '## 待办', '', '- [ ] [auto] first task', '- [ ] [gate] second task'].join('\n');
     expect(parseTodoEntries(markdown)).toEqual([
-      { raw: '[auto] first task', task: 'first task', mode: 'auto' },
-      { raw: '[gate] second task', task: 'second task', mode: 'gate' }
+      { raw: '[auto] first task', task: 'first task', mode: 'auto', section: '待办' },
+      { raw: '[gate] second task', task: 'second task', mode: 'gate', section: '待办' }
     ]);
   });
 
@@ -30,7 +39,70 @@ describe('todo-ledger helpers', () => {
     expect(selectNextTodoTask(markdown)).toEqual({
       raw: '[gate] windows acceptance',
       task: 'windows acceptance',
-      mode: 'gate'
+      mode: 'gate',
+      section: '待办'
+    });
+  });
+
+  it('parses optional entries from the optional section', () => {
+    const markdown = [
+      '# TODO',
+      '',
+      '## 待办',
+      '',
+      '- [ ] [gate] windows acceptance',
+      '',
+      '## 可选',
+      '',
+      '- [ ] [auto] import fixtures',
+      '- [ ] [auto] tighten diagnostics'
+    ].join('\n');
+
+    expect(parseTodoEntriesBySection(markdown, '可选')).toEqual([
+      { raw: '[auto] import fixtures', task: 'import fixtures', mode: 'auto', section: '可选' },
+      { raw: '[auto] tighten diagnostics', task: 'tighten diagnostics', mode: 'auto', section: '可选' }
+    ]);
+  });
+
+  it('falls back to the first optional auto task when mainline is blocked by a gate', () => {
+    const markdown = [
+      '# TODO',
+      '',
+      '## 待办',
+      '',
+      '- [ ] [gate] windows acceptance',
+      '',
+      '## 可选',
+      '',
+      '- [ ] [auto] import fixtures'
+    ].join('\n');
+
+    expect(selectNextExecutableTodoTask(markdown)).toEqual({
+      raw: '[auto] import fixtures',
+      task: 'import fixtures',
+      mode: 'auto',
+      section: '可选'
+    });
+  });
+
+  it('keeps waiting on the mainline gate when no optional auto task exists', () => {
+    const markdown = [
+      '# TODO',
+      '',
+      '## 待办',
+      '',
+      '- [ ] [gate] windows acceptance',
+      '',
+      '## 可选',
+      '',
+      '- [ ] [gate] manual follow-up'
+    ].join('\n');
+
+    expect(selectNextExecutableTodoTask(markdown)).toEqual({
+      raw: '[gate] windows acceptance',
+      task: 'windows acceptance',
+      mode: 'gate',
+      section: '待办'
     });
   });
 
