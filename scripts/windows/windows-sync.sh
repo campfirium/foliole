@@ -7,7 +7,6 @@ WINDOWS_MIRROR_DIR="${WINDOWS_MIRROR_DIR:-/mnt/c/dev/foliole}"
 WINDOWS_SYNC_CHANGE_LOG="${WINDOWS_SYNC_CHANGE_LOG:-}"
 WINDOWS_SYNC_INCLUDE_ELECTRON_DIST="${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST:-}"
 WINDOWS_SYNC_LOCK_FILE="${WINDOWS_SYNC_LOCK_FILE:-/tmp/foliole-windows-mirror.lock}"
-WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED="${WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED:-0}"
 
 if [[ ! -d "${WINDOWS_MIRROR_DIR}" ]]; then
   echo "[windows-sync] mirror directory not found: ${WINDOWS_MIRROR_DIR}"
@@ -56,25 +55,19 @@ RSYNC_ARGS=(
   --exclude "android/.gradle/"
   --exclude "android/build/"
   --exclude "android/app/build/"
+  --exclude "android/app/src/main/assets/public/"
+  --exclude "android/app/src/main/assets/capacitor.config.json"
+  --exclude "android/app/src/main/assets/capacitor.plugins.json"
+  --exclude "android/app/src/main/res/xml/config.xml"
+  --exclude "android/app/capacitor.build.gradle"
+  --exclude "android/capacitor.settings.gradle"
+  --exclude "android/capacitor-cordova-android-plugins/"
   --exclude "android/capacitor-cordova-android-plugins/build/"
   --exclude "playwright-report/"
   --exclude "test-results/"
   --exclude "blob-report/"
   --exclude "logs/"
 )
-
-
-if [[ "${WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED}" == "1" ]]; then
-  RSYNC_ARGS+=(
-    --exclude "android/app/src/main/assets/public/"
-    --exclude "android/app/src/main/assets/capacitor.config.json"
-    --exclude "android/app/src/main/assets/capacitor.plugins.json"
-    --exclude "android/app/src/main/res/xml/config.xml"
-    --exclude "android/app/capacitor.build.gradle"
-    --exclude "android/capacitor.settings.gradle"
-    --exclude "android/capacitor-cordova-android-plugins/"
-  )
-fi
 
 if [[ -z "${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST}" ]]; then
   RSYNC_ARGS+=(--exclude "electron-dist/")

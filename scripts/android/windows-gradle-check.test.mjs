@@ -68,7 +68,7 @@ describe('windows-gradle-check.sh', () => {
         WINDOWS_SYNC_SCRIPT: path.join(tempRoot, 'windows-sync.sh'),
         WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-gradle-check.ps1'),
         ANDROID_WINDOWS_MIRROR_DIR: mirrorDir,
-        ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-android-preview-test',
+        ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-test',
         POWERSHELL_ARGS_LOG: powershellArgsLog
       });
 
@@ -76,7 +76,7 @@ describe('windows-gradle-check.sh', () => {
       expect(result.stdout).toContain(`sync-target:${mirrorDir}`);
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
       expect(args).toContain('-WindowsWorkDir');
-      expect(args).toContain('C:\\dev\\foliole-android-preview-test');
+      expect(args).toContain('C:\\dev\\foliole-test');
       expect(args).toContain('-TaskName');
       expect(args).toContain('lint');
     } finally {

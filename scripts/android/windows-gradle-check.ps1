@@ -1,5 +1,5 @@
 param(
-  [string]$WindowsWorkDir = "C:\dev\foliole-android-preview",
+  [string]$WindowsWorkDir = "C:\dev\foliole",
   [string]$AndroidHostDir = "android",
   [Parameter(Mandatory = $true)]
   [string]$TaskName

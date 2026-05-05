@@ -76,16 +76,16 @@ describe('windows-sync script', () => {
       expect(args).toContain('.windows-native-boot-ready.json');
       expect(args).toContain('.windows-native-bridge-ready.json');
       expect(args).toContain('--inplace');
-      expect(args).not.toContain('android/app/src/main/assets/public/');
-      expect(args).not.toContain('android/app/src/main/assets/capacitor.config.json');
-      expect(args).not.toContain('android/capacitor-cordova-android-plugins/');
+      expect(args).toContain('android/app/src/main/assets/public/');
+      expect(args).toContain('android/app/src/main/assets/capacitor.config.json');
+      expect(args).toContain('android/capacitor-cordova-android-plugins/');
       expect(result.stdout).toContain('[windows-sync] lock acquired');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
 
-  it('can preserve generated Capacitor Android files for android preview sync', async () => {
+  it('preserves generated Capacitor Android files even when the legacy opt-in is unset', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-sync-android-generated-'));
     try {
       const mirrorDir = path.join(tempRoot, 'mirror');
@@ -110,7 +110,7 @@ describe('windows-sync script', () => {
         PATH: `${mockBinDir}:${process.env.PATH ?? ''}`,
         RSYNC_ARGS_LOG: argsLog,
         WINDOWS_MIRROR_DIR: mirrorDir,
-        WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED: '1'
+        WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED: '0'
       });
 
       expect(result.code).toBe(0);
