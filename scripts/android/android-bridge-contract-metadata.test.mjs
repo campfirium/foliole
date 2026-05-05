@@ -36,6 +36,7 @@ const PAIRING_STORE = path.join(
 );
 const RESOURCE_STORE_SOURCES = [
   'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceStore.java',
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceBatchStore.java',
   'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceMissingStore.java',
   'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobBatchStore.java',
   'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobBatchManifestStore.java',
@@ -118,7 +119,10 @@ describe('Android bridge contract metadata', () => {
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.resourceResourcesRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)');
+    expect(combinedSource).not.toContain('resourceObject(context, "syncRequestKeys")');
     expect(combinedSource).not.toContain('requireText(attachmentId, "attachment_id"');
     expect(combinedSource).not.toContain('requireText(url, "url"');
     expect(combinedSource).not.toContain('requireText(value, "hash"');

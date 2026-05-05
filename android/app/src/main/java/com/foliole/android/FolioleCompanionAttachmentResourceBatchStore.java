@@ -29,7 +29,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
 
     static JSObject syncResources(Context context, SQLiteDatabase database, JSONArray resources) throws Exception {
         if (resources == null) {
-            throw new IllegalArgumentException("resources is required.");
+            throw new IllegalArgumentException(FolioleCompanionBridgeContractDefinitions.resourceResourcesRequestKey(context) + " is required.");
         }
         DownloadResult result = downloadResources(context, resources);
         for (String attachmentId : result.failedIds) {
@@ -73,8 +73,8 @@ final class FolioleCompanionAttachmentResourceBatchStore {
 
     private static Callable<SingleDownloadResult> downloadTask(Context context, JSONObject resource) {
         return () -> {
-            JSONObject requestKeys = resourceObject(context, "syncRequestKeys");
-            String attachmentId = requireText(resource.optString(requestKeys.getString("attachmentId"), null), requestKeys.getString("attachmentId"));
+            String attachmentIdKey = FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(context);
+            String attachmentId = requireText(resource.optString(attachmentIdKey, null), attachmentIdKey);
             try {
                 syncResourceFile(context, attachmentId, resource);
                 return new SingleDownloadResult(attachmentId, true);
@@ -85,16 +85,17 @@ final class FolioleCompanionAttachmentResourceBatchStore {
     }
 
     private static void syncResourceFile(Context context, String attachmentId, JSONObject resource) throws Exception {
-        JSONObject requestKeys = resourceObject(context, "syncRequestKeys");
-        String contentHash = requireText(resource.optString(requestKeys.getString("contentHash"), null), requestKeys.getString("contentHash"));
+        String contentHashKey = FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context);
+        String urlKey = FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context);
+        String contentHash = requireText(resource.optString(contentHashKey, null), contentHashKey);
         File outputFile = attachmentFile(context, contentHash);
         File parent = outputFile.getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             throw new IllegalStateException("Failed to create attachment directory.");
         }
         FolioleCompanionDesktopHttpClient.downloadToFile(
-            requireText(resource.optString(requestKeys.getString("url"), null), requestKeys.getString("url")),
-            resource.optJSONObject(requestKeys.getString("headers")),
+            requireText(resource.optString(urlKey, null), urlKey),
+            resource.optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)),
             outputFile
         );
     }
