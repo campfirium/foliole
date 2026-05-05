@@ -47,6 +47,38 @@ function createImport(content: string, importedAt: string) {
   });
 }
 
+function expectImportedReadwiseHighlights(nodeRow: unknown, childRows: unknown, parentId: string | null) {
+  expect(nodeRow).toEqual({
+    content: [
+      '# Article',
+      '',
+      '<highlight id="1">This is the highlighted sentence</highlight id="1"> inside the article body.',
+      '',
+      'Another paragraph with <highlight id="2">Another matching excerpt</highlight id="2">. End.',
+      '',
+      '## Unmatched Sidecar Highlights',
+      '',
+      '- Missing: quote that is not present in the body'
+    ].join('\n'),
+    parent_id: 'special-inbox',
+    title: 'readwise.md'
+  });
+  expect(childRows).toEqual([
+    {
+      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
+      content: 'This is the highlighted sentence',
+      parent_id: parentId,
+      title: 'This is the highlighted sentence'
+    },
+    {
+      anchor_link: JSON.stringify({ id: '2', kind: 'highlight' }),
+      content: 'Another matching excerpt',
+      parent_id: parentId,
+      title: 'Another matching excerpt'
+    }
+  ]);
+}
+
 function readPersistedImportState(sourceFingerprint: string, nodeId: string | null) {
   const connection = openDatabaseConnection();
   const sourceRow = connection.sqlite
@@ -68,7 +100,9 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
     ? connection.sqlite.prepare('SELECT parent_id, title, content FROM nodes WHERE id = ?').get(nodeId)
     : undefined;
   const childRows = nodeId
-    ? connection.sqlite.prepare('SELECT parent_id, title, content FROM nodes WHERE parent_id = ? ORDER BY created_at ASC').all(nodeId)
+    ? connection.sqlite
+        .prepare('SELECT parent_id, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+        .all(nodeId)
     : [];
 
   return { childRows, nodeRow, runRows, sourceRow };
@@ -213,33 +247,7 @@ it('creates imported child nodes for matched sidecar highlights during the first
 
   const { childRows, nodeRow, runRows } = readPersistedImportState(imported.sourceFingerprint, imported.nodeId);
 
-  expect(nodeRow).toEqual({
-    content: [
-      '# Article',
-      '',
-      'This is the highlighted sentence inside the article body.',
-      '',
-      'Another paragraph with Another matching excerpt. End.',
-      '',
-      '## Unmatched Sidecar Highlights',
-      '',
-      '- Missing: quote that is not present in the body'
-    ].join('\n'),
-    parent_id: 'special-inbox',
-    title: 'readwise.md'
-  });
-  expect(childRows).toEqual([
-    {
-      content: 'This is the highlighted sentence inside the article body.',
-      parent_id: imported.nodeId,
-      title: 'This is the highlighted sentence inside the article body.'
-    },
-    {
-      content: 'Another paragraph with Another matching excerpt. End.',
-      parent_id: imported.nodeId,
-      title: 'Another paragraph with Another matching excerpt. End.'
-    }
-  ]);
+  expectImportedReadwiseHighlights(nodeRow, childRows, imported.nodeId);
   expect(runRows).toEqual([
     {
       degraded_reason: 'Controlled context degraded: 1 unmatched sidecar highlight(s)',

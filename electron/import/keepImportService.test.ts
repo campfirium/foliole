@@ -104,9 +104,13 @@ function readImportedChildRows() {
   const importedNode = connection.sqlite
     .prepare(`SELECT latest_node_id FROM import_sources WHERE source_name = 'Sample Article.md'`)
     .get() as { latest_node_id: string };
-  return connection.sqlite
-    .prepare('SELECT title, content FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
-    .all(importedNode.latest_node_id) as Array<{ content: string; title: string }>;
+  const parentRow = connection.sqlite
+    .prepare('SELECT content FROM nodes WHERE id = ?')
+    .get(importedNode.latest_node_id) as { content: string };
+  const childRows = connection.sqlite
+    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+    .all(importedNode.latest_node_id) as Array<{ anchor_link: string | null; content: string; title: string }>;
+  return { childRows, parentRow };
 }
 
 it('blocks keep auto recreation after the imported node is deleted', async () => {
@@ -208,15 +212,19 @@ it('wires readwise keep import into existing highlight-derived child creation', 
     sourceType: 'readwise'
   });
 
-  const childRows = readImportedChildRows();
+  const { childRows, parentRow } = readImportedChildRows();
 
   expect(childRows).toHaveLength(2);
+  expect(parentRow.content).toContain('<highlight id="1">This is the highlighted sentence.</highlight id="1">');
+  expect(parentRow.content).toContain('<highlight id="2">Another matching excerpt.</highlight id="2">');
   expect(childRows[0]).toEqual({
-    content: 'Before the quote. This is the highlighted sentence. After the quote.',
-    title: 'Before the quote. This is the highlighted sentence. After the quote.'
+    anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
+    content: 'This is the highlighted sentence.',
+    title: 'This is the highlighted sentence.'
   });
   expect(childRows[1]).toEqual({
-    content: 'Another paragraph with Another matching excerpt. End.',
-    title: 'Another paragraph with Another matching excerpt. End.'
+    anchor_link: JSON.stringify({ id: '2', kind: 'highlight' }),
+    content: 'Another matching excerpt.',
+    title: 'Another matching excerpt.'
   });
 });

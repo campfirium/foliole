@@ -8,6 +8,7 @@ import type {
 
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
+import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
 
 const INBOX_NODE_ID = 'special-inbox';
 
@@ -209,15 +210,19 @@ export function runPreparedImport(driver: DatabaseDriver, prepared: PreparedImpo
       return degradedRecord;
     }
 
+    const anchoredImport = applyImportedHighlightAnchors({
+      content: prepared.content,
+      highlights: prepared.matchedHighlights
+    });
     const existingNode = existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null;
     const nodeId =
       duplicateSemantic === 'updated' && existingNode && !existingNode.deleted_at
-        ? updateExistingNode(driver, existingNode, baseRecord, prepared.content)
-        : writeNewNode(driver, baseRecord, prepared.content);
+        ? updateExistingNode(driver, existingNode, baseRecord, anchoredImport.content)
+        : writeNewNode(driver, baseRecord, anchoredImport.content);
     if (duplicateSemantic === 'new') {
       insertImportedHighlightNodes({
         driver,
-        highlights: prepared.matchedHighlights,
+        highlights: anchoredImport.highlights,
         importedAt: baseRecord.importedAt,
         parentNodeId: nodeId,
         startPosition: readNextNodePosition(driver)

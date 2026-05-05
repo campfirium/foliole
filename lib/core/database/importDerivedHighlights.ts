@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
 
 import type { DatabaseDriver } from './driver.js';
+import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
 
 function deriveImportedHighlightTitle(content: string) {
   const firstLine = content
@@ -18,7 +19,7 @@ function deriveImportedHighlightTitle(content: string) {
 
 export function insertImportedHighlightNodes(input: {
   driver: DatabaseDriver;
-  highlights: PreparedImportHighlightRecord[] | undefined;
+  highlights: Array<PreparedImportHighlightRecord | AnchoredImportedHighlightRecord> | undefined;
   importedAt: string;
   parentNodeId: string;
   startPosition: number;
@@ -31,7 +32,7 @@ export function insertImportedHighlightNodes(input: {
     `INSERT INTO nodes (
        id, parent_id, priority, desired_retention, title, is_title_manual,
        content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, NULL, NULL, ?, 0, ?, NULL, NULL, ?, ?, NULL)`
+     ) VALUES (?, ?, NULL, NULL, ?, 0, ?, NULL, ?, ?, ?, NULL)`
   );
   const insertOrder = input.driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
 
@@ -42,6 +43,7 @@ export function insertImportedHighlightNodes(input: {
       input.parentNodeId,
       deriveImportedHighlightTitle(highlight.content),
       highlight.content,
+      'anchorId' in highlight ? JSON.stringify({ id: highlight.anchorId, kind: 'highlight' }) : null,
       input.importedAt,
       input.importedAt
     ]);

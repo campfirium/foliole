@@ -2,6 +2,34 @@ function normalizeLineEndings(value: string) {
   return value.replace(/\r\n?/g, '\n');
 }
 
+function normalizeLooseWhitespaceWithMap(value: string) {
+  const raw = normalizeLineEndings(value);
+  let normalized = '';
+  const rawIndexes: number[] = [];
+  let pendingWhitespaceStart: number | null = null;
+
+  for (let index = 0; index < raw.length; index += 1) {
+    const character = raw[index];
+    if (/\s/.test(character)) {
+      if (pendingWhitespaceStart === null) {
+        pendingWhitespaceStart = index;
+      }
+      continue;
+    }
+
+    if (pendingWhitespaceStart !== null && normalized.length > 0) {
+      normalized += ' ';
+      rawIndexes.push(pendingWhitespaceStart);
+      pendingWhitespaceStart = null;
+    }
+
+    normalized += character;
+    rawIndexes.push(index);
+  }
+
+  return { normalized: normalized.trim(), raw, rawIndexes };
+}
+
 function stripMarkdown(value: string) {
   return value
     .replace(/!\[[^\]]*]\([^)]+\)/g, ' ')
@@ -94,7 +122,32 @@ function resolveDirectionalBoundary(input: {
   }, null as number | null);
 }
 
+function tryExtractDirectQuote(rawExcerpt: string, quote: string) {
+  const normalizedExcerpt = normalizeLooseWhitespaceWithMap(rawExcerpt);
+  const normalizedQuote = normalizeLooseWhitespaceWithMap(quote).normalized;
+  if (!normalizedExcerpt.normalized || !normalizedQuote) {
+    return null;
+  }
+
+  const start = normalizedExcerpt.normalized.indexOf(normalizedQuote);
+  if (start < 0) {
+    return null;
+  }
+  const end = start + normalizedQuote.length - 1;
+  const rawStart = normalizedExcerpt.rawIndexes[start];
+  const rawEnd = normalizedExcerpt.rawIndexes[end];
+  if (rawStart === undefined || rawEnd === undefined) {
+    return null;
+  }
+  return normalizedExcerpt.raw.slice(rawStart, rawEnd + 1).trim();
+}
+
 export function trimMatchedExcerpt(rawExcerpt: string, quote: string, anchorFragment: string) {
+  const directQuote = tryExtractDirectQuote(rawExcerpt, quote);
+  if (directQuote) {
+    return directQuote;
+  }
+
   const normalizedExcerpt = normalizeText(rawExcerpt);
   const normalizedQuote = normalizeText(quote);
   const normalizedAnchor = normalizeText(anchorFragment);

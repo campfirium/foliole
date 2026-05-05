@@ -100,3 +100,13 @@ it('prefers the backward candidate closest to the anchor instead of an earlier d
     )
   ).toBe('我们 在这里 完成定位');
 });
+
+it('trims a matched sentence down to the exact quote instead of keeping the full paragraph', () => {
+  const content = [
+    '# Article',
+    '',
+    'Before the quote. This is the highlighted sentence. After the quote.'
+  ].join('\n');
+
+  expect(findContextExcerpt(content, 'This is the highlighted sentence.')).toBe('This is the highlighted sentence.');
+});
