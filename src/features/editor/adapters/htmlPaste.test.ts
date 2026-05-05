@@ -9,7 +9,32 @@ vi.mock('../../../shared/platform/attachmentImports', () => ({
   importClipboardImageAttachment
 }));
 
-import { handleClipboardImagePaste, handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
+import { FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
+import { handleClipboardImagePaste, handleInternalClipboardPaste, handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
+
+describe('handleInternalClipboardPaste', () => {
+  it('restores the internal markdown payload when the custom clipboard mime exists', () => {
+    const dispatch = vi.fn();
+    const view = {
+      dispatch,
+      state: { selection: { main: { from: 1, to: 4 } } }
+    } as unknown as EditorView;
+
+    expect(
+      handleInternalClipboardPaste(
+        {
+          getData: (format: string) => (format === FOLIOLE_CLIPBOARD_MIME ? '![Cover](asset://hash-1.png)' : '')
+        },
+        view
+      )
+    ).toBe(true);
+
+    expect(dispatch).toHaveBeenCalledWith({
+      changes: { from: 1, insert: '![Cover](asset://hash-1.png)', to: 4 },
+      selection: { anchor: 29 }
+    });
+  });
+});
 
 describe('handleMarkdownCompatibleHtmlPaste', () => {
   it('converts clipboard HTML into markdown-compatible text before insertion', () => {

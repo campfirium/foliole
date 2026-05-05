@@ -5,11 +5,12 @@ import { openExternalUrl } from '../../../shared/platform/bridge';
 import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
+import { createClipboardExportFromView, FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
 import { handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
 import { handleClipboardImagePaste } from './htmlPaste';
+import { handleInternalClipboardPaste } from './htmlPaste';
 import {
   addAnchorTagDecorations,
-  collectSelectionTextWithExpandedLinks,
   getCursorLineNumber,
   INLINE_ANCHOR_TAG_PATTERN
 } from './liveMarkdownAnchors';
@@ -239,15 +240,21 @@ const markdownInteractionHandlers = EditorView.domEventHandlers({
     const clipboard = event.clipboardData;
     if (!clipboard) return false;
 
-    const expandedText = collectSelectionTextWithExpandedLinks(view);
-    if (!expandedText) return false;
+    const exportPayload = createClipboardExportFromView(view);
+    if (!exportPayload) return false;
 
     event.preventDefault();
-    clipboard.setData('text/plain', expandedText);
+    clipboard.setData('text/plain', exportPayload.externalText);
+    clipboard.setData('text/html', exportPayload.externalHtml);
+    clipboard.setData(FOLIOLE_CLIPBOARD_MIME, exportPayload.internalText);
     return true;
   },
   paste(event, view) {
     if (handleClipboardImagePaste(event.clipboardData, view, view.state.facet(activeNodeIdFacet))) {
+      event.preventDefault();
+      return true;
+    }
+    if (handleInternalClipboardPaste(event.clipboardData, view)) {
       event.preventDefault();
       return true;
     }

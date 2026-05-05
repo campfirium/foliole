@@ -5,6 +5,7 @@ import { buildAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl
 import { importClipboardImageAttachment } from '../../../shared/platform/attachmentImports';
 
 import { bypassAnchorStructureGuard } from './anchorStructureGuard';
+import { FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
 
 interface ClipboardLike {
   getData: (format: string) => string;
@@ -15,6 +16,24 @@ interface ClipboardItemLike {
   kind: string;
   type: string;
   getAsFile?: () => File | null;
+}
+
+export function handleInternalClipboardPaste(clipboard: ClipboardLike | null, view: EditorView) {
+  if (!clipboard) {
+    return false;
+  }
+
+  const internalContent = clipboard.getData(FOLIOLE_CLIPBOARD_MIME);
+  if (!internalContent) {
+    return false;
+  }
+
+  const { from, to } = view.state.selection.main;
+  view.dispatch({
+    changes: { from, insert: internalContent, to },
+    selection: { anchor: from + internalContent.length }
+  });
+  return true;
 }
 
 export function handleMarkdownCompatibleHtmlPaste(clipboard: ClipboardLike | null, view: EditorView) {
