@@ -10,7 +10,7 @@ ANDROID_EMULATOR_SCRIPT="${ANDROID_EMULATOR_SCRIPT:-scripts/android/windows-run-
 ANDROID_DEPLOY_SCRIPT="${ANDROID_DEPLOY_SCRIPT:-scripts/android/windows-deploy-app.sh}"
 ANDROID_PREVIEW_OPEN_STUDIO="${ANDROID_PREVIEW_OPEN_STUDIO:-1}"
 DEFAULT_ANDROID_AVD="${DEFAULT_ANDROID_AVD:-Foliole_API_36}"
-ANDROID_PREVIEW_AVD="${ANDROID_PREVIEW_AVD:-${FOLIOLE_ANDROID_AVD:-${DEFAULT_ANDROID_AVD}}}"
+ANDROID_PREVIEW_AVD="${ANDROID_PREVIEW_AVD-${FOLIOLE_ANDROID_AVD-${DEFAULT_ANDROID_AVD}}}"
 ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS:-600}"
 ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR:-C:\dev\foliole}"
 ANDROID_WINDOWS_MIRROR_DIR="${ANDROID_WINDOWS_MIRROR_DIR:-$(wslpath -u "${ANDROID_WINDOWS_WORKDIR}")}"
@@ -26,13 +26,17 @@ run_preview_step() {
   local label="$1"
   shift
 
-  local started_at finished_at elapsed
+  local started_at finished_at elapsed exit_code
   started_at="$(date +%s)"
   echo "[android-preview] begin: ${label}"
+  set +e
   "$@"
+  exit_code=$?
+  set -e
   finished_at="$(date +%s)"
   elapsed=$((finished_at - started_at))
   echo "[android-preview] done: ${label} (${elapsed}s)"
+  return "${exit_code}"
 }
 
 run_with_timeout() {

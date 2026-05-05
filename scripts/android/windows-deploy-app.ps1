@@ -6,7 +6,8 @@ param(
   [int]$BootTimeoutSeconds = 180,
   [int]$LaunchTimeoutSeconds = 20,
   [int]$LaunchStabilitySeconds = 4,
-  [int]$DevReverseSyncPort = 38641
+  [int]$DevReverseSyncPort = 38641,
+  [switch]$StopGradleDaemon
 )
 
 $ErrorActionPreference = "Stop"
@@ -73,6 +74,14 @@ function Invoke-GradleWrapper {
   & cmd.exe /d /c $gradleCommand
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
+  }
+}
+
+function Stop-GradleWrapperDaemon {
+  Write-Info "stopping Gradle daemon"
+  & cmd.exe /d /c "call .\gradlew.bat --stop"
+  if ($LASTEXITCODE -ne 0) {
+    Write-Info "Gradle daemon stop failed; continuing"
   }
 }
 
@@ -179,6 +188,15 @@ Write-Info "verifying foreground activity"
 & $nodeExe $verifyScript --adb $adbPath --serial $serial --app-id $AppId --component "$AppId/$MainActivity" --timeout-seconds $LaunchTimeoutSeconds --stability-seconds $LaunchStabilitySeconds
 if ($LASTEXITCODE -ne 0) {
   throw "Android app did not remain in the foreground after launch."
+}
+
+if ($StopGradleDaemon) {
+  Push-Location $androidDir
+  try {
+    Stop-GradleWrapperDaemon
+  } finally {
+    Pop-Location
+  }
 }
 
 Write-Info "status: OPENED"

@@ -3,7 +3,9 @@ param(
   [string]$AndroidHostDir = "android",
   [string]$AndroidWebBuildScript = "android:web:build",
   [string]$CapCliPackage = "@capacitor/cli",
-  [string]$CapCliVersion = "8.3.0"
+  [string]$CapCliVersion = "8.3.0",
+  [ValidateSet("auto", "skip", "force")]
+  [string]$DependencyRefresh = "auto"
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,14 +48,22 @@ function Sync-WindowsMirrorDependencies {
   $installStampPath = Join-Path $nodeModulesDir ".foliole-install-stamp"
   $packageJsonPath = Join-Path $WindowsWorkDir "package.json"
   $packageLockPath = Join-Path $WindowsWorkDir "package-lock.json"
-  $needsInstall = !(Test-Path -Path $installStampPath)
+  if ($DependencyRefresh -eq "skip" -and (Test-Path -Path $nodeModulesDir)) {
+    Write-Info "dependency refresh skipped by ANDROID_WINDOWS_DEPENDENCY_REFRESH=skip"
+    return
+  }
 
-  if (!$needsInstall -and (Test-Path -Path $packageJsonPath)) {
-    $needsInstall = (Get-Item $packageJsonPath).LastWriteTimeUtc -gt (Get-Item $installStampPath).LastWriteTimeUtc
+  $needsInstall = !(Test-Path -Path $nodeModulesDir) -or !(Test-Path -Path $installStampPath)
+  if ($DependencyRefresh -eq "force") {
+    $needsInstall = $true
   }
 
   if (!$needsInstall -and (Test-Path -Path $packageLockPath)) {
     $needsInstall = (Get-Item $packageLockPath).LastWriteTimeUtc -gt (Get-Item $installStampPath).LastWriteTimeUtc
+  }
+
+  if (!$needsInstall -and !(Test-Path -Path $packageLockPath) -and (Test-Path -Path $packageJsonPath)) {
+    $needsInstall = (Get-Item $packageJsonPath).LastWriteTimeUtc -gt (Get-Item $installStampPath).LastWriteTimeUtc
   }
 
   if (!$needsInstall) {

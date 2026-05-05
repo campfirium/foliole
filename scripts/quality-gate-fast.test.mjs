@@ -347,7 +347,7 @@ describe('quality-gate-fast.sh', () => {
       expect(result.stdout).toContain('[quality-gate-fast] selected level: mid');
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/FancyCard.tsx');
       expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
-      expect(result.stdout).toContain('related test:run --pool=threads --maxWorkers=10 src/app/components/FancyCard.test.tsx');
+      expect(result.stdout).toContain('related test:run --pool=threads --maxWorkers=2 src/app/components/FancyCard.test.tsx');
       expect(result.stdout).not.toContain('repo lint should stay unused');
       expect(result.stdout).not.toContain('repo test should stay unused');
       expect(result.stdout).not.toContain('repo build should stay unused');

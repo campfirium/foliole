@@ -11,10 +11,11 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const ANDROID_PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'android-preview.sh');
+const ANDROID_PREVIEW_LITE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'android-preview-lite.sh');
 
-function runAndroidPreview(cwd, env = {}) {
+function runAndroidPreview(cwd, env = {}, script = ANDROID_PREVIEW_SCRIPT) {
   return new Promise((resolve) => {
-    const child = spawn('bash', [ANDROID_PREVIEW_SCRIPT], {
+    const child = spawn('bash', [script], {
       cwd,
       env: {
         ...process.env,
@@ -76,6 +77,99 @@ describe('android-preview.sh', () => {
       expect(result.stdout).toContain('[android-preview] begin: android-deploy');
       expect(result.stdout).toContain('[android-preview] done: android-deploy');
       expect(result.stdout).toContain('[android-preview] status: OPENED');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('allows sync-only preview when the AVD and Studio launch are disabled', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-'));
+    try {
+      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-only-target:${WINDOWS_MIRROR_DIR}\n');
+      const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho android-sync-only\n');
+      const failIfCalled = await writeExecutable(tempRoot, 'fail-if-called.sh', '#!/usr/bin/env bash\nexit 64\n');
+
+      const result = await runAndroidPreview(tempRoot, {
+        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SYNC_SCRIPT: androidSync,
+        ANDROID_EMULATOR_SCRIPT: failIfCalled,
+        ANDROID_DEPLOY_SCRIPT: failIfCalled,
+        ANDROID_OPEN_SCRIPT: failIfCalled,
+        ANDROID_PREVIEW_AVD: '',
+        ANDROID_PREVIEW_OPEN_STUDIO: '0',
+        ANDROID_WINDOWS_MIRROR_DIR: path.join(tempRoot, 'android-preview-mirror')
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('sync-only-target:');
+      expect(result.stdout).toContain('android-sync-only');
+      expect(result.stdout).toContain('[android-preview] status: SYNCED');
+      expect(result.stdout).not.toContain('[android-preview] begin: android-emulator');
+      expect(result.stdout).not.toContain('[android-preview] begin: android-deploy');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('stops when Capacitor sync fails instead of deploying stale output', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-fail-'));
+    try {
+      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-before-failure\n');
+      const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-failed\nexit 42\n');
+      const failIfCalled = await writeExecutable(tempRoot, 'fail-if-called.sh', '#!/usr/bin/env bash\necho should-not-run\nexit 64\n');
+
+      const result = await runAndroidPreview(tempRoot, {
+        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SYNC_SCRIPT: androidSync,
+        ANDROID_EMULATOR_SCRIPT: failIfCalled,
+        ANDROID_DEPLOY_SCRIPT: failIfCalled,
+        ANDROID_PREVIEW_AVD: 'Test_AVD',
+        ANDROID_WINDOWS_MIRROR_DIR: path.join(tempRoot, 'android-preview-mirror')
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('cap-sync-failed');
+      expect(result.stdout).toContain('[android-preview] failed at: android host sync');
+      expect(result.stdout).toContain('[android-preview] status: FAILED');
+      expect(result.stdout).not.toContain('should-not-run');
+      expect(result.stdout).not.toContain('[android-preview] begin: android-emulator');
+      expect(result.stdout).not.toContain('[android-preview] begin: android-deploy');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('lite preview keeps emulator deployment but asks deploy to stop Gradle afterward', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-lite-'));
+    try {
+      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho lite-sync\n');
+      const androidSync = await writeExecutable(
+        tempRoot,
+        'android-sync.sh',
+        '#!/usr/bin/env bash\necho lite-cap-sync\necho dependency-refresh:${ANDROID_WINDOWS_DEPENDENCY_REFRESH-unset}\n'
+      );
+      const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho lite-emulator:$1\n');
+      const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho stop-gradle:${ANDROID_GRADLE_STOP_AFTER_DEPLOY-unset}\n');
+
+      const result = await runAndroidPreview(
+        tempRoot,
+        {
+          WINDOWS_SYNC_SCRIPT: windowsSync,
+          ANDROID_SYNC_SCRIPT: androidSync,
+          ANDROID_EMULATOR_SCRIPT: emulator,
+          ANDROID_DEPLOY_SCRIPT: deploy,
+          ANDROID_PREVIEW_AVD: 'Lite_AVD',
+          ANDROID_WINDOWS_MIRROR_DIR: path.join(tempRoot, 'android-preview-mirror')
+        },
+        ANDROID_PREVIEW_LITE_SCRIPT
+      );
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('lite-emulator:Lite_AVD');
+      expect(result.stdout).toContain('stop-gradle:1');
+      expect(result.stdout).toContain('dependency-refresh:skip');
+      expect(result.stdout).toContain('[android-preview] status: OPENED');
+      expect(result.stdout).toContain('lite-cap-sync');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
