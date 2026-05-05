@@ -1,8 +1,19 @@
-import type { DatabaseDriver } from './driver.js';
+import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
 
 interface NodeAnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze';
+}
+
+interface NodeReadingPayload {
+  intervalDurationMs: number;
+  intervalGrowthFactor: number;
+  lastHandledAt: string;
+  nextAt: string;
+  priority: number;
+  readingPosition: number;
+  repetitionCount: number;
+  state: 'active' | 'done' | 'dismissed';
 }
 
 export interface UpsertNodeSnapshotInput {
@@ -15,6 +26,7 @@ export interface UpsertNodeSnapshotInput {
   content: string;
   reveal: string | null;
   anchorLink: NodeAnchorLinkPayload | null;
+  reading?: NodeReadingPayload | null;
   position: number | null;
   createdAt: string;
   updatedAt: string;
@@ -38,39 +50,79 @@ function toAnchorLinkValue(anchorLink: NodeAnchorLinkPayload | null): string | n
   return anchorLink ? JSON.stringify(anchorLink) : null;
 }
 
-export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnapshotInput): void {
-  const upsertNodeStatement = driver.prepare(
+function createUpsertNodeStatement(driver: DatabaseDriver) {
+  return driver.prepare(
     `INSERT INTO nodes (
-        id,
-        parent_id,
-        priority,
-        desired_retention,
-        title,
-        is_title_manual,
-        content,
-        reveal,
-        anchor_link,
-        created_at,
-        updated_at,
-        deleted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
-      ON CONFLICT(id) DO UPDATE SET
-        parent_id = excluded.parent_id,
-        priority = excluded.priority,
-        desired_retention = excluded.desired_retention,
-        title = excluded.title,
-        is_title_manual = excluded.is_title_manual,
-        content = excluded.content,
-        reveal = excluded.reveal,
-        anchor_link = excluded.anchor_link,
-        updated_at = excluded.updated_at,
-        deleted_at = NULL`
+       id, parent_id, priority, desired_retention, title, is_title_manual,
+       content, reveal, anchor_link, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+     ON CONFLICT(id) DO UPDATE SET
+       parent_id = excluded.parent_id,
+       priority = excluded.priority,
+       desired_retention = excluded.desired_retention,
+       title = excluded.title,
+       is_title_manual = excluded.is_title_manual,
+       content = excluded.content,
+       reveal = excluded.reveal,
+       anchor_link = excluded.anchor_link,
+       updated_at = excluded.updated_at,
+       deleted_at = NULL`
   );
-  const upsertNodeOrderStatement = driver.prepare(
+}
+
+function createUpsertNodeOrderStatement(driver: DatabaseDriver) {
+  return driver.prepare(
     `INSERT INTO node_order (node_id, position)
      VALUES (?, ?)
      ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`
   );
+}
+
+function createUpsertNodeReadingStatement(driver: DatabaseDriver) {
+  return driver.prepare(
+    `INSERT INTO node_reading (
+       node_id, interval_duration_ms, interval_growth_factor, last_handled_at,
+       next_at, priority, reading_position, repetition_count, state
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(node_id) DO UPDATE SET
+       interval_duration_ms = excluded.interval_duration_ms,
+       interval_growth_factor = excluded.interval_growth_factor,
+       last_handled_at = excluded.last_handled_at,
+       next_at = excluded.next_at,
+       priority = excluded.priority,
+       reading_position = excluded.reading_position,
+       repetition_count = excluded.repetition_count,
+       state = excluded.state`
+  );
+}
+
+function writeNodeReadingSnapshot(
+  input: UpsertNodeSnapshotInput,
+  runUpsert: (params?: DatabaseBindParams) => void,
+  runDelete: (params?: DatabaseBindParams) => void
+) {
+  if (!input.reading) {
+    runDelete([input.nodeId]);
+    return;
+  }
+  runUpsert([
+    input.nodeId,
+    input.reading.intervalDurationMs,
+    input.reading.intervalGrowthFactor,
+    input.reading.lastHandledAt,
+    input.reading.nextAt,
+    input.reading.priority,
+    input.reading.readingPosition,
+    input.reading.repetitionCount,
+    input.reading.state
+  ]);
+}
+
+export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnapshotInput): void {
+  const upsertNodeStatement = createUpsertNodeStatement(driver);
+  const upsertNodeOrderStatement = createUpsertNodeOrderStatement(driver);
+  const upsertNodeReadingStatement = createUpsertNodeReadingStatement(driver);
+  const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
 
   driver.transaction(() => {
     upsertNodeStatement.run([
@@ -89,6 +141,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
     if (typeof input.position === 'number') {
       upsertNodeOrderStatement.run([input.nodeId, input.position]);
     }
+    writeNodeReadingSnapshot(input, upsertNodeReadingStatement.run, deleteNodeReadingStatement.run);
   });
 }
 
@@ -132,6 +185,7 @@ export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): 
 export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNodesPermanentlyInput): void {
   const deleteReviewLogStatement = driver.prepare('DELETE FROM review_log WHERE node_id = ?');
   const deleteNodeReviewStatement = driver.prepare('DELETE FROM node_review WHERE node_id = ?');
+  const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
   const deleteNodeOrderStatement = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   const clearOrderStatement = driver.prepare('DELETE FROM node_order');
@@ -141,6 +195,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     for (const nodeId of input.nodeIds) {
       deleteReviewLogStatement.run([nodeId]);
       deleteNodeReviewStatement.run([nodeId]);
+      deleteNodeReadingStatement.run([nodeId]);
       deleteNodeOrderStatement.run([nodeId]);
     }
     for (const nodeId of [...input.nodeIds].reverse()) {

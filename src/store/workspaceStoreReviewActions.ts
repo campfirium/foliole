@@ -1,3 +1,4 @@
+import type { Node } from '../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
@@ -6,8 +7,9 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 
 import { buildReviewQueuePlan } from './reviewQueuePlanner';
 import { buildNextReadingProfile, createEmptyReviewSession, resolveReadingPriorityChain } from './workspaceReviewReading';
-import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
+import { applyGradedReviewState, persistReviewGradeMutation } from './workspaceStoreReviewActionHelpers';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
@@ -38,34 +40,6 @@ function createRevealReviewAnswerAction(set: WorkspaceSet): WorkspaceReviewActio
     });
   };
 }
-async function persistReviewGradeMutation(args: { currentNodeId: string; grade: ReviewGrade; reviewedAt: string; cardBefore: ReturnType<typeof toSchedulerCard>; cardAfter: ReturnType<typeof toSchedulerCard> }): Promise<void> {
-  await syncReviewGradeToRuntime({ nodeId: args.currentNodeId, grade: args.grade, reviewedAt: args.reviewedAt, cardBefore: args.cardBefore, cardAfter: args.cardAfter });
-}
-function applyGradedReviewState(args: { set: WorkspaceSet; snapshot: WorkspaceState; currentNodeId: string; nextNodeId: string | null; nextQueue: string[]; nextReviewProfile: ReturnType<typeof toNodeReviewProfile>; reviewedAt: string; now: string }) {
-  args.set((state) => {
-    const node = state.nodesById[args.currentNodeId];
-    if (!node) return state;
-    return {
-      activeNodeId: args.nextNodeId ?? state.activeNodeId,
-      nodesById: {
-        ...state.nodesById,
-        [args.currentNodeId]: {
-          ...node,
-          review: { ...args.nextReviewProfile, lastReviewAt: args.reviewedAt },
-          updatedAt: args.now
-        }
-      },
-      reviewSession: args.nextNodeId
-        ? {
-            currentNodeId: args.nextNodeId,
-            isAnswerRevealed: false,
-            queueNodeIds: args.nextQueue,
-            totalNodeCount: args.snapshot.reviewSession.totalNodeCount
-          }
-        : createEmptyReviewSession()
-    };
-  });
-}
 function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceReviewActions['deferReviewItem'] {
   return () => {
     const now = new Date().toISOString();
@@ -91,18 +65,22 @@ function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Work
       range: pushQueueSettings.readingIntervalGrowthFactorRange
     });
     const nextNodeId = remainingQueue[0] ?? null;
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[currentNodeId];
       if (!node) return state;
+      const nextReadingProfile = buildNextReadingProfile(nextReading, node.reading);
+      const nextNode: Node = {
+        ...node,
+        reading: nextReadingProfile,
+        updatedAt: now
+      };
+      nextNodeForSync = nextNode;
       return {
         activeNodeId: nextNodeId ?? state.activeNodeId,
         nodesById: {
           ...state.nodesById,
-          [currentNodeId]: {
-            ...node,
-            reading: buildNextReadingProfile(nextReading, node.reading),
-            updatedAt: now
-          }
+          [currentNodeId]: nextNode
         },
         reviewSession: nextNodeId
           ? {
@@ -114,6 +92,9 @@ function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Work
           : createEmptyReviewSession()
       };
     });
+    if (nextNodeForSync) {
+      syncNodeContentToRuntime(nextNodeForSync);
+    }
     return true;
   };
 }
@@ -141,19 +122,22 @@ function createCompleteReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): W
       initialIntervalMs: pushQueueSettings.readingInitialIntervalMs,
       range: pushQueueSettings.readingIntervalGrowthFactorRange
     });
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[currentNodeId];
       if (!node) return state;
       const nextReadingProfile = buildNextReadingProfile(nextReading, node.reading);
+      const nextNode: Node = {
+        ...node,
+        reading: nextReadingProfile,
+        updatedAt: now
+      };
+      nextNodeForSync = nextNode;
       return {
         activeNodeId: nextNodeId ?? state.activeNodeId,
         nodesById: {
           ...state.nodesById,
-          [currentNodeId]: {
-            ...node,
-            reading: nextReadingProfile,
-            updatedAt: now
-          }
+          [currentNodeId]: nextNode
         },
         reviewSession: nextNodeId
           ? {
@@ -165,6 +149,9 @@ function createCompleteReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): W
           : createEmptyReviewSession()
       };
     });
+    if (nextNodeForSync) {
+      syncNodeContentToRuntime(nextNodeForSync);
+    }
     return true;
   };
 }
@@ -177,23 +164,26 @@ function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Wo
     if (!currentNode || isFsrsReviewItemNode(currentNode)) return false;
     const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
     const nextNodeId = nextQueue[0] ?? null;
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[currentNodeId];
       if (!node) return state;
+      const nextNode: Node = {
+        ...node,
+        reading: node.reading
+          ? {
+              ...node.reading,
+              state: 'dismissed'
+            }
+          : node.reading,
+        updatedAt: now
+      };
+      nextNodeForSync = nextNode;
       return {
         activeNodeId: nextNodeId ?? state.activeNodeId,
         nodesById: {
           ...state.nodesById,
-          [currentNodeId]: {
-            ...node,
-            reading: node.reading
-              ? {
-                  ...node.reading,
-                  state: 'dismissed'
-                }
-              : node.reading,
-            updatedAt: now
-          }
+          [currentNodeId]: nextNode
         },
         reviewSession: nextNodeId
           ? {
@@ -205,6 +195,9 @@ function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Wo
           : createEmptyReviewSession()
       };
     });
+    if (nextNodeForSync) {
+      syncNodeContentToRuntime(nextNodeForSync);
+    }
     return true;
   };
 }

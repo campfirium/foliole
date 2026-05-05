@@ -35,6 +35,7 @@ function toNodeSnapshotPayload(node: Node, position?: number): NativeNodeSnapsho
     content: node.content,
     reveal: node.reveal,
     anchorLink: node.anchorLink ?? null,
+    reading: node.reading ?? null,
     position: typeof position === 'number' ? position : null,
     createdAt: node.createdAt,
     updatedAt: node.updatedAt

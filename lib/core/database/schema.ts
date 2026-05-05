@@ -28,6 +28,18 @@ export const nodeReview = sqliteTable('node_review', {
   lapses: integer('lapses').notNull().default(0)
 });
 
+export const nodeReading = sqliteTable('node_reading', {
+  nodeId: text('node_id').primaryKey(),
+  intervalDurationMs: integer('interval_duration_ms').notNull().default(0),
+  intervalGrowthFactor: real('interval_growth_factor').notNull().default(1),
+  lastHandledAt: text('last_handled_at').notNull(),
+  nextAt: text('next_at').notNull(),
+  priority: real('priority').notNull().default(0),
+  readingPosition: integer('reading_position').notNull().default(0),
+  repetitionCount: integer('repetition_count').notNull().default(0),
+  state: text('state').notNull().default('active')
+});
+
 export const reviewLog = sqliteTable('review_log', {
   id: text('id').primaryKey(),
   opId: text('op_id').notNull().unique(),

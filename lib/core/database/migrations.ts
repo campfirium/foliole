@@ -8,7 +8,7 @@ export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget 
   sqlite: TSqlite;
 }
 
-export const DATABASE_SCHEMA_VERSION = 3;
+export const DATABASE_SCHEMA_VERSION = 4;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -89,6 +89,20 @@ const CREATE_TABLE_STATEMENTS_V3 = [
   'ALTER TABLE nodes ADD COLUMN desired_retention REAL'
 ];
 
+const CREATE_TABLE_STATEMENTS_V4 = [
+  `CREATE TABLE IF NOT EXISTS node_reading (
+    node_id TEXT PRIMARY KEY REFERENCES nodes(id),
+    interval_duration_ms INTEGER NOT NULL DEFAULT 0,
+    interval_growth_factor REAL NOT NULL DEFAULT 1,
+    last_handled_at TEXT NOT NULL,
+    next_at TEXT NOT NULL,
+    priority REAL NOT NULL DEFAULT 0,
+    reading_position INTEGER NOT NULL DEFAULT 0,
+    repetition_count INTEGER NOT NULL DEFAULT 0,
+    state TEXT NOT NULL DEFAULT 'active'
+  )`
+];
+
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -118,6 +132,12 @@ export function runDatabaseMigrations(sqlite: DatabaseMigrationTarget) {
         sqlite.exec(statement);
       }
       setUserVersion(sqlite, 3);
+    }
+    if (currentVersion < 4) {
+      for (const statement of CREATE_TABLE_STATEMENTS_V4) {
+        sqlite.exec(statement);
+      }
+      setUserVersion(sqlite, 4);
     }
     if (currentVersion > DATABASE_SCHEMA_VERSION) {
       throw new Error(`database schema version ${currentVersion} is newer than supported`);

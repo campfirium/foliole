@@ -220,6 +220,10 @@ describe('createWorkspaceNodeActions create sync', () => {
 });
 
 describe('createWorkspaceNodeActions dismiss', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('marks pending reading nodes as dismissed from the node menu', () => {
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
@@ -231,6 +235,14 @@ describe('createWorkspaceNodeActions dismiss', () => {
       state: 'dismissed',
       repetitionCount: 0
     });
+    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'node-1',
+        reading: expect.objectContaining({
+          state: 'dismissed'
+        })
+      })
+    );
   });
 });
 

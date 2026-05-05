@@ -117,6 +117,7 @@ it('handles node mutation commands', async () => {
     content: '# Content',
     reveal: null,
     anchorLink: null,
+    reading: null,
     position: 1,
     createdAt: '2026-03-06T00:00:00.000Z',
     updatedAt: '2026-03-06T00:00:01.000Z'
@@ -153,6 +154,7 @@ it('handles node reveal mutation command', async () => {
     content: 'Question',
     reveal: 'Answer',
     anchorLink: { id: 'cloze-1', kind: 'cloze' },
+    reading: null,
     position: 2,
     createdAt: '2026-03-06T00:00:00.000Z',
     updatedAt: '2026-03-06T00:00:02.000Z'

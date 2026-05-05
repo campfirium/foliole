@@ -1,4 +1,5 @@
 import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
+import type { Node } from '../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
@@ -21,15 +22,11 @@ import {
   createUpdateNodeDesiredRetentionAction,
   createUpdateNodePriorityAction
 } from './workspaceStoreNodeSchedulerActions';
+import { createSetNodeViewStateAction } from './workspaceStoreNodeViewActions';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
 import { createChildNodeAction, createMoveNodeAction, createMoveNodesAction } from './workspaceStoreTreeActions';
 
-type WorkspaceSet = (
-  partial:
-    | WorkspaceState
-    | Partial<WorkspaceState>
-    | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
-) => void;
+type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
 type WorkspaceNodeActions = Pick<
   WorkspaceState,
@@ -51,28 +48,6 @@ type WorkspaceNodeActions = Pick<
   | 'updateNodeContent'
   | 'updateNodeReveal'
 >;
-
-function createSetNodeViewStateAction(set: WorkspaceSet): WorkspaceNodeActions['setNodeViewState'] {
-  return (nodeId, viewState) => {
-    set((state) => {
-      if (!state.nodesById[nodeId]) {
-        return state;
-      }
-      return {
-        nodeViewById: {
-          ...state.nodeViewById,
-          [nodeId]: {
-            scrollTop: Math.max(0, viewState.scrollTop),
-            selection: {
-              from: Math.max(0, viewState.selection.from),
-              to: Math.max(0, viewState.selection.to)
-            }
-          }
-        }
-      };
-    });
-  };
-}
 
 function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeTitle'] {
   return (nodeId, title) => {
@@ -162,6 +137,7 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
 function createDismissNodeAction(set: WorkspaceSet): WorkspaceNodeActions['dismissNode'] {
   return (nodeId, now = new Date().toISOString()) => {
     let dismissed = false;
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
       if (!node || node.content.trim().length === 0 || isFsrsReviewItemNode(node) || node.reading?.state === 'dismissed') {
@@ -169,26 +145,31 @@ function createDismissNodeAction(set: WorkspaceSet): WorkspaceNodeActions['dismi
       }
       dismissed = true;
       const defaultPriority = getCurrentReviewSchedulerSettings().pushQueue.defaultPriority;
+      const nextNode: Node = {
+        ...node,
+        reading: {
+          intervalDurationMs: node.reading?.intervalDurationMs ?? 0,
+          intervalGrowthFactor: node.reading?.intervalGrowthFactor ?? 1,
+          lastHandledAt: node.reading?.lastHandledAt ?? now,
+          nextAt: node.reading?.nextAt ?? now,
+          priority: node.reading?.priority ?? defaultPriority,
+          readingPosition: node.reading?.readingPosition ?? 0,
+          repetitionCount: node.reading?.repetitionCount ?? 0,
+          state: 'dismissed'
+        },
+        updatedAt: now
+      };
+      nextNodeForSync = nextNode;
       return {
         nodesById: {
           ...state.nodesById,
-          [nodeId]: {
-            ...node,
-            reading: {
-              intervalDurationMs: node.reading?.intervalDurationMs ?? 0,
-              intervalGrowthFactor: node.reading?.intervalGrowthFactor ?? 1,
-              lastHandledAt: node.reading?.lastHandledAt ?? now,
-              nextAt: node.reading?.nextAt ?? now,
-              priority: node.reading?.priority ?? defaultPriority,
-              readingPosition: node.reading?.readingPosition ?? 0,
-              repetitionCount: node.reading?.repetitionCount ?? 0,
-              state: 'dismissed'
-            },
-            updatedAt: now
-          }
+          [nodeId]: nextNode
         }
       };
     });
+    if (nextNodeForSync) {
+      syncNodeContentToRuntime(nextNodeForSync);
+    }
     return dismissed;
   };
 }
@@ -197,6 +178,7 @@ function createRelearnNodeAction(set: WorkspaceSet): WorkspaceNodeActions['relea
   return (nodeId, now = new Date().toISOString()) => {
     let relearned = false;
     let shouldSyncReviewReset = false;
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
       if (!node || node.content.trim().length === 0) {
@@ -207,20 +189,26 @@ function createRelearnNodeAction(set: WorkspaceSet): WorkspaceNodeActions['relea
       }
       relearned = true;
       shouldSyncReviewReset = isFsrsReviewItemNode(node);
+      const nextNode: Node = {
+        ...node,
+        review: shouldSyncReviewReset ? null : node.review,
+        reading: null,
+        updatedAt: now
+      };
+      nextNodeForSync = nextNode;
       return {
         nodesById: {
           ...state.nodesById,
-          [nodeId]: {
-            ...node,
-            review: shouldSyncReviewReset ? null : node.review,
-            reading: null,
-            updatedAt: now
-          }
+          [nodeId]: nextNode
         }
       };
     });
     if (shouldSyncReviewReset) {
       syncRelearnNodeToRuntime({ nodeId });
+      return relearned;
+    }
+    if (nextNodeForSync) {
+      syncNodeContentToRuntime(nextNodeForSync);
     }
     return relearned;
   };

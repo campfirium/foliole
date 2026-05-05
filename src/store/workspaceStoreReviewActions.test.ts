@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import { syncNodeContentToRuntime, syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createClozeReviewNode,
@@ -18,6 +18,7 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
   return {
     ...actual,
+    syncNodeContentToRuntime: vi.fn(),
     syncReviewGradeToRuntime: vi.fn()
   };
 });
@@ -219,4 +220,12 @@ it('dismisses reading items and removes them from future queues', () => {
   expect(harness.getState().reviewSession.currentNodeId).toBe('reading-2');
   expect(harness.getState().reviewSession.queueNodeIds).toEqual(['reading-2']);
   expect(harness.getState().nodesById['reading-1']?.reading?.state).toBe('dismissed');
+  expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
+    expect.objectContaining({
+      id: 'reading-1',
+      reading: expect.objectContaining({
+        state: 'dismissed'
+      })
+    })
+  );
 });

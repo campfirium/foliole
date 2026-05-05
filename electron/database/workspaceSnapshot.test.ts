@@ -70,3 +70,41 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
   expect(snapshot?.activeNodeId).toBe('node-2');
   expect(snapshot?.nodesById['node-2']?.content).toBe('content:node-2');
 });
+
+it('loads persisted reading profiles from sqlite snapshot', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-reading',
+    parentNodeId: null,
+    title: 'Reading node',
+    isTitleManual: true,
+    content: 'content:reading',
+    reveal: null,
+    anchorLink: null,
+    reading: {
+      intervalDurationMs: 0,
+      intervalGrowthFactor: 1,
+      lastHandledAt: '2026-03-18T00:00:00.000Z',
+      nextAt: '2026-03-18T00:00:00.000Z',
+      priority: 0,
+      readingPosition: 0,
+      repetitionCount: 0,
+      state: 'dismissed'
+    },
+    position: 0,
+    createdAt: '2026-03-18T00:00:00.000Z',
+    updatedAt: '2026-03-18T00:00:00.000Z'
+  });
+
+  const snapshot = loadWorkspaceSnapshot();
+
+  expect(snapshot?.nodesById['node-reading']?.reading).toEqual({
+    intervalDurationMs: 0,
+    intervalGrowthFactor: 1,
+    lastHandledAt: '2026-03-18T00:00:00.000Z',
+    nextAt: '2026-03-18T00:00:00.000Z',
+    priority: 0,
+    readingPosition: 0,
+    repetitionCount: 0,
+    state: 'dismissed'
+  });
+});

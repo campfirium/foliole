@@ -5,13 +5,9 @@ import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { isDesktopRuntime } from '../shared/platform/runtime';
 
 import {
-  syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime,
-  syncReadingProgressToRuntime,
-  syncRestoreNodesToRuntime,
-  syncSoftDeleteNodesToRuntime,
   syncReviewGradeToRuntime
 } from './workspaceRuntimeSync';
 
@@ -34,6 +30,16 @@ function createNodeFixture(): Node {
     content: '# Seed',
     anchorLink: { id: 'hl-1', kind: 'highlight' },
     reveal: 'Reveal',
+    reading: {
+      intervalDurationMs: 0,
+      intervalGrowthFactor: 1,
+      lastHandledAt: '2026-03-06T00:00:00.000Z',
+      nextAt: '2026-03-06T00:00:00.000Z',
+      priority: 0,
+      readingPosition: 0,
+      repetitionCount: 0,
+      state: 'dismissed'
+    },
     review: null,
     createdAt: '2026-03-06T00:00:00.000Z',
     updatedAt: '2026-03-06T00:00:01.000Z'
@@ -73,6 +79,33 @@ function expectNoWorkspacePersist(invoke: ReturnType<typeof vi.fn>) {
   expect(invokedCommands).not.toContain('save_workspace_state');
 }
 
+function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'update_node_content' | 'update_node_reveal') {
+  expect(invoke).toHaveBeenCalledWith(command, {
+    nodeId: 'node-1',
+    parentNodeId: null,
+    priority: 0,
+    desiredRetention: 0.81,
+    title: 'Seed',
+    isTitleManual: false,
+    content: '# Seed',
+    reveal: 'Reveal',
+    anchorLink: { id: 'hl-1', kind: 'highlight' },
+    reading: {
+      intervalDurationMs: 0,
+      intervalGrowthFactor: 1,
+      lastHandledAt: '2026-03-06T00:00:00.000Z',
+      nextAt: '2026-03-06T00:00:00.000Z',
+      priority: 0,
+      readingPosition: 0,
+      repetitionCount: 0,
+      state: 'dismissed'
+    },
+    position: null,
+    createdAt: '2026-03-06T00:00:00.000Z',
+    updatedAt: '2026-03-06T00:00:01.000Z'
+  });
+}
+
 describe('workspaceRuntimeSync node mutations', () => {
   it('sends node content updates through update_node_content command', () => {
     const invoke = vi.fn().mockResolvedValue(null);
@@ -80,20 +113,7 @@ describe('workspaceRuntimeSync node mutations', () => {
 
     syncNodeContentToRuntime(createNodeFixture());
 
-    expect(invoke).toHaveBeenCalledWith('update_node_content', {
-      nodeId: 'node-1',
-      parentNodeId: null,
-      priority: 0,
-      desiredRetention: 0.81,
-      title: 'Seed',
-      isTitleManual: false,
-      content: '# Seed',
-      reveal: 'Reveal',
-      anchorLink: { id: 'hl-1', kind: 'highlight' },
-      position: null,
-      createdAt: '2026-03-06T00:00:00.000Z',
-      updatedAt: '2026-03-06T00:00:01.000Z'
-    });
+    expectNodeMutationSync(invoke, 'update_node_content');
     expectNoWorkspacePersist(invoke);
   });
 
@@ -103,20 +123,7 @@ describe('workspaceRuntimeSync node mutations', () => {
 
     syncNodeRevealToRuntime(createNodeFixture());
 
-    expect(invoke).toHaveBeenCalledWith('update_node_reveal', {
-      nodeId: 'node-1',
-      parentNodeId: null,
-      priority: 0,
-      desiredRetention: 0.81,
-      title: 'Seed',
-      isTitleManual: false,
-      content: '# Seed',
-      reveal: 'Reveal',
-      anchorLink: { id: 'hl-1', kind: 'highlight' },
-      position: null,
-      createdAt: '2026-03-06T00:00:00.000Z',
-      updatedAt: '2026-03-06T00:00:01.000Z'
-    });
+    expectNodeMutationSync(invoke, 'update_node_reveal');
     expectNoWorkspacePersist(invoke);
   });
 
@@ -204,83 +211,5 @@ describe('workspaceRuntimeSync review mutations', () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(null);
 
     await expect(syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD)).resolves.toBeUndefined();
-  });
-});
-
-describe('workspaceRuntimeSync trash mutations', () => {
-  it('syncs soft delete mutations through soft_delete_nodes command', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
-    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-
-    syncSoftDeleteNodesToRuntime({
-      nodeIds: ['node-1', 'node-2'],
-      deletedAt: '2026-03-06T00:00:00.000Z'
-    });
-
-    expect(invoke).toHaveBeenCalledWith('soft_delete_nodes', {
-      nodeIds: ['node-1', 'node-2'],
-      deletedAt: '2026-03-06T00:00:00.000Z'
-    });
-    expectNoWorkspacePersist(invoke);
-  });
-
-  it('syncs restore mutations through restore_nodes command', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
-    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-
-    syncRestoreNodesToRuntime({ nodeIds: ['node-1'] });
-
-    expect(invoke).toHaveBeenCalledWith('restore_nodes', { nodeIds: ['node-1'] });
-    expectNoWorkspacePersist(invoke);
-  });
-
-  it('syncs permanent delete mutations through delete_nodes_permanently command', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
-    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-
-    syncDeleteNodesPermanentlyToRuntime({
-      nodeIds: ['node-3'],
-      nodeOrder: ['node-1', 'node-2']
-    });
-
-    expect(invoke).toHaveBeenCalledWith('delete_nodes_permanently', {
-      nodeIds: ['node-3'],
-      nodeOrder: ['node-1', 'node-2']
-    });
-    expectNoWorkspacePersist(invoke);
-  });
-});
-
-describe('workspaceRuntimeSync reading progress', () => {
-  it('syncs reading progress through save_reading_progress command', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
-    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-
-    syncReadingProgressToRuntime({
-      activeNodeId: 'node-2',
-      nodeViewStates: [
-        {
-          nodeId: 'node-2',
-          scrollTop: 120,
-          selectionFrom: 4,
-          selectionTo: 8
-        }
-      ],
-      updatedAt: '2026-03-06T00:00:00.000Z'
-    });
-
-    expect(invoke).toHaveBeenCalledWith('save_reading_progress', {
-      activeNodeId: 'node-2',
-      nodeViewStates: [
-        {
-          nodeId: 'node-2',
-          scrollTop: 120,
-          selectionFrom: 4,
-          selectionTo: 8
-        }
-      ],
-      updatedAt: '2026-03-06T00:00:00.000Z'
-    });
-    expectNoWorkspacePersist(invoke);
   });
 });

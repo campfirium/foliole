@@ -17,6 +17,17 @@ interface WorkspaceReviewProfile {
   lapses: number;
 }
 
+interface WorkspaceReadingProfile {
+  intervalDurationMs: number;
+  intervalGrowthFactor: number;
+  lastHandledAt: string;
+  nextAt: string;
+  priority: number;
+  readingPosition: number;
+  repetitionCount: number;
+  state: 'active' | 'done' | 'dismissed';
+}
+
 interface WorkspaceNodeSnapshot {
   id: string;
   parentNodeId: string | null;
@@ -27,6 +38,7 @@ interface WorkspaceNodeSnapshot {
   content: string;
   reveal: string | null;
   anchorLink: WorkspaceAnchorLink | null;
+  reading: WorkspaceReadingProfile | null;
   review: WorkspaceReviewProfile | null;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +64,14 @@ interface WorkspaceNodeRow extends DatabaseRow {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  reading_interval_duration_ms: number | null;
+  reading_interval_growth_factor: number | null;
+  reading_last_handled_at: string | null;
+  reading_next_at: string | null;
+  reading_priority: number | null;
+  reading_position: number | null;
+  reading_repetition_count: number | null;
+  reading_state: string | null;
   review_due: string | null;
   review_last_review_at: string | null;
   review_state: number | null;
@@ -83,6 +103,25 @@ function parseAnchorLink(value: string | null): WorkspaceAnchorLink | null {
   } catch {
     return null;
   }
+}
+
+function toReadingProfile(row: WorkspaceNodeRow): WorkspaceReadingProfile | null {
+  if (typeof row.reading_last_handled_at !== 'string' || typeof row.reading_next_at !== 'string') {
+    return null;
+  }
+  if (row.reading_state !== 'active' && row.reading_state !== 'done' && row.reading_state !== 'dismissed') {
+    return null;
+  }
+  return {
+    intervalDurationMs: row.reading_interval_duration_ms ?? 0,
+    intervalGrowthFactor: row.reading_interval_growth_factor ?? 1,
+    lastHandledAt: row.reading_last_handled_at,
+    nextAt: row.reading_next_at,
+    priority: row.reading_priority ?? 0,
+    readingPosition: row.reading_position ?? 0,
+    repetitionCount: row.reading_repetition_count ?? 0,
+    state: row.reading_state
+  };
 }
 
 function toReviewProfile(row: WorkspaceNodeRow): WorkspaceReviewProfile | null {
@@ -117,6 +156,14 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        n.created_at,
        n.updated_at,
        n.deleted_at,
+       rd.interval_duration_ms AS reading_interval_duration_ms,
+       rd.interval_growth_factor AS reading_interval_growth_factor,
+       rd.last_handled_at AS reading_last_handled_at,
+       rd.next_at AS reading_next_at,
+       rd.priority AS reading_priority,
+       rd.reading_position AS reading_position,
+       rd.repetition_count AS reading_repetition_count,
+       rd.state AS reading_state,
        nr.due AS review_due,
        nr.last_review_at AS review_last_review_at,
        nr.state AS review_state,
@@ -127,6 +174,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        nr.reps AS review_reps,
        nr.lapses AS review_lapses
      FROM nodes n
+     LEFT JOIN node_reading rd ON rd.node_id = n.id
      LEFT JOIN node_review nr ON nr.node_id = n.id`
   );
 }
@@ -148,6 +196,7 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
       content: row.content,
       reveal: row.reveal,
       anchorLink: parseAnchorLink(row.anchor_link),
+      reading: toReadingProfile(row),
       review: toReviewProfile(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at

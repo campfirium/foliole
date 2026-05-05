@@ -1,0 +1,60 @@
+import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade } from '../features/review/model/reviewTypes';
+
+import { createEmptyReviewSession } from './workspaceReviewReading';
+import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import type { WorkspaceState } from './workspaceStore';
+
+type WorkspaceSet = (
+  partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
+) => void;
+
+export async function persistReviewGradeMutation(args: {
+  currentNodeId: string;
+  grade: ReviewGrade;
+  reviewedAt: string;
+  cardBefore: ReturnType<typeof toSchedulerCard>;
+  cardAfter: ReturnType<typeof toSchedulerCard>;
+}): Promise<void> {
+  await syncReviewGradeToRuntime({
+    nodeId: args.currentNodeId,
+    grade: args.grade,
+    reviewedAt: args.reviewedAt,
+    cardBefore: args.cardBefore,
+    cardAfter: args.cardAfter
+  });
+}
+
+export function applyGradedReviewState(args: {
+  set: WorkspaceSet;
+  snapshot: WorkspaceState;
+  currentNodeId: string;
+  nextNodeId: string | null;
+  nextQueue: string[];
+  nextReviewProfile: ReturnType<typeof toNodeReviewProfile>;
+  reviewedAt: string;
+  now: string;
+}) {
+  args.set((state) => {
+    const node = state.nodesById[args.currentNodeId];
+    if (!node) return state;
+    return {
+      activeNodeId: args.nextNodeId ?? state.activeNodeId,
+      nodesById: {
+        ...state.nodesById,
+        [args.currentNodeId]: {
+          ...node,
+          review: { ...args.nextReviewProfile, lastReviewAt: args.reviewedAt },
+          updatedAt: args.now
+        }
+      },
+      reviewSession: args.nextNodeId
+        ? {
+            currentNodeId: args.nextNodeId,
+            isAnswerRevealed: false,
+            queueNodeIds: args.nextQueue,
+            totalNodeCount: args.snapshot.reviewSession.totalNodeCount
+          }
+        : createEmptyReviewSession()
+    };
+  });
+}

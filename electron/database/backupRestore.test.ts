@@ -66,6 +66,7 @@ it('restores the application sqlite state from an online backup snapshot', async
         content: '# original',
         reveal: null,
         anchorLink: null,
+        reading: null,
         review: null,
         createdAt: '2026-03-14T10:00:00.000Z',
         updatedAt: '2026-03-14T10:00:00.000Z'
@@ -139,6 +140,7 @@ function createRestoredWorkspaceSnapshot() {
         content: '# root',
         reveal: null,
         anchorLink: null,
+        reading: null,
         review: null,
         createdAt: '2026-03-14T10:00:00.000Z',
         updatedAt: '2026-03-14T10:00:00.000Z'
@@ -151,6 +153,7 @@ function createRestoredWorkspaceSnapshot() {
         content: 'Prompt [...]',
         reveal: 'Answer',
         anchorLink: null,
+        reading: null,
         review: {
           due: '2026-03-17T10:02:00.000Z',
           lastReviewAt: '2026-03-14T10:02:00.000Z',
@@ -173,6 +176,7 @@ function createRestoredWorkspaceSnapshot() {
         content: '# trash',
         reveal: null,
         anchorLink: null,
+        reading: null,
         review: null,
         createdAt: '2026-03-14T10:00:00.000Z',
         updatedAt: '2026-03-14T10:01:00.000Z'

@@ -80,16 +80,29 @@ beforeEach(() => {
   reviewMutationContext.createId.mockReturnValueOnce('op-1').mockReturnValueOnce('log-1');
 });
 
-it('writes node snapshot via driver transaction and prepared statements', () => {
+function mockNodeSnapshotStatements() {
   const upsertNodeRun = vi.fn();
   const upsertOrderRun = vi.fn();
+  const upsertReadingRun = vi.fn();
+  const deleteReadingRun = vi.fn();
 
   prepareSpy.mockImplementation((sql) => ({
     sql,
-    run: sql.includes('INSERT INTO nodes') ? upsertNodeRun : upsertOrderRun,
+    run: sql.includes('INSERT INTO nodes')
+      ? upsertNodeRun
+      : sql.includes('INSERT INTO node_order')
+        ? upsertOrderRun
+        : sql.includes('INSERT INTO node_reading')
+          ? upsertReadingRun
+          : deleteReadingRun,
     get: vi.fn(),
     all: vi.fn()
   }));
+  return { deleteReadingRun, upsertNodeRun, upsertOrderRun, upsertReadingRun };
+}
+
+it('writes node snapshot via driver transaction and prepared statements', () => {
+  const { deleteReadingRun, upsertNodeRun, upsertOrderRun, upsertReadingRun } = mockNodeSnapshotStatements();
 
   upsertNodeSnapshot(driver, {
     nodeId: 'node-1',
@@ -99,13 +112,23 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
     content: '# Node 1',
     reveal: 'Answer',
     anchorLink: { id: 'anchor-1', kind: 'highlight' },
+    reading: {
+      intervalDurationMs: 0,
+      intervalGrowthFactor: 1,
+      lastHandledAt: '2026-03-14T00:00:00.000Z',
+      nextAt: '2026-03-14T00:00:00.000Z',
+      priority: 0,
+      readingPosition: 0,
+      repetitionCount: 0,
+      state: 'dismissed'
+    },
     position: 2,
     createdAt: '2026-03-14T00:00:00.000Z',
     updatedAt: '2026-03-14T00:00:00.000Z'
   });
 
   expect(transactionSpy).toHaveBeenCalledTimes(1);
-  expect(prepareSpy).toHaveBeenCalledTimes(2);
+  expect(prepareSpy).toHaveBeenCalledTimes(4);
   expect(upsertNodeRun).toHaveBeenCalledWith([
     'node-1',
     null,
@@ -120,6 +143,18 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
     '2026-03-14T00:00:00.000Z'
   ]);
   expect(upsertOrderRun).toHaveBeenCalledWith(['node-1', 2]);
+  expect(upsertReadingRun).toHaveBeenCalledWith([
+    'node-1',
+    0,
+    1,
+    '2026-03-14T00:00:00.000Z',
+    '2026-03-14T00:00:00.000Z',
+    0,
+    0,
+    0,
+    'dismissed'
+  ]);
+  expect(deleteReadingRun).not.toHaveBeenCalled();
 });
 
 it('writes review mutation via driver contract with injected context', () => {
@@ -204,6 +239,7 @@ it('loads workspace snapshot through query helpers only', () => {
         content: 'content',
         reveal: null,
         anchorLink: null,
+        reading: null,
         review: null,
         createdAt: '2026-03-14T00:00:00.000Z',
         updatedAt: '2026-03-14T00:00:00.000Z'

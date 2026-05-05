@@ -19,6 +19,17 @@ export interface NativeWorkspaceReviewProfile {
   lapses: number;
 }
 
+export interface NativeWorkspaceReadingProfile {
+  intervalDurationMs: number;
+  intervalGrowthFactor: number;
+  lastHandledAt: string;
+  nextAt: string;
+  priority: number;
+  readingPosition: number;
+  repetitionCount: number;
+  state: 'active' | 'done' | 'dismissed';
+}
+
 export interface NativeWorkspaceNodeSnapshot {
   id: string;
   parentNodeId: string | null;
@@ -29,6 +40,7 @@ export interface NativeWorkspaceNodeSnapshot {
   content: string;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
+  reading: NativeWorkspaceReadingProfile | null;
   review: NativeWorkspaceReviewProfile | null;
   createdAt: string;
   updatedAt: string;
@@ -61,6 +73,7 @@ export interface NativeNodeSnapshotArgs {
   content: string;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
+  reading?: NativeWorkspaceReadingProfile | null;
   position: number | null;
   createdAt: string;
   updatedAt: string;

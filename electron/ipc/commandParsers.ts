@@ -59,6 +59,17 @@ interface AnchorLinkPayload {
   kind: 'highlight' | 'cloze';
 }
 
+interface ReadingProfilePayload {
+  intervalDurationMs: number;
+  intervalGrowthFactor: number;
+  lastHandledAt: string;
+  nextAt: string;
+  priority: number;
+  readingPosition: number;
+  repetitionCount: number;
+  state: 'active' | 'done' | 'dismissed';
+}
+
 function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
   if (value === null || value === undefined) {
     return null;
@@ -76,6 +87,34 @@ function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
   return { id: payload.id, kind: payload.kind };
 }
 
+function asReadingState(value: unknown, field: string): ReadingProfilePayload['state'] {
+  if (value === 'active' || value === 'done' || value === 'dismissed') {
+    return value;
+  }
+  throw new Error(`invalid argument: ${field}`);
+}
+
+function asReadingProfile(value: unknown, field: string): ReadingProfilePayload | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  const payload = value as Record<string, unknown>;
+  return {
+    intervalDurationMs: asNullableInteger(payload.intervalDurationMs, `${field}.intervalDurationMs`) ?? 0,
+    intervalGrowthFactor:
+      asNullableFiniteNumber(payload.intervalGrowthFactor, `${field}.intervalGrowthFactor`) ?? 0,
+    lastHandledAt: asTimestamp(payload.lastHandledAt, `${field}.lastHandledAt`),
+    nextAt: asTimestamp(payload.nextAt, `${field}.nextAt`),
+    priority: asNullableFiniteNumber(payload.priority, `${field}.priority`) ?? 0,
+    readingPosition: asNullableInteger(payload.readingPosition, `${field}.readingPosition`) ?? 0,
+    repetitionCount: asNullableInteger(payload.repetitionCount, `${field}.repetitionCount`) ?? 0,
+    state: asReadingState(payload.state, `${field}.state`)
+  };
+}
+
 export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
   return {
     nodeId: asString(args.nodeId, 'nodeId'),
@@ -87,6 +126,7 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     content: asString(args.content, 'content'),
     reveal: asNullableString(args.reveal, 'reveal'),
     anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
+    reading: asReadingProfile(args.reading, 'reading'),
     position: asNullableInteger(args.position, 'position'),
     createdAt: asString(args.createdAt, 'createdAt'),
     updatedAt: asString(args.updatedAt, 'updatedAt')
