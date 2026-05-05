@@ -84,6 +84,9 @@ export function reconcileFocusedRendererBoundaryNodes(args: FocusedRendererBound
     ...nextKeepNodeIds,
     ...args.documentWorksetNodeIds
   ]);
+  if (args.activeNodeId) {
+    affectedNodeIds.add(args.activeNodeId);
+  }
 
   let changed = false;
   const nextBoundaryNodesById = { ...args.currentNodesById };

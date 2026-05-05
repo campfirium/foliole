@@ -89,6 +89,12 @@ async function expectOutlinedRegionRendered(host: HTMLElement) {
   });
 }
 
+async function expectOutlinedRegionRemoved(host: HTMLElement) {
+  await waitFor(() => {
+    expect(host.querySelector('.cm-md-image-cloze-region[data-region-id="region-1"]')).toBeNull();
+  });
+}
+
 describe('live markdown image rendering basics', () => {
   beforeEach(() => {
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
@@ -174,6 +180,21 @@ describe('live markdown image rendering image cloze presentation', () => {
     await expectOutlinedRegionRendered(host);
 
     unregisterImageClozeEditorPresentation('node-1');
+    adapter.destroy();
+  });
+
+  it('removes rendered image cloze regions after the presentation is cleared', async () => {
+    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+
+    adapter.setNodeId('node-1');
+    registerImageClozeEditorPresentation('node-1', createOutlinedPresentation());
+    adapter.refreshImageClozePresentation();
+    await expectOutlinedRegionRendered(host);
+
+    unregisterImageClozeEditorPresentation('node-1');
+    adapter.refreshImageClozePresentation();
+    await expectOutlinedRegionRemoved(host);
+
     adapter.destroy();
   });
 });
