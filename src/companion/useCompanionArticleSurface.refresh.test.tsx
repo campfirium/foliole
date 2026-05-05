@@ -52,7 +52,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot) {
   return {
     bootstrapState: {
       booted_at: '2026-04-25T09:00:00.000Z',
-      database_path: 'foliole-companion.db',
+      database_path: 'foliole-companionSQLite.db',
       database_ready: true,
       device_id: 'android-test-device',
       runtime_kind: 'android-capacitor' as const

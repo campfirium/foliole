@@ -41,7 +41,7 @@ describe('companionBootstrap', () => {
     capacitorState.getPlatform.mockReturnValue('android');
     loadBootstrap.mockResolvedValue({
       booted_at: '2026-04-22T02:00:00.000Z',
-      database_path: '/data/user/0/com.foliole.android/databases/foliole-companion.db',
+      database_path: '/data/user/0/com.foliole.android/databases/foliole-companionSQLite.db',
       database_ready: true,
       device_id: 'android-test-device',
       device_name: 'Pixel 9',
@@ -51,7 +51,7 @@ describe('companionBootstrap', () => {
     const { loadCompanionBootstrapState } = await import('./companionBootstrap');
     await expect(loadCompanionBootstrapState()).resolves.toEqual({
       booted_at: '2026-04-22T02:00:00.000Z',
-      database_path: '/data/user/0/com.foliole.android/databases/foliole-companion.db',
+      database_path: '/data/user/0/com.foliole.android/databases/foliole-companionSQLite.db',
       database_ready: true,
       device_id: 'android-test-device',
       device_name: 'Pixel 9',

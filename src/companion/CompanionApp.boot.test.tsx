@@ -20,7 +20,7 @@ function mockCompanionWorkspaceSync() {
   useCompanionWorkspaceSync.mockReturnValue({
     bootstrapState: {
       booted_at: '2026-04-22T02:00:00.000Z',
-      database_path: '/data/user/0/com.foliole.android/databases/foliole-companion.db',
+      database_path: '/data/user/0/com.foliole.android/databases/foliole-companionSQLite.db',
       database_ready: true,
       device_id: 'android-test-device',
       runtime_kind: 'android-capacitor'
@@ -81,7 +81,7 @@ describe('CompanionApp bootstrap states', () => {
       status: 'ready',
       state: {
         booted_at: '2026-04-22T02:00:00.000Z',
-        database_path: '/data/user/0/com.foliole.android/databases/foliole-companion.db',
+        database_path: '/data/user/0/com.foliole.android/databases/foliole-companionSQLite.db',
         database_ready: true,
         device_id: 'android-test-device',
         runtime_kind: 'android-capacitor'

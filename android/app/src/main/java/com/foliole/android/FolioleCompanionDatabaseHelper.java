@@ -14,7 +14,7 @@ import java.time.Instant;
 
 final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
-    static final String DATABASE_NAME = "foliole-companion.db";
+    static final String DATABASE_NAME = "foliole-companionSQLite.db";
     private static final int DATABASE_VERSION = 14;
     private final Context context;
 

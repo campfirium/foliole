@@ -24,7 +24,7 @@ import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
 function createArgs() {
   const bootstrapState: NativeCompanionBootstrapState = {
     booted_at: '2026-04-24T03:00:00.000Z',
-    database_path: 'foliole-companion.db',
+    database_path: 'foliole-companionSQLite.db',
     database_ready: true,
     device_id: 'android-test-device',
     device_name: null,
