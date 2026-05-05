@@ -66,6 +66,7 @@ interface NodeImageRegionGroupPayload {
 
 export interface UpsertNodeSnapshotInput {
   nodeId: string;
+  deviceId?: string;
   parentNodeId: string | null;
   kind: NodeKind;
   priority?: number | null;
@@ -168,6 +169,8 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       input.reveal,
       toAnchorLinkValue(input.anchorLink),
       toImageRegionsValue(input.imageRegions),
+      input.position,
+      input.deviceId ?? null,
       input.createdAt,
       input.updatedAt
     ]);

@@ -5,11 +5,15 @@ import type {
   NativeKeepImportPreviewResult, NativeImportedTextFile, NativeTextImportArgs, NativeTextImportResult
 } from './nativeImportContract.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
+import type {
+  NativeNodeSnapshotBatchMutationSpec,
+  NativeNodeSnapshotMutationSpec
+} from './nativeNodeMutationContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type {
   NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
   NativeImportRemoteImageAttachmentArgs, NativeImportLocalImageAttachmentResult,
-  NativeRelearnNodeArgs, NativeNodeAnchorLocatorUpdateArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
+  NativeRelearnNodeArgs, NativeReadingProgressSnapshot,
   NativeResetImportDataResult,
   NativeMergeReadwiseTopicHighlightsResult,
   NativeReviewSchedulerSettings,
@@ -19,6 +23,7 @@ import type {
   NativeWorkspaceSearchResult,
   NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
+import type { NativeSyncCommandMap } from './nativeSyncCommandMap.js';
 import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type {
   NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult,
@@ -28,16 +33,7 @@ import type {
 export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
 
-type NativeNodeSnapshotMutationSpec = {
-  args: NativeNodeSnapshotArgs;
-  result: null;
-};
-type NativeNodeSnapshotBatchMutationSpec = {
-  args: { parent: NativeNodeSnapshotArgs; affectedAnchors: NativeNodeAnchorLocatorUpdateArgs[] };
-  result: null;
-};
-
-export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & {
+export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeSyncCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;
@@ -224,6 +220,10 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
   [NATIVE_COMMANDS.updateNodeContent]: NativeNodeSnapshotMutationSpec;
   [NATIVE_COMMANDS.updateNodeContentWithAnchors]: NativeNodeSnapshotBatchMutationSpec;
   [NATIVE_COMMANDS.updateNodeReveal]: NativeNodeSnapshotMutationSpec;
+  [NATIVE_COMMANDS.flushDirtyNodeSyncVersions]: {
+    args: undefined;
+    result: string[];
+  };
   [NATIVE_COMMANDS.relearnNode]: {
     args: NativeRelearnNodeArgs;
     result: null;

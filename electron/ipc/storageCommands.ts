@@ -1,9 +1,4 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-import {
-  createApplicationDatabaseBackup,
-  listApplicationDatabaseBackups,
-  restoreApplicationDatabaseBackup
-} from '../database/backupRestore.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
 import {
   loadExternalSearchBrowseEntries,
@@ -15,12 +10,14 @@ import { loadExternalSearchFolders, saveExternalSearchFolders } from '../databas
 import { resetImportData } from '../database/importMaintenance.js';
 import {
   deleteNodesPermanently,
+  flushAllDirtyNodeSyncVersions,
   replaceNodeOrder,
   restoreNodes,
   softDeleteNodes,
   updateNodeAnchorLinks,
   upsertNodeSnapshot
 } from '../database/nodeMutations.js';
+import { loadSyncPeers, saveSyncPeers } from '../database/syncPeers.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
 import { notifyExternalSearchFoldersChanged } from '../externalSearchBackgroundRefreshRuntime.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
@@ -57,37 +54,14 @@ import { toNativePdfImportsInventory } from './pdfImportsInventoryPayload.js';
 import { toNativeReadwiseBooksInventory } from './readwiseBooksInventoryPayload.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { handleStorageAttachmentCommand } from './storageAttachmentCommands.js';
+import {
+  handleSqliteMaintenanceCommand,
+  readObjectArg,
+  readSettingsObject
+} from './storageCommandSupport.js';
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
+import { handleSyncMutationCommand } from './storageSyncCommands.js';
 
-function readSettingsObject(settings: unknown) {
-  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
-    throw new Error('invalid argument: settings');
-  }
-  return settings as Record<string, unknown>;
-}
-
-function readObjectArg(value: unknown, field: string) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`invalid argument: ${field}`);
-  }
-  return value as Record<string, unknown>;
-}
-function handleSqliteMaintenanceCommand(command: string, args: Record<string, unknown>) {
-  if (command === NATIVE_COMMANDS.listSqliteBackups) {
-    return listApplicationDatabaseBackups();
-  }
-  if (command === NATIVE_COMMANDS.backupSqliteDatabase) {
-    return createApplicationDatabaseBackup({
-      destinationPath: asNullableString(args.destinationPath, 'destinationPath') ?? undefined
-    });
-  }
-  if (command === NATIVE_COMMANDS.restoreSqliteDatabase) {
-    return restoreApplicationDatabaseBackup({
-      sourcePath: asString(args.sourcePath, 'sourcePath')
-    });
-  }
-  return undefined;
-}
 function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createFolder) {
     const parsed = parseNodeCreationArgs(args, 'folder');
@@ -120,6 +94,9 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
     updateNodeAnchorLinks(affectedAnchors);
     scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
     return null;
+  }
+  if (command === NATIVE_COMMANDS.flushDirtyNodeSyncVersions) {
+    return flushAllDirtyNodeSyncVersions();
   }
   if (command === NATIVE_COMMANDS.replaceNodeOrder) {
     replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));
@@ -158,6 +135,10 @@ async function handleSettingsStorageCommand(
     await saveAppSettingsState(readSettingsObject(args.settings));
     await refreshManagedInboxMonitorFromSettings();
     return null;
+  }
+  if (command === NATIVE_COMMANDS.loadSyncPeers) return loadSyncPeers();
+  if (command === NATIVE_COMMANDS.saveSyncPeers) {
+    return saveSyncPeers(Array.isArray(args.peers) ? (args.peers as Parameters<typeof saveSyncPeers>[0]) : []);
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
   if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();
@@ -212,6 +193,10 @@ export async function handleStorageCommand(
   args: Record<string, unknown>,
   window: Parameters<typeof handleStorageAttachmentCommand>[2] = null
 ): Promise<unknown> {
+  const syncMutationResult = handleSyncMutationCommand(command, args);
+  if (syncMutationResult !== undefined) {
+    return syncMutationResult;
+  }
   const nodeMutationResult = await handleNodeMutationCommand(command, args);
   if (nodeMutationResult !== undefined) {
     return nodeMutationResult;

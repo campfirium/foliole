@@ -5,6 +5,7 @@ import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/work
 import { getRuntimeInvoke } from '../platform/bridge';
 
 import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
+import { type WorkspaceSyncDebugApi, createWorkspaceSyncDebugApi } from './workspaceSyncDebugBridge';
 
 interface DebugNodeSeed {
   anchorLink?: NodeAnchorLink | null;
@@ -59,10 +60,8 @@ interface WorkspaceDebugApi {
   updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
 }
 
-type WorkspaceDebugWindow = Window & {
-  electronAPI?: { debug?: unknown };
-  __folioleWorkspaceDebug?: WorkspaceDebugApi;
-};
+type CombinedWorkspaceDebugApi = WorkspaceDebugApi & WorkspaceSyncDebugApi;
+type WorkspaceDebugWindow = Window & { electronAPI?: { debug?: unknown }; __folioleWorkspaceDebug?: WorkspaceDebugApi };
 
 function isWorkspaceDebugEnabled() {
   if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
@@ -256,7 +255,8 @@ function createWorkspaceDebugApi(): WorkspaceDebugApi {
     ...createNodeMutationDebugApi(),
     ...createNodeReadDebugApi(),
     importClipboardImageAttachment: createClipboardImportHandler(),
-    ...createSeedNodeDebugApi()
+    ...createSeedNodeDebugApi(),
+    ...createWorkspaceSyncDebugApi(getRuntimeInvoke)
   };
 }
 
@@ -270,5 +270,5 @@ export function installWorkspaceDebugBridge() {
     return;
   }
 
-  targetWindow.__folioleWorkspaceDebug = createWorkspaceDebugApi();
+  targetWindow.__folioleWorkspaceDebug = createWorkspaceDebugApi() as CombinedWorkspaceDebugApi;
 }

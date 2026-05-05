@@ -1,22 +1,59 @@
-import { migrateAttachmentIdsToHashes } from './attachmentIdMigration.js';
 import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
-import { migrateNodeKinds } from './nodeKindMigration.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 21;
+export const DATABASE_SCHEMA_VERSION = 24;
 
-const CREATE_TABLE_STATEMENTS_V1 = [
+const CREATE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
     id TEXT PRIMARY KEY,
     parent_id TEXT REFERENCES nodes(id),
+    kind TEXT NOT NULL DEFAULT 'topic',
+    priority INTEGER,
+    desired_retention REAL,
     title TEXT NOT NULL,
     is_title_manual INTEGER NOT NULL DEFAULT 0,
+    hide_title_heading INTEGER NOT NULL DEFAULT 0,
     content TEXT NOT NULL DEFAULT '',
+    opening_text TEXT,
+    virtual_filter TEXT,
     reveal TEXT,
     anchor_link TEXT,
+    image_regions TEXT,
+    position INTEGER,
+    current_version_id TEXT,
+    last_modified_by_device_id TEXT,
+    sync_dirty INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS node_sync_versions (
+    version_id TEXT PRIMARY KEY,
+    object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    parent_version_id TEXT,
+    device_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    content_hash TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_node_sync_versions_object_created
+    ON node_sync_versions (object_id, created_at)`,
+  `CREATE TABLE IF NOT EXISTS node_sync_conflicts (
+    conflict_version_id TEXT PRIMARY KEY,
+    object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    parent_version_id TEXT,
+    device_id TEXT,
+    content_hash TEXT,
+    snapshot_json TEXT NOT NULL,
+    detected_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_node_sync_conflicts_object_detected
+    ON node_sync_conflicts (object_id, detected_at)`,
+  `CREATE TABLE IF NOT EXISTS sync_peers (
+    peer_id TEXT PRIMARY KEY,
+    status TEXT NOT NULL DEFAULT 'paired',
+    last_synced_at TEXT,
+    last_seen_version_cursor TEXT,
+    updated_at TEXT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS node_review (
     node_id TEXT PRIMARY KEY REFERENCES nodes(id),
@@ -29,6 +66,17 @@ const CREATE_TABLE_STATEMENTS_V1 = [
     scheduled_days INTEGER NOT NULL DEFAULT 0,
     reps INTEGER NOT NULL DEFAULT 0,
     lapses INTEGER NOT NULL DEFAULT 0
+  )`,
+  `CREATE TABLE IF NOT EXISTS node_reading (
+    node_id TEXT PRIMARY KEY REFERENCES nodes(id),
+    interval_duration_ms INTEGER NOT NULL DEFAULT 0,
+    interval_growth_factor REAL NOT NULL DEFAULT 1,
+    last_handled_at TEXT NOT NULL,
+    next_at TEXT NOT NULL,
+    priority REAL NOT NULL DEFAULT 0,
+    reading_position INTEGER NOT NULL DEFAULT 0,
+    repetition_count INTEGER NOT NULL DEFAULT 0,
+    state TEXT NOT NULL DEFAULT 'active'
   )`,
   `CREATE TABLE IF NOT EXISTS review_log (
     id TEXT PRIMARY KEY,
@@ -49,21 +97,6 @@ const CREATE_TABLE_STATEMENTS_V1 = [
     node_id TEXT PRIMARY KEY REFERENCES nodes(id),
     position INTEGER NOT NULL
   )`,
-  `CREATE TABLE IF NOT EXISTS attachments (
-    id TEXT PRIMARY KEY,
-    original_name TEXT,
-    mime_type TEXT,
-    size_bytes INTEGER,
-    created_at TEXT NOT NULL
-  )`,
-  `CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`
-];
-
-const CREATE_TABLE_STATEMENTS_V2 = [
   `CREATE TABLE IF NOT EXISTS workspace_meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -75,29 +108,31 @@ const CREATE_TABLE_STATEMENTS_V2 = [
     selection_from INTEGER,
     selection_to INTEGER,
     updated_at TEXT NOT NULL
-  )`
-];
-
-const CREATE_TABLE_STATEMENTS_V3 = [
-  'ALTER TABLE nodes ADD COLUMN priority INTEGER',
-  'ALTER TABLE nodes ADD COLUMN desired_retention REAL'
-];
-
-const CREATE_TABLE_STATEMENTS_V4 = [
-  `CREATE TABLE IF NOT EXISTS node_reading (
-    node_id TEXT PRIMARY KEY REFERENCES nodes(id),
-    interval_duration_ms INTEGER NOT NULL DEFAULT 0,
-    interval_growth_factor REAL NOT NULL DEFAULT 1,
-    last_handled_at TEXT NOT NULL,
-    next_at TEXT NOT NULL,
-    priority REAL NOT NULL DEFAULT 0,
-    reading_position INTEGER NOT NULL DEFAULT 0,
-    repetition_count INTEGER NOT NULL DEFAULT 0,
-    state TEXT NOT NULL DEFAULT 'active'
-  )`
-];
-
-const CREATE_TABLE_STATEMENTS_V5 = [
+  )`,
+  `CREATE TABLE IF NOT EXISTS mirror_articles (
+    article_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,
+    relative_path TEXT NOT NULL,
+    mirrored_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS attachments (
+    id TEXT PRIMARY KEY,
+    original_name TEXT,
+    mime_type TEXT,
+    size_bytes INTEGER,
+    created_at TEXT NOT NULL,
+    pdf_index_status TEXT,
+    pdf_indexed_at TEXT,
+    pdf_index_error TEXT,
+    pdf_index_version INTEGER,
+    pdf_index_attempt INTEGER
+  )`,
+  `CREATE TABLE IF NOT EXISTS node_attachments (
+    node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    attachment_id TEXT NOT NULL REFERENCES attachments(id),
+    role TEXT NOT NULL,
+    PRIMARY KEY (node_id, attachment_id, role)
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)',
   `CREATE TABLE IF NOT EXISTS import_sources (
     source_fingerprint TEXT PRIMARY KEY,
     provider TEXT NOT NULL,
@@ -123,122 +158,84 @@ const CREATE_TABLE_STATEMENTS_V5 = [
     imported_at TEXT NOT NULL,
     degraded_reason TEXT,
     failure_reason TEXT
-  )`
-];
-
-const CREATE_TABLE_STATEMENTS_V6 = [
+  )`,
   `CREATE TABLE IF NOT EXISTS keep_import_items (
     rule_id TEXT NOT NULL,
     source_path TEXT NOT NULL,
     source_mtime_ms INTEGER NOT NULL,
     source_size_bytes INTEGER NOT NULL,
+    highlight_source_mtime_ms INTEGER,
+    highlight_source_size_bytes INTEGER,
+    has_source_update INTEGER NOT NULL DEFAULT 0,
     last_node_id TEXT,
     last_status TEXT NOT NULL,
     first_seen_at TEXT NOT NULL,
     last_seen_at TEXT NOT NULL,
     last_imported_at TEXT,
     PRIMARY KEY (rule_id, source_path)
-  )`
-];
-
-const CREATE_TABLE_STATEMENTS_V7 = [
-  'ALTER TABLE keep_import_items ADD COLUMN highlight_source_mtime_ms INTEGER',
-  'ALTER TABLE keep_import_items ADD COLUMN highlight_source_size_bytes INTEGER'
-];
-
-const CREATE_TABLE_STATEMENTS_V8 = ['ALTER TABLE nodes ADD COLUMN hide_title_heading INTEGER NOT NULL DEFAULT 0'];
-
-const CREATE_TABLE_STATEMENTS_V9 = ['ALTER TABLE keep_import_items ADD COLUMN has_source_update INTEGER NOT NULL DEFAULT 0'];
-
-const CREATE_TABLE_STATEMENTS_V10 = [
-  `CREATE TABLE IF NOT EXISTS node_attachments (
-    node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-    attachment_id TEXT NOT NULL REFERENCES attachments(id),
-    role TEXT NOT NULL,
-    PRIMARY KEY (node_id, attachment_id, role)
   )`,
-  'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)'
-];
-
-const CREATE_TABLE_STATEMENTS_V12 = ['CREATE TABLE IF NOT EXISTS mirror_articles (article_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE, relative_path TEXT NOT NULL, mirrored_at TEXT NOT NULL)'];
-
-const CREATE_TABLE_STATEMENTS_V13 = ['ALTER TABLE nodes ADD COLUMN kind TEXT NOT NULL DEFAULT \'topic\''];
-
-const CREATE_TABLE_STATEMENTS_V14 = ['ALTER TABLE nodes ADD COLUMN virtual_filter TEXT'];
-const CREATE_TABLE_STATEMENTS_V15 = [
-  `CREATE TABLE IF NOT EXISTS attachments (
+  `CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS pdf_page_text (
+    attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
+    page INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    page_width REAL,
+    page_height REAL,
+    PRIMARY KEY (attachment_id, page)
+  )`,
+  `CREATE TABLE IF NOT EXISTS external_search_folders (
     id TEXT PRIMARY KEY,
-    original_name TEXT,
-    mime_type TEXT,
-    size_bytes INTEGER,
-    created_at TEXT NOT NULL
-  )`,
-  'ALTER TABLE attachments ADD COLUMN pdf_index_status TEXT',
-  'ALTER TABLE attachments ADD COLUMN pdf_indexed_at TEXT',
-  'ALTER TABLE attachments ADD COLUMN pdf_index_error TEXT',
-  'ALTER TABLE attachments ADD COLUMN pdf_index_version INTEGER',
-  'ALTER TABLE attachments ADD COLUMN pdf_index_attempt INTEGER',
-  `CREATE TABLE IF NOT EXISTS pdf_page_text (
-    attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
-    page INTEGER NOT NULL,
-    text TEXT NOT NULL,
-    PRIMARY KEY (attachment_id, page)
+    folder_path TEXT NOT NULL UNIQUE,
+    attachment_mode TEXT NOT NULL,
+    attachment_root_path TEXT,
+    excluded_dirs_json TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'idle',
+    document_count INTEGER NOT NULL DEFAULT 0,
+    indexed_at TEXT,
+    last_error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
   )`
 ];
-const CREATE_TABLE_STATEMENTS_V16 = [
-  `CREATE TABLE IF NOT EXISTS pdf_page_text (
-    attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
-    page INTEGER NOT NULL,
-    text TEXT NOT NULL,
-    PRIMARY KEY (attachment_id, page)
-  )`,
-  'ALTER TABLE pdf_page_text ADD COLUMN page_width REAL',
-  'ALTER TABLE pdf_page_text ADD COLUMN page_height REAL'
-];
-const CREATE_TABLE_STATEMENTS_V17 = ['ALTER TABLE nodes ADD COLUMN image_regions TEXT'];
-const CREATE_TABLE_STATEMENTS_V18 = ['ALTER TABLE nodes ADD COLUMN opening_text TEXT'];
-const CREATE_TABLE_STATEMENTS_V21 = [`CREATE TABLE IF NOT EXISTS external_search_folders (id TEXT PRIMARY KEY, folder_path TEXT NOT NULL UNIQUE, attachment_mode TEXT NOT NULL, attachment_root_path TEXT, excluded_dirs_json TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'idle', document_count INTEGER NOT NULL DEFAULT 0, indexed_at TEXT, last_error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`];
+
+const LEGACY_REBUILD_REQUIRED_MESSAGE =
+  'legacy development database schema is no longer supported; delete the existing foliole.db and rebuild with the new schema';
+
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
 }
-function setUserVersion(sqlite: DatabaseMigrationTarget, version: number) { sqlite.pragma(`user_version = ${version}`); }
 
-const MIGRATION_STEPS = [
-  { statements: CREATE_TABLE_STATEMENTS_V1, version: 1 },
-  { statements: CREATE_TABLE_STATEMENTS_V2, version: 2 },
-  { statements: CREATE_TABLE_STATEMENTS_V3, version: 3 },
-  { statements: CREATE_TABLE_STATEMENTS_V4, version: 4 },
-  { statements: CREATE_TABLE_STATEMENTS_V5, version: 5 },
-  { statements: CREATE_TABLE_STATEMENTS_V6, version: 6 },
-  { statements: CREATE_TABLE_STATEMENTS_V7, version: 7 },
-  { statements: CREATE_TABLE_STATEMENTS_V8, version: 8 },
-  { statements: CREATE_TABLE_STATEMENTS_V9, version: 9 },
-  { statements: CREATE_TABLE_STATEMENTS_V10, version: 10 },
-  { migrate: migrateAttachmentIdsToHashes, version: 11 },
-  { statements: CREATE_TABLE_STATEMENTS_V12, version: 12 },
-  { migrate: migrateNodeKinds, statements: CREATE_TABLE_STATEMENTS_V13, version: 13 },
-  { statements: CREATE_TABLE_STATEMENTS_V14, version: 14 },
-  { statements: CREATE_TABLE_STATEMENTS_V15, version: 15 },
-  { statements: CREATE_TABLE_STATEMENTS_V16, version: 16 },
-  { statements: CREATE_TABLE_STATEMENTS_V17, version: 17 },
-  { statements: CREATE_TABLE_STATEMENTS_V18, version: 18 },
-  { migrate: migrateWorkspaceSearchIndexes, version: 19 },
-  { migrate: migrateWorkspaceSearchIndexes, version: 20 },
-  { statements: CREATE_TABLE_STATEMENTS_V21, version: 21 }
-];
-function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
-  if (currentVersion >= step.version) return;
-  if (Array.isArray(step.statements)) for (const statement of step.statements) sqlite.exec(statement);
-  if (step.migrate) step.migrate(sqlite);
-  if (!Array.isArray(step.statements) && !step.migrate) throw new Error(`missing migration handler for schema version ${step.version}`);
-  setUserVersion(sqlite, step.version);
+function setUserVersion(sqlite: DatabaseMigrationTarget, version: number) {
+  sqlite.pragma(`user_version = ${version}`);
 }
+
+function createFreshSchema(sqlite: DatabaseMigrationTarget) {
+  for (const statement of CREATE_SCHEMA_STATEMENTS) {
+    sqlite.exec(statement);
+  }
+  migrateWorkspaceSearchIndexes(sqlite);
+  setUserVersion(sqlite, DATABASE_SCHEMA_VERSION);
+}
+
 export function runDatabaseMigrations(sqlite: DatabaseMigrationTarget) {
   const applyInTransaction = sqlite.transaction(() => {
     const currentVersion = readUserVersion(sqlite);
-    for (const step of MIGRATION_STEPS) applyMigrationStep(sqlite, currentVersion, step);
-    if (currentVersion > DATABASE_SCHEMA_VERSION) throw new Error(`database schema version ${currentVersion} is newer than supported`);
+    if (currentVersion === 0) {
+      createFreshSchema(sqlite);
+      return;
+    }
+    if (currentVersion === DATABASE_SCHEMA_VERSION) {
+      return;
+    }
+    if (currentVersion > DATABASE_SCHEMA_VERSION) {
+      throw new Error(`database schema version ${currentVersion} is newer than supported`);
+    }
+    throw new Error(LEGACY_REBUILD_REQUIRED_MESSAGE);
   });
   applyInTransaction();
 }
@@ -246,4 +243,8 @@ export function runDatabaseMigrations(sqlite: DatabaseMigrationTarget) {
 export function initializeDatabaseConnection<T extends DatabaseConnectionLike>(connection: T): T {
   runDatabaseMigrations(connection.sqlite);
   return connection;
+}
+
+export function isLegacyDatabaseRebuildRequiredError(error: unknown): error is Error {
+  return error instanceof Error && error.message === LEGACY_REBUILD_REQUIRED_MESSAGE;
 }

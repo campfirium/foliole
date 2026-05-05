@@ -19,7 +19,8 @@ const {
   recordPreparedImportFailure,
   runPreparedImport,
   showOpenDialog,
-  syncAppMenuState
+  syncAppMenuState,
+  flushAllDirtyNodeSyncVersions
 } = vi.hoisted(() => ({
   defaultReviewSchedulerSettings: {
     algorithm: 'ts-fsrs@4.3.0',
@@ -61,7 +62,8 @@ const {
   recordPreparedImportFailure: vi.fn(),
   runPreparedImport: vi.fn(),
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] }),
-  syncAppMenuState: vi.fn()
+  syncAppMenuState: vi.fn(),
+  flushAllDirtyNodeSyncVersions: vi.fn(() => ['node-1'])
 }));
 
 vi.mock('electron', () => ({
@@ -89,6 +91,7 @@ vi.mock('./paths.js', () => ({
 }));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
+  flushAllDirtyNodeSyncVersions,
   replaceNodeOrder: vi.fn(),
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
@@ -266,6 +269,16 @@ it('handles window commands through invoke channel', async () => {
   expect(mockWindow.webContents.toggleDevTools).toHaveBeenCalledTimes(1);
   expect(mockWindow.maximize).toHaveBeenCalledTimes(1);
   expect(mockWindow.close).toHaveBeenCalledTimes(1);
+});
+
+it('flushes dirty node sync versions through invoke channel', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'flush_dirty_node_sync_versions'
+    } satisfies NativeInvokeRequest<'flush_dirty_node_sync_versions'>)
+  ).resolves.toEqual(['node-1']);
+
+  expect(flushAllDirtyNodeSyncVersions).toHaveBeenCalledTimes(1);
 });
 
 it('restores window when toggle command runs while maximized', async () => {

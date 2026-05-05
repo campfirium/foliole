@@ -152,6 +152,7 @@ export type {
   NativeExternalSearchFolder,
   NativeExternalSearchPreview
 } from './nativeExternalSearchContract.js';
+export type * from './nativeSyncContract.js';
 
 export interface NativeImportLocalImageAttachmentArgs {
   nodeId: string;

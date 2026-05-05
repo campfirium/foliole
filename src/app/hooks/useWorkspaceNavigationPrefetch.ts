@@ -23,6 +23,7 @@ export interface PreparedNavigationDependencies {
   closeContextMenu: () => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   flushPendingEditorDraft: () => void;
+  flushPendingEditorDraftImmediately: () => Promise<boolean>;
   goBack: () => NodeNavigationResult | null;
   goForward: () => NodeNavigationResult | null;
   goToParent: () => NodeNavigationResult | null;
@@ -36,26 +37,37 @@ export interface PreparedNavigationDependencies {
 function useNavigationAction(
   action: () => NodeNavigationResult | null,
   flushPendingEditorDraft: () => void,
+  flushPendingEditorDraftImmediately: () => Promise<boolean>,
   prepareForNavigation: (nodeIdOverride?: string | null) => void,
   finalize: (result: NodeNavigationResult | null) => void,
   resolveTargetNodeId: () => string | null,
   markRequested: (nodeId: string) => void,
   ensureNodeReady: (nodeId: string) => Promise<void>
 ) {
-  return useCallback(() => {
+  return useCallback(async () => {
     const sourceNodeId = useWorkspaceStore.getState().activeNodeId;
     const targetNodeId = resolveTargetNodeId();
     if (targetNodeId) {
       markRequested(targetNodeId);
     }
     flushPendingEditorDraft();
+    await flushPendingEditorDraftImmediately();
     prepareForNavigation(sourceNodeId);
     const result = action();
     finalize(result);
     if (targetNodeId) {
       void ensureNodeReady(targetNodeId);
     }
-  }, [action, ensureNodeReady, finalize, flushPendingEditorDraft, markRequested, prepareForNavigation, resolveTargetNodeId]);
+  }, [
+    action,
+    ensureNodeReady,
+    finalize,
+    flushPendingEditorDraft,
+    flushPendingEditorDraftImmediately,
+    markRequested,
+    prepareForNavigation,
+    resolveTargetNodeId
+  ]);
 }
 
 function useSelectNodeAction(
@@ -63,6 +75,7 @@ function useSelectNodeAction(
   action: (nodeId: string) => NodeNavigationResult | null,
   prepareForNavigation: (nodeIdOverride?: string | null) => void,
   flushPendingEditorDraft: () => void,
+  flushPendingEditorDraftImmediately: () => Promise<boolean>,
   finalize: (result: NodeNavigationResult | null) => void,
   markRequested: (nodeId: string) => void,
   ensureNodeReady: (nodeId: string) => Promise<void>,
@@ -85,12 +98,23 @@ function useSelectNodeAction(
 
       markRequested(nodeId);
       flushPendingEditorDraft();
+      await flushPendingEditorDraftImmediately();
       prepareForNavigation();
       const result = action(nodeId);
       finalize(result ? { ...result, focusAnchor } : result);
       void ensureNodeReady(nodeId);
     },
-    [action, activeNodeId, ensureNodeReady, finalize, flushPendingEditorDraft, markRequested, openPreparedNode, prepareForNavigation]
+    [
+      action,
+      activeNodeId,
+      ensureNodeReady,
+      finalize,
+      flushPendingEditorDraft,
+      flushPendingEditorDraftImmediately,
+      markRequested,
+      openPreparedNode,
+      prepareForNavigation
+    ]
   );
 }
 
@@ -178,6 +202,7 @@ function useNavigationTransitionHandles(
   const openPreparedNode = usePreparedOpenNodeAction(
     args.openNode,
     args.flushPendingEditorDraft,
+    args.flushPendingEditorDraftImmediately,
     prepareForNavigation,
     finalizeNavigation,
     markSelectionRequested
@@ -189,6 +214,7 @@ function useNavigationTransitionHandles(
     args.jumpToAncestorNode,
     args.openNode,
     args.flushPendingEditorDraft,
+    args.flushPendingEditorDraftImmediately,
     prepareForNavigation,
     finalizeNavigation,
     markSelectionRequested,
@@ -215,6 +241,7 @@ export function usePreparedNavigationHandlers(args: PreparedNavigationDependenci
       args.openNode,
       prepareForNavigation,
       args.flushPendingEditorDraft,
+      args.flushPendingEditorDraftImmediately,
       finalizeNavigation,
       markSelectionRequested,
       ensureNodeReady,
@@ -224,6 +251,7 @@ export function usePreparedNavigationHandlers(args: PreparedNavigationDependenci
     handleGoBack: useNavigationAction(
       args.goBack,
       args.flushPendingEditorDraft,
+      args.flushPendingEditorDraftImmediately,
       prepareForNavigation,
       finalizeNavigation,
       targetResolvers.resolveBackTargetNodeId,
@@ -233,6 +261,7 @@ export function usePreparedNavigationHandlers(args: PreparedNavigationDependenci
     handleGoForward: useNavigationAction(
       args.goForward,
       args.flushPendingEditorDraft,
+      args.flushPendingEditorDraftImmediately,
       prepareForNavigation,
       finalizeNavigation,
       targetResolvers.resolveForwardTargetNodeId,
@@ -242,6 +271,7 @@ export function usePreparedNavigationHandlers(args: PreparedNavigationDependenci
     handleGoParent: useNavigationAction(
       args.goToParent,
       args.flushPendingEditorDraft,
+      args.flushPendingEditorDraftImmediately,
       prepareForNavigation,
       finalizeNavigation,
       targetResolvers.resolveParentTargetNodeId,

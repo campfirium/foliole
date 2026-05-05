@@ -15,6 +15,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 export function usePreparedOpenNodeAction(
   action: (nodeId: string) => NodeNavigationResult | null,
   flushPendingEditorDraft: () => void,
+  flushPendingEditorDraftImmediately: () => Promise<boolean>,
   prepareForNavigation: (nodeIdOverride?: string | null) => void,
   finalize: (result: NodeNavigationResult | null) => void,
   markRequested: (nodeId: string) => void
@@ -25,6 +26,7 @@ export function usePreparedOpenNodeAction(
     async (nodeId: string, focusAnchor: NodeNavigationResult['focusAnchor'] = null) => {
       markRequested(nodeId);
       flushPendingEditorDraft();
+      await flushPendingEditorDraftImmediately();
       prepareForNavigation();
       const result = action(nodeId);
       finalize(result ? { ...result, focusAnchor } : result);
@@ -55,7 +57,7 @@ export function usePreparedOpenNodeAction(
         }
       });
     },
-    [action, finalize, flushPendingEditorDraft, markRequested, prepareForNavigation]
+    [action, finalize, flushPendingEditorDraft, flushPendingEditorDraftImmediately, markRequested, prepareForNavigation]
   );
 }
 
@@ -65,6 +67,7 @@ export function useBreadcrumbSelectionAction(
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null,
   openNode: (nodeId: string) => NodeNavigationResult | null,
   flushPendingEditorDraft: () => void,
+  flushPendingEditorDraftImmediately: () => Promise<boolean>,
   prepareForNavigation: (nodeIdOverride?: string | null) => void,
   finalizeNavigation: (result: NodeNavigationResult | null) => void,
   markSelectionRequested: (nodeId: string) => void,
@@ -90,6 +93,7 @@ export function useBreadcrumbSelectionAction(
 
       markSelectionRequested(nodeId);
       flushPendingEditorDraft();
+      await flushPendingEditorDraftImmediately();
       prepareForNavigation(activeNodeId);
       const result = jumpToAncestorNode(nodeId) ?? openNode(nodeId);
       finalizeNavigation(result);
@@ -106,6 +110,7 @@ export function useBreadcrumbSelectionAction(
       openPreparedNode,
       prepareForNavigation,
       flushPendingEditorDraft,
+      flushPendingEditorDraftImmediately,
     ]
   );
 }

@@ -11,12 +11,44 @@ export const nodes = sqliteTable('nodes', {
   hideTitleHeading: integer('hide_title_heading', { mode: 'boolean' }).notNull().default(false),
   content: text('content').notNull().default(''),
   openingText: text('opening_text'),
+  virtualFilter: text('virtual_filter'),
   reveal: text('reveal'),
   anchorLink: text('anchor_link'),
   imageRegions: text('image_regions'),
+  position: integer('position'),
+  currentVersionId: text('current_version_id'),
+  lastModifiedByDeviceId: text('last_modified_by_device_id'),
+  syncDirty: integer('sync_dirty', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   deletedAt: text('deleted_at')
+});
+
+export const nodeSyncVersions = sqliteTable('node_sync_versions', {
+  versionId: text('version_id').primaryKey(),
+  objectId: text('object_id').notNull(),
+  parentVersionId: text('parent_version_id'),
+  deviceId: text('device_id').notNull(),
+  createdAt: text('created_at').notNull(),
+  contentHash: text('content_hash').notNull()
+});
+
+export const nodeSyncConflicts = sqliteTable('node_sync_conflicts', {
+  conflictVersionId: text('conflict_version_id').primaryKey(),
+  objectId: text('object_id').notNull(),
+  parentVersionId: text('parent_version_id'),
+  deviceId: text('device_id'),
+  contentHash: text('content_hash'),
+  snapshotJson: text('snapshot_json').notNull(),
+  detectedAt: text('detected_at').notNull()
+});
+
+export const syncPeers = sqliteTable('sync_peers', {
+  peerId: text('peer_id').primaryKey(),
+  status: text('status').notNull().default('paired'),
+  lastSyncedAt: text('last_synced_at'),
+  lastSeenVersionCursor: text('last_seen_version_cursor'),
+  updatedAt: text('updated_at').notNull()
 });
 
 export const nodeReview = sqliteTable('node_review', {

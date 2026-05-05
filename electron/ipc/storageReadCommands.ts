@@ -2,12 +2,16 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadNodeBacklinks } from '../database/nodeBacklinks.js';
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
 import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
+import { loadSyncNodeConflicts } from '../database/syncConflictReads.js';
+import { loadSyncIndex } from '../database/syncIndex.js';
+import { loadSyncNodes } from '../database/syncNodes.js';
 import { loadWorkspaceListSnapshot } from '../database/workspaceListSnapshot.js';
 import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import {
   asNullableString,
+  asStringArray,
   asString,
   asTimestamp,
   parseNodeViewStatePayloadArray
@@ -17,6 +21,15 @@ import { parseApplyReviewGradeArgs } from './reviewCommandArgs.js';
 export function handleWorkspaceReadCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
     return loadWorkspaceSnapshot();
+  }
+  if (command === NATIVE_COMMANDS.loadSyncIndex) {
+    return loadSyncIndex();
+  }
+  if (command === NATIVE_COMMANDS.loadSyncNodes) {
+    return loadSyncNodes(asStringArray(args.objectIds, 'objectIds'));
+  }
+  if (command === NATIVE_COMMANDS.loadSyncNodeConflicts) {
+    return loadSyncNodeConflicts(Array.isArray(args.objectIds) ? asStringArray(args.objectIds, 'objectIds') : undefined);
   }
   if (command === NATIVE_COMMANDS.loadWorkspaceListSnapshot) {
     return loadWorkspaceListSnapshot({

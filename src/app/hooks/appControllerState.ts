@@ -124,6 +124,7 @@ function useWorkspaceEditorController(
     closeContextMenu: () => undefined,
     editorRef: runtime.editorRef,
     flushPendingEditorDraft: runtime.flushPendingEditorDraft,
+    flushPendingEditorDraftImmediately: runtime.flushPendingEditorDraftImmediately,
     forwardStackSize: ws.navigation.forwardStack.length,
     goBack: ws.goBack,
     goForward: ws.goForward,

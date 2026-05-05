@@ -3,6 +3,24 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { handleInvokeRequest } from './commands.js';
 
+const { loadSyncPeers, saveSyncPeers } = vi.hoisted(() => ({
+  loadSyncPeers: vi.fn().mockReturnValue([
+    {
+      peer_id: 'android-1',
+      status: 'paired',
+      last_synced_at: '2026-04-21T16:30:00.000Z',
+      last_seen_version_cursor: 'desktop-1#42',
+      updated_at: '2026-04-21T16:30:00.000Z'
+    }
+  ]),
+  saveSyncPeers: vi.fn().mockImplementation((peers: Array<Record<string, unknown>>) =>
+    peers.map((peer) => ({
+      ...peer,
+      updated_at: '2026-04-21T16:35:00.000Z'
+    }))
+  )
+}));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
@@ -28,6 +46,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   upsertNodeSnapshot: vi.fn(),
   upsertNodeSnapshots: vi.fn()
 }));
+vi.mock('../database/syncPeers.js', () => ({ loadSyncPeers, saveSyncPeers }));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
   saveAppSettingsState: vi.fn().mockResolvedValue(undefined)
@@ -165,6 +184,39 @@ async function expectAppAndImportSettingsCommands() {
   await expect(handleInvokeRequest({ command: 'load_app_settings_state' })).resolves.toEqual({
     'foliole-ui-font-preset': 'inter'
   });
+  await expect(handleInvokeRequest({ command: 'load_sync_peers' })).resolves.toEqual([
+    {
+      peer_id: 'android-1',
+      status: 'paired',
+      last_synced_at: '2026-04-21T16:30:00.000Z',
+      last_seen_version_cursor: 'desktop-1#42',
+      updated_at: '2026-04-21T16:30:00.000Z'
+    }
+  ]);
+  await expect(
+    handleInvokeRequest({
+      command: 'save_sync_peers',
+      args: {
+        peers: [
+          {
+            peer_id: 'android-2',
+            status: 'stale',
+            last_synced_at: null,
+            last_seen_version_cursor: 'desktop-1#55',
+            updated_at: 'ignored'
+          }
+        ]
+      }
+    })
+  ).resolves.toEqual([
+    {
+      peer_id: 'android-2',
+      status: 'stale',
+      last_synced_at: null,
+      last_seen_version_cursor: 'desktop-1#55',
+      updated_at: '2026-04-21T16:35:00.000Z'
+    }
+  ]);
   await expect(
     handleInvokeRequest({
       command: 'save_app_settings_state',

@@ -8,14 +8,13 @@ import {
 import { getReviewSchedulerVersion, loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
 import { openDatabaseConnection } from './connection.js';
-
-const REVIEW_DEVICE_ID = 'desktop-local';
+import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 
 export type { ApplyReviewGradeInput };
 
 export function applyReviewGrade(input: ApplyReviewGradeInput): void {
   applyReviewGradeViaDriver(openDatabaseConnection().driver, input, {
-    deviceId: REVIEW_DEVICE_ID,
+    deviceId: loadOrCreateDesktopDeviceId(input.reviewedAt),
     schedulerVersion: getReviewSchedulerVersion(loadReviewSchedulerSettings()),
     createId: randomUUID
   });

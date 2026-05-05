@@ -4,8 +4,9 @@ export function createUpsertNodeStatement(driver: DatabaseDriver) {
   return driver.prepare(
     `INSERT INTO nodes (
      id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, opening_text, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+       content, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
+       current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 1, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
        kind = excluded.kind,
@@ -20,6 +21,9 @@ export function createUpsertNodeStatement(driver: DatabaseDriver) {
        reveal = excluded.reveal,
        anchor_link = excluded.anchor_link,
        image_regions = excluded.image_regions,
+       position = excluded.position,
+       last_modified_by_device_id = excluded.last_modified_by_device_id,
+       sync_dirty = excluded.sync_dirty,
        updated_at = excluded.updated_at,
        deleted_at = NULL`
   );

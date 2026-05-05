@@ -40,18 +40,13 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('creates a pre-migration snapshot inside Backups before upgrading the library database', async () => {
+it('creates a pre-migration snapshot inside Backups before rejecting a legacy library database', async () => {
   const databasePath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'foliole.db');
   await fs.mkdir(path.dirname(databasePath), { recursive: true });
   createVersionTwelveDatabase(databasePath);
 
-  const connection = initializeDatabase();
-
-  expect(connection.dbPath).toBe(databasePath);
+  await expect(async () => initializeDatabase()).rejects.toThrow(/delete the existing foliole\.db and rebuild/i);
   expect(resolveDatabasePath()).toBe(databasePath);
-  expect(
-    connection.sqlite.prepare('SELECT kind FROM nodes WHERE id = ?').pluck().get('legacy-node')
-  ).toBe('topic');
 
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(databasePath);
   const snapshotNames = await fs.readdir(snapshotDirectory);

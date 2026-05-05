@@ -12,6 +12,7 @@ import {
 import { registerAttachmentProtocol, registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
 import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
 import { initializeDatabase } from './database/migrate.js';
+import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
@@ -185,6 +186,11 @@ app.on('before-quit', (event) => {
   if (!mirrorFlushed) {
     mirrorFlushed = true;
     event.preventDefault();
+    try {
+      flushAllDirtyNodeSyncVersions();
+    } catch (error) {
+      console.error('[database] flush dirty node sync versions on quit failed', error);
+    }
     flushMirrorSync()
       .catch((error) => {
         console.error('[mirror] flush on quit failed', error);
@@ -213,6 +219,7 @@ app.whenReady().then(async () => {
   });
   await appendBootEvent('database_init_start');
   initializeDatabase();
+  flushAllDirtyNodeSyncVersions();
   await appendBootEvent('database_init_complete');
   registerAttachmentProtocol();
   installInvokeHandler();

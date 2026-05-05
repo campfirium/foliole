@@ -16,7 +16,9 @@ import type {
 } from '../../lib/core/database/nodeMutations.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
+import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
 import { withTransaction } from './transaction.js';
 
 export type {
@@ -28,20 +30,39 @@ export type {
 };
 
 export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
-  upsertNodeSnapshotViaDriver(openDatabaseConnection().driver, input);
+  upsertNodeSnapshotViaDriver(openDatabaseConnection().driver, {
+    ...input,
+    deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
+  });
 }
 
 export function upsertNodeSnapshots(inputs: UpsertNodeSnapshotInput[]): void {
   const connection = openDatabaseConnection();
   withTransaction(connection.driver, () => {
     inputs.forEach((input) => {
-      upsertNodeSnapshotViaDriver(connection.driver, input);
+      upsertNodeSnapshotViaDriver(connection.driver, {
+        ...input,
+        deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
+      });
     });
   });
 }
 
 export function replaceNodeOrder(nodeIds: string[]): void {
-  replaceNodeOrderViaDriver(openDatabaseConnection().driver, nodeIds);
+  const connection = openDatabaseConnection();
+  const now = new Date().toISOString();
+  const deviceId = loadOrCreateDesktopDeviceId(now);
+  withTransaction(connection.driver, () => {
+    replaceNodeOrderViaDriver(connection.driver, nodeIds);
+    for (let index = 0; index < nodeIds.length; index += 1) {
+      connection.driver.execute(
+        `UPDATE nodes
+         SET position = ?, updated_at = ?, last_modified_by_device_id = ?, sync_dirty = 1
+         WHERE id = ?`,
+        [index, now, deviceId, nodeIds[index]]
+      );
+    }
+  });
 }
 
 export function updateNodeAnchorLinks(inputs: UpdateNodeAnchorLinkInput[]): void {
@@ -53,11 +74,36 @@ export function clearNodeOrder(): void {
 }
 
 export function softDeleteNodes(input: SoftDeleteNodesInput): void {
-  softDeleteNodesViaDriver(openDatabaseConnection().driver, input);
+  const connection = openDatabaseConnection();
+  const deviceId = loadOrCreateDesktopDeviceId(input.deletedAt);
+  withTransaction(connection.driver, () => {
+    softDeleteNodesViaDriver(connection.driver, input);
+    for (const nodeId of input.nodeIds) {
+      connection.driver.execute(
+        `UPDATE nodes
+         SET last_modified_by_device_id = ?, sync_dirty = 1
+         WHERE id = ?`,
+        [deviceId, nodeId]
+      );
+    }
+  });
 }
 
 export function restoreNodes(input: RestoreNodesInput): void {
-  restoreNodesViaDriver(openDatabaseConnection().driver, input);
+  const connection = openDatabaseConnection();
+  const now = new Date().toISOString();
+  const deviceId = loadOrCreateDesktopDeviceId(now);
+  withTransaction(connection.driver, () => {
+    restoreNodesViaDriver(connection.driver, input);
+    for (const nodeId of input.nodeIds) {
+      connection.driver.execute(
+        `UPDATE nodes
+         SET last_modified_by_device_id = ?, sync_dirty = 1
+         WHERE id = ?`,
+        [deviceId, nodeId]
+      );
+    }
+  });
 }
 
 export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): string[] {
@@ -68,4 +114,8 @@ export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): stri
     cleanupOrphanAttachments(connection.driver, attachmentCleanupPlan);
   });
   return affectedParentNodeIds;
+}
+
+export function flushAllDirtyNodeSyncVersions() {
+  return flushDirtyNodeSyncVersions();
 }
