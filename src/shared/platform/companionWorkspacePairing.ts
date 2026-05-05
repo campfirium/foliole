@@ -1,10 +1,15 @@
-import type { NativeCompanionPairingState } from '../../../lib/platform/nativeCompanionSyncContract';
-
 import {
   createCompanionPairingPublicKey,
   decryptCompanionPairingSecret,
   dropCompanionPairingPrivateKey
 } from './companionPairingEncryption';
+import {
+  normalizePairingState,
+  readStoredWebPairingState,
+  readWebPairingState,
+  writeWebPairingState
+} from './companionPairingState';
+import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import { discoverCompanionDesktop, discoverCompanionDesktops } from './companionWorkspaceDiscovery';
 import {
   DISCOVERY_ENDPOINT_PATH,
@@ -20,55 +25,10 @@ import {
   type RequestCompanionPairingResponse
 } from './companionWorkspaceSyncBridge';
 
-const WEB_PAIRING_STATE_KEY = 'foliole-companion-pairing-state';
 const pairingKeyIdsByRequestId = new Map<string, string>();
 const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-pack?after_state_seq=0';
 
-type WebCompanionPairingState = NativeCompanionPairingState & { device_secret?: string };
-
 export { discoverCompanionDesktop, discoverCompanionDesktops };
-
-export function normalizePairingState(value: unknown): NativeCompanionPairingState {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {
-      device_id: null,
-      device_kind: null,
-      device_name: null,
-      is_paired: false,
-      paired_at: null
-    };
-  }
-  const raw = value as Record<string, unknown>;
-  return {
-    device_id: typeof raw.device_id === 'string' && raw.device_id.trim() ? raw.device_id.trim() : null,
-    device_kind: typeof raw.device_kind === 'string' && raw.device_kind.trim() ? raw.device_kind.trim() : null,
-    device_name: typeof raw.device_name === 'string' && raw.device_name.trim() ? raw.device_name.trim() : null,
-    is_paired: raw.is_paired === true,
-    paired_at: typeof raw.paired_at === 'string' && raw.paired_at.trim() ? raw.paired_at.trim() : null
-  };
-}
-
-function readStoredWebPairingState() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  try {
-    return JSON.parse(window.localStorage.getItem(WEB_PAIRING_STATE_KEY) ?? 'null') as WebCompanionPairingState | null;
-  } catch {
-    return null;
-  }
-}
-
-function readWebPairingState() {
-  return normalizePairingState(readStoredWebPairingState());
-}
-
-function writeWebPairingState(state: WebCompanionPairingState) {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(WEB_PAIRING_STATE_KEY, JSON.stringify(state));
-  }
-  return normalizePairingState(state);
-}
 
 function toHex(buffer: ArrayBuffer) {
   return [...new Uint8Array(buffer)].map((value) => value.toString(16).padStart(2, '0')).join('');
@@ -227,13 +187,13 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
       paired_at: payload.paired_at
     });
   }
-  await FolioleCompanionSync.savePairingCredentials({
+  await runCompanionSyncWriterTask(() => FolioleCompanionSync.savePairingCredentials({
     device_id: payload.device_id,
     device_kind: args.deviceKind,
     device_name: args.deviceName,
     device_secret: deviceSecret,
     paired_at: payload.paired_at
-  });
+  }));
   const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
   if (!storedPairingState.is_paired) {
     throw new Error('Android pairing credentials were not saved.');

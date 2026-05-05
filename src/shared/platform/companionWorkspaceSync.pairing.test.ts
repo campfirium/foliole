@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const writerQueueMock = vi.hoisted(() => ({
+  run: vi.fn(async <T>(task: () => Promise<T>) => task())
+}));
+
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'web'),
   isNativePlatform: vi.fn(() => false),
@@ -9,6 +13,10 @@ const capacitorMock = vi.hoisted(() => ({
     savePairingCredentials: vi.fn(),
     signCompanionSyncRequest: vi.fn()
   }
+}));
+
+vi.mock('./companionSyncWriterQueue', () => ({
+  runCompanionSyncWriterTask: writerQueueMock.run
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -73,7 +81,10 @@ function mockNativePairingHttp() {
     });
 }
 
-beforeEach(() => resetCompanionWorkspaceSyncTestState(capacitorMock));
+beforeEach(() => {
+  resetCompanionWorkspaceSyncTestState(capacitorMock);
+  writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => task());
+});
 
 describe('companionWorkspaceSync pairing', () => {
   it('discovers the desktop, requests pairing, and stores web preview credentials after approval', async () => {
@@ -150,6 +161,7 @@ it('verifies native pairing credentials are readable after saving', async () => 
     url: 'http://10.0.2.2:38641/companion/pair'
   });
   expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(1);
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
   expect(capacitorMock.plugin.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
     method: 'GET',
     path_with_query: '/companion/sync-pack?after_state_seq=0'
