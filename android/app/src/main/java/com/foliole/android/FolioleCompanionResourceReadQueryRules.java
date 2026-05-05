@@ -75,6 +75,26 @@ final class FolioleCompanionResourceReadQueryRules {
         return pdfPageTextObject(context, "outputKeys").getString(key);
     }
 
+    static String pdfPageTextRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(pdfPageTextString(context, key));
+    }
+
+    static int pdfPageTextRowInt(Context context, JSONObject row, String key) throws Exception {
+        return row.getInt(pdfPageTextString(context, key));
+    }
+
+    static String pdfPageTextRowOptString(Context context, JSONObject row, String key, String defaultValue) throws Exception {
+        return row.optString(pdfPageTextString(context, key), defaultValue);
+    }
+
+    static int pdfPageTextRowOptInt(Context context, JSONObject row, String key) throws Exception {
+        return row.optInt(pdfPageTextString(context, key));
+    }
+
+    static Object pdfPageTextRowValue(Context context, JSONObject row, String key) throws Exception {
+        return row.opt(pdfPageTextString(context, key));
+    }
+
     private static JSONObject group(Context context, String groupName) throws Exception {
         return FolioleCompanionQueryAssetKeys.ruleGroup(context, "resourceRead", groupName);
     }

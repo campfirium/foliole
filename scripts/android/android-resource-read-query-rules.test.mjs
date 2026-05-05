@@ -140,6 +140,11 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentSyncResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextOutputKey(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowString(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowInt(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowOptString(context, row, key, defaultValue)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowOptInt(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextRowValue(context, row, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "resourceRead", groupName)');
     expect(rulesSource).toContain('getJSONObject(key)');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestByHash"');
@@ -170,7 +175,8 @@ describe('Android resource read query rules', () => {
     const source = await readFile(READABLE_ARTICLE_QUERY, 'utf8');
 
     expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleOutputKey(context, key)');
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowKey(context, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowString(context, row, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowNullableString(context, row, key)');
     expect(source).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, "textKey")');
     expect(source).not.toContain('article.put("node_id"');
     expect(source).not.toContain('article.put("content_status"');

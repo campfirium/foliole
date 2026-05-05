@@ -123,12 +123,12 @@ final class FolioleCompanionReadableArticleQuery {
     }
 
     private static JSObject buildArticle(Context context, SQLiteDatabase database, JSONObject row) throws Exception {
-        String nodeId = row.getString(rowKey(context, "id"));
-        String title = normalizeTitle(context, nullableString(row, rowKey(context, "title")));
-        String inlineContent = nullableString(row, rowKey(context, "content"));
-        String bodyBlobHash = nullableString(row, rowKey(context, "bodyBlobHash"));
-        String bodyBlobData = nullableString(row, rowKey(context, "bodyBlobData"));
-        String availability = nullableString(row, rowKey(context, "availability"));
+        String nodeId = rowString(context, row, "id");
+        String title = normalizeTitle(context, rowNullableString(context, row, "title"));
+        String inlineContent = rowNullableString(context, row, "content");
+        String bodyBlobHash = rowNullableString(context, row, "bodyBlobHash");
+        String bodyBlobData = rowNullableString(context, row, "bodyBlobData");
+        String availability = rowNullableString(context, row, "availability");
         String content = resolveContent(inlineContent, bodyBlobData);
         String pdfAttachmentId = loadReferencePdfAttachmentId(context, database, nodeId);
         JSObject article = new JSObject();
@@ -139,10 +139,6 @@ final class FolioleCompanionReadableArticleQuery {
         article.put(outputKey(context, "contentStatus"), resolveContentStatus(context, inlineContent, bodyBlobHash, bodyBlobData, availability));
         article.put(outputKey(context, "pdfAttachmentId"), pdfAttachmentId);
         return article;
-    }
-
-    private static String nullableString(JSONObject row, String key) {
-        return row.isNull(key) ? null : row.optString(key, null);
     }
 
     private static String normalizeTitle(Context context, String title) throws Exception {
@@ -163,7 +159,11 @@ final class FolioleCompanionReadableArticleQuery {
         return FolioleCompanionContentReadQueryRules.readableArticleOutputKey(context, key);
     }
 
-    private static String rowKey(Context context, String key) throws Exception {
-        return FolioleCompanionContentReadQueryRules.readableArticleRowKey(context, key);
+    private static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.readableArticleRowString(context, row, key);
+    }
+
+    private static String rowNullableString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.readableArticleRowNullableString(context, row, key);
     }
 }

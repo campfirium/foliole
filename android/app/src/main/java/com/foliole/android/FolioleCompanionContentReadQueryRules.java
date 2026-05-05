@@ -48,6 +48,15 @@ final class FolioleCompanionContentReadQueryRules {
         return readableArticleObject(context, "rowKeys").getString(key);
     }
 
+    static String readableArticleRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(readableArticleRowKey(context, key));
+    }
+
+    static String readableArticleRowNullableString(Context context, JSONObject row, String key) throws Exception {
+        String rowKey = readableArticleRowKey(context, key);
+        return row.isNull(rowKey) ? null : row.optString(rowKey, null);
+    }
+
     private static JSONObject group(Context context, String groupName) throws Exception {
         return FolioleCompanionQueryAssetKeys.ruleGroup(context, "contentRead", groupName);
     }

@@ -44,6 +44,8 @@ describe('Android content read query rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowString(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowNullableString(context, row, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "contentRead", groupName)');
     expect(combinedStoreSource).not.toContain('"externalDocumentById"');
     expect(combinedStoreSource).not.toContain('"readableArticleFirstNode"');

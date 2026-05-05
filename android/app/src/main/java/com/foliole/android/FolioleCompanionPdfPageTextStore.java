@@ -60,13 +60,13 @@ final class FolioleCompanionPdfPageTextStore {
 
     private static JSObject toSearchResult(Context context, JSONObject row) throws Exception {
         JSObject result = new JSObject();
-        String text = row.optString(stringRule(context, "textKey"), "");
-        int matchStart = Math.max(0, row.optInt(stringRule(context, "matchIndexKey")) - 1);
-        result.put(stringRule(context, "attachmentIdKey"), row.getString(stringRule(context, "attachmentIdKey")));
-        result.put(stringRule(context, "pageKey"), row.getInt(stringRule(context, "pageKey")));
+        String text = rowOptString(context, row, "textKey", "");
+        int matchStart = Math.max(0, rowOptInt(context, row, "matchIndexKey") - 1);
+        result.put(stringRule(context, "attachmentIdKey"), rowString(context, row, "attachmentIdKey"));
+        result.put(stringRule(context, "pageKey"), rowInt(context, row, "pageKey"));
         result.put(stringRule(context, "textKey"), text);
-        result.put(stringRule(context, "pageWidthKey"), row.opt(stringRule(context, "pageWidthKey")));
-        result.put(stringRule(context, "pageHeightKey"), row.opt(stringRule(context, "pageHeightKey")));
+        result.put(stringRule(context, "pageWidthKey"), rowValue(context, row, "pageWidthKey"));
+        result.put(stringRule(context, "pageHeightKey"), rowValue(context, row, "pageHeightKey"));
         result.put(outputKey(context, "matchStart"), matchStart);
         result.put(outputKey(context, "excerpt"), buildExcerpt(context, text, matchStart));
         return result;
@@ -92,6 +92,26 @@ final class FolioleCompanionPdfPageTextStore {
 
     private static String outputKey(Context context, String key) throws Exception {
         return FolioleCompanionResourceReadQueryRules.pdfPageTextOutputKey(context, key);
+    }
+
+    private static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowString(context, row, key);
+    }
+
+    private static int rowInt(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowInt(context, row, key);
+    }
+
+    private static String rowOptString(Context context, JSONObject row, String key, String defaultValue) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowOptString(context, row, key, defaultValue);
+    }
+
+    private static int rowOptInt(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowOptInt(context, row, key);
+    }
+
+    private static Object rowValue(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.pdfPageTextRowValue(context, row, key);
     }
 
 }
