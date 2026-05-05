@@ -1,5 +1,3 @@
-import { stripImportedAnchorMarkup } from '../../../lib/core/import/importAnchorMarkup';
-
 const FENCE_PATTERN = /^\s{0,3}(```|~~~)/;
 const LEVEL_ONE_HEADING_PATTERN = /^\s{0,3}#\s+(.+?)\s*#*\s*$/;
 
@@ -29,7 +27,7 @@ export function extractImportedHeadingTitle(content: string) {
       continue;
     }
 
-    const match = stripImportedAnchorMarkup(line).match(LEVEL_ONE_HEADING_PATTERN);
+    const match = line.match(LEVEL_ONE_HEADING_PATTERN);
     if (!match) {
       continue;
     }

@@ -38,6 +38,7 @@ export interface PreparedImportRecord {
   contentFingerprint: string;
   content: string;
   matchedHighlights?: PreparedImportHighlightRecord[];
+  unmatchedHighlights?: PreparedImportHighlightRecord[];
   degradedReason: string | null;
   importedAt: string;
   sourceProfile?: PreparedImportSourceProfile;

@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildImportedHighlightPreview } from '../../lib/core/import/importedHighlightPreview';
+import { buildImportedHighlightPreview, buildImportedHighlightPreviewFromMatches } from '../../lib/core/import/importedHighlightPreview';
 
 describe('importedHighlightPreview', () => {
-  it('detects imported highlight and cloze tags from imported content', () => {
-    const result = buildImportedHighlightPreview({
-      content: 'Before <highlight id="h1">important</highlight id="h1"> and <cloze id="c1">hidden</cloze id="c1"> after',
+  it('previews structured matched and unmatched sidecar highlights', () => {
+    const result = buildImportedHighlightPreviewFromMatches({
+      content: 'Before important after',
+      matchedHighlights: [{ content: 'important', label: null, locatorText: 'Before important after' }],
+      unmatchedHighlights: [{ content: 'missing quote', label: 'Missing', locatorText: null }],
       sourceName: 'Imported article'
     });
 
     expect(result.detectedHighlightCount).toBe(2);
     expect(result.samples).toMatchObject([
       { highlightText: 'important', matched: true, sourceName: 'Imported article' },
-      { highlightText: 'hidden', matched: true, sourceName: 'Imported article' }
+      { highlightText: 'missing quote', matched: false, sourceName: 'Imported article' }
     ]);
   });
 

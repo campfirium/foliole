@@ -3,15 +3,11 @@ import path from 'node:path';
 
 import type { BrowserWindow } from 'electron';
 
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { insertImportedHighlightNodes } from '../../lib/core/database/importDerivedHighlights.js';
-import { collectAnchoredImportedHighlights } from '../../lib/core/database/importHighlightAnchors.js';
 import { resolveReadwiseHighlightUpdate } from '../../lib/core/database/importReadwiseHighlightUpdates.js';
-import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
-import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from '../../lib/platform/nativeContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { resolveImportKind } from '../ipc/importSourcePipeline.js';
@@ -57,7 +53,6 @@ function readExistingChildHighlightContents(nodeId: string) {
       `SELECT content
        FROM nodes
        WHERE parent_id = ?
-         AND anchor_link IS NOT NULL
          AND deleted_at IS NULL
        ORDER BY created_at ASC`,
       [nodeId]
@@ -65,26 +60,9 @@ function readExistingChildHighlightContents(nodeId: string) {
     .map((row) => row.content);
 }
 
-function readExistingUnmatchedHighlightContents(sourceContent: string) {
-  const marker = '\n\n## Unmatched Sidecar Highlights\n\n';
-  const markerIndex = sourceContent.indexOf(marker);
-  if (markerIndex < 0) {
-    return [];
-  }
-  return sourceContent
-    .slice(markerIndex + marker.length)
-    .split('\n')
-    .map((line) => /^-\s+[^:]+:\s*(.+?)\s*$/.exec(line)?.[1] ?? '')
-    .filter(Boolean);
-}
-
-function readExistingHighlightContents(nodeId: string, sourceContent: string) {
+function readExistingHighlightContents(nodeId: string) {
   return Array.from(
-    new Set([
-      ...readExistingChildHighlightContents(nodeId),
-      ...collectAnchoredImportedHighlights(sourceContent).map((highlight) => highlight.content),
-      ...readExistingUnmatchedHighlightContents(sourceContent)
-    ])
+    new Set(readExistingChildHighlightContents(nodeId))
   );
 }
 
@@ -138,19 +116,10 @@ async function selectHighlightFilePath(window?: BrowserWindow | null) {
 function persistMergedHighlights(input: {
   importedAt: string;
   nodeId: string;
-  sourceTitle: string;
   update: ReturnType<typeof resolveReadwiseHighlightUpdate>;
 }) {
   const connection = openDatabaseConnection();
   connection.driver.transaction(() => {
-    const bodyBlobHash = upsertTextBodyBlob(connection.driver, input.update.content, input.importedAt);
-    connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
-      input.update.content,
-      bodyBlobHash,
-      resolveNodeOpeningText(input.update.content, input.sourceTitle),
-      input.importedAt,
-      input.nodeId
-    ]);
     if (input.update.highlights.length > 0) {
       insertImportedHighlightNodes({
         driver: connection.driver,
@@ -161,7 +130,6 @@ function persistMergedHighlights(input: {
         startPosition: readNextNodePosition()
       });
     }
-    syncWorkspaceSearchIndexForNodeIds(connection.driver, [input.nodeId]);
   });
 }
 
@@ -180,7 +148,7 @@ export async function mergeReadwiseTopicHighlightsFromFile(
   }
 
   const existingHighlightContentSet = new Set(
-    readExistingHighlightContents(nodeId, sourceNode.content)
+    readExistingHighlightContents(nodeId)
       .map((content) => normalizeHighlightContent(content))
       .filter(Boolean)
   );
@@ -195,7 +163,7 @@ export async function mergeReadwiseTopicHighlightsFromFile(
   const importedAt = new Date().toISOString();
   const prepared = createPreparedManualHighlightMerge(nodeId, sourceNode, normalizedHighlightFilePath, highlightSidecar);
   const readwiseUpdate = resolveReadwiseHighlightUpdate({
-    existingChildContents: readExistingHighlightContents(nodeId, sourceNode.content),
+    existingChildContents: readExistingHighlightContents(nodeId),
     existingContent: sourceNode.content,
     prepared
   });
@@ -206,7 +174,6 @@ export async function mergeReadwiseTopicHighlightsFromFile(
   persistMergedHighlights({
     importedAt,
     nodeId,
-    sourceTitle: sourceNode.title,
     update: readwiseUpdate
   });
 

@@ -55,7 +55,7 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
   const childRows = nodeId
     ? connection.sqlite
         .prepare('SELECT parent_id, kind, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
-        .all(nodeId) as Array<{ anchor_link: string; content: string; kind: string; parent_id: string; title: string }>
+        .all(nodeId) as Array<{ anchor_link: string | null; content: string; kind: string; parent_id: string; title: string }>
     : [];
 
   return { childRows, nodeRow, runRows };
@@ -70,7 +70,7 @@ function parseAnchorLink(value: string) {
 }
 
 function expectReadwiseParentBody(input: {
-  childRows: Array<{ anchor_link: string; content: string; kind: string; parent_id: string | null; title: string }>;
+  childRows: Array<{ anchor_link: string | null; content: string; kind: string; parent_id: string | null; title: string }>;
   nodeRow: { content: string; kind: string; parent_id: string; title: string } | undefined;
 }) {
   expect(input.nodeRow).toEqual({
@@ -79,11 +79,7 @@ function expectReadwiseParentBody(input: {
       '',
       'This is the highlighted sentence inside the article body.',
       '',
-      'Another paragraph with Another matching excerpt. End.',
-      '',
-      '## Unmatched Sidecar Highlights',
-      '',
-      '- Missing: quote that is not present in the body'
+      'Another paragraph with Another matching excerpt. End.'
     ].join('\n'),
     kind: 'topic',
     parent_id: 'special-inbox',
@@ -92,13 +88,13 @@ function expectReadwiseParentBody(input: {
 }
 
 function expectReadwiseDerivedChildren(input: {
-  childRows: Array<{ anchor_link: string; content: string; kind: string; parent_id: string | null; title: string }>;
+  childRows: Array<{ anchor_link: string | null; content: string; kind: string; parent_id: string | null; title: string }>;
   nodeId: string | null;
 }) {
-  const firstAnchorLink = parseAnchorLink(input.childRows[0]!.anchor_link);
-  const secondAnchorLink = parseAnchorLink(input.childRows[1]!.anchor_link);
+  const firstAnchorLink = parseAnchorLink(input.childRows[0]!.anchor_link ?? '');
+  const secondAnchorLink = parseAnchorLink(input.childRows[1]!.anchor_link ?? '');
   expect(input.childRows.map((row) => ({
-    anchorLink: parseAnchorLink(row.anchor_link),
+    anchorLink: row.anchor_link ? parseAnchorLink(row.anchor_link) : null,
     content: row.content,
     kind: row.kind,
     parent_id: row.parent_id,
@@ -129,12 +125,19 @@ function expectReadwiseDerivedChildren(input: {
       kind: 'topic',
       parent_id: input.nodeId,
       title: 'Another matching excerpt'
+    },
+    {
+      anchorLink: null,
+      content: 'quote that is not present in the body',
+      kind: 'topic',
+      parent_id: input.nodeId,
+      title: 'quote that is not present in the body'
     }
   ]);
 }
 
 function expectReadwiseImportedState(input: {
-  childRows: Array<{ anchor_link: string; content: string; kind: string; parent_id: string | null; title: string }>;
+  childRows: Array<{ anchor_link: string | null; content: string; kind: string; parent_id: string | null; title: string }>;
   nodeId: string | null;
   nodeRow: { content: string; kind: string; parent_id: string; title: string } | undefined;
   runRows: unknown;
@@ -184,8 +187,8 @@ function expectImportedChildrenInSnapshot(nodeId: string, sourceFingerprint: str
     .map((childNodeId) => snapshot.nodesById[childNodeId])
     .filter((node) => node?.parentNodeId === nodeId);
   const persistedState = readPersistedImportState(sourceFingerprint, nodeId);
-  const firstAnchorLink = parseAnchorLink(persistedState.childRows[0]!.anchor_link);
-  const secondAnchorLink = parseAnchorLink(persistedState.childRows[1]!.anchor_link);
+  const firstAnchorLink = parseAnchorLink(persistedState.childRows[0]!.anchor_link ?? '');
+  const secondAnchorLink = parseAnchorLink(persistedState.childRows[1]!.anchor_link ?? '');
   expect(importedChildren).toEqual([
     expect.objectContaining({
       kind: 'topic',
@@ -202,6 +205,11 @@ function expectImportedChildrenInSnapshot(nodeId: string, sourceFingerprint: str
         kind: 'highlight',
         locator: expect.objectContaining({ originalText: 'Another paragraph with Another matching excerpt. End.' })
       })
+    }),
+    expect.objectContaining({
+      kind: 'topic',
+      anchorLink: null,
+      content: 'quote that is not present in the body'
     })
   ]);
 }

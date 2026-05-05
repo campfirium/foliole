@@ -52,7 +52,7 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
   const childRows = nodeId
     ? connection.sqlite
         .prepare('SELECT parent_id, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
-        .all(nodeId) as Array<{ anchor_link: string; content: string; parent_id: string; title: string }>
+        .all(nodeId) as Array<{ anchor_link: string | null; content: string; parent_id: string; title: string }>
     : [];
 
   return { childRows, nodeRow, runRows };
@@ -70,8 +70,8 @@ function createReadwiseImport(content: string, highlights: string[], importedAt:
   });
 }
 
-function parseAnchorLink(value: string) {
-  return JSON.parse(value) as {
+function parseAnchorLink(value: string | null) {
+  return JSON.parse(value ?? '{}') as {
     id: string;
     kind: string;
     locator?: { from: number; originalText: string; to: number };
@@ -85,22 +85,18 @@ function expectUpdatedReadwiseParentBody(nodeRow: unknown) {
       '',
       'Alpha sentence.',
       '',
-      'Beta sentence.',
-      '',
-      '## Unmatched Sidecar Highlights',
-      '',
-      '- Highlight 1: Gamma missing.'
+      'Beta sentence.'
     ].join('\n'),
     parent_id: 'special-inbox',
     title: 'readwise'
   });
 }
 
-function expectUpdatedReadwiseChildren(childRows: Array<{ anchor_link: string; content: string; parent_id: string; title: string }>, nodeId: string | null) {
-  const firstAnchorLink = parseAnchorLink(childRows[0]!.anchor_link);
-  const secondAnchorLink = parseAnchorLink(childRows[1]!.anchor_link);
+function expectUpdatedReadwiseChildren(childRows: Array<{ anchor_link: string | null; content: string; parent_id: string; title: string }>, nodeId: string | null) {
+  const firstAnchorLink = parseAnchorLink(childRows[0]!.anchor_link ?? '');
+  const secondAnchorLink = parseAnchorLink(childRows[1]!.anchor_link ?? '');
   expect(childRows.map((row) => ({
-    anchorLink: parseAnchorLink(row.anchor_link),
+    anchorLink: row.anchor_link ? parseAnchorLink(row.anchor_link) : null,
     content: row.content,
     parent_id: row.parent_id,
     title: row.title
@@ -124,6 +120,12 @@ function expectUpdatedReadwiseChildren(childRows: Array<{ anchor_link: string; c
       content: 'Beta sentence.',
       parent_id: nodeId,
       title: 'Beta sentence.'
+    },
+    {
+      anchorLink: null,
+      content: 'Gamma missing.',
+      parent_id: nodeId,
+      title: 'Gamma missing.'
     }
   ]);
 }

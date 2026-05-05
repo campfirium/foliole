@@ -1,4 +1,5 @@
 import type { PersistedImportRecord, PreparedImportRecord } from '../import/contract.js';
+import type { PreparedImportHighlightRecord } from '../import/contract.js';
 
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
@@ -113,12 +114,12 @@ function persistImportedHighlightNodes(input: {
   importedAt: string;
   nodeId: string;
   prepared: PreparedImportRecord;
-  matchedAnchoredHighlights: ReturnType<typeof applyImportedHighlightAnchors>['highlights'];
+  matchedAnchoredHighlights: Array<PreparedImportHighlightRecord | ReturnType<typeof applyImportedHighlightAnchors>['highlights'][number]>;
 }) {
   if (input.prepared.sourceProfile !== 'body_with_highlight_sidecar') {
     replaceImportedHighlightNodes({
       driver: input.driver,
-      highlights: input.matchedAnchoredHighlights,
+      highlights: input.matchedAnchoredHighlights as ReturnType<typeof applyImportedHighlightAnchors>['highlights'],
       importedAt: input.importedAt,
       parentNodeId: input.nodeId,
       parentContent: input.anchoredContent,
@@ -208,7 +209,9 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
       resultStatus: 'degraded'
     });
   }
-  const anchoredImport = applyImportedHighlightAnchors({ content: prepared.content, highlights: prepared.matchedHighlights });
+  const anchoredImport = prepared.sourceProfile === 'body_with_highlight_sidecar'
+    ? resolveReadwiseHighlightUpdate({ existingChildContents: [], existingContent: prepared.content, prepared })
+    : applyImportedHighlightAnchors({ content: prepared.content, highlights: prepared.matchedHighlights });
   const nodeId = resolvePreparedNodeId({
     anchoredContent: anchoredImport.content,
     baseRecord,

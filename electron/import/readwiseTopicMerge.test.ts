@@ -123,15 +123,33 @@ it('merges selected highlight files into an existing topic and appends newly add
   }));
 });
 
-it('treats a plain highlight file as a single manual highlight block', async () => {
+it('keeps unmatched manual highlight content as child nodes without changing the source body', async () => {
   const imported = createImportedTopic();
   const highlightPath = await writeHighlightFile('highlights-empty.md', '# Article\n\nNo parsed highlights here.');
 
   await expect(mergeReadwiseTopicHighlightsFromFile(imported.nodeId as string, highlightPath)).resolves.toEqual({
-    merged_highlight_count: 1,
+    merged_highlight_count: 2,
     node_id: imported.nodeId,
     status: 'merged'
   });
+  const state = readMergedState(imported.nodeId as string);
+  expect(state.node?.content).toBe(['# Article', '', 'Alpha sentence.', '', 'Beta sentence.'].join('\n'));
+  expect(state.children.map((child) => ({
+    anchorLink: child.anchor_link ? parseAnchorLink(child.anchor_link) : null,
+    content: child.content
+  }))).toEqual([
+    {
+      anchorLink: expect.objectContaining({
+        kind: 'highlight',
+        locator: expect.objectContaining({ originalText: '# Article' })
+      }),
+      content: '# Article'
+    },
+    {
+      anchorLink: null,
+      content: 'No parsed highlights here.'
+    }
+  ]);
 });
 
 it('merges the GTD article case with the full set of highlights', async () => {

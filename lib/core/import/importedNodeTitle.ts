@@ -1,7 +1,5 @@
 import path from 'node:path';
 
-import { stripImportedAnchorMarkup } from './importAnchorMarkup.js';
-
 export type ImportNodeTitleStrategy = 'file_name' | 'heading';
 
 const FENCE_PATTERN = /^\s{0,3}(```|~~~)/;
@@ -42,7 +40,7 @@ export function extractUniqueLevelOneHeading(content: string) {
       continue;
     }
 
-    const match = stripImportedAnchorMarkup(line).match(LEVEL_ONE_HEADING_PATTERN);
+    const match = line.match(LEVEL_ONE_HEADING_PATTERN);
     if (!match) {
       continue;
     }

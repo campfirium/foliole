@@ -35,18 +35,6 @@ function appendDegradedReason(...reasons: Array<string | null | undefined>) {
   return collected.length > 0 ? Array.from(new Set(collected)).join('; ') : null;
 }
 
-function renderUnmatchedHighlightsAppendix(unmatchedHighlights: ImportSidecarHighlight[]) {
-  const sections: string[] = [];
-  if (unmatchedHighlights.length > 0) {
-    sections.push('## Unmatched Sidecar Highlights');
-    unmatchedHighlights.forEach((highlight, index) => {
-      const label = highlight.label?.trim() || `Highlight ${index + 1}`;
-      sections.push(`- ${label}: ${highlight.text.trim()}`);
-    });
-  }
-  return sections.join('\n\n').trim();
-}
-
 export function buildRetainedDegradedImportContent(input: {
   reason: string;
   sourceKind: ImportSourceKind;
@@ -92,8 +80,6 @@ function resolveControlledContent(input: {
   sourceName: string;
   unmatchedHighlights: ImportSidecarHighlight[];
 }) {
-  const unmatchedAppendix = renderUnmatchedHighlightsAppendix(input.unmatchedHighlights);
-
   if (input.policy === 'full_text') {
     return {
       content: input.content,
@@ -104,9 +90,9 @@ function resolveControlledContent(input: {
     };
   }
 
-  if (unmatchedAppendix) {
+  if (input.matchedHighlights.length > 0) {
     return {
-      content: input.policy === 'context_only' ? unmatchedAppendix : `${input.content}\n\n${unmatchedAppendix}`,
+      content: input.content,
       degradedReason: input.degradedReason,
       matchedHighlights: input.matchedHighlights,
       policy: input.policy,
@@ -114,7 +100,7 @@ function resolveControlledContent(input: {
     };
   }
 
-  if (input.matchedHighlights.length > 0) {
+  if (input.unmatchedHighlights.length > 0) {
     return {
       content: input.content,
       degradedReason: input.degradedReason,

@@ -80,6 +80,7 @@ async function classifySource(
     const highlightPreview = buildImportedHighlightPreviewFromMatches({
       content: prepared.content,
       matchedHighlights: prepared.matchedHighlights,
+      unmatchedHighlights: prepared.unmatchedHighlights,
       sourceName: sourcePath
     });
     return {

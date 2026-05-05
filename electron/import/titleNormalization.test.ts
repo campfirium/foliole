@@ -54,7 +54,7 @@ describe('normalizeImportedMarkdownHeadings', () => {
 });
 
 describe('createPreparedDesktopTextImport heading normalization', () => {
-  it('keeps a single title heading while preserving generated appendix headings and heading titles', () => {
+  it('keeps a single title heading while keeping unmatched sidecar highlights out of content', () => {
     const prepared = createPreparedDesktopTextImport({
       content: '# Imported title\n\n### Section',
       fileName: 'note.md',
@@ -66,7 +66,10 @@ describe('createPreparedDesktopTextImport heading normalization', () => {
       titleStrategy: 'heading'
     });
 
-    expect(prepared.content).toBe('# Imported title\n\n### Section\n\n## Unmatched Sidecar Highlights\n\n- Missing: quote that is not present');
+    expect(prepared.content).toBe('# Imported title\n\n### Section');
+    expect(prepared.unmatchedHighlights).toEqual([
+      { content: 'quote that is not present', label: 'Missing', locatorText: null }
+    ]);
     expect(prepared.nodeTitle).toBe('Imported title');
     expect(prepared.hideTitleHeading).toBe(true);
   });

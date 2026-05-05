@@ -142,6 +142,18 @@ function collectPreparedMatchedHighlights(input: {
   ];
 }
 
+function collectPreparedUnmatchedHighlights(input: {
+  contextResult: ReturnType<typeof applyControlledImportContext>;
+}) {
+  return input.contextResult.unmatchedHighlights
+    .map((highlight) => ({
+      content: normalizeImportedContent(highlight.text).trim(),
+      label: highlight.label?.trim() || null,
+      locatorText: null
+    }))
+    .filter((highlight) => highlight.content.length > 0);
+}
+
 export function createPreparedDesktopTextImport(
   input: CreatePreparedDesktopTextImportInput
 ): PreparedImportRecord {
@@ -158,6 +170,7 @@ export function createPreparedDesktopTextImport(
     degradedReason: preparedContent.contextResult.degradedReason,
     importedAt: input.importedAt,
     matchedHighlights: collectPreparedMatchedHighlights(preparedContent),
+    unmatchedHighlights: collectPreparedUnmatchedHighlights(preparedContent),
     hideTitleHeading: shouldHideImportedTitleHeading(preparedContent.highlightedContent),
     nodeTitle: resolveImportedNodeTitle({
       content: preparedContent.highlightedContent,

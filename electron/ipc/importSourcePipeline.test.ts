@@ -12,7 +12,7 @@ it('recognizes pdf files as importable long-form sources', () => {
   expect(resolveImportKind('/tmp/paper.pdf')).toBe('pdf');
 });
 
-it('keeps the source body intact, returns matched highlights, and appends only unmatched sidecar highlights', () => {
+it('keeps the source body intact and returns matched and unmatched sidecar highlights structurally', () => {
   const prepared = buildPreparedImportRecord(
     {
       filePath: '/tmp/chapter.md',
@@ -34,8 +34,10 @@ it('keeps the source body intact, returns matched highlights, and appends only u
   expect(prepared.content).toContain('# Chapter');
   expect(prepared.nodeTitle).toBe('chapter');
   expect(prepared.content).not.toContain('## Imported Context');
-  expect(prepared.content).toContain('## Unmatched Sidecar Highlights');
-  expect(prepared.content).toContain('- Missing: quote that is not present in the body');
+  expect(prepared.content).not.toContain('## Unmatched Sidecar Highlights');
+  expect(prepared.unmatchedHighlights).toEqual([
+    { content: 'quote that is not present in the body', label: 'Missing', locatorText: null }
+  ]);
   expect(prepared.matchedHighlights).toEqual([
     {
       content: 'controlled imports and highlight recovery',
@@ -83,6 +85,7 @@ it('recovers list-heavy and flattened highlights from the source body before mar
   expect(prepared.content).toContain('| 每周回顾 | 保持系统清空 & 当前 | 每周打开 Someday/Waiting/Projects 重新评估 |');
   expect(prepared.nodeTitle).toBe('readwise');
   expect(prepared.content).not.toContain('## Unmatched Sidecar Highlights');
+  expect(prepared.unmatchedHighlights).toEqual([]);
   expect(prepared.matchedHighlights).toEqual([
     {
       content: ['每周回顾：', '• 是否有项目已无任务？', '• 是否有任务长期未触发？'].join('\n'),

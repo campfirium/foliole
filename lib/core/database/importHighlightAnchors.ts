@@ -1,5 +1,4 @@
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
-import { extractImportedAnchorBlocks, stripImportedAnchorMarkup } from '../import/importAnchorMarkup.js';
 
 export interface AnchoredImportedHighlightRecord extends PreparedImportHighlightRecord {
   anchorId: string;
@@ -7,8 +6,6 @@ export interface AnchoredImportedHighlightRecord extends PreparedImportHighlight
   kind: 'highlight' | 'cloze';
   to?: number;
 }
-
-const INLINE_ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)\b[^>]*>/g;
 
 function normalizeLineEndings(value: string) {
   return value.replace(/\r\n?/g, '\n');
@@ -40,61 +37,6 @@ function normalizeLooseWhitespaceWithMap(value: string) {
   }
 
   return { normalized: normalized.trim(), rawIndexes };
-}
-
-export function collectAnchoredImportedHighlights(content: string) {
-  const projection = projectInlineAnchorContent(content);
-  return extractImportedAnchorBlocks(content)
-    .map<AnchoredImportedHighlightRecord | null>((block) => {
-      const anchorContent = stripImportedAnchorMarkup(content.slice(block.contentFrom, block.contentTo)).trim();
-      if (!block.id || !anchorContent) {
-        return null;
-      }
-      return {
-        anchorId: block.id,
-        content: anchorContent,
-        from: projection.rawToVisible[block.contentFrom] ?? 0,
-        kind: block.kind,
-        label: null,
-        locatorText: anchorContent,
-        to: projection.rawToVisible[block.contentTo] ?? 0
-      };
-    })
-    .filter((highlight): highlight is AnchoredImportedHighlightRecord => highlight !== null);
-}
-
-function projectInlineAnchorContent(content: string) {
-  const rawToVisible: number[] = Array.from({ length: content.length + 1 }, () => 0);
-  let rawCursor = 0;
-  let visibleCursor = 0;
-
-  for (const match of content.matchAll(INLINE_ANCHOR_TAG_PATTERN)) {
-    const tagFrom = match.index ?? -1;
-    const tagText = match[0] ?? '';
-    const tagTo = tagFrom < 0 ? -1 : tagFrom + tagText.length;
-    if (tagFrom < 0 || tagTo < 0) {
-      continue;
-    }
-
-    while (rawCursor < tagFrom) {
-      rawToVisible[rawCursor] = visibleCursor;
-      rawCursor += 1;
-      visibleCursor += 1;
-    }
-    while (rawCursor < tagTo) {
-      rawToVisible[rawCursor] = visibleCursor;
-      rawCursor += 1;
-    }
-  }
-
-  while (rawCursor < content.length) {
-    rawToVisible[rawCursor] = visibleCursor;
-    rawCursor += 1;
-    visibleCursor += 1;
-  }
-
-  rawToVisible[content.length] = visibleCursor;
-  return { rawToVisible };
 }
 
 function findAvailableOccurrence(
@@ -154,17 +96,14 @@ export function applyImportedHighlightAnchors(input: {
   content: string;
   highlights: PreparedImportHighlightRecord[] | undefined;
 }) {
-  const content = stripImportedAnchorMarkup(input.content);
-  const inlineAnchors = collectAnchoredImportedHighlights(input.content);
+  const content = input.content;
   if (!input.highlights?.length) {
-    return { content, highlights: inlineAnchors };
+    return { content, highlights: [] as AnchoredImportedHighlightRecord[] };
   }
 
-  let searchFrom = inlineAnchors.reduce((max, highlight) => Math.max(max, highlight.to ?? 0), 0);
-  const occupiedRanges: Array<{ from: number; to: number }> = inlineAnchors
-    .filter((highlight) => typeof highlight.from === 'number' && typeof highlight.to === 'number')
-    .map((highlight) => ({ from: highlight.from ?? 0, to: highlight.to ?? 0 }));
-  const locatedHighlights: AnchoredImportedHighlightRecord[] = [...inlineAnchors];
+  let searchFrom = 0;
+  const occupiedRanges: Array<{ from: number; to: number }> = [];
+  const locatedHighlights: AnchoredImportedHighlightRecord[] = [];
 
   input.highlights.forEach((highlight) => {
     const excerpt = (highlight.locatorText ?? highlight.content).trim();

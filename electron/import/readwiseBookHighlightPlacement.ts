@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
 import { replaceImportedHighlightNodes } from '../../lib/core/database/importPipelineHighlightNodes.js';
-import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import type { PreparedImportHighlightRecord } from '../../lib/core/import/contract.js';
 import { createContextExcerptLocator } from '../../lib/core/import/controlledContextMatch.js';
 import {
@@ -11,10 +10,8 @@ import {
   prepareHighlightExcerptCandidate,
   type PreparedHighlightExcerptCandidate
 } from '../../lib/core/import/highlightExcerptMatch.js';
-import { stripImportedAnchorMarkup } from '../../lib/core/import/importAnchorMarkup.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 interface ImportedBookSection {
@@ -69,7 +66,7 @@ function readImportedBookSections(rootNodeId: string) {
 
 function buildSectionHighlightLocators(sections: ImportedBookSection[]) {
   return sections.map((section, sectionIndex) => ({
-    locator: createContextExcerptLocator(stripImportedAnchorMarkup(section.content)),
+    locator: createContextExcerptLocator(section.content),
     section,
     sectionIndex
   }));
@@ -159,22 +156,11 @@ function persistSectionHighlights(input: {
   sections: ImportedBookSection[];
 }) {
   const connection = openDatabaseConnection();
-  const touchedNodeIds = new Set<string>();
   connection.driver.transaction((driver) => {
     let nextPosition = readNextNodePosition(driver);
     input.sections.forEach((section) => {
       const sectionHighlights = input.groupedBySection.get(section.id) ?? [];
-      const baseContent = stripImportedAnchorMarkup(section.content);
-      const anchored = applyImportedHighlightAnchors({ content: baseContent, highlights: sectionHighlights });
-      if (anchored.content !== section.content) {
-        driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
-          anchored.content,
-          resolveNodeOpeningText(anchored.content, section.title),
-          input.importedAt,
-          section.id
-        ]);
-        touchedNodeIds.add(section.id);
-      }
+      const anchored = applyImportedHighlightAnchors({ content: section.content, highlights: sectionHighlights });
       const insertedCount = replaceImportedHighlightNodes({
         driver,
         highlights: anchored.highlights,
@@ -185,7 +171,6 @@ function persistSectionHighlights(input: {
       });
       nextPosition += insertedCount;
     });
-    syncWorkspaceSearchIndexForNodeIds(driver, [...touchedNodeIds]);
   });
 }
 

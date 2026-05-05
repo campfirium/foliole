@@ -50,15 +50,9 @@ function countCurrentHighlights(nodeId: string) {
   return row?.count ?? 0;
 }
 
-function stripUnmatchedSidecarAppendix(content: string) {
-  const marker = '\n\n## Unmatched Sidecar Highlights\n\n';
-  const markerIndex = content.indexOf(marker);
-  return (markerIndex >= 0 ? content.slice(0, markerIndex) : content).trim();
-}
-
 function normalizeComparableContent(content: string, sourceProfile?: string) {
   const normalized = content.replace(/\r\n?/g, '\n').trim();
-  return sourceProfile === 'body_with_highlight_sidecar' ? stripUnmatchedSidecarAppendix(normalized) : normalized;
+  return normalized;
 }
 
 export function normalizeNodeSourcePreviewContent(content: string) {
