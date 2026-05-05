@@ -91,9 +91,9 @@ describe('CompanionApp bootstrap states', () => {
 
     render(<CompanionApp />);
 
-    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Review')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Device sync/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByLabelText('Learn')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Connect another device/ })).toBeInTheDocument();
   });
 
   it('shows a failure state when bootstrap rejects', async () => {

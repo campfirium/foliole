@@ -126,7 +126,7 @@ describe('CompanionSyncContent paired flow', () => {
       sync_events: [{
         endpoint_url: 'http://10.0.2.2:38641',
         id: 'sync-event-1',
-        message: 'Sync fully completed.',
+        message: 'Sync fully completed; downloaded 1 topic body in this sync.',
         occurred_at: '2026-04-24T10:04:00.000Z',
         status: 'completed'
       }]
@@ -137,8 +137,8 @@ describe('CompanionSyncContent paired flow', () => {
     expect(screen.getByText('Last sync')).toBeInTheDocument();
     expect(screen.getByText('Android Emulator')).toBeInTheDocument();
     expect(screen.getByText('Activity')).toBeInTheDocument();
-    expect(screen.getByText('Everything was up to date.')).toBeInTheDocument();
-    expect(screen.getByText(/^Synced \d/)).toBeInTheDocument();
+    expect(screen.getByText('Downloaded 1 topic body in this sync.')).toBeInTheDocument();
+    expect(screen.getByText(/^Checked \d/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 
