@@ -6,6 +6,7 @@ import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 
 interface NodeSyncVersionSourceRow extends DatabaseRow {
   anchor_link: string | null;
+  body_blob_hash: string | null;
   content: string;
   created_at: string;
   current_version_id: string | null;
@@ -67,6 +68,7 @@ function loadNodeSyncVersionSource(nodeId: string) {
        is_title_manual,
        hide_title_heading,
        content,
+       body_blob_hash,
        opening_text,
        virtual_filter,
        reveal,
@@ -98,7 +100,8 @@ function buildNodeSyncSnapshot(row: NodeSyncVersionSourceRow, nodeId: string) {
   return {
     anchor_link: row.anchor_link,
     attachments: listNodeAttachmentRefs(nodeId),
-    content: row.content,
+    body_blob_hash: row.body_blob_hash,
+    content: '',
     created_at: row.created_at,
     deleted_at: row.deleted_at,
     desired_retention: row.desired_retention,

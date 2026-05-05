@@ -113,9 +113,9 @@ function upsertRemoteNode(driver: DatabaseDriver, record: NativeSyncNodeRecord) 
   driver.execute(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
+       content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
        current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
        kind = excluded.kind,
@@ -125,6 +125,7 @@ function upsertRemoteNode(driver: DatabaseDriver, record: NativeSyncNodeRecord) 
        is_title_manual = excluded.is_title_manual,
        hide_title_heading = excluded.hide_title_heading,
        content = excluded.content,
+       body_blob_hash = excluded.body_blob_hash,
        opening_text = excluded.opening_text,
        virtual_filter = excluded.virtual_filter,
        reveal = excluded.reveal,
@@ -146,7 +147,8 @@ function upsertRemoteNode(driver: DatabaseDriver, record: NativeSyncNodeRecord) 
       snapshot.title,
       snapshot.is_title_manual ? 1 : 0,
       snapshot.hide_title_heading ? 1 : 0,
-      snapshot.content,
+      snapshot.content ?? '',
+      snapshot.body_blob_hash ?? null,
       snapshot.opening_text,
       snapshot.virtual_filter,
       snapshot.reveal,

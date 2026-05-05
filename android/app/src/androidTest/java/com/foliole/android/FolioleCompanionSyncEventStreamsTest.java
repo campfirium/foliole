@@ -84,7 +84,7 @@ public class FolioleCompanionSyncEventStreamsTest {
         database.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', priority INTEGER, " +
             "desired_retention REAL, title TEXT NOT NULL, is_title_manual INTEGER NOT NULL DEFAULT 0, " +
-            "hide_title_heading INTEGER NOT NULL DEFAULT 0, content TEXT NOT NULL DEFAULT '', opening_text TEXT, " +
+            "hide_title_heading INTEGER NOT NULL DEFAULT 0, content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, opening_text TEXT, " +
             "virtual_filter TEXT, reveal TEXT, anchor_link TEXT, image_regions TEXT, position INTEGER, " +
             "current_version_id TEXT, last_modified_by_device_id TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0, " +
             "created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");
@@ -123,6 +123,7 @@ public class FolioleCompanionSyncEventStreamsTest {
             .put("kind", "item")
             .put("title", "Remote Node")
             .put("content", content)
+            .put("body_blob_hash", "blob-remote")
             .put("created_at", "2026-04-26T00:00:00.000Z")
             .put("updated_at", "2026-04-26T01:00:00.000Z");
     }

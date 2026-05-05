@@ -159,6 +159,11 @@ final class FolioleCompanionSyncNodeVersionStore {
         values.put("is_title_manual", snapshot.optBoolean("is_title_manual", false) ? 1 : 0);
         values.put("hide_title_heading", snapshot.optBoolean("hide_title_heading", false) ? 1 : 0);
         values.put("content", snapshot.optString("content", ""));
+        if (snapshot.has("body_blob_hash") && !snapshot.isNull("body_blob_hash")) {
+            values.put("body_blob_hash", snapshot.optString("body_blob_hash", null));
+        } else {
+            values.putNull("body_blob_hash");
+        }
         putNullableString(values, "opening_text", snapshot.optString("opening_text", null));
         putJsonValue(values, "virtual_filter", snapshot.opt("virtual_filter"));
         putJsonValue(values, "reveal", snapshot.opt("reveal"));

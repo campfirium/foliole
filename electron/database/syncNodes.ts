@@ -5,6 +5,7 @@ import { openDatabaseConnection } from './connection.js';
 
 interface SyncNodeRow extends DatabaseRow {
   anchor_link: string | null;
+  body_blob_hash: string | null;
   content: string;
   content_hash: string | null;
   created_at: string;
@@ -79,6 +80,7 @@ function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
   return {
     anchor_link: row.anchor_link,
     attachments: listNodeAttachmentRefs(row.id),
+    body_blob_hash: row.body_blob_hash,
     content: row.content,
     created_at: row.created_at,
     deleted_at: row.deleted_at,
@@ -136,6 +138,7 @@ const SYNC_NODE_SELECT_COLUMNS = `
   n.is_title_manual,
   n.hide_title_heading,
   n.content,
+  n.body_blob_hash,
   n.opening_text,
   n.virtual_filter,
   n.reveal,

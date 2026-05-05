@@ -132,6 +132,7 @@ function expectedSyncNodeRecord() {
           { attachment_id: 'att-1', role: 'inline' },
           { attachment_id: 'att-2', role: 'cover' }
         ],
+        body_blob_hash: null,
         content: 'hello',
         created_at: '2026-04-21T10:00:00.000Z',
         deleted_at: null,

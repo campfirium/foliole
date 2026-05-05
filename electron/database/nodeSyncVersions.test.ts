@@ -78,17 +78,24 @@ it('creates a sync version from a dirty node and clears the dirty flag', () => {
     last_modified_by_device_id: expect.stringMatching(/^desktop-/),
     sync_dirty: 0
   });
-  expect(
-    connection.driver.queryOne<{ object_id: string; parent_version_id: string | null; snapshot_json: string | null; version_id: string }>(
+  const versionRow = connection.driver.queryOne<{
+    object_id: string;
+    parent_version_id: string | null;
+    snapshot_json: string | null;
+    version_id: string;
+  }>(
       'SELECT object_id, parent_version_id, snapshot_json, version_id FROM node_sync_versions WHERE version_id = ?',
       [versionId ?? '']
-    )
-  ).toEqual({
+    );
+  expect(versionRow).toEqual({
     object_id: 'node-1',
     parent_version_id: null,
     snapshot_json: expect.stringContaining('"title":"Node 1"'),
     version_id: versionId
   });
+  const snapshot = JSON.parse(versionRow?.snapshot_json ?? '{}') as Record<string, unknown>;
+  expect(snapshot.content).toBe('');
+  expect(snapshot.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
 });
 
 it('creates an initial sync version for an unversioned clean node', () => {

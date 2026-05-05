@@ -99,7 +99,8 @@ export interface NativeSyncNodeRecord {
   snapshot: {
     anchor_link: string | null;
     attachments: NativeSyncNodeAttachmentRef[];
-    content: string;
+    body_blob_hash?: string | null;
+    content?: string;
     created_at: string;
     deleted_at: string | null;
     desired_retention: number | null;
