@@ -27,12 +27,11 @@ if [[ "${ACTION}" == "apply" ]]; then
     changed_files="$(printf "%s\n%s\n" "${tracked_changes}" "${untracked_changes}" | sed '/^$/d' | sort -u)"
   fi
 
-  if [[ -n "${changed_files}" ]] && printf "%s\n" "${changed_files}" | rg -q \
-    "^(src-tauri/|package\\.json$|package-lock\\.json$|pnpm-lock\\.yaml$|yarn\\.lock$|bun\\.lock|vite\\.config\\.ts$|index\\.html$)"; then
-    RESOLVED_ACTION="restart"
-  else
-    RESOLVED_ACTION="sync"
-  fi
+  # Always sync only. The running `tauri dev` process on Windows watches for
+  # file changes itself and handles hot-reload (frontend) or recompile+restart
+  # (Rust) automatically. Forcing a restart from WSL kills WebView2 mid-flight
+  # and causes UDD lock corruption. Let Tauri CLI own the restart decision.
+  RESOLVED_ACTION="sync"
 
   echo "[windows-native-dev] apply decision: ${RESOLVED_ACTION}"
 fi

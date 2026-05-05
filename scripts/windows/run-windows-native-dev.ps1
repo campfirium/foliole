@@ -249,8 +249,9 @@ function Stop-NativeDevSession {
   $apps = Get-NativeAppProcesses -WorkDir $WorkDir
   foreach ($app in $apps) {
     try {
-      Stop-Process -Id $app.ProcessId -Force -ErrorAction Stop
-      Write-Log "[windows-native-dev] stopped app pid=$($app.ProcessId)"
+      # Use taskkill /T to kill the entire process tree (Tauri + all WebView2 children)
+      $result = taskkill.exe /PID $app.ProcessId /T /F 2>&1
+      Write-Log "[windows-native-dev] stopped app pid=$($app.ProcessId) (tree): $result"
     } catch {
       Write-Log "[windows-native-dev] failed to stop app pid=$($app.ProcessId): $($_.Exception.Message)"
     }
@@ -298,6 +299,28 @@ function Stop-NativeDevSession {
 
   if (Test-Path $stateFile) {
     Remove-Item -Force $stateFile
+  }
+
+  # Wait for foliole-tauri-core.exe to fully exit (up to 5s), then clean up
+  # the WebView2 User Data Directory lock so the next launch doesn't deadlock.
+  $exePath = (Join-Path $WorkDir "src-tauri\target\debug\foliole-tauri-core.exe").ToLowerInvariant()
+  $waited = 0
+  while ($waited -lt 5000) {
+    $still = Get-CimInstance Win32_Process | Where-Object {
+      $_.Name -eq "foliole-tauri-core.exe" -and
+      $_.ExecutablePath -and
+      $_.ExecutablePath.ToLowerInvariant() -eq $exePath
+    }
+    if (-not $still) { break }
+    Start-Sleep -Milliseconds 300
+    $waited += 300
+  }
+
+  $appId = "com.foliole.desktop"
+  $uddLock = "$env:LOCALAPPDATA\$appId\EBWebView\Default\LOCK"
+  if (Test-Path $uddLock) {
+    Remove-Item -Force $uddLock -ErrorAction SilentlyContinue
+    Write-Log "[windows-native-dev] cleared WebView2 UDD lock: $uddLock"
   }
 }
 
