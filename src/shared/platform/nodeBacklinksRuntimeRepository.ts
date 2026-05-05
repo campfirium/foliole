@@ -1,7 +1,7 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 
-import { toRuntimeNodeBacklinks } from './nodeBacklinksBridgePayloads';
+import { toRuntimeNodeBacklinks } from './nodeBacklinksRuntimePayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
