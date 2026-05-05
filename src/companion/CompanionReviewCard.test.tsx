@@ -7,13 +7,19 @@ vi.mock('./CompanionArticleDocument', () => ({
   CompanionArticleDocument: ({
     content,
     hideTitleHeading,
+    layout,
     nodeId
   }: {
     content: string;
     hideTitleHeading?: boolean;
+    layout?: 'article' | 'review';
     nodeId: string;
   }) => (
-    <div data-hide-title-heading={hideTitleHeading ? 'true' : 'false'} data-node-id={nodeId}>
+    <div
+      data-hide-title-heading={hideTitleHeading ? 'true' : 'false'}
+      data-layout={layout ?? 'article'}
+      data-node-id={nodeId}
+    >
       {content}
     </div>
   )
@@ -54,12 +60,15 @@ describe('CompanionReviewCard', () => {
     expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
     expect(screen.queryByText('Due now')).not.toBeInTheDocument();
     expect(screen.getByText('Readable topic body')).toHaveAttribute('data-hide-title-heading', 'true');
+    expect(screen.getByText('Readable topic body')).toHaveAttribute('data-layout', 'review');
   });
 
   it('renders the answer section only when reveal content exists', () => {
     render(<CompanionReviewAnswer card={createCard()} />);
 
-    expect(screen.getByText('Answer')).toBeInTheDocument();
+    expect(screen.queryByText('Answer')).not.toBeInTheDocument();
+    expect(screen.getByRole('separator')).toHaveClass('mx-6');
     expect(screen.getByText('Answer body')).toBeInTheDocument();
+    expect(screen.getByText('Answer body')).toHaveAttribute('data-layout', 'review');
   });
 });

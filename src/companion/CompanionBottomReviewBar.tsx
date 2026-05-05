@@ -36,7 +36,10 @@ export function CompanionBottomReviewBar(props: {
               <FsrsRevealAction onRevealAnswer={props.onRevealAnswer} />
             ) : (
               <ReviewGradeActions
+                buttonClassName="min-w-0 flex-1 px-3"
+                buttonVariant="primary"
                 errorMessage={null}
+                groupClassName="w-full gap-2"
                 isSubmitting={Boolean(props.disabled)}
                 submitGrade={async (grade) => props.onGrade(grade as BottomBarGrade)}
               />

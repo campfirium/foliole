@@ -3,38 +3,78 @@ import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { AppButton } from './Button';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
 
-function GradeButton({
-  ariaLabel,
-  disabled,
-  onClick
-}: {
-  ariaLabel: 'Again' | 'Hard' | 'Good' | 'Easy';
+function ReviewGradeButton(props: {
+  buttonClassName?: string;
+  buttonVariant: 'ghost' | 'primary';
   disabled: boolean;
-  onClick: () => void;
+  grade: ReviewGrade;
+  label: 'Again' | 'Hard' | 'Good' | 'Easy';
+  submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
   return (
-    <AppButton aria-label={ariaLabel} className="min-w-24 px-4" disabled={disabled} onClick={onClick} size="md" variant="ghost">
-      {ariaLabel}
+    <AppButton
+      aria-label={props.label}
+      className={props.buttonClassName ?? 'min-w-24 px-4'}
+      disabled={props.disabled}
+      onClick={() => void props.submitGrade(props.grade)}
+      size="md"
+      variant={props.buttonVariant}
+    >
+      {props.label}
     </AppButton>
   );
 }
 
 export function ReviewGradeActions({
+  buttonClassName,
+  buttonVariant = 'ghost',
   errorMessage,
+  groupClassName,
   isSubmitting,
   submitGrade
 }: {
+  buttonClassName?: string;
+  buttonVariant?: 'ghost' | 'primary';
   errorMessage: string | null;
+  groupClassName?: string;
   isSubmitting: boolean;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
   return (
     <div className="flex items-center gap-2">
-      <ToolbarActionGroup ariaLabel="Review grade actions" className="gap-2">
-        <GradeButton ariaLabel="Again" disabled={isSubmitting} onClick={() => void submitGrade(1)} />
-        <GradeButton ariaLabel="Hard" disabled={isSubmitting} onClick={() => void submitGrade(2)} />
-        <GradeButton ariaLabel="Good" disabled={isSubmitting} onClick={() => void submitGrade(3)} />
-        <GradeButton ariaLabel="Easy" disabled={isSubmitting} onClick={() => void submitGrade(4)} />
+      <ToolbarActionGroup ariaLabel="Review grade actions" className={groupClassName ?? 'gap-2'}>
+        <ReviewGradeButton
+          buttonClassName={buttonClassName}
+          buttonVariant={buttonVariant}
+          disabled={isSubmitting}
+          grade={1}
+          label="Again"
+          submitGrade={submitGrade}
+        />
+        <ReviewGradeButton
+          buttonClassName={buttonClassName}
+          buttonVariant={buttonVariant}
+          disabled={isSubmitting}
+          grade={2}
+          label="Hard"
+          submitGrade={submitGrade}
+        />
+        <ReviewGradeButton
+          buttonClassName={buttonClassName}
+          buttonVariant={buttonVariant}
+          disabled={isSubmitting}
+          grade={3}
+          label="Good"
+          submitGrade={submitGrade}
+        />
+        <ReviewGradeButton
+          buttonClassName={buttonClassName}
+          buttonVariant={buttonVariant}
+          disabled={isSubmitting}
+          grade={4}
+          label="Easy"
+          submitGrade={submitGrade}
+        />
       </ToolbarActionGroup>
       {errorMessage ? (
         <p aria-live="assertive" className="text-xs text-red-600">

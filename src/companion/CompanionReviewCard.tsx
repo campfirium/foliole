@@ -39,10 +39,10 @@ function ReviewBreadcrumb(props: {
 
 function ReviewAnswer(props: { nodeId: string; reveal: string }) {
   return (
-    <section className="mt-5 border-t border-companion-divider px-1 pt-5">
-      <div className="text-[12px] font-medium tracking-[0.08em] text-companion-text-secondary">Answer</div>
-      <div className="mt-3">
-        <CompanionArticleDocument content={props.reveal} nodeId={`${props.nodeId}::answer`} />
+    <section className="mt-5">
+      <hr className="mx-6 border-0 border-t border-companion-divider" />
+      <div className="pt-5">
+        <CompanionArticleDocument content={props.reveal} layout="review" nodeId={`${props.nodeId}::answer`} />
       </div>
     </section>
   );
@@ -60,6 +60,7 @@ export function CompanionReviewCard(props: {
         <CompanionArticleDocument
           content={props.card.content}
           hideTitleHeading={props.card.hideTitleHeading}
+          layout="review"
           nodeId={props.card.nodeId}
         />
       </div>

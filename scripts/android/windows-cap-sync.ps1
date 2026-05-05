@@ -36,10 +36,48 @@ function Ensure-CapacitorCliAvailable {
   }
 }
 
+function Sync-WindowsMirrorDependencies {
+  $npmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
+  if ($null -eq $npmCmd) {
+    throw "npm.cmd not found on Windows. Install Node.js on Windows first."
+  }
+
+  $nodeModulesDir = Join-Path $WindowsWorkDir "node_modules"
+  $installStampPath = Join-Path $nodeModulesDir ".foliole-install-stamp"
+  $packageJsonPath = Join-Path $WindowsWorkDir "package.json"
+  $packageLockPath = Join-Path $WindowsWorkDir "package-lock.json"
+  $needsInstall = !(Test-Path -Path $installStampPath)
+
+  if (!$needsInstall -and (Test-Path -Path $packageJsonPath)) {
+    $needsInstall = (Get-Item $packageJsonPath).LastWriteTimeUtc -gt (Get-Item $installStampPath).LastWriteTimeUtc
+  }
+
+  if (!$needsInstall -and (Test-Path -Path $packageLockPath)) {
+    $needsInstall = (Get-Item $packageLockPath).LastWriteTimeUtc -gt (Get-Item $installStampPath).LastWriteTimeUtc
+  }
+
+  if (!$needsInstall) {
+    return
+  }
+
+  Write-Info "package manifest changed in windows mirror; running npm install"
+  & $npmCmd.Source install
+  if ($LASTEXITCODE -ne 0) {
+    throw "npm install failed in Windows mirror; cannot refresh dependencies for Capacitor sync."
+  }
+
+  if (!(Test-Path -Path $nodeModulesDir)) {
+    throw "node_modules missing after npm install in Windows mirror."
+  }
+
+  Set-Content -Path $installStampPath -Value (Get-Date).ToUniversalTime().ToString("o") -NoNewline
+}
+
 Push-Location $WindowsWorkDir
 try {
   Write-Info "workdir: $WindowsWorkDir"
   Ensure-CapacitorCliAvailable
+  Sync-WindowsMirrorDependencies
   $npmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
   if ($null -eq $npmCmd) {
     throw "npm.cmd not found on Windows. Install Node.js on Windows first."
