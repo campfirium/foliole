@@ -7,7 +7,6 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.UUID;
@@ -47,42 +46,6 @@ final class FolioleCompanionSyncReviewLogStore {
         JSObject result = new JSObject();
         result.put("reviews", reviews);
         return result;
-    }
-
-    static JSObject applyReviewLog(SQLiteDatabase database, JSONArray reviews) throws Exception {
-        JSArray appliedOpIds = applyReviewLogRows(database, reviews, false);
-        JSObject result = new JSObject();
-        result.put("applied_op_ids", appliedOpIds);
-        return result;
-    }
-
-    static JSArray applyAndConfirmReviewLogRows(SQLiteDatabase database, JSONArray reviews) throws Exception {
-        return applyReviewLogRows(database, reviews, true);
-    }
-
-    private static JSArray applyReviewLogRows(SQLiteDatabase database, JSONArray reviews, boolean confirmExisting) throws Exception {
-        JSArray appliedOpIds = new JSArray();
-        if (reviews == null) {
-            return appliedOpIds;
-        }
-        database.beginTransaction();
-        try {
-            for (int index = 0; index < reviews.length(); index += 1) {
-                JSONObject record = reviews.optJSONObject(index);
-                if (record == null || record.optString("op_id", "").trim().isEmpty()) {
-                    continue;
-                }
-                String opId = record.optString("op_id");
-                if (nodeExists(database, record.optString("node_id")) &&
-                    (insertReviewLog(database, record) || (confirmExisting && reviewLogExists(database, opId)))) {
-                    appliedOpIds.put(opId);
-                }
-            }
-            database.setTransactionSuccessful();
-        } finally {
-            database.endTransaction();
-        }
-        return appliedOpIds;
     }
 
     static String saveLocalReviewLog(
@@ -128,24 +91,6 @@ final class FolioleCompanionSyncReviewLogStore {
         values.put("stability_after", record.optDouble("stability_after", 0));
         values.put("difficulty_after", record.optDouble("difficulty_after", 0));
         return database.insertWithOnConflict("review_log", null, values, SQLiteDatabase.CONFLICT_IGNORE) != -1;
-    }
-
-    private static boolean nodeExists(SQLiteDatabase database, String nodeId) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT 1 FROM nodes WHERE id = ? LIMIT 1",
-            new String[] { nodeId == null ? "" : nodeId }
-        )) {
-            return cursor.moveToFirst();
-        }
-    }
-
-    private static boolean reviewLogExists(SQLiteDatabase database, String opId) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT 1 FROM review_log WHERE op_id = ? LIMIT 1",
-            new String[] { opId == null ? "" : opId }
-        )) {
-            return cursor.moveToFirst();
-        }
     }
 
     private static String whereAfterCursor(JSONObject cursor) {

@@ -41,7 +41,7 @@ public class FolioleCompanionSyncEventStreamsTest {
             .put(review("op-1", "desktop"))
             .put(review("op-1", "desktop"));
 
-        JSObject applied = FolioleCompanionSyncReviewLogStore.applyReviewLog(database, reviews);
+        JSObject applied = FolioleCompanionSyncReviewLogApplyHarness.applyReviewLog(database, reviews);
 
         assertEquals(1, applied.getJSONArray("applied_op_ids").length());
         assertEquals(1, countRows("review_log", "op_id = 'op-1'"));

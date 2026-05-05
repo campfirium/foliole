@@ -12,6 +12,7 @@ const FORBIDDEN_MAIN_PATTERNS = [
   /\bapplySyncPack\s*\(/,
   /\bapplyNodeVersions\s*\(/,
   /\bapplySyncNodeVersions\s*\(/,
+  /\bapplyReviewLog\s*\(/,
   /\bpublic\s+void\s+applySyncObjects\s*\(/,
   /\bpublic\s+void\s+applySyncReviewLog\s*\(/
 ];

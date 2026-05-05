@@ -183,7 +183,7 @@ final class FolioleCompanionSyncPackApply {
                 reviews.put(review);
             }
         }
-        return FolioleCompanionSyncReviewLogStore.applyAndConfirmReviewLogRows(database, reviews);
+        return FolioleCompanionSyncReviewLogApplyHarness.applyAndConfirmReviewLogRows(database, reviews);
     }
 
     private static boolean incomingTableExists(SQLiteDatabase database, String tableName) {
