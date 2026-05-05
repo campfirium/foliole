@@ -7,6 +7,7 @@ import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { EditorContextMenu } from './EditorContextMenu';
 import { FolderListView } from './FolderListView';
+import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 interface DocumentPanelContentProps {
@@ -62,7 +63,12 @@ export function DocumentPanelContent({
     );
   }
 
-  return <DocumentPanelBody {...bodyProps} />;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ReadwiseBookActionsPanel activeNodeId={activeNodeId} />
+      <DocumentPanelBody {...bodyProps} />
+    </div>
+  );
 }
 
 export function DocumentPanelContextMenu({

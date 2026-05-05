@@ -15,6 +15,10 @@ vi.mock('./DocumentPanelBody', () => ({
   DocumentPanelBody: () => <div data-testid="document-panel-body">Document body</div>
 }));
 
+vi.mock('./ReadwiseBookActionsPanel', () => ({
+  ReadwiseBookActionsPanel: () => null
+}));
+
 const { documentSourceUpdatePanelMock } = vi.hoisted(() => ({
   documentSourceUpdatePanelMock: vi.fn()
 }));
