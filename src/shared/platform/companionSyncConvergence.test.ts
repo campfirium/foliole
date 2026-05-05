@@ -52,7 +52,7 @@ function testBlocksFinishedPassWithDirtyWork() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync pass was recorded while 1 dirty change(s), 1 pending ack(s), 0 body blob(s), 0 attachment file(s), and 0 structure change(s) remain.',
+      detail: 'A finished sync pass was recorded while 1 dirty change(s), 1 pending ack(s), 0 push issue(s), 0 body blob(s), 0 attachment file(s), and 0 structure change(s) remain.',
       severity: 'error'
     })
   ]));
@@ -134,6 +134,24 @@ function testBlocksPushConflicts() {
   ]));
 }
 
+function testBlocksPersistedPushIssues() {
+  const report = buildSyncConvergenceReport(result({
+    android: {
+      ...result().android!,
+      sync_state: { ...result().android!.sync_state, push_issue_count: 1 }
+    }
+  }));
+
+  expect(report.status).toBe('blocked');
+  expect(report.checks).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      code: 'push_issue_not_converged',
+      detail: '1 device change(s) were rejected or conflicted during push.',
+      severity: 'error'
+    })
+  ]));
+}
+
 function testBlocksFinishedPassWithResourceBacklog() {
   const report = buildSyncConvergenceReport(result({
     android: {
@@ -148,7 +166,7 @@ function testBlocksFinishedPassWithResourceBacklog() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync pass was recorded while 0 dirty change(s), 0 pending ack(s), 3 body blob(s), 2 attachment file(s), and 1 structure change(s) remain.',
+      detail: 'A finished sync pass was recorded while 0 dirty change(s), 0 pending ack(s), 0 push issue(s), 3 body blob(s), 2 attachment file(s), and 1 structure change(s) remain.',
       severity: 'error'
     })
   ]));
@@ -197,6 +215,7 @@ describe('buildSyncConvergenceReport', () => {
   it('deduplicates merged error diagnostic verdicts', testDeduplicatesMergedErrorVerdicts);
   it('blocks pending acks that survive a later finished sync pass', testBlocksStalePendingAck);
   it('blocks skipped passes that ended with push conflicts or rejections', testBlocksPushConflicts);
+  it('blocks persisted push conflicts or rejections', testBlocksPersistedPushIssues);
   it('blocks finished sync passes that still have structure or resource backlog', testBlocksFinishedPassWithResourceBacklog);
   it('keeps body backlog and structure lag as pending work', testKeepsBodyBacklogPending);
   it('keeps attachment backlog as pending work', testKeepsAttachmentBacklogPending);

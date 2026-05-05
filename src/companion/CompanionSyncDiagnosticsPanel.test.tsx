@@ -76,6 +76,15 @@ const diagnosticResult = {
         state_seq: 7,
         status: 'accepted'
       }],
+      push_issue_count: 1,
+      push_issues: [{
+        acked_at: '2026-04-29T01:26:00.000Z',
+        client_op_id: 'node_review:node-2:5',
+        object_id: 'node-2',
+        object_type: 'node_review',
+        state_seq: null,
+        status: 'conflict'
+      }],
       state_counts: [
         { count: 1, dirty_count: 1, max_state_seq: 4, min_state_seq: 4, object_type: 'node_review' }
       ]
@@ -117,7 +126,7 @@ function expectDiagnosticSummary() {
   expect(screen.getByText('Convergence check')).toBeInTheDocument();
   expect(screen.getByText('Blocked')).toBeInTheDocument();
   expect(screen.getByText('Latest finished sync pass is not fully converged')).toBeInTheDocument();
-  expect(screen.getByText('A finished sync pass was recorded while 1 dirty change(s), 1 pending ack(s), 5 body blob(s), 2 attachment file(s), and 3 structure change(s) remain.')).toBeInTheDocument();
+  expect(screen.getByText('A finished sync pass was recorded while 1 dirty change(s), 1 pending ack(s), 1 push issue(s), 5 body blob(s), 2 attachment file(s), and 3 structure change(s) remain.')).toBeInTheDocument();
 }
 
 function expectStageCheckpoint() {
@@ -149,9 +158,10 @@ function expectCheckpointDetails() {
 function expectAndroidDiagnosticRows() {
   expect(screen.getByText('Android')).toBeInTheDocument();
   expect(screen.getAllByText('Object types')).toHaveLength(2);
-  expect(screen.getAllByText('node_review')).toHaveLength(3);
+  expect(screen.getAllByText('node_review')).toHaveLength(4);
   expect(screen.getByText('1 waiting')).toBeInTheDocument();
   expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
+  expect(screen.getByText('Changes needing review')).toBeInTheDocument();
   expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Attachment bytes still caching').length).toBeGreaterThan(0);
   expect(screen.getByText('Due review bodies')).toBeInTheDocument();
@@ -167,8 +177,11 @@ function expectDiagnosticTables() {
   expect(screen.getAllByText('5.0 MB').length).toBeGreaterThan(0);
   expect(screen.getAllByText('3.0 MB').length).toBeGreaterThan(0);
   expect(screen.getByText('Desktop confirmations waiting')).toBeInTheDocument();
+  expect(screen.getByText('Device changes needing review')).toBeInTheDocument();
   expect(screen.getByText('accepted')).toBeInTheDocument();
+  expect(screen.getByText('conflict')).toBeInTheDocument();
   expect(screen.getByText('seq 7')).toBeInTheDocument();
+  expect(screen.getByText('seq -')).toBeInTheDocument();
   expect(screen.getAllByText('node-1').length).toBeGreaterThan(0);
   expect(screen.getByText('seq 4')).toBeInTheDocument();
   expect(screen.getByText('Desktop')).toBeInTheDocument();

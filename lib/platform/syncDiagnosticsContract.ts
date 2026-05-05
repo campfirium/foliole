@@ -60,6 +60,8 @@ export interface SyncDiagnosticState {
   pack_cursor: number | null;
   pending_ack_count?: number;
   pending_acks?: SyncDiagnosticPendingAck[];
+  push_issue_count?: number;
+  push_issues?: SyncDiagnosticPendingAck[];
   state_counts: SyncDiagnosticCountRange[];
 }
 

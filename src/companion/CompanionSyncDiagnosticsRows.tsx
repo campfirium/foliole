@@ -51,9 +51,9 @@ export function DirtyObjectRows(props: { rows: SyncDiagnosticDirtyObject[] }) {
   );
 }
 
-export function PendingAckRows(props: { rows: SyncDiagnosticPendingAck[] }) {
+export function PendingAckRows(props: { emptyText?: string; rows: SyncDiagnosticPendingAck[] }) {
   if (props.rows.length === 0) {
-    return <p className="py-3 text-sm text-companion-text-secondary">No desktop confirmations waiting.</p>;
+    return <p className="py-3 text-sm text-companion-text-secondary">{props.emptyText ?? 'No desktop confirmations waiting.'}</p>;
   }
   return (
     <div className="border-t border-companion-divider">

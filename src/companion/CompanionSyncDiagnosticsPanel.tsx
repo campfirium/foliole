@@ -57,6 +57,12 @@ function friendlyVerdict(verdict: SyncDiagnosticVerdict) {
       title: 'Desktop accepted changes; waiting for confirmation'
     };
   }
+  if (verdict.code === 'android_has_push_issues') {
+    return {
+      description: 'Open the sync diagnostic details to see which device changes need attention.',
+      title: 'Device changes need review'
+    };
+  }
   if (verdict.code === 'desktop_ready') {
     return {
       description: 'Desktop sync is reachable from this device.',
@@ -99,6 +105,7 @@ function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       <MetricRow label={isAndroid ? 'Device changes' : 'Desktop changes'} value={formatNumber(snapshot.sync_state.max_state_seq)} />
       {isAndroid ? <MetricRow label="Last desktop sync" value={formatNumber(snapshot.sync_state.pack_cursor)} /> : null}
       {isAndroid ? <MetricRow label="Waiting for confirmation" value={formatNumber(snapshot.sync_state.pending_ack_count)} /> : null}
+      {isAndroid ? <MetricRow label="Changes needing review" value={formatNumber(snapshot.sync_state.push_issue_count ?? 0)} /> : null}
       <MetricRow label="Bodies still caching" value={formatNumber(snapshot.content.missing_content_blob_count)} />
       {isAndroid ? <MetricRow label="Body bytes still caching" value={formatBytes(snapshot.content.missing_content_blob_bytes ?? 0)} /> : null}
       {isAndroid ? <MetricRow label="Topic bodies" value={formatNumber(snapshot.content.missing_topic_body_count ?? 0)} /> : null}
@@ -152,6 +159,7 @@ function SnapshotSection(props: {
 }) {
   const dirtyObjects = props.snapshot?.sync_state.dirty_objects ?? [];
   const pendingAcks = props.snapshot?.sync_state.pending_acks ?? [];
+  const pushIssues = props.snapshot?.sync_state.push_issues ?? [];
   return (
     <section>
       <h3 className="text-sm font-semibold text-foreground">{props.title}</h3>
@@ -171,6 +179,10 @@ function SnapshotSection(props: {
               <section>
                 <h4 className="text-xs font-semibold text-companion-text-secondary">Desktop confirmations waiting</h4>
                 <PendingAckRows rows={pendingAcks} />
+              </section>
+              <section>
+                <h4 className="text-xs font-semibold text-companion-text-secondary">Device changes needing review</h4>
+                <PendingAckRows emptyText="No device changes need review." rows={pushIssues} />
               </section>
             </>
           ) : null}

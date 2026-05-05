@@ -36,6 +36,19 @@ interface DesktopSyncPushResponse {
 }
 
 function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
+  if (
+    raw.identity.objectType !== 'review_log'
+    && (raw.status === 'accepted' || raw.status === 'already_applied')
+    && typeof raw.state_seq !== 'number'
+  ) {
+    return {
+      clientOpId: raw.client_op_id,
+      conflictReason: 'missing_state_seq',
+      identity: raw.identity,
+      stateSeq: raw.state_seq,
+      status: 'rejected'
+    };
+  }
   return {
     clientOpId: raw.client_op_id,
     conflictReason: raw.conflict_reason,
@@ -97,7 +110,7 @@ export async function pushLocalDirtyObjects(endpointUrl: string): Promise<Compan
     const response = await postDesktopJson<DesktopSyncPushResponse>(endpointUrl, SYNC_PUSH_PATH, { items });
     const acks = response.acks.map(toPushAck);
     const accepted = acceptedAcks(acks);
-    await saveCompanionSyncPushAcks(accepted.filter((ack) => ack.identity.objectType !== 'review_log'));
+    await saveCompanionSyncPushAcks(acks);
     return {
       pushedObjectIds: accepted
         .filter((ack) => ack.identity.objectType !== 'review_log')

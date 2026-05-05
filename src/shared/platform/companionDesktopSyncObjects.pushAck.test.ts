@@ -132,9 +132,10 @@ describe('companion desktop sync push acknowledgements', () => {
       json: async () => {
         if (init?.method === 'POST' && url.includes('/companion/sync-push')) {
           return {
-            acks: parsePushItems(init).items.map((item) => ({
+            acks: parsePushItems(init).items.map((item, index) => ({
               client_op_id: item.clientOpId,
               identity: item.identity,
+              state_seq: item.identity.objectType === 'review_log' ? undefined : 100 + index,
               status: 'accepted'
             }))
           };
@@ -189,7 +190,8 @@ describe('companion desktop sync push acknowledgements', () => {
       expect.objectContaining({
         clientOpId: 'view_state:session_resume:android:phone:android-test-device:active_node:12',
         status: 'accepted'
-      })
+      }),
+      expect.objectContaining({ clientOpId: 'review_log:op-1', status: 'accepted' })
     ]);
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
     expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
@@ -267,7 +269,37 @@ describe('companion desktop sync push acknowledgements', () => {
     expect(result.pushConflictCount).toBe(1);
     expect(result.pushRejectedCount).toBe(1);
     expect(result.pushedObjectIds).toEqual([]);
-    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([]);
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
+      expect.objectContaining({ clientOpId: 'node_reading:node-1:9', status: 'conflict' }),
+      expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'rejected' })
+    ]);
+  });
+
+  it('rejects accepted state-object acks that cannot be confirmed by a pulled state seq', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
+    vi.mocked(fetch).mockResolvedValueOnce({
+      json: async () => ({
+        acks: [{
+          client_op_id: 'node_review:node-1:10',
+          identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
+          status: 'accepted'
+        }]
+      }),
+      ok: true
+    } as Response);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushedObjectIds).toEqual([]);
+    expect(result.pushRejectedCount).toBe(1);
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
+      expect.objectContaining({
+        clientOpId: 'node_review:node-1:10',
+        conflictReason: 'missing_state_seq',
+        status: 'rejected'
+      })
+    ]);
   });
 
   it('skips legacy node_reading dirty rows that do not have a base reference', async () => {

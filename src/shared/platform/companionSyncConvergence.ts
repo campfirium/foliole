@@ -75,12 +75,21 @@ export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult)
 function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
   const dirtyCount = result.android?.sync_state.local_dirty_count ?? 0;
   const pendingAckCount = result.android?.sync_state.pending_ack_count ?? 0;
+  const pushIssueCount = result.android?.sync_state.push_issue_count ?? 0;
   const checks: SyncConvergenceCheck[] = [];
   if (dirtyCount > 0) {
     checks.push(check('local_dirty_not_converged', 'warning', 'Device changes still need to send', `${dirtyCount} local change(s) are still dirty.`));
   }
   if (pendingAckCount > 0) {
     checks.push(buildPendingAckCheck(result));
+  }
+  if (pushIssueCount > 0) {
+    checks.push(check(
+      'push_issue_not_converged',
+      'error',
+      'Device changes need review before sending',
+      `${pushIssueCount} device change(s) were rejected or conflicted during push.`
+    ));
   }
   return checks;
 }
@@ -175,15 +184,16 @@ function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {
   if (latest?.status !== 'completed') return [];
   const dirtyCount = result.android?.sync_state.local_dirty_count ?? 0;
   const pendingAckCount = result.android?.sync_state.pending_ack_count ?? 0;
+  const pushIssueCount = result.android?.sync_state.push_issue_count ?? 0;
   const missingBodies = result.android?.content.missing_content_blob_count ?? 0;
   const missingAttachments = result.android?.content.missing_attachment_resource_count ?? 0;
   const lag = structureLag(result) ?? 0;
-  if (dirtyCount === 0 && pendingAckCount === 0 && missingBodies === 0 && missingAttachments === 0 && lag === 0) return [];
+  if (dirtyCount === 0 && pendingAckCount === 0 && pushIssueCount === 0 && missingBodies === 0 && missingAttachments === 0 && lag === 0) return [];
   return [check(
     'completed_event_with_local_work',
     'error',
     'Latest finished sync pass is not fully converged',
-    `A finished sync pass was recorded while ${dirtyCount} dirty change(s), ${pendingAckCount} pending ack(s), ${missingBodies} body blob(s), ${missingAttachments} attachment file(s), and ${lag} structure change(s) remain.`
+    `A finished sync pass was recorded while ${dirtyCount} dirty change(s), ${pendingAckCount} pending ack(s), ${pushIssueCount} push issue(s), ${missingBodies} body blob(s), ${missingAttachments} attachment file(s), and ${lag} structure change(s) remain.`
   )];
 }
 

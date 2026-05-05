@@ -27,11 +27,11 @@ final class FolioleCompanionSyncPushAckStore {
         try {
             for (int index = 0; index < acks.length(); index += 1) {
                 JSONObject ack = acks.optJSONObject(index);
-                if (ack == null || !isAccepted(ack)) {
+                if (ack == null || !isKnownStatus(ack)) {
                     continue;
                 }
                 JSONObject identity = ack.optJSONObject("identity");
-                if (identity == null || identity.optString("objectType").trim().isEmpty()) {
+                if (!hasRequiredAckFields(ack, identity)) {
                     continue;
                 }
                 ContentValues values = new ContentValues();
@@ -43,6 +43,11 @@ final class FolioleCompanionSyncPushAckStore {
                 }
                 values.put("status", ack.optString("status"));
                 values.put("acked_at", now);
+                database.delete(
+                    "sync_push_ack",
+                    "object_type = ? AND object_id = ? AND status IN ('conflict', 'rejected')",
+                    new String[] { values.getAsString("object_type"), values.getAsString("object_id") }
+                );
                 database.insertWithOnConflict("sync_push_ack", null, values, SQLiteDatabase.CONFLICT_REPLACE);
                 savedClientOpIds.put(values.getAsString("client_op_id"));
             }
@@ -55,8 +60,29 @@ final class FolioleCompanionSyncPushAckStore {
         return result;
     }
 
-    private static boolean isAccepted(JSONObject ack) {
+    private static boolean isKnownStatus(JSONObject ack) {
         String status = ack.optString("status");
-        return status.equals("accepted") || status.equals("already_applied");
+        return status.equals("accepted") ||
+            status.equals("already_applied") ||
+            status.equals("conflict") ||
+            status.equals("rejected");
+    }
+
+    private static boolean hasRequiredAckFields(JSONObject ack, JSONObject identity) {
+        if (identity == null) {
+            return false;
+        }
+        String clientOpId = ack.optString("client_op_id", ack.optString("clientOpId")).trim();
+        String objectType = identity.optString("objectType").trim();
+        String objectId = identity.optString("objectId").trim();
+        String status = ack.optString("status");
+        boolean canConfirm = status.equals("accepted") || status.equals("already_applied");
+        if (canConfirm && objectType.equals("review_log")) {
+            return false;
+        }
+        return !clientOpId.isEmpty() &&
+            !objectType.isEmpty() &&
+            !objectId.isEmpty() &&
+            (!canConfirm || (ack.has("state_seq") && !ack.isNull("state_seq")));
     }
 }
