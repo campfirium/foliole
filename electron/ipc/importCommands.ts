@@ -9,7 +9,7 @@ import { asString } from './commandParsers.js';
 import type { InvokeContext } from './commands.js';
 import type { InvokeRequest } from './contracts.js';
 import { runDirectoryImport } from './importDirectory.js';
-import { runTextFileImport, selectImportTextFile } from './importTextFile.js';
+import { runImportForFilePath, runTextFileImport, selectImportTextFile } from './importTextFile.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
 
 function resolveNativeHighlightPolicy(value: unknown) {
@@ -75,6 +75,9 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   }
   if (request.command === NATIVE_COMMANDS.selectImportDirectory) {
     return selectImportDirectory(context);
+  }
+  if (request.command === NATIVE_COMMANDS.importExternalSearchDocument) {
+    return runImportForFilePath(asString(args.absolute_path, 'absolute_path'), args);
   }
   return undefined;
 }

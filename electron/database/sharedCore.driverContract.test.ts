@@ -87,6 +87,13 @@ beforeEach(() => {
   prepareSpy.mockReset();
   executeSpy.mockReset();
   transactionSpy.mockReset();
+  vi.mocked(driver.queryAll).mockReset();
+  vi.mocked(driver.queryAll).mockImplementation((sql, params) => {
+    if (!sql.includes('WITH RECURSIVE node_descendants')) {
+      return [];
+    }
+    return [{ id: String(params?.[0] ?? '') }];
+  });
   reviewMutationContext.createId.mockReset();
   reviewMutationContext.createId.mockReturnValueOnce('op-1').mockReturnValueOnce('log-1');
 });
@@ -186,6 +193,7 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
 
   expect(transactionSpy).toHaveBeenCalledTimes(1);
   expect(prepareSpy).toHaveBeenCalledTimes(8);
+  expect(driver.queryAll).toHaveBeenCalledWith(expect.stringContaining('WITH RECURSIVE node_descendants'), ['node-1']);
   expectNodeSnapshotPersistence(runs);
   expectNodeSnapshotSearchSync(runs);
 });

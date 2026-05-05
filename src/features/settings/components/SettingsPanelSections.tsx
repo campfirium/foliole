@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import type { RuntimeExternalSearchFolder } from '../../../shared/platform/externalSearchBridge';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 import { SETTINGS_CATEGORIES, type SettingsCategoryId } from '../model/settingsPanelOptions';
 
@@ -8,6 +9,7 @@ import { SettingsAboutSection } from './sections/SettingsAboutSection';
 import { SettingsAppearanceSection } from './sections/SettingsAppearanceSection';
 import { SettingsBackupsSection } from './sections/SettingsBackupsSection';
 import { SettingsEditorSection } from './sections/SettingsEditorSection';
+import { SettingsExternalSearchSection } from './sections/SettingsExternalSearchSection';
 import { SettingsImportSection } from './sections/SettingsImportSection';
 import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
@@ -19,11 +21,15 @@ export interface SettingsCategoryContentProps {
   activeCategory: SettingsCategoryId;
   assetsPath: string;
   errorByLocation: Record<'assets_dir' | 'inbox' | 'library_home' | 'mirror', string | null>;
+  externalSearchError: string | null;
+  externalSearchFeedback: string | null;
+  externalSearchFolders: RuntimeExternalSearchFolder[];
   hotkeyItems: HotkeySettingItem[];
   inboxPath: string;
   isDesktopRuntime: boolean;
   isRebuildingMirrorLinks: boolean;
   isRebuildingMirrorOutput: boolean;
+  isSavingExternalSearchFolders: boolean;
   libraryHomePath: string;
   mirrorLinkRebuildError: string | null;
   mirrorLinkRebuildFeedback: string | null;
@@ -32,9 +38,18 @@ export interface SettingsCategoryContentProps {
   mirrorPath: string;
   importCategoryContent?: ReactNode;
   onChangeLocation: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
+  onAddExternalSearchFolder: () => void;
+  onChooseExternalAttachmentRoot: (folderId: string) => void;
+  onChooseExternalSearchFolder: (folderId: string) => void;
+  onRebuildExternalSearchIndex: (folderId?: string) => void;
+  onRemoveExternalSearchFolder: (folderId: string) => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
+  onUpdateExternalSearchFolder: (
+    folderId: string,
+    patch: Partial<Pick<RuntimeExternalSearchFolder, 'attachmentRootPath' | 'excludedDirs' | 'folderPath'>>
+  ) => void;
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
   readwiseReaderCategoryContent?: ReactNode;
   onHotkeyReset: (commandId: string) => void;
@@ -81,44 +96,56 @@ function ReviewSettingsContent() {
   return <SettingsReviewSection />;
 }
 
-export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
-  if (props.activeCategory === 'editor') {
-    return <SettingsEditorSection />;
-  }
-  if (props.activeCategory === 'appearance') {
-    return <SettingsAppearanceSection />;
-  }
-  if (props.activeCategory === 'mouse-gestures') {
-    return <SettingsMouseGesturesSection />;
-  }
-  if (props.activeCategory === 'library') {
-    return (
-      <SettingsImportSection
-        errorByLocation={props.errorByLocation}
-        assetsPath={props.assetsPath}
-        inboxPath={props.inboxPath}
-        isDesktopRuntime={props.isDesktopRuntime}
-        isRebuildingMirrorLinks={props.isRebuildingMirrorLinks}
-        isRebuildingMirrorOutput={props.isRebuildingMirrorOutput}
-        libraryHomePath={props.libraryHomePath}
-        mirrorLinkRebuildError={props.mirrorLinkRebuildError}
-        mirrorLinkRebuildFeedback={props.mirrorLinkRebuildFeedback}
-        mirrorOutputRebuildError={props.mirrorOutputRebuildError}
-        mirrorOutputRebuildFeedback={props.mirrorOutputRebuildFeedback}
-        mirrorPath={props.mirrorPath}
-        onChangeLocation={props.onChangeLocation}
-        onRebuildMirrorLinks={props.onRebuildMirrorLinks}
-        onRebuildMirrorOutput={props.onRebuildMirrorOutput}
-        onRestoreDefault={props.onRestoreDefault}
-        pendingLocation={props.pendingLocation}
-      />
-    );
-  }
+function renderLibraryCategory(props: SettingsCategoryContentProps) {
+  return (
+    <SettingsImportSection
+      assetsPath={props.assetsPath}
+      errorByLocation={props.errorByLocation}
+      inboxPath={props.inboxPath}
+      isDesktopRuntime={props.isDesktopRuntime}
+      isRebuildingMirrorLinks={props.isRebuildingMirrorLinks}
+      isRebuildingMirrorOutput={props.isRebuildingMirrorOutput}
+      libraryHomePath={props.libraryHomePath}
+      mirrorLinkRebuildError={props.mirrorLinkRebuildError}
+      mirrorLinkRebuildFeedback={props.mirrorLinkRebuildFeedback}
+      mirrorOutputRebuildError={props.mirrorOutputRebuildError}
+      mirrorOutputRebuildFeedback={props.mirrorOutputRebuildFeedback}
+      mirrorPath={props.mirrorPath}
+      onChangeLocation={props.onChangeLocation}
+      onRebuildMirrorLinks={props.onRebuildMirrorLinks}
+      onRebuildMirrorOutput={props.onRebuildMirrorOutput}
+      onRestoreDefault={props.onRestoreDefault}
+      pendingLocation={props.pendingLocation}
+    />
+  );
+}
+
+function renderExternalSearchCategory(props: SettingsCategoryContentProps) {
+  return (
+    <SettingsExternalSearchSection
+      error={props.externalSearchError}
+      feedback={props.externalSearchFeedback}
+      folders={props.externalSearchFolders}
+      isDesktopRuntime={props.isDesktopRuntime}
+      isSaving={props.isSavingExternalSearchFolders}
+      onAddFolder={props.onAddExternalSearchFolder}
+      onChooseAttachmentRoot={props.onChooseExternalAttachmentRoot}
+      onChooseFolder={props.onChooseExternalSearchFolder}
+      onRebuildIndex={props.onRebuildExternalSearchIndex}
+      onRemoveFolder={props.onRemoveExternalSearchFolder}
+      onUpdateFolder={props.onUpdateExternalSearchFolder}
+    />
+  );
+}
+
+function renderFallbackCategory(props: SettingsCategoryContentProps) {
   if (props.activeCategory === 'import') {
     return props.importCategoryContent ?? <p className="text-sm text-foreground/65">Import content is not available yet.</p>;
   }
   if (props.activeCategory === 'readwise-reader') {
-    return props.readwiseReaderCategoryContent ?? <p className="text-sm text-foreground/65">Readwise Reader content is not available yet.</p>;
+    return props.readwiseReaderCategoryContent ?? (
+      <p className="text-sm text-foreground/65">Readwise Reader content is not available yet.</p>
+    );
   }
   if (props.activeCategory === 'review') {
     return <ReviewSettingsContent />;
@@ -129,5 +156,29 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
   if (props.activeCategory === 'about') {
     return <SettingsAboutSection />;
   }
-  return <HotkeySettingsSection items={props.hotkeyItems} onReset={props.onHotkeyReset} onResetAll={props.onHotkeyResetAll} onUpdate={props.onHotkeyUpdate} />;
+  return (
+    <HotkeySettingsSection
+      items={props.hotkeyItems}
+      onReset={props.onHotkeyReset}
+      onResetAll={props.onHotkeyResetAll}
+      onUpdate={props.onHotkeyUpdate}
+    />
+  );
+}
+
+export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
+  switch (props.activeCategory) {
+    case 'editor':
+      return <SettingsEditorSection />;
+    case 'appearance':
+      return <SettingsAppearanceSection />;
+    case 'mouse-gestures':
+      return <SettingsMouseGesturesSection />;
+    case 'library':
+      return renderLibraryCategory(props);
+    case 'external-search':
+      return renderExternalSearchCategory(props);
+    default:
+      return renderFallbackCategory(props);
+  }
 }

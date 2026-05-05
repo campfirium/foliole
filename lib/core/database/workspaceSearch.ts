@@ -23,7 +23,14 @@ const EXCERPT_LENGTH = 96;
 export interface WorkspaceSearchResult {
   excerpt: string;
   id: string;
-  kind: 'node' | 'pdf';
+  kind: 'external' | 'node' | 'pdf';
+  externalMatch: {
+    absolutePath: string;
+    folderId: string;
+    folderPath: string;
+    query: string;
+    relativePath: string;
+  } | null;
   nodeMatch: {
     from: number;
     query: string;
@@ -83,6 +90,7 @@ function sortAndLimitResults(results: RankedWorkspaceSearchResult[]) {
     .slice(0, MAX_RESULTS)
     .map((result) => ({
       excerpt: result.excerpt,
+      externalMatch: result.externalMatch,
       id: result.id,
       kind: result.kind,
       nodeMatch: result.nodeMatch,
@@ -104,6 +112,7 @@ function toFiniteRank(value: number | null | undefined, fallback: number) {
 function buildNodeResult(row: WorkspaceSearchRow, query: string): RankedWorkspaceSearchResult {
   return {
     excerpt: buildExcerpt(row.content, query),
+    externalMatch: null,
     id: row.id,
     kind: 'node',
     nodeMatch: resolveNodeContentMatch(row.content, query),
@@ -123,6 +132,7 @@ function buildPdfResult(row: WorkspacePdfSearchRow, query: string): RankedWorksp
   }
   return {
     excerpt: buildPdfExcerpt(row.text, query, page),
+    externalMatch: null,
     id: row.id,
     kind: 'pdf',
     nodeMatch: null,
@@ -142,6 +152,7 @@ function buildPdfResult(row: WorkspacePdfSearchRow, query: string): RankedWorksp
 function buildCrossPagePdfResult(row: WorkspacePdfCrossPageSearchRow, query: string): RankedWorkspaceSearchResult {
   return {
     excerpt: buildCrossPagePdfExcerpt(row.text, row.next_text, row.match_start, query, row.page, row.end_page),
+    externalMatch: null,
     id: row.id,
     kind: 'pdf',
     nodeMatch: null,

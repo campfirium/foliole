@@ -60,6 +60,9 @@ function buildAncestorTitles(nodeId: string, nodesById: Record<string, Workspace
 }
 
 export function resolveSearchResultPathLabel(result: WorkspaceSearchResult, nodesById: Record<string, WorkspaceListNode | undefined>) {
+  if (result.kind === 'external' && result.externalMatch) {
+    return result.externalMatch.relativePath;
+  }
   const titles = buildAncestorTitles(result.id, nodesById);
   return titles.length > 0 ? titles.join(' / ') : 'Top level';
 }
@@ -72,6 +75,9 @@ export function resolveSearchResultNodeBadge(
   result: WorkspaceSearchResult,
   nodesById: Record<string, WorkspaceListNode | undefined>
 ) {
+  if (result.kind === 'external') {
+    return 'External';
+  }
   const anchorKind = nodesById[result.id]?.anchorLink?.kind;
   if (anchorKind === 'highlight') {
     return 'Highlight';
@@ -126,4 +132,13 @@ export function renderSearchResultMetaBadge(label: string | null): ReactNode {
       {label}
     </span>
   );
+}
+
+export function resolveExternalFolderLabel(result: WorkspaceSearchResult) {
+  if (result.kind !== 'external' || !result.externalMatch) {
+    return null;
+  }
+  const normalizedPath = result.externalMatch.folderPath.replace(/\\/g, '/');
+  const segments = normalizedPath.split('/').filter(Boolean);
+  return segments[segments.length - 1] ?? result.externalMatch.folderPath;
 }

@@ -7,6 +7,7 @@ export type SettingsCategoryId =
   | 'about'
   | 'backups'
   | 'editor'
+  | 'external-search'
   | 'mouse-gestures'
   | 'appearance'
   | 'library'
@@ -19,13 +20,18 @@ export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCateg
   { id: 'about', label: 'About', description: 'Version details, diagnostics, and workspace support tools.' },
   { id: 'backups', label: 'Backups', description: 'Manage backup location, retention, and recovery tools.' },
   { id: 'editor', label: 'Editor', description: 'Choose how editing, images, and writing surfaces behave.' },
-  { id: 'mouse-gestures', label: 'Mouse gestures', description: 'Tune gesture actions, thresholds, and trail feedback.' },
   { id: 'appearance', label: 'Appearance', description: 'Control the look and density of the workspace.' },
   { id: 'library', label: 'Library', description: 'Point Foliole to your library home, inbox, and mirror paths.' },
   { id: 'import', label: 'Import', description: 'Adjust import sources and intake behavior.' },
+  { id: 'mouse-gestures', label: 'Mouse gestures', description: 'Tune gesture actions, thresholds, and trail feedback.' },
   { id: 'readwise-reader', label: 'Readwise Reader', description: 'Configure Readwise Reader folders and parsing rules.' },
   { id: 'review', label: 'Review', description: 'Set scheduler defaults and review queue behavior.' },
-  { id: 'hotkeys', label: 'Hotkeys', description: 'Customize keyboard shortcuts for common actions.' }
+  { id: 'hotkeys', label: 'Hotkeys', description: 'Customize keyboard shortcuts for common actions.' },
+  {
+    id: 'external-search',
+    label: 'External library',
+    description: 'Search, preview, and import content from your external library.'
+  }
 ];
 
 export const SETTINGS_CATEGORY_STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.settingsActiveCategory;

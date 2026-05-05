@@ -1,19 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
-import {
-  renderSearchResultMetaBadge,
-  renderSearchResultSourceLabel,
-  renderSearchResultText,
-  resolveSearchResultContext,
-  resolveSearchResultNodeBadge,
-  resolveSearchResultPathLabel
-} from './searchPaletteResultPresentation';
+import { ExternalSearchPreviewDialog } from './ExternalSearchPreviewDialog';
+import { SearchPaletteEmptyState, SearchPaletteList } from './SearchPaletteResults';
 import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
 
 interface SearchPaletteProps {
@@ -83,55 +78,6 @@ function SearchInput(props: SearchInputProps) {
   );
 }
 
-function SearchPaletteEmptyState({ query }: { query: string }) {
-  const label = query.trim() ? 'No matching notes' : 'Search across note titles and content';
-  return (
-    <ul className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
-      <li className="px-3 py-8 text-center text-sm text-foreground/55">{label}</li>
-    </ul>
-  );
-}
-
-function SearchPaletteList(props: {
-  activeIndex: number;
-  nodesById: WorkspaceListNodesById;
-  onOpenResult: (result: WorkspaceSearchResult) => void;
-  query: string;
-  results: WorkspaceSearchResult[];
-  sourceDetailsByNodeId: Record<string, RuntimeNodeSourceDetails | null | undefined>;
-}) {
-  if (!props.results.length) {
-    return null;
-  }
-
-  return (
-    <ul aria-label="Workspace search results" className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
-      {props.results.map((item, index) => (
-        <li key={`${item.id}-${item.kind}-${index}`}>
-          <button
-            className="flex w-full flex-col gap-1 rounded-md px-3 py-2 text-left hover:bg-bg-subtle data-[active=true]:bg-bg-subtle"
-            data-active={index === props.activeIndex}
-            onClick={() => props.onOpenResult(item)}
-            type="button"
-          >
-            <span className="min-w-0 truncate text-sm font-medium text-foreground">{renderSearchResultText(item.title, props.query)}</span>
-            <span className="line-clamp-2 text-xs text-foreground/60">
-              {renderSearchResultText(resolveSearchResultContext(item), props.query)}
-            </span>
-            <span className="flex items-center justify-between gap-3 text-[11px] text-foreground/45">
-              <span className="min-w-0 truncate">{resolveSearchResultPathLabel(item, props.nodesById)}</span>
-              <span className="flex shrink-0 items-center gap-1">
-                {renderSearchResultMetaBadge(resolveSearchResultNodeBadge(item, props.nodesById))}
-                {renderSearchResultSourceLabel(props.sourceDetailsByNodeId[item.id])}
-              </span>
-            </span>
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function useSearchResults(props: Pick<SearchPaletteProps, 'isOpen' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>, query: string) {
   const localResults = useMemo(
     () => buildWorkspaceSearchResults(props.nodeOrder, props.nodesById, props.trashedNodeIds, query),
@@ -167,7 +113,7 @@ function useSearchResultSourceDetails(results: WorkspaceSearchResult[]) {
   const cacheRef = useRef<Record<string, RuntimeNodeSourceDetails | null>>({});
 
   useEffect(() => {
-    const nodeIds = [...new Set(results.map((result) => result.id).filter(Boolean))];
+    const nodeIds = [...new Set(results.filter((result) => result.kind !== 'external').map((result) => result.id).filter(Boolean))];
     if (nodeIds.length === 0) {
       setSourceDetailsByNodeId({});
       return;
@@ -208,42 +154,32 @@ function useSearchResultSourceDetails(results: WorkspaceSearchResult[]) {
 
 function useOrderedSearchResults(results: WorkspaceSearchResult[], nodesById: WorkspaceListNodesById) {
   return useMemo(() => {
+    const externalResults: WorkspaceSearchResult[] = [];
     const regularResults: WorkspaceSearchResult[] = [];
     const anchoredResults: WorkspaceSearchResult[] = [];
     results.forEach((result) => {
+      if (result.kind === 'external') {
+        externalResults.push(result);
+        return;
+      }
       if (nodesById[result.id]?.anchorLink?.kind) {
         anchoredResults.push(result);
         return;
       }
       regularResults.push(result);
     });
-    return [...regularResults, ...anchoredResults];
+    return [...regularResults, ...anchoredResults, ...externalResults];
   }, [nodesById, results]);
 }
 
 export function SearchPalette(props: SearchPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [externalPreviewPath, setExternalPreviewPath] = useState<string | null>(null);
   const rawResults = useSearchResults(props, query);
   const results = useOrderedSearchResults(rawResults, props.nodesById);
   const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
-
-  useEffect(() => {
-    if (!props.isOpen) {
-      setQuery('');
-      setActiveIndex(0);
-    }
-  }, [props.isOpen]);
-
-  useEffect(() => {
-    if (!results.length) {
-      setActiveIndex(0);
-      return;
-    }
-    if (activeIndex >= results.length) {
-      setActiveIndex(results.length - 1);
-    }
-  }, [activeIndex, results]);
+  useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setExternalPreviewPath, setQuery);
 
   if (!props.isOpen) {
     return null;
@@ -252,7 +188,7 @@ export function SearchPalette(props: SearchPaletteProps) {
   const openActiveNode = () => {
     const result = results[activeIndex];
     if (result) {
-      props.onOpenResult(result);
+      openSearchPaletteResult(result, props.onOpenResult, setExternalPreviewPath);
     }
   };
 
@@ -271,7 +207,7 @@ export function SearchPalette(props: SearchPaletteProps) {
           <SearchPaletteList
             activeIndex={activeIndex}
             nodesById={props.nodesById}
-            onOpenResult={props.onOpenResult}
+            onOpenResult={(result) => openSearchPaletteResult(result, props.onOpenResult, setExternalPreviewPath)}
             query={query}
             results={results}
             sourceDetailsByNodeId={sourceDetailsByNodeId}
@@ -280,6 +216,67 @@ export function SearchPalette(props: SearchPaletteProps) {
           <SearchPaletteEmptyState query={query} />
         )}
       </div>
+      <ExternalSearchPreviewDialog
+        absolutePath={externalPreviewPath}
+        onImportComplete={(result) => handleImportedExternalResult(result, props.onOpenResult, setExternalPreviewPath)}
+        onOpenChange={(open) => !open && setExternalPreviewPath(null)}
+      />
     </div>
   );
+}
+
+function useSearchPaletteLifecycle(
+  isOpen: boolean,
+  activeIndex: number,
+  resultCount: number,
+  setActiveIndex: (value: number) => void,
+  setExternalPreviewPath: (value: string | null) => void,
+  setQuery: (value: string) => void
+) {
+  useEffect(() => {
+    if (!isOpen) {
+      setQuery('');
+      setActiveIndex(0);
+      setExternalPreviewPath(null);
+    }
+  }, [isOpen, setActiveIndex, setExternalPreviewPath, setQuery]);
+
+  useEffect(() => {
+    if (!resultCount) {
+      setActiveIndex(0);
+      return;
+    }
+    if (activeIndex >= resultCount) setActiveIndex(resultCount - 1);
+  }, [activeIndex, resultCount, setActiveIndex]);
+}
+
+function openSearchPaletteResult(
+  result: WorkspaceSearchResult,
+  onOpenResult: (result: WorkspaceSearchResult) => void,
+  setExternalPreviewPath: (value: string | null) => void
+) {
+  if (result.kind === 'external' && result.externalMatch) {
+    setExternalPreviewPath(result.externalMatch.absolutePath);
+    return;
+  }
+  onOpenResult(result);
+}
+
+function handleImportedExternalResult(
+  result: NativeTextImportResult,
+  onOpenResult: (result: WorkspaceSearchResult) => void,
+  setExternalPreviewPath: (value: string | null) => void
+) {
+  setExternalPreviewPath(null);
+  if (!result.node_id) return;
+  onOpenResult({
+    excerpt: '',
+    externalMatch: null,
+    id: result.node_id,
+    kind: 'node',
+    nodeMatch: null,
+    pdfMatch: null,
+    title: result.source_name,
+    updatedAt: result.imported_at
+  });
 }

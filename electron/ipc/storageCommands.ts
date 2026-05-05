@@ -5,9 +5,9 @@ import {
   restoreApplicationDatabaseBackup
 } from '../database/backupRestore.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
-import {
-  resetImportData
-} from '../database/importMaintenance.js';
+import { loadExternalSearchPreview, pruneExternalSearchCache, rebuildExternalSearchIndexes } from '../database/externalSearchCache.js';
+import { loadExternalSearchFolders, saveExternalSearchFolders } from '../database/externalSearchFolders.js';
+import { resetImportData } from '../database/importMaintenance.js';
 import {
   deleteNodesPermanently,
   replaceNodeOrder,
@@ -144,32 +144,20 @@ async function handleSettingsStorageCommand(
   args: Record<string, unknown>,
   window: Parameters<typeof handleStorageAttachmentCommand>[2] = null
 ) {
-  if (command === NATIVE_COMMANDS.loadImportManagerSettings) {
-    return loadImportManagerSettings();
-  }
-  if (command === NATIVE_COMMANDS.loadAppSettingsState) {
-    return loadAppSettingsState();
-  }
+  const externalSearchResult = handleExternalSearchStorageCommand(command, args);
+  if (externalSearchResult !== undefined) return externalSearchResult;
+  if (command === NATIVE_COMMANDS.loadImportManagerSettings) return loadImportManagerSettings();
+  if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
   if (command === NATIVE_COMMANDS.saveAppSettingsState) {
     await saveAppSettingsState(readSettingsObject(args.settings));
     await refreshManagedInboxMonitorFromSettings();
     return null;
   }
-  if (command === NATIVE_COMMANDS.loadLibraryPathSettings) {
-    return loadLibraryPathSettings();
-  }
-  if (command === NATIVE_COMMANDS.loadBackupSettings) {
-    return loadBackupSettings();
-  }
-  if (command === NATIVE_COMMANDS.rebuildMirrorOutput) {
-    return rebuildMirrorOutput();
-  }
-  if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) {
-    return rebuildMirrorAttachmentLinks();
-  }
-  if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) {
-    return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
-  }
+  if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
+  if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();
+  if (command === NATIVE_COMMANDS.rebuildMirrorOutput) return rebuildMirrorOutput();
+  if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
+  if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
     const location = asString(args.location, 'location') as 'library_home' | 'assets_dir' | 'inbox' | 'mirror';
     const result = await updateLibraryPathSetting({
@@ -182,19 +170,30 @@ async function handleSettingsStorageCommand(
     await refreshManagedInboxMonitorFromSettings();
     return result;
   }
-  if (command === NATIVE_COMMANDS.saveBackupSettings) {
-    return saveBackupSettings(readSettingsObject(args.settings));
-  }
+  if (command === NATIVE_COMMANDS.saveBackupSettings) return saveBackupSettings(readSettingsObject(args.settings));
   if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
     const result = saveImportManagerSettings(readSettingsObject(args.settings));
     await refreshKeepImportMonitorFromSettings();
     return result;
   }
-  if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) {
-    return loadReviewSchedulerSettings();
+  if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) return loadReviewSchedulerSettings();
+  if (command === NATIVE_COMMANDS.saveReviewSchedulerSettings) return saveReviewSchedulerSettings(readSettingsObject(args.settings));
+  return undefined;
+}
+
+function handleExternalSearchStorageCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.loadExternalSearchFolders) return loadExternalSearchFolders();
+  if (command === NATIVE_COMMANDS.saveExternalSearchFolders) {
+    const folders = Array.isArray(args.folders) ? args.folders : [];
+    const savedFolders = saveExternalSearchFolders(folders as Parameters<typeof saveExternalSearchFolders>[0]);
+    pruneExternalSearchCache(savedFolders.map((folder) => folder.id));
+    return savedFolders;
   }
-  if (command === NATIVE_COMMANDS.saveReviewSchedulerSettings) {
-    return saveReviewSchedulerSettings(readSettingsObject(args.settings));
+  if (command === NATIVE_COMMANDS.rebuildExternalSearchIndex) {
+    return rebuildExternalSearchIndexes(asNullableString(args.folder_id, 'folder_id') ?? undefined);
+  }
+  if (command === NATIVE_COMMANDS.loadExternalSearchPreview) {
+    return loadExternalSearchPreview(asString(args.absolute_path, 'absolute_path'));
   }
   return undefined;
 }

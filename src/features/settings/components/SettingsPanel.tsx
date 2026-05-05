@@ -15,6 +15,7 @@ import {
   SettingsSidebar,
   type SettingsCategoryContentProps
 } from './SettingsPanelSections';
+import { useExternalSearchFolders } from './useExternalSearchFolders';
 import { useLibraryPathSettings } from './useLibraryPathSettings';
 
 interface SettingsPanelProps {
@@ -36,6 +37,7 @@ function SettingsPanelContent(props: SettingsPanelProps) {
 function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null) {
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => requestedCategory ?? getInitialSettingsCategory());
   const libraryPathSettings = useLibraryPathSettings();
+  const externalSearchFolders = useExternalSearchFolders();
 
   useEffect(() => setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory), [activeCategory]);
   useEffect(() => {
@@ -53,6 +55,7 @@ function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null)
     description,
     setActiveCategory,
     title,
+    ...externalSearchFolders,
     ...libraryPathSettings
   };
 }
@@ -61,10 +64,14 @@ type SettingsPanelBodyProps = {
   activeCategory: SettingsCategoryId;
   assetsPath: string;
   errorByLocation: Record<'assets_dir' | 'inbox' | 'library_home' | 'mirror', string | null>;
+  externalSearchError: string | null;
+  externalSearchFeedback: string | null;
+  externalSearchFolders: ReturnType<typeof useExternalSearchFolders>['externalSearchFolders'];
   inboxPath: string;
   isDesktopRuntime: boolean;
   isRebuildingMirrorLinks: boolean;
   isRebuildingMirrorOutput: boolean;
+  isSavingExternalSearchFolders: boolean;
   libraryHomePath: string;
   description: string;
   mirrorLinkRebuildError: string | null;
@@ -75,9 +82,15 @@ type SettingsPanelBodyProps = {
   importCategoryContent?: ReactNode;
   onClose: () => void;
   onChangeLocation: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
+  onAddExternalSearchFolder: () => void;
+  onChooseExternalAttachmentRoot: (folderId: string) => void;
+  onChooseExternalSearchFolder: (folderId: string) => void;
+  onRebuildExternalSearchIndex: (folderId?: string) => void;
+  onRemoveExternalSearchFolder: (folderId: string) => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
+  onUpdateExternalSearchFolder: ReturnType<typeof useExternalSearchFolders>['onUpdateExternalSearchFolder'];
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
   readwiseReaderCategoryContent?: ReactNode;
   setActiveCategory: (category: SettingsCategoryId) => void;
@@ -95,10 +108,14 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
     activeCategory: props.activeCategory,
     assetsPath: props.assetsPath,
     errorByLocation: props.errorByLocation,
+    externalSearchError: props.externalSearchError,
+    externalSearchFeedback: props.externalSearchFeedback,
+    externalSearchFolders: props.externalSearchFolders,
     inboxPath: props.inboxPath,
     isDesktopRuntime: props.isDesktopRuntime,
     isRebuildingMirrorLinks: props.isRebuildingMirrorLinks,
     isRebuildingMirrorOutput: props.isRebuildingMirrorOutput,
+    isSavingExternalSearchFolders: props.isSavingExternalSearchFolders,
     libraryHomePath: props.libraryHomePath,
     mirrorLinkRebuildError: props.mirrorLinkRebuildError,
     mirrorLinkRebuildFeedback: props.mirrorLinkRebuildFeedback,
@@ -107,9 +124,15 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
     mirrorPath: props.mirrorPath,
     importCategoryContent: props.importCategoryContent,
     onChangeLocation: props.onChangeLocation,
+    onAddExternalSearchFolder: props.onAddExternalSearchFolder,
+    onChooseExternalAttachmentRoot: props.onChooseExternalAttachmentRoot,
+    onChooseExternalSearchFolder: props.onChooseExternalSearchFolder,
+    onRebuildExternalSearchIndex: props.onRebuildExternalSearchIndex,
+    onRemoveExternalSearchFolder: props.onRemoveExternalSearchFolder,
     onRebuildMirrorLinks: props.onRebuildMirrorLinks,
     onRebuildMirrorOutput: props.onRebuildMirrorOutput,
     onRestoreDefault: props.onRestoreDefault,
+    onUpdateExternalSearchFolder: props.onUpdateExternalSearchFolder,
     pendingLocation: props.pendingLocation,
     readwiseReaderCategoryContent: props.readwiseReaderCategoryContent
   };

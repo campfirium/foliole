@@ -61,7 +61,7 @@ export async function selectImportFilePath(window?: BrowserWindow | null) {
   return filePaths?.[0] ?? null;
 }
 
-async function runImportForFilePath(filePath: string, args?: NativeTextImportArgs) {
+export async function runImportForFilePath(filePath: string, args?: NativeTextImportArgs) {
   const source = resolveSingleFileImportSource(filePath);
   const importedAt = new Date().toISOString();
   const highlightPolicy = resolveImportHighlightPolicy(args);

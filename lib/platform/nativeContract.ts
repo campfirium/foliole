@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
+import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
 import type {
   NativeDirectoryImportArgs, NativeDirectoryImportResult, NativeNodeSourceDetails, NativeKeepImportPreviewArgs,
   NativeKeepImportPreviewResult, NativeImportedTextFile, NativeTextImportArgs, NativeTextImportResult
@@ -7,8 +8,7 @@ import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type {
   NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
-  NativeImportRemoteImageAttachmentArgs,
-  NativeImportLocalImageAttachmentResult,
+  NativeImportRemoteImageAttachmentArgs, NativeImportLocalImageAttachmentResult,
   NativeRelearnNodeArgs, NativeNodeAnchorLocatorUpdateArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
   NativeResetImportDataResult,
   NativeMergeReadwiseTopicHighlightsResult,
@@ -37,7 +37,7 @@ type NativeNodeSnapshotBatchMutationSpec = {
   result: null;
 };
 
-export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & {
+export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;

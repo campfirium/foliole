@@ -24,6 +24,7 @@ export { AppEmptyState } from './EmptyState';
 export { AppIconButton } from './IconButton';
 export { AppInput } from './Input';
 export { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
+export { ObjectConfigHeader, ObjectConfigPathButton, ObjectConfigRow, ObjectConfigTable } from './ObjectConfigTable';
 export { AppPanel } from './Panel';
 export { InspectorSection } from './InspectorSection';
 export { ReviewActionBar } from './ReviewActionBar';

@@ -4,7 +4,14 @@ import type { WorkspaceListNode } from '../../features/nodes/model/workspaceList
 export interface WorkspaceSearchResult {
   excerpt: string;
   id: string;
-  kind: 'node' | 'pdf';
+  kind: 'external' | 'node' | 'pdf';
+  externalMatch: {
+    absolutePath: string;
+    folderId: string;
+    folderPath: string;
+    query: string;
+    relativePath: string;
+  } | null;
   nodeMatch: {
     from: number;
     query: string;
@@ -68,6 +75,7 @@ export function buildWorkspaceSearchResults(
     }
     results.push({
       excerpt: path,
+      externalMatch: null,
       id: node.id,
       kind: 'node',
       nodeMatch: null,

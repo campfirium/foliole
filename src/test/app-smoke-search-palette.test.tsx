@@ -25,6 +25,7 @@ function createSearchRuntimeInvoke() {
       expect(args).toEqual({ query: 'Atlas' });
       return Promise.resolve([
         {
+          externalMatch: null,
           id: 'node-2',
           title: 'Project Atlas',
           excerpt: '...Project Atlas...',
@@ -34,6 +35,7 @@ function createSearchRuntimeInvoke() {
           updatedAt: '2026-03-30T00:00:00.000Z'
         },
         {
+          externalMatch: null,
           id: 'node-3',
           title: 'Weekly Log',
           excerpt: '...Atlas launch checklist and follow-up notes....',

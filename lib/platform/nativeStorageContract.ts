@@ -122,7 +122,14 @@ export interface NativeWorkspaceBacklink {
 export interface NativeWorkspaceSearchResult {
   excerpt: string;
   id: string;
-  kind: 'node' | 'pdf';
+  kind: 'external' | 'node' | 'pdf';
+  externalMatch: {
+    absolutePath: string;
+    folderId: string;
+    folderPath: string;
+    query: string;
+    relativePath: string;
+  } | null;
   nodeMatch: {
     from: number;
     query: string;
@@ -138,6 +145,8 @@ export interface NativeWorkspaceSearchResult {
   title: string;
   updatedAt: string;
 }
+
+export type { NativeExternalSearchAttachmentMode, NativeExternalSearchFolder, NativeExternalSearchPreview } from './nativeExternalSearchContract.js';
 
 export interface NativeImportLocalImageAttachmentArgs {
   nodeId: string;

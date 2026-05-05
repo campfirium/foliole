@@ -3,7 +3,7 @@ import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migratio
 import { migrateNodeKinds } from './nodeKindMigration.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 19;
+export const DATABASE_SCHEMA_VERSION = 21;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -197,6 +197,7 @@ const CREATE_TABLE_STATEMENTS_V16 = [
 ];
 const CREATE_TABLE_STATEMENTS_V17 = ['ALTER TABLE nodes ADD COLUMN image_regions TEXT'];
 const CREATE_TABLE_STATEMENTS_V18 = ['ALTER TABLE nodes ADD COLUMN opening_text TEXT'];
+const CREATE_TABLE_STATEMENTS_V21 = [`CREATE TABLE IF NOT EXISTS external_search_folders (id TEXT PRIMARY KEY, folder_path TEXT NOT NULL UNIQUE, attachment_mode TEXT NOT NULL, attachment_root_path TEXT, excluded_dirs_json TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'idle', document_count INTEGER NOT NULL DEFAULT 0, indexed_at TEXT, last_error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`];
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -222,35 +223,22 @@ const MIGRATION_STEPS = [
   { statements: CREATE_TABLE_STATEMENTS_V16, version: 16 },
   { statements: CREATE_TABLE_STATEMENTS_V17, version: 17 },
   { statements: CREATE_TABLE_STATEMENTS_V18, version: 18 },
-  { migrate: migrateWorkspaceSearchIndexes, version: 19 }
+  { migrate: migrateWorkspaceSearchIndexes, version: 19 },
+  { migrate: migrateWorkspaceSearchIndexes, version: 20 },
+  { statements: CREATE_TABLE_STATEMENTS_V21, version: 21 }
 ];
 function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
-  if (currentVersion >= step.version) {
-    return;
-  }
-  if (Array.isArray(step.statements)) {
-    for (const statement of step.statements) {
-      sqlite.exec(statement);
-    }
-  }
-  const migrate = step.migrate;
-  if (migrate) {
-    migrate(sqlite);
-  }
-  if (!Array.isArray(step.statements) && !migrate) {
-    throw new Error(`missing migration handler for schema version ${step.version}`);
-  }
+  if (currentVersion >= step.version) return;
+  if (Array.isArray(step.statements)) for (const statement of step.statements) sqlite.exec(statement);
+  if (step.migrate) step.migrate(sqlite);
+  if (!Array.isArray(step.statements) && !step.migrate) throw new Error(`missing migration handler for schema version ${step.version}`);
   setUserVersion(sqlite, step.version);
 }
 export function runDatabaseMigrations(sqlite: DatabaseMigrationTarget) {
   const applyInTransaction = sqlite.transaction(() => {
     const currentVersion = readUserVersion(sqlite);
-    for (const step of MIGRATION_STEPS) {
-      applyMigrationStep(sqlite, currentVersion, step);
-    }
-    if (currentVersion > DATABASE_SCHEMA_VERSION) {
-      throw new Error(`database schema version ${currentVersion} is newer than supported`);
-    }
+    for (const step of MIGRATION_STEPS) applyMigrationStep(sqlite, currentVersion, step);
+    if (currentVersion > DATABASE_SCHEMA_VERSION) throw new Error(`database schema version ${currentVersion} is newer than supported`);
   });
   applyInTransaction();
 }

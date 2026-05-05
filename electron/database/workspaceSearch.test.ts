@@ -96,12 +96,14 @@ it('searches titles and content from sqlite without needing renderer-side conten
     id: 'node-title',
     title: 'Project Atlas',
     excerpt: 'Planning notes stay in sqlite until the node is opened.',
+    externalMatch: null,
     kind: 'node',
     nodeMatch: null,
     pdfMatch: null,
     updatedAt: '2026-03-03T00:00:00.000Z'
   });
   expect(results[1]).toMatchObject({
+    externalMatch: null,
     id: 'node-content',
     title: 'Weekly Log',
     kind: 'node',
@@ -136,6 +138,7 @@ it('includes indexed pdf page hits in workspace search results', () => {
   const results = searchWorkspace('Atlas');
 
   expect(results[0]).toMatchObject({
+    externalMatch: null,
     id: 'node-pdf',
     kind: 'pdf',
     nodeMatch: null,
@@ -192,6 +195,7 @@ it('includes cross-page pdf hits without changing the per-page storage model', (
   const results = searchWorkspace('bridge');
 
   expect(results[0]).toMatchObject({
+    externalMatch: null,
     id: 'node-pdf-cross',
     kind: 'pdf',
     nodeMatch: null,

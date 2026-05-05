@@ -60,6 +60,7 @@ function createArgs() {
 function openNodeSearchResult(args: ReturnType<typeof createArgs>) {
   buildControllerSearchState(args).onOpenResult({
     excerpt: 'Beta',
+    externalMatch: null,
     id: 'node-2',
     kind: 'node',
     nodeMatch: null,
@@ -72,6 +73,7 @@ function openNodeSearchResult(args: ReturnType<typeof createArgs>) {
 function openBodyMatchResult(args: ReturnType<typeof createArgs>) {
   buildControllerSearchState(args).onOpenResult({
     excerpt: '...Beta...',
+    externalMatch: null,
     id: 'node-2',
     kind: 'node',
     nodeMatch: { from: 4, query: 'beta', to: 8 },
@@ -84,6 +86,7 @@ function openBodyMatchResult(args: ReturnType<typeof createArgs>) {
 function openPdfResult(args: ReturnType<typeof createArgs>) {
   buildControllerSearchState(args).onOpenResult({
     excerpt: '...keyword bridge...',
+    externalMatch: null,
     id: 'node-2',
     kind: 'pdf',
     nodeMatch: null,

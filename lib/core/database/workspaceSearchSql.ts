@@ -3,6 +3,7 @@ import type { DatabaseRow } from './driver.js';
 export interface WorkspaceSearchRow extends DatabaseRow {
   content: string;
   id: string;
+  path: string;
   rank: number;
   title: string;
   updated_at: string;
@@ -13,6 +14,7 @@ export interface WorkspacePdfSearchRow extends DatabaseRow {
   id: string;
   page: string;
   page_text_length: string;
+  path: string;
   rank: number;
   text: string;
   title: string;
@@ -46,7 +48,7 @@ export const CONTENT_FALLBACK_SQL = `SELECT id, title, content, updated_at
     AND instr(lower(content), ?) > 0
   ORDER BY updated_at DESC
   LIMIT ?`;
-export const NODE_FTS_SQL = `SELECT node_id AS id, title, content, updated_at, bm25(node_search, 8.0, 1.0) AS rank
+export const NODE_FTS_SQL = `SELECT node_id AS id, title, path, content, updated_at, bm25(node_search, 8.0, 2.0, 1.0) AS rank
   FROM node_search
   WHERE node_search MATCH ?
   ORDER BY rank ASC, updated_at DESC
@@ -54,12 +56,13 @@ export const NODE_FTS_SQL = `SELECT node_id AS id, title, content, updated_at, b
 export const PDF_FTS_SQL = `SELECT
   node_id AS id,
   title,
+  path,
   text,
   attachment_id,
   page,
   updated_at,
   page_text_length,
-  bm25(pdf_search, 4.0, 1.0) AS rank
+  bm25(pdf_search, 4.0, 2.0, 1.0) AS rank
 FROM pdf_search
 WHERE pdf_search MATCH ?
 ORDER BY rank ASC, updated_at DESC
