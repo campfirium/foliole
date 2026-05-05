@@ -80,3 +80,16 @@ export const WORKSPACE_SURFACE_MANUAL_PALETTES: readonly WorkspaceSurfaceManualP
   { family: 'walnut', id: 'walnut-ledger-deep', tones: ['#6e5a48', '#c7baab', '#e0d6cb', '#f1ebe4', '#d6cbbf'], whiteDocumentTones: ['#7a6553', '#d0c4b6', '#e7ddd4', '#ffffff', '#ddd3c8'] },
   { family: 'walnut', id: 'walnut-ledger-soft', tones: ['#856f5d', '#d6ccc1', '#ebe3db', '#f7f3ee', '#e1d8cf'], whiteDocumentTones: ['#907a68', '#ddd4ca', '#f0e9e2', '#ffffff', '#e7dfd7'] }
 ] as const;
+
+export const WORKSPACE_SURFACE_DARK_MANUAL_PALETTES: readonly WorkspaceSurfaceManualPaletteDefinition[] = [
+  { family: 'graphite', id: 'dark-graphite-study', tones: ['#1c1d1c', '#242624', '#2c2f2b', '#151615', '#343832'], whiteDocumentTones: ['#1c1d1c', '#242624', '#2c2f2b', '#151615', '#343832'] },
+  { family: 'graphite', id: 'dark-graphite-paper', tones: ['#20211f', '#282a27', '#30332f', '#181918', '#383d37'], whiteDocumentTones: ['#20211f', '#282a27', '#30332f', '#181918', '#383d37'] },
+  { family: 'moss', id: 'dark-moss-study', tones: ['#1d241f', '#263027', '#2f3a30', '#151916', '#374238'], whiteDocumentTones: ['#1d241f', '#263027', '#2f3a30', '#151916', '#374238'] },
+  { family: 'moss', id: 'dark-moss-ledger', tones: ['#20261d', '#2a3226', '#333d2f', '#171a15', '#3b4637'], whiteDocumentTones: ['#20261d', '#2a3226', '#333d2f', '#171a15', '#3b4637'] },
+  { family: 'ink-blue', id: 'dark-ink-blue-harbor', tones: ['#1a2230', '#253044', '#2e3b52', '#121722', '#364560'], whiteDocumentTones: ['#1a2230', '#253044', '#2e3b52', '#121722', '#364560'] },
+  { family: 'ink-blue', id: 'dark-ink-blue-slate', tones: ['#1c2430', '#273140', '#303c4e', '#141922', '#394759'], whiteDocumentTones: ['#1c2430', '#273140', '#303c4e', '#141922', '#394759'] },
+  { family: 'sepia', id: 'dark-sepia-ledger', tones: ['#29231c', '#362e25', '#41382d', '#1c1712', '#4e4235'], whiteDocumentTones: ['#29231c', '#362e25', '#41382d', '#1c1712', '#4e4235'] },
+  { family: 'sepia', id: 'dark-sepia-ash', tones: ['#2a241f', '#362f29', '#413a32', '#1b1714', '#4c443b'], whiteDocumentTones: ['#2a241f', '#362f29', '#413a32', '#1b1714', '#4c443b'] },
+  { family: 'plum-ash', id: 'dark-plum-ash-study', tones: ['#261f2b', '#32293a', '#3d3246', '#19151d', '#493b53'], whiteDocumentTones: ['#261f2b', '#32293a', '#3d3246', '#19151d', '#493b53'] },
+  { family: 'teal-slate', id: 'dark-teal-slate-atlas', tones: ['#172629', '#203337', '#284044', '#11191a', '#304b50'], whiteDocumentTones: ['#172629', '#203337', '#284044', '#11191a', '#304b50'] }
+] as const;

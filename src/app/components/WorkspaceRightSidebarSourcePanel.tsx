@@ -79,15 +79,15 @@ function SourceSummarySection({ entries }: { entries: RuntimeTextImportResult[] 
   return (
     <InspectorSection title="Import summary">
       <dl className="mt-3 grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-md bg-bg-elevated px-2 py-2">
+        <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Imported</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{importedCount}</dd>
         </div>
-        <div className="rounded-md bg-bg-elevated px-2 py-2">
+        <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Issues</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{degradedCount}</dd>
         </div>
-        <div className="rounded-md bg-bg-elevated px-2 py-2">
+        <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Failed</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{failedCount}</dd>
         </div>
@@ -132,7 +132,7 @@ function KeepImportSection({ item }: { item: RuntimeKeepImportItemDetails }) {
 function LatestImportRunSection({ entry }: { entry: RuntimeTextImportResult }) {
   return (
     <InspectorSection title="Latest import">
-      <div className="rounded-lg border border-border bg-bg-panel px-3 py-3">
+      <div className="rounded-lg border border-border bg-[var(--app-inspector-section-elevated-bg)] px-3 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">{entry.sourceName}</p>

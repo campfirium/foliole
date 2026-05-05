@@ -66,15 +66,15 @@ function QueueSummary({ fsrsCount, readingCount, totalCount }: { fsrsCount: numb
   return (
     <InspectorSection title="Whole queue">
       <dl className="mt-3 grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-md bg-bg-elevated px-2 py-2">
+        <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Total</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{totalCount}</dd>
         </div>
-        <div className="rounded-md bg-bg-elevated px-2 py-2">
+        <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">FSRS</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{fsrsCount}</dd>
         </div>
-        <div className="rounded-md bg-bg-elevated px-2 py-2">
+        <div className="rounded-md bg-[var(--app-inspector-section-elevated-bg)] px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Reading</dt>
           <dd className="mt-1 text-base font-semibold text-foreground">{readingCount}</dd>
         </div>

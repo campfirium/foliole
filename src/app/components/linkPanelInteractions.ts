@@ -37,7 +37,7 @@ interface ResizeStartState {
 
 const EMBEDDED_SCROLLBAR_CSS = `
   html, body {
-    scrollbar-color: #e5e5e5 transparent;
+    scrollbar-color: color-mix(in srgb, CanvasText 18%, transparent) transparent;
     scrollbar-width: thin;
   }
   ::-webkit-scrollbar {
@@ -51,7 +51,7 @@ const EMBEDDED_SCROLLBAR_CSS = `
     border: 2px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
-    background-color: #e5e5e5;
+    background-color: color-mix(in srgb, CanvasText 18%, transparent);
   }
 `;
 

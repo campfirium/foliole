@@ -125,4 +125,29 @@ describe('useCompanionArticleSurface', () => {
     expect(result.current.browsedFolder?.nodeId).toBe('folder-1');
     expect(result.current.readableArticle).toBeNull();
   });
+
+  it('persists reading review actions as single-node companion updates', async () => {
+    const snapshot = createSnapshot();
+    snapshot.nodesById['article-1'] = {
+      ...snapshot.nodesById['article-1'],
+      reading: {
+        intervalDurationMs: 60000,
+        intervalGrowthFactor: 1.5,
+        lastHandledAt: '2026-04-22T07:00:00.000Z',
+        nextAt: '2026-04-22T08:00:00.000Z',
+        priority: 1,
+        readingPosition: 0,
+        repetitionCount: 1,
+        state: 'active'
+      }
+    };
+    const workspaceSync = createWorkspaceSync(snapshot);
+    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+
+    await act(async () => {
+      await result.current.handleCompleteReviewItem();
+    });
+
+    expect(workspaceSync.replaceSnapshot).toHaveBeenCalledWith(expect.any(Object), 'article-1');
+  });
 });

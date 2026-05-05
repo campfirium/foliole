@@ -227,8 +227,12 @@ export function useCompanionWorkspaceSync() {
     setError(null);
   }
 
-  async function replaceSnapshot(workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
+  async function replaceSnapshot(
+    workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
+    changedNodeId?: string
+  ) {
     const nextState = await persistCompanionWorkspaceSnapshot({
+      changedNodeId,
       endpointUrl: state.endpoint_url,
       lastSyncedAt: state.last_synced_at,
       workspaceSnapshot

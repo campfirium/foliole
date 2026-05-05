@@ -48,7 +48,7 @@ export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
   const transformMode = customIcon.markup ? customIcon.transformMode : fallbackTransformMode;
   const pattern = stateAppearance.strokeStyle === 'dashed' ? 'dash' : 'normal';
   const iconStyle = {
-    color: stateAppearance.color,
+    ['--node-icon-custom-color' as const]: stateAppearance.color,
     opacity: stateAppearance.fadeEnabled && !stateAppearance.fadeWholeRow ? stateAppearance.fadeOpacity : 1,
     ['--node-icon-dash-length' as const]: String(stateAppearance.dashLength),
     ['--node-icon-gap-length' as const]: String(stateAppearance.gapLength),

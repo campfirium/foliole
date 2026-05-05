@@ -41,7 +41,7 @@ vi.mock('../../shared/platform/performanceDiagnosticsProbe', () => ({
 }));
 
 function createNavigationPrefetchHookHarness(args: {
-  actionName: string;
+  actionName: 'go-back' | 'go-forward' | 'go-parent';
   actionResult: NodeNavigationResult | null;
   activeNodeId?: string;
   backStack?: string[];
@@ -100,7 +100,7 @@ function createNavigationPrefetchHookHarness(args: {
 }
 
 async function expectPreparedNavigationResult(args: {
-  actionName: string;
+  actionName: 'go-back' | 'go-forward' | 'go-parent';
   actionResult: NodeNavigationResult | null;
   backStack?: string[];
   forwardStack?: string[];
@@ -110,18 +110,43 @@ async function expectPreparedNavigationResult(args: {
 }) {
   const { action, callOrder, invoke, view } = createNavigationPrefetchHookHarness(args);
 
+  await triggerPreparedNavigation(view.result.current, args.actionName);
+  expectPreparedNavigationEffects({
+    action,
+    actionName: args.actionName,
+    callOrder,
+    expectedTargetNodeId: args.expectedTargetNodeId,
+    invoke
+  });
+}
+
+async function triggerPreparedNavigation(
+  navigation: Pick<
+    ReturnType<typeof useWorkspaceNavigation>,
+    'handleGoBack' | 'handleGoForward' | 'handleGoParent'
+  >,
+  actionName: 'go-back' | 'go-forward' | 'go-parent'
+) {
   await act(async () => {
-    if (args.actionName === 'go-back') {
-      view.result.current.handleGoBack();
-    } else if (args.actionName === 'go-forward') {
-      view.result.current.handleGoForward();
+    if (actionName === 'go-back') {
+      navigation.handleGoBack();
+    } else if (actionName === 'go-forward') {
+      navigation.handleGoForward();
     } else {
-      view.result.current.handleGoParent();
+      navigation.handleGoParent();
     }
     await Promise.resolve();
   });
+}
 
-  expect(callOrder).toEqual([
+function expectPreparedNavigationEffects(args: {
+  action: ReturnType<typeof createNavigationActionMock>;
+  actionName: 'go-back' | 'go-forward' | 'go-parent';
+  callOrder: string[];
+  expectedTargetNodeId: string;
+  invoke: ReturnType<typeof createPrefetchInvokeMock>;
+}) {
+  expect(args.callOrder).toEqual([
     'selection-requested',
     'flush-draft',
     'flush-draft-immediately',
@@ -131,18 +156,39 @@ async function expectPreparedNavigationResult(args: {
     'load-resolved',
     'load-merged'
   ]);
-  expect(action).toHaveBeenCalledTimes(1);
-  expect(invoke.mock.calls).toEqual([['load_node_document', { nodeId: args.expectedTargetNodeId }]]);
+  expect(args.action).toHaveBeenCalledTimes(1);
+  expect(args.invoke.mock.calls).toEqual([['load_node_document', { nodeId: args.expectedTargetNodeId }]]);
 }
 
-describe('useWorkspaceNavigation navigation hydration', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    resetWorkspaceNodeDocumentPrefetchForTest();
-    resetWorkspaceNavigationTestState();
-    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
-  });
+function buildParentNavigationNodes() {
+  return {
+    ...navigationTestNodes,
+    'node-1': {
+      ...navigationTestNodes['node-1'],
+      content: '',
+      hasContent: true,
+      hasReveal: false
+    },
+    child: {
+      ...navigationTestNodes['node-2'],
+      id: 'child',
+      parentNodeId: 'node-1',
+      content: 'Loaded child body',
+      hasContent: true,
+      hasReveal: false,
+      title: 'Child'
+    }
+  };
+}
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetWorkspaceNodeDocumentPrefetchForTest();
+  resetWorkspaceNavigationTestState();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+});
+
+describe('useWorkspaceNavigation navigation hydration', () => {
   it('navigates back immediately and then hydrates the previous node', async () => {
     await expectPreparedNavigationResult({
       actionName: 'go-back',
@@ -162,58 +208,23 @@ describe('useWorkspaceNavigation navigation hydration', () => {
   });
 
   it('navigates upward immediately and then hydrates the parent node', async () => {
-    const parentNodes = {
-      ...navigationTestNodes,
-      'node-1': {
-        ...navigationTestNodes['node-1'],
-        content: '',
-        hasContent: true,
-        hasReveal: false
-      },
-      child: {
-        ...navigationTestNodes['node-2'],
-        id: 'child',
-        parentNodeId: 'node-1',
-        content: 'Loaded child body',
-        hasContent: true,
-        hasReveal: false,
-        title: 'Child'
-      }
-    };
-
     await expectPreparedNavigationResult({
       actionName: 'go-parent',
       actionResult: { focusAnchor: null, nodeId: 'node-1' },
       activeNodeId: 'child',
       expectedTargetNodeId: 'node-1',
-      nodesById: parentNodes
+      nodesById: buildParentNavigationNodes()
     });
   });
+});
 
+describe('useWorkspaceNavigation parent navigation refs', () => {
   it('keeps the shared editor ref bound during parent navigation', async () => {
-    const parentNodes = {
-      ...navigationTestNodes,
-      'node-1': {
-        ...navigationTestNodes['node-1'],
-        content: '',
-        hasContent: true,
-        hasReveal: false
-      },
-      child: {
-        ...navigationTestNodes['node-2'],
-        id: 'child',
-        parentNodeId: 'node-1',
-        content: 'Loaded child body',
-        hasContent: true,
-        hasReveal: false,
-        title: 'Child'
-      }
-    };
     const { editorAdapter, editorRef, view } = createNavigationPrefetchHookHarness({
       actionName: 'go-parent',
       actionResult: { focusAnchor: null, nodeId: 'node-1' },
       activeNodeId: 'child',
-      nodesById: parentNodes
+      nodesById: buildParentNavigationNodes()
     });
 
     await act(async () => {

@@ -11,6 +11,7 @@ import {
   sanitizeWorkspaceSurfaceColor,
   type WorkspaceSurfaceColorValue
 } from './workspaceSurfaceColor';
+import { type WorkspaceSurfaceColorMode } from './workspaceSurfaceSettings';
 
 export type WorkspaceSurfaceGeneratorMode = 'automatic' | 'random' | 'manual' | null;
 export type WorkspaceSurfaceRandomHistory = string[][];
@@ -22,7 +23,23 @@ const DEFAULT_AUTO_OPTIONS: WorkspaceSurfaceAutoPaletteOptions = {
 };
 
 export const DEFAULT_WORKSPACE_SURFACE_AUTO_SEED = '#7a7a7a';
+export const DEFAULT_DARK_WORKSPACE_SURFACE_AUTO_SEED = '#30362f';
 const WORKSPACE_SURFACE_RANDOM_HISTORY_LIMIT = 6;
+
+function modeKey(mode: WorkspaceSurfaceColorMode, lightKey: string, darkKey: string) {
+  return mode === 'dark' ? darkKey : lightKey;
+}
+
+function getModeStorageKeys(mode: WorkspaceSurfaceColorMode) {
+  return {
+    autoOptions: modeKey(mode, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoOptions, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoOptionsDark),
+    autoSeed: modeKey(mode, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoSeed, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoSeedDark),
+    favorites: modeKey(mode, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavorites, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavoritesDark),
+    generatorMode: modeKey(mode, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceGeneratorMode, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceGeneratorModeDark),
+    randomHistory: modeKey(mode, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRandomHistory, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRandomHistoryDark),
+    recommendationId: modeKey(mode, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRecommendationId, APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRecommendationIdDark)
+  };
+}
 
 function parseStoredJson(key: string) {
   const raw = getWhitelistedLocalStorageItem(key);
@@ -36,36 +53,38 @@ function parseStoredJson(key: string) {
   }
 }
 
-export function getWorkspaceSurfaceGeneratorMode(): WorkspaceSurfaceGeneratorMode {
-  const raw = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceGeneratorMode);
+export function getWorkspaceSurfaceGeneratorMode(mode: WorkspaceSurfaceColorMode = 'light'): WorkspaceSurfaceGeneratorMode {
+  const raw = getWhitelistedLocalStorageItem(getModeStorageKeys(mode).generatorMode);
   return raw === 'automatic' || raw === 'random' || raw === 'manual' ? raw : null;
 }
 
-export function setWorkspaceSurfaceGeneratorMode(value: WorkspaceSurfaceGeneratorMode) {
-  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceGeneratorMode, value ?? 'manual');
+export function setWorkspaceSurfaceGeneratorMode(value: WorkspaceSurfaceGeneratorMode, mode: WorkspaceSurfaceColorMode = 'light') {
+  setWhitelistedLocalStorageItem(getModeStorageKeys(mode).generatorMode, value ?? 'manual');
 }
 
-export function getWorkspaceSurfaceRecommendationId() {
-  return getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRecommendationId);
+export function getWorkspaceSurfaceRecommendationId(mode: WorkspaceSurfaceColorMode = 'light') {
+  return getWhitelistedLocalStorageItem(getModeStorageKeys(mode).recommendationId);
 }
 
-export function setWorkspaceSurfaceRecommendationId(value: string | null) {
-  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRecommendationId, value ?? '');
+export function setWorkspaceSurfaceRecommendationId(value: string | null, mode: WorkspaceSurfaceColorMode = 'light') {
+  setWhitelistedLocalStorageItem(getModeStorageKeys(mode).recommendationId, value ?? '');
 }
 
-export function getWorkspaceSurfaceAutoSeed(fallback?: string) {
+export function getWorkspaceSurfaceAutoSeed(fallback?: string, mode: WorkspaceSurfaceColorMode = 'light') {
   const parsed = parseWorkspaceSurfaceColor(
-    getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoSeed) ?? fallback ?? DEFAULT_WORKSPACE_SURFACE_AUTO_SEED
+    getWhitelistedLocalStorageItem(getModeStorageKeys(mode).autoSeed) ??
+      fallback ??
+      (mode === 'dark' ? DEFAULT_DARK_WORKSPACE_SURFACE_AUTO_SEED : DEFAULT_WORKSPACE_SURFACE_AUTO_SEED)
   );
   return parsed ?? parseWorkspaceSurfaceColor(DEFAULT_WORKSPACE_SURFACE_AUTO_SEED)!;
 }
 
-export function setWorkspaceSurfaceAutoSeed(value: WorkspaceSurfaceColorValue) {
-  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoSeed, formatWorkspaceSurfaceColorCss(value));
+export function setWorkspaceSurfaceAutoSeed(value: WorkspaceSurfaceColorValue, mode: WorkspaceSurfaceColorMode = 'light') {
+  setWhitelistedLocalStorageItem(getModeStorageKeys(mode).autoSeed, formatWorkspaceSurfaceColorCss(value));
 }
 
-export function getWorkspaceSurfaceAutoOptions(): WorkspaceSurfaceAutoPaletteOptions {
-  const parsed = parseStoredJson(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoOptions);
+export function getWorkspaceSurfaceAutoOptions(mode: WorkspaceSurfaceColorMode = 'light'): WorkspaceSurfaceAutoPaletteOptions {
+  const parsed = parseStoredJson(getModeStorageKeys(mode).autoOptions);
   if (!parsed || typeof parsed !== 'object') {
     return DEFAULT_AUTO_OPTIONS;
   }
@@ -75,8 +94,8 @@ export function getWorkspaceSurfaceAutoOptions(): WorkspaceSurfaceAutoPaletteOpt
   };
 }
 
-export function setWorkspaceSurfaceAutoOptions(value: WorkspaceSurfaceAutoPaletteOptions) {
-  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoOptions, JSON.stringify(value));
+export function setWorkspaceSurfaceAutoOptions(value: WorkspaceSurfaceAutoPaletteOptions, mode: WorkspaceSurfaceColorMode = 'light') {
+  setWhitelistedLocalStorageItem(getModeStorageKeys(mode).autoOptions, JSON.stringify(value));
 }
 
 function normalizeStoredPalette(input: unknown) {
@@ -119,50 +138,50 @@ function normalizeFavorites(input: unknown): WorkspaceSurfaceFavorites {
   return normalizePaletteCollection(input);
 }
 
-export function getWorkspaceSurfaceRandomHistory() {
-  return normalizeRandomHistory(parseStoredJson(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRandomHistory));
+export function getWorkspaceSurfaceRandomHistory(mode: WorkspaceSurfaceColorMode = 'light') {
+  return normalizeRandomHistory(parseStoredJson(getModeStorageKeys(mode).randomHistory));
 }
 
-export function setWorkspaceSurfaceRandomHistory(value: WorkspaceSurfaceRandomHistory) {
+export function setWorkspaceSurfaceRandomHistory(value: WorkspaceSurfaceRandomHistory, mode: WorkspaceSurfaceColorMode = 'light') {
   setWhitelistedLocalStorageItem(
-    APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRandomHistory,
+    getModeStorageKeys(mode).randomHistory,
     JSON.stringify(normalizeRandomHistory(value))
   );
 }
 
-export function pushWorkspaceSurfaceRandomHistoryEntry(palette: string[]) {
+export function pushWorkspaceSurfaceRandomHistoryEntry(palette: string[], mode: WorkspaceSurfaceColorMode = 'light') {
   const normalizedPalette = normalizeStoredPalette(palette);
   if (!normalizedPalette) {
-    return getWorkspaceSurfaceRandomHistory();
+    return getWorkspaceSurfaceRandomHistory(mode);
   }
-  const nextHistory = normalizeRandomHistory([normalizedPalette, ...getWorkspaceSurfaceRandomHistory()]);
-  setWorkspaceSurfaceRandomHistory(nextHistory);
+  const nextHistory = normalizeRandomHistory([normalizedPalette, ...getWorkspaceSurfaceRandomHistory(mode)]);
+  setWorkspaceSurfaceRandomHistory(nextHistory, mode);
   return nextHistory;
 }
 
-export function getWorkspaceSurfaceFavorites() {
-  return normalizeFavorites(parseStoredJson(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavorites));
+export function getWorkspaceSurfaceFavorites(mode: WorkspaceSurfaceColorMode = 'light') {
+  return normalizeFavorites(parseStoredJson(getModeStorageKeys(mode).favorites));
 }
 
-export function setWorkspaceSurfaceFavorites(value: WorkspaceSurfaceFavorites) {
+export function setWorkspaceSurfaceFavorites(value: WorkspaceSurfaceFavorites, mode: WorkspaceSurfaceColorMode = 'light') {
   setWhitelistedLocalStorageItem(
-    APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavorites,
+    getModeStorageKeys(mode).favorites,
     JSON.stringify(normalizeFavorites(value))
   );
 }
 
-export function addWorkspaceSurfaceFavorite(palette: string[]) {
+export function addWorkspaceSurfaceFavorite(palette: string[], mode: WorkspaceSurfaceColorMode = 'light') {
   const normalizedPalette = normalizeStoredPalette(palette);
   if (!normalizedPalette) {
-    return getWorkspaceSurfaceFavorites();
+    return getWorkspaceSurfaceFavorites(mode);
   }
-  const nextFavorites = normalizeFavorites([normalizedPalette, ...getWorkspaceSurfaceFavorites()]);
-  setWorkspaceSurfaceFavorites(nextFavorites);
+  const nextFavorites = normalizeFavorites([normalizedPalette, ...getWorkspaceSurfaceFavorites(mode)]);
+  setWorkspaceSurfaceFavorites(nextFavorites, mode);
   return nextFavorites;
 }
 
-export function removeWorkspaceSurfaceFavorite(palette: string[]) {
-  const nextFavorites = getWorkspaceSurfaceFavorites().filter((entry) => entry.join('|') !== palette.join('|'));
-  setWorkspaceSurfaceFavorites(nextFavorites);
+export function removeWorkspaceSurfaceFavorite(palette: string[], mode: WorkspaceSurfaceColorMode = 'light') {
+  const nextFavorites = getWorkspaceSurfaceFavorites(mode).filter((entry) => entry.join('|') !== palette.join('|'));
+  setWorkspaceSurfaceFavorites(nextFavorites, mode);
   return nextFavorites;
 }

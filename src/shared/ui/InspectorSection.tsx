@@ -24,7 +24,10 @@ export function InspectorSection({
   return (
     <section
       aria-label={ariaLabel}
-      className={cn('rounded-lg border border-border bg-bg-panel p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]', className)}
+      className={cn(
+        'rounded-lg border border-border bg-[var(--app-inspector-section-bg)] p-4 shadow-[0_1px_0_var(--app-inspector-section-shadow-color)]',
+        className
+      )}
     >
       <div className={cn('flex items-start justify-between gap-3', (description || children) && 'mb-3')}>
         <div className="min-w-0">

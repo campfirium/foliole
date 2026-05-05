@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import {
   buildWorkspaceSurfaceAutoColumnPalette,
+  type WorkspaceSurfaceAutoPaletteMode,
   type WorkspaceSurfaceAutoPaletteOptions
 } from '../../model/workspaceSurfaceAutoPalette';
 import { type WorkspaceSurfaceColorValue } from '../../model/workspaceSurfaceColor';
@@ -56,7 +57,7 @@ function WorkspaceSurfacePreferences(props: {
     <div className="space-y-2">
       <h4 className="text-sm font-medium text-foreground">Preferences</h4>
       <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-        <InlineSwitch checked={props.options.documentPureWhite} label="Document stays white" onChange={(checked) => setOption('documentPureWhite', checked)} />
+        <InlineSwitch checked={props.options.documentPureWhite} label="Use neutral document surface" onChange={(checked) => setOption('documentPureWhite', checked)} />
         <InlineSwitch checked={props.options.folderTopicSharedTone} label="Folder and topic share tone" onChange={(checked) => setOption('folderTopicSharedTone', checked)} />
       </div>
     </div>
@@ -79,10 +80,11 @@ function WorkspaceSurfaceAutomaticPanel(props: {
   activeMode: string | null;
   autoSeedColor: WorkspaceSurfaceColorValue;
   options: WorkspaceSurfaceAutoPaletteOptions;
+  resolvedBaseColorMode: WorkspaceSurfaceAutoPaletteMode;
   onApplyAutomaticPalette: () => void;
   onAutoSeedColorChange: (color: WorkspaceSurfaceColorValue) => void;
 }) {
-  const autoPalette = buildWorkspaceSurfaceAutoColumnPalette(props.autoSeedColor, props.options);
+  const autoPalette = buildWorkspaceSurfaceAutoColumnPalette(props.autoSeedColor, props.options, undefined, props.resolvedBaseColorMode);
 
   return (
     <ModeBlock title="Automatic">
@@ -91,6 +93,7 @@ function WorkspaceSurfaceAutomaticPanel(props: {
           color={props.autoSeedColor}
           onChange={(color) => props.onAutoSeedColorChange(color)}
           options={props.options}
+          resolvedBaseColorMode={props.resolvedBaseColorMode}
         />
         <WorkspaceSurfaceAutomaticPaletteCard activeMode={props.activeMode} onClick={props.onApplyAutomaticPalette} palette={autoPalette} />
       </div>
@@ -116,6 +119,7 @@ export function WorkspaceSurfaceColorModePanel(props: {
   onRemoveFavorite: (palette: string[]) => void;
   onRefreshRandomPalettes: () => void;
   randomPalettes: string[][];
+  resolvedBaseColorMode: WorkspaceSurfaceAutoPaletteMode;
 }) {
   return (
     <div className="mt-3 space-y-4">
@@ -142,6 +146,7 @@ export function WorkspaceSurfaceColorModePanel(props: {
         onApplyAutomaticPalette={props.onApplyAutomaticPalette}
         onAutoSeedColorChange={props.onAutoSeedColorChange}
         options={props.autoOptions}
+        resolvedBaseColorMode={props.resolvedBaseColorMode}
       />
     </div>
   );

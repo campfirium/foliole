@@ -1,8 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-
-import {
-  resolveCompanionRecentArticles,
-} from '../shared/platform/companionReadableArticle';
+import { useEffect, useState } from 'react';
 
 import type { BottomBarGrade, TopBarAction } from './CompanionFloatingBars';
 import {
@@ -12,7 +8,7 @@ import {
   gradeCompanionReviewCard,
   resolveCompanionReviewSession
 } from './companionReviewSession';
-import { useCompanionBrowseSelection } from './useCompanionBrowseSelection';
+import { useCompanionBrowseState } from './useCompanionBrowseState';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
@@ -44,7 +40,7 @@ function useCompanionReviewGradeAction(
       if (!result) {
         throw new Error('The current review card is no longer available.');
       }
-      await workspaceSync.replaceSnapshot(result.snapshot);
+      await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       floatingBar.revealBar();
     } catch (error) {
       setReviewError(error instanceof Error ? error.message : 'Failed to apply the review grade.');
@@ -87,7 +83,7 @@ function useCompanionReadingReviewActions(
       if (!result) {
         throw new Error('The current reading item is no longer available.');
       }
-      await workspaceSync.replaceSnapshot(result.snapshot);
+      await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       floatingBar.revealBar();
     } catch (error) {
       setReadingError(error instanceof Error ? error.message : 'Failed to update the reading review item.');
@@ -161,26 +157,6 @@ function useCompanionActionState(args: {
   }
 
   return { handleSelectBrowseNode, handleSelectRecentArticle, handleTopBarAction };
-}
-
-function useCompanionBrowseState(workspaceSync: CompanionWorkspaceSyncApi) {
-  const snapshot = workspaceSync.state.workspace_snapshot;
-  const recentArticles = useMemo(() => resolveCompanionRecentArticles(snapshot), [snapshot]);
-  const reviewSession = useMemo(() => resolveCompanionReviewSession(snapshot), [snapshot]);
-  const { browsedFolder, readableArticle, selectedBrowseNodeId, setSelectedBrowseNodeId } = useCompanionBrowseSelection(
-    snapshot,
-    workspaceSync.readableArticle
-  );
-
-  return {
-    browsedFolder,
-    readableArticle,
-    recentArticles,
-    reviewSession,
-    selectedBrowseNodeId,
-    setSelectedBrowseNodeId,
-    snapshot
-  };
 }
 
 function useCompanionInteractionState(

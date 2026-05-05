@@ -7,7 +7,7 @@ export function resolveNodeRowButtonClassName(args: {
 }) {
   return cn(
     'gap-0 overflow-hidden pl-[calc(0.4rem+var(--node-depth,0)*1rem)] pr-[0.4rem]',
-    'text-[#111317]',
+    'text-foreground',
     'font-normal',
     args.isSelected && 'bg-foreground/[0.05]'
   );

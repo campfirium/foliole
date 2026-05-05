@@ -59,7 +59,7 @@ export function DocumentPriorityControl({
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label={buttonLabel}
-          className="inline-block shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left align-baseline text-sm font-normal leading-[1.25] text-[#7f8791] text-ellipsis hover:text-[#5f6368] disabled:cursor-default disabled:opacity-55"
+          className="inline-block shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left align-baseline text-sm font-normal leading-[1.25] text-foreground/50 text-ellipsis hover:text-foreground/70 disabled:cursor-default disabled:opacity-55"
           disabled={!isEditable}
           title={buttonLabel}
           type="button"

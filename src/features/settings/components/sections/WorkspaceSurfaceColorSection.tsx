@@ -147,9 +147,10 @@ function WorkspaceSurfaceModes(props: {
       }}
       onRemoveFavorite={(palette) => removeWorkspaceSurfaceFavoriteEntry(props.editor, palette)}
       onRefreshRandomPalettes={() => props.editor.setRandomPalettes(
-        createRandomWorkspaceSurfacePalettes(props.editor.autoOptions, 8)
+        createRandomWorkspaceSurfacePalettes(props.editor.autoOptions, 8, [], props.editor.mode)
       )}
       randomPalettes={props.editor.randomPalettes}
+      resolvedBaseColorMode={props.editor.mode}
     />
   );
 }

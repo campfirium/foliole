@@ -1,7 +1,13 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
-import { sanitizeWorkspaceSurfaceColor } from './workspaceSurfaceColor';
+import {
+  formatWorkspaceSurfaceColorCss,
+  parseWorkspaceSurfaceColor,
+  sanitizeWorkspaceSurfaceColor,
+  workspaceSurfaceColorFromHsl,
+  workspaceSurfaceColorToHsl
+} from './workspaceSurfaceColor';
 
 export const WORKSPACE_SURFACE_REGION_IDS = [
   'titlebar-rail',
@@ -24,6 +30,7 @@ export const WORKSPACE_SURFACE_REGION_IDS = [
 export type WorkspaceSurfaceRegionId = (typeof WORKSPACE_SURFACE_REGION_IDS)[number];
 export type WorkspaceSurfacePalette = string[];
 export type WorkspaceSurfaceAssignments = Record<WorkspaceSurfaceRegionId, number>;
+export type WorkspaceSurfaceColorMode = 'dark' | 'light';
 
 export const DEFAULT_WORKSPACE_SURFACE_PALETTE: WorkspaceSurfacePalette = [
   '#ffffff',
@@ -31,6 +38,14 @@ export const DEFAULT_WORKSPACE_SURFACE_PALETTE: WorkspaceSurfacePalette = [
   '#f6f6f6',
   '#f5f5f3',
   '#ececea'
+];
+
+export const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE: WorkspaceSurfacePalette = [
+  '#1f211f',
+  '#252824',
+  '#2b2f2a',
+  '#171817',
+  '#30362f'
 ];
 
 export const DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS: WorkspaceSurfaceAssignments = {
@@ -53,8 +68,16 @@ export const DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS: WorkspaceSurfaceAssignments 
 
 const STORAGE_KEYS = {
   assignments: APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments,
+  assignmentsDark: APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignmentsDark,
+  paletteDark: APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePaletteDark,
   palette: APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette
 } as const;
+const WORKSPACE_FOLDER_TOPIC_DIVIDER_ROWS = ['titlebar', 'main', 'footer'] as const;
+const LIGHT_SURFACE_THRESHOLD = 62;
+const SIDEBAR_PANEL_LIGHTNESS_OFFSET = 4;
+const SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET = 8;
+const LIGHT_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET = 8;
+const DARK_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET = 12;
 
 function clampAssignment(value: number, paletteLength: number) {
   if (paletteLength <= 0) {
@@ -63,14 +86,29 @@ function clampAssignment(value: number, paletteLength: number) {
   return Math.min(Math.max(Math.round(value), 0), paletteLength - 1);
 }
 
-function normalizePalette(input: unknown): WorkspaceSurfacePalette {
+function clampPercentage(value: number) {
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function getDefaultWorkspaceSurfacePalette(mode: WorkspaceSurfaceColorMode) {
+  return mode === 'dark' ? DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE : DEFAULT_WORKSPACE_SURFACE_PALETTE;
+}
+
+function getStorageKeys(mode: WorkspaceSurfaceColorMode) {
+  return mode === 'dark'
+    ? { assignments: STORAGE_KEYS.assignmentsDark, palette: STORAGE_KEYS.paletteDark }
+    : { assignments: STORAGE_KEYS.assignments, palette: STORAGE_KEYS.palette };
+}
+
+function normalizePalette(input: unknown, mode: WorkspaceSurfaceColorMode = 'light'): WorkspaceSurfacePalette {
+  const defaultPalette = getDefaultWorkspaceSurfacePalette(mode);
   if (!Array.isArray(input)) {
-    return [...DEFAULT_WORKSPACE_SURFACE_PALETTE];
+    return [...defaultPalette];
   }
   const normalized = input
     .filter((value): value is string => typeof value === 'string')
-    .map((value, index) => sanitizeWorkspaceSurfaceColor(value, DEFAULT_WORKSPACE_SURFACE_PALETTE[index] ?? DEFAULT_WORKSPACE_SURFACE_PALETTE[0]));
-  return normalized.length > 0 ? normalized : [...DEFAULT_WORKSPACE_SURFACE_PALETTE];
+    .map((value, index) => sanitizeWorkspaceSurfaceColor(value, defaultPalette[index] ?? defaultPalette[0]));
+  return normalized.length > 0 ? normalized : [...defaultPalette];
 }
 
 function normalizeAssignments(input: unknown, paletteLength: number): WorkspaceSurfaceAssignments {
@@ -101,23 +139,67 @@ function writeStoredJson(key: string, value: unknown) {
   setWhitelistedLocalStorageItem(key, JSON.stringify(value));
 }
 
-export function getWorkspaceSurfacePalette() {
-  return normalizePalette(parseStoredJson(STORAGE_KEYS.palette));
+function shiftSurfaceLightness(color: string, offset: number) {
+  const parsed = parseWorkspaceSurfaceColor(color);
+  if (!parsed) {
+    return color;
+  }
+  const hsl = workspaceSurfaceColorToHsl(parsed);
+  return formatWorkspaceSurfaceColorCss(
+    workspaceSurfaceColorFromHsl({
+      a: parsed.a,
+      h: hsl.h,
+      l: clampPercentage(hsl.l + offset),
+      s: hsl.s
+    })
+  );
 }
 
-export function setWorkspaceSurfacePalette(value: WorkspaceSurfacePalette) {
-  writeStoredJson(STORAGE_KEYS.palette, normalizePalette(value));
+function deriveScrollbarThumbColor(color: string) {
+  const parsed = parseWorkspaceSurfaceColor(color);
+  if (!parsed) {
+    return color;
+  }
+  const lightness = workspaceSurfaceColorToHsl(parsed).l;
+  const offset = lightness >= LIGHT_SURFACE_THRESHOLD
+    ? -LIGHT_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET
+    : DARK_SURFACE_SCROLLBAR_THUMB_LIGHTNESS_OFFSET;
+  return shiftSurfaceLightness(color, offset);
 }
 
-export function getWorkspaceSurfaceAssignments() {
-  const palette = getWorkspaceSurfacePalette();
-  return normalizeAssignments(parseStoredJson(STORAGE_KEYS.assignments), palette.length);
+function derivePanelSurfaceColor(color: string, lightnessOffset: number) {
+  const parsed = parseWorkspaceSurfaceColor(color);
+  if (!parsed) {
+    return color;
+  }
+  const lightness = workspaceSurfaceColorToHsl(parsed).l;
+  const offset = lightness >= LIGHT_SURFACE_THRESHOLD
+    ? lightnessOffset
+    : Math.max(lightnessOffset, lightnessOffset + 2);
+  return shiftSurfaceLightness(color, offset);
 }
 
-export function setWorkspaceSurfaceAssignments(value: WorkspaceSurfaceAssignments, paletteLength?: number) {
+export function getWorkspaceSurfacePalette(mode: WorkspaceSurfaceColorMode = 'light') {
+  return normalizePalette(parseStoredJson(getStorageKeys(mode).palette), mode);
+}
+
+export function setWorkspaceSurfacePalette(value: WorkspaceSurfacePalette, mode: WorkspaceSurfaceColorMode = 'light') {
+  writeStoredJson(getStorageKeys(mode).palette, normalizePalette(value, mode));
+}
+
+export function getWorkspaceSurfaceAssignments(mode: WorkspaceSurfaceColorMode = 'light') {
+  const palette = getWorkspaceSurfacePalette(mode);
+  return normalizeAssignments(parseStoredJson(getStorageKeys(mode).assignments), palette.length);
+}
+
+export function setWorkspaceSurfaceAssignments(
+  value: WorkspaceSurfaceAssignments,
+  paletteLength?: number,
+  mode: WorkspaceSurfaceColorMode = 'light'
+) {
   writeStoredJson(
-    STORAGE_KEYS.assignments,
-    normalizeAssignments(value, paletteLength ?? getWorkspaceSurfacePalette().length)
+    getStorageKeys(mode).assignments,
+    normalizeAssignments(value, paletteLength ?? getWorkspaceSurfacePalette(mode).length)
   );
 }
 
@@ -131,5 +213,26 @@ export function applyWorkspaceSurfaceSettings(
   WORKSPACE_SURFACE_REGION_IDS.forEach((regionId) => {
     const color = palette[assignments[regionId]] ?? palette[0];
     root.style.setProperty(`--workspace-region-${regionId}-bg`, color);
+    root.style.setProperty(
+      `--workspace-region-${regionId}-scrollbar-thumb-color`,
+      deriveScrollbarThumbColor(color)
+    );
   });
+  WORKSPACE_FOLDER_TOPIC_DIVIDER_ROWS.forEach((row) => {
+    const folderColor = palette[assignments[`${row}-folder`]] ?? palette[0];
+    const topicColor = palette[assignments[`${row}-topic`]] ?? palette[0];
+    root.style.setProperty(
+      `--workspace-divider-${row}-folder-topic-opacity`,
+      folderColor === topicColor ? '0' : '1'
+    );
+  });
+  const sidebarColor = palette[assignments['main-sidebar']] ?? palette[0];
+  root.style.setProperty(
+    '--workspace-region-main-sidebar-panel-bg',
+    derivePanelSurfaceColor(sidebarColor, SIDEBAR_PANEL_LIGHTNESS_OFFSET)
+  );
+  root.style.setProperty(
+    '--workspace-region-main-sidebar-panel-elevated-bg',
+    derivePanelSurfaceColor(sidebarColor, SIDEBAR_PANEL_ELEVATED_LIGHTNESS_OFFSET)
+  );
 }
