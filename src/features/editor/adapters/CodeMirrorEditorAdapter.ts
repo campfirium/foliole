@@ -3,6 +3,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { EditorState } from '@codemirror/state';
 import { EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
+import { anchorStructureGuard, bypassAnchorStructureGuard } from './anchorStructureGuard';
 import type { EditorAdapter, EditorSelection } from './EditorAdapter';
 import { liveMarkdown } from './liveMarkdown';
 
@@ -12,6 +13,7 @@ interface CodeMirrorEditorAdapterOptions {
 }
 
 export class CodeMirrorEditorAdapter implements EditorAdapter {
+  private isApplyingExternalContent = false;
   private onChange?: (content: string) => void;
   private view: EditorView;
 
@@ -23,13 +25,14 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
         doc: options.initialContent,
         extensions: [
           markdown(),
+          anchorStructureGuard,
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           highlightActiveLine(),
           liveMarkdown,
           EditorView.updateListener.of((update) => {
-            if (!update.docChanged || !this.onChange) {
+            if (!update.docChanged || !this.onChange || this.isApplyingExternalContent) {
               return;
             }
             this.onChange(update.state.doc.toString());
@@ -57,9 +60,15 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       return;
     }
 
-    this.view.dispatch({
-      changes: { from: 0, to: currentContent.length, insert: content }
-    });
+    this.isApplyingExternalContent = true;
+    try {
+      this.view.dispatch({
+        annotations: bypassAnchorStructureGuard.of(true),
+        changes: { from: 0, to: currentContent.length, insert: content }
+      });
+    } finally {
+      this.isApplyingExternalContent = false;
+    }
   }
 
   getSelection(): EditorSelection {

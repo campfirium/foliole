@@ -13,6 +13,7 @@ interface NodeListTreeProps {
 }
 
 export function NodeListTree({ activeNodeId, nodeOrder, nodesById, onSelectNode }: NodeListTreeProps) {
+  const createRootNode = useWorkspaceStore((state) => state.createRootNode);
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
   const treeRows = buildNodeTreeRows(nodeOrder, nodesById);
   const [contextNodeId, setContextNodeId] = useState<string | null>(null);
@@ -52,10 +53,19 @@ export function NodeListTree({ activeNodeId, nodeOrder, nodesById, onSelectNode 
     closeContextMenu();
   };
 
+  const handleCreateRootNode = () => {
+    createRootNode('');
+  };
+
   return (
     <>
       <Panel
         ariaLabel="Node list panel"
+        actions={
+          <Button aria-label="New" onClick={handleCreateRootNode} size="sm" variant="subtle">
+            New
+          </Button>
+        }
         as="aside"
         bodyClassName="node-list"
         className="panel-list"

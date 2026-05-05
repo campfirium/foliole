@@ -17,6 +17,7 @@ import { useListResizer } from './hooks/useListResizer';
 export function App() {
   const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
   const createHighlightNodeFromSelection = useWorkspaceStore((state) => state.createHighlightNodeFromSelection);
+  const createRootNode = useWorkspaceStore((state) => state.createRootNode);
   const createQANodeFromSelection = useWorkspaceStore((state) => state.createQANodeFromSelection);
   const documentMaxWidth = useWorkspaceStore((state) => state.layout.documentMaxWidth);
   const listWidth = useWorkspaceStore((state) => state.layout.listWidth);
@@ -51,6 +52,7 @@ export function App() {
 
   const handleEditorChange = (content: string) => {
     if (!activeNode) {
+      createRootNode(content);
       return;
     }
     updateNodeContent(activeNode.id, content);

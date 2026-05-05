@@ -101,6 +101,30 @@ function createTestStore(now: Date) {
         };
       });
     },
+    createRootNode: (content = '') => {
+      const nodeId = 'node-root-id';
+      const timestamp = new Date().toISOString();
+
+      set((state) => ({
+        activeNodeId: nodeId,
+        nodeOrder: [...state.nodeOrder, nodeId],
+        nodesById: {
+          ...state.nodesById,
+          [nodeId]: {
+            id: nodeId,
+            parentNodeId: null,
+            title: deriveNodeTitleFromContent(content),
+            content,
+            reveal: null,
+            review: null,
+            createdAt: timestamp,
+            updatedAt: timestamp
+          }
+        }
+      }));
+
+      return nodeId;
+    },
     createHighlightNodeFromSelection: (parentNodeId, content) => {
       const normalizedContent = content.trim();
       if (!normalizedContent) {
@@ -269,6 +293,37 @@ describe('workspaceStore', () => {
     expect(store.getState().nodesById['node-highlight-id']?.content).toBe('selected text');
     expect(store.getState().nodesById['node-highlight-id']?.reveal).toBeNull();
     expect(store.getState().nodesById['node-highlight-id']?.review).toBeNull();
+  });
+
+  it('creates root node when workspace is empty', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    store.setState({
+      activeNodeId: null,
+      nodeOrder: [],
+      nodesById: {}
+    });
+
+    const nodeId = store.getState().createRootNode('Pasted content');
+
+    expect(nodeId).toBe('node-root-id');
+    expect(store.getState().activeNodeId).toBe('node-root-id');
+    expect(store.getState().nodeOrder).toEqual(['node-root-id']);
+    expect(store.getState().nodesById['node-root-id']?.content).toBe('Pasted content');
+  });
+
+  it('creates empty root node for explicit new note action', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    store.setState({
+      activeNodeId: null,
+      nodeOrder: [],
+      nodesById: {}
+    });
+
+    const nodeId = store.getState().createRootNode();
+
+    expect(nodeId).toBe('node-root-id');
+    expect(store.getState().nodesById['node-root-id']?.content).toBe('');
+    expect(store.getState().nodesById['node-root-id']?.title).toBe('Untitled');
   });
 
   it('deletes node and switches active node', () => {

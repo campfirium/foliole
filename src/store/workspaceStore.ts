@@ -20,6 +20,7 @@ export interface WorkspaceState {
   setActiveNode: (nodeId: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
   deleteNode: (nodeId: string) => void;
+  createRootNode: (content?: string) => string;
   createHighlightNodeFromSelection: (parentNodeId: string, content: string) => string | null;
   createQANodeFromSelection: (parentNodeId: string, promptContent: string, answerContent: string) => string | null;
 }
@@ -167,6 +168,30 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             nodesById: remainingNodesById
           };
         });
+      },
+      createRootNode: (content = '') => {
+        const nodeId = `node-${crypto.randomUUID()}`;
+        const timestamp = new Date().toISOString();
+
+        set((state) => ({
+          activeNodeId: nodeId,
+          nodeOrder: [...state.nodeOrder, nodeId],
+          nodesById: {
+            ...state.nodesById,
+            [nodeId]: {
+              id: nodeId,
+              parentNodeId: null,
+              title: deriveNodeTitleFromContent(content),
+              content,
+              reveal: null,
+              review: null,
+              createdAt: timestamp,
+              updatedAt: timestamp
+            }
+          }
+        }));
+
+        return nodeId;
       },
       createHighlightNodeFromSelection: (parentNodeId, content) => {
         const normalizedContent = content.trim();

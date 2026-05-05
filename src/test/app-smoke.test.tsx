@@ -229,6 +229,72 @@ describe('App', () => {
     expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Alpha Beta Gamma');
   });
 
+  it('creates a root node on first editor change when workspace has no active node', () => {
+    useWorkspaceStore.setState({
+      activeNodeId: null,
+      nodeOrder: [],
+      nodesById: {}
+    });
+
+    render(<App />);
+
+    fireEvent.change(screen.getByTestId('editor-value'), {
+      target: { value: 'Pasted from clipboard' }
+    });
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.activeNodeId).toBeTruthy();
+    if (!workspace.activeNodeId) {
+      throw new Error('expected active node to be created');
+    }
+    expect(workspace.nodeOrder).toHaveLength(1);
+    expect(workspace.nodesById[workspace.activeNodeId]?.content).toBe('Pasted from clipboard');
+  });
+
+  it('creates a new empty note from node panel action', () => {
+    useWorkspaceStore.setState({
+      activeNodeId: null,
+      nodeOrder: [],
+      nodesById: {}
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'New' }));
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.activeNodeId).toBeTruthy();
+    if (!workspace.activeNodeId) {
+      throw new Error('expected active node to be created');
+    }
+    expect(workspace.nodeOrder).toHaveLength(1);
+    expect(workspace.nodesById[workspace.activeNodeId]?.content).toBe('');
+    expect(workspace.nodesById[workspace.activeNodeId]?.title).toBe('Untitled');
+  });
+
+  it('keeps first note content unchanged when editing a newly created note', () => {
+    render(<App />);
+    const originalFirstNodeContent = useWorkspaceStore.getState().nodesById['node-1']?.content;
+
+    fireEvent.click(screen.getByRole('button', { name: 'New' }));
+
+    const workspaceAfterCreate = useWorkspaceStore.getState();
+    const newNodeId = workspaceAfterCreate.activeNodeId;
+    expect(newNodeId).toBeTruthy();
+    if (!newNodeId) {
+      throw new Error('expected new active node');
+    }
+    expect(newNodeId).not.toBe('node-1');
+
+    fireEvent.change(screen.getByTestId('editor-value'), {
+      target: { value: 'My second note content' }
+    });
+
+    const workspaceAfterEdit = useWorkspaceStore.getState();
+    expect(workspaceAfterEdit.nodesById['node-1']?.content).toBe(originalFirstNodeContent);
+    expect(workspaceAfterEdit.nodesById[newNodeId]?.content).toBe('My second note content');
+  });
+
   it('creates highlight node from editor context menu without leaving current node', () => {
     render(<App />);
     const editor = screen.getByLabelText('Mock editor');
@@ -248,7 +314,7 @@ describe('App', () => {
     expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
     expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome');
     expect(workspace.nodesById[createdNodeId]?.content).toBe('Welcome');
-    expect(workspace.nodesById['node-1']?.content).toContain('==Welcome==');
+    expect(workspace.nodesById['node-1']?.content).toContain('<highlight id="1">Welcome</highlight>');
   });
 
   it('creates cloze node from editor context menu without leaving current node', () => {
@@ -271,7 +337,7 @@ describe('App', () => {
     expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome to Foliole');
     expect(workspace.nodesById[createdNodeId]?.content).toBe('# [[...]] to Foliole');
     expect(workspace.nodesById[createdNodeId]?.reveal).toBe('Welcome');
-    expect(workspace.nodesById['node-1']?.content).toContain('{{Welcome}}');
+    expect(workspace.nodesById['node-1']?.content).toContain('<cloze id="1">Welcome</cloze>');
   });
 
   it('deletes a node from node-list context menu', () => {

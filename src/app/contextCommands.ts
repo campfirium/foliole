@@ -65,12 +65,27 @@ export function applySelectionMarkup(adapter: EditorAdapter | null, markupType: 
     return false;
   }
 
-  const marker = markupType === 'highlight' ? ['==', '=='] : ['{{', '}}'];
-  const selectedText = adapter.getContent().slice(selection.from, selection.to);
+  const content = adapter.getContent();
+  const from = Math.min(selection.from, selection.to);
+  const to = Math.max(selection.from, selection.to);
+  const selectedText = content.slice(from, to);
   if (!selectedText.trim()) {
     return false;
   }
 
-  adapter.replaceSelection(`${marker[0]}${selectedText}${marker[1]}`);
+  const nextAnchorId = String(getNextAnchorNumericId(content));
+  const tagName = markupType === 'highlight' ? 'highlight' : 'cloze';
+  adapter.replaceSelection(`<${tagName} id="${nextAnchorId}">${selectedText}</${tagName}>`);
   return true;
+}
+
+function getNextAnchorNumericId(content: string): number {
+  let maxId = 0;
+  for (const match of content.matchAll(/<(?:highlight|cloze)\s+id="([1-9]\d*)"\s*>/g)) {
+    const id = Number.parseInt(match[1] ?? '', 10);
+    if (Number.isFinite(id) && id > maxId) {
+      maxId = id;
+    }
+  }
+  return maxId + 1;
 }
