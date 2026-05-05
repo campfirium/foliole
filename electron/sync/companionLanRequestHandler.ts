@@ -18,6 +18,10 @@ import {
   handleSyncReviewLogPush
 } from './companionLanSyncObjectPush.js';
 import {
+  buildCompanionSyncPackResource,
+  SYNC_PACK_PATH
+} from './companionLanSyncPack.js';
+import {
   buildSyncIndexPayload,
   buildSyncNodeVersionsPayload,
   buildSyncObjectsPayload,
@@ -44,6 +48,7 @@ export {
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
+  SYNC_PACK_PATH,
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH
 };
@@ -170,6 +175,20 @@ async function handleAuthenticatedGet(
     );
     if (resource.status === 'ready') {
       writeBinary(response, 200, resource.body, resource.mimeType);
+    } else {
+      writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
+    }
+    return;
+  }
+  if (parsedRequestUrl.pathname === SYNC_PACK_PATH) {
+    const resource = await buildCompanionSyncPackResource(parsedRequestUrl);
+    if (resource.status === 'ready') {
+      response.writeHead(200, {
+        'Content-Disposition': `attachment; filename="${resource.fileName ?? 'sync-pack.db'}"`,
+        'Content-Length': resource.body?.byteLength ?? 0,
+        'Content-Type': 'application/vnd.sqlite3'
+      });
+      response.end(resource.body);
     } else {
       writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
     }

@@ -16,6 +16,14 @@ const attachmentResourceMock = vi.hoisted(() => ({
     status: 'ready'
   }))
 }));
+const syncPackMock = vi.hoisted(() => ({
+  buildCompanionSyncPackResource: vi.fn(async (): Promise<unknown> => ({
+    body: Buffer.from('sqlite-pack'),
+    fileName: 'pack-1.db',
+    status: 'ready',
+    statusCode: 200
+  }))
+}));
 
 vi.mock('../database/workspaceSnapshot.js', () => ({
   loadWorkspaceSnapshot: workspaceSnapshotMock.loadWorkspaceSnapshot,
@@ -29,10 +37,15 @@ vi.mock('./companionLanAttachmentResources.js', () => ({
   ATTACHMENT_RESOURCE_PATH: '/companion/attachment-resource',
   loadCompanionAttachmentResource: attachmentResourceMock.loadCompanionAttachmentResource
 }));
+vi.mock('./companionLanSyncPack.js', () => ({
+  SYNC_PACK_PATH: '/companion/sync-pack',
+  buildCompanionSyncPackResource: syncPackMock.buildCompanionSyncPackResource
+}));
 
 import {
   ATTACHMENT_RESOURCE_PATH,
   createLanWorkspaceSyncRequestHandler,
+  SYNC_PACK_PATH,
   WORKSPACE_VERSION_PATH,
   WORKSPACE_SNAPSHOT_PATH
 } from './companionLanRequestHandler.js';
@@ -43,6 +56,12 @@ beforeEach(() => {
     body: Buffer.from('attachment-bytes'),
     mimeType: 'image/png',
     status: 'ready'
+  });
+  syncPackMock.buildCompanionSyncPackResource.mockResolvedValue({
+    body: Buffer.from('sqlite-pack'),
+    fileName: 'pack-1.db',
+    status: 'ready',
+    statusCode: 200
   });
 });
 
@@ -122,4 +141,24 @@ it('returns attachment resource errors as json', async () => {
     'Content-Type': 'application/json; charset=utf-8'
   }));
   expect(response.end).toHaveBeenCalledWith(JSON.stringify({ error: 'content_hash_mismatch' }));
+});
+
+it('serves signed sqlite sync packs without loading the workspace snapshot', async () => {
+  const response = createResponse();
+  await createHandler()({
+    headers: {},
+    method: 'GET',
+    url: `${SYNC_PACK_PATH}?after_state_seq=4`
+  } as http.IncomingMessage, response);
+
+  expect(response.writeHead).toHaveBeenCalledWith(200, {
+    'Content-Disposition': 'attachment; filename="pack-1.db"',
+    'Content-Length': Buffer.byteLength('sqlite-pack'),
+    'Content-Type': 'application/vnd.sqlite3'
+  });
+  expect(response.end).toHaveBeenCalledWith(Buffer.from('sqlite-pack'));
+  expect(syncPackMock.buildCompanionSyncPackResource).toHaveBeenCalledWith(expect.objectContaining({
+    pathname: SYNC_PACK_PATH
+  }));
+  expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });

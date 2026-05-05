@@ -10,6 +10,7 @@ import {
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
+  SYNC_PACK_PATH,
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH,
   WORKSPACE_SNAPSHOT_PATH,
@@ -118,6 +119,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
         SYNC_REVIEW_LOG_PATH,
         SYNC_INDEX_PATH,
         SYNC_OBJECTS_PATH,
+        SYNC_PACK_PATH,
         ATTACHMENT_RESOURCE_PATH,
         WORKSPACE_VERSION_PATH,
         WORKSPACE_SNAPSHOT_PATH
