@@ -225,19 +225,24 @@ export function enforceWorkspaceRendererBoundary<T extends WorkspaceRendererBoun
   const nextActiveNodeId = 'activeNodeId' in state ? state.activeNodeId ?? null : currentState.activeNodeId;
   const nextNodesById = 'nodesById' in state ? state.nodesById ?? currentState.nodesById : currentState.nodesById;
   const nextKeepNodeIds = new Set(keepNodeIds);
-  const documentWorksetNodeIds = listDocumentWorksetNodeIds(currentState.nodesById, nextNodesById);
+  const shouldPreserveDocumentWorkset = !('activeNodeId' in state);
+  const canUseFocusedReconcile =
+    'activeNodeId' in state &&
+    'nodesById' in state &&
+    hasMatchingNodeIds(currentState.nodesById, nextNodesById);
+  const documentWorksetNodeIds =
+    shouldPreserveDocumentWorkset || canUseFocusedReconcile
+      ? listDocumentWorksetNodeIds(currentState.nodesById, nextNodesById)
+      : [];
 
-  if (!('activeNodeId' in state)) {
+  if (shouldPreserveDocumentWorkset) {
     for (const nodeId of documentWorksetNodeIds) {
       nextKeepNodeIds.add(nodeId);
     }
   }
 
   const reconciledNodesById =
-    'activeNodeId' in state &&
-    'nodesById' in state &&
-    hasMatchingNodeIds(currentState.nodesById, nextNodesById) &&
-    documentWorksetNodeIds.length <= 4
+    canUseFocusedReconcile && documentWorksetNodeIds.length <= 4
       ? reconcileFocusedRendererBoundaryNodes(
           {
             activeNodeId: nextActiveNodeId,
