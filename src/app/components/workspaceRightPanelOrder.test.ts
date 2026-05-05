@@ -7,6 +7,7 @@ it('normalizes persisted right panel order and fills missing panels', () => {
     'highlights',
     'review-queue',
     'source-info',
+    'outline',
     'backlinks',
     'performance',
     'dev'

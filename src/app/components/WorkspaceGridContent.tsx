@@ -36,16 +36,27 @@ export function WorkspaceGridContent({
 }) {
   const listNodesById = useProjectedListNodesById(props.nodesById);
   const documentSurfaceProps = useMemo(
-    () =>
-      selectWorkspaceDocumentSurfaceProps({
+    () => ({
+      ...selectWorkspaceDocumentSurfaceProps({
         documentNodeId,
         isImmersiveEditing,
         onEnterImmersiveEdit,
         onShouldSuppressSelectionRestore,
         props
       }),
-    [documentNodeId, isImmersiveEditing, onEnterImmersiveEdit, onShouldSuppressSelectionRestore, props]
+      showDocumentOutline: activeRightPanelId !== 'outline' || props.isRightSidebarCollapsed
+    }),
+    [
+      activeRightPanelId,
+      documentNodeId,
+      isImmersiveEditing,
+      onEnterImmersiveEdit,
+      onShouldSuppressSelectionRestore,
+      props
+    ]
   );
+  const outlineActivePosition =
+    props.getReadingPositionSelection()?.from ?? props.editorNodeViewState?.selection.from ?? 0;
 
   return (
     <WorkspaceLayoutGridFrame
@@ -59,6 +70,7 @@ export function WorkspaceGridContent({
           documentNodeId,
           documentSurfaceProps,
           listNodesById,
+          outlineActivePosition,
           onSelectNode,
           props
         })

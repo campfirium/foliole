@@ -8,6 +8,7 @@ import { AppPanel } from '../../shared/ui';
 import { WorkspaceRightSidebarBacklinksPanel } from './WorkspaceRightSidebarBacklinksPanel';
 import { WorkspaceRightSidebarDevPanel } from './WorkspaceRightSidebarDevPanel';
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
+import { WorkspaceRightSidebarOutlinePanel } from './WorkspaceRightSidebarOutlinePanel';
 import { WorkspaceRightSidebarPerformancePanel } from './WorkspaceRightSidebarPerformancePanel';
 import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
 import { WorkspaceRightSidebarSourcePanel } from './WorkspaceRightSidebarSourcePanel';
@@ -26,6 +27,9 @@ function getPanelTitle(panelId: WorkspaceRightPanelId) {
   if (panelId === 'highlights') {
     return 'Highlights';
   }
+  if (panelId === 'outline') {
+    return 'Outline';
+  }
   if (panelId === 'backlinks') {
     return 'Backlinks';
   }
@@ -37,9 +41,11 @@ type WorkspaceRightSidebarNodesById = Record<string, Node>;
 interface WorkspaceRightSidebarPanelProps {
   activeNodeId: string | null;
   activePanelId: WorkspaceRightPanelId;
+  outlineActivePosition: number;
   nodeOrder: string[];
   nodesById: WorkspaceRightSidebarNodesById;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
+  onRevealDocumentPosition?: (position: number) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   reviewCurrentNodeId: string | null;
@@ -60,6 +66,9 @@ function renderPanel(props: WorkspaceRightSidebarPanelProps) {
   }
   if (props.activePanelId === 'highlights') {
     return renderHighlightsPanel(props);
+  }
+  if (props.activePanelId === 'outline') {
+    return renderOutlinePanel(props);
   }
   if (props.activePanelId === 'backlinks') {
     return renderBacklinksPanel(props);
@@ -183,12 +192,27 @@ function renderHighlightsPanel(
   );
 }
 
+function renderOutlinePanel(
+  props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById' | 'onRevealDocumentPosition' | 'outlineActivePosition'>
+) {
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
+  return (
+    <WorkspaceRightSidebarOutlinePanel
+      activePosition={props.outlineActivePosition}
+      content={activeNode?.content ?? ''}
+      onRevealPosition={props.onRevealDocumentPosition ?? (() => undefined)}
+    />
+  );
+}
+
 export interface WorkspaceRightSidebarProps {
   activeNodeId: string | null;
   activePanelId: WorkspaceRightPanelId;
+  outlineActivePosition?: number;
   nodeOrder: string[];
   nodesById: WorkspaceRightSidebarNodesById;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
+  onRevealDocumentPosition?: (position: number) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   reviewCurrentNodeId: string | null;
@@ -199,6 +223,10 @@ export interface WorkspaceRightSidebarProps {
 
 export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
   recordComponentRender('rightSidebar');
+  const panelProps = {
+    ...props,
+    outlineActivePosition: props.outlineActivePosition ?? 0
+  };
   return (
     <AppPanel
       aria-label="Inspector"
@@ -208,7 +236,7 @@ export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
       headerClassName="min-h-[var(--workspace-top-toolbar-height)] px-4 py-2"
       title={<span className="text-sm font-semibold uppercase tracking-[0.04em]">{getPanelTitle(props.activePanelId)}</span>}
     >
-      {renderPanel(props)}
+      {renderPanel(panelProps)}
     </AppPanel>
   );
 }

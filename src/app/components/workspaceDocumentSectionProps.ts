@@ -64,6 +64,7 @@ export function buildDocumentSectionProps(
     editableNodeId: props.editorNodeId,
     editorAppearanceKey,
     editorContent: props.editorContent,
+    showDocumentOutline: props.showDocumentOutline,
     ...buildDocumentEditorProps(isImmersiveEditing, onShouldSuppressSelectionRestore, props),
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,

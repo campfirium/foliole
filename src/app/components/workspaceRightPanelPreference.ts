@@ -9,6 +9,7 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 export const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
   'review-queue',
   'source-info',
+  'outline',
   'highlights',
   'backlinks',
   'performance',

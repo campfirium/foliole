@@ -194,7 +194,7 @@ describe('WindowTitleBar right sidebar anchor layout', () => {
     expectExpandedRightAnchorLayout(container);
     expect(screen.getByRole('button', { name: 'Review queue panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Source info panel' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Highlights panel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Outline panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
   });
@@ -224,15 +224,15 @@ describe('WindowTitleBar right sidebar anchor sorting', () => {
     renderTitleBar({ activeRightPanelId: 'dev' });
 
     const reviewButton = screen.getByRole('button', { name: 'Review queue panel' });
-    const highlightsButton = screen.getByRole('button', { name: 'Highlights panel' });
+    const outlineButton = screen.getByRole('button', { name: 'Outline panel' });
     const transfer = createDragTransfer();
 
-    fireEvent.dragStart(highlightsButton, { dataTransfer: transfer });
+    fireEvent.dragStart(outlineButton, { dataTransfer: transfer });
     fireEvent.dragOver(reviewButton, { dataTransfer: transfer });
-    fireEvent.dragEnd(highlightsButton, { dataTransfer: transfer });
+    fireEvent.dragEnd(outlineButton, { dataTransfer: transfer });
 
     expect(getVisibleRightSidebarButtonLabels()).toEqual([
-      'Highlights panel',
+      'Outline panel',
       'Review queue panel',
       'Source info panel',
       'More right sidebar panels'

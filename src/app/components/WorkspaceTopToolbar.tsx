@@ -1,8 +1,8 @@
-import { Bug, FileSearch, FileText, Gauge, Highlighter, Link2, ListOrdered, PanelLeft, Trash2 } from 'lucide-react';
+import { Bug, FileSearch, FileText, Gauge, Highlighter, Link2, ListOrdered, PanelLeft, TableOfContents, Trash2 } from 'lucide-react';
 
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
-export type WorkspaceRightPanelId = 'review-queue' | 'source-info' | 'highlights' | 'backlinks' | 'performance' | 'dev';
+export type WorkspaceRightPanelId = 'review-queue' | 'source-info' | 'outline' | 'highlights' | 'backlinks' | 'performance' | 'dev';
 
 const toolbarButtonClassName = 'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 const activeToolbarButtonClassName = `${toolbarButtonClassName} data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground`;
@@ -54,6 +54,12 @@ function renderInspectorActions(activeRightPanelId: WorkspaceRightPanelId, isRig
         icon={<FileSearch aria-hidden="true" size={16} strokeWidth={1.75} />}
         label="Source info panel"
         onClick={() => onSelectRightPanel('source-info')}
+      />
+      <InspectorActionButton
+        active={!isRightSidebarCollapsed && activeRightPanelId === 'outline'}
+        icon={<TableOfContents aria-hidden="true" size={16} strokeWidth={1.75} />}
+        label="Outline panel"
+        onClick={() => onSelectRightPanel('outline')}
       />
       <InspectorActionButton
         active={!isRightSidebarCollapsed && activeRightPanelId === 'highlights'}

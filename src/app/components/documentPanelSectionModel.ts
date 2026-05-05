@@ -125,6 +125,7 @@ function getDocumentPanelBodyProps(
     onResetLayout: props.onResetLayout,
     onStartDocumentResize: props.onStartDocumentResize,
     readOnly: props.isEditorReadOnly || (props.isImmersiveMode && !props.isImmersiveEditing),
+    showDocumentOutline: props.showDocumentOutline,
     showDocumentResizeHandles: !props.isImmersiveMode,
     reveal: panelState.reveal
   };

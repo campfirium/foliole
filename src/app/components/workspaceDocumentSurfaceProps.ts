@@ -86,6 +86,7 @@ export type WorkspaceDocumentSurfaceProps = WorkspaceDocumentSurfaceSource & {
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
+  showDocumentOutline?: boolean;
 };
 
 type WorkspaceDocumentSurfaceSelectorArgs = {

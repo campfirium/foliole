@@ -1,4 +1,4 @@
-import { Bug, FileSearch, Gauge, Highlighter, Link2, ListOrdered } from 'lucide-react';
+import { Bug, FileSearch, Gauge, Highlighter, Link2, ListOrdered, TableOfContents } from 'lucide-react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
@@ -21,6 +21,11 @@ export const WORKSPACE_RIGHT_PANEL_DEFINITIONS: WorkspaceRightPanelDefinition[] 
     icon: <FileSearch aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
     menuLabel: 'Source info',
     panelId: 'source-info'
+  },
+  {
+    icon: <TableOfContents aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
+    menuLabel: 'Outline',
+    panelId: 'outline'
   },
   {
     icon: <Highlighter aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,

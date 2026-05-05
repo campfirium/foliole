@@ -38,6 +38,7 @@ export interface DocumentPanelSectionProps {
   onCompleteApplyingReadingPosition?: (reason: string) => void;
   isDocumentResizing: boolean;
   showAnswerSection: boolean;
+  showDocumentOutline?: boolean;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
   onRegisterEditorDraftFlush?: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;

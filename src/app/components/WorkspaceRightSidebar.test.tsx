@@ -240,3 +240,36 @@ it('routes current-parent text highlights through unified node selection without
   expect(onRevealAnchorInDocument).not.toHaveBeenCalled();
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 });
+
+it('renders the outline panel from active topic headings', () => {
+  const onRevealDocumentPosition = vi.fn();
+  const activeNode = createNode({
+    content: '# Title\n\n## First section\n\nText\n\n### Detail',
+    id: 'node-topic',
+    title: 'Topic'
+  });
+
+  render(
+    <WorkspaceRightSidebar
+      activeNodeId="node-topic"
+      activePanelId="outline"
+      outlineActivePosition={activeNode.content.indexOf('Detail')}
+      nodeOrder={['node-topic']}
+      nodesById={{ 'node-topic': activeNode }}
+      onRevealAnchorInDocument={vi.fn()}
+      onRevealDocumentPosition={onRevealDocumentPosition}
+      onSelectBreadcrumbNode={vi.fn()}
+      onSelectNode={vi.fn()}
+      reviewCurrentNodeId={null}
+      reviewQueueNodeIds={[]}
+      reviewSchedulerSettings={{} as never}
+      trashedNodeIds={[]}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /first section/i }));
+
+  expect(screen.getByText('Outline')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /detail/i })).toHaveAttribute('aria-current', 'location');
+  expect(onRevealDocumentPosition).toHaveBeenCalledWith(activeNode.content.indexOf('First section'));
+});

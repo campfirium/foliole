@@ -43,6 +43,7 @@ export interface WorkspaceGridContentProjectionSource {
   onOpenVirtualView: (nodeId?: string) => void;
   onResetLayout: () => void;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
+  onRevealDocumentPosition: (position: number) => void;
   onRightSidebarSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onRightSidebarSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
@@ -64,6 +65,7 @@ export function selectWorkspaceGridColumnProps({
   documentNodeId,
   documentSurfaceProps,
   listNodesById,
+  outlineActivePosition,
   onSelectNode,
   props
 }: {
@@ -71,6 +73,7 @@ export function selectWorkspaceGridColumnProps({
   documentNodeId: string | null;
   documentSurfaceProps: WorkspaceDocumentSurfaceProps;
   listNodesById: WorkspaceListNodesById;
+  outlineActivePosition: number;
   onSelectNode: WorkspaceGridContentProjectionSource['onSelectNode'];
   props: WorkspaceGridContentProjectionSource;
 }): WorkspaceGridColumnProps {
@@ -84,6 +87,7 @@ export function selectWorkspaceGridColumnProps({
     rightSidebarProps: selectWorkspaceRightSidebarProps({
       activeRightPanelId,
       documentNodeId,
+      outlineActivePosition,
       onSelectNode,
       props
     }),
@@ -143,20 +147,24 @@ function selectWorkspaceListSplitterProps(
 function selectWorkspaceRightSidebarProps({
   activeRightPanelId,
   documentNodeId,
+  outlineActivePosition,
   onSelectNode,
   props
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
+  outlineActivePosition: number;
   onSelectNode: WorkspaceGridContentProjectionSource['onSelectNode'];
   props: WorkspaceGridContentProjectionSource;
 }): WorkspaceRightSidebarProps {
   return {
     activePanelId: activeRightPanelId,
     activeNodeId: documentNodeId,
+    outlineActivePosition,
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,
     onRevealAnchorInDocument: props.onRevealAnchorInDocument,
+    onRevealDocumentPosition: props.onRevealDocumentPosition,
     onSelectBreadcrumbNode: props.onSelectBreadcrumbNode,
     onSelectNode,
     reviewCurrentNodeId: props.reviewCurrentNodeId,
