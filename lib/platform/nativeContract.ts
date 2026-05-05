@@ -3,6 +3,7 @@ import type {
   NativeDirectoryImportArgs,
   NativeDirectoryImportResult,
   NativeNodeSourceDetails,
+  NativeNodeSourceUpdatePreview,
   NativeKeepImportPreviewArgs,
   NativeKeepImportPreviewResult,
   NativeImportedTextFile,
@@ -47,6 +48,7 @@ export type {
   NativeDirectoryImportResult,
   NativeDirectoryImportSourceAdapter,
   NativeNodeSourceDetails,
+  NativeNodeSourceUpdatePreview,
   NativeKeepImportPreviewArgs,
   NativeKeepImportPreviewEntry,
   NativeKeepImportPreviewResult,
@@ -106,6 +108,10 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.loadNodeSourceDetails]: {
     args: { node_id: string };
     result: NativeNodeSourceDetails | null;
+  };
+  [NATIVE_COMMANDS.loadNodeSourceUpdatePreview]: {
+    args: { node_id: string };
+    result: NativeNodeSourceUpdatePreview | null;
   };
   [NATIVE_COMMANDS.selectImportTextFile]: {
     args: NativeTextImportArgs;

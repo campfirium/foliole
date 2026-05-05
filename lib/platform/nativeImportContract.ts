@@ -119,3 +119,10 @@ export interface NativeNodeSourceDetails {
   keep_import_item: NativeKeepImportItemDetails | null;
   source_node_id: string;
 }
+
+export interface NativeNodeSourceUpdatePreview {
+  checked_at: string;
+  current_content: string;
+  source_node_id: string;
+  updated_content: string;
+}

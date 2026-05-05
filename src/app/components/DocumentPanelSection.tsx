@@ -1,4 +1,3 @@
-import { X } from 'lucide-react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -7,13 +6,14 @@ import type { EditorSelection } from '../../features/editor/adapters/EditorAdapt
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { DocumentPanelHeader } from './DocumentPanelHeader';
+import { DocumentSourceUpdatePanel } from './DocumentSourceUpdatePanel';
 import { EditorContextMenu } from './EditorContextMenu';
+import { useNodeSourceUpdatePreview } from './useNodeSourceUpdatePreview';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 interface DocumentPanelSectionProps {
@@ -161,68 +161,20 @@ function useSplitPanelNodeViewState(activeNodeId: string | null, isSplitPanelOpe
   };
 }
 
-function DocumentSplitPanelSurface({
-  bodyProps,
-  panelNodeViewState,
-  panelEditorRef,
-  onOpenChange,
-  open
-}: {
-  bodyProps: ReturnType<typeof getDocumentPanelBodyProps>;
-  panelNodeViewState?: NodeViewState;
-  panelEditorRef: React.MutableRefObject<EditorAdapter | null>;
-  onOpenChange: (open: boolean) => void;
-  open: boolean;
-}) {
-  return (
-    <AppDialog onOpenChange={onOpenChange} open={open}>
-      <AppDialogPortal>
-        <AppDialogOverlay />
-        <AppDialogContent
-          aria-describedby={undefined}
-          className="left-1/2 top-1/2 h-[min(820px,calc(100vh-88px))] w-[min(1520px,calc(100vw-72px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-border/35 bg-bg-panel p-0"
-        >
-          <section className="flex h-full min-h-0 flex-col overflow-hidden">
-            <AppDialogTitle className="sr-only">Document split panel</AppDialogTitle>
-            <header className="flex h-12 flex-none items-center justify-end border-b border-border px-4">
-              <AppButton aria-label="Close split panel" className="size-8 px-0" onClick={() => onOpenChange(false)} variant="ghost">
-                <X aria-hidden="true" size={15} strokeWidth={1.9} />
-              </AppButton>
-            </header>
-            <div className="grid min-h-0 flex-1 grid-cols-2 overflow-hidden">
-              <div className="flex min-h-0 min-w-0 overflow-hidden bg-bg-elevated">
-                <DocumentPanelBody
-                  {...bodyProps}
-                  answerEditorDebugId={undefined}
-                  editorNodeViewState={panelNodeViewState}
-                  onEditorContextMenu={undefined}
-                  onEditorReady={(adapter) => {
-                    panelEditorRef.current = adapter;
-                  }}
-                  onRevealDocumentPosition={() => undefined}
-                  onRevealDocumentSelection={() => undefined}
-                  onResolveDocumentPositionAtViewportY={() => null}
-                  promptEditorDebugId={undefined}
-                  showDocumentOutline={false}
-                  showDocumentResizeHandles={false}
-                />
-              </div>
-              <section aria-label="Split panel placeholder" className="app-scrollbar min-h-0 min-w-0 overflow-auto border-l border-border bg-bg-panel/40" />
-            </div>
-          </section>
-        </AppDialogContent>
-      </AppDialogPortal>
-    </AppDialog>
-  );
-}
-
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
-  const [isSplitPanelOpen, setIsSplitPanelOpen] = useState(false);
+  const [isSourceUpdatePanelOpen, setIsSourceUpdatePanelOpen] = useState(false);
   const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props, editorDisplayMode);
   const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
   const bodyProps = getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal);
-  const { panelEditorRef, panelNodeViewState } = useSplitPanelNodeViewState(props.activeNodeId, isSplitPanelOpen);
+  const { panelEditorRef, panelNodeViewState } = useSplitPanelNodeViewState(props.activeNodeId, isSourceUpdatePanelOpen);
+  const sourceUpdatePreview = useNodeSourceUpdatePreview(props.activeNodeId);
+
+  useEffect(() => {
+    if (!sourceUpdatePreview.value && !sourceUpdatePreview.isLoading) {
+      setIsSourceUpdatePanelOpen(false);
+    }
+  }, [sourceUpdatePreview.isLoading, sourceUpdatePreview.value]);
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
@@ -232,23 +184,32 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           canGoBack={props.canGoBack}
           canGoForward={props.canGoForward}
           canGoParent={props.canGoParent}
-          isSplitPanelOpen={isSplitPanelOpen}
+          isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
           nodesById={props.nodesById}
           onGoBack={props.onGoBack}
           onGoForward={props.onGoForward}
           onGoParent={props.onGoParent}
           onSelectNode={props.onSelectNode}
-          onToggleSplitPanel={() => setIsSplitPanelOpen((current) => !current)}
+          onToggleSourceUpdatePanel={() => setIsSourceUpdatePanelOpen((current) => !current)}
+          showSourceUpdateAction={Boolean(sourceUpdatePreview.value)}
         />
         <DocumentPanelBody {...bodyProps} />
       </section>
-      <DocumentSplitPanelSurface
-        bodyProps={bodyProps}
-        onOpenChange={setIsSplitPanelOpen}
-        open={isSplitPanelOpen}
-        panelEditorRef={panelEditorRef}
-        panelNodeViewState={panelNodeViewState}
-      />
+      {sourceUpdatePreview.value ? (
+        <DocumentSourceUpdatePanel
+          currentContent={sourceUpdatePreview.value.currentContent}
+          currentNodeId={sourceUpdatePreview.value.sourceNodeId}
+          documentMaxWidth={props.documentMaxWidth}
+          editorAppearanceKey={props.editorAppearanceKey}
+          onOpenChange={setIsSourceUpdatePanelOpen}
+          open={isSourceUpdatePanelOpen}
+          panelNodeViewState={panelNodeViewState}
+          setPanelEditorAdapter={(adapter) => {
+            panelEditorRef.current = adapter;
+          }}
+          updatedContent={sourceUpdatePreview.value.updatedContent}
+        />
+      ) : null}
       {props.contextMenu ? (
         <EditorContextMenu
           canRunCommands={props.contextMenu.canRunCommands}

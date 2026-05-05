@@ -8,7 +8,9 @@ const {
   mockHighlightActiveLine,
   mockKeymapOf,
   mockEditorView,
-  mockEditorStateCreate
+  mockEditorStateCreate,
+  mockReadOnlyOf,
+  mockEditableOf
 } = vi.hoisted(() => ({
   mockDrawSelection: vi.fn(() => 'draw-selection-extension'),
   mockScrollIntoView: vi.fn(() => 'scroll-into-view-effect'),
@@ -17,7 +19,9 @@ const {
   mockHighlightActiveLine: vi.fn(() => 'highlight-active-line'),
   mockKeymapOf: vi.fn(() => 'keymap-extension'),
   mockEditorView: vi.fn(),
-  mockEditorStateCreate: vi.fn((config) => config)
+  mockEditorStateCreate: vi.fn((config) => config),
+  mockReadOnlyOf: vi.fn(() => 'read-only-extension'),
+  mockEditableOf: vi.fn(() => 'editable-extension')
 }));
 
 vi.mock('@codemirror/commands', () => ({
@@ -32,7 +36,10 @@ vi.mock('@codemirror/lang-markdown', () => ({
 
 vi.mock('@codemirror/state', () => ({
   EditorState: {
-    create: mockEditorStateCreate
+    create: mockEditorStateCreate,
+    readOnly: {
+      of: mockReadOnlyOf
+    }
   }
 }));
 
@@ -48,6 +55,9 @@ vi.mock('@codemirror/view', () => ({
       this.destroy = () => undefined;
     },
     {
+      editable: {
+        of: mockEditableOf
+      },
       lineWrapping: mockLineWrapping,
       scrollIntoView: mockScrollIntoView,
       updateListener: {

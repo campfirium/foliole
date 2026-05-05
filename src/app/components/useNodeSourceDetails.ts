@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/importBridge';
+import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
 
 interface NodeSourceDetailsState {
   isLoading: boolean;

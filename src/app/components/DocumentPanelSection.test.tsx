@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 
@@ -12,6 +12,17 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
 
 vi.mock('./DocumentPanelBody', () => ({
   DocumentPanelBody: () => <div data-testid="document-panel-body">Document body</div>
+}));
+
+const { useNodeSourceUpdatePreview } = vi.hoisted(() => ({
+  useNodeSourceUpdatePreview: vi.fn(() => ({
+    isLoading: false,
+    value: null
+  }))
+}));
+
+vi.mock('./useNodeSourceUpdatePreview', () => ({
+  useNodeSourceUpdatePreview
 }));
 
 const baseNode = {
@@ -63,30 +74,62 @@ function renderSection() {
   );
 }
 
+beforeEach(() => {
+  useNodeSourceUpdatePreview.mockReturnValue({
+    isLoading: false,
+    value: null
+  });
+});
+
 describe('DocumentPanelSection', () => {
-  it('opens and closes the split panel dialog from the new header action', () => {
+  it('hides the source update action when no source update is available', () => {
     renderSection();
 
-    expect(screen.queryByLabelText('Split panel placeholder')).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle split panel' }));
-
-    expect(screen.getByRole('dialog', { name: 'Document split panel' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Split panel placeholder')).toBeInTheDocument();
-    expect(screen.getAllByTestId('document-panel-body')).toHaveLength(2);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Close split panel' }));
-
-    expect(screen.queryByRole('dialog', { name: 'Document split panel' })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Split panel placeholder')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Toggle source update panel' })).not.toBeInTheDocument();
     expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
   });
 
-  it('places the split panel action before the more-options menu in the header', () => {
+  it('opens and closes the source update panel from the header action', () => {
+    useNodeSourceUpdatePreview.mockReturnValue({
+      isLoading: false,
+      value: {
+        checkedAt: '2026-03-28T10:00:00.000Z',
+        currentContent: '# Current',
+        sourceNodeId: 'node-1',
+        updatedContent: '# Updated'
+      } as never
+    });
+
     renderSection();
 
-    const splitButton = screen.getByRole('button', { name: 'Toggle split panel' });
+    expect(screen.queryByRole('dialog', { name: 'Source update panel' })).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle source update panel' }));
+
+    expect(screen.getByRole('dialog', { name: 'Source update panel' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('document-panel-body')).toHaveLength(3);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close source update panel' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Source update panel' })).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('document-panel-body')).toHaveLength(1);
+  });
+
+  it('places the source update action before the more-options menu in the header', () => {
+    useNodeSourceUpdatePreview.mockReturnValue({
+      isLoading: false,
+      value: {
+        checkedAt: '2026-03-28T10:00:00.000Z',
+        currentContent: '# Current',
+        sourceNodeId: 'node-1',
+        updatedContent: '# Updated'
+      } as never
+    });
+
+    renderSection();
+
+    const splitButton = screen.getByRole('button', { name: 'Toggle source update panel' });
     const moreButton = screen.getByRole('button', { name: 'More editor options' });
 
     expect(splitButton.compareDocumentPosition(moreButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

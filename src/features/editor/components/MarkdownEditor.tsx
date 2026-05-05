@@ -23,6 +23,7 @@ interface MarkdownEditorProps {
   debugId?: string;
   nodeId: string | null;
   nodeViewState?: EditorViewState;
+  readOnly?: boolean;
   value: string;
   onChange: (value: string) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -34,7 +35,8 @@ function useEditorAdapter(
   debugId: string | undefined,
   onChange: (value: string) => void,
   onReady: ((adapter: EditorAdapter | null) => void) | undefined,
-  initialValue: string
+  initialValue: string,
+  readOnly: boolean | undefined
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const initialValueRef = useRef(initialValue);
@@ -52,7 +54,8 @@ function useEditorAdapter(
 
     const adapter = new CodeMirrorEditorAdapter(host, {
       initialContent: initialValueRef.current,
-      onChange: (nextValue) => onChangeRef.current(nextValue)
+      onChange: (nextValue) => onChangeRef.current(nextValue),
+      readOnly
     });
 
     adapterRef.current = adapter;
@@ -69,7 +72,7 @@ function useEditorAdapter(
       adapter.destroy();
       adapterRef.current = null;
     };
-  }, [debugId, hostRef]);
+  }, [debugId, hostRef, readOnly]);
 
   return adapterRef;
 }
@@ -166,6 +169,7 @@ export function MarkdownEditor({
   debugId,
   nodeId,
   nodeViewState,
+  readOnly,
   value,
   onChange,
   onContextMenu,
@@ -173,7 +177,7 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const { bindings, settings } = useMouseGestureSettings();
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value);
+  const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value, readOnly);
   const { scrollMetrics, syncScrollMetrics } = useEditorScrollbarMetrics(adapterRef);
 
   useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value);

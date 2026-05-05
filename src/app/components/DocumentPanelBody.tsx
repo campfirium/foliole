@@ -38,6 +38,7 @@ interface DocumentPanelBodyProps {
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
   promptEditorDebugId?: string;
+  readOnly?: boolean;
   reveal: string;
   showDocumentOutline?: boolean;
   showDocumentResizeHandles?: boolean;
@@ -134,6 +135,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
         onChange={props.onEditorChange}
         onContextMenu={props.onEditorContextMenu}
         onReady={props.onEditorReady}
+        readOnly={props.readOnly}
         value={props.editorContent}
       />
     </div>
@@ -206,6 +208,7 @@ export function DocumentPanelBody({
   editorContentPaddingBottom,
   emptyContent,
   promptEditorDebugId = 'prompt-editor',
+  readOnly,
   answerEditorDebugId = 'answer-editor',
   editorNodeId,
   editorNodeViewState,
@@ -247,6 +250,7 @@ export function DocumentPanelBody({
     onResolveDocumentPositionAtViewportY,
     onResetLayout,
     onStartDocumentResize,
+    readOnly,
     reveal,
     showDocumentOutline,
     showDocumentResizeHandles

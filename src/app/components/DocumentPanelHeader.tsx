@@ -16,13 +16,14 @@ interface DocumentPanelHeaderProps {
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
-  isSplitPanelOpen: boolean;
+  isSourceUpdatePanelOpen: boolean;
   nodesById: Record<string, Node>;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
   onSelectNode: (nodeId: string) => void;
-  onToggleSplitPanel: () => void;
+  onToggleSourceUpdatePanel: () => void;
+  showSourceUpdateAction: boolean;
 }
 
 interface NavigationButtonsProps {
@@ -46,18 +47,43 @@ function NavigationButtons({ canGoBack, canGoForward, canGoParent, onGoBack, onG
   );
 }
 
+function SourceUpdateAction({
+  isOpen,
+  onToggle,
+  visible
+}: {
+  isOpen: boolean;
+  onToggle: () => void;
+  visible: boolean;
+}) {
+  if (!visible) {
+    return null;
+  }
+  return (
+    <AppIconButton
+      aria-pressed={isOpen}
+      className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+      data-active={isOpen}
+      icon={<SplitPanelIcon />}
+      label="Toggle source update panel"
+      onClick={onToggle}
+    />
+  );
+}
+
 export function DocumentPanelHeader({
   activeNodeId,
   canGoBack,
   canGoForward,
   canGoParent,
-  isSplitPanelOpen,
+  isSourceUpdatePanelOpen,
   nodesById,
   onGoBack,
   onGoForward,
   onGoParent,
   onSelectNode,
-  onToggleSplitPanel
+  onToggleSourceUpdatePanel,
+  showSourceUpdateAction
 }: DocumentPanelHeaderProps) {
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
 
@@ -80,14 +106,7 @@ export function DocumentPanelHeader({
         </div>
       </div>
       <ToolbarActionGroup ariaLabel="Document editor actions">
-        <AppIconButton
-          aria-pressed={isSplitPanelOpen}
-          className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
-          data-active={isSplitPanelOpen}
-          icon={<SplitPanelIcon />}
-          label="Toggle split panel"
-          onClick={onToggleSplitPanel}
-        />
+        <SourceUpdateAction isOpen={isSourceUpdatePanelOpen} onToggle={onToggleSourceUpdatePanel} visible={showSourceUpdateAction} />
         <AppDropdownMenu>
           <AppDropdownMenuTrigger asChild>
             <AppIconButton
