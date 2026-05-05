@@ -6,6 +6,24 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import type { ReadwiseBookInventoryItem, ReadwiseBooksInventory } from './readwiseBooksInventory.js';
 
 export const READWISE_BOOK_AUTO_NODE_POLICY = 'all_books';
+const INBOX_NODE_ID = 'special-inbox';
+
+interface ActiveNodeRow {
+  [column: string]: unknown;
+  anchor_link: string | null;
+  content: string;
+  created_at: string;
+  desired_retention: number | null;
+  hide_title_heading: number;
+  id: string;
+  is_title_manual: number;
+  kind: 'folder' | 'item' | 'topic';
+  parent_id: string | null;
+  position: number | null;
+  priority: number | null;
+  reveal: string | null;
+  title: string;
+}
 
 function formatAnnotationStatus(status: ReadwiseBookInventoryItem['annotationStatus']) {
   return status === 'has_highlights' ? 'Highlights available' : 'No highlights yet';
@@ -47,10 +65,54 @@ function resolveNextNodePosition() {
   return (row?.position ?? -1) + 1;
 }
 
-function hasActiveNode(nodeId: string) {
+function readActiveNode(nodeId: string) {
   const connection = openDatabaseConnection();
-  const row = connection.driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL', [nodeId]);
-  return Boolean(row?.id);
+  return (
+    connection.driver.queryOne<ActiveNodeRow>(
+      `SELECT n.id,
+              n.parent_id,
+              n.kind,
+              n.priority,
+              n.desired_retention,
+              n.title,
+              n.is_title_manual,
+              n.hide_title_heading,
+              n.content,
+              n.reveal,
+              n.anchor_link,
+              n.created_at,
+              o.position
+       FROM nodes n
+       LEFT JOIN node_order o ON o.node_id = n.id
+       WHERE n.id = ? AND n.deleted_at IS NULL`,
+      [nodeId]
+    ) ?? null
+  );
+}
+
+function ensureReadwiseBookNodeInInbox(node: ActiveNodeRow, updatedAt: string) {
+  if (node.parent_id === INBOX_NODE_ID && typeof node.position === 'number') {
+    return node.id;
+  }
+
+  upsertNodeSnapshot({
+    anchorLink: null,
+    content: node.content,
+    createdAt: node.created_at,
+    desiredRetention: node.desired_retention,
+    hideTitleHeading: node.hide_title_heading === 1,
+    isTitleManual: node.is_title_manual === 1,
+    kind: node.kind,
+    nodeId: node.id,
+    parentNodeId: INBOX_NODE_ID,
+    position: resolveNextNodePosition(),
+    priority: node.priority,
+    reveal: node.reveal,
+    title: node.title,
+    updatedAt
+  });
+
+  return node.id;
 }
 
 function createReadwiseBookNode(book: ReadwiseBookInventoryItem, position: number, updatedAt: string) {
@@ -63,7 +125,7 @@ function createReadwiseBookNode(book: ReadwiseBookInventoryItem, position: numbe
     isTitleManual: true,
     kind: 'topic',
     nodeId,
-    parentNodeId: null,
+    parentNodeId: INBOX_NODE_ID,
     position,
     reveal: null,
     title: book.title,
@@ -91,8 +153,9 @@ export function ensureReadwiseBookNodes(inventory: ReadwiseBooksInventory): Read
       }
 
       const placeholderNodeId = buildReadwiseBookPlaceholderNodeId(book.bookKey);
-      const generatedNodeId = hasActiveNode(placeholderNodeId)
-        ? placeholderNodeId
+      const existingNode = readActiveNode(placeholderNodeId);
+      const generatedNodeId = existingNode
+        ? ensureReadwiseBookNodeInInbox(existingNode, inventory.scannedAt)
         : createReadwiseBookNode(book, nextNodePosition++, inventory.scannedAt);
 
       return {

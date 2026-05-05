@@ -19,9 +19,10 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import {
@@ -99,7 +100,7 @@ it('creates minimal readwise book nodes with status and action placeholders', as
   const placeholderNode = snapshot?.nodesById[buildReadwiseBookPlaceholderNodeId('annotated book')];
   expect(placeholderNode).toMatchObject({
     kind: 'topic',
-    parentNodeId: null,
+    parentNodeId: 'special-inbox',
     title: 'Annotated Book'
   });
   expect(placeholderNode?.content).toContain('## Current status');
@@ -151,4 +152,44 @@ it('keeps existing imported book content instead of replacing it with the placeh
   const importedNode = importedBook?.generatedNodeId ? snapshot?.nodesById[importedBook.generatedNodeId] : null;
   expect(importedNode?.content).toContain('Existing imported body.');
   expect(importedNode?.content).not.toContain('## Next actions');
+});
+
+it('moves legacy root-level readwise book placeholders into inbox', async () => {
+  const { fullDocumentDir, highlightDir } = await createBooksFixture();
+  const legacyNodeId = buildReadwiseBookPlaceholderNodeId('annotated book');
+
+  upsertNodeSnapshot({
+    anchorLink: null,
+    content: 'Legacy placeholder content',
+    createdAt: '2026-04-03T11:00:00.000Z',
+    hideTitleHeading: false,
+    isTitleManual: true,
+    kind: 'topic',
+    nodeId: legacyNodeId,
+    parentNodeId: null,
+    position: 3,
+    reveal: null,
+    title: 'Annotated Book',
+    updatedAt: '2026-04-03T11:00:00.000Z'
+  });
+
+  const inventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+
+  const annotatedBook = inventory.books.find((book) => book.bookKey === 'annotated book');
+  expect(annotatedBook?.generatedNodeId).toBe(legacyNodeId);
+
+  const snapshot = loadWorkspaceSnapshot();
+  expect(snapshot?.nodesById[legacyNodeId]).toMatchObject({
+    content: 'Legacy placeholder content',
+    parentNodeId: 'special-inbox'
+  });
+
+  const nodeRow = openDatabaseConnection().sqlite
+    .prepare('SELECT parent_id FROM nodes WHERE id = ?')
+    .get(legacyNodeId) as { parent_id: string | null } | undefined;
+  expect(nodeRow?.parent_id).toBe('special-inbox');
 });
