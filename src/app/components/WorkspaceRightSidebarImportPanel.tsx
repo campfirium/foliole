@@ -7,7 +7,7 @@ const importStatusItems = [
   },
   {
     label: 'Inbox landing',
-    value: 'Pending next task'
+    value: 'Inbox is available in the node tree'
   },
   {
     label: 'Failures',

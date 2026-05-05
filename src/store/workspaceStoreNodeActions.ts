@@ -1,5 +1,6 @@
 import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { isInboxNode } from '../features/nodes/model/specialNodes';
 import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
@@ -54,7 +55,7 @@ function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceNodeActions['u
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node) {
+      if (!node || isInboxNode(node)) {
         return state;
       }
       const nextTitle = title.trim() || UNTITLED_NODE_TITLE;
@@ -83,7 +84,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node) {
+      if (!node || isInboxNode(node)) {
         return state;
       }
       const derivedTitle = deriveNodeTitleFromContent(content);
@@ -112,7 +113,7 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || node.reveal === null) {
+      if (!node || isInboxNode(node) || node.reveal === null) {
         return state;
       }
       const nextNode = {
@@ -140,7 +141,13 @@ function createDismissNodeAction(set: WorkspaceSet): WorkspaceNodeActions['dismi
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || node.content.trim().length === 0 || isFsrsReviewItemNode(node) || node.reading?.state === 'dismissed') {
+      if (
+        !node ||
+        isInboxNode(node) ||
+        node.content.trim().length === 0 ||
+        isFsrsReviewItemNode(node) ||
+        node.reading?.state === 'dismissed'
+      ) {
         return state;
       }
       dismissed = true;
@@ -181,7 +188,7 @@ function createRelearnNodeAction(set: WorkspaceSet): WorkspaceNodeActions['relea
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || node.content.trim().length === 0) {
+      if (!node || isInboxNode(node) || node.content.trim().length === 0) {
         return state;
       }
       if (!isFsrsReviewItemNode(node) && node.reading === null) {

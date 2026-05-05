@@ -116,7 +116,7 @@ describe('windows-preview script', () => {
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
-        WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts'
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
       });
 
       expect(result.code).toBe(0);

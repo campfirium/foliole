@@ -26,11 +26,14 @@ export interface NodeAnchorLink {
   kind: 'highlight' | 'cloze';
 }
 
+export type NodeSpecialKind = 'inbox';
+
 export interface Node {
   id: string;
   parentNodeId: string | null;
   priority?: number | null;
   desiredRetention?: number | null;
+  specialKind?: NodeSpecialKind;
   title: string;
   isTitleManual?: boolean;
   content: string;

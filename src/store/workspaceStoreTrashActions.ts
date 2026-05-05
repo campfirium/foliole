@@ -1,6 +1,7 @@
 import { parseAnchorBlocks } from '../features/editor/model/anchorBlocks';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { isInboxNode } from '../features/nodes/model/specialNodes';
 
 import { collectNodeSubtreeIds, findFallbackActiveNodeId } from './workspaceHelpers';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, sanitizeNavigationState } from './workspaceNavigation';
@@ -68,7 +69,7 @@ function buildDeleteNodePatch(args: {
 }
 
 function computeDeleteNodeMutation(state: WorkspaceState, nodeId: string): DeleteNodeMutationResult | null {
-  if (!state.nodesById[nodeId] || state.trashedNodeIds.includes(nodeId)) {
+  if (!state.nodesById[nodeId] || isInboxNode(state.nodesById[nodeId]) || state.trashedNodeIds.includes(nodeId)) {
     return null;
   }
   const deletedParentId = state.nodesById[nodeId]?.parentNodeId ?? null;
@@ -192,7 +193,7 @@ function createDeleteNodePermanentlyAction(
     let nodeOrderForSync: string[] = [];
 
     set((state) => {
-      if (!state.nodesById[nodeId]) {
+      if (!state.nodesById[nodeId] || isInboxNode(state.nodesById[nodeId])) {
         return state;
       }
       const idsToDelete = collectNodeSubtreeIds(nodeId, state.nodesById);

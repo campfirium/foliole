@@ -19,7 +19,7 @@ describe('WorkspaceRightSidebarImportPanel', () => {
 
     expect(screen.getByRole('heading', { name: 'Import status' })).toBeInTheDocument();
     expect(screen.getByText('No imports yet')).toBeInTheDocument();
-    expect(screen.getByText('Pending next task')).toBeInTheDocument();
+    expect(screen.getByText('Inbox is available in the node tree')).toBeInTheDocument();
     expect(screen.getByText('Nothing recorded')).toBeInTheDocument();
   });
 });

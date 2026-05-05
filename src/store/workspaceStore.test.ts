@@ -1,5 +1,6 @@
 import { beforeEach, expect, it } from 'vitest';
 
+import { INBOX_NODE_ID, isInboxNode } from '../features/nodes/model/specialNodes';
 import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
 import { NODE_TITLE_MAX_CHARS } from '../shared/config/nodeTitleConfig';
 
@@ -24,7 +25,9 @@ it('creates seed node as initial state', () => {
   const initial = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
 
   expect(initial.activeNodeId).toBe('node-1');
-  expect(initial.nodeOrder).toEqual(['node-1']);
+  expect(initial.nodeOrder).toEqual([INBOX_NODE_ID, 'node-1']);
+  expect(isInboxNode(initial.nodesById[INBOX_NODE_ID])).toBe(true);
+  expect(initial.nodesById[INBOX_NODE_ID]?.parentNodeId).toBeNull();
   expect(initial.nodesById['node-1']?.parentNodeId).toBeNull();
   expect(initial.nodesById['node-1']?.review).toBeNull();
   expect(initial.layout.listWidth).toBe(LIST_WIDTH_DEFAULT);
@@ -46,7 +49,7 @@ it('updates reveal only for qa nodes', () => {
   useWorkspaceStore.getState().createQANodeFromSelection('node-1', 'Prompt [...]', 'answer');
   const qaNodeId = useWorkspaceStore
     .getState()
-    .nodeOrder.find((nodeId) => nodeId !== 'node-1');
+    .nodeOrder.find((nodeId) => nodeId !== 'node-1' && nodeId !== INBOX_NODE_ID);
 
   expect(qaNodeId).toBeTruthy();
   if (!qaNodeId) {

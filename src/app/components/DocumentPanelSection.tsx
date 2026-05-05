@@ -3,6 +3,7 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as Reac
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -46,10 +47,23 @@ interface DocumentPanelSectionProps {
   nodesById: Record<string, Node>;
 }
 
+function resolveInboxEmptyState(activeNode: Node | undefined) {
+  return isInboxNode(activeNode)
+    ? {
+        title: 'Inbox is ready',
+        description:
+          'Formal imports will land under Inbox. When items arrive, select a child node to read or edit it.'
+      }
+    : undefined;
+}
+
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
+  const inboxEmptyState = resolveInboxEmptyState(activeNode);
   const reveal = activeNode?.reveal ?? '';
-  const hasAnswerSection = Boolean(activeNode?.reveal && activeNode.reveal.trim().length > 0 && props.showAnswerSection);
+  const hasAnswerSection = Boolean(
+    !inboxEmptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && props.showAnswerSection
+  );
   const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
 
   return (
@@ -73,6 +87,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           editorContent={props.editorContent}
           editorNodeId={props.editorNodeId}
           editorNodeViewState={props.editorNodeViewState}
+          emptyState={inboxEmptyState}
           hasAnswerSection={hasAnswerSection}
           isDocumentResizing={props.isDocumentResizing}
           onAnswerChange={props.onAnswerChange}

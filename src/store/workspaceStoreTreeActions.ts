@@ -1,4 +1,5 @@
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
+import { isInboxNode } from '../features/nodes/model/specialNodes';
 
 import {
   isSameNodeOrder,
@@ -64,7 +65,7 @@ function resolveMovableRootNodeIds(
   const rootNodeIds = collectMoveRootIds(nodeIds, state.nodeOrder, state.nodesById).filter(
     (nodeId) => {
       const node = state.nodesById[nodeId];
-      return Boolean(node && !state.trashedNodeIds.includes(nodeId) && !node.anchorLink);
+      return Boolean(node && !state.trashedNodeIds.includes(nodeId) && !node.anchorLink && !isInboxNode(node));
     }
   );
   if (rootNodeIds.length === 0) {

@@ -5,6 +5,7 @@ import type { ReviewSessionState } from '../../../store/workspaceStore';
 import { isFsrsReviewItemNode } from '../../review/model/reviewItemKind';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
+import { isInboxNode } from '../model/specialNodes';
 
 import { getDismissedFadeOpacity, shouldFadeDismissedWholeRow } from './nodeIconAppearanceSettings';
 import type { useNodeListDragController } from './NodeListTreeDrag';
@@ -48,6 +49,7 @@ export function NodeListRows(props: NodeListRowsProps) {
 
   return props.rows.map((row) => {
     const node = props.nodesById[row.node.id];
+    const isInbox = isInboxNode(node);
     const isDerivedNode = Boolean(node?.anchorLink);
     const isReviewCard = isFsrsReviewItemNode(node);
     const nodeIconState = resolveNodeTreeRowIconState({
@@ -66,7 +68,7 @@ export function NodeListRows(props: NodeListRowsProps) {
         }
         isCollapsed={props.collapsedNodeIds.has(row.node.id)}
         isDerived={isDerivedNode}
-        isDragDisabled={props.isTrashViewOpen || isDerivedNode}
+        isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox}
         isDropTarget={props.drag.dropTargetNodeId === row.node.id}
         isMuted={nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow()}
         mutedOpacity={nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow() ? getDismissedFadeOpacity() : 1}
@@ -78,14 +80,14 @@ export function NodeListRows(props: NodeListRowsProps) {
         nodeIconKind={resolveNodeTreeRowIconKind(isReviewCard)}
         nodeIconState={nodeIconState}
         rowSpacing={props.rowSpacing}
-        onContextMenu={props.onContextMenu}
+        onContextMenu={isInbox ? undefined : props.onContextMenu}
         onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
         onDragEnter={props.drag.onDragEnterNode}
         onDragOver={props.drag.onDragOverNode}
         onDragStart={props.drag.onDragStartNode}
         onDrop={props.drag.onDropOnNode}
         onKeyDown={onRowKeyDown}
-        onRename={props.onRename}
+        onRename={isInbox ? undefined : props.onRename}
         onSelect={props.onSelect}
         onToggleCollapse={props.onToggleCollapse}
       />

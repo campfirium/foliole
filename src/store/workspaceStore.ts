@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
 import {
@@ -177,7 +178,28 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         nodeOrder: state.nodeOrder,
         nodesById: state.nodesById,
         trashedNodeIds: state.trashedNodeIds
-      })
+      }),
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState ?? {}) as Partial<WorkspacePersistedState>;
+        const nextState = {
+          ...currentState,
+          ...persisted,
+          layout: {
+            ...currentState.layout,
+            ...persisted.layout
+          },
+          nodeViewById: persisted.nodeViewById ?? currentState.nodeViewById
+        };
+        return {
+          ...nextState,
+          ...ensureInboxNodeInSnapshot({
+            activeNodeId: nextState.activeNodeId,
+            nodeOrder: nextState.nodeOrder,
+            nodesById: nextState.nodesById,
+            trashedNodeIds: nextState.trashedNodeIds
+          })
+        };
+      }
     }
   )
 );

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+
 import {
   syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
@@ -135,7 +137,7 @@ describe('createWorkspaceNodeActions trash sync', () => {
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
       nodeIds: [nodeId],
-      nodeOrder: ['node-1']
+      nodeOrder: [INBOX_NODE_ID, 'node-1']
     });
   });
 

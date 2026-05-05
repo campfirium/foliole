@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent }
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { cn } from '../../shared/lib/utils';
+import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -11,6 +12,10 @@ interface DocumentPanelBodyProps {
   editorContent: string;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
+  emptyState?: {
+    description: string;
+    title: string;
+  };
   hasAnswerSection: boolean;
   isDocumentResizing: boolean;
   onAnswerChange: (answer: string) => void;
@@ -84,11 +89,53 @@ function AnswerSection({ editorAppearanceKey, editorNodeId, onAnswerChange, reve
   );
 }
 
+function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
+  if (props.emptyState) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-8">
+        <AppEmptyState description={props.emptyState.description} title={props.emptyState.title} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-0 w-full flex-1" onContextMenu={props.onEditorContextMenu}>
+      <MarkdownEditor
+        ariaLabel="Prompt editor"
+        className="prompt-editor-host"
+        debugId="prompt-editor"
+        key={`prompt-${props.editorAppearanceKey}`}
+        nodeId={props.editorNodeId}
+        nodeViewState={props.editorNodeViewState}
+        onChange={props.onEditorChange}
+        onReady={props.onEditorReady}
+        value={props.editorContent}
+      />
+    </div>
+  );
+}
+
+function renderAnswerSection(props: DocumentPanelBodyProps) {
+  if (!props.hasAnswerSection || props.emptyState) {
+    return null;
+  }
+
+  return (
+    <AnswerSection
+      editorAppearanceKey={props.editorAppearanceKey}
+      editorNodeId={props.editorNodeId}
+      onAnswerChange={props.onAnswerChange}
+      reveal={props.reveal}
+    />
+  );
+}
+
 export function DocumentPanelBody({
   editorAppearanceKey,
   editorContent,
   editorNodeId,
   editorNodeViewState,
+  emptyState,
   hasAnswerSection,
   isDocumentResizing,
   onAnswerChange,
@@ -99,31 +146,29 @@ export function DocumentPanelBody({
   onStartDocumentResize,
   reveal
 }: DocumentPanelBodyProps) {
+  const bodyProps = {
+    editorAppearanceKey,
+    editorContent,
+    editorNodeId,
+    editorNodeViewState,
+    emptyState,
+    hasAnswerSection,
+    isDocumentResizing,
+    onAnswerChange,
+    onEditorChange,
+    onEditorContextMenu,
+    onEditorReady,
+    onResetLayout,
+    onStartDocumentResize,
+    reveal
+  };
+
   return (
     <div className="flex min-h-0 flex-1 pl-4 pr-0 pt-4 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0">
       <div className="relative flex h-full min-h-0 w-full" data-resizing={isDocumentResizing}>
         <div className="flex h-full min-h-0 w-full flex-1 flex-col">
-          <div className="min-h-0 w-full flex-1" onContextMenu={onEditorContextMenu}>
-            <MarkdownEditor
-              ariaLabel="Prompt editor"
-              className="prompt-editor-host"
-              debugId="prompt-editor"
-              key={`prompt-${editorAppearanceKey}`}
-              nodeId={editorNodeId}
-              nodeViewState={editorNodeViewState}
-              onChange={onEditorChange}
-              onReady={onEditorReady}
-              value={editorContent}
-            />
-          </div>
-          {hasAnswerSection ? (
-            <AnswerSection
-              editorAppearanceKey={editorAppearanceKey}
-              editorNodeId={editorNodeId}
-              onAnswerChange={onAnswerChange}
-              reveal={reveal}
-            />
-          ) : null}
+          {renderDocumentBodyContent(bodyProps)}
+          {renderAnswerSection(bodyProps)}
         </div>
         <DocumentWidthHandle
           ariaLabel="Resize document width from left"

@@ -4,9 +4,14 @@ import { expect, it } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, mockEditorState } from './app-smoke.shared';
+
+function findCreatedNodeId(nodeOrder: string[]) {
+  return nodeOrder.find((nodeId) => nodeId !== 'node-1' && nodeId !== INBOX_NODE_ID);
+}
 
 it('creates highlight node from editor context menu without leaving current node', () => {
   render(<App />);
@@ -19,7 +24,7 @@ it('creates highlight node from editor context menu without leaving current node
 
   const workspace = useWorkspaceStore.getState();
   expect(workspace.activeNodeId).toBe('node-1');
-  const createdNodeId = workspace.nodeOrder.find((nodeId) => nodeId !== 'node-1');
+  const createdNodeId = findCreatedNodeId(workspace.nodeOrder);
   expect(createdNodeId).toBeTruthy();
   if (!createdNodeId) {
     throw new Error('expected a child node');
@@ -73,7 +78,7 @@ it('creates cloze node from editor context menu without leaving current node', (
   fireEvent.click(screen.getByRole('menuitem', { name: 'Cloze' }));
 
   const workspace = useWorkspaceStore.getState();
-  const createdNodeId = workspace.nodeOrder.find((nodeId) => nodeId !== 'node-1');
+  const createdNodeId = findCreatedNodeId(workspace.nodeOrder);
   expect(createdNodeId).toBeTruthy();
   if (!createdNodeId) {
     throw new Error('expected a child node');
@@ -99,7 +104,7 @@ it('creates cloze child content without inheriting anchor tags from parent', () 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Cloze' }));
 
   const workspace = useWorkspaceStore.getState();
-  const createdNodeId = workspace.nodeOrder.find((nodeId) => nodeId !== 'node-1');
+  const createdNodeId = findCreatedNodeId(workspace.nodeOrder);
   expect(createdNodeId).toBeTruthy();
   if (!createdNodeId) {
     throw new Error('expected a child node');

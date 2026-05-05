@@ -1,6 +1,7 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type {
   AccentColorPreset,
@@ -102,6 +103,17 @@ interface BuildControllerLayoutPropsArgs {
   mapPaletteItemsToHotkeyItems: (items: CommandPaletteItem[]) => HotkeySettingItem[];
 }
 
+function resolveEditorBindingArgs(args: BuildControllerLayoutPropsArgs) {
+  const isInboxActiveNode = !args.runtime.isViewingTrashNode && isInboxNode(args.activeNode);
+  return {
+    editorNodeId: args.runtime.isViewingTrashNode || isInboxActiveNode ? null : args.ws.activeNodeId,
+    editorNodeViewState:
+      !args.runtime.isViewingTrashNode && !isInboxActiveNode && args.ws.activeNodeId
+        ? args.ws.nodeViewById[args.ws.activeNodeId]
+        : undefined
+  };
+}
+
 export function buildAppControllerLayoutProps(args: BuildControllerLayoutPropsArgs) {
   return buildLayoutProps({
     ...createLayoutDataArgs(args),
@@ -148,8 +160,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     documentMaxWidth: args.ws.documentMaxWidth,
     documentNode: args.runtime.isViewingTrashNode ? args.selectedTrashNode : args.activeNode,
     documentResize: args.documentResize,
-    editorNodeId: args.runtime.isViewingTrashNode ? null : args.ws.activeNodeId,
-    editorNodeViewState: !args.runtime.isViewingTrashNode && args.ws.activeNodeId ? args.ws.nodeViewById[args.ws.activeNodeId] : undefined,
+    ...resolveEditorBindingArgs(args),
     hotkeyItems: args.mapPaletteItemsToHotkeyItems(args.hotkeyItems),
     isResizingList: args.listResize.isResizingList,
     isResizingRightSidebar: args.rightSidebarResize.isResizingRightSidebar,

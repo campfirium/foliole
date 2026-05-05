@@ -1,5 +1,6 @@
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
+import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 
 import type { WorkspaceLayoutState } from './workspaceStore';
 
@@ -34,12 +35,12 @@ export function createSeedNode(timestamp: string): Node {
 export function createInitialWorkspaceSnapshot(now: Date, defaultLayoutState: WorkspaceLayoutState) {
   const timestamp = now.toISOString();
   const seedNode = createSeedNode(timestamp);
-  return {
+  return ensureInboxNodeInSnapshot({
     activeNodeId: seedNode.id,
     layout: { ...defaultLayoutState },
     nodeViewById: {},
     nodeOrder: [seedNode.id],
     nodesById: { [seedNode.id]: seedNode },
     trashedNodeIds: []
-  };
+  });
 }

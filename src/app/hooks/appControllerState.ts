@@ -5,6 +5,7 @@ import {
   getMarkdownSyntaxVisibility,
   type MarkdownSyntaxVisibility
 } from '../../features/editor/model/markdownSyntaxSetting';
+import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import {
   applyAppearanceSettings,
   getAccentColorPreset,
@@ -116,7 +117,10 @@ export function useWorkspaceControllerState(
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
   const trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
-  const study = useStudyMode({ activeNodeId: ws.activeNodeId, isViewingTrashNode: false });
+  const study = useStudyMode({
+    activeNodeId: isInboxNode(activeNode) ? null : ws.activeNodeId,
+    isViewingTrashNode: false
+  });
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
