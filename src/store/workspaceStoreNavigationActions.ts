@@ -39,6 +39,18 @@ function isReviewSessionSelectionSynced(state: WorkspaceState, nodeId: string) {
   return state.reviewSession.queueNodeIds[0] === nodeId;
 }
 
+function buildNavigationNodeState(
+  state: WorkspaceState,
+  nodeId: string,
+  navigation: WorkspaceState['navigation']
+) {
+  return {
+    activeNodeId: nodeId,
+    navigation,
+    reviewSession: syncReviewSessionSelection(state, nodeId)
+  };
+}
+
 function createOpenNodeAction(set: WorkspaceSet) {
   return (nodeId: string) => {
     let nextResult: NodeNavigationResult | null = null;
@@ -50,16 +62,16 @@ function createOpenNodeAction(set: WorkspaceSet) {
         return state;
       }
       nextResult = { focusAnchor: null, nodeId };
-      return {
-        activeNodeId: nodeId,
-        navigation: state.activeNodeId
+      return buildNavigationNodeState(
+        state,
+        nodeId,
+        state.activeNodeId
           ? {
               backStack: pushNavigationHistory(state.navigation.backStack, state.activeNodeId),
               forwardStack: []
             }
-          : { ...state.navigation, forwardStack: [] },
-        reviewSession: syncReviewSessionSelection(state, nodeId)
-      };
+          : { ...state.navigation, forwardStack: [] }
+      );
     });
     return nextResult;
   };
@@ -75,13 +87,10 @@ function createGoBackAction(set: WorkspaceSet) {
         return state;
       }
       nextResult = { focusAnchor: null, nodeId: targetNodeId };
-      return {
-        activeNodeId: targetNodeId,
-        navigation: {
-          backStack: state.navigation.backStack.slice(0, -1),
-          forwardStack: [currentNodeId, ...state.navigation.forwardStack]
-        }
-      };
+      return buildNavigationNodeState(state, targetNodeId, {
+        backStack: state.navigation.backStack.slice(0, -1),
+        forwardStack: [currentNodeId, ...state.navigation.forwardStack]
+      });
     });
     return nextResult;
   };
@@ -97,13 +106,10 @@ function createGoForwardAction(set: WorkspaceSet) {
         return state;
       }
       nextResult = { focusAnchor: null, nodeId: targetNodeId };
-      return {
-        activeNodeId: targetNodeId,
-        navigation: {
-          backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
-          forwardStack: state.navigation.forwardStack.slice(1)
-        }
-      };
+      return buildNavigationNodeState(state, targetNodeId, {
+        backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
+        forwardStack: state.navigation.forwardStack.slice(1)
+      });
     });
     return nextResult;
   };
@@ -123,13 +129,10 @@ function createGoToParentAction(set: WorkspaceSet) {
         return state;
       }
       nextResult = { focusAnchor: currentNode.anchorLink ?? null, nodeId: parentNodeId };
-      return {
-        activeNodeId: parentNodeId,
-        navigation: {
-          backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
-          forwardStack: []
-        }
-      };
+      return buildNavigationNodeState(state, parentNodeId, {
+        backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
+        forwardStack: []
+      });
     });
     return nextResult;
   };
@@ -148,13 +151,10 @@ function createJumpToAncestorAction(set: WorkspaceSet) {
         return state;
       }
       nextResult = { focusAnchor: ancestorTarget.focusAnchor, nodeId: ancestorNodeId };
-      return {
-        activeNodeId: ancestorNodeId,
-        navigation: {
-          backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
-          forwardStack: []
-        }
-      };
+      return buildNavigationNodeState(state, ancestorNodeId, {
+        backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
+        forwardStack: []
+      });
     });
     return nextResult;
   };
