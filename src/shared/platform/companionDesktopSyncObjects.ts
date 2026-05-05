@@ -1,5 +1,5 @@
-import { postDesktopJson } from './companionDesktopSyncHttp';
 import { syncCompanionAttachmentResourceRequestsFromDesktop } from './companionDesktopAttachmentResources';
+import { postDesktopJson } from './companionDesktopSyncHttp';
 import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
 import { loadLocalSyncDiagnostics } from './companionSyncDiagnostics';
 import {
@@ -33,6 +33,7 @@ export interface CompanionDesktopSyncOptions {
 
 export interface CompanionDesktopSyncProgress {
   attachmentBreakdown?: {
+    dueReviewAttachments?: number;
     imageAttachments?: number;
     imageBytes?: number;
     otherAttachments?: number;
@@ -160,6 +161,7 @@ async function loadMissingAttachmentResourceSummary() {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   return {
     attachmentBreakdown: diagnostics ? {
+      dueReviewAttachments: diagnostics.content.missing_due_review_attachment_resource_count,
       imageAttachments: diagnostics.content.missing_image_attachment_resource_count,
       imageBytes: diagnostics.content.missing_image_attachment_resource_bytes,
       otherAttachments: diagnostics.content.missing_other_attachment_resource_count,

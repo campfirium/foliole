@@ -17,10 +17,27 @@ function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
   if (progress.phase === 'structure') {
     return 'Stage 1 · Library index';
   }
+  if (isFsrsPriorityProgress(progress)) {
+    return 'Stage 2 · FSRS priority';
+  }
   if (progress.phase === 'attachment') {
     return 'Stage 4 · Attachments';
   }
   return 'Stage 3 · Topic bodies';
+}
+
+function fsrsPriorityTotal(progress: CompanionDesktopSyncProgress) {
+  if (progress.phase === 'content') {
+    return progress.contentBreakdown?.dueReviewBodies ?? 0;
+  }
+  if (progress.phase === 'attachment') {
+    return progress.attachmentBreakdown?.dueReviewAttachments ?? 0;
+  }
+  return 0;
+}
+
+function isFsrsPriorityProgress(progress: CompanionDesktopSyncProgress) {
+  return fsrsPriorityTotal(progress) > 0;
 }
 
 function formatBytes(bytes: number) {
@@ -38,6 +55,9 @@ function formatContentBreakdown(progress: CompanionDesktopSyncProgress) {
     return null;
   }
   const breakdown = progress.contentBreakdown;
+  if (isFsrsPriorityProgress(progress)) {
+    return `Due review bodies ${breakdown.dueReviewBodies}`;
+  }
   const segments = [
     ['Top-level', breakdown.topLevelTopicBodies],
     ['Nested', breakdown.nestedTopicBodies],
@@ -54,6 +74,9 @@ function formatAttachmentBreakdown(progress: CompanionDesktopSyncProgress) {
     return null;
   }
   const breakdown = progress.attachmentBreakdown;
+  if (isFsrsPriorityProgress(progress)) {
+    return `Due review attachments ${breakdown.dueReviewAttachments}`;
+  }
   const segments = [
     ['Images', breakdown.imageAttachments],
     ['PDFs', breakdown.pdfAttachments],
@@ -70,13 +93,14 @@ function CompanionBottomSyncStatus(props: {
   if (!props.progress) {
     return null;
   }
-  const total = props.progress.total ?? 0;
+  const fsrsTotal = fsrsPriorityTotal(props.progress);
+  const total = fsrsTotal > 0 ? fsrsTotal : props.progress.total ?? 0;
   const completed = Math.min(props.progress.completed, total);
   const ratio = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
-  const countLabel = props.progress.total === null
+  const countLabel = props.progress.total === null && fsrsTotal === 0
     ? `${props.progress.completed} cached`
     : `${completed}/${total}`;
-  const byteLabel = props.progress.totalBytes == null || props.progress.completedBytes == null
+  const byteLabel = fsrsTotal > 0 || props.progress.totalBytes == null || props.progress.completedBytes == null
     ? null
     : `${formatBytes(props.progress.completedBytes)}/${formatBytes(props.progress.totalBytes)}`;
   const contentBreakdown = formatContentBreakdown(props.progress);
