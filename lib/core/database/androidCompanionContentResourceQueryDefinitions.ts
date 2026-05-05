@@ -40,5 +40,23 @@ export const ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'size_bytes', source: 'size_bytes', type: 'long' },
       { key: 'availability', source: 'availability', type: 'string' }
     ]
+  },
+  contentBlobManifestByHash: {
+    resultKey: 'blobs',
+    sql:
+      'SELECT compression, original_size_bytes, stored_size_bytes, original_sha256, stored_sha256 ' +
+      'FROM content_blobs WHERE hash = ? LIMIT 1',
+    columns: [
+      { key: 'compression', source: 'compression', type: 'string' },
+      { key: 'original_size_bytes', source: 'original_size_bytes', type: 'long' },
+      { key: 'stored_size_bytes', source: 'stored_size_bytes', type: 'long' },
+      { key: 'original_sha256', source: 'original_sha256', type: 'string' },
+      { key: 'stored_sha256', source: 'stored_sha256', type: 'string' }
+    ]
+  },
+  contentBlobDataExisting: {
+    resultKey: 'blobs',
+    sql: 'SELECT hash FROM content_blob_data WHERE hash = ? LIMIT 1',
+    columns: [{ key: 'hash', source: 'hash', type: 'string' }]
   }
 };

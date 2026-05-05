@@ -1,11 +1,11 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.security.MessageDigest;
@@ -24,10 +24,10 @@ final class FolioleCompanionContentBlobStore {
 
     static JSObject syncBlob(Context context, SQLiteDatabase database, String hash, String url, JSONObject headers) throws Exception {
         String normalizedHash = requireHash(hash);
-        if (hasCachedBlobData(database, normalizedHash)) {
+        if (hasCachedBlobData(context, database, normalizedHash)) {
             return markCached(context, database, normalizedHash);
         }
-        ContentBlobManifest manifest = loadManifest(database, normalizedHash);
+        ContentBlobManifest manifest = loadManifest(context, database, normalizedHash);
         markFetching(context, database, normalizedHash);
         try {
             if (!"none".equals(manifest.compression)) {
@@ -64,32 +64,28 @@ final class FolioleCompanionContentBlobStore {
         return result;
     }
 
-    private static ContentBlobManifest loadManifest(SQLiteDatabase database, String hash) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT compression, original_size_bytes, stored_size_bytes, original_sha256, stored_sha256 " +
-                "FROM content_blobs WHERE hash = ? LIMIT 1",
-            new String[] { hash }
-        )) {
-            if (!cursor.moveToFirst()) {
-                throw new IllegalStateException("Content blob manifest is missing.");
-            }
-            return new ContentBlobManifest(
-                cursor.getString(0),
-                cursor.getLong(1),
-                cursor.getLong(2),
-                cursor.getString(3),
-                cursor.getString(4)
-            );
+    private static ContentBlobManifest loadManifest(Context context, SQLiteDatabase database, String hash) throws Exception {
+        JSONArray blobs = FolioleCompanionNamedQueryStore
+            .loadArray(context, database, "contentBlobManifestByHash", new String[] { hash })
+            .getJSONArray("blobs");
+        if (blobs.length() <= 0) {
+            throw new IllegalStateException("Content blob manifest is missing.");
         }
+        JSONObject blob = blobs.getJSONObject(0);
+        return new ContentBlobManifest(
+            blob.getString("compression"),
+            blob.getLong("original_size_bytes"),
+            blob.getLong("stored_size_bytes"),
+            blob.getString("original_sha256"),
+            blob.getString("stored_sha256")
+        );
     }
 
-    private static boolean hasCachedBlobData(SQLiteDatabase database, String hash) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT 1 FROM content_blob_data WHERE hash = ? LIMIT 1",
-            new String[] { hash }
-        )) {
-            return cursor.moveToFirst();
-        }
+    private static boolean hasCachedBlobData(Context context, SQLiteDatabase database, String hash) throws Exception {
+        return FolioleCompanionNamedQueryStore
+            .loadArray(context, database, "contentBlobDataExisting", new String[] { hash })
+            .getJSONArray("blobs")
+            .length() > 0;
     }
 
     private static JSObject markCached(Context context, SQLiteDatabase database, String hash) throws Exception {
