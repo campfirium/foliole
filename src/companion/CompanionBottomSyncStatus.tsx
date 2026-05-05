@@ -39,11 +39,11 @@ function visibleCompleted(progress: CompanionDesktopSyncProgress, total: number)
 }
 
 function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
-  if (progress.phase === 'structure') return 'Stage 1 · Library index';
+  if (progress.phase === 'structure') return 'Library index';
   if (isActiveTopicProgress(progress)) return 'Current topic';
-  if (isReviewQueueProgress(progress)) return 'Stage 2 · Review queue';
-  if (progress.phase === 'attachment') return 'Stage 4 · Attachments';
-  return 'Stage 3 · Topic bodies';
+  if (isReviewQueueProgress(progress)) return 'Review resources';
+  if (progress.phase === 'attachment') return 'Attachments';
+  return 'Topic bodies';
 }
 
 function formatBytes(bytes: number) {

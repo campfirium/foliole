@@ -24,7 +24,7 @@ function expectReviewQueueBodyProgressAfterActiveTopic() {
     />
   );
 
-  expect(screen.getByText('Stage 2 · Review queue')).toBeInTheDocument();
+  expect(screen.getByText('Review resources')).toBeInTheDocument();
   expect(screen.getByText('2/7')).toBeInTheDocument();
   expect(screen.queryByText('3/7')).not.toBeInTheDocument();
 }
@@ -52,7 +52,7 @@ function expectReviewQueueAttachmentProgressAfterActiveTopic() {
     />
   );
 
-  expect(screen.getByText('Stage 2 · Review queue')).toBeInTheDocument();
+  expect(screen.getByText('Review resources')).toBeInTheDocument();
   expect(screen.getByText('1/3')).toBeInTheDocument();
   expect(screen.queryByText('2/3')).not.toBeInTheDocument();
 }

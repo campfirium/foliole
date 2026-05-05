@@ -21,14 +21,14 @@ function renderBottomBar(syncProgress: Parameters<typeof CompanionBottomTabBar>[
 function expectLibraryIndexStage() {
   renderBottomBar({ completed: 820, phase: 'structure', total: 820 });
 
-  expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
+  expect(screen.getByText('Library index')).toBeInTheDocument();
   expect(screen.getByText('820/820')).toBeInTheDocument();
 }
 
 function expectUnknownStructureConfirmation() {
   renderBottomBar({ completed: 0, phase: 'structure', total: null });
 
-  expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
+  expect(screen.getByText('Library index')).toBeInTheDocument();
   expect(screen.getByText('Checking')).toBeInTheDocument();
   expect(screen.queryByText('0 cached')).not.toBeInTheDocument();
 }
@@ -51,7 +51,7 @@ function expectReviewQueueBodyStage() {
   });
 
   expect(screen.getByLabelText('Sync progress')).toBeInTheDocument();
-  expect(screen.getByText('Stage 2 · Review queue')).toBeInTheDocument();
+  expect(screen.getByText('Review resources')).toBeInTheDocument();
   expect(screen.getByText('3/7')).toBeInTheDocument();
   expect(screen.getByText('Review queue: 7 bodies')).toBeInTheDocument();
   expect(screen.queryByText('3/616 - 1.0 MB/2.0 MB')).not.toBeInTheDocument();
@@ -77,7 +77,7 @@ function expectActiveTopicBodyStage() {
   expect(screen.getByText('Current topic')).toBeInTheDocument();
   expect(screen.getByText('0/1')).toBeInTheDocument();
   expect(screen.getByText('Current topic: 1 body')).toBeInTheDocument();
-  expect(screen.queryByText('Stage 2 · Review queue')).not.toBeInTheDocument();
+  expect(screen.queryByText('Review resources')).not.toBeInTheDocument();
 }
 
 function expectTopicBodyStageAfterReviewQueue() {
@@ -98,7 +98,7 @@ function expectTopicBodyStageAfterReviewQueue() {
     totalBytes: 2097152
   });
 
-  expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
+  expect(screen.getByText('Topic bodies')).toBeInTheDocument();
   expect(screen.getByText('128/616 - 1.0 MB/2.0 MB · 1m 5s')).toBeInTheDocument();
   expect(screen.getByText('Top-level 64 · Nested 156 · External 23 · Review queue 0')).toBeInTheDocument();
 }
@@ -120,9 +120,9 @@ function expectTopicBodyStageAfterDueReviewBodiesComplete() {
     totalBytes: 2097152
   });
 
-  expect(screen.getByText('Stage 3 · Topic bodies')).toBeInTheDocument();
+  expect(screen.getByText('Topic bodies')).toBeInTheDocument();
   expect(screen.getByText('7/616 - 1.0 MB/2.0 MB')).toBeInTheDocument();
-  expect(screen.queryByText('Stage 2 · Review queue')).not.toBeInTheDocument();
+  expect(screen.queryByText('Review resources')).not.toBeInTheDocument();
 }
 
 function expectAttachmentStage() {
@@ -143,7 +143,7 @@ function expectAttachmentStage() {
     totalBytes: 8388608
   });
 
-  expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
+  expect(screen.getByText('Attachments')).toBeInTheDocument();
   expect(screen.getByText('4/12 - 2.0 MB/8.0 MB')).toBeInTheDocument();
   expect(screen.getByText('Images 5 · PDFs 4 · Other 3')).toBeInTheDocument();
 }
@@ -167,7 +167,7 @@ function expectReviewQueueAttachmentStage() {
     totalBytes: 8388608
   });
 
-  expect(screen.getByText('Stage 2 · Review queue')).toBeInTheDocument();
+  expect(screen.getByText('Review resources')).toBeInTheDocument();
   expect(screen.getByText('2/3')).toBeInTheDocument();
   expect(screen.getByText('Review queue: 3 attachments')).toBeInTheDocument();
 }
@@ -194,7 +194,7 @@ function expectActiveTopicAttachmentStage() {
   expect(screen.getByText('Current topic')).toBeInTheDocument();
   expect(screen.getByText('0/1')).toBeInTheDocument();
   expect(screen.getByText('Current topic: 1 attachment')).toBeInTheDocument();
-  expect(screen.queryByText('Stage 2 · Review queue')).not.toBeInTheDocument();
+  expect(screen.queryByText('Review resources')).not.toBeInTheDocument();
 }
 
 function expectAttachmentStageAfterDueReviewAttachmentsComplete() {
@@ -216,9 +216,9 @@ function expectAttachmentStageAfterDueReviewAttachmentsComplete() {
     totalBytes: 8388608
   });
 
-  expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
+  expect(screen.getByText('Attachments')).toBeInTheDocument();
   expect(screen.getByText('3/12 - 2.0 MB/8.0 MB')).toBeInTheDocument();
-  expect(screen.queryByText('Stage 2 · Review queue')).not.toBeInTheDocument();
+  expect(screen.queryByText('Review resources')).not.toBeInTheDocument();
 }
 
 describe('CompanionBottomTabBar', () => {
