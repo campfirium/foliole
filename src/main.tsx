@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom/client';
 
 import { App } from './app/App';
 import './app/styles.css';
+import { getRuntimeInvoke } from './shared/platform/bridge';
 import { reportNativeAppReady, reportNativeBootStage } from './shared/testing/nativeBootReporter';
 
 const ROOT_ID = 'root';
@@ -48,18 +49,16 @@ function mountApp() {
     });
   });
 
+  const bootContext = {
+    href: window.location.href,
+    readyState: document.readyState,
+    tauriInvokeReady: Boolean(getRuntimeInvoke()),
+    userAgent: navigator.userAgent
+  };
   console.info('[startup] boot context', {
-    href: window.location.href,
-    readyState: document.readyState,
-    tauriInvokeReady: Boolean((window as Window & { __TAURI__?: { core?: { invoke?: unknown } } }).__TAURI__?.core?.invoke),
-    userAgent: navigator.userAgent
+    ...bootContext
   });
-  reportNativeBootStage('boot_context', {
-    href: window.location.href,
-    readyState: document.readyState,
-    tauriInvokeReady: Boolean((window as Window & { __TAURI__?: { core?: { invoke?: unknown } } }).__TAURI__?.core?.invoke),
-    userAgent: navigator.userAgent
-  });
+  reportNativeBootStage('boot_context', bootContext);
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>

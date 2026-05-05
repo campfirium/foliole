@@ -1,5 +1,6 @@
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 
+import { onWindowKeydown } from '../../../shared/platform/keyboard';
 import { AppButton, AppEmptyState, AppIconButton } from '../../../shared/ui';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTreeRows } from '../model/nodeTree';
@@ -91,8 +92,7 @@ export function NodeListTree({
         closeContextMenu();
       }
     };
-    window.addEventListener('keydown', onEscape);
-    return () => window.removeEventListener('keydown', onEscape);
+    return onWindowKeydown(onEscape);
   }, []);
 
   const openContextMenu = (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => {

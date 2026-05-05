@@ -1,9 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
-
-interface TauriBridgeWindow extends Window {
-  __TAURI__?: unknown;
-  __TAURI_INTERNALS__?: unknown;
-}
+import { getRuntimeInvoke } from '../platform/bridge';
 
 interface BootPayload {
   [key: string]: unknown;
@@ -15,22 +10,8 @@ declare global {
   }
 }
 
-function getInvoke(): TauriInvoke | null {
-  if (typeof window === 'undefined' || !isTauriRuntime()) {
-    return null;
-  }
-  return invoke as TauriInvoke;
-}
-
-type TauriInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
-
-function isTauriRuntime() {
-  const tauriWindow = window as TauriBridgeWindow;
-  return Boolean(tauriWindow.__TAURI__ || tauriWindow.__TAURI_INTERNALS__);
-}
-
 export function reportNativeBootStage(stage: string, payload?: BootPayload) {
-  const invoke = getInvoke();
+  const invoke = getRuntimeInvoke();
   if (!invoke) {
     return;
   }

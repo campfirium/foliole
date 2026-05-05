@@ -3,6 +3,7 @@ import {
   DEFAULT_PERSISTED_APP_SETTINGS,
   type MarkdownSyntaxVisibility
 } from '../../../shared/config/appSettings';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 export type { MarkdownSyntaxVisibility } from '../../../shared/config/appSettings';
 
@@ -14,11 +15,7 @@ function isMarkdownSyntaxVisibility(value: string): value is MarkdownSyntaxVisib
 }
 
 export function getMarkdownSyntaxVisibility(): MarkdownSyntaxVisibility {
-  if (typeof window === 'undefined') {
-    return MARKDOWN_SYNTAX_VISIBILITY_DEFAULT;
-  }
-
-  const raw = window.localStorage.getItem(MARKDOWN_SYNTAX_VISIBILITY_KEY);
+  const raw = getWhitelistedLocalStorageItem(MARKDOWN_SYNTAX_VISIBILITY_KEY);
   if (!raw || !isMarkdownSyntaxVisibility(raw)) {
     return MARKDOWN_SYNTAX_VISIBILITY_DEFAULT;
   }
@@ -26,8 +23,5 @@ export function getMarkdownSyntaxVisibility(): MarkdownSyntaxVisibility {
 }
 
 export function setMarkdownSyntaxVisibility(value: MarkdownSyntaxVisibility) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(MARKDOWN_SYNTAX_VISIBILITY_KEY, value);
+  setWhitelistedLocalStorageItem(MARKDOWN_SYNTAX_VISIBILITY_KEY, value);
 }

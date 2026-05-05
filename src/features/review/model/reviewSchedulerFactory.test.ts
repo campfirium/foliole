@@ -1,6 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { getRuntimeInvoke } from '../../../shared/platform/bridge';
 
 import { createReviewSchedulerAdapter } from './reviewSchedulerFactory';
+
+vi.mock('../../../shared/platform/bridge', () => ({
+  getRuntimeInvoke: vi.fn()
+}));
 
 const BASE_CARD = {
   due: '2026-02-26T00:00:00.000Z',
@@ -15,7 +21,12 @@ const BASE_CARD = {
 } as const;
 
 describe('createReviewSchedulerAdapter', () => {
+  beforeEach(() => {
+    vi.mocked(getRuntimeInvoke).mockReset();
+  });
+
   it('falls back to local scheduler when tauri invoke is unavailable', async () => {
+    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
     const adapter = createReviewSchedulerAdapter();
     const result = await adapter.grade({
       card: { ...BASE_CARD },
@@ -27,6 +38,7 @@ describe('createReviewSchedulerAdapter', () => {
   });
 
   it('throws when rust-only mode is set and tauri invoke is unavailable', async () => {
+    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
     const adapter = createReviewSchedulerAdapter('rust-only');
 
     await expect(
@@ -39,19 +51,11 @@ describe('createReviewSchedulerAdapter', () => {
   });
 
   it('uses tauri invoke when available', async () => {
-    const tauriWindow = window as Window & {
-      __TAURI__?: {
-        core?: {
-          invoke?: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
-        };
-      };
-    };
-    const original = tauriWindow.__TAURI__;
     const invoke = vi.fn().mockResolvedValue({
       card: { ...BASE_CARD, reps: 9 },
       reviewed_at: '2026-02-26T00:00:00.000Z'
     });
-    tauriWindow.__TAURI__ = { core: { invoke } };
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
     const adapter = createReviewSchedulerAdapter('rust-only');
     const result = await adapter.grade({
@@ -66,7 +70,5 @@ describe('createReviewSchedulerAdapter', () => {
       now: '2026-02-26T00:00:00.000Z'
     });
     expect(result.card.reps).toBe(9);
-
-    tauriWindow.__TAURI__ = original;
   });
 });

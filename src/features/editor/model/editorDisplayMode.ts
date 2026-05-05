@@ -3,6 +3,7 @@ import {
   DEFAULT_PERSISTED_APP_SETTINGS,
   type EditorDisplayMode
 } from '../../../shared/config/appSettings';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 export type { EditorDisplayMode } from '../../../shared/config/appSettings';
 
@@ -14,11 +15,7 @@ function isEditorDisplayMode(value: string): value is EditorDisplayMode {
 }
 
 export function getEditorDisplayMode(): EditorDisplayMode {
-  if (typeof window === 'undefined') {
-    return EDITOR_DISPLAY_MODE_DEFAULT;
-  }
-
-  const raw = window.localStorage.getItem(EDITOR_DISPLAY_MODE_KEY);
+  const raw = getWhitelistedLocalStorageItem(EDITOR_DISPLAY_MODE_KEY);
   if (!raw || !isEditorDisplayMode(raw)) {
     return EDITOR_DISPLAY_MODE_DEFAULT;
   }
@@ -26,8 +23,5 @@ export function getEditorDisplayMode(): EditorDisplayMode {
 }
 
 export function setEditorDisplayMode(value: EditorDisplayMode) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(EDITOR_DISPLAY_MODE_KEY, value);
+  setWhitelistedLocalStorageItem(EDITOR_DISPLAY_MODE_KEY, value);
 }

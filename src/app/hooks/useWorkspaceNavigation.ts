@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useMemo, useState, type MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
+import { createCommandRegistry } from '../../shared/commands/registry';
+import { onWindowKeydown } from '../../shared/platform/keyboard';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 interface WorkspaceNavigationDependencies {
@@ -93,6 +95,23 @@ export function useWorkspaceNavigation({
     applyNavigationResult(goToParent());
   }, [applyNavigationResult, closeContextMenu, goToParent, saveActiveNodeView]);
 
+  const navigationCommandRegistry = useMemo(
+    () =>
+      createCommandRegistry([
+        {
+          id: 'navigation.goBack',
+          execute: handleGoBack,
+          shortcut: { key: 'ArrowLeft', altKey: true }
+        },
+        {
+          id: 'navigation.goForward',
+          execute: handleGoForward,
+          shortcut: { key: 'ArrowRight', altKey: true }
+        }
+      ]),
+    [handleGoBack, handleGoForward]
+  );
+
   useEffect(() => {
     if (!activeNodeId || !pendingAnchorNodeId || !pendingAnchor || pendingAnchorNodeId !== activeNodeId || !activeNodeContent) {
       return;
@@ -123,25 +142,14 @@ export function useWorkspaceNavigation({
 
   useEffect(() => {
     const handleNavigationHotkeys = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || !event.altKey) {
+      if (event.defaultPrevented) {
         return;
       }
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        handleGoBack();
-        return;
-      }
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        handleGoForward();
-      }
+      navigationCommandRegistry.runByShortcut(event);
     };
 
-    window.addEventListener('keydown', handleNavigationHotkeys);
-    return () => {
-      window.removeEventListener('keydown', handleNavigationHotkeys);
-    };
-  }, [handleGoBack, handleGoForward]);
+    return onWindowKeydown(handleNavigationHotkeys);
+  }, [navigationCommandRegistry]);
 
   return {
     canGoBack: backStackSize > 0,

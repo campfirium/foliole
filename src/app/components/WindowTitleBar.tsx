@@ -1,18 +1,17 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Copy, FileText, Minus, PanelLeft, Square, Trash2, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 
-type TauriRuntimeWindow = Window & { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown };
+import {
+  closeMainWindow,
+  isWindowControlsAvailable,
+  minimizeMainWindow,
+  onMainWindowResized,
+  queryMainWindowMaximized,
+  toggleMainWindowMaximize
+} from '../../shared/platform/windowControls';
+
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
-
-function isTauriRuntime() {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-  const runtimeWindow = window as TauriRuntimeWindow;
-  return Boolean(runtimeWindow.__TAURI__ || runtimeWindow.__TAURI_INTERNALS__);
-}
 
 function runWindowAction(action: () => Promise<void>) {
   void action().catch((error) => {
@@ -37,33 +36,31 @@ export function WindowTitleBar({
   onOpenTrashView,
   onToggleListVisibility
 }: WindowTitleBarProps) {
-  const controlsEnabled = isTauriRuntime();
-  const appWindow = useMemo(() => (controlsEnabled ? getCurrentWindow() : null), [controlsEnabled]);
+  const controlsEnabled = isWindowControlsAvailable();
   const [isMaximized, setIsMaximized] = useState(false);
 
   const syncMaximizedState = useCallback(async () => {
-    if (!appWindow) {
+    if (!controlsEnabled) {
       setIsMaximized(false);
       return;
     }
-    const maximized = await appWindow.isMaximized();
+    const maximized = await queryMainWindowMaximized();
     setIsMaximized(maximized);
-  }, [appWindow]);
+  }, [controlsEnabled]);
 
   useEffect(() => {
-    if (!appWindow) {
+    if (!controlsEnabled) {
       setIsMaximized(false);
       return;
     }
 
     void syncMaximizedState();
     let unlisten: (() => void) | undefined;
-    void appWindow
-      .onResized(() => {
+    void onMainWindowResized(() => {
         void syncMaximizedState();
       })
       .then((dispose) => {
-        unlisten = dispose;
+        unlisten = dispose ?? undefined;
       })
       .catch((error) => {
         console.error('[window-titlebar] failed to subscribe resize listener', error);
@@ -72,31 +69,31 @@ export function WindowTitleBar({
     return () => {
       unlisten?.();
     };
-  }, [appWindow, syncMaximizedState]);
+  }, [controlsEnabled, syncMaximizedState]);
 
   const handleMinimize = useCallback(() => {
-    if (!appWindow) {
+    if (!controlsEnabled) {
       return;
     }
-    runWindowAction(() => appWindow.minimize());
-  }, [appWindow]);
+    runWindowAction(minimizeMainWindow);
+  }, [controlsEnabled]);
 
   const handleToggleMaximize = useCallback(() => {
-    if (!appWindow) {
+    if (!controlsEnabled) {
       return;
     }
     runWindowAction(async () => {
-      await appWindow.toggleMaximize();
+      await toggleMainWindowMaximize();
       await syncMaximizedState();
     });
-  }, [appWindow, syncMaximizedState]);
+  }, [controlsEnabled, syncMaximizedState]);
 
   const handleClose = useCallback(() => {
-    if (!appWindow) {
+    if (!controlsEnabled) {
       return;
     }
-    runWindowAction(() => appWindow.close());
-  }, [appWindow]);
+    runWindowAction(closeMainWindow);
+  }, [controlsEnabled]);
 
   return (
     <header className="window-titlebar" data-window-maximized={isMaximized} style={{ '--workspace-list-width': `${listWidth}px` } as CSSProperties}>

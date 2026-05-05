@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import {
@@ -39,6 +39,8 @@ import {
   type InterfaceFontPreset,
   type MonospaceFontPreset
 } from '../features/settings/model/appearanceSettings';
+import { createCommandRegistry } from '../shared/commands/registry';
+import { onWindowKeydown } from '../shared/platform/keyboard';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { WorkspaceLayout } from './components/WorkspaceLayout';
@@ -387,22 +389,38 @@ export function App() {
     };
   }, []);
 
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (isSettingsOpen) {
-          setIsSettingsOpen(false);
-          return;
+  const appCommandRegistry = useMemo(
+    () =>
+      createCommandRegistry([
+        {
+          id: 'ui.closeSettings',
+          shortcut: { key: 'Escape' },
+          isEnabled: () => isSettingsOpen,
+          execute: () => {
+            setIsSettingsOpen(false);
+          }
+        },
+        {
+          id: 'ui.closeContextMenu',
+          shortcut: { key: 'Escape' },
+          execute: () => {
+            closeContextMenu();
+          }
         }
-        closeContextMenu();
+      ]),
+    [closeContextMenu, isSettingsOpen]
+  );
+
+  useEffect(() => {
+    const handleAppHotkeys = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return;
       }
+      appCommandRegistry.runByShortcut(event);
     };
 
-    window.addEventListener('keydown', handleEscape);
-    return () => {
-      window.removeEventListener('keydown', handleEscape);
-    };
-  }, [closeContextMenu, isSettingsOpen]);
+    return onWindowKeydown(handleAppHotkeys);
+  }, [appCommandRegistry]);
 
   useEffect(() => {
     applyAppearanceSettings({

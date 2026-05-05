@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { listRuntimeSystemFonts } from '../../../shared/platform/bridge';
 
 const BASE_FONTS = ['monospace', 'sans-serif', 'serif'] as const;
 const FONT_CANDIDATES = [
@@ -25,28 +25,10 @@ const FONT_CANDIDATES = [
 ] as const;
 
 const TEST_TEXT = 'AaBbCcDdEe1234567890的一是在不了有和人这中大';
-interface TauriCoreBridge {
-  invoke?: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
-}
-
-interface TauriBridgeWindow extends Window {
-  __TAURI__?: {
-    core?: TauriCoreBridge;
-  };
-  __TAURI_INTERNALS__?: unknown;
-}
 
 export interface SystemFontCatalog {
   fonts: string[];
   monospaceFonts: string[];
-}
-
-function isTauriRuntime() {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-  const tauriWindow = window as TauriBridgeWindow;
-  return Boolean(tauriWindow.__TAURI__ || tauriWindow.__TAURI_INTERNALS__);
 }
 
 function measureWidth(fontFamily: string, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) {
@@ -95,28 +77,15 @@ export async function listAvailableSystemFonts(): Promise<SystemFontCatalog> {
   if (typeof window === 'undefined') {
     return { fonts: [], monospaceFonts: [] };
   }
-  if (!isTauriRuntime()) {
-    const fallbackFonts = detectSystemFonts();
-    return {
-      fonts: fallbackFonts,
-      monospaceFonts: detectMonospaceFonts(fallbackFonts)
-    };
-  }
 
   try {
-    const result = await invoke('list_system_fonts');
-    if (!result || typeof result !== 'object') {
+    const result = await listRuntimeSystemFonts();
+    if (!result) {
       const fallbackFonts = detectSystemFonts();
       return { fonts: fallbackFonts, monospaceFonts: detectMonospaceFonts(fallbackFonts) };
     }
-    const rawFonts = (result as { fonts?: unknown }).fonts;
-    const rawMonospaceFonts = (result as { monospace_fonts?: unknown }).monospace_fonts;
-    const fonts = Array.isArray(rawFonts) ? rawFonts.filter((value): value is string => typeof value === 'string') : [];
-    const monospaceFonts = Array.isArray(rawMonospaceFonts)
-      ? rawMonospaceFonts.filter((value): value is string => typeof value === 'string')
-      : [];
-    const normalizedFonts = normalizeFontList(fonts);
-    const normalizedMonospaceFonts = normalizeFontList(monospaceFonts);
+    const normalizedFonts = normalizeFontList(result.fonts);
+    const normalizedMonospaceFonts = normalizeFontList(result.monospaceFonts);
     if (normalizedFonts.length === 0) {
       const fallbackFonts = detectSystemFonts();
       return {

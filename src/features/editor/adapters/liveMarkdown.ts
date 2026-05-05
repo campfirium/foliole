@@ -1,7 +1,7 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
-import { invoke } from '@tauri-apps/api/core';
 
+import { openExternalUrl } from '../../../shared/platform/bridge';
 import {
   collectAnchorTagTokenRanges,
   collectAnchorTextSegments,
@@ -708,34 +708,7 @@ function collectSelectionTextWithExpandedLinks(view: EditorView) {
 }
 
 async function openMarkdownLink(href: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  const trimmed = href.trim();
-  if (!trimmed) {
-    return;
-  }
-
-  const resolvedHref = (() => {
-    try {
-      return new URL(trimmed, window.location.href).toString();
-    } catch {
-      return null;
-    }
-  })();
-
-  if (!resolvedHref) {
-    return;
-  }
-
-  try {
-    await invoke('open_external_url', { url: resolvedHref });
-    return;
-  } catch {
-    // Fall back to browser behavior in non-Tauri environments.
-  }
-
-  window.open(resolvedHref, '_blank', 'noopener,noreferrer');
+  await openExternalUrl(href);
 }
 
 function buildLineDecorations(view: EditorView): DecorationSet {

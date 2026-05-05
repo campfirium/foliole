@@ -16,6 +16,7 @@ tauri-command = ["dep:tauri"]
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+directories = "5"
 fontdb = "0.23"
 fsrs = "5.2.0"
 serde = { version = "1", features = ["derive"] }
