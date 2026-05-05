@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 
-import { AppButton, AppPanel, EmptyState } from '../../../shared/ui';
+import { AppButton, AppEmptyState, AppPanel } from '../../../shared/ui';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTreeRows } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
@@ -231,7 +231,7 @@ export function NodeListTree({
           data-collapsed={isTrashViewOpen}
         >
           {noteRows.length === 0 ? (
-            <EmptyState description="Create or import a node to start editing." title="No nodes" />
+            <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
           ) : (
             noteRows.map((row) => (
               <NodeTreeRow

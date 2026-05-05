@@ -27,7 +27,7 @@ function resolveSize(size: ButtonSize) {
   return size === 'sm' ? '1' : '2';
 }
 
-export function Button({
+export function AppButton({
   children,
   variant = 'ghost',
   size = 'sm',

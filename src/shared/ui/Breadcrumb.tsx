@@ -17,7 +17,7 @@ interface BreadcrumbProps {
   onExpandEllipsis?: (id: string) => void;
 }
 
-export function Breadcrumb({
+export function AppBreadcrumb({
   ariaLabel = 'Breadcrumb',
   className,
   items,

@@ -1,6 +1,6 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
-import { AppButton, EmptyState } from '../../../shared/ui';
+import { AppButton, AppEmptyState } from '../../../shared/ui';
 import type { NodeTreeRow as NodeTreeRowModel } from '../model/nodeTree';
 
 import { NodeTreeRow } from './NodeTreeRow';
@@ -66,7 +66,7 @@ export function NodeTrashSection({
         data-open={isOpen}
       >
         {rows.length === 0 ? (
-          <EmptyState description="Deleted nodes will appear here." title="Trash is empty" />
+          <AppEmptyState description="Deleted nodes will appear here." title="Trash is empty" />
         ) : (
           rows.map((row) => (
             <NodeTreeRow

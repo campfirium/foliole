@@ -3,7 +3,7 @@ interface EmptyStateProps {
   description: string;
 }
 
-export function EmptyState({ title, description }: EmptyStateProps) {
+export function AppEmptyState({ title, description }: EmptyStateProps) {
   return (
     <div className="flex min-h-[120px] flex-col items-center justify-center gap-2 text-center text-sm text-slate-500" role="status">
       <p className="m-0 text-sm font-semibold text-foreground">{title}</p>

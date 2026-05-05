@@ -1,4 +1,5 @@
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@radix-ui/themes';
+
 import { cn } from '@/lib/utils';
 
 type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
@@ -24,6 +25,10 @@ function toneClass(tone: StatusTone) {
   return 'border-slate-300 bg-slate-100/70 text-slate-500';
 }
 
-export function StatusBadge({ label, tone = 'neutral' }: StatusBadgeProps) {
-  return <Badge className={cn(toneClass(tone))}>{label}</Badge>;
+export function AppStatusBadge({ label, tone = 'neutral' }: StatusBadgeProps) {
+  return (
+    <Badge className={cn('min-h-6 rounded-full border px-2 text-xs font-semibold', toneClass(tone))} radius="full">
+      {label}
+    </Badge>
+  );
 }

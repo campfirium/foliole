@@ -19,7 +19,7 @@ interface PanelProps<T extends PanelElement = 'section'> {
   scrollBody?: boolean;
 }
 
-export function Panel<T extends PanelElement = 'section'>({
+export function AppPanel<T extends PanelElement = 'section'>({
   as,
   title,
   center,

@@ -8,7 +8,7 @@ interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   label: string;
 }
 
-export function IconButton({ icon, label, className, type = 'button', ...rest }: IconButtonProps) {
+export function AppIconButton({ icon, label, className, type = 'button', ...rest }: IconButtonProps) {
   return (
     <RadixIconButton aria-label={label} className={cn('size-8', className)} size="1" type={type} variant="ghost" {...rest}>
       {icon}

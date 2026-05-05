@@ -11,7 +11,7 @@ interface ToolbarProps<T extends ToolbarElement = 'section'> {
   children: ReactNode;
 }
 
-export function Toolbar<T extends ToolbarElement = 'section'>({
+export function AppToolbar<T extends ToolbarElement = 'section'>({
   as,
   ariaLabel,
   className,
