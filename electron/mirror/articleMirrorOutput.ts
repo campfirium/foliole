@@ -11,6 +11,7 @@ import {
   stripAnchorTags
 } from './articleMirrorText.js';
 import { collectArticleData } from './articleMirrorTree.js';
+import { rewriteMirrorMarkdownAttachmentPaths } from './markdownAttachmentPaths.js';
 import {
   createRootReservedDirectoryNames,
   resolveArticleDirectory
@@ -176,12 +177,12 @@ function renderArticleMarkdown(article: ArticleNode, derivedByAnchorKey: Map<str
   const title = article.title.trim() || 'Untitled';
   const body = `${renderArticleBody(article, derivedByAnchorKey).trim()}${renderManualTopicAppendix(manualTopics)}`.trim();
   if (body.length === 0) {
-    return `# ${title}\n`;
+    return rewriteMirrorMarkdownAttachmentPaths(`# ${title}\n`);
   }
   if (article.hideTitleHeading) {
-    return `${body}\n`;
+    return rewriteMirrorMarkdownAttachmentPaths(`${body}\n`);
   }
-  return `# ${title}\n\n${body}\n`;
+  return rewriteMirrorMarkdownAttachmentPaths(`# ${title}\n\n${body}\n`);
 }
 
 function buildDerivedChildMap(snapshot: WorkspaceSnapshot, articleId: string) {

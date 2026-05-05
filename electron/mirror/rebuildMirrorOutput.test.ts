@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { createAttachmentRecord } from '../database/attachments.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -122,6 +123,45 @@ it('writes one readable article .md with inline highlights, inline clozes, and s
   expect(output).toContain('Edited <u>guess</u> (❄ cloze: Custom prompt [...] only; answer: real answer) later.');
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Highlights.md'))).rejects.toThrow();
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Clozes.md'))).rejects.toThrow();
+});
+
+it('exports attachment markdown links as absolute asset paths', async () => {
+  createAttachmentRecord({
+    id: 'hash-1',
+    originalName: 'cover.png',
+    mimeType: 'image/png',
+    sizeBytes: 12,
+    createdAt: '2026-03-30T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'topic-with-asset',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'Asset Topic',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: '![Cover](asset://hash-1.png)\n\n[Attachment](<asset://hash-1.png>)',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-30T00:00:00.000Z',
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  });
+
+  await expect(rebuildMirrorOutput()).resolves.toMatchObject({
+    queued_article_count: 1,
+    rebuilt_article_count: 1,
+    failed_article_count: 0,
+    pending_article_count: 0
+  });
+
+  const outputPath = path.join(tempRoot, 'Library', 'Mirror', 'Asset Topic.md');
+  const output = await fs.readFile(outputPath, 'utf8');
+  const expectedPath = path.join(tempRoot, 'Library', 'Assets', 'hash-1.png');
+
+  expect(output).toContain(`![Cover](${expectedPath})`);
+  expect(output).toContain(`[Attachment](<${expectedPath}>)`);
+  expect(output).not.toContain('asset://hash-1');
 });
 
 
