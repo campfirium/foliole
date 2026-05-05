@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 
-import { AppButton, AppEmptyState, AppPanel } from '../../../shared/ui';
+import { AppButton, AppEmptyState } from '../../../shared/ui';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTreeRows } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
@@ -149,7 +149,7 @@ export function NodeListTree({
     createRootNode('');
   };
 
-  const handleNotesHeaderClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
+  const handleOpenNotesView = (event: ReactMouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     onOpenNotesView();
   };
@@ -195,68 +195,51 @@ export function NodeListTree({
 
   return (
     <>
-      <AppPanel
-        ariaLabel="Node list panel"
-        actions={
-          <div className="inline-flex gap-2">
-            <AppButton aria-label="New" onClick={handleCreateRootNode} size="sm" variant="subtle">
-              New
-            </AppButton>
-          </div>
-        }
-        as="aside"
-        bodyClassName="flex min-h-0 flex-1 flex-col gap-0 px-4 py-0"
-        className="min-h-0"
-        onHeaderClick={onOpenNotesView}
-        scrollBody
-        surfaceClassName="bg-bg-panel"
-        title={
-          <h2 className="m-0">
-            <button
-              aria-label="Nodes"
-              aria-pressed={!isTrashViewOpen}
-              className="min-h-7 w-full border-0 bg-transparent p-0 text-left text-sm font-semibold uppercase tracking-[0.06em] text-foreground/70 hover:text-foreground aria-[pressed=true]:text-foreground"
-              onClick={handleNotesHeaderClick}
-              type="button"
-            >
-              Nodes
-            </button>
-          </h2>
-        }
-      >
-        <section
-          aria-hidden={isTrashViewOpen}
-          className="flex max-h-[120dvh] flex-1 flex-col gap-2 overflow-hidden pt-2 transition-all duration-200 data-[collapsed=true]:pointer-events-none data-[collapsed=true]:max-h-0 data-[collapsed=true]:translate-y-[-4px] data-[collapsed=true]:pt-0 data-[collapsed=true]:opacity-0"
-          data-collapsed={isTrashViewOpen}
-        >
-          {noteRows.length === 0 ? (
-            <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
-          ) : (
-            noteRows.map((row) => (
-              <NodeTreeRow
-                depth={row.depth}
-                isActive={activeNodeId === row.node.id}
-                isSelected={selectedNodeIds.includes(row.node.id)}
-                key={row.node.id}
-                label={row.node.title}
-                nodeId={row.node.id}
-                onContextMenu={openContextMenu}
-                onSelect={handleSelectNode}
-                showBranch={row.depth > 0 || row.hasChildren}
-              />
-            ))
-          )}
-        </section>
+      <aside aria-label="Node list panel" className="flex min-h-0 flex-col border-r border-border bg-bg-panel text-foreground">
+        <header className="flex min-h-[40px] items-center justify-end border-b border-border px-3">
+          <h2 className="sr-only">Nodes</h2>
+          <button className="sr-only" onClick={handleOpenNotesView} type="button">
+            Nodes
+          </button>
+          <AppButton aria-label="New" onClick={handleCreateRootNode} size="sm" variant="subtle">
+            New
+          </AppButton>
+        </header>
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-2">
+          <section
+            aria-hidden={isTrashViewOpen}
+            className="flex max-h-[120dvh] flex-1 flex-col gap-2 overflow-hidden transition-all duration-200 data-[collapsed=true]:pointer-events-none data-[collapsed=true]:max-h-0 data-[collapsed=true]:translate-y-[-4px] data-[collapsed=true]:opacity-0"
+            data-collapsed={isTrashViewOpen}
+          >
+            {noteRows.length === 0 ? (
+              <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
+            ) : (
+              noteRows.map((row) => (
+                <NodeTreeRow
+                  depth={row.depth}
+                  isActive={activeNodeId === row.node.id}
+                  isSelected={selectedNodeIds.includes(row.node.id)}
+                  key={row.node.id}
+                  label={row.node.title}
+                  nodeId={row.node.id}
+                  onContextMenu={openContextMenu}
+                  onSelect={handleSelectNode}
+                  showBranch={row.depth > 0 || row.hasChildren}
+                />
+              ))
+            )}
+          </section>
 
-        <NodeTrashSection
-          isOpen={isTrashViewOpen}
-          onContextMenu={openContextMenu}
-          onEmptyTrash={handleEmptyTrash}
-          onSelect={handleSelectNode}
-          rows={trashRows}
-          selectedNodeIds={selectedNodeIds}
-        />
-      </AppPanel>
+          <NodeTrashSection
+            isOpen={isTrashViewOpen}
+            onContextMenu={openContextMenu}
+            onEmptyTrash={handleEmptyTrash}
+            onSelect={handleSelectNode}
+            rows={trashRows}
+            selectedNodeIds={selectedNodeIds}
+          />
+        </div>
+      </aside>
       {menuPosition ? (
         <NodeListContextMenu
           isTrashMenu={contextMenuMode === 'trash'}

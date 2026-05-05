@@ -5,7 +5,7 @@ import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor'
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { cn } from '../../lib/utils';
-import { AppIconButton, AppPanel } from '../../shared/ui';
+import { AppIconButton } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -80,86 +80,85 @@ export function DocumentPanelSection({
   const hasAnswerSection = hasAnswerContent && showAnswerSection;
 
   return (
-    <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col">
-      <AppPanel
-        ariaLabel="Document panel"
-        center={
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex shrink-0 items-center gap-1">
-              <AppIconButton
-                className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-                disabled={!canGoBack}
-                icon="←"
-                label="Go back"
-                onClick={onGoBack}
-              />
-              <AppIconButton
-                className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-                disabled={!canGoForward}
-                icon="→"
-                label="Go forward"
-                onClick={onGoForward}
-              />
-              <AppIconButton
-                className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-                disabled={!canGoParent}
-                icon="↑"
-                label="Go to parent node"
-                onClick={onGoParent}
-              />
-            </div>
-            <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
+    <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
+      <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
+        <header className="flex min-h-[40px] items-center border-b border-border px-3">
+          <h2 className="sr-only">Content</h2>
+          <div className="flex shrink-0 items-center gap-1">
+            <AppIconButton
+              className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+              disabled={!canGoBack}
+              icon="←"
+              label="Go back"
+              onClick={onGoBack}
+            />
+            <AppIconButton
+              className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+              disabled={!canGoForward}
+              icon="→"
+              label="Go forward"
+              onClick={onGoForward}
+            />
+            <button aria-label="Go to parent node" className="sr-only" disabled={!canGoParent} onClick={onGoParent} type="button">
+              Go to parent node
+            </button>
           </div>
-        }
-        bodyClassName="flex min-h-0 flex-1 p-4 max-[1080px]:p-2"
-        className="h-full min-h-0 flex-1"
-        surfaceClassName="bg-bg-elevated"
-        style={documentLayoutStyle}
-        title="Content"
-      >
-        <div className="flex h-full min-h-0 w-full gap-2" data-resizing={isDocumentResizing}>
-          <DocumentWidthHandle
-            ariaLabel="Resize document width from left"
-            onPointerDown={(event) => onStartDocumentResize('left', event)}
-            onResetLayout={onResetLayout}
-            side="left"
-          />
-          <div className="mx-auto flex h-full min-h-0 w-full [width:min(100%,var(--document-max-width))]">
-            <div className="flex h-full min-h-0 w-full flex-1 flex-col">
-              <div className="min-h-0 w-full flex-1" onContextMenu={onEditorContextMenu}>
-                <MarkdownEditor
-                  ariaLabel="Prompt editor"
-                  className="prompt-editor-host"
-                  debugId="prompt-editor"
-                  nodeId={editorNodeId}
-                  nodeViewState={editorNodeViewState}
-                  onChange={onEditorChange}
-                  onReady={onEditorReady}
-                  value={editorContent}
-                />
-              </div>
-              {hasAnswerSection ? (
-                <section aria-label="Cloze answer section" className="flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden pt-3">
+          <div className="min-w-0 flex-1">
+            <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
+              <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
+            </div>
+          </div>
+        </header>
+
+        <div className="flex min-h-0 flex-1 p-4 max-[1080px]:p-2">
+          <div className="flex h-full min-h-0 w-full gap-2" data-resizing={isDocumentResizing}>
+            <DocumentWidthHandle
+              ariaLabel="Resize document width from left"
+              onPointerDown={(event) => onStartDocumentResize('left', event)}
+              onResetLayout={onResetLayout}
+              side="left"
+            />
+            <div className="mx-auto flex h-full min-h-0 w-full [width:min(100%,var(--document-max-width))]">
+              <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+                <div className="min-h-0 w-full flex-1" onContextMenu={onEditorContextMenu}>
                   <MarkdownEditor
-                    ariaLabel="Answer editor"
-                    className="answer-editor-host min-h-0"
-                    debugId="answer-editor"
+                    ariaLabel="Prompt editor"
+                    className="prompt-editor-host"
+                    debugId="prompt-editor"
                     nodeId={editorNodeId}
-                    onChange={onAnswerChange}
-                    value={reveal}
+                    nodeViewState={editorNodeViewState}
+                    onChange={onEditorChange}
+                    onReady={onEditorReady}
+                    value={editorContent}
                   />
-                </section>
-              ) : null}
+                </div>
+                {hasAnswerSection ? (
+                  <section
+                    aria-label="Cloze answer section"
+                    className="flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden border-t border-border pt-3"
+                  >
+                    <MarkdownEditor
+                      ariaLabel="Answer editor"
+                      className="answer-editor-host min-h-0"
+                      debugId="answer-editor"
+                      nodeId={editorNodeId}
+                      onChange={onAnswerChange}
+                      value={reveal}
+                    />
+                  </section>
+                ) : null}
+              </div>
             </div>
+            <DocumentWidthHandle
+              ariaLabel="Resize document width from right"
+              onPointerDown={(event) => onStartDocumentResize('right', event)}
+              onResetLayout={onResetLayout}
+              side="right"
+            />
           </div>
-          <DocumentWidthHandle
-            ariaLabel="Resize document width from right"
-            onPointerDown={(event) => onStartDocumentResize('right', event)}
-            onResetLayout={onResetLayout}
-            side="right"
-          />
         </div>
-      </AppPanel>
+      </section>
+
       {contextMenu ? (
         <EditorContextMenu
           canRunCommands={contextMenu.canRunCommands}

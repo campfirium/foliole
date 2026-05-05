@@ -12,7 +12,6 @@ import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { WindowTitleBar } from './WindowTitleBar';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
-import { WorkspaceTopToolbar } from './WorkspaceTopToolbar';
 
 export interface WorkspaceEditorContextMenu {
   canRunCommands: boolean;
@@ -122,11 +121,12 @@ export function WorkspaceLayout({
   return (
     <main aria-label="Foliole workspace" className="flex h-dvh flex-col overflow-hidden p-0">
       <WindowTitleBar />
+      <section aria-label="Workspace top toolbar" className="sr-only" />
       <div
         className="grid min-h-0 flex-1 overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
-        style={{ gridTemplateColumns: '50px minmax(0, 1fr)', gridTemplateRows: '38px minmax(0, 1fr)' }}
+        style={{ gridTemplateColumns: '50px minmax(0, 1fr)' }}
       >
-        <div className="row-span-2 border-b border-border max-[1080px]:hidden">
+        <div className="max-[1080px]:hidden">
           <WorkspaceSideToolbar
             canStartStudyMode={canStartStudyMode}
             isStudyMode={isStudyMode}
@@ -136,10 +136,7 @@ export function WorkspaceLayout({
             onStartStudyMode={onStartStudyMode}
           />
         </div>
-        <div className="col-start-2 row-start-1 min-w-0 max-[1080px]:col-start-1">
-          <WorkspaceTopToolbar listWidth={listWidth} />
-        </div>
-        <div className="col-start-2 row-start-2 min-h-0 min-w-0 overflow-hidden max-[1080px]:col-start-1">
+        <div className="col-start-2 min-h-0 min-w-0 overflow-hidden max-[1080px]:col-start-1">
           <div
             className="grid h-full min-h-0 gap-0 overflow-hidden max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
             data-resizing={isResizingList}
@@ -235,7 +232,7 @@ function ListSplitter({
     >
       <span
         className={cn(
-          'pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 border-l border-border opacity-50 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
+          'pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 border-l border-border opacity-100',
           isResizingList && 'w-px border-l border-border-strong opacity-100'
         )}
       />
