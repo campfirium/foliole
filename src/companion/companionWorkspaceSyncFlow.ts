@@ -10,125 +10,11 @@ import {
   recordCompanionWorkspaceSyncEvent
 } from '../shared/platform/companionWorkspaceSync';
 
+import { describeCompanionSyncPassResult } from './companionSyncPassResult';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 export type ForegroundAutoSyncOutcome = 'completed' | 'failed' | 'skipped';
-
-function describeSyncPassResult(result: {
-  attachmentResourceError: string | null;
-  contentBlobError: string | null;
-  remainingAttachmentResourceBytes?: number | null;
-  remainingAttachmentResourceCount: number | null;
-  remainingContentBlobBytes?: number | null;
-  remainingContentBlobCount: number | null;
-  localDirtyCount?: number | null;
-  pendingAckCount?: number | null;
-  pushConflictCount?: number;
-  pushError?: string | null;
-  pushRejectedCount?: number;
-}) {
-  if (result.attachmentResourceError) {
-    return {
-      message: `Attachment cache failed: ${result.attachmentResourceError}`,
-      outcome: 'failed' as const,
-      status: 'failed' as const
-    };
-  }
-  if (result.contentBlobError) {
-    return {
-      message: `Topic body cache failed: ${result.contentBlobError}`,
-      outcome: 'failed' as const,
-      status: 'failed' as const
-    };
-  }
-  const remainingBodies = result.remainingContentBlobCount;
-  const remainingAttachments = result.remainingAttachmentResourceCount;
-  const bodyLabel = formatBacklogLabel('topic bodies', remainingBodies, result.remainingContentBlobBytes);
-  const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
-  if (result.pushError) {
-    const prefix = `Sync pass finished; device changes could not be sent: ${result.pushError}`;
-    if (remainingBodies === 0 && remainingAttachments === 0) {
-      return { message: prefix, outcome: 'skipped' as const, status: 'skipped' as const };
-    }
-    if (remainingBodies === 0) {
-      return {
-        message: `${prefix}; ${attachmentLabel} still caching.`,
-        outcome: 'skipped' as const,
-        status: 'skipped' as const
-      };
-    }
-    if (remainingAttachments === 0) {
-      return {
-        message: `${prefix}; ${bodyLabel} still caching.`,
-        outcome: 'skipped' as const,
-        status: 'skipped' as const
-      };
-    }
-    return {
-      message: `${prefix}; ${bodyLabel} and ${attachmentLabel} still caching.`,
-      outcome: 'skipped' as const,
-      status: 'skipped' as const
-    };
-  }
-  const rejectedOrConflicted = (result.pushConflictCount ?? 0) + (result.pushRejectedCount ?? 0);
-  if (rejectedOrConflicted > 0) {
-    return {
-      message: `Sync pass finished; ${rejectedOrConflicted} device change(s) need review before they can be sent.`,
-      outcome: 'skipped' as const,
-      status: 'skipped' as const
-    };
-  }
-  if (
-    remainingBodies === 0 &&
-    remainingAttachments === 0 &&
-    result.localDirtyCount === 0 &&
-    result.pendingAckCount === 0
-  ) {
-    return {
-      message: 'Sync completed.',
-      outcome: 'completed' as const,
-      status: 'completed' as const
-    };
-  }
-  if (remainingBodies === 0 && remainingAttachments === 0) {
-    return {
-      message: 'Sync pass finished; local changes are still waiting to settle.',
-      outcome: 'skipped' as const,
-      status: 'skipped' as const
-    };
-  }
-  if (remainingBodies === 0) {
-    return {
-      message: `Sync pass finished; ${attachmentLabel} still caching.`,
-      outcome: 'skipped' as const,
-      status: 'skipped' as const
-    };
-  }
-  if (remainingAttachments === 0) {
-    return {
-      message: `Sync pass finished; ${bodyLabel} still caching.`,
-      outcome: 'skipped' as const,
-      status: 'skipped' as const
-    };
-  }
-  return {
-    message: `Sync pass finished; ${bodyLabel} and ${attachmentLabel} still caching.`,
-    outcome: 'skipped' as const,
-    status: 'skipped' as const
-  };
-}
-
-function formatBytes(bytes: number) {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${bytes} B`;
-}
-
-function formatBacklogLabel(label: string, count: number | null, bytes?: number | null) {
-  const countLabel = count === null ? `some ${label}` : `${count} ${label}`;
-  return typeof bytes === 'number' && bytes > 0 ? `${countLabel} (${formatBytes(bytes)})` : countLabel;
-}
 
 export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
   return loadCompanionReadableArticle(snapshot);
@@ -156,7 +42,7 @@ export async function runCompanionStreamSync(args: {
   if (args.cancelled()) {
     return;
   }
-  const passResult = describeSyncPassResult(result);
+  const passResult = describeCompanionSyncPassResult(result);
   const completedState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
     message: passResult.message,

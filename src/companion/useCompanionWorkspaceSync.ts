@@ -2,22 +2,12 @@ import { useEffect, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
-import {
-  syncCompanionObjectsFromDesktop,
-  type CompanionDesktopSyncProgress
-} from '../shared/platform/companionDesktopSyncObjects';
+import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
-import {
-  loadCompanionReadableArticle,
-  loadCompanionWorkspaceSyncState,
-  persistCompanionWorkspaceSnapshot,
-  recordCompanionWorkspaceSyncEvent,
-  removeCompanionWorkspaceSyncRememberedTarget,
-  saveCompanionSyncOnboardingStatus,
-  saveCompanionWorkspaceSyncEndpoint
-} from '../shared/platform/companionWorkspaceSync';
+import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
+import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import {
   type CompanionWorkspaceSyncStatus,
   syncReadableArticle,
@@ -25,104 +15,6 @@ import {
 } from './companionWorkspaceSyncFlow';
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
 import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
-
-function describeManualSyncPassResult(result: {
-  attachmentResourceError: string | null;
-  contentBlobError: string | null;
-  remainingAttachmentResourceBytes?: number | null;
-  remainingAttachmentResourceCount: number | null;
-  remainingContentBlobBytes?: number | null;
-  remainingContentBlobCount: number | null;
-  localDirtyCount?: number | null;
-  pendingAckCount?: number | null;
-  pushConflictCount?: number;
-  pushError?: string | null;
-  pushRejectedCount?: number;
-}) {
-  if (result.attachmentResourceError) {
-    return {
-      message: `Attachment cache failed: ${result.attachmentResourceError}`,
-      status: 'failed' as const
-    };
-  }
-  if (result.contentBlobError) {
-    return {
-      message: `Topic body cache failed: ${result.contentBlobError}`,
-      status: 'failed' as const
-    };
-  }
-  const remainingBodies = result.remainingContentBlobCount;
-  const remainingAttachments = result.remainingAttachmentResourceCount;
-  const bodyLabel = formatBacklogLabel('topic bodies', remainingBodies, result.remainingContentBlobBytes);
-  const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
-  if (result.pushError) {
-    const prefix = `Sync pass finished; device changes could not be sent: ${result.pushError}`;
-    if (remainingBodies === 0 && remainingAttachments === 0) {
-      return { message: prefix, status: 'skipped' as const };
-    }
-    if (remainingBodies === 0) {
-      return { message: `${prefix}; ${attachmentLabel} still caching.`, status: 'skipped' as const };
-    }
-    if (remainingAttachments === 0) {
-      return { message: `${prefix}; ${bodyLabel} still caching.`, status: 'skipped' as const };
-    }
-    return {
-      message: `${prefix}; ${bodyLabel} and ${attachmentLabel} still caching.`,
-      status: 'skipped' as const
-    };
-  }
-  const rejectedOrConflicted = (result.pushConflictCount ?? 0) + (result.pushRejectedCount ?? 0);
-  if (rejectedOrConflicted > 0) {
-    return {
-      message: `Sync pass finished; ${rejectedOrConflicted} device change(s) need review before they can be sent.`,
-      status: 'skipped' as const
-    };
-  }
-  if (
-    remainingBodies === 0 &&
-    remainingAttachments === 0 &&
-    result.localDirtyCount === 0 &&
-    result.pendingAckCount === 0
-  ) {
-    return {
-      message: 'Sync completed.',
-      status: 'completed' as const
-    };
-  }
-  if (remainingBodies === 0 && remainingAttachments === 0) {
-    return {
-      message: 'Sync pass finished; local changes are still waiting to settle.',
-      status: 'skipped' as const
-    };
-  }
-  if (remainingBodies === 0) {
-    return {
-      message: `Sync pass finished; ${attachmentLabel} still caching.`,
-      status: 'skipped' as const
-    };
-  }
-  if (remainingAttachments === 0) {
-    return {
-      message: `Sync pass finished; ${bodyLabel} still caching.`,
-      status: 'skipped' as const
-    };
-  }
-  return {
-    message: `Sync pass finished; ${bodyLabel} and ${attachmentLabel} still caching.`,
-    status: 'skipped' as const
-  };
-}
-
-function formatBytes(bytes: number) {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${bytes} B`;
-}
-
-function formatBacklogLabel(label: string, count: number | null, bytes?: number | null) {
-  const countLabel = count === null ? `some ${label}` : `${count} ${label}`;
-  return typeof bytes === 'number' && bytes > 0 ? `${countLabel} (${formatBytes(bytes)})` : countLabel;
-}
 
 const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
   endpoint_url: null,
@@ -132,16 +24,6 @@ const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
   sync_onboarding_status: 'pending',
   workspace_snapshot: null
 };
-
-interface WorkspaceSnapshotActionArgs {
-  setError: (message: string | null) => void;
-  setReadableArticle: (article: CompanionReadableArticle | null) => void;
-  setSyncConflictCount: (count: number) => void;
-  setState: (state: NativeCompanionWorkspaceSyncState) => void;
-  setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
-  setStatus: (status: CompanionWorkspaceSyncStatus) => void;
-  state: NativeCompanionWorkspaceSyncState;
-}
 
 async function initializeWorkspaceSyncState(args: {
   cancelled: () => boolean;
@@ -158,164 +40,6 @@ async function initializeWorkspaceSyncState(args: {
   args.setReadableArticle(await syncReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   args.setStatus('idle');
-}
-
-async function syncDesktopStreams(args: {
-  endpointUrl: string;
-  setReadableArticle: (article: CompanionReadableArticle | null) => void;
-  setSyncConflictCount: (count: number) => void;
-  setState: (state: NativeCompanionWorkspaceSyncState) => void;
-  setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
-}) {
-  async function refreshAfterStructureSync() {
-    const structureState = await loadCompanionWorkspaceSyncState();
-    args.setState(structureState);
-    args.setReadableArticle(await loadCompanionReadableArticle(structureState.workspace_snapshot));
-    args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-  }
-
-  const startedState = await recordCompanionWorkspaceSyncEvent({
-    endpointUrl: args.endpointUrl,
-    message: 'Sync started.',
-    status: 'started'
-  });
-  args.setState(startedState);
-  const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
-    onProgress: args.setSyncProgress,
-    onStructureSynced: refreshAfterStructureSync
-  });
-  const passResult = describeManualSyncPassResult(result);
-  const nextState = await recordCompanionWorkspaceSyncEvent({
-    endpointUrl: args.endpointUrl,
-    message: passResult.message,
-    status: passResult.status
-  });
-  args.setState(nextState);
-  args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
-  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-  if (
-    result.attachmentResourceError ||
-    result.contentBlobError ||
-    (result.remainingAttachmentResourceCount === 0 && result.remainingContentBlobCount === 0)
-  ) {
-    args.setSyncProgress(null);
-  }
-  return nextState;
-}
-
-async function recordManualSyncFailure(args: {
-  endpointUrl: string;
-  message: string;
-  setState: (state: NativeCompanionWorkspaceSyncState) => void;
-}) {
-  const failedState = await recordCompanionWorkspaceSyncEvent({
-    endpointUrl: args.endpointUrl,
-    message: args.message,
-    status: 'failed'
-  }).catch(() => null);
-  if (failedState) {
-    args.setState(failedState);
-  }
-}
-
-async function refreshCompanionWorkspaceFromDevice(args: {
-  setReadableArticle: (article: CompanionReadableArticle | null) => void;
-  setSyncConflictCount: (count: number) => void;
-  setState: (state: NativeCompanionWorkspaceSyncState) => void;
-}) {
-  const nextState = await loadCompanionWorkspaceSyncState();
-  args.setState(nextState);
-  args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
-  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-  return nextState;
-}
-
-function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
-  return async function pullFromDesktop(endpointUrl: string) {
-    args.setStatus('syncing');
-    args.setError(null);
-    try {
-      const nextState = await syncDesktopStreams({
-        endpointUrl,
-        setReadableArticle: args.setReadableArticle,
-        setSyncConflictCount: args.setSyncConflictCount,
-        setState: args.setState,
-        setSyncProgress: args.setSyncProgress
-      });
-      args.setStatus('idle');
-      return nextState;
-    } catch (syncError) {
-      const message = syncError instanceof Error ? syncError.message : 'Desktop sync failed.';
-      args.setStatus('idle');
-      args.setSyncProgress(null);
-      args.setError(message);
-      await recordManualSyncFailure({ endpointUrl, message, setState: args.setState });
-      throw syncError;
-    }
-  };
-}
-
-async function replaceCompanionWorkspaceSnapshot(
-  args: WorkspaceSnapshotActionArgs,
-  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
-  changedNodeId?: string
-) {
-  const nextState = await persistCompanionWorkspaceSnapshot({
-    changedNodeId,
-    endpointUrl: args.state.endpoint_url,
-    lastSyncedAt: args.state.last_synced_at,
-    rememberedTargets: args.state.remembered_targets,
-    workspaceSnapshot
-  });
-  args.setState(nextState);
-  args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
-  return nextState;
-}
-
-function useWorkspaceSnapshotActions(args: WorkspaceSnapshotActionArgs) {
-  async function saveEndpoint(endpointUrl: string) {
-    const nextState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
-    args.setState(nextState);
-    return nextState;
-  }
-
-  async function removeRememberedTarget(endpointUrl: string) {
-    const nextState = await removeCompanionWorkspaceSyncRememberedTarget(endpointUrl);
-    args.setState(nextState);
-    return nextState;
-  }
-
-  const pullFromDesktop = createPullFromDesktop(args);
-
-  async function replaceSnapshot(
-    workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
-    changedNodeId?: string
-  ) {
-    return await replaceCompanionWorkspaceSnapshot(args, workspaceSnapshot, changedNodeId);
-  }
-
-  async function refreshFromDevice() {
-    return await refreshCompanionWorkspaceFromDevice({
-      setReadableArticle: args.setReadableArticle,
-      setSyncConflictCount: args.setSyncConflictCount,
-      setState: args.setState
-    });
-  }
-
-  async function saveSyncOnboardingStatus(status: NativeCompanionWorkspaceSyncState['sync_onboarding_status']) {
-    const nextState = await saveCompanionSyncOnboardingStatus(status);
-    args.setState(nextState);
-    return nextState;
-  }
-
-  return {
-    pullFromDesktop,
-    refreshFromDevice,
-    removeRememberedTarget,
-    replaceSnapshot,
-    saveEndpoint,
-    saveSyncOnboardingStatus
-  };
 }
 
 function useWorkspaceSyncBootstrap(
@@ -362,7 +86,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     setError(null);
   }
 
-  const snapshotActions = useWorkspaceSnapshotActions({
+  const snapshotActions = createWorkspaceSnapshotActions({
     setError,
     setReadableArticle,
     setSyncConflictCount,
