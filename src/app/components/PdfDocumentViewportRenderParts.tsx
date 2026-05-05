@@ -19,10 +19,12 @@ interface PdfViewportToolbarProps {
   onSearchFocusChange: (focused: boolean) => void;
   onSearchQueryChange: (value: string) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
+  onSetZoom: (value: number) => void;
+  onToolbarActiveChange: (active: boolean) => void;
+  onToolbarInteraction: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
-  rotation: number;
   searchIndexingHint: string | null;
   searchQuery: string;
   searchStatus: PdfSearchStatus;
@@ -44,10 +46,12 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
       onSearchFocusChange={props.onSearchFocusChange}
       searchIndexingHint={props.searchIndexingHint}
       onSearchQueryChange={props.onSearchQueryChange}
+      onSetZoom={props.onSetZoom}
+      onToolbarActiveChange={props.onToolbarActiveChange}
+      onToolbarInteraction={props.onToolbarInteraction}
       onZoomIn={props.onZoomIn}
       onZoomOut={props.onZoomOut}
       page={props.page}
-      rotation={props.rotation}
       searchQuery={props.searchQuery}
       searchStatus={props.searchStatus}
       zoom={props.zoom}

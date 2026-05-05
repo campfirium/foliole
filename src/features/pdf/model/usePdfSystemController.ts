@@ -159,6 +159,9 @@ function createPdfCoreActions(args: {
     rotateClockwise: () => {
       args.setRotation((current) => (current + 90) % 360);
     },
+    setZoom: (value: number) => {
+      args.setZoom(clampInteger(value, PDF_ZOOM_MIN, PDF_ZOOM_MAX));
+    },
     zoomIn: () => {
       args.setZoom((current) => Math.min(PDF_ZOOM_MAX, current + PDF_ZOOM_STEP));
     },

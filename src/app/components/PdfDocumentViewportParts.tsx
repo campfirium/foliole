@@ -147,6 +147,9 @@ interface PdfDocumentViewportContentProps {
   onSearchRequestHandled: (requestId: number) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
   onSearchTargetHandled: (targetId: number) => void;
+  onSetZoom: (value: number) => void;
+  onToolbarActiveChange: (active: boolean) => void;
+  onToolbarInteraction: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
@@ -238,7 +241,10 @@ function resolveViewportContentBodyProps(
     onSearchFocusChange: props.onSearchFocusChange,
     onSearchQueryChange: props.onSearchQueryChange,
     onSearchRequest: props.onSearchRequest,
+    onSetZoom: props.onSetZoom,
+    onToolbarActiveChange: props.onToolbarActiveChange,
     onTextLayerRender: props.onTextLayerRender,
+    onToolbarInteraction: props.onToolbarInteraction,
     onZoomIn: props.onZoomIn,
     onZoomOut: props.onZoomOut,
     page: props.page,

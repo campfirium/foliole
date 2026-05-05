@@ -19,14 +19,15 @@ function accumulateScrollDistance(delta: number, scrollDirectionRef: MutableRefO
   return direction;
 }
 
-function shouldForceToolbarVisible(currentScrollTop: number, hasPersistentSearch: boolean, isSearchFocused: boolean) {
-  return currentScrollTop <= TOOLBAR_TOP_VISIBILITY_OFFSET || hasPersistentSearch || isSearchFocused;
+function shouldForceToolbarVisible(currentScrollTop: number, hasPersistentSearch: boolean, isSearchFocused: boolean, isToolbarActive: boolean) {
+  return currentScrollTop <= TOOLBAR_TOP_VISIBILITY_OFFSET || hasPersistentSearch || isSearchFocused || isToolbarActive;
 }
 
 function resolveToolbarVisibilityOnScroll(args: {
   currentScrollTop: number;
   hasPersistentSearch: boolean;
   isSearchFocused: boolean;
+  isToolbarActive: boolean;
   lastScrollTopRef: MutableRefObject<number>;
   scrollDirectionRef: MutableRefObject<'down' | 'up' | null>;
   scrollDistanceRef: MutableRefObject<number>;
@@ -34,7 +35,7 @@ function resolveToolbarVisibilityOnScroll(args: {
   const delta = args.currentScrollTop - args.lastScrollTopRef.current;
   args.lastScrollTopRef.current = args.currentScrollTop;
 
-  if (shouldForceToolbarVisible(args.currentScrollTop, args.hasPersistentSearch, args.isSearchFocused)) {
+  if (shouldForceToolbarVisible(args.currentScrollTop, args.hasPersistentSearch, args.isSearchFocused, args.isToolbarActive)) {
     resetScrollTracking(args.scrollDirectionRef, args.scrollDistanceRef);
     return true;
   }
@@ -54,69 +55,123 @@ function resolveToolbarVisibilityOnScroll(args: {
   return null;
 }
 
-export function usePdfToolbarVisibility(
-  searchQuery: string,
-  scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
-  onScrollBase: () => void
-) {
-  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const hasObservedInitialScrollRef = useRef(false);
-  const lastScrollTopRef = useRef(0);
-  const scrollDirectionRef = useRef<'down' | 'up' | null>(null);
-  const scrollDistanceRef = useRef(0);
-  const hasPersistentSearch = searchQuery.trim().length > 0;
+function syncToolbarWithObservedScroll(args: {
+  currentScrollTop: number;
+  hasObservedInitialScrollRef: MutableRefObject<boolean>;
+  lastScrollTopRef: MutableRefObject<number>;
+  scrollDirectionRef: MutableRefObject<'down' | 'up' | null>;
+  scrollDistanceRef: MutableRefObject<number>;
+  setIsToolbarVisible: (value: boolean) => void;
+  suppressScrollTrackingRef: MutableRefObject<boolean>;
+  hasPersistentSearch: boolean;
+  isSearchFocused: boolean;
+  isToolbarActive: boolean;
+}) {
+  if (!args.hasObservedInitialScrollRef.current) {
+    args.hasObservedInitialScrollRef.current = true;
+    args.lastScrollTopRef.current = args.currentScrollTop;
+    resetScrollTracking(args.scrollDirectionRef, args.scrollDistanceRef);
+    args.setIsToolbarVisible(true);
+    return;
+  }
+  if (args.suppressScrollTrackingRef.current) {
+    args.suppressScrollTrackingRef.current = false;
+    args.lastScrollTopRef.current = args.currentScrollTop;
+    resetScrollTracking(args.scrollDirectionRef, args.scrollDistanceRef);
+    args.setIsToolbarVisible(true);
+    return;
+  }
 
+  const nextVisibility = resolveToolbarVisibilityOnScroll(args);
+  if (nextVisibility !== null) {
+    args.setIsToolbarVisible(nextVisibility);
+  }
+}
+
+function handleToolbarInteraction(
+  scrollDirectionRef: MutableRefObject<'down' | 'up' | null>,
+  scrollDistanceRef: MutableRefObject<number>,
+  setIsToolbarVisible: (value: boolean) => void,
+  suppressScrollTrackingRef: MutableRefObject<boolean>
+) {
+  suppressScrollTrackingRef.current = true;
+  resetScrollTracking(scrollDirectionRef, scrollDistanceRef);
+  setIsToolbarVisible(true);
+}
+
+function handleSearchFocusChange(setIsSearchFocused: (value: boolean) => void, setIsToolbarVisible: (value: boolean) => void, focused: boolean) {
+  setIsSearchFocused(focused);
+  if (focused) {
+    setIsToolbarVisible(true);
+  }
+}
+
+function useToolbarVisibilityReset(
+  scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
+  lastScrollTopRef: MutableRefObject<number>,
+  scrollDirectionRef: MutableRefObject<'down' | 'up' | null>,
+  scrollDistanceRef: MutableRefObject<number>,
+  hasObservedInitialScrollRef: MutableRefObject<boolean>,
+  setIsToolbarVisible: (value: boolean) => void
+) {
   useEffect(() => {
     hasObservedInitialScrollRef.current = false;
     lastScrollTopRef.current = 0;
     resetScrollTracking(scrollDirectionRef, scrollDistanceRef);
     setIsToolbarVisible(true);
-  }, [scrollContainerRef]);
+  }, [hasObservedInitialScrollRef, lastScrollTopRef, scrollContainerRef, scrollDirectionRef, scrollDistanceRef, setIsToolbarVisible]);
+}
 
+function useToolbarPersistentVisibility(forceVisible: boolean, isSearchFocused: boolean, setIsToolbarVisible: (value: boolean) => void) {
   useEffect(() => {
-    if (hasPersistentSearch || isSearchFocused) setIsToolbarVisible(true);
-  }, [hasPersistentSearch, isSearchFocused]);
-
-  const handleToolbarScroll = () => {
-    onScrollBase();
-
-    const container = scrollContainerRef.current;
-    if (!container) {
-      return;
-    }
-
-    const currentScrollTop = container.scrollTop;
-    if (!hasObservedInitialScrollRef.current) {
-      hasObservedInitialScrollRef.current = true;
-      lastScrollTopRef.current = currentScrollTop;
-      resetScrollTracking(scrollDirectionRef, scrollDistanceRef);
+    if (forceVisible || isSearchFocused) {
       setIsToolbarVisible(true);
-      return;
     }
+  }, [forceVisible, isSearchFocused, setIsToolbarVisible]);
+}
 
-    const nextVisibility = resolveToolbarVisibilityOnScroll({
-      currentScrollTop,
-      hasPersistentSearch,
-      isSearchFocused,
-      lastScrollTopRef,
-      scrollDirectionRef,
-      scrollDistanceRef
-    });
-    if (nextVisibility === null) {
-      return;
-    }
-    setIsToolbarVisible(nextVisibility);
-  };
+export function usePdfToolbarVisibility(searchQuery: string, scrollContainerRef: MutableRefObject<HTMLDivElement | null>, onScrollBase: () => void) {
+  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isToolbarActive, setIsToolbarActive] = useState(false);
+  const hasObservedInitialScrollRef = useRef(false);
+  const lastScrollTopRef = useRef(0);
+  const suppressScrollTrackingRef = useRef(false);
+  const scrollDirectionRef = useRef<'down' | 'up' | null>(null);
+  const scrollDistanceRef = useRef(0);
+  const hasPersistentSearch = searchQuery.trim().length > 0;
+
+  useToolbarVisibilityReset(scrollContainerRef, lastScrollTopRef, scrollDirectionRef, scrollDistanceRef, hasObservedInitialScrollRef, setIsToolbarVisible);
+  useToolbarPersistentVisibility(hasPersistentSearch || isToolbarActive, isSearchFocused, setIsToolbarVisible);
 
   return {
-    handleSearchFocusChange: (focused: boolean) => {
-      setIsSearchFocused(focused);
-      if (focused) {
+    handleSearchFocusChange: (focused: boolean) => handleSearchFocusChange(setIsSearchFocused, setIsToolbarVisible, focused),
+    handleToolbarActiveChange: (active: boolean) => {
+      setIsToolbarActive(active);
+      if (active) {
         setIsToolbarVisible(true);
       }
     },
-    handleToolbarScroll,
+    handleToolbarInteraction: () => handleToolbarInteraction(scrollDirectionRef, scrollDistanceRef, setIsToolbarVisible, suppressScrollTrackingRef),
+    handleToolbarScroll: () => {
+      onScrollBase();
+      const container = scrollContainerRef.current;
+      if (!container) {
+        return;
+      }
+      syncToolbarWithObservedScroll({
+        currentScrollTop: container.scrollTop,
+        hasObservedInitialScrollRef,
+        hasPersistentSearch,
+        isSearchFocused,
+        isToolbarActive,
+        lastScrollTopRef,
+        scrollDirectionRef,
+        scrollDistanceRef,
+        setIsToolbarVisible,
+        suppressScrollTrackingRef
+      });
+    },
     isToolbarVisible
   };
 }

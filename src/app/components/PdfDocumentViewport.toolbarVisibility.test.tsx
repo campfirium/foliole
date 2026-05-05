@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 const { collectTextSegmentsSpy } = vi.hoisted(() => ({
@@ -51,32 +51,69 @@ vi.mock('./pdfSearchTextSegments', () => ({
 
 import { PdfDocumentViewport } from './PdfDocumentViewport';
 
+function useToolbarReplayScroll(page: number, zoom: number, shouldReplayToolbarScrollRef: MutableRefObject<boolean>) {
+  useEffect(() => {
+    if (!shouldReplayToolbarScrollRef.current) {
+      return;
+    }
+    shouldReplayToolbarScrollRef.current = false;
+    const scrollContainer = screen.getByTestId('pdf-scroll-container');
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      configurable: true,
+      value: 24,
+      writable: true
+    });
+    fireEvent.scroll(scrollContainer);
+  }, [page, zoom]);
+}
+
 function ToolbarVisibilityHarness() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchStatus, setSearchStatus] = useState({ current: 0, hasQuery: false, total: 0 });
+  const [page, setPage] = useState(1);
+  const [zoom, setZoom] = useState(100);
+  const shouldReplayToolbarScrollRef = useRef(false);
+
+  useToolbarReplayScroll(page, zoom, shouldReplayToolbarScrollRef);
 
   return (
     <PdfDocumentViewport
       clearPageJumpRequest={() => undefined}
       highlightLocators={[]}
       loadError={null}
-      maxPage={1}
+      maxPage={3}
       onClearSearch={() => undefined}
       onContextMenu={() => undefined}
       onLoadError={() => undefined}
       onLoadSuccess={() => undefined}
-      onNextPage={() => undefined}
-      onPageChange={() => undefined}
-      onPreviousPage={() => undefined}
+      onNextPage={() => {
+        shouldReplayToolbarScrollRef.current = true;
+        setPage((current) => current + 1);
+      }}
+      onPageChange={setPage}
+      onPreviousPage={() => {
+        shouldReplayToolbarScrollRef.current = true;
+        setPage((current) => Math.max(1, current - 1));
+      }}
       onRotateClockwise={() => undefined}
       onSearchQueryChange={setSearchQuery}
       onSearchRequest={() => undefined}
       onSearchRequestHandled={() => undefined}
       onSearchStatusChange={setSearchStatus}
       onSearchTargetHandled={() => undefined}
-      onZoomIn={() => undefined}
-      onZoomOut={() => undefined}
-      page={1}
+      onSetZoom={(value) => {
+        shouldReplayToolbarScrollRef.current = true;
+        setZoom(value);
+      }}
+      onZoomIn={() => {
+        shouldReplayToolbarScrollRef.current = true;
+        setZoom((current) => current + 10);
+      }}
+      onZoomOut={() => {
+        shouldReplayToolbarScrollRef.current = true;
+        setZoom((current) => current - 10);
+      }}
+      page={page}
       pageJumpRequest={null}
       pdfSelectionLocator={undefined}
       pdfSource="/tmp/sample.pdf"
@@ -87,8 +124,8 @@ function ToolbarVisibilityHarness() {
       searchTarget={null}
       searchStatus={searchStatus}
       setVisiblePage={() => undefined}
-      totalPages={1}
-      zoom={100}
+      totalPages={3}
+      zoom={zoom}
     />
   );
 }
@@ -102,13 +139,23 @@ function setScrollTopAndScroll(container: HTMLElement, scrollTop: number) {
   fireEvent.scroll(container);
 }
 
+function renderToolbarVisibilityHarness() {
+  render(<ToolbarVisibilityHarness />);
+  return {
+    scrollContainer: screen.getByTestId('pdf-scroll-container'),
+    toolbar: screen.getByTestId('pdf-document-toolbar')
+  };
+}
+
+async function expectToolbarInteractionToKeepVisible(toolbar: HTMLElement, action: () => void) {
+  action();
+  await waitFor(() => expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true'));
+}
+
 describe('PdfDocumentViewport toolbar visibility', () => {
   it('hides on downward scroll and returns on upward scroll', () => {
     collectTextSegmentsSpy.mockReturnValue([]);
-    render(<ToolbarVisibilityHarness />);
-
-    const toolbar = screen.getByTestId('pdf-document-toolbar');
-    const scrollContainer = screen.getByTestId('pdf-scroll-container');
+    const { scrollContainer, toolbar } = renderToolbarVisibilityHarness();
 
     expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
 
@@ -130,10 +177,7 @@ describe('PdfDocumentViewport toolbar visibility', () => {
         ? [{ element: span, end: node.textContent?.length ?? 0, node, start: 0, text: node.textContent ?? '' }]
         : [];
     });
-    render(<ToolbarVisibilityHarness />);
-
-    const toolbar = screen.getByTestId('pdf-document-toolbar');
-    const scrollContainer = screen.getByTestId('pdf-scroll-container');
+    const { scrollContainer, toolbar } = renderToolbarVisibilityHarness();
     const searchInput = screen.getByLabelText('PDF search');
 
     setScrollTopAndScroll(scrollContainer, 80);
@@ -152,15 +196,31 @@ describe('PdfDocumentViewport toolbar visibility', () => {
 
   it('stays visible on the first restored scroll position before any user scroll gesture', () => {
     collectTextSegmentsSpy.mockReturnValue([]);
-    render(<ToolbarVisibilityHarness />);
-
-    const toolbar = screen.getByTestId('pdf-document-toolbar');
-    const scrollContainer = screen.getByTestId('pdf-scroll-container');
+    const { scrollContainer, toolbar } = renderToolbarVisibilityHarness();
 
     setScrollTopAndScroll(scrollContainer, 220);
     expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
 
     setScrollTopAndScroll(scrollContainer, 280);
+    expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
+  });
+
+  it('keeps the toolbar visible after page and zoom actions until the next reading scroll', async () => {
+    collectTextSegmentsSpy.mockReturnValue([]);
+    const { scrollContainer, toolbar } = renderToolbarVisibilityHarness();
+
+    setScrollTopAndScroll(scrollContainer, 80);
+    setScrollTopAndScroll(scrollContainer, 120);
+    expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
+
+    await expectToolbarInteractionToKeepVisible(toolbar, () => fireEvent.click(screen.getByLabelText('Next page')));
+
+    setScrollTopAndScroll(scrollContainer, 64);
+    expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
+
+    await expectToolbarInteractionToKeepVisible(toolbar, () => fireEvent.click(screen.getByLabelText('Zoom in')));
+
+    setScrollTopAndScroll(scrollContainer, 96);
     expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
   });
 });

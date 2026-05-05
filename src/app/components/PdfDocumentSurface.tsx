@@ -180,6 +180,7 @@ function buildPdfSurfaceLayoutProps(
     searchTarget: searchState.searchTarget,
     setSearchQuery: searchState.handleSearchQueryChange,
     setSearchStatus: searchState.setSearchStatus,
+    setZoom: pdfSystem.actions.setZoom,
     setVisiblePage: pdfSystem.actions.setVisiblePage,
     stepPage: pdfSystem.actions.stepPage,
     surfaceRef: selectionState.surfaceRef,

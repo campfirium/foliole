@@ -22,7 +22,10 @@ interface PdfDocumentViewportContentBodyProps {
   onSearchFocusChange: (focused: boolean) => void;
   onSearchQueryChange: (value: string) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
+  onSetZoom: (value: number) => void;
+  onToolbarActiveChange: (active: boolean) => void;
   onTextLayerRender: (pageNumber: number) => void;
+  onToolbarInteraction: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
@@ -60,10 +63,12 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
         searchIndexingHint={props.searchIndexingHint}
         onSearchQueryChange={props.onSearchQueryChange}
         onSearchRequest={props.onSearchRequest}
+        onSetZoom={props.onSetZoom}
+        onToolbarActiveChange={props.onToolbarActiveChange}
+        onToolbarInteraction={props.onToolbarInteraction}
         onZoomIn={props.onZoomIn}
         onZoomOut={props.onZoomOut}
         page={props.page}
-        rotation={props.rotation}
         searchQuery={props.searchQuery}
         searchStatus={props.searchStatus}
         zoom={props.zoom}

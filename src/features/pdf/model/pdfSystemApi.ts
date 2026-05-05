@@ -24,6 +24,7 @@ export interface PdfSystemExternalApi {
   reportLoadSuccess: (numPages: number) => void;
   requestPageChange: (value: number) => void;
   rotateClockwise: () => void;
+  setZoom: (value: number) => void;
   setVisiblePage: (page: number) => void;
   stepPage: (direction: -1 | 1) => void;
   zoomIn: () => void;
