@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 
 import { App } from './app/App';
 import './app/styles.css';
+import { reportNativeAppReady, reportNativeBootStage } from './shared/testing/nativeBootReporter';
 
 const ROOT_ID = 'root';
 
@@ -31,12 +32,27 @@ function mountApp() {
 
   window.addEventListener('error', (event) => {
     console.error('[startup] uncaught error', event.error);
+    reportNativeBootStage('window_error', {
+      message: event.message,
+      source: event.filename,
+      line: event.lineno,
+      column: event.colno
+    });
   });
   window.addEventListener('unhandledrejection', (event) => {
     console.error('[startup] unhandled rejection', event.reason);
+    reportNativeBootStage('unhandled_rejection', {
+      reason: String(event.reason)
+    });
   });
 
   console.info('[startup] boot context', {
+    href: window.location.href,
+    readyState: document.readyState,
+    tauriInvokeReady: Boolean((window as Window & { __TAURI__?: { core?: { invoke?: unknown } } }).__TAURI__?.core?.invoke),
+    userAgent: navigator.userAgent
+  });
+  reportNativeBootStage('boot_context', {
     href: window.location.href,
     readyState: document.readyState,
     tauriInvokeReady: Boolean((window as Window & { __TAURI__?: { core?: { invoke?: unknown } } }).__TAURI__?.core?.invoke),
@@ -48,12 +64,25 @@ function mountApp() {
       <App />
     </React.StrictMode>
   );
+  reportNativeBootStage('react_render_committed');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      reportNativeAppReady({
+        href: window.location.href,
+        readyState: document.readyState
+      });
+    });
+  });
 }
 
 try {
+  reportNativeBootStage('boot_start');
   mountApp();
 } catch (error) {
   console.error('[startup] fatal bootstrap error', error);
+  reportNativeBootStage('fatal_bootstrap_error', {
+    message: error instanceof Error ? error.message : 'Unknown startup exception'
+  });
   const message = error instanceof Error ? error.message : 'Unknown startup exception';
   renderStartupError(message);
 }

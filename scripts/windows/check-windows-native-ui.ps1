@@ -3,6 +3,7 @@ param(
   [string]$WindowsWorkDir,
   [Parameter(Mandatory = $true)]
   [string]$LogDir,
+  [switch]$ForceScreenshot,
   [double]$MinNonBlackRatio = 0.03,
   [double]$MinLumaStdDev = 8.0,
   [double]$MinTopBandStdDev = 12.0,
@@ -191,6 +192,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 Prune-OldScreenshots -Directory $LogDir -KeepCount $KeepLatestScreenshots
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $outputImage = Join-Path $LogDir "windows-native-ui-$timestamp.png"
+$readyMarkerPath = Join-Path $WindowsWorkDir ".windows-native-boot-ready.json"
 
 $appProcess = Get-AppProcess -WorkDir $WindowsWorkDir
 if (-not $appProcess) {
@@ -202,6 +204,23 @@ $managed = Get-Process -Id $appProcess.ProcessId -ErrorAction SilentlyContinue
 if (-not $managed -or $managed.MainWindowHandle -eq 0) {
   Write-Output "[windows-ui-check] app main window handle missing."
   exit 3
+}
+
+if (-not $ForceScreenshot -and (Test-Path $readyMarkerPath)) {
+  try {
+    $readyMarker = Get-Content -Path $readyMarkerPath -Raw | ConvertFrom-Json
+    $markerSession = "$($readyMarker.session)".Trim()
+    $markerStage = "$($readyMarker.stage)".Trim()
+    $markerPid = [int]$readyMarker.pid
+    if ($markerStage -eq "app_ready" -and $markerSession.Length -gt 0 -and $markerPid -eq $managed.Id) {
+      Write-Output "[windows-ui-check] ready marker path: $readyMarkerPath"
+      Write-Output "[windows-ui-check] ready marker stage=app_ready session=$markerSession pid=$markerPid"
+      Write-Output "[windows-ui-check] passed via startup handshake."
+      exit 0
+    }
+  } catch {
+    Write-Output "[windows-ui-check] ready marker parse failed: $($_.Exception.Message)"
+  }
 }
 
 $windowHandle = [IntPtr]$managed.MainWindowHandle

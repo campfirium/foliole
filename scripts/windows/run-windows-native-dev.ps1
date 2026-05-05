@@ -9,6 +9,7 @@ param(
   [string]$WindowsWorkDir,
   [Parameter(Mandatory = $true)]
   [string]$LogDir,
+  [int]$BootReadyTimeoutSec = 25,
   [ValidateSet("start", "sync", "restart", "stop", "status", "apply")]
   [string]$Action = "apply"
 )
@@ -44,10 +45,11 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $logPath = Join-Path $LogDir "windows-native-dev-$timestamp.log"
 $stateFile = Join-Path $WindowsWorkDir ".windows-native-dev-state.json"
 $lockHashStateFile = Join-Path $WindowsWorkDir ".windows-native-dev-lock.sha256"
+$bootReadyFile = Join-Path $WindowsWorkDir ".windows-native-boot-ready.json"
 
 function Write-Log {
   param([string]$Message)
-  $Message | Tee-Object -FilePath $logPath -Append
+  $Message | Tee-Object -FilePath $logPath -Append | Out-Host
 }
 
 function Invoke-Robocopy {
@@ -167,6 +169,23 @@ function Get-NativeLauncherProcesses {
   }
 }
 
+function Get-NativeViteProcesses {
+  param([string]$WorkDir)
+
+  $normalizedWorkDir = $WorkDir.ToLowerInvariant()
+  return Get-CimInstance Win32_Process | Where-Object {
+    if ($_.Name -ne "node.exe" -or -not $_.CommandLine) {
+      return $false
+    }
+
+    $commandLineLower = $_.CommandLine.ToLowerInvariant()
+    return $commandLineLower.Contains($normalizedWorkDir) -and
+      $commandLineLower.Contains("vite") -and
+      $commandLineLower.Contains("127.0.0.1") -and
+      $commandLineLower.Contains("4600")
+  }
+}
+
 function Stop-NativeDevSession {
   param([string]$WorkDir)
 
@@ -190,6 +209,16 @@ function Stop-NativeDevSession {
     }
   }
 
+  $viteProcesses = Get-NativeViteProcesses -WorkDir $WorkDir
+  foreach ($viteProcess in $viteProcesses) {
+    try {
+      Stop-Process -Id $viteProcess.ProcessId -Force -ErrorAction Stop
+      Write-Log "[windows-native-dev] stopped vite pid=$($viteProcess.ProcessId)"
+    } catch {
+      Write-Log "[windows-native-dev] failed to stop vite pid=$($viteProcess.ProcessId): $($_.Exception.Message)"
+    }
+  }
+
   if (Test-Path $stateFile) {
     Remove-Item -Force $stateFile
   }
@@ -198,11 +227,13 @@ function Stop-NativeDevSession {
 function Save-StateFile {
   param(
     [string]$WorkDir,
-    [int]$LauncherPid
+    [int]$LauncherPid,
+    [string]$BootSession
   )
 
   $payload = [ordered]@{
     launcher_pid = $LauncherPid
+    boot_session = $BootSession
     started_at = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
     workdir = $WorkDir
   }
@@ -246,16 +277,68 @@ function Launch-NativeDev {
 
   if (Is-NativeDevRunning -WorkDir $WorkDir) {
     Write-Log "[windows-native-dev] native app already running, skip launch."
-    return
+    return ""
   }
 
-  $launchCommand = "cd /d `"$WorkDir`" && npm run tauri:dev"
+  if (Test-Path $bootReadyFile) {
+    Remove-Item -Force $bootReadyFile -ErrorAction SilentlyContinue
+  }
+
+  $bootSession = [Guid]::NewGuid().ToString("N")
+  $launchCommand = "cd /d `"$WorkDir`" && set `"FOLIOLE_WORKDIR=$WorkDir`" && set `"FOLIOLE_BOOT_SESSION=$bootSession`" && npm run tauri:dev"
   Write-Log ""
   Write-Log "[windows-native-dev] step: launch native tauri dev"
   Write-Log "[windows-native-dev] cmd: $launchCommand"
+  Write-Log "[windows-native-dev] boot session: $bootSession"
   $cmdProc = Start-Process -FilePath "cmd.exe" -ArgumentList "/k", $launchCommand -PassThru
-  Save-StateFile -WorkDir $WorkDir -LauncherPid $cmdProc.Id
+  Save-StateFile -WorkDir $WorkDir -LauncherPid $cmdProc.Id -BootSession $bootSession
   Write-Log "[windows-native-dev] launcher pid: $($cmdProc.Id)"
+  return $bootSession
+}
+
+function Wait-ForFrontendReady {
+  param(
+    [string]$WorkDir,
+    [string]$BootSession,
+    [int]$TimeoutSeconds
+  )
+
+  if ([string]::IsNullOrWhiteSpace($BootSession)) {
+    Write-Log "[windows-native-dev] boot readiness wait skipped: empty session."
+    return $true
+  }
+
+  $maxAttempts = [Math]::Max(1, [Math]::Ceiling(($TimeoutSeconds * 1000) / 250))
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    $appCount = @(Get-NativeAppProcesses -WorkDir $WorkDir).Count
+    if ($appCount -eq 0) {
+      Start-Sleep -Milliseconds 250
+      continue
+    }
+
+    if (-not (Test-Path $bootReadyFile)) {
+      Start-Sleep -Milliseconds 250
+      continue
+    }
+
+    try {
+      $marker = Get-Content -Path $bootReadyFile -Raw | ConvertFrom-Json
+      $markerSession = "$($marker.session)".Trim()
+      $expectedSession = $BootSession.Trim()
+      if ($markerSession -eq $expectedSession -and $marker.stage -eq "app_ready") {
+        Write-Log "[windows-native-dev] frontend ready marker detected."
+        return $true
+      }
+    } catch {
+      Write-Log "[windows-native-dev] ready marker parse failed: $($_.Exception.Message)"
+    }
+
+    Start-Sleep -Milliseconds 250
+  }
+
+  Write-Log "[windows-native-dev] frontend ready timeout after ${TimeoutSeconds}s (session=$BootSession)."
+  Write-Log "[windows-native-dev] expected marker file: $bootReadyFile"
+  return $false
 }
 
 function Ensure-AppWindowForeground {
@@ -354,7 +437,12 @@ if ($Action -eq "sync") {
 if ($Action -eq "apply") {
   if (-not (Is-NativeDevRunning -WorkDir $WindowsWorkDir)) {
     Write-Log "[windows-native-dev] apply mode fallback: app not running, start now."
-    Launch-NativeDev -WorkDir $WindowsWorkDir
+    $applyBootSession = Launch-NativeDev -WorkDir $WindowsWorkDir
+    if (-not (Wait-ForFrontendReady -WorkDir $WindowsWorkDir -BootSession $applyBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
+      Write-Log "[windows-native-dev] status: BOOT_TIMEOUT"
+      Write-Log "[windows-native-dev] log file: $logPath"
+      exit 11
+    }
   }
   Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
 
@@ -365,8 +453,14 @@ if ($Action -eq "apply") {
 }
 
 if ($Action -eq "restart") {
-  Launch-NativeDev -WorkDir $WindowsWorkDir
+  $restartBootSession = Launch-NativeDev -WorkDir $WindowsWorkDir
   Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
+  if (-not (Wait-ForFrontendReady -WorkDir $WindowsWorkDir -BootSession $restartBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
+    Show-Status -WorkDir $WindowsWorkDir
+    Write-Log "[windows-native-dev] status: BOOT_TIMEOUT"
+    Write-Log "[windows-native-dev] log file: $logPath"
+    exit 11
+  }
   Show-Status -WorkDir $WindowsWorkDir
   Write-Log "[windows-native-dev] status: RESTARTED"
   Write-Log "[windows-native-dev] log file: $logPath"
@@ -374,8 +468,14 @@ if ($Action -eq "restart") {
 }
 
 if ($Action -eq "start") {
-  Launch-NativeDev -WorkDir $WindowsWorkDir
+  $startBootSession = Launch-NativeDev -WorkDir $WindowsWorkDir
   Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
+  if (-not (Wait-ForFrontendReady -WorkDir $WindowsWorkDir -BootSession $startBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
+    Show-Status -WorkDir $WindowsWorkDir
+    Write-Log "[windows-native-dev] status: BOOT_TIMEOUT"
+    Write-Log "[windows-native-dev] log file: $logPath"
+    exit 11
+  }
   Show-Status -WorkDir $WindowsWorkDir
   Write-Log "[windows-native-dev] status: STARTED"
   Write-Log "[windows-native-dev] log file: $logPath"
