@@ -43,11 +43,14 @@
   --app-control-border-color: rgb(var(--color-foreground) / 0.22);
   --app-control-border-hover-color: rgb(var(--color-foreground) / 0.36);
   --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.04);
+  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 92%, var(--workspace-region-main-topic-bg) 8%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 84%, var(--workspace-region-main-topic-bg) 16%);
+  --app-floating-surface-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 70%, var(--workspace-region-main-document-bg) 30%);
   --app-accent-color: #3f8f68;
   --app-accent-color-rgb: 63 143 104;
   --app-selection-color: #3876ff;
   --app-selection-color-rgb: 56 118 255;
-  --app-selection-surface-color: rgb(var(--app-selection-color-rgb) / 0.34);
+  --app-selection-surface-color: rgb(var(--app-selection-color-rgb) / 0.2);
   --app-highlight-color: #38bdf8;
   --app-highlight-color-rgb: 56 189 248;
   --app-highlight-surface-color: rgb(var(--app-highlight-color-rgb) / 0.34);
@@ -148,6 +151,10 @@
   --app-control-border-color: rgb(var(--color-foreground) / 0.34);
   --app-control-border-hover-color: rgb(var(--color-foreground) / 0.5);
   --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.06);
+  --app-selection-surface-color: rgb(var(--app-selection-color-rgb) / 0.26);
+  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-topic-bg) 12%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 78%, var(--workspace-region-main-topic-bg) 22%);
+  --app-floating-surface-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 72%, var(--workspace-region-main-document-bg) 28%);
   --app-settings-shell-bg: var(--workspace-region-main-document-bg);
   --app-settings-sidebar-bg: var(--workspace-region-main-topic-bg);
   --app-settings-group-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 36%, var(--workspace-region-main-document-bg) 64%);
@@ -185,6 +192,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   overflow: hidden;
+}
+
+::selection {
+  background: var(--app-selection-surface-color);
 }
 
 [role='treeitem'][data-node-visibility='muted'] {
@@ -248,23 +259,31 @@ body {
 .workspace-region-main-folder {
   background: var(--workspace-region-main-folder-bg);
   --app-surface: var(--workspace-region-main-folder-bg);
+  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 94%, var(--workspace-region-main-topic-bg) 6%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 88%, var(--workspace-region-main-topic-bg) 12%);
   --app-scrollbar-thumb-color: var(--workspace-region-main-folder-scrollbar-thumb-color);
 }
 
 .workspace-region-main-topic {
   background: var(--workspace-region-main-topic-bg);
   --app-surface: var(--workspace-region-main-topic-bg);
+  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 94%, var(--workspace-region-main-document-bg) 6%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 88%, var(--workspace-region-main-document-bg) 12%);
   --app-scrollbar-thumb-color: var(--workspace-region-main-topic-scrollbar-thumb-color);
 }
 
 .workspace-region-main-document {
   background: var(--workspace-region-main-document-bg);
   --app-surface: var(--workspace-region-main-document-bg);
+  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 94%, var(--workspace-region-main-topic-bg) 6%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-topic-bg) 12%);
   --app-scrollbar-thumb-color: var(--workspace-region-main-document-scrollbar-thumb-color);
 }
 
 .workspace-toolbar-surface {
   --app-surface: rgb(var(--color-bg-subtle));
+  --app-surface-control-bg: color-mix(in srgb, rgb(var(--color-bg-subtle)) 94%, var(--workspace-region-main-topic-bg) 6%);
+  --app-surface-control-hover-bg: color-mix(in srgb, rgb(var(--color-bg-subtle)) 88%, var(--workspace-region-main-topic-bg) 12%);
 }
 
 .workspace-region-main-sidebar {

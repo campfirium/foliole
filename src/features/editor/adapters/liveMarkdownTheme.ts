@@ -164,7 +164,8 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-activeLine': { backgroundColor: 'transparent' },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
-    backgroundColor: SHARED_SELECTION_SURFACE_COLOR
+    backgroundColor: SHARED_SELECTION_SURFACE_COLOR,
+    borderRadius: '0.16rem'
   },
   '&[data-paragraph-marker-active="true"] .cm-selectionBackground, &[data-paragraph-marker-active="true"].cm-focused .cm-selectionBackground, &[data-paragraph-marker-active="true"] ::selection': {
     backgroundColor: 'transparent'

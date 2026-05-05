@@ -14,8 +14,10 @@ export function FolderListTextItem(props: FolderListTextItemProps) {
     <li>
       <button
         aria-label={props.ariaLabel}
-        className={`flex w-full flex-col gap-3 py-5 text-left transition-colors focus-visible:outline-none ${
-          props.active ? 'bg-bg-subtle' : 'hover:bg-bg-subtle focus-visible:bg-bg-subtle'
+        className={`-mx-4 flex w-[calc(100%+2rem)] flex-col gap-3 rounded-md px-4 py-5 text-left transition-colors focus-visible:outline-none ${
+          props.active
+            ? 'bg-[var(--app-surface-control-bg)]'
+            : 'hover:bg-[var(--app-surface-control-hover-bg)] focus-visible:bg-[var(--app-surface-control-bg)]'
         }`}
         onClick={props.onClick}
         type="button"

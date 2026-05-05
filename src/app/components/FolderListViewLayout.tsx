@@ -34,11 +34,11 @@ function FolderListHeader({
     <div className="flex flex-wrap items-center gap-3 border-b border-border/10 pb-3">
       {showCountAndTitle ? <FolderListHeaderSummary folderTitle={folderTitle} itemCountLabel={itemCountLabel} /> : null}
       <div className="w-[248px] max-w-full max-[900px]:w-full max-[900px]:basis-full">
-        <div className="flex h-9 w-full items-center gap-2 rounded-lg bg-bg-subtle px-3">
+        <div className="flex h-9 w-full items-center gap-2 rounded-lg border border-border/12 bg-transparent px-3 transition-colors hover:border-border/18 focus-within:border-border/28">
           <Search aria-hidden="true" className="shrink-0 text-foreground/38" size={14} strokeWidth={1.8} />
           <AppInput
             aria-label="Search folder contents"
-            className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none placeholder:text-foreground/38 focus-visible:ring-0"
+            className="h-8 w-full !border-0 !bg-transparent px-0 text-sm shadow-none placeholder:text-foreground/38 hover:!bg-transparent focus-visible:!bg-transparent focus-visible:!ring-0"
             onChange={(event) => onChangeSearchQuery(event.target.value)}
             placeholder="Search in this folder"
             type="search"
