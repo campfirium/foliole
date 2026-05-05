@@ -29,7 +29,7 @@ final class FolioleCompanionMissingResourceQueryRules {
     }
 
     static int attachmentLimit(Context context, int limit) throws Exception {
-        return Math.max(group(context, "attachmentResources").getInt("minLimit"), limit);
+        return Math.max(intValue(context, "attachmentResources", "minLimit"), limit);
     }
 
     static JSONObject attachmentObject(Context context, String key) throws Exception {
@@ -98,7 +98,7 @@ final class FolioleCompanionMissingResourceQueryRules {
     }
 
     static int contentLimit(Context context, int limit) throws Exception {
-        return Math.max(group(context, "contentBlobs").getInt("minLimit"), limit);
+        return Math.max(intValue(context, "contentBlobs", "minLimit"), limit);
     }
 
     static JSONObject contentObject(Context context, String key) throws Exception {
@@ -123,6 +123,10 @@ final class FolioleCompanionMissingResourceQueryRules {
 
     private static String stringValue(Context context, String groupName, String key) throws Exception {
         return group(context, groupName).getString(key);
+    }
+
+    private static int intValue(Context context, String groupName, String key) throws Exception {
+        return group(context, groupName).getInt(key);
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {

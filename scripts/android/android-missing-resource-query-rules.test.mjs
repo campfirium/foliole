@@ -74,6 +74,8 @@ describe('Android missing resource query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "missingResourceRead", groupName)');
+    expect(rulesSource).toContain('intValue(context, "attachmentResources", "minLimit")');
+    expect(rulesSource).toContain('intValue(context, "contentBlobs", "minLimit")');
     expect(combinedStoreSource).not.toContain('field.getString("outputKey")');
     expect(combinedStoreSource).not.toContain('field.getString("rowKey")');
     expect(combinedStoreSource).not.toContain('field.getString("type")');
@@ -93,5 +95,6 @@ describe('Android missing resource query rules', () => {
     expect(combinedStoreSource).not.toContain('"size_bytes"');
     expect(combinedStoreSource).not.toContain('"storage_key"');
     expect(combinedStoreSource).not.toContain('Math.max(1, limit)');
+    expect(rulesSource).not.toContain('getInt("minLimit")');
   });
 });

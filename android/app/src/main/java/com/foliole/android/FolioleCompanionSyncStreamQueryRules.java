@@ -28,7 +28,7 @@ final class FolioleCompanionSyncStreamQueryRules {
     }
 
     static int nodeVersionAncestorDepthLimit(Context context) throws Exception {
-        return group(context, "nodeVersions").getInt("ancestorDepthLimit");
+        return intValue(context, "nodeVersions", "ancestorDepthLimit");
     }
 
     static String reviewLogQueryName(Context context) throws Exception {
