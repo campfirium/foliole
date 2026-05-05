@@ -10,10 +10,10 @@ final class FolioleCompanionDocumentSyncPayload {
     private FolioleCompanionDocumentSyncPayload() {}
 
     static void apply(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
-        if (!record.isNull("deleted_at")) {
+        if (!record.isNull(recordKey(context, "recordDeletedAtKey"))) {
             FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "markMissingMutationName"), new Object[] {
-                record.optString("deleted_at"),
-                record.optString("updated_at"),
+                FolioleCompanionDocumentPayloadRules.deletedAt(context, record),
+                FolioleCompanionDocumentPayloadRules.updatedAt(context, record),
                 objectId
             });
             return;
@@ -21,23 +21,23 @@ final class FolioleCompanionDocumentSyncPayload {
         JSONObject payload = payload(record);
         FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "upsertMutationName"), new Object[] {
             objectId,
-            payload.optString("folder_id", ""),
-            payload.optString("relative_path", ""),
-            payload.optString("file_name", ""),
-            payload.optString("extension", ""),
-            payload.optLong("source_size_bytes", 0),
-            payload.optString("source_modified_at", record.optString("updated_at")),
-            payload.optLong("source_modified_ms", 0),
-            payload.optString("content_hash", record.optString("content_hash")),
-            nullIfEmpty(payload.optString("title", "")),
-            nullIfEmpty(payload.optString("opening_text", "")),
-            nullIfEmpty(payload.optString("body_blob_hash", "")),
-            payload.optString("content", ""),
-            payload.optString("indexed_at", record.optString("updated_at")),
-            payload.optInt("is_present", 1),
-            nullIfEmpty(payload.optString("missing_at", "")),
-            payload.optString("created_at", record.optString("updated_at")),
-            record.optString("updated_at")
+            filePart(context, payload, "folderIdPayloadKey"),
+            filePart(context, payload, "relativePathPayloadKey"),
+            filePart(context, payload, "fileNamePayloadKey"),
+            filePart(context, payload, "extensionPayloadKey"),
+            FolioleCompanionDocumentPayloadRules.longValue(context, payload, "sourceSizeBytesPayloadKey"),
+            string(context, payload, "sourceModifiedAtPayloadKey", FolioleCompanionDocumentPayloadRules.updatedAt(context, record)),
+            FolioleCompanionDocumentPayloadRules.longValue(context, payload, "sourceModifiedMsPayloadKey"),
+            FolioleCompanionDocumentPayloadRules.contentHash(context, payload, record),
+            FolioleCompanionDocumentPayloadRules.nullableString(context, payload, "titlePayloadKey"),
+            FolioleCompanionDocumentPayloadRules.nullableString(context, payload, "openingTextPayloadKey"),
+            FolioleCompanionDocumentPayloadRules.nullableString(context, payload, "bodyBlobHashPayloadKey"),
+            string(context, payload, "contentPayloadKey", documentDefault(context, "defaultContent")),
+            string(context, payload, "indexedAtPayloadKey", FolioleCompanionDocumentPayloadRules.updatedAt(context, record)),
+            FolioleCompanionDocumentPayloadRules.isPresent(context, payload),
+            FolioleCompanionDocumentPayloadRules.nullableString(context, payload, "missingAtPayloadKey"),
+            string(context, payload, "createdAtPayloadKey", FolioleCompanionDocumentPayloadRules.updatedAt(context, record)),
+            FolioleCompanionDocumentPayloadRules.updatedAt(context, record)
         });
     }
 
@@ -49,7 +49,27 @@ final class FolioleCompanionDocumentSyncPayload {
         return FolioleCompanionSyncApplyMutationRules.string(context, "documents", key);
     }
 
-    private static String nullIfEmpty(String value) {
-        return value == null || value.trim().isEmpty() ? null : value;
+    private static String filePart(Context context, JSONObject payload, String keyName) throws Exception {
+        return FolioleCompanionDocumentPayloadRules.filePart(context, payload, keyName);
+    }
+
+    private static String string(Context context, JSONObject payload, String keyName, String fallback) throws Exception {
+        return FolioleCompanionDocumentPayloadRules.string(context, payload, keyName, fallback);
+    }
+
+    private static String documentDefault(Context context, String key) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.metadata(
+            context,
+            FolioleCompanionSyncPayloadQueryStore.EXTERNAL_DOCUMENT_PAYLOAD_QUERY_NAME,
+            key
+        );
+    }
+
+    private static String recordKey(Context context, String key) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.metadata(
+            context,
+            FolioleCompanionSyncPayloadQueryStore.EXTERNAL_DOCUMENT_PAYLOAD_QUERY_NAME,
+            key
+        );
     }
 }

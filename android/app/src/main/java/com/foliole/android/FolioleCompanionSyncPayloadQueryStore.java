@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 
 final class FolioleCompanionSyncPayloadQueryStore {
     private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
+    static final String EXTERNAL_DOCUMENT_PAYLOAD_QUERY_NAME = "syncPayloadExternalDocument";
     private static final String NODE_READING_PAYLOAD_QUERY_NAME = "syncPayloadNodeReading";
     private static final String NODE_REVIEW_PAYLOAD_QUERY_NAME = "syncPayloadNodeReview";
 

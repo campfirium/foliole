@@ -10,7 +10,34 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       'FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ? LIMIT 1'
   },
   syncPayloadExternalDocument: {
-    syncPayload: { argMode: 'object_id', objectType: 'external_document' },
+    syncPayload: {
+      argMode: 'object_id',
+      bodyBlobHashPayloadKey: 'body_blob_hash',
+      contentHashPayloadKey: 'content_hash',
+      contentPayloadKey: 'content',
+      createdAtPayloadKey: 'created_at',
+      defaultContent: '',
+      defaultFilePart: '',
+      defaultIsPresent: 1,
+      defaultLong: 0,
+      documentIdPayloadKey: 'document_id',
+      extensionPayloadKey: 'extension',
+      fileNamePayloadKey: 'file_name',
+      folderIdPayloadKey: 'folder_id',
+      indexedAtPayloadKey: 'indexed_at',
+      isPresentPayloadKey: 'is_present',
+      missingAtPayloadKey: 'missing_at',
+      objectType: 'external_document',
+      openingTextPayloadKey: 'opening_text',
+      recordContentHashKey: 'content_hash',
+      recordDeletedAtKey: 'deleted_at',
+      recordUpdatedAtKey: 'updated_at',
+      relativePathPayloadKey: 'relative_path',
+      sourceModifiedAtPayloadKey: 'source_modified_at',
+      sourceModifiedMsPayloadKey: 'source_modified_ms',
+      sourceSizeBytesPayloadKey: 'source_size_bytes',
+      titlePayloadKey: 'title'
+    },
     sql:
       "SELECT json_object('document_id', document_id, 'folder_id', folder_id, 'relative_path', relative_path, " +
       "'file_name', file_name, 'extension', extension, 'source_size_bytes', source_size_bytes, " +
