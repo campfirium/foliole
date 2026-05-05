@@ -1,16 +1,23 @@
-import { useState, type DragEvent as ReactDragEvent } from 'react';
+import { useMemo, useState, type DragEvent as ReactDragEvent } from 'react';
 
 import type { Node } from '../model/nodeTypes';
 
+const DROP_INTENT_EDGE_RATIO = 0.25;
+
+type DropIntent = 'before' | 'after' | 'child';
+type MoveIntent = DropIntent | 'root';
+
 interface UseNodeListDragControllerInput {
   isTrashViewOpen: boolean;
-  moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean;
   nodesById: Record<string, Node>;
+  noteRowIds: string[];
+  selectedNodeIds: string[];
 }
 
 export interface NodeListDragController {
-  dragSourceNodeId: string | null;
   dropTargetNodeId: string | null;
+  dropIntent: DropIntent | null;
   isRootDropActive: boolean;
   onDragEnd: () => void;
   onDragEnterNode: (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => void;
@@ -21,22 +28,141 @@ export interface NodeListDragController {
   onDropRoot: (event: ReactDragEvent<HTMLElement>) => void;
 }
 
-interface DragStateSetters {
-  setDragSourceNodeId: (nodeId: string | null) => void;
-  setDropTargetNodeId: (nodeId: string | null) => void;
-  setIsRootDropActive: (isActive: boolean) => void;
+interface DragState {
+  dropIntent: DropIntent | null;
+  dropTargetNodeId: string | null;
+  isRootDropActive: boolean;
+  sourceNodeIds: string[];
 }
 
-function resetDragState(setters: DragStateSetters) {
-  setters.setDragSourceNodeId(null);
-  setters.setDropTargetNodeId(null);
-  setters.setIsRootDropActive(false);
+function createInitialDragState(): DragState {
+  return {
+    dropIntent: null,
+    dropTargetNodeId: null,
+    isRootDropActive: false,
+    sourceNodeIds: []
+  };
 }
 
-function createOnDragStartNode(
+function resolveDragSourceNodeIds(
+  nodeId: string,
+  noteRowIds: string[],
+  selectedNodeIds: string[]
+): string[] {
+  if (!selectedNodeIds.includes(nodeId)) {
+    return [nodeId];
+  }
+  const selectedSet = new Set(selectedNodeIds);
+  const scopedSelection = noteRowIds.filter((candidateId) => selectedSet.has(candidateId));
+  return scopedSelection.length > 0 ? scopedSelection : [nodeId];
+}
+
+function resolveDropIntent(event: ReactDragEvent<HTMLElement>): DropIntent {
+  const rowRect = event.currentTarget.getBoundingClientRect();
+  const topEdge = rowRect.top + rowRect.height * DROP_INTENT_EDGE_RATIO;
+  const bottomEdge = rowRect.bottom - rowRect.height * DROP_INTENT_EDGE_RATIO;
+  if (event.clientY <= topEdge) {
+    return 'before';
+  }
+  if (event.clientY >= bottomEdge) {
+    return 'after';
+  }
+  return 'child';
+}
+
+function isInvalidDropTarget(
+  targetNodeId: string,
+  sourceNodeIds: string[],
+  nodesById: Record<string, Node>
+) {
+  const sourceSet = new Set(sourceNodeIds);
+  if (sourceSet.has(targetNodeId)) {
+    return true;
+  }
+  let cursorId = nodesById[targetNodeId]?.parentNodeId ?? null;
+  while (cursorId) {
+    if (sourceSet.has(cursorId)) {
+      return true;
+    }
+    cursorId = nodesById[cursorId]?.parentNodeId ?? null;
+  }
+  return false;
+}
+
+function createNodeDropHandler(
+  isTrashViewOpen: boolean,
+  state: DragState,
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean,
+  setState: (next: DragState) => void
+) {
+  return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
+    event.preventDefault();
+    if (
+      isTrashViewOpen ||
+      state.sourceNodeIds.length === 0 ||
+      !state.dropIntent ||
+      state.sourceNodeIds.includes(targetNodeId)
+    ) {
+      setState(createInitialDragState());
+      return;
+    }
+
+    moveNodes(state.sourceNodeIds, targetNodeId, state.dropIntent);
+    setState(createInitialDragState());
+  };
+}
+
+function createRootDropHandler(
+  isTrashViewOpen: boolean,
+  sourceNodeIds: string[],
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => boolean,
+  setState: (next: DragState) => void
+) {
+  return (event: ReactDragEvent<HTMLElement>) => {
+    event.preventDefault();
+    if (isTrashViewOpen || sourceNodeIds.length === 0) {
+      setState(createInitialDragState());
+      return;
+    }
+    moveNodes(sourceNodeIds, null, 'root');
+    setState(createInitialDragState());
+  };
+}
+
+function createNodeDragOverHandler(
   isTrashViewOpen: boolean,
   nodesById: Record<string, Node>,
-  setDragSourceNodeId: (nodeId: string | null) => void
+  sourceNodeIds: string[],
+  setState: (updater: (prev: DragState) => DragState) => void
+) {
+  return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
+    if (
+      isTrashViewOpen ||
+      sourceNodeIds.length === 0 ||
+      !nodesById[targetNodeId] ||
+      isInvalidDropTarget(targetNodeId, sourceNodeIds, nodesById)
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const dropIntent = resolveDropIntent(event);
+    setState((prev) => ({
+      ...prev,
+      dropIntent,
+      dropTargetNodeId: targetNodeId,
+      isRootDropActive: false
+    }));
+  };
+}
+
+function createDragStartHandler(
+  isTrashViewOpen: boolean,
+  nodesById: Record<string, Node>,
+  noteRowIds: string[],
+  selectedNodeIds: string[],
+  setState: (next: DragState) => void
 ) {
   return (nodeId: string, event: ReactDragEvent<HTMLElement>) => {
     const node = nodesById[nodeId];
@@ -44,123 +170,72 @@ function createOnDragStartNode(
       event.preventDefault();
       return;
     }
-    setDragSourceNodeId(nodeId);
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', nodeId);
+    setState({
+      dropIntent: null,
+      dropTargetNodeId: null,
+      isRootDropActive: false,
+      sourceNodeIds: resolveDragSourceNodeIds(nodeId, noteRowIds, selectedNodeIds)
+    });
   };
 }
 
-function createOnDragOverNode(
+function createDragOverRootHandler(
   isTrashViewOpen: boolean,
-  dragSourceNodeId: string | null,
-  nodesById: Record<string, Node>,
-  setDropTargetNodeId: (nodeId: string | null) => void,
-  setIsRootDropActive: (isActive: boolean) => void
+  sourceNodeIds: string[],
+  setState: (updater: (prev: DragState) => DragState) => void
 ) {
-  return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
-    if (
-      isTrashViewOpen ||
-      !dragSourceNodeId ||
-      dragSourceNodeId === targetNodeId ||
-      !nodesById[targetNodeId]
-    ) {
+  return (event: ReactDragEvent<HTMLElement>) => {
+    if (isTrashViewOpen || sourceNodeIds.length === 0) {
       return;
     }
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    setDropTargetNodeId(targetNodeId);
-    setIsRootDropActive(false);
-  };
-}
-
-function createOnDropOnNode(
-  isTrashViewOpen: boolean,
-  dragSourceNodeId: string | null,
-  moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean,
-  setters: DragStateSetters
-) {
-  return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
-    event.preventDefault();
-    if (!dragSourceNodeId || isTrashViewOpen || dragSourceNodeId === targetNodeId) {
-      resetDragState(setters);
-      return;
-    }
-    moveNode(dragSourceNodeId, targetNodeId);
-    resetDragState(setters);
-  };
-}
-
-function createOnDragOverRoot(
-  isTrashViewOpen: boolean,
-  dragSourceNodeId: string | null,
-  setDropTargetNodeId: (nodeId: string | null) => void,
-  setIsRootDropActive: (isActive: boolean) => void
-) {
-  return (event: ReactDragEvent<HTMLElement>) => {
-    if (isTrashViewOpen || !dragSourceNodeId) {
-      return;
-    }
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    setDropTargetNodeId(null);
-    setIsRootDropActive(true);
-  };
-}
-
-function createOnDropRoot(
-  isTrashViewOpen: boolean,
-  dragSourceNodeId: string | null,
-  moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean,
-  setters: DragStateSetters
-) {
-  return (event: ReactDragEvent<HTMLElement>) => {
-    event.preventDefault();
-    if (!dragSourceNodeId || isTrashViewOpen) {
-      resetDragState(setters);
-      return;
-    }
-    moveNode(dragSourceNodeId, null);
-    resetDragState(setters);
+    setState((prev) => ({
+      ...prev,
+      dropIntent: null,
+      dropTargetNodeId: null,
+      isRootDropActive: true
+    }));
   };
 }
 
 export function useNodeListDragController({
   isTrashViewOpen,
-  moveNode,
-  nodesById
+  moveNodes,
+  nodesById,
+  noteRowIds,
+  selectedNodeIds
 }: UseNodeListDragControllerInput): NodeListDragController {
-  const [dragSourceNodeId, setDragSourceNodeId] = useState<string | null>(null);
-  const [dropTargetNodeId, setDropTargetNodeId] = useState<string | null>(null);
-  const [isRootDropActive, setIsRootDropActive] = useState(false);
-  const setters: DragStateSetters = {
-    setDragSourceNodeId,
-    setDropTargetNodeId,
-    setIsRootDropActive
-  };
-
-  const onDragStartNode = createOnDragStartNode(isTrashViewOpen, nodesById, setDragSourceNodeId);
-  const onDragOverNode = createOnDragOverNode(
-    isTrashViewOpen,
-    dragSourceNodeId,
-    nodesById,
-    setDropTargetNodeId,
-    setIsRootDropActive
+  const [state, setState] = useState<DragState>(createInitialDragState);
+  const onDragStartNode = useMemo(
+    () =>
+      createDragStartHandler(isTrashViewOpen, nodesById, noteRowIds, selectedNodeIds, setState),
+    [isTrashViewOpen, nodesById, noteRowIds, selectedNodeIds]
   );
-  const onDropOnNode = createOnDropOnNode(isTrashViewOpen, dragSourceNodeId, moveNode, setters);
-  const onDragOverRoot = createOnDragOverRoot(
-    isTrashViewOpen,
-    dragSourceNodeId,
-    setDropTargetNodeId,
-    setIsRootDropActive
+  const onDragOverNode = useMemo(
+    () => createNodeDragOverHandler(isTrashViewOpen, nodesById, state.sourceNodeIds, setState),
+    [isTrashViewOpen, nodesById, state.sourceNodeIds]
   );
-  const onDropRoot = createOnDropRoot(isTrashViewOpen, dragSourceNodeId, moveNode, setters);
-  const onDragEnd = () => resetDragState(setters);
+  const onDropOnNode = useMemo(
+    () => createNodeDropHandler(isTrashViewOpen, state, moveNodes, setState),
+    [isTrashViewOpen, moveNodes, state]
+  );
+  const onDragOverRoot = useMemo(
+    () => createDragOverRootHandler(isTrashViewOpen, state.sourceNodeIds, setState),
+    [isTrashViewOpen, state.sourceNodeIds]
+  );
+  const onDropRoot = useMemo(
+    () => createRootDropHandler(isTrashViewOpen, state.sourceNodeIds, moveNodes, setState),
+    [isTrashViewOpen, moveNodes, state.sourceNodeIds]
+  );
 
   return {
-    dragSourceNodeId,
-    dropTargetNodeId,
-    isRootDropActive,
-    onDragEnd,
+    dropTargetNodeId: state.dropTargetNodeId,
+    dropIntent: state.dropIntent,
+    isRootDropActive: state.isRootDropActive,
+    onDragEnd: () => setState(createInitialDragState()),
     onDragEnterNode: onDragOverNode,
     onDragOverNode,
     onDragOverRoot,

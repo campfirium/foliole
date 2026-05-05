@@ -50,6 +50,11 @@ export interface WorkspaceState {
     anchorId?: string
   ) => string | null;
   moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
+  moveNodes: (
+    nodeIds: string[],
+    targetNodeId: string | null,
+    intent: 'before' | 'after' | 'child' | 'root'
+  ) => boolean;
 }
 
 interface WorkspacePersistedState {

@@ -35,7 +35,7 @@ function useNodeListTreeModel({
   const createRootNode = useWorkspaceStore((state) => state.createRootNode);
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
   const deleteNodePermanently = useWorkspaceStore((state) => state.deleteNodePermanently);
-  const moveNode = useWorkspaceStore((state) => state.moveNode);
+  const moveNodes = useWorkspaceStore((state) => state.moveNodes);
   const restoreNode = useWorkspaceStore((state) => state.restoreNode);
   const trashedNodeIds = useWorkspaceStore((state) => state.trashedNodeIds);
   const collapsedState = useCollapsedNodeState();
@@ -80,7 +80,7 @@ function useNodeListTreeModel({
     deleteNode,
     deleteNodePermanently,
     handleSelectNode,
-    moveNode,
+    moveNodes,
     restoreNode,
     state
   };
@@ -122,7 +122,7 @@ export function NodeListTree({
       deleteNode={model.deleteNode}
       deleteNodePermanently={model.deleteNodePermanently}
       isTrashViewOpen={isTrashViewOpen}
-      moveNode={model.moveNode}
+      moveNodes={model.moveNodes}
       nodesById={nodesById}
       onOpenNotesView={onOpenNotesView}
       onSelect={model.handleSelectNode}

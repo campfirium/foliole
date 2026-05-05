@@ -75,7 +75,8 @@ function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     createChildNode: () => 'unused',
     createHighlightNodeFromSelection: () => null,
     createQANodeFromSelection: () => null,
-    moveNode: () => false
+    moveNode: () => false,
+    moveNodes: () => false
   };
 }
 

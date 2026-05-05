@@ -55,6 +55,7 @@ function NodeListRows(props: NodeListRowsProps) {
       isCollapsed={props.collapsedNodeIds.has(row.node.id)}
       isDragDisabled={props.isTrashViewOpen || Boolean(props.nodesById[row.node.id]?.anchorLink)}
       isDropTarget={props.drag.dropTargetNodeId === row.node.id}
+      dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
       isSelected={props.selectedNodeIds.includes(row.node.id)}
       key={row.node.id}
       label={row.node.title}
@@ -81,8 +82,13 @@ interface NodeListPanelProps {
   createRootNode: (content?: string) => string;
   deleteNodePermanently: (nodeId: string) => void;
   isTrashViewOpen: boolean;
-  moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
+  moveNodes: (
+    nodeIds: string[],
+    targetNodeId: string | null,
+    intent: 'before' | 'after' | 'child' | 'root'
+  ) => boolean;
   nodesById: Record<string, Node>;
+  noteRowIds: string[];
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   selectedNodeIds: string[];
@@ -94,15 +100,13 @@ interface NodeListPanelProps {
 function NodeListPanel(props: NodeListPanelProps) {
   const drag = useNodeListDragController({
     isTrashViewOpen: props.isTrashViewOpen,
-    moveNode: props.moveNode,
-    nodesById: props.nodesById
+    moveNodes: props.moveNodes,
+    nodesById: props.nodesById,
+    noteRowIds: props.noteRowIds,
+    selectedNodeIds: props.selectedNodeIds
   });
-
   return (
-    <aside
-      aria-label="Node list panel"
-      className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground"
-    >
+    <aside aria-label="Node list panel" className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground">
       <NodeListHeader
         isTrashViewOpen={props.isTrashViewOpen}
         onCollapseAll={props.collapse.collapseAllNotes}
@@ -163,7 +167,11 @@ interface NodeListTreeContentProps {
   deleteNode: (nodeId: string) => void;
   deleteNodePermanently: (nodeId: string) => void;
   isTrashViewOpen: boolean;
-  moveNode: (nodeId: string, nextParentNodeId: string | null) => boolean;
+  moveNodes: (
+    nodeIds: string[],
+    targetNodeId: string | null,
+    intent: 'before' | 'after' | 'child' | 'root'
+  ) => boolean;
   nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
@@ -185,8 +193,9 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         createRootNode={props.createRootNode}
         deleteNodePermanently={props.deleteNodePermanently}
         isTrashViewOpen={props.isTrashViewOpen}
-        moveNode={props.moveNode}
+        moveNodes={props.moveNodes}
         nodesById={props.nodesById}
+        noteRowIds={props.state.noteRowIds}
         onOpenNotesView={props.onOpenNotesView}
         onSelect={props.onSelect}
         selectedNodeIds={props.selectedNodeIds}

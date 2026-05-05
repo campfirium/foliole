@@ -18,6 +18,7 @@ interface NodeTreeRowProps {
   hasChildren: boolean;
   isDragDisabled?: boolean;
   isDropTarget?: boolean;
+  dropIntent?: 'before' | 'after' | 'child' | null;
   label: string;
   nodeId: string;
   onDragEnd?: (event: ReactDragEvent<HTMLDivElement>) => void;
@@ -47,6 +48,7 @@ export function NodeTreeRow({
   hasChildren,
   isDragDisabled = false,
   isDropTarget = false,
+  dropIntent = null,
   label,
   nodeId,
   onDragEnd,
@@ -65,7 +67,11 @@ export function NodeTreeRow({
 
   return (
     <div
-      className={cn(isDropTarget && 'border border-border-strong bg-foreground/[0.06]')}
+      className={cn(
+        isDropTarget && dropIntent === 'child' && 'border border-border-strong bg-foreground/[0.06]',
+        isDropTarget && dropIntent === 'before' && 'border-t-2 border-border-strong',
+        isDropTarget && dropIntent === 'after' && 'border-b-2 border-border-strong'
+      )}
       draggable={!isDragDisabled}
       onDragEnd={onDragEnd}
       onDragEnter={onDragEnter ? (event) => onDragEnter(nodeId, event) : undefined}

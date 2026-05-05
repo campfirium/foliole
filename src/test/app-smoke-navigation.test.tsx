@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
 
@@ -77,6 +77,63 @@ it('supports tree keyboard navigation for node list', () => {
 
   fireEvent.keyDown(childButton, { key: 'ArrowLeft' });
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+});
+
+it('moves selected nodes as one drag group and preserves selection order', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
+    nodesById: {
+      ...state.nodesById,
+      'node-1': createNode({ id: 'node-1', title: 'Root 1', content: '# Root 1' }),
+      'node-2': createNode({ id: 'node-2', title: 'Root 2', content: '# Root 2' }),
+      'node-3': createNode({ id: 'node-3', title: 'Root 3', content: '# Root 3' }),
+      'node-4': createNode({ id: 'node-4', title: 'Folder', content: '# Folder' })
+    }
+  }));
+
+  render(<App />);
+
+  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const node2Button = within(listPanel).getByRole('treeitem', { name: 'Root 2' });
+  const node3Button = within(listPanel).getByRole('treeitem', { name: 'Root 3' });
+  const node4Button = within(listPanel).getByRole('treeitem', { name: 'Folder' });
+  const dragRow = node2Button.closest('div[draggable="true"]');
+  const dropRow = node4Button.closest('div[draggable="true"]');
+  if (!dragRow || !dropRow) {
+    throw new Error('Expected draggable rows for drag and drop test');
+  }
+
+  fireEvent.click(node2Button);
+  fireEvent.click(node3Button, { ctrlKey: true });
+  const dataTransfer = {
+    dropEffect: 'move',
+    effectAllowed: 'move',
+    getData: () => '',
+    setData: () => undefined
+  } as unknown as DataTransfer;
+  const rectSpy = vi.spyOn(dropRow, 'getBoundingClientRect').mockReturnValue({
+    bottom: 100,
+    height: 100,
+    left: 0,
+    right: 300,
+    toJSON: () => ({}),
+    top: 0,
+    width: 300,
+    x: 0,
+    y: 0
+  });
+
+  fireEvent.dragStart(dragRow, { dataTransfer });
+  fireEvent.dragOver(dropRow, { clientY: 50, dataTransfer });
+  fireEvent.drop(dropRow, { clientY: 50, dataTransfer });
+  fireEvent.dragEnd(dragRow, { dataTransfer });
+  rectSpy.mockRestore();
+
+  const state = useWorkspaceStore.getState();
+  expect(state.nodesById['node-2']?.parentNodeId).toBe('node-4');
+  expect(state.nodesById['node-3']?.parentNodeId).toBe('node-4');
+  expect(state.nodeOrder).toEqual(['node-1', 'node-4', 'node-2', 'node-3']);
 });
 
 it('renders breadcrumbs in document header and jumps to ancestor anchor', () => {

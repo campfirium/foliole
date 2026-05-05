@@ -52,3 +52,26 @@ it('blocks moving derived nodes and cycle reparenting', () => {
   expect(useWorkspaceStore.getState().nodesById[derivedId]?.parentNodeId).toBe('node-1');
   expect(useWorkspaceStore.getState().nodesById['node-1']?.parentNodeId).toBeNull();
 });
+
+it('moves selected root nodes before target and preserves relative order', () => {
+  const rootAId = useWorkspaceStore.getState().createRootNode('A');
+  const rootBId = useWorkspaceStore.getState().createRootNode('B');
+  const rootCId = useWorkspaceStore.getState().createRootNode('C');
+  const rootDId = useWorkspaceStore.getState().createRootNode('D');
+
+  const moved = useWorkspaceStore
+    .getState()
+    .moveNodes([rootDId, rootCId], rootBId, 'before');
+
+  expect(moved).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById[rootBId]?.parentNodeId).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById[rootCId]?.parentNodeId).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById[rootDId]?.parentNodeId).toBeNull();
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([
+    'node-1',
+    rootAId,
+    rootCId,
+    rootDId,
+    rootBId
+  ]);
+});
