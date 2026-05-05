@@ -35,3 +35,45 @@ it('builds controlled context for body plus highlight sidecar imports and keeps 
   expect(prepared.content).toContain('- Missing: quote that is not present in the body');
   expect(prepared.degradedReason).toContain('1 unmatched sidecar highlight(s)');
 });
+
+it('recovers list-heavy and flattened highlights from the source body before marking them unmatched', () => {
+  const prepared = buildPreparedImportRecord(
+    {
+      filePath: '/tmp/readwise.md',
+      kind: 'markdown',
+      sourceName: 'readwise.md'
+    },
+    {
+      content: [
+        '# GTD',
+        '',
+        'Checklist:',
+        '- 是否有项目已无任务？',
+        '- 是否有任务长期未触发？',
+        '',
+        '| 要素 | GTD 原理 | Todoist 中的对应操作 |',
+        '| --- | --- | --- |',
+        '| 每周回顾 | 保持系统清空 & 当前 | 每周打开 Someday/Waiting/Projects 重新评估 |'
+      ].join('\n'),
+      highlightSidecar: [
+        {
+          label: 'Review questions',
+          text: ['每周回顾：', '• 是否有项目已无任务？', '• 是否有任务长期未触发？'].join('\n')
+        },
+        {
+          label: 'Table row',
+          text: '要素 GTD 原理 Todoist 中的对应操作 每周回顾 保持系统清空 当前 每周打开 Someday/Waiting/Projects 重新评估'
+        }
+      ],
+      importedAt: '2026-03-25T12:00:00.000Z',
+      sourceProfile: 'body_with_highlight_sidecar'
+    }
+  );
+
+  expect(prepared.content).toContain('### Review questions');
+  expect(prepared.content).toContain('是否有项目已无任务？');
+  expect(prepared.content).toContain('### Table row');
+  expect(prepared.content).toContain('Todoist 中的对应操作');
+  expect(prepared.content).not.toContain('## Unmatched Sidecar Highlights');
+  expect(prepared.degradedReason).toBeNull();
+});

@@ -1,4 +1,5 @@
 import type { ImportSourceKind } from './contract.js';
+import { findContextExcerpt } from './controlledContextMatch.js';
 
 export type ImportContextPolicy = 'full_text' | 'full_text_with_context' | 'context_only';
 export type ImportSourceProfile = 'default' | 'epub' | 'body_with_highlight_sidecar';
@@ -24,41 +25,11 @@ interface ControlledImportContextOutput {
   policy: ImportContextPolicy;
 }
 
-function escapePattern(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function appendDegradedReason(...reasons: Array<string | null | undefined>) {
   const collected = reasons
     .map((reason) => reason?.trim())
     .filter((reason): reason is string => Boolean(reason));
   return collected.length > 0 ? Array.from(new Set(collected)).join('; ') : null;
-}
-
-function findParagraphBounds(content: string, startIndex: number, endIndex: number) {
-  const beforeBreak = content.lastIndexOf('\n\n', startIndex);
-  const afterBreak = content.indexOf('\n\n', endIndex);
-  return {
-    start: beforeBreak >= 0 ? beforeBreak + 2 : 0,
-    end: afterBreak >= 0 ? afterBreak : content.length
-  };
-}
-
-function findContextExcerpt(content: string, quote: string) {
-  const normalizedQuote = quote.trim();
-  if (!normalizedQuote) {
-    return null;
-  }
-  const pattern = normalizedQuote
-    .split(/\s+/)
-    .map((segment) => escapePattern(segment))
-    .join('\\s+');
-  const match = new RegExp(pattern, 'i').exec(content);
-  if (!match || match.index === undefined) {
-    return null;
-  }
-  const bounds = findParagraphBounds(content, match.index, match.index + match[0].length);
-  return content.slice(bounds.start, bounds.end).trim();
 }
 
 function renderContextAppendix(
