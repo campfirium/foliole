@@ -61,6 +61,10 @@ function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {
 }
 
 export function saveWindowStateNow(window: BrowserWindow): void {
+  if (window.isMinimized()) {
+    logWindowStateLifecycleEvent('skip-save-window-state-minimized', window);
+    return;
+  }
   const nextState = toWindowStateFromRuntime(window);
   saveJsonSetting(WINDOW_STATE_KEY, nextState);
   logWindowStateLifecycleEvent('save-window-state', window, {

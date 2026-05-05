@@ -50,7 +50,8 @@ it('persists and loads maximized window state', async () => {
       height: 980
     }),
     isMaximized: () => true,
-    isFullScreen: () => false
+    isFullScreen: () => false,
+    isMinimized: () => false
   };
 
   await saveWindowState(window as never);
@@ -79,7 +80,8 @@ it('persists and loads fullscreen window state using normal bounds', async () =>
       height: 920
     }),
     isMaximized: () => false,
-    isFullScreen: () => true
+    isFullScreen: () => true,
+    isMinimized: () => false
   };
 
   await saveWindowState(window as never);
@@ -90,6 +92,53 @@ it('persists and loads fullscreen window state using normal bounds', async () =>
     height: 920,
     isMaximized: false,
     isFullScreen: true
+  });
+});
+
+it('does not let minimized transition overwrite a maximized preference', async () => {
+  await saveWindowState({
+    getBounds: () => ({
+      x: -7,
+      y: -7,
+      width: 1934,
+      height: 1054
+    }),
+    getNormalBounds: () => ({
+      x: 41,
+      y: 0,
+      width: 1242,
+      height: 811
+    }),
+    isMaximized: () => true,
+    isFullScreen: () => false,
+    isMinimized: () => false
+  } as never);
+
+  await saveWindowState({
+    getBounds: () => ({
+      x: 41,
+      y: 0,
+      width: 1242,
+      height: 811
+    }),
+    getNormalBounds: () => ({
+      x: 41,
+      y: 0,
+      width: 1242,
+      height: 811
+    }),
+    isMaximized: () => false,
+    isFullScreen: () => false,
+    isMinimized: () => true
+  } as never);
+
+  await expect(loadWindowState()).resolves.toEqual({
+    x: 41,
+    y: 0,
+    width: 1242,
+    height: 811,
+    isMaximized: true,
+    isFullScreen: false
   });
 });
 
