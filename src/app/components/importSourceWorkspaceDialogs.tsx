@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { KeepImportPreviewSummary } from '../../../lib/core/import/importManagerSettings';
 
-import { inspectReadwiseReaderSetup } from './readwiseReaderConfigBridge';
+import { inspectReadwiseReaderSetup } from './readwiseReaderSetupInspection';
 import { ReadwiseReaderConfigDialog } from './ReadwiseReaderConfigDialog';
 import { useImportSourceWorkspaceState } from './useImportSourceWorkspaceState';
 

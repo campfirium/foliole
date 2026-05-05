@@ -2,7 +2,7 @@ import { isReadwiseReaderConfigReady, type ReadwiseReaderConfig } from '../../..
 import { AppButton, AppStatusBadge, SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/ui';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
-import { inspectReadwiseReaderSetup } from './readwiseReaderConfigBridge';
+import { inspectReadwiseReaderSetup } from './readwiseReaderSetupInspection';
 import { ReadwiseDirectorySection, ReadwiseParserFields, ReadwisePreviewDialog, getArticlesSource } from './ReadwiseReaderSetupParts';
 import { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
 

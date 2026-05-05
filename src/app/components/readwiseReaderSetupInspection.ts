@@ -11,15 +11,7 @@ export async function inspectReadwiseReaderSetup(input: {
   fullDocumentDirectoryPath: string;
 }): Promise<RuntimeReadwiseDetectionResult> {
   if (!hasReadwiseReaderSetupRuntimeRepository()) {
-    return {
-      checkedSourceCount: 0,
-      detectedHighlightCount: 0,
-      matchedHighlightCount: 0,
-      message: 'Readwise detection is only available in the desktop app.',
-      sampleCount: 0,
-      samples: [],
-      success: false
-    };
+    return createUnavailableResult();
   }
 
   const result = await inspectReadwiseReaderSetupInRuntime({
@@ -31,7 +23,11 @@ export async function inspectReadwiseReaderSetup(input: {
     noteKeyword: input.config.noteKeyword,
     tagKeyword: input.config.tagKeyword
   });
-  return result ?? {
+  return result ?? createUnavailableResult();
+}
+
+function createUnavailableResult(): RuntimeReadwiseDetectionResult {
+  return {
     checkedSourceCount: 0,
     detectedHighlightCount: 0,
     matchedHighlightCount: 0,
