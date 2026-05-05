@@ -13,6 +13,7 @@ import {
   type ImportSidecarHighlight,
   type ImportSourceProfile
 } from './controlledContext.js';
+import { degradeUnmanagedEpubImages } from './epubEmbeddedResources.js';
 import { applyImportHighlightPolicy } from './highlightPolicy.js';
 import {
   resolveImportedNodeTitle,
@@ -44,6 +45,13 @@ function normalizeImportedContent(content: string) {
   return content.replace(/\r\n?/g, '\n');
 }
 
+function appendDegradedReason(...reasons: Array<string | null | undefined>) {
+  const collected = reasons
+    .map((reason) => reason?.trim())
+    .filter((reason): reason is string => Boolean(reason));
+  return collected.length > 0 ? Array.from(new Set(collected)).join('; ') : null;
+}
+
 function serializeHighlightSidecar(highlightSidecar: ImportSidecarHighlight[] | undefined) {
   if (!highlightSidecar || highlightSidecar.length === 0) {
     return '';
@@ -60,10 +68,18 @@ function serializeHighlightSidecar(highlightSidecar: ImportSidecarHighlight[] | 
 export function createPreparedDesktopTextImport(
   input: CreatePreparedDesktopTextImportInput
 ): PreparedImportRecord {
-  const highlightedContent = applyImportHighlightPolicy(input.content, input.highlightPolicy ?? 'reference_only');
+  const normalizedInputContent = normalizeImportedContent(input.content);
+  const epubDegradedContent =
+    input.kind === 'epub' || input.sourceProfile === 'epub'
+      ? degradeUnmanagedEpubImages(normalizedInputContent)
+      : { content: normalizedInputContent, degradedReason: null };
+  const highlightedContent = applyImportHighlightPolicy(
+    epubDegradedContent.content,
+    input.highlightPolicy ?? 'reference_only'
+  );
   const contextResult = applyControlledImportContext({
     content: highlightedContent,
-    degradedReason: input.degradedReason,
+    degradedReason: appendDegradedReason(input.degradedReason, epubDegradedContent.degradedReason),
     highlightSidecar: input.highlightSidecar,
     policy: input.contextPolicy,
     sourceKind: input.kind,
