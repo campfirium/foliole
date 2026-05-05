@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WINDOWS_MIRROR_DIR="${WINDOWS_MIRROR_DIR:-/mnt/c/dev/foliole}"
 WINDOWS_SYNC_CHANGE_LOG="${WINDOWS_SYNC_CHANGE_LOG:-}"
+WINDOWS_SYNC_INCLUDE_ELECTRON_DIST="${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST:-}"
 
 if [[ ! -d "${WINDOWS_MIRROR_DIR}" ]]; then
   echo "[windows-sync] mirror directory not found: ${WINDOWS_MIRROR_DIR}"
@@ -41,7 +42,6 @@ RSYNC_ARGS=(
   --exclude "src-tauri/"
   --exclude "node_modules/"
   --exclude "dist/"
-  --exclude "electron-dist/"
   --exclude "release/"
   --exclude "coverage/"
   --exclude "playwright-report/"
@@ -49,6 +49,10 @@ RSYNC_ARGS=(
   --exclude "blob-report/"
   --exclude "logs/"
 )
+
+if [[ -z "${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST}" ]]; then
+  RSYNC_ARGS+=(--exclude "electron-dist/")
+fi
 
 if [[ -n "${WINDOWS_SYNC_CHANGE_LOG}" ]]; then
   : > "${WINDOWS_SYNC_CHANGE_LOG}"

@@ -38,11 +38,19 @@ async function createMockScripts(root, clientBody) {
   const syncScript = path.join(root, 'mock-sync.sh');
   const clientScript = path.join(root, 'mock-client.sh');
   const freshnessScript = path.join(root, 'mock-freshness.mjs');
+  const compileScript = path.join(root, 'mock-compile.sh');
   const actionLog = path.join(root, 'actions.log');
 
   await writeFile(
     syncScript,
-    ['#!/usr/bin/env bash', 'set -euo pipefail', 'echo "[windows-sync] status: SYNCED"'].join('\n'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'if [ -n "${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST:-}" ]; then',
+      '  echo "[windows-sync] include electron-dist"',
+      'fi',
+      'echo "[windows-sync] status: SYNCED"'
+    ].join('\n'),
     'utf8'
   );
   await writeFile(
@@ -56,9 +64,21 @@ async function createMockScripts(root, clientBody) {
     'utf8'
   );
   await writeFile(freshnessScript, 'process.stdout.write("[check-electron-dist-fresh] status: FRESH\\n");\n', 'utf8');
+  await writeFile(
+    compileScript,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'cat <<\'EOF\' > "${MOCK_FRESHNESS_SCRIPT}"',
+      'process.stdout.write("[check-electron-dist-fresh] status: FRESH\\\\n");',
+      'EOF',
+      'echo "[mock-electron-compile] status: COMPILED"'
+    ].join('\n'),
+    'utf8'
+  );
   await writeFile(actionLog, '', 'utf8');
 
-  return { actionLog, clientScript, freshnessScript, syncScript };
+  return { actionLog, clientScript, compileScript, freshnessScript, syncScript };
 }
 
 async function readActions(actionLog) {
@@ -77,10 +97,10 @@ async function readRendererReloadIntent(rootDir) {
 }
 
 describe('windows-preview script', () => {
-  it('fails before sync when electron-dist is stale', async () => {
+  it('rebuilds stale electron-dist before sync instead of failing early', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
-      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, compileScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING"', '  exit 0', 'fi', 'exit 1'].join('\n')
       );
@@ -96,16 +116,20 @@ describe('windows-preview script', () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        MOCK_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_ELECTRON_COMPILE_COMMAND: `bash ${compileScript}`,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts'
       });
 
-      expect(result.code).toBe(1);
+      expect(result.code).toBe(0);
       expect(result.stdout).toContain('step 1/3: verify electron-dist freshness');
-      expect(result.stdout).not.toContain('[windows-sync] status: SYNCED');
-      expect(await readActions(actionLog)).toEqual([]);
+      expect(result.stdout).toContain('electron-dist stale; compiling runtime bundle');
+      expect(result.stdout).toContain('[mock-electron-compile] status: COMPILED');
+      expect(result.stdout).toContain('[windows-sync] status: SYNCED');
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -173,6 +197,7 @@ describe('windows-preview script', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('reason: Class B: working tree electron changes detected');
+      expect(result.stdout).toContain('[windows-sync] include electron-dist');
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: REQUESTED nonce=1');
       expect(result.stdout).toContain('status: RESTART_REQUESTED');

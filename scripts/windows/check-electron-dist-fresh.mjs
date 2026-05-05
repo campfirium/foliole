@@ -4,6 +4,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.cjs']);
+const DEFAULT_SOURCE_ROOTS = ['electron', path.join('lib', 'core'), path.join('lib', 'platform')];
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -49,25 +50,32 @@ function getNewestFile(filePaths) {
   return newest;
 }
 
-function resolveExpectedDistPath(sourceRoot, distRoot, sourcePath) {
-  const relativePath = path.relative(sourceRoot, sourcePath);
-  if (path.extname(relativePath) !== '.ts') {
-    return null;
-  }
-
-  return path.join(distRoot, path.basename(sourceRoot), relativePath.replace(/\.ts$/, '.js'));
-}
-
 function createRelativePath(repoRoot, targetPath) {
   return path.relative(repoRoot, targetPath) || path.basename(targetPath);
 }
 
+function resolveSourceRoots(repoRoot, sourceRoots) {
+  return sourceRoots.map((sourceRoot) => (path.isAbsolute(sourceRoot) ? sourceRoot : path.join(repoRoot, sourceRoot)));
+}
+
+function resolveExpectedDistPath(repoRoot, distRoot, sourcePath) {
+  const relativePath = path.relative(repoRoot, sourcePath);
+  if (path.extname(relativePath) !== '.ts') {
+    return null;
+  }
+
+  return path.join(distRoot, relativePath.replace(/\.ts$/, '.js'));
+}
+
 export function inspectElectronDistFreshness({
   repoRoot = resolveRepoRoot(),
-  sourceRoot = path.join(repoRoot, 'electron'),
+  sourceRoots = DEFAULT_SOURCE_ROOTS,
   distRoot = path.join(repoRoot, 'electron-dist')
 } = {}) {
-  const sourceFiles = collectFiles(sourceRoot).filter((filePath) => SOURCE_EXTENSIONS.has(path.extname(filePath)));
+  const resolvedSourceRoots = resolveSourceRoots(repoRoot, sourceRoots);
+  const sourceFiles = resolvedSourceRoots.flatMap((sourceRoot) =>
+    collectFiles(sourceRoot).filter((filePath) => SOURCE_EXTENSIONS.has(path.extname(filePath)))
+  );
   const distFiles = collectFiles(distRoot);
   const newestSource = getNewestFile(sourceFiles);
   const newestDist = getNewestFile(distFiles);
@@ -98,7 +106,7 @@ export function inspectElectronDistFreshness({
   }
 
   for (const sourcePath of sourceFiles) {
-    const expectedDistPath = resolveExpectedDistPath(sourceRoot, distRoot, sourcePath);
+    const expectedDistPath = resolveExpectedDistPath(repoRoot, distRoot, sourcePath);
     if (!expectedDistPath) {
       continue;
     }
@@ -154,9 +162,11 @@ function printResult(result) {
 
 function runCli() {
   const repoRoot = process.env.FOLIOLE_ELECTRON_FRESHNESS_REPO_ROOT?.trim() || resolveRepoRoot();
-  const sourceRoot = process.env.FOLIOLE_ELECTRON_SOURCE_ROOT?.trim() || path.join(repoRoot, 'electron');
   const distRoot = process.env.FOLIOLE_ELECTRON_DIST_ROOT?.trim() || path.join(repoRoot, 'electron-dist');
-  const result = inspectElectronDistFreshness({ distRoot, repoRoot, sourceRoot });
+  const sourceRoots = process.env.FOLIOLE_ELECTRON_SOURCE_ROOTS?.trim()
+    ? process.env.FOLIOLE_ELECTRON_SOURCE_ROOTS.split(path.delimiter).filter(Boolean)
+    : DEFAULT_SOURCE_ROOTS;
+  const result = inspectElectronDistFreshness({ distRoot, repoRoot, sourceRoots });
 
   printResult(result);
   if (!result.ok) {

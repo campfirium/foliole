@@ -8,6 +8,7 @@ WINDOWS_CLIENT_SCRIPT="${WINDOWS_CLIENT_SCRIPT:-scripts/windows/windows-restart-
 WINDOWS_RESTART_INTENT_SCRIPT="${WINDOWS_RESTART_INTENT_SCRIPT:-scripts/windows/write-restart-intent.mjs}"
 WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT="${WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT:-scripts/windows/write-renderer-reload-intent.mjs}"
 WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT="${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT:-scripts/windows/check-electron-dist-fresh.mjs}"
+WINDOWS_ELECTRON_COMPILE_COMMAND="${WINDOWS_ELECTRON_COMPILE_COMMAND:-npm run electron:compile}"
 WINDOWS_RESTART_INTENT_ROOT="${WINDOWS_RESTART_INTENT_ROOT:-}"
 WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-C:\\dev\\foliole}"
 WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
@@ -44,7 +45,7 @@ has_committed_electron_changes_since() {
   if ! git rev-parse --verify "${runtime_head}^{commit}" >/dev/null 2>&1; then
     return 0
   fi
-  git diff --name-only "${runtime_head}..${CURRENT_HEAD}" -- electron/ | grep -q .
+  git diff --name-only "${runtime_head}..${CURRENT_HEAD}" -- electron/ lib/core/ lib/platform/ | grep -q .
 }
 
 CURRENT_HEAD="$(resolve_current_head)"
@@ -125,6 +126,29 @@ run_windows_client_action() {
   return "${exit_code}"
 }
 
+has_runtime_code_changes() {
+  local changed_files="$1"
+  echo "${changed_files}" | grep -qE '^(electron/|lib/core/|lib/platform/)'
+}
+
+ensure_fresh_electron_dist() {
+  local freshness_output=""
+  local freshness_exit=0
+  set +e
+  freshness_output="$(node "${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT}" 2>&1)"
+  freshness_exit=$?
+  set -e
+  if [ "${freshness_exit}" -eq 0 ]; then
+    printf '%s\n' "${freshness_output}"
+    return 0
+  fi
+
+  printf '%s\n' "${freshness_output}"
+  echo "[windows-preview] electron-dist stale; compiling runtime bundle"
+  eval "${WINDOWS_ELECTRON_COMPILE_COMMAND}"
+  node "${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT}"
+}
+
 resolve_changed_files() {
   if [ -n "${WINDOWS_PREVIEW_CHANGED_FILES:-}" ]; then
     printf '%s' "${WINDOWS_PREVIEW_CHANGED_FILES}"
@@ -158,7 +182,7 @@ select_update_action() {
 
   if [ "${status_exit}" -eq 0 ] && status_is_running "${status_output}"; then
     runtime_head="$(extract_runtime_head "${status_output}")"
-    if echo "${changed_files}" | grep -qE '^electron/'; then
+    if has_runtime_code_changes "${changed_files}"; then
       SELECTED_ACTION="restart-intent"
       SELECTED_REASON="Class B: working tree electron changes detected"
       return 0
@@ -282,12 +306,16 @@ run_status_probe_failed() {
 }
 
 echo "[windows-preview] step 1/3: verify electron-dist freshness"
-node "${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT}"
+ensure_fresh_electron_dist
 
 echo "[windows-preview] step 2/3: sync to windows mirror"
-bash "${WINDOWS_SYNC_SCRIPT}"
-
 changed_files="$(resolve_changed_files)"
+if has_runtime_code_changes "${changed_files}"; then
+  WINDOWS_SYNC_INCLUDE_ELECTRON_DIST=1 bash "${WINDOWS_SYNC_SCRIPT}"
+else
+  bash "${WINDOWS_SYNC_SCRIPT}"
+fi
+
 select_update_action "${changed_files}"
 
 echo "[windows-preview] step 3/3: apply update action"

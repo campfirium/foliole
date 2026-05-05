@@ -42,7 +42,14 @@ async function createMockScripts(root, clientBody) {
 
   await writeFile(
     syncScript,
-    ['#!/usr/bin/env bash', 'set -euo pipefail', 'echo "[windows-sync] status: SYNCED"'].join('\n'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'if [ -n "${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST:-}" ]; then',
+      '  echo "[windows-sync] include electron-dist"',
+      'fi',
+      'echo "[windows-sync] status: SYNCED"'
+    ].join('\n'),
     'utf8'
   );
   await writeFile(
@@ -146,6 +153,7 @@ describe('windows-preview update loop regressions', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('reason: Class B: working tree electron changes detected');
+      expect(result.stdout).toContain('[windows-sync] include electron-dist');
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(restartIntent).toMatchObject({
         nonce: 1,
