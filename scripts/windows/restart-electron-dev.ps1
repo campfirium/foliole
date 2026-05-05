@@ -156,13 +156,13 @@ if ($Action -eq "start") {
   }
 
   $started = Start-ElectronShell -WorkDir $WindowsWorkDir
-  Write-Info "status: STARTED pid=$($started.ProcessId)"
+  Write-Info "status: STARTED pid=$($started.Id)"
   exit 0
 }
 
 if ($Action -eq "restart") {
   Stop-ElectronShell
   $started = Start-ElectronShell -WorkDir $WindowsWorkDir
-  Write-Info "status: RESTARTED pid=$($started.ProcessId)"
+  Write-Info "status: RESTARTED pid=$($started.Id)"
   exit 0
 }

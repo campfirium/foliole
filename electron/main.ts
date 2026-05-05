@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,7 +28,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function resolvePreloadPath() {
-  return path.join(__dirname, 'preload.js');
+  const sourcePreloadPath = path.join(__dirname, '..', 'electron', 'preload.cjs');
+  if (fs.existsSync(sourcePreloadPath)) {
+    return sourcePreloadPath;
+  }
+  return path.join(__dirname, 'preload.cjs');
 }
 
 function resolveRendererUrl() {
@@ -100,8 +105,8 @@ async function createMainWindow() {
 }
 
 function installInvokeHandler() {
-  ipcMain.handle(IPC_INVOKE_CHANNEL, async (_, request: InvokeRequest) =>
-    handleInvokeRequest(request)
+  ipcMain.handle(IPC_INVOKE_CHANNEL, async (event, request: InvokeRequest) =>
+    handleInvokeRequest(request, { sender: event.sender })
   );
 }
 

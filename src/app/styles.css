@@ -131,6 +131,7 @@ body {
 .window-titlebar-controls {
   display: inline-flex;
   margin-left: auto;
+  -webkit-app-region: no-drag;
 }
 
 .window-titlebar-button {
@@ -146,6 +147,11 @@ body {
   min-width: 46px;
   transition: background-color 140ms, color 140ms;
   -webkit-app-region: no-drag;
+}
+
+.window-titlebar-button > *,
+.window-titlebar-leading-button > * {
+  pointer-events: none;
 }
 
 .window-titlebar-button:hover:not(:disabled) {

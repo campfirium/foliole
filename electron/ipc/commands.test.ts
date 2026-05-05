@@ -4,7 +4,19 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { handleInvokeRequest } from './commands.js';
 
+const mockWindow = {
+  close: vi.fn(),
+  isMaximized: vi.fn(() => false),
+  maximize: vi.fn(),
+  minimize: vi.fn(),
+  unmaximize: vi.fn()
+};
+
 vi.mock('electron', () => ({
+  BrowserWindow: {
+    fromWebContents: vi.fn(() => mockWindow),
+    getFocusedWindow: vi.fn(() => mockWindow)
+  },
   app: { getVersion: () => '1.0.0' },
   shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
 }));
@@ -30,6 +42,7 @@ vi.mock('./review.js', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockWindow.isMaximized.mockReturnValue(false);
 });
 
 it('handles workspace storage commands', async () => {
@@ -91,4 +104,22 @@ it('throws on unsupported command', async () => {
   await expect(handleInvokeRequest({ command: 'unknown.command' })).rejects.toThrow(
     'unsupported native command'
   );
+});
+
+it('handles window commands through invoke channel', async () => {
+  await expect(handleInvokeRequest({ command: 'window_minimize' })).resolves.toBeNull();
+  await expect(handleInvokeRequest({ command: 'window_toggle_maximize' })).resolves.toBeNull();
+  await expect(handleInvokeRequest({ command: 'window_close' })).resolves.toBeNull();
+  await expect(handleInvokeRequest({ command: 'window_is_maximized' })).resolves.toBe(false);
+
+  expect(mockWindow.minimize).toHaveBeenCalledTimes(1);
+  expect(mockWindow.maximize).toHaveBeenCalledTimes(1);
+  expect(mockWindow.close).toHaveBeenCalledTimes(1);
+});
+
+it('restores window when toggle command runs while maximized', async () => {
+  mockWindow.isMaximized.mockReturnValue(true);
+
+  await expect(handleInvokeRequest({ command: 'window_toggle_maximize' })).resolves.toBeNull();
+  expect(mockWindow.unmaximize).toHaveBeenCalledTimes(1);
 });

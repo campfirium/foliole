@@ -1,4 +1,4 @@
-import { app, shell } from 'electron';
+import { BrowserWindow, app, shell, type WebContents } from 'electron';
 
 import { bootReport } from './boot.js';
 import type { InvokeRequest } from './contracts.js';
@@ -26,7 +26,63 @@ function asStringArray(value: unknown, field: string): string[] {
   return value;
 }
 
-export async function handleInvokeRequest(request: InvokeRequest): Promise<unknown> {
+interface InvokeContext {
+  sender?: WebContents;
+}
+
+function resolveTargetWindow(context?: InvokeContext) {
+  if (context?.sender) {
+    const window = BrowserWindow.fromWebContents(context.sender);
+    if (window) {
+      return window;
+    }
+  }
+  return BrowserWindow.getFocusedWindow();
+}
+
+async function handleWindowCommand(command: string, context?: InvokeContext): Promise<unknown> {
+  const window = resolveTargetWindow(context);
+  if (command === 'window_minimize') {
+    window?.minimize();
+    return null;
+  }
+  if (command === 'window_toggle_maximize') {
+    if (!window) {
+      return null;
+    }
+    if (window.isMaximized()) {
+      window.unmaximize();
+    } else {
+      window.maximize();
+    }
+    return null;
+  }
+  if (command === 'window_close') {
+    window?.close();
+    return null;
+  }
+  if (command === 'window_is_maximized') {
+    return Boolean(window?.isMaximized());
+  }
+  return undefined;
+}
+
+async function handleStorageCommand(command: string, args: Record<string, unknown>): Promise<unknown> {
+  if (command === 'load_workspace_state') {
+    return loadWorkspaceState(asString(args.storageKey, 'storageKey'));
+  }
+  if (command === 'save_workspace_state') {
+    await saveWorkspaceState(asString(args.storageKey, 'storageKey'), asString(args.payload, 'payload'));
+    return null;
+  }
+  if (command === 'clear_workspace_state') {
+    await clearWorkspaceState(asString(args.storageKey, 'storageKey'));
+    return null;
+  }
+  return undefined;
+}
+
+export async function handleInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
   const command = request.command;
   const args = request.args ?? {};
 
@@ -42,45 +98,32 @@ export async function handleInvokeRequest(request: InvokeRequest): Promise<unkno
   if (command === 'resolve_app_paths') {
     return resolveAppPaths();
   }
-
   if (command === 'list_system_fonts') {
     return listSystemFonts();
   }
-
   if (command === 'sync_app_menu_state') {
     syncAppMenuState(asStringArray(args.enabledCommandIds, 'enabledCommandIds'));
     return null;
   }
 
-  if (command === 'load_workspace_state') {
-    return loadWorkspaceState(asString(args.storageKey, 'storageKey'));
+  const storageResult = await handleStorageCommand(command, args);
+  if (storageResult !== undefined) {
+    return storageResult;
   }
 
-  if (command === 'save_workspace_state') {
-    await saveWorkspaceState(
-      asString(args.storageKey, 'storageKey'),
-      asString(args.payload, 'payload')
-    );
-    return null;
+  const windowResult = await handleWindowCommand(command, context);
+  if (windowResult !== undefined) {
+    return windowResult;
   }
-
-  if (command === 'clear_workspace_state') {
-    await clearWorkspaceState(asString(args.storageKey, 'storageKey'));
-    return null;
-  }
-
   if (command === 'boot_report') {
     await bootReport(asString(args.stage, 'stage'), args.payload ?? null);
     return null;
   }
-
   if (command === 'review_grade') {
     return reviewGrade(args as unknown as ReviewGradeRequest);
   }
-
   if (command === 'app_get_version') {
     return app.getVersion();
   }
-
   throw new Error(`unsupported native command: ${command}`);
 }

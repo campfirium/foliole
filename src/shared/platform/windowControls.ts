@@ -1,3 +1,4 @@
+import { getRuntimeInvoke } from './bridge';
 import { getElectronAPI } from './electronApi';
 import { isDesktopRuntime } from './runtime';
 
@@ -11,15 +12,23 @@ function getWindowControls() {
 }
 
 export function isWindowControlsAvailable() {
-  return Boolean(getWindowControls());
+  return Boolean(getWindowControls() || getRuntimeInvoke());
 }
 
 export async function queryMainWindowMaximized() {
   const controls = getWindowControls();
-  if (!controls) {
+  if (controls) {
+    return controls.isMaximized();
+  }
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
     return false;
   }
-  return controls.isMaximized();
+  try {
+    return (await runtimeInvoke('window_is_maximized')) === true;
+  } catch {
+    return false;
+  }
 }
 
 export async function onMainWindowResized(handler: () => void): Promise<WindowResizeUnlisten> {
@@ -32,24 +41,39 @@ export async function onMainWindowResized(handler: () => void): Promise<WindowRe
 
 export async function minimizeMainWindow() {
   const controls = getWindowControls();
-  if (!controls) {
+  if (controls) {
+    await controls.minimize();
     return;
   }
-  await controls.minimize();
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  await runtimeInvoke('window_minimize');
 }
 
 export async function toggleMainWindowMaximize() {
   const controls = getWindowControls();
-  if (!controls) {
+  if (controls) {
+    await controls.toggleMaximize();
     return;
   }
-  await controls.toggleMaximize();
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  await runtimeInvoke('window_toggle_maximize');
 }
 
 export async function closeMainWindow() {
   const controls = getWindowControls();
-  if (!controls) {
+  if (controls) {
+    await controls.close();
     return;
   }
-  await controls.close();
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  await runtimeInvoke('window_close');
 }
