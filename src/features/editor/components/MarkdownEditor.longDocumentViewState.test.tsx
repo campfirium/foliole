@@ -29,7 +29,15 @@ function renderEditor(ui: React.ReactElement) {
   });
 }
 
-async function expectRestoredViewState(nodeViewState: { scrollTop: number; selection: { from: number; to: number } }) {
+async function expectRestoredViewState(nodeViewState: { scrollTop: number; selection: { from: number; to: number } | null }) {
+  if (!nodeViewState.selection) {
+    expect(mockRestoreSelection).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
+    });
+    expect(mockRevealSelection).not.toHaveBeenCalled();
+    return;
+  }
   expect(mockRestoreSelection).toHaveBeenLastCalledWith({
     from: nodeViewState.selection.from,
     to: nodeViewState.selection.from
@@ -109,7 +117,7 @@ it('waits for on-demand content to load before restoring a saved scroll-only pos
   const longDocument = createLongDocument();
   const nodeViewState = {
     scrollTop: 5_400,
-    selection: { from: 0, to: 0 }
+    selection: null
   };
   const view = renderEditor(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="Initial body" />);
 
