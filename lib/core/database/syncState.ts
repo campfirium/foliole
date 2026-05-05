@@ -17,7 +17,7 @@ export type SyncObjectType =
   | 'setting'
   | 'view_state';
 
-export type StateSyncObjectType = Exclude<SyncObjectType, 'import_run' | 'node'>;
+export type StateSyncObjectType = Exclude<SyncObjectType, 'import_run'>;
 export type SyncStreamName = 'node_versions' | 'review_log' | 'state';
 
 export interface SyncObjectStateInput {

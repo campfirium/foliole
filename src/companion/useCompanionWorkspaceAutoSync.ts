@@ -9,6 +9,8 @@ import { shouldRunForegroundAutoSyncCheck } from './companionAutoSync';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
+type ForegroundSyncReason = 'endpoint-ready' | 'foreground';
+const FOREGROUND_DUPLICATE_EVENT_WINDOW_MS = 1_000;
 
 type TryForegroundAutoSync = (args: {
   cancelled: () => boolean;
@@ -23,6 +25,7 @@ function createForegroundSyncRunner(args: {
   cancelled: () => boolean;
   inFlightRef: MutableRefObject<boolean>;
   lastCheckedAtRef: MutableRefObject<number>;
+  lastForegroundAtRef: MutableRefObject<number>;
   setError: (error: string | null) => void;
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
@@ -30,12 +33,18 @@ function createForegroundSyncRunner(args: {
   stateRef: MutableRefObject<NativeCompanionWorkspaceSyncState>;
   tryForegroundAutoSync: TryForegroundAutoSync;
 }) {
-  return () => {
+  return (reason: ForegroundSyncReason) => {
     if (args.inFlightRef.current) return;
     const state = args.stateRef.current;
     if (!resolveCompanionWorkspaceSyncEndpoint(state)) return;
     const now = Date.now();
+    if (reason === 'foreground') {
+      const elapsed = now - args.lastForegroundAtRef.current;
+      if (elapsed >= 0 && elapsed < FOREGROUND_DUPLICATE_EVENT_WINDOW_MS) return;
+      args.lastForegroundAtRef.current = now;
+    }
     if (!shouldRunForegroundAutoSyncCheck({
+      force: reason === 'foreground',
       isNativeRuntime: isNativeAndroidCompanionRuntime(),
       lastCheckedAt: args.lastCheckedAtRef.current,
       now
@@ -65,7 +74,8 @@ export function useForegroundAutoSync(
 ) {
   const inFlightRef = useRef(false);
   const lastCheckedAtRef = useRef(0);
-  const runForegroundSyncCheckRef = useRef<() => void>(() => undefined);
+  const lastForegroundAtRef = useRef(0);
+  const runForegroundSyncCheckRef = useRef<(reason: ForegroundSyncReason) => void>(() => undefined);
   const stateRef = useRef(state);
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(state);
 
@@ -74,7 +84,7 @@ export function useForegroundAutoSync(
   }, [state]);
 
   useEffect(() => {
-    runForegroundSyncCheckRef.current();
+    runForegroundSyncCheckRef.current('endpoint-ready');
   }, [endpointUrl]);
 
   useEffect(() => {
@@ -83,6 +93,7 @@ export function useForegroundAutoSync(
       cancelled: () => cancelled,
       inFlightRef,
       lastCheckedAtRef,
+      lastForegroundAtRef,
       setError,
       setReadableArticle,
       setState,
@@ -92,9 +103,9 @@ export function useForegroundAutoSync(
     });
     runForegroundSyncCheckRef.current = runForegroundSyncCheck;
 
-    runForegroundSyncCheck();
+    runForegroundSyncCheck('endpoint-ready');
     let unsubscribe: (() => void) | null = null;
-    void subscribeNativeAppForeground(runForegroundSyncCheck).then((nextUnsubscribe) => {
+    void subscribeNativeAppForeground(() => runForegroundSyncCheck('foreground')).then((nextUnsubscribe) => {
       if (cancelled) {
         nextUnsubscribe();
         return;

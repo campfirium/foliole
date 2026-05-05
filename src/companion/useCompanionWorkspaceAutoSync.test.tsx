@@ -69,6 +69,31 @@ describe('useForegroundAutoSync', () => {
     expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
   });
 
+  it('runs when the native app returns to foreground even inside the bootstrap interval', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const { foregroundHandlers, tryForegroundAutoSync } = await renderAutoSyncHook(true);
+    now.mockReturnValue(1_500);
+
+    await act(async () => {
+      foregroundHandlers[0]?.();
+    });
+
+    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('deduplicates paired native foreground events fired together', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const { foregroundHandlers, tryForegroundAutoSync } = await renderAutoSyncHook(true);
+    now.mockReturnValue(1_500);
+
+    await act(async () => {
+      foregroundHandlers[0]?.();
+      foregroundHandlers[0]?.();
+    });
+
+    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+  });
+
   it('runs after the native sync endpoint loads during bootstrap', async () => {
     vi.spyOn(Date, 'now').mockReturnValue(1_000);
     const { hook, tryForegroundAutoSync } = await renderAutoSyncHook(true, null);

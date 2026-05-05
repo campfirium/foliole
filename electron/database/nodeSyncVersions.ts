@@ -3,6 +3,7 @@ import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { backfillMissingNodeSyncState, upsertNodeSyncState } from './nodeSyncStateRows.js';
 
 interface NodeSyncVersionSourceRow extends DatabaseRow {
   anchor_link: string | null;
@@ -121,6 +122,64 @@ function buildNodeSyncSnapshot(row: NodeSyncVersionSourceRow, nodeId: string) {
   };
 }
 
+function computeNodeSyncVersionHash(row: NodeSyncVersionSourceRow, nodeId: string) {
+  return computeNodeSyncHash({
+    anchorLink: row.anchor_link,
+    attachments: listNodeAttachmentRefs(nodeId).map((attachment) => ({
+      attachmentId: attachment.attachment_id,
+      role: attachment.role
+    })),
+    content: row.content,
+    createdAt: row.created_at,
+    deletedAt: row.deleted_at,
+    desiredRetention: row.desired_retention,
+    hideTitleHeading: row.hide_title_heading === 1,
+    id: row.id,
+    imageRegions: row.image_regions,
+    isTitleManual: row.is_title_manual === 1,
+    kind: row.kind,
+    openingText: row.opening_text,
+    parentId: row.parent_id,
+    position: row.position,
+    priority: row.priority,
+    reveal: row.reveal,
+    title: row.title,
+    updatedAt: row.updated_at,
+    virtualFilter: row.virtual_filter
+  });
+}
+
+function insertNodeSyncVersion(args: {
+  contentHash: string;
+  deviceId: string;
+  nodeId: string;
+  now: string;
+  parentVersionId: string | null;
+  snapshotJson: string;
+  versionId: string;
+}) {
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id,
+       object_id,
+       parent_version_id,
+       device_id,
+       created_at,
+       content_hash,
+       snapshot_json
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      args.versionId,
+      args.nodeId,
+      args.parentVersionId,
+      args.deviceId,
+      args.now,
+      args.contentHash,
+      args.snapshotJson
+    ]
+  );
+}
+
 export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOString()): string | null {
   const connection = openDatabaseConnection();
   const deviceId = loadOrCreateDesktopDeviceId(now);
@@ -132,49 +191,30 @@ export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOStrin
       return;
     }
     const versionId = nextNodeSyncVersionId(deviceId, now);
-    const contentHash = computeNodeSyncHash({
-      anchorLink: row.anchor_link,
-      attachments: listNodeAttachmentRefs(nodeId).map((attachment) => ({
-        attachmentId: attachment.attachment_id,
-        role: attachment.role
-      })),
-      content: row.content,
-      createdAt: row.created_at,
-      deletedAt: row.deleted_at,
-      desiredRetention: row.desired_retention,
-      hideTitleHeading: row.hide_title_heading === 1,
-      id: row.id,
-      imageRegions: row.image_regions,
-      isTitleManual: row.is_title_manual === 1,
-      kind: row.kind,
-      openingText: row.opening_text,
-      parentId: row.parent_id,
-      position: row.position,
-      priority: row.priority,
-      reveal: row.reveal,
-      title: row.title,
-      updatedAt: row.updated_at,
-      virtualFilter: row.virtual_filter
+    const contentHash = computeNodeSyncVersionHash(row, nodeId);
+    insertNodeSyncVersion({
+      contentHash,
+      deviceId,
+      nodeId: row.id,
+      now,
+      parentVersionId: row.current_version_id,
+      snapshotJson: JSON.stringify(buildNodeSyncSnapshot(row, nodeId)),
+      versionId
     });
-
-    connection.driver.execute(
-      `INSERT INTO node_sync_versions (
-         version_id,
-         object_id,
-         parent_version_id,
-         device_id,
-         created_at,
-         content_hash,
-         snapshot_json
-       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [versionId, row.id, row.current_version_id, deviceId, now, contentHash, JSON.stringify(buildNodeSyncSnapshot(row, nodeId))]
-    );
     connection.driver.execute(
       `UPDATE nodes
        SET current_version_id = ?, last_modified_by_device_id = ?, sync_dirty = 0
        WHERE id = ?`,
       [versionId, deviceId, row.id]
     );
+    upsertNodeSyncState({
+      contentHash,
+      currentVersionId: versionId,
+      deletedAt: row.deleted_at,
+      deviceId,
+      nodeId: row.id,
+      updatedAt: row.updated_at
+    });
     createdVersionId = versionId;
   });
 
@@ -191,5 +231,5 @@ export function flushDirtyNodeSyncVersions(now = new Date().toISOString()) {
   for (const nodeId of nodeIds) {
     flushNodeSyncVersion(nodeId, now);
   }
-  return nodeIds;
+  return [...new Set([...nodeIds, ...backfillMissingNodeSyncState()])];
 }

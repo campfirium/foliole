@@ -38,7 +38,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('creates a sync version from a dirty node and clears the dirty flag', () => {
+function upsertTestNode() {
   upsertNodeSnapshot({
     nodeId: 'node-1',
     parentNodeId: null,
@@ -53,6 +53,32 @@ it('creates a sync version from a dirty node and clears the dirty flag', () => {
     createdAt: '2026-04-21T10:00:00.000Z',
     updatedAt: '2026-04-21T10:00:00.000Z'
   });
+}
+
+function assertNodeSyncState(versionId: string | null) {
+  const connection = openDatabaseConnection();
+  expect(
+    connection.driver.queryOne<{
+      content_hash: string;
+      current_version_id: string | null;
+      object_id: string;
+      object_type: string;
+      sync_dirty: number;
+    }>(
+      'SELECT object_type, object_id, current_version_id, content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ?',
+      ['node', 'node-1']
+    )
+  ).toEqual({
+    content_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+    current_version_id: versionId,
+    object_id: 'node-1',
+    object_type: 'node',
+    sync_dirty: 0
+  });
+}
+
+it('creates a sync version from a dirty node and clears the dirty flag', () => {
+  upsertTestNode();
 
   const connection = openDatabaseConnection();
   expect(
@@ -96,23 +122,11 @@ it('creates a sync version from a dirty node and clears the dirty flag', () => {
   const snapshot = JSON.parse(versionRow?.snapshot_json ?? '{}') as Record<string, unknown>;
   expect(snapshot.content).toBe('');
   expect(snapshot.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
+  assertNodeSyncState(versionId);
 });
 
 it('creates an initial sync version for an unversioned clean node', () => {
-  upsertNodeSnapshot({
-    nodeId: 'node-1',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Node 1',
-    isTitleManual: true,
-    content: 'Hello world',
-    reveal: null,
-    anchorLink: null,
-    imageRegions: null,
-    position: 0,
-    createdAt: '2026-04-21T10:00:00.000Z',
-    updatedAt: '2026-04-21T10:00:00.000Z'
-  });
+  upsertTestNode();
 
   const connection = openDatabaseConnection();
   connection.driver.execute('UPDATE nodes SET sync_dirty = 0 WHERE id = ?', ['node-1']);
@@ -127,4 +141,26 @@ it('creates an initial sync version for an unversioned clean node', () => {
     current_version_id: expect.stringMatching(/^desktop-.*#0$/),
     sync_dirty: 0
   });
+  expect(
+    connection.driver.queryOne<{ object_id: string }>(
+      'SELECT object_id FROM sync_object_state WHERE object_type = ? AND object_id = ?',
+      ['node', 'node-1']
+    )
+  ).toEqual({ object_id: 'node-1' });
+});
+
+it('backfills sync state for already versioned nodes missing from sync_object_state', () => {
+  upsertTestNode();
+  const connection = openDatabaseConnection();
+  const versionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z');
+  connection.driver.execute('DELETE FROM sync_object_state WHERE object_type = ? AND object_id = ?', ['node', 'node-1']);
+
+  expect(flushDirtyNodeSyncVersions('2026-04-21T10:02:00.000Z')).toContain('node-1');
+
+  expect(
+    connection.driver.queryOne<{ current_version_id: string | null; object_id: string }>(
+      'SELECT object_id, current_version_id FROM sync_object_state WHERE object_type = ? AND object_id = ?',
+      ['node', 'node-1']
+    )
+  ).toEqual({ current_version_id: versionId, object_id: 'node-1' });
 });

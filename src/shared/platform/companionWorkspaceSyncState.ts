@@ -49,6 +49,13 @@ function normalizeSyncEvents(raw: Record<string, unknown>) {
   return raw.sync_events.map(normalizeSyncEvent).filter((event): event is NativeCompanionSyncEvent => event !== null);
 }
 
+function resolveLastSyncedAt(raw: Record<string, unknown>, syncEvents: NativeCompanionSyncEvent[]) {
+  if (typeof raw.last_synced_at === 'string' && raw.last_synced_at.trim()) {
+    return raw.last_synced_at.trim();
+  }
+  return syncEvents.find((event) => event.status === 'completed')?.occurred_at ?? null;
+}
+
 export function prependSyncEvent(
   state: NativeCompanionWorkspaceSyncState,
   event: Omit<NativeCompanionSyncEvent, 'id'> & { id?: string }
@@ -73,13 +80,14 @@ export function normalizeWorkspaceSyncState(value: unknown): NativeCompanionWork
   }
 
   const raw = value as Record<string, unknown>;
+  const syncEvents = normalizeSyncEvents(raw);
   return {
     endpoint_url: typeof raw.endpoint_url === 'string' && raw.endpoint_url.trim() ? raw.endpoint_url.trim() : null,
-    last_synced_at: typeof raw.last_synced_at === 'string' && raw.last_synced_at.trim() ? raw.last_synced_at.trim() : null,
+    last_synced_at: resolveLastSyncedAt(raw, syncEvents),
     remembered_targets: Array.isArray(raw.remembered_targets)
       ? raw.remembered_targets.filter((target): target is string => typeof target === 'string' && target.trim().length > 0)
       : [],
-    sync_events: normalizeSyncEvents(raw),
+    sync_events: syncEvents,
     sync_onboarding_status: normalizeSyncOnboardingStatus(raw),
     workspace_snapshot:
       raw.workspace_snapshot && typeof raw.workspace_snapshot === 'object' && !Array.isArray(raw.workspace_snapshot)

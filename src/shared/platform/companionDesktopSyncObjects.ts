@@ -1,3 +1,4 @@
+import { postDesktopJson } from './companionDesktopSyncHttp';
 import {
   applyCompanionDesktopSyncPack,
   loadCompanionMissingContentBlobHashes,
@@ -44,23 +45,7 @@ function buildContentBlobPath(hash: string) {
 }
 
 async function ackContentBlob(endpointUrl: string, hash: string) {
-  const bodyText = JSON.stringify({ hashes: [hash] });
-  const headers = await createSignedRequestHeaders({
-    bodyText,
-    method: 'POST',
-    pathWithQuery: CONTENT_BLOB_ACK_PATH
-  });
-  const response = await fetch(`${endpointUrl}${CONTENT_BLOB_ACK_PATH}`, {
-    body: bodyText,
-    headers: {
-      ...headers,
-      'Content-Type': 'application/json'
-    },
-    method: 'POST'
-  });
-  if (!response.ok) {
-    throw new Error(`Content blob ack failed with ${response.status}.`);
-  }
+  await postDesktopJson(endpointUrl, CONTENT_BLOB_ACK_PATH, { hashes: [hash] });
 }
 
 function normalizeEndpointUrl(endpointUrl: string) {

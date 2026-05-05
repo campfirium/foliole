@@ -36,4 +36,15 @@ describe('shouldRunForegroundAutoSyncCheck', () => {
       })
     ).toBe(true);
   });
+
+  it('allows native foreground returns to force a sync check', () => {
+    expect(
+      shouldRunForegroundAutoSyncCheck({
+        force: true,
+        isNativeRuntime: true,
+        lastCheckedAt: 1_000,
+        now: 1_500
+      })
+    ).toBe(true);
+  });
 });

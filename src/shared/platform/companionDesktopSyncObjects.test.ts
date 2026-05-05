@@ -15,8 +15,23 @@ const pairingMock = vi.hoisted(() => ({
   }))
 }));
 
+const capacitorMock = vi.hoisted(() => ({
+  getPlatform: vi.fn(() => 'web'),
+  isNativePlatform: vi.fn(() => false),
+  plugin: {
+    desktopHttpRequest: vi.fn()
+  }
+}));
+
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('@capacitor/core', () => ({
+  Capacitor: {
+    getPlatform: capacitorMock.getPlatform,
+    isNativePlatform: capacitorMock.isNativePlatform
+  },
+  registerPlugin: vi.fn(() => capacitorMock.plugin)
+}));
 
 async function testPullsStructurePackAndContentBlobs() {
   const bodyHash = 'a'.repeat(64);
@@ -24,6 +39,7 @@ async function testPullsStructurePackAndContentBlobs() {
     .mockResolvedValueOnce([bodyHash])
     .mockResolvedValueOnce([]);
   const fetchMock = vi.fn(async () => ({ ok: true }));
+  fetchMock.mockResolvedValue(new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 }));
   vi.stubGlobal('fetch', fetchMock);
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
@@ -58,6 +74,37 @@ async function testPullsStructurePackAndContentBlobs() {
       'X-Signature': 'signed:/companion/content-blob/ack'
     },
     method: 'POST'
+  });
+}
+
+async function testRoutesAckThroughNativeDesktopHttp() {
+  capacitorMock.getPlatform.mockReturnValue('android');
+  capacitorMock.isNativePlatform.mockReturnValue(true);
+  const bodyHash = 'b'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobHashes
+    .mockResolvedValueOnce([bodyHash])
+    .mockResolvedValueOnce([]);
+  capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({
+    body: JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }),
+    status: 200
+  });
+  vi.stubGlobal('fetch', vi.fn());
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  await expect(syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/')).resolves.toMatchObject({
+    syncedContentBlobHashes: [bodyHash]
+  });
+
+  expect(fetch).not.toHaveBeenCalled();
+  expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenCalledWith({
+    body: JSON.stringify({ hashes: [bodyHash] }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Device-Id': 'android-test-device',
+      'X-Signature': 'signed:/companion/content-blob/ack'
+    },
+    method: 'POST',
+    url: 'http://10.0.2.2:38641/companion/content-blob/ack'
   });
 }
 
@@ -105,6 +152,9 @@ describe('companion desktop sync objects', () => {
     vi.useRealTimers();
     vi.resetAllMocks();
     vi.unstubAllGlobals();
+    capacitorMock.getPlatform.mockReturnValue('web');
+    capacitorMock.isNativePlatform.mockReturnValue(false);
+    capacitorMock.plugin.desktopHttpRequest.mockReset();
     syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
       applied_blob_count: 2,
       applied_object_count: 3,
@@ -124,6 +174,8 @@ describe('companion desktop sync objects', () => {
   });
 
   it('pulls the structure pack and missing content blobs from desktop', testPullsStructurePackAndContentBlobs);
+
+  it('routes content blob acknowledgements through native desktop HTTP on Android', testRoutesAckThroughNativeDesktopHttp);
 
   it('does not run legacy JSON state, topic, or review streams on the normal pull path', testNoLegacyJsonStreams);
 
