@@ -61,13 +61,11 @@ export function beginRestoreSelection(args: {
   adapter: CodeMirrorEditorAdapter;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
-  beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined;
   clearRestoreCompletionTimers: () => void;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   restoreScrollTop: number | undefined;
   selection: EditorViewState['selection'];
   selectionKey: string;
-  setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
   targetViewportRatio: number | null | undefined;
   valueLength: number;
 }) {
@@ -75,8 +73,6 @@ export function beginRestoreSelection(args: {
   args.isRestoreApplyingActiveRef.current = true;
   args.activeRestoreSelectionKeyRef.current = args.selectionKey;
   args.activeRestoreValueLengthRef.current = args.valueLength;
-  args.beginApplyingReadingPosition?.(args.selection, 'editor-restore-selection');
-  args.setReadingPositionSelection?.(args.selection);
   if (typeof args.targetViewportRatio === 'number' && args.adapter.revealSelectionAtViewportRatio) {
     args.adapter.setSelection(args.selection);
     args.adapter.revealSelectionAtViewportRatio(args.selection, args.targetViewportRatio);

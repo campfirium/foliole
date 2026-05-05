@@ -20,6 +20,7 @@ function useSelectionRestoreRefs() {
     lastRestoredSelectionKeyRef: useRef<string | null>(null),
     pendingRestoreSelectionKeyRef: useRef<string | null>(null),
     previousNodeIdRef: useRef<string | null>(null),
+    previousReadingSelectionRef: useRef<EditorViewState['selection'] | null | undefined>(undefined),
     restoreCompletionFrame2Ref: useRef<number | null>(null),
     restoreCompletionFrameRef: useRef<number | null>(null),
     restoreCompletionTimeoutRef: useRef<number | null>(null)
@@ -30,7 +31,6 @@ function useSelectionRestoreExecution(args: {
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
-  beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
@@ -42,7 +42,6 @@ function useSelectionRestoreExecution(args: {
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
-  setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
   shouldSuppressSelectionRestore: (() => boolean) | undefined;
   value: string;
 }) {
@@ -51,7 +50,6 @@ function useSelectionRestoreExecution(args: {
       adapter: args.adapterRef.current,
       activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
       activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
-      beginApplyingReadingPosition: args.beginApplyingReadingPosition,
       completeApplyingReadingPosition: args.completeApplyingReadingPosition,
       isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
       lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
@@ -63,7 +61,6 @@ function useSelectionRestoreExecution(args: {
       restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
       restoreCompletionFrameRef: args.restoreCompletionFrameRef,
       restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
-      setReadingPositionSelection: args.setReadingPositionSelection,
       shouldSuppressSelectionRestore: args.shouldSuppressSelectionRestore,
       value: args.value
     });
@@ -76,65 +73,46 @@ export function useEditorSelectionRestore(
   readingSelection: EditorViewState['selection'] | null | undefined,
   readingTargetViewportRatio: number | null | undefined,
   nodeViewState: EditorViewState | undefined,
-  beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined,
+  _beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined,
   completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined,
-  setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined,
+  _setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined,
   shouldSuppressSelectionRestore: (() => boolean) | undefined,
   value: string
 ) {
-  const {
-    activeRestoreSelectionKeyRef,
-    activeRestoreValueLengthRef,
-    isRestoreApplyingActiveRef,
-    lastRestoredSelectionKeyRef,
-    pendingRestoreSelectionKeyRef,
-    previousNodeIdRef,
-    restoreCompletionFrame2Ref,
-    restoreCompletionFrameRef,
-    restoreCompletionTimeoutRef
-  } = useSelectionRestoreRefs();
+  const restoreRefs = useSelectionRestoreRefs();
   useSelectionRestorePreparation({
-    activeRestoreSelectionKeyRef,
+    activeRestoreSelectionKeyRef: restoreRefs.activeRestoreSelectionKeyRef,
     completeApplyingReadingPosition,
-    isRestoreApplyingActiveRef,
-    lastRestoredSelectionKeyRef,
+    isRestoreApplyingActiveRef: restoreRefs.isRestoreApplyingActiveRef,
+    lastRestoredSelectionKeyRef: restoreRefs.lastRestoredSelectionKeyRef,
     nodeId,
     nodeViewState,
-    pendingRestoreSelectionKeyRef,
-    previousNodeIdRef,
+    pendingRestoreSelectionKeyRef: restoreRefs.pendingRestoreSelectionKeyRef,
+    previousNodeIdRef: restoreRefs.previousNodeIdRef,
+    previousReadingSelectionRef: restoreRefs.previousReadingSelectionRef,
     readingSelection,
-    restoreCompletionFrame2Ref,
-    restoreCompletionFrameRef,
-    restoreCompletionTimeoutRef
+    restoreCompletionFrame2Ref: restoreRefs.restoreCompletionFrame2Ref,
+    restoreCompletionFrameRef: restoreRefs.restoreCompletionFrameRef,
+    restoreCompletionTimeoutRef: restoreRefs.restoreCompletionTimeoutRef
   });
-  useSelectionRestoreExecution(
-    createSelectionRestoreExecutionArgs({
-      adapterRef,
-      activeRestoreSelectionKeyRef,
-      activeRestoreValueLengthRef,
-      beginApplyingReadingPosition,
-      completeApplyingReadingPosition,
-      isRestoreApplyingActiveRef,
-      lastRestoredSelectionKeyRef,
-      nodeId,
-      nodeViewState,
-      pendingRestoreSelectionKeyRef,
-      readingSelection,
-      readingTargetViewportRatio,
-      restoreCompletionFrame2Ref,
-      restoreCompletionFrameRef,
-      restoreCompletionTimeoutRef,
-      setReadingPositionSelection,
-      shouldSuppressSelectionRestore,
-      value
-    })
-  );
-}
-
-function createSelectionRestoreExecutionArgs(
-  args: Parameters<typeof useSelectionRestoreExecution>[0]
-) {
-  return args;
+  useSelectionRestoreExecution({
+    adapterRef,
+    activeRestoreSelectionKeyRef: restoreRefs.activeRestoreSelectionKeyRef,
+    activeRestoreValueLengthRef: restoreRefs.activeRestoreValueLengthRef,
+    completeApplyingReadingPosition,
+    isRestoreApplyingActiveRef: restoreRefs.isRestoreApplyingActiveRef,
+    lastRestoredSelectionKeyRef: restoreRefs.lastRestoredSelectionKeyRef,
+    nodeId,
+    nodeViewState,
+    pendingRestoreSelectionKeyRef: restoreRefs.pendingRestoreSelectionKeyRef,
+    readingSelection,
+    readingTargetViewportRatio,
+    restoreCompletionFrame2Ref: restoreRefs.restoreCompletionFrame2Ref,
+    restoreCompletionFrameRef: restoreRefs.restoreCompletionFrameRef,
+    restoreCompletionTimeoutRef: restoreRefs.restoreCompletionTimeoutRef,
+    shouldSuppressSelectionRestore,
+    value
+  });
 }
 
 function useSelectionRestorePreparation(args: {
@@ -146,6 +124,7 @@ function useSelectionRestorePreparation(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   previousNodeIdRef: MutableRefObject<string | null>;
+  previousReadingSelectionRef: MutableRefObject<EditorViewState['selection'] | null | undefined>;
   readingSelection: EditorViewState['selection'] | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
@@ -166,7 +145,6 @@ function runSelectionRestore(args: {
   adapter: CodeMirrorEditorAdapter | null;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
-  beginApplyingReadingPosition: ((selection: EditorViewState['selection'], reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string, selection?: EditorViewState['selection']) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
@@ -178,7 +156,6 @@ function runSelectionRestore(args: {
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
-  setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
   shouldSuppressSelectionRestore: (() => boolean) | undefined;
   value: string;
 }) {
@@ -197,7 +174,6 @@ function runSelectionRestore(args: {
   handleSelectionRestore({
     activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
     activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
-    beginApplyingReadingPosition: args.beginApplyingReadingPosition,
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
     isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
     lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
@@ -210,7 +186,6 @@ function runSelectionRestore(args: {
     restoreCompletionFrameRef: args.restoreCompletionFrameRef,
     restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
     restoreTarget,
-    setReadingPositionSelection: args.setReadingPositionSelection,
     shouldSuppressSelectionRestore: args.shouldSuppressSelectionRestore,
     valueLength: args.value.length
   });

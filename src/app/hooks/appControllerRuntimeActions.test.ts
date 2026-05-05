@@ -10,7 +10,6 @@ vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
 
 import {
   createPersistPdfViewState,
-  createRevealAnchorInDocument,
   createRevealDocumentPosition,
   createRevealDocumentSelection
 } from './appControllerRuntimeActions';
@@ -62,56 +61,6 @@ function createRevealDocumentPositionArgs(args: {
   };
 }
 
-function createZeroWidthAnchorRevealArgs(args: {
-  content: string;
-  getScrollTop: () => number;
-  revealPosition?: ReturnType<typeof vi.fn>;
-  revealSelectionAtViewportRatio?: ReturnType<typeof vi.fn>;
-  revealSelection: ReturnType<typeof vi.fn>;
-  setSelection?: ReturnType<typeof vi.fn>;
-  setNodeViewState: ReturnType<typeof vi.fn>;
-}) {
-  return {
-    runtime: {
-      editorRef: {
-        current: {
-          getScrollTop: args.getScrollTop,
-          revealPosition: args.revealPosition ?? vi.fn(),
-          revealSelectionAtViewportRatio: args.revealSelectionAtViewportRatio,
-          revealSelection: args.revealSelection,
-          setSelection: args.setSelection ?? vi.fn()
-        }
-      },
-      ...createRuntimeState(),
-      isViewingTrashNode: false
-    },
-    ws: {
-      activeNodeId: 'node-1',
-      nodeViewById: {
-        'node-1': {
-          scrollTop: 12,
-          selection: { from: 1, to: 1 }
-        }
-      },
-      nodesById: {
-        'node-1': {
-          id: 'node-1',
-          parentNodeId: null,
-          kind: 'topic',
-          title: 'Parent',
-          content: args.content,
-          anchorLink: null,
-          reveal: null,
-          review: null,
-          createdAt: '2026-04-05T00:00:00.000Z',
-          updatedAt: '2026-04-05T00:00:00.000Z'
-        }
-      },
-      setNodeViewState: args.setNodeViewState
-    }
-  };
-}
-
 describe('createRevealDocumentPosition', () => {
   it('updates the stored reading position before applying the reading anchor request', () => {
     const revealPosition = vi.fn();
@@ -124,7 +73,7 @@ describe('createRevealDocumentPosition', () => {
       revealPosition,
       setNodeViewState,
       setSelection
-    }) as any;
+    }) as never;
     const revealDocumentPosition = createRevealDocumentPosition(args);
 
     revealDocumentPosition(48000);
@@ -164,96 +113,13 @@ describe('createRevealDocumentPosition', () => {
         },
         setNodeViewState
       }
-    } as any);
+    } as never);
 
     revealDocumentSelection({ from: 3, to: 125 });
 
     expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
       scrollTop: 24,
       selection: { from: 3, to: 125 }
-    });
-  });
-});
-
-describe('createRevealAnchorInDocument', () => {
-  it('routes to pdf locator jump when editor adapter is unavailable', () => {
-    const runtimeState = createRuntimeState();
-    const revealAnchorInDocument = createRevealAnchorInDocument({
-      runtime: {
-        editorRef: {
-          current: null
-        },
-        ...runtimeState,
-        isViewingTrashNode: false
-      },
-      ws: {
-        activeNodeId: 'node-pdf-parent',
-        nodesById: {
-          'node-pdf-parent': {
-            id: 'node-pdf-parent',
-            parentNodeId: null,
-            kind: 'topic',
-            title: 'PDF Parent',
-            content: 'Plain markdown content',
-            anchorLink: null,
-            reveal: null,
-            review: null,
-            createdAt: '2026-04-05T00:00:00.000Z',
-            updatedAt: '2026-04-05T00:00:00.000Z'
-          }
-        }
-      }
-    } as never);
-
-    revealAnchorInDocument({ id: 'pdf-hl-2', kind: 'highlight', locator: { page: 7, x: 0.2, y: 0.2 } });
-    revealAnchorInDocument({ id: 'pdf-hl-3', kind: 'highlight', locator: { page: 7, x: 0.9, y: 0.8 } });
-
-    expect(requestPdfAnchorJump).toHaveBeenNthCalledWith(1, 'node-pdf-parent', { page: 7, x: 0.2, y: 0.2 });
-    expect(requestPdfAnchorJump).toHaveBeenNthCalledWith(2, 'node-pdf-parent', { page: 7, x: 0.9, y: 0.8 });
-  });
-
-  it('reveals zero-width text anchors instead of dropping the jump', () => {
-    const revealSelection = vi.fn();
-    const revealPosition = vi.fn();
-    const revealSelectionAtViewportRatio = vi.fn();
-    const setSelection = vi.fn();
-    const getScrollTop = vi.fn(() => 88);
-    const setNodeViewState = vi.fn();
-    const content = 'AD';
-    const anchorPosition = 1;
-    const args = createZeroWidthAnchorRevealArgs({
-      content,
-      getScrollTop,
-      revealPosition,
-      revealSelectionAtViewportRatio,
-      revealSelection,
-      setNodeViewState,
-      setSelection
-    }) as any;
-    const revealAnchorInDocument = createRevealAnchorInDocument(args);
-
-    revealAnchorInDocument({
-      id: 'anchor-1',
-      kind: 'highlight',
-      locator: { from: anchorPosition, originalText: '', to: anchorPosition }
-    });
-
-    expect(revealSelection).not.toHaveBeenCalled();
-    expect(revealPosition).not.toHaveBeenCalled();
-    expect(revealSelectionAtViewportRatio).toHaveBeenCalledWith({ from: anchorPosition, to: anchorPosition }, 0.24);
-    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
-      scrollTop: 88,
-      selection: { from: anchorPosition, to: anchorPosition }
-    });
-    expect(setSelection).toHaveBeenCalledWith({ from: anchorPosition, to: anchorPosition });
-    expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
-    expect(args.runtime.readingPositionRef.current).toEqual({
-      nodeId: 'node-1',
-      selection: { from: anchorPosition, to: anchorPosition }
-    });
-    expect(args.runtime.readingPositionSyncRef.current.state).toMatchObject({
-      reason: 'reveal-anchor',
-      targetSelection: { from: anchorPosition, to: anchorPosition }
     });
   });
 });

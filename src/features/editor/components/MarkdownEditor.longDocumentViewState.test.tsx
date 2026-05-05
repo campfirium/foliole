@@ -187,7 +187,7 @@ it('prefers the current reading selection over the stale saved selection', async
     expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
   });
 });
-it('locks reading-position sync while restoring a saved selection', async () => {
+it('does not rewrite reading-position state while applying a saved selection', async () => {
   const onBeginApplyingReadingPosition = vi.fn();
   const onCompleteApplyingReadingPosition = vi.fn();
   const onSetReadingPositionSelection = vi.fn();
@@ -203,11 +203,8 @@ it('locks reading-position sync while restoring a saved selection', async () => 
       value={createLongDocument()}
     />
   );
-  expect(onBeginApplyingReadingPosition).toHaveBeenCalledWith(
-    { from: 48_000, to: 48_000 },
-    'editor-restore-selection'
-  );
-  expect(onSetReadingPositionSelection).toHaveBeenCalledWith({ from: 48_000, to: 48_000 });
+  expect(onBeginApplyingReadingPosition).not.toHaveBeenCalled();
+  expect(onSetReadingPositionSelection).not.toHaveBeenCalled();
   await waitFor(() => {
     expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled', { from: 48_000, to: 48_000 });
   });

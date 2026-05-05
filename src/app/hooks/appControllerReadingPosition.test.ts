@@ -51,7 +51,7 @@ describe('createReadingPositionHandlers', () => {
     handlers.completeApplyingReadingPosition('editor-restore-selection-settled', { from: 42, to: 42 });
 
     expect(handlers.getReadingPositionSyncState()).toBeNull();
-    expect(handlers.getReadingPositionSelection()).toEqual({ from: 42, to: 42 });
+    expect(handlers.getReadingPositionSelection()).toBeNull();
   });
 
   it('does not let a stale completion clear a fresh anchor-navigation request', () => {
@@ -67,5 +67,22 @@ describe('createReadingPositionHandlers', () => {
       targetSelection: { from: 88, to: 88 },
       targetViewportRatio: 0.24
     });
+  });
+
+  it('clears a reveal-anchor request after the matching restore completes', () => {
+    const { handlers, readingPositionRef } = createHarness();
+
+    readingPositionRef.current = {
+      nodeId: 'node-1',
+      selection: { from: 12, to: 12 }
+    };
+    (handlers as unknown as {
+      beginApplyingReadingPosition: (selection: { from: number; to: number }, reason: string) => void;
+    }).beginApplyingReadingPosition({ from: 12, to: 12 }, 'reveal-anchor');
+
+    handlers.completeApplyingReadingPosition('editor-restore-selection-settled', { from: 12, to: 12 });
+
+    expect(handlers.getReadingPositionSyncState()).toBeNull();
+    expect(handlers.getReadingPositionSelection()).toBeNull();
   });
 });

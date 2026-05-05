@@ -7,6 +7,16 @@ function isSameSelection(left: EditorSelection, right: EditorSelection) {
   return left.from === right.from && left.to === right.to;
 }
 
+function shouldClearAppliedReadingSelection(reason: string) {
+  return (
+    reason === 'anchor-navigation' ||
+    reason === 'node-navigation' ||
+    reason === 'reveal-anchor' ||
+    reason === 'reveal-selection' ||
+    reason === 'reveal-position'
+  );
+}
+
 function getActiveReadingSelection(args: BuildControllerLayoutPropsArgs) {
   const current = args.runtime.readingPositionRef.current;
   return current.nodeId === args.ws.activeNodeId ? current.selection : null;
@@ -46,6 +56,17 @@ function completeReadingSyncState(args: {
     nodeId: args.activeNodeId,
     state: null
   };
+  if (
+    shouldClearAppliedReadingSelection(args.currentState.state.reason) &&
+    args.runtime.readingPositionRef.current.nodeId === args.activeNodeId &&
+    args.runtime.readingPositionRef.current.selection &&
+    isSameSelection(args.runtime.readingPositionRef.current.selection, args.currentState.state.targetSelection)
+  ) {
+    args.runtime.readingPositionRef.current = {
+      nodeId: args.activeNodeId,
+      selection: null
+    };
+  }
   pushDebugTrace('runtime.reading-position.applying-complete', {
     activeNodeId: args.activeNodeId,
     reason: args.reason,
@@ -101,6 +122,16 @@ function createReadingPositionMutations(args: BuildControllerLayoutPropsArgs) {
       const current = args.runtime.readingPositionSyncRef.current;
       if (current.nodeId !== nodeId || current.state?.reason !== 'anchor-navigation') {
         return;
+      }
+      if (
+        args.runtime.readingPositionRef.current.nodeId === nodeId &&
+        args.runtime.readingPositionRef.current.selection &&
+        isSameSelection(args.runtime.readingPositionRef.current.selection, current.state.targetSelection)
+      ) {
+        args.runtime.readingPositionRef.current = {
+          nodeId,
+          selection: null
+        };
       }
       args.runtime.readingPositionSyncRef.current = {
         nodeId,

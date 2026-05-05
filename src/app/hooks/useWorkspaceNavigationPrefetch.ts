@@ -59,6 +59,7 @@ function useNavigationAction(
 }
 
 function useSelectNodeAction(
+  activeNodeId: string | null,
   action: (nodeId: string) => NodeNavigationResult | null,
   prepareForNavigation: (nodeIdOverride?: string | null) => void,
   flushPendingEditorDraft: () => void,
@@ -69,6 +70,13 @@ function useSelectNodeAction(
 ) {
   return useCallback(
     async (nodeId: string, focusAnchor: NodeAnchorLink | null = null) => {
+      if (focusAnchor && activeNodeId === nodeId) {
+        markRequested(nodeId);
+        flushPendingEditorDraft();
+        finalize({ focusAnchor, nodeId });
+        return;
+      }
+
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
       if (targetNode && !isNodeDocumentLoaded(targetNode) && getRuntimeInvoke()) {
         await openPreparedNode(nodeId, focusAnchor);
@@ -82,7 +90,7 @@ function useSelectNodeAction(
       finalize(result ? { ...result, focusAnchor } : result);
       void ensureNodeReady(nodeId);
     },
-    [action, ensureNodeReady, finalize, flushPendingEditorDraft, markRequested, openPreparedNode, prepareForNavigation]
+    [action, activeNodeId, ensureNodeReady, finalize, flushPendingEditorDraft, markRequested, openPreparedNode, prepareForNavigation]
   );
 }
 
@@ -203,6 +211,7 @@ export function usePreparedNavigationHandlers(args: PreparedNavigationDependenci
 
   return {
     handleSelectNode: useSelectNodeAction(
+      args.activeNodeId,
       args.openNode,
       prepareForNavigation,
       args.flushPendingEditorDraft,

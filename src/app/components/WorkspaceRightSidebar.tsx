@@ -1,7 +1,6 @@
 import { memo } from 'react';
 
-import { isPdfAnchorLocator, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
@@ -166,9 +165,7 @@ function renderHighlightsPanel(
   props: Pick<
     WorkspaceLayoutProps,
     'activeNodeId' | 'nodeOrder' | 'trashedNodeIds' | 'nodesById' | 'onSelectNode'
-  > & {
-    onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
-  }
+  >
 ) {
   return (
     <WorkspaceRightSidebarHighlightsPanel
@@ -182,15 +179,6 @@ function renderHighlightsPanel(
           (highlightNode?.anchorLink?.kind === 'highlight' || highlightNode?.anchorLink?.kind === 'cloze') &&
           highlightNode.parentNodeId
         ) {
-          if (props.activeNodeId === highlightNode.parentNodeId) {
-            props.onRevealAnchorInDocument(highlightNode.anchorLink as NodeAnchorLink);
-            return;
-          }
-          if (isPdfAnchorLocator(highlightNode.anchorLink.locator)) {
-            props.onSelectNode(highlightNode.parentNodeId);
-            requestPdfAnchorJump(highlightNode.parentNodeId, highlightNode.anchorLink.locator);
-            return;
-          }
           props.onSelectNode(highlightNode.parentNodeId, highlightNode.anchorLink as NodeAnchorLink);
           return;
         }

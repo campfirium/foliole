@@ -108,6 +108,41 @@ async function runImmediateRestoreCase() {
   }
 }
 
+async function runBreadcrumbThenCurrentHighlightCase() {
+  const jumpToAncestorNode = vi.fn(() => ({
+    focusAnchor: {
+      id: 'text-hl-restore-2',
+      kind: 'highlight' as const,
+      locator: { from: 6, originalText: 'Beta', to: 10 }
+    },
+    nodeId: 'node-1'
+  }));
+
+  const { beginAnchorNavigationRestore, result, rerender } = renderTextLocatorNavigationHook({
+    activeNodeContent: 'Alpha Beta Gamma',
+    activeNodeId: 'text-hl-child',
+    jumpToAncestorNode
+  });
+
+  await act(async () => {
+    await result.current.handleSelectBreadcrumbNode('node-1');
+    rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
+  });
+
+  await act(async () => {
+    await result.current.handleSelectNode('node-1', {
+      id: 'text-hl-after-breadcrumb',
+      kind: 'highlight',
+      locator: { from: 6, originalText: 'Beta', to: 10 }
+    });
+  });
+
+  expect(beginAnchorNavigationRestore).toHaveBeenCalledTimes(2);
+  expect(beginAnchorNavigationRestore).toHaveBeenNthCalledWith(1, 'node-1', { from: 6, to: 6 });
+  expect(beginAnchorNavigationRestore).toHaveBeenNthCalledWith(2, 'node-1', { from: 6, to: 6 });
+  expect(result.current.shouldSuppressSelectionRestore()).toBe(false);
+}
+
 describe('useWorkspaceNavigation text locator basics', () => {
   it('reveals text locator breadcrumbs inside the unified reading-position flow', async () => {
     const jumpToAncestorNode = vi.fn(() => ({
@@ -156,6 +191,27 @@ describe('useWorkspaceNavigation text locator basics', () => {
     expect(requestPdfAnchorJump).not.toHaveBeenCalled();
   });
 
+  it('reveals text locator focus in the current node without reopening the node', async () => {
+    const openNode = vi.fn(() => ({ focusAnchor: null, nodeId: 'node-1' }));
+    const { beginAnchorNavigationRestore, result } = renderTextLocatorNavigationHook({
+      activeNodeContent: 'Alpha Beta Gamma',
+      activeNodeId: 'node-1',
+      openNode
+    });
+
+    await act(async () => {
+      await result.current.handleSelectNode('node-1', {
+        id: 'text-hl-current-1',
+        kind: 'highlight',
+        locator: { from: 6, originalText: 'Beta', to: 10 }
+      });
+    });
+
+    expect(openNode).not.toHaveBeenCalled();
+    expect(beginAnchorNavigationRestore).toHaveBeenLastCalledWith('node-1', { from: 6, to: 6 });
+    expect(requestPdfAnchorJump).not.toHaveBeenCalled();
+  });
+
 });
 
 describe('useWorkspaceNavigation text locator pending flow', () => {
@@ -189,4 +245,6 @@ describe('useWorkspaceNavigation text locator pending flow', () => {
   });
 
   it('does not suppress restore after a breadcrumb text-locator jump is already routed into reading-position restore', runImmediateRestoreCase);
+
+  it('still accepts a current-node highlight jump after a breadcrumb jump', runBreadcrumbThenCurrentHighlightCase);
 });

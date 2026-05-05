@@ -121,3 +121,52 @@ it('does not run a second restore after a viewport-ratio restore clears its requ
   });
   expect(mockRestoreSelection).not.toHaveBeenCalled();
 });
+
+it('reruns the same viewport-ratio request when a fresh request object arrives', async () => {
+  vi.useFakeTimers();
+  const requestAnimationFrameSpy = vi
+    .spyOn(window, 'requestAnimationFrame')
+    .mockImplementation((callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+  const cancelAnimationFrameSpy = vi
+    .spyOn(window, 'cancelAnimationFrame')
+    .mockImplementation((handle: number) => window.clearTimeout(handle));
+
+  function Harness() {
+    const [readingSelection, setReadingSelection] = useState({ from: 48_000, to: 48_024 });
+
+    return (
+      <>
+        <button onClick={() => setReadingSelection({ from: 48_000, to: 48_024 })} type="button">
+          Repeat request
+        </button>
+        <MarkdownEditor
+          nodeId="node-1"
+          nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+          onChange={vi.fn()}
+          readingSelection={readingSelection}
+          readingTargetViewportRatio={0.24}
+          value={createLongDocument()}
+        />
+      </>
+    );
+  }
+
+  try {
+    const view = renderEditor(<Harness />);
+    expect(mockRevealSelectionAtViewportRatio).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    act(() => {
+      view.getByRole('button', { name: 'Repeat request' }).click();
+    });
+
+    expect(mockRevealSelectionAtViewportRatio).toHaveBeenCalledTimes(2);
+  } finally {
+    requestAnimationFrameSpy.mockRestore();
+    cancelAnimationFrameSpy.mockRestore();
+    vi.useRealTimers();
+  }
+});

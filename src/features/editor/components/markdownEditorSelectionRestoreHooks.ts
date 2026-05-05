@@ -10,6 +10,7 @@ export function usePendingRestoreKey(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   previousNodeIdRef: MutableRefObject<string | null>;
+  previousReadingSelectionRef: MutableRefObject<EditorViewState['selection'] | null | undefined>;
   readingSelection: EditorViewState['selection'] | null | undefined;
 }) {
   useLayoutEffect(() => {
@@ -19,14 +20,20 @@ export function usePendingRestoreKey(args: {
       args.nodeViewState
     );
     const nodeChanged = args.previousNodeIdRef.current !== args.nodeId;
+    const readingSelectionChanged =
+      Boolean(args.readingSelection) &&
+      args.previousReadingSelectionRef.current !== args.readingSelection;
     const readingRequestChanged =
       Boolean(args.readingSelection) &&
-      args.pendingRestoreSelectionKeyRef.current !== nextPendingRestoreSelectionKey &&
-      args.lastRestoredSelectionKeyRef.current !== nextPendingRestoreSelectionKey;
+      (args.pendingRestoreSelectionKeyRef.current !== nextPendingRestoreSelectionKey ||
+        args.lastRestoredSelectionKeyRef.current !== nextPendingRestoreSelectionKey ||
+        readingSelectionChanged);
     if (!nodeChanged && !readingRequestChanged) {
+      args.previousReadingSelectionRef.current = args.readingSelection;
       return;
     }
     args.previousNodeIdRef.current = args.nodeId;
+    args.previousReadingSelectionRef.current = args.readingSelection;
     args.lastRestoredSelectionKeyRef.current = null;
     args.pendingRestoreSelectionKeyRef.current = nextPendingRestoreSelectionKey;
   }, [args]);

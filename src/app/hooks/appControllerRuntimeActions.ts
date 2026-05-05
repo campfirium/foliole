@@ -91,8 +91,6 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
       from: selection.from,
       to: selection.from
     };
-    writeNodeReadingPosition(args, caretSelection);
-    applyReadingPositionToActiveEditor(args, caretSelection, HIGHLIGHT_JUMP_VIEWPORT_RATIO);
     requestReadingPositionApply({
       nodeId: args.ws.activeNodeId,
       reason: 'reveal-anchor',
