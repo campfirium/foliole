@@ -253,6 +253,44 @@ describe('windows-preview script', () => {
     }
   });
 
+  it('does not treat stale RUNNING during fallback-start as a successful start', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: STOPPED reason=stale-runtime-detected"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "start" ]; then',
+          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('reason: Class C: no trusted running client');
+      expect(result.stdout).toContain('selected action: fallback-start');
+      expect(result.stdout).toContain('fallback start failed');
+      expect(result.stdout).toContain('status: RUNNING head=old-head');
+      expect(result.stdout).not.toContain('[windows-preview] status: STARTED');
+      expect(await readActions(actionLog)).toEqual(['status', 'start']);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('does not fall back to start after selecting restart-intent', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {

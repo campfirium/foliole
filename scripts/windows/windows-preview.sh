@@ -79,7 +79,7 @@ run_windows_client_action() {
       rm -f "${output_file}"
       return 0
     fi
-    if [ "${action}" = "start" ] && echo "${current_output}" | grep -qE 'status:\s*(RUNNING|STARTED)'; then
+    if [ "${action}" = "start" ] && echo "${current_output}" | grep -qE 'status:\s*STARTED'; then
       kill "${action_pid}" 2>/dev/null || true
       sleep 1
       kill -9 "${action_pid}" 2>/dev/null || true
@@ -241,7 +241,7 @@ run_fallback_start() {
   start_output="$(run_windows_client_action start)"
   start_exit=$?
   set -e
-  if [ "${start_exit}" -eq 0 ] && echo "${start_output}" | grep -qE 'status:\s*(RUNNING|STARTED)'; then
+  if [ "${start_exit}" -eq 0 ] && echo "${start_output}" | grep -qE 'status:\s*STARTED'; then
     echo "[windows-preview] status: STARTED"
     return 0
   fi
