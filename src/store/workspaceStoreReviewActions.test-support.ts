@@ -97,6 +97,7 @@ export function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     updateNodeReveal: () => undefined,
     updateNodePriority: () => undefined,
     updateNodeDesiredRetention: () => undefined,
+    relearnNode: () => false,
     startReviewSession: () => false,
     revealReviewAnswer: () => undefined,
     gradeReviewCard: async () => false,

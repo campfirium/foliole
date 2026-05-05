@@ -43,6 +43,7 @@ export interface WorkspaceState {
   updateNodeReveal: (nodeId: string, reveal: string) => void;
   updateNodePriority: (nodeId: string, priority: number | null) => void;
   updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
+  relearnNode: (nodeId: string, now?: string) => boolean;
   startReviewSession: (now?: string) => boolean;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;

@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
 import {
   DOCUMENT_WIDTH_DEFAULT,
   LIST_WIDTH_DEFAULT,
@@ -71,6 +72,47 @@ it('supports multi-select permanent delete inside trash', () => {
   const workspace = useWorkspaceStore.getState();
   expect(workspace.nodesById['node-2']).toBeUndefined();
   expect(workspace.nodesById['node-3']).toBeUndefined();
+});
+
+it('relearns reading nodes from the node context menu', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      ...state.nodesById,
+      'node-2': createNode({
+        id: 'node-2',
+        title: 'Reading node',
+        content: '# Reading node',
+        reading: {
+          intervalDurationMs: 24 * 60 * 60 * 1000,
+          intervalGrowthFactor: 1.3,
+          lastHandledAt: '2026-02-24T00:00:00.000Z',
+          nextAt: '2026-03-10T00:00:00.000Z',
+          priority: 5,
+          readingPosition: 0,
+          repetitionCount: 2,
+          state: 'dismissed'
+        }
+      })
+    }
+  }));
+
+  render(<App />);
+  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Reading node' }), { clientX: 56, clientY: 64 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
+
+  const workspace = useWorkspaceStore.getState();
+  expect(workspace.nodesById['node-2']?.reading).toBeNull();
+  expect(
+    buildReviewQueuePlan({
+      nodeOrder: workspace.nodeOrder,
+      nodesById: workspace.nodesById,
+      now: '2026-02-25T00:00:00.000Z',
+      trashedNodeIds: workspace.trashedNodeIds
+    }).queueNodeIds
+  ).toContain('node-2');
 });
 
 it('empties all trash items from trash header action', () => {

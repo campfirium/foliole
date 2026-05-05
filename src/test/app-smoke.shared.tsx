@@ -81,6 +81,7 @@ export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 
     title: partial.title,
     content: partial.content,
     reveal: partial.reveal ?? null,
+    reading: partial.reading ?? null,
     review: partial.review ?? null,
     anchorLink: partial.anchorLink,
     createdAt: partial.createdAt ?? FIXED_TIMESTAMP,

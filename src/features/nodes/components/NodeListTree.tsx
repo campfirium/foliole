@@ -30,6 +30,7 @@ function useNodeWorkspaceActions() {
     deleteNode: useWorkspaceStore((state) => state.deleteNode),
     deleteNodePermanently: useWorkspaceStore((state) => state.deleteNodePermanently),
     moveNodes: useWorkspaceStore((state) => state.moveNodes),
+    relearnNode: useWorkspaceStore((state) => state.relearnNode),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle),
     trashedNodeIds: useWorkspaceStore((state) => state.trashedNodeIds)
@@ -88,6 +89,7 @@ function useNodeListTreeModel({
     deleteNodePermanently: workspace.deleteNodePermanently,
     handleSelectNode,
     moveNodes: workspace.moveNodes,
+    relearnNode: workspace.relearnNode,
     restoreNode: workspace.restoreNode,
     updateNodeTitle: workspace.updateNodeTitle,
     state
@@ -134,6 +136,7 @@ export function NodeListTree({
       nodesById={nodesById}
       onOpenNotesView={onOpenNotesView}
       onSelect={model.handleSelectNode}
+      relearnNode={model.relearnNode}
       updateNodeTitle={model.updateNodeTitle}
       restoreNode={model.restoreNode}
       selectedNodeIds={state.selectedNodeIds}

@@ -39,6 +39,7 @@ type WorkspaceNodeActions = Pick<
   | 'moveNode'
   | 'moveNodes'
   | 'restoreNode'
+  | 'relearnNode'
   | 'setNodeViewState'
   | 'updateNodeDesiredRetention'
   | 'updateNodePriority'
@@ -154,6 +155,30 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
   };
 }
 
+function createRelearnNodeAction(set: WorkspaceSet): WorkspaceNodeActions['relearnNode'] {
+  return (nodeId, now = new Date().toISOString()) => {
+    let relearned = false;
+    set((state) => {
+      const node = state.nodesById[nodeId];
+      if (!node || node.reveal !== null || node.content.trim().length === 0) {
+        return state;
+      }
+      relearned = true;
+      return {
+        nodesById: {
+          ...state.nodesById,
+          [nodeId]: {
+            ...node,
+            reading: null,
+            updatedAt: now
+          }
+        }
+      };
+    });
+    return relearned;
+  };
+}
+
 export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActions {
   const trashActions = createWorkspaceTrashActions(set, {
     syncNodeContent: syncNodeContentToRuntime,
@@ -176,6 +201,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateNodeTitle: createUpdateNodeTitleAction(set),
     updateNodeContent: createUpdateNodeContentAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
+    relearnNode: createRelearnNodeAction(set),
     updateNodePriority: createUpdateNodePriorityAction(set),
     updateNodeDesiredRetention: createUpdateNodeDesiredRetentionAction(set),
     createRootNode: createRootNodeAction(set, runtimeHandlers),
