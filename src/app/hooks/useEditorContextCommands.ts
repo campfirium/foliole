@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
@@ -11,6 +11,7 @@ import {
   type ImageClozeDeleteEventDetail
 } from '../../features/image-cloze/model/imageClozeEvents';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { getSelectionCommandPayload, type SelectionCommandPayload } from '../contextCommands';
 
 import { createSelectionHandlers, runSelectionCommandFromPayload } from './editorSelectionCommandActions';
 import { createToggleSelectionHighlightFromPayloadHandler } from './selectionHighlightToggle';
@@ -106,6 +107,40 @@ function useImageClozeEventBridge(args: {
   }, [args]);
 }
 
+function usePreservedSelectionPayload(args: {
+  activeNodeId: string | null;
+  editorRef: MutableRefObject<EditorAdapter | null>;
+}) {
+  const preservedSelectionPayloadRef = useRef<SelectionCommandPayload | null>(null);
+
+  useEffect(() => {
+    preservedSelectionPayloadRef.current = null;
+  }, [args.activeNodeId]);
+
+  useEffect(() => {
+    const preserveSelectionPayloadBeforeContextMenu = (event: MouseEvent) => {
+      if (event.button !== 2) {
+        return;
+      }
+      if (!args.activeNodeId) {
+        preservedSelectionPayloadRef.current = null;
+        return;
+      }
+      const payload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);
+      if (payload) {
+        preservedSelectionPayloadRef.current = payload;
+      }
+    };
+
+    document.addEventListener('mousedown', preserveSelectionPayloadBeforeContextMenu, true);
+    return () => {
+      document.removeEventListener('mousedown', preserveSelectionPayloadBeforeContextMenu, true);
+    };
+  }, [args.activeNodeId, args.editorRef]);
+
+  return preservedSelectionPayloadRef;
+}
+
 export function useEditorContextCommands({
   activeNode,
   activeNodeId,
@@ -124,6 +159,7 @@ export function useEditorContextCommands({
   updateNodeContent
 }: UseEditorContextCommandsParams) {
   const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
+  const preservedSelectionPayloadRef = usePreservedSelectionPayload({ activeNodeId, editorRef });
   useImageClozeEventBridge({ activeNode, activeNodeId, createImageClozeNodes, deleteImageClozeRegion, editorRef, nodesById });
   const closeContextMenu = () => setContextMenu(null);
   const syncActiveNodeContentFromEditor = createSyncActiveNodeContentFromEditor(activeNodeId, editorRef, updateNodeContent);
@@ -131,6 +167,7 @@ export function useEditorContextCommands({
     activeNode,
     activeNodeId,
     editorRef,
+    getPreservedSelectionPayload: () => preservedSelectionPayloadRef.current,
     isTrashViewOpen,
     setContextMenu
   });

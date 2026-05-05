@@ -1,8 +1,53 @@
-import { getTextAnchorLocators, type Node } from '../../nodes/model/nodeTypes';
 import { type EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
 
+interface TextAnchorDecorationNode {
+  anchorLink?: {
+    kind: 'highlight' | 'cloze';
+    locator?: unknown;
+  } | null;
+  id: string;
+  parentNodeId: string | null;
+}
+
+interface TextAnchorLocator {
+  from: number;
+  originalText: string;
+  to: number;
+}
+
+function isTextAnchorLocator(value: unknown): value is TextAnchorLocator {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      typeof (value as { from?: unknown }).from === 'number' &&
+      Number.isInteger((value as { from: number }).from) &&
+      (value as { from: number }).from >= 0 &&
+      typeof (value as { to?: unknown }).to === 'number' &&
+      Number.isInteger((value as { to: number }).to) &&
+      (value as { to: number }).to >= (value as { from: number }).from &&
+      typeof (value as { originalText?: unknown }).originalText === 'string'
+  );
+}
+
+function getTextAnchorLocators(locator: unknown): TextAnchorLocator[] {
+  if (isTextAnchorLocator(locator)) {
+    return [locator];
+  }
+  if (
+    locator &&
+    typeof locator === 'object' &&
+    Array.isArray((locator as { ranges?: unknown }).ranges)
+  ) {
+    const ranges = (locator as { ranges: unknown[] }).ranges.filter(isTextAnchorLocator);
+    if (ranges.length > 1 && ranges.length === (locator as { ranges: unknown[] }).ranges.length) {
+      return ranges;
+    }
+  }
+  return [];
+}
+
 function resolveNodeTextAnchorDecorations(
-  node: Node,
+  node: TextAnchorDecorationNode,
   parentContent: string
 ): EditorTextAnchorDecoration[] {
   const anchorLink = node.anchorLink;
@@ -26,7 +71,7 @@ function resolveNodeTextAnchorDecorations(
 
 export function collectDocumentTextAnchorDecorations(args: {
   activeNodeId: string | null;
-  nodesById: Record<string, Node>;
+  nodesById: Record<string, TextAnchorDecorationNode>;
   parentContent: string;
   trashedNodeIds: string[];
 }) {

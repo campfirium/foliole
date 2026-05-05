@@ -143,9 +143,8 @@ function useNavigationTransitionHandles(
   const prepareForNavigation = useCallback(
     (nodeIdOverride?: string | null) => {
       args.saveActiveNodeView(nodeIdOverride);
-      args.editorRef.current = null;
     },
-    [args.editorRef, args.saveActiveNodeView]
+    [args.saveActiveNodeView]
   );
   const openPreparedNode = usePreparedOpenNodeAction(
     args.openNode,

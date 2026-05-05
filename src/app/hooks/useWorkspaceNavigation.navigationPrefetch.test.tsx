@@ -69,6 +69,8 @@ function createNavigationPrefetchHookHarness(args: {
     callOrder.push('flush-draft-immediately');
     return true;
   });
+  const editorAdapter = {} as never;
+  const editorRef = { current: editorAdapter };
 
   const view = renderHook(() =>
     useWorkspaceNavigation({
@@ -80,7 +82,7 @@ function createNavigationPrefetchHookHarness(args: {
       beginAnchorNavigationRestore: vi.fn(),
       closeContextMenu: vi.fn(),
       completeAnchorNavigationRestore: vi.fn(),
-      editorRef: { current: null },
+      editorRef,
       flushPendingEditorDraft,
       flushPendingEditorDraftImmediately,
       forwardStackSize: (args.forwardStack ?? []).length,
@@ -94,7 +96,7 @@ function createNavigationPrefetchHookHarness(args: {
     })
   );
 
-  return { action, callOrder, invoke, view };
+  return { action, callOrder, editorAdapter, editorRef, invoke, view };
 }
 
 async function expectPreparedNavigationResult(args: {
@@ -186,5 +188,39 @@ describe('useWorkspaceNavigation navigation hydration', () => {
       expectedTargetNodeId: 'node-1',
       nodesById: parentNodes
     });
+  });
+
+  it('keeps the shared editor ref bound during parent navigation', async () => {
+    const parentNodes = {
+      ...navigationTestNodes,
+      'node-1': {
+        ...navigationTestNodes['node-1'],
+        content: '',
+        hasContent: true,
+        hasReveal: false
+      },
+      child: {
+        ...navigationTestNodes['node-2'],
+        id: 'child',
+        parentNodeId: 'node-1',
+        content: 'Loaded child body',
+        hasContent: true,
+        hasReveal: false,
+        title: 'Child'
+      }
+    };
+    const { editorAdapter, editorRef, view } = createNavigationPrefetchHookHarness({
+      actionName: 'go-parent',
+      actionResult: { focusAnchor: null, nodeId: 'node-1' },
+      activeNodeId: 'child',
+      nodesById: parentNodes
+    });
+
+    await act(async () => {
+      view.result.current.handleGoParent();
+      await Promise.resolve();
+    });
+
+    expect(editorRef.current).toBe(editorAdapter);
   });
 });

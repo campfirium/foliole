@@ -101,6 +101,7 @@ function normalizeReadableArticlePayload(value: unknown): CompanionReadableArtic
     content: raw.content,
     hideTitleHeading: raw.hide_title_heading === true,
     nodeId: raw.node_id,
+    textAnchorDecorations: [],
     title: raw.title
   };
 }

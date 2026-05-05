@@ -168,6 +168,7 @@ function registerReadableArticleTest() {
       content: 'Readable from local snapshot',
       hideTitleHeading: false,
       nodeId: 'node-1',
+      textAnchorDecorations: [],
       title: 'Synced article'
     });
   });

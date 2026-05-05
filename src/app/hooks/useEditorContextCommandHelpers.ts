@@ -85,6 +85,7 @@ export function createHandleEditorContextMenu(args: {
   activeNode?: Node;
   activeNodeId: string | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  getPreservedSelectionPayload?: () => SelectionCommandPayload | null;
   isTrashViewOpen: boolean;
   setContextMenu: (value: EditorContextMenuState) => void;
 }) {
@@ -95,7 +96,9 @@ export function createHandleEditorContextMenu(args: {
     }
 
     const position = normalizeContextMenuPosition(event.clientX, event.clientY);
-    const commandPayload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current);
+    const commandPayload = getSelectionCommandPayload(args.activeNodeId, args.editorRef.current)
+      ?? args.getPreservedSelectionPayload?.()
+      ?? null;
     const imageContextMenu = resolveImageContextMenuState(event, position);
     if (imageContextMenu) {
       const fallbackPayload = getSelectionCommandPayloadForRanges(

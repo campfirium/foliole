@@ -132,6 +132,7 @@ function renderReadableArticleDocument(
       content={readableArticle.content}
       hideTitleHeading={readableArticle.hideTitleHeading}
       nodeId={readableArticle.nodeId}
+      textAnchorDecorations={readableArticle.textAnchorDecorations}
     />
   );
 }

@@ -179,6 +179,7 @@ describe('companionReadableArticle title and reading helpers', () => {
       content: '# First\n\nBody',
       hideTitleHeading: false,
       nodeId: 'node-1',
+      textAnchorDecorations: [],
       title: 'First'
     });
   });
@@ -193,6 +194,33 @@ describe('companionReadableArticle title and reading helpers', () => {
     const result = resolveReadableCompanionArticleByNodeId(snapshot, 'node-1');
 
     expect(result?.hideTitleHeading).toBe(true);
+  });
+
+  it('collects shared text anchor decorations for readable articles', () => {
+    const snapshot: WorkspaceSnapshot = createExplicitArticleSnapshot();
+    snapshot.nodeOrder = ['node-1', 'node-highlight'];
+    const nextNodesById: WorkspaceSnapshot['nodesById'] = {
+      ...snapshot.nodesById,
+      'node-highlight': createNodeRecord({
+      anchorLink: {
+        id: 'highlight-1',
+        kind: 'highlight',
+        locator: { from: 8, originalText: 'Body', to: 12 }
+      },
+      content: 'Body',
+      createdAt: '2026-04-20T09:30:00.000Z',
+      id: 'node-highlight',
+      kind: 'item',
+      parentNodeId: 'node-1',
+      title: 'Body highlight',
+      updatedAt: '2026-04-21T10:30:00.000Z'
+      })
+    };
+    snapshot.nodesById = nextNodesById;
+
+    const result = resolveReadableCompanionArticleByNodeId(snapshot, 'node-1');
+
+    expect(result?.textAnchorDecorations).toEqual([{ from: 8, kind: 'highlight', to: 12 }]);
   });
 
 });

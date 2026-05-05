@@ -19,6 +19,7 @@ describe('resolveReadableCompanionArticle', () => {
       content: 'Readable body',
       hideTitleHeading: false,
       nodeId: 'node-2',
+      textAnchorDecorations: [],
       title: 'Readable title'
     });
   });

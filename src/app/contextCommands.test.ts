@@ -121,6 +121,25 @@ describe('getSelectionCommandPayload', () => {
     });
   });
 
+  it('keeps locator bounds aligned to trimmed text inside the selected range', () => {
+    const content = 'Alpha  Beta  Gamma';
+    const betaFrom = content.indexOf('Beta');
+    const payload = getSelectionCommandPayloadForContentRanges('node-1', content, [
+      { from: betaFrom - 2, to: betaFrom + 'Beta'.length + 2 }
+    ]);
+
+    expect(payload?.entries).toEqual([
+      expect.objectContaining({
+        locator: {
+          from: betaFrom,
+          originalText: 'Beta',
+          to: betaFrom + 'Beta'.length
+        },
+        selectionText: 'Beta'
+      })
+    ]);
+  });
+
   it('builds one payload entry per selected range', runBuildsOnePayloadEntryPerSelectedRangeCase);
 
   it('merges overlapping ranges before building payload entries', runMergesOverlappingRangesCase);

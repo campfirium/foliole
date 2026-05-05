@@ -80,6 +80,7 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
       content: '# First article\n\nBody',
       hideTitleHeading: false,
       nodeId: 'article-1',
+      textAnchorDecorations: [],
       title: 'First article'
     },
     replaceSnapshot: vi.fn(async () => state),

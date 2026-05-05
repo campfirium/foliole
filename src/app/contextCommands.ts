@@ -77,8 +77,8 @@ function buildSelectionCommandPayload(
   }
   const entries = selections
     .map((range): SelectionCommandEntry | null => {
-      const selectionText = content.slice(range.from, range.to).trim();
-      if (!selectionText) {
+      const locator = buildTextLocator(content, range);
+      if (!locator) {
         return null;
       }
       const prefix = content.slice(0, range.from);
@@ -88,9 +88,9 @@ function buildSelectionCommandPayload(
       const entry = {
         anchorId: createAnchorId(),
         clozeContent,
-        locator: buildTextLocator(range, selectionText),
+        locator,
         range,
-        selectionText
+        selectionText: locator.originalText
       };
       return entry;
     })
@@ -112,12 +112,20 @@ function buildSelectionCommandPayload(
   };
 }
 
-function buildTextLocator(range: EditorSelection, selectionText: string): TextAnchorLocator {
-  const from = range.from;
+function buildTextLocator(content: string, range: EditorSelection): TextAnchorLocator | null {
+  const rawSelectionText = content.slice(range.from, range.to);
+  const leadingWhitespaceLength = rawSelectionText.match(/^\s*/)?.[0].length ?? 0;
+  const trailingWhitespaceLength = rawSelectionText.match(/\s*$/)?.[0].length ?? 0;
+  const from = range.from + leadingWhitespaceLength;
+  const to = Math.max(from, range.to - trailingWhitespaceLength);
+  const originalText = content.slice(from, to);
+  if (!originalText) {
+    return null;
+  }
   return {
     from,
-    originalText: selectionText,
-    to: from + selectionText.length
+    originalText,
+    to
   };
 }
 

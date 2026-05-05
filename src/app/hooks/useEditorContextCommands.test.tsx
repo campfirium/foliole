@@ -85,6 +85,46 @@ it('reapplies the current selection when opening the editor context menu', () =>
   expect(adapter.focus).toHaveBeenCalledTimes(1);
 });
 
+it('keeps the last valid markdown selection payload when right-click clears the live selection', () => {
+  const adapter = createEditorAdapter({
+    getContent: vi.fn(() => 'Welcome to Foliole'),
+    getSelection: vi.fn(() => ({ from: 0, to: 0 })),
+    getSelectionRanges: vi.fn(() => [])
+  });
+
+  const editorRef = { current: adapter };
+  const { result } = renderHook(() =>
+    useEditorContextCommands(buildHookArgs({ editorRef }))
+  );
+
+  act(() => {
+    editorRef.current = createEditorAdapter({
+      getContent: vi.fn(() => 'Welcome to Foliole'),
+      getSelection: vi.fn(() => ({ from: 0, to: 7 })),
+      getSelectionRanges: vi.fn(() => [{ from: 0, to: 7 }])
+    }) as never;
+    document.dispatchEvent(new MouseEvent('mousedown', { button: 2, bubbles: true }));
+    editorRef.current = adapter as never;
+  });
+
+  act(() => {
+    result.current.handleEditorContextMenu({
+      clientX: 40,
+      clientY: 48,
+      preventDefault: vi.fn()
+    } as never);
+  });
+
+  expect(result.current.contextMenu).toMatchObject({
+    canRunCommands: true,
+    kind: 'selection',
+    payload: expect.objectContaining({
+      parentNodeId: 'node-1',
+      selectionText: 'Welcome'
+    })
+  });
+});
+
 it('creates a linked note from an explicit reading selection payload', () => {
   let content = 'Alpha\n\nBeta';
   const updateNodeContent = vi.fn();

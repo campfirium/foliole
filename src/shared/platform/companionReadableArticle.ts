@@ -1,11 +1,14 @@
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 import { resolveNodeOpeningText } from '../../../lib/core/nodes/nodeOpeningPreview';
+import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
+import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
 
 export interface CompanionReadableArticle {
   content: string;
   hideTitleHeading: boolean;
   nodeId: string;
+  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   title: string;
 }
 
@@ -57,7 +60,20 @@ function buildReadableArticle(node: CompanionReadableNode) {
     content: node.content,
     hideTitleHeading: Boolean(node.hideTitleHeading),
     nodeId: node.id,
+    textAnchorDecorations: [],
     title: resolveCompanionArticleTitle(node)
+  };
+}
+
+function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: CompanionReadableNode) {
+  return {
+    ...buildReadableArticle(node),
+    textAnchorDecorations: collectDocumentTextAnchorDecorations({
+      activeNodeId: node.id,
+      nodesById: snapshot.nodesById,
+      parentContent: node.content,
+      trashedNodeIds: snapshot.trashedNodeIds
+    })
   };
 }
 
@@ -90,7 +106,7 @@ export function resolveReadableCompanionArticleByNodeId(
     return null;
   }
   const node = snapshot.nodesById[nodeId];
-  return hasReadableContent(node) ? buildReadableArticle(node) : null;
+  return hasReadableContent(node) ? buildReadableArticleFromSnapshot(snapshot, node) : null;
 }
 
 export function resolveReadableCompanionArticle(snapshot: WorkspaceSnapshot | null): CompanionReadableArticle | null {
@@ -111,7 +127,7 @@ export function resolveReadableCompanionArticle(snapshot: WorkspaceSnapshot | nu
     if (!hasReadableContent(node)) {
       continue;
     }
-    return buildReadableArticle(node);
+    return buildReadableArticleFromSnapshot(snapshot, node);
   }
 
   return null;
