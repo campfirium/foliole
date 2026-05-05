@@ -21,7 +21,12 @@ final class FolioleCompanionNodeAttachmentStore {
             for (int index = 0; index < rows.length(); index += 1) {
                 JSONObject row = rows.getJSONObject(index);
                 JSONObject snapshot = new JSONObject(row.getString(backfillSnapshotRule(context, "snapshotJsonKey")));
-                replaceNodeAttachments(context, database, row.getString(backfillSnapshotRule(context, "idKey")), snapshot.optJSONArray("attachments"));
+                replaceNodeAttachments(
+                    context,
+                    database,
+                    row.getString(backfillSnapshotRule(context, "idKey")),
+                    snapshot.optJSONArray(backfillSnapshotRule(context, "attachmentsKey"))
+                );
             }
         } catch (Exception ignored) {
             // Best-effort compatibility repair for pre-link-schema Android databases.
@@ -38,8 +43,8 @@ final class FolioleCompanionNodeAttachmentStore {
             if (attachment == null) {
                 continue;
             }
-            String attachmentId = attachment.optString("attachment_id", "").trim();
-            String role = attachment.optString("role", "").trim();
+            String attachmentId = attachment.optString(backfillSnapshotRule(context, "attachmentIdKey"), "").trim();
+            String role = attachment.optString(backfillSnapshotRule(context, "roleKey"), "").trim();
             if (attachmentId.isEmpty() || role.isEmpty()) {
                 continue;
             }

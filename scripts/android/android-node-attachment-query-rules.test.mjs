@@ -19,8 +19,11 @@ describe('Android node attachment read query rules', () => {
 
     expect(definitions.nodeAttachmentRead).toEqual(ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES);
     expect(definitions.nodeAttachmentRead.backfillSnapshots).toMatchObject({
+      attachmentIdKey: 'attachment_id',
+      attachmentsKey: 'attachments',
       idKey: 'id',
       queryName: 'nodeAttachmentBackfillSnapshots',
+      roleKey: 'role',
       resultKey: 'snapshots',
       snapshotJsonKey: 'snapshot_json'
     });
@@ -41,5 +44,8 @@ describe('Android node attachment read query rules', () => {
     expect(storeSource).not.toContain('"nodeAttachments"');
     expect(storeSource).not.toContain('"snapshots"');
     expect(storeSource).not.toContain('"snapshot_json"');
+    expect(storeSource).not.toContain('optJSONArray("attachments"');
+    expect(storeSource).not.toContain('optString("attachment_id"');
+    expect(storeSource).not.toContain('optString("role"');
   });
 });

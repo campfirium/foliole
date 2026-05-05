@@ -18,8 +18,11 @@ export { ANDROID_COMPANION_CONTENT_READ_RULES };
 
 export const ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES = {
   backfillSnapshots: {
+    attachmentIdKey: 'attachment_id',
+    attachmentsKey: 'attachments',
     idKey: 'id',
     queryName: 'nodeAttachmentBackfillSnapshots',
+    roleKey: 'role',
     resultKey: 'snapshots',
     snapshotJsonKey: 'snapshot_json'
   },

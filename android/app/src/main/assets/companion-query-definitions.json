@@ -1998,8 +1998,11 @@
   },
   "nodeAttachmentRead": {
     "backfillSnapshots": {
+      "attachmentIdKey": "attachment_id",
+      "attachmentsKey": "attachments",
       "idKey": "id",
       "queryName": "nodeAttachmentBackfillSnapshots",
+      "roleKey": "role",
       "resultKey": "snapshots",
       "snapshotJsonKey": "snapshot_json"
     },
