@@ -10,6 +10,7 @@ import { logRuntimeWarning } from './runtimeLogging';
 const EXTERNAL_URL_WINDOW_FEATURES = 'noopener,noreferrer';
 
 export type NativeMenuUnlisten = (() => void) | null;
+export type ManagedInboxUpdateUnlisten = (() => void) | null;
 export type WindowResizeUnlisten = (() => void) | null;
 
 export type { RuntimeAppPaths, RuntimeSystemFontCatalog } from './bridgePayloads';
@@ -171,6 +172,21 @@ export async function onNativeMenuCommand(handler: (commandId: string) => void):
       return;
     }
     handler(commandId);
+  });
+}
+
+export async function onManagedInboxUpdated(
+  handler: (importId: string) => void
+): Promise<ManagedInboxUpdateUnlisten> {
+  const bridge = getElectronBridge();
+  if (!bridge) {
+    return null;
+  }
+  return bridge.onManagedInboxUpdated((importId) => {
+    if (!importId.trim()) {
+      return;
+    }
+    handler(importId);
   });
 }
 

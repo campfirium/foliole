@@ -1,6 +1,7 @@
 import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 
 export const IPC_INVOKE_CHANNEL = 'foliole:invoke';
+export const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 export const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 export const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
 

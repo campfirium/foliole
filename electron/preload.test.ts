@@ -56,6 +56,7 @@ describe('electron preload', () => {
       'electronAPI',
       expect.objectContaining({
         invoke: expect.any(Function),
+        onManagedInboxUpdated: expect.any(Function),
         onNativeMenuCommand: expect.any(Function),
         onWindowResized: expect.any(Function)
       })

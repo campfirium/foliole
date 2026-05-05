@@ -12,6 +12,7 @@ vi.mock('../../shared/platform/importBridge', () => ({
 beforeEach(() => {
   window.electronAPI = {
     invoke: vi.fn(async () => null),
+    onManagedInboxUpdated: () => () => undefined,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   };

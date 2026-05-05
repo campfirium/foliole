@@ -5,6 +5,7 @@ import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from './appS
 function createMockElectronApi(invoke: ReturnType<typeof vi.fn>) {
   return {
     invoke,
+    onManagedInboxUpdated: () => () => undefined,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   };

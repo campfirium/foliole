@@ -106,6 +106,7 @@ const IMPORT_OVERVIEW_RESULT = {
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
     invoke,
+    onManagedInboxUpdated: () => () => undefined,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   };

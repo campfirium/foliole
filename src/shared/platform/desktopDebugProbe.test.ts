@@ -8,6 +8,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke'], runtimeHead: strin
   return {
     debug: { preloadPath: '/workspace/foliole/electron/preload.cjs', runtimeHead },
     invoke,
+    onManagedInboxUpdated: () => () => undefined,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   };

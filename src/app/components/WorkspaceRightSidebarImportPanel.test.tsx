@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
@@ -56,6 +56,7 @@ const IMPORTED_OVERVIEW = {
 };
 
 function mockDesktopBridge() {
+  let managedInboxListener: ((importId: string) => void) | null = null;
   const invoke = vi.fn(async (...args: unknown[]) => {
     const [command] = args;
     if (command === 'load_reading_progress') {
@@ -89,13 +90,30 @@ function mockDesktopBridge() {
   });
   window.electronAPI = {
     invoke,
+    onManagedInboxUpdated: (handler) => {
+      managedInboxListener = handler;
+      return () => {
+        managedInboxListener = null;
+      };
+    },
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
+  };
+  return {
+    emitManagedInboxUpdated(importId: string) {
+      managedInboxListener?.(importId);
+    }
   };
 }
 
 function getInboxChildren() {
   return Object.values(useWorkspaceStore.getState().nodesById).filter((node) => node.parentNodeId === INBOX_NODE_ID);
+}
+
+async function flushAsyncWork() {
+  await act(async () => {
+    await Promise.resolve();
+  });
 }
 
 beforeEach(() => {
@@ -159,4 +177,31 @@ it('imports the selected Markdown file into Inbox', async () => {
   expect(screen.getByText('Failed failed-note.md')).toBeInTheDocument();
   expect(screen.getByText('disk failed')).toBeInTheDocument();
   expect(screen.queryByText('Imported at')).not.toBeInTheDocument();
+});
+
+it('rehydrates Inbox when background monitoring imports a new file', async () => {
+  vi.mocked(loadRuntimeImportOverview)
+    .mockResolvedValueOnce(EMPTY_IMPORT_OVERVIEW)
+    .mockResolvedValueOnce(IMPORTED_OVERVIEW);
+
+  const initialInboxChildren = getInboxChildren();
+  const bridge = mockDesktopBridge();
+  render(<WorkspaceRightSidebarImportPanel />);
+  await flushAsyncWork();
+
+  expect(loadRuntimeImportOverview).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('No imports yet')).toBeInTheDocument();
+
+  await act(async () => {
+    bridge.emitManagedInboxUpdated('import-1');
+    await Promise.resolve();
+  });
+
+  await waitFor(() => {
+    expect(getInboxChildren()).toHaveLength(initialInboxChildren.length + 1);
+    expect(screen.getByText('Imported imported-note.md')).toBeInTheDocument();
+  });
+
+  expect(getInboxChildren().some((node) => node.id === 'node-import-1')).toBe(true);
+  expect(screen.getByText('Inbox child created from imported-note.md')).toBeInTheDocument();
 });

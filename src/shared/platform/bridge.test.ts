@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import {
   getRuntimeInvoke,
   listRuntimeSystemFonts,
+  onManagedInboxUpdated,
   onMainWindowResized,
   onNativeMenuCommand,
   openExternalUrl,
@@ -17,6 +18,7 @@ import type { ElectronAPI } from './electronApi';
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
     invoke,
+    onManagedInboxUpdated: () => () => undefined,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   };
@@ -168,6 +170,24 @@ it('subscribes window resize through typed electron bridge', async () => {
   await expect(onMainWindowResized(handler)).resolves.toBe(unlisten);
 
   expect(onWindowResized).toHaveBeenCalledWith(handler);
+});
+
+it('filters empty managed inbox update events before reaching the handler', async () => {
+  const onManagedInboxUpdatedBridge = vi.fn((handler: (importId: string) => void) => {
+    handler('');
+    handler('import-42');
+    return () => undefined;
+  });
+  window.electronAPI = {
+    ...createMockElectronApi(vi.fn()),
+    onManagedInboxUpdated: onManagedInboxUpdatedBridge
+  };
+  const handler = vi.fn();
+
+  await onManagedInboxUpdated(handler);
+
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(handler).toHaveBeenCalledWith('import-42');
 });
 
 it('filters empty native menu events before reaching the handler', async () => {

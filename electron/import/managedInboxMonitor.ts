@@ -1,10 +1,13 @@
 import fs from 'node:fs';
 
 import { MANAGED_INBOX_APP_SETTING_KEY, normalizeManagedInboxPath } from '../../lib/platform/managedInbox.js';
+import type { NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
 import { runManagedInboxImport } from '../ipc/importDirectory.js';
 import { ensureManagedInboxRoot, resolveManagedInboxPaths } from '../ipc/managedInboxFolder.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 import { loadAppSettingsState } from '../ipc/storage.js';
+
+import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
 
 interface ManagedInboxWatchHandle {
   close(): void;
@@ -15,7 +18,8 @@ interface ManagedInboxMonitorDeps {
   ensureRoot(rootPath: string): Promise<void>;
   loadConfiguredRootPath(): Promise<string>;
   logError(message: string, error: unknown): void;
-  runImport(rootPath: string): Promise<unknown>;
+  notifyUpdate(importId: string): void;
+  runImport(rootPath: string): Promise<NativeDirectoryImportResult>;
   watch(rootPath: string, listener: () => void): ManagedInboxWatchHandle;
 }
 
@@ -57,6 +61,7 @@ function createDefaultManagedInboxMonitorDeps(): ManagedInboxMonitorDeps {
     logError(message, error) {
       console.error(message, error);
     },
+    notifyUpdate: notifyManagedInboxUpdated,
     runImport: runManagedInboxImport,
     watch: watchManagedInboxDirectory
   };
@@ -97,6 +102,11 @@ function closeWatcher(state: ManagedInboxMonitorState) {
 
 function requestRerun(state: ManagedInboxMonitorState) {
   state.rerunRequested = true;
+}
+
+function resolveLatestImportId(result: NativeDirectoryImportResult) {
+  const latestEntry = result.entries[result.entries.length - 1];
+  return typeof latestEntry?.import_id === 'string' ? latestEntry.import_id : null;
 }
 
 async function ensureWatcher(
@@ -141,7 +151,11 @@ async function runImportCycle(
       const rootPath = nextRootPath ?? (await deps.loadConfiguredRootPath());
       nextRootPath = null;
       await ensureWatcher(deps, state, scheduleRun, rootPath);
-      await deps.runImport(rootPath);
+      const result = await deps.runImport(rootPath);
+      const latestImportId = resolveLatestImportId(result);
+      if (latestImportId) {
+        deps.notifyUpdate(latestImportId);
+      }
     } while (state.rerunRequested && state.started);
   } catch (error) {
     deps.logError('[managed-inbox] auto import cycle failed', error);

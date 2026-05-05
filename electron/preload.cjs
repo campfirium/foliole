@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const preloadPath = typeof __filename === 'string' ? __filename : null;
 
 const IPC_INVOKE_CHANNEL = 'foliole:invoke';
+const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
 
@@ -13,11 +14,19 @@ function isDesktopDebugProbeEnabled() {
 }
 
 function subscribe(channel, handler) {
-  if (channel !== IPC_MENU_EVENT_CHANNEL && channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL) {
+  if (
+    channel !== IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL &&
+    channel !== IPC_MENU_EVENT_CHANNEL &&
+    channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL
+  ) {
     return () => undefined;
   }
 
   const listener = (_event, payload) => {
+    if (channel === IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL) {
+      handler(payload?.importId ?? '');
+      return;
+    }
     if (channel === IPC_MENU_EVENT_CHANNEL) {
       handler(payload?.commandId ?? '');
       return;
@@ -33,6 +42,7 @@ function subscribe(channel, handler) {
 
 const electronApi = {
   invoke: (command, args) => ipcRenderer.invoke(IPC_INVOKE_CHANNEL, { command, args }),
+  onManagedInboxUpdated: (handler) => subscribe(IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, handler),
   onNativeMenuCommand: (handler) => subscribe(IPC_MENU_EVENT_CHANNEL, handler),
   onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler)
 };

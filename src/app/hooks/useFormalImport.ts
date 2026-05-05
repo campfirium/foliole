@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { create } from 'zustand';
 
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { getRuntimeInvoke, onManagedInboxUpdated } from '../../shared/platform/bridge';
 import {
   loadRuntimeImportOverview,
   runRuntimeTextFileImport,
@@ -31,6 +31,7 @@ const DEFAULT_IMPORT_OVERVIEW: RuntimeImportOverview = {
 interface FormalImportUiState {
   hasLoadedOverview: boolean;
   isImporting: boolean;
+  lastSeenResultImportId: string | null;
   overview: RuntimeImportOverview;
   status: FormalImportStatus;
 }
@@ -38,9 +39,12 @@ interface FormalImportUiState {
 const useFormalImportState = create<FormalImportUiState>(() => ({
   hasLoadedOverview: false,
   isImporting: false,
+  lastSeenResultImportId: null,
   overview: DEFAULT_IMPORT_OVERVIEW,
   status: DEFAULT_FORMAL_IMPORT_STATUS
 }));
+
+let managedInboxRefreshInFlight: Promise<void> | null = null;
 
 function formatImportTimestamp(timestamp: string) {
   return timestamp.replace('T', ' ').slice(0, 16);
@@ -97,6 +101,7 @@ function buildStatusFromOverview(overview: RuntimeImportOverview): FormalImportS
 function applyImportResultStatus(result: RuntimeTextImportResult) {
   useFormalImportState.setState({
     isImporting: false,
+    lastSeenResultImportId: result.importId,
     status: buildSuccessStatus(result, formatImportTimestamp(result.importedAt))
   });
 }
@@ -127,8 +132,17 @@ async function refreshFormalImportOverview() {
   if (!overview) {
     return;
   }
+
+  const latestResult = overview.latestResult;
+  const previousImportId = useFormalImportState.getState().lastSeenResultImportId;
+  const hasFreshImport = Boolean(latestResult && latestResult.importId !== previousImportId);
+  if (latestResult && hasFreshImport && shouldRehydrateWorkspace(latestResult)) {
+    await useWorkspaceStore.persist.rehydrate();
+  }
+
   useFormalImportState.setState({
     hasLoadedOverview: true,
+    lastSeenResultImportId: latestResult?.importId ?? null,
     overview,
     status: buildStatusFromOverview(overview)
   });
@@ -139,12 +153,51 @@ function shouldRehydrateWorkspace(result: RuntimeTextImportResult) {
 }
 
 export function resetFormalImportState() {
+  managedInboxRefreshInFlight = null;
   useFormalImportState.setState({
     hasLoadedOverview: false,
     isImporting: false,
+    lastSeenResultImportId: null,
     overview: DEFAULT_IMPORT_OVERVIEW,
     status: DEFAULT_FORMAL_IMPORT_STATUS
   });
+}
+
+async function refreshManagedInboxOverview() {
+  if (managedInboxRefreshInFlight) {
+    await managedInboxRefreshInFlight;
+    return;
+  }
+  managedInboxRefreshInFlight = refreshFormalImportOverview().finally(() => {
+    managedInboxRefreshInFlight = null;
+  });
+  await managedInboxRefreshInFlight;
+}
+
+function useManagedInboxUpdateSubscription(isAvailable: boolean) {
+  useEffect(() => {
+    if (!isAvailable) {
+      return;
+    }
+    let isDisposed = false;
+    let unlisten: (() => void) | null = null;
+    void onManagedInboxUpdated(() => {
+      if (isDisposed) {
+        return;
+      }
+      void refreshManagedInboxOverview();
+    }).then((nextUnlisten) => {
+      if (isDisposed) {
+        nextUnlisten?.();
+        return;
+      }
+      unlisten = nextUnlisten;
+    });
+    return () => {
+      isDisposed = true;
+      unlisten?.();
+    };
+  }, [isAvailable]);
 }
 
 export function useFormalImport() {
@@ -160,6 +213,7 @@ export function useFormalImport() {
     }
     void refreshFormalImportOverview();
   }, [hasLoadedOverview, isAvailable]);
+  useManagedInboxUpdateSubscription(isAvailable);
 
   const startImport = useCallback(async () => {
     if (useFormalImportState.getState().isImporting) {

@@ -8,6 +8,7 @@ export interface ElectronDebugMetadata {
 export interface ElectronAPI {
   debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
+  onManagedInboxUpdated: (handler: (importId: string) => void) => () => void;
   onNativeMenuCommand: (handler: (commandId: string) => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;
 }

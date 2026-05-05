@@ -40,7 +40,7 @@ it('uses invoke fallback when windowControls is missing', async () => {
   isDesktopRuntime.mockReturnValue(true);
   invoke.mockResolvedValueOnce(true).mockResolvedValue(null);
   const onWindowResized = vi.fn().mockReturnValue(() => undefined);
-  getElectronAPI.mockReturnValue({ invoke, onNativeMenuCommand: vi.fn(), onWindowResized });
+  getElectronAPI.mockReturnValue({ invoke, onManagedInboxUpdated: vi.fn(), onNativeMenuCommand: vi.fn(), onWindowResized });
 
   expect(isWindowControlsAvailable()).toBe(true);
   await expect(queryMainWindowMaximized()).resolves.toBe(true);
@@ -63,6 +63,7 @@ it('uses typed invoke for window commands when desktop bridge is available', asy
   invoke.mockResolvedValueOnce(false).mockResolvedValue(null);
   getElectronAPI.mockReturnValue({
     invoke,
+    onManagedInboxUpdated: vi.fn(),
     onNativeMenuCommand: vi.fn(),
     onWindowResized: vi.fn().mockReturnValue(() => undefined)
   });
