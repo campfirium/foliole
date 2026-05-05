@@ -10,22 +10,22 @@
 
 ## 文档读取顺序
 - 启动时只读 `AGENTS.md`。
-- 仅当用户在新会话首条有效指令明确说“继续”时，读取 `.lab/agent/TODO.md`；必要时补读 `.lab/agent/DONE.md`、`git log --oneline -n 5` 与 `.lab/agent/current-phase.md`。
+- 仅当用户在新会话首条有效指令明确说“继续”时，先读取 `.lab/agent/todo.md`；必要时按需补读 `.lab/agent/verify.md`、`.lab/agent/optional.md`、`.lab/agent/notes.md`、`.lab/agent/done.md`、`git log --oneline -n 5` 与 `.lab/agent/current-phase.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增/重写 spec、整理文档结构、拆分长文档时，按需读取 `.lab/specs/38-document-structure-governance-v1.md`。
 - 任务涉及执行细则时，读取 `.lab/agent/workflow.md`。
 - 仅在判断验证或停车策略时读取 `.lab/agent/windows-preview.flag` 与 `.lab/agent/park.flag`。
 
 ## 任务执行主规则
-1. 任务来源优先级：用户当次明确指令 > 当前代码现状 > `.lab/agent/TODO.md` 待办首项。
+1. 任务来源优先级：用户当次明确指令 > 当前代码现状 > `.lab/agent/todo.md` 首项。
 2. 若用户未给清晰任务范围，先补齐任务说明，再实施；禁止凭短标题脑补。
 3. 任务说明至少应覆盖：当前问题或背景、预期目标、影响范围、明确边界、已知约束或依赖。
 4. 若根因未确认，允许写“现象 + 当前怀疑 + 待确认点”；禁止把猜测写成事实。
-5. 若本轮入口是“继续”，在选择任务前必须先做台账对账：逐条比对 `TODO` 待办首项、`DONE` 最近记录与 `git log --oneline -n 5`，确认该任务是否其实已完成但未同步。
-6. 若 `TODO`、`DONE` 与最近提交不一致，先更新台账或向用户明确差异，再实施代码任务；禁止跳过对账直接认领下一条。
-7. `待验证` 仅表示“已实现但仍待复核/待人工确认”的备注区，不是默认任务来源；除非用户明确要求补做其中缺口，否则不得把它当作新的实施任务直接开工。
+5. 若本轮入口是“继续”，在选择任务前必须先做台账对账：逐条比对 `todo` 首项、`done` 最近记录与 `git log --oneline -n 5`，必要时再核对 `verify` / `optional`，确认该任务是否其实已完成但未同步。
+6. 若 `todo`、`verify`、`optional`、`done` 与最近提交不一致，先更新台账或向用户明确差异，再实施代码任务；禁止跳过对账直接认领下一条。
+7. `verify` 仅表示“已实现但仍待复核/待人工确认”的备注区，不是默认任务来源；除非用户明确要求补做其中缺口，否则不得把它当作新的实施任务直接开工。
 8. 只改当前任务相关文件；发现结构性阻塞时，先写回 TODO，再决定是否提升优先级。
-9. `.lab/agent/TODO.md` 是未完成工作的唯一真实来源；`.lab/agent/DONE.md` 只记录已完成项；但当“继续”恢复发现台账滞后于代码与提交时，必须先修正台账真相。
+9. `.lab/agent/todo.md`、`.lab/agent/verify.md`、`.lab/agent/optional.md` 共同构成未完成工作的真实来源，其中默认接手入口只有 `todo`；`.lab/agent/notes.md` 只承载长期备注，`.lab/agent/done.md` 只记录已完成项；但当“继续”恢复发现台账滞后于代码与提交时，必须先修正台账真相。
 
 ## 质量闸与测试
 - 不允许通过降低检查标准过关；禁止跳过关键检查、删除校验或用注释掩盖失败。

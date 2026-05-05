@@ -5,7 +5,6 @@ import {
   isPauseTask,
   parseFirstTodoTask,
   parseTodoEntries,
-  parseTodoEntriesBySection,
   selectNextExecutableTodoTask,
   selectNextTodoTask,
   validateTodoEntries
@@ -13,12 +12,12 @@ import {
 
 describe('todo-ledger helpers', () => {
   it('parses the first pending todo item', () => {
-    const markdown = ['# TODO', '', '## 待办', '', '- [ ] [auto] first task', '- [ ] [gate] second task'].join('\n');
+    const markdown = ['# Pending TODO', '', '- [ ] [auto] first task', '- [ ] [gate] second task'].join('\n');
     expect(parseFirstTodoTask(markdown)).toBe('first task');
   });
 
   it('parses explicit task modes from todo items', () => {
-    const markdown = ['# TODO', '', '## 待办', '', '- [ ] [auto] first task', '- [ ] [gate] second task'].join('\n');
+    const markdown = ['# Pending TODO', '', '- [ ] [auto] first task', '- [ ] [gate] second task'].join('\n');
     expect(parseTodoEntries(markdown)).toEqual([
       { raw: '[auto] first task', task: 'first task', mode: 'auto', section: '待办' },
       { raw: '[gate] second task', task: 'second task', mode: 'gate', section: '待办' }
@@ -27,9 +26,7 @@ describe('todo-ledger helpers', () => {
 
   it('keeps the first pending gate task as the next task', () => {
     const markdown = [
-      '# TODO',
-      '',
-      '## 待办',
+      '# Pending TODO',
       '',
       '- [ ] [gate] windows acceptance',
       '- [ ] [auto] cleanup contract',
@@ -45,39 +42,19 @@ describe('todo-ledger helpers', () => {
   });
 
   it('parses optional entries from the optional section', () => {
-    const markdown = [
-      '# TODO',
-      '',
-      '## 待办',
-      '',
-      '- [ ] [gate] windows acceptance',
-      '',
-      '## 可选',
-      '',
-      '- [ ] [auto] import fixtures',
-      '- [ ] [auto] tighten diagnostics'
-    ].join('\n');
+    const markdown = ['# Optional TODO', '', '- [ ] [auto] import fixtures', '- [ ] [auto] tighten diagnostics'].join('\n');
 
-    expect(parseTodoEntriesBySection(markdown, '可选')).toEqual([
+    expect(parseTodoEntries(markdown, '可选')).toEqual([
       { raw: '[auto] import fixtures', task: 'import fixtures', mode: 'auto', section: '可选' },
       { raw: '[auto] tighten diagnostics', task: 'tighten diagnostics', mode: 'auto', section: '可选' }
     ]);
   });
 
   it('falls back to the first optional auto task when mainline is blocked by a gate', () => {
-    const markdown = [
-      '# TODO',
-      '',
-      '## 待办',
-      '',
-      '- [ ] [gate] windows acceptance',
-      '',
-      '## 可选',
-      '',
-      '- [ ] [auto] import fixtures'
-    ].join('\n');
+    const pendingMarkdown = ['# Pending TODO', '', '- [ ] [gate] windows acceptance'].join('\n');
+    const optionalMarkdown = ['# Optional TODO', '', '- [ ] [auto] import fixtures'].join('\n');
 
-    expect(selectNextExecutableTodoTask(markdown)).toEqual({
+    expect(selectNextExecutableTodoTask(pendingMarkdown, optionalMarkdown)).toEqual({
       raw: '[auto] import fixtures',
       task: 'import fixtures',
       mode: 'auto',
@@ -86,19 +63,10 @@ describe('todo-ledger helpers', () => {
   });
 
   it('keeps waiting on the mainline gate when no optional auto task exists', () => {
-    const markdown = [
-      '# TODO',
-      '',
-      '## 待办',
-      '',
-      '- [ ] [gate] windows acceptance',
-      '',
-      '## 可选',
-      '',
-      '- [ ] [gate] manual follow-up'
-    ].join('\n');
+    const pendingMarkdown = ['# Pending TODO', '', '- [ ] [gate] windows acceptance'].join('\n');
+    const optionalMarkdown = ['# Optional TODO', '', '- [ ] [gate] manual follow-up'].join('\n');
 
-    expect(selectNextExecutableTodoTask(markdown)).toEqual({
+    expect(selectNextExecutableTodoTask(pendingMarkdown, optionalMarkdown)).toEqual({
       raw: '[gate] windows acceptance',
       task: 'windows acceptance',
       mode: 'gate',
@@ -118,14 +86,14 @@ describe('todo-ledger helpers', () => {
   });
 
   it('flags pending entries without an explicit execution mode', () => {
-    const markdown = ['# TODO', '', '## 待办', '', '- [ ] first task'].join('\n');
-    expect(validateTodoEntries(markdown)).toEqual(['line 5: pending TODO must start with [auto] or [gate]']);
+    const markdown = ['# Pending TODO', '', '- [ ] first task'].join('\n');
+    expect(validateTodoEntries(markdown, 'pending')).toEqual(['line 3: pending entry must start with [auto] or [gate]']);
   });
 
   it('flags extra bracket prefixes after the execution mode', () => {
-    const markdown = ['# TODO', '', '## 待办', '', '- [ ] [auto] [infra] first task'].join('\n');
+    const markdown = ['# Pending TODO', '', '- [ ] [auto] [infra] first task'].join('\n');
     expect(validateTodoEntries(markdown)).toEqual([
-      'line 5: category tags must use plain text like "infra:" instead of extra [label] prefixes'
+      'line 3: category tags must use plain text like "infra:" instead of extra [label] prefixes'
     ]);
   });
 });

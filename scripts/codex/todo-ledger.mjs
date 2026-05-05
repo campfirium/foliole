@@ -4,15 +4,16 @@ import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..', '..');
-const TODO_PATH = path.join(REPO_ROOT, '.lab', 'agent', 'TODO.md');
-const DONE_PATH = path.join(REPO_ROOT, '.lab', 'agent', 'DONE.md');
+const TODO_PATH = path.join(REPO_ROOT, '.lab', 'agent', 'todo.md');
+const VERIFY_PATH = path.join(REPO_ROOT, '.lab', 'agent', 'verify.md');
+const OPTIONAL_PATH = path.join(REPO_ROOT, '.lab', 'agent', 'optional.md');
+const NOTES_PATH = path.join(REPO_ROOT, '.lab', 'agent', 'notes.md');
+const DONE_PATH = path.join(REPO_ROOT, '.lab', 'agent', 'done.md');
 
 const DEFAULT_PAUSE_PATTERNS = [
   /^执行 Windows 客户端集成验收/,
   /^验收 Phase \d+ 退出标志/
 ];
-const TODO_SECTIONS = new Set(['待办', '待验证', '可选']);
-
 const TASK_MODE_PREFIX = /^\[(auto|gate)\]\s*/i;
 const BRACKET_PREFIX = /^\[[^\]]+\]\s*/;
 
@@ -41,19 +42,13 @@ function parsePendingTask(line, patterns = DEFAULT_PAUSE_PATTERNS) {
   };
 }
 
-export function validateTodoEntries(markdown) {
+export function validateTodoEntries(markdown, fileLabel = 'todo') {
   const lines = markdown.split('\n');
-  let currentSection = '';
   const issues = [];
 
   lines.forEach((line, index) => {
     const trimmed = line.trim();
-    if (trimmed.startsWith('## ')) {
-      const sectionName = trimmed.slice(3).trim();
-      currentSection = TODO_SECTIONS.has(sectionName) ? sectionName : '';
-      return;
-    }
-    if (!currentSection) {
+    if (!trimmed.startsWith('- [ ] ')) {
       return;
     }
     const match = trimmed.match(/^- \[ \] (.+)$/);
@@ -62,12 +57,12 @@ export function validateTodoEntries(markdown) {
     }
     const body = match[1].trim();
     if (!TASK_MODE_PREFIX.test(body)) {
-      issues.push(`line ${index + 1}: pending TODO must start with [auto] or [gate]`);
+      issues.push(`line ${index + 1}: ${fileLabel} entry must start with [auto] or [gate]`);
       return;
     }
     const taskText = body.replace(TASK_MODE_PREFIX, '').trim();
     if (!taskText) {
-      issues.push(`line ${index + 1}: pending TODO task text is empty`);
+      issues.push(`line ${index + 1}: ${fileLabel} task text is empty`);
       return;
     }
     if (BRACKET_PREFIX.test(taskText)) {
@@ -81,36 +76,16 @@ export function validateTodoEntries(markdown) {
 function assertValidTodoEntries(markdown) {
   const issues = validateTodoEntries(markdown);
   if (issues.length > 0) {
-    throw new Error(`invalid TODO.md pending entries:\n${issues.join('\n')}`);
+    throw new Error(`invalid todo entries:\n${issues.join('\n')}`);
   }
 }
 
-export function parseTodoEntriesBySection(markdown, sectionName, patterns = DEFAULT_PAUSE_PATTERNS) {
-  const lines = markdown.split('\n');
-  let currentSection = '';
-  const entries = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('## ')) {
-      const nextSectionName = trimmed.slice(3).trim();
-      currentSection = TODO_SECTIONS.has(nextSectionName) ? nextSectionName : '';
-      continue;
-    }
-    if (currentSection !== sectionName) {
-      continue;
-    }
-    const entry = parsePendingTask(trimmed, patterns);
-    if (entry) {
-      entries.push({ ...entry, section: sectionName });
-    }
-  }
-
-  return entries;
-}
-
-export function parseTodoEntries(markdown, patterns = DEFAULT_PAUSE_PATTERNS) {
-  return parseTodoEntriesBySection(markdown, '待办', patterns);
+export function parseTodoEntries(markdown, sectionName = '待办', patterns = DEFAULT_PAUSE_PATTERNS) {
+  return markdown
+    .split('\n')
+    .map((line) => parsePendingTask(line.trim(), patterns))
+    .filter(Boolean)
+    .map((entry) => ({ ...entry, section: sectionName }));
 }
 
 export function parseFirstTodoTask(markdown) {
@@ -118,14 +93,13 @@ export function parseFirstTodoTask(markdown) {
   return parseTodoEntries(markdown)[0]?.task ?? '';
 }
 
-export function selectNextTodoTask(markdown) {
-  return parseTodoEntries(markdown)[0] ?? null;
+export function selectNextTodoTask(markdown, sectionName = '待办') {
+  return parseTodoEntries(markdown, sectionName)[0] ?? null;
 }
 
-export function selectNextExecutableTodoTask(markdown) {
-  const mainlineEntry = selectNextTodoTask(markdown);
-  const optionalAutoEntry =
-    parseTodoEntriesBySection(markdown, '可选').find((entry) => entry.mode === 'auto') ?? null;
+export function selectNextExecutableTodoTask(pendingMarkdown, optionalMarkdown = '') {
+  const mainlineEntry = selectNextTodoTask(pendingMarkdown, '待办');
+  const optionalAutoEntry = parseTodoEntries(optionalMarkdown, '可选').find((entry) => entry.mode === 'auto') ?? null;
 
   if (!mainlineEntry) {
     return optionalAutoEntry;
@@ -145,9 +119,13 @@ export function isGateEntry(entry) {
 }
 
 export async function readTodoEntry() {
-  const content = await readFile(TODO_PATH, 'utf8');
-  assertValidTodoEntries(content);
-  return selectNextExecutableTodoTask(content);
+  const [pendingContent, optionalContent] = await Promise.all([
+    readFile(TODO_PATH, 'utf8'),
+    readFile(OPTIONAL_PATH, 'utf8')
+  ]);
+  assertValidTodoEntries(pendingContent);
+  assertValidTodoEntries(optionalContent);
+  return selectNextExecutableTodoTask(pendingContent, optionalContent);
 }
 
 export async function readPrimaryTodoEntry() {
@@ -162,19 +140,10 @@ export async function readTodoTask() {
 
 function removeFirstPendingTask(markdown, task) {
   const lines = markdown.split('\n');
-  let insideTodoSection = false;
   let removed = false;
   const updatedLines = lines.filter((line) => {
     const trimmed = line.trim();
-    if (trimmed === '## 待办') {
-      insideTodoSection = true;
-      return true;
-    }
-    if (insideTodoSection && trimmed.startsWith('## ')) {
-      insideTodoSection = false;
-      return true;
-    }
-    if (!insideTodoSection || removed) {
+    if (removed) {
       return true;
     }
     const entry = parsePendingTask(trimmed);
@@ -222,4 +191,4 @@ export async function completePauseTask(task, note = 'manual acceptance complete
   ]);
 }
 
-export { DEFAULT_PAUSE_PATTERNS, DONE_PATH, REPO_ROOT, TODO_PATH };
+export { DEFAULT_PAUSE_PATTERNS, DONE_PATH, NOTES_PATH, OPTIONAL_PATH, REPO_ROOT, TODO_PATH, VERIFY_PATH };

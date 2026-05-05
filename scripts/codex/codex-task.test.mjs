@@ -5,31 +5,13 @@ import { parseFirstTodoTask } from './todo-ledger.mjs';
 
 describe('codex-task helpers', () => {
   it('parses the first pending todo item', () => {
-    const markdown = [
-      '# TODO',
-      '',
-      '## 待办',
-      '',
-      '- [ ] [auto] first task',
-      '- [ ] [gate] second task',
-      '',
-      '## 待验证',
-      '- [ ] [auto] later task'
-    ].join('\n');
+    const markdown = ['# Pending TODO', '', '- [ ] [auto] first task', '- [ ] [gate] second task'].join('\n');
 
     expect(parseFirstTodoTask(markdown)).toBe('first task');
   });
 
   it('returns an empty task when there is no pending todo item', () => {
-    const markdown = [
-      '# TODO',
-      '',
-      '## 待办',
-      '',
-      '- [x] done task',
-      '',
-      '## 待验证'
-    ].join('\n');
+    const markdown = ['# Pending TODO', '', '- [x] done task'].join('\n');
 
     expect(parseFirstTodoTask(markdown)).toBe('');
   });

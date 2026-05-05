@@ -4,7 +4,7 @@ import process from 'node:process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { REPO_ROOT, parseFirstTodoTask } from './todo-ledger.mjs';
+import { REPO_ROOT, TODO_PATH, parseFirstTodoTask } from './todo-ledger.mjs';
 
 const LOG_DIR = path.join(REPO_ROOT, 'logs', 'codex');
 const TASK_SKILL_DIRECTIVE = /^\[skills?:\s*([^\]]+)\]\s*/i;
@@ -58,8 +58,7 @@ async function resolveTask(task) {
     return task;
   }
 
-  const todoPath = path.join(REPO_ROOT, '.lab', 'agent', 'TODO.md');
-  const todoContent = await readFile(todoPath, 'utf8');
+  const todoContent = await readFile(TODO_PATH, 'utf8');
   const nextTask = parseFirstTodoTask(todoContent);
   if (!nextTask) {
     throw new Error('no pending TODO item found and no --task provided');
