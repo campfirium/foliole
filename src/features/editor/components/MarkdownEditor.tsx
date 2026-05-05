@@ -7,6 +7,7 @@ import {
   type MutableRefObject
 } from 'react';
 
+import { collectMarkdownImageReferences } from '../../../../lib/core/import/markdownImageReferences';
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
 import { useMouseGestureSettings } from '../../settings/context/MouseGestureSettingsProvider';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
@@ -135,9 +136,14 @@ function useMarkdownEditorSurfaceModel(args: {
   const onTrackPointerDown = useTrackPointerHandler(args.adapterRef, args.hostRef, scrollbar, args.syncScrollMetrics);
   const thumbHandlers = useThumbPointerHandlers(args.adapterRef, scrollMetrics, scrollbar, args.syncScrollMetrics);
   const mouseGesture = useEditorMouseGesture(args.adapterRef, args.hostRef, args.bindings, args.settings);
+  const hasMarkdownImages = useMemo(
+    () => args.value.includes('![') && args.value.includes('](') && collectMarkdownImageReferences(args.value).length > 0,
+    [args.value]
+  );
   const imageMaxHeight = useMarkdownEditorImageEffects({
     fitBlockImagesToViewport: args.fitBlockImagesToViewport,
     hostRef: args.hostRef,
+    hasMarkdownImages,
     nodeId: args.nodeId,
     onFitBlockImageMetricsChange: args.onFitBlockImageMetricsChange,
     onImageLoadStateChange: args.onImageLoadStateChange,

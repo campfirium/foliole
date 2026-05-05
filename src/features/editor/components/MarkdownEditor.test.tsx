@@ -18,6 +18,7 @@ const mockRefreshImageClozePresentation = vi.fn();
 const mockSetSelection = vi.fn();
 const mockSetScrollTop = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
+const mockResizeObserver = vi.fn();
 
 const mockCtor = vi.fn();
 
@@ -109,6 +110,21 @@ function resetMocks() {
 describe('MarkdownEditor rendering', () => {
   resetMocks();
 
+  beforeEach(() => {
+    mockResizeObserver.mockClear();
+    vi.stubGlobal(
+      'ResizeObserver',
+      vi.fn().mockImplementation(() => {
+        mockResizeObserver();
+        return {
+          disconnect: vi.fn(),
+          observe: vi.fn(),
+          unobserve: vi.fn()
+        };
+      })
+    );
+  });
+
   it('does not recreate editor adapter when value changes', () => {
     const onChange = vi.fn();
     const view = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={onChange} value="a" />);
@@ -139,6 +155,17 @@ describe('MarkdownEditor rendering', () => {
     );
 
     expect(container.querySelector('.markdown-editor-host')).toHaveAttribute('data-fit-block-images', 'true');
+  });
+
+  it('skips image observers for plain-text content when viewport-based image fitting is enabled', () => {
+    const onChange = vi.fn();
+    const view = renderWithMouseGestureProvider(
+      <MarkdownEditor fitBlockImagesToViewport nodeId="node-1" onChange={onChange} value="plain text only" />
+    );
+
+    view.rerender(<MarkdownEditor fitBlockImagesToViewport nodeId="node-1" onChange={onChange} value="plain text only updated" />);
+
+    expect(mockResizeObserver).toHaveBeenCalledTimes(1);
   });
 
   it('updates title-heading visibility without recreating editor adapter', () => {

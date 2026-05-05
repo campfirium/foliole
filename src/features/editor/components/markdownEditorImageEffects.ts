@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useState, type MutableRefObject } from 'rea
 interface UseFitBlockImageHeightArgs {
   fitBlockImagesToViewport: boolean;
   hostRef: MutableRefObject<HTMLDivElement | null>;
+  hasMarkdownImages: boolean;
   nodeId: string | null;
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number } | null) => void;
   rootRef: MutableRefObject<HTMLDivElement | null>;
@@ -10,11 +11,12 @@ interface UseFitBlockImageHeightArgs {
 }
 
 function useImageHeightReporter(args: UseFitBlockImageHeightArgs) {
-  const { fitBlockImagesToViewport, hostRef, nodeId, onFitBlockImageMetricsChange, rootRef, value } = args;
+  const { fitBlockImagesToViewport, hasMarkdownImages, hostRef, nodeId, onFitBlockImageMetricsChange, rootRef, value } = args;
   const [imageMaxHeight, setImageMaxHeight] = useState<string | undefined>(undefined);
+  const imageEffectSource = hasMarkdownImages ? value : '';
 
   useLayoutEffect(() => {
-    if (!fitBlockImagesToViewport || !rootRef.current) {
+    if (!fitBlockImagesToViewport || !hasMarkdownImages || !rootRef.current) {
       setImageMaxHeight(undefined);
       onFitBlockImageMetricsChange?.(null);
       return;
@@ -63,12 +65,13 @@ function useImageHeightReporter(args: UseFitBlockImageHeightArgs) {
       element.removeEventListener('load', handleImageLoad, true);
       resizeObserver?.disconnect();
     };
-  }, [fitBlockImagesToViewport, hostRef, nodeId, onFitBlockImageMetricsChange, rootRef, value]);
+  }, [fitBlockImagesToViewport, hasMarkdownImages, hostRef, imageEffectSource, nodeId, onFitBlockImageMetricsChange, rootRef]);
 
   return imageMaxHeight;
 }
 
 interface UseImageLoadStateArgs {
+  hasMarkdownImages: boolean;
   nodeId: string | null;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   rootRef: MutableRefObject<HTMLDivElement | null>;
@@ -76,10 +79,11 @@ interface UseImageLoadStateArgs {
 }
 
 function useImageLoadStateReporter(args: UseImageLoadStateArgs) {
-  const { nodeId, onImageLoadStateChange, rootRef, value } = args;
+  const { hasMarkdownImages, nodeId, onImageLoadStateChange, rootRef, value } = args;
+  const imageEffectSource = hasMarkdownImages ? value : '';
 
   useEffect(() => {
-    if (!rootRef.current) {
+    if (!hasMarkdownImages || !rootRef.current) {
       onImageLoadStateChange?.({ loadedCount: 0, totalCount: 0 });
       return;
     }
@@ -112,7 +116,7 @@ function useImageLoadStateReporter(args: UseImageLoadStateArgs) {
       element.removeEventListener('error', handleImageEvent, true);
       element.removeEventListener('load', handleImageEvent, true);
     };
-  }, [nodeId, onImageLoadStateChange, rootRef, value]);
+  }, [hasMarkdownImages, imageEffectSource, nodeId, onImageLoadStateChange, rootRef]);
 }
 
 export function useMarkdownEditorImageEffects(args: UseFitBlockImageHeightArgs & UseImageLoadStateArgs) {
